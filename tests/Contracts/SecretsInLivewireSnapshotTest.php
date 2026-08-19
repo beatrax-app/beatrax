@@ -6,6 +6,7 @@ use Livewire\Component;
 use Modules\Auth\Internal\Http\Livewire\AddUserPage;
 use Modules\Auth\Internal\Http\Livewire\AppLockSettingsSection;
 use Modules\Auth\Internal\Http\Livewire\ChangePasswordPage;
+use Modules\Auth\Internal\Http\Livewire\DeleteAccountSection;
 use Modules\Auth\Internal\Http\Livewire\LoginPage;
 use Modules\Auth\Internal\Http\Livewire\ManageUserPage;
 use Modules\Auth\Internal\Http\Livewire\ResetPasswordPage;
@@ -132,6 +133,14 @@ it('does not allow production Livewire components to expose registry columns via
             // OAuthSecretsRepository hands plaintext to the file
             // sink only after submit() validates.
             'clientSecret',
+        ],
+        DeleteAccountSection::class => [
+            // `$password` is the account password the user re-types to
+            // confirm an irreversible deletion on a device a household
+            // shares — the same user-input reasoning as
+            // AppLockSettingsSection, not an echo of stored data.
+            // cancel() zeroes it when the confirmation is abandoned.
+            'password',
         ],
         AppLockSettingsSection::class => [
             // `$accountPassword` is the account password the user

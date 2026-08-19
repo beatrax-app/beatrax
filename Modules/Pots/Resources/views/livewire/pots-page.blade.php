@@ -27,16 +27,22 @@
     - Row actions (Fund, Move, Edit) are always visible on phone (D-12)
     At >=768px: existing card grid + Flux modals unchanged.
 --}}
-<style>
-    @media (min-width: 768px) {
-        .pots-phone-list { display: none !important; }
-    }
-    @media (max-width: 767px) {
-        .pots-desktop-list { display: none !important; }
-    }
-</style>
-
+{{-- Inside the single root, not beside it. Livewire binds wire:id to the
+     FIRST top-level element, so a <style> tag out here became the whole
+     component: every wire:model and wire:click in the markup below was
+     orphaned, no /livewire/update request was ever sent, and each write
+     silently did nothing while the sheets still opened — those ride
+     $dispatch, which is a plain window event and needs no binding. --}}
 <div class="mx-auto max-w-3xl px-4 py-12">
+    <style>
+        @media (min-width: 768px) {
+            .pots-phone-list { display: none !important; }
+        }
+        @media (max-width: 767px) {
+            .pots-desktop-list { display: none !important; }
+        }
+    </style>
+
     {{-- Page header --}}
     <header class="mb-8 flex items-start justify-between gap-4">
         <div>
@@ -95,7 +101,9 @@
                                 $dispatch('open-sheet', { name: 'pot-fund' });
                             "
                             class="text-xs text-slate-400 hover:text-slate-900 focus:outline-none min-w-[44px] min-h-[44px] flex items-center justify-center dark:hover:text-slate-100"
-                        >{{ Lang::get('pots::messages.actions.fund') }}</button>
+                         title="{{ Lang::get('pots::messages.actions.fund') }}"
+                            aria-label="{{ Lang::get('pots::messages.actions.fund') }}"
+                        ><span aria-hidden="true" class="sm:hidden">↓</span><span class="sr-only sm:not-sr-only">{{ Lang::get('pots::messages.actions.fund') }}</span></button>
                         <button
                             type="button"
                             x-on:click="
@@ -104,7 +112,40 @@
                                 $dispatch('open-sheet', { name: 'pot-move' });
                             "
                             class="text-xs text-slate-400 hover:text-slate-900 focus:outline-none min-w-[44px] min-h-[44px] flex items-center justify-center dark:hover:text-slate-100"
-                        >{{ Lang::get('pots::messages.actions.move') }}</button>
+                         title="{{ Lang::get('pots::messages.actions.move') }}"
+                            aria-label="{{ Lang::get('pots::messages.actions.move') }}"
+                        ><span aria-hidden="true" class="sm:hidden">⇄</span><span class="sr-only sm:not-sr-only">{{ Lang::get('pots::messages.actions.move') }}</span></button>
+                        {{-- Withdraw, edit and archive lived only in the desktop
+                             kebab, which the phone list hides — so on a phone
+                             money could go into a pot and never come out. --}}
+                        <button
+                            type="button"
+                            x-on:click="
+                                $wire.set('operationPotId', {{ $pot->id }});
+                                $wire.set('operationKind', 'withdraw');
+                                $dispatch('open-sheet', { name: 'pot-withdraw' });
+                            "
+                            class="text-xs text-slate-400 hover:text-slate-900 focus:outline-none min-w-[44px] min-h-[44px] flex items-center justify-center dark:hover:text-slate-100"
+                            title="{{ Lang::get('pots::messages.actions.withdraw') }}"
+                            aria-label="{{ Lang::get('pots::messages.actions.withdraw') }}"
+                        ><span aria-hidden="true">↑</span></button>
+                        <button
+                            type="button"
+                            x-on:click="
+                                $wire.openEdit({{ $pot->id }});
+                                $dispatch('open-sheet', { name: 'pot-form' });
+                            "
+                            class="text-xs text-slate-400 hover:text-slate-900 focus:outline-none min-w-[44px] min-h-[44px] flex items-center justify-center dark:hover:text-slate-100"
+                            title="{{ Lang::get('pots::messages.actions.edit') }}"
+                            aria-label="{{ Lang::get('pots::messages.actions.edit') }}"
+                        ><span aria-hidden="true">✎</span></button>
+                        <button
+                            type="button"
+                            wire:click="confirmArchive({{ $pot->id }})"
+                            class="text-xs text-slate-400 hover:text-slate-900 focus:outline-none min-w-[44px] min-h-[44px] flex items-center justify-center dark:hover:text-slate-100"
+                            title="{{ Lang::get('pots::messages.actions.archive') }}"
+                            aria-label="{{ Lang::get('pots::messages.actions.archive') }}"
+                        ><span aria-hidden="true">⊟</span></button>
                     </div>
                 @endforeach
             @endforeach
@@ -231,7 +272,9 @@
                                                 }
                                             "
                                             class="text-sm text-slate-400 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100"
-                                        >{{ Lang::get('pots::messages.actions.fund') }}</button>
+                                         title="{{ Lang::get('pots::messages.actions.fund') }}"
+                            aria-label="{{ Lang::get('pots::messages.actions.fund') }}"
+                        ><span aria-hidden="true" class="sm:hidden">↓</span><span class="sr-only sm:not-sr-only">{{ Lang::get('pots::messages.actions.fund') }}</span></button>
 
                                         {{-- Move button --}}
                                         <button
@@ -245,7 +288,9 @@
                                                 }
                                             "
                                             class="text-sm text-slate-400 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100"
-                                        >{{ Lang::get('pots::messages.actions.move') }}</button>
+                                         title="{{ Lang::get('pots::messages.actions.move') }}"
+                            aria-label="{{ Lang::get('pots::messages.actions.move') }}"
+                        ><span aria-hidden="true" class="sm:hidden">⇄</span><span class="sr-only sm:not-sr-only">{{ Lang::get('pots::messages.actions.move') }}</span></button>
 
                                         {{-- Kebab dropdown --}}
                                         <flux:dropdown>

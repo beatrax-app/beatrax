@@ -11,6 +11,12 @@ return [
     'match_any' => 'Match any condition',
 
     'condition_label' => 'Condition :number',
+    'between_and' => 'and',
+    'field_merchant' => 'Counterparty',
+    'field_description' => 'Description',
+    'field_counterparty' => 'Counterparty',
+    'field_amount' => 'Amount',
+    'field_date' => 'Date',
     'condition_field_aria' => 'Condition :number field',
     'condition_operator_aria' => 'Condition :number operator',
     'condition_value_aria' => 'Condition :number value',

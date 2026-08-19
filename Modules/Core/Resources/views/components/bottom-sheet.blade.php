@@ -3,6 +3,11 @@
     'title' => '',         // Sheet heading (optional)
 ])
 
+@use('Modules\Core\Public\Support\Lang')
+@php
+    $titleId = 'bottom-sheet-title-'.$name;
+@endphp
+
 {{--
     Bottom sheet wrapper (D-10, UI-SPEC §6.3, Pitfall 6).
 
@@ -25,8 +30,8 @@
     panel correctly. Escape and the scrim still dismiss, so the overlay is not
     a keyboard dead end, but focus is no longer trapped inside it; restoring a
     trap needs one that does not walk the document marking siblings inert.
-    and released on close. safe-area padding-bottom keeps content above the home
-    indicator on iOS.
+
+    safe-area padding-bottom keeps content above the home indicator on iOS.
 --}}
 <div
     x-data="{ open: false }"
@@ -76,7 +81,18 @@
         @keydown.escape="open = false"
         role="dialog"
         aria-modal="true"
-        @if ($title) aria-label="{{ $title }}" @endif
+        {{-- Pointed at the heading rather than repeating its text: the same
+             sheet is both "create" and "edit", and a Livewire re-render
+             updated the heading while the duplicated aria-label kept saying
+             "create". One string, so the two can no longer disagree. --}}
+        @if ($title)
+            aria-labelledby="{{ $titleId }}"
+        @else
+            {{-- A title can be conditional at the call site and come through
+                 empty — the calendar's is, before a day is picked. A dialog
+                 with no name at all is worse than a generic one. --}}
+            aria-label="{{ Lang::get('core::components.sheet_untitled') }}"
+        @endif
     >
         {{-- Drag handle (UI-SPEC §6.3) --}}
         <div
@@ -86,6 +102,7 @@
 
         @if ($title)
             <h2
+                id="{{ $titleId }}"
                 style="font-size: var(--text-base); font-weight: 600; color: var(--color-text); margin-bottom: var(--space-4);"
             >{{ $title }}</h2>
         @endif

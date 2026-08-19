@@ -11,6 +11,12 @@ return [
     'match_any' => 'Να ταιριάζει οποιαδήποτε συνθήκη',
 
     'condition_label' => 'Συνθήκη :number',
+    'between_and' => 'και',
+    'field_merchant' => 'Αντισυμβαλλόμενος',
+    'field_description' => 'Περιγραφή',
+    'field_counterparty' => 'Αντισυμβαλλόμενος',
+    'field_amount' => 'Ποσό',
+    'field_date' => 'Ημερομηνία',
     'condition_field_aria' => 'Πεδίο συνθήκης :number',
     'condition_operator_aria' => 'Τελεστής συνθήκης :number',
     'condition_value_aria' => 'Τιμή συνθήκης :number',

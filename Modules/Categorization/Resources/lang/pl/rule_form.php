@@ -11,6 +11,12 @@ return [
     'match_any' => 'Dopasuj dowolny warunek',
 
     'condition_label' => 'Warunek :number',
+    'between_and' => 'i',
+    'field_merchant' => 'Kontrahent',
+    'field_description' => 'Opis',
+    'field_counterparty' => 'Kontrahent',
+    'field_amount' => 'Kwota',
+    'field_date' => 'Data',
     'condition_field_aria' => 'Pole warunku :number',
     'condition_operator_aria' => 'Operator warunku :number',
     'condition_value_aria' => 'Wartość warunku :number',

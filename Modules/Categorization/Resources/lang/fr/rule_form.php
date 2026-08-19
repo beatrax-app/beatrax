@@ -11,6 +11,12 @@ return [
     'match_any' => 'Au moins une condition',
 
     'condition_label' => 'Condition :number',
+    'between_and' => 'et',
+    'field_merchant' => 'Tiers',
+    'field_description' => 'Description',
+    'field_counterparty' => 'Tiers',
+    'field_amount' => 'Montant',
+    'field_date' => 'Date',
     'condition_field_aria' => 'Champ de la condition :number',
     'condition_operator_aria' => 'Opérateur de la condition :number',
     'condition_value_aria' => 'Valeur de la condition :number',

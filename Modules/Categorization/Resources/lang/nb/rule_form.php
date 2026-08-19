@@ -11,6 +11,12 @@ return [
     'match_any' => 'Match en av betingelsene',
 
     'condition_label' => 'Betingelse :number',
+    'between_and' => 'og',
+    'field_merchant' => 'Motpart',
+    'field_description' => 'Beskrivelse',
+    'field_counterparty' => 'Motpart',
+    'field_amount' => 'Beløp',
+    'field_date' => 'Dato',
     'condition_field_aria' => 'Felt for betingelse :number',
     'condition_operator_aria' => 'Operator for betingelse :number',
     'condition_value_aria' => 'Verdi for betingelse :number',

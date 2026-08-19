@@ -29,6 +29,10 @@ final class EnsureDatabaseReady
         'sw',
         'site.webmanifest',
         'pwa.icon',
+        // The app mark is embedded in the privacy veil and both lock
+        // screens, which this gate can be showing at the time.
+        'app.icon',
+        'app.splash',
         // The guest language switch has to work on the very first screen a
         // fresh install shows, which is the one this gate redirects to.
         'locale.switch',

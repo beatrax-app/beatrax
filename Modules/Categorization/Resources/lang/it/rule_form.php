@@ -11,6 +11,12 @@ return [
     'match_any' => 'Soddisfa almeno una condizione',
 
     'condition_label' => 'Condizione :number',
+    'between_and' => 'e',
+    'field_merchant' => 'Controparte',
+    'field_description' => 'Descrizione',
+    'field_counterparty' => 'Controparte',
+    'field_amount' => 'Importo',
+    'field_date' => 'Data',
     'condition_field_aria' => 'Campo della condizione :number',
     'condition_operator_aria' => 'Operatore della condizione :number',
     'condition_value_aria' => 'Valore della condizione :number',

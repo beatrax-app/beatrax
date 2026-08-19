@@ -56,11 +56,11 @@
                                     aria-label="{{ Lang::get('categorization::rule_form.condition_field_aria', ['number' => $i + 1]) }}"
                                     class="inline-flex rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                 >
-                                    <option value="merchant">merchant</option>
-                                    <option value="description">description</option>
-                                    <option value="counterparty">counterparty</option>
-                                    <option value="amount">amount</option>
-                                    <option value="date">date</option>
+                                    <option value="merchant">{{ Lang::get('categorization::rule_form.field_merchant') }}</option>
+                                    <option value="description">{{ Lang::get('categorization::rule_form.field_description') }}</option>
+                                    <option value="counterparty">{{ Lang::get('categorization::rule_form.field_counterparty') }}</option>
+                                    <option value="amount">{{ Lang::get('categorization::rule_form.field_amount') }}</option>
+                                    <option value="date">{{ Lang::get('categorization::rule_form.field_date') }}</option>
                                 </select>
 
                                 <select

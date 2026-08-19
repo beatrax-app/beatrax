@@ -6,6 +6,7 @@ return [
     'page_title' => 'Regler',
     'heading' => 'Regler',
     'intro' => 'Kategorisér transaktioner allerede ved importen. Regler gælder for alle kilder — bank, kort, PayPal og e-mailkvitteringer.',
+    'device_local_note' => 'Regler bliver på denne enhed. De deles ikke med dine andre enheder.',
 
     'reapply' => 'Anvend regler på historikken igen',
     'reapplying' => 'Anvender igen…',

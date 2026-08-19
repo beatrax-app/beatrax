@@ -21,6 +21,12 @@
                 <p class="mt-2 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
                     {{ Lang::get('categorization::rules.intro') }}
                 </p>
+                {{-- Rules never leave the device that authored them, and the
+                     backfiller skips them, so the page says so rather than
+                     letting a second device look like it is missing them. --}}
+                <p class="mt-1 max-w-2xl text-sm text-slate-400 dark:text-slate-500">
+                    {{ Lang::get('categorization::rules.device_local_note') }}
+                </p>
             </div>
             <div class="flex items-center gap-2">
                 <button

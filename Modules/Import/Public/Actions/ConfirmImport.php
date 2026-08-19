@@ -13,6 +13,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\JobRunStatus;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Contracts\AppliesEnrichments;
+use Modules\Import\Public\Contracts\CapturesImportForSync;
 use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Import\Public\Dto\ImportConfirmResult;
 use Modules\Import\Public\Exceptions\PreviewExpiredException;
@@ -35,6 +36,7 @@ final class ConfirmImport implements ConfirmsImports
         private readonly DispatchesRecurringDetection $recurringDispatcher,
         private readonly UpsertsCardStatements $cardStatementUpserter,
         private readonly DatabaseManager $db,
+        private readonly CapturesImportForSync $syncCapture,
     ) {}
 
     public function __invoke(int $importRunId, User $user, bool $dispatchChain = true): ImportConfirmResult
@@ -128,6 +130,12 @@ final class ConfirmImport implements ConfirmsImports
         });
 
         $this->cache->forget($importRunId);
+
+        // Capture the import for sync, post-commit and parents first. Without
+        // it the ledger rows reached a peer only through the one-time pairing
+        // backfill, so a statement imported afterwards stayed on the device
+        // that read it while the notifications ABOUT it synced perfectly well.
+        $this->syncCapture->capture($importRun, $user);
 
         // Dispatch strictly post-commit, never inside the transaction
         // closure (the queue driver doesn't share the SQLite transaction

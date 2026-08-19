@@ -6,6 +6,7 @@ return [
     'page_title' => 'Noteikumi',
     'heading' => 'Noteikumi',
     'intro' => 'Kategorizē darījumus jau importa laikā. Noteikumi attiecas uz visiem avotiem — banku, karti, PayPal un e-pasta čekiem.',
+    'device_local_note' => 'Noteikumi paliek šajā ierīcē. Tie netiek koplietoti ar citām tavām ierīcēm.',
 
     'reapply' => 'Piemērot noteikumus vēsturei',
     'reapplying' => 'Piemēro…',

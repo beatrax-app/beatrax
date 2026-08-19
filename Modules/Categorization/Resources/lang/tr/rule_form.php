@@ -11,6 +11,12 @@ return [
     'match_any' => 'Herhangi bir koşul eşleşsin',
 
     'condition_label' => 'Koşul :number',
+    'between_and' => 've',
+    'field_merchant' => 'Karşı taraf',
+    'field_description' => 'Açıklama',
+    'field_counterparty' => 'Karşı taraf',
+    'field_amount' => 'Tutar',
+    'field_date' => 'Tarih',
     'condition_field_aria' => 'Koşul :number alanı',
     'condition_operator_aria' => 'Koşul :number operatörü',
     'condition_value_aria' => 'Koşul :number değeri',

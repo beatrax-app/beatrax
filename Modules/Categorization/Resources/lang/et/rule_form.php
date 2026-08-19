@@ -11,6 +11,12 @@ return [
     'match_any' => 'Vasta ükskõik millisele tingimusele',
 
     'condition_label' => 'Tingimus :number',
+    'between_and' => 'ja',
+    'field_merchant' => 'Vastaspool',
+    'field_description' => 'Kirjeldus',
+    'field_counterparty' => 'Vastaspool',
+    'field_amount' => 'Summa',
+    'field_date' => 'Kuupäev',
     'condition_field_aria' => 'Tingimuse :number väli',
     'condition_operator_aria' => 'Tingimuse :number operaator',
     'condition_value_aria' => 'Tingimuse :number väärtus',

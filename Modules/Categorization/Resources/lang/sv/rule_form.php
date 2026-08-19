@@ -11,6 +11,12 @@ return [
     'match_any' => 'Matcha något villkor',
 
     'condition_label' => 'Villkor :number',
+    'between_and' => 'och',
+    'field_merchant' => 'Motpart',
+    'field_description' => 'Beskrivning',
+    'field_counterparty' => 'Motpart',
+    'field_amount' => 'Belopp',
+    'field_date' => 'Datum',
     'condition_field_aria' => 'Fält för villkor :number',
     'condition_operator_aria' => 'Operator för villkor :number',
     'condition_value_aria' => 'Värde för villkor :number',

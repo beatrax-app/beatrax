@@ -6,6 +6,7 @@ return [
     'page_title' => 'Reeglid',
     'heading' => 'Reeglid',
     'intro' => 'Kategoriseeri tehingud juba importimisel. Reeglid kehtivad igale allikale — pangale, kaardile, PayPalile ja e-posti kviitungitele.',
+    'device_local_note' => 'Reeglid jäävad sellesse seadmesse. Neid ei jagata sinu teiste seadmetega.',
 
     'reapply' => 'Rakenda reeglid ajaloole uuesti',
     'reapplying' => 'Rakendan uuesti…',

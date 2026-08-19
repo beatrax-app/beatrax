@@ -11,6 +11,12 @@ return [
     'match_any' => 'Cumplir cualquier condición',
 
     'condition_label' => 'Condición :number',
+    'between_and' => 'y',
+    'field_merchant' => 'Contraparte',
+    'field_description' => 'Descripción',
+    'field_counterparty' => 'Contraparte',
+    'field_amount' => 'Importe',
+    'field_date' => 'Fecha',
     'condition_field_aria' => 'Campo de la condición :number',
     'condition_operator_aria' => 'Operador de la condición :number',
     'condition_value_aria' => 'Valor de la condición :number',

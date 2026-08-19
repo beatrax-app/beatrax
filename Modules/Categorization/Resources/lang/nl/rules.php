@@ -6,6 +6,7 @@ return [
     'page_title' => 'Regels',
     'heading' => 'Regels',
     'intro' => 'Categoriseer transacties al bij het importeren. Regels gelden voor elke bron — bank, kaart, PayPal en e-mailbonnen.',
+    'device_local_note' => 'Regels blijven op dit apparaat. Ze worden niet gedeeld met je andere apparaten.',
 
     'reapply' => 'Regels opnieuw op geschiedenis toepassen',
     'reapplying' => 'Opnieuw toepassen…',

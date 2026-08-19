@@ -95,7 +95,7 @@
             </header>
 
             <p class="triage-meta">
-                {{ Lang::get('counterparties::triage.meta', [
+                {{ Lang::choice('counterparties::triage.meta', count($recentTransactions), [
                     'count' => count($recentTransactions),
                     'date' => ! empty($recentTransactions) ? CarbonImmutable::parse((string) $recentTransactions[0]->posted_at)->isoFormat('L') : '—',
                 ]) }}
@@ -171,19 +171,25 @@
                 <legend style="font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); font-weight: 600; padding: 0 var(--space-1);">
                     {{ Lang::get('counterparties::triage.label_manually') }}
                 </legend>
-                <div style="display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center;">
+                {{-- One Alpine scope over both fields and the button. The
+                     x-data used to sit on the input alone, so the button could
+                     not see it and the wire:click reached into the DOM instead
+                     — and Livewire evaluates a wire:click against the $wire
+                     proxy, where a bare `document` is $wire.document. Every
+                     click threw before manualLabel was reached, silently. --}}
+                <div x-data="{ manualName: '', manualType: 'merchant' }" style="display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center;">
                     <label for="triage-manual-name" class="sr-only">{{ Lang::get('counterparties::triage.display_name_label') }}</label>
                     <input
                         id="triage-manual-name"
                         type="text"
                         placeholder="{{ Lang::get('counterparties::triage.display_name_placeholder') }}"
-                        x-data="{ name: '' }"
-                        x-model="name"
+                        x-model="manualName"
                         style="flex: 1 1 240px; padding: 6px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: var(--text-sm);"
                     />
                     <label for="triage-manual-type" class="sr-only">{{ Lang::get('counterparties::triage.type_label') }}</label>
                     <select
                         id="triage-manual-type"
+                        x-model="manualType"
                         style="padding: 6px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: var(--text-sm);"
                     >
                         <option value="merchant">{{ Lang::get('counterparties::triage.type_merchant') }}</option>
@@ -194,7 +200,7 @@
                     <button
                         type="button"
                         class="pill-btn-ghost focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
-                        wire:click="manualLabel(document.getElementById('triage-manual-name').value, document.getElementById('triage-manual-type').value)"
+                        x-on:click="$wire.manualLabel(manualName, manualType)"
                     >{{ Lang::get('counterparties::triage.save_label') }}</button>
                 </div>
             </fieldset>

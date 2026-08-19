@@ -11,6 +11,12 @@ return [
     'match_any' => 'Match en vilkårlig betingelse',
 
     'condition_label' => 'Betingelse :number',
+    'between_and' => 'og',
+    'field_merchant' => 'Modpart',
+    'field_description' => 'Beskrivelse',
+    'field_counterparty' => 'Modpart',
+    'field_amount' => 'Beløb',
+    'field_date' => 'Dato',
     'condition_field_aria' => 'Felt for betingelse :number',
     'condition_operator_aria' => 'Operator for betingelse :number',
     'condition_value_aria' => 'Værdi for betingelse :number',

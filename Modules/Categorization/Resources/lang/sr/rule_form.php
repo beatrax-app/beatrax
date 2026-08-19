@@ -11,6 +11,12 @@ return [
     'match_any' => 'Podudaranje sa bilo kojim uslovom',
 
     'condition_label' => 'Uslov :number',
+    'between_and' => 'i',
+    'field_merchant' => 'Druga strana',
+    'field_description' => 'Opis',
+    'field_counterparty' => 'Druga strana',
+    'field_amount' => 'Iznos',
+    'field_date' => 'Datum',
     'condition_field_aria' => 'Polje uslova :number',
     'condition_operator_aria' => 'Operator uslova :number',
     'condition_value_aria' => 'Vrednost uslova :number',

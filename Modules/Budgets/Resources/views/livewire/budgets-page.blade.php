@@ -280,7 +280,7 @@
                         wire:click="openMove({{ $row->categoryId }})"
                         x-on:click="$dispatch('open-sheet', { name: 'envelope-move' })"
                         class="text-xs text-slate-400 hover:text-slate-900 focus:outline-none min-w-[44px] min-h-[44px] flex items-center justify-center dark:hover:text-slate-100"
-                    >{{ Lang::get('budgets::messages.row.move') }}</button>
+                     title="{{ Lang::get('budgets::messages.row.move') }}"><span aria-hidden="true" class="sm:hidden">⇄</span><span class="sr-only sm:not-sr-only">{{ Lang::get('budgets::messages.row.move') }}</span></button>
                 </div>
             @endforeach
         </div>

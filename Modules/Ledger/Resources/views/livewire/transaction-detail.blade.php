@@ -35,7 +35,7 @@
     />
 
     <main class="min-h-screen bg-white dark:bg-slate-950">
-        <div class="mx-auto max-w-3xl px-8 py-12 space-y-6" data-testid="transaction-detail">
+        <div class="mx-auto max-w-3xl px-4 py-12 space-y-6 sm:px-8" data-testid="transaction-detail">
             <header class="space-y-1">
                 <div class="flex items-center gap-3">
                     <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('ledger::detail.heading') }}</h1>

@@ -11,6 +11,12 @@ return [
     'match_any' => 'Atbilst jebkuram nosacījumam',
 
     'condition_label' => 'Nosacījums :number',
+    'between_and' => 'un',
+    'field_merchant' => 'Darījuma partneris',
+    'field_description' => 'Apraksts',
+    'field_counterparty' => 'Darījuma partneris',
+    'field_amount' => 'Summa',
+    'field_date' => 'Datums',
     'condition_field_aria' => 'Nosacījuma :number lauks',
     'condition_operator_aria' => 'Nosacījuma :number operators',
     'condition_value_aria' => 'Nosacījuma :number vērtība',

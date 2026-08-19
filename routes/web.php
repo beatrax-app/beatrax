@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Route;
 
 // App-wide web routes live here. Module-local web routes are loaded from
@@ -22,6 +23,30 @@ use Illuminate\Support\Facades\Route;
  *
  * Middleware: ['web'] only — NO auth guard (T-04-02-02)
  */
+/*
+ * Reads the file into the response body rather than returning a
+ * BinaryFileResponse. The mobile bridge forwards a buffered body; a streamed
+ * one arrived as the 8-byte PNG signature plus two bytes, under a
+ * Content-Length claiming the full 23548 — a header that promised an image and
+ * a body that was not one.
+ */
+if (! function_exists('pngResponse')) {
+    function pngResponse(string $path): Response
+    {
+        if (! is_file($path)) {
+            abort(404);
+        }
+
+        $bytes = (string) file_get_contents($path);
+
+        return response($bytes, 200, [
+            'Content-Type' => 'image/png',
+            'Content-Length' => (string) strlen($bytes),
+            'Cache-Control' => 'public, max-age=604800',
+        ]);
+    }
+}
+
 Route::get('/sw.js', function () {
     return response()
         ->view('sw')
@@ -63,10 +88,20 @@ Route::get('/icons/{icon}', function (string $icon) {
     if (! in_array($icon, $allowed, true)) {
         abort(404);
     }
-    $path = public_path('icons/'.$icon);
-    if (! file_exists($path)) {
-        abort(404);
-    }
 
-    return response()->file($path);
+    return pngResponse(public_path('icons/'.$icon));
 })->middleware(['web'])->name('pwa.icon');
+
+/*
+ * The app mark and splash, on the same terms as the icon set above.
+ *
+ * These had no route at all, so on a phone — where there is no web server in
+ * front of Laravel and every request is answered by PHP — /icon.png 404'd.
+ * The privacy veil and both lock screens embed it, so the screen that covers a
+ * financial app when it backgrounds showed a broken image.
+ */
+Route::get('/icon.png', fn () => pngResponse(public_path('icon.png')))
+    ->middleware(['web'])->name('app.icon');
+
+Route::get('/splash.png', fn () => pngResponse(public_path('splash.png')))
+    ->middleware(['web'])->name('app.splash');
