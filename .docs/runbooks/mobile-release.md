@@ -23,25 +23,12 @@ domain code by symlink. Nothing in the desktop release pipeline touches it.
 Bifrost builds from `beatrax-app/mobile-build`, a fully generated mirror with a
 single writer (`mobile-bifrost-publish.yml`). Never hand-edit that repo.
 
-### The generated-shell patches do not reach Bifrost
+### The generated-shell patches and Bifrost
 
-The patch scripts live at the **desktop** repo root, in `scripts/`, and
-`mobile-app/composer.json` reaches them as `../scripts/nativephp_*.php`. After
-materialization `mobile-app/` *is* the build repo root, so that `../` climbs
-above it: `beatrax-app/mobile-build/scripts/` holds only `materialize.sh` and
-`create-ios-signing.sh`. `NativeBuildPatches` resolves the same path
-(`dirname(base_path()) . '/scripts'`), finds no directory, and skips silently.
-
-So a Bifrost-built AAB or IPA carries none of the WebView camera permission,
-cookie persistence, shell theming, boot splash or app-icon patches. Builds from
-this repository do — `mobile:package-android` applies them and warns loudly when
-the directory is missing, which is what a Bifrost log would show.
-
-Closing it needs `materialize.sh` to copy `scripts/nativephp_*.php` into the
-output tree and the composer + `NativeBuildPatches` paths to become root-relative
-rather than `../`. That changes what the build repo contains, and nothing here
-can prove the result until a Bifrost build runs, so it is deliberately not done
-as part of the CI fix.
+`materialize.sh` carries `scripts/nativephp_*.php` into the build repo, and
+`NativeBuildPatches::locate()` finds them there. The mechanics are below, under
+[The patch scripts in a Bifrost tree](#the-patch-scripts-in-a-bifrost-tree) —
+read that section, not this heading, for what actually happens.
 
 ## Before a release
 
@@ -188,3 +175,41 @@ correct for the dev tree and inert everywhere else: `post-update-cmd` does not
 fire for `composer install`, which is what CI and Bifrost run. The patches reach
 a built artifact through `NativeBuildPatches`, not through composer — running
 `composer update` inside a materialized tree would fail on those paths.
+
+**Carrying the scripts is not the same as the scripts working there, and today
+they do not.** Every script written before this note resolves the generated
+project as `__DIR__/../mobile-app/nativephp/…`. In the dev tree that is right.
+In a materialized tree the script sits at `<build-repo>/scripts/`, the project
+is at `<build-repo>/nativephp/`, and `../mobile-app/nativephp` does not exist —
+so each one prints *"no Android scaffold yet — skipping"* and exits 0. Verified
+by copying the scripts into a tree shaped like the build repo and running them.
+
+The consequence is the one the old, deleted section warned about, arrived at by
+a different route: a Bifrost AAB or IPA still carries NativePHP's own "N" icon,
+no WebView camera permission, and `allowBackup="true"`. The first of those is an
+instant rejection on both stores.
+
+`nativephp_strip_unused_permissions.php`, `nativephp_ios_privacy_manifest.php`
+and `nativephp_ios_export_compliance.php` probe both roots and do work in a
+materialized tree. **The other eleven need the same probe before a Bifrost
+artifact is submitted anywhere.**
+
+## Export compliance and the French declaration
+
+`nativephp_ios_export_compliance.php` writes `ITSAppUsesNonExemptEncryption`
+= `true` into the iOS `Info.plist`, so App Store Connect stops re-asking the
+export questionnaire on every upload. The answer is `true` because the app's
+crypto is libsodium via PHP's `sodium` extension — a third-party library linked
+into the bundle — and not the OS's own. Apple's documentation is explicit that
+the answer covers "any third-party libraries you link against".
+
+That answer has a paperwork consequence which is **not** Apple's to grant and is
+not done. Ed25519, XChaCha20-Poly1305 and BLAKE2b are industry-standard
+algorithms from outside the OS, which puts the app in the row of Apple's
+documentation matrix requiring a **French encryption declaration (ANSSI)**. No
+US CCATS follows — that row is for proprietary algorithms, and none are used.
+
+Start the ANSSI declaration before France is in the release territories. When
+ANSSI issues a code it goes in `ITSEncryptionExportComplianceCode` beside the
+existing key; filing it also retires the annual BIS self-classification report,
+which is otherwise owed for relying on exempt forms.
