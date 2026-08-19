@@ -1,0 +1,176 @@
+<?php
+
+declare(strict_types=1);
+
+use Carbon\CarbonImmutable;
+use Illuminate\Database\DatabaseManager;
+use Modules\Core\Models\User;
+use Modules\Ledger\Models\Account;
+use Modules\Ledger\Models\ImportRun;
+use Modules\Recurring\Internal\Detectors\ExpenseSeriesDetector;
+use Modules\Recurring\Models\RecurringSeries;
+
+/*
+ * /recurring/review is the one screen whose whole job is "do you recognise
+ * this?" — and it listed the clustering key, which is lower-cased with the
+ * punctuation stripped: `netflix international bv`, `asn bank gea`, and
+ * `domino s pizza` with the apostrophe gone rather than escaped. The same
+ * merchants read correctly as `Netflix International BV` on /transactions.
+ *
+ * `merchants` maps the normalised key back to the name as written and is
+ * plaintext (rule evaluation joins on it), so the detector can read it with
+ * no key material.
+ */
+
+function rsmnUser(): User
+{
+    return User::query()->create([
+        'username' => 'rsmn-'.bin2hex(random_bytes(4)),
+        'password' => 'fixture',
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+        'recurring_detection_window_months' => 12,
+    ]);
+}
+
+function rsmnSeed(User $user, string $normalized, ?string $displayName): void
+{
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $account = Account::query()->create([
+        'user_id' => $user->id,
+        'name' => 'rsmn account',
+        'slug' => 'rsmn-'.bin2hex(random_bytes(4)),
+        'kind' => 'bank',
+        'iban' => 'NL00RSMN'.str_pad((string) $user->id, 10, '0', STR_PAD_LEFT),
+        'default_currency' => 'EUR',
+    ]);
+
+    $run = ImportRun::query()->create([
+        'user_id' => $user->id,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/rsmn.csv',
+        'sha256' => str_pad((string) $user->id, 64, 'a', STR_PAD_LEFT),
+        'uploaded_at' => CarbonImmutable::parse('2026-05-17 00:00:00'),
+        'status' => 'previewed',
+    ]);
+
+    if ($displayName !== null) {
+        $db->connection()->table('merchants')->insert([
+            'user_id' => $user->id,
+            'name' => $displayName,
+            'normalized_name' => $normalized,
+            'created_at' => '2026-05-17 12:00:00',
+            'updated_at' => '2026-05-17 12:00:00',
+        ]);
+    }
+
+    foreach (['2026-06-04', '2026-07-04', '2026-08-04'] as $i => $postedAt) {
+        $db->connection()->table('transactions')->insert([
+            'user_id' => $user->id,
+            'account_id' => $account->id,
+            'type' => 'expense',
+            'posted_at' => $postedAt,
+            'booked_at' => $postedAt.' 12:00:00',
+            'value_date' => $postedAt,
+            'amount_minor' => -1399,
+            'currency' => 'EUR',
+            'settled_amount_minor' => -1399,
+            'settled_currency' => 'EUR',
+            'counterparty_name' => $displayName ?? $normalized,
+            'counterparty_normalized' => $normalized,
+            'normalization_version' => 3,
+            'source_format' => 'asn-csv',
+            'import_run_id' => $run->id,
+            'source_row_index' => $i,
+            'fingerprint' => str_pad('rsmn'.$user->id.$i, 64, 'd', STR_PAD_LEFT),
+            'fingerprint_version' => 3,
+            'created_at' => '2026-05-17 12:00:00',
+            'updated_at' => '2026-05-17 12:00:00',
+        ]);
+    }
+}
+
+it('lists a detected series under the merchant name as written', function (): void {
+    $user = rsmnUser();
+    rsmnSeed($user, 'domino s pizza', "Domino's Pizza");
+
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-19 09:00:00'));
+    app(ExpenseSeriesDetector::class)->detectForUser($user);
+    CarbonImmutable::setTestNow();
+
+    $series = RecurringSeries::query()->where('user_id', $user->id)->first();
+
+    expect($series)->not->toBeNull()
+        ->and($series->detected_name)->toBe("Domino's Pizza");
+});
+
+it('keeps the clustering key on the column that clusters', function (): void {
+    $user = rsmnUser();
+    rsmnSeed($user, 'netflix international bv', 'Netflix International BV');
+
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-19 09:00:00'));
+    app(ExpenseSeriesDetector::class)->detectForUser($user);
+    CarbonImmutable::setTestNow();
+
+    $series = RecurringSeries::query()->where('user_id', $user->id)->first();
+
+    expect($series->cluster_counterparty_key)->toBe('netflix international bv')
+        ->and($series->detected_name)->toBe('Netflix International BV');
+});
+
+it('falls back to the normalised key when the merchant is unknown', function (): void {
+    $user = rsmnUser();
+    rsmnSeed($user, 'kpn bv', null);
+
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-19 09:00:00'));
+    app(ExpenseSeriesDetector::class)->detectForUser($user);
+    CarbonImmutable::setTestNow();
+
+    $series = RecurringSeries::query()->where('user_id', $user->id)->first();
+
+    expect($series)->not->toBeNull()
+        ->and($series->detected_name)->toBe('kpn bv');
+});
+
+it('heals the rows that already carry the normalised key', function (): void {
+    $user = rsmnUser();
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $db->connection()->table('merchants')->insert([
+        'user_id' => $user->id,
+        'name' => 'ASN Bank GEA',
+        'normalized_name' => 'asn bank gea',
+        'created_at' => '2026-05-17 12:00:00',
+        'updated_at' => '2026-05-17 12:00:00',
+    ]);
+
+    $seriesId = $db->connection()->table('recurring_series')->insertGetId([
+        'user_id' => $user->id,
+        'direction' => 'expense',
+        'detected_name' => 'asn bank gea',
+        'state' => 'pending',
+        'cadence' => 'monthly',
+        'latest_amount_minor' => -1399,
+        'latest_currency' => 'EUR',
+        'monthly_equivalent_minor' => -1399,
+        'variance_tolerance_percent' => 25,
+        'cluster_key' => 'expense|asn bank gea|EUR|monthly',
+        'cluster_counterparty_key' => 'asn bank gea',
+        'created_at' => '2026-05-17 12:00:00',
+        'updated_at' => '2026-05-17 12:00:00',
+    ]);
+
+    // The rows already in the database were written before the detector
+    // learned to do this, and no sweep revisits them.
+    $migration = require base_path('Modules/Recurring/Database/Migrations/2026_08_19_000002_show_merchant_names_on_recurring_review.php');
+    $migration->up();
+
+    $healed = $db->connection()->table('recurring_series')->where('id', $seriesId)->first(['detected_name', 'cluster_counterparty_key']);
+
+    expect($healed->detected_name)->toBe('ASN Bank GEA')
+        ->and($healed->cluster_counterparty_key)->toBe('asn bank gea');
+});
