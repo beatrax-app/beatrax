@@ -140,4 +140,6 @@ return [
         'min_aria' => 'Mažiausia suma',
         'max_aria' => 'Didžiausia suma',
     ],
+
+    'other_movement' => 'Mokesčiai ir korekcijos (neįskaičiuota)',
 ];

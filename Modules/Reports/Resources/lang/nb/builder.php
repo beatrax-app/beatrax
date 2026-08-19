@@ -140,4 +140,6 @@ return [
         'min_aria' => 'Minste beløp',
         'max_aria' => 'Største beløp',
     ],
+
+    'other_movement' => 'Gebyrer og justeringer (ikke medregnet)',
 ];

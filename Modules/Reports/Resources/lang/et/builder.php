@@ -140,4 +140,6 @@ return [
         'min_aria' => 'Miinimumsumma',
         'max_aria' => 'Maksimumsumma',
     ],
+
+    'other_movement' => 'Tasud ja korrektsioonid (pole arvestatud)',
 ];

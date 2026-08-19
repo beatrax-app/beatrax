@@ -140,4 +140,6 @@ return [
         'min_aria' => 'Montante mínimo',
         'max_aria' => 'Montante máximo',
     ],
+
+    'other_movement' => 'Taxas e ajustes (não contados acima)',
 ];

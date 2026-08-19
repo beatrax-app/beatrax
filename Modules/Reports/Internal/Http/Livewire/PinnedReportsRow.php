@@ -20,6 +20,8 @@ final class PinnedReportsRow extends Component
 {
     private const CHART_HEIGHT = 180;
 
+    private const DONUT_HEIGHT = 240;
+
     /** @var list<string> */
     private const DONUT_PALETTE = ['#0F172A', '#334155', '#64748B', '#94A3B8', '#0EA5E9', '#059669', '#B45309', '#BE123C', '#7C3AED', '#0891B2'];
 
@@ -140,7 +142,9 @@ final class PinnedReportsRow extends Component
         return [
             'chart' => [
                 'type' => 'donut',
-                'height' => self::CHART_HEIGHT,
+                // Taller than the bar/line cards: the legend below the ring is
+                // what makes the slices mean anything, and it needs the room.
+                'height' => self::DONUT_HEIGHT,
                 'animations' => ['enabled' => false],
                 'toolbar' => ['show' => false],
                 'fontFamily' => 'Inter, system-ui, sans-serif',
@@ -149,7 +153,17 @@ final class PinnedReportsRow extends Component
             'labels' => $labels,
             'colors' => $colors,
             'dataLabels' => ['enabled' => false],
-            'legend' => ['show' => false],
+            // A donut with no legend and no data labels is a ring of colours
+            // that says nothing, and hovering to tell which slice is which is
+            // not available on a phone. The bar and line cards carry meaning
+            // in the axis; this one has nowhere else to put it.
+            'legend' => [
+                'show' => true,
+                'position' => 'bottom',
+                'fontSize' => '11px',
+                'itemMargin' => ['horizontal' => 6, 'vertical' => 2],
+                'labels' => ['colors' => '#64748B'],
+            ],
             'tooltip' => ['enabled' => true],
         ];
     }

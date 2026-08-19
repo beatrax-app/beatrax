@@ -140,4 +140,6 @@ return [
         'min_aria' => 'Importo minimo',
         'max_aria' => 'Importo massimo',
     ],
+
+    'other_movement' => 'Commissioni e rettifiche (non conteggiate sopra)',
 ];

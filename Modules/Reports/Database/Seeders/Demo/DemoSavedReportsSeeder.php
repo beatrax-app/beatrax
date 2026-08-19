@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Reports\Database\Seeders\Demo;
 
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\Reports\Models\SavedReport;
 use Modules\Reports\Public\Actions\SaveReport;
 use Modules\Reports\Public\Actions\TogglePin;
@@ -19,10 +20,10 @@ final class DemoSavedReportsSeeder
 {
     // Kept under the three-report pin cap the dashboard enforces, with the
     // unpinned entry proving the index renders both states.
-    /** @var list<array{name: string, metric: string, dimension: string, period: string, viz: string, pinned: bool}> */
+    /** @var list<array{nameKey: string, metric: string, dimension: string, period: string, viz: string, pinned: bool}> */
     private const REPORTS = [
         [
-            'name' => 'Where the money went',
+            'nameKey' => 'report_where_money_went',
             'metric' => 'spend',
             'dimension' => 'category',
             'period' => 'last_3_months',
@@ -30,7 +31,7 @@ final class DemoSavedReportsSeeder
             'pinned' => true,
         ],
         [
-            'name' => 'Monthly net position',
+            'nameKey' => 'report_monthly_net',
             'metric' => 'net',
             'dimension' => 'time_bucket',
             'period' => 'last_6_months',
@@ -38,7 +39,7 @@ final class DemoSavedReportsSeeder
             'pinned' => true,
         ],
         [
-            'name' => 'Top counterparties this year',
+            'nameKey' => 'report_top_counterparties',
             'metric' => 'spend',
             'dimension' => 'counterparty',
             'period' => 'ytd',
@@ -70,13 +71,15 @@ final class DemoSavedReportsSeeder
     }
 
     /**
-     * @param  array{name: string, metric: string, dimension: string, period: string, viz: string, pinned: bool}  $row
+     * @param  array{nameKey: string, metric: string, dimension: string, period: string, viz: string, pinned: bool}  $row
      */
     private function upsertReport(User $user, array $row): void
     {
+        $name = Lang::get('core::demo.'.$row['nameKey']);
+
         $existing = SavedReport::query()
             ->where('user_id', $user->id)
-            ->where('name', $row['name'])
+            ->where('name', $name)
             ->exists();
 
         if ($existing) {
@@ -93,7 +96,7 @@ final class DemoSavedReportsSeeder
                 currencyMode: 'base',
                 viz: $row['viz'],
             ),
-            $row['name'],
+            $name,
         );
 
         if ($row['pinned']) {
