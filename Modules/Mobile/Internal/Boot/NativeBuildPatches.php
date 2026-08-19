@@ -33,6 +33,7 @@ final readonly class NativeBuildPatches
         'nativephp_android_file_chooser.php',
         'nativephp_keep_webview_cookies.php',
         'nativephp_exclude_data_from_backup.php',
+        'nativephp_strip_unused_permissions.php',
         'nativephp_theme_native_shell.php',
         'nativephp_brand_boot_splash.php',
         'nativephp_android_adaptive_icon.php',
@@ -40,6 +41,8 @@ final readonly class NativeBuildPatches
         'nativephp_extend_bundle_copy_timeout.php',
         'nativephp_ios_request_body_stream.php',
         'nativephp_ios_download_delegate.php',
+        'nativephp_ios_privacy_manifest.php',
+        'nativephp_ios_export_compliance.php',
     ];
 
     public function __construct(

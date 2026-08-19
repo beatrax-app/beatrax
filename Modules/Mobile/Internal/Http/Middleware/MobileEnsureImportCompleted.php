@@ -33,6 +33,15 @@ final readonly class MobileEnsureImportCompleted
         'mobile.welcome',
         'auth.lock',
         'logout',
+
+        // Public artefacts, exempt for the same reason MobileEnsureDatabaseReady
+        // exempts them: the app mark is embedded in the privacy veil and both
+        // lock screens, and this gate can be showing while they are. Without
+        // these the icon request is answered with the setup page's HTML.
+        'site.webmanifest',
+        'pwa.icon',
+        'app.icon',
+        'app.splash',
     ];
 
     // The Livewire AJAX endpoint drives the pairing and setup screens

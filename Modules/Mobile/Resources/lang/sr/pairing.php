@@ -35,7 +35,6 @@ return [
 
     'errors' => [
         'relay_unreachable' => 'Nije moguće doći do drugog uređaja. Proveri da li su oba na istoj mreži i da li je sinhronizacija uključena na računaru.',
-        'import_needs_qr' => 'Za uvoz skeniraj QR kod prikazan na drugom uređaju.',
         'invalid_code' => 'Ovaj kod nije ispravan ili je istekao. Zatraži da drugi uređaj napravi novi.',
         'identity_locked' => 'Identitet tvog uređaja je zaključan. Otključaj aplikaciju pa probaj ponovo.',
     ],

@@ -30,6 +30,10 @@ final class MobileEnsureDatabaseReady
         'setup',
         'site.webmanifest',
         'pwa.icon',
+        // The app mark is embedded in the privacy veil and both lock
+        // screens, which this gate can be showing at the time.
+        'app.icon',
+        'app.splash',
         'locale.switch',
     ];
 

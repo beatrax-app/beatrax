@@ -35,7 +35,6 @@ return [
 
     'errors' => [
         'relay_unreachable' => 'A másik eszköz nem érhető el. Győződj meg róla, hogy mindkettő ugyanazon a hálózaton van, és a szinkronizálás be van kapcsolva az asztali gépen.',
-        'import_needs_qr' => 'Az importáláshoz olvasd be a másik eszközön megjelenő QR-kódot.',
         'invalid_code' => 'Ez a kód érvénytelen vagy lejárt. Kérj újat a másik eszköztől.',
         'identity_locked' => 'Az eszközazonosságod zárolva van. Oldd fel az alkalmazást, és próbáld újra.',
     ],

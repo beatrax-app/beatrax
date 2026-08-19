@@ -112,16 +112,23 @@
             >{{ Lang::get('mobile::pairing.open_camera') }}</button>
         </div>
 
-        <div class="text-center">
-            <button
-                type="button"
-                wire:click="useWordCode"
-                class="min-h-[44px] px-2 text-sm text-slate-500 underline-offset-2 hover:underline
-                       focus:outline-none focus-visible:underline dark:text-slate-400"
-            >
-                {{ Lang::get('mobile::pairing.enter_code_instead') }}
-            </button>
-        </div>
+        {{-- Not offered while importing. A typed code carries the token and
+             nothing else, so the desktop never learns this device's identity
+             and the pairing cannot complete — the arm existed only to answer
+             it with an error. Offering a route that can only fail is worse
+             than not offering it. --}}
+        @unless ($importMode)
+            <div class="text-center">
+                <button
+                    type="button"
+                    wire:click="useWordCode"
+                    class="min-h-[44px] px-2 text-sm text-slate-500 underline-offset-2 hover:underline
+                           focus:outline-none focus-visible:underline dark:text-slate-400"
+                >
+                    {{ Lang::get('mobile::pairing.enter_code_instead') }}
+                </button>
+            </div>
+        @endunless
     @endif
 
     {{-- ===== Step: enter a code (D-02 fallback — camera unavailable/denied or user choice) ===== --}}
@@ -169,7 +176,11 @@
         <div class="flex gap-3">
             <button
                 type="button"
-                wire:click="submitCode"
+                {{-- The null is load-bearing: submitCode()'s first parameter
+                     is the scanned QR payload, and calling it with no argument
+                     at all makes Livewire try to resolve a ?string from the
+                     container, which 500s. --}}
+                wire:click="submitCode(null)"
                 class="flex-1 min-h-[44px] rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white
                        hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                        dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"

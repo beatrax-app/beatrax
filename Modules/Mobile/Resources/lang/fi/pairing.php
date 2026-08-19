@@ -35,7 +35,6 @@ return [
 
     'errors' => [
         'relay_unreachable' => 'Toiseen laitteeseen ei saada yhteyttä. Varmista, että molemmat ovat samassa verkossa ja synkronointi on päällä työpöytäsovelluksessa.',
-        'import_needs_qr' => 'Skannaa toisella laitteella näkyvä QR-koodi, niin tuonti onnistuu.',
         'invalid_code' => 'Tämä koodi on virheellinen tai vanhentunut. Pyydä toista laitetta luomaan uusi.',
         'identity_locked' => 'Laitteesi identiteetti on lukittu. Avaa sovelluksen lukitus ja yritä uudelleen.',
     ],

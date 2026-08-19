@@ -35,7 +35,6 @@ return [
 
     'errors' => [
         'relay_unreachable' => 'Teise seadmeni ei saa. Veendu, et mõlemad on samas võrgus ja et töölauas on sünkroonimine sisse lülitatud.',
-        'import_needs_qr' => 'Importimiseks skanni teises seadmes kuvatav QR-kood.',
         'invalid_code' => 'See kood on vigane või aegunud. Palu teisel seadmel uus luua.',
         'identity_locked' => 'Sinu seadme identiteet on lukus. Ava rakendus ja proovi uuesti.',
     ],

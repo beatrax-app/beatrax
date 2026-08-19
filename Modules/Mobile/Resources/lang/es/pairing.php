@@ -35,7 +35,6 @@ return [
 
     'errors' => [
         'relay_unreachable' => 'No se puede contactar con el otro dispositivo. Asegúrate de que los dos están en la misma red y de que la sincronización está activada en el ordenador.',
-        'import_needs_qr' => 'Escanea el código QR que se muestra en el otro dispositivo para importar.',
         'invalid_code' => 'Este código no es válido o ha caducado. Pide al otro dispositivo que genere uno nuevo.',
         'identity_locked' => 'La identidad de tu dispositivo está bloqueada. Desbloquea la app e inténtalo de nuevo.',
     ],

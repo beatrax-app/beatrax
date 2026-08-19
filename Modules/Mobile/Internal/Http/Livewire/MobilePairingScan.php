@@ -217,6 +217,7 @@ final class MobilePairingScan extends Component
         Session $session,
         LoggerInterface $logger,
         DeviceRegistryService $devices,
+        UrlGenerator $urls,
         string $data = '',
         string $format = '',
         ?string $id = null,
@@ -225,7 +226,7 @@ final class MobilePairingScan extends Component
             return;
         }
 
-        $this->submitCode($data, $currentUser, $qrBridge, $gateway, $session, $logger, $devices);
+        $this->submitCode($data, $currentUser, $qrBridge, $gateway, $session, $logger, $devices, $urls);
     }
 
     // Fired when the user backs out of the scanner or the OS refuses the
@@ -245,6 +246,15 @@ final class MobilePairingScan extends Component
     {
         $this->cameraUnavailableNotice = true;
         $this->step = 'enter_code';
+    }
+
+    // A locked identity is the one failure the user can actually fix, and the
+    // message alone was a dead end: nothing on this screen opens the PIN pad,
+    // so "unlock the app and try again" left them with no way to do either.
+    private function sendToUnlock(UrlGenerator $urls): void
+    {
+        $this->flashMessage = Lang::get('mobile::pairing.errors.identity_locked');
+        $this->redirect($urls->route('mobile.lock'), navigate: false);
     }
 
     // -------------------------------------------------------------------------
@@ -268,15 +278,16 @@ final class MobilePairingScan extends Component
         Session $session,
         LoggerInterface $logger,
         DeviceRegistryService $devices,
+        UrlGenerator $urls,
     ): void {
         $userId = $currentUser->user()->id;
 
-        // The typed word-code carries only the token - no initiator
-        // identity to seed a cross-device row from - so import supports
-        // the QR path only. Never a dead end: the copy directs the user
-        // back to the QR.
+        // A typed code carries the token and nothing else, so an import has
+        // no initiator identity to seed a cross-device row from. The import
+        // flow no longer offers the arm at all; this stays because a Livewire
+        // action is callable from the client whatever the UI renders.
         if ($this->importMode && $scannedPayload === null) {
-            $this->flashMessage = Lang::get('mobile::pairing.errors.import_needs_qr');
+            $this->flashMessage = Lang::get('mobile::pairing.errors.invalid_code');
 
             return;
         }
@@ -330,7 +341,7 @@ final class MobilePairingScan extends Component
                 // Self-minting one here would strand the peer's.
                 $gateway->enableSyncIdentityWithoutEpoch($userId, $session);
             } catch (LogicException) {
-                $this->flashMessage = Lang::get('mobile::pairing.errors.identity_locked');
+                $this->sendToUnlock($urls);
 
                 return;
             }
@@ -350,9 +361,13 @@ final class MobilePairingScan extends Component
             // An identity that cannot be opened means locked, not a bad
             // code. Sending that user to the other device for a fresh QR is
             // advice that can never work.
-            $this->flashMessage = $gateway->hasUsableIdentity($userId, $session)
-                ? Lang::get('mobile::pairing.errors.invalid_code')
-                : Lang::get('mobile::pairing.errors.identity_locked');
+            if (! $gateway->hasUsableIdentity($userId, $session)) {
+                $this->sendToUnlock($urls);
+
+                return;
+            }
+
+            $this->flashMessage = Lang::get('mobile::pairing.errors.invalid_code');
 
             return;
         }
@@ -500,6 +515,7 @@ final class MobilePairingScan extends Component
         MobileImportIntentGate $importIntent,
         DatabaseManager $db,
         LoggerInterface $logger,
+        UrlGenerator $urls,
     ): void {
         if ($this->pairingTokenId === '') {
             return;
@@ -512,7 +528,7 @@ final class MobilePairingScan extends Component
         // client state.
         $deviceId = $gateway->currentDeviceId($userId, $session);
         if ($deviceId === null) {
-            $this->flashMessage = Lang::get('mobile::pairing.errors.identity_locked');
+            $this->sendToUnlock($urls);
 
             return;
         }
