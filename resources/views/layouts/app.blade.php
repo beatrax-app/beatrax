@@ -300,7 +300,7 @@
             data-locked-label="{{ Lang::get('core::components.veil_locked') }}"
         >
             <img
-                src="/icon.png"
+                src="{{ Vite::asset('resources/brand/logo.svg') }}"
                 width="48"
                 height="48"
                 alt=""
