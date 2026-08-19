@@ -7,11 +7,18 @@ extend-ignore-re = ["\\[[a-z]\\][a-zA-Z]+", "JOINed"]
 [default.extend-words]
 beatrax = "beatrax"
 Beatrax = "Beatrax"
+# A Dutch hosting company that appears as a counterparty in sync fixtures.
+Versio = "Versio"
+versio = "versio"
+# Apple's own App Store Connect rejection codes, quoted verbatim
+# (ITMS-91053, ITMS-91056) in the privacy-manifest tests.
+ITMS = "ITMS"
 # Dutch statement vocabulary that appears verbatim in parser examples.
 Betaalautomaat = "Betaalautomaat"
 Geldautomaat = "Geldautomaat"
 Bankstorting = "Bankstorting"
 Incasso = "Incasso"
+Contant = "Contant"
 Overboeking = "Overboeking"
 Saldo = "Saldo"
 aangifte = "aangifte"
