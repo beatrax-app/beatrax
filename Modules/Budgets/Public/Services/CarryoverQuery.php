@@ -91,8 +91,13 @@ final class CarryoverQuery
             // the page still needs a cell to put the first assignment in.
             // Returning [] rendered "you have no expense categories" at 24 of
             // them, with no cell to click and no advice that could help.
+
+            // Income, not zero: the fold below is income + carry - assigned,
+            // and both of those are nought before the first assignment, so
+            // income is what it would answer. Zero told a reader with a
+            // month's pay in the account that they had nothing to assign.
             return [
-                'toBudgetMinor' => 0,
+                'toBudgetMinor' => $this->glance->incomeForPeriod($user, $target, self::CURRENCY),
                 'overspentCount' => 0,
                 'rows' => $this->unstartedRows($user),
             ];

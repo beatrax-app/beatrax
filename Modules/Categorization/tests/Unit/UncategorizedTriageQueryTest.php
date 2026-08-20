@@ -99,7 +99,29 @@ it('returns only uncategorized transactions ordered newest-first', function (): 
 
     // Newest-first (descending posted_at).
     expect($batch->rows[0])->toBeInstanceOf(TriageRow::class);
-    expect($batch->rows[0]->bookedAt)->toContain('15-05-2026');
+
+    // The row carries the reader's own short date, so the expectation has to
+    // name a locale — English writes it with slashes.
+    expect($batch->rows[0]->bookedAt)->toContain('15/05/2026');
+});
+
+it('writes the date the way the reader\'s language does', function (): void {
+    makeTriageTx($this->user, $this->account, $this->run, day: 15, categoryId: null);
+
+    /** @var UncategorizedTriageQuery $q */
+    $q = $this->app->make(UncategorizedTriageQuery::class);
+
+    // Pre-formatted into the row at query time, so the locale has to be the
+    // reader's before the query runs. It used to be a fixed d-m-Y in every
+    // language, which is the one separator no locale but Dutch writes.
+    app()->setLocale('nl');
+    expect($q->for($this->user, limit: 50)->rows[0]->bookedAt)->toContain('15-05-2026');
+
+    app()->setLocale('de');
+    expect($q->for($this->user, limit: 50)->rows[0]->bookedAt)->toContain('15.05.2026');
+
+    app()->setLocale('en');
+    expect($q->for($this->user, limit: 50)->rows[0]->bookedAt)->toContain('15/05/2026');
 });
 
 it('paginates with cursors when there are more rows than the page limit', function (): void {

@@ -37,6 +37,10 @@ it('matches the rendered sidebar HTML for a developer (snapshot lock)', function
     // the snapshot stays stable across runs. The structural shape
     // (sections, side-items, side-dev-block, account row) is what we
     // care about.
+
+    // Vite's content hash goes with them: it is not structure, and leaving it
+    // in meant editing any brand asset failed this sidebar test for a reason
+    // that has nothing to do with the sidebar.
     $stripped = preg_replace(
         [
             '/\swire:id="[^"]*"/',
@@ -48,6 +52,8 @@ it('matches the rendered sidebar HTML for a developer (snapshot lock)', function
         '',
         $html,
     );
+
+    $stripped = preg_replace('/-[A-Za-z0-9_-]{8}\.(svg|png|css|js)/', '.$1', (string) $stripped);
 
     expect($stripped)->toMatchSnapshot();
 });
