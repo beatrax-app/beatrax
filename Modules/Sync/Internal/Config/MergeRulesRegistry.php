@@ -353,9 +353,9 @@ final class MergeRulesRegistry
                 '_create_required' => ['name', 'definition'],
             ],
             // `state` is deliberately absent — it is locally derived, never
-            // synced. `id` IS in `_create_required`: notifications.id is a
-            // non-autoincrement sha256 string PK (see @link), so CREATE_ROW
-            // must carry it explicitly or `insertOrIgnore` drops the row.
+            // synced. `id` stays listed for the record that this PK is a
+            // sha256 string rather than an autoincrement, but the applier
+            // seeds it from the op's own pk and never needs it as a field.
             'notifications' => [
                 'read_at' => ['strategy' => 'lww', 'nullable' => true],
                 'dismissed_at' => ['strategy' => 'lww', 'nullable' => true],

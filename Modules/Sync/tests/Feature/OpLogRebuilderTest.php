@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
+use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpLogRebuilder;
@@ -310,4 +311,42 @@ it('confines DROP TRIGGER to the rebuilder and trigger-owning migrations (IN-01 
     }
 
     expect($offenders)->toBe([]);
+});
+
+it('re-derives the full-text index after a rebuild instead of leaving it behind', function (): void {
+    /*
+     * The rebuild deletes and replays every covered row inside one
+     * transaction, deliberately without a search writer so FTS writes are
+     * suppressed there. Nothing put them back afterwards, so every rebuilt
+     * row lost its search doc — on a real phone 18 of 141 transactions had
+     * become unfindable, and the only symptom was search quietly returning
+     * fewer results than the screen showed.
+     */
+    $searchWriter = new class implements SearchIndexWriterContract
+    {
+        /** @var list<int> */
+        public array $indexed = [];
+
+        public function upsertForTransaction(int $transactionId, int $actorUserId): void
+        {
+            $this->indexed[] = $transactionId;
+        }
+
+        public function deleteForTransaction(int $transactionId, int $actorUserId): void {}
+    };
+
+    $db = $this->db;
+    [$userId, $accountId, $runId] = rebuildSeedBase($db, 'fts');
+    $txnId = rebuildSeedImportedTxn($db, $userId, $accountId, $runId);
+
+    $replayer = new OpLogReplayer($db, ['device-rebuild' => $this->pkHex]);
+    $replayer->replay([
+        rebuildSignedEntry($this->signer, $this->sk, $userId, 'transactions', $txnId, 'note', json_encode('findable', JSON_THROW_ON_ERROR), OpType::Set, 1000),
+    ], $userId);
+
+    $rebuilder = new OpLogRebuilder($db, $replayer, new MergeRulesRegistry, ['transactions'], null, $searchWriter);
+    $rebuilder->rebuild($userId);
+
+    expect(in_array($txnId, $searchWriter->indexed, true))
+        ->toBeTrue('the rebuilt transaction was never re-indexed');
 });

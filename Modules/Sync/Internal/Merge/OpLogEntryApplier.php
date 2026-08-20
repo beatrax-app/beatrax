@@ -153,6 +153,10 @@ final readonly class OpLogEntryApplier
         return $selfRefs;
     }
 
+    // buildCreatePayload() writes these from the op itself, so a rule naming
+    // one of them is satisfied before a single field is read.
+    private const array SEEDED_FROM_PK = ['id'];
+
     // The row to write, or null when a gate refused it: a tombstone that
     // outranks the create, a create with fields still missing, a payload that
     // could not be built, or a row belonging to someone else.
@@ -251,12 +255,18 @@ final readonly class OpLogEntryApplier
     // A CreateRow needs every required column present; an incomplete set is
     // quarantined (synthesized from the first field's first entry) rather than
     // written as a partial row.
+    //
+    // Except the ones buildCreatePayload() seeds itself. A table naming `id`
+    // as required asked for a field the backfill deliberately never emits —
+    // the row's identity travels as the op's pk — so every row of that table
+    // was discarded as incomplete on arrival.
     /**
      * @param  array<string, list<OpLogEntry>>  $fields
      */
     private function createRowComplete(string $table, array $fields, string $now): bool
     {
-        $missing = array_diff($this->rules->requiredCreateColumns($table), array_keys($fields));
+        $required = array_diff($this->rules->requiredCreateColumns($table), self::SEEDED_FROM_PK);
+        $missing = array_diff($required, array_keys($fields));
 
         if ($missing === []) {
             return true;

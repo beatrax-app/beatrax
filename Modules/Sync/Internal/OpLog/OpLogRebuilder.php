@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Sync\Internal\Config\CoveredTableOrder;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Exceptions\RebuildInProgressException;
+use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 
 /**
@@ -38,6 +39,7 @@ final class OpLogRebuilder
         MergeRulesRegistry $registry,
         ?array $coveredTables = null,
         ?CoveredTableOrder $tableOrder = null,
+        private readonly ?SearchIndexWriterContract $searchWriter = null,
     ) {
         // Built here when absent rather than left null. The container leaves
         // this optional parameter unresolved, and the null fallback was plain
@@ -78,8 +80,37 @@ final class OpLogRebuilder
 
                 $this->restoreTriggers($triggerSnapshots);
             });
+
+            // Outside the transaction, because FTS writes were suppressed
+            // inside it and nothing put them back: every rebuilt row lost its
+            // search doc, so search quietly stopped finding real transactions.
+            $this->reindex($userId);
         } finally {
             $this->releaseMaintenanceLock($userId);
+        }
+    }
+
+    // Re-derives the full-text index for the rows the rebuild just replayed.
+    // Never throws: a stale index is recoverable and must not turn a finished
+    // rebuild into a failed one.
+    private function reindex(int $userId): void
+    {
+        if ($this->searchWriter === null) {
+            return;
+        }
+
+        $transactionIds = $this->db->connection()
+            ->table('transactions')
+            ->where('user_id', $userId)
+            ->orderBy('id')
+            ->pluck('id');
+
+        foreach ($transactionIds as $transactionId) {
+            try {
+                $this->searchWriter->upsertForTransaction((int) $transactionId, $userId);
+            } catch (\Throwable) {
+                // One unindexable row must not stop the rest being indexed.
+            }
         }
     }
 
