@@ -17,20 +17,27 @@
             </p>
         </header>
 
+        {{-- Import leads. A phone is the second device in almost every case:
+             the statements, the rules and the first month's tidying all happen
+             on a bigger screen, and this one is where the result is read. --}}
         <div class="space-y-3">
             <a
-                href="{{ route('signup') }}"
+                href="{{ route('mobile.import') }}"
                 class="inline-block w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
+            >
+                {{ Lang::get('mobile::welcome.import') }}
+            </a>
+
+            <a
+                href="{{ route('signup') }}"
+                class="inline-block w-full border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900"
             >
                 {{ Lang::get('mobile::welcome.create_account') }}
             </a>
 
-            <a
-                href="{{ route('mobile.import') }}"
-                class="inline-block w-full border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900"
-            >
-                {{ Lang::get('mobile::welcome.import') }}
-            </a>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+                {{ Lang::get('mobile::welcome.create_account_note') }}
+            </p>
         </div>
 
         <x-core::locale-switcher />
