@@ -7,6 +7,7 @@ namespace Modules\Mobile\Internal\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Modules\Core\Public\Services\UserDataPathService;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
@@ -14,9 +15,6 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 // FormData upload reached PHP as a multipart Content-Type over a zero-byte
 // php://input. The client encodes the file into JSON instead and this puts a
 // real UploadedFile back, so nothing behind it can tell the two apart.
-/**
- * @link ../../../../../.docs/features/mobile/architecture.md
- */
 final class EncodedUploadTransport
 {
     public const FIELD = '_beatrax_transport';
@@ -117,7 +115,14 @@ final class EncodedUploadTransport
             throw new HttpException(self::REJECTION, 'The upload did not survive the crossing intact.');
         }
 
-        $path = tempnam(sys_get_temp_dir(), 'beatrax-upload-');
+        // A 0700 directory under app storage, never sys_get_temp_dir(): these
+        // bytes are somebody's bank statement, and /tmp is world-traversable
+        // at 1777, so the name and size are readable even at 0600.
+        $dir = rtrim(UserDataPathService::appPath('tmp-uploads'), '/');
+        @mkdir($dir, 0700, true);
+        @chmod($dir, 0700);
+
+        $path = tempnam($dir, 'beatrax-upload-');
 
         if ($path === false || file_put_contents($path, $decoded) === false) {
             throw new HttpException(500, 'The upload could not be staged for parsing.');

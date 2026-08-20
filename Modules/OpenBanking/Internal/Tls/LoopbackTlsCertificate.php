@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace Modules\OpenBanking\Internal\Tls;
 
 use Modules\Core\Public\Enums\Duration;
+use Modules\Core\Public\Services\UserDataPathService;
 
-/**
- * @link ../../../../.docs/features/open-banking/architecture.md
- */
 final class LoopbackTlsCertificate
 {
     private const VALID_DAYS = 825;
@@ -157,7 +155,14 @@ final class LoopbackTlsCertificate
 
     private function writeOpensslConfig(): string
     {
-        $path = tempnam(sys_get_temp_dir(), 'ob-tls-openssl-');
+        // Beside the certificate this configures rather than in /tmp. The
+        // content is not secret, but one exempt call site is how the rule
+        // erodes, so there are none.
+        $dir = rtrim(UserDataPathService::appPath('tmp-tls'), '/');
+        @mkdir($dir, 0700, true);
+        @chmod($dir, 0700);
+
+        $path = tempnam($dir, 'ob-tls-openssl-');
         if ($path === false) {
             throw LoopbackTlsException::couldNotCreateConfig();
         }
