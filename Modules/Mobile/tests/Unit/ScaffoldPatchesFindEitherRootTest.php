@@ -45,9 +45,9 @@ it('resolves no scaffold path by hand any more', function (): void {
         $source = (string) file_get_contents($path);
 
         // Either literal is what pinned them to this repository's layout.
-        if (str_contains($source, "/../mobile-app/nativephp/")
-            || str_contains($source, "/mobile-app/nativephp/")
-            || str_contains($source, "/../mobile-app/vendor/")) {
+        if (str_contains($source, '/../mobile-app/nativephp/')
+            || str_contains($source, '/mobile-app/nativephp/')
+            || str_contains($source, '/../mobile-app/vendor/')) {
             $hardcoded[] = $script;
         }
 

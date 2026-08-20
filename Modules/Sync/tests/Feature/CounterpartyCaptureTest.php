@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Modules\Core\Models\User;
-use Carbon\CarbonImmutable;
 use Modules\Community\Public\Services\ClassificationRuleProvider;
+use Modules\Core\Models\User;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Contracts\CounterpartyResolver;
 use Modules\Ledger\Models\Account;

@@ -17,12 +17,13 @@ declare(strict_types=1);
  * outcome was an error, so it is no longer offered.
  */
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Mobile\Internal\Http\Livewire\MobilePairingScan;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 it('submits a typed code without asking the container for the QR payload', function (): void {
     $blade = (string) file_get_contents(

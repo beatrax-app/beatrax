@@ -7,6 +7,7 @@ namespace Modules\Sync\Internal\OpLog;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Collection;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Sync\Internal\Config\CoveredTableOrder;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
@@ -122,7 +123,7 @@ final readonly class OpLogBackfiller
     // by pk. Asked per chunk rather than per table so neither the result set
     // nor the IN list grows with the size of the table.
     /**
-     * @param  \Illuminate\Support\Collection<int, \stdClass>  $rows
+     * @param  Collection<int, \stdClass>  $rows
      * @return array<string, true>
      */
     private function alreadyCaptured(Connection $connection, string $table, int $userId, $rows): array

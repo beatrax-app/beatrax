@@ -5,13 +5,13 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
-use Modules\Sync\Public\Events\EntityMutated;
 use Modules\Categorization\Public\Events\TransactionCategorized;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
+use Modules\Sync\Public\Events\EntityMutated;
 
 beforeEach(function (): void {
     $this->user = User::create([
