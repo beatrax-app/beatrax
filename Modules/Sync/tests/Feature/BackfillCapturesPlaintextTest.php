@@ -150,7 +150,7 @@ it('captures the plaintext of an encrypted column, not a second layer of ciphert
     $codec = $this->app->make(SensitiveColumnCodec::class);
 
     $user = backfillCryptoUser();
-    $keyring->generateAndPersist($user->id, $session);
+    $epoch = $keyring->generateAndPersist($user->id, $session);
 
     // Written exactly as the real create path writes it: encrypted at rest
     // under the COLUMN associated data before it touches disk.
@@ -178,17 +178,19 @@ it('captures the plaintext of an encrypted column, not a second layer of ciphert
         ->where('pk', (string) $cpId)
         ->first();
 
+    // Epoch ids are minted rather than counted, so the op must carry the id
+    // this keyring actually holds — not the number it used to start from.
     expect($entry)->not->toBeNull()
-        ->and((int) $entry->gdk_epoch)->toBe(1);
+        ->and((int) $entry->gdk_epoch)->toBe($epoch->epochId);
 
     /** @var OpLogFieldCrypto $crypto */
     $crypto = $this->app->make(OpLogFieldCrypto::class);
-    $epochKey = sodium_hex2bin($keyring->loadKeyring($user->id, $session)->keyFor(1) ?? '');
+    $epochKey = sodium_hex2bin($keyring->loadKeyring($user->id, $session)->keyFor($epoch->epochId) ?? '');
 
     $once = $crypto->decrypt(
         (string) $entry->value,
         $epochKey,
-        "counterparties:{$cpId}:display_name:1",
+        "counterparties:{$cpId}:display_name:{$epoch->epochId}",
     );
 
     // ONE unwrap must land on the name. Before the fix this yielded the
@@ -308,4 +310,38 @@ it('leaves a sensitive column readable after a peer has replayed it', function (
         'MijnWerkgever BV',
         'one unwrap did not land on the name — the column is wrapped more than once'
     );
+});
+
+it('refuses to wrap a sensitive column that is already ciphertext', function (): void {
+    /*
+     * A column wrapped twice decrypts once to base64 and renders as a blob of
+     * characters on the main screen — and the read side cannot tell that from
+     * a value it merely lacks the key for, so it stays there looking like
+     * corruption with nothing reporting it.
+     *
+     * Every write of a sensitive column funnels through encryptValue(), which
+     * makes it the one place a second wrapper can be refused outright.
+     */
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+    /** @var GdkKeyringService $keyring */
+    $keyring = $this->app->make(GdkKeyringService::class);
+    /** @var SensitiveColumnCodec $codec */
+    $codec = $this->app->make(SensitiveColumnCodec::class);
+
+    $user = backfillCryptoUser();
+    $userId = (int) $user->id;
+    $keyring->generateAndPersist($userId, $session);
+
+    $once = $codec->encryptValue('transactions', 'counterparty_name', 'MijnWerkgever BV', $userId, $session);
+    expect($once)->not->toBe('MijnWerkgever BV', 'the fixture is not encrypted at all');
+
+    $twice = $codec->encryptValue('transactions', 'counterparty_name', $once, $userId, $session);
+
+    expect($twice)->toBe($once, 'a second wrapper went on and the column now reads as base64');
+
+    $read = $codec->decryptValue('transactions', 'counterparty_name', $twice, $userId, $session);
+
+    expect($read['decrypted'])->toBeTrue();
+    expect($read['value'])->toBe('MijnWerkgever BV', 'one unwrap did not land on the name');
 });

@@ -28,6 +28,7 @@ return [
     'foot_navigate' => 'gezin',
     'foot_select' => 'seç',
     'foot_close' => 'kapat',
+    'close_aria' => 'Aramayı kapat',
     'foot_try' => 'Dene',
     'results_suffix' => ' sonuç',
 ];

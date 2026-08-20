@@ -25,6 +25,8 @@ return [
     'no_entries' => 'Aucune saisie manuelle pour l\'instant.',
     'delete_entry' => 'Supprimer la saisie',
     'delete' => 'Supprimer',
+    'delete_confirm' => 'Supprimer cette écriture ?',
+    'delete_keep' => 'Conserver',
 
     'errors' => [
         'amount_positive' => 'Saisis un montant supérieur à zéro.',

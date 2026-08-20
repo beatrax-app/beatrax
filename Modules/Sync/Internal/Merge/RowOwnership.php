@@ -23,12 +23,10 @@ final readonly class RowOwnership
         'rule_actions' => ['rule_id', 'categorization_rules'],
     ];
 
-    // Owner-scoped references on covered tables. Sync carries a row's local
-    // autoincrement id as its cross-device identity, so an id minted on one
-    // device can name a completely different row on another — a phone whose
-    // accounts ran 1,2,3 created id 4, and on the desktop id 4 already
-    // belonged to the OTHER household member. The transaction arrived and
-    // pointed at their account, silently.
+    // Owner-scoped references on covered tables. A row's local autoincrement
+    // id is its cross-device identity, so an id minted on one device can name
+    // a different row on another: a phone created accounts id 4, and on the
+    // desktop id 4 already belonged to the other household member.
     private const OWNED_REFERENCES = [
         'transactions' => [
             'account_id' => 'accounts',
@@ -127,7 +125,8 @@ final readonly class RowOwnership
         foreach (self::OWNED_REFERENCES[$table] ?? [] as $column => $referencedTable) {
             $referenced = $payload[$column] ?? null;
 
-            // A null reference is the column being unset, not a bad one.
+            // A null reference is the column being unset rather than a bad
+            // id, so it is not something to refuse the whole row over.
             if ($referenced === null) {
                 continue;
             }

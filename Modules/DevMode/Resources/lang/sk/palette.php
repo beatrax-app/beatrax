@@ -28,6 +28,7 @@ return [
     'foot_navigate' => 'pohyb',
     'foot_select' => 'výber',
     'foot_close' => 'zavrieť',
+    'close_aria' => 'Zavrieť hľadanie',
     'foot_try' => 'Skús',
     'results_suffix' => ' výsledkov',
 ];

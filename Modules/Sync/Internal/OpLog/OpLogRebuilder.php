@@ -109,7 +109,8 @@ final class OpLogRebuilder
             try {
                 $this->searchWriter->upsertForTransaction((int) $transactionId, $userId);
             } catch (\Throwable) {
-                // One unindexable row must not stop the rest being indexed.
+                // One unindexable row must not stop the rest being indexed:
+                // a stale index recovers, a half-indexed sweep does not.
             }
         }
     }

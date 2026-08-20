@@ -28,6 +28,7 @@ return [
     'foot_navigate' => 'navigare',
     'foot_select' => 'selectare',
     'foot_close' => 'închide',
+    'close_aria' => 'Închide căutarea',
     'foot_try' => 'Încearcă',
     'results_suffix' => ' rezultate',
 ];

@@ -28,6 +28,7 @@ return [
     'foot_navigate' => 'navigeren',
     'foot_select' => 'selecteren',
     'foot_close' => 'sluiten',
+    'close_aria' => 'Zoeken sluiten',
     'foot_try' => 'Probeer',
     'results_suffix' => ' resultaten',
 ];

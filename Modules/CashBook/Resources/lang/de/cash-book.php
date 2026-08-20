@@ -25,6 +25,8 @@ return [
     'no_entries' => 'Noch keine manuellen Einträge.',
     'delete_entry' => 'Eintrag löschen',
     'delete' => 'Löschen',
+    'delete_confirm' => 'Diesen Eintrag löschen?',
+    'delete_keep' => 'Behalten',
 
     'errors' => [
         'amount_positive' => 'Gib einen Betrag größer als null ein.',

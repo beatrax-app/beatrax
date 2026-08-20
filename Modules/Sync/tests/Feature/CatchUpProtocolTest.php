@@ -54,7 +54,42 @@ function insertOpLogRow(array $attrs): void
         'recorded_at' => now()->toDateTimeString(),
     ];
 
-    DB::table('op_log_entries')->insert(array_merge($defaults, $attrs));
+    $row = array_merge($defaults, $attrs);
+
+    // Register the author the way production does. A catch-up only ships
+    // entries whose device is still confirmed, because one signed by a device
+    // the registry has forgotten cannot be verified by anybody — an
+    // unregistered writer here would simply never be sent.
+    registerOpLogAuthor((int) $row['user_id'], (string) $row['device_id']);
+
+    DB::table('op_log_entries')->insert($row);
+}
+
+function registerOpLogAuthor(int $userId, string $deviceId): void
+{
+    $exists = DB::table('device_registry')
+        ->where('user_id', $userId)
+        ->where('device_id', $deviceId)
+        ->exists();
+
+    if ($exists) {
+        return;
+    }
+
+    DB::table('device_registry')->insert([
+        'user_id' => $userId,
+        'device_id' => $deviceId,
+        'name' => 'Catch-up fixture',
+        'ed25519_public_key_hex' => str_repeat('11', 32),
+        'x25519_public_key_hex' => str_repeat('22', 32),
+        'safety_number_words' => '',
+        'is_self' => 0,
+        'paired_at' => '2026-06-14T00:00:00+00:00',
+        'confirmed_at' => '2026-06-14T00:00:00+00:00',
+        'last_seen_at' => null,
+        'created_at' => '2026-06-14T00:00:00+00:00',
+        'updated_at' => '2026-06-14T00:00:00+00:00',
+    ]);
 }
 
 it('catch-up request correctly identifies ops missing from the peer (HLC watermark comparison)', function (): void {
@@ -149,6 +184,10 @@ it('catch-up batches large op sets into ≤ 64KB frames (backpressure guard)', f
             'recorded_at' => now()->toDateTimeString(),
         ];
     }
+    // Bulk insert bypasses insertOpLogRow(), so the author is registered here:
+    // a catch-up only ships entries whose device is still confirmed.
+    registerOpLogAuthor(1, 'device-a');
+
     // Chunked to avoid SQLite parameter limit.
     foreach (array_chunk($rows, 500) as $chunk) {
         DB::table('op_log_entries')->insert($chunk);
@@ -206,4 +245,33 @@ it('catch-up is user-scoped: ops from other users are never included in the CATC
 
     expect($entries2)->toHaveCount(1, 'catch-up for user 2 must not bleed user 1 ops (I2 isolation)');
     expect($entries2[0]->userId)->toBe(2, 'returned entry must belong to user 2');
+});
+
+it('never ships an entry signed by a device the registry has forgotten', function (): void {
+    /*
+     * An entry signed by a device no longer in the registry cannot be verified
+     * by anyone, so sending it only fills the peer's log with drops. One real
+     * import shipped 12,948 entries and the phone refused 12,476 of them — and
+     * because the progress count is computed from survivors, the screen said
+     * "This device is synced" over the loss.
+     */
+    insertOpLogRow(['device_id' => 'device-live', 'pk' => '1', 'hlc_l' => 1_718_000_000_100]);
+    insertOpLogRow(['device_id' => 'device-retired', 'pk' => '2', 'hlc_l' => 1_718_000_000_200]);
+
+    // The identity is retired the way a removal retires it: the row goes.
+    DB::table('device_registry')->where('device_id', 'device-retired')->delete();
+
+    $framer = new TransportFramer;
+    $exchanger = new PeerCatchUpExchanger(db: app(DatabaseManager::class), framer: $framer);
+
+    $entries = [];
+    foreach ($exchanger->opsAfterWatermark(userId: 1, peerHlcL: 0, peerHlcC: 0) as $frame) {
+        foreach ($framer->decode($frame) as $entry) {
+            $entries[] = $entry->deviceId;
+        }
+    }
+
+    expect($entries)->toContain('device-live');
+    expect(in_array('device-retired', $entries, true))
+        ->toBeFalse('an entry no peer can verify was put on the wire anyway');
 });

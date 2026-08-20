@@ -25,6 +25,8 @@ return [
     'no_entries' => 'Még nincs kézi tétel.',
     'delete_entry' => 'Tétel törlése',
     'delete' => 'Törlés',
+    'delete_confirm' => 'Törli ezt a tételt?',
+    'delete_keep' => 'Megtartás',
 
     'errors' => [
         'amount_positive' => 'Adj meg nullánál nagyobb összeget.',

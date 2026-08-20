@@ -28,6 +28,7 @@ return [
     'foot_navigate' => 'navigera',
     'foot_select' => 'välj',
     'foot_close' => 'stäng',
+    'close_aria' => 'Stäng sökningen',
     'foot_try' => 'Testa',
     'results_suffix' => ' resultat',
 ];

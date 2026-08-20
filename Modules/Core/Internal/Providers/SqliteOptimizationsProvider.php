@@ -13,9 +13,8 @@ use Illuminate\Support\ServiceProvider;
  */
 final class SqliteOptimizationsProvider extends ServiceProvider
 {
-    // How long a blocked writer waits for the lock before giving up. Applied
-    // to any connection that does not configure its own — the desktop runs
-    // sync:serve, relay:serve, a queue worker and the app server against one
+    // How long a blocked writer waits before giving up, for a connection that
+    // does not configure its own. The desktop runs four processes against one
     // SQLite file, and at five seconds the relay lost whole pairing frames to
     // "database is locked" while the app server held a write.
     private const int DEFAULT_BUSY_TIMEOUT_MS = 30_000;

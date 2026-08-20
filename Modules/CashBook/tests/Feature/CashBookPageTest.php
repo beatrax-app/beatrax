@@ -85,9 +85,26 @@ it('deletes only the user\'s own manual entry', function (): void {
 
     $id = (int) DB::table('transactions')->where('user_id', $this->user->id)->where('source_format', 'manual')->value('id');
 
-    $component->call('delete', $id);
+    // Two steps now: deleting fired on the first tap with no confirmation and
+    // no undo, on a row whose only other control is an amount.
+    $component->call('confirmDelete', $id)->call('delete', $id);
 
     expect(DB::table('transactions')->where('id', $id)->exists())->toBeFalse();
+});
+
+it('does not delete an entry nobody was asked about', function (): void {
+    $component = Livewire::actingAs($this->user)
+        ->test(CashBookPage::class)
+        ->set('amount', '9,99')->set('counterparty', 'Market')->set('date', '2026-06-05')->call('add');
+
+    $id = (int) DB::table('transactions')->where('user_id', $this->user->id)->where('source_format', 'manual')->value('id');
+
+    // A delete arriving for anything other than the entry the confirm strip is
+    // open for is a client that skipped the question.
+    $component->call('delete', $id);
+
+    expect(DB::table('transactions')->where('id', $id)->exists())
+        ->toBeTrue('an unconfirmed delete went through');
 });
 
 it('records two identical same-day entries without silently dropping the second', function (): void {

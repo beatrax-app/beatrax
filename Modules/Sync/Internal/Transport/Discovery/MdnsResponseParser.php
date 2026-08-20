@@ -13,16 +13,16 @@ namespace Modules\Sync\Internal\Transport\Discovery;
  */
 final class MdnsResponseParser
 {
-    // RFC 1035 §4.1.1: id, flags, then the four section counts, two bytes each.
+    // Wire-format sizes, all RFC 1035 except the SRV preamble (RFC 2782):
+    // the header is an id, flags and four section counts; a question is a name
+    // then its type and class; a record adds a 32-bit TTL and an rdlength; and
+    // an SRV opens its rdata with a priority, a weight and a port.
     private const int HEADER_BYTES = 12;
 
-    // A question is a name followed by its type and class.
     private const int QUESTION_TAIL_BYTES = 4;
 
-    // Every record carries type, class, a 32-bit TTL and rdlength before rdata.
     private const int RECORD_PREAMBLE_BYTES = 10;
 
-    // RFC 2782: an SRV's rdata opens with priority, weight and port.
     private const int SRV_PREAMBLE_BYTES = 6;
 
     private const int IPV4_BYTES = 4;
@@ -215,7 +215,8 @@ final class MdnsResponseParser
         $table->recordAddress($this->readName($datagram, $cursor), $sender);
     }
 
-    // TXT rdata is a sequence of length-prefixed strings, one per key=value.
+    // TXT rdata is a sequence of length-prefixed strings, one per key=value
+    // pair, so the wanted key is found by walking them rather than parsing.
     private function deviceIdFromText(string $rdata): ?string
     {
         $cursor = 0;

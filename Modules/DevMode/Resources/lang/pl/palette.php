@@ -28,6 +28,7 @@ return [
     'foot_navigate' => 'nawigacja',
     'foot_select' => 'wybór',
     'foot_close' => 'zamknij',
+    'close_aria' => 'Zamknij wyszukiwanie',
     'foot_try' => 'Spróbuj',
     'results_suffix' => ' wyników',
 ];

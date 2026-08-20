@@ -76,6 +76,16 @@
                         style="display:none"
                     >↻</span>
 
+                    {{-- On a phone the sheet covers the scrim completely, so
+                         the scrim's click.self never fires and the only way out
+                         was a key the device does not have. --}}
+                    <x-core::emoji-action
+                        :label="Lang::get('dev::palette.close_aria')"
+                        class="md:hidden order-last"
+                        x-on:click="close()"
+                        data-testid="palette-close"
+                    >✖️</x-core::emoji-action>
+
                     <div class="flex-1 relative">
                         <input
                             x-ref="input"

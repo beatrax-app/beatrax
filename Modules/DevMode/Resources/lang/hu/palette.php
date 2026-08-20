@@ -28,6 +28,7 @@ return [
     'foot_navigate' => 'navigálás',
     'foot_select' => 'kiválasztás',
     'foot_close' => 'bezárás',
+    'close_aria' => 'Keresés bezárása',
     'foot_try' => 'Próbáld',
     'results_suffix' => ' találat',
 ];

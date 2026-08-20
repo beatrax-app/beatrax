@@ -28,6 +28,7 @@ return [
     'foot_navigate' => 'navigate',
     'foot_select' => 'select',
     'foot_close' => 'close',
+    'close_aria' => 'Close search',
     'foot_try' => 'Try',
     'results_suffix' => ' results',
 ];

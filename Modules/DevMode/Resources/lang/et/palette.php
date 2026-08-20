@@ -28,6 +28,7 @@ return [
     'foot_navigate' => 'liigu',
     'foot_select' => 'vali',
     'foot_close' => 'sulge',
+    'close_aria' => 'Sulge otsing',
     'foot_try' => 'Proovi',
     'results_suffix' => ' tulemust',
 ];

@@ -265,14 +265,10 @@ final readonly class OpLogEntryApplier
         ) >= 0;
     }
 
-    // A CreateRow needs every required column present; an incomplete set is
-    // quarantined (synthesized from the first field's first entry) rather than
-    // written as a partial row.
-    //
-    // Except the ones buildCreatePayload() seeds itself. A table naming `id`
-    // as required asked for a field the backfill deliberately never emits —
-    // the row's identity travels as the op's pk — so every row of that table
-    // was discarded as incomplete on arrival.
+    // A CreateRow needs every required column, minus the ones
+    // buildCreatePayload() seeds itself: a table naming `id` as required asked
+    // for a field the backfill never emits, so every row of it was discarded
+    // as incomplete on arrival rather than written.
     /**
      * @param  array<string, list<OpLogEntry>>  $fields
      */

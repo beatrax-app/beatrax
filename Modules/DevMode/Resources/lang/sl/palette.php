@@ -28,6 +28,7 @@ return [
     'foot_navigate' => 'premikanje',
     'foot_select' => 'izbira',
     'foot_close' => 'zapiranje',
+    'close_aria' => 'Zapri iskanje',
     'foot_try' => 'Poskusi',
     'results_suffix' => ' zadetkov',
 ];

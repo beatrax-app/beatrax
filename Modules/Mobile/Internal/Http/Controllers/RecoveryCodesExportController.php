@@ -11,16 +11,12 @@ use Modules\Core\Public\Services\CurrentUser;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Identity\RecoveryCodesExportBridge;
 
-// Hands the pending recovery codes to the OS share sheet and says whether it
-// worked.
-//
-// A GET with no CSRF token on purpose: the screen it serves is the one that
-// shows the codes once, and a Livewire round-trip from there has already been
-// seen to 419 on device and take the codes with it. Possession of the session
-// holding the codes is the gate — there is nothing here another session could
-// reach, and the only effect is a share sheet on the user's own device.
+// Hands the pending recovery codes to the OS share sheet, and says whether it
+// worked. A GET with no CSRF token on purpose: a Livewire round-trip from the
+// screen that shows the codes once has already been seen to 419 on device and
+// take them with it. Holding the session that holds the codes is the gate.
 /**
- * @link ../../../../.docs/features/mobile/architecture.md
+ * @link ../../../../../.docs/features/mobile/architecture.md
  */
 final class RecoveryCodesExportController
 {

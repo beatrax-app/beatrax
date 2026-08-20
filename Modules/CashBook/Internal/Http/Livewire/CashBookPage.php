@@ -43,6 +43,10 @@ final class CashBookPage extends Component
 
     public string $error = '';
 
+    // Which entry is asking. Deleting fired on the first tap with no
+    // confirmation and no undo, on a row whose only other control is an amount.
+    public ?int $deletingEntryId = null;
+
     public function mount(Clock $clock): void
     {
         $this->date = $clock->now()->toDateString();
@@ -87,8 +91,26 @@ final class CashBookPage extends Component
         $this->toast(Lang::get('cashbook::cash-book.toast.added'));
     }
 
+    public function confirmDelete(int $transactionId): void
+    {
+        $this->deletingEntryId = $transactionId;
+    }
+
+    public function cancelDelete(): void
+    {
+        $this->deletingEntryId = null;
+    }
+
     public function delete(int $transactionId, CurrentUser $currentUser, DatabaseManager $db): void
     {
+        // Only the entry that was asked about. A delete arriving for anything
+        // else is a client that skipped the question.
+        if ($this->deletingEntryId !== $transactionId) {
+            return;
+        }
+
+        $this->deletingEntryId = null;
+
         $db->connection()->table('transactions')
             ->where('id', $transactionId)
             ->where('user_id', $currentUser->user()->id)

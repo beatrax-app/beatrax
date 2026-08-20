@@ -8,13 +8,10 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Native\Mobile\Facades\Share;
 use Throwable;
 
-// Hands the recovery codes to the OS as a file the user can keep.
-//
-// The screen used to do this with a blob URL and an <a download>. The Android
-// WebView drops that click silently — no file, no error, no console entry —
-// while the screen printed "Saved to your downloads." about codes that are
-// never shown again. Going through the OS share sheet is the route that
-// exists on a phone, and it reports whether it happened.
+// Hands the recovery codes to the OS as a file the user can keep. A blob URL
+// and an <a download> is dropped silently by the Android webview — no file, no
+// error, no console entry — while the screen claimed it had saved codes that
+// are never shown again. The share sheet is the route a phone actually has.
 /**
  * @link ../../../../.docs/features/mobile/architecture.md
  */

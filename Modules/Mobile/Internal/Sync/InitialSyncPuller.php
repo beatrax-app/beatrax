@@ -53,14 +53,10 @@ final class InitialSyncPuller
             : $this->resolvePeerDeviceId($userId, $identity->deviceId);
 
         if ($peerDeviceId === null) {
-            // Locked / no key / sync never enabled, or no confirmed peer
-            // yet - skip entirely. Data stays encrypted; the cursor is left
-            // untouched.
-            //
-            // Except when a peer we ONCE confirmed has withdrawn it: that
-            // reads identically here, and reporting it as "waiting for the
-            // other device" left the screen turning forever on a pairing that
-            // no longer exists and cannot come back on its own.
+            // Locked / no key / never enabled / no confirmed peer — skip.
+            // A peer that ONCE confirmed and withdrew it reads identically
+            // here, and calling that "waiting for the other device" left the
+            // screen turning forever on a pairing that cannot come back.
             return [
                 ...$this->progress($userId),
                 'blocked' => $this->peerRevokedUs($userId) ? SyncBlockedReason::Revoked : SyncBlockedReason::NoPeer,

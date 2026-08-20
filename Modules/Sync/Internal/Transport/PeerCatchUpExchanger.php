@@ -78,6 +78,16 @@ final readonly class PeerCatchUpExchanger
         $rows = $this->db->connection()
             ->table('op_log_entries')
             ->where('user_id', $userId)
+            // An entry signed by a device the registry no longer holds cannot
+            // be verified by anyone, so sending it only wastes the wire and
+            // fills the peer's log with drops: one import shipped 12,948
+            // entries and the phone refused 12,476 of them.
+            ->whereIn('device_id', function (Builder $authors) use ($userId): void {
+                $authors->select('device_id')
+                    ->from('device_registry')
+                    ->where('user_id', $userId)
+                    ->whereNotNull('confirmed_at');
+            })
             ->where(function (Builder $q) use ($peerHlcL, $peerHlcC): void {
                 $q->where('hlc_l', '>', $peerHlcL)
                     ->orWhere(function (Builder $q2) use ($peerHlcL, $peerHlcC): void {

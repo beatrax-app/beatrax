@@ -28,6 +28,7 @@ return [
     'foot_navigate' => 'навигация',
     'foot_select' => 'избор',
     'foot_close' => 'затвори',
+    'close_aria' => 'Затвори търсенето',
     'foot_try' => 'Опитай',
     'results_suffix' => ' резултата',
 ];

@@ -28,6 +28,7 @@ return [
     'foot_navigate' => 'pārvietoties',
     'foot_select' => 'izvēlēties',
     'foot_close' => 'aizvērt',
+    'close_aria' => 'Aizvērt meklēšanu',
     'foot_try' => 'Mēģiniet',
     'results_suffix' => ' rezultāti',
 ];

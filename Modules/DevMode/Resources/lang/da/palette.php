@@ -28,6 +28,7 @@ return [
     'foot_navigate' => 'navigér',
     'foot_select' => 'vælg',
     'foot_close' => 'luk',
+    'close_aria' => 'Luk søgning',
     'foot_try' => 'Prøv',
     'results_suffix' => ' resultater',
 ];

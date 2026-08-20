@@ -28,6 +28,7 @@ return [
     'foot_navigate' => 'siirry',
     'foot_select' => 'valitse',
     'foot_close' => 'sulje',
+    'close_aria' => 'Sulje haku',
     'foot_try' => 'Kokeile',
     'results_suffix' => ' tulosta',
 ];

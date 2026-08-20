@@ -98,11 +98,17 @@ final class PairingFlowModal extends Component
 
     // The component is rendered unconditionally (always in the DOM) so the
     // hosting <flux:modal wire:model="open"> sees a real false->true
-    // transition — Flux only shows the dialog on that transition. Reset the
-    // flow so a reopened modal never resumes a stale/cancelled handshake.
+    // transition — Flux only shows the dialog on that transition. The flow is
+    // reset first so a reopened modal never resumes a cancelled handshake,
+    // then a still-live one is picked back up below.
     #[On('open-pairing-modal')]
-    public function openModal(CurrentUser $currentUser, Dispatcher $events): void
-    {
+    public function openModal(
+        CurrentUser $currentUser,
+        Dispatcher $events,
+        PairingGateway $gateway,
+        PairingRelayCourier $relayCourier,
+        LoggerInterface $logger,
+    ): void {
         // A daemon started while the app was locked holds no transport keypair
         // and rejects every handshake. Opening this modal is an unlocked,
         // authenticated moment, and exactly when the listener must be ready.
@@ -119,6 +125,39 @@ final class PairingFlowModal extends Component
         $this->side = '';
         $this->safetyWords = [];
         $this->open = true;
+
+        $this->resumeInFlight($currentUser->user()->id, $gateway, $relayCourier, $logger);
+    }
+
+    // Picks up a handshake that is still live. This modal's poll is the only
+    // thing that drains the relay, so a desktop that confirmed first and closed
+    // it left the phone's PAIR_CONFIRM sitting in the mailbox undelivered —
+    // and reopening started at step one instead of finishing.
+    private function resumeInFlight(
+        int $userId,
+        PairingGateway $gateway,
+        PairingRelayCourier $relayCourier,
+        LoggerInterface $logger,
+    ): void {
+        try {
+            $relayCourier->drainAndApply($userId);
+        } catch (Throwable $e) {
+            $logger->warning('PairingFlowModal: relay drain failed while resuming.', [
+                'user_id' => $userId,
+                'exception' => $e::class,
+            ]);
+        }
+
+        $inFlight = $gateway->inFlightFor($userId);
+
+        if ($inFlight === null) {
+            return;
+        }
+
+        $this->pairingTokenId = (string) $inFlight['id'];
+        $this->safetyWords = $inFlight['safety_words'];
+        $this->side = 'initiator';
+        $this->step = 'confirm';
     }
 
     // Loads the identity, issues a token, builds the QR + word-code, and

@@ -28,6 +28,7 @@ return [
     'foot_navigate' => 'πλοήγηση',
     'foot_select' => 'επιλογή',
     'foot_close' => 'κλείσιμο',
+    'close_aria' => 'Κλείσιμο αναζήτησης',
     'foot_try' => 'Δοκίμασε',
     'results_suffix' => ' αποτελέσματα',
 ];
