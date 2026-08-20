@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Core\Providers;
 
 use App\Models\User;
+use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Internal\AutoUpdate\HttpPublisherManifestFetcher;
@@ -25,6 +27,7 @@ use Modules\Core\Internal\Http\Livewire\NetWorthCard;
 use Modules\Core\Internal\Http\Livewire\SettingsPage;
 use Modules\Core\Internal\Http\Livewire\SpendingTrendCard;
 use Modules\Core\Internal\Http\Livewire\SystemAlertsBanner;
+use Modules\Core\Internal\Listeners\ClearGuardBetweenJobs;
 use Modules\Core\Internal\Providers\HealthCheckServiceProvider;
 use Modules\Core\Internal\Providers\SqliteOptimizationsProvider;
 use Modules\Core\Models\User as CoreUser;
@@ -48,9 +51,6 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\AppChromeResolver;
 use Modules\Core\Public\Support\LoadsModuleResources;
 
-/**
- * @link ../../../.docs/features/core/architecture.md
- */
 final class CoreServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
@@ -111,6 +111,12 @@ final class CoreServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             set_time_limit(0);
         }
+
+        // Whoever a queued job binds must not outlive it. Registered here
+        // rather than left to each job's own discipline: a job that forgets is
+        // indistinguishable from one that succeeds, and the damage lands on
+        // the NEXT job, scoped to the wrong user.
+        $this->app->make(Dispatcher::class)->listen(JobProcessing::class, ClearGuardBetweenJobs::class);
 
         $this->loadModuleResources('core');
         $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
