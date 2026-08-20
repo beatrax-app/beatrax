@@ -154,7 +154,7 @@
                                     x-data="{ copied: false }"
                                     x-on:click="
                                         try {
-                                            await navigator.clipboard.writeText(@js($copyPayload));
+                                            await window.beatraxCopy(@js($copyPayload));
                                             copied = true;
                                             setTimeout(() => copied = false, 1500);
                                         } catch (e) {}

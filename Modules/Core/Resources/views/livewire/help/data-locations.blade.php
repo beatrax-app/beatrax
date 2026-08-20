@@ -28,7 +28,7 @@
     centralised and theme-token-driven.
 
     The copy-to-clipboard buttons live as a per-row Alpine island so
-    no round-trip is needed; the `navigator.clipboard.writeText`
+    no round-trip is needed; the `window.beatraxCopy()`
     promise is best-effort (some browsers gate it on https + user
     activation, both of which the local dev environment + a button
     click satisfy).
@@ -53,7 +53,7 @@
                 type="button"
                 aria-label="{{ Lang::get('core::help.copy_sqlite_aria') }}"
                 class="copy-path-btn"
-                x-on:click="navigator.clipboard.writeText('{{ $sqlitePath }}').then(() => { copied = true; setTimeout(() => copied = false, 1500); }).catch(() => {})"
+                x-on:click="window.beatraxCopy('{{ $sqlitePath }}').then((ok) => { copied = ok; setTimeout(() => copied = false, 1500); })"
                 x-text="copied ? {{ Js::from(Lang::get('core::help.copied')) }} : {{ Js::from(Lang::get('core::help.copy')) }}"
             >{{ Lang::get('core::help.copy') }}</button>
         </div>
@@ -65,7 +65,7 @@
                 type="button"
                 aria-label="{{ Lang::get('core::help.copy_secrets_aria') }}"
                 class="copy-path-btn"
-                x-on:click="navigator.clipboard.writeText('{{ $secretsPath }}').then(() => { copied = true; setTimeout(() => copied = false, 1500); }).catch(() => {})"
+                x-on:click="window.beatraxCopy('{{ $secretsPath }}').then((ok) => { copied = ok; setTimeout(() => copied = false, 1500); })"
                 x-text="copied ? {{ Js::from(Lang::get('core::help.copied')) }} : {{ Js::from(Lang::get('core::help.copy')) }}"
             >{{ Lang::get('core::help.copy') }}</button>
         </div>
@@ -77,7 +77,7 @@
                 type="button"
                 aria-label="{{ Lang::get('core::help.copy_caches_aria') }}"
                 class="copy-path-btn"
-                x-on:click="navigator.clipboard.writeText('{{ $cachesPath }}').then(() => { copied = true; setTimeout(() => copied = false, 1500); }).catch(() => {})"
+                x-on:click="window.beatraxCopy('{{ $cachesPath }}').then((ok) => { copied = ok; setTimeout(() => copied = false, 1500); })"
                 x-text="copied ? {{ Js::from(Lang::get('core::help.copied')) }} : {{ Js::from(Lang::get('core::help.copy')) }}"
             >{{ Lang::get('core::help.copy') }}</button>
         </div>

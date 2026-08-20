@@ -497,22 +497,14 @@
                     async copyLine(line) {
                         const text = this.renderLineForClipboard(line);
                         try {
-                            if (navigator.clipboard && navigator.clipboard.writeText) {
-                                await navigator.clipboard.writeText(text);
-                            } else {
-                                // Fallback for old Electron / non-secure contexts:
-                                // a temporary textarea + execCommand('copy').
-                                // The packaged app runs file:// in some webview
-                                // contexts where navigator.clipboard is gated.
-                                const ta = document.createElement('textarea');
-                                ta.value = text;
-                                ta.style.position = 'fixed';
-                                ta.style.opacity = '0';
-                                document.body.appendChild(ta);
-                                ta.focus();
-                                ta.select();
-                                try { document.execCommand('copy'); } finally { document.body.removeChild(ta); }
+                            // This fallback used to live here alone; it is now
+                            // window.beatraxCopy(), because every other copy
+                            // button in the app needed the same thing and had
+                            // a bare navigator.clipboard guard instead.
+                            if (! await window.beatraxCopy(text)) {
+                                throw new Error('clipboard unavailable');
                             }
+
                             line.copiedAt = Date.now();
                             // Revert the ✓ label after the user has had time
                             // to register it. Captured `line` reference is the

@@ -28,6 +28,7 @@ return [
     'recovery_download' => 'Lataa .txt-tiedostona',
     'recovery_copy' => 'Kopioi koodit',
     'recovery_copied' => 'Kopioitu',
+    'recovery_copy_failed' => 'Kopiointi ei onnistunut. Kirjoita koodit muistiin.',
     'recovery_saved' => 'Tallennettu lataustesi joukkoon.',
     'recovery_confirm' => 'Olen tallentanut nämä koodit turvalliseen paikkaan.',
     'continue_to_pairing' => 'Jatka laiteparin muodostukseen',

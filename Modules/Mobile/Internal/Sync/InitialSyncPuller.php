@@ -165,10 +165,9 @@ final class InitialSyncPuller
             : max($cursor['records_expected'] ?? 0, $recordsApplied);
 
         // An import exists because another device HAS data, so finishing one
-        // with nothing applied is a defect somewhere upstream, not a quiet
-        // success. Nothing else says so: the screen reports complete and the
-        // records line reads "0 of 0", which is indistinguishable from a sync
-        // that genuinely had nothing to carry.
+        // with nothing applied is a defect upstream, not a quiet success.
+        // Nothing else says so: "0 of 0" on a complete screen is
+        // indistinguishable from a sync that had nothing to carry.
         if ($isComplete && $recordsApplied === 0) {
             $this->logger->warning('InitialSyncPuller: import completed without applying a single record.', [
                 'user_id' => $userId,

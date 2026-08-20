@@ -28,6 +28,7 @@ return [
     'recovery_download' => 'Downloaden als .txt',
     'recovery_copy' => 'Codes kopiëren',
     'recovery_copied' => 'Gekopieerd',
+    'recovery_copy_failed' => 'Kopiëren is niet gelukt. Schrijf de codes op.',
     'recovery_saved' => 'Opgeslagen in je downloads.',
     'recovery_confirm' => 'Ik heb deze codes op een veilige plek bewaard.',
     'continue_to_pairing' => 'Doorgaan naar koppelen',

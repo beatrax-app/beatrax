@@ -102,7 +102,7 @@
                             <button
                                 type="button"
                                 x-data
-                                x-on:click="navigator.clipboard.writeText($el.querySelector('span').textContent); $el.querySelector('span').textContent = '{{ Lang::get('email-scan::wizard.copied') }}'; setTimeout(() => $el.querySelector('span').textContent = '{{ $redirectUri }}', 2000);"
+                                x-on:click="(async () => { const label = $el.querySelector('span'); const was = label.textContent; if (await window.beatraxCopy(was)) { label.textContent = '{{ Lang::get('email-scan::wizard.copied') }}'; setTimeout(() => label.textContent = '{{ $redirectUri }}', 2000); } })()"
                                 class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-mono text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
                             ><span>{{ $redirectUri }}</span></button>
                         </div>
@@ -170,7 +170,7 @@
                             <button
                                 type="button"
                                 x-data
-                                x-on:click="navigator.clipboard.writeText($el.querySelector('span').textContent); $el.querySelector('span').textContent = '{{ Lang::get('email-scan::wizard.copied') }}'; setTimeout(() => $el.querySelector('span').textContent = '{{ $redirectUri }}', 2000);"
+                                x-on:click="(async () => { const label = $el.querySelector('span'); const was = label.textContent; if (await window.beatraxCopy(was)) { label.textContent = '{{ Lang::get('email-scan::wizard.copied') }}'; setTimeout(() => label.textContent = '{{ $redirectUri }}', 2000); } })()"
                                 class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-mono text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
                             ><span>{{ $redirectUri }}</span></button>
                         </div>

@@ -8,6 +8,7 @@ return [
     'subtitle' => 'Print deze of bewaar ze op een veilige plek. Ze worden niet nogmaals getoond.',
     'copy' => 'Codes kopiëren',
     'copied' => 'Gekopieerd',
+    'copy_failed' => 'Kopiëren is niet gelukt. Schrijf de codes op.',
     'download' => 'Downloaden als .txt',
     'saved_as' => 'Opgeslagen als beatrax-recovery-codes-:username.txt',
     'confirm' => 'Ik heb deze codes op een veilige plek bewaard.',

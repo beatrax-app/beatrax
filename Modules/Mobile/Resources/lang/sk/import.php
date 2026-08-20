@@ -28,6 +28,7 @@ return [
     'recovery_download' => 'Stiahnuť ako .txt',
     'recovery_copy' => 'Kopírovať kódy',
     'recovery_copied' => 'Skopírované',
+    'recovery_copy_failed' => 'Kopírovanie sa nepodarilo. Kódy si radšej opíšte.',
     'recovery_saved' => 'Uložené medzi stiahnuté súbory.',
     'recovery_confirm' => 'Tieto kódy mám uložené na bezpečnom mieste.',
     'continue_to_pairing' => 'Pokračovať na párovanie',

@@ -28,6 +28,7 @@ return [
     'recovery_download' => 'Preuzmi kao .txt',
     'recovery_copy' => 'Kopiraj kodove',
     'recovery_copied' => 'Kopirano',
+    'recovery_copy_failed' => 'Kopiranje nije uspjelo. Zapišite kodove.',
     'recovery_saved' => 'Spremljeno u mapu Preuzimanja.',
     'recovery_confirm' => 'Ovi su kodovi spremljeni na sigurno mjesto.',
     'continue_to_pairing' => 'Nastavi na uparivanje',

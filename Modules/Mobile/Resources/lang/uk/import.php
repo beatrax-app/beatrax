@@ -28,6 +28,7 @@ return [
     'recovery_download' => 'Завантажити як .txt',
     'recovery_copy' => 'Копіювати коди',
     'recovery_copied' => 'Скопійовано',
+    'recovery_copy_failed' => 'Не вдалося скопіювати. Запишіть коди.',
     'recovery_saved' => 'Збережено в завантаженнях.',
     'recovery_confirm' => 'Ці коди збережено в надійному місці.',
     'continue_to_pairing' => 'Перейти до пов’язування',

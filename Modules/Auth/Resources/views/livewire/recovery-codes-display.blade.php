@@ -32,17 +32,24 @@
             x-data="{
                     copied: false,
                     saved: false,
+                    failed: false,
                     codes: @js($codes),
                     payload: @js($downloadPayload),
                     filename: @js($downloadFilename),
-                    copy() {
-                        if (! navigator.clipboard) {
-                            return;
-                        }
-                        navigator.clipboard.writeText(this.codes.join('\n')).then(() => {
+                    async copy() {
+                        // The webview withholds navigator.clipboard outside a
+                        // secure context, and this screen is the one that can
+                        // never be shown again — so a copy that quietly does
+                        // nothing is the worst possible outcome here.
+                        if (await window.beatraxCopy(this.codes.join('\n'))) {
+                            this.failed = false;
                             this.copied = true;
                             setTimeout(() => { this.copied = false; }, 2500);
-                        });
+
+                            return;
+                        }
+
+                        this.failed = true;
                     },
                     save() {
                         const url = URL.createObjectURL(new Blob([this.payload], { type: 'text/plain' }));
@@ -81,6 +88,7 @@
             </div>
 
             <p x-show="saved" x-cloak aria-live="polite" class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::recovery_codes.saved_as', ['username' => $username]) }}</p>
+            <p x-show="failed" x-cloak role="alert" aria-live="assertive" class="text-sm text-rose-600 dark:text-rose-400">{{ Lang::get('auth::recovery_codes.copy_failed') }}</p>
         </div>
 
         <label class="flex items-start gap-2">

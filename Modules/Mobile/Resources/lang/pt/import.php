@@ -28,6 +28,7 @@ return [
     'recovery_download' => 'Transferir como .txt',
     'recovery_copy' => 'Copiar códigos',
     'recovery_copied' => 'Copiado',
+    'recovery_copy_failed' => 'Não foi possível copiar. Anote os códigos.',
     'recovery_saved' => 'Guardado nas tuas transferências.',
     'recovery_confirm' => 'Guardei estes códigos num sítio seguro.',
     'continue_to_pairing' => 'Continuar para o emparelhamento',

@@ -28,6 +28,7 @@ return [
     'recovery_download' => 'Lejupielādēt kā .txt',
     'recovery_copy' => 'Kopēt kodus',
     'recovery_copied' => 'Nokopēts',
+    'recovery_copy_failed' => 'Neizdevās nokopēt. Pierakstiet kodus.',
     'recovery_saved' => 'Saglabāts lejupielāžu mapē.',
     'recovery_confirm' => 'Šie kodi ir saglabāti drošā vietā.',
     'continue_to_pairing' => 'Turpināt uz sapārošanu',

@@ -34,10 +34,9 @@ final class DeviceIdentityService
     ) {}
 
     // Puts back the self-row for an identity whose key-file is still on disk.
-    // Keyed on device_id so a row that survived is refreshed rather than
-    // duplicated, and confirmed_at is set because deviceKeys() only hands a
-    // peer the keys of confirmed devices — an unconfirmed self-row would keep
-    // this device's own entries unverifiable.
+    // Keyed on device_id so a surviving row is refreshed, not duplicated.
+    // confirmed_at is set because deviceKeys() hands peers only confirmed
+    // devices, and an unconfirmed self-row hides this device's own entries.
     private function restoreSelfRow(int $userId, DeviceIdentityDto $identity): void
     {
         $now = $this->clock->now()->toIso8601String();
@@ -86,13 +85,10 @@ final class DeviceIdentityService
             throw new \LogicException('Cannot generate device identity: app-lock not unlocked.');
         }
 
-        // Switching sync off and on again MUST NOT mint a second identity.
-        // Every op this device has ever written is signed by the identity
-        // that wrote it, and a peer verifies each entry against the sender's
-        // registry, so replacing the key-file orphans the entire history: the
-        // device keeps its data and quietly loses the ability to hand it to
-        // anyone. Restoring the self-row from the key-file that is already on
-        // disk keeps the device the same device.
+        // Switching sync off and on again MUST NOT mint a second identity:
+        // every op is signed by the identity that wrote it, so replacing the
+        // key-file orphans the whole history and the device quietly loses the
+        // ability to hand its data to anyone. Restore, do not replace.
         $existing = $this->loader->load($userId, $session);
         if ($existing !== null) {
             $this->restoreSelfRow($userId, $existing);

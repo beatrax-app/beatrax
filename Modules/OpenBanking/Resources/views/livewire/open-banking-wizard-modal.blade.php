@@ -59,7 +59,7 @@
                                 type="button"
                                 x-data
                                 aria-label="{{ Lang::get('openbanking::messages.wizard.copy_public_key') }}"
-                                x-on:click="navigator.clipboard.writeText(document.getElementById('ob-public-key').value); $el.querySelector('span').textContent = '{{ Lang::get('openbanking::messages.wizard.copied') }}'; setTimeout(() => $el.querySelector('span').textContent = '{{ Lang::get('openbanking::messages.wizard.copy_public_key') }}', 2000);"
+                                x-on:click="(async () => { const label = $el.querySelector('span'); const was = label.textContent; if (await window.beatraxCopy(document.getElementById('ob-public-key').value)) { label.textContent = '{{ Lang::get('openbanking::messages.wizard.copied') }}'; setTimeout(() => label.textContent = was, 2000); } })()"
                                 class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
                             ><span>{{ Lang::get('openbanking::messages.wizard.copy_public_key') }}</span></button>
 
@@ -76,7 +76,7 @@
                                 x-data
                                 data-redirect-uri="{{ $redirectUri }}"
                                 aria-label="{{ Lang::get('openbanking::messages.wizard.copy_redirect_uri') }}"
-                                x-on:click="navigator.clipboard.writeText($el.querySelector('span').textContent); $el.querySelector('span').textContent = '{{ Lang::get('openbanking::messages.wizard.copied') }}'; setTimeout(() => $el.querySelector('span').textContent = $el.dataset.redirectUri, 2000);"
+                                x-on:click="(async () => { const label = $el.querySelector('span'); const was = label.textContent; if (await window.beatraxCopy(was)) { label.textContent = '{{ Lang::get('openbanking::messages.wizard.copied') }}'; setTimeout(() => label.textContent = $el.dataset.redirectUri, 2000); } })()"
                                 class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-mono text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
                             ><span>{{ $redirectUri }}</span></button>
                         </div>

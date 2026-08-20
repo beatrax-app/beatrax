@@ -28,6 +28,7 @@ return [
     'recovery_download' => 'Prenesi kot .txt',
     'recovery_copy' => 'Kopiraj kode',
     'recovery_copied' => 'Kopirano',
+    'recovery_copy_failed' => 'Kopiranje ni uspelo. Zapišite kode.',
     'recovery_saved' => 'Shranjeno v mapo Prenosi.',
     'recovery_confirm' => 'Te kode so shranjene na varnem mestu.',
     'continue_to_pairing' => 'Nadaljuj na seznanjanje',

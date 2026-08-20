@@ -132,13 +132,23 @@
                     confirmed: false,
                     copied: false,
                     saved: false,
+                    failed: false,
                     codes: @js($codes),
-                    copy() {
-                        if (! navigator.clipboard) { return; }
-                        navigator.clipboard.writeText(this.codes.join('\n')).then(() => {
+                    async copy() {
+                        // Guarding on navigator.clipboard and returning left
+                        // this button dead on the very device it exists for:
+                        // the webview withholds the async API outside a secure
+                        // context. beatraxCopy() falls back and, crucially,
+                        // reports failure instead of swallowing it.
+                        if (await window.beatraxCopy(this.codes.join('\n'))) {
+                            this.failed = false;
                             this.copied = true;
                             setTimeout(() => { this.copied = false; }, 2500);
-                        });
+
+                            return;
+                        }
+
+                        this.failed = true;
                     },
                     save() {
                         const url = URL.createObjectURL(new Blob([this.codes.join('\n')], { type: 'text/plain' }));
@@ -190,6 +200,7 @@
                     </div>
 
                     <p x-show="saved" x-cloak aria-live="polite" class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('mobile::import.recovery_saved') }}</p>
+                    <p x-show="failed" x-cloak role="alert" aria-live="assertive" class="text-sm text-rose-600 dark:text-rose-400">{{ Lang::get('mobile::import.recovery_copy_failed') }}</p>
                 </div>
 
                 <label class="flex items-start gap-2">

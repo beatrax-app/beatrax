@@ -28,6 +28,7 @@ return [
     'recovery_download' => 'Descarcă drept .txt',
     'recovery_copy' => 'Copiază codurile',
     'recovery_copied' => 'Copiat',
+    'recovery_copy_failed' => 'Copierea nu a reușit. Notați codurile.',
     'recovery_saved' => 'Salvat în descărcările tale.',
     'recovery_confirm' => 'Am salvat aceste coduri într-un loc sigur.',
     'continue_to_pairing' => 'Continuă spre împerechere',

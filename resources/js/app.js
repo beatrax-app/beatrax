@@ -480,6 +480,49 @@ function beatraxInlineScanner($wire) {
     };
 }
 
+/**
+ * Copy text to the clipboard, reporting whether it actually worked.
+ *
+ * navigator.clipboard is gated to secure contexts, and the packaged app's
+ * webview is not one on either phone. Every call site used to guard with a
+ * bare `if (! navigator.clipboard) return`, so on a phone the button did
+ * nothing and said nothing — worst of all on the recovery codes, which are
+ * never shown again.
+ *
+ * @param {string} text
+ * @returns {Promise<boolean>} whether the text reached the clipboard
+ */
+window.beatraxCopy = async function beatraxCopy(text) {
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+
+            return true;
+        }
+
+        // A temporary textarea and the legacy command, which webviews still
+        // honour where the async API is withheld.
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.setAttribute('readonly', 'readonly');
+        area.style.position = 'fixed';
+        area.style.top = '0';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.focus();
+        area.select();
+        area.setSelectionRange(0, area.value.length);
+
+        try {
+            return document.execCommand('copy') === true;
+        } finally {
+            document.body.removeChild(area);
+        }
+    } catch (e) {
+        return false;
+    }
+};
+
 document.addEventListener('alpine:init', () => {
     if (window.Alpine) {
         window.Alpine.data('palette', palette);

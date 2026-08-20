@@ -28,6 +28,7 @@ return [
     'recovery_download' => 'Atsisiųsti kaip .txt',
     'recovery_copy' => 'Kopijuoti kodus',
     'recovery_copied' => 'Nukopijuota',
+    'recovery_copy_failed' => 'Nepavyko nukopijuoti. Užsirašykite kodus.',
     'recovery_saved' => 'Išsaugota atsisiuntimų aplanke.',
     'recovery_confirm' => 'Išsaugojau šiuos kodus saugioje vietoje.',
     'continue_to_pairing' => 'Tęsti į susiejimą',

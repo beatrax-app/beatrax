@@ -28,6 +28,7 @@ return [
     'recovery_download' => 'Ladda ner som .txt',
     'recovery_copy' => 'Kopiera koder',
     'recovery_copied' => 'Kopierat',
+    'recovery_copy_failed' => 'Det gick inte att kopiera. Skriv ner koderna i stället.',
     'recovery_saved' => 'Sparad i dina nedladdningar.',
     'recovery_confirm' => 'Jag har sparat de här koderna på ett säkert ställe.',
     'continue_to_pairing' => 'Fortsätt till parkopplingen',
