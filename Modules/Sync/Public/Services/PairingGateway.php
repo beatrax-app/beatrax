@@ -320,7 +320,7 @@ final class PairingGateway
     // step in component state, which a reload wipes while the ROW carries on,
     // so callers resume from here rather than restarting the ceremony.
     /**
-     * @return array{id: int, state: string, safety_words: list<string>, token_hash: string, peer_device_id: string}|null
+     * @return array{id: int, state: string, safety_words: list<string>, token_hash: string, peer_device_id: string, initiator_device_id: string|null, responder_device_id: string|null}|null
      */
     public function inFlightFor(int $userId): ?array
     {
@@ -329,7 +329,7 @@ final class PairingGateway
             ->whereIn('state', [PairingState::AwaitingConfirm->value, PairingState::Confirmed->value])
             ->where('expires_at', '>', $this->clock->now()->toIso8601String())
             ->orderByDesc('id')
-            ->first(['id', 'state', 'token_hash', 'initiator_device_id']);
+            ->first(['id', 'state', 'token_hash', 'initiator_device_id', 'responder_device_id']);
 
         if ($row === null || ! is_numeric($row->id) || ! is_string($row->state)) {
             return null;
@@ -351,6 +351,11 @@ final class PairingGateway
             'safety_words' => $words,
             'token_hash' => is_string($row->token_hash) ? $row->token_hash : '',
             'peer_device_id' => is_string($row->initiator_device_id) ? $row->initiator_device_id : '',
+            // Both ids, so a resuming screen can work out which side it is
+            // rather than assuming. peer_device_id stays the initiator's for
+            // the phone, which is always the responder.
+            'initiator_device_id' => is_string($row->initiator_device_id) ? $row->initiator_device_id : null,
+            'responder_device_id' => is_string($row->responder_device_id) ? $row->responder_device_id : null,
         ];
     }
 

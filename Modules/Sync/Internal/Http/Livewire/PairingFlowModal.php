@@ -20,6 +20,7 @@ use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\OpLog\PreSyncHistoryCapture;
 use Modules\Sync\Internal\Pairing\InvalidPublicKeyException;
 use Modules\Sync\Internal\Pairing\PairingRelayCourier;
+use Modules\Sync\Internal\Pairing\PairingRowGuards;
 use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\QrPayloadBuilder;
@@ -107,6 +108,8 @@ final class PairingFlowModal extends Component
         PairingGateway $gateway,
         PairingRelayCourier $relayCourier,
         LoggerInterface $logger,
+        Session $session,
+        DeviceRegistryService $registry,
     ): void {
         // A daemon started while the app was locked holds no transport keypair
         // and rejects every handshake. Opening this modal is an unlocked,
@@ -125,7 +128,7 @@ final class PairingFlowModal extends Component
         $this->safetyWords = [];
         $this->open = true;
 
-        $this->resumeInFlight($currentUser->user()->id, $gateway, $relayCourier, $logger);
+        $this->resumeInFlight($currentUser->user()->id, $gateway, $relayCourier, $logger, $session, $registry);
     }
 
     // Picks up a handshake that is still live. This modal's poll is the only
@@ -136,6 +139,8 @@ final class PairingFlowModal extends Component
         PairingGateway $gateway,
         PairingRelayCourier $relayCourier,
         LoggerInterface $logger,
+        Session $session,
+        DeviceRegistryService $registry,
     ): void {
         try {
             $relayCourier->drainAndApply($userId);
@@ -152,10 +157,31 @@ final class PairingFlowModal extends Component
             return;
         }
 
+        // Which side this device is, read off its OWN identity. It used to be
+        // assumed to be the initiator, so a desktop resuming as the responder
+        // confirmed toward its own device id and looked up its own name as the
+        // peer's — the one thing currentDeviceId() exists to prevent.
+        $side = PairingRowGuards::sideOwnedByIds(
+            $inFlight['initiator_device_id'],
+            $inFlight['responder_device_id'],
+            $gateway->currentDeviceId($userId, $session) ?? '',
+        );
+
+        if ($side === null) {
+            return;
+        }
+
         $this->pairingTokenId = (string) $inFlight['id'];
         $this->safetyWords = $inFlight['safety_words'];
-        $this->side = 'initiator';
-        $this->step = 'confirm';
+        $this->side = $side;
+
+        // A confirmed handshake is finished, and re-presenting the trust gate
+        // asked for a safety-number confirmation that confirm() then refuses
+        // as already given — leaving the modal with no way forward and no way
+        // to start again.
+        $this->step = $inFlight['state'] === PairingState::Confirmed->value ? 'success' : 'confirm';
+
+        $this->hydrateDeviceNames($gateway, $registry, $userId, $side === 'responder');
     }
 
     // Loads the identity, issues a token, builds the QR + word-code, and

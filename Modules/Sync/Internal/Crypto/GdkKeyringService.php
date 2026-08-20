@@ -50,9 +50,10 @@ final class GdkKeyringService
         private readonly SodiumPrimitives $sodium,
     ) {}
 
-    // Generates GDK epoch 1, persists the encrypted keyring file, and sets
-    // sync_encryption_state.current_epoch = 1. Returns the in-memory epoch
-    // DTO (carries the raw key hex — never persist the DTO itself).
+    // Mints the first GDK epoch, persists the encrypted keyring file, and
+    // points sync_encryption_state.current_epoch at it. The id is random, not
+    // 1: two devices that each generated a first epoch both called it 1 over
+    // different keys. Returns the in-memory DTO — never persist the DTO.
     /**
      * @throws \LogicException when the app-lock KEK is unavailable.
      * @throws CryptoOperationFailedException on a libsodium failure.
