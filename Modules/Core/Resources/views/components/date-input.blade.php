@@ -1,5 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 @use('Carbon\CarbonImmutable')
+@use('Modules\Core\Public\Support\Fmt')
 {{-- `fieldId` lands on the BUTTON: a <label for="…"> must point at the thing a
      user actually clicks. Callers that had `id` on their old
      `<input type="date">` pass it here so their existing label keeps
@@ -25,9 +26,10 @@
         $weekdayNames[] = $weekStart->addDays($d)->isoFormat('dd');
     }
 
-    // The short-date pattern this locale actually writes, e.g. DD-MM-YYYY for
-    // Dutch, YYYY.MM.DD. for Hungarian, MM/DD/YYYY for English.
-    $pattern = $anchor->getIsoFormats()['L'] ?? 'YYYY-MM-DD';
+    // The short-date pattern this locale writes, e.g. DD-MM-YYYY for Dutch and
+    // YYYY.MM.DD. for Hungarian — through Fmt, which corrects the month-first
+    // ones so the field and every list agree AND read day-first.
+    $pattern = Fmt::datePattern();
 
     // 0 = Sunday … 6 = Saturday, matching JS Date#getDay so the grid maths
     // needs no translation on the client.

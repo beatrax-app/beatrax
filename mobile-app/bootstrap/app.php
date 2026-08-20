@@ -16,6 +16,7 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap;
 use Modules\Mobile\Internal\Http\Middleware\MobileEnsureDatabaseReady;
 use Modules\Mobile\Internal\Http\Middleware\MobileEnsureImportCompleted;
+use Modules\Mobile\Internal\Http\Middleware\RestoreFrameworkRedirector;
 use Modules\Mobile\Internal\NativeMobileAppServiceProvider;
 use Modules\Mobile\Internal\Spike\SpikeStoragePathCommand;
 use Modules\Mobile\Internal\Spike\SpikeSyncDialCommand;
@@ -93,6 +94,9 @@ return Application::configure(basePath: dirname(__DIR__))
         SpikeStoragePathCommand::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
+        // Outermost, because it repairs a container binding every later
+        // middleware depends on: see the class for what leaves it broken.
+        $middleware->prepend(RestoreFrameworkRedirector::class);
         $middleware->prepend(LoopbackOnly::class);
         // Paired with LoopbackOnly (mirrors the desktop root): LoopbackOnly
         // gates the interface the connection arrived on, TrustedHostGuard gates
