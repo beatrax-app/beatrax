@@ -49,6 +49,35 @@ function phoneUiCoarsePointerBlocks(): array
     return $matches[0];
 }
 
+/**
+ * @return list<string> the class attribute of every element the coarse-pointer
+ *                      44px floor selects, across all Blade views
+ */
+function phoneUiButtonClassLists(): array
+{
+    $views = [];
+    foreach (['Modules', 'resources'] as $root) {
+        $directory = new RecursiveDirectoryIterator(base_path($root), FilesystemIterator::SKIP_DOTS);
+        foreach (new RecursiveIteratorIterator($directory) as $file) {
+            if (str_ends_with((string) $file, '.blade.php')) {
+                $views[] = (string) $file;
+            }
+        }
+    }
+
+    $lists = [];
+    foreach ($views as $view) {
+        preg_match_all('/<(button|summary)\b([^>]*)>/s', (string) file_get_contents($view), $tags, PREG_SET_ORDER);
+        foreach ($tags as $tag) {
+            if (preg_match('/class="([^"]*)"/', $tag[2], $class) === 1) {
+                $lists[] = $class[1];
+            }
+        }
+    }
+
+    return $lists;
+}
+
 it('keeps every touch form control at or above the iOS auto-zoom threshold', function (): void {
     // iOS zooms the page in when a focused control renders below 16px and does
     // not zoom back out. The viewport deliberately allows zoom, so raising the
@@ -138,4 +167,53 @@ it('backs every open-sheet dispatch with a sheet that answers to that name', fun
     }
 
     expect($orphans)->toBe([], 'open-sheet dispatched at a name no bottom sheet answers to: '.implode(', ', $orphans));
+});
+
+it('keeps the 44px floor from deforming controls the design draws smaller', function (): void {
+    // The floor inflates the border box, so a fixed-size control with a pill
+    // radius becomes a circle and its positioned children strand — the
+    // "Enable sync" switch shipped as a small circle inside a bigger one.
+    // Anything the floor would deform has to opt out and take its reach from
+    // a pseudo-element instead, which costs no layout.
+    $css = phoneUiUnlayeredCss();
+
+    $drawnSmall = [];
+    preg_match_all('/(?<selector>[^{}]+)\{(?<body>[^{}]*)\}/', $css, $rules, PREG_SET_ORDER);
+    foreach ($rules as $rule) {
+        $selector = trim($rule['selector']);
+        if (! preg_match('/^\.([a-zA-Z0-9_-]+)$/', $selector, $name)) {
+            continue;
+        }
+
+        preg_match('/(?<![a-z-])width:\s*(\d+)px/', $rule['body'], $width);
+        preg_match('/(?<![a-z-])height:\s*(\d+)px/', $rule['body'], $height);
+
+        $sizes = array_map(intval(...), array_column([$width, $height], 1));
+        if ($sizes !== [] && min($sizes) < 44) {
+            $drawnSmall[$name[1]] = true;
+        }
+    }
+
+    $onButtons = [];
+    foreach (phoneUiButtonClassLists() as $classList) {
+        foreach (preg_split('/\s+/', $classList) ?: [] as $class) {
+            if (isset($drawnSmall[$class])) {
+                $onButtons[$class] = true;
+            }
+        }
+    }
+
+    $unprotected = array_keys(array_filter(
+        $onButtons,
+        static fn (bool $_, string $class): bool => preg_match(
+            '/\.'.preg_quote($class, '/').'(::after)?\s*[,{]/',
+            implode('', phoneUiCoarsePointerBlocks())
+        ) !== 1,
+        ARRAY_FILTER_USE_BOTH
+    ));
+
+    expect($unprotected)->toBe([], sprintf(
+        '%s sit on a <button> at a fixed size below 44px and the coarse-pointer floor will deform them',
+        implode(', ', array_map(static fn (string $c): string => '.'.$c, $unprotected))
+    ));
 });

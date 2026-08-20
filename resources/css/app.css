@@ -3852,7 +3852,6 @@ td.date,
     @media (pointer: coarse) {
         .tax-badge--untagged {
             opacity: 1;
-            min-height: 44px;
         }
     }
 
@@ -5071,6 +5070,50 @@ mark {
     label:has(> input[type='file']) {
         min-height: 44px;
         min-width: 44px;
+    }
+
+    /*
+     * The guideline asks for a 44px target, not a 44px picture. Inflating the
+     * box turned the 36x20 switch into a circle with its thumb stranded at the
+     * top, so the reach moves to a pseudo-element that no layout can see.
+     */
+    .switch,
+    [role='switch'],
+    .split-badge,
+    .tax-badge,
+    .fx-disclosure-trigger,
+    .srch-chip-close,
+    .srch-sheet-apply,
+    .srch-sheet-clear {
+        position: relative;
+        min-height: 0;
+        min-width: 0;
+    }
+
+    .switch::after,
+    [role='switch']::after,
+    .split-badge::after,
+    .tax-badge::after,
+    .fx-disclosure-trigger::after,
+    .srch-chip-close::after,
+    .srch-sheet-apply::after,
+    .srch-sheet-clear::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 44px;
+        height: 44px;
+        transform: translate(-50%, -50%);
+    }
+
+    /*
+     * This close button sits beside the chip it clears, so a halo wide enough
+     * to reach 44px would swallow taps meant for the chip. It grows only in
+     * the axis that is free.
+     */
+    .srch-chip-close::after {
+        width: 24px;
     }
 }
 
