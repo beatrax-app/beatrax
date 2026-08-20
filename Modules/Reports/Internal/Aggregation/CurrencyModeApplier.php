@@ -153,7 +153,7 @@ final class CurrencyModeApplier
                 // Counted, not just flagged: the banner reads ":count not
                 // converted", so raising the flag alone would render a literal
                 // zero beside a warning that something was dropped.
-                $excludedCurrencies[(string) $currency] = true;
+                $excludedCurrencies[$currency] = true;
 
                 continue;
             }

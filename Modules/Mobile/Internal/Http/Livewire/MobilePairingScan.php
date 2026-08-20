@@ -232,7 +232,7 @@ final class MobilePairingScan extends Component
             return;
         }
 
-        $this->submitCode($data, $currentUser, $qrBridge, $gateway, $session, $logger, $devices, $urls);
+        $this->submitCode($data, $currentUser, $qrBridge, $gateway, $session, $logger, $devices, $urls, $lock);
     }
 
     // Fired when the user backs out of the scanner or the OS refuses the

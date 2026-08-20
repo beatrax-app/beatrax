@@ -25,11 +25,11 @@ final class NoStoreFinancialData
     // not write — counterparty names, payment references and receipt bodies
     // arrive from bank exports and mailboxes — so these are what stands
     // between a missed escape and a working attack.
-    /** @var array<string, string> */
     // Static brand artefacts, and the only routes exempt from the no-store
     // rule: they carry no financial data, and overwriting their own week-long
     // policy made every lock screen and setup screen re-read a 91 KB PNG
     // through PHP, on a device with no web server in front of it.
+    /** @var list<string> */
     private const PUBLIC_ARTEFACT_ROUTES = [
         'app.icon',
         'app.splash',
@@ -37,6 +37,7 @@ final class NoStoreFinancialData
         'site.webmanifest',
     ];
 
+    /** @var array<string, string> */
     private const SECURITY_HEADERS = [
         'X-Content-Type-Options' => 'nosniff',
         'X-Frame-Options' => 'DENY',

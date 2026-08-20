@@ -122,7 +122,7 @@ final readonly class OpLogBackfiller
     // by pk. Asked per chunk rather than per table so neither the result set
     // nor the IN list grows with the size of the table.
     /**
-     * @param  \Illuminate\Support\Collection<int, object>  $rows
+     * @param  \Illuminate\Support\Collection<int, \stdClass>  $rows
      * @return array<string, true>
      */
     private function alreadyCaptured(Connection $connection, string $table, int $userId, $rows): array
@@ -149,7 +149,9 @@ final readonly class OpLogBackfiller
 
         $lookup = [];
         foreach ($found as $pk) {
-            $lookup[(string) $pk] = true;
+            if (is_int($pk) || is_string($pk)) {
+                $lookup[(string) $pk] = true;
+            }
         }
 
         return $lookup;
