@@ -338,7 +338,7 @@
 
          Persistent (no auto-dismiss) backed by inbox_scan_state.status =
          'needs_reauth' filtered by user_id. Suppressed for the rest of
-         the session once the user clicks ×; reappears on next login if
+         the session once the user dismisses it; reappears on next login if
          any inbox is still needs_reauth. Same chrome as the failed-job
          toast below but with its own copy + a distinct surface order
          (this toast renders above the failed-job toast when both are
@@ -361,19 +361,10 @@
                         class="text-xs text-slate-900 underline-offset-2 hover:underline dark:text-slate-100"
                     >{{ Lang::get('core::dashboard.reauth.link') }}</a>
                 </div>
-                <button
-                    type="button"
-                    aria-label="{{ Lang::get('core::dashboard.reauth.dismiss') }}"
+                <x-core::emoji-action
+                    :label="Lang::get('core::dashboard.reauth.dismiss')"
                     wire:click="dismissReauthToast"
-                    class="rounded text-slate-500 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:text-slate-100 dark:text-slate-400"
-                >
-                    {{-- Inline Heroicons-outline x-mark 16×16. No
-                         blade-heroicons package is installed in the
-                         project; the icon is rendered inline. --}}
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-                    </svg>
-                </button>
+                >✖️</x-core::emoji-action>
             </div>
         </div>
     @endif

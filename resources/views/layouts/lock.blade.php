@@ -11,7 +11,7 @@
     {{-- Background from CSS, not `bg-white dark:bg-slate-950`. The dark
          variant needs the class that the pre-paint script adds a beat later,
          so the utility painted white first and the page visibly flipped. --}}
-    class="beatrax-shell text-slate-900 dark:text-slate-100 {{ $chrome->isDark ? 'dark' : '' }}"
+    class="beatrax-shell text-slate-900 dark:text-slate-100 {{ $chrome->isDark ? 'dark' : 'light' }}"
     {{-- Only when the server already KNOWS the theme. An inline style beats
          every stylesheet rule, so emitting it while the pre-paint script is
          authoritative pinned a dark-OS phone to a white <html> and the page

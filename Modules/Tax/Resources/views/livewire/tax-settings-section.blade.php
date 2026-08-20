@@ -58,7 +58,9 @@
                 {{ Lang::get('tax::settings.categories_empty') }}
             </p>
         @else
-            <ul class="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800" role="list">
+            {{-- No inner scroller: the settings page already scrolls, and a
+                 nested 320px viewport hid categories behind a second scrollbar. --}}
+            <ul class="divide-y divide-slate-100 dark:divide-slate-800" role="list">
                 @foreach ($active as $cat)
                     <li
                         class="toggle-row group"

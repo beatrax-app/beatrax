@@ -523,6 +523,26 @@ window.beatraxCopy = async function beatraxCopy(text) {
     }
 };
 
+/**
+ * Apply a theme change to the root element straight away.
+ *
+ * The `dark` / `light` class is rendered by the layout, which a Livewire
+ * update never touches, so choosing a theme in settings persisted the
+ * preference and left the page exactly as it was.
+ */
+document.addEventListener('theme-changed', (event) => {
+    const root = document.documentElement;
+    const chosen = event?.detail?.theme ?? (Array.isArray(event?.detail) ? event.detail[0]?.theme : null);
+
+    const prefersDark = window.matchMedia
+        && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    const dark = chosen === 'dark' || (chosen !== 'light' && prefersDark);
+
+    root.classList.toggle('dark', dark);
+    root.classList.toggle('light', ! dark);
+});
+
 document.addEventListener('alpine:init', () => {
     if (window.Alpine) {
         window.Alpine.data('palette', palette);

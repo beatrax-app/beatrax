@@ -32,7 +32,7 @@
     lang="{{ $chrome->locale }}"
     data-base-currency="{{ $chartCurrency }}"
     data-chart-labels="{{ $chartLabels }}"
-    class="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 {{ $chrome->isDark ? 'dark' : '' }}"
+    class="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 {{ $chrome->isDark ? 'dark' : 'light' }}"
     {{-- Only when the server already KNOWS the theme. An inline style beats
          every stylesheet rule, so emitting it while the pre-paint script is
          authoritative pinned a dark-OS phone to a white <html> and the page

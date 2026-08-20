@@ -30,12 +30,10 @@
                                     class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
                                 >{{ $insight->actionLabel }} <span aria-hidden="true" style="opacity:.6;">↗</span></a>
                             @endif
-                            <button
-                                type="button"
+                            <x-core::emoji-action
+                                :label="Lang::get('drift-alerts::savings.dismiss_aria')"
                                 wire:click="dismiss('{{ $insight->key }}')"
-                                aria-label="{{ Lang::get('drift-alerts::savings.dismiss_aria') }}"
-                                class="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-                            >×</button>
+                            >✖️</x-core::emoji-action>
                         </div>
                     </li>
                 @endforeach

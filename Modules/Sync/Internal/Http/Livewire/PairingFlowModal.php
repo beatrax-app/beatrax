@@ -96,11 +96,10 @@ final class PairingFlowModal extends Component
         $this->open = $open;
     }
 
-    // The component is rendered unconditionally (always in the DOM) so the
-    // hosting <flux:modal wire:model="open"> sees a real false->true
-    // transition — Flux only shows the dialog on that transition. The flow is
-    // reset first so a reopened modal never resumes a cancelled handshake,
-    // then a still-live one is picked back up below.
+    // Rendered unconditionally so the hosting <flux:modal wire:model="open">
+    // sees a real false->true transition, which is the only thing Flux shows
+    // the dialog on. The flow resets first so a reopened modal never resumes a
+    // cancelled handshake; a still-live one is picked back up below.
     #[On('open-pairing-modal')]
     public function openModal(
         CurrentUser $currentUser,
@@ -130,9 +129,8 @@ final class PairingFlowModal extends Component
     }
 
     // Picks up a handshake that is still live. This modal's poll is the only
-    // thing that drains the relay, so a desktop that confirmed first and closed
-    // it left the phone's PAIR_CONFIRM sitting in the mailbox undelivered —
-    // and reopening started at step one instead of finishing.
+    // thing draining the relay, so a desktop that confirmed first and closed it
+    // left the phone's PAIR_CONFIRM undelivered, and reopening started over.
     private function resumeInFlight(
         int $userId,
         PairingGateway $gateway,

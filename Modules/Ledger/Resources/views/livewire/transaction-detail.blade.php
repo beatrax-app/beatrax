@@ -205,15 +205,12 @@
                                         </span>
                                     </div>
 
-                                    <button
-                                        type="button"
+                                    <x-core::emoji-action
+                                        :label="Lang::get('ledger::detail.split.remove_leg_aria')"
+                                        tone="danger"
                                         wire:click="removeLeg({{ $index }})"
-                                        class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
-                                        aria-label="{{ Lang::get('ledger::detail.split.remove_leg_aria') }}"
                                         data-testid="split-leg-remove-{{ $index }}"
-                                    >
-                                        &times;
-                                    </button>
+                                    >🗑️</x-core::emoji-action>
                                 </div>
                             @endforeach
                         </div>

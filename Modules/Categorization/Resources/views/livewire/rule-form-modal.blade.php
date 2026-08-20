@@ -114,13 +114,12 @@
                                     />
                                 @endif
 
-                                <button
-                                    type="button"
+                                <x-core::emoji-action
+                                    :label="Lang::get('categorization::rule_form.remove_condition')"
+                                    tone="danger"
                                     wire:click="removeCondition({{ $i }})"
-                                    aria-label="{{ Lang::get('categorization::rule_form.remove_condition') }}"
-                                    @disabled(count($conditions) <= 1)
-                                    class="inline-flex items-center rounded-md px-2 py-1 text-sm font-medium text-rose-600 hover:bg-rose-50 disabled:cursor-not-allowed disabled:text-slate-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 dark:text-rose-500 dark:hover:bg-rose-950 dark:disabled:text-slate-600"
-                                ><span aria-hidden="true">&times;</span></button>
+                                    :disabled="count($conditions) <= 1"
+                                >🗑️</x-core::emoji-action>
                             </div>
                             @if (isset($conditionErrors[$i]))
                                 <p class="text-sm text-rose-600 dark:text-rose-500">{{ $conditionErrors[$i] }}</p>
@@ -213,13 +212,12 @@
                                     </select>
                                 @endif
 
-                                <button
-                                    type="button"
+                                <x-core::emoji-action
+                                    :label="Lang::get('categorization::rule_form.remove_action')"
+                                    tone="danger"
                                     wire:click="removeAction({{ $i }})"
-                                    aria-label="{{ Lang::get('categorization::rule_form.remove_action') }}"
-                                    @disabled(count($actions) <= 1)
-                                    class="inline-flex items-center rounded-md px-2 py-1 text-sm font-medium text-rose-600 hover:bg-rose-50 disabled:cursor-not-allowed disabled:text-slate-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 dark:text-rose-500 dark:hover:bg-rose-950 dark:disabled:text-slate-600"
-                                ><span aria-hidden="true">&times;</span></button>
+                                    :disabled="count($actions) <= 1"
+                                >🗑️</x-core::emoji-action>
                             </div>
 
                             @if ($action['type'] === 'tax_tag')

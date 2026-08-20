@@ -29,7 +29,10 @@
             style="border-color: var(--color-rose); background: var(--color-rose-bg); color: var(--color-rose);"
         >
             <span>{{ $flashMessage }}</span>
-            <button type="button" wire:click="clearFlash" aria-label="{{ Lang::get('reports::index.dismiss') }}" style="color: inherit;">&times;</button>
+            <x-core::emoji-action
+                :label="Lang::get('reports::index.dismiss')"
+                wire:click="clearFlash"
+            >✖️</x-core::emoji-action>
         </div>
     @endif
 

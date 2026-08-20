@@ -140,7 +140,7 @@
             </p>
             <a
                 href="/recurring/review"
-                class="mt-3 inline-flex items-center text-sm underline hover:no-underline"
+                class="mt-3 inline-flex items-center text-sm font-medium underline-offset-2 hover:underline"
                 style="color: var(--color-text);"
             >
                 {{ Lang::get('calendar::messages.empty.review') }}
@@ -208,8 +208,10 @@
                             $visibleEntries = array_slice($day->entries, 0, $maxDesktop);
                             $overflow     = $entryCount - $maxDesktop;
 
+                            // Today is marked on the day number itself, not with
+                            // .cal-cell--today: an inset ring on a cell that already
+                            // has four borders read as a stray box, not as a state.
                             $cellClasses  = 'cal-cell';
-                            if ($day->isToday)    $cellClasses .= ' cal-cell--today';
                             if ($day->isRisk)     $cellClasses .= ' cal-cell--risk';
                             if ($day->date->month !== $displayMonth) $cellClasses .= ' cal-cell--other-month';
                             elseif ($day->isPast && !$day->isToday) $cellClasses .= ' cal-cell--past';
@@ -246,17 +248,17 @@
                             @keydown.enter.prevent="$wire.selectDay('{{ $dateStr }}')"
                             @keydown.space.prevent="$wire.selectDay('{{ $dateStr }}')"
                             @keydown.escape.prevent="panelOpen = false; $wire.set('selectedDay', null)"
-                            class="{{ $cellClasses }}"
+                            class="{{ $cellClasses }} align-middle text-center sm:align-top sm:text-left"
                             data-date="{{ $dateStr }}"
                             aria-label="{{ $ariaLabel }}"
                             @if ($day->isRisk && $riskCount > 0) aria-describedby="summary-strip" @endif
                         >
-                            {{-- Day number (top-left) + balance corner (top-right) --}}
-                            <div class="flex items-start justify-between">
+                            {{-- Day number (centred on phone, top-left beside the
+                                 balance corner once the entry rows appear) --}}
+                            <div class="flex items-center justify-center sm:items-start sm:justify-between">
                                 <span class="cal-day-num
-                                    {{ $day->isToday ? 'text-blue-600 dark:text-blue-400' : '' }}
-                                    {{ $day->date->month !== $displayMonth ? 'text-opacity-40' : '' }}"
-                                    style="{{ $day->date->month !== $displayMonth ? 'color: var(--color-text-faint);' : ($day->isToday ? '' : 'color: var(--color-text);') }}"
+                                    {{ $day->isToday ? 'inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-white dark:bg-blue-500' : '' }}"
+                                    style="{{ $day->isToday ? '' : ($day->date->month !== $displayMonth ? 'color: var(--color-text-faint);' : 'color: var(--color-text);') }}"
                                 >
                                     {{ $day->date->day }}
                                 </span>

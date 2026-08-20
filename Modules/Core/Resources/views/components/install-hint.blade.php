@@ -70,14 +70,10 @@
                     {{ Lang::get('core::components.install.body') }}
                 </p>
             </div>
-            <button
-                type="button"
+            <x-core::emoji-action
+                :label="Lang::get('core::components.install.dismiss_aria')"
                 x-on:click="dismiss()"
-                style="display: inline-flex; align-items: center; justify-content: center; min-width: 28px; min-height: 28px; border: 0; background: transparent; cursor: pointer; color: var(--color-text-faint); border-radius: var(--radius-sm); flex-shrink: 0;"
-                aria-label="{{ Lang::get('core::components.install.dismiss_aria') }}"
-            >
-                <span aria-hidden="true" style="font-size: 18px; line-height: 1;">×</span>
-            </button>
+            >✖️</x-core::emoji-action>
         </div>
 
         <div style="display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;">

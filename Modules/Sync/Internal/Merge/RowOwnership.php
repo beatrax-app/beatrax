@@ -135,13 +135,16 @@ final readonly class RowOwnership
                 return false;
             }
 
-            $belongs = $this->db->connection()
+            // Only a row that EXISTS and belongs to someone else is refused.
+            // An absent parent is an ordering problem, not a cross-user one —
+            // children legitimately arrive before their parent — and the
+            // deferral and foreign-key paths already handle that case.
+            $owner = $this->db->connection()
                 ->table($referencedTable)
                 ->where('id', $referenced)
-                ->where('user_id', $userId)
-                ->exists();
+                ->value('user_id');
 
-            if (! $belongs) {
+            if ($owner !== null && (int) $owner !== $userId) {
                 return false;
             }
         }

@@ -105,7 +105,7 @@
                     id="defaultCurrencyView"
                     name="defaultCurrencyView"
                     wire:model="defaultCurrencyView"
-                    class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
+                    class="block w-full max-w-xs rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
                 >
                     <option value="eur_only">{{ Lang::get('core::settings.currency_display.eur_only') }}</option>
                     <option value="original">{{ Lang::get('core::settings.currency_display.original') }}</option>
@@ -128,7 +128,7 @@
                         id="baseCurrency"
                         name="baseCurrency"
                         wire:model="baseCurrency"
-                        class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
+                        class="block w-full max-w-xs rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
                     >
                         @foreach ($currencyOptions as $code => $name)
                             <option value="{{ $code }}">{{ $code }} — {{ $name }}</option>
@@ -198,7 +198,7 @@
                     id="periodStartDay"
                     name="periodStartDay"
                     wire:model="periodStartDay"
-                    class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
+                    class="block w-full max-w-xs rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
                 />
                 <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.period.help') }}</p>
                 @error('periodStartDay')
@@ -218,7 +218,7 @@
                     id="recurringDetectionWindowMonths"
                     name="recurringDetectionWindowMonths"
                     wire:model="recurringDetectionWindowMonths"
-                    class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
+                    class="block w-full max-w-xs rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
                 />
                 <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.recurring.window_help') }}</p>
                 @error('recurringDetectionWindowMonths')
@@ -234,7 +234,7 @@
                     id="recurringIncomeMinAmountMinor"
                     name="recurringIncomeMinAmountMinor"
                     wire:model="recurringIncomeMinAmountMinor"
-                    class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
+                    class="block w-full max-w-xs rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
                 />
                 <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.recurring.income_help') }}</p>
                 @error('recurringIncomeMinAmountMinor')
@@ -251,7 +251,7 @@
                     id="driftAlertThresholdPercent"
                     name="driftAlertThresholdPercent"
                     wire:model="driftAlertThresholdPercent"
-                    class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
+                    class="block w-full max-w-xs rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
                 >
                     <option value="1">{{ Lang::get('core::settings.drift.options.1') }}</option>
                     <option value="2">{{ Lang::get('core::settings.drift.options.2') }}</option>
@@ -270,7 +270,7 @@
         <div class="space-y-1 border-t border-slate-100 pt-6 dark:border-slate-800">
             <button
                 type="submit"
-                class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:focus-visible:ring-emerald-500"
+                class="block w-full max-w-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:focus-visible:ring-emerald-500"
             >
                 {{ Lang::get('core::settings.save') }}
             </button>

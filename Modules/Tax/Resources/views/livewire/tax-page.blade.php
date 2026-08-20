@@ -117,7 +117,10 @@
              So the prompt sits above the figures it refines, and the figures
              stay on screen. --}}
         @if (! $hasTaxCountry)
-            <div class="card mb-6 p-4" style="border-radius: var(--radius-lg);">
+            {{-- A tinted band, not a second .card: stacked directly on the
+                 totals strip it repeated the same white surface, border and
+                 shadow, so the two read as one card drawn twice. --}}
+            <div class="mb-6 rounded-lg p-4" style="background: var(--color-surface-2);">
                 <p style="font-size: var(--text-base); font-weight: 600; color: var(--color-text); margin: 0 0 var(--space-1);">
                     {{ Lang::get('tax::page.country_prompt_heading') }}
                 </p>
@@ -191,7 +194,8 @@
                     @endif
                     <a
                         href="{{ route('transactions.index') }}"
-                        style="display: inline-block; margin-top: var(--space-4); font-size: var(--text-base); color: var(--color-blue); text-decoration: underline;"
+                        class="font-medium underline-offset-2 hover:underline"
+                        style="display: inline-block; margin-top: var(--space-4); font-size: var(--text-base); color: var(--color-text);"
                     >{{ Lang::get('tax::page.go_to_transactions') }}</a>
                 </div>
 

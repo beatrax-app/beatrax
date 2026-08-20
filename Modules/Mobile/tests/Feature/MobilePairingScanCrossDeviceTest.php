@@ -132,7 +132,8 @@ it('the full happy path reaches CONFIRMED on both databases AND epoch delivery â
     // phone ever existed.
     $desktopIdentity = $this->asDevice('desktop', fn () => app(DeviceIdentityService::class)->generateAndPersist(MPS_DESKTOP_USER_ID, $session));
     $this->asDevice('desktop', fn () => app(GdkKeyringService::class)->generateAndPersist(MPS_DESKTOP_USER_ID, $session));
-    $desktopEpochKeyHex = $this->asDevice('desktop', fn () => app(GdkKeyringService::class)->currentEpoch(MPS_DESKTOP_USER_ID, $session)->keyHex);
+    $desktopEpoch = $this->asDevice('desktop', fn () => app(GdkKeyringService::class)->currentEpoch(MPS_DESKTOP_USER_ID, $session));
+    $desktopEpochKeyHex = $desktopEpoch->keyHex;
 
     $issuedToken = $this->asDevice('desktop', fn () => app(PairingTokenService::class)->issue(
         MPS_DESKTOP_USER_ID,
@@ -254,5 +255,8 @@ it('the full happy path reaches CONFIRMED on both databases AND epoch delivery â
     $loaded = $keyring->loadKeyring((int) $user->id, $session);
 
     expect($loaded->epochs())->not->toBe([], 'the phone keyring must converge from the desktop\'s delivered epoch (this plan\'s truth #1)');
-    expect($loaded->keyFor(1))->toBe($desktopEpochKeyHex, 'the delivered epoch-1 key must match the desktop\'s real key');
+    // Under the desktop's OWN epoch id: ids are minted, so the phone adopts
+    // the number the desktop minted rather than starting its own count at 1.
+    expect($loaded->keyFor($desktopEpoch->epochId))
+        ->toBe($desktopEpochKeyHex, 'the delivered epoch key must match the desktop\'s real key');
 });

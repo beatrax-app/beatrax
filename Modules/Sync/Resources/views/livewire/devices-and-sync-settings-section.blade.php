@@ -188,18 +188,14 @@
                                         <span class="text-sm text-slate-900 dark:text-slate-100">{{ $device['name'] }}</span>
 
                                         @if (! ($device['removed'] ?? false))
-                                            <button
-                                                type="button"
+                                            {{-- The reveal-on-hover classes stay: the pencil is
+                                                 deliberately quiet until the row is hovered or
+                                                 focused. Only the bespoke chrome is dropped. --}}
+                                            <x-core::emoji-action
+                                                :label="Lang::get('sync::devices.rename_device')"
+                                                class="opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
                                                 wire:click="startRename({{ $device['id'] }})"
-                                                aria-label="{{ Lang::get('sync::devices.rename_device') }}"
-                                                class="opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100
-                                                       text-slate-400 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-1 rounded
-                                                       dark:text-slate-500 dark:hover:text-slate-300 dark:focus-visible:ring-slate-100"
-                                            >
-                                                <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                                    <path d="M2.695 14.762l-1.262 3.155a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.886L17.5 5.501a2.121 2.121 0 00-3-3L3.58 13.419a4 4 0 00-.885 1.343z" />
-                                                </svg>
-                                            </button>
+                                            >✏️</x-core::emoji-action>
                                         @endif
 
                                         @if ($device['is_self'])

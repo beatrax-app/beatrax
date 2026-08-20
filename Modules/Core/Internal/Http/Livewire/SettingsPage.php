@@ -101,6 +101,12 @@ final class SettingsPage extends Component
         $this->validateOnly('theme');
 
         ($writeUserPreference)($currentUser->user()->id, ['theme' => $this->theme]);
+
+        // The class this drives lives on the root element in the layout, which
+        // Livewire never re-renders — so the preference was written and the
+        // page kept the theme it was served with. Tapping Light repainted the
+        // button and nothing else, until a full navigation happened to occur.
+        $this->dispatch('theme-changed', theme: $this->theme);
     }
 
     // Validates against the supported-locale allow-list before the preference

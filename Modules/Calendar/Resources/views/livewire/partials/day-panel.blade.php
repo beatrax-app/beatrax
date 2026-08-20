@@ -16,13 +16,12 @@
     <span class="font-semibold" style="font-size: var(--text-md, 1rem); color: var(--color-text);">
         {{ $dayDto->date->translatedFormat('j M Y') }}
     </span>
-    <button
+    <x-core::emoji-action
+        :label="Lang::get('calendar::messages.panel.close')"
+        class="ml-auto"
         wire:click="$set('selectedDay', null)"
-        @click="panelOpen = false"
-        class="ml-auto flex h-8 w-8 items-center justify-center rounded hover:bg-slate-100 dark:hover:bg-slate-800"
-        style="color: var(--color-text-muted);"
-        aria-label="{{ Lang::get('calendar::messages.panel.close') }}"
-    >×</button>
+        x-on:click="panelOpen = false"
+    >✖️</x-core::emoji-action>
 </div>
 
 {{-- SOD balance — "—" when computing OR when no honest SoD exists (WR-08:
@@ -78,14 +77,14 @@
                         <div class="mt-1 flex flex-wrap gap-2 text-xs" style="color: var(--color-text-muted);">
                             <a
                                 href="/recurring/series/{{ $entry->seriesId }}"
-                                class="underline hover:no-underline"
+                                class="font-medium underline-offset-2 hover:underline"
                                 style="color: var(--color-text-muted);"
                                 wire:navigate
                             >{{ Lang::get('calendar::messages.panel.series') }}</a>
                             @if ($entry->counterpartySlug !== null)
                                 <a
                                     href="/counterparties/{{ $entry->counterpartySlug }}"
-                                    class="underline hover:no-underline"
+                                    class="font-medium underline-offset-2 hover:underline"
                                     style="color: var(--color-text-muted);"
                                     wire:navigate
                                 >{{ Lang::get('calendar::messages.panel.counterparty') }}</a>
