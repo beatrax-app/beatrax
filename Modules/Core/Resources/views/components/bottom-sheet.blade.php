@@ -5,7 +5,10 @@
 
 @use('Modules\Core\Public\Support\Lang')
 @php
-    $titleId = 'bottom-sheet-title-'.$name;
+    // A nameless sheet would emit id="bottom-sheet-title-" and a second one
+    // would duplicate it, pointing both aria-labelledby at the same node.
+    // Every caller names its sheet today; this keeps that from being load-bearing.
+    $titleId = 'bottom-sheet-title-'.($name !== '' ? $name : substr(md5($title), 0, 8));
 @endphp
 
 {{--

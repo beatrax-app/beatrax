@@ -26,6 +26,17 @@ final class NoStoreFinancialData
     // arrive from bank exports and mailboxes — so these are what stands
     // between a missed escape and a working attack.
     /** @var array<string, string> */
+    // Static brand artefacts, and the only routes exempt from the no-store
+    // rule: they carry no financial data, and overwriting their own week-long
+    // policy made every lock screen and setup screen re-read a 91 KB PNG
+    // through PHP, on a device with no web server in front of it.
+    private const PUBLIC_ARTEFACT_ROUTES = [
+        'app.icon',
+        'app.splash',
+        'pwa.icon',
+        'site.webmanifest',
+    ];
+
     private const SECURITY_HEADERS = [
         'X-Content-Type-Options' => 'nosniff',
         'X-Frame-Options' => 'DENY',
@@ -48,8 +59,10 @@ final class NoStoreFinancialData
         /** @var Response $response */
         $response = $next($request);
 
-        $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-        $response->headers->set('Pragma', 'no-cache');
+        if (! in_array($request->route()?->getName(), self::PUBLIC_ARTEFACT_ROUTES, true)) {
+            $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+            $response->headers->set('Pragma', 'no-cache');
+        }
 
         foreach (self::SECURITY_HEADERS as $header => $value) {
             if (! $response->headers->has($header)) {
