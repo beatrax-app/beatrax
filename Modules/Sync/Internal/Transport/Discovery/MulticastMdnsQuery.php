@@ -26,6 +26,9 @@ final class MulticastMdnsQuery
     // rather than letting a long response arrive truncated.
     private const int MAX_DATAGRAM_BYTES = 9000;
 
+    // One length byte per label, so 63 is the protocol's own ceiling.
+    private const int MAX_LABEL_BYTES = 63;
+
     private const int MICROSECONDS_PER_SECOND = 1_000_000;
 
     private const string SERVICE_DOMAIN = 'local';
@@ -123,7 +126,9 @@ final class MulticastMdnsQuery
             return null;
         }
 
-        $sender = $this->addressOf($peer);
+        // $peer is an out-parameter, so it is only a string once the read
+        // actually succeeded; a datagram we cannot attribute is discarded.
+        $sender = is_string($peer) ? $this->addressOf($peer) : '';
 
         return $sender === '' ? null : $datagram;
     }
@@ -134,7 +139,16 @@ final class MulticastMdnsQuery
     {
         $question = '';
         foreach (explode('.', $name) as $label) {
-            $question .= chr(strlen($label)).$label;
+            $length = strlen($label);
+
+            // A DNS label is one length byte, so 63 is the protocol's ceiling
+            // and anything longer cannot be encoded at all. Silently wrapping
+            // it through chr() would emit a different name than was asked for.
+            if ($length < 1 || $length > self::MAX_LABEL_BYTES) {
+                return '';
+            }
+
+            $question .= chr($length).$label;
         }
 
         return pack('nnnnnn', 0, 0, 1, 0, 0, 0)

@@ -103,6 +103,10 @@ final class OpLogRebuilder
             ->pluck('id');
 
         foreach ($transactionIds as $transactionId) {
+            if (! is_numeric($transactionId)) {
+                continue;
+            }
+
             try {
                 $this->searchWriter->upsertForTransaction((int) $transactionId, $userId);
             } catch (\Throwable) {
