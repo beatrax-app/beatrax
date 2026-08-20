@@ -1,6 +1,6 @@
 <aside wire:name="core.app-sidebar" class="side" aria-label="Primary" style="--side-w: 248px;">
     <div class="side-brand">
-        <img src="https://beatrax.test/build/assets/logo-DEpTnGRK.svg" alt="Beatrax" width="24" height="24" class="logo logo-svg" />
+        <img src="https://beatrax.test/build/assets/logo.svg" alt="Beatrax" width="24" height="24" class="logo logo-svg" />
         <span>Beatrax</span>
         
         <span class="version-chip">v0.0.0-dev</span>

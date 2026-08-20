@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Support\Fmt')
 @php
     /**
      * @var array{description: string, count: int, lastSeen: ?string, paymentType: ?\Modules\Import\Public\Enums\PaymentType} $row
@@ -19,7 +20,7 @@
     <div class="text-sm text-slate-700 dark:text-slate-300">
         <p>{{ Lang::get('community::mystery.card.seen') }} <span style="font-variant-numeric: tabular-nums;">{{ $count }}</span> {{ Lang::choice('community::mystery.card.time', $count) }}</p>
         @if ($lastSeen !== null)
-            <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('community::mystery.card.last_seen', ['date' => \Illuminate\Support\Carbon::parse($lastSeen)->format('d-m-Y')]) }}</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('community::mystery.card.last_seen', ['date' => Fmt::shortDate($lastSeen)]) }}</p>
         @endif
     </div>
     <div class="text-sm text-slate-700 dark:text-slate-300">

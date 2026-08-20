@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Search\Internal\Services;
 
-use Carbon\CarbonImmutable;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Core\Public\Support\Fmt;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Search\Public\Dto\SearchRowDto;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -42,7 +42,7 @@ final class SearchRowMapper
 
         return new SearchRowDto(
             id: self::toInt($row->id),
-            bookedAt: CarbonImmutable::parse(self::toString($row->booked_at))->format('d-m-Y'),
+            bookedAt: Fmt::shortDate(self::toString($row->booked_at)),
             counterpartyName: $counterpartyName,
             counterpartySlug: $this->counterpartySlug($row),
             categoryId: $row->category_id === null ? null : self::toInt($row->category_id),

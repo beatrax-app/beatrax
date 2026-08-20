@@ -9,6 +9,7 @@ use Illuminate\Contracts\Foundation\Application;
 use InvalidArgumentException;
 use Modules\Categorization\Public\Contracts\AppliesAutoCategory;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Fmt;
 use Modules\Core\Public\Support\SafeTrace;
 use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
 use Modules\Import\Internal\Pipeline\Stages\ClassifyTransactionType;
@@ -136,7 +137,7 @@ final class ImportPipeline
                         rowIndex: $source->sourceRowIndex,
                         status: 'error',
                         accountId: null,
-                        bookedAt: $source->bookedAt->format('d-m-Y'),
+                        bookedAt: Fmt::shortDate($source->bookedAt),
                         counterpartyName: $source->counterpartyName,
                         counterpartyIban: $source->counterpartyIban,
                         description: $rowDescription,
@@ -183,7 +184,7 @@ final class ImportPipeline
                         rowIndex: $source->sourceRowIndex,
                         status: 'error',
                         accountId: $accountId,
-                        bookedAt: $source->bookedAt->format('d-m-Y'),
+                        bookedAt: Fmt::shortDate($source->bookedAt),
                         counterpartyName: $source->counterpartyName,
                         counterpartyIban: $source->counterpartyIban,
                         description: $rowDescription,
@@ -215,7 +216,7 @@ final class ImportPipeline
                     rowIndex: $source->sourceRowIndex,
                     status: $disposition->status(),
                     accountId: $accountId,
-                    bookedAt: $source->bookedAt->format('d-m-Y'),
+                    bookedAt: Fmt::shortDate($source->bookedAt),
                     counterpartyName: $source->counterpartyName,
                     counterpartyIban: $source->counterpartyIban,
                     description: $rowDescription,
