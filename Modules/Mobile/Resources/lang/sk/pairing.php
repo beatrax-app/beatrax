@@ -35,8 +35,8 @@ return [
 
     'errors' => [
         'relay_unreachable' => 'Druhé zariadenie sa nedá dosiahnuť. Skontroluj, či sú obe v tej istej sieti a či je na počítači zapnutá synchronizácia.',
-        'import_needs_qr' => 'Ak chceš importovať, naskenuj QR kód zobrazený na druhom zariadení.',
         'invalid_code' => 'Tento kód je neplatný alebo mu vypršala platnosť. Nechaj si na druhom zariadení vygenerovať nový.',
         'identity_locked' => 'Identita tvojho zariadenia je zamknutá. Odomkni aplikáciu a skús to znova.',
+        'identity_needs_lock' => 'Najprv nastavte zámok aplikácie — chráni identitu vášho zariadenia.',
     ],
 ];

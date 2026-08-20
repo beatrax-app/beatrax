@@ -6,6 +6,7 @@ return [
     'page_title' => 'Rules',
     'heading' => 'Rules',
     'intro' => 'Pre-categorize transactions on import. Rules apply to every source — bank, card, PayPal, and email receipts.',
+    'device_local_note' => 'Rules stay on this device. They are not shared with your other devices.',
 
     'reapply' => 'Re-apply rules to history',
     'reapplying' => 'Re-applying…',

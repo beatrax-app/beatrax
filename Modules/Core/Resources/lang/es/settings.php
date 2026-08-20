@@ -124,6 +124,13 @@ return [
         'open_releases' => 'Abrir la página de versiones →',
     ],
 
+    'privacy' => [
+        'heading' => 'Política de privacidad',
+        'body' => 'Beatrax guarda tus finanzas en tus propios dispositivos. La política explica qué significa eso, qué envían las funciones en línea opcionales y cómo eliminar tus datos.',
+        'open' => 'Leer la política de privacidad →',
+        'url_hint' => 'Si el enlace no se abre, visita:',
+    ],
+
     'first_run_tour' => [
         'heading' => 'Recorrido inicial',
         'body' => 'Vuelve a lanzar el asistente de configuración si quieres repasar el recorrido de introducción.',

@@ -35,8 +35,8 @@ return [
 
     'errors' => [
         'relay_unreachable' => 'Det går inte att nå den andra enheten. Kontrollera att båda är på samma nätverk och att synkronisering är aktiverad på datorn.',
-        'import_needs_qr' => 'Skanna QR-koden som visas på den andra enheten för att importera.',
         'invalid_code' => 'Koden är ogiltig eller har gått ut. Låt den andra enheten skapa en ny.',
         'identity_locked' => 'Enhetens identitet är låst. Lås upp appen och försök igen.',
+        'identity_needs_lock' => 'Ställ in applåset först — det skyddar enhetens identitet.',
     ],
 ];

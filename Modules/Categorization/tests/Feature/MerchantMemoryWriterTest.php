@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Modules\Categorization\Public\Events\TransactionCategorized;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
+use Modules\Sync\Public\Events\EntityMutated;
 
 beforeEach(function (): void {
     $this->user = User::create([
@@ -231,4 +233,38 @@ it("does not write a memory row when the event's userId does not match the trans
     expect(DB::table('merchant_memories')->where('user_id', $foreign->id)->count())->toBe(0);
     expect(DB::table('merchant_memories')->where('user_id', $this->user->id)->count())->toBe(0);
     expect($merchantId)->toBeGreaterThan(0);
+});
+
+it('announces every repeat sighting, not only the first', function (): void {
+    Event::fake([EntityMutated::class]);
+
+    $merchantId = seedWriterMerchant($this->user->id, 'spotify premium');
+    $tx = makeMemoryTransaction($this->user, $this->account, $this->run, 'Spotify Premium', 'spotify premium');
+
+    event(new TransactionCategorized($tx->id, $this->streaming->id, $this->user->id));
+    event(new TransactionCategorized($tx->id, $this->streaming->id, $this->user->id));
+    event(new TransactionCategorized($tx->id, $this->streaming->id, $this->user->id));
+
+    // The insert branch dispatched; the update branch did not, so a peer was
+    // told the merchant existed and never that it had been seen again — and
+    // the count is what breaks the tie between two remembered categories.
+    Event::assertDispatched(
+        EntityMutated::class,
+        static fn (EntityMutated $e): bool => $e->table === 'merchant_memories' && $e->mutationType === 'edit'
+            && $e->incrementFields === ['occurrence_count']
+            && ($e->dirtyFields['occurrence_count'] ?? null) === 1,
+    );
+
+    $edits = 0;
+    Event::assertDispatched(EntityMutated::class, static function (EntityMutated $e) use (&$edits): bool {
+        if ($e->table === 'merchant_memories' && $e->mutationType === 'edit') {
+            $edits++;
+        }
+
+        return true;
+    });
+
+    expect($edits)->toBe(2);
+
+    unset($merchantId);
 });

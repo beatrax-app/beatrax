@@ -35,8 +35,8 @@ return [
 
     'errors' => [
         'relay_unreachable' => 'Diğer cihaza ulaşılamıyor. Her ikisinin de aynı ağda olduğundan ve masaüstünde senkronizasyonun açık olduğundan emin ol.',
-        'import_needs_qr' => 'İçe aktarmak için diğer cihazda görünen QR kodunu tara.',
         'invalid_code' => 'Bu kod geçersiz veya süresi dolmuş. Diğer cihazdan yeni bir kod oluşturmasını iste.',
         'identity_locked' => 'Cihaz kimliğin kilitli. Uygulamanın kilidini açıp yeniden dene.',
+        'identity_needs_lock' => 'Önce uygulama kilidini ayarlayın — cihaz kimliğinizi o korur.',
     ],
 ];

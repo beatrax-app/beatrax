@@ -13,7 +13,7 @@ return [
     'all_caught_heading' => '🎉 Alles erledigt — jeder Zahlungspartner ist gekennzeichnet.',
     'back_to_index' => 'Zurück zu den Zahlungspartnern →',
 
-    'meta' => ':count Transaktionen · zuletzt gesehen :date',
+    'meta' => ':count Transaktion · zuletzt gesehen :date|:count Transaktionen · zuletzt gesehen :date',
 
     'suggested_aria' => 'Vorgeschlagene Übereinstimmung',
     'suggestion_medium' => '✨ Vielleicht **:name** — mittlere Zuverlässigkeit',

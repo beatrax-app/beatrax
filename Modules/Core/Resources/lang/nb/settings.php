@@ -124,6 +124,13 @@ return [
         'open_releases' => 'Åpne utgivelsessiden →',
     ],
 
+    'privacy' => [
+        'heading' => 'Personvernerklæring',
+        'body' => 'Beatrax holder økonomien din på dine egne enheter. Erklæringen forklarer hva det betyr, hva de valgfrie nettfunksjonene sender, og hvordan du fjerner dataene dine.',
+        'open' => 'Les personvernerklæringen →',
+        'url_hint' => 'Hvis lenken ikke åpnes, gå til:',
+    ],
+
     'first_run_tour' => [
         'heading' => 'Omvisning ved første oppstart',
         'body' => 'Start oppsettsveiviseren på nytt hvis du vil gå gjennom introduksjonen en gang til.',

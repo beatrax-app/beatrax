@@ -35,8 +35,8 @@ return [
 
     'errors' => [
         'relay_unreachable' => 'Cannot reach the other device. Make sure both are on the same network and sync is enabled on the desktop.',
-        'import_needs_qr' => 'Scan the QR code shown on the other device to import.',
         'invalid_code' => 'This code is invalid or has expired. Ask the other device to generate a new one.',
         'identity_locked' => 'Your device identity is locked. Unlock the app and try again.',
+        'identity_needs_lock' => 'Set up the app lock first — your device identity is protected by it.',
     ],
 ];

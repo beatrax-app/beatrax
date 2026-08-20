@@ -11,6 +11,11 @@ return [
     'match_any' => 'Potrivește orice condiție',
 
     'condition_label' => 'Condiția :number',
+    'between_and' => 'și',
+    'field_description' => 'Descriere',
+    'field_counterparty' => 'Contraparte',
+    'field_amount' => 'Sumă',
+    'field_date' => 'Dată',
     'condition_field_aria' => 'Câmpul condiției :number',
     'condition_operator_aria' => 'Operatorul condiției :number',
     'condition_value_aria' => 'Valoarea condiției :number',

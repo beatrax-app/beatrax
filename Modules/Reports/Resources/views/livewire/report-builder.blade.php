@@ -337,6 +337,18 @@
                             >{{ $headlineDelta >= 0 ? '+' : '−' }}{{ $fmt(abs($headlineDelta), $result->currency) }}</span>
                         </div>
                     @endif
+                    {{-- Fees and adjustments are in no metric, by design: a bank
+                         fee is not category spending. Shown beside the total
+                         rather than folded into it, so a total that omits money
+                         does not read as everything that left the account. --}}
+                    @if ($result->otherMovementMinor !== 0)
+                        <div class="flex items-baseline justify-between gap-4">
+                            <span class="text-xs" style="color: var(--color-text-muted);">{{ Lang::get('reports::builder.other_movement') }}</span>
+                            <span class="text-xs" style="color: var(--color-text-muted); font-variant-numeric: tabular-nums;">
+                                {{ $fmt($result->otherMovementMinor, $result->currency) }}
+                            </span>
+                        </div>
+                    @endif
                     @if ($result->hasExcludedAccounts)
                         <p class="text-xs" style="color: var(--color-amber);">
                             {{ Lang::choice('reports::builder.fx_excluded', $result->accountsWithoutRate, ['count' => $result->accountsWithoutRate]) }}

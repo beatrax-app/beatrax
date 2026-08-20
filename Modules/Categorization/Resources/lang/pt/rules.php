@@ -6,6 +6,7 @@ return [
     'page_title' => 'Regras',
     'heading' => 'Regras',
     'intro' => 'Pré-categoriza as transações na importação. As regras aplicam-se a todas as origens — banco, cartão, PayPal e recibos de e-mail.',
+    'device_local_note' => 'As regras ficam neste dispositivo. Não são partilhadas com os teus outros dispositivos.',
 
     'reapply' => 'Reaplicar as regras ao histórico',
     'reapplying' => 'A reaplicar…',

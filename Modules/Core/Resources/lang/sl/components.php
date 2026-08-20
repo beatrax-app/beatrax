@@ -49,4 +49,15 @@ return [
         'hour' => 'Ura',
         'minute' => 'Minuta',
     ],
+
+    'veil_locked' => 'Aplikacija je zaklenjena',
+
+    'chart' => [
+        'donut' => 'Kolobarni grafikon',
+        'bar' => 'Stolpčni grafikon',
+        'line' => 'Črtni grafikon',
+        'range_area' => 'Grafikon razpona',
+    ],
+
+    'sheet_untitled' => 'Pogovorno okno',
 ];

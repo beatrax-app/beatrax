@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__.'/nativephp_scaffold_root.php';
+
 /*
  * Let a multipart upload body reach PHP on iOS.
  *
@@ -43,7 +45,7 @@ declare(strict_types=1);
  * unpatched shell degrades to exactly the behaviour this exists to fix.
  */
 
-$target = __DIR__.'/../mobile-app/nativephp/ios/NativePHP/PHPSchemeHandler.swift';
+$target = beatraxScaffoldPath('ios/NativePHP/PHPSchemeHandler.swift') ?? '';
 
 if (! is_file($target)) {
     // The native scaffold is generated on demand and is absent from a fresh

@@ -12,6 +12,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Import\Public\Events\TransactionImported;
 use Modules\Ledger\Models\Transaction;
+use Modules\Ledger\Public\Contracts\CapturesTransactionsForSync;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Dto\RecordResult;
@@ -34,10 +35,17 @@ final class RecordTransactions implements RecordsTransactions
         private readonly Dispatcher $events,
         private readonly SensitiveColumnCodec $codec,
         private readonly SessionFactory $session,
+        private readonly CapturesTransactionsForSync $syncCapture,
     ) {}
 
-    public function __invoke(iterable $canonical, User $user): RecordResult
+    // $captureForSync is the import path's opt-out, and only its: that
+    // caller captures the run and its accounts before the transactions, so
+    // capturing here as well wrote every imported row twice.
+    public function __invoke(iterable $canonical, User $user, bool $captureForSync = true): RecordResult
     {
+        /** @var list<int> $insertedIds */
+        $insertedIds = [];
+
         $inserted = 0;
         $duplicates = 0;
         /** @var list<string> $sourceFormats */
@@ -50,13 +58,13 @@ final class RecordTransactions implements RecordsTransactions
         foreach ($canonical as $row) {
             $chunk[] = $row;
             if (count($chunk) >= self::CHUNK_SIZE) {
-                $this->persistChunk($chunk, $user, $inserted, $duplicates, $sourceFormats);
+                $this->persistChunk($chunk, $user, $inserted, $duplicates, $sourceFormats, $insertedIds);
                 $chunk = [];
             }
         }
 
         if ($chunk !== []) {
-            $this->persistChunk($chunk, $user, $inserted, $duplicates, $sourceFormats);
+            $this->persistChunk($chunk, $user, $inserted, $duplicates, $sourceFormats, $insertedIds);
         }
 
         // Dispatched exactly once per call, after every chunk
@@ -71,6 +79,13 @@ final class RecordTransactions implements RecordsTransactions
                 insertedCount: $inserted,
                 sourceFormats: $distinctFormats,
             ));
+
+            // Post-commit, and here rather than at each caller: the cash book,
+            // e-mail receipts and the migration pipeline all record through
+            // this one action, and none of them was covered.
+            if ($captureForSync) {
+                $this->syncCapture->captureTransactions($insertedIds, $user);
+            }
         }
 
         return new RecordResult(inserted: $inserted, duplicates: $duplicates);
@@ -79,10 +94,11 @@ final class RecordTransactions implements RecordsTransactions
     /**
      * @param  list<CanonicalTransaction>  $chunk
      * @param  list<string>  $sourceFormats
+     * @param  list<int>  $insertedIds
      */
-    private function persistChunk(array $chunk, User $user, int &$inserted, int &$duplicates, array &$sourceFormats): void
+    private function persistChunk(array $chunk, User $user, int &$inserted, int &$duplicates, array &$sourceFormats, array &$insertedIds): void
     {
-        $this->db->connection()->transaction(function () use ($chunk, $user, &$inserted, &$duplicates, &$sourceFormats): void {
+        $this->db->connection()->transaction(function () use ($chunk, $user, &$inserted, &$duplicates, &$sourceFormats, &$insertedIds): void {
             $now = $this->clock->now()->toDateTimeString();
             foreach ($chunk as $row) {
                 if ($row->userId === null) {
@@ -120,6 +136,8 @@ final class RecordTransactions implements RecordsTransactions
                         ->where('user_id', $row->userId)
                         ->where('fingerprint', $fingerprint)
                         ->firstOrFail();
+
+                    $insertedIds[] = $persisted->id;
 
                     $this->events->dispatch(new TransactionImported(
                         transaction: $persisted,

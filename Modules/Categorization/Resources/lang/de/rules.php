@@ -6,6 +6,7 @@ return [
     'page_title' => 'Regeln',
     'heading' => 'Regeln',
     'intro' => 'Transaktionen schon beim Import kategorisieren. Regeln gelten für jede Quelle — Bank, Karte, PayPal und E-Mail-Belege.',
+    'device_local_note' => 'Regeln bleiben auf diesem Gerät. Sie werden nicht mit deinen anderen Geräten geteilt.',
 
     'reapply' => 'Regeln erneut auf den Verlauf anwenden',
     'reapplying' => 'Wird erneut angewendet…',

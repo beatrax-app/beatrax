@@ -11,6 +11,11 @@ return [
     'match_any' => 'Täsmää mihin tahansa ehtoon',
 
     'condition_label' => 'Ehto :number',
+    'between_and' => 'ja',
+    'field_description' => 'Kuvaus',
+    'field_counterparty' => 'Vastapuoli',
+    'field_amount' => 'Summa',
+    'field_date' => 'Päivä',
     'condition_field_aria' => 'Ehdon :number kenttä',
     'condition_operator_aria' => 'Ehdon :number operaattori',
     'condition_value_aria' => 'Ehdon :number arvo',

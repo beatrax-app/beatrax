@@ -124,6 +124,13 @@ return [
         'open_releases' => 'Atvērt laidienu lapu →',
     ],
 
+    'privacy' => [
+        'heading' => 'Privātuma politika',
+        'body' => 'Beatrax tur tavas finanses tavās paša ierīcēs. Politika skaidro, ko tas nozīmē, ko sūta izvēles tiešsaistes funkcijas un kā noņemt savus datus.',
+        'open' => 'Lasīt privātuma politiku →',
+        'url_hint' => 'Ja saite neatveras, apmeklē:',
+    ],
+
     'first_run_tour' => [
         'heading' => 'Pirmās palaišanas ievads',
         'body' => 'Palaidiet iestatīšanas vedni vēlreiz, ja vēlaties atkārtoti iziet ievada soļus.',

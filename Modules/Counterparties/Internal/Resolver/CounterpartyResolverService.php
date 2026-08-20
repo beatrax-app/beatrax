@@ -21,6 +21,7 @@ use Modules\Counterparties\Public\Events\CounterpartyResolved;
 use Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban;
 use Modules\Import\Public\Services\MerchantNameResolver;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Sync\Public\Events\EntityMutated;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 // The default CounterpartyResolver implementation — the seven-step
@@ -367,6 +368,31 @@ final class CounterpartyResolverService implements CounterpartyResolver
                 'metadata' => $metadata === [] ? null : $metadata,
             ], $userId, ($this->session)()),
         );
+
+        // Plaintext on purpose: OpLogWriter encrypts sensitive columns itself
+        // under the GDK epoch, and the backfiller decrypts before handing them
+        // over. Passing the stored ciphertext would encrypt it twice and the
+        // peer would never read it back.
+        if ($row->wasRecentlyCreated) {
+            $this->events->dispatch(new EntityMutated(
+                table: 'counterparties',
+                pk: $row->id,
+                userId: $userId,
+                mutationType: 'create',
+                dirtyFields: [
+                    'user_id' => $userId,
+                    'slug' => $slug,
+                    'type' => $type,
+                    'display_name' => $displayName,
+                    'iban' => $iban,
+                    'merchant_name' => $merchantName,
+                    // website and logo_url live in here and nowhere else, so
+                    // omitting it landed the counterparty on the peer with
+                    // both fields blank.
+                    'metadata' => $metadata === [] ? null : $metadata,
+                ],
+            ));
+        }
 
         $this->events->dispatch(new CounterpartyResolved(
             counterpartyId: $row->id,

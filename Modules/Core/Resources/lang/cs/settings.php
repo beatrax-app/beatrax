@@ -124,6 +124,13 @@ return [
         'open_releases' => 'Otevřít stránku s vydáními →',
     ],
 
+    'privacy' => [
+        'heading' => 'Zásady ochrany osobních údajů',
+        'body' => 'Beatrax drží tvoje finance na tvých vlastních zařízeních. Zásady vysvětlují, co to znamená, co odesílají volitelné online funkce a jak svoje data odstranit.',
+        'open' => 'Přečíst zásady ochrany osobních údajů →',
+        'url_hint' => 'Pokud se odkaz neotevře, navštiv:',
+    ],
+
     'first_run_tour' => [
         'heading' => 'Úvodní prohlídka',
         'body' => 'Spusť průvodce nastavením znovu, pokud si chceš úvodní kroky projít ještě jednou.',

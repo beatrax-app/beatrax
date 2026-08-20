@@ -266,6 +266,12 @@ jobs:
               run: |
                   set -euo pipefail
                   cp .env.example .env
+                  # A shipped bundle must never answer an error with Laravel's
+                  # debug page: it prints file paths, the framework version and a
+                  # full stack trace. .env.example carries APP_DEBUG=true for
+                  # local work, so it is overridden here, portably.
+                  { grep -Ev '^(APP_ENV|APP_DEBUG)=' .env; printf 'APP_ENV=production\nAPP_DEBUG=false\n'; } > .env.release
+                  mv .env.release .env
                   # The desktop updater's Ed25519 pre-check reads this feed at
                   # runtime; the bundled .env is this file, so the origin has to
                   # be written in before native:build copies the app tree.
@@ -405,6 +411,12 @@ jobs:
               run: |
                   set -euo pipefail
                   cp .env.example .env
+                  # A shipped bundle must never answer an error with Laravel's
+                  # debug page: it prints file paths, the framework version and a
+                  # full stack trace. .env.example carries APP_DEBUG=true for
+                  # local work, so it is overridden here, portably.
+                  { grep -Ev '^(APP_ENV|APP_DEBUG)=' .env; printf 'APP_ENV=production\nAPP_DEBUG=false\n'; } > .env.release
+                  mv .env.release .env
                   # The desktop updater's Ed25519 pre-check reads this feed at
                   # runtime; the bundled .env is this file, so the origin has to
                   # be written in before native:build copies the app tree.
@@ -522,6 +534,12 @@ jobs:
               run: |
                   set -euo pipefail
                   cp .env.example .env
+                  # A shipped bundle must never answer an error with Laravel's
+                  # debug page: it prints file paths, the framework version and a
+                  # full stack trace. .env.example carries APP_DEBUG=true for
+                  # local work, so it is overridden here, portably.
+                  { grep -Ev '^(APP_ENV|APP_DEBUG)=' .env; printf 'APP_ENV=production\nAPP_DEBUG=false\n'; } > .env.release
+                  mv .env.release .env
                   # The desktop updater's Ed25519 pre-check reads this feed at
                   # runtime; the bundled .env is this file, so the origin has to
                   # be written in before native:build copies the app tree.
@@ -614,6 +632,12 @@ jobs:
               run: |
                   set -euo pipefail
                   cp .env.example .env
+                  # A shipped bundle must never answer an error with Laravel's
+                  # debug page: it prints file paths, the framework version and a
+                  # full stack trace. .env.example carries APP_DEBUG=true for
+                  # local work, so it is overridden here, portably.
+                  { grep -Ev '^(APP_ENV|APP_DEBUG)=' .env; printf 'APP_ENV=production\nAPP_DEBUG=false\n'; } > .env.release
+                  mv .env.release .env
                   mkdir -p database storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
                   touch database/database.sqlite
                   chmod -R u+rwX storage bootstrap/cache

@@ -25,6 +25,7 @@ final class ReportAggregator
         private readonly TimeBucketSpendQuery $timeBucketSpendQuery,
         private readonly NetWorthSeriesQuery $netWorthSeriesQuery,
         private readonly CurrencyModeApplier $currencyModeApplier,
+        private readonly OtherMovementQuery $otherMovementQuery,
         private readonly PeriodComparison $periodComparison,
     ) {}
 
@@ -59,6 +60,7 @@ final class ReportAggregator
             hasExcludedAccounts: $result->hasExcludedAccounts || $comparison['previousHasExcludedAccounts'],
             accountsWithoutRate: $result->accountsWithoutRate + $comparison['previousAccountsWithoutRate'],
             comparisonRows: $comparison['rows'],
+            otherMovementMinor: $result->otherMovementMinor,
         );
     }
 
@@ -82,6 +84,7 @@ final class ReportAggregator
             $definition->currencyMode,
             $queryForCurrency,
             $filters,
+            $this->otherMovementQuery->totalsByCurrency($user, $period, $definition->metric, $filters),
         );
     }
 

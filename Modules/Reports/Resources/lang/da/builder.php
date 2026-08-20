@@ -140,4 +140,6 @@ return [
         'min_aria' => 'Mindste beløb',
         'max_aria' => 'Største beløb',
     ],
+
+    'other_movement' => 'Gebyrer og reguleringer (ikke medregnet)',
 ];

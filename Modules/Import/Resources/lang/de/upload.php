@@ -8,7 +8,7 @@ return [
     'migrate_prompt' => 'Wechselst du von einer anderen Budget-App?',
     'migrate_link' => 'Aus YNAB oder Actual importieren',
     'subtitle' => 'Zieh einen Bank-, Karten- oder PayPal-Export hierher, oder eine E-Mail-Belegdatei.',
-    'mime_hint' => 'Diese Datei sieht nicht nach einem unterstützten Kontoauszugs-Export aus. Nimm eine Bank-CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, eine Kartenabrechnung als PDF, eine E-Mail-Nachricht (.eml) oder ein Postfach-Archiv (.mbox).',
+    'mime_hint' => 'Unterstützte Dateien: Bank-CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, Kartenabrechnungs-PDF, E-Mail-Nachricht (.eml) oder Mailbox-Archiv (.mbox).',
 
     'source_label' => 'Quelle',
 

@@ -11,6 +11,11 @@ return [
     'match_any' => 'Eine Bedingung muss zutreffen',
 
     'condition_label' => 'Bedingung :number',
+    'between_and' => 'und',
+    'field_description' => 'Beschreibung',
+    'field_counterparty' => 'Zahlungspartner',
+    'field_amount' => 'Betrag',
+    'field_date' => 'Datum',
     'condition_field_aria' => 'Feld von Bedingung :number',
     'condition_operator_aria' => 'Operator von Bedingung :number',
     'condition_value_aria' => 'Wert von Bedingung :number',

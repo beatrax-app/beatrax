@@ -8,7 +8,7 @@ return [
     'migrate_prompt' => 'Vii de la altă aplicație de bugetare?',
     'migrate_link' => 'Importă din YNAB sau Actual',
     'subtitle' => 'Trage aici un export bancar, de card sau PayPal, ori un fișier cu bon primit pe e-mail.',
-    'mime_hint' => 'Fișierul nu pare un export de extras acceptat. Trage aici un CSV bancar, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, un PDF cu extrasul cardului, un mesaj de e-mail (.eml) sau o arhivă de căsuță poștală (.mbox).',
+    'mime_hint' => 'Fișiere acceptate: CSV bancar, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, PDF cu extrasul cardului, mesaj e-mail (.eml) sau arhivă de cutie poștală (.mbox).',
 
     'source_label' => 'Sursă',
 

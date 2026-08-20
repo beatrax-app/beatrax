@@ -140,4 +140,6 @@ return [
         'min_aria' => 'Vähimmäissumma',
         'max_aria' => 'Enimmäissumma',
     ],
+
+    'other_movement' => 'Palkkiot ja oikaisut (ei laskettu mukaan)',
 ];

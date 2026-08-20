@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Support\LegalLinks')
 @use('Modules\Core\Public\Enums\Locale')
 @use('Modules\Core\Public\Enums\Theme')
 @php
@@ -374,6 +375,28 @@
             @livewire('auth.recovery-codes-section')
         </section>
 
+        {{-- Both stores require the privacy policy to be reachable inside the
+             app, not only from the store listing. The URL is printed beside
+             the link because a WebView shell is free to swallow target=_blank,
+             and an unreachable policy is the same rejection as a missing one. --}}
+        <section class="space-y-2" id="privacy-policy">
+            <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.privacy.heading') }}</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">
+                {{ Lang::get('core::settings.privacy.body') }}
+            </p>
+            <a
+                href="{{ LegalLinks::PRIVACY_POLICY_URL }}"
+                target="_blank"
+                rel="noopener noreferrer"
+                data-testid="privacy-policy-link"
+                class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+            >{{ Lang::get('core::settings.privacy.open') }}</a>
+            <p class="text-xs text-[var(--color-text-muted)]">
+                {{ Lang::get('core::settings.privacy.url_hint') }}
+                <span class="select-all font-mono">{{ LegalLinks::PRIVACY_POLICY_URL }}</span>
+            </p>
+        </section>
+
         <section class="space-y-2" id="first-run-tour">
             <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.first_run_tour.heading') }}</h2>
             <p class="text-sm text-slate-500 dark:text-slate-400">
@@ -383,6 +406,14 @@
                 href="{{ route('setup', ['force' => 1]) }}"
                 class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
             >{{ Lang::get('core::settings.first_run_tour.run_again') }}</a>
+        </section>
+    </div>
+
+    {{-- ===== Delete account ===== --}}
+    <div class="{{ $card }}">
+        <section class="space-y-2" id="delete-account">
+            <h2 class="{{ $cardHead }}">{{ Lang::get('auth::delete_account.heading') }}</h2>
+            @livewire('auth.delete-account-section')
         </section>
     </div>
 

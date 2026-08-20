@@ -33,6 +33,15 @@ final readonly class MobileEnsureImportCompleted
         'mobile.welcome',
         'auth.lock',
         'logout',
+
+        // Static brand artefacts, exempt for the same reason
+        // MobileEnsureDatabaseReady exempts them: no web server sits in front
+        // of PHP here, and a gate that catches them answers the manifest and
+        // the icon set with the setup page's HTML.
+        'site.webmanifest',
+        'pwa.icon',
+        'app.icon',
+        'app.splash',
     ];
 
     // The Livewire AJAX endpoint drives the pairing and setup screens

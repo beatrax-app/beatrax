@@ -6,6 +6,7 @@ return [
     'page_title' => 'Pravidla',
     'heading' => 'Pravidla',
     'intro' => 'Předkategorizuj transakce už při importu. Pravidla platí pro každý zdroj — banku, kartu, PayPal i účtenky z e-mailu.',
+    'device_local_note' => 'Pravidla zůstávají v tomto zařízení. Nesdílejí se s vašimi ostatními zařízeními.',
 
     'reapply' => 'Použít pravidla znovu na historii',
     'reapplying' => 'Aplikuje se…',

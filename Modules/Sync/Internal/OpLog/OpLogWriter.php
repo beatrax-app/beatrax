@@ -62,6 +62,45 @@ final class OpLogWriter
         $this->writeEntry($table, $pk, $field, $jsonValue, OpType::Set, $gdkEpochId);
     }
 
+    // A g_counter field merges as the SUM of each device's own maximum, so an
+    // op must carry THIS device's running total. The stored column holds the
+    // merged total across every device, and emitting that would re-count the
+    // other devices' contributions as ours on the next merge.
+    public function writeIncrement(string $table, int|string $pk, string $field, int $delta): void
+    {
+        $this->writeSet($table, $pk, $field, $this->ownRunningTotal($table, $pk, $field) + $delta);
+    }
+
+    // The highest total this device has published for the field, which is the
+    // per-device state a G-Counter needs and the op log already holds.
+    private function ownRunningTotal(string $table, int|string $pk, string $field): int
+    {
+        $rows = $this->db->connection()
+            ->table('op_log_entries')
+            ->where('user_id', $this->userId)
+            ->where('device_id', $this->deviceId)
+            ->where('table_name', $table)
+            ->where('pk', (string) $pk)
+            ->where('field', $field)
+            ->pluck('value');
+
+        $highest = 0;
+
+        foreach ($rows as $value) {
+            if (! is_string($value)) {
+                continue;
+            }
+
+            $decoded = json_decode($value, true);
+
+            if (is_int($decoded) && $decoded > $highest) {
+                $highest = $decoded;
+            }
+        }
+
+        return $highest;
+    }
+
     /**
      * @param  string  $table  Target table name.
      * @param  int|string  $pk  Primary key of the new row.

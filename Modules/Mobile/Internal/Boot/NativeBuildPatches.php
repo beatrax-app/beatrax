@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Mobile\Internal\Boot;
 
 use Psr\Log\LoggerInterface;
+use RuntimeException;
 use Symfony\Component\Process\Process;
 use Throwable;
 
@@ -33,6 +34,7 @@ final readonly class NativeBuildPatches
         'nativephp_android_file_chooser.php',
         'nativephp_keep_webview_cookies.php',
         'nativephp_exclude_data_from_backup.php',
+        'nativephp_strip_unused_permissions.php',
         'nativephp_theme_native_shell.php',
         'nativephp_brand_boot_splash.php',
         'nativephp_android_adaptive_icon.php',
@@ -40,6 +42,16 @@ final readonly class NativeBuildPatches
         'nativephp_extend_bundle_copy_timeout.php',
         'nativephp_ios_request_body_stream.php',
         'nativephp_ios_download_delegate.php',
+        'nativephp_ios_privacy_manifest.php',
+        'nativephp_ios_export_compliance.php',
+    ];
+
+    // A cosmetic patch that fails degrades to the unpatched shell, which is
+    // visible on the device. These two are invisible until App Store review
+    // rejects the build, so they stop it here instead.
+    private const REQUIRED_SCRIPTS = [
+        'nativephp_ios_privacy_manifest.php',
+        'nativephp_ios_export_compliance.php',
     ];
 
     public function __construct(
@@ -78,14 +90,21 @@ final readonly class NativeBuildPatches
 
             $failure = $this->runPatch($path);
 
-            if ($failure !== null) {
-                // A failed patch must not abort the build; it degrades to the
-                // unpatched shell, which is visible and fixable.
-                $this->log->warning('NativeBuildPatches: patch script failed.', [
-                    'script' => $script,
-                    'exception' => $failure,
-                ]);
+            if ($failure === null) {
+                continue;
             }
+
+            if (in_array($script, self::REQUIRED_SCRIPTS, true)) {
+                throw new RuntimeException(
+                    "NativeBuildPatches: {$script} failed, and the artefact it writes is required for App Store "
+                    ."submission. Refusing to build without it.\n{$failure}",
+                );
+            }
+
+            $this->log->warning('NativeBuildPatches: patch script failed.', [
+                'script' => $script,
+                'exception' => $failure,
+            ]);
         }
     }
 

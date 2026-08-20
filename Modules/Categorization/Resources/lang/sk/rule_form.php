@@ -11,6 +11,11 @@ return [
     'match_any' => 'Splniť ktorúkoľvek podmienku',
 
     'condition_label' => 'Podmienka :number',
+    'between_and' => 'a',
+    'field_description' => 'Popis',
+    'field_counterparty' => 'Protistrana',
+    'field_amount' => 'Suma',
+    'field_date' => 'Dátum',
     'condition_field_aria' => 'Pole podmienky :number',
     'condition_operator_aria' => 'Operátor podmienky :number',
     'condition_value_aria' => 'Hodnota podmienky :number',

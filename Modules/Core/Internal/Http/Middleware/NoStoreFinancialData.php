@@ -33,6 +33,18 @@ final class NoStoreFinancialData
         'X-Permitted-Cross-Domain-Policies' => 'none',
     ];
 
+    // Static brand artefacts, and the only routes exempt from the no-store
+    // rule: they carry no financial data, and overwriting their own week-long
+    // policy made every lock screen and setup screen re-read a 91 KB PNG
+    // through PHP, on a device with no web server in front of it.
+    /** @var list<string> */
+    private const PUBLIC_ARTEFACT_ROUTES = [
+        'app.icon',
+        'app.splash',
+        'pwa.icon',
+        'site.webmanifest',
+    ];
+
     public function __construct(
         private readonly Vite $vite,
         private readonly Application $app,
@@ -48,8 +60,10 @@ final class NoStoreFinancialData
         /** @var Response $response */
         $response = $next($request);
 
-        $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-        $response->headers->set('Pragma', 'no-cache');
+        if (! in_array($request->route()?->getName(), self::PUBLIC_ARTEFACT_ROUTES, true)) {
+            $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+            $response->headers->set('Pragma', 'no-cache');
+        }
 
         foreach (self::SECURITY_HEADERS as $header => $value) {
             if (! $response->headers->has($header)) {

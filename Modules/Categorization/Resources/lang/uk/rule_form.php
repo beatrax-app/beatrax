@@ -11,6 +11,11 @@ return [
     'match_any' => 'Відповідає будь-якій умові',
 
     'condition_label' => 'Умова :number',
+    'between_and' => 'і',
+    'field_description' => 'Опис',
+    'field_counterparty' => 'Контрагент',
+    'field_amount' => 'Сума',
+    'field_date' => 'Дата',
     'condition_field_aria' => 'Поле умови :number',
     'condition_operator_aria' => 'Оператор умови :number',
     'condition_value_aria' => 'Значення умови :number',

@@ -6,6 +6,7 @@ return [
     'page_title' => 'Règles',
     'heading' => 'Règles',
     'intro' => 'Catégorise les transactions dès l\'import. Les règles s\'appliquent à toutes les sources — banque, carte, PayPal et reçus par e-mail.',
+    'device_local_note' => 'Les règles restent sur cet appareil. Elles ne sont pas partagées avec vos autres appareils.',
 
     'reapply' => 'Réappliquer les règles à l\'historique',
     'reapplying' => 'Réapplication…',

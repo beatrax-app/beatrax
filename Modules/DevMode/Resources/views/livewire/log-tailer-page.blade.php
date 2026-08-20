@@ -213,220 +213,68 @@
             </span>
         </div>
     </div>
-</div>
+    {{-- Inside the root: Livewire binds wire:id to the first top-level
+         element, so anything beside it is unbound. The script also needs
+         the CSP nonce — without it the page loads and does nothing. --}}
 
-<style>
-    @keyframes cursor-blink-1s { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
-    .cursor-blink { animation: cursor-blink-1s 1s steps(1) infinite; }
-</style>
+    <style>
+        @keyframes cursor-blink-1s { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+        .cursor-blink { animation: cursor-blink-1s 1s steps(1) infinite; }
+    </style>
 
-<script>
-    /* global Alpine */
-    if (typeof window !== 'undefined' && !window.__devLogTailerRegistered) {
-        window.__devLogTailerRegistered = true;
-        document.addEventListener('alpine:init', () => {
-            Alpine.data('logTailer', (opts) => ({
-                pollUrl: opts.pollUrl,
-                contextUrl: opts.contextUrl,
-                statsUrl: opts.statsUrl,
-                severities: new Set(opts.initialSeverities || []),
-                contains: opts.initialContains || '',
-                channelFilter: opts.initialChannel || '',
-                // Server-rendered status strings so the tailer's client-side
-                // notices honour the request's resolved UI language.
-                labels: opts.labels || {},
-                buffer: [],
-                paused: false,
-                statusMessage: '',
-                totalReceived: 0,
-                nextLineId: 1,
-                MAX_BUFFER: 10000,
-                // Polling cursor + rotation guard. The server returns the
-                // current inode in every response; the client passes it
-                // back next tick so the server can detect a logrotate /
-                // midnight day-rollover and signal reset.
-                offset: 0,
-                inode: null,
-                pollTimer: null,
-                pollAbort: null,
-                POLL_INTERVAL_MS: 1000,
-                // Stats polling — slower cadence because the O(N) parse
-                // server-side is not free. 3s feels live without burning
-                // the file-walker on every keystroke.
-                stats: opts.initialStats || {
-                    today: { sizeBytes: 0, totalLines: 0, perSeverity: {}, capped: false },
-                    allFiles: { count: 0, totalBytes: 0 },
-                },
-                statsTimer: null,
-                statsAbort: null,
-                STATS_INTERVAL_MS: 3000,
+    <script nonce="{{ Vite::cspNonce() }}">
+        /* global Alpine */
+        if (typeof window !== 'undefined' && !window.__devLogTailerRegistered) {
+            window.__devLogTailerRegistered = true;
+            document.addEventListener('alpine:init', () => {
+                Alpine.data('logTailer', (opts) => ({
+                    pollUrl: opts.pollUrl,
+                    contextUrl: opts.contextUrl,
+                    statsUrl: opts.statsUrl,
+                    severities: new Set(opts.initialSeverities || []),
+                    contains: opts.initialContains || '',
+                    channelFilter: opts.initialChannel || '',
+                    // Server-rendered status strings so the tailer's client-side
+                    // notices honour the request's resolved UI language.
+                    labels: opts.labels || {},
+                    buffer: [],
+                    paused: false,
+                    statusMessage: '',
+                    totalReceived: 0,
+                    nextLineId: 1,
+                    MAX_BUFFER: 10000,
+                    // Polling cursor + rotation guard. The server returns the
+                    // current inode in every response; the client passes it
+                    // back next tick so the server can detect a logrotate /
+                    // midnight day-rollover and signal reset.
+                    offset: 0,
+                    inode: null,
+                    pollTimer: null,
+                    pollAbort: null,
+                    POLL_INTERVAL_MS: 1000,
+                    // Stats polling — slower cadence because the O(N) parse
+                    // server-side is not free. 3s feels live without burning
+                    // the file-walker on every keystroke.
+                    stats: opts.initialStats || {
+                        today: { sizeBytes: 0, totalLines: 0, perSeverity: {}, capped: false },
+                        allFiles: { count: 0, totalBytes: 0 },
+                    },
+                    statsTimer: null,
+                    statsAbort: null,
+                    STATS_INTERVAL_MS: 3000,
 
-                start() {
-                    this.pollNow();
-                    this.refreshStats();
-                },
+                    start() {
+                        this.pollNow();
+                        this.refreshStats();
+                    },
 
-                // Alpine teardown hook — fires when the component root is
-                // removed from the DOM (wire:navigate page swap, tab close,
-                // hot reload). Stops the polling loop AND aborts any
-                // request in flight; otherwise the next tick would fetch
-                // against a torn-down component.
-                destroy() {
-                    this.paused = true;
-                    if (this.pollTimer) {
-                        clearTimeout(this.pollTimer);
-                        this.pollTimer = null;
-                    }
-                    if (this.pollAbort) {
-                        try { this.pollAbort.abort(); } catch (e) {}
-                        this.pollAbort = null;
-                    }
-                    if (this.statsTimer) {
-                        clearTimeout(this.statsTimer);
-                        this.statsTimer = null;
-                    }
-                    if (this.statsAbort) {
-                        try { this.statsAbort.abort(); } catch (e) {}
-                        this.statsAbort = null;
-                    }
-                },
-
-                async pollNow() {
-                    if (this.paused) { return; }
-                    if (this.pollTimer) {
-                        clearTimeout(this.pollTimer);
-                        this.pollTimer = null;
-                    }
-                    this.pollAbort = new AbortController();
-                    try {
-                        const params = new URLSearchParams({ since: String(this.offset) });
-                        if (this.inode !== null) { params.set('inode', String(this.inode)); }
-                        const res = await fetch(`${this.pollUrl}?${params.toString()}`, {
-                            headers: { 'Accept': 'application/json' },
-                            signal: this.pollAbort.signal,
-                        });
-                        if (!res.ok) { throw new Error('poll-not-ok'); }
-                        const body = await res.json();
-                        if (body.reset === true) {
-                            this.offset = 0;
-                        }
-                        if (typeof body.inode === 'number') {
-                            this.inode = body.inode;
-                        }
-                        if (typeof body.chunk === 'string' && body.chunk !== '') {
-                            this.ingest(body.chunk);
-                        }
-                        if (typeof body.newOffset === 'number') {
-                            this.offset = body.newOffset;
-                        }
-                        this.statusMessage = '';
-                    } catch (e) {
-                        if (e && e.name === 'AbortError') { return; }
-                        this.statusMessage = this.labels.pollInterrupted;
-                    } finally {
-                        this.pollAbort = null;
-                    }
-                    if (!this.paused) {
-                        this.pollTimer = setTimeout(() => this.pollNow(), this.POLL_INTERVAL_MS);
-                    }
-                },
-
-                ingest(chunk) {
-                    // The chunk may contain multiple newline-separated lines.
-                    const lines = chunk.split(/\r?\n/);
-                    for (const raw of lines) {
-                        if (raw === '') { continue; }
-                        const parsed = this.parseLine(raw);
-                        if (parsed === null) {
-                            // Continuation line (stack trace row, JSON exception
-                            // payload tail) — fold into the previous entry's
-                            // expandable continuation. If the buffer is empty
-                            // we have nothing to attach to; drop silently.
-                            if (this.buffer.length > 0) {
-                                const tail = this.buffer[this.buffer.length - 1];
-                                tail.continuation = tail.continuation
-                                    ? tail.continuation + '\n' + raw
-                                    : raw;
-                            }
-                            this.totalReceived++;
-                            continue;
-                        }
-                        // Collapse identical back-to-back entries (same severity
-                        // + same message + no expansion yet) into a single
-                        // counter row. The 30s-die LogStreamController loop and
-                        // similar tight repeats would otherwise spam six near-
-                        // identical lines in a row; one row + "×6" is far
-                        // easier to read.
-                        if (this.buffer.length > 0) {
-                            const tail = this.buffer[this.buffer.length - 1];
-                            if (
-                                tail.severity === parsed.severity
-                                && tail.channel === parsed.channel
-                                && tail.message === parsed.message
-                                && tail.continuation === ''
-                            ) {
-                                tail.count++;
-                                tail.timestamp = parsed.timestamp;
-                                this.totalReceived++;
-                                continue;
-                            }
-                        }
-                        this.buffer.push(parsed);
-                        this.totalReceived++;
-                        if (this.buffer.length > this.MAX_BUFFER) {
-                            this.buffer.shift();
-                        }
-                    }
-                },
-
-                parseLine(raw) {
-                    // Standard Laravel format:
-                    //   "[2026-05-24 10:00:00] local.INFO: message body"
-                    // Returns null for any line that does NOT match — the
-                    // caller treats those as continuation lines.
-                    const m = raw.match(/^\[([^\]]+)\]\s+([a-z0-9_]+)\.([A-Z]+):\s*(.*)$/i);
-                    if (!m) { return null; }
-                    return {
-                        id: this.nextLineId++,
-                        raw: raw,
-                        timestamp: m[1],
-                        channel: m[2],
-                        severity: m[3].toUpperCase(),
-                        message: m[4],
-                        continuation: '',
-                        count: 1,
-                        expanded: false,
-                        // null until the user clicks Copy — then a timestamp
-                        // that the button uses to flip its label to ✓ for
-                        // ~1.5s before reverting. Per-line so multiple
-                        // adjacent copies don't collide.
-                        copiedAt: null,
-                    };
-                },
-
-                get visibleLines() {
-                    const containsLower = this.contains.toLowerCase();
-                    return this.buffer.filter((l) => {
-                        if (this.severities.size > 0 && !this.severities.has(l.severity)) { return false; }
-                        if (this.channelFilter && !l.channel.includes(this.channelFilter)) { return false; }
-                        if (this.contains) {
-                            const hay = (l.message + ' ' + l.continuation).toLowerCase();
-                            if (!hay.includes(containsLower)) { return false; }
-                        }
-                        return true;
-                    });
-                },
-
-                toggleSeverity(sev) {
-                    if (this.severities.has(sev)) { this.severities.delete(sev); } else { this.severities.add(sev); }
-                    // Re-evaluate visibleLines via Alpine reactivity (Set mutation
-                    // is not reactive; trigger via re-assignment).
-                    this.severities = new Set(this.severities);
-                },
-
-                togglePause() {
-                    this.paused = !this.paused;
-                    if (this.paused) {
+                    // Alpine teardown hook — fires when the component root is
+                    // removed from the DOM (wire:navigate page swap, tab close,
+                    // hot reload). Stops the polling loop AND aborts any
+                    // request in flight; otherwise the next tick would fetch
+                    // against a torn-down component.
+                    destroy() {
+                        this.paused = true;
                         if (this.pollTimer) {
                             clearTimeout(this.pollTimer);
                             this.pollTimer = null;
@@ -435,180 +283,336 @@
                             try { this.pollAbort.abort(); } catch (e) {}
                             this.pollAbort = null;
                         }
-                        this.statusMessage = this.labels.paused;
-                    } else {
-                        this.statusMessage = '';
-                        this.pollNow();
-                    }
-                },
-
-                severityColor(sev) {
-                    switch (sev) {
-                        case 'DEBUG': case 'INFO': return 'text-slate-400';
-                        case 'NOTICE': return 'text-slate-200';
-                        case 'WARNING': return 'text-amber-400';
-                        case 'ERROR': case 'CRITICAL': case 'ALERT': case 'EMERGENCY': return 'text-rose-400';
-                        default: return 'text-slate-200';
-                    }
-                },
-
-                severityRule(sev) {
-                    // Tailwind class for the left-rule color so a glance down
-                    // the column flags severity without reading text.
-                    switch (sev) {
-                        case 'DEBUG': case 'INFO': return 'border-slate-700';
-                        case 'NOTICE': return 'border-slate-500';
-                        case 'WARNING': return 'border-amber-500';
-                        case 'ERROR': case 'CRITICAL': case 'ALERT': case 'EMERGENCY': return 'border-rose-500';
-                        default: return 'border-slate-700';
-                    }
-                },
-
-                shortTime(ts) {
-                    // Laravel timestamps are "YYYY-MM-DD HH:MM:SS" — strip the
-                    // date for the row chrome; the date is the same for every
-                    // row in the daily-rotated file so showing it inline
-                    // wastes column width.
-                    if (typeof ts !== 'string' || ts === '') { return ''; }
-                    const idx = ts.indexOf(' ');
-                    return idx >= 0 ? ts.slice(idx + 1) : ts;
-                },
-
-                toggleExpand(line) {
-                    line.expanded = !line.expanded;
-                },
-
-                // Build a plain-text version of the entry suitable for
-                // pasting into a chat / bug report. Includes the
-                // continuation block (stack trace, JSON payload) when
-                // present, so a single click captures the full failure
-                // context, not just the headline.
-                renderLineForClipboard(line) {
-                    const head = '[' + line.timestamp + '] '
-                        + line.channel + '.' + line.severity + ': '
-                        + (line.message || line.raw);
-                    return line.continuation
-                        ? head + '\n' + line.continuation
-                        : head;
-                },
-
-                async copyLine(line) {
-                    const text = this.renderLineForClipboard(line);
-                    try {
-                        if (navigator.clipboard && navigator.clipboard.writeText) {
-                            await navigator.clipboard.writeText(text);
-                        } else {
-                            // Fallback for old Electron / non-secure contexts:
-                            // a temporary textarea + execCommand('copy').
-                            // The packaged app runs file:// in some webview
-                            // contexts where navigator.clipboard is gated.
-                            const ta = document.createElement('textarea');
-                            ta.value = text;
-                            ta.style.position = 'fixed';
-                            ta.style.opacity = '0';
-                            document.body.appendChild(ta);
-                            ta.focus();
-                            ta.select();
-                            try { document.execCommand('copy'); } finally { document.body.removeChild(ta); }
+                        if (this.statsTimer) {
+                            clearTimeout(this.statsTimer);
+                            this.statsTimer = null;
                         }
-                        line.copiedAt = Date.now();
-                        // Revert the ✓ label after the user has had time
-                        // to register it. Captured `line` reference is the
-                        // same object Alpine renders, so the assignment
-                        // triggers a re-render.
-                        setTimeout(() => { line.copiedAt = null; }, 1500);
-                    } catch (e) {
-                        this.statusMessage = this.labels.copyFailedPrefix + (e && e.message ? e.message : this.labels.clipboardUnavailable);
-                    }
-                },
+                        if (this.statsAbort) {
+                            try { this.statsAbort.abort(); } catch (e) {}
+                            this.statsAbort = null;
+                        }
+                    },
 
-                // Hide-from-view only. The on-disk log file is untouched —
-                // this is a client-side buffer prune so a noisy row can be
-                // cleared from a screenshare without scrolling past it. A
-                // fresh poll that re-fetches the same offset will NOT
-                // resurrect the row because the tail offset advances; the
-                // row reappears only on an explicit page reload that
-                // restarts the buffer from scratch.
-                dismissLine(line) {
-                    const idx = this.buffer.findIndex((l) => l.id === line.id);
-                    if (idx >= 0) {
-                        this.buffer.splice(idx, 1);
-                    }
-                },
+                    async pollNow() {
+                        if (this.paused) { return; }
+                        if (this.pollTimer) {
+                            clearTimeout(this.pollTimer);
+                            this.pollTimer = null;
+                        }
+                        this.pollAbort = new AbortController();
+                        try {
+                            const params = new URLSearchParams({ since: String(this.offset) });
+                            if (this.inode !== null) { params.set('inode', String(this.inode)); }
+                            const res = await fetch(`${this.pollUrl}?${params.toString()}`, {
+                                headers: { 'Accept': 'application/json' },
+                                signal: this.pollAbort.signal,
+                            });
+                            if (!res.ok) { throw new Error('poll-not-ok'); }
+                            const body = await res.json();
+                            if (body.reset === true) {
+                                this.offset = 0;
+                            }
+                            if (typeof body.inode === 'number') {
+                                this.inode = body.inode;
+                            }
+                            if (typeof body.chunk === 'string' && body.chunk !== '') {
+                                this.ingest(body.chunk);
+                            }
+                            if (typeof body.newOffset === 'number') {
+                                this.offset = body.newOffset;
+                            }
+                            this.statusMessage = '';
+                        } catch (e) {
+                            if (e && e.name === 'AbortError') { return; }
+                            this.statusMessage = this.labels.pollInterrupted;
+                        } finally {
+                            this.pollAbort = null;
+                        }
+                        if (!this.paused) {
+                            this.pollTimer = setTimeout(() => this.pollNow(), this.POLL_INTERVAL_MS);
+                        }
+                    },
 
-                // Stats poller — runs on its own slower timer so the
-                // O(N) file parse cost does not piggy-back on the 1 Hz
-                // tail poll.
-                async refreshStats() {
-                    if (this.statsTimer) {
-                        clearTimeout(this.statsTimer);
-                        this.statsTimer = null;
-                    }
-                    this.statsAbort = new AbortController();
-                    try {
-                        const res = await fetch(this.statsUrl, {
-                            headers: { 'Accept': 'application/json' },
-                            signal: this.statsAbort.signal,
+                    ingest(chunk) {
+                        // The chunk may contain multiple newline-separated lines.
+                        const lines = chunk.split(/\r?\n/);
+                        for (const raw of lines) {
+                            if (raw === '') { continue; }
+                            const parsed = this.parseLine(raw);
+                            if (parsed === null) {
+                                // Continuation line (stack trace row, JSON exception
+                                // payload tail) — fold into the previous entry's
+                                // expandable continuation. If the buffer is empty
+                                // we have nothing to attach to; drop silently.
+                                if (this.buffer.length > 0) {
+                                    const tail = this.buffer[this.buffer.length - 1];
+                                    tail.continuation = tail.continuation
+                                        ? tail.continuation + '\n' + raw
+                                        : raw;
+                                }
+                                this.totalReceived++;
+                                continue;
+                            }
+                            // Collapse identical back-to-back entries (same severity
+                            // + same message + no expansion yet) into a single
+                            // counter row. The 30s-die LogStreamController loop and
+                            // similar tight repeats would otherwise spam six near-
+                            // identical lines in a row; one row + "×6" is far
+                            // easier to read.
+                            if (this.buffer.length > 0) {
+                                const tail = this.buffer[this.buffer.length - 1];
+                                if (
+                                    tail.severity === parsed.severity
+                                    && tail.channel === parsed.channel
+                                    && tail.message === parsed.message
+                                    && tail.continuation === ''
+                                ) {
+                                    tail.count++;
+                                    tail.timestamp = parsed.timestamp;
+                                    this.totalReceived++;
+                                    continue;
+                                }
+                            }
+                            this.buffer.push(parsed);
+                            this.totalReceived++;
+                            if (this.buffer.length > this.MAX_BUFFER) {
+                                this.buffer.shift();
+                            }
+                        }
+                    },
+
+                    parseLine(raw) {
+                        // Standard Laravel format:
+                        //   "[2026-05-24 10:00:00] local.INFO: message body"
+                        // Returns null for any line that does NOT match — the
+                        // caller treats those as continuation lines.
+                        const m = raw.match(/^\[([^\]]+)\]\s+([a-z0-9_]+)\.([A-Z]+):\s*(.*)$/i);
+                        if (!m) { return null; }
+                        return {
+                            id: this.nextLineId++,
+                            raw: raw,
+                            timestamp: m[1],
+                            channel: m[2],
+                            severity: m[3].toUpperCase(),
+                            message: m[4],
+                            continuation: '',
+                            count: 1,
+                            expanded: false,
+                            // null until the user clicks Copy — then a timestamp
+                            // that the button uses to flip its label to ✓ for
+                            // ~1.5s before reverting. Per-line so multiple
+                            // adjacent copies don't collide.
+                            copiedAt: null,
+                        };
+                    },
+
+                    get visibleLines() {
+                        const containsLower = this.contains.toLowerCase();
+                        return this.buffer.filter((l) => {
+                            if (this.severities.size > 0 && !this.severities.has(l.severity)) { return false; }
+                            if (this.channelFilter && !l.channel.includes(this.channelFilter)) { return false; }
+                            if (this.contains) {
+                                const hay = (l.message + ' ' + l.continuation).toLowerCase();
+                                if (!hay.includes(containsLower)) { return false; }
+                            }
+                            return true;
                         });
-                        if (!res.ok) { throw new Error('stats-not-ok'); }
-                        const body = await res.json();
-                        if (body && typeof body === 'object') {
-                            this.stats = body;
+                    },
+
+                    toggleSeverity(sev) {
+                        if (this.severities.has(sev)) { this.severities.delete(sev); } else { this.severities.add(sev); }
+                        // Re-evaluate visibleLines via Alpine reactivity (Set mutation
+                        // is not reactive; trigger via re-assignment).
+                        this.severities = new Set(this.severities);
+                    },
+
+                    togglePause() {
+                        this.paused = !this.paused;
+                        if (this.paused) {
+                            if (this.pollTimer) {
+                                clearTimeout(this.pollTimer);
+                                this.pollTimer = null;
+                            }
+                            if (this.pollAbort) {
+                                try { this.pollAbort.abort(); } catch (e) {}
+                                this.pollAbort = null;
+                            }
+                            this.statusMessage = this.labels.paused;
+                        } else {
+                            this.statusMessage = '';
+                            this.pollNow();
                         }
-                    } catch (e) {
-                        if (e && e.name === 'AbortError') { return; }
-                        // Stats failures are non-fatal — the tail keeps
-                        // flowing, the chip counts simply stop updating
-                        // until the next refresh succeeds. No status
-                        // message: the operator would see it spam on
-                        // every retry under a flaky network.
-                    } finally {
-                        this.statsAbort = null;
-                    }
-                    this.statsTimer = setTimeout(() => this.refreshStats(), this.STATS_INTERVAL_MS);
-                },
+                    },
 
-                // Truncate-button handler. Livewire fires the server-side
-                // truncate, then dispatches a `logs:truncated` window
-                // event we listen to here. Zero the local cursor + buffer
-                // immediately so the operator sees the visual reset
-                // without waiting for the next tail-poll round-trip.
-                handleTruncated() {
-                    this.buffer = [];
-                    this.totalReceived = 0;
-                    this.offset = 0;
-                    this.inode = null;
-                    this.statusMessage = '';
-                    this.refreshStats();
-                    if (!this.paused) {
-                        this.pollNow();
-                    }
-                },
+                    severityColor(sev) {
+                        switch (sev) {
+                            case 'DEBUG': case 'INFO': return 'text-slate-400';
+                            case 'NOTICE': return 'text-slate-200';
+                            case 'WARNING': return 'text-amber-400';
+                            case 'ERROR': case 'CRITICAL': case 'ALERT': case 'EMERGENCY': return 'text-rose-400';
+                            default: return 'text-slate-200';
+                        }
+                    },
 
-                // Compact count renderer for severity chips — keeps the
-                // chip narrow when counts grow into the thousands
-                // ("1.2k", "5.4M") rather than expanding the row.
-                formatCount(n) {
-                    if (typeof n !== 'number' || !isFinite(n) || n < 0) { return '0'; }
-                    if (n < 1000) { return String(n); }
-                    if (n < 1000000) { return (n / 1000).toFixed(n < 10000 ? 1 : 0) + 'k'; }
-                    return (n / 1000000).toFixed(1) + 'M';
-                },
+                    severityRule(sev) {
+                        // Tailwind class for the left-rule color so a glance down
+                        // the column flags severity without reading text.
+                        switch (sev) {
+                            case 'DEBUG': case 'INFO': return 'border-slate-700';
+                            case 'NOTICE': return 'border-slate-500';
+                            case 'WARNING': return 'border-amber-500';
+                            case 'ERROR': case 'CRITICAL': case 'ALERT': case 'EMERGENCY': return 'border-rose-500';
+                            default: return 'border-slate-700';
+                        }
+                    },
 
-                // Mirrors the server-side LogTailerPage::humanBytes() so
-                // the truncate toast wording and the totals-strip render
-                // use the same units.
-                humanBytes(bytes) {
-                    const BYTES_PER_UNIT = 1024;
-                    if (typeof bytes !== 'number' || !isFinite(bytes) || bytes <= 0) { return '0 B'; }
-                    if (bytes < BYTES_PER_UNIT) { return bytes + ' B'; }
-                    const kb = bytes / BYTES_PER_UNIT;
-                    if (kb < BYTES_PER_UNIT) { return kb.toFixed(1) + ' KB'; }
-                    const mb = kb / BYTES_PER_UNIT;
-                    if (mb < BYTES_PER_UNIT) { return mb.toFixed(1) + ' MB'; }
-                    return (mb / BYTES_PER_UNIT).toFixed(2) + ' GB';
-                },
-            }));
-        });
-    }
-</script>
+                    shortTime(ts) {
+                        // Laravel timestamps are "YYYY-MM-DD HH:MM:SS" — strip the
+                        // date for the row chrome; the date is the same for every
+                        // row in the daily-rotated file so showing it inline
+                        // wastes column width.
+                        if (typeof ts !== 'string' || ts === '') { return ''; }
+                        const idx = ts.indexOf(' ');
+                        return idx >= 0 ? ts.slice(idx + 1) : ts;
+                    },
+
+                    toggleExpand(line) {
+                        line.expanded = !line.expanded;
+                    },
+
+                    // Build a plain-text version of the entry suitable for
+                    // pasting into a chat / bug report. Includes the
+                    // continuation block (stack trace, JSON payload) when
+                    // present, so a single click captures the full failure
+                    // context, not just the headline.
+                    renderLineForClipboard(line) {
+                        const head = '[' + line.timestamp + '] '
+                            + line.channel + '.' + line.severity + ': '
+                            + (line.message || line.raw);
+                        return line.continuation
+                            ? head + '\n' + line.continuation
+                            : head;
+                    },
+
+                    async copyLine(line) {
+                        const text = this.renderLineForClipboard(line);
+                        try {
+                            if (navigator.clipboard && navigator.clipboard.writeText) {
+                                await navigator.clipboard.writeText(text);
+                            } else {
+                                // Fallback for old Electron / non-secure contexts:
+                                // a temporary textarea + execCommand('copy').
+                                // The packaged app runs file:// in some webview
+                                // contexts where navigator.clipboard is gated.
+                                const ta = document.createElement('textarea');
+                                ta.value = text;
+                                ta.style.position = 'fixed';
+                                ta.style.opacity = '0';
+                                document.body.appendChild(ta);
+                                ta.focus();
+                                ta.select();
+                                try { document.execCommand('copy'); } finally { document.body.removeChild(ta); }
+                            }
+                            line.copiedAt = Date.now();
+                            // Revert the ✓ label after the user has had time
+                            // to register it. Captured `line` reference is the
+                            // same object Alpine renders, so the assignment
+                            // triggers a re-render.
+                            setTimeout(() => { line.copiedAt = null; }, 1500);
+                        } catch (e) {
+                            this.statusMessage = this.labels.copyFailedPrefix + (e && e.message ? e.message : this.labels.clipboardUnavailable);
+                        }
+                    },
+
+                    // Hide-from-view only. The on-disk log file is untouched —
+                    // this is a client-side buffer prune so a noisy row can be
+                    // cleared from a screenshare without scrolling past it. A
+                    // fresh poll that re-fetches the same offset will NOT
+                    // resurrect the row because the tail offset advances; the
+                    // row reappears only on an explicit page reload that
+                    // restarts the buffer from scratch.
+                    dismissLine(line) {
+                        const idx = this.buffer.findIndex((l) => l.id === line.id);
+                        if (idx >= 0) {
+                            this.buffer.splice(idx, 1);
+                        }
+                    },
+
+                    // Stats poller — runs on its own slower timer so the
+                    // O(N) file parse cost does not piggy-back on the 1 Hz
+                    // tail poll.
+                    async refreshStats() {
+                        if (this.statsTimer) {
+                            clearTimeout(this.statsTimer);
+                            this.statsTimer = null;
+                        }
+                        this.statsAbort = new AbortController();
+                        try {
+                            const res = await fetch(this.statsUrl, {
+                                headers: { 'Accept': 'application/json' },
+                                signal: this.statsAbort.signal,
+                            });
+                            if (!res.ok) { throw new Error('stats-not-ok'); }
+                            const body = await res.json();
+                            if (body && typeof body === 'object') {
+                                this.stats = body;
+                            }
+                        } catch (e) {
+                            if (e && e.name === 'AbortError') { return; }
+                            // Stats failures are non-fatal — the tail keeps
+                            // flowing, the chip counts simply stop updating
+                            // until the next refresh succeeds. No status
+                            // message: the operator would see it spam on
+                            // every retry under a flaky network.
+                        } finally {
+                            this.statsAbort = null;
+                        }
+                        this.statsTimer = setTimeout(() => this.refreshStats(), this.STATS_INTERVAL_MS);
+                    },
+
+                    // Truncate-button handler. Livewire fires the server-side
+                    // truncate, then dispatches a `logs:truncated` window
+                    // event we listen to here. Zero the local cursor + buffer
+                    // immediately so the operator sees the visual reset
+                    // without waiting for the next tail-poll round-trip.
+                    handleTruncated() {
+                        this.buffer = [];
+                        this.totalReceived = 0;
+                        this.offset = 0;
+                        this.inode = null;
+                        this.statusMessage = '';
+                        this.refreshStats();
+                        if (!this.paused) {
+                            this.pollNow();
+                        }
+                    },
+
+                    // Compact count renderer for severity chips — keeps the
+                    // chip narrow when counts grow into the thousands
+                    // ("1.2k", "5.4M") rather than expanding the row.
+                    formatCount(n) {
+                        if (typeof n !== 'number' || !isFinite(n) || n < 0) { return '0'; }
+                        if (n < 1000) { return String(n); }
+                        if (n < 1000000) { return (n / 1000).toFixed(n < 10000 ? 1 : 0) + 'k'; }
+                        return (n / 1000000).toFixed(1) + 'M';
+                    },
+
+                    // Mirrors the server-side LogTailerPage::humanBytes() so
+                    // the truncate toast wording and the totals-strip render
+                    // use the same units.
+                    humanBytes(bytes) {
+                        const BYTES_PER_UNIT = 1024;
+                        if (typeof bytes !== 'number' || !isFinite(bytes) || bytes <= 0) { return '0 B'; }
+                        if (bytes < BYTES_PER_UNIT) { return bytes + ' B'; }
+                        const kb = bytes / BYTES_PER_UNIT;
+                        if (kb < BYTES_PER_UNIT) { return kb.toFixed(1) + ' KB'; }
+                        const mb = kb / BYTES_PER_UNIT;
+                        if (mb < BYTES_PER_UNIT) { return mb.toFixed(1) + ' MB'; }
+                        return (mb / BYTES_PER_UNIT).toFixed(2) + ' GB';
+                    },
+                }));
+            });
+        }
+    </script>
+
+</div>

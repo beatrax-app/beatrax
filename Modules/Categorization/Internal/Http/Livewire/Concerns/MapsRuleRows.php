@@ -61,7 +61,7 @@ trait MapsRuleRows
     {
         return [
             'id' => null,
-            'field' => 'merchant',
+            'field' => 'counterparty',
             'op' => 'contains',
             'value' => '',
             'value2' => null,
@@ -92,6 +92,14 @@ trait MapsRuleRows
     private static function conditionFromDto(RuleConditionDto $dto): array
     {
         $field = $dto->valueType === 'string' ? $dto->field : $dto->valueType;
+
+        // `merchant` and `counterparty` are one field under two names, and the
+        // select no longer offers both. Rules written when it did still carry
+        // `merchant`, and a value with no matching option would display as
+        // whichever option happens to come first.
+        if ($field === 'merchant') {
+            $field = 'counterparty';
+        }
 
         if ($dto->valueType === 'amount') {
             // The DB stores signed integer minor units; the form input

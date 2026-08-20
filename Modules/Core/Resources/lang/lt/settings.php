@@ -124,6 +124,13 @@ return [
         'open_releases' => 'Atverti laidų puslapį →',
     ],
 
+    'privacy' => [
+        'heading' => 'Privatumo politika',
+        'body' => 'Beatrax laiko tavo finansus tavo paties įrenginiuose. Politika paaiškina, ką tai reiškia, ką siunčia pasirenkamos internetinės funkcijos ir kaip pašalinti savo duomenis.',
+        'open' => 'Skaityti privatumo politiką →',
+        'url_hint' => 'Jei nuoroda neatsidaro, apsilankyk:',
+    ],
+
     'first_run_tour' => [
         'heading' => 'Pirmojo paleidimo apžvalga',
         'body' => 'Paleisk sąrankos vediklį iš naujo, jei nori dar kartą pereiti įvadinį srautą.',

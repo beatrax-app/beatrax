@@ -49,4 +49,15 @@ return [
         'hour' => 'Stunda',
         'minute' => 'Minūte',
     ],
+
+    'veil_locked' => 'Lietotne bloķēta',
+
+    'chart' => [
+        'donut' => 'Gredzena diagramma',
+        'bar' => 'Stabiņu diagramma',
+        'line' => 'Līniju diagramma',
+        'range_area' => 'Diapazona diagramma',
+    ],
+
+    'sheet_untitled' => 'Dialoglodziņš',
 ];

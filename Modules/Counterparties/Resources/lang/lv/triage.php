@@ -13,7 +13,7 @@ return [
     'all_caught_heading' => '🎉 Viss izdarīts — katrs darījuma partneris ir marķēts.',
     'back_to_index' => 'Atpakaļ uz darījuma partneriem →',
 
-    'meta' => 'Darījumi: :count · pēdējoreiz :date',
+    'meta' => ':count darījumu · pēdējoreiz :date|:count darījums · pēdējoreiz :date|:count darījumi · pēdējoreiz :date',
 
     'suggested_aria' => 'Ieteiktā sakritība',
     'suggestion_medium' => '✨ Varbūt **:name** — vidēja ticamība',

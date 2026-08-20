@@ -140,4 +140,6 @@ return [
         'min_aria' => 'Minimumbedrag',
         'max_aria' => 'Maximumbedrag',
     ],
+
+    'other_movement' => 'Kosten en correcties (niet meegeteld)',
 ];

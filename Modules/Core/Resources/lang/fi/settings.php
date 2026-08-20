@@ -124,6 +124,13 @@ return [
         'open_releases' => 'Avaa julkaisusivu →',
     ],
 
+    'privacy' => [
+        'heading' => 'Tietosuojakäytäntö',
+        'body' => 'Beatrax pitää raha-asiasi omilla laitteillasi. Käytäntö kertoo, mitä se tarkoittaa, mitä valinnaiset verkkotoiminnot lähettävät ja miten poistat tietosi.',
+        'open' => 'Lue tietosuojakäytäntö →',
+        'url_hint' => 'Jos linkki ei aukea, mene osoitteeseen:',
+    ],
+
     'first_run_tour' => [
         'heading' => 'Aloituskierros',
         'body' => 'Käynnistä ohjattu käyttöönotto uudelleen, jos haluat käydä esittelyn läpi uudestaan.',

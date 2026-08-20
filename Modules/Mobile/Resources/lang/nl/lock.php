@@ -11,7 +11,7 @@ return [
     'backspace' => 'Wissen',
     'ok' => 'OK',
     'ok_aria' => 'OK — pincode bevestigen',
-    'sign_out' => 'Uitloggen',
+    'sign_out' => 'Afmelden',
 
     'errors' => [
         'pin_length' => 'De pincode moet minimaal 6 cijfers hebben.',

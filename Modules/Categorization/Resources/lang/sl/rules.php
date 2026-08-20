@@ -6,6 +6,7 @@ return [
     'page_title' => 'Pravila',
     'heading' => 'Pravila',
     'intro' => 'Vnaprej kategoriziraj transakcije ob uvozu. Pravila veljajo za vsak vir — banko, kartico, PayPal in potrdila iz e-pošte.',
+    'device_local_note' => 'Pravila ostanejo v tej napravi. Ne delijo se z vašimi drugimi napravami.',
 
     'reapply' => 'Znova uporabi pravila na zgodovini',
     'reapplying' => 'Ponovna uporaba…',

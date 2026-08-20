@@ -6,9 +6,11 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Livewire\Livewire;
+use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Http\Livewire\MobilePairingScan;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
@@ -143,7 +145,11 @@ it('says the device is locked rather than blaming the code, when the identity ca
 
     /** @var Session $session */
     $session = app(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat('k', 32));
+
+    // A real device can only mint an identity while an app lock is provisioned
+    // — the identity is sealed under that lock's key — so the fixture has to
+    // have one, or the branch under test is not the one that runs.
+    app(AppLockProvisioner::class)->enable((int) $user->id, '123456', 'fixture', $session);
 
     app(DeviceIdentityService::class)->generateAndPersist((int) $user->id, $session);
     $qr = mpwiDesktopQr(fn (string $d, Closure $fn) => $this->asDevice($d, $fn), $session);
@@ -155,7 +161,13 @@ it('says the device is locked rather than blaming the code, when the identity ca
 
     Livewire::test(MobilePairingScan::class)
         ->call('submitCode', $qr['payload'])
-        ->assertSet('flashMessage', Lang::get('mobile::pairing.errors.identity_locked'));
+        ->assertRedirect(route('mobile.lock'));
+
+    // Flashed rather than set on the component: the redirect is a full page
+    // load into the lock screen, so a public property of the screen being
+    // left behind arrives nowhere and the PIN pad explains nothing.
+    expect($session->get(MobilePairingScan::LOCKED_IDENTITY_FLASH))
+        ->toBe(Lang::get('mobile::pairing.errors.identity_locked'));
 });
 
 it('pairs from the plain scan screen too, the only sync entry point a phone has', function (): void {
@@ -178,4 +190,19 @@ it('pairs from the plain scan screen too, the only sync entry point a phone has'
         ->call('submitCode', $qr['payload'])
         ->assertSet('flashMessage', '')
         ->assertSet('step', 'confirm');
+});
+
+it('does not send a device with no app lock to a PIN pad it cannot pass', function (): void {
+    $this->crossDevicePairingSetUp();
+
+    $user = mpwiUser('mpwi-no-lock');
+    test()->actingAs($user);
+
+    // No app lock was ever provisioned, so there is no key to seal an identity
+    // with and no PIN to unlock with. The identity mint throws, and redirecting
+    // to the lock screen would strand the reader on a pad with nothing to enter.
+    Livewire::test(MobilePairingScan::class)
+        ->call('submitCode', null)
+        ->assertNoRedirect()
+        ->assertSet('flashMessage', Lang::get('mobile::pairing.errors.identity_needs_lock'));
 });

@@ -8,7 +8,7 @@ return [
     'migrate_prompt' => 'Przechodzisz z innej aplikacji budżetowej?',
     'migrate_link' => 'Importuj z YNAB lub Actual',
     'subtitle' => 'Upuść eksport z banku, karty lub PayPal albo plik z paragonem e-mail.',
-    'mime_hint' => 'Ten plik nie wygląda na obsługiwany eksport wyciągu. Upuść bankowy plik CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, wyciąg karty w PDF, wiadomość e-mail (.eml) lub archiwum skrzynki (.mbox).',
+    'mime_hint' => 'Obsługiwane pliki: bankowy CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, PDF wyciągu z karty, wiadomość e-mail (.eml) lub archiwum skrzynki (.mbox).',
 
     'source_label' => 'Źródło',
 

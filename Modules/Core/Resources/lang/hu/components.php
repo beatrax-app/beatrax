@@ -49,4 +49,15 @@ return [
         'hour' => 'Óra',
         'minute' => 'Perc',
     ],
+
+    'veil_locked' => 'Alkalmazás zárolva',
+
+    'chart' => [
+        'donut' => 'Gyűrűdiagram',
+        'bar' => 'Oszlopdiagram',
+        'line' => 'Vonaldiagram',
+        'range_area' => 'Tartománydiagram',
+    ],
+
+    'sheet_untitled' => 'Párbeszédpanel',
 ];

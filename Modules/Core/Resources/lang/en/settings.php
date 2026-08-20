@@ -124,6 +124,13 @@ return [
         'open_releases' => 'Open releases page →',
     ],
 
+    'privacy' => [
+        'heading' => 'Privacy policy',
+        'body' => 'Beatrax keeps your finances on your own devices. The policy explains what that means, what the optional online features send, and how to remove your data.',
+        'open' => 'Read the privacy policy →',
+        'url_hint' => 'If the link does not open, visit:',
+    ],
+
     'first_run_tour' => [
         'heading' => 'First-run tour',
         'body' => 'Re-launch the setup wizard if you want to walk back through the introductory flow.',

@@ -13,7 +13,7 @@ return [
     'all_caught_heading' => '🎉 Gata — fiecare contraparte este etichetată.',
     'back_to_index' => 'Înapoi la contrapărți →',
 
-    'meta' => ':count tranzacții · văzută ultima dată :date',
+    'meta' => ':count tranzacție · văzută ultima dată :date|:count tranzacții · văzută ultima dată :date|:count de tranzacții · văzută ultima dată :date',
 
     'suggested_aria' => 'Potrivire sugerată',
     'suggestion_medium' => '✨ Poate **:name** — încredere medie',

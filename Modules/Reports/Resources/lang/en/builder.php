@@ -140,4 +140,6 @@ return [
         'min_aria' => 'Minimum amount',
         'max_aria' => 'Maximum amount',
     ],
+
+    'other_movement' => 'Fees and adjustments (not counted above)',
 ];

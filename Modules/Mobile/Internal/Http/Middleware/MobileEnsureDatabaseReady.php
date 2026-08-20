@@ -30,6 +30,11 @@ final class MobileEnsureDatabaseReady
         'setup',
         'site.webmanifest',
         'pwa.icon',
+        // Static brand artefacts, served by PHP because no web server sits in
+        // front of it here. The desktop setup, staging and welcome shells
+        // embed the app mark, and this gate is what shows them.
+        'app.icon',
+        'app.splash',
         'locale.switch',
     ];
 

@@ -140,4 +140,6 @@ return [
         'min_aria' => 'Kwota minimalna',
         'max_aria' => 'Kwota maksymalna',
     ],
+
+    'other_movement' => 'Opłaty i korekty (nieuwzględnione powyżej)',
 ];

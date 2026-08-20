@@ -140,4 +140,6 @@ return [
         'min_aria' => 'Najmanjši znesek',
         'max_aria' => 'Največji znesek',
     ],
+
+    'other_movement' => 'Provizije in prilagoditve (niso vštete)',
 ];

@@ -6,6 +6,7 @@ return [
     'page_title' => 'Szabályok',
     'heading' => 'Szabályok',
     'intro' => 'Kategorizáld a tranzakciókat már importáláskor. A szabályok minden forrásra vonatkoznak — bank, kártya, PayPal és e-mailes bizonylatok.',
+    'device_local_note' => 'A szabályok ezen az eszközön maradnak. Nem osztjuk meg őket a többi eszközöddel.',
 
     'reapply' => 'Szabályok újraalkalmazása az előzményekre',
     'reapplying' => 'Újraalkalmazás…',

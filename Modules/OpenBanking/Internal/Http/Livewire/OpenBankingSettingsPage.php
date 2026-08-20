@@ -440,7 +440,15 @@ final class OpenBankingSettingsPage extends Component
 
     public function render(ViewFactory $views): View
     {
-        return $views->make('openbanking::livewire.open-banking-settings-page');
+        $view = $views->make('openbanking::livewire.open-banking-settings-page');
+
+        // layouts.app is a @yield('content') layout, so a page reaches it by
+        // extending it. Declaring no layout at all rendered the shell with an
+        // empty <main> and left the tab titled just "Beatrax".
+        /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
+        $view->extends('layouts.app', ['title' => Lang::get('openbanking::messages.page.heading').' · Beatrax']);
+
+        return $view;
     }
 
     // -------------------------------------------------------------------

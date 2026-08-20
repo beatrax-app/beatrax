@@ -17,6 +17,7 @@ use Modules\Auth\Internal\Http\Livewire\AddUserPage;
 use Modules\Auth\Internal\Http\Livewire\AppLockKeyProbe;
 use Modules\Auth\Internal\Http\Livewire\AppLockSettingsSection;
 use Modules\Auth\Internal\Http\Livewire\ChangePasswordPage;
+use Modules\Auth\Internal\Http\Livewire\DeleteAccountSection;
 use Modules\Auth\Internal\Http\Livewire\LockScreen;
 use Modules\Auth\Internal\Http\Livewire\LoginPage;
 use Modules\Auth\Internal\Http\Livewire\ManageUserPage;
@@ -143,6 +144,7 @@ final class AuthServiceProvider extends ServiceProvider
         $livewire->component('auth.signup-page', SignupPage::class);
         $livewire->component('auth.recovery-codes-display', RecoveryCodesDisplay::class);
         $livewire->component('auth.recovery-codes-section', RecoveryCodesSection::class);
+        $livewire->component('auth.delete-account-section', DeleteAccountSection::class);
         $livewire->component('auth.change-password-page', ChangePasswordPage::class);
         $livewire->component('auth.add-user-page', AddUserPage::class);
         $livewire->component('auth.reset-password-page', ResetPasswordPage::class);

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__.'/nativephp_scaffold_root.php';
+
 /*
  * Save a downloaded file on iOS instead of navigating onto it.
  *
@@ -33,7 +35,7 @@ declare(strict_types=1);
  * unpatched shell degrades to exactly the behaviour this exists to fix.
  */
 
-$target = __DIR__.'/../mobile-app/nativephp/ios/NativePHP/ContentView.swift';
+$target = beatraxScaffoldPath('ios/NativePHP/ContentView.swift') ?? '';
 
 if (! is_file($target)) {
     // The native scaffold is generated on demand and is absent from a fresh

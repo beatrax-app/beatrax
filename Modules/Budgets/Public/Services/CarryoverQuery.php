@@ -186,12 +186,35 @@ final class CarryoverQuery
             ->where('id', $user->id)
             ->value('envelope_activated_at');
 
-        if ($raw === null || $raw === '') {
+        if ($raw !== null && $raw !== '') {
+            try {
+                return CarbonImmutable::parse(self::toString($raw));
+            } catch (\Throwable) {
+                // Fall through to the assignments below rather than treating
+                // an unreadable stamp as "never started".
+            }
+        }
+
+        return $this->earliestAssignedPeriodFor($user);
+    }
+
+    // envelope_activated_at is absent from the merge registry, so a device
+    // that joined by pairing has it null forever and every assignment that
+    // arrived with the sync was reported as zero. The earliest month anything
+    // was assigned is the honest anchor for when budgeting began.
+    private function earliestAssignedPeriodFor(User $user): ?CarbonImmutable
+    {
+        $earliest = $this->db->connection()
+            ->table('envelope_assignments')
+            ->where('user_id', $user->id)
+            ->min('period_start');
+
+        if (! is_string($earliest) || $earliest === '') {
             return null;
         }
 
         try {
-            return CarbonImmutable::parse(self::toString($raw));
+            return CarbonImmutable::parse($earliest);
         } catch (\Throwable) {
             return null;
         }

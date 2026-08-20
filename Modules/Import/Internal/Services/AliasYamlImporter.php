@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Modules\Import\Internal\Services;
 
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\DateFactory;
 use InvalidArgumentException;
 use Modules\Community\Public\Dto\CorpusEntryDto;
 use Modules\Core\Models\User;
 use Modules\Import\Public\Services\PatternGeneralizer;
+use Modules\Sync\Public\Events\EntityMutated;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Yaml;
@@ -25,6 +27,7 @@ final class AliasYamlImporter
         private readonly PatternGeneralizer $generalizer,
         private readonly LoggerInterface $logger,
         private readonly DateFactory $dates,
+        private readonly Dispatcher $events,
     ) {}
 
     /**
@@ -157,7 +160,7 @@ final class AliasYamlImporter
                 $existingRow = $existing[$entry->pattern] ?? null;
 
                 if ($existingRow === null) {
-                    $connection->table('merchant_aliases')->insert([
+                    $aliasId = $connection->table('merchant_aliases')->insertGetId([
                         'user_id' => $user->id,
                         'pattern' => $entry->pattern,
                         'generalized_pattern' => $entry->generalizedPattern,
@@ -166,6 +169,21 @@ final class AliasYamlImporter
                         'updated_at' => $now,
                     ]);
                     $changed++;
+
+                    // Aliases are uploaded by the user on the settings page,
+                    // so they are that user's work and travel with them.
+                    $this->events->dispatch(new EntityMutated(
+                        table: 'merchant_aliases',
+                        pk: $aliasId,
+                        userId: $user->id,
+                        mutationType: 'create',
+                        dirtyFields: [
+                            'user_id' => $user->id,
+                            'pattern' => $entry->pattern,
+                            'generalized_pattern' => $entry->generalizedPattern,
+                            'friendly_name' => $entry->name,
+                        ],
+                    ));
 
                     continue;
                 }

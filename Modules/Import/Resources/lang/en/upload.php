@@ -8,7 +8,7 @@ return [
     'migrate_prompt' => 'Moving from another budgeting app?',
     'migrate_link' => 'Import from YNAB or Actual',
     'subtitle' => 'Drop in a bank, card, or PayPal export, or an email receipt file.',
-    'mime_hint' => "That file doesn't look like a supported statement export. Drop in a bank CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, a card-statement PDF, an email message (.eml), or a mailbox archive (.mbox).",
+    'mime_hint' => 'Supported files: bank CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, card-statement PDF, email message (.eml), or mailbox archive (.mbox).',
 
     'source_label' => 'Source',
 

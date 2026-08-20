@@ -29,6 +29,11 @@ final class EnsureDatabaseReady
         'sw',
         'site.webmanifest',
         'pwa.icon',
+        // Static brand artefacts, served by PHP because no web server sits in
+        // front of it here. The desktop setup, staging and welcome shells
+        // embed the app mark, and this gate is what shows them.
+        'app.icon',
+        'app.splash',
         // The guest language switch has to work on the very first screen a
         // fresh install shows, which is the one this gate redirects to.
         'locale.switch',

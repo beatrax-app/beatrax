@@ -124,6 +124,13 @@ return [
         'open_releases' => 'Åbn udgivelsessiden →',
     ],
 
+    'privacy' => [
+        'heading' => 'Privatlivspolitik',
+        'body' => 'Beatrax holder din økonomi på dine egne enheder. Politikken forklarer, hvad det betyder, hvad de valgfri onlinefunktioner sender, og hvordan du fjerner dine data.',
+        'open' => 'Læs privatlivspolitikken →',
+        'url_hint' => 'Hvis linket ikke åbner, så besøg:',
+    ],
+
     'first_run_tour' => [
         'heading' => 'Rundvisning ved første opstart',
         'body' => 'Start opsætningsguiden igen, hvis du vil gennemgå introduktionen en gang til.',

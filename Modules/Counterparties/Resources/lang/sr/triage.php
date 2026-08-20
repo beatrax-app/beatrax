@@ -13,7 +13,7 @@ return [
     'all_caught_heading' => '🎉 Sve je rešeno — svaka druga strana je označena.',
     'back_to_index' => 'Nazad na druge strane →',
 
-    'meta' => ':count transakcija · poslednji put viđeno :date',
+    'meta' => ':count transakcija · poslednji put viđeno :date|:count transakcije · poslednji put viđeno :date|:count transakcija · poslednji put viđeno :date',
 
     'suggested_aria' => 'Predloženo poklapanje',
     'suggestion_medium' => '✨ Možda **:name** — srednja pouzdanost',

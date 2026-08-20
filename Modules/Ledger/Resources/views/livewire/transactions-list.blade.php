@@ -149,7 +149,13 @@
                                          (outside this <a>, below) replaces it (UI-SPEC §5.1). --}}
                                     <p class="secondary mt-0.5 truncate">
                                         @if (! $isSplitRow && $row['categoryId'] !== null)
-                                            <span class="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">cat</span>
+                                            {{-- A glyph, not the literal "cat": the abbreviation only reads as one in
+     English and Dutch, and this app ships Greek, Bulgarian and Ukrainian
+     where a Latin CAT means nothing. The word travels in the title. --}}
+                                            <span
+                                                class="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                                                title="{{ Lang::get('ledger::list.table.category') }}"
+                                            ><span aria-hidden="true">▦</span><span class="sr-only">{{ Lang::get('ledger::list.table.category') }}</span></span>
                                         @endif
                                         {{ $row['bookedAt'] }}
                                     </p>

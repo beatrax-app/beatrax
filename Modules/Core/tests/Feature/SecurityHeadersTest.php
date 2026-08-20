@@ -86,3 +86,24 @@ it('does not fight a response that sets its own frame policy', function (): void
         // The rest still apply — only the conflicting one is withdrawn.
         ->and($response->headers->get('X-Content-Type-Options'))->toBe('nosniff');
 });
+
+it('lets a static brand artefact keep the cache policy it declares', function (): void {
+    $response = test()->get('/icon.png');
+
+    // The route asks for a week; the no-store rule overwrote it, so the lock
+    // screen, privacy veil and setup screens re-read a 91 KB PNG through PHP
+    // on every render — on a device with no web server in front of it.
+    $response->assertOk();
+
+    expect($response->headers->get('Cache-Control'))->toContain('max-age=604800')
+        ->and($response->headers->get('Cache-Control'))->not->toContain('no-store');
+});
+
+it('keeps no-store on a financial page even so', function (): void {
+    // The exemption is by route name and must not widen: everything that can
+    // carry a figure still refuses to be cached.
+    $response = test()->actingAs(securityHeadersUser())->get('/settings');
+
+    expect($response->headers->get('Cache-Control'))->toContain('no-store')
+        ->and($response->headers->get('Cache-Control'))->not->toContain('public');
+});
