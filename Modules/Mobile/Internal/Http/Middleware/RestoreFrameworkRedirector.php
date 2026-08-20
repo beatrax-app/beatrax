@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
+use Illuminate\Session\Store;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
@@ -39,8 +40,10 @@ final class RestoreFrameworkRedirector
         if ($this->needsRestoring()) {
             $redirector = new Redirector($this->app->make('url'));
 
-            if ($this->app->bound('session.store')) {
-                $redirector->setSession($this->app->make('session.store'));
+            $session = $this->app->bound('session.store') ? $this->app->make('session.store') : null;
+
+            if ($session instanceof Store) {
+                $redirector->setSession($session);
             }
 
             $this->app->instance('redirect', $redirector);
@@ -55,9 +58,11 @@ final class RestoreFrameworkRedirector
     private function needsRestoring(): bool
     {
         try {
-            return $this->app->make('redirect')::class !== Redirector::class;
+            $current = $this->app->make('redirect');
         } catch (Throwable) {
             return true;
         }
+
+        return $current::class !== Redirector::class;
     }
 }
