@@ -2,11 +2,15 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Budgets\Internal\Http\Livewire\BudgetsPage;
 use Modules\Core\Models\User;
+use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
+use Modules\Ledger\Models\ImportRun;
+use Modules\Ledger\Models\Transaction;
 
 /*
  * A user who has never assigned anything has no envelope_activated_at, so
@@ -65,4 +69,50 @@ it('still shows the empty state when the user genuinely has no expense categorie
     Livewire::test(BudgetsPage::class)
         ->assertOk()
         ->assertSee('No expense categories yet');
+});
+
+it('offers the income there is to assign, not zero', function (): void {
+    $account = Account::create([
+        'user_id' => $this->user->id,
+        'name' => 'Cash',
+        'slug' => 'unstarted-cash-'.bin2hex(random_bytes(3)),
+        'kind' => 'bank',
+        'iban' => 'NL00UNST'.strtoupper(bin2hex(random_bytes(4))),
+        'default_currency' => 'EUR',
+    ]);
+
+    $run = ImportRun::create([
+        'user_id' => $this->user->id,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/unstarted.csv',
+        'sha256' => str_pad((string) $this->user->id, 64, 'u', STR_PAD_LEFT),
+        'uploaded_at' => CarbonImmutable::now(),
+        'status' => 'completed',
+    ]);
+
+    Transaction::create([
+        'user_id' => $this->user->id,
+        'account_id' => $account->id,
+        'type' => 'income',
+        'posted_at' => CarbonImmutable::now()->startOfMonth()->addDays(2),
+        'booked_at' => CarbonImmutable::now()->startOfMonth()->addDays(2),
+        'value_date' => CarbonImmutable::now()->startOfMonth()->addDays(2),
+        'amount_minor' => 80000,
+        'currency' => 'EUR',
+        'settled_amount_minor' => 80000,
+        'settled_currency' => 'EUR',
+        'counterparty_normalized' => 'salary',
+        'normalization_version' => 1,
+        'source_format' => 'asn_csv',
+        'import_run_id' => $run->id,
+        'source_row_index' => 0,
+        'fingerprint' => 'unstarted-'.bin2hex(random_bytes(8)),
+        'fingerprint_version' => 1,
+    ]);
+
+    // The fold one branch down is income + carry - assigned, and before the
+    // first assignment carry and assigned are both nought — so income is what
+    // it would answer. Zero told a reader with a month's pay in the account
+    // that they had nothing to assign, on the page titled "assign every euro".
+    expect(Livewire::test(BudgetsPage::class)->viewData('toBudgetMinor'))->toBe(80000);
 });
