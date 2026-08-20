@@ -177,7 +177,11 @@
                      — and Livewire evaluates a wire:click against the $wire
                      proxy, where a bare `document` is $wire.document. Every
                      click threw before manualLabel was reached, silently. --}}
-                <div x-data="{ manualName: '', manualType: 'merchant' }" style="display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center;">
+                {{-- Keyed to the counterparty: without it Livewire morphs the
+                     element in place, Alpine keeps its state, and the name
+                     typed for one counterparty was still in the box for the
+                     next one. --}}
+                <div wire:key="triage-manual-{{ $current?->id ?? 'none' }}" x-data="{ manualName: '', manualType: 'merchant' }" style="display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center;">
                     <label for="triage-manual-name" class="sr-only">{{ Lang::get('counterparties::triage.display_name_label') }}</label>
                     <input
                         id="triage-manual-name"
@@ -200,7 +204,7 @@
                     <button
                         type="button"
                         class="pill-btn-ghost focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
-                        x-on:click="$wire.manualLabel(manualName, manualType)"
+                        x-on:click="$wire.manualLabel(manualName, manualType); manualName = ''"
                     >{{ Lang::get('counterparties::triage.save_label') }}</button>
                 </div>
             </fieldset>

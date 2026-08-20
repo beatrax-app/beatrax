@@ -51,3 +51,16 @@ it('still carries the date in every shipped locale', function (): void {
 
     expect($problems)->toBe([]);
 });
+
+it('has the screen actually ask for the plural form', function (): void {
+    $blade = (string) file_get_contents(
+        base_path('Modules/Counterparties/Resources/views/livewire/counterparty-triage.blade.php')
+    );
+
+    // The cases above prove the STRINGS pluralise. Reverting the call site to
+    // Lang::get would put "1 transacties" back on screen with every one of
+    // them still green, because none of them renders the view.
+    expect($blade)->toContain("Lang::choice('counterparties::triage.meta'")
+        ->and(str_contains($blade, "Lang::get('counterparties::triage.meta'"))
+        ->toBeFalse('the triage meta line reads the plural string through Lang::get');
+});
