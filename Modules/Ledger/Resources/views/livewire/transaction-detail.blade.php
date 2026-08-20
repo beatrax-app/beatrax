@@ -55,11 +55,11 @@
                             <a
                                 href="{{ route('counterparties.profile', ['slug' => $transaction->counterparty->slug]) }}"
                                 wire:navigate
-                                class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                                class="break-words underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
                                 data-testid="tx-detail-counterparty-link"
                             >{{ $transaction->counterparty_name ?? '—' }}</a>
                         @else
-                            <span data-testid="tx-detail-counterparty-text">{{ $transaction->counterparty_name ?? '—' }}</span>
+                            <span class="break-words" data-testid="tx-detail-counterparty-text">{{ $transaction->counterparty_name ?? '—' }}</span>
                         @endif
                     </dd>
                 </dl>

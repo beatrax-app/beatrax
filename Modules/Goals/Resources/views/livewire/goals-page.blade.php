@@ -105,9 +105,12 @@
                         </p>
                     </div>
                     <span class="amount">{{ $pct }}%</span>
-                    {{-- Row actions — always visible on phone (D-12) --}}
-                    <button
-                        type="button"
+                    {{-- Row actions — always visible on phone (D-12). Drawn
+                         as icons rather than the text characters they were:
+                         a pencil, a tick and a box each carry their own
+                         metrics, so none of them sat centred. --}}
+                    <x-core::emoji-action
+                        :label="Lang::get('goals::messages.row.edit')"
                         x-on:click="
                             $wire.openEdit({{ $row->id }});
                             if (window.innerWidth < 768) {
@@ -116,30 +119,42 @@
                                 $flux.modal('goal-form').show();
                             }
                         "
-                        class="text-xs text-slate-400 hover:text-slate-900 focus:outline-none dark:hover:text-slate-100 min-w-[44px] min-h-[44px] flex items-center justify-center"
-                     title="{{ Lang::get('goals::messages.row.edit') }}"
-                            aria-label="{{ Lang::get('goals::messages.row.edit') }}"
-                        ><span aria-hidden="true" class="sm:hidden">✎</span><span class="sr-only sm:not-sr-only">{{ Lang::get('goals::messages.row.edit') }}</span></button>
+                    >✏️</x-core::emoji-action>
                     {{-- Complete and archive existed only in the desktop kebab,
                          which the phone list hides — so a goal could be created
                          and edited on a phone but never finished or put away. --}}
                     @if ($row->status !== \Modules\Goals\Public\Enums\GoalStatus::Completed->value)
+                        <x-core::emoji-action
+                            :label="Lang::get('goals::messages.actions.mark_complete')"
+                            wire:click="markComplete({{ $row->id }})"
+                        >✅</x-core::emoji-action>
+                    @endif
+                    <x-core::emoji-action
+                        :label="Lang::get('goals::messages.actions.archive')"
+                        wire:click="confirmArchive({{ $row->id }})"
+                    >🗄️</x-core::emoji-action>
+                </li>
+
+                @if ($archivingGoalId === $row->id)
+                    {{-- The confirm strip lived only in the desktop card list,
+                         which the phone hides — so the archive button set the
+                         id and then nothing appeared. The control looked dead
+                         because its answer was rendered somewhere unreachable. --}}
+                    <li class="flex items-center gap-3 border-t border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+                        <p class="flex-1 text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('goals::messages.archive.confirm_question') }}</p>
                         <button
                             type="button"
-                            wire:click="markComplete({{ $row->id }})"
-                            class="text-xs text-slate-400 hover:text-slate-900 focus:outline-none dark:hover:text-slate-100 min-w-[44px] min-h-[44px] flex items-center justify-center"
-                            title="{{ Lang::get('goals::messages.actions.mark_complete') }}"
-                            aria-label="{{ Lang::get('goals::messages.actions.mark_complete') }}"
-                        ><span aria-hidden="true">✓</span></button>
-                    @endif
-                    <button
-                        type="button"
-                        wire:click="confirmArchive({{ $row->id }})"
-                        class="text-xs text-slate-400 hover:text-slate-900 focus:outline-none dark:hover:text-slate-100 min-w-[44px] min-h-[44px] flex items-center justify-center"
-                        title="{{ Lang::get('goals::messages.actions.archive') }}"
-                        aria-label="{{ Lang::get('goals::messages.actions.archive') }}"
-                    ><span aria-hidden="true">⊟</span></button>
-                </li>
+                            wire:click="cancelArchive"
+                            class="text-sm text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100 dark:text-slate-400"
+                        >{{ Lang::get('goals::messages.archive.close') }}</button>
+                        <button
+                            type="button"
+                            wire:click="archive({{ $row->id }})"
+                            aria-label="{{ Lang::get('goals::messages.archive.confirm_aria', ['name' => $row->name]) }}"
+                            class="text-sm font-medium text-rose-600 hover:text-rose-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 dark:text-rose-400 dark:hover:text-rose-200"
+                        >{{ Lang::get('goals::messages.archive.archive') }}</button>
+                    </li>
+                @endif
             @endforeach
         </ul>
 
@@ -230,7 +245,7 @@
                         </div>
                     @else
                         <div class="mt-3 flex items-center gap-2">
-                            <x-core::glyph-action
+                            <x-core::emoji-action
                                 :label="Lang::get('goals::messages.row.edit')"
                                 wire:click="openEdit({{ $row->id }})"
                                 x-on:click="
@@ -240,17 +255,13 @@
                                         $flux.modal('goal-form').show();
                                     }
                                 "
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z"/>
-                                </svg>
-                            </x-core::glyph-action>
+                            >✏️</x-core::emoji-action>
 
                             <flux:dropdown>
                                 <flux:button
                                     variant="ghost"
                                     size="sm"
-                                    class="glyph-action"
+                                    class="emoji-action"
                                     icon="ellipsis-horizontal"
                                     aria-label="{{ Lang::get('goals::messages.actions.more_aria', ['name' => $row->name]) }}"
                                 />
@@ -302,7 +313,7 @@
                                     <flux:button
                                         variant="ghost"
                                         size="sm"
-                                        class="glyph-action"
+                                        class="emoji-action"
                                         icon="ellipsis-horizontal"
                                         aria-label="{{ Lang::get('goals::messages.actions.more_aria', ['name' => $row->name]) }}"
                                     />

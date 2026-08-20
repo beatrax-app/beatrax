@@ -109,59 +109,29 @@
                              screen, so the row said which pot it was not. --}}
                         <div class="flex w-full items-center justify-end gap-1">
                         {{-- Row actions always visible on phone (D-12) --}}
-                        <button
-                            type="button"
-                            x-on:click="
-                                $wire.set('operationPotId', {{ $pot->id }});
-                                $wire.set('operationKind', 'fund');
-                                $dispatch('open-sheet', { name: 'pot-fund' });
-                            "
-                            class="text-xs text-slate-400 hover:text-slate-900 focus:outline-none min-w-[44px] min-h-[44px] flex items-center justify-center dark:hover:text-slate-100"
-                         title="{{ Lang::get('pots::messages.actions.fund') }}"
-                            aria-label="{{ Lang::get('pots::messages.actions.fund') }}"
-                        ><span aria-hidden="true" class="sm:hidden">↓</span><span class="sr-only sm:not-sr-only">{{ Lang::get('pots::messages.actions.fund') }}</span></button>
-                        <button
-                            type="button"
-                            x-on:click="
-                                $wire.set('operationPotId', {{ $pot->id }});
-                                $wire.set('operationKind', 'transfer');
-                                $dispatch('open-sheet', { name: 'pot-move' });
-                            "
-                            class="text-xs text-slate-400 hover:text-slate-900 focus:outline-none min-w-[44px] min-h-[44px] flex items-center justify-center dark:hover:text-slate-100"
-                         title="{{ Lang::get('pots::messages.actions.move') }}"
-                            aria-label="{{ Lang::get('pots::messages.actions.move') }}"
-                        ><span aria-hidden="true" class="sm:hidden">⇄</span><span class="sr-only sm:not-sr-only">{{ Lang::get('pots::messages.actions.move') }}</span></button>
+                        <x-core::emoji-action
+                            :label="Lang::get('pots::messages.actions.fund')"
+                            x-on:click=" $wire.set('operationPotId', {{ $pot->id }}); $wire.set('operationKind', 'fund'); $dispatch('open-sheet', { name: 'pot-fund' }); "
+                        >💰</x-core::emoji-action>
+                        <x-core::emoji-action
+                            :label="Lang::get('pots::messages.actions.move')"
+                            x-on:click=" $wire.set('operationPotId', {{ $pot->id }}); $wire.set('operationKind', 'transfer'); $dispatch('open-sheet', { name: 'pot-move' }); "
+                        >🔄</x-core::emoji-action>
                         {{-- Withdraw, edit and archive lived only in the desktop
                              kebab, which the phone list hides — so on a phone
                              money could go into a pot and never come out. --}}
-                        <button
-                            type="button"
-                            x-on:click="
-                                $wire.set('operationPotId', {{ $pot->id }});
-                                $wire.set('operationKind', 'withdraw');
-                                $dispatch('open-sheet', { name: 'pot-withdraw' });
-                            "
-                            class="text-xs text-slate-400 hover:text-slate-900 focus:outline-none min-w-[44px] min-h-[44px] flex items-center justify-center dark:hover:text-slate-100"
-                            title="{{ Lang::get('pots::messages.actions.withdraw') }}"
-                            aria-label="{{ Lang::get('pots::messages.actions.withdraw') }}"
-                        ><span aria-hidden="true">↑</span></button>
-                        <button
-                            type="button"
-                            x-on:click="
-                                $wire.openEdit({{ $pot->id }});
-                                $dispatch('open-sheet', { name: 'pot-form' });
-                            "
-                            class="text-xs text-slate-400 hover:text-slate-900 focus:outline-none min-w-[44px] min-h-[44px] flex items-center justify-center dark:hover:text-slate-100"
-                            title="{{ Lang::get('pots::messages.actions.edit') }}"
-                            aria-label="{{ Lang::get('pots::messages.actions.edit') }}"
-                        ><span aria-hidden="true">✎</span></button>
-                        <button
-                            type="button"
+                        <x-core::emoji-action
+                            :label="Lang::get('pots::messages.actions.withdraw')"
+                            x-on:click=" $wire.set('operationPotId', {{ $pot->id }}); $wire.set('operationKind', 'withdraw'); $dispatch('open-sheet', { name: 'pot-withdraw' }); "
+                        >🏧</x-core::emoji-action>
+                        <x-core::emoji-action
+                            :label="Lang::get('pots::messages.actions.edit')"
+                            x-on:click=" $wire.openEdit({{ $pot->id }}); $dispatch('open-sheet', { name: 'pot-form' }); "
+                        >✏️</x-core::emoji-action>
+                        <x-core::emoji-action
+                            :label="Lang::get('pots::messages.actions.archive')"
                             wire:click="confirmArchive({{ $pot->id }})"
-                            class="text-xs text-slate-400 hover:text-slate-900 focus:outline-none min-w-[44px] min-h-[44px] flex items-center justify-center dark:hover:text-slate-100"
-                            title="{{ Lang::get('pots::messages.actions.archive') }}"
-                            aria-label="{{ Lang::get('pots::messages.actions.archive') }}"
-                        ><span aria-hidden="true">⊟</span></button>
+                        >🗄️</x-core::emoji-action>
                         </div>
                     </div>
                 @endforeach
@@ -314,7 +284,7 @@
                                             <flux:button
                                                 variant="ghost"
                                                 size="sm"
-                                                class="glyph-action"
+                                                class="emoji-action"
                                                 icon="ellipsis-horizontal"
                                                 aria-label="{{ Lang::get('pots::messages.more_actions_aria', ['name' => $pot->name]) }}"
                                             />
@@ -438,7 +408,7 @@
                                     <flux:button
                                         variant="ghost"
                                         size="sm"
-                                        class="glyph-action"
+                                        class="emoji-action"
                                         icon="ellipsis-horizontal"
                                         aria-label="{{ Lang::get('pots::messages.more_actions_aria', ['name' => $pot->name]) }}"
                                     />

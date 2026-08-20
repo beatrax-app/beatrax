@@ -10,6 +10,7 @@ return [
         'reprojecting' => 'Ricostruzione della tua cronologia…',
         'retrying' => "Riconnessione all'altro dispositivo…",
         'locked' => "Sblocca l'app per continuare la configurazione.",
+        'revoked' => 'Questo dispositivo è stato rimosso dall\'altro dispositivo. Associalo di nuovo per riprendere la sincronizzazione.',
     ],
     'step' => [
         'connect' => 'Connessione al tuo altro dispositivo',

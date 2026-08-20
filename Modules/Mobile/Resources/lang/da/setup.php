@@ -10,6 +10,7 @@ return [
         'reprojecting' => 'Genopbygger din historik…',
         'retrying' => 'Forbinder til den anden enhed igen…',
         'locked' => 'Lås appen op for at fortsætte opsætningen.',
+        'revoked' => 'Denne enhed er fjernet fra din anden enhed. Par igen for at fortsætte synkroniseringen.',
     ],
     'step' => [
         'connect' => 'Forbinder til din anden enhed',

@@ -10,6 +10,7 @@ return [
         'reprojecting' => 'Atkuriama tavo istorija…',
         'retrying' => 'Iš naujo jungiamasi prie kito įrenginio…',
         'locked' => 'Atrakink programėlę, kad tęstum sąranką.',
+        'revoked' => 'Šis įrenginys pašalintas kitame jūsų įrenginyje. Susiekite iš naujo, kad sinchronizavimas tęstųsi.',
     ],
     'step' => [
         'connect' => 'Jungiamasi prie kito įrenginio',

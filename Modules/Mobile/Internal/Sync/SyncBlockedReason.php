@@ -23,6 +23,12 @@ enum SyncBlockedReason: string
 
     case Locked = 'locked';
 
+    // The peer says it no longer knows this device. Terminal, not retryable:
+    // clearing the local confirmation left every later tick reporting "no
+    // confirmed peer yet", which is what a device that had NEVER paired
+    // reports — so the screen sat on "Syncing…" forever with nothing to do.
+    case Revoked = 'revoked';
+
     // A poll tick that threw. The screen is driven entirely by those ticks,
     // so an unhandled failure answered 500, which Livewire discards — the
     // view kept its last frame and looked alive while nothing ran again.

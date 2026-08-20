@@ -10,6 +10,7 @@ return [
         'reprojecting' => 'Rakennetaan historiaasi uudelleen…',
         'retrying' => 'Yhdistetään uudelleen toiseen laitteeseen…',
         'locked' => 'Avaa sovelluksen lukitus, niin käyttöönotto jatkuu.',
+        'revoked' => 'Tämä laite on poistettu toisesta laitteestasi. Muodosta pari uudelleen jatkaaksesi synkronointia.',
     ],
     'step' => [
         'connect' => 'Yhdistetään toiseen laitteeseesi',

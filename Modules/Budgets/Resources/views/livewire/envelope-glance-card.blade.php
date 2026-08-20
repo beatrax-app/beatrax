@@ -46,7 +46,7 @@
                 </div>
 
                 @if ($overspentCount >= 1)
-                    <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                    <span class="inline-flex shrink-0 items-center whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
                         {{ Lang::get('budgets::messages.badge.over_budget', ['count' => $overspentCount]) }}
                     </span>
                 @endif

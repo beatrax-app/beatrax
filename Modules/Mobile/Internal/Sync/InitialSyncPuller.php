@@ -56,7 +56,15 @@ final class InitialSyncPuller
             // Locked / no key / sync never enabled, or no confirmed peer
             // yet - skip entirely. Data stays encrypted; the cursor is left
             // untouched.
-            return [...$this->progress($userId), 'blocked' => SyncBlockedReason::NoPeer];
+            //
+            // Except when a peer we ONCE confirmed has withdrawn it: that
+            // reads identically here, and reporting it as "waiting for the
+            // other device" left the screen turning forever on a pairing that
+            // no longer exists and cannot come back on its own.
+            return [
+                ...$this->progress($userId),
+                'blocked' => $this->peerRevokedUs($userId) ? SyncBlockedReason::Revoked : SyncBlockedReason::NoPeer,
+            ];
         }
 
         $cursor = $this->loadOrCreateCursor($userId, $peerDeviceId);
@@ -250,6 +258,22 @@ final class InitialSyncPuller
 
     // Resolves the single confirmed non-self peer device_id (single-
     // household pairing); multi-peer selection is out of scope.
+
+    // A peer row that was paired and is no longer confirmed is one that
+    // revoked us — LanSyncClient clears confirmed_at when the other side says
+    // it no longer knows this device. A device that never paired has no such
+    // row at all, which is what separates "not yet" from "no longer".
+    private function peerRevokedUs(int $userId): bool
+    {
+        return $this->db->connection()
+            ->table('device_registry')
+            ->where('user_id', $userId)
+            ->where('is_self', 0)
+            ->whereNotNull('paired_at')
+            ->whereNull('confirmed_at')
+            ->exists();
+    }
+
     private function resolvePeerDeviceId(int $userId, string $localDeviceId): ?string
     {
         $confirmed = $this->registryService->deviceKeys($userId);

@@ -589,12 +589,13 @@ td.date,
  */
 @layer components {
     /*
-     * The one inline action glyph. Twenty icon-only buttons carried seventeen
-     * different class strings, several with no affordance at all, so the same
-     * verb looked like a different control on every screen — or like nothing
-     * pressable. See the x-core::glyph-action component.
+     * The one inline action button, for an icon standing alone AS the verb.
+     * Twenty of these carried seventeen different class strings, several with
+     * no affordance at all. Its mark is an emoji: a sole action has no words
+     * to lean on, and a text glyph is drawn from the body font at whatever
+     * size and baseline it likes. See the x-core::emoji-action component.
      */
-    .glyph-action {
+    .emoji-action {
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -612,46 +613,41 @@ td.date,
             color 120ms ease;
     }
 
-    .glyph-action__mark {
+    .emoji-action__mark {
         display: inline-flex;
         align-items: center;
         justify-content: center;
         width: 20px;
         height: 20px;
-        font-size: 16px;
+        font-size: 17px;
         line-height: 1;
-        /* Text glyphs sit on a baseline; this is what takes them off it. */
-        font-variant-emoji: text;
+        /* Ask for the colour picture, not the monochrome text fallback. */
+        font-variant-emoji: emoji;
     }
 
-    .glyph-action__mark svg {
-        width: 18px;
-        height: 18px;
-    }
-
-    .glyph-action:hover {
+    .emoji-action:hover {
         background: var(--color-bg-subtle);
         border-color: var(--color-border-strong);
         color: var(--color-text);
     }
 
     /* Pressed reads as movement, which is what tells a thumb it landed. */
-    .glyph-action:active {
+    .emoji-action:active {
         background: var(--color-border-faint);
         transform: translateY(1px);
     }
 
-    .glyph-action:focus-visible {
+    .emoji-action:focus-visible {
         outline: 2px solid var(--color-text);
         outline-offset: 2px;
     }
 
-    .glyph-action:disabled {
+    .emoji-action:disabled {
         opacity: 0.45;
         pointer-events: none;
     }
 
-    .glyph-action--danger:hover {
+    .emoji-action--danger:hover {
         border-color: var(--color-danger, currentColor);
         color: var(--color-danger, currentColor);
     }

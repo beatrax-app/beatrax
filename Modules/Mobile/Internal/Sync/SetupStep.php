@@ -33,7 +33,7 @@ enum SetupStep: string
     public static function forBlocked(?SyncBlockedReason $blocked): self
     {
         return match ($blocked) {
-            SyncBlockedReason::NoPeer, SyncBlockedReason::Unreachable, SyncBlockedReason::Retrying => self::Connect,
+            SyncBlockedReason::NoPeer, SyncBlockedReason::Unreachable, SyncBlockedReason::Retrying, SyncBlockedReason::Revoked => self::Connect,
             SyncBlockedReason::NoKeys => self::Keys,
             SyncBlockedReason::Reprojecting => self::Rebuild,
             SyncBlockedReason::Locked, null => self::Transfer,

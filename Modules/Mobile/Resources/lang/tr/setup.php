@@ -10,6 +10,7 @@ return [
         'reprojecting' => 'Geçmişin yeniden oluşturuluyor…',
         'retrying' => 'Diğer cihaza yeniden bağlanılıyor…',
         'locked' => 'Kuruluma devam etmek için uygulamanın kilidini aç.',
+        'revoked' => 'Bu cihaz diğer cihazınızdan kaldırıldı. Eşitlemeye devam etmek için yeniden eşleştirin.',
     ],
     'step' => [
         'connect' => 'Diğer cihazına bağlanılıyor',
