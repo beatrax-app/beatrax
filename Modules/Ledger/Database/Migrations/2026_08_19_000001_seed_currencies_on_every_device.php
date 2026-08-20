@@ -20,8 +20,9 @@ use Illuminate\Support\Facades\DB;
  * the user to choose from a select with no options.
  *
  * A migration rather than a seeder: it runs wherever the schema does, however
- * the device was set up. Idempotent, so re-running is safe and an existing
- * install keeps whatever it already has.
+ * the device was set up. Idempotent, so re-running is safe — updateOrInsert,
+ * so a re-run also restores the canonical name and minor_unit rather than
+ * leaving an edited row in place.
  *
  * @link ../../../../.docs/features/ledger/architecture.md
  */
