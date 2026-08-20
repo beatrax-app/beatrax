@@ -63,6 +63,15 @@ final class RestoreFrameworkRedirector
             return true;
         }
 
-        return $current::class !== Redirector::class;
+        return ! self::isFrameworkRedirector($current);
+    }
+
+    // Declared mixed on purpose: what the container's return type resolves to
+    // differs between here and CI, and narrowing from mixed reads the same to
+    // the analyser either way. instanceof first, then the exact class —
+    // Livewire's extends the framework's, so instanceof alone accepts both.
+    private static function isFrameworkRedirector(mixed $redirector): bool
+    {
+        return $redirector instanceof Redirector && $redirector::class === Redirector::class;
     }
 }
