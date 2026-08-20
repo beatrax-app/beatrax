@@ -64,8 +64,9 @@ final class DeleteAccountSection extends Component
         } catch (Throwable $e) {
             $this->password = '';
 
-            // The purge runs in one transaction and asserts its own
-            // post-condition, so a throw here means nothing was deleted.
+            // Only pre-commit failures reach here: DeleteAccountAction logs
+            // and swallows everything past the commit, precisely so this
+            // message cannot claim a rollback that did not happen.
             $log->error('DeleteAccountSection: account deletion failed and was rolled back.', [
                 'exception' => $e->getMessage(),
             ]);

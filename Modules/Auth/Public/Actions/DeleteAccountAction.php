@@ -13,6 +13,8 @@ use Modules\Auth\Internal\Account\UserScopedFilePurge;
 use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
+use Psr\Log\LoggerInterface;
+use Throwable;
 
 // Deletes the caller's own account and everything it owns ON THIS DEVICE, and
 // the settings copy says so: there is no Beatrax server to delete from, and a
@@ -35,6 +37,7 @@ final class DeleteAccountAction
         private readonly UserScopedFilePurge $purgeFiles,
         private readonly ColdStartVault $coldStartVault,
         private readonly LogoutAction $logout,
+        private readonly LoggerInterface $log,
     ) {}
 
     public function __invoke(User $user, string $password): void
@@ -51,24 +54,52 @@ final class DeleteAccountAction
         $deviceIds = $this->deviceIdsOf($connection, $userId);
         $successorId = $this->successorAdministratorId($connection, $user);
 
-        // Before the rows, not after: forgetting a biometric enrolment writes
-        // the enrolment flag back through the lock gateway, and doing that
-        // after the row is gone would resurrect it.
-        $this->coldStartVault->forget($userId);
-
         $connection->transaction(function () use ($connection, $userId, $successorId, $deviceIds): void {
             if ($successorId !== null) {
                 $connection->table('users')->where('id', $successorId)->update(['is_developer' => true]);
             }
 
+            // Before the rows, not after: forgetting an enrolment writes the
+            // flag back through the lock gateway, which after the row is gone
+            // would resurrect it. Inside the transaction so that write rolls
+            // back too; the keychain clear and desktop unlink cannot.
+            $this->coldStartVault->forget($userId);
+
             ($this->purgeData)($connection, $userId, $deviceIds);
         });
 
-        $this->rebuildSearchIndex($connection);
+        $this->settleAfterPurge($connection, $userId);
+    }
 
-        ($this->purgeFiles)($userId, $connection->table('users')->count() === 0);
+    // Everything past the commit, where no failure can bring the account back.
+    // Logged and swallowed rather than thrown: a caller reading a post-commit
+    // throw as "rolled back" told the user nothing had changed and left the
+    // session naming an id that no longer resolves. A held handle suffices.
+    private function settleAfterPurge(Connection $connection, int $userId): void
+    {
+        try {
+            $this->rebuildSearchIndex($connection);
+        } catch (Throwable $e) {
+            $this->log->error('DeleteAccountAction: search index rebuild failed after the purge committed.', [
+                'exception' => $e->getMessage(),
+            ]);
+        }
 
-        ($this->logout)();
+        try {
+            ($this->purgeFiles)($userId, $connection->table('users')->count() === 0);
+        } catch (Throwable $e) {
+            $this->log->error('DeleteAccountAction: file purge failed after the purge committed; residue left on disk.', [
+                'exception' => $e->getMessage(),
+            ]);
+        }
+
+        try {
+            ($this->logout)();
+        } catch (Throwable $e) {
+            $this->log->error('DeleteAccountAction: logout failed after the purge committed.', [
+                'exception' => $e->getMessage(),
+            ]);
+        }
     }
 
     /** @return list<string> this account's own device identifiers */

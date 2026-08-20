@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 use Modules\Auth\Internal\Http\Livewire\DeleteAccountSection;
@@ -310,4 +311,73 @@ it('keeps no plaintext password in the component after a failed purge', function
         ->assertSet('password', '');
 
     expect(json_encode($component->snapshot))->not->toContain('owner-password-12');
+});
+
+// A filesystem that refuses to unlink the account's own identity blob, the
+// way a held handle does on Windows. Narrow on purpose: this is the container's
+// shared `files` binding, and a blanket exists()/delete() override changes what
+// Blade and the translation loader see too.
+function deleteAccountRefuseFileDeletes(UserDataPathService $paths, int $userId): void
+{
+    $blocked = $paths->appRelative(sprintf('sync/identity/%d.enc', $userId));
+
+    $real = app(Filesystem::class);
+    $real->ensureDirectoryExists(dirname($blocked));
+    $real->put($blocked, 'fixture');
+
+    $files = new class($blocked) extends Filesystem
+    {
+        public function __construct(private readonly string $blocked) {}
+
+        public function delete($paths): bool
+        {
+            if ($paths === $this->blocked) {
+                throw new RuntimeException('unlink(): Resource temporarily unavailable');
+            }
+
+            return parent::delete($paths);
+        }
+    };
+
+    app()->instance('files', $files);
+    app()->instance(Filesystem::class, $files);
+}
+
+it('finishes the deletion when the file purge fails after the commit', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $owner = deleteAccountUser('owner', administrator: true);
+    deleteAccountSeedOwnedRows($db, $owner, 'owner-marker');
+
+    $this->actingAs($owner);
+    deleteAccountRefuseFileDeletes(app(UserDataPathService::class), $owner->id);
+
+    // The rows are already gone by the time the unlink fails. Throwing here
+    // reported "your account was not deleted, nothing was changed" over a
+    // committed purge, leaving the session pointed at a row that had gone.
+    app(DeleteAccountAction::class)($owner, 'owner-password-12');
+
+    expect(User::query()->where('id', $owner->id)->exists())->toBeFalse()
+        ->and(deleteAccountOwnedRowCount($db, $owner->id))->toBe(0)
+        ->and(auth()->check())->toBeFalse();
+});
+
+it('does not tell the user nothing changed when the account is already gone', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $owner = deleteAccountUser('owner', administrator: true);
+    deleteAccountSeedOwnedRows($db, $owner, 'owner-marker');
+
+    $this->actingAs($owner);
+    deleteAccountRefuseFileDeletes(app(UserDataPathService::class), $owner->id);
+
+    Livewire::test(DeleteAccountSection::class)
+        ->set('password', 'owner-password-12')
+        ->call('deleteAccount')
+        ->assertSet('failure', null)
+        ->assertRedirect('/');
+
+    expect(User::query()->where('id', $owner->id)->exists())->toBeFalse();
 });
