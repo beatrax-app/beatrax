@@ -314,6 +314,7 @@
                                             <flux:button
                                                 variant="ghost"
                                                 size="sm"
+                                                class="glyph-action"
                                                 icon="ellipsis-horizontal"
                                                 aria-label="{{ Lang::get('pots::messages.more_actions_aria', ['name' => $pot->name]) }}"
                                             />
@@ -437,6 +438,7 @@
                                     <flux:button
                                         variant="ghost"
                                         size="sm"
+                                        class="glyph-action"
                                         icon="ellipsis-horizontal"
                                         aria-label="{{ Lang::get('pots::messages.more_actions_aria', ['name' => $pot->name]) }}"
                                     />

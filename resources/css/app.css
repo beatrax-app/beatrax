@@ -586,6 +586,69 @@ td.date,
  * target route is absent.
  */
 @layer components {
+    /*
+     * The one inline action glyph. Twenty icon-only buttons carried seventeen
+     * different class strings, several with no affordance at all, so the same
+     * verb looked like a different control on every screen — or like nothing
+     * pressable. See the x-core::glyph-action component.
+     */
+    .glyph-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        flex: none;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: var(--color-surface);
+        color: var(--color-text-muted);
+        line-height: 1;
+        transition:
+            background-color 120ms ease,
+            border-color 120ms ease,
+            color 120ms ease;
+    }
+
+    .glyph-action__mark {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: var(--text-sm);
+    }
+
+    .glyph-action__mark svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .glyph-action:hover {
+        background: var(--color-bg-subtle);
+        border-color: var(--color-border-strong);
+        color: var(--color-text);
+    }
+
+    /* Pressed reads as movement, which is what tells a thumb it landed. */
+    .glyph-action:active {
+        background: var(--color-border-faint);
+        transform: translateY(1px);
+    }
+
+    .glyph-action:focus-visible {
+        outline: 2px solid var(--color-text);
+        outline-offset: 2px;
+    }
+
+    .glyph-action:disabled {
+        opacity: 0.45;
+        pointer-events: none;
+    }
+
+    .glyph-action--danger:hover {
+        border-color: var(--color-danger, currentColor);
+        color: var(--color-danger, currentColor);
+    }
+
     .dev-side {
         background: var(--color-bg-subtle);
         border-right: 1px solid var(--color-border);

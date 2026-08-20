@@ -230,8 +230,8 @@
                         </div>
                     @else
                         <div class="mt-3 flex items-center gap-2">
-                            <button
-                                type="button"
+                            <x-core::glyph-action
+                                :label="Lang::get('goals::messages.row.edit')"
                                 wire:click="openEdit({{ $row->id }})"
                                 x-on:click="
                                     if (window.innerWidth < 768) {
@@ -240,15 +240,17 @@
                                         $flux.modal('goal-form').show();
                                     }
                                 "
-                                class="text-sm text-slate-400 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100"
-                             title="{{ Lang::get('goals::messages.row.edit') }}"
-                            aria-label="{{ Lang::get('goals::messages.row.edit') }}"
-                        ><span aria-hidden="true" class="sm:hidden">✎</span><span class="sr-only sm:not-sr-only">{{ Lang::get('goals::messages.row.edit') }}</span></button>
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z"/>
+                                </svg>
+                            </x-core::glyph-action>
 
                             <flux:dropdown>
                                 <flux:button
                                     variant="ghost"
                                     size="sm"
+                                    class="glyph-action"
                                     icon="ellipsis-horizontal"
                                     aria-label="{{ Lang::get('goals::messages.actions.more_aria', ['name' => $row->name]) }}"
                                 />
@@ -300,6 +302,7 @@
                                     <flux:button
                                         variant="ghost"
                                         size="sm"
+                                        class="glyph-action"
                                         icon="ellipsis-horizontal"
                                         aria-label="{{ Lang::get('goals::messages.actions.more_aria', ['name' => $row->name]) }}"
                                     />
