@@ -1,6 +1,9 @@
 @use('Modules\Core\Public\Support\Lang')
-<div class="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
-    <div class="w-full max-w-md mx-auto px-6 space-y-6">
+{{-- Anchored to the top rather than centred: ten recovery codes are taller
+     than a phone viewport, and centring pushed the heading up underneath the
+     sticky app bar, clipping the one instruction on the screen. --}}
+<div class="min-h-screen flex items-start justify-center bg-white dark:bg-slate-950">
+    <div class="w-full max-w-md mx-auto px-6 space-y-6 pb-10 pt-[calc(var(--top-bar-h)+1.5rem)]">
 
         {{-- ===== Step: collect_pin ===== --}}
         @if ($step === 'collect_pin' && ! $alreadyProvisioned)

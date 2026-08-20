@@ -25,13 +25,10 @@
             {{ Lang::get('mobile::biometric.unavailable') }}
         </p>
     @else
-        <div class="flex items-start justify-between gap-4">
-            <div class="flex-1 min-w-0">
-                <p class="text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::biometric.toggle_label') }}</p>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    {{ Lang::get('mobile::biometric.toggle_help') }}
-                </p>
-            </div>
+        <x-core::setting-row
+            :label="Lang::get('mobile::biometric.toggle_label')"
+            :description="Lang::get('mobile::biometric.toggle_help')"
+        >
             <button
                 type="button"
                 @if ($enrolled) wire:click="disable" @endif
@@ -41,7 +38,7 @@
             >
                 <span class="switch__thumb"></span>
             </button>
-        </div>
+        </x-core::setting-row>
 
         @unless ($enrolled)
             <div class="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">

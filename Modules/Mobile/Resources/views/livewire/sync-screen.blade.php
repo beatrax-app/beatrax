@@ -100,13 +100,10 @@
         <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::sync.network') }}</h2>
 
         {{-- ===== "Pause sync on cellular" toggle (D-10) ===== --}}
-        <div class="flex items-start justify-between gap-4">
-            <div class="flex-1 min-w-0">
-                <p class="text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::sync.pause_cellular') }}</p>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    {{ Lang::get('mobile::sync.pause_cellular_help') }}
-                </p>
-            </div>
+        <x-core::setting-row
+            :label="Lang::get('mobile::sync.pause_cellular')"
+            :description="Lang::get('mobile::sync.pause_cellular_help')"
+        >
             {{-- The visual `.switch` track is 36x20px (existing component, reused
                  verbatim); the wrapping min-w/min-h-[44px] flex box below is the
                  D-14/WCAG 2.5.5 tap-target padding this mobile surface requires
@@ -123,7 +120,7 @@
                     <span class="switch__thumb"></span>
                 </button>
             </div>
-        </div>
+        </x-core::setting-row>
     </section>
 
     {{-- The three sections below moved off Settings. They answer the same

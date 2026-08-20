@@ -8,11 +8,11 @@
 <div class="space-y-4">
 {{-- ===== Tax country row ===== --}}
 <div class="settings-section" data-testid="tax-country-row">
-    <div class="settings-section__meta">
-        <span class="settings-section__label">{{ Lang::get('tax::settings.country_label') }}</span>
-        <p class="settings-section__desc">{{ Lang::get('tax::settings.country_desc') }}</p>
+    <div class="meta-side">
+        <span class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ Lang::get('tax::settings.country_label') }}</span>
+        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('tax::settings.country_desc') }}</p>
     </div>
-    <div class="settings-section__body space-y-2">
+    <div class="body-side space-y-2">
         <select
             wire:change="setTaxCountry($event.target.value)"
             class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
@@ -42,11 +42,11 @@
 
 {{-- ===== Deduction categories row ===== --}}
 <div class="settings-section mt-4" data-testid="tax-categories-row">
-    <div class="settings-section__meta">
-        <span class="settings-section__label">{{ Lang::get('tax::settings.categories_label') }}</span>
-        <p class="settings-section__desc">{{ Lang::get('tax::settings.categories_desc') }}</p>
+    <div class="meta-side">
+        <span class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ Lang::get('tax::settings.categories_label') }}</span>
+        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('tax::settings.categories_desc') }}</p>
     </div>
-    <div class="settings-section__body">
+    <div class="body-side">
         @php
             /** @var list<\stdClass> $categories */
             $active   = array_filter((array) $categories, fn ($c) => ($c->status ?? '') === 'active');

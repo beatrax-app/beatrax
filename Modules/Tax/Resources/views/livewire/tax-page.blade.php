@@ -250,7 +250,10 @@
                                     style="border-collapse: collapse; font-size: var(--text-base);"
                                 >
                                     <thead>
-                                        <tr style="background: var(--color-surface-2); border-bottom: 1px solid var(--color-border);">
+                                        {{-- No fill of its own: .tax-section-header directly above is
+                                             already surface-2, so painting this row the same colour put
+                                             two identical grey bars 1px apart. --}}
+                                        <tr style="border-bottom: 1px solid var(--color-border);">
                                             <th class="date px-3 py-2 text-left" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em; width: 7rem;">{{ Lang::get('tax::page.col_date') }}</th>
                                             <th class="px-3 py-2 text-left" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em; width: 6rem;">{{ Lang::get('tax::page.col_account') }}</th>
                                             <th class="px-3 py-2 text-left" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em;">{{ Lang::get('tax::page.col_counterparty') }}</th>

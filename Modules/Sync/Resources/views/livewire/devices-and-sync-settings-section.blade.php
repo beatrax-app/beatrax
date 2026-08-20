@@ -46,13 +46,10 @@
     @endif
 
     {{-- ===== Enable-sync toggle row (D-02 gate) ===== --}}
-    <div class="flex items-start justify-between gap-4">
-        <div class="flex-1 min-w-0">
-            <p class="text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('sync::devices.enable_sync') }}</p>
-            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                {{ Lang::get('sync::devices.enable_sync_help') }}
-            </p>
-        </div>
+    <x-core::setting-row
+        :label="Lang::get('sync::devices.enable_sync')"
+        :description="Lang::get('sync::devices.enable_sync_help')"
+    >
         <button
             type="button"
             wire:click="{{ $syncEnabled ? '' : ($appLockConfigured ? 'enableSync' : '') }}"
@@ -67,7 +64,7 @@
         >
             <span class="switch__thumb"></span>
         </button>
-    </div>
+    </x-core::setting-row>
 
     {{-- App-lock gate notice (shown when sync is off and no app-lock is set) --}}
     @if (! $syncEnabled && ! $appLockConfigured)
@@ -91,17 +88,14 @@
     @if ($appLockConfigured)
         <div class="space-y-3" data-testid="encryption-status-row">
             @if ($encryptionOn)
-                <div class="flex items-start justify-between gap-4">
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('sync::devices.encrypted_at_rest') }}</p>
-                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                            {{ Lang::get('sync::devices.encrypted_at_rest_help') }}
-                        </p>
-                    </div>
+                <x-core::setting-row
+                    :label="Lang::get('sync::devices.encrypted_at_rest')"
+                    :description="Lang::get('sync::devices.encrypted_at_rest_help')"
+                >
                     <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
                         {{ Lang::get('sync::devices.on') }}
                     </span>
-                </div>
+                </x-core::setting-row>
             @elseif ($syncEnabled)
                 {{-- D-07 mandatory-when-synced: transient auto-activation. NO CTA, NO decline. --}}
                 <div

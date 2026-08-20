@@ -161,32 +161,39 @@
                                     </p>
                                 </div>
                             </a>
-                            {{-- Split badge: OUTSIDE the <a> (flex sibling) so toggling the
-                                 legs never triggers navigation (UI-SPEC §5.1). No Livewire
-                                 round trip — legs are already server-rendered below. --}}
-                            @if ($isSplitRow)
-                                <button
-                                    type="button"
-                                    class="split-badge"
-                                    @click="open = !open"
-                                    :aria-expanded="open"
-                                    aria-controls="split-legs-phone-{{ $row['id'] }}"
-                                    aria-label="{{ Lang::get('ledger::list.split_expand_aria', ['count' => count($rowLegs)]) }}"
-                                    data-testid="split-badge-phone-{{ $row['id'] }}"
-                                >
-                                    {{ Lang::get('ledger::list.split_badge', ['count' => count($rowLegs)]) }}
-                                    <svg class="split-badge__chevron h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-                                    </svg>
-                                </button>
-                            @endif
-                            {{-- Tax badge: always-visible at phone width (D-21). Parent-row
-                                 badge unaffected by split state (UI-SPEC discretion — see the
-                                 per-leg read-only badges in the expanded list below). --}}
-                            <x-tax::tax-badge :transaction="$row" :showAlways="true" />
-                            {{-- Cleared/uncleared/reconciled badge (SC-1, D-11). Always visible
-                                 at phone width, same as the tax badge. --}}
-                            <x-ledger::cleared-badge :transaction="['id' => $row['id'], 'status' => $row['status'] ?? \Modules\Ledger\Public\Enums\ClearedStatus::Cleared->value]" />
+                            {{-- One row of actions, one pill height. The three primitives
+                                 each set their own (split 20px, tax 18px, status pill its
+                                 padding + line-height), so side by side they stepped up and
+                                 down and the row read as lumpy; h-5 on the group's children
+                                 lands them all on the split badge's existing 20px. --}}
+                            <div class="flex shrink-0 items-center gap-3 [&>*]:h-5">
+                                {{-- Split badge: OUTSIDE the <a> (flex sibling) so toggling the
+                                     legs never triggers navigation (UI-SPEC §5.1). No Livewire
+                                     round trip — legs are already server-rendered below. --}}
+                                @if ($isSplitRow)
+                                    <button
+                                        type="button"
+                                        class="split-badge"
+                                        @click="open = !open"
+                                        :aria-expanded="open"
+                                        aria-controls="split-legs-phone-{{ $row['id'] }}"
+                                        aria-label="{{ Lang::get('ledger::list.split_expand_aria', ['count' => count($rowLegs)]) }}"
+                                        data-testid="split-badge-phone-{{ $row['id'] }}"
+                                    >
+                                        {{ Lang::get('ledger::list.split_badge', ['count' => count($rowLegs)]) }}
+                                        <svg class="split-badge__chevron h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                                        </svg>
+                                    </button>
+                                @endif
+                                {{-- Tax badge: always-visible at phone width (D-21). Parent-row
+                                     badge unaffected by split state (UI-SPEC discretion — see the
+                                     per-leg read-only badges in the expanded list below). --}}
+                                <x-tax::tax-badge :transaction="$row" :showAlways="true" />
+                                {{-- Cleared/uncleared/reconciled badge (SC-1, D-11). Always visible
+                                     at phone width, same as the tax badge. --}}
+                                <x-ledger::cleared-badge :transaction="['id' => $row['id'], 'status' => $row['status'] ?? \Modules\Ledger\Public\Enums\ClearedStatus::Cleared->value]" />
+                            </div>
                             {{-- Amount: tabular, right-aligned; positive = emerald. Always the
                                  parent total — never a client-recomputed sum (UI-SPEC §5.1). --}}
                             <span class="amount {{ $isPositive($rowAmt) ? 'positive' : '' }}">

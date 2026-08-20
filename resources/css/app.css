@@ -3704,10 +3704,6 @@ td.date,
         outline-offset: -2px;
     }
 
-    /* Today ring */
-    .cal-cell--today {
-        box-shadow: inset 0 0 0 1.5px var(--color-border-strong);
-    }
 
     /* Risk day tint (balance < 0) */
     .cal-cell--risk {

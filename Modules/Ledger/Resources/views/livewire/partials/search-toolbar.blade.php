@@ -44,33 +44,44 @@
     </div>
 
     {{-- ─── Filter chips row (desktop ≥768px) ──────────────────────────── --}}
-    <div class="srch-chips hidden md:flex">
-        @include('ledger::livewire.partials.search-filter-popovers')
+    {{-- The hide sits on a wrapper, not on .srch-chips itself: that rule is
+         unlayered CSS and `display: flex` there outranks Tailwind's layered
+         `hidden`, so the desktop row also rendered at 411px — where the last
+         chip's popover ran off the right edge and covered the summary strip. --}}
+    <div class="hidden md:block">
+        <div class="srch-chips">
+            @include('ledger::livewire.partials.search-filter-popovers')
 
-        @if ($isSearchMode ?? false)
-            <button
-                type="button"
-                wire:click="clearSearch"
-                class="srch-clear-all ml-auto"
-            >{{ Lang::get('ledger::list.search.clear_all') }}</button>
-        @endif
+            @if ($isSearchMode ?? false)
+                <button
+                    type="button"
+                    wire:click="clearSearch"
+                    class="srch-clear-all ml-auto"
+                >{{ Lang::get('ledger::list.search.clear_all') }}</button>
+            @endif
+        </div>
     </div>
 
     {{-- ─── Phone "Filters {N}" button + bottom sheet (<768px) ────────────── --}}
     <div class="md:hidden flex items-center gap-2 mt-2">
-        <x-core::bottom-sheet name="search-filters" title="{{ Lang::get('ledger::list.search.filters') }}">
-            <button
-                type="button"
-                x-on:click="$dispatch('open-sheet', { name: 'search-filters' })"
-                class="srch-filters-btn"
-                aria-label="{{ Lang::get('ledger::list.search.open_filters_aria') }}"
-            >
-                {{ Lang::get('ledger::list.search.filters') }}
-                @if (($activeFilterCount ?? 0) > 0)
-                    <span class="srch-filter-badge">{{ $activeFilterCount }}</span>
-                @endif
-            </button>
+        {{-- Outside the sheet, not in its slot: everything passed to
+             x-core::bottom-sheet is rendered inside the panel, which is
+             display:none until it opens — so the only control that opens the
+             sheet was hidden inside the sheet. The window-level open-sheet
+             event is what the panel listens for, so it works from out here. --}}
+        <button
+            type="button"
+            x-on:click="$dispatch('open-sheet', { name: 'search-filters' })"
+            class="srch-filters-btn"
+            aria-label="{{ Lang::get('ledger::list.search.open_filters_aria') }}"
+        >
+            {{ Lang::get('ledger::list.search.filters') }}
+            @if (($activeFilterCount ?? 0) > 0)
+                <span class="srch-filter-badge">{{ $activeFilterCount }}</span>
+            @endif
+        </button>
 
+        <x-core::bottom-sheet name="search-filters" title="{{ Lang::get('ledger::list.search.filters') }}">
             {{-- Bottom sheet slot content (stacked filter sections) --}}
             <div class="space-y-4">
                 {{-- Date filter --}}
