@@ -12,7 +12,6 @@ return [
 
     'condition_label' => 'Betingelse :number',
     'between_and' => 'og',
-    'field_merchant' => 'Modpart',
     'field_description' => 'Beskrivelse',
     'field_counterparty' => 'Modpart',
     'field_amount' => 'Beløb',

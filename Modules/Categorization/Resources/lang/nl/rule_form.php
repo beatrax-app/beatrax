@@ -12,7 +12,6 @@ return [
 
     'condition_label' => 'Voorwaarde :number',
     'between_and' => 'en',
-    'field_merchant' => 'Winkelier',
     'field_description' => 'Omschrijving',
     'field_counterparty' => 'Tegenpartij',
     'field_amount' => 'Bedrag',

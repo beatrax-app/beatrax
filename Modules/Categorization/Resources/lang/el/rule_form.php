@@ -12,7 +12,6 @@ return [
 
     'condition_label' => 'Συνθήκη :number',
     'between_and' => 'και',
-    'field_merchant' => 'Αντισυμβαλλόμενος',
     'field_description' => 'Περιγραφή',
     'field_counterparty' => 'Αντισυμβαλλόμενος',
     'field_amount' => 'Ποσό',

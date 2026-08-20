@@ -12,7 +12,6 @@ return [
 
     'condition_label' => 'Podmínka :number',
     'between_and' => 'a',
-    'field_merchant' => 'Protistrana',
     'field_description' => 'Popis',
     'field_counterparty' => 'Protistrana',
     'field_amount' => 'Částka',

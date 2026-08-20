@@ -12,7 +12,6 @@ return [
 
     'condition_label' => 'Условие :number',
     'between_and' => 'и',
-    'field_merchant' => 'Контрагент',
     'field_description' => 'Описание',
     'field_counterparty' => 'Контрагент',
     'field_amount' => 'Сума',

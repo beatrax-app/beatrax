@@ -12,7 +12,6 @@ return [
 
     'condition_label' => 'Ehto :number',
     'between_and' => 'ja',
-    'field_merchant' => 'Vastapuoli',
     'field_description' => 'Kuvaus',
     'field_counterparty' => 'Vastapuoli',
     'field_amount' => 'Summa',

@@ -12,7 +12,6 @@ return [
 
     'condition_label' => 'Tingimus :number',
     'between_and' => 'ja',
-    'field_merchant' => 'Vastaspool',
     'field_description' => 'Kirjeldus',
     'field_counterparty' => 'Vastaspool',
     'field_amount' => 'Summa',

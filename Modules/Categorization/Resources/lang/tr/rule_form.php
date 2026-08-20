@@ -12,7 +12,6 @@ return [
 
     'condition_label' => 'Koşul :number',
     'between_and' => 've',
-    'field_merchant' => 'Karşı taraf',
     'field_description' => 'Açıklama',
     'field_counterparty' => 'Karşı taraf',
     'field_amount' => 'Tutar',

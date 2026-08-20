@@ -12,7 +12,6 @@ return [
 
     'condition_label' => 'Condition :number',
     'between_and' => 'et',
-    'field_merchant' => 'Tiers',
     'field_description' => 'Description',
     'field_counterparty' => 'Tiers',
     'field_amount' => 'Montant',

@@ -12,7 +12,6 @@ return [
 
     'condition_label' => 'Condición :number',
     'between_and' => 'y',
-    'field_merchant' => 'Contraparte',
     'field_description' => 'Descripción',
     'field_counterparty' => 'Contraparte',
     'field_amount' => 'Importe',

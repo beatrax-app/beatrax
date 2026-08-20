@@ -12,7 +12,6 @@ return [
 
     'condition_label' => 'Uslov :number',
     'between_and' => 'i',
-    'field_merchant' => 'Druga strana',
     'field_description' => 'Opis',
     'field_counterparty' => 'Druga strana',
     'field_amount' => 'Iznos',

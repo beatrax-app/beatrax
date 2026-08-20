@@ -12,7 +12,6 @@ return [
 
     'condition_label' => 'Warunek :number',
     'between_and' => 'i',
-    'field_merchant' => 'Kontrahent',
     'field_description' => 'Opis',
     'field_counterparty' => 'Kontrahent',
     'field_amount' => 'Kwota',

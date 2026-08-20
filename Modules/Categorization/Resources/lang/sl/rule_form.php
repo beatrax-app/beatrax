@@ -12,7 +12,6 @@ return [
 
     'condition_label' => 'Pogoj :number',
     'between_and' => 'in',
-    'field_merchant' => 'Nasprotna stranka',
     'field_description' => 'Opis',
     'field_counterparty' => 'Nasprotna stranka',
     'field_amount' => 'Znesek',

@@ -12,7 +12,6 @@ return [
 
     'condition_label' => 'Bedingung :number',
     'between_and' => 'und',
-    'field_merchant' => 'Zahlungspartner',
     'field_description' => 'Beschreibung',
     'field_counterparty' => 'Zahlungspartner',
     'field_amount' => 'Betrag',

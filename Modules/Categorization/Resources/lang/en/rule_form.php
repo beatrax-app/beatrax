@@ -12,7 +12,6 @@ return [
 
     'condition_label' => 'Condition :number',
     'between_and' => 'and',
-    'field_merchant' => 'Counterparty',
     'field_description' => 'Description',
     'field_counterparty' => 'Counterparty',
     'field_amount' => 'Amount',

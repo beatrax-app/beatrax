@@ -12,7 +12,6 @@ return [
 
     'condition_label' => ':number. feltétel',
     'between_and' => 'és',
-    'field_merchant' => 'Partner',
     'field_description' => 'Leírás',
     'field_counterparty' => 'Partner',
     'field_amount' => 'Összeg',

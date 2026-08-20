@@ -12,7 +12,6 @@ return [
 
     'condition_label' => 'Uvjet :number',
     'between_and' => 'i',
-    'field_merchant' => 'Protustranka',
     'field_description' => 'Opis',
     'field_counterparty' => 'Protustranka',
     'field_amount' => 'Iznos',

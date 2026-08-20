@@ -12,7 +12,6 @@ return [
 
     'condition_label' => 'Sąlyga :number',
     'between_and' => 'ir',
-    'field_merchant' => 'Kita šalis',
     'field_description' => 'Aprašymas',
     'field_counterparty' => 'Kita šalis',
     'field_amount' => 'Suma',

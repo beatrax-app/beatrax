@@ -12,7 +12,6 @@ return [
 
     'condition_label' => 'Nosacījums :number',
     'between_and' => 'un',
-    'field_merchant' => 'Darījuma partneris',
     'field_description' => 'Apraksts',
     'field_counterparty' => 'Darījuma partneris',
     'field_amount' => 'Summa',

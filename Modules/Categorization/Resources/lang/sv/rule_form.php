@@ -12,7 +12,6 @@ return [
 
     'condition_label' => 'Villkor :number',
     'between_and' => 'och',
-    'field_merchant' => 'Motpart',
     'field_description' => 'Beskrivning',
     'field_counterparty' => 'Motpart',
     'field_amount' => 'Belopp',
