@@ -32,10 +32,7 @@ final class ClientSideRedirect
             return $response;
         }
 
-        // Only a document navigation. A fetch() or a Livewire round-trip
-        // expects the redirect itself, and handing either an HTML page
-        // instead would break it.
-        if ($request->expectsJson() || $request->hasHeader('X-Livewire') || ! $request->acceptsHtml()) {
+        if (! $this->isDocumentNavigation($request)) {
             return $response;
         }
 
@@ -52,6 +49,29 @@ final class ClientSideRedirect
         $response->setContent($this->document($target));
 
         return $response;
+    }
+
+    // Only a document navigation may be rewritten: a fetch(), an <img> or a
+    // Livewire round-trip expects the redirect itself, and acceptsHtml()
+    // answers yes to `*/*` and to a missing Accept alike — which is every
+    // sub-resource the shell fetches.
+
+    // The Android WebView is Chromium and names the destination. Where that
+    // header is absent, an Accept that literally says text/html stands in: a
+    // navigation sends it, an <img> and a default fetch() do not.
+    private function isDocumentNavigation(Request $request): bool
+    {
+        if ($request->expectsJson() || $request->hasHeader('X-Livewire')) {
+            return false;
+        }
+
+        $destination = $request->headers->get('Sec-Fetch-Dest');
+
+        if (is_string($destination) && $destination !== '') {
+            return $destination === 'document';
+        }
+
+        return str_contains(mb_strtolower((string) $request->headers->get('Accept', '')), 'text/html');
     }
 
     // Path, query and fragment only. The shell serves one origin, and a

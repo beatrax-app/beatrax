@@ -29,6 +29,10 @@ use Throwable;
  */
 final class MobilePairingScan extends Component
 {
+    // Read once by MobileLockScreen::mount(). A public property cannot carry
+    // it across navigate:false, which is a full page load.
+    public const LOCKED_IDENTITY_FLASH = 'mobile.pairing.locked_identity';
+
     // The scanner plugin reaches the WebView by dispatching a Livewire
     // event named `native:` plus the PHP event class it fired. Spelled as
     // plain strings because the plugin lives only in mobile-app/vendor and
@@ -251,9 +255,13 @@ final class MobilePairingScan extends Component
     // A locked identity is the one failure the user can actually fix, and the
     // message alone was a dead end: nothing on this screen opens the PIN pad,
     // so "unlock the app and try again" left them with no way to do either.
-    private function sendToUnlock(UrlGenerator $urls): void
+    private function sendToUnlock(UrlGenerator $urls, Session $session): void
     {
-        $this->flashMessage = Lang::get('mobile::pairing.errors.identity_locked');
+        // Flashed, not set on $this: navigate:false is a full page load into
+        // MobileLockScreen, which renders its own flashMessage. Setting this
+        // component's property sent the user to a PIN pad with no explanation
+        // — the same dead end, one screen further along.
+        $session->flash(self::LOCKED_IDENTITY_FLASH, Lang::get('mobile::pairing.errors.identity_locked'));
         $this->redirect($urls->route('mobile.lock'), navigate: false);
     }
 
@@ -341,7 +349,7 @@ final class MobilePairingScan extends Component
                 // Self-minting one here would strand the peer's.
                 $gateway->enableSyncIdentityWithoutEpoch($userId, $session);
             } catch (LogicException) {
-                $this->sendToUnlock($urls);
+                $this->sendToUnlock($urls, $session);
 
                 return;
             }
@@ -362,7 +370,7 @@ final class MobilePairingScan extends Component
             // code. Sending that user to the other device for a fresh QR is
             // advice that can never work.
             if (! $gateway->hasUsableIdentity($userId, $session)) {
-                $this->sendToUnlock($urls);
+                $this->sendToUnlock($urls, $session);
 
                 return;
             }
@@ -528,7 +536,7 @@ final class MobilePairingScan extends Component
         // client state.
         $deviceId = $gateway->currentDeviceId($userId, $session);
         if ($deviceId === null) {
-            $this->sendToUnlock($urls);
+            $this->sendToUnlock($urls, $session);
 
             return;
         }

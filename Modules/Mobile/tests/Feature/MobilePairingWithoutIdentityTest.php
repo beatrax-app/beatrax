@@ -155,7 +155,13 @@ it('says the device is locked rather than blaming the code, when the identity ca
 
     Livewire::test(MobilePairingScan::class)
         ->call('submitCode', $qr['payload'])
-        ->assertSet('flashMessage', Lang::get('mobile::pairing.errors.identity_locked'));
+        ->assertRedirect(route('mobile.lock'));
+
+    // Flashed rather than set on the component: the redirect is a full page
+    // load into the lock screen, so a public property of the screen being
+    // left behind arrives nowhere and the PIN pad explains nothing.
+    expect($session->get(MobilePairingScan::LOCKED_IDENTITY_FLASH))
+        ->toBe(Lang::get('mobile::pairing.errors.identity_locked'));
 });
 
 it('pairs from the plain scan screen too, the only sync entry point a phone has', function (): void {
