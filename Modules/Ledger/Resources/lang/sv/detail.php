@@ -53,6 +53,16 @@ return [
         'save' => 'Spara',
     ],
 
+    'type_label' => [
+        'expense' => 'Utgift',
+        'income' => 'Inkomst',
+        'transfer_out' => 'Överföring ut',
+        'transfer_in' => 'Överföring in',
+        'fee' => 'Avgift',
+        'refund' => 'Återbetalning',
+        'adjustment' => 'Justering',
+    ],
+
     'note' => [
         'heading' => 'Anteckning',
         'help' => 'Personlig anteckning för den här transaktionen. Syns bara för dig.',

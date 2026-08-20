@@ -53,6 +53,16 @@ return [
         'save' => 'Opslaan',
     ],
 
+    'type_label' => [
+        'expense' => 'Uitgave',
+        'income' => 'Inkomsten',
+        'transfer_out' => 'Uitgaande overboeking',
+        'transfer_in' => 'Inkomende overboeking',
+        'fee' => 'Kosten',
+        'refund' => 'Terugbetaling',
+        'adjustment' => 'Correctie',
+    ],
+
     'note' => [
         'heading' => 'Notitie',
         'help' => 'Persoonlijke notitie bij deze transactie. Alleen zichtbaar voor jou.',

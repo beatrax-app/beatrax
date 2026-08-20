@@ -53,6 +53,16 @@ return [
         'save' => 'Salva',
     ],
 
+    'type_label' => [
+        'expense' => 'Spesa',
+        'income' => 'Entrata',
+        'transfer_out' => 'Trasferimento in uscita',
+        'transfer_in' => 'Trasferimento in entrata',
+        'fee' => 'Commissione',
+        'refund' => 'Rimborso',
+        'adjustment' => 'Rettifica',
+    ],
+
     'note' => [
         'heading' => 'Nota',
         'help' => 'Nota personale per questa transazione. Visibile solo a te.',

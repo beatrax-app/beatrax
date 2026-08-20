@@ -53,6 +53,16 @@ return [
         'save' => 'Saglabāt',
     ],
 
+    'type_label' => [
+        'expense' => 'Izdevumi',
+        'income' => 'Ieņēmumi',
+        'transfer_out' => 'Izejošs pārskaitījums',
+        'transfer_in' => 'Ienākošs pārskaitījums',
+        'fee' => 'Komisijas maksa',
+        'refund' => 'Atmaksa',
+        'adjustment' => 'Korekcija',
+    ],
+
     'note' => [
         'heading' => 'Piezīme',
         'help' => 'Personiska piezīme par šo darījumu. Redzama tikai jums.',

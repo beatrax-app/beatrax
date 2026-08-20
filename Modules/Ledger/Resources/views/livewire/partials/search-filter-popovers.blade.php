@@ -14,12 +14,11 @@
     // defines, so it lands on the near-white fallback: unreadable under dark
     // mode's near-white text, and indistinguishable from the white popover in
     // light. `!` because that rule is unlayered and outranks layered utilities.
-    $chipHover = 'hover:bg-slate-100! dark:hover:bg-slate-800!';
 @endphp
 
 {{-- ─── Date chip ─────────────────────────────────────────────────────── --}}
 <div class="relative" x-data="{ open: false }" x-on:keydown.escape.window="open = false">
-    <span class="srch-chip {{ $chipHover }} {{ ($filterAfter ?? '') !== '' || ($filterBefore ?? '') !== '' ? 'srch-chip--active' : '' }}">
+    <span class="srch-chip {{ ($filterAfter ?? '') !== '' || ($filterBefore ?? '') !== '' ? 'srch-chip--active' : '' }}">
         <button type="button" class="srch-chip-toggle" x-on:click="open = !open" :aria-expanded="open">
             @if (($filterAfter ?? '') !== '' || ($filterBefore ?? '') !== '')
                 @php
@@ -84,7 +83,7 @@
 {{-- ─── Account chip ───────────────────────────────────────────────────── --}}
 @if (! empty($availableAccounts ?? []))
     <div class="relative" x-data="{ open: false }" x-on:keydown.escape.window="open = false">
-        <span class="srch-chip {{ $chipHover }} {{ ! empty($filterAccounts ?? []) ? 'srch-chip--active' : '' }}">
+        <span class="srch-chip {{ ! empty($filterAccounts ?? []) ? 'srch-chip--active' : '' }}">
             <button type="button" class="srch-chip-toggle" x-on:click="open = !open" :aria-expanded="open">
                 @if (! empty($filterAccounts ?? []))
                     @php
@@ -153,7 +152,7 @@
             }
         }
     @endphp
-    <span class="srch-chip {{ $chipHover }} {{ $amountActive ? 'srch-chip--active' : '' }}">
+    <span class="srch-chip {{ $amountActive ? 'srch-chip--active' : '' }}">
         <button type="button" class="srch-chip-toggle" x-on:click="open = !open" :aria-expanded="open">
             {!! $amountLabel !!}
         </button>
@@ -217,7 +216,7 @@
 {{-- ─── Category chip ──────────────────────────────────────────────────── --}}
 @if (! empty($availableCategories ?? []))
     <div class="relative" x-data="{ open: false }" x-on:keydown.escape.window="open = false">
-        <span class="srch-chip {{ $chipHover }} {{ ! empty($filterCategories ?? []) ? 'srch-chip--active' : '' }}">
+        <span class="srch-chip {{ ! empty($filterCategories ?? []) ? 'srch-chip--active' : '' }}">
             <button type="button" class="srch-chip-toggle" x-on:click="open = !open" :aria-expanded="open">
                 @if (! empty($filterCategories ?? []))
                     @php

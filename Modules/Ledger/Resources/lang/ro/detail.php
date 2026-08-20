@@ -53,6 +53,16 @@ return [
         'save' => 'Salvează',
     ],
 
+    'type_label' => [
+        'expense' => 'Cheltuială',
+        'income' => 'Venit',
+        'transfer_out' => 'Transfer ieșit',
+        'transfer_in' => 'Transfer primit',
+        'fee' => 'Comision',
+        'refund' => 'Rambursare',
+        'adjustment' => 'Ajustare',
+    ],
+
     'note' => [
         'heading' => 'Notă',
         'help' => 'Notă personală pentru această tranzacție. Vizibilă doar pentru tine.',

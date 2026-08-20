@@ -53,6 +53,16 @@ return [
         'save' => 'Spremi',
     ],
 
+    'type_label' => [
+        'expense' => 'Trošak',
+        'income' => 'Prihod',
+        'transfer_out' => 'Odlazni prijenos',
+        'transfer_in' => 'Dolazni prijenos',
+        'fee' => 'Naknada',
+        'refund' => 'Povrat',
+        'adjustment' => 'Ispravak',
+    ],
+
     'note' => [
         'heading' => 'Bilješka',
         'help' => 'Osobna bilješka za ovu transakciju. Vidljiva samo tebi.',

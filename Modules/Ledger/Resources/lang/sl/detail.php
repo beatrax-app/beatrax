@@ -53,6 +53,16 @@ return [
         'save' => 'Shrani',
     ],
 
+    'type_label' => [
+        'expense' => 'Strošek',
+        'income' => 'Prihodek',
+        'transfer_out' => 'Odhodni prenos',
+        'transfer_in' => 'Dohodni prenos',
+        'fee' => 'Provizija',
+        'refund' => 'Vračilo',
+        'adjustment' => 'Prilagoditev',
+    ],
+
     'note' => [
         'heading' => 'Opomba',
         'help' => 'Osebna opomba za to transakcijo. Vidna je samo tebi.',

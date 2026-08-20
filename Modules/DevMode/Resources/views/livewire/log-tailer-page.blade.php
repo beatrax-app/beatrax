@@ -140,8 +140,14 @@
                         <span class="text-[10.5px] text-slate-500 shrink-0 w-[60px] tabular-nums" x-text="shortTime(line.timestamp)"></span>
                         <span class="text-[10px] font-semibold uppercase tracking-wide shrink-0 w-[64px]" x-bind:class="severityColor(line.severity)" x-text="line.severity"></span>
                         <span class="text-[10.5px] text-slate-400 shrink-0 w-[72px] truncate" x-text="line.channel || '—'" x-bind:title="line.channel"></span>
+                        {{-- A floor, not min-w-0. Every other cell in the row is
+                             shrink-0, so the message was the only thing that could
+                             give: at phone width (the dev shell keeps its 220px
+                             sidebar, leaving ~127px of pane) it was squeezed to zero
+                             and every row rendered blank. It holds its width now and
+                             the pane scrolls sideways, as the wrapper intends. --}}
                         <span
-                            class="text-slate-100 flex-1 min-w-0"
+                            class="text-slate-100 flex-1 min-w-60"
                             x-bind:class="line.expanded ? 'whitespace-pre-wrap break-words' : 'truncate'"
                             x-text="line.message || line.raw"
                         ></span>

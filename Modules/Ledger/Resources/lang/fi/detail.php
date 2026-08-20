@@ -53,6 +53,16 @@ return [
         'save' => 'Tallenna',
     ],
 
+    'type_label' => [
+        'expense' => 'Meno',
+        'income' => 'Tulo',
+        'transfer_out' => 'Lähtevä siirto',
+        'transfer_in' => 'Saapuva siirto',
+        'fee' => 'Palvelumaksu',
+        'refund' => 'Hyvitys',
+        'adjustment' => 'Oikaisu',
+    ],
+
     'note' => [
         'heading' => 'Muistiinpano',
         'help' => 'Henkilökohtainen muistiinpano tälle tapahtumalle. Näkyy vain sinulle.',

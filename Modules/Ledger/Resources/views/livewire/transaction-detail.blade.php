@@ -388,7 +388,7 @@
                         <option value="">{{ Lang::get('ledger::detail.reclassify.choose_option') }}</option>
                         @foreach (\Modules\Ledger\Public\Enums\TransactionType::cases() as $type)
                             @if ($type->value !== $transaction->type)
-                                <option value="{{ $type->value }}">{{ $type->value }}</option>
+                                <option value="{{ $type->value }}">{{ Lang::get('ledger::detail.type_label.'.$type->value) }}</option>
                             @endif
                         @endforeach
                     </select>

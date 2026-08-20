@@ -53,6 +53,16 @@ return [
         'save' => 'Enregistrer',
     ],
 
+    'type_label' => [
+        'expense' => 'Dépense',
+        'income' => 'Revenu',
+        'transfer_out' => 'Virement sortant',
+        'transfer_in' => 'Virement entrant',
+        'fee' => 'Frais',
+        'refund' => 'Remboursement',
+        'adjustment' => 'Ajustement',
+    ],
+
     'note' => [
         'heading' => 'Note',
         'help' => 'Note personnelle pour cette transaction. Visible uniquement par toi.',

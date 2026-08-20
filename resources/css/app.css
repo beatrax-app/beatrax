@@ -76,6 +76,7 @@
     --color-bg-subtle: #f8fafc;
     --color-surface: #ffffff;
     --color-surface-2: #f1f5f9;
+    --color-hover: #f1f5f9;
     --color-switch-knob: #ffffff;
     --color-surface-raised: #ffffff;
     --color-border: #e2e8f0;
@@ -177,6 +178,7 @@
     --color-bg-subtle: #0b1220;
     --color-surface: #0b1220;
     --color-surface-2: #1e293b;
+    --color-hover: #1e293b;
     --color-switch-knob: #ffffff;
     --color-surface-raised: #0f172a;
     --color-border: #1e293b;

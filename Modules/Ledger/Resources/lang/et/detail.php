@@ -53,6 +53,16 @@ return [
         'save' => 'Salvesta',
     ],
 
+    'type_label' => [
+        'expense' => 'Kulu',
+        'income' => 'Tulu',
+        'transfer_out' => 'Väljaminev ülekanne',
+        'transfer_in' => 'Sissetulev ülekanne',
+        'fee' => 'Teenustasu',
+        'refund' => 'Tagasimakse',
+        'adjustment' => 'Korrigeerimine',
+    ],
+
     'note' => [
         'heading' => 'Märkus',
         'help' => 'Isiklik märkus selle tehingu kohta. Näed seda ainult sina.',

@@ -53,6 +53,16 @@ return [
         'save' => 'Išsaugoti',
     ],
 
+    'type_label' => [
+        'expense' => 'Išlaidos',
+        'income' => 'Pajamos',
+        'transfer_out' => 'Išeinantis pervedimas',
+        'transfer_in' => 'Gaunamas pervedimas',
+        'fee' => 'Mokestis',
+        'refund' => 'Grąžinimas',
+        'adjustment' => 'Koregavimas',
+    ],
+
     'note' => [
         'heading' => 'Pastaba',
         'help' => 'Asmeninė šios operacijos pastaba. Matoma tik tau.',

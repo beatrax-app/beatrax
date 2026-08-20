@@ -53,6 +53,16 @@ return [
         'save' => 'Uložiť',
     ],
 
+    'type_label' => [
+        'expense' => 'Výdavok',
+        'income' => 'Príjem',
+        'transfer_out' => 'Odchádzajúci prevod',
+        'transfer_in' => 'Prichádzajúci prevod',
+        'fee' => 'Poplatok',
+        'refund' => 'Vrátenie peňazí',
+        'adjustment' => 'Úprava',
+    ],
+
     'note' => [
         'heading' => 'Poznámka',
         'help' => 'Osobná poznámka k tejto transakcii. Vidíš ju len ty.',

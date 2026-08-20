@@ -53,6 +53,16 @@ return [
         'save' => 'Gem',
     ],
 
+    'type_label' => [
+        'expense' => 'Udgift',
+        'income' => 'Indtægt',
+        'transfer_out' => 'Overførsel ud',
+        'transfer_in' => 'Overførsel ind',
+        'fee' => 'Gebyr',
+        'refund' => 'Refusion',
+        'adjustment' => 'Justering',
+    ],
+
     'note' => [
         'heading' => 'Note',
         'help' => 'Personlig note til denne transaktion. Kun synlig for dig.',

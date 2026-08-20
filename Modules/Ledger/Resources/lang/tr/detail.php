@@ -53,6 +53,16 @@ return [
         'save' => 'Kaydet',
     ],
 
+    'type_label' => [
+        'expense' => 'Gider',
+        'income' => 'Gelir',
+        'transfer_out' => 'Giden transfer',
+        'transfer_in' => 'Gelen transfer',
+        'fee' => 'Ücret',
+        'refund' => 'İade',
+        'adjustment' => 'Düzeltme',
+    ],
+
     'note' => [
         'heading' => 'Not',
         'help' => 'Bu işleme ait kişisel not. Yalnızca sen görebilirsin.',

@@ -53,6 +53,16 @@ return [
         'save' => 'Speichern',
     ],
 
+    'type_label' => [
+        'expense' => 'Ausgabe',
+        'income' => 'Einnahme',
+        'transfer_out' => 'Ausgehende Überweisung',
+        'transfer_in' => 'Eingehende Überweisung',
+        'fee' => 'Gebühr',
+        'refund' => 'Erstattung',
+        'adjustment' => 'Korrektur',
+    ],
+
     'note' => [
         'heading' => 'Notiz',
         'help' => 'Persönliche Notiz zu dieser Transaktion. Nur für dich sichtbar.',

@@ -53,6 +53,16 @@ return [
         'save' => 'Lagre',
     ],
 
+    'type_label' => [
+        'expense' => 'Utgift',
+        'income' => 'Inntekt',
+        'transfer_out' => 'Overføring ut',
+        'transfer_in' => 'Overføring inn',
+        'fee' => 'Gebyr',
+        'refund' => 'Refusjon',
+        'adjustment' => 'Justering',
+    ],
+
     'note' => [
         'heading' => 'Notat',
         'help' => 'Personlig notat for denne transaksjonen. Bare synlig for deg.',

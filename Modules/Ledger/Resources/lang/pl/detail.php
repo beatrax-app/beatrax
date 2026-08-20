@@ -53,6 +53,16 @@ return [
         'save' => 'Zapisz',
     ],
 
+    'type_label' => [
+        'expense' => 'Wydatek',
+        'income' => 'Przychód',
+        'transfer_out' => 'Przelew wychodzący',
+        'transfer_in' => 'Przelew przychodzący',
+        'fee' => 'Opłata',
+        'refund' => 'Zwrot',
+        'adjustment' => 'Korekta',
+    ],
+
     'note' => [
         'heading' => 'Notatka',
         'help' => 'Osobista notatka do tej transakcji. Widoczna tylko dla Ciebie.',

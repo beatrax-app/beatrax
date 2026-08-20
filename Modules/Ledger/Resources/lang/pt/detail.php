@@ -53,6 +53,16 @@ return [
         'save' => 'Guardar',
     ],
 
+    'type_label' => [
+        'expense' => 'Despesa',
+        'income' => 'Receita',
+        'transfer_out' => 'Transferência enviada',
+        'transfer_in' => 'Transferência recebida',
+        'fee' => 'Taxa',
+        'refund' => 'Reembolso',
+        'adjustment' => 'Ajuste',
+    ],
+
     'note' => [
         'heading' => 'Nota',
         'help' => 'Nota pessoal para esta transação. Visível apenas para ti.',

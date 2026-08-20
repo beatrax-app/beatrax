@@ -53,6 +53,18 @@ return [
         'save' => 'Save',
     ],
 
+    // Keyed by TransactionType's backing value: the reclassify dropdown offers
+    // the enum's cases and the raw key is not a name anyone should have to read.
+    'type_label' => [
+        'expense' => 'Expense',
+        'income' => 'Income',
+        'transfer_out' => 'Transfer out',
+        'transfer_in' => 'Transfer in',
+        'fee' => 'Fee',
+        'refund' => 'Refund',
+        'adjustment' => 'Adjustment',
+    ],
+
     'note' => [
         'heading' => 'Note',
         'help' => 'Personal note for this transaction. Visible only to you.',

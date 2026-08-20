@@ -53,6 +53,16 @@ return [
         'save' => 'Mentés',
     ],
 
+    'type_label' => [
+        'expense' => 'Kiadás',
+        'income' => 'Bevétel',
+        'transfer_out' => 'Kimenő átutalás',
+        'transfer_in' => 'Bejövő átutalás',
+        'fee' => 'Díj',
+        'refund' => 'Visszatérítés',
+        'adjustment' => 'Korrekció',
+    ],
+
     'note' => [
         'heading' => 'Megjegyzés',
         'help' => 'Személyes megjegyzés ehhez a tranzakcióhoz. Csak te látod.',
