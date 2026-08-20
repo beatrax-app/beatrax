@@ -101,3 +101,41 @@ it('never leaves the sheet dialog without an accessible name', function (): void
     expect($sheet)->toContain('@else')
         ->and($sheet)->toContain("aria-label=\"{{ Lang::get('core::components.sheet_untitled') }}\"");
 });
+
+it('backs every open-sheet dispatch with a sheet that answers to that name', function (): void {
+    $files = [];
+    foreach (['Modules', 'resources/views'] as $root) {
+        $dir = base_path($root);
+        if (! is_dir($dir)) {
+            continue;
+        }
+        $walk = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS));
+        foreach ($walk as $file) {
+            if (str_ends_with($file->getFilename(), '.blade.php')) {
+                $files[] = $file->getPathname();
+            }
+        }
+    }
+
+    expect($files)->not->toBeEmpty();
+
+    // A phone row's Withdraw button dispatched open-sheet {name:'pot-withdraw'}
+    // when the only thing carrying that name was a flux:modal, which the phone
+    // never opens. The button was inert and the page looked complete, so money
+    // could go into a pot and not come out.
+    $orphans = [];
+    foreach ($files as $path) {
+        $blade = (string) file_get_contents($path);
+
+        preg_match_all('/open-sheet[\'"]?\s*,\s*\{?\s*name\s*:\s*[\'"]([a-z0-9-]+)[\'"]/', $blade, $dispatched);
+        preg_match_all('/<x-core::bottom-sheet\s+name=["\']([a-z0-9-]+)["\']/', $blade, $declared);
+
+        foreach (array_unique($dispatched[1]) as $name) {
+            if (! in_array($name, $declared[1], true)) {
+                $orphans[] = $name.' in '.str_replace(base_path().'/', '', $path);
+            }
+        }
+    }
+
+    expect($orphans)->toBe([], 'open-sheet dispatched at a name no bottom sheet answers to: '.implode(', ', $orphans));
+});

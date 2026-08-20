@@ -16,6 +16,18 @@
 
     $fmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)
         ->format($currency === 'EUR' ? 'nl_NL' : 'en_US');
+
+    // Derived once for both withdraw surfaces. It used to be derived inside
+    // the modal, which put it out of scope for the sheet that renders first.
+    $withdrawPot = null;
+    foreach ($groups as $accountPots) {
+        foreach ($accountPots as $p) {
+            if ($p->id === $operationPotId) {
+                $withdrawPot = $p;
+                break 2;
+            }
+        }
+    }
 @endphp
 
 {{--
@@ -532,6 +544,49 @@
     {{-- ------------------------------------------------------------------- --}}
     {{-- Phone bottom sheet: Move pot (D-10)                                  --}}
     {{-- ------------------------------------------------------------------- --}}
+    {{-- Withdraw sheet. The phone row's ↑ dispatches open-sheet for this
+         name; without a sheet listening, the only thing that answered was a
+         flux:modal the phone never opens, so Withdraw did nothing at all. --}}
+    <x-core::bottom-sheet name="pot-withdraw" title="{{ Lang::get('pots::messages.withdraw.heading', ['name' => $withdrawPot?->name ?? Lang::get('pots::messages.pot_fallback')]) }}">
+        <form wire:submit="withdrawPot" class="space-y-4">
+            <div>
+                <label for="withdraw-amount-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.common.amount') }}</label>
+                <input
+                    type="text"
+                    id="withdraw-amount-sheet"
+                    wire:model="operationAmount"
+                    inputmode="decimal"
+                    placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
+                    style="font-size: 16px; font-variant-numeric: tabular-nums;"
+                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                />
+                @if ($errorAmount !== '')
+                    <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
+                @endif
+                @if ($withdrawPot !== null)
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        {{ Lang::get('pots::messages.available_in', ['name' => $withdrawPot->name, 'amount' => $fmt($withdrawPot->balanceMinor, $withdrawPot->currency)]) }}
+                    </p>
+                @endif
+            </div>
+            <div>
+                <label for="withdraw-memo-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.common.note_optional') }}</label>
+                <input
+                    type="text"
+                    id="withdraw-memo-sheet"
+                    wire:model="operationMemo"
+                    placeholder="{{ Lang::get('pots::messages.withdraw.note_placeholder') }}"
+                    style="font-size: 16px;"
+                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                />
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="submit" class="flex-1 rounded-md bg-slate-900 px-4 py-3 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white">{{ Lang::get('pots::messages.actions.withdraw') }}</button>
+                <button type="button" wire:click="$dispatch('modal-close', { name: 'pot-withdraw' })" class="rounded-md border border-slate-200 px-4 py-3 text-sm font-medium text-slate-500 focus:outline-none dark:border-slate-700">{{ Lang::get('pots::messages.common.cancel') }}</button>
+            </div>
+        </form>
+    </x-core::bottom-sheet>
+
     <x-core::bottom-sheet name="pot-move" title="{{ Lang::get('pots::messages.move.title') }}">
         @php
             $moveSrcPotSheet = null;
@@ -834,17 +889,6 @@
     {{-- ------------------------------------------------------------------- --}}
     <flux:modal name="pot-withdraw" dismissible>
         <div class="pt-[44px]" style="max-width: 480px;">
-            @php
-                $withdrawPot = null;
-                foreach ($groups as $accountPots) {
-                    foreach ($accountPots as $p) {
-                        if ($p->id === $operationPotId) {
-                            $withdrawPot = $p;
-                            break 2;
-                        }
-                    }
-                }
-            @endphp
             <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">
                 {{ Lang::get('pots::messages.withdraw.heading', ['name' => $withdrawPot?->name ?? Lang::get('pots::messages.pot_fallback')]) }}
             </h2>
