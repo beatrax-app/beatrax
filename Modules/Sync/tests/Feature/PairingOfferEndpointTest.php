@@ -125,7 +125,7 @@ it('returns the initiator public identity for a live token', function (): void {
 
     $result = pairingOfferDispatch(
         pairingOfferHandler((int) $user->id),
-        pairingOfferRequest('GET', '/pair/offer?token='.$issued['token']),
+        pairingOfferRequest('GET', '/pair/offer?token='.hash('sha256', $issued['token'])),
     );
 
     expect($result['status'])->toBe(200);
@@ -140,7 +140,7 @@ it('returns nothing beyond the four public identity fields', function (): void {
 
     $result = pairingOfferDispatch(
         pairingOfferHandler((int) $user->id),
-        pairingOfferRequest('GET', '/pair/offer?token='.$issued['token']),
+        pairingOfferRequest('GET', '/pair/offer?token='.hash('sha256', $issued['token'])),
     );
 
     expect(array_keys($result['body']))->toBe(['device_id', 'ed25519', 'x25519', 'name']);
@@ -158,7 +158,7 @@ it('never hands out the relay endpoint, token or pin even when one is configured
 
     $result = pairingOfferDispatch(
         pairingOfferHandler((int) $user->id),
-        pairingOfferRequest('GET', '/pair/offer?token='.$issued['token']),
+        pairingOfferRequest('GET', '/pair/offer?token='.hash('sha256', $issued['token'])),
     );
 
     expect($result['status'])->toBe(200);
@@ -181,7 +181,7 @@ it('refuses an unknown token with a bare 404', function (): void {
 
     $result = pairingOfferDispatch(
         pairingOfferHandler((int) $user->id),
-        pairingOfferRequest('GET', '/pair/offer?token='.bin2hex(random_bytes(16))),
+        pairingOfferRequest('GET', '/pair/offer?token='.hash('sha256', bin2hex(random_bytes(16)))),
     );
 
     expect($result['status'])->toBe(404);
@@ -212,7 +212,7 @@ it('refuses an expired token', function (): void {
 
     $result = pairingOfferDispatch(
         pairingOfferHandler((int) $user->id),
-        pairingOfferRequest('GET', '/pair/offer?token='.$issued['token']),
+        pairingOfferRequest('GET', '/pair/offer?token='.hash('sha256', $issued['token'])),
     );
 
     expect($result['status'])->toBe(404);
@@ -231,7 +231,7 @@ it('refuses a token whose ceremony already finished', function (): void {
 
     $result = pairingOfferDispatch(
         pairingOfferHandler((int) $user->id),
-        pairingOfferRequest('GET', '/pair/offer?token='.$issued['token']),
+        pairingOfferRequest('GET', '/pair/offer?token='.hash('sha256', $issued['token'])),
     );
 
     expect($result['status'])->toBe(404);
@@ -249,7 +249,7 @@ it('still answers while the row is awaiting confirmation', function (): void {
 
     $result = pairingOfferDispatch(
         pairingOfferHandler((int) $user->id),
-        pairingOfferRequest('GET', '/pair/offer?token='.$issued['token']),
+        pairingOfferRequest('GET', '/pair/offer?token='.hash('sha256', $issued['token'])),
     );
 
     expect($result['status'])->toBe(200);
@@ -263,7 +263,7 @@ it('refuses a token belonging to another user', function (): void {
 
     $result = pairingOfferDispatch(
         pairingOfferHandler((int) $other->id),
-        pairingOfferRequest('GET', '/pair/offer?token='.$issued['token']),
+        pairingOfferRequest('GET', '/pair/offer?token='.hash('sha256', $issued['token'])),
     );
 
     expect($result['status'])->toBe(404);
@@ -275,7 +275,7 @@ it('refuses every lookup when the daemon resolved no user', function (): void {
 
     $result = pairingOfferDispatch(
         pairingOfferHandler(0),
-        pairingOfferRequest('GET', '/pair/offer?token='.$issued['token']),
+        pairingOfferRequest('GET', '/pair/offer?token='.hash('sha256', $issued['token'])),
     );
 
     expect($result['status'])->toBe(404);
@@ -288,11 +288,11 @@ it('throttles a source hammering the endpoint', function (): void {
     $handler = pairingOfferHandler((int) $user->id);
 
     for ($attempt = 0; $attempt < PairingOfferRateLimiter::MAX_PER_WINDOW; $attempt++) {
-        $allowed = pairingOfferDispatch($handler, pairingOfferRequest('GET', '/pair/offer?token='.$issued['token']));
+        $allowed = pairingOfferDispatch($handler, pairingOfferRequest('GET', '/pair/offer?token='.hash('sha256', $issued['token'])));
         expect($allowed['status'])->toBe(200);
     }
 
-    $refused = pairingOfferDispatch($handler, pairingOfferRequest('GET', '/pair/offer?token='.$issued['token']));
+    $refused = pairingOfferDispatch($handler, pairingOfferRequest('GET', '/pair/offer?token='.hash('sha256', $issued['token'])));
 
     expect($refused['status'])->toBe(429);
     expect($refused['body'])->toBe(['error' => 'rate_limited']);
@@ -305,12 +305,12 @@ it('buckets the throttle per source, not globally', function (): void {
     $handler = pairingOfferHandler((int) $user->id);
 
     for ($attempt = 0; $attempt <= PairingOfferRateLimiter::MAX_PER_WINDOW; $attempt++) {
-        pairingOfferDispatch($handler, pairingOfferRequest('GET', '/pair/offer?token='.$issued['token'], '198.51.100.7'));
+        pairingOfferDispatch($handler, pairingOfferRequest('GET', '/pair/offer?token='.hash('sha256', $issued['token']), '198.51.100.7'));
     }
 
     $fromElsewhere = pairingOfferDispatch(
         $handler,
-        pairingOfferRequest('GET', '/pair/offer?token='.$issued['token'], '198.51.100.8'),
+        pairingOfferRequest('GET', '/pair/offer?token='.hash('sha256', $issued['token']), '198.51.100.8'),
     );
 
     expect($fromElsewhere['status'])->toBe(200);
@@ -351,8 +351,37 @@ it('labels the offer with this device registry name', function (): void {
 
     $result = pairingOfferDispatch(
         pairingOfferHandler((int) $user->id),
-        pairingOfferRequest('GET', '/pair/offer?token='.$issued['token']),
+        pairingOfferRequest('GET', '/pair/offer?token='.hash('sha256', $issued['token'])),
     );
 
     expect($result['body']['name'] ?? null)->toBe('Studio Mac');
+});
+
+it('never accepts the raw token, only its hash', function (): void {
+    /*
+     * The typed word-code is a bearer credential: whoever holds it can walk
+     * the accept path. The phone asks every mDNS responder in turn whether it
+     * holds the token, over plaintext HTTP, before it knows which one is the
+     * real desktop — so sending the token itself hands it to whoever answers
+     * a multicast question first.
+     *
+     * The row is stored under sha256(token), so the hash is all a lookup ever
+     * needed. What can leak now buys public keys and nothing else.
+     */
+    $user = pairingOfferUser('offer-hash-only');
+    $issued = pairingOfferIssue($user);
+
+    $raw = pairingOfferDispatch(
+        pairingOfferHandler((int) $user->id),
+        pairingOfferRequest('GET', '/pair/offer?token='.$issued['token']),
+    );
+
+    expect($raw['status'])->toBe(404, 'the endpoint accepted a raw token');
+
+    $hashed = pairingOfferDispatch(
+        pairingOfferHandler((int) $user->id),
+        pairingOfferRequest('GET', '/pair/offer?token='.hash('sha256', $issued['token'])),
+    );
+
+    expect($hashed['status'])->toBe(200);
 });

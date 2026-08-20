@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Listeners;
 
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Contracts\Container\Container;
 use Modules\Notifications\Public\Events\NotificationPreferenceMutated;
@@ -50,7 +51,7 @@ final class SyncCaptureListener
      */
     private function report(string $message, \Throwable $e, array $context): void
     {
-        $context['exception'] = $e->getMessage();
+        $context = [...$context, ...SafeExceptionContext::describe($e)];
 
         if ($e instanceof BindingResolutionException) {
             $this->log->debug($message.' — no writer available; skipped.', $context);

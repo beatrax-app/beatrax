@@ -70,6 +70,27 @@
             @endif
         </div>
 
+        {{-- What the poll is waiting on. Every one of these reasons has copy
+             in twenty-six languages and none of it was ever rendered, so a
+             stalled setup showed a turning bar and nothing else — including
+             the one state that cannot resolve on its own. --}}
+        @if ($blocked !== null)
+            <p aria-live="polite" class="text-sm text-slate-500 dark:text-slate-400" data-testid="setup-blocked-reason">
+                {{ Lang::get('mobile::setup.blocked.'.$blocked->value) }}
+            </p>
+        @endif
+
+        {{-- Revoked is terminal: the other device no longer knows this one, so
+             polling can never clear it. This is the only way out of a screen
+             that otherwise holds the app hostage. --}}
+        @if ($blocked === \Modules\Mobile\Internal\Sync\SyncBlockedReason::Revoked)
+            <a
+                href="{{ route('mobile.pair', ['mode' => 'import']) }}"
+                class="inline-block text-sm font-medium text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-400"
+                data-testid="setup-repair-link"
+            >{{ Lang::get('mobile::setup.step.connect') }}</a>
+        @endif
+
         {{-- The count only. The step list already says WHICH stage is
              running, and the cursor's expected figure only ever equals what
              has been applied — the same reason stepPercent() will not draw a

@@ -35,9 +35,29 @@ final readonly class RowOwnership
             'import_run_id' => 'import_runs',
         ],
         'transaction_splits' => ['transaction_id' => 'transactions', 'category_id' => 'categories'],
-        'pot_movements' => ['pot_id' => 'pots'],
+        // Both legs of a transfer name a pot, and the counterpart leg is the
+        // one that could quietly credit another household member's pot.
+        'pot_movements' => ['pot_id' => 'pots', 'counterpart_pot_id' => 'pots'],
         'merchant_memories' => ['merchant_id' => 'merchants', 'category_id' => 'categories'],
         'tax_transaction_tags' => ['transaction_id' => 'transactions'],
+        'chain_links' => ['from_transaction_id' => 'transactions', 'to_transaction_id' => 'transactions'],
+        'recurring_series' => ['latest_funding_chain_link_id' => 'chain_links'],
+        'recurring_series_occurrences' => [
+            'recurring_series_id' => 'recurring_series',
+            'transaction_id' => 'transactions',
+        ],
+        'anomaly_alerts' => ['transaction_id' => 'transactions'],
+        'drift_alerts' => [
+            'recurring_series_id' => 'recurring_series',
+            'latest_occurrence_id' => 'recurring_series_occurrences',
+        ],
+        // `target_series_id` deliberately carries no database foreign key —
+        // the series lives in another module — so this check is the only
+        // thing stopping a mutation from naming another member's series.
+        'forecast_scenario_mutations' => [
+            'forecast_scenario_id' => 'forecast_scenarios',
+            'target_series_id' => 'recurring_series',
+        ],
     ];
 
     public function __construct(

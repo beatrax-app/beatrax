@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Crypto;
 
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Auth\Public\Events\AppLockPassphraseChanged;
 use Modules\Core\Models\SystemAlert;
 use Psr\Log\LoggerInterface;
@@ -30,7 +31,7 @@ final class RewrapGdkOnPassphraseChange
             // Swallow — a GDK re-wrap failure must NEVER break the
             // already-committed passphrase change.
             $this->log->error('RewrapGdkOnPassphraseChange: GDK re-wrap failed', [
-                'exception' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
                 'userId' => $event->userId,
             ]);
 
@@ -44,7 +45,7 @@ final class RewrapGdkOnPassphraseChange
                     'severity' => 'critical',
                     'message' => 'GDK keyring re-wrap failed after an app-lock passphrase change — encrypted data may be unrecoverable until the keyring is re-wrapped.',
                     'metadata' => [
-                        'exception' => $e->getMessage(),
+                        ...SafeExceptionContext::describe($e),
                         'exception_class' => get_class($e),
                     ],
                 ]);

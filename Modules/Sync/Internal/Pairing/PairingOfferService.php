@@ -34,13 +34,16 @@ final readonly class PairingOfferService
     /**
      * @return array{device_id: string, ed25519: string, x25519: string, name: string}|null
      */
-    public function offerFor(string $token, int $userId): ?array
+    // Takes the token's HASH, never the token. The row is stored under
+    // sha256(token), so the hash is all a lookup needs — and the token itself
+    // stays on the device that typed it rather than going to whichever peer
+    // answered a multicast question first.
+    public function offerFor(string $tokenHash, int $userId): ?array
     {
-        if ($token === '' || $userId <= 0) {
+        if ($tokenHash === '' || $userId <= 0) {
             return null;
         }
 
-        $tokenHash = hash('sha256', $token);
 
         // expires_at is TEXT compared lexically, which is correct only
         // because every value is written via toIso8601String() in UTC —

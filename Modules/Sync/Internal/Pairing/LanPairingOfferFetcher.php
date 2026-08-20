@@ -98,7 +98,7 @@ final readonly class LanPairingOfferFetcher
             $response = $this->http->createPendingRequest()
                 ->connectTimeout(self::CONNECT_TIMEOUT_SECONDS)
                 ->timeout(self::REQUEST_TIMEOUT_SECONDS)
-                ->get($url, ['token' => $tokenHex]);
+                ->get($url, ['token' => hash('sha256', $tokenHex)]);
 
             if (! $response->successful()) {
                 return null;
@@ -108,7 +108,7 @@ final readonly class LanPairingOfferFetcher
         } catch (Throwable) {
             // A refused connection, a timeout, or a body that is not JSON all
             // mean the same thing here: this peer is not the one. Nothing is
-            // logged — the token is in the request and the identity in the
+            // logged — the token hash is in the request and the identity in the
             // reply, and neither belongs in a log file.
             return null;
         }

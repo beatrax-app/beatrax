@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Pairing;
 
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Illuminate\Database\DatabaseManager;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
@@ -139,7 +140,7 @@ final class PairingRelayCourier
                 $this->logger?->warning('PairingRelayCourier: failed to apply a drained pairing frame.', [
                     'user_id' => $userId,
                     'exception' => $e::class,
-                    'message' => $e->getMessage(),
+                    ...SafeExceptionContext::describe($e),
                 ]);
             }
         }
@@ -172,7 +173,7 @@ final class PairingRelayCourier
             $this->logger?->warning('PairingRelayCourier: could not resolve device drain secret.', [
                 'user_id' => $userId,
                 'exception' => $e::class,
-                'message' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
             ]);
 
             return null;
@@ -194,7 +195,7 @@ final class PairingRelayCourier
             $this->logger?->warning('PairingRelayCourier: drain failed.', [
                 'user_id' => $userId,
                 'exception' => $e::class,
-                'message' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
             ]);
 
             return null;

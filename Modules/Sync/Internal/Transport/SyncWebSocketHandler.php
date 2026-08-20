@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Transport;
 
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Amp\Http\Server\Request;
 use Amp\Http\Server\Response;
 use Amp\TimeoutCancellation;
@@ -112,7 +113,7 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
             $noiseSession = $this->performHandshake($client);
         } catch (Throwable $e) {
             $this->logger->warning('SyncWebSocketHandler: Noise handshake failed.', [
-                'error' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
             ]);
             $client->close();
 
@@ -176,7 +177,7 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
             $this->runCatchUp($client, $session, $deviceKeys);
         } catch (Throwable $e) {
             $this->logger->warning('SyncWebSocketHandler: catch-up exchange failed.', [
-                'error' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
             ]);
             $session->close();
             $client->close();
@@ -210,7 +211,7 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
             }
         } catch (Throwable $e) {
             $this->logger->warning('SyncWebSocketHandler: live stream error.', [
-                'error' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
             ]);
         }
 
@@ -249,7 +250,7 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
             )));
         } catch (Throwable $e) {
             $this->logger->info('SyncWebSocketHandler: could not tell the peer it was revoked.', [
-                'error' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
             ]);
         }
     }

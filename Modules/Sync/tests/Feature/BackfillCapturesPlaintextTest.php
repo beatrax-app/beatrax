@@ -312,15 +312,18 @@ it('leaves a sensitive column readable after a peer has replayed it', function (
     );
 });
 
-it('refuses to wrap a sensitive column that is already ciphertext', function (): void {
+it('encrypts a note that merely looks like ciphertext', function (): void {
     /*
-     * A column wrapped twice decrypts once to base64 and renders as a blob of
-     * characters on the main screen — and the read side cannot tell that from
-     * a value it merely lacks the key for, so it stays there looking like
-     * corruption with nothing reporting it.
+     * A guard here once skipped encryption whenever a value looked like
+     * ciphertext — "pure base64 alphabet, decodes to 40+ bytes", which is any
+     * 54-character alphanumeric run. A pasted payment reference or a hash in a
+     * note therefore went to disk in the clear, came back BLANK on read
+     * (safeUndecrypted blanks what it thinks is ciphertext), and then aborted
+     * the whole backfill for that user, which refuses to capture a value the
+     * codec blanked.
      *
-     * Every write of a sensitive column funnels through encryptValue(), which
-     * makes it the one place a second wrapper can be refused outright.
+     * The double-wrap it was written to stop is prevented a layer down, where
+     * plaintextFields() decrypts before OpLogWriter is handed anything.
      */
     /** @var Session $session */
     $session = $this->app->make(Session::class);
@@ -333,15 +336,16 @@ it('refuses to wrap a sensitive column that is already ciphertext', function ():
     $userId = (int) $user->id;
     $keyring->generateAndPersist($userId, $session);
 
-    $once = $codec->encryptValue('transactions', 'counterparty_name', 'MijnWerkgever BV', $userId, $session);
-    expect($once)->not->toBe('MijnWerkgever BV', 'the fixture is not encrypted at all');
+    // Exactly the shape the old guard mistook for ciphertext.
+    $reference = hash('sha256', 'a payment reference someone pasted into a note');
 
-    $twice = $codec->encryptValue('transactions', 'counterparty_name', $once, $userId, $session);
+    $stored = $codec->encryptValue('transactions', 'note', $reference, $userId, $session);
 
-    expect($twice)->toBe($once, 'a second wrapper went on and the column now reads as base64');
+    expect($stored)->not->toBe($reference, 'a value that looks like base64 was stored in the clear');
 
-    $read = $codec->decryptValue('transactions', 'counterparty_name', $twice, $userId, $session);
+    $read = $codec->decryptValue('transactions', 'note', $stored, $userId, $session);
 
     expect($read['decrypted'])->toBeTrue();
-    expect($read['value'])->toBe('MijnWerkgever BV', 'one unwrap did not land on the name');
+    expect($read['value'])->toBe($reference, 'the note did not survive the round trip');
 });
+

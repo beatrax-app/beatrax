@@ -1,0 +1,33 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Core\Public\Support;
+
+use Illuminate\Database\QueryException;
+use Throwable;
+
+// What went wrong, without what it went wrong ON.
+//
+// A QueryException's message carries the statement AND its bindings, and in
+// this app the bindings are the data: a relay pairing frame, a transaction's
+// amount and counterparty, an op-log entry's signed value. Logging
+// getMessage() therefore writes the very thing the encryption exists to keep
+// off disk — into a 0644 daily log at debug level.
+/**
+ * @link ../../../../.docs/features/core/architecture.md
+ */
+final class SafeExceptionContext
+{
+    /**
+     * @return array{reason: string, sqlstate: string}
+     */
+    public static function describe(Throwable $e): array
+    {
+        // SQLSTATE distinguishes the failures worth acting on — a lock
+        // timeout from a constraint violation — and carries no row data.
+        $sqlstate = $e instanceof QueryException && is_string($e->getCode()) ? $e->getCode() : '';
+
+        return ['reason' => $e::class, 'sqlstate' => $sqlstate];
+    }
+}

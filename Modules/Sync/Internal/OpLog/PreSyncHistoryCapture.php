@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\OpLog;
 
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Database\DatabaseManager;
 use Psr\Log\LoggerInterface;
@@ -71,7 +72,7 @@ final readonly class PreSyncHistoryCapture
         } catch (Throwable $e) {
             $this->log->error('PreSyncHistoryCapture: capture failed.', [
                 'user_id' => $userId,
-                'exception' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
             ]);
 
             return 0;

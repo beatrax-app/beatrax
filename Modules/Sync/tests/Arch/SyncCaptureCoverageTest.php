@@ -65,8 +65,33 @@ function snapshotOnlyTables(): array
 function uncapturedBacklog(): array
 {
     return [
+        // These have merge rules and travel in the pairing backfill, so a peer
+        // no longer receives them empty, but no write path emits an incremental
+        // op yet. All four are detector-driven and each is still waiting on an
+        // identity both devices can compute — see the note below.
+        'chain_links',
+        'recurring_series',
+        'recurring_series_occurrences',
+        'drift_alerts',
     ];
 }
+
+/*
+ * What holds the four above: both devices run the same detector, and each mints
+ * its own local id for the same logical row. The idempotency UNIQUE then drops
+ * whichever create arrives second, leaving that device's later SETs pointing at
+ * a pk it does not hold.
+ *
+ * `anomaly_alerts` is the first table off this list. Its id is now derived from
+ * (user_id, transaction_id) — the columns its own UNIQUE already names, neither
+ * of which ever moves — so both devices compute the same number, the second
+ * create collides harmlessly, and an edit lands on a row that exists.
+ *
+ * The four left are the ones whose identity is not settled yet. `chain_links`
+ * has no UNIQUE at all. `recurring_series` has one built from columns the
+ * detector rewrites in place, so it names nothing durable. The remaining two
+ * are keyed through `recurring_series` and unblock only behind it.
+ */
 
 /**
  * Tables written to the op log: the literals in the Sync listeners, plus the

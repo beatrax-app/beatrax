@@ -259,3 +259,26 @@ it('carries no key material, so a spoofed answer cannot authenticate anything', 
 
     expect($exposed)->toBe(['deviceId', 'discoveryMode', 'host', 'port']);
 });
+
+it('refuses an A record that tries to claim the instance before its SRV', function (): void {
+    /*
+     * The address is first-wins, and record order is chosen by whoever
+     * answered. An A record naming the SERVICE INSTANCE and placed BEFORE the
+     * SRV therefore used to take the slot ahead of the datagram's real sender
+     * — pointing the pairing-token fetch at any IPv4 the answerer liked, which
+     * is token exfiltration off the LAN and an SSRF probe from inside it.
+     *
+     * Only the host a datagram actually arrived from can address an instance.
+     */
+    $datagram = mdnsMessage(
+        mdnsRecord(MDNS_INSTANCE, MDNS_TYPE_A, "\xcb\x00\x71\x05")
+        .mdnsRecord(MDNS_INSTANCE, MDNS_TYPE_SRV, mdnsSrv(51337))
+        .mdnsRecord(MDNS_INSTANCE, MDNS_TYPE_TXT, mdnsTxt('did='.MDNS_DEVICE_ID)),
+        3
+    );
+
+    $peers = mdnsParse($datagram);
+
+    expect($peers)->toHaveCount(1);
+    expect($peers[0]->host)->toBe(MDNS_SENDER, 'an A record redirected the peer away from the host that answered');
+});

@@ -119,14 +119,6 @@ final class SensitiveColumnCodec
 
     private function encryptWithEpoch(string $table, string $field, string $value, GdkEpoch $epoch): string
     {
-        // The one place a second wrapper can be refused, since every write of
-        // a sensitive column funnels through here. Encrypted twice, a column
-        // decrypts once to base64 and reads as corruption the decrypt side
-        // cannot tell from a value it merely lacks the key for.
-        if (self::looksLikeCiphertext($value)) {
-            return $value;
-        }
-
         $rawKey = sodium_hex2bin($epoch->keyHex);
         try {
             return $this->crypto->encrypt(

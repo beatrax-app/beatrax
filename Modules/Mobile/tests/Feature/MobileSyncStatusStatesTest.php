@@ -7,6 +7,8 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Mobile\Internal\Sync\SyncBlockedReason;
+use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Http\Livewire\SyncScreen;
@@ -229,4 +231,32 @@ it('embeds the existing sync.sync-status-section component and never queries syn
         ->and($componentContents)->not->toContain('"sync_sessions"')
         ->and($componentContents)->not->toContain("table('relay_mailbox')")
         ->and($componentContents)->not->toContain('"relay_mailbox"');
+});
+
+it('shows what the setup poll is waiting on, and a way out when it cannot resolve', function (): void {
+    /*
+     * Every blocked reason had copy in twenty-six languages and the screen
+     * rendered none of it — the component set $blocked and the blade never
+     * read it. A stalled setup showed a turning bar and nothing else.
+     *
+     * Revoked is the one that matters most: the other device no longer knows
+     * this one, so polling can never clear it, and MobileEnsureImportCompleted
+     * redirects every route back here until the import completes. Without a
+     * way out that is a permanent lockout.
+     */
+    $blade = (string) file_get_contents(
+        base_path('Modules/Mobile/Resources/views/livewire/setup-progress-screen.blade.php')
+    );
+
+    expect(str_contains($blade, "mobile::setup.blocked."))
+        ->toBeTrue('the setup screen renders no blocked reason at all');
+
+    expect(str_contains($blade, 'setup-repair-link'))
+        ->toBeTrue('a revoked device has no route out of the setup screen');
+
+    // Every reason the puller can report must have copy to render.
+    foreach (SyncBlockedReason::cases() as $reason) {
+        expect(Lang::get('mobile::setup.blocked.'.$reason->value))
+            ->not->toBe('mobile::setup.blocked.'.$reason->value, "no copy for {$reason->value}");
+    }
 });

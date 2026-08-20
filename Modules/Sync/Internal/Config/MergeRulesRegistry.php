@@ -558,6 +558,19 @@ final class MergeRulesRegistry
                 '_delete_wins' => true,
                 '_create_required' => ['user_id', 'name'],
             ],
+            // AFTER forecast_scenarios, whose id it names. This is the
+            // scenario's CONTENT: covered only by the container before, a
+            // synced scenario arrived as an empty named box. `kind` is frozen
+            // after insert — changing one is a remove plus a re-add.
+            'forecast_scenario_mutations' => [
+                'payload' => ['strategy' => 'lww', 'nullable' => false],
+                'target_series_id' => ['strategy' => 'lww', 'nullable' => true],
+                '_delete_wins' => true,
+                // `id` is seeded from the op's own pk and must never be
+                // listed; `target_series_id` is null for the two kinds that
+                // name no series, and the timestamps are nullable.
+                '_create_required' => ['user_id', 'forecast_scenario_id', 'kind', 'payload'],
+            ],
         ];
     }
 

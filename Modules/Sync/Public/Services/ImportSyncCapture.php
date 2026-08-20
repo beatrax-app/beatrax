@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Public\Services;
 
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
@@ -98,7 +99,7 @@ final readonly class ImportSyncCapture implements CapturesImportForSync, Capture
                     'table' => $table,
                     'userId' => $userId,
                     'exception' => $e::class,
-                    'message' => $e->getMessage(),
+                    ...SafeExceptionContext::describe($e),
                 ] + $context);
 
                 return;

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Commands;
 
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Amp\Http\HttpStatus;
 use Amp\Http\Server\DefaultErrorHandler;
 use Amp\Http\Server\Request;
@@ -15,7 +16,6 @@ use Amp\Socket\Certificate;
 use Amp\Socket\InternetAddress;
 use Amp\Socket\ServerTlsContext;
 use Illuminate\Console\Command;
-use Illuminate\Database\QueryException;
 use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
 use Modules\Sync\Internal\Transport\Relay\RelayDeliverRateLimiter;
@@ -184,7 +184,7 @@ final class RelayServeCommand extends Command
                 self::MAX_PENDING_PER_RECIPIENT,
             );
         } catch (\Throwable $e) {
-            $this->logger->error('relay:serve: deliver failed.', $this->safeReason($e));
+            $this->logger->error('relay:serve: deliver failed.', SafeExceptionContext::describe($e));
 
             return $this->jsonError(HttpStatus::INTERNAL_SERVER_ERROR, 'deliver_failed');
         }
@@ -250,7 +250,7 @@ final class RelayServeCommand extends Command
         try {
             $rows = $this->mailbox->drain($did, self::DRAIN_PAGE_SIZE);
         } catch (\Throwable $e) {
-            $this->logger->error('relay:serve: drain failed.', $this->safeReason($e));
+            $this->logger->error('relay:serve: drain failed.', SafeExceptionContext::describe($e));
 
             return $this->jsonError(HttpStatus::INTERNAL_SERVER_ERROR, 'drain_failed');
         }
@@ -306,7 +306,7 @@ final class RelayServeCommand extends Command
         try {
             $this->mailbox->confirm($id);
         } catch (\Throwable $e) {
-            $this->logger->error('relay:serve: confirm failed.', ['id' => $id, ...$this->safeReason($e)]);
+            $this->logger->error('relay:serve: confirm failed.', ['id' => $id, ...SafeExceptionContext::describe($e)]);
 
             return $this->jsonError(HttpStatus::INTERNAL_SERVER_ERROR, 'confirm_failed');
         }
@@ -351,19 +351,6 @@ final class RelayServeCommand extends Command
     }
 
 
-    // What went wrong, without what it went wrong ON. A QueryException's
-    // message carries the statement AND its bindings, and the binding here is
-    // the relay blob — so a failed insert wrote a whole PAIR_RESPONDER_ACCEPT,
-    // device ids and both public keys included, into the log in the clear.
-    /**
-     * @return array{reason: string, sqlstate: string}
-     */
-    private function safeReason(\Throwable $e): array
-    {
-        $sqlstate = $e instanceof QueryException && is_string($e->getCode()) ? $e->getCode() : '';
-
-        return ['reason' => $e::class, 'sqlstate' => $sqlstate];
-    }
 
     private function jsonError(int $status, string $errorCode): Response
     {

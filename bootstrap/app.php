@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use Psr\Log\LoggerInterface;
+use Modules\Core\Public\Support\SafeExceptionContext;
+use Illuminate\Database\QueryException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Container\Container;
 use Illuminate\Foundation\Application;
@@ -97,6 +100,20 @@ return Application::configure(basePath: dirname(__DIR__))
                 'method' => $request->method(),
                 'path' => '/'.ltrim($request->path(), '/'),
             ];
+        });
+
+        // The same invariant, for the exceptions nobody catches. A
+        // QueryException's message carries the statement AND its bindings, and
+        // in this app the bindings ARE the financial data — so the default
+        // reporter writes to the log exactly what the context callback above
+        // is careful to keep out of it.
+        $exceptions->reportable(function (QueryException $e): bool {
+            Container::getInstance()->make(LoggerInterface::class)->error(
+                'Database query failed.',
+                SafeExceptionContext::describe($e),
+            );
+
+            return false;
         });
     })
     ->booting(function (): void {

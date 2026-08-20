@@ -25,8 +25,6 @@ final class MdnsResponseParser
 
     private const int SRV_PREAMBLE_BYTES = 6;
 
-    private const int IPV4_BYTES = 4;
-
     // RFC 1035 §4.1.4 name compression: a length byte whose top two bits are
     // set is a pointer, and the low fourteen bits are the offset it points to.
     private const int LABEL_TYPE_MASK = 0xC0;
@@ -161,9 +159,8 @@ final class MdnsResponseParser
         match ($type) {
             DnsRecordType::Service => $this->applyService($name, $rdata, $sender, $table),
             DnsRecordType::Text => $this->applyText($name, $rdata, $table),
-            DnsRecordType::Address => $this->applyAddress($name, $rdata, $table),
             DnsRecordType::Pointer => $this->applyPointer($datagram, $rdataOffset, $sender, $table),
-            null => null,
+            DnsRecordType::Address, null => null,
         };
     }
 
@@ -197,14 +194,10 @@ final class MdnsResponseParser
         }
     }
 
-    private function applyAddress(string $name, string $rdata, MdnsInstanceTable $table): void
-    {
-        if (strlen($rdata) !== self::IPV4_BYTES) {
-            return;
-        }
-
-        $table->recordAddress($name, implode('.', array_map(ord(...), str_split($rdata))));
-    }
+    // An A record is deliberately NOT read for addressing. Its owner name is
+    // attacker-chosen, so a record naming the instance and placed BEFORE the
+    // SRV would win the first-wins slot and point the fetch at any address on
+    // the internet. Only the host a datagram actually arrived from is used.
 
     // A PTR names an instance without saying where it is. Recording the
     // sender keeps that instance addressable when its SRV and TXT arrive in a
