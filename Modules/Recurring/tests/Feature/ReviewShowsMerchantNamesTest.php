@@ -174,3 +174,50 @@ it('heals the rows that already carry the normalised key', function (): void {
     expect($healed->detected_name)->toBe('ASN Bank GEA')
         ->and($healed->cluster_counterparty_key)->toBe('asn bank gea');
 });
+
+it('heals only the owner rows, never another account with the same key', function (): void {
+    $mine = rsmnUser();
+    $theirs = rsmnUser();
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    // Only my account knows this merchant by a display name.
+    $db->connection()->table('merchants')->insert([
+        'user_id' => $mine->id,
+        'name' => 'ASN Bank GEA',
+        'normalized_name' => 'asn bank gea',
+        'created_at' => '2026-05-17 12:00:00',
+        'updated_at' => '2026-05-17 12:00:00',
+    ]);
+
+    $rows = [];
+    foreach ([$mine, $theirs] as $owner) {
+        $rows[$owner->id] = $db->connection()->table('recurring_series')->insertGetId([
+            'user_id' => $owner->id,
+            'direction' => 'expense',
+            'detected_name' => 'asn bank gea',
+            'state' => 'pending',
+            'cadence' => 'monthly',
+            'latest_amount_minor' => -1399,
+            'latest_currency' => 'EUR',
+            'monthly_equivalent_minor' => -1399,
+            'variance_tolerance_percent' => 25,
+            'cluster_key' => 'expense|asn bank gea|EUR|monthly',
+            'cluster_counterparty_key' => 'asn bank gea',
+            'created_at' => '2026-05-17 12:00:00',
+            'updated_at' => '2026-05-17 12:00:00',
+        ]);
+    }
+
+    $migration = require base_path('Modules/Recurring/Database/Migrations/2026_08_19_000002_show_merchant_names_on_recurring_review.php');
+    $migration->up();
+
+    // The per-merchant loop scoped every UPDATE by user_id; the single
+    // correlated statement that replaced it has to scope the same way, or one
+    // household member's naming of a merchant renames the other's series.
+    expect($db->connection()->table('recurring_series')->where('id', $rows[$mine->id])->value('detected_name'))
+        ->toBe('ASN Bank GEA')
+        ->and($db->connection()->table('recurring_series')->where('id', $rows[$theirs->id])->value('detected_name'))
+        ->toBe('asn bank gea');
+});

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * `recurring_series.detected_name` was copied straight from the clustering
@@ -22,22 +23,31 @@ use Illuminate\Support\Facades\DB;
  */
 return new class extends Migration
 {
+    // One correlated statement, not one UPDATE per merchant: this runs at
+    // launch-time migration on a phone, where every round trip is a synchronous
+    // call on the path between tapping the icon and seeing anything.
     public function up(): void
     {
-        $merchants = DB::table('merchants')->get(['user_id', 'name', 'normalized_name']);
+        $schema = Schema::getFacadeRoot();
 
-        foreach ($merchants as $merchant) {
-            $name = is_string($merchant->name) ? $merchant->name : '';
-            $normalized = is_string($merchant->normalized_name) ? $merchant->normalized_name : '';
-            if ($name === '' || $normalized === '' || $name === $normalized) {
-                continue;
-            }
-
-            DB::table('recurring_series')
-                ->where('user_id', $merchant->user_id)
-                ->where('detected_name', $normalized)
-                ->update(['detected_name' => $name]);
+        if (! $schema->hasTable('merchants') || ! $schema->hasTable('recurring_series')) {
+            return;
         }
+
+        $match = <<<'SQL'
+            SELECT m.name
+            FROM merchants m
+            WHERE m.user_id = recurring_series.user_id
+              AND m.normalized_name = recurring_series.detected_name
+              AND m.name <> ''
+              AND m.normalized_name <> ''
+              AND m.name <> m.normalized_name
+            LIMIT 1
+            SQL;
+
+        DB::statement(
+            "UPDATE recurring_series SET detected_name = ({$match}) WHERE EXISTS ({$match})"
+        );
     }
 
     public function down(): void
