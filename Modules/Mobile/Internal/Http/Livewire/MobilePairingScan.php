@@ -14,6 +14,7 @@ use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use LogicException;
+use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\Lang;
@@ -222,6 +223,7 @@ final class MobilePairingScan extends Component
         LoggerInterface $logger,
         DeviceRegistryService $devices,
         UrlGenerator $urls,
+        AppLockClientConfig $lock,
         string $data = '',
         string $format = '',
         ?string $id = null,
@@ -255,8 +257,18 @@ final class MobilePairingScan extends Component
     // A locked identity is the one failure the user can actually fix, and the
     // message alone was a dead end: nothing on this screen opens the PIN pad,
     // so "unlock the app and try again" left them with no way to do either.
-    private function sendToUnlock(UrlGenerator $urls, Session $session): void
+    private function sendToUnlock(UrlGenerator $urls, Session $session, AppLockClientConfig $lock, int $userId): void
     {
+        // The lock screen can only be passed with a PIN, so sending a device
+        // that has no app lock there is a dead end of its own — the identity
+        // is unreadable because no lock was ever set up, not because one is
+        // engaged. Say so, and leave the reader where they can act.
+        if (! $lock->isEnabled($userId)) {
+            $this->flashMessage = Lang::get('mobile::pairing.errors.identity_needs_lock');
+
+            return;
+        }
+
         // Flashed, not set on $this: navigate:false is a full page load into
         // MobileLockScreen, which renders its own flashMessage. Setting this
         // component's property sent the user to a PIN pad with no explanation
@@ -287,6 +299,7 @@ final class MobilePairingScan extends Component
         LoggerInterface $logger,
         DeviceRegistryService $devices,
         UrlGenerator $urls,
+        AppLockClientConfig $lock,
     ): void {
         $userId = $currentUser->user()->id;
 
@@ -349,7 +362,7 @@ final class MobilePairingScan extends Component
                 // Self-minting one here would strand the peer's.
                 $gateway->enableSyncIdentityWithoutEpoch($userId, $session);
             } catch (LogicException) {
-                $this->sendToUnlock($urls, $session);
+                $this->sendToUnlock($urls, $session, $lock, $userId);
 
                 return;
             }
@@ -370,7 +383,7 @@ final class MobilePairingScan extends Component
             // code. Sending that user to the other device for a fresh QR is
             // advice that can never work.
             if (! $gateway->hasUsableIdentity($userId, $session)) {
-                $this->sendToUnlock($urls, $session);
+                $this->sendToUnlock($urls, $session, $lock, $userId);
 
                 return;
             }
@@ -524,6 +537,7 @@ final class MobilePairingScan extends Component
         DatabaseManager $db,
         LoggerInterface $logger,
         UrlGenerator $urls,
+        AppLockClientConfig $lock,
     ): void {
         if ($this->pairingTokenId === '') {
             return;
@@ -536,7 +550,7 @@ final class MobilePairingScan extends Component
         // client state.
         $deviceId = $gateway->currentDeviceId($userId, $session);
         if ($deviceId === null) {
-            $this->sendToUnlock($urls, $session);
+            $this->sendToUnlock($urls, $session, $lock, $userId);
 
             return;
         }

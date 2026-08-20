@@ -37,5 +37,6 @@ return [
         'relay_unreachable' => 'Nije moguće doprijeti do drugog uređaja. Provjeri jesu li oba na istoj mreži i je li sinkronizacija uključena na računalu.',
         'invalid_code' => 'Ovaj kod nije ispravan ili je istekao. Zatraži da drugi uređaj izradi novi.',
         'identity_locked' => 'Identitet tvojeg uređaja je zaključan. Otključaj aplikaciju pa pokušaj ponovno.',
+        'identity_needs_lock' => 'Najprije postavite zaključavanje aplikacije — ono štiti identitet vašeg uređaja.',
     ],
 ];

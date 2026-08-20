@@ -37,5 +37,6 @@ return [
         'relay_unreachable' => 'Nie można połączyć się z drugim urządzeniem. Upewnij się, że oba są w tej samej sieci, a synchronizacja na komputerze jest włączona.',
         'invalid_code' => 'Ten kod jest nieprawidłowy lub wygasł. Poproś o wygenerowanie nowego na drugim urządzeniu.',
         'identity_locked' => 'Tożsamość Twojego urządzenia jest zablokowana. Odblokuj aplikację i spróbuj ponownie.',
+        'identity_needs_lock' => 'Najpierw skonfiguruj blokadę aplikacji — to ona chroni tożsamość urządzenia.',
     ],
 ];

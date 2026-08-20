@@ -37,5 +37,6 @@ return [
         'relay_unreachable' => 'Druge naprave ni mogoče doseči. Preveri, ali sta obe v istem omrežju in ali je sinhronizacija na namizju vklopljena.',
         'invalid_code' => 'Ta koda ni veljavna ali je potekla. Prosi drugo napravo, naj ustvari novo.',
         'identity_locked' => 'Identiteta tvoje naprave je zaklenjena. Odkleni aplikacijo in poskusi znova.',
+        'identity_needs_lock' => 'Najprej nastavite zaklepanje aplikacije — ščiti identiteto vaše naprave.',
     ],
 ];

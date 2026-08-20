@@ -37,5 +37,6 @@ return [
         'relay_unreachable' => 'Nevar sasniegt otru ierīci. Pārliecinieties, ka abas ir vienā tīklā un ka datorā ir ieslēgta sinhronizācija.',
         'invalid_code' => 'Šis kods nav derīgs vai tam ir beidzies termiņš. Palūdziet otrai ierīcei izveidot jaunu.',
         'identity_locked' => 'Ierīces identitāte ir bloķēta. Atbloķējiet lietotni un mēģiniet vēlreiz.',
+        'identity_needs_lock' => 'Vispirms iestatiet lietotnes bloķēšanu — tā aizsargā ierīces identitāti.',
     ],
 ];

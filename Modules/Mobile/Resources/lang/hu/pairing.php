@@ -37,5 +37,6 @@ return [
         'relay_unreachable' => 'A másik eszköz nem érhető el. Győződj meg róla, hogy mindkettő ugyanazon a hálózaton van, és a szinkronizálás be van kapcsolva az asztali gépen.',
         'invalid_code' => 'Ez a kód érvénytelen vagy lejárt. Kérj újat a másik eszköztől.',
         'identity_locked' => 'Az eszközazonosságod zárolva van. Oldd fel az alkalmazást, és próbáld újra.',
+        'identity_needs_lock' => 'Először állítsa be az alkalmazászárat — ez védi az eszköz identitását.',
     ],
 ];

@@ -37,5 +37,6 @@ return [
         'relay_unreachable' => 'Kan het andere apparaat niet bereiken. Zorg dat beide op hetzelfde netwerk zitten en synchronisatie op de desktop aanstaat.',
         'invalid_code' => 'Deze code is ongeldig of verlopen. Vraag het andere apparaat om een nieuwe te genereren.',
         'identity_locked' => 'De identiteit van je apparaat is vergrendeld. Ontgrendel de app en probeer het opnieuw.',
+        'identity_needs_lock' => 'Stel eerst de app-vergrendeling in — die beschermt de identiteit van je apparaat.',
     ],
 ];

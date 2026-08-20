@@ -29,8 +29,9 @@ final class EnsureDatabaseReady
         'sw',
         'site.webmanifest',
         'pwa.icon',
-        // The app mark is embedded in the privacy veil and both lock
-        // screens, which this gate can be showing at the time.
+        // Static brand artefacts, served by PHP because no web server sits in
+        // front of it here. The desktop setup, staging and welcome shells
+        // embed the app mark, and this gate is what shows them.
         'app.icon',
         'app.splash',
         // The guest language switch has to work on the very first screen a

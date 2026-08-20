@@ -37,5 +37,6 @@ return [
         'relay_unreachable' => 'Den anden enhed kan ikke nås. Sørg for, at begge er på samme netværk, og at synkronisering er slået til på computeren.',
         'invalid_code' => 'Koden er ugyldig eller udløbet. Bed den anden enhed om at generere en ny.',
         'identity_locked' => 'Din enheds identitet er låst. Lås appen op, og prøv igen.',
+        'identity_needs_lock' => 'Opsæt app-låsen først — den beskytter enhedens identitet.',
     ],
 ];

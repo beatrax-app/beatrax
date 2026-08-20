@@ -37,5 +37,6 @@ return [
         'relay_unreachable' => 'Nepavyksta pasiekti kito įrenginio. Įsitikink, kad abu yra tame pačiame tinkle ir kad kompiuteryje įjungtas sinchronizavimas.',
         'invalid_code' => 'Šis kodas neteisingas arba nebegalioja. Paprašyk kitame įrenginyje sugeneruoti naują.',
         'identity_locked' => 'Tavo įrenginio tapatybė užrakinta. Atrakink programėlę ir bandyk dar kartą.',
+        'identity_needs_lock' => 'Pirmiausia nustatykite programėlės užraktą — jis saugo įrenginio tapatybę.',
     ],
 ];

@@ -37,5 +37,6 @@ return [
         'relay_unreachable' => 'Das andere Gerät ist nicht erreichbar. Stelle sicher, dass beide im selben Netzwerk sind und die Synchronisierung auf dem Desktop aktiviert ist.',
         'invalid_code' => 'Dieser Code ist ungültig oder abgelaufen. Lass das andere Gerät einen neuen erzeugen.',
         'identity_locked' => 'Die Identität deines Geräts ist gesperrt. Entsperre die App und versuche es erneut.',
+        'identity_needs_lock' => 'Richte zuerst die App-Sperre ein — sie schützt die Identität deines Geräts.',
     ],
 ];

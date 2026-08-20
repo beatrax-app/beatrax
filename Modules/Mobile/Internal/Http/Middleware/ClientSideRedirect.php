@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Foundation\Vite;
 use Illuminate\Http\Request;
 use Modules\Core\Public\Services\UserDataPathService;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 // A server redirect never moves the address bar inside the ANDROID shell:
@@ -28,7 +29,10 @@ final class ClientSideRedirect
     {
         $response = $next($request);
 
-        if (UserDataPathService::platform() !== 'android' || ! $response->isRedirection()) {
+        // instanceof, not just isRedirection(): StreamedResponse and
+        // BinaryFileResponse throw from setContent(), so a 3xx of either class
+        // would 500 where it used to redirect.
+        if (UserDataPathService::platform() !== 'android' || ! $response instanceof RedirectResponse) {
             return $response;
         }
 
@@ -123,11 +127,16 @@ final class ClientSideRedirect
         $href = htmlspecialchars($target, ENT_QUOTES);
         $nonce = $this->vite->cspNonce();
 
+        // A target carrying bytes json_encode refuses comes back false, and
+        // the script branch would emit `window.location.replace();` — a
+        // TypeError and a blank page. The meta refresh takes that case too,
+        // because it needs no encoding at all.
+
         // Without a nonce the CSP blocks the script and the reader gets a
         // blank page instead of a redirect, so the no-nonce path navigates
         // with a meta refresh instead. It leaves a history entry the script
         // does not, which is the lesser problem by a long way.
-        if ($nonce === null) {
+        if ($nonce === null || $encoded === '' || $encoded === 'false') {
             return '<!doctype html><html><head><meta charset="utf-8">'
                 ."<meta http-equiv=\"refresh\" content=\"0;url={$href}\">"
                 .'<title>Beatrax</title></head><body>'

@@ -34,10 +34,10 @@ final readonly class MobileEnsureImportCompleted
         'auth.lock',
         'logout',
 
-        // Public artefacts, exempt for the same reason MobileEnsureDatabaseReady
-        // exempts them: the app mark is embedded in the privacy veil and both
-        // lock screens, and this gate can be showing while they are. Without
-        // these the icon request is answered with the setup page's HTML.
+        // Static brand artefacts, exempt for the same reason
+        // MobileEnsureDatabaseReady exempts them: no web server sits in front
+        // of PHP here, and a gate that catches them answers the manifest and
+        // the icon set with the setup page's HTML.
         'site.webmanifest',
         'pwa.icon',
         'app.icon',
