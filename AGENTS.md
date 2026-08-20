@@ -78,9 +78,8 @@ An IMAP library is not a shortcut here; it is a specification violation.
 - The [definition of done](https://github.com/beatrax-app/spec/blob/main/40-quality/definition-of-done.md) is met.
 
 A pull request is judged on whether it satisfies the requirement it cites,
-passes the gates, and is code somebody can maintain. Which tools you used to
-write it is not a property of the change, and nobody needs to be told. Review is
-there for a reason.
+passes the gates, and is code somebody can maintain. Review is there for a
+reason.
 
 ## Commits
 
@@ -93,9 +92,6 @@ feat(ledger): pair a settlement against its originating charge
 Spec: B5-R13
 Signed-off-by: Your Name <you@example.com>
 ```
-
-**No AI attribution** — no `Co-Authored-By`, no tool reference, no generated-with
-footer. The sign-off is the authorship statement, and an AI cannot sign off.
 
 Write the subject for the person who will read the release notes: the notes are
 assembled from the commits, so the subject *is* the entry.
