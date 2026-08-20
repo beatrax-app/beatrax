@@ -79,8 +79,11 @@ it('generates a new GDK epoch N+1 and appends it to the acting device keyring on
 
     $rotation->rotateAndRevoke((int) $user->id, $removedDeviceId, $session);
 
+    // A rotation must produce a DIFFERENT key, not a higher number: ids are
+    // minted so two devices rotating apart can never name the same key.
     $current = $keyring->currentEpoch((int) $user->id, $session);
-    expect($current->epochId)->toBeGreaterThan($initial->epochId);
+    expect($current->epochId)->not->toBe($initial->epochId);
+    expect($current->keyHex)->not->toBe($initial->keyHex);
 });
 
 it('takes Session as a per-method rotateAndRevoke() parameter, not a constructor field (D-11)', function (): void {

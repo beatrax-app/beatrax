@@ -70,10 +70,15 @@ final class GdkRotationService
         // revoked-but-not-rotated. Empty keyring means encryption is not yet
         // enabled (group-of-one bootstrap -> epoch 1).
         $keyring = $this->keyringService->loadKeyring($userId, $session);
-        $newEpochId = 1;
-        foreach ($keyring->epochs() as $epoch) {
-            $newEpochId = max($newEpochId, $epoch->epochId + 1);
-        }
+
+        // Minted, not counted. max(held) + 1 is only unique among the epochs
+        // THIS device happens to hold, so two devices rotating without having
+        // heard from each other both produced the same number over different
+        // keys — and every op the other one wrote decrypted to nothing.
+        $newEpochId = GdkEpochId::mint(array_map(
+            static fn (GdkEpoch $epoch): int => $epoch->epochId,
+            $keyring->epochs(),
+        ));
 
         // The acting device's identity signs each fan-out wrap so recipients can
         // authenticate its provenance. Loaded after loadKeyring() has proven the

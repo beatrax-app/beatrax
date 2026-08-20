@@ -70,7 +70,7 @@ final class GdkKeyringService
             $keyHex = $this->sodium->binToHex($rawKey);
             sodium_memzero($rawKey);
 
-            $epoch = new GdkEpoch(epochId: 1, keyHex: $keyHex);
+            $epoch = new GdkEpoch(epochId: GdkEpochId::mint([]), keyHex: $keyHex);
             $keyring = GdkKeyring::empty()->withEpoch($epoch);
 
             $this->writeKeyringFile($userId, $keyring, $kek);
@@ -105,7 +105,7 @@ final class GdkKeyringService
             $keyHex = $this->sodium->binToHex($rawKey);
             sodium_memzero($rawKey);
 
-            $epoch = new GdkEpoch(epochId: 1, keyHex: $keyHex);
+            $epoch = new GdkEpoch(epochId: GdkEpochId::mint([]), keyHex: $keyHex);
             $keyring = GdkKeyring::empty()->withEpoch($epoch);
 
             $tmpEncPath = $this->stageKeyringFile($userId, $keyring, $kek);

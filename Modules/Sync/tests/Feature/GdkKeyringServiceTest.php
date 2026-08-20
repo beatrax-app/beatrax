@@ -49,7 +49,7 @@ it('generates a GDK epoch and persists an encrypted keyring file under the app-l
     $epoch = $service->generateAndPersist((int) $user->id, $session);
 
     expect($epoch)->toBeInstanceOf(GdkEpoch::class);
-    expect($epoch->epochId)->toBe(1);
+    expect($epoch->epochId)->toBeGreaterThan(0);
     expect($epoch->keyHex)->toHaveLength(64);
 });
 

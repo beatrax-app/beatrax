@@ -405,7 +405,7 @@ it('is idempotent — re-handling an already-present epoch does not duplicate or
 
     /** @var GdkKeyringService $keyring */
     $keyring = app(GdkKeyringService::class);
-    $keyring->generateAndPersist((int) $user->id, $session); // epoch 1
+    $selfMinted = $keyring->generateAndPersist((int) $user->id, $session); // epoch 1
 
     /** @var GdkRotationService $rotation */
     $rotation = app(GdkRotationService::class);
@@ -478,7 +478,7 @@ it('adopts the peer GDK epoch over a colliding local key that has encrypted noth
     // non-import self-minting peer — a scenario the desktop cannot
     // distinguish from an import peer without a cross-device signal,
     // see HIGH-01).
-    $keyring->generateAndPersist((int) $user->id, $session);
+    $selfMinted = $keyring->generateAndPersist((int) $user->id, $session);
 
     /** @var GdkRotationService $rotation */
     $rotation = app(GdkRotationService::class);
@@ -489,7 +489,9 @@ it('adopts the peer GDK epoch over a colliding local key that has encrypted noth
 
     $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
     $recipientPub = sodium_hex2bin($deviceB->x25519PublicKeyHex);
-    $wrap = $rotation->buildGdkEpochWrap(1, $rawGdkKey, $recipientPub, $deviceB->deviceId, $senderId, $senderSecretHex);
+    // Deliberately reuses the id device B already holds: epoch ids are minted
+    // now, so a collision has to be built rather than stumbled into.
+    $wrap = $rotation->buildGdkEpochWrap($selfMinted->epochId, $rawGdkKey, $recipientPub, $deviceB->deviceId, $senderId, $senderSecretHex);
 
     // The handler logs via a constructor-injected LoggerInterface, NOT the
     // Log facade — bind a container spy so the injected instance is captured.
@@ -505,10 +507,10 @@ it('adopts the peer GDK epoch over a colliding local key that has encrypted noth
     $handler->handle(json_encode($wrap, JSON_THROW_ON_ERROR), (int) $user->id, $session);
 
     $logSpy->shouldHaveReceived('warning')
-        ->withArgs(function (string $message, array $ctx) use ($deviceB): bool {
+        ->withArgs(function (string $message, array $ctx) use ($deviceB, $selfMinted): bool {
             return str_starts_with($message, 'GdkEpochControlHandler:')
                 && str_contains($message, 'adopted the peer GDK epoch')
-                && ($ctx['epoch_id'] ?? null) === 1
+                && ($ctx['epoch_id'] ?? null) === $selfMinted->epochId
                 && ($ctx['recipient_device_id'] ?? null) === $deviceB->deviceId;
         })
         ->once();
@@ -516,7 +518,7 @@ it('adopts the peer GDK epoch over a colliding local key that has encrypted noth
     // Nothing local was encrypted under the self-minted epoch 1, so the
     // group's key replaces it and the desktop's rows become readable.
     $loaded = $keyring->loadKeyring((int) $user->id, $session);
-    expect($loaded->keyFor(1))->toBe(sodium_bin2hex($rawGdkKey), 'the group key must replace an unused local epoch of the same id');
+    expect($loaded->keyFor($selfMinted->epochId))->toBe(sodium_bin2hex($rawGdkKey), 'the group key must replace an unused local epoch of the same id');
 });
 
 /*
@@ -539,10 +541,11 @@ it('keeps a colliding local GDK epoch that local rows are already encrypted unde
 
     /** @var GdkKeyringService $keyring */
     $keyring = app(GdkKeyringService::class);
-    $keyring->generateAndPersist((int) $user->id, $session);
-    $localKeyHex = $keyring->loadKeyring((int) $user->id, $session)->keyFor(1);
+    $selfMinted = $keyring->generateAndPersist((int) $user->id, $session);
+    $localKeyHex = $keyring->loadKeyring((int) $user->id, $session)->keyFor($selfMinted->epochId);
 
-    // One durable row encrypted under the local epoch 1 is all it takes.
+    // One durable row encrypted under the local epoch is all it takes to make
+    // it USED, which is what must stop the delivery replacing its key.
     app(DatabaseManager::class)->connection()->table('op_log_entries')->insert([
         'user_id' => (int) $user->id,
         'device_id' => $deviceB->deviceId,
@@ -554,7 +557,7 @@ it('keeps a colliding local GDK epoch that local rows are already encrypted unde
         'hlc_l' => 1,
         'hlc_c' => 0,
         'signature' => str_repeat('0', 128),
-        'gdk_epoch' => 1,
+        'gdk_epoch' => $selfMinted->epochId,
         'recorded_at' => '2026-01-01 00:00:00',
     ]);
 
@@ -564,7 +567,9 @@ it('keeps a colliding local GDK epoch that local rows are already encrypted unde
     $rotation = app(GdkRotationService::class);
     $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
     $recipientPub = sodium_hex2bin($deviceB->x25519PublicKeyHex);
-    $wrap = $rotation->buildGdkEpochWrap(1, $rawGdkKey, $recipientPub, $deviceB->deviceId, $senderId, $senderSecretHex);
+    // Deliberately reuses the id device B already holds: epoch ids are minted
+    // now, so a collision has to be built rather than stumbled into.
+    $wrap = $rotation->buildGdkEpochWrap($selfMinted->epochId, $rawGdkKey, $recipientPub, $deviceB->deviceId, $senderId, $senderSecretHex);
 
     /** @var MockInterface $logSpy */
     $logSpy = Mockery::spy(LoggerInterface::class);
@@ -577,11 +582,11 @@ it('keeps a colliding local GDK epoch that local rows are already encrypted unde
 
     $logSpy->shouldHaveReceived('error')
         ->withArgs(fn (string $message, array $ctx): bool => str_contains($message, 'locally-USED epoch')
-            && ($ctx['epoch_id'] ?? null) === 1)
+            && ($ctx['epoch_id'] ?? null) === $selfMinted->epochId)
         ->once();
 
     $loaded = $keyring->loadKeyring((int) $user->id, $session);
-    expect($loaded->keyFor(1))->toBe($localKeyHex, 'a used local epoch key must survive a colliding delivery');
+    expect($loaded->keyFor($selfMinted->epochId))->toBe($localKeyHex, 'a used local epoch key must survive a colliding delivery');
 });
 
 /*

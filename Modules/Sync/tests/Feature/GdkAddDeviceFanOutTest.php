@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Sync\Internal\Crypto\GdkEpoch;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
@@ -89,8 +90,11 @@ it('wraps ALL keyring epochs (not just the latest) to a single newly-confirmed d
     $rotation->rotateAndRevoke((int) $user->id, $throwaway1, $session); // epoch 2, revokes throwaway-1
     $rotation->rotateAndRevoke((int) $user->id, $throwaway2, $session); // epoch 3, revokes throwaway-2
 
+    // Three distinct epochs are held; their ids are minted rather than
+    // counted, so what matters is that the keyring has all three and points
+    // at the newest — not that they happen to read 1, 2, 3.
     $beforeCurrentEpoch = $keyring->currentEpoch((int) $user->id, $session);
-    expect($beforeCurrentEpoch->epochId)->toBe(3);
+    expect($keyring->loadKeyring((int) $user->id, $session)->epochs())->toHaveCount(3);
 
     // Drain the rotation fan-out noise so this test's own assertions are
     // scoped to what fanOutAllEpochsToDevice() itself enqueues.
@@ -137,12 +141,20 @@ it('wraps ALL keyring epochs (not just the latest) to a single newly-confirmed d
         expect(sodium_bin2hex((string) $opened))->toBe($expectedKeyHex);
     }
 
+    // Every epoch the keyring holds must have been wrapped — compared against
+    // the keyring itself rather than a literal, because ids are minted.
+    $heldEpochIds = array_map(
+        static fn (GdkEpoch $epoch): int => $epoch->epochId,
+        $keyring->loadKeyring((int) $user->id, $session)->epochs(),
+    );
+
     sort($seenEpochIds);
-    expect($seenEpochIds)->toBe([1, 2, 3]);
+    sort($heldEpochIds);
+    expect($seenEpochIds)->toBe($heldEpochIds);
 
     // current_epoch UNCHANGED — no rotation, no revoke, no new epoch minted.
     $afterCurrentEpoch = $keyring->currentEpoch((int) $user->id, $session);
-    expect($afterCurrentEpoch->epochId)->toBe(3);
+    expect($afterCurrentEpoch->epochId)->toBe($beforeCurrentEpoch->epochId);
 
     // No confirmed_at cleared / no revoke side effect anywhere.
     $recipientRow = $db->connection()->table('device_registry')->where('id', $recipientId)->first();
