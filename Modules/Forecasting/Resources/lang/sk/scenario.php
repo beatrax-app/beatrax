@@ -11,6 +11,7 @@ return [
     'rename' => 'Premenovať',
     'confirm_delete' => 'Potvrdiť odstránenie',
     'delete_scenario' => 'Odstrániť scenár',
+    'delete_confirm' => 'Odstrániť tento scenár?',
 
     'mutations_count' => 'Zmeny (:count)',
     'no_mutations' => 'Zatiaľ žiadne zmeny. Pridaj nižšie prvú a uvidíš, ako tento scenár vychádza oproti východisku.',
@@ -67,6 +68,7 @@ return [
         'new_amount' => 'Nová suma',
         'new_next_date' => 'Nový ďalší dátum',
         'scope' => 'Rozsah',
+        'scope_legend' => 'Ktoré výskyty posunúť',
         'scope_next' => 'Len najbližší výskyt',
         'scope_all' => 'Všetky nasledujúce výskyty',
     ],

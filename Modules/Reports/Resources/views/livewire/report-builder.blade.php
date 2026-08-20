@@ -24,12 +24,7 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    // EUR amounts render nl_NL (`€ 68,86`); non-EUR renders en_US (`$74.43`)
-    // — the exact dashboard.blade.php / net-worth-card.blade.php $fmt
-    // routing convention, reused verbatim (UI-SPEC Typography rules).
-    $fmt = static fn (int $minor, string $currency): string => $currency === 'EUR'
-        ? Money::ofMinor($minor, $currency)->format('nl_NL')
-        : Money::ofMinor($minor, $currency)->format('en_US');
+    $fmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)->format();
 
     $amountClass = static fn (int $minor): string => $minor < 0
         ? 'text-rose-600 dark:text-rose-400'
@@ -142,7 +137,7 @@
                         <button
                             type="button"
                             wire:click="$set('metric', '{{ $key }}')"
-                            class="chip"
+                            class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                             aria-pressed="{{ $metric === $key ? 'true' : 'false' }}"
                         >{{ $label }}</button>
                     @endforeach
@@ -158,7 +153,7 @@
                             <button
                                 type="button"
                                 wire:click="$set('dimension', '{{ $key }}')"
-                                class="chip"
+                                class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                                 aria-pressed="{{ $dimension === $key ? 'true' : 'false' }}"
                             >{{ $label }}</button>
                         @endforeach
@@ -174,7 +169,7 @@
                         <button
                             type="button"
                             wire:click="$set('periodPreset', '{{ $key }}')"
-                            class="chip"
+                            class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                             aria-pressed="{{ $periodPreset === $key ? 'true' : 'false' }}"
                         >{{ $label }}</button>
                     @endforeach
@@ -193,8 +188,8 @@
             <div>
                 <p class="srch-filter-label" style="margin-bottom: var(--space-2);">{{ Lang::get('reports::builder.currency.heading') }}</p>
                 <div class="view-toggle" role="group" aria-label="{{ Lang::get('reports::builder.currency.aria') }}">
-                    <button type="button" wire:click="$set('currencyMode', 'base')" class="{{ $currencyMode === 'base' ? 'active' : '' }}" aria-pressed="{{ $currencyMode === 'base' ? 'true' : 'false' }}">{{ Lang::get('reports::builder.currency.base') }}</button>
-                    <button type="button" wire:click="$set('currencyMode', 'original')" class="{{ $currencyMode === 'original' ? 'active' : '' }}" aria-pressed="{{ $currencyMode === 'original' ? 'true' : 'false' }}">{{ Lang::get('reports::builder.currency.original') }}</button>
+                    <button type="button" wire:click="$set('currencyMode', 'base')" class="{{ $currencyMode === 'base' ? 'active' : '' }} focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" aria-pressed="{{ $currencyMode === 'base' ? 'true' : 'false' }}">{{ Lang::get('reports::builder.currency.base') }}</button>
+                    <button type="button" wire:click="$set('currencyMode', 'original')" class="{{ $currencyMode === 'original' ? 'active' : '' }} focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" aria-pressed="{{ $currencyMode === 'original' ? 'true' : 'false' }}">{{ Lang::get('reports::builder.currency.original') }}</button>
                 </div>
             </div>
 
@@ -203,8 +198,8 @@
                 <div>
                     <p class="srch-filter-label" style="margin-bottom: var(--space-2);">{{ Lang::get('reports::builder.granularity.heading') }}</p>
                     <div class="view-toggle" role="group" aria-label="{{ Lang::get('reports::builder.granularity.aria') }}">
-                        <button type="button" wire:click="$set('granularity', 'monthly')" class="{{ $granularity === 'monthly' ? 'active' : '' }}" aria-pressed="{{ $granularity === 'monthly' ? 'true' : 'false' }}">{{ Lang::get('reports::builder.granularity.monthly') }}</button>
-                        <button type="button" wire:click="$set('granularity', 'weekly')" class="{{ $granularity === 'weekly' ? 'active' : '' }}" aria-pressed="{{ $granularity === 'weekly' ? 'true' : 'false' }}">{{ Lang::get('reports::builder.granularity.weekly') }}</button>
+                        <button type="button" wire:click="$set('granularity', 'monthly')" class="{{ $granularity === 'monthly' ? 'active' : '' }} focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" aria-pressed="{{ $granularity === 'monthly' ? 'true' : 'false' }}">{{ Lang::get('reports::builder.granularity.monthly') }}</button>
+                        <button type="button" wire:click="$set('granularity', 'weekly')" class="{{ $granularity === 'weekly' ? 'active' : '' }} focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" aria-pressed="{{ $granularity === 'weekly' ? 'true' : 'false' }}">{{ Lang::get('reports::builder.granularity.weekly') }}</button>
                     </div>
                 </div>
             @endif
@@ -220,15 +215,12 @@
             {{-- Compare to previous period (Req 13) --}}
             <div class="flex items-center justify-between gap-2">
                 <label for="report-compare-switch" class="srch-filter-label" style="margin: 0;">{{ Lang::get('reports::builder.compare') }}</label>
-                <button
-                    type="button"
+                <x-core::switch
                     id="report-compare-switch"
+                    :on="$compare"
+                    :label="Lang::get('reports::builder.compare')"
                     wire:click="$set('compare', {{ $compare ? 'false' : 'true' }})"
-                    class="switch {{ $compare ? 'switch--on' : '' }}"
-                    role="switch"
-                    aria-checked="{{ $compare ? 'true' : 'false' }}"
-                    aria-label="{{ Lang::get('reports::builder.compare') }}"
-                ><span class="switch__thumb"></span></button>
+                />
             </div>
 
             {{-- Visualization --}}
@@ -239,7 +231,7 @@
                         <button
                             type="button"
                             wire:click="$set('viz', '{{ $key }}')"
-                            class="chip"
+                            class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                             aria-pressed="{{ $viz === $key ? 'true' : 'false' }}"
                         >{{ $label }}</button>
                     @endforeach

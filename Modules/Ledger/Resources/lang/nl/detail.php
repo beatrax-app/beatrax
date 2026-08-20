@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Categorie verwijderen',
         'keep_category' => 'Deze categorie behouden',
         'restore_single' => 'Herstellen als één categorie?',
+        'survivor_legend' => 'Categorie om te behouden',
         'confirm_unsplit' => 'Ja, splitsing ongedaan maken',
         'keep_split' => 'Splitsing behouden',
     ],

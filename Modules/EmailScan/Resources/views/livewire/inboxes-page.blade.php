@@ -25,15 +25,15 @@
          global helper. The DI-only invariant applies to Blade views
          too. --}}
     @if ($oauthCanceledMessage !== null)
-        <div aria-live="polite" aria-atomic="true" class="mb-6 rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-600 dark:bg-rose-950 dark:border-rose-800 dark:text-rose-200">
+        <x-core::alert tone="danger" class="mb-6" aria-live="polite" aria-atomic="true">
             {{ Lang::get('email-scan::inboxes.connection_canceled') }} {{ $oauthCanceledMessage }}
-        </div>
+        </x-core::alert>
     @endif
 
     @if ($oauthFailedMessage !== null)
-        <div aria-live="polite" aria-atomic="true" class="mb-6 rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-600 dark:bg-rose-950 dark:border-rose-800 dark:text-rose-200">
+        <x-core::alert tone="danger" class="mb-6" aria-live="polite" aria-atomic="true">
             {{ Lang::get('email-scan::inboxes.connection_failed') }} {{ $oauthFailedMessage }}
-        </div>
+        </x-core::alert>
     @endif
 
     @php

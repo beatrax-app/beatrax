@@ -33,16 +33,12 @@
                     @endif
                 </p>
             </div>
-            <button
-                type="button"
-                class="switch{{ $enabled ? ' switch--on' : '' }}"
+            <x-core::switch
+                :on="$enabled"
+                :label="Lang::get('openbanking::messages.page.toggle_label')"
                 wire:click="toggleClicked"
-                aria-pressed="{{ $enabled ? 'true' : 'false' }}"
-                aria-label="{{ Lang::get('openbanking::messages.page.toggle_label') }}"
                 data-testid="ob-toggle"
-            >
-                <span class="switch__thumb"></span>
-            </button>
+            />
         </div>
     </x-core::card>
 

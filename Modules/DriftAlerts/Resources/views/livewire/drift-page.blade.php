@@ -19,9 +19,7 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    $fmt = static fn (Money $money): string => $money->currency() === 'EUR'
-        ? $money->format('nl_NL')
-        : $money->format('en_US');
+    $fmt = static fn (Money $money): string => $money->format();
 
     $tabs = [
         'open' => Lang::get('drift-alerts::alerts.tabs.open'),
@@ -118,25 +116,13 @@
     {{-- Level 2 — lifecycle tabs (shared between types). --}}
     <nav class="mb-6 flex items-center gap-2 border-b border-slate-200 dark:border-slate-700" role="tablist" aria-label="{{ Lang::get('drift-alerts::alerts.lifecycle_aria') }}">
         @foreach ($tabs as $key => $label)
-            <button
-                type="button"
-                role="tab"
-                aria-selected="{{ $tab === $key ? 'true' : 'false' }}"
-                wire:click="setTab('{{ $key }}')"
-                @class([
-                    'px-3 py-2 text-sm',
-                    'border-b-2 border-slate-900 font-medium text-slate-900 dark:border-slate-100 dark:text-slate-100' => $tab === $key,
-                    'border-b-2 border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100' => $tab !== $key,
-                ])
-            >{{ $label }}</button>
+            <x-core::tab :active="$tab === $key" wire:click="setTab('{{ $key }}')">{{ $label }}</x-core::tab>
         @endforeach
     </nav>
 
     @if ($type === 'anomaly')
         @php
-            $anomalyFmt = static fn (Money $money): string => $money->currency() === 'EUR'
-                ? $money->format('nl_NL')
-                : $money->format('en_US');
+            $anomalyFmt = static fn (Money $money): string => $money->format();
 
             $anomalyTintFor = static function (object $row): string {
                 $up = abs($row->latestAmount->toMinor()) >= abs($row->baselineAmount->toMinor());
@@ -156,10 +142,7 @@
 
         @if (count($anomalyRows) === 0)
             @php [$emptyHeading, $emptyBody] = $anomalyEmpty[$tab] ?? $anomalyEmpty['open']; @endphp
-            <x-core::card>
-                <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ $emptyHeading }}</h2>
-                <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">{{ $emptyBody }}</p>
-            </x-core::card>
+            <x-core::empty-state :heading="$emptyHeading" :body="$emptyBody" />
         @else
             <ul class="space-y-3" aria-live="polite">
                 @foreach ($anomalyRows as $anomaly)
@@ -178,7 +161,7 @@
                 <div class="mt-6 flex justify-center">
                     <button
                         type="button"
-                        wire:click="$set('cursorId', {{ $anomalyRows[count($anomalyRows) - 1]->anomalyAlertId }})"
+                        wire:click="loadMoreAnomalies('{{ $anomalyRows[count($anomalyRows) - 1]->detectedAt->toDateTimeString() }}', '{{ $anomalyRows[count($anomalyRows) - 1]->anomalyAlertId }}')"
                         class="shrink-0 whitespace-nowrap text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
                     >{{ Lang::get('drift-alerts::alerts.load_more') }}</button>
                 </div>
@@ -186,16 +169,17 @@
         @endif
     @elseif ($tab === 'open')
         @if (count($grouped) === 0)
-            <x-core::card>
-                <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('drift-alerts::alerts.empty_open.heading') }}</h2>
-                <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">
+            <x-core::empty-state :heading="Lang::get('drift-alerts::alerts.empty_open.heading')">
+                {{-- A slot, not the :body prop: the settings link finishes the
+                     sentence, and the prop escapes its value. --}}
+                <x-slot:body>
                     {{ Lang::get('drift-alerts::alerts.empty_open.body') }}
                     <a
                         href="{{ route('settings') }}#drift-threshold"
                         class="text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:text-slate-100 dark:hover:text-slate-300"
                     >{{ Lang::get('drift-alerts::alerts.empty_open.link') }}</a>.
-                </p>
-            </x-core::card>
+                </x-slot:body>
+            </x-core::empty-state>
         @else
             <div class="space-y-4">
                 @foreach ($grouped as $seriesId => $groupAlerts)
@@ -269,19 +253,17 @@
         @endif
     @else
         @if (count($rows) === 0)
-            <x-core::card>
-                @if ($tab === 'history')
-                    <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('drift-alerts::alerts.empty_history.heading') }}</h2>
-                    <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">
-                        {{ Lang::get('drift-alerts::alerts.empty_history.body') }}
-                    </p>
-                @else
-                    <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('drift-alerts::alerts.empty_dismissed.heading') }}</h2>
-                    <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">
-                        {{ Lang::get('drift-alerts::alerts.empty_dismissed.body') }}
-                    </p>
-                @endif
-            </x-core::card>
+            @if ($tab === 'history')
+                <x-core::empty-state
+                    :heading="Lang::get('drift-alerts::alerts.empty_history.heading')"
+                    :body="Lang::get('drift-alerts::alerts.empty_history.body')"
+                />
+            @else
+                <x-core::empty-state
+                    :heading="Lang::get('drift-alerts::alerts.empty_dismissed.heading')"
+                    :body="Lang::get('drift-alerts::alerts.empty_dismissed.body')"
+                />
+            @endif
         @else
             <ul class="space-y-3">
                 @foreach ($rows as $alert)

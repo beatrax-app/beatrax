@@ -49,14 +49,14 @@
     </header>
 
     @if ($flashMessage !== '')
-        <div
+        <x-core::alert
+            tone="positive"
             wire:transition.duration.3000ms
             aria-atomic="true"
             aria-live="polite"
-            class="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-200"
         >
             {{ $flashMessage }}
-        </div>
+        </x-core::alert>
     @endif
 
     @if ($reapplyInFlight && $reapplyProgress !== null)

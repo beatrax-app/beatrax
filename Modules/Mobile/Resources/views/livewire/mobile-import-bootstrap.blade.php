@@ -15,65 +15,54 @@
             </header>
 
             <form wire:submit="submit" class="space-y-4">
-                <div class="space-y-1">
-                    <label for="username" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::import.username') }}</label>
-                    <input
-                        type="text"
-                        id="username"
-                        wire:model="username"
-                        autocomplete="username"
-                        autofocus
-                        class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
-                    />
-                </div>
+                <x-core::form-field
+                    :label="Lang::get('mobile::import.username')"
+                    name="username"
+                    wire:model="username"
+                    autocomplete="username"
+                    autofocus
+                />
 
-                <div class="space-y-1">
-                    <label for="password" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::import.password') }}</label>
-                    <input
-                        type="password"
-                        id="password"
-                        wire:model="password"
-                        autocomplete="new-password"
-                        class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
-                    />
-                    <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('mobile::import.password_help') }}</p>
-                </div>
+                <x-core::form-field
+                    :label="Lang::get('mobile::import.password')"
+                    name="password"
+                    type="password"
+                    :hint="Lang::get('mobile::import.password_help')"
+                    wire:model="password"
+                    autocomplete="new-password"
+                />
 
-                <div class="space-y-1">
-                    <label for="password-confirmation" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::import.confirm_password') }}</label>
-                    <input
-                        type="password"
-                        id="password-confirmation"
-                        wire:model="passwordConfirmation"
-                        autocomplete="new-password"
-                        class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
-                    />
-                </div>
+                {{-- field-id keeps the control's existing id: the wire property
+                     is camelCase and the id on the page is hyphenated, and a
+                     password manager that remembered this field remembers the id. --}}
+                <x-core::form-field
+                    :label="Lang::get('mobile::import.confirm_password')"
+                    name="passwordConfirmation"
+                    field-id="password-confirmation"
+                    type="password"
+                    wire:model="passwordConfirmation"
+                    autocomplete="new-password"
+                />
 
-                <div class="space-y-1">
-                    <label for="pin" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::import.pin') }}</label>
-                    <input
-                        type="password"
-                        inputmode="numeric"
-                        id="pin"
-                        wire:model="pin"
-                        autocomplete="off"
-                        class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
-                    />
-                    <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('mobile::import.pin_help') }}</p>
-                </div>
+                <x-core::form-field
+                    :label="Lang::get('mobile::import.pin')"
+                    name="pin"
+                    type="password"
+                    :hint="Lang::get('mobile::import.pin_help')"
+                    inputmode="numeric"
+                    wire:model="pin"
+                    autocomplete="off"
+                />
 
-                <div class="space-y-1">
-                    <label for="confirm-pin" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::import.confirm_pin') }}</label>
-                    <input
-                        type="password"
-                        inputmode="numeric"
-                        id="confirm-pin"
-                        wire:model="confirmPin"
-                        autocomplete="off"
-                        class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
-                    />
-                </div>
+                <x-core::form-field
+                    :label="Lang::get('mobile::import.confirm_pin')"
+                    name="confirmPin"
+                    field-id="confirm-pin"
+                    type="password"
+                    inputmode="numeric"
+                    wire:model="confirmPin"
+                    autocomplete="off"
+                />
 
                 @if ($flashMessage !== '')
                     <p class="text-sm text-rose-600 dark:text-rose-500">{{ $flashMessage }}</p>

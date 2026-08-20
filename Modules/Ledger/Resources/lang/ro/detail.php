@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Elimină categoria',
         'keep_category' => 'Păstrează această categorie',
         'restore_single' => 'Restaurezi ca o singură categorie?',
+        'survivor_legend' => 'Categoria de păstrat',
         'confirm_unsplit' => 'Da, anulează împărțirea',
         'keep_split' => 'Păstrează împărțirea',
     ],

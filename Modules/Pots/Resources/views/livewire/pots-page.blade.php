@@ -79,20 +79,19 @@
 
     {{-- No accounts / no pots: empty state --}}
     @if (count($accounts) === 0 || count($groups) === 0)
-        <x-core::card>
-            <x-core::section-heading :title="Lang::get('pots::messages.empty.heading')" />
-            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                {{ Lang::get('pots::messages.empty.body') }}
-            </p>
+        <x-core::empty-state
+            :heading="Lang::get('pots::messages.empty.heading')"
+            :body="Lang::get('pots::messages.empty.body')"
+        >
             @if (count($accounts) > 0)
                 <button
                     type="button"
                     x-on:click="$flux.modal('pot-form').show()"
                     wire:click="$set('editPotId', 0)"
-                    class="mt-4 inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+                    class="inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
                 >{{ Lang::get('pots::messages.empty.cta') }}</button>
             @endif
-        </x-core::card>
+        </x-core::empty-state>
     @else
         {{-- Phone: flat .card-list-item list across all accounts (D-06) --}}
         <div class="pots-phone-list rounded-lg border border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-700 overflow-hidden">
@@ -242,6 +241,12 @@
                                         >{{ Lang::get('pots::messages.actions.archive') }}</button>
                                     </div>
                                 @else
+                                    {{-- Both actions carried the phone idiom the /budgets
+                                         row uses — a sm:hidden glyph beside a sr-only
+                                         sm:not-sr-only word — and neither half ever did
+                                         anything: this list is display:none under 768px,
+                                         so sm: (640px) always applies. The glyph was
+                                         never painted, the label never hidden. --}}
                                     <div class="mt-3 flex items-center gap-2">
                                         {{-- Fund button --}}
                                         <button
@@ -254,10 +259,10 @@
                                                     $flux.modal('pot-fund').show();
                                                 }
                                             "
-                                            class="text-sm text-slate-400 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100"
-                                         title="{{ Lang::get('pots::messages.actions.fund') }}"
-                            aria-label="{{ Lang::get('pots::messages.actions.fund') }}"
-                        ><span aria-hidden="true" class="sm:hidden">↓</span><span class="sr-only sm:not-sr-only">{{ Lang::get('pots::messages.actions.fund') }}</span></button>
+                                            class="text-sm text-slate-400 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 min-w-[44px] min-h-[44px] flex items-center justify-center dark:hover:text-slate-100"
+                                            title="{{ Lang::get('pots::messages.actions.fund') }}"
+                                            aria-label="{{ Lang::get('pots::messages.actions.fund') }}"
+                                        >{{ Lang::get('pots::messages.actions.fund') }}</button>
 
                                         {{-- Move button --}}
                                         <button
@@ -270,10 +275,10 @@
                                                     $flux.modal('pot-move').show();
                                                 }
                                             "
-                                            class="text-sm text-slate-400 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100"
-                                         title="{{ Lang::get('pots::messages.actions.move') }}"
-                            aria-label="{{ Lang::get('pots::messages.actions.move') }}"
-                        ><span aria-hidden="true" class="sm:hidden">⇄</span><span class="sr-only sm:not-sr-only">{{ Lang::get('pots::messages.actions.move') }}</span></button>
+                                            class="text-sm text-slate-400 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 min-w-[44px] min-h-[44px] flex items-center justify-center dark:hover:text-slate-100"
+                                            title="{{ Lang::get('pots::messages.actions.move') }}"
+                                            aria-label="{{ Lang::get('pots::messages.actions.move') }}"
+                                        >{{ Lang::get('pots::messages.actions.move') }}</button>
 
                                         {{-- Kebab dropdown --}}
                                         <flux:dropdown>
@@ -429,35 +434,44 @@
             wire:submit="{{ $editPotId ? 'updatePot' : 'createPot' }}"
             class="space-y-4"
         >
+            {{-- The inline 16px stays on every sheet control. size="base" is
+                 text-base, and this theme redefines --text-base to 0.9375rem
+                 (15px) — under Safari's 16px threshold, so the class alone
+                 would let the viewport zoom on focus. --}}
             <div>
-                <label for="pot-name-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.form.name') }}</label>
-                <input
-                    type="text"
-                    id="pot-name-sheet"
+                <x-core::form-field
+                    name="name"
+                    field-id="pot-name-sheet"
+                    :label="Lang::get('pots::messages.form.name')"
+                    size="base"
                     wire:model="name"
-                    placeholder="{{ Lang::get('pots::messages.form.name_placeholder') }}"
+                    :placeholder="Lang::get('pots::messages.form.name_placeholder')"
                     style="font-size: 16px;"
-                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                 />
                 @if ($errorName !== '')
                     <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorName }}</p>
                 @endif
             </div>
-            <div>
-                <label for="pot-account-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.form.account') }}</label>
-                <select
-                    id="pot-account-sheet"
-                    wire:model="accountId"
-                    @if ($editPotId) disabled @endif
-                    style="font-size: 16px;"
-                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 {{ $editPotId ? 'opacity-50 cursor-not-allowed' : '' }}"
-                >
-                    <option value="">{{ Lang::get('pots::messages.form.select_account') }}</option>
-                    @foreach ($accounts as $account)
-                        <option value="{{ $account->id }}">{{ $account->name }}</option>
-                    @endforeach
-                </select>
-            </div>
+            {{-- Bound, not wrapped in @if: a directive inside a component
+                 tag's attribute list defeats Blade's tag regex, and the tag
+                 then reaches the page as an unknown element that renders
+                 nothing. A false attribute is dropped by the bag. --}}
+            <x-core::form-field
+                name="accountId"
+                field-id="pot-account-sheet"
+                type="select"
+                :label="Lang::get('pots::messages.form.account')"
+                size="base"
+                wire:model="accountId"
+                :disabled="$editPotId !== 0"
+                :class="$editPotId ? 'opacity-50 cursor-not-allowed' : ''"
+                style="font-size: 16px;"
+            >
+                <option value="">{{ Lang::get('pots::messages.form.select_account') }}</option>
+                @foreach ($accounts as $account)
+                    <option value="{{ $account->id }}">{{ $account->name }}</option>
+                @endforeach
+            </x-core::form-field>
             <div class="flex gap-3 pt-2">
                 <button
                     type="submit"
@@ -482,31 +496,29 @@
     <x-core::bottom-sheet name="pot-fund" title="{{ Lang::get('pots::messages.fund.title') }}">
         <form wire:submit="fundPot" class="space-y-4">
             <div>
-                <label for="fund-amount-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.common.amount') }}</label>
-                <input
-                    type="text"
-                    id="fund-amount-sheet"
-                    wire:model="operationAmount"
+                <x-core::form-field
+                    name="operationAmount"
+                    field-id="fund-amount-sheet"
+                    :label="Lang::get('pots::messages.common.amount')"
+                    size="base"
                     inputmode="decimal"
-                    placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
+                    wire:model="operationAmount"
+                    :placeholder="Lang::get('core::components.amount_placeholder')"
                     style="font-size: 16px; font-variant-numeric: tabular-nums;"
-                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                 />
                 @if ($errorAmount !== '')
                     <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
                 @endif
             </div>
-            <div>
-                <label for="fund-memo-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.common.note_optional') }}</label>
-                <input
-                    type="text"
-                    id="fund-memo-sheet"
-                    wire:model="operationMemo"
-                    placeholder="{{ Lang::get('pots::messages.fund.note_placeholder') }}"
-                    style="font-size: 16px;"
-                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
-                />
-            </div>
+            <x-core::form-field
+                name="operationMemo"
+                field-id="fund-memo-sheet"
+                :label="Lang::get('pots::messages.common.note_optional')"
+                size="base"
+                wire:model="operationMemo"
+                :placeholder="Lang::get('pots::messages.fund.note_placeholder')"
+                style="font-size: 16px;"
+            />
             <div class="flex gap-3 pt-2">
                 <button type="submit" class="flex-1 rounded-md bg-slate-900 px-4 py-3 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white">{{ Lang::get('pots::messages.fund.submit') }}</button>
                 <button type="button" wire:click="$dispatch('modal-close', { name: 'pot-fund' })" class="rounded-md border border-slate-200 px-4 py-3 text-sm font-medium text-slate-500 focus:outline-none dark:border-slate-700">{{ Lang::get('pots::messages.common.cancel') }}</button>
@@ -523,15 +535,15 @@
     <x-core::bottom-sheet name="pot-withdraw" title="{{ Lang::get('pots::messages.withdraw.heading', ['name' => $withdrawPot?->name ?? Lang::get('pots::messages.pot_fallback')]) }}">
         <form wire:submit="withdrawPot" class="space-y-4">
             <div>
-                <label for="withdraw-amount-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.common.amount') }}</label>
-                <input
-                    type="text"
-                    id="withdraw-amount-sheet"
-                    wire:model="operationAmount"
+                <x-core::form-field
+                    name="operationAmount"
+                    field-id="withdraw-amount-sheet"
+                    :label="Lang::get('pots::messages.common.amount')"
+                    size="base"
                     inputmode="decimal"
-                    placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
+                    wire:model="operationAmount"
+                    :placeholder="Lang::get('core::components.amount_placeholder')"
                     style="font-size: 16px; font-variant-numeric: tabular-nums;"
-                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                 />
                 @if ($errorAmount !== '')
                     <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
@@ -542,17 +554,15 @@
                     </p>
                 @endif
             </div>
-            <div>
-                <label for="withdraw-memo-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.common.note_optional') }}</label>
-                <input
-                    type="text"
-                    id="withdraw-memo-sheet"
-                    wire:model="operationMemo"
-                    placeholder="{{ Lang::get('pots::messages.withdraw.note_placeholder') }}"
-                    style="font-size: 16px;"
-                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
-                />
-            </div>
+            <x-core::form-field
+                name="operationMemo"
+                field-id="withdraw-memo-sheet"
+                :label="Lang::get('pots::messages.common.note_optional')"
+                size="base"
+                wire:model="operationMemo"
+                :placeholder="Lang::get('pots::messages.withdraw.note_placeholder')"
+                style="font-size: 16px;"
+            />
             <div class="flex gap-3 pt-2">
                 <button type="submit" class="flex-1 rounded-md bg-slate-900 px-4 py-3 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white">{{ Lang::get('pots::messages.actions.withdraw') }}</button>
                 <button type="button" wire:click="$dispatch('modal-close', { name: 'pot-withdraw' })" class="rounded-md border border-slate-200 px-4 py-3 text-sm font-medium text-slate-500 focus:outline-none dark:border-slate-700">{{ Lang::get('pots::messages.common.cancel') }}</button>
@@ -573,30 +583,30 @@
                 : [];
         @endphp
         <form wire:submit="movePot" class="space-y-4">
+            <x-core::form-field
+                name="transferTargetPotId"
+                field-id="move-to-sheet"
+                type="select"
+                :label="Lang::get('pots::messages.move.to')"
+                size="base"
+                wire:model="transferTargetPotId"
+                style="font-size: 16px;"
+            >
+                <option value="">{{ count($moveDestPotsSheet) === 0 ? Lang::get('pots::messages.move.no_others_short') : Lang::get('pots::messages.move.select_pot') }}</option>
+                @foreach ($moveDestPotsSheet as $destPot)
+                    <option value="{{ $destPot->id }}">{{ $destPot->name }}</option>
+                @endforeach
+            </x-core::form-field>
             <div>
-                <label for="move-to-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.move.to') }}</label>
-                <select
-                    id="move-to-sheet"
-                    wire:model="transferTargetPotId"
-                    style="font-size: 16px;"
-                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
-                >
-                    <option value="">{{ count($moveDestPotsSheet) === 0 ? Lang::get('pots::messages.move.no_others_short') : Lang::get('pots::messages.move.select_pot') }}</option>
-                    @foreach ($moveDestPotsSheet as $destPot)
-                        <option value="{{ $destPot->id }}">{{ $destPot->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div>
-                <label for="move-amount-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.common.amount') }}</label>
-                <input
-                    type="text"
-                    id="move-amount-sheet"
-                    wire:model="operationAmount"
+                <x-core::form-field
+                    name="operationAmount"
+                    field-id="move-amount-sheet"
+                    :label="Lang::get('pots::messages.common.amount')"
+                    size="base"
                     inputmode="decimal"
-                    placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
+                    wire:model="operationAmount"
+                    :placeholder="Lang::get('core::components.amount_placeholder')"
                     style="font-size: 16px; font-variant-numeric: tabular-nums;"
-                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                 />
                 @if ($errorAmount !== '')
                     <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
@@ -625,14 +635,14 @@
             >
                 {{-- Name --}}
                 <div>
-                    <label for="pot-name" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.form.name') }}</label>
-                    <input
-                        type="text"
-                        id="pot-name"
+                    <x-core::form-field
+                        name="name"
+                        field-id="pot-name"
+                        :label="Lang::get('pots::messages.form.name')"
                         wire:model="name"
-                        placeholder="{{ Lang::get('pots::messages.form.name_placeholder') }}"
-                        @if ($errorName !== '') aria-invalid="true" aria-describedby="pot-name-error" @endif
-                        class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                        :placeholder="Lang::get('pots::messages.form.name_placeholder')"
+                        :aria-invalid="$errorName !== '' ? 'true' : null"
+                        :aria-describedby="$errorName !== '' ? 'pot-name-error' : null"
                     />
                     @if ($errorName !== '')
                         <p id="pot-name-error" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorName }}</p>
@@ -640,36 +650,36 @@
                 </div>
 
                 {{-- Account (disabled on edit) --}}
-                <div>
-                    <label for="pot-account" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.form.account') }}</label>
-                    <select
-                        id="pot-account"
-                        wire:model="accountId"
-                        @if ($editPotId) disabled @endif
-                        class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 {{ $editPotId ? 'opacity-50 cursor-not-allowed' : '' }}"
-                    >
-                        <option value="">{{ Lang::get('pots::messages.form.select_account') }}</option>
-                        @foreach ($accounts as $account)
-                            <option value="{{ $account->id }}">{{ $account->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
+                <x-core::form-field
+                    name="accountId"
+                    field-id="pot-account"
+                    type="select"
+                    :label="Lang::get('pots::messages.form.account')"
+                    wire:model="accountId"
+                    :disabled="$editPotId !== 0"
+                    :class="$editPotId ? 'opacity-50 cursor-not-allowed' : ''"
+                >
+                    <option value="">{{ Lang::get('pots::messages.form.select_account') }}</option>
+                    @foreach ($accounts as $account)
+                        <option value="{{ $account->id }}">{{ $account->name }}</option>
+                    @endforeach
+                </x-core::form-field>
 
                 {{-- Initial amount (create only, D-08) --}}
                 @if (! $editPotId)
                     <div>
-                        <label for="pot-amount" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.form.initial_amount') }}</label>
-                        <input
-                            type="text"
-                            id="pot-amount"
-                            wire:model="amount"
+                        <x-core::form-field
+                            name="amount"
+                            field-id="pot-amount"
+                            :label="Lang::get('pots::messages.form.initial_amount')"
+                            :hint="Lang::get('pots::messages.form.initial_amount_help')"
                             inputmode="decimal"
-                            placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
-                            @if ($errorAmount !== '') aria-invalid="true" aria-describedby="pot-amount-error" @endif
-                            class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                            wire:model="amount"
+                            :placeholder="Lang::get('core::components.amount_placeholder')"
+                            :aria-invalid="$errorAmount !== '' ? 'true' : null"
+                            :aria-describedby="$errorAmount !== '' ? 'pot-amount-error' : null"
                             style="font-variant-numeric: tabular-nums;"
                         />
-                        <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">{{ Lang::get('pots::messages.form.initial_amount_help') }}</p>
                         @if ($errorAmount !== '')
                             <p id="pot-amount-error" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
                         @endif
@@ -677,18 +687,26 @@
                 @endif
 
                 {{-- Link to (D-15): Goal | None — category-linking is retired --}}
-                <div>
-                    <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.form.link_to') }}</label>
+                {{-- "Link to" was a <label> with no `for` and nothing inside it,
+                     which labels exactly nothing. wire:model emits no name=, so
+                     the two radios were not one group to the browser either. --}}
+                <fieldset>
+                    <legend class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.form.link_to') }}</legend>
                     <div class="flex gap-2">
                         <label class="flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm {{ $linkType === 'goal' ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:bg-slate-900' }}">
-                            <input type="radio" wire:model.live="linkType" value="goal" class="sr-only" />
+                            <input type="radio" name="linkType" wire:model.live="linkType" value="goal" class="sr-only" />
                             {{ Lang::get('pots::messages.form.link_goal') }}
                         </label>
                         <label class="flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm {{ $linkType === 'none' ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:bg-slate-900' }}">
-                            <input type="radio" wire:model.live="linkType" value="none" class="sr-only" />
+                            <input type="radio" name="linkType" wire:model.live="linkType" value="none" class="sr-only" />
                             {{ Lang::get('pots::messages.form.link_none') }}
                         </label>
                     </div>
+                    {{-- Left hand-rolled on purpose: this select has no label of
+                         its own — the "Link to" legend names the whole group it
+                         sits in — and x-core::form-field requires one. Giving it a label
+                         means a new user-facing string in all 26 locales, which
+                         is a copy decision, not a refactor. --}}
                     @if ($linkType === 'goal')
                         <select
                             wire:model="goalId"
@@ -700,7 +718,7 @@
                             @endforeach
                         </select>
                     @endif
-                </div>
+                </fieldset>
 
                 {{-- Modal footer --}}
                 <div class="flex justify-end gap-2 pt-2">
@@ -740,15 +758,15 @@
             <x-core::section-heading :title="Lang::get('pots::messages.fund.heading', ['name' => $fundPot?->name ?? Lang::get('pots::messages.pot_fallback')])" />
             <form wire:submit="fundPot" class="mt-6 space-y-4">
                 <div>
-                    <label for="fund-amount" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.common.amount') }}</label>
-                    <input
-                        type="text"
-                        id="fund-amount"
-                        wire:model="operationAmount"
+                    <x-core::form-field
+                        name="operationAmount"
+                        field-id="fund-amount"
+                        :label="Lang::get('pots::messages.common.amount')"
                         inputmode="decimal"
-                        placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
-                        @if ($errorAmount !== '') aria-invalid="true" aria-describedby="fund-amount-error" @endif
-                        class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                        wire:model="operationAmount"
+                        :placeholder="Lang::get('core::components.amount_placeholder')"
+                        :aria-invalid="$errorAmount !== '' ? 'true' : null"
+                        :aria-describedby="$errorAmount !== '' ? 'fund-amount-error' : null"
                         style="font-variant-numeric: tabular-nums;"
                     />
                     @if ($fundRec !== null)
@@ -760,16 +778,13 @@
                         <p id="fund-amount-error" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
                     @endif
                 </div>
-                <div>
-                    <label for="fund-memo" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.common.note_optional') }}</label>
-                    <input
-                        type="text"
-                        id="fund-memo"
-                        wire:model="operationMemo"
-                        placeholder="{{ Lang::get('pots::messages.fund.note_placeholder') }}"
-                        class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
-                    />
-                </div>
+                <x-core::form-field
+                    name="operationMemo"
+                    field-id="fund-memo"
+                    :label="Lang::get('pots::messages.common.note_optional')"
+                    wire:model="operationMemo"
+                    :placeholder="Lang::get('pots::messages.fund.note_placeholder')"
+                />
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" wire:click="$dispatch('modal-close', { name: 'pot-fund' })" class="rounded-md px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100 dark:text-slate-400">{{ Lang::get('pots::messages.common.cancel') }}</button>
                     <button type="submit" class="inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white">{{ Lang::get('pots::messages.fund.submit') }}</button>
@@ -799,29 +814,28 @@
             @endphp
             <x-core::section-heading :title="Lang::get('pots::messages.move.heading', ['name' => $moveSrcPot?->name ?? Lang::get('pots::messages.pot_fallback')])" />
             <form wire:submit="movePot" class="mt-6 space-y-4">
+                <x-core::form-field
+                    name="transferTargetPotId"
+                    field-id="move-to"
+                    type="select"
+                    :label="Lang::get('pots::messages.move.to')"
+                    wire:model="transferTargetPotId"
+                >
+                    <option value="">{{ count($moveDestPots) === 0 ? Lang::get('pots::messages.move.no_others') : Lang::get('pots::messages.move.select_pot') }}</option>
+                    @foreach ($moveDestPots as $destPot)
+                        <option value="{{ $destPot->id }}">{{ $destPot->name }}</option>
+                    @endforeach
+                </x-core::form-field>
                 <div>
-                    <label for="move-to" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.move.to') }}</label>
-                    <select
-                        id="move-to"
-                        wire:model="transferTargetPotId"
-                        class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
-                    >
-                        <option value="">{{ count($moveDestPots) === 0 ? Lang::get('pots::messages.move.no_others') : Lang::get('pots::messages.move.select_pot') }}</option>
-                        @foreach ($moveDestPots as $destPot)
-                            <option value="{{ $destPot->id }}">{{ $destPot->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label for="move-amount" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.common.amount') }}</label>
-                    <input
-                        type="text"
-                        id="move-amount"
-                        wire:model="operationAmount"
+                    <x-core::form-field
+                        name="operationAmount"
+                        field-id="move-amount"
+                        :label="Lang::get('pots::messages.common.amount')"
                         inputmode="decimal"
-                        placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
-                        @if ($errorAmount !== '') aria-invalid="true" aria-describedby="move-amount-error" @endif
-                        class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                        wire:model="operationAmount"
+                        :placeholder="Lang::get('core::components.amount_placeholder')"
+                        :aria-invalid="$errorAmount !== '' ? 'true' : null"
+                        :aria-describedby="$errorAmount !== '' ? 'move-amount-error' : null"
                         style="font-variant-numeric: tabular-nums;"
                     />
                     @if ($moveSrcPot !== null)
@@ -833,16 +847,13 @@
                         <p id="move-amount-error" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
                     @endif
                 </div>
-                <div>
-                    <label for="move-memo" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.common.note_optional') }}</label>
-                    <input
-                        type="text"
-                        id="move-memo"
-                        wire:model="operationMemo"
-                        placeholder="{{ Lang::get('pots::messages.move.note_placeholder') }}"
-                        class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
-                    />
-                </div>
+                <x-core::form-field
+                    name="operationMemo"
+                    field-id="move-memo"
+                    :label="Lang::get('pots::messages.common.note_optional')"
+                    wire:model="operationMemo"
+                    :placeholder="Lang::get('pots::messages.move.note_placeholder')"
+                />
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" wire:click="$dispatch('modal-close', { name: 'pot-move' })" class="rounded-md px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100 dark:text-slate-400">{{ Lang::get('pots::messages.common.cancel') }}</button>
                     <button type="submit" @disabled(count($moveDestPots) === 0) class="inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed">{{ Lang::get('pots::messages.move.submit') }}</button>
@@ -859,15 +870,15 @@
             <x-core::section-heading :title="Lang::get('pots::messages.withdraw.heading', ['name' => $withdrawPot?->name ?? Lang::get('pots::messages.pot_fallback')])" />
             <form wire:submit="withdrawPot" class="mt-6 space-y-4">
                 <div>
-                    <label for="withdraw-amount" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.common.amount') }}</label>
-                    <input
-                        type="text"
-                        id="withdraw-amount"
-                        wire:model="operationAmount"
+                    <x-core::form-field
+                        name="operationAmount"
+                        field-id="withdraw-amount"
+                        :label="Lang::get('pots::messages.common.amount')"
                         inputmode="decimal"
-                        placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
-                        @if ($errorAmount !== '') aria-invalid="true" aria-describedby="withdraw-amount-error" @endif
-                        class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                        wire:model="operationAmount"
+                        :placeholder="Lang::get('core::components.amount_placeholder')"
+                        :aria-invalid="$errorAmount !== '' ? 'true' : null"
+                        :aria-describedby="$errorAmount !== '' ? 'withdraw-amount-error' : null"
                         style="font-variant-numeric: tabular-nums;"
                     />
                     @if ($withdrawPot !== null)
@@ -879,16 +890,13 @@
                         <p id="withdraw-amount-error" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
                     @endif
                 </div>
-                <div>
-                    <label for="withdraw-memo" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.common.note_optional') }}</label>
-                    <input
-                        type="text"
-                        id="withdraw-memo"
-                        wire:model="operationMemo"
-                        placeholder="{{ Lang::get('pots::messages.withdraw.note_placeholder') }}"
-                        class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
-                    />
-                </div>
+                <x-core::form-field
+                    name="operationMemo"
+                    field-id="withdraw-memo"
+                    :label="Lang::get('pots::messages.common.note_optional')"
+                    wire:model="operationMemo"
+                    :placeholder="Lang::get('pots::messages.withdraw.note_placeholder')"
+                />
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" wire:click="$dispatch('modal-close', { name: 'pot-withdraw' })" class="rounded-md px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100 dark:text-slate-400">{{ Lang::get('pots::messages.common.cancel') }}</button>
                     <button type="submit" class="inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white">{{ Lang::get('pots::messages.actions.withdraw') }}</button>

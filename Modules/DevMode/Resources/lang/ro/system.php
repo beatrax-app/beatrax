@@ -7,6 +7,10 @@ return [
 
     'subtitle_html' => 'Mediu + runtime + configurație efectivă. Cheile sensibile (terminații <code class="font-mono text-xs">*password*</code>, <code class="font-mono text-xs">*secret*</code>, <code class="font-mono text-xs">*key</code>, <code class="font-mono text-xs">*token*</code>) sunt mascate.',
     'php' => 'PHP',
+    'php_version' => 'versiune',
+    'php_sapi' => 'sapi',
+    'php_ini_path' => 'cale ini',
+    'php_extensions' => 'extensii',
     'laravel' => 'Laravel',
     'sqlite' => 'SQLite',
     'sqlite_file' => 'fișier',

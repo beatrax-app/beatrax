@@ -5,19 +5,20 @@
 {{--
     The turning ring that says work is in flight.
 
-    Three unrelated implementations of it existed. Six were an inline <svg
-    class="animate-spin">, two were an empty <span> given a border and spun
-    with rounded-full border-2 border-t-*, and one was the character ↻ in a
-    text span. Even the six SVGs did not agree: three different arc paths,
-    two sizes, and stroke colours picked from the button they sat in rather
-    than from the text around them.
+    Eight of these existed in three unrelated implementations. Five were an
+    inline <svg class="animate-spin">, two were an empty <span> given a
+    border and spun with rounded-full border-2 border-t-*, and one was the
+    character ↻ in a text span. The five SVGs did not agree with each other
+    either: three drew a ring and two drew heroicons' arrow-path, and the
+    three rings carried three different arc paths — the upstream one, and
+    two shortenings of it.
 
-    The ring wins on usage — five of the eight marks were one, counting both
-    spellings of it — so that is what this draws, in the upstream Tailwind
-    circle+path form the three SVG copies were each a truncation of. Size is
-    the one real distinction: a spinner beside a sentence matches the text
-    (h-4 w-4) and a spinner inside a button is smaller than the label it
-    interrupts (h-3 w-3).
+    The ring wins on usage, five marks of the eight counting both spellings
+    of it, so that is what this draws — in the upstream Tailwind circle+path
+    form only one of the three ring copies still had whole. Size is the one
+    real distinction: a spinner beside a sentence matches the text (h-4 w-4)
+    and a spinner inside a button is smaller than the label it interrupts
+    (h-3 w-3).
 
     currentColor replaces the hand-picked border shades. A spinner is the
     text going round; it should not need to know it is on a dark button.

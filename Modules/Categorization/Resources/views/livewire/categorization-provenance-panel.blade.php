@@ -11,12 +11,17 @@
 @use('Modules\Core\Public\Support\Lang')
 <div>
     @if ($flashMessage !== '')
-        <aside
+        {{-- role="complementary" is the <aside> this used to be: the shared
+             alert draws a <div>, so the landmark has to be spelled out or a
+             screen-reader user loses it from the landmark list. --}}
+        <x-core::alert
+            tone="neutral"
+            class="mb-3"
+            role="complementary"
             aria-live="polite" aria-atomic="true"
-            class="mb-3 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300"
         >
             {{ $flashMessage }}
-        </aside>
+        </x-core::alert>
     @endif
 
     @if ($variant === 'rule')

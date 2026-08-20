@@ -105,14 +105,14 @@
                 title="{{ Lang::get('core::help.export_title_attr') }}"
             >{{ Lang::get('core::help.export_cta') }}</button>
         @else
-            <div class="rounded-md border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-700">
+            <x-core::alert tone="neutral">
                 <p class="font-medium">{{ Lang::get('core::help.dev_off') }}</p>
                 <p class="mt-1">{{ Lang::get('core::help.to_export') }}</p>
                 <ol class="mt-2 list-decimal pl-5 space-y-1">
                     <li>{!! Lang::get('core::help.enable_dev_html') !!}</li>
                     <li>{{ Lang::get('core::help.manual_copy') }}</li>
                 </ol>
-            </div>
+            </x-core::alert>
         @endif
     </section>
 

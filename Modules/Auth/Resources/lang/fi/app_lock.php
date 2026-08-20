@@ -8,8 +8,6 @@ return [
     'error_enroll_failed' => 'Laitteesi ei suostunut tallentamaan avainta. Biometrinen avaus ei ole käytettävissä.',
     'heading' => 'Sovelluslukko',
 
-    // Asetuksissa on vain viittaus; itse säätimet ovat synkronointinäkymässä
-    // osoitteessa /sync#app-lock.
     'moved_help' => 'PIN-koodisi, automaattisen lukituksen ajastus ja biometrinen avaus ovat tämän laitteen synkronointiasetuksissa.',
     'moved_cta' => 'Avaa Synkronointi ja laite',
 

@@ -12,7 +12,7 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    $eurFmt = static fn (int $minor): string => Money::ofMinor($minor, 'EUR')->format('nl_NL');
+    $eurFmt = static fn (int $minor): string => Money::ofMinor($minor, 'EUR')->format();
 
     $expenseEur = (int) ($totals['expense_eur_minor'] ?? 0);
     $incomeEur = (int) ($totals['income_eur_minor'] ?? 0);

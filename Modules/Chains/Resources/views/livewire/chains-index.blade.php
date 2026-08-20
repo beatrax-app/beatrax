@@ -44,12 +44,11 @@
     </header>
 
     @if (count($settlements) === 0)
-        <x-core::card data-testid="chains-index-empty">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('chains::index.empty_heading') }}</h2>
-            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                {{ Lang::get('chains::index.empty_body') }}
-            </p>
-        </x-core::card>
+        <x-core::empty-state
+            data-testid="chains-index-empty"
+            :heading="Lang::get('chains::index.empty_heading')"
+            :body="Lang::get('chains::index.empty_body')"
+        />
     @else
         <ul class="space-y-4" data-testid="chains-index-list">
             @foreach ($settlements as $settlement)

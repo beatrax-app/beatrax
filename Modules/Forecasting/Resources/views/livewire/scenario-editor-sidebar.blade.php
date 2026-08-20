@@ -46,26 +46,29 @@
                         wire:click="startRename"
                         class="text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline dark:hover:text-slate-100 dark:text-slate-400"
                     >{{ Lang::get('forecasting::scenario.rename') }}</button>
-                    @if ($confirmingDeleteScenario === $scenarioId)
-                        <button
-                            type="button"
-                            wire:click="deleteScenario"
-                            class="text-rose-700 underline-offset-2 hover:underline dark:text-rose-500"
-                        >{{ Lang::get('forecasting::scenario.confirm_delete') }}</button>
-                        <button
-                            type="button"
-                            wire:click="cancelDeleteScenario"
-                            class="text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline dark:hover:text-slate-100 dark:text-slate-400"
-                        >{{ Lang::get('forecasting::scenario.cancel') }}</button>
-                    @else
+                    @unless ($confirmingDeleteScenario === $scenarioId)
                         <button
                             type="button"
                             wire:click="confirmDeleteScenario"
                             class="text-rose-700 underline-offset-2 hover:underline dark:text-rose-500"
                         >{{ Lang::get('forecasting::scenario.delete_scenario') }}</button>
-                    @endif
+                    @endunless
                 </div>
             </div>
+            @if ($confirmingDeleteScenario === $scenarioId)
+                {{-- The confirm used to be a bare pair of text links beside the
+                     title: "Confirm delete" and "Cancel", with nothing asking
+                     anything. The strip supplies the question the two buttons
+                     answer, which is why it stands on its own row. --}}
+                <x-core::confirm-strip
+                    class="mt-2"
+                    :question="Lang::get('forecasting::scenario.delete_confirm')"
+                    :cancel-label="Lang::get('forecasting::scenario.cancel')"
+                    :confirm-label="Lang::get('forecasting::scenario.confirm_delete')"
+                    cancel="cancelDeleteScenario"
+                    confirm="deleteScenario"
+                />
+            @endif
             @if ($scenarioDescription !== null && $scenarioDescription !== '')
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ $scenarioDescription }}</p>
             @endif

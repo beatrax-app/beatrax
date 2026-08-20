@@ -2,17 +2,7 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    /**
-     * EUR amounts render in Dutch locale (e.g. `€ 68,86`); non-EUR amounts
-     * render in US English locale (e.g. `$74.43`) so the symbol prefix
-     * matches the user's mental model of the foreign currency. brick/money
-     * routes the locale through ext-intl's NumberFormatter; the parameter-
-     * less Money::format() default already encodes this routing — the
-     * explicit branch here documents the intent at the call site.
-     */
-    $fmt = static fn (Money $money): string => $money->currency() === 'EUR'
-        ? $money->format('nl_NL')
-        : $money->format('en_US');
+    $fmt = static fn (Money $money): string => $money->format();
 @endphp
 
 <div
@@ -32,11 +22,16 @@
           order-1: header
           order-2: alerts strip (drift badge)
           order-3: KPI tiles (single-column at phone)
-          order-4: goals summary card
+          order-4: goals summary card, budgets glance
           order-5: upcoming content (fixed payments, spending trend, savings insights)
-          order-6: status tiles + net worth (deprioritised on phone)
+          order-6: tax summary, pinned reports, status tiles + net worth (deprioritised on phone)
           order-7: top spending + recent transactions
           order-8: install hint
+
+        EVERY child of .dashboard-main carries an order class. A child without
+        one falls back to `order: 0`, which sorts it ABOVE order-1 — that is
+        how the tax/budgets/pinned cards ended up over the period summary the
+        page exists to show.
 
         At >=768px (tablet/desktop), all order classes are reset (order-none) and
         the existing space-y-12 block layout is preserved exactly.
@@ -47,13 +42,19 @@
 
     <div class="dashboard-main">
 
-    {{-- Header (order 1 on phone, first naturally on desktop) --}}
-    <header class="flex items-start justify-between gap-6 dashboard-phone-order-1">
+    {{-- Header (order 1 on phone, first naturally on desktop).
+
+         items-baseline, not items-start: the period title and the ‹ Today ›
+         stepper are one control line, and aligning their boxes left the
+         30px title and the 40px buttons reading off two different lines.
+         The stepper never shrinks, so its glyphs keep their tap targets
+         when a long month name takes the width it needs. --}}
+    <header class="flex items-baseline justify-between gap-6 dashboard-phone-order-1">
         <div class="space-y-1">
             <h1 class="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ $summary->period->label }}</h1>
             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.subtitle') }}</p>
         </div>
-        <div class="flex items-center gap-1">
+        <div class="flex shrink-0 items-center gap-1">
             <button
                 type="button"
                 wire:click="previousPeriod"
@@ -106,19 +107,19 @@
     <div class="dashboard-phone-order-3">
     @if ($tiles === null)
         <section class="grid grid-cols-1 gap-4 md:grid-cols-3" aria-label="{{ Lang::get('core::dashboard.totals_aria') }}">
-            <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+            <x-core::card>
                 <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.in') }}</p>
                 <p class="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                     {{ $fmt($summary->inflow) }}
                 </p>
-            </div>
-            <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+            </x-core::card>
+            <x-core::card>
                 <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.out') }}</p>
                 <p class="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                     {{ $fmt($summary->outflow) }}
                 </p>
-            </div>
-            <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+            </x-core::card>
+            <x-core::card>
                 <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.net') }}</p>
                 <p
                     class="mt-2 text-3xl font-semibold {{ $summary->net->isNegative() ? 'text-slate-900 dark:text-slate-100' : 'text-emerald-600 dark:text-emerald-500' }}"
@@ -126,7 +127,7 @@
                 >
                     {{ $fmt($summary->net) }}
                 </p>
-            </div>
+            </x-core::card>
         </section>
     @else
         <div class="space-y-12">
@@ -134,19 +135,19 @@
                 <section aria-label="{{ Lang::get('core::dashboard.totals_aria_currency', ['currency' => $tile->currency]) }}" class="space-y-2">
                     <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ $tile->currency }}</h2>
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+                        <x-core::card>
                             <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.in') }}</p>
                             <p class="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                                 {{ $fmt($tile->inflow) }}
                             </p>
-                        </div>
-                        <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+                        </x-core::card>
+                        <x-core::card>
                             <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.out') }}</p>
                             <p class="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                                 {{ $fmt($tile->outflow) }}
                             </p>
-                        </div>
-                        <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+                        </x-core::card>
+                        <x-core::card>
                             <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.net') }}</p>
                             <p
                                 class="mt-2 text-3xl font-semibold {{ $tile->net->isNegative() ? 'text-slate-900 dark:text-slate-100' : 'text-emerald-600 dark:text-emerald-500' }}"
@@ -154,7 +155,7 @@
                             >
                                 {{ $fmt($tile->net) }}
                             </p>
-                        </div>
+                        </x-core::card>
                     </div>
                 </section>
             @endforeach
@@ -169,15 +170,17 @@
     </div>
 
     {{-- Tax summary card (D-18) — tagged total + item count for the seasonal
-         tax year (Jan-Apr → previous year; May-Dec → current year). Links to /tax. --}}
-    <div>
+         tax year (Jan-Apr → previous year; May-Dec → current year). Links to /tax.
+         Seasonal, so it joins the order-6 tail on phones. --}}
+    <div class="dashboard-phone-order-6">
         @livewire('tax.summary-card')
     </div>
 
     {{-- Budgets glance card (Req 12, D-21) — "Ready to assign" figure sourced
          from the envelope model, plus an amber over-budget pill. Renders
-         nothing when the user has zero expense categories. --}}
-    <div>
+         nothing when the user has zero expense categories. Sits with the
+         goals card (order 4): both answer "am I on plan this period?". --}}
+    <div class="dashboard-phone-order-4">
         @livewire('budgets.envelope-glance-card')
     </div>
 
@@ -185,7 +188,7 @@
          reports the user pinned via TogglePin (/reports/library). Renders
          nothing when zero pins, same convention as goals.summary-card /
          tax.summary-card / budgets.envelope-glance-card above. --}}
-    <div>
+    <div class="dashboard-phone-order-6">
         @livewire('reports.pinned-reports-row')
     </div>
 
@@ -257,16 +260,14 @@
                                     {{ $fmt($cat->spend) }}
                                 </span>
                             </div>
-                            <div class="h-1 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-                                @php
-                                    $rawPct = (int) round($cat->percentageOfTotal * 100);
-                                    $barWidth = $rawPct === 0 ? 0 : max(2, min(100, $rawPct));
-                                @endphp
-                                <div
-                                    class="h-1 bg-slate-900 dark:bg-slate-100"
-                                    style="width: {{ $barWidth }}%;"
-                                ></div>
-                            </div>
+                            {{-- The sliver stays a call-site rule: a category with
+                                 a real but tiny share should still draw, while a
+                                 zero draws nothing at all. --}}
+                            @php
+                                $rawPct = (int) round($cat->percentageOfTotal * 100);
+                                $barWidth = $rawPct === 0 ? 0 : max(2, min(100, $rawPct));
+                            @endphp
+                            <x-core::progress-bar :value="$barWidth" :label="$cat->name" />
                         </li>
                     @endforeach
                 </ul>
@@ -300,10 +301,10 @@
                     <table class="dash-recent-table min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
                         <thead class="bg-slate-50 dark:bg-slate-900">
                             <tr>
-                                <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.th_date') }}</th>
-                                <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.th_counterparty') }}</th>
-                                <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.th_category') }}</th>
-                                <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.th_amount') }}</th>
+                                <x-core::th align="left">{{ Lang::get('core::dashboard.th_date') }}</x-core::th>
+                                <x-core::th align="left">{{ Lang::get('core::dashboard.th_counterparty') }}</x-core::th>
+                                <x-core::th align="left">{{ Lang::get('core::dashboard.th_category') }}</x-core::th>
+                                <x-core::th align="right">{{ Lang::get('core::dashboard.th_amount') }}</x-core::th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-200 bg-white dark:bg-slate-950 dark:divide-slate-700">

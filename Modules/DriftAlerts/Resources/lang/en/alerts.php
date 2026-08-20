@@ -57,6 +57,7 @@ return [
         'meta_eur_equiv' => '(≈ :amount/yr)',
         'cancel_impact' => 'Cancel this → save :amount/yr',
         'cadence_flipped' => 'Cadence flipped — also showing in',
+        'cadence_flipped_link' => 'Review recurring',
         'acknowledge' => 'Acknowledge',
         'acknowledge_aria' => 'Acknowledge drift alert :id',
         'snooze' => 'Snooze ▾',

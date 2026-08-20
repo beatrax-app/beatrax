@@ -25,6 +25,8 @@ return [
         'tax_years' => 'Maksuaastad',
     ],
 
+    'tablist_aria' => 'Vastaspoole jaotised',
+
     'tab_note_personal' => '— eraisikutest kontaktidel rahastusahelaid ei ole',
     'tab_note_bank' => '— pangatasude vastaspool ei tekita rahastusahelaid',
     'tab_note_government' => '— riigiasutustest vastaspooltel rahastusahelaid ei ole',

@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Kategória eltávolítása',
         'keep_category' => 'Kategória megtartása',
         'restore_single' => 'Visszaállítod egyetlen kategóriára?',
+        'survivor_legend' => 'Megtartandó kategória',
         'confirm_unsplit' => 'Igen, megszüntetem',
         'keep_split' => 'Felosztás megtartása',
     ],

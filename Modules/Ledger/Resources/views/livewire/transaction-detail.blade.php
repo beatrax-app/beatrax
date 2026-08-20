@@ -1,25 +1,17 @@
 @use('Modules\Core\Public\Support\Lang')
 @php
-    use Brick\Math\BigDecimal;
-    use Brick\Math\RoundingMode;
     use Carbon\CarbonImmutable;
     use Modules\Ledger\Public\ValueObjects\Money;
+    use Modules\Ledger\Public\ValueObjects\MoneyInput;
+    use Modules\Ledger\Public\ValueObjects\Rate;
 
-    // EUR amounts render in Dutch locale; non-EUR amounts in US English
-    // locale so the symbol prefix matches the user's mental model.
-    // brick/money routes the locale through ext-intl's NumberFormatter.
-    $fmt = static fn (Money $money): string => $money->currency() === 'EUR'
-        ? $money->format('nl_NL')
-        : $money->format('en_US');
+    $fmt = static fn (Money $money): string => $money->format();
 
-    // FX-rate display: scale the persisted decimal(18,8) string to three
-    // decimals via BigDecimal so the value never crosses the float
-    // boundary. number_format() with a float cast would silently corrupt
-    // FX precision; the integer-only money rule extends to rate display.
-    $fxRateDisplay = $transaction->fx_rate_used === null
-        ? null
-        : (string) BigDecimal::of($transaction->fx_rate_used)
-            ->toScale(3, RoundingMode::HalfUp);
+    // Rate, not number_format(): a float cast would silently corrupt the
+    // persisted decimal(18,8) precision, which is the whole reason the
+    // column is read as a string.
+    $fxRate = $transaction->fx_rate_used === null ? null : Rate::of($transaction->fx_rate_used);
+    $fxRateDisplay = $fxRate === null ? null : (string) $fxRate->toScale(3);
 @endphp
 
 <div>
@@ -189,18 +181,15 @@
                                              own aria-label, so the visible text beside it is the
                                              same string rather than a second, unattached name. --}}
                                         <span class="inline-flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                                            <button
-                                                type="button"
+                                            {{-- :disabled, not @disabled — a directive inside a component
+                                                 tag defeats the tag compiler and ships it as raw HTML. --}}
+                                            <x-core::switch
+                                                :on="(bool) ($leg['tax'] ?? false)"
+                                                :label="Lang::get('ledger::detail.split.tax_deductible')"
                                                 wire:click="toggleLegTax({{ $index }})"
-                                                @disabled($leg['id'] === null)
-                                                role="switch"
-                                                aria-checked="{{ ($leg['tax'] ?? false) ? 'true' : 'false' }}"
-                                                aria-label="{{ Lang::get('ledger::detail.split.tax_deductible') }}"
-                                                class="switch {{ ($leg['tax'] ?? false) ? 'switch--on' : '' }}"
+                                                :disabled="$leg['id'] === null"
                                                 data-testid="split-leg-tax-toggle-{{ $index }}"
-                                            >
-                                                <span class="switch__thumb"></span>
-                                            </button>
+                                            />
                                             {{ Lang::get('ledger::detail.split.tax_deductible') }}
                                         </span>
                                     </div>
@@ -305,22 +294,32 @@
                         @if ($confirmUnsplit)
                             <div class="space-y-2" aria-live="polite" aria-atomic="true" data-testid="split-unsplit-confirm">
                                 <p class="text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('ledger::detail.split.restore_single') }}</p>
-                                <div class="flex flex-wrap items-center gap-3">
-                                    @foreach ($legs as $index => $leg)
-                                        @php
-                                            $radioCat = collect($splitCategories)->firstWhere('id', (int) ($leg['categoryId'] ?? 0));
-                                        @endphp
-                                        <label class="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-                                            <input
-                                                type="radio"
-                                                name="unsplit-survivor"
-                                                wire:click="selectUnsplitSurvivor({{ $index }})"
-                                                @checked($unsplitSurvivorIndex === $index)
-                                            >
-                                            {{ $radioCat->path ?? '—' }} €{{ $leg['amount'] }}
-                                        </label>
-                                    @endforeach
-                                </div>
+                                {{-- Without the legend a screen reader reads each radio with
+                                     nothing saying what is being chosen. sr-only because the
+                                     sentence above already asks it on screen. --}}
+                                <fieldset>
+                                    <legend class="sr-only">{{ Lang::get('ledger::detail.split.survivor_legend') }}</legend>
+                                    <div class="flex flex-wrap items-center gap-3">
+                                        @foreach ($legs as $index => $leg)
+                                            @php
+                                                $radioCat = collect($splitCategories)->firstWhere('id', (int) ($leg['categoryId'] ?? 0));
+
+                                                // Parsed back from the string the user typed so the symbol
+                                                // and grouping come from the leg's currency, not a literal €.
+                                                $radioMinor = MoneyInput::tryToMinor((string) ($leg['amount'] ?? ''));
+                                            @endphp
+                                            <label class="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                                                <input
+                                                    type="radio"
+                                                    name="unsplit-survivor"
+                                                    wire:click="selectUnsplitSurvivor({{ $index }})"
+                                                    @checked($unsplitSurvivorIndex === $index)
+                                                >
+                                                {{ $radioCat->path ?? '—' }} {{ $radioMinor === null ? '—' : $fmt(Money::ofMinor($radioMinor, $transaction->settled_currency)) }}
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                </fieldset>
                                 <div class="flex items-center gap-3">
                                     <button
                                         type="button"

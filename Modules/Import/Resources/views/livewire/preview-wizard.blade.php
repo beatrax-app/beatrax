@@ -2,7 +2,7 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    $fmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)->format('nl_NL');
+    $fmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)->format();
 
     // Header-action enablement. Discard is meaningful whenever a preview
     // is still in cache; Confirm requires every naming step to be resolved.
@@ -138,11 +138,11 @@
                 <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700" style="font-feature-settings: 'tnum';">
                     <thead class="bg-slate-50 dark:bg-slate-900">
                         <tr>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400">{{ Lang::get('import::preview.col_date') }}</th>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400">{{ Lang::get('import::preview.col_funding_source') }}</th>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400">{{ Lang::get('import::preview.col_counterparty') }}</th>
-                            <th scope="col" class="px-4 py-2 text-right text-xs font-medium text-slate-500 dark:text-slate-400">{{ Lang::get('import::preview.col_amount') }}</th>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400">{{ Lang::get('import::preview.col_status') }}</th>
+                            <x-core::th align="left">{{ Lang::get('import::preview.col_date') }}</x-core::th>
+                            <x-core::th align="left">{{ Lang::get('import::preview.col_funding_source') }}</x-core::th>
+                            <x-core::th align="left">{{ Lang::get('import::preview.col_counterparty') }}</x-core::th>
+                            <x-core::th align="right">{{ Lang::get('import::preview.col_amount') }}</x-core::th>
+                            <x-core::th align="left">{{ Lang::get('import::preview.col_status') }}</x-core::th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-200 bg-white dark:bg-slate-950 dark:divide-slate-700">

@@ -11,6 +11,7 @@ return [
     'rename' => 'Átnevezés',
     'confirm_delete' => 'Törlés megerősítése',
     'delete_scenario' => 'Forgatókönyv törlése',
+    'delete_confirm' => 'Törli ezt a forgatókönyvet?',
 
     'mutations_count' => 'Módosítások (:count)',
     'no_mutations' => 'Még nincs módosítás. Adj hozzá egyet alább, hogy lásd, hogyan viszonyul ez a forgatókönyv az alapesethez.',
@@ -67,6 +68,7 @@ return [
         'new_amount' => 'Új összeg',
         'new_next_date' => 'Új következő dátum',
         'scope' => 'Hatókör',
+        'scope_legend' => 'Mely előfordulások tolódjanak el',
         'scope_next' => 'Csak a következő előfordulás',
         'scope_all' => 'Az összes további előfordulás',
     ],

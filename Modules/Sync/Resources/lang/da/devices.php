@@ -16,6 +16,7 @@ return [
     'on' => 'Til',
     'securing' => 'Beskytter dine data…',
     'do_not_close' => 'Luk ikke dette vindue.',
+    'encryption_progress_aria' => 'Fremdrift for krypteringen',
     'not_encrypted_offer' => 'Dine data er ikke krypteret i hvile. Sæt kryptering op for at beskytte dem, hvis denne enhed bliver væk eller stjålet.',
     'enable_encryption' => 'Aktivér kryptering',
 

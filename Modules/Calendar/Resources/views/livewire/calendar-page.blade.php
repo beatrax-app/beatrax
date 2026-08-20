@@ -35,10 +35,7 @@
         <div class="cal-summary-strip" aria-live="polite" id="summary-strip">
             @if ($isComputingAny)
                 <span style="color: var(--color-text-faint);">
-                    <svg wire:loading class="inline-block h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                    </svg>
+                    <x-core::spinner wire:loading />
                     {{ Lang::get('calendar::messages.summary.computing') }}
                 </span>
             @else
@@ -133,19 +130,22 @@
 
     {{-- §7.1 Empty state --}}
     @if (!$hasEntries)
-        <div class="mb-6 rounded-lg border p-8" style="border-color: var(--color-border); background: var(--color-surface);">
-            <p class="font-semibold" style="color: var(--color-text);">{{ Lang::get('calendar::messages.empty.heading') }}</p>
-            <p class="mt-1 text-sm" style="color: var(--color-text-muted);">
-                {{ Lang::get('calendar::messages.empty.body') }}
-            </p>
+        <x-core::empty-state
+            class="mb-6"
+            :heading="Lang::get('calendar::messages.empty.heading')"
+            :body="Lang::get('calendar::messages.empty.body')"
+        >
+            {{-- The 44px floor in app.css covers <button> and <summary>, and
+                 the one way out of an empty calendar is a link — 20px tall on
+                 a phone. Spelled inline, as the month arrows above are. --}}
             <a
-                href="/recurring/review"
-                class="mt-3 inline-flex items-center text-sm font-medium underline-offset-2 hover:underline"
-                style="color: var(--color-text);"
+                href="{{ route('recurring.review') }}"
+                class="inline-flex items-center text-sm font-medium underline-offset-2 hover:underline"
+                style="color: var(--color-text); min-height: 44px;"
             >
                 {{ Lang::get('calendar::messages.empty.review') }}
             </a>
-        </div>
+        </x-core::empty-state>
     @endif
 
     {{-- §5 Calendar grid + §6.4 desktop right-rail day panel wrapper --}}

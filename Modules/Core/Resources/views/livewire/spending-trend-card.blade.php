@@ -2,8 +2,8 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    $fmt = static fn (int $minor): string => Money::ofMinor($minor, $trend->currency)->format('nl_NL');
-    $signed = static fn (int $minor): string => ($minor >= 0 ? '+' : '−').Money::ofMinor(abs($minor), $trend->currency)->format('nl_NL');
+    $fmt = static fn (int $minor): string => Money::ofMinor($minor, $trend->currency)->format();
+    $signed = static fn (int $minor): string => ($minor >= 0 ? '+' : '−').Money::ofMinor(abs($minor), $trend->currency)->format();
     // Spending more than last period reads as rose (worth noticing); less = emerald.
     $deltaClass = static fn (string $dir): string => match ($dir) {
         'up' => 'text-rose-600 dark:text-rose-400',
@@ -15,7 +15,7 @@
 
 <div>
     @if ($trend->hasComparison())
-        <section class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-950" aria-label="{{ Lang::get('core::spending_trend.aria') }}">
+        <x-core::card tag="section" aria-label="{{ Lang::get('core::spending_trend.aria') }}">
             <div class="flex items-baseline justify-between gap-4">
                 <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('core::spending_trend.heading') }}</h2>
                 <span class="text-xs text-slate-400 dark:text-slate-500">{{ Lang::get('core::spending_trend.vs', ['label' => $trend->previousLabel]) }}</span>
@@ -39,6 +39,6 @@
                     @endforeach
                 </ul>
             @endif
-        </section>
+        </x-core::card>
     @endif
 </div>

@@ -16,11 +16,9 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    $fmt = static fn (Money $money): string => $money->currency() === 'EUR'
-        ? $money->format('nl_NL')
-        : $money->format('en_US');
+    $fmt = static fn (Money $money): string => $money->format();
 
-    $eurFmt = static fn (int $minor): string => Money::ofMinor($minor, 'EUR')->format('nl_NL');
+    $eurFmt = static fn (int $minor): string => Money::ofMinor($minor, 'EUR')->format();
 
     $chartElementId = 'series-chart-'.$series->seriesId;
     $occurrenceCount = count($occurrences);

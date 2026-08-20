@@ -8,8 +8,6 @@ return [
     'error_enroll_failed' => 'Seade keeldus võtit salvestamast. Biomeetriline avamine pole saadaval.',
     'heading' => 'Rakenduse lukk',
 
-    // Seaded viitavad ainult edasi; juhtnupud ise asuvad
-    // sünkroonimisvaates aadressil /sync#app-lock.
     'moved_help' => 'Sinu PIN-kood, automaatse lukustuse aeg ja biomeetriline avamine asuvad selle seadme sünkroonimisseadetes.',
     'moved_cta' => 'Ava sünkroonimine ja seade',
 

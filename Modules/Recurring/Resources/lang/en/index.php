@@ -16,6 +16,7 @@ return [
     'empty' => [
         'heading' => 'No recurring activity yet',
         'before_link' => 'Approve detected suggestions on',
+        'link' => 'Review recurring',
         'after_link' => 'to see them here.',
     ],
 

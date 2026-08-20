@@ -13,7 +13,7 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    $fmt = static fn (int $minor): string => Money::ofMinor($minor, 'EUR')->format('nl_NL');
+    $fmt = static fn (int $minor): string => Money::ofMinor($minor, 'EUR')->format();
     $figureColour = $toBudgetMinor !== null && $toBudgetMinor < 0
         ? 'text-rose-600 dark:text-rose-400'
         : 'text-emerald-600 dark:text-emerald-400';

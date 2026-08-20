@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Pašalinti kategoriją',
         'keep_category' => 'Palikti šią kategoriją',
         'restore_single' => 'Atkurti kaip vieną kategoriją?',
+        'survivor_legend' => 'Kategorija, kurią palikti',
         'confirm_unsplit' => 'Taip, panaikinti padalijimą',
         'keep_split' => 'Palikti padalijimą',
     ],

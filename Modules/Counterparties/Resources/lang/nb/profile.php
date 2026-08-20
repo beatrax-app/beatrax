@@ -25,6 +25,8 @@ return [
         'tax_years' => 'Inntektsår',
     ],
 
+    'tablist_aria' => 'Motpartens seksjoner',
+
     'tab_note_personal' => '— ingen finansieringskjeder for private kontakter',
     'tab_note_bank' => '— en motpart for bankgebyrer genererer ikke finansieringskjeder',
     'tab_note_government' => '— ingen finansieringskjeder for offentlige motparter',

@@ -57,6 +57,7 @@ return [
         'meta_eur_equiv' => '(≈ :amount/yıl)',
         'cancel_impact' => 'Bunu iptal et → :amount/yıl tasarruf et',
         'cadence_flipped' => 'Sıklık değişti — şurada da görünüyor:',
+        'cadence_flipped_link' => 'Düzenli işlemleri gözden geçir',
         'acknowledge' => 'Onayla',
         'acknowledge_aria' => ':id numaralı sapma uyarısını onayla',
         'snooze' => 'Ertele ▾',

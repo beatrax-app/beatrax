@@ -72,13 +72,14 @@
     </header>
 
     @if ($trackedCount === 0)
-        <x-core::card>
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('drift-alerts::watch.empty_heading') }}</h2>
-            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+        <x-core::empty-state :heading="Lang::get('drift-alerts::watch.empty_heading')">
+            {{-- A slot, not the :body prop: the Recurring link finishes the
+                 sentence, and the prop escapes its value. --}}
+            <x-slot:body>
                 {{ Lang::get('drift-alerts::watch.empty_body') }}
                 <a href="{{ route('recurring.index') }}" class="text-slate-900 underline underline-offset-2 dark:text-slate-100">{{ Lang::get('drift-alerts::watch.empty_link') }}</a>.
-            </p>
-        </x-core::card>
+            </x-slot:body>
+        </x-core::empty-state>
     @else
         <ul class="space-y-2">
             @foreach ($rows as $row)

@@ -7,39 +7,33 @@
         />
 
         <form wire:submit="submit" class="space-y-4">
-            <div class="space-y-1">
-                <label for="current-password" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('auth::change_password.current_password') }}</label>
-                <input
-                    type="password"
-                    id="current-password"
-                    wire:model="currentPassword"
-                    autocomplete="current-password"
-                    autofocus
-                    class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
-                />
-            </div>
+            <x-core::form-field
+                field-id="current-password"
+                name="currentPassword"
+                type="password"
+                :label="Lang::get('auth::change_password.current_password')"
+                wire:model="currentPassword"
+                autocomplete="current-password"
+                autofocus
+            />
 
-            <div class="space-y-1">
-                <label for="new-password" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('auth::change_password.new_password') }}</label>
-                <input
-                    type="password"
-                    id="new-password"
-                    wire:model="newPassword"
-                    autocomplete="new-password"
-                    class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
-                />
-            </div>
+            <x-core::form-field
+                field-id="new-password"
+                name="newPassword"
+                type="password"
+                :label="Lang::get('auth::change_password.new_password')"
+                wire:model="newPassword"
+                autocomplete="new-password"
+            />
 
-            <div class="space-y-1">
-                <label for="new-password-confirmation" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('auth::change_password.confirm_new_password') }}</label>
-                <input
-                    type="password"
-                    id="new-password-confirmation"
-                    wire:model="newPasswordConfirmation"
-                    autocomplete="new-password"
-                    class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
-                />
-            </div>
+            <x-core::form-field
+                field-id="new-password-confirmation"
+                name="newPasswordConfirmation"
+                type="password"
+                :label="Lang::get('auth::change_password.confirm_new_password')"
+                wire:model="newPasswordConfirmation"
+                autocomplete="new-password"
+            />
 
             @if ($flashMessage !== '')
                 <p class="text-sm text-rose-600 dark:text-rose-500">{{ $flashMessage }}</p>

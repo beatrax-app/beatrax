@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Usuń kategorię',
         'keep_category' => 'Zachowaj tę kategorię',
         'restore_single' => 'Przywrócić jako pojedynczą kategorię?',
+        'survivor_legend' => 'Kategoria do zachowania',
         'confirm_unsplit' => 'Tak, cofnij podział',
         'keep_split' => 'Zachowaj podział',
     ],

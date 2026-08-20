@@ -2,7 +2,7 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    $fmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)->format('nl_NL');
+    $fmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)->format();
 @endphp
 
 <div class="space-y-6">

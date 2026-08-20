@@ -16,6 +16,7 @@ return [
     'on' => 'Aan',
     'securing' => 'Je gegevens worden beveiligd…',
     'do_not_close' => 'Sluit dit venster niet.',
+    'encryption_progress_aria' => 'Voortgang versleuteling',
     'not_encrypted_offer' => 'Je gegevens zijn niet versleuteld opgeslagen. Stel versleuteling in om ze te beschermen als dit apparaat verloren of gestolen raakt.',
     'enable_encryption' => 'Versleuteling inschakelen',
 

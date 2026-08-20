@@ -55,9 +55,9 @@
                     {{-- Said plainly rather than discovered: a translation that
                          reads slightly off is easier to forgive, and far easier
                          to fix, once you know where it came from. --}}
-                    <p class="mt-3 max-w-prose rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+                    <x-core::alert tone="warning" class="mt-3 max-w-prose">
                         {{ Lang::get('community::index.translations_ai_notice') }}
-                    </p>
+                    </x-core::alert>
                     <p class="mt-3 max-w-prose text-sm text-slate-500 dark:text-slate-400">
                         {{ Lang::get('community::index.translations_how') }}
                     </p>

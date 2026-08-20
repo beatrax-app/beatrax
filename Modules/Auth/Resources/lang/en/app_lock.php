@@ -8,8 +8,6 @@ return [
     'error_enroll_failed' => 'Your device declined to store the key. Biometric unlock is unavailable.',
     'heading' => 'App lock',
 
-    // Settings keeps a pointer only; the controls themselves live on the
-    // sync surface at /sync#app-lock.
     'moved_help' => "Your PIN, auto-lock timing and biometric unlock live with this device's sync settings.",
     'moved_cta' => 'Open Sync & Device',
 

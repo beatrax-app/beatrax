@@ -33,15 +33,13 @@
         :label="Lang::get('auth::app_lock.toggle_label')"
         :description="Lang::get('auth::app_lock.toggle_description')"
     >
-        <button
-            type="button"
+        {{-- Empty wire:click when off on purpose: enabling needs the PIN fields
+             and the account password, so the setup panel below does it. --}}
+        <x-core::switch
+            :on="$lockEnabled"
+            :label="Lang::get('auth::app_lock.toggle_label')"
             wire:click="{{ $lockEnabled ? 'confirmDisable' : '' }}"
-            class="switch{{ $lockEnabled ? ' switch--on' : '' }}"
-            aria-pressed="{{ $lockEnabled ? 'true' : 'false' }}"
-            aria-label="{{ Lang::get('auth::app_lock.toggle_label') }}"
-        >
-            <span class="switch__thumb"></span>
-        </button>
+        />
     </x-core::setting-row>
 
     {{-- ===== 3b: PIN setup (shown when lock is not yet enabled) ===== --}}
@@ -50,61 +48,48 @@
             <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('auth::app_lock.setup_heading') }}</h3>
 
             <div class="space-y-3">
-                <div class="space-y-1">
-                    <label for="new-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('auth::app_lock.new_pin_label') }}</label>
-                    <input
-                        id="new-pin-input"
-                        type="password"
-                        inputmode="numeric"
-                        autocomplete="new-password"
-                        wire:model="newPin"
-                        placeholder="········"
-                        class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-base text-slate-900
-                               focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                               dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus-visible:ring-slate-100"
-                    />
-                    @error('newPin')
-                        <p class="text-sm text-rose-600 dark:text-rose-400">{{ $message }}</p>
-                    @enderror
-                </div>
+                <x-core::form-field
+                    :label="Lang::get('auth::app_lock.new_pin_label')"
+                    name="newPin"
+                    field-id="new-pin-input"
+                    type="password"
+                    size="base"
+                    inputmode="numeric"
+                    autocomplete="new-password"
+                    wire:model="newPin"
+                    placeholder="········"
+                />
 
-                <div class="space-y-1">
-                    <label for="confirm-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('auth::app_lock.confirm_pin_label') }}</label>
-                    <input
-                        id="confirm-pin-input"
-                        type="password"
-                        inputmode="numeric"
-                        autocomplete="new-password"
-                        wire:model="confirmPin"
-                        placeholder="········"
-                        class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-base text-slate-900
-                               focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                               dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus-visible:ring-slate-100"
-                    />
-                    @error('confirmPin')
-                        <p class="text-sm text-rose-600 dark:text-rose-400">{{ $message }}</p>
-                    @enderror
-                </div>
+                <x-core::form-field
+                    :label="Lang::get('auth::app_lock.confirm_pin_label')"
+                    name="confirmPin"
+                    field-id="confirm-pin-input"
+                    type="password"
+                    size="base"
+                    inputmode="numeric"
+                    autocomplete="new-password"
+                    wire:model="confirmPin"
+                    placeholder="········"
+                />
 
-                <div class="space-y-1">
-                    <label for="account-password-input" class="block text-sm text-slate-700 dark:text-slate-300">
+                {{-- The "we never store it" note is set inside the label, not
+                     under the field, so it is read out as part of the label
+                     rather than as a separate hint. That needs markup, so the
+                     label goes as a slot. --}}
+                <x-core::form-field
+                    name="accountPassword"
+                    field-id="account-password-input"
+                    type="password"
+                    size="base"
+                    autocomplete="current-password"
+                    wire:model="accountPassword"
+                    placeholder="{{ Lang::get('auth::app_lock.account_password_placeholder') }}"
+                >
+                    <x-slot:label>
                         {{ Lang::get('auth::app_lock.account_password_label') }}
                         <span class="ml-1 text-xs text-slate-400">{{ Lang::get('auth::app_lock.account_password_note') }}</span>
-                    </label>
-                    <input
-                        id="account-password-input"
-                        type="password"
-                        autocomplete="current-password"
-                        wire:model="accountPassword"
-                        placeholder="{{ Lang::get('auth::app_lock.account_password_placeholder') }}"
-                        class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-base text-slate-900
-                               focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                               dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus-visible:ring-slate-100"
-                    />
-                    @error('accountPassword')
-                        <p class="text-sm text-rose-600 dark:text-rose-400">{{ $message }}</p>
-                    @enderror
-                </div>
+                    </x-slot:label>
+                </x-core::form-field>
 
                 <button
                     type="button"
@@ -223,20 +208,17 @@
                     <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">
                         {{ Lang::get('auth::app_lock.deenroll_modal_heading') }}
                     </h3>
-                    <div class="space-y-1">
-                        <label for="deenroll-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('auth::app_lock.current_pin_label') }}</label>
-                        <input
-                            id="deenroll-pin-input"
-                            type="password"
-                            inputmode="numeric"
-                            autocomplete="off"
-                            wire:model="deenrollPin"
-                            placeholder="········"
-                            class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-base text-slate-900
-                                   focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                                   dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus-visible:ring-slate-100"
-                        />
-                    </div>
+                    <x-core::form-field
+                        :label="Lang::get('auth::app_lock.current_pin_label')"
+                        name="deenrollPin"
+                        field-id="deenroll-pin-input"
+                        type="password"
+                        size="base"
+                        inputmode="numeric"
+                        autocomplete="off"
+                        wire:model="deenrollPin"
+                        placeholder="········"
+                    />
                     <div class="flex gap-3">
                         <button
                             type="button"
@@ -289,20 +271,17 @@
                 <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">
                     {{ Lang::get('auth::app_lock.disable_modal_heading') }}
                 </h3>
-                <div class="space-y-1">
-                    <label for="disable-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('auth::app_lock.current_pin_label') }}</label>
-                    <input
-                        id="disable-pin-input"
-                        type="password"
-                        inputmode="numeric"
-                        autocomplete="off"
-                        wire:model="currentPin"
-                        placeholder="········"
-                        class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-base text-slate-900
-                               focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                               dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus-visible:ring-slate-100"
-                    />
-                </div>
+                <x-core::form-field
+                    :label="Lang::get('auth::app_lock.current_pin_label')"
+                    name="currentPin"
+                    field-id="disable-pin-input"
+                    type="password"
+                    size="base"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    wire:model="currentPin"
+                    placeholder="········"
+                />
                 <div class="flex gap-3">
                     <button
                         type="button"
@@ -338,47 +317,38 @@
                     {{ Lang::get('auth::app_lock.forgot_modal_body') }}
                 </p>
                 <div class="space-y-3">
-                    <div class="space-y-1">
-                        <label for="forgot-account-password-input" class="block text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('auth::app_lock.account_password_label') }}</label>
-                        <input
-                            id="forgot-account-password-input"
-                            type="password"
-                            autocomplete="current-password"
-                            wire:model="accountPassword"
-                            placeholder="{{ Lang::get('auth::app_lock.account_password_placeholder') }}"
-                            class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-base text-slate-900
-                                   focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                                   dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus-visible:ring-slate-100"
-                        />
-                    </div>
-                    <div class="space-y-1">
-                        <label for="forgot-new-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('auth::app_lock.new_pin_label') }}</label>
-                        <input
-                            id="forgot-new-pin-input"
-                            type="password"
-                            inputmode="numeric"
-                            autocomplete="new-password"
-                            wire:model="newPin"
-                            placeholder="········"
-                            class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-base text-slate-900
-                                   focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                                   dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus-visible:ring-slate-100"
-                        />
-                    </div>
-                    <div class="space-y-1">
-                        <label for="forgot-confirm-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('auth::app_lock.confirm_new_pin_label') }}</label>
-                        <input
-                            id="forgot-confirm-pin-input"
-                            type="password"
-                            inputmode="numeric"
-                            autocomplete="new-password"
-                            wire:model="confirmPin"
-                            placeholder="········"
-                            class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-base text-slate-900
-                                   focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                                   dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus-visible:ring-slate-100"
-                        />
-                    </div>
+                    <x-core::form-field
+                        :label="Lang::get('auth::app_lock.account_password_label')"
+                        name="accountPassword"
+                        field-id="forgot-account-password-input"
+                        type="password"
+                        size="base"
+                        autocomplete="current-password"
+                        wire:model="accountPassword"
+                        placeholder="{{ Lang::get('auth::app_lock.account_password_placeholder') }}"
+                    />
+                    <x-core::form-field
+                        :label="Lang::get('auth::app_lock.new_pin_label')"
+                        name="newPin"
+                        field-id="forgot-new-pin-input"
+                        type="password"
+                        size="base"
+                        inputmode="numeric"
+                        autocomplete="new-password"
+                        wire:model="newPin"
+                        placeholder="········"
+                    />
+                    <x-core::form-field
+                        :label="Lang::get('auth::app_lock.confirm_new_pin_label')"
+                        name="confirmPin"
+                        field-id="forgot-confirm-pin-input"
+                        type="password"
+                        size="base"
+                        inputmode="numeric"
+                        autocomplete="new-password"
+                        wire:model="confirmPin"
+                        placeholder="········"
+                    />
                 </div>
                 <div class="flex gap-3">
                     <button
@@ -412,48 +382,39 @@
                     {{ Lang::get('auth::app_lock.change_modal_heading') }}
                 </h3>
                 <div class="space-y-3">
-                    <div class="space-y-1">
-                        <label for="change-current-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('auth::app_lock.current_pin_label') }}</label>
-                        <input
-                            id="change-current-pin-input"
-                            type="password"
-                            inputmode="numeric"
-                            autocomplete="off"
-                            wire:model="currentPin"
-                            placeholder="········"
-                            class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-base text-slate-900
-                                   focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                                   dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus-visible:ring-slate-100"
-                        />
-                    </div>
-                    <div class="space-y-1">
-                        <label for="change-new-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('auth::app_lock.new_pin_label') }}</label>
-                        <input
-                            id="change-new-pin-input"
-                            type="password"
-                            inputmode="numeric"
-                            autocomplete="new-password"
-                            wire:model="newPin"
-                            placeholder="········"
-                            class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-base text-slate-900
-                                   focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                                   dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus-visible:ring-slate-100"
-                        />
-                    </div>
-                    <div class="space-y-1">
-                        <label for="change-confirm-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('auth::app_lock.confirm_new_pin_label') }}</label>
-                        <input
-                            id="change-confirm-pin-input"
-                            type="password"
-                            inputmode="numeric"
-                            autocomplete="new-password"
-                            wire:model="confirmPin"
-                            placeholder="········"
-                            class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-base text-slate-900
-                                   focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                                   dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus-visible:ring-slate-100"
-                        />
-                    </div>
+                    <x-core::form-field
+                        :label="Lang::get('auth::app_lock.current_pin_label')"
+                        name="currentPin"
+                        field-id="change-current-pin-input"
+                        type="password"
+                        size="base"
+                        inputmode="numeric"
+                        autocomplete="off"
+                        wire:model="currentPin"
+                        placeholder="········"
+                    />
+                    <x-core::form-field
+                        :label="Lang::get('auth::app_lock.new_pin_label')"
+                        name="newPin"
+                        field-id="change-new-pin-input"
+                        type="password"
+                        size="base"
+                        inputmode="numeric"
+                        autocomplete="new-password"
+                        wire:model="newPin"
+                        placeholder="········"
+                    />
+                    <x-core::form-field
+                        :label="Lang::get('auth::app_lock.confirm_new_pin_label')"
+                        name="confirmPin"
+                        field-id="change-confirm-pin-input"
+                        type="password"
+                        size="base"
+                        inputmode="numeric"
+                        autocomplete="new-password"
+                        wire:model="confirmPin"
+                        placeholder="········"
+                    />
                 </div>
                 <div class="flex gap-3">
                     <button

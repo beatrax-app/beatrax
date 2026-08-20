@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Supprimer la catégorie',
         'keep_category' => 'Garder cette catégorie',
         'restore_single' => 'Rétablir en une seule catégorie ?',
+        'survivor_legend' => 'Catégorie à conserver',
         'confirm_unsplit' => 'Oui, annuler la ventilation',
         'keep_split' => 'Garder la ventilation',
     ],

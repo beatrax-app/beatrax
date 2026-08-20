@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Odstrániť kategóriu',
         'keep_category' => 'Ponechať túto kategóriu',
         'restore_single' => 'Obnoviť ako jednu kategóriu?',
+        'survivor_legend' => 'Kategória, ktorá zostane',
         'confirm_unsplit' => 'Áno, zrušiť rozdelenie',
         'keep_split' => 'Ponechať rozdelenie',
     ],

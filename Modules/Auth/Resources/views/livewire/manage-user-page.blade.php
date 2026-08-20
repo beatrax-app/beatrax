@@ -24,16 +24,14 @@
         <div x-show="open" x-cloak class="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-4 dark:bg-slate-900 dark:border-slate-700">
             <p id="set-password-body" class="text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('auth::manage_user.set_password.body', ['name' => $partnerUsername]) }}</p>
 
-            <div class="space-y-1">
-                <label for="new-partner-password" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('auth::manage_user.set_password.label') }}</label>
-                <input
-                    type="password"
-                    id="new-partner-password"
-                    wire:model="newPartnerPassword"
-                    autocomplete="new-password"
-                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
-                />
-            </div>
+            <x-core::form-field
+                field-id="new-partner-password"
+                name="newPartnerPassword"
+                type="password"
+                :label="Lang::get('auth::manage_user.set_password.label')"
+                wire:model="newPartnerPassword"
+                autocomplete="new-password"
+            />
 
             <div class="flex items-center gap-2">
                 <button
@@ -68,19 +66,18 @@
             {{ Lang::get('auth::manage_user.regenerate.open') }}
         </button>
 
-        <div x-show="open" x-cloak class="space-y-3 rounded-md border border-rose-200 bg-rose-50 p-4 dark:bg-rose-950">
+        <x-core::alert tone="danger" class="space-y-3" x-show="open" x-cloak>
             <p id="regenerate-body" class="text-sm text-rose-900 dark:text-rose-200">{{ Lang::get('auth::manage_user.regenerate.body') }}</p>
 
-            <div class="space-y-1">
-                <label for="confirm-username" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('auth::manage_user.regenerate.confirm_label') }}</label>
-                <input
-                    type="text"
-                    id="confirm-username"
-                    x-model="typed"
-                    autocomplete="off"
-                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
-                />
-            </div>
+            {{-- x-model, not wire:model: the typed name never leaves the
+                 browser, it only unlocks the button next to it. --}}
+            <x-core::form-field
+                field-id="confirm-username"
+                name="confirmUsername"
+                :label="Lang::get('auth::manage_user.regenerate.confirm_label')"
+                x-model="typed"
+                autocomplete="off"
+            />
 
             <div class="flex items-center gap-2">
                 <button
@@ -101,7 +98,7 @@
                     {{ Lang::get('auth::manage_user.regenerate.keep') }}
                 </button>
             </div>
-        </div>
+        </x-core::alert>
 
         @if ($regeneratedCodes !== [])
             <div class="space-y-3 pt-2">

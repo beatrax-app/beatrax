@@ -15,45 +15,37 @@
         />
 
         <form wire:submit="submit" class="space-y-4">
-            <div class="space-y-1">
-                <label for="username" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('auth::signup.username') }}</label>
-                <input
-                    type="text"
-                    id="username"
-                    wire:model="username"
-                    autocomplete="username"
-                    autofocus
-                    aria-describedby="username-hint"
-                    class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
-                />
-                <p id="username-hint" class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('auth::signup.username_hint') }}</p>
-            </div>
+            <x-core::form-field
+                name="username"
+                :label="Lang::get('auth::signup.username')"
+                :hint="Lang::get('auth::signup.username_hint')"
+                wire:model="username"
+                autocomplete="username"
+                autofocus
+            />
 
-            <div class="space-y-1">
-                <label for="password" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('auth::signup.password') }}</label>
-                <input
-                    type="password"
-                    id="password"
-                    wire:model="password"
-                    x-on:input="pw = $event.target.value"
-                    autocomplete="new-password"
-                    aria-describedby="password-requirements"
-                    class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
-                />
-                <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('auth::signup.password_hint') }}</p>
-            </div>
+            {{-- aria-describedby names the live checklist below; the component
+                 appends its own hint id, so the field points at both. --}}
+            <x-core::form-field
+                name="password"
+                type="password"
+                :label="Lang::get('auth::signup.password')"
+                :hint="Lang::get('auth::signup.password_hint')"
+                wire:model="password"
+                x-on:input="pw = $event.target.value"
+                autocomplete="new-password"
+                aria-describedby="password-requirements"
+            />
 
-            <div class="space-y-1">
-                <label for="password-confirmation" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('auth::signup.confirm_password') }}</label>
-                <input
-                    type="password"
-                    id="password-confirmation"
-                    wire:model="passwordConfirmation"
-                    x-on:input="pwc = $event.target.value"
-                    autocomplete="new-password"
-                    class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
-                />
-            </div>
+            <x-core::form-field
+                field-id="password-confirmation"
+                name="passwordConfirmation"
+                type="password"
+                :label="Lang::get('auth::signup.confirm_password')"
+                wire:model="passwordConfirmation"
+                x-on:input="pwc = $event.target.value"
+                autocomplete="new-password"
+            />
 
             {{-- Live requirement checklist — each row ticks as the field is typed (client-side, no roundtrip). --}}
             <ul id="password-requirements" class="space-y-1.5" aria-live="polite" aria-label="{{ Lang::get('auth::signup.requirements_aria') }}">

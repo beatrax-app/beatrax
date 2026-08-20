@@ -57,6 +57,7 @@ return [
         'meta_eur_equiv' => '(≈ :amount/m.)',
         'cancel_impact' => 'Nutrauk tai → sutaupysi :amount/m.',
         'cadence_flipped' => 'Dažnumas pasikeitė — taip pat rodoma čia:',
+        'cadence_flipped_link' => 'Peržiūrėti pasikartojančius',
         'acknowledge' => 'Patvirtinti',
         'acknowledge_aria' => 'Patvirtinti pokyčio įspėjimą :id',
         'snooze' => 'Atidėti ▾',

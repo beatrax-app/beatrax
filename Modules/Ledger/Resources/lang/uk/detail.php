@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Прибрати категорію',
         'keep_category' => 'Залишити цю категорію',
         'restore_single' => 'Відновити як одну категорію?',
+        'survivor_legend' => 'Категорія, яку залишити',
         'confirm_unsplit' => 'Так, скасувати розподіл',
         'keep_split' => 'Залишити розподіл',
     ],

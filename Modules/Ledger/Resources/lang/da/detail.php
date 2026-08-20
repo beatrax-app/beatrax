@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Fjern kategori',
         'keep_category' => 'Behold denne kategori',
         'restore_single' => 'Gendan som én kategori?',
+        'survivor_legend' => 'Kategori der beholdes',
         'confirm_unsplit' => 'Ja, ophæv opdelingen',
         'keep_split' => 'Behold opdelingen',
     ],

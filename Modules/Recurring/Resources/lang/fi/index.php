@@ -16,6 +16,7 @@ return [
     'empty' => [
         'heading' => 'Ei vielä toistuvaa toimintaa',
         'before_link' => 'Hyväksy tunnistetut ehdotukset sivulla',
+        'link' => 'Tarkista toistuvat',
         'after_link' => 'ja ne näkyvät tässä.',
     ],
 

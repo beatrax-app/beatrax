@@ -18,7 +18,7 @@
     // in original-currency minor units; the tile presents the absolute
     // magnitude in EUR so it reads as "potential annualized cost".
     $eurMagnitude = abs((int) $totalAnnualizedImpact);
-    $eurFormatted = Money::ofMinor($eurMagnitude, 'EUR')->format('nl_NL');
+    $eurFormatted = Money::ofMinor($eurMagnitude, 'EUR')->format();
 @endphp
 
 <div>

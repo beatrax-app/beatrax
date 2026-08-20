@@ -57,6 +57,7 @@ return [
         'meta_eur_equiv' => '(≈ :amount/rok)',
         'cancel_impact' => 'Zruš to → ušetríš :amount/rok',
         'cadence_flipped' => 'Zmena frekvencie — zobrazuje sa aj v',
+        'cadence_flipped_link' => 'Kontrola opakovaných',
         'acknowledge' => 'Potvrdiť',
         'acknowledge_aria' => 'Potvrdiť upozornenie na odchýlku :id',
         'snooze' => 'Odložiť ▾',

@@ -16,7 +16,7 @@
 
 @use('Modules\Core\Public\Support\Lang')
 <div>
-    <flux:modal name="backfill-window-{{ $inboxId ?? 0 }}" class="md:max-w-lg" dismissible="true">
+    <flux:modal name="backfill-window-{{ $inboxId ?? 0 }}" class="md:max-w-lg" :dismissible="true">
         <div class="space-y-6">
             <flux:heading size="lg">{{ Lang::get('email-scan::backfill.heading') }}</flux:heading>
 

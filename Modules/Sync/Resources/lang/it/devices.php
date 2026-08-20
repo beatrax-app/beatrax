@@ -16,6 +16,7 @@ return [
     'on' => 'Attivo',
     'securing' => 'Protezione dei tuoi dati…',
     'do_not_close' => 'Non chiudere questa finestra.',
+    'encryption_progress_aria' => 'Avanzamento della crittografia',
     'not_encrypted_offer' => 'I tuoi dati non sono crittografati a riposo. Configura la crittografia per proteggerli se questo dispositivo viene smarrito o rubato.',
     'enable_encryption' => 'Attiva la crittografia',
 

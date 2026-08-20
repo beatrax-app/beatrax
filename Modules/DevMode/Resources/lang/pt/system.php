@@ -7,6 +7,10 @@ return [
 
     'subtitle_html' => 'Ambiente + runtime + configuração efetiva. As chaves sensíveis (sufixos <code class="font-mono text-xs">*password*</code>, <code class="font-mono text-xs">*secret*</code>, <code class="font-mono text-xs">*key</code>, <code class="font-mono text-xs">*token*</code>) são mascaradas.',
     'php' => 'PHP',
+    'php_version' => 'versão',
+    'php_sapi' => 'sapi',
+    'php_ini_path' => 'caminho ini',
+    'php_extensions' => 'extensões',
     'laravel' => 'Laravel',
     'sqlite' => 'SQLite',
     'sqlite_file' => 'ficheiro',

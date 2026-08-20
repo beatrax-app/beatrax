@@ -8,8 +8,6 @@ return [
     'error_enroll_failed' => 'Tvoja naprava je zavrnila shranjevanje ključa. Biometrično odklepanje ni na voljo.',
     'heading' => 'Zaklepanje aplikacije',
 
-    // Settings keeps a pointer only; the controls themselves live on the
-    // sync surface at /sync#app-lock.
     'moved_help' => 'Tvoj PIN, čas samodejnega zaklepanja in biometrično odklepanje so pri nastavitvah sinhronizacije te naprave.',
     'moved_cta' => 'Odpri Sinhronizacijo in napravo',
 

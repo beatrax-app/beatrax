@@ -16,6 +16,7 @@ return [
     'empty' => [
         'heading' => 'Noch keine wiederkehrende Aktivität',
         'before_link' => 'Bestätige erkannte Vorschläge unter',
+        'link' => 'Wiederkehrendes prüfen',
         'after_link' => 'und sie erscheinen hier.',
     ],
 

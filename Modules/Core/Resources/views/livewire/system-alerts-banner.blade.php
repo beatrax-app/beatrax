@@ -52,7 +52,7 @@
     @foreach ($alerts as $alert)
         @switch ($alert->severity)
             @case ('critical')
-                <div role="alert" class="rounded-lg border border-rose-500 bg-rose-50 text-rose-900 p-4 dark:bg-rose-950 dark:text-rose-200 dark:border-rose-800">
+                <x-core::alert tone="danger" role="alert">
                     <div class="flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-4">
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-medium">@include('core::livewire.partials.system-alert-message', ['alert' => $alert])</p>
@@ -66,10 +66,10 @@
                             @include('core::livewire.partials.system-alert-actions', ['alert' => $alert])
                         </div>
                     </div>
-                </div>
+                </x-core::alert>
                 @break
             @case ('warning')
-                <div aria-live="polite" aria-atomic="true" class="rounded-lg border border-amber-300 bg-amber-50 text-amber-900 p-4 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800">
+                <x-core::alert tone="warning" aria-live="polite" aria-atomic="true">
                     <div class="flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-4">
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-medium">@include('core::livewire.partials.system-alert-message', ['alert' => $alert])</p>
@@ -83,10 +83,10 @@
                             @include('core::livewire.partials.system-alert-actions', ['alert' => $alert])
                         </div>
                     </div>
-                </div>
+                </x-core::alert>
                 @break
             @default
-                <div aria-live="polite" aria-atomic="true" class="rounded-lg border border-slate-200 bg-slate-50 text-slate-700 p-4 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-700">
+                <x-core::alert tone="neutral" aria-live="polite" aria-atomic="true">
                     <div class="flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-4">
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-medium">@include('core::livewire.partials.system-alert-message', ['alert' => $alert])</p>
@@ -100,7 +100,7 @@
                             @include('core::livewire.partials.system-alert-actions', ['alert' => $alert])
                         </div>
                     </div>
-                </div>
+                </x-core::alert>
         @endswitch
     @endforeach
 </section>

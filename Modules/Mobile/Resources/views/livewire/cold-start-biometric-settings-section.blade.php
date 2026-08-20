@@ -11,6 +11,7 @@
       - Empty state (no vault): "Biometric unlock is only available in the
         Beatrax mobile app."
 --}}
+@use('Illuminate\View\ComponentAttributeBag')
 @use('Modules\Core\Public\Support\Lang')
 
 <div class="space-y-6">
@@ -29,32 +30,40 @@
             :label="Lang::get('mobile::biometric.toggle_label')"
             :description="Lang::get('mobile::biometric.toggle_help')"
         >
-            <button
-                type="button"
-                @if ($enrolled) wire:click="disable" @endif
-                class="switch{{ $enrolled ? ' switch--on' : '' }}"
-                aria-pressed="{{ $enrolled ? 'true' : 'false' }}"
-                aria-label="{{ Lang::get('mobile::biometric.toggle_aria') }}"
-            >
-                <span class="switch__thumb"></span>
-            </button>
+            {{-- Turning biometrics ON is the PIN panel's job below, so only the
+                 enrolled toggle carries a handler. Blade does not parse an @if
+                 between the attributes of an <x-…> tag, hence the bag. --}}
+            @php
+                $biometricToggleAction = new ComponentAttributeBag($enrolled ? ['wire:click' => 'disable'] : []);
+            @endphp
+            <x-core::switch
+                :on="$enrolled"
+                :label="Lang::get('mobile::biometric.toggle_aria')"
+                :attributes="$biometricToggleAction"
+            />
         </x-core::setting-row>
 
         @unless ($enrolled)
-            <div class="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
+            {{-- One step darker than the usual sub-panel fill: the PIN field
+                 inside is bg-slate-50 / dark:bg-slate-900, the exact slate this
+                 panel used to be, so a 1px border was all that separated the
+                 control from its container. --}}
+            <div class="space-y-4 rounded-xl border border-slate-200 bg-slate-100 p-4 dark:border-slate-700 dark:bg-slate-800">
                 <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::biometric.confirm_pin_heading') }}</h3>
 
-                <div class="space-y-1">
-                    <label for="cold-start-pin" class="block text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('mobile::biometric.current_pin') }}</label>
-                    <input
-                        id="cold-start-pin"
-                        type="password"
-                        inputmode="numeric"
-                        autocomplete="off"
-                        wire:model="pin"
-                        class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 tabular-nums focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
-                    />
-                </div>
+                {{-- tabular-nums ADDS to the component's control classes rather
+                     than contradicting one, which is the only kind of class this
+                     field may pass: digits typed into a PIN should not reflow. --}}
+                <x-core::form-field
+                    :label="Lang::get('mobile::biometric.current_pin')"
+                    name="pin"
+                    field-id="cold-start-pin"
+                    type="password"
+                    class="tabular-nums"
+                    inputmode="numeric"
+                    wire:model="pin"
+                    autocomplete="off"
+                />
 
                 <button
                     type="button"

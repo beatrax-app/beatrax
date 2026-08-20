@@ -19,7 +19,7 @@
 @endphp
 
 <div>
-    <flux:modal :name="$modalName" class="md:max-w-lg" dismissible="false">
+    <flux:modal :name="$modalName" class="md:max-w-lg" :dismissible="false">
         <div class="space-y-6">
             <flux:heading size="lg">{{ $title }}</flux:heading>
 

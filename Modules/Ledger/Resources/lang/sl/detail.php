@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Odstrani kategorijo',
         'keep_category' => 'Obdrži to kategorijo',
         'restore_single' => 'Obnoviti kot eno samo kategorijo?',
+        'survivor_legend' => 'Kategorija, ki ostane',
         'confirm_unsplit' => 'Da, razveljavi razdelitev',
         'keep_split' => 'Obdrži razdelitev',
     ],

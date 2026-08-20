@@ -42,19 +42,19 @@
         </flux:heading>
 
         @if ($tree === null)
-            <div class="px-6 pt-md">
-                <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('chains::drawer.unresolved_heading') }}</h3>
-                <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                    {{ Lang::get('chains::drawer.unresolved_body') }}
-                </p>
-            </div>
+            <x-core::empty-state
+                level="h3"
+                class="mx-6 mt-md"
+                :heading="Lang::get('chains::drawer.unresolved_heading')"
+                :body="Lang::get('chains::drawer.unresolved_body')"
+            />
         @elseif (count($tree->nodes) === 0)
-            <div class="px-6 pt-md">
-                <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('chains::drawer.none_heading') }}</h3>
-                <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                    {{ Lang::get('chains::drawer.none_body') }}
-                </p>
-            </div>
+            <x-core::empty-state
+                level="h3"
+                class="mx-6 mt-md"
+                :heading="Lang::get('chains::drawer.none_heading')"
+                :body="Lang::get('chains::drawer.none_body')"
+            />
         @elseif (count($tree->nodes) === 1)
             {{-- Only the root node walked back — no funder leg followed. --}}
             {{-- overflow-x-scroll-wrapper ensures chain-node inner content scrolls horizontally at phone width --}}

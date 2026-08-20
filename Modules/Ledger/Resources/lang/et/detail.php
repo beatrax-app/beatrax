@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Eemalda kategooria',
         'keep_category' => 'Jäta see kategooria alles',
         'restore_single' => 'Kas taastada ühe kategooriaga?',
+        'survivor_legend' => 'Kategooria, mis jääb alles',
         'confirm_unsplit' => 'Jah, tühista jaotus',
         'keep_split' => 'Jäta jaotus alles',
     ],

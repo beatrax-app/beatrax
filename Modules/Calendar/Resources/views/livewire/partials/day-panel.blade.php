@@ -73,17 +73,19 @@
                                 {{ Lang::get('calendar::messages.panel.date_approximate') }}
                             </div>
                         @endif
-                        {{-- Drill-through links (CAL-03) --}}
+                        {{-- Drill-through links (CAL-03). route(), not a path
+                             built by hand: it encodes the slug, which arrived
+                             here as stored data. --}}
                         <div class="mt-1 flex flex-wrap gap-2 text-xs" style="color: var(--color-text-muted);">
                             <a
-                                href="/recurring/series/{{ $entry->seriesId }}"
+                                href="{{ route('recurring.series.show', ['seriesId' => $entry->seriesId]) }}"
                                 class="font-medium underline-offset-2 hover:underline"
                                 style="color: var(--color-text-muted);"
                                 wire:navigate
                             >{{ Lang::get('calendar::messages.panel.series') }}</a>
                             @if ($entry->counterpartySlug !== null)
                                 <a
-                                    href="/counterparties/{{ $entry->counterpartySlug }}"
+                                    href="{{ route('counterparties.profile', ['slug' => $entry->counterpartySlug]) }}"
                                     class="font-medium underline-offset-2 hover:underline"
                                     style="color: var(--color-text-muted);"
                                     wire:navigate

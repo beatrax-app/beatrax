@@ -11,6 +11,7 @@ return [
     'rename' => 'Redenumește',
     'confirm_delete' => 'Confirmă ștergerea',
     'delete_scenario' => 'Șterge scenariul',
+    'delete_confirm' => 'Ștergi acest scenariu?',
 
     'mutations_count' => 'Modificări (:count)',
     'no_mutations' => 'Nicio modificare deocamdată. Adaugă una mai jos ca să vezi cum se compară acest scenariu cu scenariul de bază.',
@@ -67,6 +68,7 @@ return [
         'new_amount' => 'Sumă nouă',
         'new_next_date' => 'Noua dată următoare',
         'scope' => 'Domeniu',
+        'scope_legend' => 'Care apariții se mută',
         'scope_next' => 'Doar următoarea apariție',
         'scope_all' => 'Toate aparițiile ulterioare',
     ],

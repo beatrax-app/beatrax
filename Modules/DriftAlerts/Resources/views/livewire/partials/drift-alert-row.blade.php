@@ -69,12 +69,15 @@
                 @endif
             </p>
             @if ($seriesState === 'cadence_changed')
+                {{-- This read "/recurring/review": a route path shown as prose,
+                     and the one untranslated fragment in a localised sentence.
+                     The link text is the destination page's own title. --}}
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                     {{ Lang::get('drift-alerts::alerts.row.cadence_flipped') }}
                     <a
                         href="{{ route('recurring.review') }}"
                         class="text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:text-slate-100 dark:hover:text-slate-300"
-                    >/recurring/review</a>
+                    >{{ Lang::get('drift-alerts::alerts.row.cadence_flipped_link') }}</a>
                 </p>
             @endif
         </div>

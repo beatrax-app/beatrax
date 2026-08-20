@@ -11,7 +11,7 @@
      the current step's content and controls render. --}}
 
 <div>
-    <flux:modal wire:key="open-banking-wizard" name="open-banking-wizard" class="md:max-w-2xl" dismissible="false">
+    <flux:modal wire:key="open-banking-wizard" name="open-banking-wizard" class="md:max-w-2xl" :dismissible="false">
         <div class="space-y-6">
             <header>
                 <flux:heading size="lg">{{ Lang::get('openbanking::messages.wizard.heading') }}</flux:heading>
@@ -96,37 +96,45 @@
             @elseif ($step === 3)
                 <div class="space-y-3">
                     <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('openbanking::messages.wizard.step3_title') }}</p>
-                    <label class="block text-xs font-medium text-slate-500 mb-1 dark:text-slate-400" for="ob-application-id">{{ Lang::get('openbanking::messages.wizard.application_id_label') }}</label>
-                    <input
-                        id="ob-application-id"
-                        type="text"
+                    {{-- The aria-label that used to sit on this input repeated
+                         the visible label word for word, and aria-label wins,
+                         so the <label for> was announced to nobody. One name
+                         now, carried by the association. --}}
+                    <x-core::form-field
+                        :label="Lang::get('openbanking::messages.wizard.application_id_label')"
+                        :hint="Lang::get('openbanking::messages.wizard.step3_help')"
+                        name="applicationId"
+                        field-id="ob-application-id"
                         wire:model.live="applicationId"
-                        aria-label="{{ Lang::get('openbanking::messages.wizard.application_id_label') }}"
-                        class="block w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-sm text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
-                    >
-                    <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('openbanking::messages.wizard.step3_help') }}</p>
+                        class="font-mono"
+                    />
                 </div>
             @elseif ($step === 4)
-                <div class="space-y-3">
-                    <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('openbanking::messages.wizard.step4_title') }}</p>
+                {{-- Without a shared name= the browser never treated these three
+                     as one group: arrow keys did not move between them, and two
+                     could sit checked until the Livewire round trip corrected it.
+                     The step title was a <p> floating above them, so the group
+                     had no accessible name either. --}}
+                <fieldset class="space-y-3">
+                    <legend class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('openbanking::messages.wizard.step4_title') }}</legend>
                     <div class="grid grid-cols-2 gap-3">
                         <label class="flex cursor-pointer flex-col gap-1 rounded-md border border-slate-300 p-3 has-[:checked]:border-slate-900 dark:border-slate-700 dark:has-[:checked]:border-slate-100">
                             <span class="flex items-center gap-2">
-                                <input type="radio" wire:click="chooseBank('asn')" @checked($bankChoice === 'asn') class="h-4 w-4 border-slate-300 text-emerald-600 focus:ring-emerald-600 dark:border-slate-700">
+                                <input type="radio" name="bankChoice" wire:click="chooseBank('asn')" @checked($bankChoice === 'asn') class="h-4 w-4 border-slate-300 text-emerald-600 focus:ring-emerald-600 dark:border-slate-700">
                                 <span class="text-sm font-semibold text-slate-900 dark:text-slate-100">ASN Bank</span>
                             </span>
                             <span class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('openbanking::messages.wizard.via_enable_banking') }}</span>
                         </label>
                         <label class="flex cursor-pointer flex-col gap-1 rounded-md border border-slate-300 p-3 has-[:checked]:border-slate-900 dark:border-slate-700 dark:has-[:checked]:border-slate-100">
                             <span class="flex items-center gap-2">
-                                <input type="radio" wire:click="chooseBank('sns')" @checked($bankChoice === 'sns') class="h-4 w-4 border-slate-300 text-emerald-600 focus:ring-emerald-600 dark:border-slate-700">
+                                <input type="radio" name="bankChoice" wire:click="chooseBank('sns')" @checked($bankChoice === 'sns') class="h-4 w-4 border-slate-300 text-emerald-600 focus:ring-emerald-600 dark:border-slate-700">
                                 <span class="text-sm font-semibold text-slate-900 dark:text-slate-100">SNS (de Volksbank)</span>
                             </span>
                             <span class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('openbanking::messages.wizard.via_enable_banking') }}</span>
                         </label>
                     </div>
                     <label class="flex items-center gap-2 pt-1">
-                        <input type="radio" wire:click="chooseBank('other')" @checked($bankChoice === 'other') class="h-4 w-4 border-slate-300 text-emerald-600 focus:ring-emerald-600 dark:border-slate-700">
+                        <input type="radio" name="bankChoice" wire:click="chooseBank('other')" @checked($bankChoice === 'other') class="h-4 w-4 border-slate-300 text-emerald-600 focus:ring-emerald-600 dark:border-slate-700">
                         <span class="text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('openbanking::messages.wizard.other_institution') }}</span>
                     </label>
                     @if ($bankChoice === 'other')
@@ -138,7 +146,7 @@
                             class="block w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-sm text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
                         >
                     @endif
-                </div>
+                </fieldset>
             @elseif ($step === 5)
                 <div class="space-y-3">
                     <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('openbanking::messages.wizard.step5_title') }}</p>

@@ -57,6 +57,7 @@ return [
         'meta_eur_equiv' => '(≈ :amount/año)',
         'cancel_impact' => 'Cancela esto → ahorra :amount/año',
         'cadence_flipped' => 'La frecuencia ha cambiado — también aparece en',
+        'cadence_flipped_link' => 'Revisar recurrentes',
         'acknowledge' => 'Confirmar',
         'acknowledge_aria' => 'Confirmar la alerta de desviación :id',
         'snooze' => 'Posponer ▾',

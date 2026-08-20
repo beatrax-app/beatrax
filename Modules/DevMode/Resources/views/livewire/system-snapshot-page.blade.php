@@ -29,11 +29,14 @@
         <h2 class="text-sm font-semibold mb-3">{{ Lang::get('dev::system.php') }}</h2>
         <table class="table w-full text-sm" style="font-variant-numeric: tabular-nums;">
             <tbody>
-                <tr><th class="{{ $keyTh }}">version</th><td class="font-mono">{{ $php['version'] }}</td></tr>
-                <tr><th class="{{ $keyTh }}">sapi</th><td class="font-mono">{{ $php['sapi'] }}</td></tr>
-                <tr><th class="{{ $keyTh }}">ini path</th><td class="font-mono text-xs">{{ $php['ini_path'] }}</td></tr>
+                {{-- Hand-written labels, so they translate like "file" in the SQLite
+                     table; the other tables print the array key they were handed,
+                     which is an identifier. `sapi` is PHP's own name, not a word. --}}
+                <tr><th class="{{ $keyTh }}">{{ Lang::get('dev::system.php_version') }}</th><td class="font-mono">{{ $php['version'] }}</td></tr>
+                <tr><th class="{{ $keyTh }}">{{ Lang::get('dev::system.php_sapi') }}</th><td class="font-mono">{{ $php['sapi'] }}</td></tr>
+                <tr><th class="{{ $keyTh }}">{{ Lang::get('dev::system.php_ini_path') }}</th><td class="font-mono text-xs">{{ $php['ini_path'] }}</td></tr>
                 <tr>
-                    <th class="{{ $keyTh }}">extensions</th>
+                    <th class="{{ $keyTh }}">{{ Lang::get('dev::system.php_extensions') }}</th>
                     <td class="text-xs">{{ implode(', ', $php['extensions']) }}</td>
                 </tr>
             </tbody>

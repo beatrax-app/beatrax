@@ -25,6 +25,8 @@ return [
         'tax_years' => 'Davčna leta',
     ],
 
+    'tablist_aria' => 'Razdelki nasprotne stranke',
+
     'tab_note_personal' => '— za osebne stike ni verig financiranja',
     'tab_note_bank' => '— nasprotna stranka za bančne provizije ne ustvarja verig financiranja',
     'tab_note_government' => '— za državne ustanove ni verig financiranja',

@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Quitar la categoría',
         'keep_category' => 'Mantener esta categoría',
         'restore_single' => '¿Restaurar como una sola categoría?',
+        'survivor_legend' => 'Categoría que se mantiene',
         'confirm_unsplit' => 'Sí, deshacer el desglose',
         'keep_split' => 'Mantener el desglose',
     ],

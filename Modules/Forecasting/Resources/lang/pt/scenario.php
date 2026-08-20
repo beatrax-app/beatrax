@@ -11,6 +11,7 @@ return [
     'rename' => 'Mudar o nome',
     'confirm_delete' => 'Confirmar a eliminação',
     'delete_scenario' => 'Eliminar cenário',
+    'delete_confirm' => 'Eliminar este cenário?',
 
     'mutations_count' => 'Modificações (:count)',
     'no_mutations' => 'Ainda não há modificações. Adiciona uma abaixo para veres como este cenário se compara com a tua referência.',
@@ -67,6 +68,7 @@ return [
         'new_amount' => 'Novo montante',
         'new_next_date' => 'Nova data seguinte',
         'scope' => 'Âmbito',
+        'scope_legend' => 'Que ocorrências deslocar',
         'scope_next' => 'Apenas a próxima ocorrência',
         'scope_all' => 'Todas as ocorrências seguintes',
     ],

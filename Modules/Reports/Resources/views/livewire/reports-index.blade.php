@@ -38,7 +38,7 @@
 
     {{-- Toolbar: New report link + Cards|List toggle ---------------- --}}
     <div style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap;">
-        <a href="{{ route('reports.index') }}" class="pill-btn-primary" style="text-decoration: none;">
+        <a href="{{ route('reports.index') }}" class="pill-btn-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" style="text-decoration: none;">
             {{ Lang::get('reports::index.build_new') }}
         </a>
 
@@ -46,13 +46,13 @@
             <div class="view-toggle" role="group" aria-label="{{ Lang::get('reports::index.view_mode_aria') }}">
                 <button
                     type="button"
-                    class="{{ $activeView === 'cards' ? 'active' : '' }}"
+                    class="{{ $activeView === 'cards' ? 'active' : '' }} focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                     aria-pressed="{{ $activeView === 'cards' ? 'true' : 'false' }}"
                     wire:click="setView('cards')"
                 >▦ {{ Lang::get('reports::index.cards') }}</button>
                 <button
                     type="button"
-                    class="{{ $activeView === 'list' ? 'active' : '' }}"
+                    class="{{ $activeView === 'list' ? 'active' : '' }} focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                     aria-pressed="{{ $activeView === 'list' ? 'true' : 'false' }}"
                     wire:click="setView('list')"
                 >≡ {{ Lang::get('reports::index.list') }}</button>
@@ -66,7 +66,7 @@
             :heading="Lang::get('reports::index.empty.heading')"
             :body="Lang::get('reports::index.empty.body')"
         >
-            <a href="{{ route('reports.index') }}" class="pill-btn-primary" style="display: inline-block; text-decoration: none;">
+            <a href="{{ route('reports.index') }}" class="pill-btn-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" style="display: inline-block; text-decoration: none;">
                 {{ Lang::get('reports::index.empty.cta') }}
             </a>
         </x-core::empty-state>
@@ -82,7 +82,7 @@
                             aria-pressed="{{ $row->pinned ? 'true' : 'false' }}"
                             aria-label="{{ $row->pinned ? Lang::get('reports::index.pin.pinned_aria') : Lang::get('reports::index.pin.pin_aria') }}"
                             title="{{ $row->pinned ? Lang::get('reports::index.pin.pinned_title') : Lang::get('reports::index.pin.pin_title') }}"
-                            class="chip"
+                            class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                             style="{{ $row->pinned ? 'background: var(--color-text); color: var(--color-text-inverse); border-color: var(--color-text);' : '' }}"
                         ><span aria-hidden="true">📌</span> {{ $row->pinned ? Lang::get('reports::index.pin.pinned_label') : Lang::get('reports::index.pin.pin_label') }}</button>
                     </header>
@@ -107,14 +107,14 @@
                             class="opacity-0 group-hover:opacity-100 transition-opacity"
                             style="display: flex; align-items: center; gap: var(--space-2); margin-top: auto; padding-top: var(--space-2);"
                         >
-                            <a href="{{ route('reports.index', ['report' => $row->id]) }}" class="chip" style="text-decoration: none;">{{ Lang::get('reports::index.open') }}</a>
-                            <a href="{{ route('reports.index', ['report' => $row->id]) }}" class="chip" style="text-decoration: none;">{{ Lang::get('reports::index.edit') }}</a>
+                            <a href="{{ route('reports.index', ['report' => $row->id]) }}" class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" style="text-decoration: none;">{{ Lang::get('reports::index.open') }}</a>
+                            <a href="{{ route('reports.index', ['report' => $row->id]) }}" class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" style="text-decoration: none;">{{ Lang::get('reports::index.edit') }}</a>
 
                             <button
                                 type="button"
                                 wire:click="confirmDelete({{ $row->id }})"
                                 aria-label="{{ Lang::get('reports::index.delete_aria', ['name' => $row->name]) }}"
-                                class="chip"
+                                class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                                 style="color: var(--color-rose);"
                             >{{ Lang::get('reports::index.delete') }}</button>
                         </div>
@@ -151,7 +151,7 @@
                                     wire:click="togglePin({{ $row->id }})"
                                     aria-pressed="{{ $row->pinned ? 'true' : 'false' }}"
                                     aria-label="{{ $row->pinned ? Lang::get('reports::index.pin.pinned_aria') : Lang::get('reports::index.pin.pin_aria') }}"
-                                    class="chip"
+                                    class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                                     style="{{ $row->pinned ? 'background: var(--color-text); color: var(--color-text-inverse); border-color: var(--color-text);' : '' }}"
                                 ><span aria-hidden="true">📌</span> {{ $row->pinned ? Lang::get('reports::index.pin.pinned_label') : Lang::get('reports::index.pin.pin_label') }}</button>
                             </td>
@@ -168,14 +168,14 @@
                             @else
                                 <td style="padding: var(--space-2) var(--space-3); text-align: right;">
                                     <div style="display: inline-flex; align-items: center; gap: var(--space-2);">
-                                        <a href="{{ route('reports.index', ['report' => $row->id]) }}" class="chip" style="text-decoration: none;">{{ Lang::get('reports::index.open') }}</a>
-                                        <a href="{{ route('reports.index', ['report' => $row->id]) }}" class="chip" style="text-decoration: none;">{{ Lang::get('reports::index.edit') }}</a>
+                                        <a href="{{ route('reports.index', ['report' => $row->id]) }}" class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" style="text-decoration: none;">{{ Lang::get('reports::index.open') }}</a>
+                                        <a href="{{ route('reports.index', ['report' => $row->id]) }}" class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" style="text-decoration: none;">{{ Lang::get('reports::index.edit') }}</a>
 
                                         <button
                                             type="button"
                                             wire:click="confirmDelete({{ $row->id }})"
                                             aria-label="{{ Lang::get('reports::index.delete_aria', ['name' => $row->name]) }}"
-                                            class="chip"
+                                            class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                                             style="color: var(--color-rose);"
                                         >{{ Lang::get('reports::index.delete') }}</button>
                                     </div>

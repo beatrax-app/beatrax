@@ -50,20 +50,16 @@
         :label="Lang::get('sync::devices.enable_sync')"
         :description="Lang::get('sync::devices.enable_sync_help')"
     >
-        <button
-            type="button"
+        {{-- Blade does not compile @class / @disabled between the attributes of
+             an <x-…> tag, so the app-lock gate is spelled as bound expressions.
+             The dimming classes ADD to the track the component builds. --}}
+        <x-core::switch
+            :on="$syncEnabled"
+            :label="Lang::get('sync::devices.enable_sync')"
             wire:click="{{ $syncEnabled ? '' : ($appLockConfigured ? 'enableSync' : '') }}"
-            @class([
-                'switch',
-                'switch--on' => $syncEnabled,
-                'opacity-50 cursor-not-allowed pointer-events-none' => ! $appLockConfigured && ! $syncEnabled,
-            ])
-            aria-pressed="{{ $syncEnabled ? 'true' : 'false' }}"
-            aria-label="{{ Lang::get('sync::devices.enable_sync') }}"
-            @disabled(! $appLockConfigured && ! $syncEnabled)
-        >
-            <span class="switch__thumb"></span>
-        </button>
+            :class="! $appLockConfigured && ! $syncEnabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''"
+            :disabled="! $appLockConfigured && ! $syncEnabled"
+        />
     </x-core::setting-row>
 
     {{-- App-lock gate notice (shown when sync is off and no app-lock is set) --}}
@@ -98,23 +94,18 @@
                 </x-core::setting-row>
             @elseif ($syncEnabled)
                 {{-- D-07 mandatory-when-synced: transient auto-activation. NO CTA, NO decline. --}}
-                <div
-                    class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300"
+                <x-core::alert
+                    tone="warning"
                     data-testid="encryption-securing-notice"
                 >
                     <p aria-live="polite" class="font-semibold">{{ Lang::get('sync::devices.securing') }}</p>
-                    <div
-                        class="mt-2 h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700"
-                        role="progressbar"
-                        aria-valuenow="{{ $encryptionProgress }}"
-                        aria-valuemin="0"
-                        aria-valuemax="100"
-                        aria-label="Encryption progress"
-                    >
-                        <div class="h-2 rounded-full bg-slate-900 dark:bg-slate-100" style="width: {{ $encryptionProgress }}%"></div>
-                    </div>
+                    <x-core::progress-bar
+                        class="mt-2"
+                        :value="$encryptionProgress"
+                        :label="Lang::get('sync::devices.encryption_progress_aria')"
+                    />
                     <p class="mt-1 text-xs">{{ Lang::get('sync::devices.do_not_close') }}</p>
-                </div>
+                </x-core::alert>
             @else
                 {{-- Single-device (sync off) optional offer — D-07 second bullet. --}}
                 <div
@@ -331,9 +322,9 @@
 
                 {{-- Non-HTTPS warning (T-13-08 / Pitfall 6) --}}
                 @if ($relayIsInsecure)
-                    <div
-                        class="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700
-                               dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300"
+                    <x-core::alert
+                        tone="warning"
+                        class="flex items-start gap-2"
                         role="alert"
                         data-testid="relay-insecure-warning"
                     >
@@ -341,7 +332,7 @@
                         <span>
                             {!! Lang::get('sync::devices.relay_insecure_warning') !!}
                         </span>
-                    </div>
+                    </x-core::alert>
                 @endif
 
                 {{-- Relay save flash message --}}
@@ -369,18 +360,21 @@
                     <p class="text-sm text-slate-700 dark:text-slate-300">
                         {{ Lang::get('sync::devices.enable_at_rest_body') }}
                     </p>
-                    <div
-                        class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300"
-                        role="alert"
-                    >
+                    <x-core::alert tone="danger" role="alert">
                         {{ Lang::get('sync::devices.no_recovery_warning') }}
-                    </div>
+                    </x-core::alert>
                     <p class="text-xs text-slate-500 dark:text-slate-400">
                         {{ Lang::get('sync::devices.recover_help') }}
                     </p>
-                    {{-- D-02a/D-02c honest disclosure (14-VALIDATION.md manual-only check pinned by
-                         DevicesAndSyncEncryptionUiTest — do not remove/soften this copy). --}}
-                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+                    {{-- Honest disclosure, pinned by DevicesAndSyncEncryptionUiTest
+                         — do not remove or soften this copy.
+
+                         Deliberately not x-core::alert: it is the least urgent
+                         block in a narrow modal, and an alert put a second
+                         bordered box under the rose one and raised two long
+                         sentences of caveat to the weight of the body copy. It
+                         belongs in the register of the help line above it. --}}
+                    <div class="text-xs text-slate-500 dark:text-slate-400">
                         <p>{{ Lang::get('sync::devices.amounts_plaintext') }}</p>
                         <p class="mt-1">{{ Lang::get('sync::devices.search_plaintext') }}</p>
                     </div>
@@ -413,16 +407,11 @@
                         <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100" aria-live="polite">
                             {{ Lang::get('sync::devices.securing') }}
                         </h3>
-                        <div
-                            class="mt-4 h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700"
-                            role="progressbar"
-                            aria-valuenow="{{ $encryptionProgress }}"
-                            aria-valuemin="0"
-                            aria-valuemax="100"
-                            aria-label="Encryption progress"
-                        >
-                            <div class="h-2 rounded-full bg-slate-900 dark:bg-slate-100" style="width: {{ $encryptionProgress }}%"></div>
-                        </div>
+                        <x-core::progress-bar
+                            class="mt-4"
+                            :value="$encryptionProgress"
+                            :label="Lang::get('sync::devices.encryption_progress_aria')"
+                        />
                         <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('sync::devices.do_not_close') }}</p>
                     </div>
                 @elseif ($encryptionStep === 'done')
@@ -477,13 +466,10 @@
                     <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('sync::devices.removing') }} {{ $this->currentNameFor($removingDeviceId) }}</p>
                 </div>
 
-                <div
-                    class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300"
-                    role="note"
-                >
+                <x-core::alert tone="warning" role="note">
                     <p>{{ Lang::get('sync::devices.remove_rotates_key') }}</p>
                     <p class="mt-1">{{ Lang::get('sync::devices.remove_cannot_erase') }}</p>
-                </div>
+                </x-core::alert>
 
                 <div class="flex gap-3" wire:loading.remove wire:target="removeDevice">
                     <button
@@ -513,10 +499,7 @@
                     class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400"
                     aria-live="polite" aria-atomic="true"
                 >
-                    <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                    </svg>
+                    <x-core::spinner />
                     <span>{{ Lang::get('sync::devices.rotating_key') }}</span>
                 </div>
             </div>

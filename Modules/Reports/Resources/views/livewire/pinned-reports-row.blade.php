@@ -37,7 +37,8 @@
                 >
                     <div class="flex items-center justify-between gap-2">
                         <p class="min-w-0 flex-1 truncate text-base font-semibold text-slate-900 dark:text-slate-100">{{ $card['name'] }}</p>
-                        <span class="shrink-0 text-sm text-slate-400 dark:text-slate-500" aria-label="{{ Lang::get('reports::pinned.pinned_report') }}" title="{{ Lang::get('reports::pinned.pinned_report') }}">📌</span>
+                        {{-- role="img" or the aria-label is dropped: a generic element takes no name. --}}
+                        <span role="img" class="shrink-0 text-sm text-slate-400 dark:text-slate-500" aria-label="{{ Lang::get('reports::pinned.pinned_report') }}" title="{{ Lang::get('reports::pinned.pinned_report') }}">📌</span>
                     </div>
 
                     <div

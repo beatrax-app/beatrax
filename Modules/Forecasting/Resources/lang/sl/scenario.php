@@ -11,6 +11,7 @@ return [
     'rename' => 'Preimenuj',
     'confirm_delete' => 'Potrdi brisanje',
     'delete_scenario' => 'Izbriši scenarij',
+    'delete_confirm' => 'Izbrišem ta scenarij?',
 
     'mutations_count' => 'Spremembe (:count)',
     'no_mutations' => 'Sprememb še ni. Spodaj dodaj eno, da vidiš, kako se ta scenarij primerja s tvojo izhodiščno napovedjo.',
@@ -67,6 +68,7 @@ return [
         'new_amount' => 'Nov znesek',
         'new_next_date' => 'Nov naslednji datum',
         'scope' => 'Obseg',
+        'scope_legend' => 'Katere pojavitve premakniti',
         'scope_next' => 'Samo naslednja pojavitev',
         'scope_all' => 'Vse nadaljnje pojavitve',
     ],

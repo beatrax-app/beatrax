@@ -4,11 +4,9 @@
 
     $baseCurrency = $netWorth->currency;
 
-    // Format a minor amount in the base reporting currency.
-    $fmt = static fn (int $minor): string => Money::ofMinor($minor, $baseCurrency)->format('nl_NL');
+    $fmt = static fn (int $minor): string => Money::ofMinor($minor, $baseCurrency)->format();
 
-    // Format a minor amount in a given (native) currency.
-    $nativeFmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)->format('nl_NL');
+    $nativeFmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)->format();
 
     $amountClass = static fn (int $minor): string => $minor < 0
         ? 'text-rose-600 dark:text-rose-400'
@@ -59,7 +57,7 @@
 
 <div>
     @if ($netWorth->hasAccounts())
-        <section class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-950" aria-label="{{ Lang::get('core::net_worth.aria') }}">
+        <x-core::card tag="section" aria-label="{{ Lang::get('core::net_worth.aria') }}">
             <div class="flex items-start justify-between gap-4">
                 <div class="min-w-0">
                     <p class="text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">{{ Lang::get('core::net_worth.heading') }}</p>
@@ -166,6 +164,6 @@
                     @endforeach
                 </ul>
             @endif
-        </section>
+        </x-core::card>
     @endif
 </div>

@@ -13,16 +13,10 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    $fmt = static fn (Money $money): string => $money->currency() === 'EUR'
-        ? $money->format('nl_NL')
-        : $money->format('en_US');
+    $fmt = static fn (Money $money): string => $money->format();
 
-    // D-91 confidence-tier mapping → chip text + chip chrome.
-    // No hue encoding — UI-SPEC § Color forbids semantic-colour-by-
-    // confidence. The Candidate parent card also carries `opacity-60`
-    // for the calm "dimmed" treatment. Dark companions track the
-    // Phase 15 D-15 token table: page-surface chip on `slate-950`,
-    // card-surface chip on `slate-900`, slate-400 caption on dark.
+    // No hue encoding: confidence is signalled by surface and text weight
+    // only, never by a semantic colour.
     $tierClasses = match ($node->confidenceTier) {
         'Deterministic' => 'bg-white text-slate-900 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-100 dark:ring-slate-700',
         'Confirmed'     => 'bg-slate-50 text-slate-900 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-100 dark:ring-slate-700',

@@ -116,14 +116,22 @@
             };
         @endphp
         {{-- overflow-x: auto ensures the tab bar scrolls at phone width rather than clipping --}}
-        <nav style="border-bottom: 1px solid var(--color-border); display: flex; align-items: center; gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+        {{-- The strip carried no tab semantics at all, so a reader heard
+             "button" four times and never which one was showing. The tablist and
+             its name stay here because this is what knows the tabs; x-core::tab
+             brings role and aria-selected, and its slate values are the same
+             pair --color-text already resolved to. --}}
+        <nav
+            style="border-bottom: 1px solid var(--color-border); display: flex; align-items: center; gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch;"
+            role="tablist"
+            aria-label="{{ Lang::get('counterparties::profile.tablist_aria') }}"
+        >
             @foreach ($tabs as $tab)
-                <button
-                    type="button"
-                    class="focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
-                    style="padding: 8px 14px; border: 0; background: transparent; font-size: var(--text-sm); font-weight: 500; color: {{ $activeTab === $tab['key'] ? 'var(--color-text)' : 'var(--color-text-muted)' }}; border-bottom: 1px solid {{ $activeTab === $tab['key'] ? 'var(--color-text)' : 'transparent' }}; cursor: pointer; white-space: nowrap; flex-shrink: 0;"
+                <x-core::tab
+                    :active="$activeTab === $tab['key']"
+                    class="shrink-0 whitespace-nowrap"
                     wire:click="switchTab('{{ $tab['key'] }}')"
-                >{{ $tab['label'] }}</button>
+                >{{ $tab['label'] }}</x-core::tab>
             @endforeach
             @if ($tabNote !== null)
                 <span style="font-size: var(--text-xs); color: var(--color-text-faint); margin-left: var(--space-3); white-space: nowrap; flex-shrink: 0;">

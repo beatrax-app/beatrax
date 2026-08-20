@@ -7,6 +7,10 @@ return [
 
     'subtitle_html' => 'Aplinka, vykdymo aplinka ir veikianti konfigūracija. Slapti raktai (galūnės <code class="font-mono text-xs">*password*</code>, <code class="font-mono text-xs">*secret*</code>, <code class="font-mono text-xs">*key</code>, <code class="font-mono text-xs">*token*</code>) užmaskuoti.',
     'php' => 'PHP',
+    'php_version' => 'versija',
+    'php_sapi' => 'sapi',
+    'php_ini_path' => 'ini kelias',
+    'php_extensions' => 'plėtiniai',
     'laravel' => 'Laravel',
     'sqlite' => 'SQLite',
     'sqlite_file' => 'failas',

@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Kategoriyi kaldır',
         'keep_category' => 'Bu kategoriyi koru',
         'restore_single' => 'Tek kategori olarak geri yüklensin mi?',
+        'survivor_legend' => 'Korunacak kategori',
         'confirm_unsplit' => 'Evet, bölmeyi geri al',
         'keep_split' => 'Bölüştürmeyi koru',
     ],

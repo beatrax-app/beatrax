@@ -11,6 +11,7 @@ return [
     'rename' => 'Hernoemen',
     'confirm_delete' => 'Verwijderen bevestigen',
     'delete_scenario' => 'Scenario verwijderen',
+    'delete_confirm' => 'Dit scenario verwijderen?',
 
     'mutations_count' => 'Mutaties (:count)',
     'no_mutations' => 'Nog geen mutaties. Voeg er hieronder een toe om te zien hoe dit scenario zich verhoudt tot je basislijn.',
@@ -67,6 +68,7 @@ return [
         'new_amount' => 'Nieuw bedrag',
         'new_next_date' => 'Nieuwe volgende datum',
         'scope' => 'Bereik',
+        'scope_legend' => 'Welke voorkomsten verschuiven',
         'scope_next' => 'Alleen de volgende voorkomst',
         'scope_all' => 'Alle daaropvolgende voorkomsten',
     ],

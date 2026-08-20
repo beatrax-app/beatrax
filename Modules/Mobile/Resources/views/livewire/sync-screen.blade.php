@@ -38,16 +38,10 @@
                 <p class="text-sm text-slate-600 dark:text-slate-400" aria-live="polite">
                     {{ Lang::get('mobile::sync.syncing_progress', ['count' => $progressApplied]) }}
                 </p>
-                <div
-                    class="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700"
-                    role="progressbar"
-                    aria-valuenow="{{ $progressPercent }}"
-                    aria-valuemin="0"
-                    aria-valuemax="100"
-                    aria-label="{{ Lang::get('mobile::sync.initial_sync_aria') }}"
-                >
-                    <div class="h-2 rounded-full bg-slate-900 dark:bg-slate-100" style="width: {{ $progressPercent }}%"></div>
-                </div>
+                <x-core::progress-bar
+                    :value="$progressPercent"
+                    :label="Lang::get('mobile::sync.initial_sync_aria')"
+                />
             </div>
         @endif
     </section>
@@ -104,21 +98,15 @@
             :label="Lang::get('mobile::sync.pause_cellular')"
             :description="Lang::get('mobile::sync.pause_cellular_help')"
         >
-            {{-- The visual `.switch` track is 36x20px (existing component, reused
-                 verbatim); the wrapping min-w/min-h-[44px] flex box below is the
-                 D-14/WCAG 2.5.5 tap-target padding this mobile surface requires
-                 (same "small visual, 44px hit target" idiom as Goals/Pots pages'
-                 `min-w-[44px] min-h-[44px] flex items-center justify-center`). --}}
+            {{-- The .switch track is 44x26px and app.css only grows it to a
+                 44px target under @media (pointer: coarse). This wrapper is what
+                 holds WCAG 2.5.5 on a mouse-driven build of the same screen. --}}
             <div class="min-w-[44px] min-h-[44px] flex items-center justify-center">
-                <button
-                    type="button"
+                <x-core::switch
+                    :on="$pauseOnCellular"
+                    :label="Lang::get('mobile::sync.pause_cellular')"
                     wire:click="toggleCellularPause"
-                    @class(['switch', 'switch--on' => $pauseOnCellular])
-                    aria-pressed="{{ $pauseOnCellular ? 'true' : 'false' }}"
-                    aria-label="{{ Lang::get('mobile::sync.pause_cellular') }}"
-                >
-                    <span class="switch__thumb"></span>
-                </button>
+                />
             </div>
         </x-core::setting-row>
     </section>

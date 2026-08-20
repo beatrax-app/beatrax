@@ -16,6 +16,7 @@ return [
     'on' => 'Ligado',
     'securing' => 'A proteger os teus dados…',
     'do_not_close' => 'Não feches esta janela.',
+    'encryption_progress_aria' => 'Progresso da encriptação',
     'not_encrypted_offer' => 'Os teus dados não estão encriptados em repouso. Configura a encriptação para os proteger caso este dispositivo se perca ou seja roubado.',
     'enable_encryption' => 'Ativar a encriptação',
 

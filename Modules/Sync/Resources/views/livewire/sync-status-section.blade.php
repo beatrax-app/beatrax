@@ -27,15 +27,15 @@
         </div>
 
     @elseif ($overallStatus === 'error')
-        <div
-            class="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700
-                   dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300"
+        <x-core::alert
+            tone="danger"
+            class="flex items-center gap-2"
             role="alert"
             data-testid="sync-status-overall"
         >
             <span class="inline-block h-2 w-2 flex-shrink-0 rounded-full bg-rose-600 dark:bg-rose-500" aria-hidden="true"></span>
             {{ Lang::get('sync::status.error') }}
-        </div>
+        </x-core::alert>
 
     @elseif ($overallStatus === 'syncing')
         <div
@@ -48,20 +48,20 @@
         </div>
 
     @elseif ($overallStatus === 'offline')
-        <div
-            class="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700
-                   dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300"
+        <x-core::alert
+            tone="warning"
+            class="flex items-center gap-2"
             data-testid="sync-status-overall"
         >
             <span class="inline-block h-2 w-2 flex-shrink-0 rounded-full bg-amber-500 dark:bg-amber-400" aria-hidden="true"></span>
             {{ Lang::get('sync::status.offline') }}
-        </div>
+        </x-core::alert>
 
     @else
         {{-- all_synced --}}
-        <div
-            class="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700
-                   dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300"
+        <x-core::alert
+            tone="positive"
+            class="flex items-center gap-2"
             data-testid="sync-status-overall"
         >
             <span class="inline-block h-2 w-2 flex-shrink-0 rounded-full bg-emerald-500 dark:bg-emerald-400" aria-hidden="true"></span>
@@ -69,7 +69,7 @@
             @if ($lastSyncedHuman !== null)
                 <span class="text-emerald-600 dark:text-emerald-400">&middot; {{ Lang::get('sync::status.synced') }} {{ $lastSyncedHuman }}</span>
             @endif
-        </div>
+        </x-core::alert>
     @endif
 
     {{-- ===== Per-peer list ===== --}}

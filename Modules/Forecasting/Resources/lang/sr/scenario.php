@@ -11,6 +11,7 @@ return [
     'rename' => 'Preimenuj',
     'confirm_delete' => 'Potvrdi brisanje',
     'delete_scenario' => 'Obriši scenario',
+    'delete_confirm' => 'Obrisati ovaj scenario?',
 
     'mutations_count' => 'Izmene (:count)',
     'no_mutations' => 'Još nema izmena. Dodaj jednu ispod da vidiš kako se ovaj scenario poredi sa tvojom polaznom prognozom.',
@@ -67,6 +68,7 @@ return [
         'new_amount' => 'Novi iznos',
         'new_next_date' => 'Novi sledeći datum',
         'scope' => 'Obim',
+        'scope_legend' => 'Koja pojavljivanja pomeriti',
         'scope_next' => 'Samo sledeće pojavljivanje',
         'scope_all' => 'Sva naredna pojavljivanja',
     ],

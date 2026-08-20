@@ -57,6 +57,7 @@ return [
         'meta_eur_equiv' => '(≈ :amount/år)',
         'cancel_impact' => 'Si opp denne → spar :amount/år',
         'cadence_flipped' => 'Intervallet er endret — vises også i',
+        'cadence_flipped_link' => 'Gjennomgå gjentakende',
         'acknowledge' => 'Bekreft',
         'acknowledge_aria' => 'Bekreft avviksvarsel :id',
         'snooze' => 'Utsett ▾',

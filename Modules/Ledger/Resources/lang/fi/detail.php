@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Poista kategoria',
         'keep_category' => 'Säilytä tämä kategoria',
         'restore_single' => 'Palautetaanko yhdeksi kategoriaksi?',
+        'survivor_legend' => 'Säilytettävä kategoria',
         'confirm_unsplit' => 'Kyllä, pura jako',
         'keep_split' => 'Säilytä jako',
     ],

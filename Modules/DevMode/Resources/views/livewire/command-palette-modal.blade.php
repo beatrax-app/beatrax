@@ -63,18 +63,21 @@
                 aria-label="{{ Lang::get('dev::palette.dialog_aria') }}"
             >
                 <div class="palette-input flex items-center gap-2 px-4 py-3 border-b border-slate-200 dark:border-slate-700 relative">
-                    {{-- Loading spinner or search icon --}}
+                    {{-- Loading spinner or search icon. Both are pinned to the
+                         same w-4 box: they swap in and out of one slot ahead
+                         of the input, and two glyphs of different advance
+                         width would shift the query text sideways every time
+                         a search starts. --}}
                     <span
-                        class="ic text-slate-400 dark:text-slate-500"
+                        class="ic w-4 text-center text-slate-400 dark:text-slate-500"
                         aria-hidden="true"
                         x-show="!serverLoading"
                     >⌕</span>
-                    <span
-                        class="ic text-slate-400 dark:text-slate-500 animate-spin"
-                        aria-hidden="true"
+                    <x-core::spinner
+                        class="text-slate-400 dark:text-slate-500"
                         x-show="serverLoading"
                         style="display:none"
-                    >↻</span>
+                    />
 
                     {{-- On a phone the sheet covers the scrim completely, so
                          the scrim's click.self never fires and the only way out

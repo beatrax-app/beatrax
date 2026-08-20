@@ -2,13 +2,7 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    // EUR amounts render in Dutch locale (e.g. `€ 68,86`); non-EUR amounts
-    // render in US English locale (e.g. `$74.43`) so the symbol prefix
-    // matches the user's mental model of the foreign currency. brick/money
-    // routes the locale through ext-intl's NumberFormatter under the hood.
-    $fmt = static fn (Money $money): string => $money->currency() === 'EUR'
-        ? $money->format('nl_NL')
-        : $money->format('en_US');
+    $fmt = static fn (Money $money): string => $money->format();
 
     // Whether the given Money value is positive (for phone card coloring).
     // Uses toMinor() > 0 so zero-value rows are not highlighted emerald.
@@ -47,7 +41,7 @@
     $splitLegs ??= [];
 
     // Format minor-unit amount (settled EUR, nl_NL) for the summary strip
-    $fmtMinor = static fn (int $minor): string => Money::ofMinor(abs($minor), 'EUR')->format('nl_NL');
+    $fmtMinor = static fn (int $minor): string => Money::ofMinor(abs($minor), 'EUR')->format();
 @endphp
 
 <div class="space-y-6">

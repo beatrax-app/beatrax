@@ -99,22 +99,17 @@
     <form wire:submit="save" class="{{ $card }} space-y-8">
         <section class="space-y-2">
             <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.currency_display.heading') }}</h2>
-            <div class="space-y-1">
-                <label for="defaultCurrencyView" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.currency_display.label') }}</label>
-                <select
-                    id="defaultCurrencyView"
-                    name="defaultCurrencyView"
-                    wire:model="defaultCurrencyView"
-                    class="block w-full max-w-xs rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
-                >
-                    <option value="eur_only">{{ Lang::get('core::settings.currency_display.eur_only') }}</option>
-                    <option value="original">{{ Lang::get('core::settings.currency_display.original') }}</option>
-                </select>
-                <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.currency_display.help') }}</p>
-                @error('defaultCurrencyView')
-                    <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
-                @enderror
-            </div>
+            <x-core::form-field
+                name="defaultCurrencyView"
+                type="select"
+                :label="Lang::get('core::settings.currency_display.label')"
+                :hint="Lang::get('core::settings.currency_display.help')"
+                wire:model="defaultCurrencyView"
+                class="max-w-xs"
+            >
+                <option value="eur_only">{{ Lang::get('core::settings.currency_display.eur_only') }}</option>
+                <option value="original">{{ Lang::get('core::settings.currency_display.original') }}</option>
+            </x-core::form-field>
         </section>
 
         {{-- ===== Currency reporting (FX base currency + online fetch toggle) ===== --}}
@@ -122,23 +117,18 @@
             {{-- Sub-section A: Base reporting currency picker --}}
             <div class="space-y-2">
                 <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.base_currency.heading') }}</h2>
-                <div class="space-y-1">
-                    <label for="baseCurrency" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.base_currency.label') }}</label>
-                    <select
-                        id="baseCurrency"
-                        name="baseCurrency"
-                        wire:model="baseCurrency"
-                        class="block w-full max-w-xs rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
-                    >
-                        @foreach ($currencyOptions as $code => $name)
-                            <option value="{{ $code }}">{{ $code }} — {{ $name }}</option>
-                        @endforeach
-                    </select>
-                    <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.base_currency.help') }}</p>
-                    @error('baseCurrency')
-                        <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
-                    @enderror
-                </div>
+                <x-core::form-field
+                    name="baseCurrency"
+                    type="select"
+                    :label="Lang::get('core::settings.base_currency.label')"
+                    :hint="Lang::get('core::settings.base_currency.help')"
+                    wire:model="baseCurrency"
+                    class="max-w-xs"
+                >
+                    @foreach ($currencyOptions as $code => $currencyName)
+                        <option value="{{ $code }}">{{ $code }} — {{ $currencyName }}</option>
+                    @endforeach
+                </x-core::form-field>
             </div>
 
             {{-- Sub-section B: Online exchange-rate fetch toggle --}}
@@ -158,13 +148,11 @@
                             @endif
                         </p>
                     </div>
-                    <button type="button"
-                            class="switch{{ $fxOnlineEnabled ? ' switch--on' : '' }}"
-                            wire:click="toggleFxOnline"
-                            aria-pressed="{{ $fxOnlineEnabled ? 'true' : 'false' }}"
-                            aria-label="{{ Lang::get('core::settings.exchange_rates.fetch_aria') }}">
-                        <span class="switch__thumb"></span>
-                    </button>
+                    <x-core::switch
+                        :on="$fxOnlineEnabled"
+                        :label="Lang::get('core::settings.exchange_rates.fetch_aria')"
+                        wire:click="toggleFxOnline"
+                    />
                 </div>
 
                 @if ($fxOnlineEnabled)
@@ -189,69 +177,54 @@
 
         <section class="space-y-2">
             <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.period.heading') }}</h2>
-            <div class="space-y-1">
-                <label for="periodStartDay" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.period.label') }}</label>
-                <input
-                    type="number"
-                    min="1"
-                    max="28"
-                    id="periodStartDay"
-                    name="periodStartDay"
-                    wire:model="periodStartDay"
-                    class="block w-full max-w-xs rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
-                />
-                <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.period.help') }}</p>
-                @error('periodStartDay')
-                    <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
-                @enderror
-            </div>
+            <x-core::form-field
+                name="periodStartDay"
+                type="number"
+                min="1"
+                max="28"
+                :label="Lang::get('core::settings.period.label')"
+                :hint="Lang::get('core::settings.period.help')"
+                wire:model="periodStartDay"
+                class="max-w-xs"
+            />
         </section>
 
         <section class="space-y-4">
             <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.recurring.heading') }}</h2>
-            <div class="space-y-1">
-                <label for="recurringDetectionWindowMonths" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.recurring.window_label') }}</label>
-                <input
-                    type="number"
-                    min="2"
-                    max="60"
-                    id="recurringDetectionWindowMonths"
-                    name="recurringDetectionWindowMonths"
-                    wire:model="recurringDetectionWindowMonths"
-                    class="block w-full max-w-xs rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
-                />
-                <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.recurring.window_help') }}</p>
-                @error('recurringDetectionWindowMonths')
-                    <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
-                @enderror
-            </div>
-            <div class="space-y-1">
-                <label for="recurringIncomeMinAmountMinor" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.recurring.income_label') }}</label>
-                <input
-                    type="number"
-                    min="0"
-                    max="100000000"
-                    id="recurringIncomeMinAmountMinor"
-                    name="recurringIncomeMinAmountMinor"
-                    wire:model="recurringIncomeMinAmountMinor"
-                    class="block w-full max-w-xs rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
-                />
-                <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.recurring.income_help') }}</p>
-                @error('recurringIncomeMinAmountMinor')
-                    <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
-                @enderror
-            </div>
+            <x-core::form-field
+                name="recurringDetectionWindowMonths"
+                type="number"
+                min="2"
+                max="60"
+                :label="Lang::get('core::settings.recurring.window_label')"
+                :hint="Lang::get('core::settings.recurring.window_help')"
+                wire:model="recurringDetectionWindowMonths"
+                class="max-w-xs"
+            />
+            <x-core::form-field
+                name="recurringIncomeMinAmountMinor"
+                type="number"
+                min="0"
+                max="100000000"
+                :label="Lang::get('core::settings.recurring.income_label')"
+                :hint="Lang::get('core::settings.recurring.income_help')"
+                wire:model="recurringIncomeMinAmountMinor"
+                class="max-w-xs"
+            />
         </section>
 
         <section class="space-y-2">
             <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.drift.heading') }}</h2>
-            <div class="space-y-1" id="drift-threshold">
-                <label for="driftAlertThresholdPercent" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.drift.label') }}</label>
-                <select
-                    id="driftAlertThresholdPercent"
+            {{-- The #drift-threshold anchor is what the drift alert links to,
+                 so it wraps the field rather than living on it. --}}
+            <div id="drift-threshold">
+                <x-core::form-field
                     name="driftAlertThresholdPercent"
+                    type="select"
+                    :label="Lang::get('core::settings.drift.label')"
+                    :hint="Lang::get('core::settings.drift.help')"
                     wire:model="driftAlertThresholdPercent"
-                    class="block w-full max-w-xs rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
+                    class="max-w-xs"
                 >
                     <option value="1">{{ Lang::get('core::settings.drift.options.1') }}</option>
                     <option value="2">{{ Lang::get('core::settings.drift.options.2') }}</option>
@@ -259,11 +232,7 @@
                     <option value="10">{{ Lang::get('core::settings.drift.options.10') }}</option>
                     <option value="25">{{ Lang::get('core::settings.drift.options.25') }}</option>
                     <option value="50">{{ Lang::get('core::settings.drift.options.50') }}</option>
-                </select>
-                <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.drift.help') }}</p>
-                @error('driftAlertThresholdPercent')
-                    <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
-                @enderror
+                </x-core::form-field>
             </div>
         </section>
 
@@ -428,13 +397,11 @@
                         {{ Lang::get('core::settings.developer.help') }}
                     </p>
                 </div>
-                <button type="button"
-                        class="switch{{ $isDeveloper ? ' switch--on' : '' }}"
-                        wire:click="setDevMode({{ $isDeveloper ? 'false' : 'true' }})"
-                        aria-pressed="{{ $isDeveloper ? 'true' : 'false' }}"
-                        aria-label="{{ Lang::get('core::settings.developer.aria') }}">
-                    <span class="switch__thumb"></span>
-                </button>
+                <x-core::switch
+                    :on="$isDeveloper"
+                    :label="Lang::get('core::settings.developer.aria')"
+                    wire:click="setDevMode({{ $isDeveloper ? 'false' : 'true' }})"
+                />
             </div>
         </section>
     </div>

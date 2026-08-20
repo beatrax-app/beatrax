@@ -10,8 +10,7 @@
      * @var int|null $differenceMinor
      * @var bool $isMatched
      */
-    $fmt = static fn (int $minor): string => Money::ofMinor($minor, 'EUR')->format('nl_NL');
-    $input = 'block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100';
+    $fmt = static fn (int $minor): string => Money::ofMinor($minor, 'EUR')->format();
 
     $hasTarget = $statementTargetMinor !== null;
     $pillVariant = ! $hasAccount || ! $hasTarget ? 'muted' : ($isMatched ? 'ok' : 'fail');
@@ -27,35 +26,33 @@
 
     <div class="rounded-xl border border-slate-200 bg-white p-6 space-y-6 dark:border-slate-800 dark:bg-slate-950">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div class="space-y-1">
-                <label for="rc-account" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('ledger::reconcile.account') }}</label>
-                <select id="rc-account" wire:model.live="accountId" class="{{ $input }}">
-                    <option value="">{{ Lang::get('ledger::reconcile.choose_account') }}</option>
-                    @foreach ($accounts as $account)
-                        <option value="{{ $account->id }}">{{ $account->name }}</option>
-                    @endforeach
-                </select>
-            </div>
+            <x-core::form-field
+                name="accountId"
+                field-id="rc-account"
+                type="select"
+                :label="Lang::get('ledger::reconcile.account')"
+                wire:model.live="accountId"
+            >
+                <option value="">{{ Lang::get('ledger::reconcile.choose_account') }}</option>
+                @foreach ($accounts as $account)
+                    <option value="{{ $account->id }}">{{ $account->name }}</option>
+                @endforeach
+            </x-core::form-field>
             <div class="space-y-1">
                 <label for="rc-date" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('ledger::reconcile.statement_date') }}</label>
                 <x-core::date-input field-id="rc-date" wire:model.live="statementDate" />
             </div>
         </div>
 
-        <div class="space-y-1">
-            <label for="rc-balance" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('ledger::reconcile.statement_balance') }}</label>
-            <input
-                id="rc-balance"
-                type="text"
-                inputmode="decimal"
-                wire:model.live="statementBalance"
-                placeholder="0,00"
-                class="{{ $input }}"
-            />
-            <p class="text-xs text-slate-400 dark:text-slate-500">
-                {{ Lang::get('ledger::reconcile.balance_help') }}
-            </p>
-        </div>
+        <x-core::form-field
+            name="statementBalance"
+            field-id="rc-balance"
+            :label="Lang::get('ledger::reconcile.statement_balance')"
+            :hint="Lang::get('ledger::reconcile.balance_help')"
+            inputmode="decimal"
+            wire:model.live="statementBalance"
+            placeholder="0,00"
+        />
 
         @if ($error !== '')
             <p class="text-sm text-rose-600 dark:text-rose-500">{{ $error }}</p>

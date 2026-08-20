@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Remove category',
         'keep_category' => 'Keep this category',
         'restore_single' => 'Restore as a single category?',
+        'survivor_legend' => 'Category to keep',
         'confirm_unsplit' => 'Yes, unsplit',
         'keep_split' => 'Keep split',
     ],

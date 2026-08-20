@@ -11,6 +11,7 @@ return [
     'rename' => 'Rename',
     'confirm_delete' => 'Confirm delete',
     'delete_scenario' => 'Delete scenario',
+    'delete_confirm' => 'Delete this scenario?',
 
     'mutations_count' => 'Mutations (:count)',
     'no_mutations' => 'No mutations yet. Add one below to see how this scenario compares to your baseline.',
@@ -67,6 +68,7 @@ return [
         'new_amount' => 'New amount',
         'new_next_date' => 'New next date',
         'scope' => 'Scope',
+        'scope_legend' => 'Which occurrences to shift',
         'scope_next' => 'Just the next occurrence',
         'scope_all' => 'All subsequent occurrences',
     ],

@@ -17,9 +17,7 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    $ruleFmt = static fn (Money $money): string => $money->currency() === 'EUR'
-        ? $money->format('nl_NL')
-        : $money->format('en_US');
+    $ruleFmt = static fn (Money $money): string => $money->format();
 
     $detectorLabels = [
         'large' => Lang::get('anomaly::settings.detectors.large'),
@@ -31,40 +29,28 @@
 <div class="space-y-6" data-testid="anomaly-settings-section">
     <form wire:submit="save" class="space-y-6">
         {{-- Sensitivity --}}
-        <div class="space-y-1">
-            <label for="anomalySensitivityPercent" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('anomaly::settings.sensitivity_label') }}</label>
-            <input
-                type="number"
-                min="1"
-                max="100"
-                id="anomalySensitivityPercent"
-                name="anomalySensitivityPercent"
-                wire:model="anomalySensitivityPercent"
-                style="font-variant-numeric: tabular-nums;"
-                class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
-            />
-            <p class="text-xs text-slate-500 dark:text-slate-400">
-                {{ Lang::get('anomaly::settings.sensitivity_help', ['percent' => $anomalySensitivityPercent]) }}
-            </p>
-        </div>
+        <x-core::form-field
+            name="anomalySensitivityPercent"
+            type="number"
+            min="1"
+            max="100"
+            :label="Lang::get('anomaly::settings.sensitivity_label')"
+            :hint="Lang::get('anomaly::settings.sensitivity_help', ['percent' => $anomalySensitivityPercent])"
+            wire:model="anomalySensitivityPercent"
+            style="font-variant-numeric: tabular-nums;"
+        />
 
         {{-- Minimum charge amount floor --}}
-        <div class="space-y-1">
-            <label for="anomalyMinAmountMinor" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('anomaly::settings.min_amount_label') }}</label>
-            <input
-                type="number"
-                min="0"
-                step="1"
-                id="anomalyMinAmountMinor"
-                name="anomalyMinAmountMinor"
-                wire:model="anomalyMinAmountMinor"
-                style="font-variant-numeric: tabular-nums;"
-                class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
-            />
-            <p class="text-xs text-slate-500 dark:text-slate-400">
-                {{ Lang::get('anomaly::settings.min_amount_help') }}
-            </p>
-        </div>
+        <x-core::form-field
+            name="anomalyMinAmountMinor"
+            type="number"
+            min="0"
+            step="1"
+            :label="Lang::get('anomaly::settings.min_amount_label')"
+            :hint="Lang::get('anomaly::settings.min_amount_help')"
+            wire:model="anomalyMinAmountMinor"
+            style="font-variant-numeric: tabular-nums;"
+        />
 
         @if ($saveError !== '')
             <p class="text-sm text-rose-600 dark:text-rose-500" data-testid="anomaly-save-error">{{ $saveError }}</p>

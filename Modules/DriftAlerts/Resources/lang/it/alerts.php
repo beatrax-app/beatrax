@@ -57,6 +57,7 @@ return [
         'meta_eur_equiv' => '(≈ :amount/anno)',
         'cancel_impact' => 'Disdici → risparmia :amount/anno',
         'cadence_flipped' => 'Cadenza cambiata — visibile anche in',
+        'cadence_flipped_link' => 'Rivedi le ricorrenti',
         'acknowledge' => 'Conferma',
         'acknowledge_aria' => "Conferma l'avviso di scostamento :id",
         'snooze' => 'Posticipa ▾',

@@ -20,11 +20,9 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    $fmt = static fn (Money $money): string => $money->currency() === 'EUR'
-        ? $money->format('nl_NL')
-        : $money->format('en_US');
+    $fmt = static fn (Money $money): string => $money->format();
 
-    $eurFmt = static fn (int $minor): string => Money::ofMinor($minor, 'EUR')->format('nl_NL');
+    $eurFmt = static fn (int $minor): string => Money::ofMinor($minor, 'EUR')->format();
 
     $expenseTotal = (int) ($totals['expense_eur_minor'] ?? 0);
     $incomeTotal = (int) ($totals['income_eur_minor'] ?? 0);
@@ -66,14 +64,17 @@
     </header>
 
     @if ($sectionEmpty)
-        <x-core::card>
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('recurring::index.empty.heading') }}</h2>
-            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+        <x-core::empty-state :heading="Lang::get('recurring::index.empty.heading')">
+            {{-- A slot, not the :body prop: the link finishes the sentence, and
+                 the prop escapes its value. Its text is the destination page's
+                 own title — "/recurring/review" was one word of English URL
+                 inside a translated sentence. --}}
+            <x-slot:body>
                 {{ Lang::get('recurring::index.empty.before_link') }}
-                <a href="{{ route('recurring.review') }}" class="text-slate-900 underline underline-offset-2 dark:text-slate-100">/recurring/review</a>
+                <a href="{{ route('recurring.review') }}" class="text-slate-900 underline underline-offset-2 dark:text-slate-100">{{ Lang::get('recurring::index.empty.link') }}</a>
                 {{ Lang::get('recurring::index.empty.after_link') }}
-            </p>
-        </x-core::card>
+            </x-slot:body>
+        </x-core::empty-state>
     @else
         @if (count($expenses) > 0)
             <section class="mb-8">

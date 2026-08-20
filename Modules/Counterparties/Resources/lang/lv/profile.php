@@ -25,6 +25,8 @@ return [
         'tax_years' => 'Taksācijas gadi',
     ],
 
+    'tablist_aria' => 'Darījuma partnera sadaļas',
+
     'tab_note_personal' => '— privātiem kontaktiem finansējuma ķēžu nav',
     'tab_note_bank' => '— bankas komisiju partneris finansējuma ķēdes neveido',
     'tab_note_government' => '— valsts iestāžu partneriem finansējuma ķēžu nav',

@@ -42,7 +42,7 @@
             </p>
         </div>
         <a
-            href="{{ url('/settings') }}#forecast-buffers"
+            href="{{ route('settings') }}#forecast-buffers"
             class="text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:text-slate-100 dark:text-slate-400"
         >{{ Lang::get('forecasting::forecast.adjust_buffers') }} &rarr;</a>
     </header>
@@ -53,39 +53,26 @@
             <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('forecasting::forecast.empty_body') }}
             </p>
+            {{-- "/import" was not a route at all — the wizard is at
+                 /imports/new — so the one link out of an empty forecast
+                 landed on a 404, and a path spelled by hand is never
+                 checked against the route table. --}}
             <p class="mt-3 max-w-prose text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('forecasting::forecast.empty_start') }}
-                <a href="{{ url('/import') }}" class="text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('forecasting::forecast.empty_import_link') }}</a>
+                <a href="{{ route('imports.new') }}" class="text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('forecasting::forecast.empty_import_link') }}</a>
                 {{ Lang::get('forecasting::forecast.empty_or') }}
-                <a href="{{ url('/recurring/review') }}" class="text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('forecasting::forecast.empty_recurring_link') }}</a>.
+                <a href="{{ route('recurring.review') }}" class="text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('forecasting::forecast.empty_recurring_link') }}</a>.
             </p>
         </section>
     @else
         @if (count($accounts) > 0)
             <nav class="mb-6 flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-700" role="tablist" aria-label="{{ Lang::get('forecasting::forecast.account_tablist') }}">
-                <button
-                    type="button"
-                    role="tab"
-                    aria-selected="{{ $isAllAccountsView ? 'true' : 'false' }}"
-                    wire:click="setAccount('all')"
-                    @class([
-                        'px-3 py-2 text-sm',
-                        'border-b-2 border-slate-900 dark:border-slate-100 font-medium text-slate-900 dark:text-slate-100' => $isAllAccountsView,
-                        'border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100' => ! $isAllAccountsView,
-                    ])
-                >{{ Lang::get('forecasting::forecast.all_accounts') }}</button>
+                <x-core::tab :active="$isAllAccountsView" wire:click="setAccount('all')">{{ Lang::get('forecasting::forecast.all_accounts') }}</x-core::tab>
                 @foreach ($accounts as $account)
-                    <button
-                        type="button"
-                        role="tab"
-                        aria-selected="{{ $selectedAccountId === $account['id'] ? 'true' : 'false' }}"
+                    <x-core::tab
+                        :active="$selectedAccountId === $account['id']"
                         wire:click="setAccount('{{ $account['id'] }}')"
-                        @class([
-                            'px-3 py-2 text-sm',
-                            'border-b-2 border-slate-900 dark:border-slate-100 font-medium text-slate-900 dark:text-slate-100' => $selectedAccountId === $account['id'],
-                            'border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100' => $selectedAccountId !== $account['id'],
-                        ])
-                    >{{ $account['name'] }}</button>
+                    >{{ $account['name'] }}</x-core::tab>
                 @endforeach
             </nav>
         @endif
@@ -107,10 +94,12 @@
                 @endforeach
             </div>
 
+            {{-- aria-pressed, not role="switch": a switch is the track-and-thumb
+                 picture x-core::switch draws, and this is a chip in a row of
+                 chips. "Switch, on" announced a control that is not here. --}}
             <button
                 type="button"
-                role="switch"
-                aria-checked="{{ $viewByFunder ? 'true' : 'false' }}"
+                aria-pressed="{{ $viewByFunder ? 'true' : 'false' }}"
                 {{-- The name is the visible text; the explanation is a
                      description, so a screen reader announces the label
                      first and the rationale after it rather than instead. --}}

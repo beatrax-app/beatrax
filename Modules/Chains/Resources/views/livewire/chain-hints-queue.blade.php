@@ -31,22 +31,22 @@
     </header>
 
     @if ($statusMessage)
-        <div
-            class="mb-6 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-200"
+        <x-core::alert
+            tone="positive"
+            class="mb-6"
             aria-live="polite" aria-atomic="true"
             data-testid="chain-hints-status"
         >
             {{ $statusMessage }}
-        </div>
+        </x-core::alert>
     @endif
 
     @if (count($hints) === 0)
-        <x-core::card data-testid="chain-hints-empty">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('chains::hints.empty_heading') }}</h2>
-            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                {{ Lang::get('chains::hints.empty_body') }}
-            </p>
-        </x-core::card>
+        <x-core::empty-state
+            data-testid="chain-hints-empty"
+            :heading="Lang::get('chains::hints.empty_heading')"
+            :body="Lang::get('chains::hints.empty_body')"
+        />
     @else
         {{-- overflow-x: auto wrapper so dense hint rows scroll horizontally at phone width (D-06 power split) --}}
         <div class="overflow-x-scroll-wrapper" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">

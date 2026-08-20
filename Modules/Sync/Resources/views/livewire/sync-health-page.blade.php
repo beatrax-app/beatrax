@@ -44,13 +44,14 @@
     {{-- Recent skips table --}}
     @if ($recentSkips->isEmpty())
         {{-- Calm empty state --}}
-        <div
-            class="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+        <x-core::alert
+            tone="positive"
+            class="flex items-center gap-2"
             data-testid="sync-health-empty-state"
         >
             <span aria-hidden="true" class="text-base">✓</span>
             {{ Lang::get('sync::health.empty') }}
-        </div>
+        </x-core::alert>
     @else
         {{-- overflow-x-auto, not overflow-hidden: this table is the only
                  rendering of these rows at every width, and hidden CLIPPED the

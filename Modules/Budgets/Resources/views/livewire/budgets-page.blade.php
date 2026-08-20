@@ -85,10 +85,10 @@
 
     {{-- Envelope grid --}}
     @if (count($rows) === 0)
-        <x-core::card>
-            <x-core::section-heading :title="Lang::get('budgets::messages.no_categories.heading')" />
-            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.no_categories.body') }}</p>
-        </x-core::card>
+        <x-core::empty-state
+            :heading="Lang::get('budgets::messages.no_categories.heading')"
+            :body="Lang::get('budgets::messages.no_categories.body')"
+        />
     @else
         {{-- Desktop grid (>=768px) --}}
         <table class="hidden w-full text-left text-sm md:table">
@@ -285,12 +285,17 @@
                             <p class="w-full text-xs text-rose-600 dark:text-rose-400">{{ $thresholdErrors[$row->categoryId] }}</p>
                         @endif
                     </div>
+                    {{-- Under 640px the mark stands alone as the verb, so it is an
+                         emoji: ⇄ came out of the body font at 8px, off baseline,
+                         and read as punctuation. 🔄 is the pots row's mark for a
+                         move. Not x-core::emoji-action — the word comes back at
+                         sm:, and that component is the icon and nothing else. --}}
                     <button
                         type="button"
                         wire:click="openMove({{ $row->categoryId }})"
                         x-on:click="$dispatch('open-sheet', { name: 'envelope-move' })"
                         class="text-xs text-slate-400 hover:text-slate-900 focus:outline-none min-w-[44px] min-h-[44px] flex items-center justify-center dark:hover:text-slate-100"
-                     title="{{ Lang::get('budgets::messages.row.move') }}"><span aria-hidden="true" class="sm:hidden">⇄</span><span class="sr-only sm:not-sr-only">{{ Lang::get('budgets::messages.row.move') }}</span></button>
+                     title="{{ Lang::get('budgets::messages.row.move') }}"><span aria-hidden="true" class="sm:hidden">🔄</span><span class="sr-only sm:not-sr-only">{{ Lang::get('budgets::messages.row.move') }}</span></button>
                 </div>
             @endforeach
         </div>
@@ -303,31 +308,34 @@
         <div class="pt-[44px]" style="max-width: 480px;">
             <x-core::section-heading :title="Lang::get('budgets::messages.modal.move_from', ['name' => $moveFromCategory?->categoryName ?? Lang::get('budgets::messages.modal.move_from_fallback')])" />
             <form wire:submit="moveMoney" class="mt-6 space-y-4">
+                <x-core::form-field
+                    :label="Lang::get('budgets::messages.modal.move_to')"
+                    name="moveToCategoryId"
+                    field-id="envelope-move-to"
+                    type="select"
+                    wire:model="moveToCategoryId"
+                >
+                    <option value="">{{ count($moveDestinations) === 0 ? Lang::get('budgets::messages.modal.no_other') : Lang::get('budgets::messages.modal.select') }}</option>
+                    @foreach ($moveDestinations as $dest)
+                        <option value="{{ $dest->categoryId }}">{{ $dest->categoryName }}</option>
+                    @endforeach
+                </x-core::form-field>
                 <div>
-                    <label for="envelope-move-to" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.modal.move_to') }}</label>
-                    <select
-                        id="envelope-move-to"
-                        wire:model="moveToCategoryId"
-                        class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
-                    >
-                        <option value="">{{ count($moveDestinations) === 0 ? Lang::get('budgets::messages.modal.no_other') : Lang::get('budgets::messages.modal.select') }}</option>
-                        @foreach ($moveDestinations as $dest)
-                            <option value="{{ $dest->categoryId }}">{{ $dest->categoryName }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label for="envelope-move-amount" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.modal.amount') }}</label>
-                    <input
-                        type="text"
-                        id="envelope-move-amount"
+                    {{-- $moveError is a plain property, not a validation-bag
+                         entry, so the component's error line cannot read it.
+                         The message stays a sibling below and the field is
+                         pointed at it by hand. --}}
+                    <x-core::form-field
+                        :label="Lang::get('budgets::messages.modal.amount')"
+                        name="moveAmount"
+                        field-id="envelope-move-amount"
                         wire:model="moveAmount"
                         inputmode="decimal"
                         placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
-                        @if ($moveError !== '') aria-invalid="true" aria-describedby="envelope-move-amount-error" @endif
-                        class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                        :aria-invalid="$moveError !== '' ? 'true' : null"
+                        :aria-describedby="$moveError !== '' ? 'envelope-move-amount-error' : null"
                         style="font-variant-numeric: tabular-nums;"
-                    >
+                    />
                     @if ($moveFromCategory !== null)
                         <p class="mt-1 text-xs text-slate-400 dark:text-slate-500" style="font-variant-numeric: tabular-nums;">
                             {{ Lang::get('budgets::messages.modal.available_in', ['name' => $moveFromCategory->categoryName, 'amount' => $fmt($moveFromCategory->availableMinor, $moveFromCategory->currency)]) }}
@@ -337,16 +345,13 @@
                         <p id="envelope-move-amount-error" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $moveError }}</p>
                     @endif
                 </div>
-                <div>
-                    <label for="envelope-move-memo" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.modal.note') }}</label>
-                    <input
-                        type="text"
-                        id="envelope-move-memo"
-                        wire:model="moveMemo"
-                        placeholder="{{ Lang::get('budgets::messages.modal.note_placeholder') }}"
-                        class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
-                    >
-                </div>
+                <x-core::form-field
+                    :label="Lang::get('budgets::messages.modal.note')"
+                    name="moveMemo"
+                    field-id="envelope-move-memo"
+                    wire:model="moveMemo"
+                    placeholder="{{ Lang::get('budgets::messages.modal.note_placeholder') }}"
+                />
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" wire:click="$dispatch('modal-close', { name: 'envelope-move' })" class="rounded-md px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100 dark:text-slate-400">{{ Lang::get('budgets::messages.modal.cancel') }}</button>
                     <button type="submit" @disabled(count($moveDestinations) === 0) class="inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed">{{ Lang::get('budgets::messages.modal.move_funds') }}</button>
@@ -358,33 +363,41 @@
     {{-- Phone bottom sheet: Move envelope money --}}
     <x-core::bottom-sheet name="envelope-move" :title="Lang::get('budgets::messages.modal.move_funds')">
         <form wire:submit="moveMoney" class="space-y-4">
+            {{-- The inline font-size stays. This theme redefines --text-base
+                 as 0.9375rem, so `size="base"` renders 15px here, not 16px —
+                 under the threshold at which Safari zooms the viewport on
+                 focus, which is the whole reason these two phone fields
+                 pinned 16px by hand. The prop states the intent; the inline
+                 rule is what currently delivers it. --}}
+            <x-core::form-field
+                :label="Lang::get('budgets::messages.modal.move_to')"
+                name="moveToCategoryId"
+                field-id="envelope-move-to-sheet"
+                type="select"
+                size="base"
+                wire:model="moveToCategoryId"
+                style="font-size: 16px;"
+            >
+                <option value="">{{ count($moveDestinations) === 0 ? Lang::get('budgets::messages.modal.no_other') : Lang::get('budgets::messages.modal.select') }}</option>
+                @foreach ($moveDestinations as $dest)
+                    <option value="{{ $dest->categoryId }}">{{ $dest->categoryName }}</option>
+                @endforeach
+            </x-core::form-field>
             <div>
-                <label for="envelope-move-to-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.modal.move_to') }}</label>
-                <select
-                    id="envelope-move-to-sheet"
-                    wire:model="moveToCategoryId"
-                    style="font-size: 16px;"
-                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
-                >
-                    <option value="">{{ count($moveDestinations) === 0 ? Lang::get('budgets::messages.modal.no_other') : Lang::get('budgets::messages.modal.select') }}</option>
-                    @foreach ($moveDestinations as $dest)
-                        <option value="{{ $dest->categoryId }}">{{ $dest->categoryName }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div>
-                <label for="envelope-move-amount-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.modal.amount') }}</label>
-                <input
-                    type="text"
-                    id="envelope-move-amount-sheet"
+                <x-core::form-field
+                    :label="Lang::get('budgets::messages.modal.amount')"
+                    name="moveAmount"
+                    field-id="envelope-move-amount-sheet"
+                    size="base"
                     wire:model="moveAmount"
                     inputmode="decimal"
                     placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
+                    :aria-invalid="$moveError !== '' ? 'true' : null"
+                    :aria-describedby="$moveError !== '' ? 'envelope-move-amount-sheet-error' : null"
                     style="font-size: 16px; font-variant-numeric: tabular-nums;"
-                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
-                >
+                />
                 @if ($moveError !== '')
-                    <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $moveError }}</p>
+                    <p id="envelope-move-amount-sheet-error" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $moveError }}</p>
                 @endif
             </div>
             <div class="flex gap-3 pt-2">

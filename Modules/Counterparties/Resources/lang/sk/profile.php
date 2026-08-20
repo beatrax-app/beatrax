@@ -25,6 +25,8 @@ return [
         'tax_years' => 'Daňové roky',
     ],
 
+    'tablist_aria' => 'Sekcie protistrany',
+
     'tab_note_personal' => '— pri osobných kontaktoch nie sú finančné reťazce',
     'tab_note_bank' => '— protistrana s bankovými poplatkami negeneruje finančné reťazce',
     'tab_note_government' => '— pri štátnych protistranách nie sú finančné reťazce',

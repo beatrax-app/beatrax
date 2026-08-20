@@ -22,9 +22,7 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    $fmt = static fn (Money $money): string => $money->currency() === 'EUR'
-        ? $money->format('nl_NL')
-        : $money->format('en_US');
+    $fmt = static fn (Money $money): string => $money->format();
 
     $kindLabel = static function (string $kind): string {
         if ($kind === \Modules\Chains\Public\Enums\ChainLinkKind::PaypalFunding->value) {
@@ -55,22 +53,21 @@
     </header>
 
     @if ($actionError)
-        <div
-            class="mb-6 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:bg-rose-950 dark:border-rose-800 dark:text-rose-200"
+        <x-core::alert
+            tone="danger"
+            class="mb-6"
             aria-live="polite" aria-atomic="true"
             data-testid="chain-review-action-error"
         >
             {{ $actionError }}
-        </div>
+        </x-core::alert>
     @endif
 
     @if (count($candidates) === 0)
-        <x-core::card>
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('chains::review.empty_heading') }}</h2>
-            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                {{ Lang::get('chains::review.empty_body') }}
-            </p>
-        </x-core::card>
+        <x-core::empty-state
+            :heading="Lang::get('chains::review.empty_heading')"
+            :body="Lang::get('chains::review.empty_body')"
+        />
     @else
         {{-- overflow-x: auto wrapper so dense chain rows scroll horizontally at phone width (D-06 power split) --}}
         <div class="overflow-x-scroll-wrapper" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">

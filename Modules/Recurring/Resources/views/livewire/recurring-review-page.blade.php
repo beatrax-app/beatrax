@@ -15,9 +15,7 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    $fmt = static fn (Money $money): string => $money->currency() === 'EUR'
-        ? $money->format('nl_NL')
-        : $money->format('en_US');
+    $fmt = static fn (Money $money): string => $money->format();
 
     $tabs = [
         'pending' => Lang::get('recurring::review.tabs.pending'),
@@ -68,18 +66,17 @@
     @endif
 
     @if (count($rows) === 0)
-        <x-core::card>
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('recurring::review.empty.heading') }}</h2>
-            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                @if ($tab === 'pending')
-                    {{ Lang::get('recurring::review.empty.pending') }}
-                @elseif ($tab === 'rejected')
-                    {{ Lang::get('recurring::review.empty.rejected') }}
-                @else
-                    {{ Lang::get('recurring::review.empty.cadence_changed') }}
-                @endif
-            </p>
-        </x-core::card>
+        @php
+            $emptyBody = match ($tab) {
+                'pending' => Lang::get('recurring::review.empty.pending'),
+                'rejected' => Lang::get('recurring::review.empty.rejected'),
+                default => Lang::get('recurring::review.empty.cadence_changed'),
+            };
+        @endphp
+        <x-core::empty-state
+            :heading="Lang::get('recurring::review.empty.heading')"
+            :body="$emptyBody"
+        />
     @else
         {{-- D-06 power-surface fallback: wrap in overflow-x:auto at phone width.
              The multi-action row (Approve/Reject/Snooze/Edit-name) cannot be

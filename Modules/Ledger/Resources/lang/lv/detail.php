@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Noņemt kategoriju',
         'keep_category' => 'Paturēt šo kategoriju',
         'restore_single' => 'Atjaunot kā vienu kategoriju?',
+        'survivor_legend' => 'Kategorija, ko paturēt',
         'confirm_unsplit' => 'Jā, atcelt sadalījumu',
         'keep_split' => 'Paturēt sadalījumu',
     ],
