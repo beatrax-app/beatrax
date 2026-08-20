@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__.'/nativephp_scaffold_root.php';
+
 /*
  * Writes the iOS app icon from resources/brand art.
  *
@@ -26,7 +28,7 @@ if (! is_file($source)) {
     exit(0);
 }
 
-$iconset = $root.'/mobile-app/nativephp/ios/NativePHP/Assets.xcassets/AppIcon.appiconset';
+$iconset = beatraxScaffoldPath('ios/NativePHP/Assets.xcassets/AppIcon.appiconset') ?? '';
 
 if (! is_dir($iconset)) {
     fwrite(STDERR, "ios-app-icon: iconset not found (run native:install first)\n");

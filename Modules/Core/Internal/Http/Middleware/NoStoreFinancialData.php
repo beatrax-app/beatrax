@@ -25,6 +25,14 @@ final class NoStoreFinancialData
     // not write — counterparty names, payment references and receipt bodies
     // arrive from bank exports and mailboxes — so these are what stands
     // between a missed escape and a working attack.
+    /** @var array<string, string> */
+    private const SECURITY_HEADERS = [
+        'X-Content-Type-Options' => 'nosniff',
+        'X-Frame-Options' => 'DENY',
+        'Referrer-Policy' => 'no-referrer',
+        'X-Permitted-Cross-Domain-Policies' => 'none',
+    ];
+
     // Static brand artefacts, and the only routes exempt from the no-store
     // rule: they carry no financial data, and overwriting their own week-long
     // policy made every lock screen and setup screen re-read a 91 KB PNG
@@ -35,14 +43,6 @@ final class NoStoreFinancialData
         'app.splash',
         'pwa.icon',
         'site.webmanifest',
-    ];
-
-    /** @var array<string, string> */
-    private const SECURITY_HEADERS = [
-        'X-Content-Type-Options' => 'nosniff',
-        'X-Frame-Options' => 'DENY',
-        'Referrer-Policy' => 'no-referrer',
-        'X-Permitted-Cross-Domain-Policies' => 'none',
     ];
 
     public function __construct(

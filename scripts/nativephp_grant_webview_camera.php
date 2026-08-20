@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__.'/nativephp_scaffold_root.php';
+
 /*
  * Grant the Android WebView's camera permission requests.
  *
@@ -27,7 +29,7 @@ declare(strict_types=1);
  * exists to fix.
  */
 
-$target = __DIR__.'/../mobile-app/nativephp/android/app/src/main/java/com/nativephp/mobile/network/WebViewManager.kt';
+$target = beatraxScaffoldPath('android/app/src/main/java/com/nativephp/mobile/network/WebViewManager.kt') ?? '';
 
 if (! is_file($target)) {
     // The native scaffold is generated on demand and is absent from a fresh
@@ -169,7 +171,7 @@ if (! $shellAlreadyPatched) {
 // `vendor/nativephp/mobile-ui/resources/android/` into the Android project, so
 // a patch applied to the generated file survives exactly until the next build
 // — which is why the camera kept falling back to the full-screen scanner.
-$edgeTarget = __DIR__.'/../mobile-app/vendor/nativephp/mobile-ui/resources/android/WebviewRenderer.kt';
+$edgeTarget = (beatraxMobileVendorPath('nativephp/mobile-ui/resources/android/WebviewRenderer.kt') ?? '');
 
 if (is_file($edgeTarget)) {
     $edgeSource = (string) file_get_contents($edgeTarget);

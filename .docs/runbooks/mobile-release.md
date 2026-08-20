@@ -176,23 +176,23 @@ fire for `composer install`, which is what CI and Bifrost run. The patches reach
 a built artifact through `NativeBuildPatches`, not through composer — running
 `composer update` inside a materialized tree would fail on those paths.
 
-**Carrying the scripts is not the same as the scripts working there, and today
-they do not.** Every script written before this note resolves the generated
-project as `__DIR__/../mobile-app/nativephp/…`. In the dev tree that is right.
-In a materialized tree the script sits at `<build-repo>/scripts/`, the project
-is at `<build-repo>/nativephp/`, and `../mobile-app/nativephp` does not exist —
-so each one prints *"no Android scaffold yet — skipping"* and exits 0. Verified
-by copying the scripts into a tree shaped like the build repo and running them.
+**Carrying the scripts is not the same as the scripts working there.** Every
+script written before this note resolved the generated project as
+`__DIR__/../mobile-app/nativephp/…`. In the dev tree that is right. In a
+materialized tree the script sits at `<build-repo>/scripts/`, the project is at
+`<build-repo>/nativephp/`, and `../mobile-app/nativephp` does not exist — so
+each one printed *"no Android scaffold yet — skipping"* and exited 0. A Bifrost
+AAB or IPA built that way carried NativePHP's own "N" icon, no WebView camera
+permission and `allowBackup="true"`, from a clean green log. The first of those
+is an instant rejection on both stores; the last means `adb backup` can pull the
+ledger and staged key material off a device with USB debugging on.
 
-The consequence is the one the old, deleted section warned about, arrived at by
-a different route: a Bifrost AAB or IPA still carries NativePHP's own "N" icon,
-no WebView camera permission, and `allowBackup="true"`. The first of those is an
-instant rejection on both stores.
-
-`nativephp_strip_unused_permissions.php`, `nativephp_ios_privacy_manifest.php`
-and `nativephp_ios_export_compliance.php` probe both roots and do work in a
-materialized tree. **The other eleven need the same probe before a Bifrost
-artifact is submitted anywhere.**
+Every one of them now resolves through `scripts/nativephp_scaffold_root.php`,
+which probes `<root>/mobile-app/nativephp/…` then `<root>/nativephp/…`, with
+`BEATRAX_NATIVE_ROOT` overriding both for a tree in neither shape. A skip now
+means there is genuinely no scaffold, not that the script was looking in the
+wrong place. `ScaffoldPatchesFindEitherRootTest` fails if one is pinned back to
+a literal path, and exercises the materialized shape against a temporary tree.
 
 ## Export compliance and the French declaration
 

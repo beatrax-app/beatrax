@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__.'/nativephp_scaffold_root.php';
+
 /*
  * Paints the two surfaces CSS can never reach: the WebView's own canvas and
  * the Activity window behind it.
@@ -17,7 +19,7 @@ declare(strict_types=1);
  * from composer's post-install/post-update hooks like the other patches.
  */
 
-$root = dirname(__DIR__).'/mobile-app/nativephp/android/app/src/main';
+$root = beatraxScaffoldPath('android/app/src/main') ?? '';
 
 $webViewManager = $root.'/java/com/nativephp/mobile/network/WebViewManager.kt';
 $themes = $root.'/res/values/themes.xml';
