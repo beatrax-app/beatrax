@@ -152,3 +152,52 @@ it('says so on the page, in the interface language', function (): void {
     expect($html)->toContain('Kosten en correcties (niet meegeteld)')
         ->and($html)->toContain('9,00');
 });
+
+it('reads a fee the same way as the total it sits beside', function (string $metric, int $expected): void {
+    $user = feesUser();
+    feesSeed($user, 'expense', -200000, 0);
+    feesSeed($user, 'income', 500000, 1);
+    feesSeed($user, 'fee', -150, 2);
+    feesSeed($user, 'adjustment', -750, 3);
+
+    $definition = new ReportDefinition(
+        metric: $metric,
+        dimension: 'category',
+        periodPreset: 'custom',
+        granularity: ReportGranularity::Monthly,
+        currencyMode: 'base',
+        viz: 'table',
+        customFrom: '2026-08-01',
+        customTo: '2026-08-31',
+    );
+
+    // A spend report reads positive, so its fee does too. Income and net read
+    // signed, so the same 9.00 of fees reads as money leaving — which is what
+    // the row beside those totals is telling the reader.
+    expect(app(ReportAggregator::class)->run($user, $definition)->otherMovementMinor)->toBe($expected);
+})->with([
+    ['spend', 900],
+    ['income', -900],
+    ['net', -900],
+]);
+
+it('carries the fees through the original-currency path too', function (): void {
+    $user = feesUser();
+    feesSeed($user, 'expense', -200000, 0);
+    feesSeed($user, 'fee', -150, 1);
+
+    $definition = new ReportDefinition(
+        metric: 'spend',
+        dimension: 'category',
+        periodPreset: 'custom',
+        granularity: ReportGranularity::Monthly,
+        currencyMode: 'original',
+        viz: 'table',
+        customFrom: '2026-08-01',
+        customTo: '2026-08-31',
+    );
+
+    // applyOriginal() picks the primary currency's total out of the per-currency
+    // map, and nothing exercised that branch at all.
+    expect(app(ReportAggregator::class)->run($user, $definition)->otherMovementMinor)->toBe(150);
+});

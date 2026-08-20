@@ -57,12 +57,20 @@ it('does the same for every guest route', function (): void {
     }
 });
 
-it('carries the query string across', function (): void {
-    $response = $this->get('/login?next=%2Fbudgets', ['Accept' => 'text/html']);
+it('carries the query string and fragment across', function (): void {
+    $middleware = app(ClientSideRedirect::class);
 
-    // The target is whatever the guest middleware chose; what matters is that
-    // it is a same-origin path and nothing was invented around it.
-    expect($response->getContent())->toMatch('/window\.location\.replace\("\/[^"]*"\)/');
+    $response = $middleware->handle(
+        Request::create('/login', 'GET', server: ['HTTP_ACCEPT' => 'text/html']),
+        static fn (): Response => new RedirectResponse('/budgets?month=2026-08&view=table#totals'),
+    );
+
+    // Decoded, because which branch renders depends on whether a CSP nonce was
+    // minted, and the meta-refresh branch escapes the ampersand. Asserting only
+    // that the target was a same-origin path passed just as well with the query
+    // dropped, which is the one thing the name promises.
+    expect(html_entity_decode((string) $response->getContent()))
+        ->toContain('/budgets?month=2026-08&view=table#totals');
 });
 
 it('leaves a Livewire round-trip its redirect', function (): void {
