@@ -85,10 +85,10 @@
 
     {{-- Envelope grid --}}
     @if (count($rows) === 0)
-        <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+        <x-core::card>
             <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('budgets::messages.no_categories.heading') }}</h2>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.no_categories.body') }}</p>
-        </div>
+        </x-core::card>
     @else
         {{-- Desktop grid (>=768px) --}}
         <table class="hidden w-full text-left text-sm md:table">
@@ -109,7 +109,7 @@
                         <td class="px-4 py-2">
                             <span class="truncate text-slate-900 dark:text-slate-100">{{ $row->categoryName }}</span>
                             @if ($row->overspendMode === \Modules\Budgets\Public\Enums\OverspendMode::CarryNegative->value)
-                                <span class="ml-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-[2px] text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">{{ Lang::get('budgets::messages.badge.carries_negative') }}</span>
+                                <x-core::status-pill tone="warning" class="ml-2">{{ Lang::get('budgets::messages.badge.carries_negative') }}</x-core::status-pill>
                             @endif
                             @if ($row->nonEurSpentMinor != 0)
                                 <span
@@ -233,7 +233,7 @@
                         <p class="primary truncate">
                             {{ $row->categoryName }}
                             @if ($row->overspendMode === \Modules\Budgets\Public\Enums\OverspendMode::CarryNegative->value)
-                                <span class="ml-1 inline-flex items-center rounded-full bg-amber-100 px-2 py-[2px] text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">{{ Lang::get('budgets::messages.badge.carries_negative') }}</span>
+                                <x-core::status-pill tone="warning" class="ml-1">{{ Lang::get('budgets::messages.badge.carries_negative') }}</x-core::status-pill>
                             @endif
                             @if ($row->nonEurSpentMinor != 0)
                                 <span

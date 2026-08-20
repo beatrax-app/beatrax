@@ -27,7 +27,7 @@
                 <h2 id="community-contribute-heading" class="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">
                     {{ Lang::get('community::index.contribute_heading') }}
                 </h2>
-                <div class="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
+                <x-core::card>
                     <p class="max-w-prose text-sm text-slate-500 dark:text-slate-400">
                         {{ Lang::get('community::index.contribute_body') }}
                     </p>
@@ -38,7 +38,7 @@
                     >
                         {{ Lang::get('community::index.contribute_cta') }}
                     </a>
-                </div>
+                </x-core::card>
             </section>
 
             {{-- Translations are the other thing the community owns: the app
@@ -48,7 +48,7 @@
                 <h2 id="community-translations-heading" class="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">
                     {{ Lang::get('community::index.translations_heading') }}
                 </h2>
-                <div class="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
+                <x-core::card>
                     <p class="max-w-prose text-sm text-slate-500 dark:text-slate-400">
                         {{ Lang::get('community::index.translations_body') }}
                     </p>
@@ -69,16 +69,16 @@
                     >
                         {{ Lang::get('community::index.translations_cta') }} &rarr;
                     </a>
-                </div>
+                </x-core::card>
             </section>
 
             <section class="space-y-3" id="shared-merchant-list" aria-labelledby="community-shared-heading">
                 <h2 id="community-shared-heading" class="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">
                     {{ Lang::get('community::index.shared_heading') }}
                 </h2>
-                <div class="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
+                <x-core::card>
                     @livewire('community.shared-list-settings-panel')
-                </div>
+                </x-core::card>
             </section>
         </div>
 @endsection

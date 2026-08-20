@@ -66,14 +66,14 @@
     </header>
 
     @if ($sectionEmpty)
-        <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+        <x-core::card>
             <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('recurring::index.empty.heading') }}</h2>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('recurring::index.empty.before_link') }}
                 <a href="{{ route('recurring.review') }}" class="text-slate-900 underline underline-offset-2 dark:text-slate-100">/recurring/review</a>
                 {{ Lang::get('recurring::index.empty.after_link') }}
             </p>
-        </div>
+        </x-core::card>
     @else
         @if (count($expenses) > 0)
             <section class="mb-8">
@@ -112,7 +112,7 @@
                      ============================================================ --}}
                 <ul class="hidden md:block space-y-2">
                     @foreach ($expenses as $row)
-                        <li class="rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700">
+                        <x-core::card tag="li" padding="tight">
                             <div class="flex items-center justify-between gap-4">
                                 <div class="min-w-0 flex-1">
                                     <p class="text-sm text-slate-900 dark:text-slate-100">
@@ -146,7 +146,7 @@
                                     <span class="text-sm text-slate-700 dark:text-slate-300" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($row->monthlyEquivalent->toMinor()) }}{{ Lang::get('recurring::index.per_month_suffix') }}</span>
                                 </div>
                             </div>
-                        </li>
+                        </x-core::card>
                     @endforeach
                 </ul>
             </section>
@@ -186,7 +186,7 @@
                      ============================================================ --}}
                 <ul class="hidden md:block space-y-2">
                     @foreach ($income as $row)
-                        <li class="rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700">
+                        <x-core::card tag="li" padding="tight">
                             <div class="flex items-center justify-between gap-4">
                                 <div class="min-w-0 flex-1">
                                     <p class="text-sm text-slate-900 dark:text-slate-100">
@@ -220,7 +220,7 @@
                                     <span class="text-sm text-slate-700 dark:text-slate-300" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($row->monthlyEquivalent->toMinor()) }}{{ Lang::get('recurring::index.per_month_suffix') }}</span>
                                 </div>
                             </div>
-                        </li>
+                        </x-core::card>
                     @endforeach
                 </ul>
             </section>

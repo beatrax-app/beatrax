@@ -25,13 +25,10 @@
         </h1>
     </header>
 
-    <aside
-        aria-live="polite" aria-atomic="true"
-        class="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-200"
-        data-testid="migration-success-banner"
-    >
+    <x-core::alert tone="positive" aria-live="polite" aria-atomic="true"
+        data-testid="migration-success-banner">
         {{ $summaryLine }}
-    </aside>
+    </x-core::alert>
 
     <section class="grid grid-cols-2 gap-4 sm:grid-cols-5" style="font-feature-settings: 'tnum';">
         @foreach ($stats as $stat)

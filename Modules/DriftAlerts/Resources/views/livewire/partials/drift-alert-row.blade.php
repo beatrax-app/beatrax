@@ -35,7 +35,7 @@
     $seriesState = $seriesStates[$alert->recurringSeriesId] ?? null;
 @endphp
 
-<div class="rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700">
+<x-core::card padding="tight">
     <div class="flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-4">
         <div class="min-w-0 flex-1">
             <p class="flex flex-wrap items-baseline gap-2 text-sm">
@@ -141,4 +141,4 @@
             </div>
         @endif
     </div>
-</div>
+</x-core::card>

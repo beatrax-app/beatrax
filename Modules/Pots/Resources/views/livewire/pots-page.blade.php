@@ -79,7 +79,7 @@
 
     {{-- No accounts / no pots: empty state --}}
     @if (count($accounts) === 0 || count($groups) === 0)
-        <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+        <x-core::card>
             <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('pots::messages.empty.heading') }}</h2>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('pots::messages.empty.body') }}
@@ -92,7 +92,7 @@
                     class="mt-4 inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
                 >{{ Lang::get('pots::messages.empty.cta') }}</button>
             @endif
-        </div>
+        </x-core::card>
     @else
         {{-- Phone: flat .card-list-item list across all accounts (D-06) --}}
         <div class="pots-phone-list rounded-lg border border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-700 overflow-hidden">
@@ -195,8 +195,9 @@
                     {{-- Pot cards --}}
                     <ul class="space-y-4">
                         @foreach ($pots as $pot)
-                            <li
-                                class="rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700"
+                            <x-core::card
+                                tag="li"
+                                padding="tight"
                                 wire:key="pot-{{ $pot->id }}"
                             >
                                 {{-- Top row: pot name + link chip --}}
@@ -204,13 +205,13 @@
                                     <p class="min-w-0 truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $pot->name }}</p>
                                     <div class="flex shrink-0 items-center gap-2">
                                         @if ($pot->goalId !== null)
-                                            <span class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-[3px] text-xs font-medium text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                                            <x-core::status-pill tone="positive">
                                                 {{ Lang::get('pots::messages.chip.goal') }} {{ $pot->goalName ?? Lang::get('pots::messages.chip.goal_name_fallback') }}
-                                            </span>
+                                            </x-core::status-pill>
                                         @elseif ($pot->categoryId !== null)
-                                            <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-[3px] text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                                            <x-core::status-pill>
                                                 {{ $pot->categoryName ?? Lang::get('pots::messages.chip.category_fallback') }}
-                                            </span>
+                                            </x-core::status-pill>
                                         @endif
                                     </div>
                                 </div>
@@ -370,7 +371,7 @@
                                         </div>
                                     </div>
                                 @endif
-                            </li>
+                            </x-core::card>
                         @endforeach
                     </ul>
                 </div>
@@ -398,7 +399,7 @@
                         <li class="rounded-lg border border-slate-200 bg-white p-4 opacity-60 dark:bg-slate-950 dark:border-slate-700" wire:key="archived-pot-{{ $pot->id }}">
                             <div class="flex items-center justify-between gap-3">
                                 <p class="min-w-0 truncate text-sm font-semibold text-slate-500 dark:text-slate-400">{{ $pot->name }}</p>
-                                <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-[3px] text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">{{ Lang::get('pots::messages.archived.badge') }}</span>
+                                <x-core::status-pill>{{ Lang::get('pots::messages.archived.badge') }}</x-core::status-pill>
                             </div>
                             <p class="mt-1 text-sm text-slate-500 dark:text-slate-400" style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums;">
                                 {{ $fmt($pot->balanceMinor, $pot->currency) }}

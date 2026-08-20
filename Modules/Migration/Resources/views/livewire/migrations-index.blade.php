@@ -1,18 +1,21 @@
 @use('Modules\Core\Public\Support\Lang')
 <div class="space-y-6">
     @if ($runs->isEmpty())
-        <div class="flex flex-col items-center gap-4 rounded-md border border-slate-200 bg-slate-50 px-6 py-16 text-center dark:bg-slate-900 dark:border-slate-700">
-            <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('migration::index.empty_heading') }}</h1>
-            <p class="max-w-md text-sm text-slate-500 dark:text-slate-400">
-                {{ Lang::get('migration::index.intro') }}
-            </p>
+        {{-- level="h1": with no runs yet this block is the whole page, so its
+             heading is the page's only h1 — the header below it never renders. --}}
+        <x-core::empty-state
+            level="h1"
+            class="py-16"
+            :heading="Lang::get('migration::index.empty_heading')"
+            :body="Lang::get('migration::index.intro')"
+        >
             <a
                 href="{{ route('migrations.new') }}"
                 class="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
             >
                 {{ Lang::get('migration::index.start_new') }}
             </a>
-        </div>
+        </x-core::empty-state>
     @else
         <header class="flex items-baseline justify-between gap-4">
             <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('migration::index.heading') }}</h1>

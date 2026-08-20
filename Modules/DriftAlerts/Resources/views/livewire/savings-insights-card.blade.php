@@ -1,7 +1,7 @@
 @use('Modules\Core\Public\Support\Lang')
 <div>
     @if (count($insights) > 0)
-        <section class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-950" aria-label="{{ Lang::get('drift-alerts::savings.aria') }}">
+        <x-core::card tag="section" aria-label="{{ Lang::get('drift-alerts::savings.aria') }}">
             <div class="flex items-baseline justify-between gap-4">
                 <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('drift-alerts::savings.heading') }}</h2>
                 <a href="{{ route('drift.watch') }}" class="text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">{{ Lang::get('drift-alerts::savings.subscriptions_link') }}</a>
@@ -38,6 +38,6 @@
                     </li>
                 @endforeach
             </ul>
-        </section>
+        </x-core::card>
     @endif
 </div>

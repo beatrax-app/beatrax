@@ -92,16 +92,14 @@ final class PotWriter
                     );
                 }
 
-                $this->db->connection()->table('pot_movements')->insert([
-                    'user_id' => $user->id,
-                    'pot_id' => $pot->id,
+                $this->insertMovement([
+                    'user_id' => (int) $user->id,
+                    'pot_id' => (int) $pot->id,
                     'counterpart_pot_id' => null,
                     'amount_minor' => $minor,
                     'currency' => $currency,
                     'kind' => 'fund',
                     'memo' => null,
-                    'created_at' => CarbonImmutable::now(),
-                    'updated_at' => CarbonImmutable::now(),
                 ]);
             }
 
@@ -191,16 +189,14 @@ final class PotWriter
                 );
             }
 
-            $this->db->connection()->table('pot_movements')->insert([
-                'user_id' => $user->id,
+            $this->insertMovement([
+                'user_id' => (int) $user->id,
                 'pot_id' => $potId,
                 'counterpart_pot_id' => null,
                 'amount_minor' => $minor,
                 'currency' => $currency,
                 'kind' => 'fund',
                 'memo' => $memo,
-                'created_at' => CarbonImmutable::now(),
-                'updated_at' => CarbonImmutable::now(),
             ]);
         });
     }
@@ -232,16 +228,14 @@ final class PotWriter
                 );
             }
 
-            $this->db->connection()->table('pot_movements')->insert([
-                'user_id' => $user->id,
+            $this->insertMovement([
+                'user_id' => (int) $user->id,
                 'pot_id' => $potId,
                 'counterpart_pot_id' => null,
                 'amount_minor' => -$minor,
                 'currency' => $currency,
                 'kind' => 'withdraw',
                 'memo' => $memo,
-                'created_at' => CarbonImmutable::now(),
-                'updated_at' => CarbonImmutable::now(),
             ]);
         });
     }
@@ -291,31 +285,27 @@ final class PotWriter
                 );
             }
 
-            $now = CarbonImmutable::now();
+            $now = CarbonImmutable::now()->toDateTimeString();
 
-            $this->db->connection()->table('pot_movements')->insert([
-                'user_id' => $user->id,
+            $this->insertMovement([
+                'user_id' => (int) $user->id,
                 'pot_id' => $fromPotId,
                 'counterpart_pot_id' => $toPotId,
                 'amount_minor' => -$minor,
                 'currency' => $currency,
                 'kind' => 'transfer_out',
                 'memo' => $memo,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]);
+            ], $now);
 
-            $this->db->connection()->table('pot_movements')->insert([
-                'user_id' => $user->id,
+            $this->insertMovement([
+                'user_id' => (int) $user->id,
                 'pot_id' => $toPotId,
                 'counterpart_pot_id' => $fromPotId,
                 'amount_minor' => $minor,
                 'currency' => $currency,
                 'kind' => 'transfer_in',
                 'memo' => $memo,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]);
+            ], $now);
         });
     }
 
@@ -330,16 +320,14 @@ final class PotWriter
             $balance = $this->balance->balanceForPot($pot->id, $user);
 
             if ($balance > 0) {
-                $this->db->connection()->table('pot_movements')->insert([
-                    'user_id' => $user->id,
-                    'pot_id' => $pot->id,
+                $this->insertMovement([
+                    'user_id' => (int) $user->id,
+                    'pot_id' => (int) $pot->id,
                     'counterpart_pot_id' => null,
                     'amount_minor' => -$balance,
                     'currency' => $pot->currency,
                     'kind' => 'withdraw',
                     'memo' => 'Released on archive',
-                    'created_at' => CarbonImmutable::now(),
-                    'updated_at' => CarbonImmutable::now(),
                 ]);
             }
 
@@ -392,6 +380,30 @@ final class PotWriter
     public function parseAmount(string $value): ?int
     {
         return MoneyInput::tryToPositiveMinor($value);
+    }
+
+    // Movements had merge rules and no capture, so a fund or withdraw made
+    // after pairing never left the device and the peer's pot balances froze
+    // at whatever the backfill had handed it. One insert path, so a new
+    // movement kind cannot ship uncaptured either.
+    /**
+     * @param  array<string, mixed>  $row  Every column but the timestamps.
+     */
+    private function insertMovement(array $row, ?string $now = null): void
+    {
+        $stamp = $now ?? CarbonImmutable::now()->toDateTimeString();
+        $row['created_at'] = $stamp;
+        $row['updated_at'] = $stamp;
+
+        $id = $this->db->connection()->table('pot_movements')->insertGetId($row);
+
+        $this->events->dispatch(new EntityMutated(
+            table: 'pot_movements',
+            pk: $id,
+            userId: (int) $row['user_id'],
+            mutationType: 'create',
+            dirtyFields: $row,
+        ));
     }
 
     // Pots were absent from the capture wiring, so a pot created or renamed

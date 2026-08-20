@@ -65,12 +65,12 @@
     @endif
 
     @if (count($candidates) === 0)
-        <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+        <x-core::card>
             <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('chains::review.empty_heading') }}</h2>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('chains::review.empty_body') }}
             </p>
-        </div>
+        </x-core::card>
     @else
         {{-- overflow-x: auto wrapper so dense chain rows scroll horizontally at phone width (D-06 power split) --}}
         <div class="overflow-x-scroll-wrapper" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">

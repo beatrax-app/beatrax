@@ -86,13 +86,10 @@
         </header>
 
         @if (! $advancedOn)
-            <div
-                class="rounded border border-amber-300 bg-amber-50 dark:bg-amber-900/10 text-amber-700 dark:text-amber-300 p-3 text-sm"
-                data-testid="sql-advanced-banner"
-            >
+            <x-core::alert tone="warning" data-testid="sql-advanced-banner">
                 <strong>{{ Lang::get('dev::sql.advanced_off_strong') }}</strong>
                 <span>{{ Lang::get('dev::sql.advanced_off_hint') }}</span>
-            </div>
+            </x-core::alert>
         @endif
 
         <div class="{{ $advancedOn ? '' : 'opacity-50 pointer-events-none' }}">
@@ -124,12 +121,9 @@
         </div>
 
         @if ($errorMessage !== '')
-            <div
-                class="rounded border border-rose-300 bg-rose-50 dark:bg-rose-900/10 text-rose-700 dark:text-rose-300 p-3 text-sm"
-                data-testid="sql-error"
-            >
+            <x-core::alert tone="danger" data-testid="sql-error">
                 {{ $errorMessage }}
-            </div>
+            </x-core::alert>
         @elseif ($rowcount !== null && $rowcount === 0)
             <div
                 class="text-sm text-[var(--color-text-muted)]"

@@ -18,13 +18,10 @@
             file, unrecognized format, zip-bomb/zip-slip guard). The
             matching stack trace is also written to the Laravel log.
         --}}
-        <aside
-            role="alert"
-            class="rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:bg-rose-950 dark:border-rose-800 dark:text-rose-200"
-            data-testid="migration-upload-error-banner"
-        >
+        <x-core::alert tone="danger" role="alert"
+            data-testid="migration-upload-error-banner">
             {{ $uploadError }}
-        </aside>
+        </x-core::alert>
     @endif
 
     <form wire:submit="submit" class="space-y-4">

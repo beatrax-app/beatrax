@@ -23,15 +23,12 @@
     </header>
 
     @if ($flashMessage !== '')
-        <div
-            wire:transition.duration.3000ms
+        <x-core::alert tone="positive" class="px-4 py-2" wire:transition.duration.3000ms
             aria-atomic="true"
-            aria-live="polite"
-            class="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-200"
-        >
+            aria-live="polite">
             {{ $flashMessage }}
             <button type="button" wire:click="clearFlash" class="ml-3 text-xs underline">{{ Lang::get('import::aliases.dismiss') }}</button>
-        </div>
+        </x-core::alert>
     @endif
 
     {{-- Two-column shape: left rail = aliases table; right rail =
@@ -58,12 +55,10 @@
             </div>
 
             @if (count($aliases) === 0)
-                <div class="rounded-lg border border-slate-200 bg-slate-50 p-6 text-center dark:bg-slate-900 dark:border-slate-700">
-                    <h2 class="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('import::aliases.empty_heading') }}</h2>
-                    <p class="mx-auto mt-2 max-w-md text-sm text-slate-500 dark:text-slate-400">
-                        {{ Lang::get('import::aliases.empty_body') }}
-                    </p>
-                </div>
+                <x-core::empty-state
+                    :heading="Lang::get('import::aliases.empty_heading')"
+                    :body="Lang::get('import::aliases.empty_body')"
+                />
             @else
                 <table class="aliases-table">
                     <thead>
@@ -175,9 +170,9 @@
                         @endif
                     </div>
                     @if ($importError !== '')
-                        <div class="rounded-md border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700 dark:bg-rose-950 dark:border-rose-800 dark:text-rose-200">
+                        <x-core::alert tone="danger" class="px-4 py-2">
                             {{ $importError }}
-                        </div>
+                        </x-core::alert>
                     @endif
 
                     @if ($importDiff !== [])

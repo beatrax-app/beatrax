@@ -68,7 +68,7 @@
     @endif
 
     @if (count($rows) === 0)
-        <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+        <x-core::card>
             <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('recurring::review.empty.heading') }}</h2>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
                 @if ($tab === 'pending')
@@ -79,7 +79,7 @@
                     {{ Lang::get('recurring::review.empty.cadence_changed') }}
                 @endif
             </p>
-        </div>
+        </x-core::card>
     @else
         {{-- D-06 power-surface fallback: wrap in overflow-x:auto at phone width.
              The multi-action row (Approve/Reject/Snooze/Edit-name) cannot be

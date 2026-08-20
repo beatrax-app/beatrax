@@ -24,7 +24,7 @@
      true — the collapse state renders NOTHING user-visible. --}}
 <div>
     @if (! $collapse)
-        <div class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-950">
+        <x-core::card>
             {{-- Card header --}}
             <div class="flex items-center justify-between">
                 <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.page.title') }}</p>
@@ -46,11 +46,11 @@
                 </div>
 
                 @if ($overspentCount >= 1)
-                    <span class="inline-flex shrink-0 items-center whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                    <x-core::status-pill tone="warning">
                         {{ Lang::get('budgets::messages.badge.over_budget', ['count' => $overspentCount]) }}
-                    </span>
+                    </x-core::status-pill>
                 @endif
             </div>
-        </div>
+        </x-core::card>
     @endif
 </div>

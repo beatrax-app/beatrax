@@ -19,7 +19,7 @@
     $netEur = (int) ($totals['net_eur_minor'] ?? 0);
 @endphp
 
-<section class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700" aria-label="{{ Lang::get('recurring::fixed_payments.heading') }}">
+<x-core::card tag="section" aria-label="{{ Lang::get('recurring::fixed_payments.heading') }}">
     <header class="mb-4 flex items-baseline justify-between gap-4">
         <div>
             <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('recurring::fixed_payments.heading') }}</h2>
@@ -74,7 +74,7 @@
                     <div class="min-w-0 flex-1">
                         <p class="primary truncate">{{ $row->displayName() }}</p>
                         <p class="secondary mt-0.5 truncate">
-                            <span class="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">{{ $row->direction }}</span>
+                            <x-core::status-pill class="uppercase tracking-wide">{{ $row->direction }}</x-core::status-pill>
                             <span class="ml-1">{{ $row->cadence->label() }}</span>
                             @if ($row->latestFundingChainLinkId !== null)
                                 · {{ Lang::get('recurring::fixed_payments.chain') }}
@@ -99,7 +99,7 @@
                             class="block truncate text-sm font-medium text-slate-900 hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100"
                         >{{ $row->displayName() }}</a>
                         <p class="text-xs text-slate-500 dark:text-slate-400">
-                            <span class="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-700 dark:bg-slate-800 dark:text-slate-300">{{ $row->direction }}</span>
+                            <x-core::status-pill class="uppercase tracking-wide">{{ $row->direction }}</x-core::status-pill>
                             <span class="ml-2">{{ $row->cadence->label() }}</span>
                             @if ($row->latestFundingChainLinkId !== null)
                                 <span
@@ -122,4 +122,4 @@
             class="tap-link text-xs text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
         >{{ Lang::get('recurring::fixed_payments.view_all') }}</a>
     </footer>
-</section>
+</x-core::card>

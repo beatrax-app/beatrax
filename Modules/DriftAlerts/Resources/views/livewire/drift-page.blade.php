@@ -156,10 +156,10 @@
 
         @if (count($anomalyRows) === 0)
             @php [$emptyHeading, $emptyBody] = $anomalyEmpty[$tab] ?? $anomalyEmpty['open']; @endphp
-            <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+            <x-core::card>
                 <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ $emptyHeading }}</h2>
                 <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">{{ $emptyBody }}</p>
-            </div>
+            </x-core::card>
         @else
             <ul class="space-y-3" aria-live="polite">
                 @foreach ($anomalyRows as $anomaly)
@@ -186,7 +186,7 @@
         @endif
     @elseif ($tab === 'open')
         @if (count($grouped) === 0)
-            <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+            <x-core::card>
                 <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('drift-alerts::alerts.empty_open.heading') }}</h2>
                 <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">
                     {{ Lang::get('drift-alerts::alerts.empty_open.body') }}
@@ -195,7 +195,7 @@
                         class="text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:text-slate-100 dark:hover:text-slate-300"
                     >{{ Lang::get('drift-alerts::alerts.empty_open.link') }}</a>.
                 </p>
-            </div>
+            </x-core::card>
         @else
             <div class="space-y-4">
                 @foreach ($grouped as $seriesId => $groupAlerts)
@@ -269,7 +269,7 @@
         @endif
     @else
         @if (count($rows) === 0)
-            <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+            <x-core::card>
                 @if ($tab === 'history')
                     <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('drift-alerts::alerts.empty_history.heading') }}</h2>
                     <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">
@@ -281,7 +281,7 @@
                         {{ Lang::get('drift-alerts::alerts.empty_dismissed.body') }}
                     </p>
                 @endif
-            </div>
+            </x-core::card>
         @else
             <ul class="space-y-3">
                 @foreach ($rows as $alert)

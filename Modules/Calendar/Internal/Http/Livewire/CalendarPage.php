@@ -17,6 +17,7 @@ use Modules\Core\Models\UserPreference;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Services\UserPreferenceWriter;
 use Modules\Core\Public\Support\Lang;
 use stdClass;
 
@@ -157,7 +158,7 @@ final class CalendarPage extends Component
         }
     }
 
-    public function persistAccountPrefs(CurrentUser $currentUser, DatabaseManager $db): void
+    public function persistAccountPrefs(CurrentUser $currentUser, DatabaseManager $db, UserPreferenceWriter $preferences): void
     {
         $ownedIds = $this->fetchOwnedAccountIds($db, $currentUser->id());
 
@@ -167,13 +168,10 @@ final class CalendarPage extends Component
         $this->visibleAccountIds = self::sanitizeAccountIds($this->visibleAccountIds, $ownedIds);
         $this->balanceAccountIds = self::sanitizeAccountIds($this->balanceAccountIds, $ownedIds);
 
-        UserPreference::query()->updateOrCreate(
-            ['user_id' => $currentUser->id()],
-            [
-                'calendar_entries_accounts' => $this->visibleAccountIds,
-                'calendar_balance_accounts' => $this->balanceAccountIds,
-            ],
-        );
+        $preferences->write($currentUser->id(), [
+            'calendar_entries_accounts' => $this->visibleAccountIds,
+            'calendar_balance_accounts' => $this->balanceAccountIds,
+        ]);
     }
 
     public function render(

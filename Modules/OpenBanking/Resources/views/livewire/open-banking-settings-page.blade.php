@@ -23,7 +23,7 @@
     @endif
 
     {{-- ===== B1: header + toggle ===== --}}
-    <div class="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
+    <x-core::card>
         <div class="flex items-start justify-between gap-3">
             <div class="flex-1">
                 <p class="text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('openbanking::messages.page.toggle_label') }}</p>
@@ -46,7 +46,7 @@
                 <span class="switch__thumb"></span>
             </button>
         </div>
-    </div>
+    </x-core::card>
 
     {{-- ===== WR-07: re-confirm CTA — the SCA dance completed but the
          acknowledgement TTL lapsed before mount() could finalize the

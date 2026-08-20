@@ -6,7 +6,7 @@ namespace Modules\OpenBanking\Internal\Listeners;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
-use Modules\Core\Models\SystemAlert;
+use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Core\Public\Support\Lang;
 use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
 use Psr\Log\LoggerInterface;
@@ -24,6 +24,7 @@ final class RaiseOpenBankingReconsentAlert
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly LoggerInterface $logger,
+        private readonly SystemAlertWriter $alerts,
     ) {}
 
     public function handle(OpenBankingConsentFailed $event): void
@@ -36,16 +37,19 @@ final class RaiseOpenBankingReconsentAlert
         }
 
         try {
-            SystemAlert::query()->create([
-                'user_id' => $userId,
-                'kind' => self::ALERT_KIND,
-                'severity' => self::ALERT_SEVERITY,
-                'message' => Lang::get('openbanking::messages.alert.reconsent'),
-                'metadata' => [
+            // A lapsed bank consent is the user's to re-grant on whichever
+            // device is to hand, so the row is owned and travels; the
+            // machine-local probes in Core deliberately do not.
+            $this->alerts->raiseForUser(
+                userId: $userId,
+                kind: self::ALERT_KIND,
+                severity: self::ALERT_SEVERITY,
+                message: Lang::get('openbanking::messages.alert.reconsent'),
+                metadata: [
                     'connection_id' => $connectionId,
                     'reason' => $event->reason,
                 ],
-            ]);
+            );
         } catch (Throwable $e) {
             // Defence-in-depth — the listener must never throw upward
             // because the upstream caller (the sync job / consent-check)

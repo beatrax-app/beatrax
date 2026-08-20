@@ -19,13 +19,10 @@
             LoggerInterface so it surfaces on /dev/logs alongside the
             other ERROR-severity entries.
         --}}
-        <aside
-            role="alert"
-            class="rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:bg-rose-950 dark:border-rose-800 dark:text-rose-200"
-            data-testid="upload-error-banner"
-        >
+        <x-core::alert tone="danger" role="alert"
+            data-testid="upload-error-banner">
             {{ $uploadError }}
-        </aside>
+        </x-core::alert>
     @endif
 
     <form wire:submit="submit" class="space-y-4">

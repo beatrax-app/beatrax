@@ -24,7 +24,7 @@
         {{ Lang::get('openbanking::messages.ics.section_label') }}
     </p>
 
-    <div class="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
+    <x-core::card>
         <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('openbanking::messages.ics.heading') }}</h2>
 
         <ol class="mt-4 grid grid-cols-3 gap-3">
@@ -112,5 +112,5 @@
                 </button>
             </div>
         @endif
-    </div>
+    </x-core::card>
 </section>

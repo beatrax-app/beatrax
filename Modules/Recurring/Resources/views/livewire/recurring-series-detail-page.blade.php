@@ -39,12 +39,8 @@
         <div class="min-w-0 flex-1">
             <h1 class="truncate text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ $series->displayName() }}</h1>
             <p class="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-slate-500 dark:text-slate-400">
-                <span
-                    class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                >{{ ucfirst($series->state) }}</span>
-                <span
-                    class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                >{{ $series->cadence->label() }}</span>
+                <x-core::status-pill>{{ ucfirst($series->state) }}</x-core::status-pill>
+                <x-core::status-pill>{{ $series->cadence->label() }}</x-core::status-pill>
                 <span style="font-variant-numeric: tabular-nums;">{{ $fmt($series->latestAmount) }}</span>
                 <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">·</span>
                 <span style="font-variant-numeric: tabular-nums;">{{ $eurFmt($series->monthlyEquivalent->toMinor()) }}/mo</span>
@@ -122,9 +118,9 @@
     <section>
         <h2 class="mb-3 text-sm font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('recurring::detail.occurrences') }}</h2>
         @if ($occurrenceCount === 0)
-            <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+            <x-core::card>
                 <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('recurring::detail.no_occurrences') }}</p>
-            </div>
+            </x-core::card>
         @else
             {{-- overflow-x: auto wrapper ensures the occurrences table is scrollable
                  at phone width without horizontal page overflow (D-06). --}}
@@ -133,9 +129,9 @@
                 <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
                     <thead class="bg-slate-50 dark:bg-slate-900">
                         <tr>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('recurring::detail.table.date') }}</th>
-                            <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('recurring::detail.table.amount') }}</th>
-                            <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('recurring::detail.table.transaction') }}</th>
+                            <x-core::th align="left">{{ Lang::get('recurring::detail.table.date') }}</x-core::th>
+                            <x-core::th align="right">{{ Lang::get('recurring::detail.table.amount') }}</x-core::th>
+                            <x-core::th align="right">{{ Lang::get('recurring::detail.table.transaction') }}</x-core::th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-200 bg-white dark:bg-slate-950 dark:divide-slate-700">

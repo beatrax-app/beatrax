@@ -25,13 +25,10 @@
             </div>
 
             @if ($submitError !== '')
-                <div
-                    class="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:bg-rose-950 dark:border-rose-800 dark:text-rose-200"
-                    role="alert"
-                    data-testid="command-arg-prompt-error"
-                >
+                <x-core::alert tone="danger" class="px-4 py-3" role="alert"
+                    data-testid="command-arg-prompt-error">
                     {{ $submitError }}
-                </div>
+                </x-core::alert>
             @endif
 
             @if ($spec === null)

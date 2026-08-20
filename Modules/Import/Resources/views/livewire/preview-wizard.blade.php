@@ -41,9 +41,9 @@
     </header>
 
     @if ($preview === null || $previewExpired)
-        <div class="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 dark:bg-amber-950">
+        <x-core::alert tone="warning">
             <p>{!! Lang::get('import::preview.expired_html') !!}</p>
-        </div>
+        </x-core::alert>
     @elseif ($needsIcsAccountName)
         <section class="space-y-4 rounded-md border border-slate-200 bg-slate-50 p-6 dark:bg-slate-900 dark:border-slate-700">
             <div class="space-y-3">

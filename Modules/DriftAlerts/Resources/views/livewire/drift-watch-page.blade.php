@@ -72,18 +72,18 @@
     </header>
 
     @if ($trackedCount === 0)
-        <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+        <x-core::card>
             <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('drift-alerts::watch.empty_heading') }}</h2>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('drift-alerts::watch.empty_body') }}
                 <a href="{{ route('recurring.index') }}" class="text-slate-900 underline underline-offset-2 dark:text-slate-100">{{ Lang::get('drift-alerts::watch.empty_link') }}</a>.
             </p>
-        </div>
+        </x-core::card>
     @else
         <ul class="space-y-2">
             @foreach ($rows as $row)
                 @php $dir = $row->direction(); @endphp
-                <li class="rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700">
+                <x-core::card tag="li" padding="tight">
                     <div class="flex items-center justify-between gap-4">
                         <div class="min-w-0 flex-1">
                             <p class="flex items-center gap-2 text-sm">
@@ -122,7 +122,7 @@
                             </p>
                         </div>
                     </div>
-                </li>
+                </x-core::card>
             @endforeach
         </ul>
     @endif

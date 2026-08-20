@@ -41,12 +41,12 @@
     @endif
 
     @if (count($hints) === 0)
-        <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700" data-testid="chain-hints-empty">
+        <x-core::card data-testid="chain-hints-empty">
             <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('chains::hints.empty_heading') }}</h2>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('chains::hints.empty_body') }}
             </p>
-        </div>
+        </x-core::card>
     @else
         {{-- overflow-x: auto wrapper so dense hint rows scroll horizontally at phone width (D-06 power split) --}}
         <div class="overflow-x-scroll-wrapper" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">

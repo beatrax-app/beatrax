@@ -6,7 +6,7 @@
      freshness indicator anywhere on this page); "Last attempt" renders
      ONLY when the last attempt did not succeed. --}}
 @if ($enabled)
-    <div class="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950" data-testid="open-banking-transparency-panel">
+    <x-core::card data-testid="open-banking-transparency-panel">
         <dl class="grid grid-cols-[auto_1fr] items-baseline gap-x-3 gap-y-3">
             <dt class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('openbanking::messages.transparency.aggregator_label') }}</dt>
             <dd class="text-right text-sm text-slate-900 dark:text-slate-100">{{ $aggregator }}</dd>
@@ -17,11 +17,11 @@
             <dt class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('openbanking::messages.transparency.consent_status_label') }}</dt>
             <dd class="text-right">
                 @if ($consentStatus === 'expired')
-                    <span class="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-950 dark:text-rose-300" data-testid="ob-consent-pill">{{ Lang::get('openbanking::messages.transparency.pill_expired') }}</span>
+                    <x-core::status-pill tone="danger" data-testid="ob-consent-pill">{{ Lang::get('openbanking::messages.transparency.pill_expired') }}</x-core::status-pill>
                 @elseif ($consentStatus === 'expiring')
-                    <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300" data-testid="ob-consent-pill">{{ Lang::get('openbanking::messages.transparency.pill_expiring') }}</span>
+                    <x-core::status-pill tone="warning" data-testid="ob-consent-pill">{{ Lang::get('openbanking::messages.transparency.pill_expiring') }}</x-core::status-pill>
                 @else
-                    <span class="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" data-testid="ob-consent-pill">{{ Lang::get('openbanking::messages.transparency.pill_connected') }}</span>
+                    <x-core::status-pill tone="positive" data-testid="ob-consent-pill">{{ Lang::get('openbanking::messages.transparency.pill_connected') }}</x-core::status-pill>
                 @endif
             </dd>
 
@@ -51,5 +51,5 @@
                 data-testid="ob-disconnect-button"
             >{{ Lang::get('openbanking::messages.transparency.disconnect_button') }}</button>
         </div>
-    </div>
+    </x-core::card>
 @endif
