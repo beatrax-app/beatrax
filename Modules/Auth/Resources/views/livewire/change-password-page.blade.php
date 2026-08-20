@@ -1,10 +1,10 @@
 @use('Modules\Core\Public\Support\Lang')
 <div class="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
     <div class="w-full max-w-sm px-6 space-y-6">
-        <header class="space-y-1">
-            <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('auth::change_password.title') }}</h1>
-            <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::change_password.subtitle') }}</p>
-        </header>
+        <x-core::page-header
+            :title="Lang::get('auth::change_password.title')"
+            :subtitle="Lang::get('auth::change_password.subtitle')"
+        />
 
         <form wire:submit="submit" class="space-y-4">
             <div class="space-y-1">
@@ -45,12 +45,9 @@
                 <p class="text-sm text-rose-600 dark:text-rose-500">{{ $flashMessage }}</p>
             @endif
 
-            <button
-                type="submit"
-                class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
-            >
+            <x-core::primary-button>
                 {{ Lang::get('auth::change_password.submit') }}
-            </button>
+            </x-core::primary-button>
         </form>
     </div>
 </div>

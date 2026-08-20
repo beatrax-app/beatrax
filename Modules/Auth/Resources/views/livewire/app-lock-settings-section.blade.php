@@ -29,13 +29,10 @@
     @endif
 
     {{-- ===== 3a: Enable / disable toggle ===== --}}
-    <div class="flex items-start justify-between gap-4">
-        <div class="flex-1 min-w-0">
-            <p class="text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('auth::app_lock.toggle_label') }}</p>
-            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                {{ Lang::get('auth::app_lock.toggle_description') }}
-            </p>
-        </div>
+    <x-core::setting-row
+        :label="Lang::get('auth::app_lock.toggle_label')"
+        :description="Lang::get('auth::app_lock.toggle_description')"
+    >
         <button
             type="button"
             wire:click="{{ $lockEnabled ? 'confirmDisable' : '' }}"
@@ -45,7 +42,7 @@
         >
             <span class="switch__thumb"></span>
         </button>
-    </div>
+    </x-core::setting-row>
 
     {{-- ===== 3b: PIN setup (shown when lock is not yet enabled) ===== --}}
     @if (! $lockEnabled)
@@ -181,17 +178,14 @@
         >
             @if ($biometricCapable || $biometricEnrolled)
                 {{-- Capable platform: show enroll/de-enroll controls --}}
-                <div class="flex items-start justify-between gap-4">
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm text-slate-900 dark:text-slate-100">{{ $biometricLabel }}</p>
-                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                            @if ($biometricEnrolled)
-                                {{ Lang::get('auth::app_lock.biometric_enrolled_description') }}
-                            @else
-                                {{ Lang::get('auth::app_lock.biometric_enroll_description') }}
-                            @endif
-                        </p>
-                    </div>
+                <x-core::setting-row :label="$biometricLabel">
+                    <x-slot:description>
+                        @if ($biometricEnrolled)
+                            {{ Lang::get('auth::app_lock.biometric_enrolled_description') }}
+                        @else
+                            {{ Lang::get('auth::app_lock.biometric_enroll_description') }}
+                        @endif
+                    </x-slot:description>
                     @if ($biometricEnrolled)
                         <button
                             type="button"
@@ -213,7 +207,7 @@
                             {{ Lang::get('auth::app_lock.enroll') }}
                         </button>
                     @endif
-                </div>
+                </x-core::setting-row>
             @else
                 {{-- Empty state: platform does not support WebAuthn --}}
                 <p class="text-sm text-slate-400 dark:text-slate-500">

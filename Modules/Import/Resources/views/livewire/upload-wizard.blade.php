@@ -82,12 +82,9 @@
             @enderror
         </div>
 
-        <button
-            type="submit"
-            class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
-        >
+        <x-core::primary-button>
             {{ Lang::get('import::upload.submit') }}
-        </button>
+        </x-core::primary-button>
     </form>
 
     {{-- Rename counterparty popover. Mounted here so the FirstImportStep

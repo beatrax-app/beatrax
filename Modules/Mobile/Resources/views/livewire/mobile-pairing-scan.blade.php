@@ -112,23 +112,21 @@
             >{{ Lang::get('mobile::pairing.open_camera') }}</button>
         </div>
 
-        {{-- Not offered while importing. A typed code carries the token and
-             nothing else, so the desktop never learns this device's identity
-             and the pairing cannot complete — the arm existed only to answer
-             it with an error. Offering a route that can only fail is worse
-             than not offering it. --}}
-        @unless ($importMode)
-            <div class="text-center">
-                <button
-                    type="button"
-                    wire:click="useWordCode"
-                    class="min-h-[44px] px-2 text-sm text-slate-500 underline-offset-2 hover:underline
-                           focus:outline-none focus-visible:underline dark:text-slate-400"
-                >
-                    {{ Lang::get('mobile::pairing.enter_code_instead') }}
-                </button>
-            </div>
-        @endunless
+        {{-- Offered while importing too. A typed code carries the token and
+             nothing else, which is why the arm used to be hidden here; the
+             importing device now asks the LAN for the initiator's public
+             identity, so the arm can complete rather than only ever error.
+             Someone who cannot or will not use the camera has a route in. --}}
+        <div class="text-center">
+            <button
+                type="button"
+                wire:click="useWordCode"
+                class="min-h-[44px] px-2 text-sm text-slate-500 underline-offset-2 hover:underline
+                       focus:outline-none focus-visible:underline dark:text-slate-400"
+            >
+                {{ Lang::get('mobile::pairing.enter_code_instead') }}
+            </button>
+        </div>
     @endif
 
     {{-- ===== Step: enter a code (D-02 fallback — camera unavailable/denied or user choice) ===== --}}

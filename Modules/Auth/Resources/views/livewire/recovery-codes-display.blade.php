@@ -1,10 +1,10 @@
 @use('Modules\Core\Public\Support\Lang')
 <div class="min-h-screen bg-white py-12 dark:bg-slate-950">
     <div class="max-w-xl mx-auto px-6 space-y-6">
-        <header class="space-y-1">
-            <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('auth::recovery_codes.title') }}</h1>
-            <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::recovery_codes.subtitle') }}</p>
-        </header>
+        <x-core::page-header
+            :title="Lang::get('auth::recovery_codes.title')"
+            :subtitle="Lang::get('auth::recovery_codes.subtitle')"
+        />
 
         {{-- One column on a phone, two from 640px.
 

@@ -1,9 +1,9 @@
 @use('Modules\Core\Public\Support\Lang')
 <div class="mx-auto max-w-md px-4 py-12 space-y-12 sm:px-8">
-    <header class="space-y-1">
-        <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('auth::manage_user.heading', ['name' => $partnerUsername]) }}</h1>
-        <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::manage_user.subtitle') }}</p>
-    </header>
+    <x-core::page-header
+        :title="Lang::get('auth::manage_user.heading', ['name' => $partnerUsername])"
+        :subtitle="Lang::get('auth::manage_user.subtitle')"
+    />
 
     @if ($flashMessage !== '')
         <p class="text-sm text-slate-700 dark:text-slate-300">{{ $flashMessage }}</p>

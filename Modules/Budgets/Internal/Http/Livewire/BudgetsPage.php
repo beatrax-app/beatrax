@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Budgets\Internal\Http\Livewire;
 
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
@@ -507,9 +508,12 @@ final class BudgetsPage extends Component
         return is_numeric($normalised) && (float) $normalised === 0.0 ? 0 : null;
     }
 
+    // Through the shared input formatter, so the field reads in the same
+    // convention as the figures beside it. A dot here put "50.00" next to
+    // "€ 50,00" in one row; tryToMinor() accepts both on the way back.
     private function minorToDecimal(int $minor): string
     {
-        return number_format($minor / 100, 2, '.', '');
+        return MoneyInput::formatMinor($minor);
     }
 
     private function toast(string $message): void

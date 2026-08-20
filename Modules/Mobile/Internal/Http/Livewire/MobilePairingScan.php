@@ -316,16 +316,6 @@ final class MobilePairingScan extends Component
     ): void {
         $userId = $currentUser->user()->id;
 
-        // A typed code carries the token and nothing else, so an import has
-        // no initiator identity to seed a cross-device row from. The import
-        // flow no longer offers the arm at all; this stays because a Livewire
-        // action is callable from the client whatever the UI renders.
-        if ($this->importMode && $scannedPayload === null) {
-            $this->flashMessage = Lang::get('mobile::pairing.errors.invalid_code');
-
-            return;
-        }
-
         // Read the QR for EVERY scan, not just an import: a phone and a
         // desktop always hold separate databases, so the desktop learns of
         // this device only through the relay frame below. Gating that on
@@ -338,6 +328,20 @@ final class MobilePairingScan extends Component
             $this->flashMessage = Lang::get('mobile::pairing.errors.invalid_code');
 
             return;
+        }
+
+        // A typed code carries the token and nothing else, so an importing
+        // device has no initiator identity to seed a cross-device row from.
+        // Ask the LAN for the public half the code cannot carry — an answer
+        // is a candidate, and the safety-number check is still the gate.
+        if ($scannedPayload === null && $this->importMode) {
+            $identity = $gateway->discoverInitiatorOnLan($this->wordCode);
+
+            if ($identity === null) {
+                $this->flashMessage = Lang::get('mobile::pairing.errors.relay_unreachable');
+
+                return;
+            }
         }
 
         if ($identity !== null) {

@@ -32,20 +32,19 @@ it('offers importing before creating an account', function (): void {
 });
 
 it('gives importing the dominant treatment', function (): void {
-    $blade = (string) file_get_contents(
-        base_path('Modules/Mobile/Resources/views/livewire/mobile-welcome-screen.blade.php')
-    );
+    // Asserted against the RENDERED page rather than the blade: the filled
+    // treatment moved into x-core::primary-button, so the class no longer
+    // appears in the source at all — while what a reader sees is unchanged.
+    $html = Livewire::test(MobileWelcomeScreen::class)->html();
 
-    // The filled button is the one a reader reaches for. Whichever action wears
-    // it is the recommendation, whatever the order says.
-    $filled = strpos($blade, 'bg-emerald-600');
-    $importCall = strpos($blade, "Lang::get('mobile::welcome.import')");
-    $createCall = strpos($blade, "Lang::get('mobile::welcome.create_account')");
+    $filled = strpos($html, 'bg-emerald-600');
+    $import = strpos($html, Lang::get('mobile::welcome.import'));
+    $create = strpos($html, Lang::get('mobile::welcome.create_account'));
 
-    expect($filled)->not->toBeFalse()
-        ->and($importCall)->not->toBeFalse()
-        ->and($createCall)->not->toBeFalse()
-        ->and(abs($filled - $importCall))->toBeLessThan(abs($filled - $createCall), 'the filled button belongs to create-account');
+    expect($filled)->not->toBeFalse('nothing on the welcome screen carries the filled treatment')
+        ->and($import)->not->toBeFalse()
+        ->and($create)->not->toBeFalse()
+        ->and(abs($filled - $import))->toBeLessThan(abs($filled - $create), 'the filled button belongs to create-account');
 });
 
 it('says the phone can still stand alone', function (): void {

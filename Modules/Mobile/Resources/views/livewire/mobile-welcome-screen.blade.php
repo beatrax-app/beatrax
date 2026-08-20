@@ -21,12 +21,9 @@
              the statements, the rules and the first month's tidying all happen
              on a bigger screen, and this one is where the result is read. --}}
         <div class="space-y-3">
-            <a
-                href="{{ route('mobile.import') }}"
-                class="inline-block w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
-            >
+            <x-core::primary-button href="{{ route('mobile.import') }}">
                 {{ Lang::get('mobile::welcome.import') }}
-            </a>
+            </x-core::primary-button>
 
             <a
                 href="{{ route('signup') }}"

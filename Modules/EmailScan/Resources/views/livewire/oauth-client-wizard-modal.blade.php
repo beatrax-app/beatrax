@@ -49,7 +49,7 @@
             @if ($provider === \Modules\EmailScan\Public\Enums\MailProvider::Gmail->value)
                 <ol class="space-y-6">
                     <li class="flex items-start gap-4">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-900">1</span>
+                        <x-email-scan::step-number lead>1</x-email-scan::step-number>
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.gmail.step1_title') }}</p>
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.gmail.step1_body') }}</p>
@@ -63,7 +63,7 @@
                     </li>
 
                     <li class="flex items-start gap-4">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">2</span>
+                        <x-email-scan::step-number>2</x-email-scan::step-number>
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.gmail.step2_title') }}</p>
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.gmail.step2_body') }}</p>
@@ -71,7 +71,7 @@
                     </li>
 
                     <li class="flex items-start gap-4">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">3</span>
+                        <x-email-scan::step-number>3</x-email-scan::step-number>
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.gmail.step3_title') }}</p>
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.gmail.step3_body') }}</p>
@@ -79,7 +79,7 @@
                     </li>
 
                     <li class="flex items-start gap-4">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">4</span>
+                        <x-email-scan::step-number>4</x-email-scan::step-number>
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.gmail.step4_title') }}</p>
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.gmail.step4_body') }}</p>
@@ -95,7 +95,7 @@
                     </li>
 
                     <li class="flex items-start gap-4">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">5</span>
+                        <x-email-scan::step-number>5</x-email-scan::step-number>
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.gmail.step5_title') }}</p>
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.gmail.step5_body') }}</p>
@@ -109,7 +109,7 @@
                     </li>
 
                     <li class="flex items-start gap-4">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">6</span>
+                        <x-email-scan::step-number>6</x-email-scan::step-number>
                         <div class="space-y-3 flex-1">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.gmail.step6_title') }}</p>
                             <div class="space-y-3">
@@ -141,7 +141,7 @@
             @elseif ($provider === \Modules\EmailScan\Public\Enums\MailProvider::Microsoft->value)
                 <ol class="space-y-6">
                     <li class="flex items-start gap-4">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-900">1</span>
+                        <x-email-scan::step-number lead>1</x-email-scan::step-number>
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.microsoft.step1_title') }}</p>
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.microsoft.step1_body') }}</p>
@@ -155,7 +155,7 @@
                     </li>
 
                     <li class="flex items-start gap-4">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">2</span>
+                        <x-email-scan::step-number>2</x-email-scan::step-number>
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.microsoft.step2_title') }}</p>
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.microsoft.step2_body') }}</p>
@@ -163,7 +163,7 @@
                     </li>
 
                     <li class="flex items-start gap-4">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">3</span>
+                        <x-email-scan::step-number>3</x-email-scan::step-number>
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.microsoft.step3_title') }}</p>
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.microsoft.step3_body') }}</p>
@@ -177,7 +177,7 @@
                     </li>
 
                     <li class="flex items-start gap-4">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">4</span>
+                        <x-email-scan::step-number>4</x-email-scan::step-number>
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.microsoft.step4_title') }}</p>
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.microsoft.step4_body') }}</p>
@@ -185,7 +185,7 @@
                     </li>
 
                     <li class="flex items-start gap-4">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">5</span>
+                        <x-email-scan::step-number>5</x-email-scan::step-number>
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.microsoft.step5_title') }}</p>
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.microsoft.step5_body') }}</p>
@@ -193,7 +193,7 @@
                     </li>
 
                     <li class="flex items-start gap-4">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">6</span>
+                        <x-email-scan::step-number>6</x-email-scan::step-number>
                         <div class="space-y-3 flex-1">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.microsoft.step6_title') }}</p>
                             <div class="space-y-3">

@@ -9,8 +9,8 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Livewire\Component;
-use Modules\Core\Models\UserPreference;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Services\UserPreferenceWriter;
 use Modules\Core\Public\Support\Lang;
 use Modules\Reports\Public\Actions\DeleteReport;
 use Modules\Reports\Public\Actions\TogglePin;
@@ -43,9 +43,10 @@ final class ReportsIndex extends Component
         }
     }
 
-    // Switches the view mode and persists the choice in
-    // user_preferences.reports_index_view scoped to the authenticated user.
-    public function setView(string $view, CurrentUser $currentUser): void
+    // Switches the view mode and persists the choice through the shared
+    // preference writer, which is also where the op-log capture lives — so
+    // the setting travels instead of stopping at the device that set it.
+    public function setView(string $view, CurrentUser $currentUser, UserPreferenceWriter $preferences): void
     {
         if (! in_array($view, ['cards', 'list'], true)) {
             return;
@@ -53,10 +54,7 @@ final class ReportsIndex extends Component
 
         $this->view = $view;
 
-        UserPreference::query()->updateOrCreate(
-            ['user_id' => $currentUser->id()],
-            ['reports_index_view' => $view],
-        );
+        $preferences->write($currentUser->id(), ['reports_index_view' => $view]);
     }
 
     public function confirmDelete(int $reportId): void

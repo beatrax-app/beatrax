@@ -7,7 +7,7 @@ namespace Modules\Mobile\Internal\Http\Controllers;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Http\JsonResponse;
 use Modules\Auth\Public\Recovery\RecoveryCodeFormatter;
-use Modules\Core\Public\Services\CurrentUser;
+use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Identity\RecoveryCodesExportBridge;
 

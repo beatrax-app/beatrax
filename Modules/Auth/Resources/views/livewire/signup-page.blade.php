@@ -9,10 +9,10 @@
             get matchOk() { return this.pwc.length > 0 && this.pw === this.pwc; },
         }"
     >
-        <header class="space-y-1">
-            <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('auth::signup.title') }}</h1>
-            <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::signup.subtitle') }}</p>
-        </header>
+        <x-core::page-header
+            :title="Lang::get('auth::signup.title')"
+            :subtitle="Lang::get('auth::signup.subtitle')"
+        />
 
         <form wire:submit="submit" class="space-y-4">
             <div class="space-y-1">
@@ -84,12 +84,9 @@
                 <p class="text-sm text-rose-600 dark:text-rose-500">{{ $flashMessage }}</p>
             @endif
 
-            <button
-                type="submit"
-                class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
-            >
+            <x-core::primary-button>
                 {{ Lang::get('auth::signup.submit') }}
-            </button>
+            </x-core::primary-button>
         </form>
 
         <x-core::locale-switcher />

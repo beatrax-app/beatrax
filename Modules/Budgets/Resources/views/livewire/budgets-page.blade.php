@@ -94,13 +94,13 @@
         <table class="hidden w-full text-left text-sm md:table">
             <thead class="border-b border-slate-200 bg-slate-50 dark:bg-slate-900 dark:border-slate-700">
                 <tr>
-                    <th class="px-4 py-2 text-xs font-normal uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.table.category') }}</th>
-                    <th class="px-4 py-2 text-right text-xs font-normal uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.table.assigned') }}</th>
-                    <th class="px-4 py-2 text-right text-xs font-normal uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.table.spent') }}</th>
-                    <th class="px-4 py-2 text-right text-xs font-normal uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.table.available') }}</th>
-                    <th class="px-4 py-2 text-left text-xs font-normal uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.table.if_overspent') }}</th>
-                    <th class="px-4 py-2 text-right text-xs font-normal uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.table.notify_at') }}</th>
-                    <th class="px-4 py-2 text-right text-xs font-normal uppercase tracking-wide text-slate-500 dark:text-slate-400"><span class="sr-only">{{ Lang::get('budgets::messages.table.actions') }}</span></th>
+                    <x-core::th align="left">{{ Lang::get('budgets::messages.table.category') }}</x-core::th>
+                    <x-core::th align="right">{{ Lang::get('budgets::messages.table.assigned') }}</x-core::th>
+                    <x-core::th align="right">{{ Lang::get('budgets::messages.table.spent') }}</x-core::th>
+                    <x-core::th align="right">{{ Lang::get('budgets::messages.table.available') }}</x-core::th>
+                    <x-core::th align="left">{{ Lang::get('budgets::messages.table.if_overspent') }}</x-core::th>
+                    <x-core::th align="right">{{ Lang::get('budgets::messages.table.notify_at') }}</x-core::th>
+                    <x-core::th align="right"><span class="sr-only">{{ Lang::get('budgets::messages.table.actions') }}</span></x-core::th>
                 </tr>
             </thead>
             <tbody>
@@ -223,8 +223,13 @@
         {{-- Phone stacked list (<768px) --}}
         <div class="rounded-lg border border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-700 overflow-hidden md:hidden">
             @foreach ($rows as $row)
+                {{-- The row is two stacked lines, not three side-by-side columns:
+                     at phone width the name column was squeezed to ~110px, which
+                     broke "spent · available" across three lines and left the
+                     separator hanging on one of its own. The name and the figures
+                     take the full width; the controls get the line below. --}}
                 <div class="card-list-item" wire:key="envelope-phone-{{ $row->categoryId }}">
-                    <div class="flex-1 min-w-0">
+                    <div class="w-full min-w-0">
                         <p class="primary truncate">
                             {{ $row->categoryName }}
                             @if ($row->overspendMode === \Modules\Budgets\Public\Enums\OverspendMode::CarryNegative->value)
@@ -241,10 +246,30 @@
                         </p>
                         <p class="secondary" style="font-variant-numeric: tabular-nums;">
                             {{ Lang::get('budgets::messages.phone.spent', ['amount' => $fmt($row->spentMinor, $row->currency)]) }}
-                            · <span class="{{ $row->availableMinor < 0 ? 'text-rose-600 dark:text-rose-400' : '' }}">{{ Lang::get('budgets::messages.phone.available', ['amount' => $fmt($row->availableMinor, $row->currency)]) }}</span>
+                            ·&nbsp;<span class="{{ $row->availableMinor < 0 ? 'text-rose-600 dark:text-rose-400' : '' }}">{{ Lang::get('budgets::messages.phone.available', ['amount' => $fmt($row->availableMinor, $row->currency)]) }}</span>
                         </p>
                     </div>
-                    <div class="flex flex-col items-end gap-1">
+                    {{-- Both fields are h-8: side by side on one line they share a
+                         baseline, and the % rides inside the notify field so the
+                         two right edges line up instead of staggering. --}}
+                    <div class="flex flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+                        <label class="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
+                            <span>{{ Lang::get('budgets::messages.phone.notify_at') }}</span>
+                            <span class="relative inline-flex items-center">
+                                <input
+                                    type="text"
+                                    inputmode="numeric"
+                                    wire:model="thresholdInputs.{{ $row->categoryId }}"
+                                    wire:keydown.enter="setNotifyThreshold({{ $row->categoryId }})"
+                                    wire:blur="setNotifyThreshold({{ $row->categoryId }})"
+                                    aria-label="{{ Lang::get('budgets::messages.row.notify_aria', ['category' => $row->categoryName]) }}"
+                                    placeholder="{{ $defaultNotifyThreshold }}"
+                                    class="h-8 w-20 rounded-md border border-slate-200 bg-white pl-2 pr-6 text-right text-sm text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                                    style="font-variant-numeric: tabular-nums;"
+                                >
+                                <span class="pointer-events-none absolute right-2 text-xs text-slate-400 dark:text-slate-500">%</span>
+                            </span>
+                        </label>
                         <input
                             type="text"
                             inputmode="decimal"
@@ -253,26 +278,11 @@
                             wire:blur="setAssigned({{ $row->categoryId }})"
                             aria-label="{{ Lang::get('budgets::messages.row.assigned_aria', ['category' => $row->categoryName]) }}"
                             placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
-                            class="amount w-20 rounded-md border border-slate-200 bg-white px-2 py-1 text-right text-sm text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                            class="amount h-8 w-24 rounded-md border border-slate-200 bg-white px-2 text-right text-sm text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                             style="font-variant-numeric: tabular-nums;"
                         >
-                        <label class="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
-                            <span>{{ Lang::get('budgets::messages.phone.notify_at') }}</span>
-                            <input
-                                type="text"
-                                inputmode="numeric"
-                                wire:model="thresholdInputs.{{ $row->categoryId }}"
-                                wire:keydown.enter="setNotifyThreshold({{ $row->categoryId }})"
-                                wire:blur="setNotifyThreshold({{ $row->categoryId }})"
-                                aria-label="{{ Lang::get('budgets::messages.row.notify_aria', ['category' => $row->categoryName]) }}"
-                                placeholder="{{ $defaultNotifyThreshold }}"
-                                class="w-12 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-right text-xs text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
-                                style="font-variant-numeric: tabular-nums;"
-                            >
-                            <span>%</span>
-                        </label>
                         @if (! empty($thresholdErrors[$row->categoryId]))
-                            <p class="text-xs text-rose-600 dark:text-rose-400">{{ $thresholdErrors[$row->categoryId] }}</p>
+                            <p class="w-full text-xs text-rose-600 dark:text-rose-400">{{ $thresholdErrors[$row->categoryId] }}</p>
                         @endif
                     </div>
                     <button

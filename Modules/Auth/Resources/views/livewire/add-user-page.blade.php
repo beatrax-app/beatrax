@@ -1,9 +1,9 @@
 @use('Modules\Core\Public\Support\Lang')
 <div class="mx-auto max-w-md px-4 py-12 space-y-12 sm:px-8">
-    <header class="space-y-1">
-        <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('auth::add_user.title') }}</h1>
-        <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::add_user.subtitle') }}</p>
-    </header>
+    <x-core::page-header
+        :title="Lang::get('auth::add_user.title')"
+        :subtitle="Lang::get('auth::add_user.subtitle')"
+    />
 
     <form wire:submit="submit" class="space-y-4">
         <div class="space-y-1">
@@ -45,11 +45,8 @@
             <p class="text-sm text-slate-700 dark:text-slate-300">{{ $flashMessage }}</p>
         @endif
 
-        <button
-            type="submit"
-            class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
-        >
+        <x-core::primary-button>
             {{ Lang::get('auth::add_user.submit') }}
-        </button>
+        </x-core::primary-button>
     </form>
 </div>

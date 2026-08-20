@@ -17,6 +17,20 @@
     @if (count($cards) > 0)
         <div class="grid grid-cols-1 gap-4 md:grid-cols-3" aria-label="{{ Lang::get('reports::pinned.reports_aria') }}">
             @foreach ($cards as $card)
+                {{-- ApexCharts sizes its own bottom legend at half the chart box
+                     and scrolls whatever will not fit — a 120px window onto every
+                     category name, centre-justified and ragged. The donut's key is
+                     lifted out of the chart and rendered below as ordinary card
+                     content, so it wraps and takes the room it needs. --}}
+                @php
+                    $options = json_decode($card['optionsJson'], true);
+                    $legend = [];
+                    if (is_array($options) && ($options['chart']['type'] ?? '') === 'donut') {
+                        foreach ($options['labels'] ?? [] as $i => $label) {
+                            $legend[] = ['label' => $label, 'colour' => $options['colors'][$i] ?? '#94A3B8'];
+                        }
+                    }
+                @endphp
                 <a
                     href="{{ route('reports.index', ['report' => $card['id']]) }}"
                     class="block rounded-lg border border-slate-200 bg-white p-4 transition-colors hover:border-slate-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:hover:border-slate-600"
@@ -33,6 +47,7 @@
                         x-init="
                             if (! window.ApexCharts) { return; }
                             const opts = window.beatraxApplyChartTheme(JSON.parse($el.dataset.options));
+                            @if ($legend !== []) opts.legend = Object.assign({}, opts.legend, { show: false }); @endif
                             chart = new window.ApexCharts($el.querySelector('#{{ $card['chartElementId'] }}'), opts);
                             chart.render();
                         "
@@ -44,6 +59,17 @@
                             class="min-h-[180px]"
                         ></div>
                     </div>
+
+                    @if ($legend !== [])
+                        <ul class="mt-3 flex flex-wrap gap-x-3 gap-y-1" data-testid="pinned-report-legend">
+                            @foreach ($legend as $entry)
+                                <li class="flex min-w-0 items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                                    <span class="h-2 w-2 shrink-0 rounded-full" style="background-color: {{ $entry['colour'] }};" aria-hidden="true"></span>
+                                    <span class="truncate">{{ $entry['label'] }}</span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
                 </a>
             @endforeach
         </div>
