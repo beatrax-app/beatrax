@@ -16,9 +16,6 @@ use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use stdClass;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final readonly class ProjectionPipeline
 {
     use CoercesScalars;

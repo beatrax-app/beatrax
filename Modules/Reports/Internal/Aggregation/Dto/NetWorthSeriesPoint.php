@@ -6,9 +6,6 @@ namespace Modules\Reports\Internal\Aggregation\Dto;
 
 use Carbon\CarbonImmutable;
 
-/**
- * @link ../../../../../.docs/features/reports/architecture.md
- */
 final readonly class NetWorthSeriesPoint
 {
     public function __construct(

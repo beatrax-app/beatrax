@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Pairing;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class Bip39WordList
 {
     // The canonical BIP39 English wordlist (github.com/trezor/python-mnemonic,

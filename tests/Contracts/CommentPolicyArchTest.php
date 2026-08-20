@@ -76,7 +76,7 @@ it('has no informative /* */ block comments (M3)', function (): void {
     expect($hits)->toBe([], "Use /** */ PHPDoc, never informative /* */ blocks. Offenders:\n  ".implode("\n  ", $hits));
 });
 
-it('has no lone single-line // comments and no // block over 4 lines (M1, M2)', function (): void {
+it('has no // block over 4 lines (M2)', function (): void {
     $hits = [];
     foreach (commentPolicyBackendFiles() as $path) {
         $lines = [];
@@ -90,9 +90,7 @@ it('has no lone single-line // comments and no // block over 4 lines (M1, M2)', 
         $block = [];
         $flush = function () use (&$block, &$hits, $path): void {
             $n = count($block);
-            if ($n >= 1 && $n < 2) {
-                $hits[] = $path.':'.$block[0].' (lone single-line //)';
-            } elseif ($n > 4) {
+            if ($n > 4) {
                 $hits[] = $path.':'.$block[0]." ({$n}-line // block > 4)";
             }
             $block = [];
@@ -105,7 +103,7 @@ it('has no lone single-line // comments and no // block over 4 lines (M1, M2)', 
         }
         $flush();
     }
-    expect($hits)->toBe([], "Inline // comments must be 2–4 line blocks. Offenders:\n  ".implode("\n  ", $hits));
+    expect($hits)->toBe([], "An inline // block is at most 4 lines. A comment worth only one line should BE one line — padding it to reach a floor is how this file used to manufacture the noise it exists to prevent. Offenders:\n  ".implode("\n  ", $hits));
 });
 
 it('has @-tag-only docblocks with no descriptive prose (M4)', function (): void {

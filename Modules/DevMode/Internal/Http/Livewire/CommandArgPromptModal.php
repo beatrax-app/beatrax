@@ -20,9 +20,6 @@ use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\ArgSpec;
 use Modules\DevMode\Public\Dto\CommandSpec;
 
-/**
- * @link ../../../../../.docs/features/dev-mode/architecture.md
- */
 final class CommandArgPromptModal extends Component
 {
     use DispatchesToast;

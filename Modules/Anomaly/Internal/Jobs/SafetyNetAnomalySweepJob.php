@@ -20,9 +20,6 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\LockStore;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/anomaly/architecture.md
- */
 final class SafetyNetAnomalySweepJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Dispatchable;

@@ -8,10 +8,8 @@ use Illuminate\Console\Command;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\DevMode\Internal\Audit\DevModeActivity;
 
-// Manual-only prune (never scheduled — history is retained forever by
-// project policy); SAFE tier since the runner already gates on the
-// developer role. `--older-than` is required, no default, so the
-// operator must explicitly opt in to a cutoff.
+// Manual-only: audit history is retained forever by policy, so this is never
+// scheduled and `--older-than` has no default — the operator names the cutoff.
 final class PruneDevAuditCommand extends Command
 {
     /** @var string */
@@ -35,8 +33,6 @@ final class PruneDevAuditCommand extends Command
 
         $cutoff = $this->clock->now()->subDays($days);
 
-        // Eloquent\Builder::where() returns Builder; ->delete() exists
-        // on the Eloquent\Builder directly (no __call forwarding).
         $deletedRaw = DevModeActivity::query()
             ->where('log_name', 'dev_mode')
             ->where('created_at', '<', $cutoff)
@@ -49,9 +45,6 @@ final class PruneDevAuditCommand extends Command
         return self::SUCCESS;
     }
 
-    // Returns the retention cutoff in days, or null after printing the
-    // operator-facing reason when --older-than is absent, empty, or not a
-    // positive integer — the two malformed shapes share one message.
     private function resolveRetentionDays(): ?int
     {
         $raw = $this->option('older-than');

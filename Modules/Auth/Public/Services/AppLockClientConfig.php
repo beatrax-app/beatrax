@@ -11,9 +11,6 @@ use Illuminate\Database\DatabaseManager;
 // read by the authenticated layout (to emit window.beatraxIdleMs) and
 // by LockEngageController (to refuse a lock it could never unlock), so
 // the client and server halves of that gate cannot drift apart.
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 final class AppLockClientConfig
 {
     public function __construct(

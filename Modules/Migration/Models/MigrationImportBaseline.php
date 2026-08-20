@@ -10,8 +10,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
 /**
- * @link ../../../.docs/features/migration/architecture.md
- *
  * @property int $id
  * @property int|null $user_id
  * @property int $migration_source_map_id

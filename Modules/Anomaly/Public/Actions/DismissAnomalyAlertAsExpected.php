@@ -16,9 +16,6 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../.docs/features/anomaly/architecture.md
- */
 final class DismissAnomalyAlertAsExpected
 {
     private const BAND_LOW_MULTIPLIER = 0.85;
@@ -33,10 +30,8 @@ final class DismissAnomalyAlertAsExpected
         private readonly BaseCurrency $baseCurrency,
     ) {}
 
-    // Returns TRUE when at least one suppression rule was written, FALSE
-    // when none was — so the caller's UI can avoid promising "Suppression
-    // rule added" when nothing was muted. An already-dismissed alert is a
-    // no-op and returns FALSE.
+    // Returns TRUE only when a suppression rule was actually written, so the
+    // caller does not promise "rule added" when nothing was muted.
     public function __invoke(int $alertId, User $user): bool
     {
         /** @var AnomalyAlert|null $alert */
@@ -75,9 +70,7 @@ final class DismissAnomalyAlertAsExpected
         return $rulesWritten;
     }
 
-    // The band is derived from the persisted alert, never the client. A
-    // null counterparty falls back to a normalized-name rule
-    // (counterparty_id IS NULL) which the evaluator still matches.
+    // The band is derived from the persisted alert, never the client.
     private function insertSuppressionRules(AnomalyAlert $alert, User $user, string $nowString): bool
     {
         $reasons = $alert->reasons;
@@ -89,10 +82,9 @@ final class DismissAnomalyAlertAsExpected
 
         $latestMinor = $alert->latest_amount_minor;
         if ($latestMinor === null) {
-            // A duplicate-only / first-time-only alert carries no
-            // per-merchant baseline. Fall back to the alert's own
-            // transaction settled amount so a band is still written and
-            // that detector still gets suppression.
+            // A duplicate-only / first-time-only alert carries no per-merchant
+            // baseline, so the band falls back to the charge's own settled
+            // amount — otherwise those detectors could never be suppressed.
             $settled = $this->settledChargeForTransaction($user, $alert->transaction_id);
             if ($settled === null) {
                 return false;
@@ -105,18 +97,16 @@ final class DismissAnomalyAlertAsExpected
 
         $boundA = (int) round(self::BAND_LOW_MULTIPLIER * $latestMinor);
         $boundB = (int) round(self::BAND_HIGH_MULTIPLIER * $latestMinor);
-        // Signed amounts: for an expense (negative) the 1.15x bound is the
-        // more-negative one. Normalise to [low, high] so the evaluator's
-        // band_low <= settled <= band_high check holds regardless of sign.
+        // For an expense (negative) the 1.15x bound is the more-negative one,
+        // so min/max — not the multipliers — decide which end is which.
         $bandLow = min($boundA, $boundB);
         $bandHigh = max($boundA, $boundB);
 
         $counterpartyId = $this->counterpartyIdForTransaction($user, $alert->transaction_id);
 
-        // Make re-dismissal idempotent: insert each reason only when no
-        // rule with the identical natural key already exists (a plain
-        // UNIQUE index would treat NULL counterparties as distinct and
-        // not dedupe them).
+        // Existence-checked rather than a UNIQUE index: SQLite treats NULL
+        // counterparty_id values as distinct, so the index would not dedupe
+        // the normalized-name fallback rules on re-dismissal.
         $connection = $this->db->connection();
         $wrote = false;
 
@@ -157,8 +147,6 @@ final class DismissAnomalyAlertAsExpected
         return $wrote;
     }
 
-    // A permitted ledger READ, mirroring counterpartyIdForTransaction.
-    // Returns null when the transaction no longer exists.
     /**
      * @return array{amount_minor: int, currency: string}|null
      */
@@ -185,9 +173,9 @@ final class DismissAnomalyAlertAsExpected
         return ['amount_minor' => (int) $amount, 'currency' => $currency];
     }
 
-    // A permitted ledger READ (the anomaly table keys per-transaction).
-    // Returns null for an unresolved merchant, producing a
-    // normalized-name-fallback rule.
+    // A permitted ledger read (noTransactionWritesFromAnomaly forbids only
+    // writes). Null means an unresolved merchant and a counterparty_id IS NULL
+    // fallback rule, which the evaluator still matches.
     private function counterpartyIdForTransaction(User $user, int $transactionId): ?int
     {
         $row = $this->db->connection()->table('transactions')

@@ -13,9 +13,6 @@ use Modules\Position\Public\Dto\PositionSummaryDto;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
-/**
- * @link ../../../../.docs/features/position/architecture.md
- */
 final readonly class PositionQuery
 {
     public function __construct(

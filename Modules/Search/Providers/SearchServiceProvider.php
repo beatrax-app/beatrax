@@ -27,9 +27,6 @@ use Modules\Search\Public\Services\SearchQuery;
 // Single owner of every Search module binding + registration; every
 // class here is wired via class_exists()-guarded blocks so no
 // downstream change ever needs to edit this file directly.
-/**
- * @link ../../../.docs/features/search/architecture.md
- */
 final class SearchServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;

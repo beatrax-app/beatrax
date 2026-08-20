@@ -10,9 +10,6 @@ use Modules\Sync\Public\Events\EntityMutated;
 use Modules\Tax\Internal\Actions\TaxCategoryWriter as InternalTaxCategoryWriter;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../.docs/features/tax/architecture.md
- */
 final class TaxCategoryWriter
 {
     public function __construct(

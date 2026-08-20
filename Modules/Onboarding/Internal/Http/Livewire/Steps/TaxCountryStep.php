@@ -10,9 +10,6 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Tax\Public\Services\TaxCountrySetup;
 
-/**
- * @link ../../../../../../.docs/features/onboarding/architecture.md
- */
 final class TaxCountryStep extends Component
 {
     public string $taxCountryCode = '';
@@ -27,8 +24,8 @@ final class TaxCountryStep extends Component
     public function continue(CurrentUser $currentUser, TaxCountrySetup $setup): void
     {
         if ($this->taxCountryCode !== '' && $currentUser->isAuthenticated()) {
-            // Re-validates the code against the allow-list server-side, so
-            // an injected/unknown code is silently ignored.
+            // Re-checks the code against the allow-list server-side; an
+            // injected one is dropped.
             $setup->selectCountry($currentUser->id(), $this->taxCountryCode);
         }
 

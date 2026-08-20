@@ -9,18 +9,8 @@ use Modules\Categorization\Public\Dto\RuleConditionDto;
 use Modules\Categorization\Public\Enums\ConditionValueType;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
-// The pure translation layer between the form's UI rows and the backend's
-// (field, value_type)/payload shapes: field-to-type maps, blank-row
-// factories, DTO<->row round-trips, and Dutch-Euro amount parsing. Every
-// method is static, so it sits beside RuleFormModal rather than inside it.
-/**
- * @link ../../../../../../.docs/features/categorization/architecture.md
- */
 trait MapsRuleRows
 {
-    // The operator dropdown for a field, as (op value => label). Derived from
-    // the field's value type so the vocabulary lives once, in the enums —
-    // return shape stays string=>string for the Blade <select>.
     /** @return array<string, string> */
     public static function operatorOptionsFor(string $field): array
     {
@@ -37,9 +27,6 @@ trait MapsRuleRows
         return self::fieldValueType($field)->value;
     }
 
-    // The value type a form field option maps to. The three string fields
-    // (merchant, description, counterparty) share Text; amount and date are
-    // their own. Kept as the single field->type authority the form reads.
     private static function fieldValueType(string $field): ConditionValueType
     {
         return match ($field) {
@@ -93,19 +80,16 @@ trait MapsRuleRows
     {
         $field = $dto->valueType === 'string' ? $dto->field : $dto->valueType;
 
-        // `merchant` and `counterparty` are one field under two names, and the
-        // select no longer offers both. Rules written when it did still carry
-        // `merchant`, and a value with no matching option would display as
-        // whichever option happens to come first.
+        // `merchant` and `counterparty` are one field under two names and the
+        // select no longer offers both, so a rule still stored as `merchant`
+        // would display as whichever option happens to come first.
         if ($field === 'merchant') {
             $field = 'counterparty';
         }
 
         if ($dto->valueType === 'amount') {
-            // The DB stores signed integer minor units; the form input
-            // displays the project's Dutch-decimal Euro convention, so
-            // round-trip through MoneyInput::formatMinor() rather than
-            // showing the raw minor-unit string back to the user.
+            // The column holds signed minor units; the form shows Euro
+            // decimals, so the raw string must never reach the input.
             $value = is_numeric($dto->value) ? MoneyInput::formatMinor((int) $dto->value) : $dto->value;
             $value2 = $dto->value2 !== null && is_numeric($dto->value2) ? MoneyInput::formatMinor((int) $dto->value2) : $dto->value2;
         } else {
@@ -152,8 +136,6 @@ trait MapsRuleRows
         return $row;
     }
 
-    // An amount condition's bounds must each parse; a non-amount value type
-    // never fails here. value2 is only present for a `between` op.
     private static function hasInvalidAmount(string $valueType, string $value, ?string $value2): bool
     {
         if ($valueType !== 'amount') {
@@ -176,10 +158,8 @@ trait MapsRuleRows
         $dbField = $valueType === 'string' ? $condition['field'] : 'merchant';
 
         if ($valueType === 'amount') {
-            // Convert the human-entered Dutch/plain-decimal Euro string
-            // into signed integer minor units before persistence.
-            // conditionRowError() has already rejected an unparsable
-            // value by this point, so the `?? 0` fallback is unreachable.
+            // conditionRowError() has already rejected an unparsable value, so
+            // the `?? 0` fallback is unreachable rather than a silent zero.
             $value = (string) (MoneyInput::tryToMinor($condition['value']) ?? 0);
             $value2 = $condition['op'] === 'between'
                 ? (string) (MoneyInput::tryToMinor($condition['value2'] ?? '') ?? 0)

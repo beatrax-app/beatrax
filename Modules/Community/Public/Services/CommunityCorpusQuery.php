@@ -9,9 +9,6 @@ use Illuminate\Database\Query\Builder;
 use Modules\Community\Public\Dto\MerchantContactDto;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/community/architecture.md
- */
 final class CommunityCorpusQuery
 {
     /** @var list<string> */

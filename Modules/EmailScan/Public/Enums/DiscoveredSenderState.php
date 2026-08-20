@@ -8,9 +8,6 @@ namespace Modules\EmailScan\Public\Enums;
 // surfaced, `added` to the known-senders list, or `dismissed`. The column
 // stays string (enforced by a trigger); this enum is the one canonical
 // spelling callers map through.
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 enum DiscoveredSenderState: string
 {
     case Candidate = 'candidate';

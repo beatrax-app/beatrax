@@ -11,9 +11,6 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Public\Dto\ForecastHighlightsDto;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final readonly class ForecastHighlightsQuery
 {
     private const int HORIZON_DAYS = 30;

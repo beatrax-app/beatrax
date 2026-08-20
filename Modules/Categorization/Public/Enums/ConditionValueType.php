@@ -7,9 +7,6 @@ namespace Modules\Categorization\Public\Enums;
 // What kind of value a condition compares, which decides both how the match
 // is performed and which operators are offered. Text covers every string
 // field (merchant, description, counterparty); Amount and Date are their own.
-/**
- * @link ../../../../.docs/features/categorization/architecture.md
- */
 enum ConditionValueType: string
 {
     case Text = 'string';

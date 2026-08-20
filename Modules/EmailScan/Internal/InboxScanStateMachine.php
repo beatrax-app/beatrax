@@ -13,9 +13,6 @@ use Modules\EmailScan\Public\Enums\InboxScanStatus;
 use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Exceptions\ScanStateNotFoundException;
 
-/**
- * @link ../../../.docs/features/email-scan/architecture.md
- */
 final class InboxScanStateMachine
 {
     private const BUSY_TIMEOUT_PRAGMA = 'PRAGMA busy_timeout = 5000';

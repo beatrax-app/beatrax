@@ -33,15 +33,13 @@ use Modules\Ledger\Public\Enums\AccountKind;
  */
 final class PreviewWizard extends Component
 {
-    // Same literal the IcsPdfAdapter emits; AccountResolver scopes
-    // lookups by (iban, user_id) so one instance-wide literal is
-    // unambiguous regardless of the user.
+    // The literal IcsPdfAdapter emits. AccountResolver scopes lookups by
+    // (iban, user_id), so one instance-wide literal stays unambiguous.
     private const ICS_OWN_IBAN = 'ICS-CARD';
 
-    // #[Locked] because a Livewire property is client-mutable across requests:
-    // without it, a mount()-only ownership check is bypassed by setting
-    // importRunId to another user's (guessable, sequential) run id and
-    // re-rendering. render() and applyRenameInPlace() re-verify ownership too.
+    // Locked because a Livewire property is client-mutable between requests:
+    // unlocked, a mount()-only ownership check is bypassed by setting this to
+    // another user's sequential, guessable run id and re-rendering.
     #[Locked]
     public int $importRunId = 0;
 
@@ -53,10 +51,7 @@ final class PreviewWizard extends Component
 
     public bool $previewExpired = false;
 
-    // Chain-resolution polling state, populated by
-    // refreshChainResolutionStatus() from chain_resolution_runs
-    // filtered by EXACT user_id (never a LIKE substring — see that
-    // method). null (pre-mount) -> pending -> running -> complete/failed.
+    // null (pre-mount) → pending → running → complete/failed.
     public ?string $chainResolutionStatus = null;
 
     public int $chainResolutionLinkedCount = 0;
@@ -69,10 +64,9 @@ final class PreviewWizard extends Component
         $this->assertOwnedRun($currentUser);
     }
 
-    // Ownership gate re-run on every request that touches the preview (mount,
-    // render, rename): the preview cache key is not user-scoped, so a foreign
-    // run id would else expose another user's in-flight import. Not-found on a
-    // foreign id, matching the sibling ImportResults/PreviewMigration components.
+    // Re-run on every request that touches the preview. The preview cache key
+    // is not user-scoped, so without this a foreign run id would expose
+    // another user's in-flight import. Foreign ids get 404, not 403.
     private function assertOwnedRun(CurrentUser $currentUser): void
     {
         ImportRun::query()
@@ -81,10 +75,9 @@ final class PreviewWizard extends Component
             ->firstOrFail();
     }
 
-    // Updates the affected preview row's aliasFriendlyName in the cache
-    // so the next render shows the new name without re-running the
-    // pipeline. Out-of-bounds rowIndex silently no-ops (returns false)
-    // — a stale dispatch from a previous wizard render never throws.
+    // Writes into the cache so the next render shows the new name without
+    // re-running the pipeline. An out-of-bounds rowIndex no-ops, so a stale
+    // dispatch from an earlier render never throws.
     #[On('rename-counterparty:saved')]
     public function applyRenameInPlace(int $rowIndex, string $friendlyName, PreviewCache $cache, CurrentUser $currentUser): void
     {
@@ -97,10 +90,9 @@ final class PreviewWizard extends Component
         $cache->applyAliasInPlace($this->importRunId, $rowIndex, $friendlyName);
     }
 
-    // wire:poll.2s target: reads the latest chain_resolution_runs row
-    // and surfaces status/linked_count/last_error. NEVER reintroduce a
-    // `failed_jobs.payload LIKE '%userId:N%'` lookup here (leaks cross-
-    // user state) — WizardChainResolutionStatusTest greps for this.
+    // Never reintroduce a failed_jobs.payload LIKE '%userId:N%' lookup here:
+    // it leaks cross-user state, and WizardChainResolutionStatusTest greps
+    // this file to keep it out.
     public function refreshChainResolutionStatus(
         DatabaseManager $db,
         CurrentUser $currentUser,
@@ -108,8 +100,7 @@ final class PreviewWizard extends Component
     ): void {
         $user = $currentUser->user();
 
-        // Exact user_id equality match, never a LIKE substring — a
-        // substring match here would let user_id=1 match user_id=11.
+        // Equality, never LIKE: a substring match lets user_id=1 match 11.
         $row = $db->connection()->table('chain_resolution_runs')
             ->where('user_id', $user->id)
             ->orderByDesc('id')
@@ -148,16 +139,12 @@ final class PreviewWizard extends Component
     ): void {
         $this->resetErrorBag('accountName');
 
-        // Keep the property in sync so the error bag surfaces next to
-        // the bound input on re-render. Validation itself is delegated
-        // to AccountNamer — the single authoritative validator — so a
-        // Livewire-side rules() declaration would duplicate or drift.
+        // AccountNamer is the single authoritative validator; a Livewire
+        // rules() declaration here would duplicate it and drift.
         $this->accountName = $name;
 
-        // Bound to the IBANs this preview actually surfaced as unknown;
-        // a crafted wire request naming an arbitrary IBAN is rejected
-        // here before it reaches the namer (defence-in-depth — AccountNamer
-        // also user-scopes every write).
+        // A crafted wire request naming an arbitrary IBAN is rejected before
+        // it reaches the namer, which user-scopes its writes anyway.
         $preview = $cache->getPreview($this->importRunId);
         $allowedIbans = $preview === null
             ? []
@@ -195,8 +182,6 @@ final class PreviewWizard extends Component
         $this->accountName = '';
     }
 
-    // See architecture.md#preview-wizard-inline-account-naming for the
-    // ICS naming branch + locked Blade copy this drives.
     public function saveIcsAccountName(
         RunsImports $importer,
         CurrentUser $currentUser,
@@ -241,9 +226,7 @@ final class PreviewWizard extends Component
         $this->icsAccountName = '';
     }
 
-    // Mirrors saveIcsAccountName() with the PayPal synthetic IBAN/kind;
-    // see architecture.md#preview-wizard-inline-account-naming for the
-    // locked Blade copy this drives.
+    // Mirrors saveIcsAccountName() with the PayPal synthetic IBAN and kind.
     public function savePaypalAccountName(
         RunsImports $importer,
         CurrentUser $currentUser,
@@ -282,10 +265,9 @@ final class PreviewWizard extends Component
         $this->paypalAccountName = '';
     }
 
-    // The pipeline refuses a hint-less CSV import at the public-contract
-    // boundary; the ImportRun's source_format is the only signal a
-    // re-run has, since the user already declared the dialect on the
-    // original upload. Every other format needs no hint.
+    // The pipeline refuses a hint-less CSV import at the contract boundary,
+    // and on a re-run the stored source_format is the only surviving record
+    // of the dialect the user declared on the original upload.
     private function formatHintForReRun(string $sourceFormat): ?BankCsvFormatHint
     {
         return match ($sourceFormat) {
@@ -302,10 +284,8 @@ final class PreviewWizard extends Component
         PreviewCache $cache,
         DatabaseManager $db,
     ): void {
-        // Defense-in-depth: the Confirm button is disabled client-side
-        // via `@disabled` while accounts still need naming, but that
-        // DOM guard can be bypassed via devtools — refuse server-side
-        // too when any naming precondition is still unmet.
+        // The blade's @disabled on Confirm is a DOM guard and devtools
+        // defeats it; this is the one that counts.
         if ($this->needsIcsAccountName($currentUser, $db)
             || $this->needsPaypalAccountName($currentUser, $db)) {
             return;
@@ -359,10 +339,9 @@ final class PreviewWizard extends Component
         ]);
     }
 
-    // Anchors on source_format (not the unknown-IBAN list) so a future
-    // synthetic-IBAN drift still triggers the prompt. Raw query builder
-    // keeps phpstan-strict-rules' staticMethod.dynamicCall quiet, same
-    // convention as the dashboard queries under Ledger/Public/Services.
+    // Anchored on source_format rather than the unknown-IBAN list, so drift
+    // in the synthetic IBAN literal still raises the prompt. Raw query
+    // builder keeps phpstan strict-rules' staticMethod.dynamicCall quiet.
     private function needsIcsAccountName(CurrentUser $currentUser, DatabaseManager $db): bool
     {
         $user = $currentUser->user();
@@ -390,8 +369,7 @@ final class PreviewWizard extends Component
         return $icsAccountCount === 0;
     }
 
-    // Mirrors needsIcsAccountName() for the PayPal branch (kind='paypal',
-    // source_format='paypal-csv').
+    // Mirrors needsIcsAccountName() for the PayPal branch.
     private function needsPaypalAccountName(CurrentUser $currentUser, DatabaseManager $db): bool
     {
         $user = $currentUser->user();

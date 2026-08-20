@@ -5,27 +5,8 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Creates the wizard_progress table — the per-user state machine that
- * tracks each user's progression through the first-run setup wizard.
- *
- * One row per (user_id, step_key). The `status` column is one of
- * `pending`, `in_progress`, `done`, `skipped`; the allowed set is
- * enforced via paired BEFORE INSERT / BEFORE UPDATE OF status triggers
- * so a typo in the application layer fails loud at the database
- * boundary rather than landing a silently-broken state.
- *
- * The `data` JSON column carries per-step opaque payload (e.g. the
- * connector chosen, the OAuth provider name, the uploaded filename)
- * so the wizard can resume mid-flow after an app relaunch without
- * re-prompting. The `completed_at` timestamp records the moment the
- * step transitions to `done` or `skipped`.
- *
- * The composite UNIQUE on (user_id, step_key) blocks duplicate-step
- * rows for the same user. The (user_id, status) index is the
- * ResumeStepResolver hot path: it asks "which step is currently
- * in_progress for this user?" on every `/setup` page request.
- */
+// The (user_id, status) index serves ResumeStepResolver, which asks for
+// this user's in_progress step on every /setup-wizard request.
 return new class extends ModuleMigration
 {
     public function up(): void

@@ -6,10 +6,8 @@ namespace Modules\Import\Public\Exceptions;
 
 use RuntimeException;
 
-// Thrown by DiscardImport when asked to discard an already-'confirmed'
-// run — that would leave the audit row marked 'discarded' while the
-// ledger rows it created remain (orphaned audit history). Callers must
-// remove the underlying transactions separately before retiring the row.
+// Discarding a confirmed run would mark the audit row 'discarded' while the
+// ledger rows it created remain. Remove those separately first.
 final class ImportAlreadyConfirmedException extends RuntimeException
 {
     public function __construct(public readonly int $importRunId)

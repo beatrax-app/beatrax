@@ -21,9 +21,6 @@ use Modules\Ledger\Public\Events\TransactionBatchImported;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
-/**
- * @link ../../../../.docs/features/ledger/architecture.md
- */
 final class RecordTransactions implements RecordsTransactions
 {
     private const CHUNK_SIZE = 500;
@@ -98,7 +95,10 @@ final class RecordTransactions implements RecordsTransactions
      */
     private function persistChunk(array $chunk, User $user, int &$inserted, int &$duplicates, array &$sourceFormats, array &$insertedIds): void
     {
-        $this->db->connection()->transaction(function () use ($chunk, $user, &$inserted, &$duplicates, &$sourceFormats, &$insertedIds): void {
+        /** @var list<Transaction> $persistedRows */
+        $persistedRows = [];
+
+        $this->db->connection()->transaction(function () use ($chunk, $user, &$inserted, &$duplicates, &$sourceFormats, &$insertedIds, &$persistedRows): void {
             $now = $this->clock->now()->toDateTimeString();
             foreach ($chunk as $row) {
                 if ($row->userId === null) {
@@ -138,15 +138,21 @@ final class RecordTransactions implements RecordsTransactions
                         ->firstOrFail();
 
                     $insertedIds[] = $persisted->id;
-
-                    $this->events->dispatch(new TransactionImported(
-                        transaction: $persisted,
-                        user: $user,
-                    ));
+                    $persistedRows[] = $persisted;
                 } else {
                     $duplicates++;
                 }
             }
         });
+
+        // After this chunk commits, never inside it. Anomaly, Receipts,
+        // Transfers and Search all listen synchronously, so a rollback left the
+        // search index and the transfer pairing acting on rows that vanished.
+        foreach ($persistedRows as $persisted) {
+            $this->events->dispatch(new TransactionImported(
+                transaction: $persisted,
+                user: $user,
+            ));
+        }
     }
 }

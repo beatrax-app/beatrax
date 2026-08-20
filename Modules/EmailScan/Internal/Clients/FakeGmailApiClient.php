@@ -13,33 +13,18 @@ final class FakeGmailApiClient implements GmailApiClientContract
     /** @var list<array{method: string, args: array<int|string, mixed>}> */
     private array $calls = [];
 
-    // Inbox-id-keyed retry-after seconds when a rate-limit simulation
-    // is armed; the next listSenderMessages* call for that inbox pops
-    // the entry and throws RateLimitedException.
     /** @var array<int, int> */
     private array $rateLimitedInboxes = [];
 
-    // Per-inbox page cursor: tracks which list page the next
-    // listSenderMessages call should serve.
     /** @var array<int, int> */
     private array $listPageCursor = [];
 
-    // Inbox-id-keyed retry-after seconds for a listHistory rate-limit
-    // simulation; the next listHistory call for that inbox pops the
-    // entry and throws RateLimitedException.
     /** @var array<int, int> */
     private array $historyRateLimitedInboxes = [];
 
-    // Queued success-shaped listHistory response. When set, the next
-    // listHistory call returns this payload verbatim instead of
-    // replaying the 404 fixture; set via queueHistoryResponse() and
-    // consumed on first use.
     /** @var array{history: list<array<string, mixed>>, historyId: ?string}|null */
     private ?array $queuedHistoryResponse = null;
 
-    // Queued listDiscoveryCandidates responses. Each call shifts the
-    // front entry; once empty, the default three-row fixture is
-    // replayed.
     /** @var list<array{messages: list<array<string, mixed>>, nextPageToken: ?string}> */
     private array $queuedDiscoveryResponses = [];
 

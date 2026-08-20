@@ -6,9 +6,6 @@ namespace Modules\EmailScan\Internal\Jobs;
 
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final readonly class PreparedScan
 {
     // Carries the outcome of IncrementalScanJob::prepareScan so handle()

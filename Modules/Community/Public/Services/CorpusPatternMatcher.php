@@ -6,9 +6,6 @@ namespace Modules\Community\Public\Services;
 
 use Psr\Log\LoggerInterface;
 
-/**
- * @link ../../../../.docs/features/community/architecture.md
- */
 final class CorpusPatternMatcher
 {
     public const REGEX_PREFIX = 'regex:';

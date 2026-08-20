@@ -18,8 +18,6 @@ use Illuminate\Support\Facades\Schema;
  * the same lookup rule evaluation joins on, so it is plaintext and needs no
  * key to read. A row the user has renamed is untouched — the rename lives in
  * `display_name_override` and outranks this column either way.
- *
- * @link ../../../../.docs/features/recurring/architecture.md
  */
 return new class extends Migration
 {

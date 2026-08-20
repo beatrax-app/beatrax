@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Transport;
 
-use Modules\Core\Public\Support\SafeExceptionContext;
 use Amp\Http\Server\Request;
 use Amp\Http\Server\Response;
 use Amp\TimeoutCancellation;
@@ -16,6 +15,7 @@ use Illuminate\Container\Container;
 use Illuminate\Contracts\Session\Session as LaravelSession;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Crypto\GdkEpochControlHandler;
@@ -30,9 +30,6 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class SyncWebSocketHandler implements WebsocketClientHandler
 {
     // Caps attacker-paced unbounded receive/op_log growth from a peer's

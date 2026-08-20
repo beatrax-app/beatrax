@@ -225,10 +225,8 @@ return [
 
         'local' => [
             'supervisor-1' => [
-                // Single-supervisor / single-user posture. One process is
-                // sufficient for this app's job pipeline; the per-user
-                // ShouldBeUniqueUntilProcessing lock serialises everything
-                // that matters anyway.
+                // The per-user ShouldBeUniqueUntilProcessing lock already
+                // serialises everything that matters.
                 'maxProcesses' => 1,
             ],
         ],

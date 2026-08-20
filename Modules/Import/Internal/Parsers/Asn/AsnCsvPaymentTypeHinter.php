@@ -15,8 +15,7 @@ final class AsnCsvPaymentTypeHinter extends DescriptionKeywordHinter
 {
     protected const SOURCE_FORMAT = SourceFormat::AsnCsv->value;
 
-    // Order is deliberate: more specific lexemes appear first so
-    // `automatische incasso` wins over `incasso` when both match.
+    // Longest lexeme first, so `automatische incasso` beats `incasso`.
     /**
      * @var list<array{keyword: string, type: PaymentType, confidence: int}>
      */

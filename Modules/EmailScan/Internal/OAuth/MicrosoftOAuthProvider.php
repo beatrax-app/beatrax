@@ -16,9 +16,6 @@ use TheNetworg\OAuth2\Client\Provider\Azure;
 use TheNetworg\OAuth2\Client\Token\AccessToken as AzureAccessToken;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 class MicrosoftOAuthProvider
 {
     private const MAIL_READ_SCOPE = 'Mail.Read';

@@ -26,17 +26,13 @@ use Modules\Recurring\Public\Contracts\DispatchesRecurringDetection;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../../../.docs/features/onboarding/architecture.md
- */
 final class FirstImportStep extends Component
 {
     /** @var array<int, array{minor: int, date: string}> */
     public array $balanceConfirmations = [];
 
-    // Not a Livewire-serialised property — Livewire 4 cannot hydrate the
-    // Spatie Data DTO across HTTP boundaries — so render() repopulates
-    // this plain property and the blade reads it via View::with().
+    // Private, because Livewire cannot hydrate a Spatie Data DTO across the
+    // HTTP boundary; render() repopulates it and hands it to the blade.
     private ?ConsolidatedPreviewBatch $preview = null;
 
     /** @var list<StartingBalanceCandidate> */
@@ -49,13 +45,13 @@ final class FirstImportStep extends Component
 
     public bool $isCommitting = false;
 
-    // Recomputed on every render() so a back-and-forth through earlier
-    // wizard steps reflects fresh on this page without a manual refresh.
+    // Recomputed on every render(), so walking back to a connector step and
+    // returning shows the new run without a manual refresh.
     /** @var list<int> */
     public array $stashedImportRunIds = [];
 
-    // Keyed by source_format; absolute row cap per section (5, 30, 55,
-    // 80, ...) once the user clicks "Load more". Absent = default 5-row cap.
+    // Absolute per-section row cap, stepping 5 → 30 → 55 as the user clicks
+    // "Load more". A missing key means the default 5.
     /** @var array<string, int> */
     public array $expandedRowCount = [];
 
@@ -68,8 +64,8 @@ final class FirstImportStep extends Component
         $this->expandedRowCount = [];
     }
 
-    // Returns an empty batch when called before the first render; tests
-    // prefer this accessor over an HTML-shape assertion.
+    // Empty batch before the first render, so tests can assert on state
+    // rather than on rendered HTML.
     public function currentPreview(): ConsolidatedPreviewBatch
     {
         return $this->preview ?? new ConsolidatedPreviewBatch(
@@ -79,9 +75,9 @@ final class FirstImportStep extends Component
         );
     }
 
-    // The payload's accountId is never trusted directly on UPDATE —
-    // commitEverything() carries its own where('user_id', ...) filter so
-    // a tampered child dispatch can't leak a write to another user's row.
+    // accountId arrives from a child component and is never trusted on the
+    // UPDATE: persistCommit() re-filters on where('user_id', ...) so a forged
+    // dispatch cannot write to another user's row.
     #[On('starting-balance.confirmed')]
     public function onStartingBalanceConfirmed(int $accountId, int $minor, string $date): void
     {
@@ -91,8 +87,7 @@ final class FirstImportStep extends Component
         ];
     }
 
-    // Idempotent past the section's totalRows: the query clamps the
-    // slice server-side and the blade footer hides the button at zero.
+    // Safe past totalRows: the query clamps the slice server-side.
     public function loadMoreRows(string $sourceFormat): void
     {
         $current = $this->expandedRowCount[$sourceFormat]
@@ -100,9 +95,11 @@ final class FirstImportStep extends Component
         $this->expandedRowCount[$sourceFormat] = $current + 25;
     }
 
-    // Named to avoid the literal "commit" — Livewire 3 reserves $commit
-    // as a magic state-sync action, so a method named commit() would
-    // never reach user code. See architecture.md for the atomicity contract.
+    // Not named commit(): Livewire reserves $commit as a magic state-sync
+    // action and a method by that name never reaches user code.
+    /**
+     * @link ../../../../../../.docs/features/onboarding/architecture.md#firstimportstep--the-consolidated-commit-surface
+     */
     public function commitEverything(
         DatabaseManager $db,
         ConfirmsImports $confirmImport,
@@ -123,8 +120,7 @@ final class FirstImportStep extends Component
                 'balance_confirmations' => count($this->balanceConfirmations),
             ]);
 
-            // Rebuilt at commit time since Livewire invokes action methods
-            // without running render() first.
+            // Livewire invokes action methods without running render() first.
             $stashedIds = $this->resolveStashedImportRunIds($user->id, $db);
             $runIdsToCommit = $this->readyRunIds($buildPreview->build($stashedIds, $user));
 
@@ -154,16 +150,15 @@ final class FirstImportStep extends Component
         }
     }
 
-    // Commit is disabled whenever no section is ready — the normal state for
-    // someone who skipped the connector steps. Without this the step has no
-    // forward control and the three steps after it are unreachable.
+    // Someone who skipped every connector has no ready section and so no
+    // enabled commit button; without skip they could never reach budgets,
+    // tax-country or done.
     public function skip(): void
     {
         $this->dispatch('wizard.step.skipped');
     }
 
-    // Only ready sections feed the commit loop, so a half-broken section
-    // doesn't take the whole batch down.
+    // Only ready sections commit, so one broken upload cannot sink the batch.
     /**
      * @return list<int>
      */
@@ -182,12 +177,11 @@ final class FirstImportStep extends Component
         return $runIds;
     }
 
-    // Marks wizard_progress done inside the transaction so the commit is truly
-    // atomic: either everything lands or nothing does. A failure before that
-    // UPDATE leaves the step in its current state so the user can retry safely.
     /**
      * @param  list<int>  $runIdsToCommit
      * @param  array<int, array{minor: int, date: string}>  $balanceConfirmations
+     *
+     * @link ../../../../../../.docs/features/onboarding/architecture.md#firstimportstep--the-consolidated-commit-surface
      */
     private function persistCommit(DatabaseManager $db, ConfirmsImports $confirmImport, User $user, string $now, array $runIdsToCommit, array $balanceConfirmations): void
     {
@@ -216,9 +210,8 @@ final class FirstImportStep extends Component
             ]);
     }
 
-    // Post-commit dispatches: failures here do NOT undo committed data, so
-    // they are swallowed with an honest log — chain/recurring catch up on the
-    // next scheduled sweep rather than misleading the user into a retry.
+    // Runs after the transaction commits, so a failure here cannot undo the
+    // import: swallowed and logged, and the next scheduled sweep catches up.
     private function dispatchPostCommit(Application $app, LoggerInterface $logger, int $userId): void
     {
         try {
@@ -249,8 +242,8 @@ final class FirstImportStep extends Component
             sectionLimitOverrides: $this->expandedRowCount,
         );
 
-        // Two candidates for the same account (conflict) both appear in
-        // this flat list — the blade groups by accountId to detect it.
+        // Two candidates for one account is the conflict case; the blade
+        // groups this flat list by accountId to spot it.
         $this->startingBalances = $detectBalances->collect($this->stashedImportRunIds, $user);
 
         $this->accountMeta = $this->loadAccountMeta($user->id, $db, $this->startingBalances);
@@ -262,10 +255,9 @@ final class FirstImportStep extends Component
         ]);
     }
 
-    // Uses raw DatabaseManager::table() rather than WizardProgress::query()
-    // so the explicit user-scope filter is load-bearing rather than
-    // relying on the BelongsToUser global scope, which falls through
-    // under non-HTTP contexts (queue workers, listener tests).
+    // Raw table() rather than WizardProgress::query(), so the user-scope
+    // filter below is the real one: BelongsToUser's global scope falls
+    // through outside an HTTP request (queue workers, listener tests).
     /**
      * @return list<int>
      */
@@ -290,9 +282,8 @@ final class FirstImportStep extends Component
             }
         }
 
-        // array_unique keeps first-occurrence order, which the row query
-        // already fixes as bank → PayPal → ICS card → email; array_values
-        // re-indexes the survivors back into a clean list.
+        // First-occurrence order survives, which the orderByRaw above has
+        // already fixed as bank → PayPal → ICS card → email.
         return array_values(array_unique($ids));
     }
 

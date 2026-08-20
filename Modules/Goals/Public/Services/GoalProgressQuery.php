@@ -15,9 +15,6 @@ use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Pots\Public\Services\PotBalanceQuery;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/goals/architecture.md
- */
 final class GoalProgressQuery
 {
     use CoercesScalars;

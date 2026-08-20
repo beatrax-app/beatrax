@@ -6,9 +6,6 @@ namespace Modules\EmailScan\Internal\Clients;
 
 use DateTimeImmutable;
 
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 interface GraphApiClientContract
 {
     /**

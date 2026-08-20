@@ -10,8 +10,6 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 
 /**
- * @link ../../../.docs/features/chains/architecture.md
- *
  * @internal Resolvers only.
  */
 final class ChainLinkInsertHelper

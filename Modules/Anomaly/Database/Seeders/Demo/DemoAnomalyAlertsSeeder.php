@@ -9,10 +9,9 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Anomaly\Internal\Jobs\BackfillAnomaliesJob;
 use Modules\Core\Models\User;
 
-// Populates the unusual-charge surface by running the real backfill over
-// the seeded transactions rather than hand-writing alert rows, so whatever
-// the detectors actually flag is what the demo shows. Runs synchronously
-// because a demo install has no queue worker attached.
+// Runs the real backfill rather than hand-writing alert rows, so the demo
+// shows what the detectors actually flag. Synchronous because a demo
+// install has no queue worker attached.
 final class DemoAnomalyAlertsSeeder
 {
     public function __construct(
@@ -28,9 +27,8 @@ final class DemoAnomalyAlertsSeeder
         $userIds = array_map(static fn (User $u): int => $u->id, $users);
 
         foreach ($users as $user) {
-            // The job claims its run by stamping anomaly_backfilled_at and
-            // no-ops when already set, so a re-seed has to clear the stamp
-            // to walk the freshly inserted transactions again.
+            // The job no-ops once anomaly_backfilled_at is stamped, so a
+            // re-seed has to clear it to walk the new transactions.
             $this->db->connection()
                 ->table('users')
                 ->where('id', $user->id)

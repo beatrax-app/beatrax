@@ -10,10 +10,7 @@ use Modules\Anomaly\Models\AnomalyAlert;
 use Modules\Anomaly\Public\Enums\AnomalyAlertState;
 use Modules\Ledger\Public\Enums\Direction;
 
-// The default state encodes a large-vs-typical expense anomaly: a €23.49
-// charge against a €9.99 per-merchant baseline, flagged `large`. Callers
-// must override the `transaction_id` FK — the schema constraint rejects
-// the factory default of `null`.
+// Callers must override `transaction_id`: the FK rejects the `null` default.
 /**
  * @extends Factory<AnomalyAlert>
  */
@@ -42,8 +39,6 @@ final class AnomalyAlertFactory extends Factory
         ];
     }
 
-    // Default state, kept symmetric with the terminal states below so
-    // call sites read explicitly.
     public function open(): self
     {
         return $this->state(fn (array $attributes): array => [
@@ -54,8 +49,6 @@ final class AnomalyAlertFactory extends Factory
         ]);
     }
 
-    // The user reviewed the alert and confirmed "seen it, it's fine"
-    // (History tab) without recording any suppression intent.
     public function acknowledged(): self
     {
         return $this->state(fn (array $attributes): array => [
@@ -65,8 +58,6 @@ final class AnomalyAlertFactory extends Factory
         ]);
     }
 
-    // Caller supplies `snoozed_until` explicitly — the revival sweep
-    // flips the row back to `open` once the timestamp is in the past.
     public function snoozed(CarbonImmutable $until): self
     {
         return $this->state(fn (array $attributes): array => [
@@ -76,9 +67,6 @@ final class AnomalyAlertFactory extends Factory
         ]);
     }
 
-    // Dismissed-as-expected (Dismissed tab): records the user's intent
-    // that the charge is not unusual and creates a suppression rule. The
-    // dismissal is undoable via the `dismissed -> open` state edge.
     public function dismissed(): self
     {
         return $this->state(fn (array $attributes): array => [

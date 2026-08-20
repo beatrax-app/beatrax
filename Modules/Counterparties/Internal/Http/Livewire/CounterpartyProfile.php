@@ -22,9 +22,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 // not 403) so the route resolver never signals that a slug exists in
 // another user's namespace. The body then routes to the profile-tabs
 // partial matching the resolved profile's type.
-/**
- * @link ../../../../../.docs/features/counterparties/architecture.md
- */
 final class CounterpartyProfile extends Component
 {
     use HandlesTaxTagging;

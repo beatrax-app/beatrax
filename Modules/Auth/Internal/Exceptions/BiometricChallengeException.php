@@ -10,9 +10,6 @@ use RuntimeException;
 // during enrollment, either absent or not decodable. Distinct because it
 // signals a broken or replayed ceremony handshake, not a validation error
 // over otherwise well-formed input.
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 final class BiometricChallengeException extends RuntimeException
 {
     public static function missing(): self

@@ -9,9 +9,6 @@ use Doctrine\SqlFormatter\Tokenizer;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/dev-mode/architecture.md
- */
 final class SelectOnlyValidator
 {
     /**

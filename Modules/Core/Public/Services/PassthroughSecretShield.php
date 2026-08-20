@@ -6,9 +6,6 @@ namespace Modules\Core\Public\Services;
 
 use Modules\Core\Public\Contracts\SecretShield;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class PassthroughSecretShield implements SecretShield
 {
     public function protect(string $plaintext): string

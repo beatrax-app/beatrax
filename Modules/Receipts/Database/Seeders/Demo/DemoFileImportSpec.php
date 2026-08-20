@@ -8,9 +8,6 @@ namespace Modules\Receipts\Database\Seeders\Demo;
 // fields the seeder would otherwise pass positionally; the on-disk
 // source_kind is derived from the filename extension rather than
 // carried separately, keeping the two always in step.
-/**
- * @link ../../../../../.docs/features/receipts/architecture.md
- */
 final readonly class DemoFileImportSpec
 {
     public function __construct(

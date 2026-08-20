@@ -14,19 +14,10 @@ use Modules\Sync\Public\Services\PairingGateway;
 
 uses(RefreshDatabase::class);
 
-/*
- * PairingResumeSideTest — reopening the pairing modal on a live handshake.
- *
- * The resume path took two things on faith. It assumed this device was the
- * INITIATOR, which decides which column a confirmation is written to and
- * whose name is shown as the peer's; and it sent every resumed row to the
- * trust gate, including one already confirmed — asking for a safety-number
- * confirmation that confirm() then refuses as already given, so the modal had
- * nothing to move it forward and nothing to start it over.
- *
- * Both are read off the row and this device's own identity now, which is what
- * PairingGateway::currentDeviceId() exists for.
- */
+// The resume path assumed this device was the initiator, which decides which
+// column a confirmation is written to and whose name is shown as the peer's;
+// and it sent even an already-confirmed row to the trust gate, which confirm()
+// then refuses as already given, leaving the modal nowhere to go.
 
 function resumeUser(string $username): User
 {

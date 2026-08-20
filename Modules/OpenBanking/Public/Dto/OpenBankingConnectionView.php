@@ -6,9 +6,6 @@ namespace Modules\OpenBanking\Public\Dto;
 
 use Carbon\CarbonImmutable;
 
-/**
- * @link ../../../../.docs/features/open-banking/architecture.md
- */
 final readonly class OpenBankingConnectionView
 {
     /**

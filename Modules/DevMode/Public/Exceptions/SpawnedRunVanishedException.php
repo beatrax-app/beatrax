@@ -10,9 +10,6 @@ use RuntimeException;
 // and got nothing back — the cache entry vanished between start()
 // persisting it and the controller re-reading it. A genuine invariant
 // break (not a routine TTL miss), so it is raised distinctly.
-/**
- * @link ../../../../.docs/features/dev-mode/architecture.md
- */
 final class SpawnedRunVanishedException extends RuntimeException
 {
     public static function immediatelyAfterSpawn(string $entryPoint, string $runId): self

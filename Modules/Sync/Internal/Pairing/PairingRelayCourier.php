@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Pairing;
 
-use Modules\Core\Public\Support\SafeExceptionContext;
 use Illuminate\Database\DatabaseManager;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
@@ -14,9 +14,6 @@ use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class PairingRelayCourier
 {
     // Mirrors GdkEpochControlHandler::MSG_GDK_EPOCH_WRAP — that class belongs

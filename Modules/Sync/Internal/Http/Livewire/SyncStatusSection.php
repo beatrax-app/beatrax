@@ -14,9 +14,6 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\SyncStatusService;
 
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 final class SyncStatusSection extends Component
 {
     // Each element: peer_device_id (string), status

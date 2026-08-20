@@ -13,9 +13,6 @@ use Modules\Reports\Public\Dto\ReportDefinition;
 use Modules\Reports\Public\Dto\ReportResultRow;
 use Modules\Reports\Public\Services\PinnedReportsQuery;
 
-/**
- * @link ../../../../../.docs/features/reports/architecture.md
- */
 final class PinnedReportsRow extends Component
 {
     private const CHART_HEIGHT = 180;
@@ -89,6 +86,8 @@ final class PinnedReportsRow extends Component
      */
     private function seriesOptions(string $chartType, array $rows): array
     {
+        $rows = self::withoutLeadingEmptyBuckets($rows);
+
         $categories = array_map(static fn (ReportResultRow $row): string => $row->groupLabel, $rows);
         $data = array_map(static fn (ReportResultRow $row): float => $row->amountMinor / 100, $rows);
 
@@ -119,6 +118,34 @@ final class PinnedReportsRow extends Component
             'legend' => ['show' => false],
             'tooltip' => ['enabled' => true],
         ];
+    }
+
+    /**
+     * @param  list<ReportResultRow>  $rows
+     * @return list<ReportResultRow>
+     */
+    private static function withoutLeadingEmptyBuckets(array $rows): array
+    {
+        // The time-bucket query emits a row per bucket whether or not the
+        // bucket holds anything, so a window opening before the first
+        // transaction begins with a flat run that says nothing. Only the
+        // LEADING run goes: a zero between two funded buckets is data.
+        $firstFunded = null;
+        foreach ($rows as $index => $row) {
+            if ($row->amountMinor !== 0) {
+                $firstFunded = $index;
+                break;
+            }
+        }
+
+        // Every bucket empty is not a leading run with something behind it —
+        // there is nothing to lead into. A flat line at zero reads as "zero
+        // in every period"; an emptied series reads as "no such report".
+        if ($firstFunded === null) {
+            return $rows;
+        }
+
+        return array_slice($rows, $firstFunded);
     }
 
     /**

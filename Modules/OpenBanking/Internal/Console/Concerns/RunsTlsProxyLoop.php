@@ -6,13 +6,8 @@ namespace Modules\OpenBanking\Internal\Console\Concerns;
 
 use Symfony\Component\Process\Process;
 
-// The single-threaded select/accept/relay pump that tunnels the TLS front
-// to the plain-HTTP backend. It lives beside the command rather than inside
-// it because it is a self-contained event loop with its own byte-buffer
-// bookkeeping, answering a socket-plumbing question of its own.
-/**
- * @link ../../../../../.docs/features/open-banking/architecture.md
- */
+// The single-threaded select/accept/relay pump tunnelling the TLS front to
+// the plain-HTTP backend.
 trait RunsTlsProxyLoop
 {
     private const READ_CHUNK = 65536;

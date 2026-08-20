@@ -14,9 +14,6 @@ use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
 
-/**
- * @link ../../../../../.docs/features/chains/architecture.md
- */
 final class ChainReviewQueue extends Component
 {
     // Cursor pair: previous page's tail chain_link.id + confidence

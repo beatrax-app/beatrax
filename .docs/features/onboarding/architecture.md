@@ -216,6 +216,8 @@ DoneStep
   → dispatch WizardCompleted
 ```
 
+### Auto-create the account, then re-preview
+
 `ConnectBankStep` extends the generic connector pattern with one extra
 step: when the parsed statement contains an IBAN the user has no
 `accounts` row for yet, it auto-creates a bank account for each unknown
@@ -261,6 +263,8 @@ tags every row `error` when `AccountResolver` returns `UnknownAccount`
 — inverting the order would cache an all-error preview on the first
 pass and the consolidated `FirstImportStep` section would render
 `READY · 0 ROWS`.
+
+### Fatal-parse detection on the PayPal step
 
 A second guard handles the pipeline's typed-parse-exception contract:
 `ImportPipeline` converts a parse-time exception

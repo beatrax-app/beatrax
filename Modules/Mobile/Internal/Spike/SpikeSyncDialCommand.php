@@ -13,9 +13,6 @@ use Throwable;
 use function Amp\async;
 use function Amp\Websocket\Client\connect;
 
-/**
- * @link ../../../../.docs/features/mobile/architecture.md
- */
 final class SpikeSyncDialCommand extends Command
 {
     /** @var string */

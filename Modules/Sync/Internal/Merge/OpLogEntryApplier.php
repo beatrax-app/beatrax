@@ -12,9 +12,6 @@ use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\OpLog\QuarantineReason;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class OpLogEntryApplier
 {
     public function __construct(

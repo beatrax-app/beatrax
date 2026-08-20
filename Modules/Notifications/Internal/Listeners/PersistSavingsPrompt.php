@@ -16,9 +16,6 @@ use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final class PersistSavingsPrompt
 {
     public function __construct(

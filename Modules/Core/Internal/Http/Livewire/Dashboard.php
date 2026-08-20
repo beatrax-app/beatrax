@@ -16,9 +16,6 @@ use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Position\Public\Services\PositionQuery;
 
-/**
- * @link ../../../../../.docs/features/core/architecture.md
- */
 final class Dashboard extends Component
 {
     private const PERIOD_DATE_FORMAT = 'Y-m-d';
@@ -27,14 +24,9 @@ final class Dashboard extends Component
     // via the wire payload. Null = current period.
     public ?string $periodStartStr = null;
 
-    // Source of truth is chain_resolution_runs filtered by exact user_id
-    // match (see architecture.md) — set by refreshFailedChainResolution(),
-    // populated on initial mount then refreshed via wire:poll.5s.
     public bool $failedChainResolutionExists = false;
 
-    // Mirrors the session key reauth_toast_dismissed_at so the Blade can
-    // branch on a single property rather than re-reading the session on
-    // every render; synchronised from the session at render time.
+    // Mirrors session key reauth_toast_dismissed_at; synchronised at render time.
     public bool $reauthToastDismissed = false;
 
     public function previousPeriod(PeriodQuery $periods): void
@@ -54,9 +46,8 @@ final class Dashboard extends Component
         $this->periodStartStr = null;
     }
 
-    // wire:poll.5s target. Latest "failed" row for this user surfaces the
-    // persistent toast; when the row is cleared (e.g. retried via
-    // /horizon/failed) the toast hides on the next poll.
+    // wire:poll.5s target. Clearing the row (e.g. retried via /horizon/failed)
+    // hides the toast on the next tick.
     public function refreshFailedChainResolution(
         DatabaseManager $db,
         CurrentUser $currentUser,
@@ -69,9 +60,8 @@ final class Dashboard extends Component
             ->exists();
     }
 
-    // Writes a session-scoped timestamp so a refresh in the same tab keeps
-    // the toast hidden; a fresh login resets the session and the toast
-    // re-surfaces if any inbox is still needs_reauth.
+    // Session-scoped, so a refresh keeps the toast hidden but a fresh login
+    // resets it and the toast re-surfaces while any inbox is needs_reauth.
     public function dismissReauthToast(
         Session $session,
         Clock $clock,
@@ -91,33 +81,21 @@ final class Dashboard extends Component
         $user = $currentUser->user();
         $period = $this->resolvePeriod($periods);
 
-        // Position data: net worth + budgets + upcoming + shortfalls, read
-        // through the single Modules\Position Public seam so the dashboard
-        // and the position digest can never disagree about "your position".
-        // `$summary` stays settled-EUR-only; only the KPI tiles split per-currency.
+        // One Position seam so the dashboard and the position digest cannot
+        // disagree. `$summary` stays settled-EUR-only; only the tiles split.
         $positionSummary = $position->forUser($user, $period);
         $summary = $positionSummary->summary;
         $tiles = $positionSummary->tilesByCurrency;
 
-        // Email-scan-health tile. Null = hide the tile entirely (no
-        // connected inboxes). The dashboard Blade reads the same null-
-        // first contract as the Next-ICS-settlement tile above.
+        // Null hides the tile entirely — no connected inboxes.
         $emailScanHealth = $positionSummary->emailScanHealth;
 
-        // Persistent reauth toast trigger: lit when at least one inbox is in
-        // needs_reauth state. The Blade also reads the session dismiss-flag
-        // to suppress the toast once clicked; it re-surfaces if a fresh
-        // needs_reauth state appears after dismissal in a later session.
         $reauthInboxCount = $db->connection()
             ->table('inbox_scan_state')
             ->where('user_id', $user->id)
             ->where('status', 'needs_reauth')
             ->count();
 
-        // Mirror the session dismiss flag into the property so the
-        // Blade can branch on a single property reference. The session
-        // is the source of truth — a fresh login resets it and the
-        // toast resurfaces if any inbox is still needs_reauth.
         $this->reauthToastDismissed = $session->has('reauth_toast_dismissed_at');
 
         // Populate on initial mount so the toast surfaces immediately
@@ -134,14 +112,11 @@ final class Dashboard extends Component
             'emailScanHealth' => $emailScanHealth,
             'reauthInboxCount' => $reauthInboxCount,
             'reauthToastDismissed' => $this->reauthToastDismissed,
-            // Non-developers see no Horizon-style queue messaging here —
-            // their channel is the existing SystemAlertsBanner.
+            // Non-developers get queue messaging via SystemAlertsBanner instead.
             'isDeveloper' => $user->is_developer === true,
         ]);
     }
 
-    // On any mismatch or parse failure, falls back to the current period and
-    // clears the property so the bad value cannot survive the round-trip.
     private function resolvePeriod(PeriodQuery $periods): Period
     {
         if ($this->periodStartStr === null) {
@@ -150,10 +125,9 @@ final class Dashboard extends Component
 
         $parsed = CarbonImmutable::createFromFormat(self::PERIOD_DATE_FORMAT, $this->periodStartStr);
 
-        // Refuse a null parse, and refuse a string that parses but does not
-        // stringify back to the original (e.g. "2026-02-30", which Carbon
-        // accepts as "2026-03-02") — either way clear the bad value so it
-        // cannot survive the round-trip, and fall back to the current period.
+        // Carbon accepts "2026-02-30" and normalises it to "2026-03-02", so a
+        // round-trip format comparison is the real validity check. Clear the bad
+        // value so it cannot survive another round-trip.
         if ($parsed === null || $parsed->format(self::PERIOD_DATE_FORMAT) !== $this->periodStartStr) {
             $this->periodStartStr = null;
 

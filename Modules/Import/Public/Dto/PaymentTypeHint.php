@@ -7,10 +7,9 @@ namespace Modules\Import\Public\Dto;
 use Modules\Import\Public\Enums\PaymentType;
 use Spatie\LaravelData\Data;
 
-// `confidence` (0..100): 90+ for authoritative source signals (CAMT.053
-// BkTxCd, PayPal event type), 70-90 for description-keyword matches,
-// 40 for the universal fallback (wins only when every source-specific
-// hinter declines). `sourceHint` is structured-log-only, never UI/PII.
+// confidence runs 0..100: 90+ for an authoritative source signal, 70-90 for
+// a description-keyword match, 40 for the universal fallback. `sourceHint`
+// is for structured logs only and must never reach the UI.
 final class PaymentTypeHint extends Data
 {
     public function __construct(

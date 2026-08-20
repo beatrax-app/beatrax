@@ -19,9 +19,6 @@ use Modules\Migration\Public\Enums\MigrationRunStatus;
 use Modules\Migration\Public\Exceptions\MigrationAlreadyDiscardedException;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 final class ConfirmMigration
 {
     public function __construct(

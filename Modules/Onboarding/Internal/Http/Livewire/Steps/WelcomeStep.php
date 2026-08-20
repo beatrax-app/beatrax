@@ -8,9 +8,6 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 
-/**
- * @link ../../../../../../.docs/features/onboarding/architecture.md
- */
 final class WelcomeStep extends Component
 {
     public function continue(): void

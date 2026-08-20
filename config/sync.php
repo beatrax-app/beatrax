@@ -4,34 +4,14 @@ declare(strict_types=1);
 
 return [
 
-    /*
-    |--------------------------------------------------------------------------
-    | Sync WebSocket Listen Port
-    |--------------------------------------------------------------------------
-    |
-    | The port the sync:serve artisan daemon binds to for incoming Noise/WebSocket
-    | connections. Peers discover this port via mDNS (D-07). The NativePHP
-    | ChildProcess host reads this value to start the listener on the correct port.
-    |
-    | Default: 51337
-    |
-    */
+    // What sync:serve binds for incoming Noise/WebSocket connections, and what
+    // peers advertise over mDNS. The NativePHP ChildProcess host reads it to
+    // start the listener on the same port.
     'port' => (int) env('SYNC_PORT', 51337),
 
-    /*
-    |--------------------------------------------------------------------------
-    | Relay HTTP Listen Port
-    |--------------------------------------------------------------------------
-    |
-    | The port the relay:serve artisan daemon binds its ZK relay HTTP endpoint
-    | (POST /relay/deliver, GET /relay/drain, DELETE /relay/drain/{id}).
-    |
-    | The relay is opt-in (D-01): it is NOT started automatically. Self-hosters
-    | run `php artisan relay:serve` manually or via their own supervised process.
-    |
-    | Default: 51338
-    |
-    */
+    // What relay:serve binds for the zero-knowledge relay endpoints. The relay
+    // is opt-in and never starts automatically: a self-hoster runs
+    // `php artisan relay:serve` themselves, or supervises it.
     'relay_port' => (int) env('SYNC_RELAY_PORT', 51338),
 
 ];

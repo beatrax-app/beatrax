@@ -6,10 +6,8 @@ namespace Modules\Import\Public\Enums;
 
 use Modules\Ingestion\Public\Enums\SourceFormat;
 
-// CSV is the only ambiguous bank-statement format (every bank exports
-// its own column shape), so the user picks the source bank up front
-// and the chosen case is what the pipeline dispatches against instead
-// of sniffing the file.
+// Every bank exports its own CSV column shape, so the user picks the bank
+// up front and the pipeline dispatches on the choice rather than sniffing.
 enum BankCsvFormatHint: string
 {
     case Asn = SourceFormat::AsnCsv->value;

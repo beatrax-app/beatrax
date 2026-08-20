@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Ingestion\Internal\Adapters\Paypal;
 
-/**
- * @link ../../../../../.docs/features/ingestion/architecture.md
- */
 final class PaypalCsvLanguageProfile
 {
     public const FORMAT = 'paypal-csv';
@@ -17,10 +14,9 @@ final class PaypalCsvLanguageProfile
 
     public const SOURCE_ENCODING = 'UTF-8';
 
-    // Detection passes when every token in a locale's list is present in
-    // the CSV header row (order-insensitive). "Reference Txn ID" is never
-    // localised by PayPal and is the strongest discriminator against a
-    // non-PayPal CSV that happens to ship a "Datum" column.
+    // Detection passes when every token in a locale's list is present (order-insensitive).
+    // "Reference Txn ID" is never localised, so it discriminates against a non-PayPal
+    // CSV that happens to ship a "Datum" column.
     /**
      * @var array<string, list<string>>
      */
@@ -50,10 +46,8 @@ final class PaypalCsvLanguageProfile
      */
     public static function detect(array $columns): ?self
     {
-        // Compare against trimmed cells (PayPal's NL export ships some
-        // headers with a trailing space) but keep signature tokens
-        // un-trimmed, so a mis-spelling surfaces rather than silently
-        // matching.
+        // Cells are trimmed (the NL export ships trailing spaces) but signature
+        // tokens are not, so a mis-spelt token surfaces instead of matching.
         $trimmedColumns = array_map(static fn (string $c): string => trim($c), $columns);
 
         foreach (self::LANGUAGE_SIGNATURES as $language => $required) {

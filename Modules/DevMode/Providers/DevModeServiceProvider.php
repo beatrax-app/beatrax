@@ -64,9 +64,6 @@ use Modules\DevMode\Public\Dto\NavigationEntry;
 use Modules\EmailScan\Models\OAuthSecret;
 use Spatie\Activitylog\Support\ActivityLogger;
 
-/**
- * @link ../../../.docs/features/dev-mode/architecture.md
- */
 final class DevModeServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;

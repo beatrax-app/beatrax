@@ -7,9 +7,6 @@ namespace Modules\Sync\Internal\Transport\Discovery;
 // The record types an mDNS answer can carry that this module acts on. Backed
 // by the numbers on the wire (RFC 1035 §3.2.2, and RFC 2782 for SRV), so a
 // parser can name what it matched rather than comparing bare integers.
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 enum DnsRecordType: int
 {
     case Address = 1;

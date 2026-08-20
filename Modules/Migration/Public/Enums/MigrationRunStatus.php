@@ -8,9 +8,6 @@ namespace Modules\Migration\Public\Enums;
 // promoted one is `confirmed`, one with unresolved conflicts is
 // `needs_attention`, and an abandoned one is `discarded`. The column stays
 // string; this enum is the one canonical spelling every caller maps through.
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 enum MigrationRunStatus: string
 {
     case Parsed = 'parsed';

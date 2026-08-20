@@ -14,10 +14,9 @@ use Modules\Desktop\Public\Events\NotificationDeepLink;
 use Native\Desktop\Events\ChildProcess\ProcessExited;
 use Native\Desktop\Facades\Notification;
 
-// NativePHP fires ProcessExited on every restart of the supervised
-// queue:work child process. A single exit is normal steady-state
-// (auto-restart on a memory-limit hit); only a sustained crash-loop
-// within the rolling window escalates to a system_alerts row + toast.
+// NativePHP fires ProcessExited on every restart of the supervised queue:work
+// child, and a single exit is normal steady-state (auto-restart on a memory-limit
+// hit), so only a sustained crash-loop within the rolling window escalates.
 final class SurfaceWorkerCrashAlert
 {
     public const WORKER_ALIAS = 'queue-default';
@@ -28,17 +27,13 @@ final class SurfaceWorkerCrashAlert
 
     public const ALERT_KIND = 'worker.crashed';
 
-    // The English canonical for the crash-loop copy — the fallback-locale
-    // source of truth (mirrored in desktop::native.worker_alert.*).
-    // escalate() renders the copy through Lang::get so it localises; at the
-    // `en` default the two are identical.
+    // The English canonical, mirrored in desktop::native.worker_alert.*; escalate()
+    // renders through Lang::get, so at the `en` default the two are identical.
     public const ALERT_BODY = "Beatrax's background processing stopped unexpectedly. Imports and email scans are paused. Reopen the app to restart it.";
 
     public const OS_NOTIFICATION_TITLE = 'Background work stopped';
 
-    // Rolling crash-counter keyed by worker alias, holding the unix
-    // timestamp of every recorded exit inside the window; older
-    // entries are pruned on every record.
+    // Unix timestamps of every exit inside the window, pruned on each record.
     /** @var array<string, list<int>> */
     private array $exits = [];
 
@@ -104,10 +99,8 @@ final class SurfaceWorkerCrashAlert
             ]);
         }
 
-        // Suppress when the window is focused (the in-app banner
-        // already shows the row) or when a prior alert is still
-        // un-acknowledged — the partner is already aware and a repeat
-        // toast is just noise.
+        // The in-app banner already shows the row when focused, and an unacknowledged
+        // prior alert means the household already knows.
         if ($alreadyAlerted || $this->focus->isFocused()) {
             return;
         }

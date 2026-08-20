@@ -17,9 +17,6 @@ use Modules\Notifications\Public\Actions\MarkNotificationRead;
 use Modules\Notifications\Public\Actions\UndoDismissNotification;
 use Modules\Notifications\Public\Services\NotificationQuery;
 
-/**
- * @link ../../../../../.docs/features/notifications/architecture.md
- */
 final class NotificationsPage extends Component
 {
     use DispatchesToast;

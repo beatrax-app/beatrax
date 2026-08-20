@@ -16,9 +16,9 @@ use Modules\Sync\Commands\RelayServeCommand;
 use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
-use Modules\Sync\Internal\Transport\Relay\RelayDeliverRateLimiter;
 use Modules\Sync\Internal\Transport\Relay\RelayDrainRegistry;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
+use Modules\Sync\Internal\Transport\Relay\RelayRateLimiter;
 use Modules\Sync\Internal\Transport\Relay\RelayTlsMaterial;
 use Psr\Log\NullLogger;
 
@@ -88,7 +88,7 @@ beforeEach(function (): void {
         new NullLogger,
         $this->mailbox,
         new RelayDrainRegistry,
-        new RelayDeliverRateLimiter(app(Clock::class)),
+        new RelayRateLimiter(app(Clock::class)),
         new RelayTlsMaterial,
         new DaemonShutdownSignal,
     );
@@ -332,7 +332,7 @@ it('throttles a burst of deliveries from one source IP with 429 rate_limited (L1
 
     // The whole per-window budget from one source IP is accepted (all well
     // under MAX_PENDING_PER_RECIPIENT, so the quota cap never fires here).
-    for ($i = 0; $i < RelayDeliverRateLimiter::MAX_PER_WINDOW; $i++) {
+    for ($i = 0; $i < RelayRateLimiter::MAX_PER_WINDOW; $i++) {
         expect($deliver($flooderIp)['status'])->toBe(202);
     }
 
@@ -344,4 +344,58 @@ it('throttles a burst of deliveries from one source IP with 429 rate_limited (L1
 
     // A different source IP is unaffected — the limit is strictly per-source.
     expect($deliver('198.51.100.23')['status'])->toBe(202);
+});
+
+// Drain and confirm each resolve a row from the database INSIDE their own
+// authorization check, so an unauthenticated caller could still spend a query
+// per request. Only deliver was throttled, which is the endpoint that needs it
+// least — it at least writes the thing the caller asked for.
+it('throttles an unauthenticated burst against drain, not just deliver (L13)', function (): void {
+    $flooderIp = '203.0.113.9';
+
+    $drain = fn (string $ip): array => dispatchRelayLimitsRequest(
+        $this->command,
+        buildRelayLimitsRequest('GET', '/relay/drain?did=device-someone-else', '', [], $ip),
+    );
+
+    // Every one of these is refused as unauthorized, which is correct — but
+    // being refused is not the same as being free, and that is the point.
+    for ($i = 0; $i < RelayRateLimiter::MAX_PER_WINDOW; $i++) {
+        expect($drain($flooderIp)['status'])->toBe(401);
+    }
+
+    $throttled = $drain($flooderIp);
+    expect($throttled['status'])->toBe(429);
+    expect($throttled['body']['error'] ?? null)->toBe('rate_limited');
+
+    expect($drain('198.51.100.29')['status'])->toBe(401);
+});
+
+it('throttles an unauthenticated burst against confirm (L13)', function (): void {
+    $flooderIp = '203.0.113.11';
+
+    $confirm = fn (string $ip): array => dispatchRelayLimitsRequest(
+        $this->command,
+        buildRelayLimitsRequest('DELETE', '/relay/drain/123456', '', [], $ip),
+    );
+
+    for ($i = 0; $i < RelayRateLimiter::MAX_PER_WINDOW; $i++) {
+        expect($confirm($flooderIp)['status'])->toBe(401);
+    }
+
+    expect($confirm($flooderIp)['status'])->toBe(429);
+});
+
+// A did that cannot name a device is a malformed request, and saying so is
+// not a disclosure: deliver already answers this way, and drain answering
+// "unauthorized" instead told a caller its syntax error looked like a
+// credentials problem.
+it('refuses a malformed did on drain as a bad request rather than an auth failure', function (): void {
+    $result = dispatchRelayLimitsRequest(
+        $this->command,
+        buildRelayLimitsRequest('GET', '/relay/drain?did='.urlencode(str_repeat('x', 129)), '', [], '203.0.113.13'),
+    );
+
+    expect($result['status'])->toBe(400)
+        ->and($result['body']['error'] ?? null)->toBe('malformed_did');
 });

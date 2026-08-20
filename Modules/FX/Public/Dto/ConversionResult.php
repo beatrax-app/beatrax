@@ -8,9 +8,6 @@ use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/fx/architecture.md
- */
 final class ConversionResult extends Data
 {
     public function __construct(

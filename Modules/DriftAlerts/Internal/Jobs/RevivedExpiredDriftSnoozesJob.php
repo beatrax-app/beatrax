@@ -18,9 +18,6 @@ use Modules\DriftAlerts\Models\DriftAlert;
 use Modules\DriftAlerts\Public\Enums\DriftAlertState;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/drift-alerts/architecture.md
- */
 final class RevivedExpiredDriftSnoozesJob implements ShouldQueue
 {
     use Dispatchable;

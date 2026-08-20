@@ -10,9 +10,6 @@ use JsonException;
 // is its own concern, distinct from ActualSqliteReader's SQLite querying.
 // It sits in a trait beside the reader rather than inside it so the reader
 // stays a table-reader, not also a rule-grammar interpreter.
-/**
- * @link ../../../../../.docs/features/migration/architecture.md
- */
 trait SummarizesRuleConditions
 {
     private const MAX_JSON_BYTES = 65536;

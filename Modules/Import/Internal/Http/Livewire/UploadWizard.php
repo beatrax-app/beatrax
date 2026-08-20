@@ -27,9 +27,8 @@ final class UploadWizard extends Component
 {
     use WithFileUploads;
 
-    // Drives the `in:` validator; the same wire-level format key the
-    // HeaderSniffer and downstream adapters dispatch on. A new format
-    // only needs to be added in one place.
+    // The same format key HeaderSniffer and the adapters dispatch on, so a
+    // new format is added here only.
     /**
      * @var list<string>
      */
@@ -41,15 +40,13 @@ final class UploadWizard extends Component
         'paypal-csv',
         'eml',
         'mbox',
-        // Bundled bank/fintech CSV presets (GenericCsvAdapter); mirrored from
-        // CsvPresetRegistry. Grouped under the "other-bank" issuer.
+        // Mirrored from CsvPresetRegistry.
         'n26-csv',
         'revolut-csv',
         'ing-nl-csv',
     ];
 
-    // Enforces the issuer/sourceFormat cross-product inside rules() (a
-    // mismatched pair fails the leaf-validator before ParseStage runs).
+    // A mismatched issuer/format pair fails in rules(), before ParseStage.
     /**
      * @var array<string, list<string>>
      */
@@ -63,14 +60,8 @@ final class UploadWizard extends Component
 
     public ?TemporaryUploadedFile $file = null;
 
-    // One-shot parse-time error surfaced below the upload form; cleared
-    // on every fresh submit(). See architecture.md#upload-wizard for the
-    // human-readable-message + full-trace-logging contract.
     public ?string $uploadError = null;
 
-    // Mounted with the most common path (ASN); changing the issuer
-    // rebuilds availableFormats() and resets $sourceFormat via
-    // updatedIssuer().
     #[Validate('required|in:asn,ics,paypal,email-file,other-bank')]
     public string $issuer = 'asn';
 
@@ -81,10 +72,9 @@ final class UploadWizard extends Component
      */
     public function rules(): array
     {
-        // .eml/.mbox validate via `extensions:` not `mimes:` — neither
-        // extension has a native MIME-type registration, so `mimes:`
-        // would silently reject every email-file upload regardless of
-        // the actual file contents.
+        // .eml/.mbox have no registered MIME type, so a `mimes:` rule would
+        // reject every email upload whatever its contents; `extensions:` is
+        // the only rule that works here.
         $sizeRule = match ($this->sourceFormat) {
             'mbox' => 'max:1048576',
             'eml' => 'max:20480',
@@ -98,9 +88,8 @@ final class UploadWizard extends Component
         ];
     }
 
-    // Enforces sourceFormat is in the issuer's allow-list — without it,
-    // the bare `in:` rule would accept any leaf with any issuer and only
-    // fail downstream at ParseStage.
+    // The bare `in:` rule accepts any leaf under any issuer; without this
+    // the mismatch only surfaces at ParseStage.
     private function issuerFormatRule(): \Closure
     {
         return function (string $attribute, mixed $value, \Closure $fail): void {
@@ -125,9 +114,8 @@ final class UploadWizard extends Component
         ];
     }
 
-    // Labels are locked by the UI design contract and not derived from
-    // the leaf key, so a future format-key rename can't silently drift
-    // the visible option text.
+    // Labels are written out rather than derived from the leaf key, so
+    // renaming a format key cannot silently change the visible option text.
     /**
      * @return list<array{value: string, label: string}>
      */
@@ -158,10 +146,9 @@ final class UploadWizard extends Component
         };
     }
 
-    // Resets $sourceFormat to the new issuer's first leaf so the Format
-    // select never holds a stale value (e.g. ICS -> ASN must move off
-    // 'ics-pdf') — otherwise the picker would visually disagree with
-    // the submitted value even though a defensive `in:` rule still passes.
+    // Without the reset the Format select keeps a leaf from the old issuer
+    // and disagrees with the value actually submitted, which the defensive
+    // `in:` rule still accepts.
     public function updatedIssuer(): void
     {
         $first = $this->availableFormats()[0] ?? null;
@@ -187,10 +174,8 @@ final class UploadWizard extends Component
         $tmp = $this->file->getRealPath();
         $originalFilename = $this->sanitiseFilename($this->file->getClientOriginalName());
 
-        // The two ambiguous CSV dialects need an explicit bank-format
-        // hint to bypass content-sniffing; every other format is
-        // self-describing, so the hint is null. The picker already
-        // commits the user to a specific bank format here.
+        // Only the two CSV dialects are ambiguous; every other format is
+        // self-describing and needs no hint.
         $formatHint = match ($this->sourceFormat) {
             SourceFormat::AsnCsv->value => BankCsvFormatHint::Asn,
             SourceFormat::IngCsv->value => BankCsvFormatHint::Ing,
@@ -206,10 +191,9 @@ final class UploadWizard extends Component
                 $formatHint,
             );
         } catch (Throwable $e) {
-            // Catch-all for failures that bubble out of runFromUpload()
-            // before the pipeline's own try/catch wraps the parse loop
-            // (filesystem errors, hash_file() failures, ImportRun insert
-            // clashes) — logged in full for triage via /dev/logs.
+            // Failures that bubble out before the pipeline's own try/catch
+            // reaches the parse loop: filesystem errors, hash_file(), an
+            // ImportRun insert clash.
             $logger->error('UploadWizard: import preview failed.', [
                 'source_format' => $this->sourceFormat,
                 'filename' => $originalFilename,
@@ -235,10 +219,8 @@ final class UploadWizard extends Component
         return $views->make('import::livewire.upload-wizard');
     }
 
-    // Sanitises to a safe `[A-Za-z0-9_-]+\.<ext>` shape — the original
-    // name is never used to construct disk paths directly, so path-
-    // traversal characters are stripped before any filesystem op sees
-    // it. Extension comes from the declared source format, not the name.
+    // Strips path-traversal characters before the name reaches a filesystem
+    // path. The extension follows the declared format, never the name.
     private function sanitiseFilename(string $original): string
     {
         $stem = pathinfo($original, PATHINFO_FILENAME);

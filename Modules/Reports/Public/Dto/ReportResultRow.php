@@ -6,9 +6,6 @@ namespace Modules\Reports\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final class ReportResultRow extends Data
 {
     public function __construct(

@@ -53,14 +53,11 @@ final class NetWorthQuery
             $anchor = $this->anchor->forAccount($accountId, $user);
             $kind = is_string($account->kind) ? $account->kind : '';
 
-            // Run the conversion first so the account line can carry the
-            // real rate/source/as-of — not just the native amount.
             $money = Money::ofMinor($anchor->openingBalanceMinor, $anchor->currency);
             $result = $this->fx->convertToBase($money, $baseCurrency);
 
-            // No rate available — result currency stays native. The line
-            // is still emitted (the breakdown shows a no-rate note) but
-            // carries no base equivalent and is left out of the total.
+            // With no rate the conversion returns the native currency untouched.
+            // Such a line is still listed in the breakdown, but left out of the total.
             $rateAvailable = $result->converted->currency() === $baseCurrency;
 
             $lines[] = new AccountBalanceLine(
@@ -107,9 +104,8 @@ final class NetWorthQuery
      */
     private function trackFxMetadata(array &$meta, ConversionResult $result): void
     {
-        // A passthrough (already-base-currency) line carries no rate,
-        // source or as-of worth surfacing, so only non-passthrough
-        // conversions feed the rollup metadata.
+        // A passthrough line was already in the base currency, so it has no rate,
+        // source or as-of to contribute.
         if ($result->isPassthrough) {
             return;
         }

@@ -12,9 +12,6 @@ use stdClass;
 // Records the transactions a detection was built from. Both detectors wrote
 // this identically, and insertOrIgnore is what makes a re-detection of the
 // same cluster idempotent rather than duplicating every occurrence row.
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
 final readonly class OccurrenceWriter
 {
     use CoercesScalars;

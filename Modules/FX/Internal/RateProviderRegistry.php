@@ -11,9 +11,6 @@ use Modules\FX\Public\Contracts\RateProvider;
 use Modules\FX\Public\Exceptions\AllProvidersFailed;
 use Modules\FX\Public\Exceptions\RateFetchException;
 
-/**
- * @link ../../../.docs/features/fx/architecture.md
- */
 final class RateProviderRegistry
 {
     use CoercesScalars;

@@ -20,12 +20,9 @@ use Modules\Sync\Internal\OpLog\OpType;
 
 uses(RefreshDatabase::class);
 
-/*
- * `pots` synced and `pot_movements` did not, so a paired phone listed every
- * pot with a balance of EUR 0,00 while the page promised the balances always
- * add up to the real account balance. The ledger is the balance: without the
- * movements there is nothing to sum.
- */
+// `pots` synced and `pot_movements` did not, so a paired phone listed every pot
+// at a balance of EUR 0,00 while the page promised the balances always add up to
+// the real account balance. The movement ledger IS the balance.
 
 /** @return array{user: User, potId: int} */
 function potMovementFixture(): array
@@ -89,8 +86,8 @@ function potMovementFixture(): array
     return ['user' => $user, 'potId' => (int) $pot->id];
 }
 
-// Binds the device identity the capture listener resolves, and hands back the
-// public key so the same history can be verified as a peer would verify it.
+// Hands the public key back so the captured history can be verified the way a
+// peer would verify it.
 function bindPotMovementWriter(int $userId): string
 {
     $keypair = sodium_crypto_sign_keypair();

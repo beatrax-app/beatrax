@@ -7,9 +7,6 @@ namespace Modules\Transfers\Public\Contracts;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Transaction;
 
-/**
- * @link ../../../../.docs/features/transfers/architecture.md
- */
 interface PairsTransferLegs
 {
     /**

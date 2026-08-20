@@ -15,9 +15,6 @@ use Modules\Migration\Public\Contracts\ParsesMigrationSource;
 use Modules\Migration\Public\Enums\MigrationRunStatus;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 final class StartMigrationRun
 {
     /** @var array<string, ParsesMigrationSource> */

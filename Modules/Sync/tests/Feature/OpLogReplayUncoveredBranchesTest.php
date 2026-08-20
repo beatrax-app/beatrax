@@ -13,22 +13,6 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
 uses(RefreshDatabase::class);
 
-/*
- * The branches of OpLogReplayer::replay() that the rest of the Sync suite never
- * reaches. Measured, not guessed: replay() sat at 78.7% line coverage, and the
- * gaps were concentrated in the row-precedence and create paths.
- *
- * The most consequential gap was a pair of blocks that look identical — the
- * transfer pair-link cascade is written out twice, once where a row also has
- * field edits and once where only a tombstone arrives. Only the second copy had
- * a test. A tombstone that arrives alongside an edit for the same row takes the
- * first copy, so the orphaned-partner reclassification on that path was
- * unverified even though its twin was covered four times over.
- *
- * These tests describe the CONTRACT of each branch rather than its current
- * shape, so they hold across a restructuring of the method.
- */
-
 const OLR_DEVICE = 'device-olr';
 
 /**
@@ -52,9 +36,8 @@ function olrDevice(DatabaseManager $db, string $username): array
     ];
 }
 
-// Signs a real Ed25519 op so it clears the replayer's verification gate — the
-// signature is over the entry's own payload, so it has to be built twice: once
-// to derive the payload, then again carrying the signature.
+// The signature covers the entry's own payload, so the entry is built twice:
+// once to derive the payload, then again carrying the signature.
 function olrSignedEntry(
     string $sk,
     string $table,
@@ -82,8 +65,6 @@ function olrSignedEntry(
 }
 
 /**
- * Seeds an account and import run, then a paired transfer_out / transfer_in.
- *
  * @return array{0: int, 1: int}
  */
 function olrPairedTransfers(DatabaseManager $db, int $userId, string $suffix): array
@@ -151,19 +132,14 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-// ---------------------------------------------------------------------
-// Row precedence: a tombstone competing with field edits on the same row.
-// ---------------------------------------------------------------------
-
 it('cascades a transfer pair reclassification when the deleted row also had field edits', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $device = olrDevice($db, 'olr-cascade-with-edit');
     [$outId, $inId] = olrPairedTransfers($db, $device['userId'], 'CWE');
 
-    // An edit AND a tombstone for the same row. The edit puts the row in the
-    // field-resolution pass, so the delete is decided there rather than in the
-    // tombstone-only pass — the copy of the cascade that had no test.
+    // The edit puts the row in the field-resolution pass, so the delete is decided
+    // there rather than in the tombstone-only pass — a separate copy of the cascade.
     $edit = olrSignedEntry($device['sk'], 'transactions', $outId, 'description',
         json_encode('edited before delete'), 1000, OpType::Set, $device['userId']);
     $tomb = olrSignedEntry($device['sk'], 'transactions', $outId, '__tombstone__',
@@ -211,7 +187,6 @@ it('leaves the row alone when its newest field edit outranks the tombstone', fun
     expect($row)->not->toBeNull()
         ->and($row->description)->toBe('edit wins');
 
-    // No cascade fired, so the partner keeps both its pair link and its type.
     $partner = $db->connection()->table('transactions')->where('id', $inId)->first();
     expect($partner->pair_transaction_id)->toBe($outId)
         ->and($partner->type)->toBe('transfer_in');
@@ -223,7 +198,6 @@ it('deletes an unpaired transaction without recording a cascade', function (): v
     $device = olrDevice($db, 'olr-unpaired');
     [$outId, $inId] = olrPairedTransfers($db, $device['userId'], 'UP');
 
-    // Break the pair so the tombstoned row has no partner to orphan.
     $db->connection()->table('transactions')->where('id', $outId)->update(['pair_transaction_id' => null]);
 
     $tomb = olrSignedEntry($device['sk'], 'transactions', $outId, '__tombstone__',
@@ -234,7 +208,6 @@ it('deletes an unpaired transaction without recording a cascade', function (): v
 
     expect($db->connection()->table('transactions')->where('id', $outId)->exists())->toBeFalse();
 
-    // The other side is untouched: no cascade, so its type is not rewritten.
     $partner = $db->connection()->table('transactions')->where('id', $inId)->first();
     expect($partner->type)->toBe('transfer_in');
 });
@@ -265,10 +238,6 @@ it('records no reclassification when both sides of a transfer are deleted togeth
 
     expect($compensating)->toBe(0);
 });
-
-// ---------------------------------------------------------------------
-// CreateRow precedence and rejection.
-// ---------------------------------------------------------------------
 
 /**
  * @return list<OpLogEntry>
@@ -439,10 +408,6 @@ it('deletes an edited but unpaired transaction without looking for a partner', f
     expect($partner->type)->toBe('transfer_in');
 });
 
-// ---------------------------------------------------------------------
-// Verification gate.
-// ---------------------------------------------------------------------
-
 it('quarantines an op from a device it holds no public key for', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -452,8 +417,7 @@ it('quarantines an op from a device it holds no public key for', function (): vo
     $entry = olrSignedEntry($device['sk'], 'transactions', $outId, 'description',
         json_encode('from a stranger'), 1000, OpType::Set, $device['userId']);
 
-    // The replayer is given an EMPTY key map, so the signature cannot be
-    // checked at all — an unverifiable op must never be applied.
+    // An op whose signature cannot be checked at all must never be applied.
     (new OpLogReplayer($db, []))->replay([$entry], $device['userId']);
 
     $row = $db->connection()->table('transactions')->where('id', $outId)->first();
@@ -466,13 +430,8 @@ it('quarantines an op from a device it holds no public key for', function (): vo
 
     expect($quarantined)->toBe(1);
 
-    // Nothing unverifiable reaches the authoritative log either.
     expect($db->connection()->table('op_log_entries')->where('user_id', $device['userId'])->count())->toBe(0);
 });
-
-// ---------------------------------------------------------------------
-// Search-index freshness, which runs after the merge transaction commits.
-// ---------------------------------------------------------------------
 
 /**
  * @return SearchIndexWriterContract&object{upserted: list<int>, deleted: list<int>}
@@ -551,7 +510,6 @@ it('quarantines a search-index failure instead of failing the merge', function (
     $row = $db->connection()->table('transactions')->where('id', $inId)->first();
     expect($row->description)->toBe('index will fail');
 
-    // Both failures are recorded so the index can be repaired later.
     $reasons = $db->connection()->table('op_log_quarantine')
         ->where('user_id', $device['userId'])
         ->pluck('reason')

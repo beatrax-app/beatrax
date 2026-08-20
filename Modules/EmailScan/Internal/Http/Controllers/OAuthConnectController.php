@@ -17,9 +17,6 @@ use Modules\EmailScan\Public\Services\InboxQuery;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../../.docs/features/email-scan/architecture.md
- */
 final class OAuthConnectController
 {
     public function __construct(

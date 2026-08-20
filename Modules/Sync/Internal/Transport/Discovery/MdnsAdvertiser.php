@@ -6,9 +6,6 @@ namespace Modules\Sync\Internal\Transport\Discovery;
 
 use Symfony\Component\Process\Process;
 
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 final class MdnsAdvertiser
 {
     use LocatesSystemBinary;

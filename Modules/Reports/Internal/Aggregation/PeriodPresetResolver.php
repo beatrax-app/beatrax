@@ -10,9 +10,6 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\PeriodQuery;
 
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final class PeriodPresetResolver
 {
     public function __construct(

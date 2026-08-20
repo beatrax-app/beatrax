@@ -9,9 +9,6 @@ use Illuminate\Log\Logger;
 use Monolog\Handler\ProcessableHandlerInterface;
 use Monolog\Logger as MonologLogger;
 
-/**
- * @link ../../../../.docs/features/dev-mode/architecture.md
- */
 final class PushRedactProcessor
 {
     public function __invoke(Logger $logger): void

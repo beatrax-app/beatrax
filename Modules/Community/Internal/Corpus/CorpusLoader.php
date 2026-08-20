@@ -11,9 +11,6 @@ use Modules\Import\Public\Services\PatternGeneralizer;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/community/architecture.md
- */
 final class CorpusLoader
 {
     private const DEFAULT_CONTRIBUTOR = 'beatrax-bot';

@@ -10,9 +10,6 @@ use Modules\Chains\Public\Exceptions\ChainLinkRequiresConcretePartnerException;
 use Modules\Core\Models\User;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../.docs/features/chains/architecture.md
- */
 final class RejectChainLink
 {
     public function __invoke(int $chainLinkId, User $user): void

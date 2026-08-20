@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Pairing;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class PeerConfirmContext
 {
     // What survives the PAIR_CONFIRM gate sequence: the row the frame was

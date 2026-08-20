@@ -21,9 +21,6 @@ use Modules\Core\Public\Events\UserInstalled;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\Lang;
 
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 final class SignupAction
 {
     private const MINIMUM_PASSWORD_LENGTH = 12;

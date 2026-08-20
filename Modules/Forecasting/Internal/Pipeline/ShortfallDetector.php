@@ -11,9 +11,6 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Public\Events\ForecastShortfallDetected;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final readonly class ShortfallDetector
 {
     public function __construct(

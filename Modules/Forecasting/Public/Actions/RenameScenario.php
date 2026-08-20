@@ -13,11 +13,9 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Models\ForecastScenario;
 use Modules\Forecasting\Public\Events\ScenarioMutated;
+use Modules\Sync\Public\Events\EntityMutated;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final class RenameScenario
 {
     public function __construct(
@@ -68,6 +66,17 @@ final class RenameScenario
             scenarioId: $scenarioId,
             mutationId: 0,
             kind: 'rename',
+        ));
+
+        // One op per changed column, so a rename here and a description edit
+        // on the other device both survive the merge instead of one row-wide
+        // write flattening the other.
+        $this->events->dispatch(new EntityMutated(
+            table: 'forecast_scenarios',
+            pk: $scenarioId,
+            userId: (int) $user->id,
+            mutationType: 'edit',
+            dirtyFields: ['name' => $trimmed],
         ));
     }
 

@@ -12,13 +12,11 @@ use Modules\Import\Public\Dto\StartingBalanceCandidate;
  */
 interface DetectsStartingBalance
 {
-    // Introspection only — the aggregator itself walks every tagged
-    // detector regardless and unions their candidate output.
+    // Introspection only: the aggregator walks every tagged detector anyway.
     public function supports(string $sourceFormat): bool;
 
-    // Stateless: reads statement_summaries/import_runs, holds no
-    // per-call state. Empty list when this detector recognises none of
-    // the supplied import-run ids, so the aggregator tries the next one.
+    // Empty when none of the supplied run ids are this detector's format,
+    // which is how the aggregator moves on to the next one.
     /**
      * @param  list<int>  $importRunIds  ImportRun ids of any source format owned by `$user`; the detector filters internally to its own source format.
      * @return list<StartingBalanceCandidate>

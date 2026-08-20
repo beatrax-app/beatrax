@@ -16,23 +16,10 @@ beforeEach(function (): void {
     $this->expectedTransactionCount = 72;
 });
 
-/*
- * Cross-format dedup policy (phase 16 UAT batch 7):
- *
- * Statement-vs-statement collisions (asn-csv / camt053 / mt940
- * / ics-pdf / paypal-csv) drop as DUPLICATE on fingerprint match —
- * never enrich. The rank-based source_ref upgrade only fires when AT
- * LEAST one side is a receipt format (paypal-receipt, ics-receipt,
- * google-play-receipt); receipts can legitimately carry data the bank
- * statement lacks (clean merchant name, line items) so the upgrade
- * pay-off survives there.
- *
- * Prior phase-2 tests asserted the inverse (CSV → CAMT enriched every
- * row). The user's phase-16 UAT report demanded the simpler behaviour
- * — same transaction → drop — because re-uploading the same date range
- * in two statement formats should not pollute the row's audit chain
- * with a second source_format. These tests lock the new policy.
- */
+// Statement-vs-statement collisions drop as DUPLICATE and never enrich: the
+// rank-based source_ref upgrade only fires when one side is a receipt format,
+// which can carry data a statement lacks. Re-uploading one period in two
+// statement formats must not add a second source_format to the audit chain.
 
 it('csv_then_camt053: every overlapping row drops as duplicate (no enrichment)', function (): void {
     $first = $this->importer->runAndConfirm($this->csvFixture, 'asn-csv', $this->fixtureUser, formatHint: BankCsvFormatHint::Asn);
@@ -45,8 +32,6 @@ it('csv_then_camt053: every overlapping row drops as duplicate (no enrichment)',
     expect($second->enriched)->toBe(0);
     expect($second->duplicates)->toBe($this->expectedTransactionCount);
 
-    // The original asn-csv rows are untouched — no source_format flip,
-    // no enriched_from entry, no source_ref upgrade.
     $totalCsv = Transaction::query()
         ->where('user_id', $this->fixtureUser->id)
         ->where('source_format', 'asn-csv')
@@ -71,8 +56,6 @@ it('camt053_then_csv: every overlapping row drops as duplicate (no enrichment)',
     expect($second->enriched)->toBe(0);
     expect($second->duplicates)->toBe($this->expectedTransactionCount);
 
-    // The original camt053 rows are untouched — no source_format flip,
-    // no enriched_from entry, no source_ref upgrade.
     $totalCamt = Transaction::query()
         ->where('user_id', $this->fixtureUser->id)
         ->where('source_format', 'camt053')
@@ -144,11 +127,8 @@ it('preview-only flow surfaces every cross-statement collision as duplicate', fu
 })->group('phase-2');
 
 it('cross_format_pair_fingerprints_match: every CSV row has a CAMT counterpart with the same v3 fingerprint', function (): void {
-    // Fingerprint parity still holds — the source_format-independent
-    // tuple (user_id, account_id, posted_at, booked_at, amount_minor,
-    // currency, counterparty_normalized) hashes the same regardless of
-    // which export produced the row. The only change is the disposition
-    // we now return on match: DUPLICATE instead of ENRICHED.
+    // The v3 tuple carries no source_format, so both exports of one row hash
+    // alike. Only the disposition on match changed: DUPLICATE, not ENRICHED.
     $first = $this->importer->runAndConfirm($this->csvFixture, 'asn-csv', $this->fixtureUser, formatHint: BankCsvFormatHint::Asn);
     expect($first->inserted)->toBe($this->expectedTransactionCount);
 
@@ -165,7 +145,6 @@ it('cross_format_pair_fingerprints_match: every CSV row has a CAMT counterpart w
     expect($newRows)->toBeEmpty();
     expect($errorRows)->toBeEmpty();
 
-    // Every preview row is a duplicate under the new policy.
     foreach ($preview->rows as $row) {
         expect($row->status)->toBe('duplicate');
     }

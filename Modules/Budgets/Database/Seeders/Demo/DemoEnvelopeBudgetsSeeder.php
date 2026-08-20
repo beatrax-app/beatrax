@@ -10,9 +10,6 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Enums\CategoryKind;
 
-/**
- * @link ../../../../../.docs/features/budgets/architecture.md
- */
 final class DemoEnvelopeBudgetsSeeder
 {
     // Deliberately leaves several spending categories (cash withdrawal, car

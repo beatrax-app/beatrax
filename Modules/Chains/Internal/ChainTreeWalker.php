@@ -18,9 +18,6 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../.docs/features/chains/architecture.md
- */
 final class ChainTreeWalker
 {
     use CoercesScalars;
@@ -51,9 +48,8 @@ final class ChainTreeWalker
         $visited = [$rootId => true];
         $depth = 0;
 
-        // Walks chain_links in both directions from the root transaction
-        // — see architecture.md § ChainLinkQuery for why forward-only
-        // missed half of paypal_funding's click-through cases.
+        // Both directions: a forward-only walk found nothing whenever the user
+        // opened the drawer on a paypal_funding chain's ASN (the `to`) side.
         while ($frontier !== [] && $depth < self::MAX_DEPTH) {
             $frontier = $this->expandFrontier($frontier, $visited, $nodes, $user);
             $depth++;
@@ -112,9 +108,7 @@ final class ChainTreeWalker
         $fromId = self::toInt($link->from_transaction_id);
         $toId = self::toInt($link->to_transaction_id);
 
-        // The partner is the OTHER side of the link relative to the current
-        // frontier: to when from is on the frontier (forward walk), from
-        // otherwise (backward walk).
+        // The partner is whichever side is not already on the frontier.
         return isset($visited[$fromId]) ? $toId : $fromId;
     }
 
@@ -181,8 +175,8 @@ final class ChainTreeWalker
         );
     }
 
-    // Joins counterparties so the resolved slug travels alongside the row
-    // data, keeping the drawer render path free of N+1 lookups.
+    // The counterparties join carries the slug inline, so the drawer render
+    // path never issues a per-node lookup.
     private function fetchTransactionDisplayRow(int $transactionId, User $user): ?stdClass
     {
         $row = $this->db->connection()->table('transactions')

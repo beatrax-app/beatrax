@@ -4,8 +4,10 @@ declare(strict_types=1);
 use Illuminate\Routing\Route;
 use Symfony\Component\Yaml\Yaml;
 
-// Arch tests powered by pest-plugin-arch. Empty module skeletons trivially
-// satisfy these rules; once subsequent plans add real code the assertions bind.
+/**
+ * @link ../../.docs/conventions/arch-invariants.md
+ * @link ../../.docs/architecture/module-boundaries.md
+ */
 
 arch('Modules\\Ledger\\Internal is only used inside Modules\\Ledger')
     ->expect('Modules\\Ledger\\Internal')
@@ -75,31 +77,18 @@ arch('Modules\\Counterparties\\Internal is only used inside Modules\\Counterpart
     ->expect('Modules\\Counterparties\\Internal')
     ->toOnlyBeUsedIn('Modules\\Counterparties');
 
-// Mobile is Sync's co-designed peer: the mobile app is the second half of the
-// device-to-device sync protocol, so Modules\Mobile\Internal\Sync\* legitimately
-// imports Sync\Internal transport/identity primitives (DeviceIdentityLoader,
-// TransportFramer, PeerCatchUpExchanger). This coupling is intentional and reviewed —
-// Mobile is allow-listed here rather than routed through Sync\Public. The cleaner
-// future refactor is to promote the consumed Sync\Internal surface into Sync\Public
-// and drop Mobile from this allow-list (deferred).
+// Mobile is Sync's co-designed peer: Modules\Mobile\Internal\Sync\* is the
+// second half of the device-to-device protocol and imports Sync\Internal
+// transport and identity primitives (DeviceIdentityLoader, TransportFramer,
+// PeerCatchUpExchanger) directly rather than through Sync\Public.
 arch('Modules\\Sync\\Internal is only used inside Modules\\Sync (Mobile peer allow-listed)')
     ->expect('Modules\\Sync\\Internal')
     ->toOnlyBeUsedIn(['Modules\\Sync', 'Modules\\Mobile']);
 
-// The Sync device-identity tests (Phase 12) must prime the Auth session
-// lock state to exercise real crypto — Modules/Sync/tests/TestCase.php calls
-// LockStateManager->unlock() in setUp(). There is deliberately no Public
-// unlock seam (AppLockKeyService exposes only release()/withhold() by design,
-// LOCK-04), so this single test-infrastructure base class is an explicit,
-// reviewed exemption. Scoped to the one class so any PRODUCTION Sync code
-// reaching into Auth\Internal still fails this rule.
-//
-// Modules\Sync\Tests\Support\EnablesEncryptionForUser (Phase 14.1) is the
-// same shape of exemption: every 14.1 encryption regression test primes the
-// KEK via this shared trait, which also calls LockStateManager->unlock()
-// directly for the identical reason (no Public unlock seam). Added
-// alongside the TestCase exemption above rather than replacing it, since
-// both are real, distinct test-infrastructure classes that need it.
+// There is deliberately no Public unlock seam — AppLockKeyService exposes only
+// release()/withhold() — so Sync's two test-infrastructure base classes call
+// LockStateManager->unlock() directly to exercise real crypto. Scoped to those
+// two classes so production Sync code reaching into Auth\Internal still fails.
 arch('Modules\\Auth\\Internal is only used inside Modules\\Auth')
     ->expect('Modules\\Auth\\Internal')
     ->toOnlyBeUsedIn('Modules\\Auth')
@@ -112,17 +101,6 @@ arch('Modules\\DevMode\\Internal is only used inside Modules\\DevMode')
     ->expect('Modules\\DevMode\\Internal')
     ->toOnlyBeUsedIn('Modules\\DevMode');
 
-// --- Later-milestone modules ---------------------------------------------
-// These modules landed after the original boundary block above was written
-// and were silently missing an `Internal` boundary rule until this block was
-// added. The `everyInternalNamespaceHasABoundaryRule` guard at the foot of
-// this file now fails CI if a NEW module ever ships an `Internal/` namespace
-// without a matching rule here, so this list can never drift out of sync with
-// `Modules/*/Internal/` again. The custom PHPStan `App\PhpStan\Rules\BoundaryRule`
-// enforces the same invariant for cross-module `use`-imports dynamically; these
-// arch rules add coverage the phpstan rule cannot reach — inline fully-qualified
-// `\Modules\<X>\Internal\...` references and imports from phpstan-excluded paths
-// (`Modules/*/Database/Seeders`, `Modules/*/Routes`).
 arch('Modules\\Budgets\\Internal is only used inside Modules\\Budgets')
     ->expect('Modules\\Budgets\\Internal')
     ->toOnlyBeUsedIn('Modules\\Budgets');
@@ -167,76 +145,29 @@ arch('Modules\\Tax\\Internal is only used inside Modules\\Tax')
     ->expect('Modules\\Tax\\Internal')
     ->toOnlyBeUsedIn('Modules\\Tax');
 
-// Module Route files (`Modules/*/Routes/web.php`) are the canonical
-// Laravel surface where `Illuminate\Support\Facades\Route` is used as
-// a static DSL entry point. The framework's route loader executes
-// these files as closures rather than classes, so there is no
-// constructor-injection seam for the Route binding. Pest's
-// `expect()->not->toBeUsedIn(...)` walks namespace-classified files;
-// `Routes/web.php` files are anonymous closures under
-// `Modules\<Name>\Routes` and naturally fall outside the class
-// boundary the check enforces. This carve-out is therefore implicit
-// in `pest-plugin-arch`'s file-walk semantics — recorded here so a
-// future contributor adding a class-based router shape (e.g. a
-// `Modules\Foo\Routes\WebRoutes` class) knows the Route facade is
-// part of the documented Laravel-convention allow-list and not a
-// bug.
+// Module Routes/web.php files are closures under Modules\<Name>\Routes, not
+// classes, so pest-arch's file walk never classifies them and the Route facade
+// they use is invisible to this rule. A future class-based router shape would
+// be caught, and would need an explicit entry below.
 arch('no Laravel facade usage in module code')
     ->expect('Illuminate\\Support\\Facades')
     ->not->toBeUsedIn('Modules')
     ->ignoring([
-        // Single carve-out: the shared LockStore helper is the only
-        // module file permitted to use the Cache facade (and the
-        // config() helper). Laravel's queue infrastructure invokes
-        // ShouldBeUniqueUntilProcessing::uniqueVia() at queue-push time,
-        // before the job's constructor DI completes, so a constructor-
-        // injected Cache repository is not reachable from a uniqueVia()
-        // body. Every ShouldBeUnique* job's uniqueVia() returns
-        // LockStore::forUniqueJobs(), so the facade crossing is confined
-        // to this one file. The phpstan.neon ignoreErrors list mirrors
-        // this allow-list.
+        // Laravel calls ShouldBeUniqueUntilProcessing::uniqueVia() at queue-push
+        // time, before the job's constructor DI completes, so an injected Cache
+        // repository is unreachable from a uniqueVia() body. Every one of them
+        // returns LockStore::forUniqueJobs(), confining the crossing to this file.
         'Modules\\Core\\Public\\Support\\LockStore',
-        // Native-chrome carve-out: NativePHP's window, app-menu,
-        // OS-theme, and notification API is only reachable through its
-        // facades, which NativePHP invokes outside the container
-        // lifecycle — there is no constructor-injection seam for them.
-        // The crossing is confined to the desktop module's native-chrome
-        // classes: the NativeAppServiceProvider NativePHP boots, the
-        // AppMenuBuilder it delegates application-menu composition to,
-        // the OsThemeProbe that wraps `System::theme()` behind the
-        // `OsThemeSignal` Public contract, and the
-        // `DispatchOsNotification` listener that calls
-        // `Notification::title()->message()->event()->reference()
-        // ->show()` (the D-12 / D-13 / D-14 dispatcher — the
-        // `WindowFocusState` collaborator and the `UrlGenerator`
-        // come through constructor DI; only the facade chain itself
-        // is unavoidable). The phpstan.neon ignoreErrors list
-        // mirrors this allow-list.
-        //
-        // The macOS menu-bar tray (D-09) is intentionally NOT in this
-        // list — the persistent tray is created in the Electron main
-        // process via the `nativephp_inject_persistent_tray` prebuild
-        // patch (see `NativeAppServiceProvider` docblock), so no PHP
-        // module code needs the `MenuBar` facade.
+        // NativePHP's window, app-menu, OS-theme and notification APIs are only
+        // reachable through its facades, which NativePHP invokes outside the
+        // container lifecycle — there is no constructor-injection seam. Every
+        // other collaborator in these classes still arrives through DI.
         'Modules\\Desktop\\Internal\\NativeAppServiceProvider',
         'Modules\\Desktop\\Internal\\Native\\AppMenuBuilder',
         'Modules\\Desktop\\Internal\\Native\\OsThemeProbe',
         'Modules\\Desktop\\Internal\\Listeners\\DispatchOsNotification',
-        // SurfaceWorkerCrashAlert calls Notification::title()->...->show()
-        // for the D-07 OS notification when the window is unfocused.
-        // The other four collaborators (Clock, DatabaseManager,
-        // WindowFocusState, UrlGenerator) come through constructor DI;
-        // only the Notification facade chain itself is unavoidable.
         'Modules\\Desktop\\Internal\\Listeners\\SurfaceWorkerCrashAlert',
-        // NavigateOnNotificationDeepLink calls Window::current()->url($route)
-        // for the D-14 notification-click deep-link. The Window facade
-        // is the only path NativePHP exposes for navigating a focused
-        // window; no constructor-injection seam exists.
         'Modules\\Desktop\\Internal\\Listeners\\NavigateOnNotificationDeepLink',
-        // ApplyCloseWindowChoice calls App::quit() and
-        // Window::current()->hide() for the D-08 close-action JS glue
-        // (deferred from plan 15-03). Both facades are canonical
-        // NativePHP API shapes with no constructor-injection seam.
         'Modules\\Desktop\\Internal\\Listeners\\ApplyCloseWindowChoice',
     ]);
 
@@ -268,17 +199,9 @@ arch('SeriesDetector implementors are never imported by Modules\\Recurring\\Inte
     ]);
 
 it('does not allow any file under Modules/Chains/Internal/Resolvers/ to mutate the transactions table (noResolverWritesTransactions)', function (): void {
-    // The Phase 5 chain resolver writes chain_links rows ONLY — it must
-    // never UPDATE / INSERT / DELETE on the transactions table. The
-    // single architectural exception (a derived funding_account_id on a
-    // future RecurringSeries row) lives outside the resolvers directory
-    // and outside this phase. The grep strips comments first so legitimate
-    // PHPDoc references stay legal.
     $hits = [];
     $resolversDir = base_path('Modules/Chains/Internal/Resolvers');
     if (! is_dir($resolversDir)) {
-        // Resolvers folder lands in a later wave; until it does the rule
-        // is trivially satisfied.
         expect(true)->toBeTrue();
 
         return;
@@ -314,9 +237,6 @@ it('does not allow any file under Modules/Chains/Internal/Resolvers/ to mutate t
 });
 
 it('does not allow any file other than CardStatementStateMachine to mutate card_statements.state (noOtherCardStatementStateMutator)', function (): void {
-    // Phase 5 D-95 invariant: only the CardStatementStateMachine class
-    // may transition card_statements.state. Other resolver code reads
-    // the lifecycle but never writes the state column.
     $hits = [];
     $chainsDir = base_path('Modules/Chains');
     if (! is_dir($chainsDir)) {
@@ -344,9 +264,6 @@ it('does not allow any file other than CardStatementStateMachine to mutate card_
             continue;
         }
         if (str_contains($path, '/tests/')) {
-            // Test files synthesise card_statements rows directly via
-            // factories or raw inserts; the architectural invariant is a
-            // production-code rule.
             continue;
         }
         $contents = (string) file_get_contents($path);
@@ -365,12 +282,8 @@ it('does not allow any file other than CardStatementStateMachine to mutate card_
 });
 
 it('does not allow a paypal-api route or class to exist (noPaypalApiRoute)', function (): void {
-    // Defensive arch invariant: the PayPal Reporting API integration is
-    // deferred behind a business-account upgrade trigger. If a future task
-    // accidentally lands a paypal-api adapter, a Reporting API client class,
-    // or a route segment using `paypal-api`, this test fails loudly. The
-    // grep strips `/* ... */` and `// ...` comments first so legitimate
-    // PHPDoc references stay legal.
+    // The PayPal Reporting API integration is deferred behind a business-account
+    // upgrade; nothing may land a paypal-api adapter or route ahead of it.
     $hits = [];
 
     foreach (['routes', 'Modules'] as $root) {
@@ -408,19 +321,12 @@ it('does not allow a paypal-api route or class to exist (noPaypalApiRoute)', fun
 });
 
 it('does not allow any file under Modules/EmailScan/ to mutate the transactions table (noTransactionWritesFromEmailScan)', function (): void {
-    // Phase 6 / Phase 7 architectural boundary: the EmailScan module
-    // owns the fetch + persist .eml + index pipeline only. Transitions
-    // out of `inbox_messages.status='fetched'` and any write against
-    // the transactions table belong to the matcher phase. This rule
-    // mirrors the resolver-side noResolverWritesTransactions invariant
-    // (Chains module) for the EmailScan module's subtree. The grep
-    // strips block + line comments first so legitimate PHPDoc
-    // references stay legal.
+    // EmailScan owns the fetch + persist-.eml + index pipeline only. Transitions
+    // out of inbox_messages.status='fetched' and every write against the
+    // transactions table belong to the Receipts matcher.
     $hits = [];
     $emailScanDir = base_path('Modules/EmailScan');
     if (! is_dir($emailScanDir)) {
-        // Module folder lands in a later wave; until it does the rule
-        // is trivially satisfied.
         expect(true)->toBeTrue();
 
         return;
@@ -459,14 +365,8 @@ it('does not allow any file under Modules/EmailScan/ to mutate the transactions 
 });
 
 it('does not allow any file other than InboxScanStateMachine to mutate inbox_scan_state (noOtherInboxScanStateMutator)', function (): void {
-    // Only the InboxScanStateMachine class may transition the per-inbox
-    // scan-state row. Other module code reads the row but never writes
-    // it. Migrations are exempt because they seed initial rows + the
-    // schema itself. The grep targets the `->update(...)` shape on the
-    // table so insertOrIgnore + migration inserts stay legal; the
-    // pattern catches both the simple stub variant (lands in an early
-    // plan) and the lockForUpdate-bearing variant (lands later) since
-    // both surfaces still go through the table-builder ->update() call.
+    // The grep targets the ->update() shape on the table specifically, so
+    // insertOrIgnore and the migrations' own seed inserts stay legal.
     $hits = [];
     $emailScanDir = base_path('Modules/EmailScan');
     if (! is_dir($emailScanDir)) {
@@ -516,15 +416,10 @@ it('does not allow any file other than InboxScanStateMachine to mutate inbox_sca
 });
 
 it('does not allow any file other than InboxScanStateMachine to write inboxes.backfill_progress (noOtherBackfillProgressMutator)', function (): void {
-    // backfill_progress is technically owned by the inboxes table,
-    // not inbox_scan_state, but it is functionally a per-inbox
-    // lifecycle signal — the /inboxes Blade reads it the same way it
-    // reads inbox_scan_state.status. Routing the column through
-    // InboxScanStateMachine::recordBackfillProgress keeps the
-    // sole-mutator invariant intact across the whole per-inbox
-    // lifecycle surface. OAuthCallbackController inserts the inbox
-    // row pair on first connect (which is a CREATE, not a lifecycle
-    // mutation) so the grep targets the UPDATE shape specifically.
+    // backfill_progress sits on the inboxes table rather than inbox_scan_state,
+    // but it is a per-inbox lifecycle signal, so routing it through
+    // InboxScanStateMachine keeps the sole-mutator invariant whole. The grep
+    // targets UPDATE only: OAuthCallbackController's first-connect INSERT is legal.
     $hits = [];
     $emailScanDir = base_path('Modules/EmailScan');
     if (! is_dir($emailScanDir)) {
@@ -560,9 +455,6 @@ it('does not allow any file other than InboxScanStateMachine to write inboxes.ba
         }
         $contents = (string) file_get_contents($path);
         $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
-        // The grep looks for the literal column name appearing
-        // inside an update() argument list on the inboxes table.
-        // Matches both raw query-builder and Eloquent shapes.
         if (preg_match("/->table\(['\"]inboxes['\"]\)[^;]*->update\\s*\\([^)]*backfill_progress/", $stripped) === 1
             || preg_match("/Inbox::query\(\)[^;]*->update\\s*\\([^)]*backfill_progress/", $stripped) === 1) {
             $hits[] = $path;
@@ -575,23 +467,12 @@ it('does not allow any file other than InboxScanStateMachine to write inboxes.ba
 });
 
 it('does not allow any file under Modules/Receipts/ to import EmailScan OAuth/client symbols (noEmailFetchFromReceipts)', function (): void {
-    // Phase 7 architectural boundary: the Receipts module owns the
-    // matcher pipeline + .eml/.mbox ingestion + ParsedReceiptDto →
-    // SourceTransactionDto bridge only. Email fetch / OAuth /
-    // provider-client work belongs to the EmailScan module
-    // (Phase 6). The receipts module reads `InboxMessageQuery` +
-    // the on-disk .eml — it must never import Gmail/Graph clients
-    // or OAuth providers. This rule mirrors the Phase 6
-    // `noTransactionWritesFromEmailScan` invariant by flipping the
-    // direction. The grep strips block + line comments first so
-    // legitimate PHPDoc references stay legal, and `tests/` is
-    // excluded so test doubles + fake fixtures can name the
-    // forbidden symbols.
+    // Receipts owns the matcher pipeline and the .eml/.mbox drop-in, and reads
+    // EmailScan only through InboxMessageQuery plus the on-disk .eml — never a
+    // provider client or an OAuth surface. This is the EmailScan rule flipped.
     $hits = [];
     $receiptsDir = base_path('Modules/Receipts');
     if (! is_dir($receiptsDir)) {
-        // Module folder lands in a later wave; until it does the
-        // rule is trivially satisfied.
         expect(true)->toBeTrue();
 
         return;
@@ -632,13 +513,8 @@ it('does not allow any file under Modules/Receipts/ to import EmailScan OAuth/cl
 });
 
 it('does not allow any Modules/EmailScan migration to declare an OAuth-secret column (noOAuthTokensInEmailScanSchema)', function (): void {
-    // Baseline invariant: OAuth client secrets and refresh tokens
-    // live exclusively in the chmod-600 JSON repository on disk; no
-    // EmailScan migration may add a column named refresh_token /
-    // client_secret / access_token (case-insensitive). The grep
-    // strips block + line comments so legitimate PHPDoc references
-    // stay legal. Trivially satisfied while no EmailScan migrations
-    // exist, and a guard rail for the migration plans that follow.
+    // OAuth client secrets and refresh tokens live exclusively in the chmod-600
+    // JSON repository on disk; no EmailScan migration may add a column for one.
     $hits = [];
     $migrationsDir = base_path('Modules/EmailScan/Database/Migrations');
     if (! is_dir($migrationsDir)) {
@@ -674,17 +550,11 @@ it('does not allow any Modules/EmailScan migration to declare an OAuth-secret co
 });
 
 it('does not allow any file under Modules/Recurring/ to mutate the transactions table (noTransactionWritesFromRecurring)', function (): void {
-    // Phase 8 architectural boundary: the Recurring module is analytical-
-    // only. Transaction-type ownership stays with the Phase 4 income
-    // detector. Mirrors the EmailScan noTransactionWritesFromEmailScan
-    // invariant: the grep strips block + line comments first so legitimate
-    // PHPDoc references stay legal, and `tests/` is excluded so test
-    // factories can populate transactions directly.
+    // Recurring is analytical-only: transaction-type ownership stays with the
+    // Ledger income detector.
     $hits = [];
     $recurringDir = base_path('Modules/Recurring');
     if (! is_dir($recurringDir)) {
-        // Module folder lands in a later wave; until it does the rule
-        // is trivially satisfied.
         expect(true)->toBeTrue();
 
         return;
@@ -723,15 +593,9 @@ it('does not allow any file under Modules/Recurring/ to mutate the transactions 
 });
 
 it('does not allow any file other than RecurringSeriesStateMachine to mutate recurring_series.state (noOtherRecurringSeriesStateMutator)', function (): void {
-    // Only the RecurringSeriesStateMachine class may transition the
-    // per-series state column. Other module code reads the row, and
-    // may UPDATE non-state columns (metric refresh — latest amount,
-    // monthly equivalent, next-expected-charge, funding-chain link)
-    // without going through the state machine; the grep targets the
-    // `state` column specifically so metric-refresh updates plus
-    // INSERTs into recurring_series_occurrences stay legal.
-    // Migrations are exempt because they seed initial rows + the
-    // schema itself.
+    // Non-state columns (latest amount, monthly equivalent, next-expected-charge,
+    // funding-chain link) may be refreshed without the state machine, so the grep
+    // targets the `state` key inside the update payload specifically.
     $hits = [];
     $recurringDir = base_path('Modules/Recurring');
     if (! is_dir($recurringDir)) {
@@ -792,21 +656,12 @@ arch('DriftEvaluator is never imported by Modules\\DriftAlerts\\Internal\\Http (
     ]);
 
 it('does not allow any file under Modules/DriftAlerts/ to mutate the recurring_series table (noRecurringSeriesWritesFromDriftAlerts)', function (): void {
-    // Architectural boundary: the DriftAlerts module is analytical-
-    // only. recurring_series mutations stay with the Recurring
-    // module's state machine and Public Actions. The grep targets
-    // WRITE verbs (update / insert / delete) only — cross-module
-    // SELECTs are funnelled through Recurring's Public service
-    // surface elsewhere; the rule here just guarantees DriftAlerts
-    // never writes. Mirrors the Recurring noTransactionWritesFromRecurring
-    // shape: strips block + line comments first so legitimate PHPDoc
-    // references stay legal, and `tests/` is excluded so test
-    // factories can populate recurring_series rows directly.
+    // DriftAlerts is analytical-only. The grep targets write verbs alone —
+    // cross-module reads go through Recurring's Public surface, which the
+    // crossModuleAccessGoesThroughPublic rule above covers.
     $hits = [];
     $driftDir = base_path('Modules/DriftAlerts');
     if (! is_dir($driftDir)) {
-        // Module folder lands in a later wave; until it does the rule
-        // is trivially satisfied.
         expect(true)->toBeTrue();
 
         return;
@@ -846,13 +701,8 @@ it('does not allow any file under Modules/DriftAlerts/ to mutate the recurring_s
 });
 
 it('does not allow any file other than DriftAlertStateMachine to mutate drift_alerts.state (noOtherDriftAlertStateMutator)', function (): void {
-    // Only the DriftAlertStateMachine class may transition the per-
-    // alert state column. Other module code reads the row, and may
-    // UPDATE non-state columns (snoozed_until, actioned_at) without
-    // going through the state machine; the grep targets the `state`
-    // column specifically so metric-refresh updates plus INSERTs into
-    // drift_alert_transitions stay legal. Migrations are exempt
-    // because they seed initial rows + the schema itself.
+    // snoozed_until and actioned_at may be updated without the state machine, so
+    // the grep targets the `state` key inside the update payload specifically.
     $hits = [];
     $driftDir = base_path('Modules/DriftAlerts');
     if (! is_dir($driftDir)) {
@@ -902,13 +752,8 @@ it('does not allow any file other than DriftAlertStateMachine to mutate drift_al
 });
 
 it('does not allow any file other than AnomalyAlertStateMachine to mutate anomaly_alerts.state (noOtherAnomalyAlertStateMutator)', function (): void {
-    // Only the AnomalyAlertStateMachine class may transition the per-
-    // alert state column. Other module code reads the row, and may
-    // UPDATE non-state companion columns (snoozed_until, actioned_at,
-    // dismissed_as) without going through the state machine; the grep
-    // targets the `state` column specifically so companion-column updates
-    // plus INSERTs into anomaly_alert_transitions stay legal. Migrations
-    // are exempt because they seed the schema + the trigger pair itself.
+    // snoozed_until, actioned_at and dismissed_as may be updated without the
+    // state machine, so the grep targets the `state` key in the payload only.
     $hits = [];
     $anomalyDir = base_path('Modules/Anomaly');
     if (! is_dir($anomalyDir)) {
@@ -958,14 +803,6 @@ it('does not allow any file other than AnomalyAlertStateMachine to mutate anomal
 });
 
 it('does not allow any file under Modules/Anomaly/ to mutate the transactions table (noTransactionWritesFromAnomaly)', function (): void {
-    // Phase 9 architectural boundary: the Anomaly module is read-only
-    // against the ledger. It evaluates transactions to flag unusual
-    // charges but never writes them — transaction-type ownership stays
-    // with the Phase 4 income detector / Ledger. Mirrors the Recurring
-    // noTransactionWritesFromRecurring invariant: the grep strips block +
-    // line comments first so legitimate PHPDoc references stay legal, and
-    // `tests/` is excluded so test factories can populate transactions
-    // directly. Reads (Transaction::query()->where()->get()) stay allowed.
     $hits = [];
     $anomalyDir = base_path('Modules/Anomaly');
     if (! is_dir($anomalyDir)) {
@@ -1022,23 +859,9 @@ arch('ProjectionPipeline is never imported by Modules\\Forecasting\\Internal\\Ht
     ]);
 
 it('does not allow any file under Modules/Forecasting/ to mutate transactions / recurring_series / card_statements / chain_links / drift_alerts tables (noTransactionWritesFromForecasting)', function (): void {
-    // Forecasting is strictly analytical: it reads the upstream
-    // substrate but never writes to it. The five forbidden tables
-    // cover the transaction surface (Phase 1/3), the recurring-series
-    // surface (Phase 8), the card-statement surface (Phase 5), the
-    // chain-routing surface (Phase 5), and the drift-alert surface
-    // (Phase 9). Reads (Transaction::query()->where(...) etc.) are
-    // permitted — only mutating verbs (update / insert / delete /
-    // truncate) and the Eloquent class-level write methods (::create,
-    // ::firstOrCreate, ::updateOrCreate) are caught. The grep strips
-    // block + line comments first so legitimate PHPDoc references
-    // stay legal, and `tests/` is excluded so test factories can
-    // populate substrate rows directly.
     $hits = [];
     $forecastingDir = base_path('Modules/Forecasting');
     if (! is_dir($forecastingDir)) {
-        // Module folder lands in a later wave; until it does the rule
-        // is trivially satisfied.
         expect(true)->toBeTrue();
 
         return;
@@ -1077,18 +900,10 @@ it('does not allow any file under Modules/Forecasting/ to mutate transactions / 
 });
 
 it('does not allow any file to JOIN forecast_scenario_mutations onto transactions / recurring_series_occurrences / chain_links / card_statements (noScenarioMutationsJoinedToTransactionQueries)', function (): void {
-    // The single most load-bearing arch invariant of the Forecasting
-    // module: forecast_scenario_mutations rows describe hypothetical
-    // what-if changes the user has saved into a scenario; they MUST
-    // NEVER be JOINed onto the transaction substrate, because doing so
-    // would let a scenario silently bleed into a real-money read. The
-    // scan walks the ENTIRE Modules/ tree — not just Forecasting —
-    // because the failure mode is any future contributor (Forecasting
-    // or another module) reaching for a convenience JOIN. The grep
-    // strips block + line comments first so legitimate PHPDoc
-    // references stay legal, and `tests/` is excluded so test
-    // factories + contract suites can synthesise both substrates
-    // independently.
+    // forecast_scenario_mutations rows are hypothetical what-if changes a user
+    // saved into a scenario; JOINing them onto the transaction substrate would
+    // let a scenario silently bleed into a real-money read. The scan walks the
+    // whole Modules/ tree because any module reaching for that JOIN causes it.
     $hits = [];
     $modulesDir = base_path('Modules');
     $iterator = new RecursiveIteratorIterator(
@@ -1124,16 +939,9 @@ it('does not allow any file to JOIN forecast_scenario_mutations onto transaction
 });
 
 it('does not allow system_alerts to be JOINed onto the transactions table (systemAlertsTableNotJoinedToTransactions)', function (): void {
-    // Phase 11 invariant: system_alerts is a purely operational surface.
-    // It surfaces failure events to the user via the dashboard banner
-    // and MUST NEVER be JOINed onto the transactions table. JOINing the
-    // operational substrate onto the domain substrate would let a
-    // background-job alert bleed into a real-money read, blurring the
-    // separation the project relies on for the "calm tool" promise.
-    // The scan walks the entire Modules/ tree, strips block and line
-    // comments first so PHPDoc references stay legal, and excludes
-    // tests/ so fixtures and contract suites can synthesise both
-    // substrates independently.
+    // system_alerts is a purely operational surface. JOINing it onto transactions
+    // would let a background-job failure bleed into a real-money read, blurring
+    // the operational/domain separation the rest of the app relies on.
     $hits = [];
     $modulesDir = base_path('Modules');
     $iterator = new RecursiveIteratorIterator(
@@ -1169,16 +977,9 @@ it('does not allow system_alerts to be JOINed onto the transactions table (syste
 });
 
 it('does not allow Laravel facades inside Modules/Core/Internal/Console/ (noFacadeCallsFromCoreConsoleCommands)', function (): void {
-    // Phase 11 invariant: Core's console commands take their
-    // dependencies through constructor DI exclusively. Importing or
-    // calling any `Illuminate\Support\Facades\…` class breaks the
-    // testability contract — facade-rooted calls cannot be substituted
-    // with a mock from the test harness, which kills the artisan-test
-    // story for db:backup, db:restore, beatrax:doctor, and
-    // beatrax:failed-jobs. The scan walks Modules/Core/Internal/
-    // Console/ recursively, strips block + line comments so PHPDoc
-    // references stay legal, and any remaining facade-namespace
-    // import / FQCN reference adds the file to the failure list.
+    // Facade-rooted calls cannot be substituted from a test harness, which kills
+    // the artisan-test story for db:backup, db:restore, beatrax:doctor and
+    // beatrax:failed-jobs. Core's console commands take everything through DI.
     $hits = [];
     $consoleDir = base_path('Modules/Core/Internal/Console');
     if (! is_dir($consoleDir)) {
@@ -1210,16 +1011,10 @@ it('does not allow Laravel facades inside Modules/Core/Internal/Console/ (noFaca
 });
 
 it('does not allow Laravel global path / container helpers inside Modules/Core/Internal/Console/ (noLaravelGlobalHelpersInCoreConsoleCommands)', function (): void {
-    // Companion to the facades grep above: catches the *_path() and
-    // container-helper family that are functionally equivalent to
-    // facade calls (they resolve through the singleton Application
-    // container) but do not import the `Illuminate\Support\Facades\…`
-    // namespace, so the facades scan misses them. CLAUDE.md
-    // `feedback_laravel_di_only.md` forbids these helpers across the
-    // entire codebase; the scope here mirrors the facade-scan above
-    // (Core console commands only) because that is the surface the
-    // Phase 11 invariant locks. Other modules carry pre-existing
-    // helper usage that is tracked as separate cleanup.
+    // Companion to the facade grep above: the *_path() and container-helper
+    // family resolves through the singleton Application container but imports no
+    // Facades namespace, so that scan misses it. Scope matches it too — other
+    // modules still carry pre-existing helper usage.
     $bannedFunctions = [
         'base_path',
         'app_path',
@@ -1236,10 +1031,6 @@ it('does not allow Laravel global path / container helpers inside Modules/Core/I
         'now',
         'today',
     ];
-    // Word-boundary on the function-call surface. `\b<name>\s*\(` matches
-    // a top-level call without also matching `$obj->base_path(...)` or
-    // `MyClass::config(...)` — the negative lookbehind for `->` and `::`
-    // rules out the method-call shape.
     $pattern = '/(?<![>:])\\b('.implode('|', array_map('preg_quote', $bannedFunctions)).')\\s*\\(/';
 
     $hits = [];
@@ -1273,25 +1064,10 @@ it('does not allow Laravel global path / container helpers inside Modules/Core/I
 });
 
 it('does not allow the Auth facade or auth/session helpers across Modules/* outside the allow-list (noAuthFacadeOrHelper)', function (): void {
-    // The current-user identity must travel through constructor-injected
-    // collaborators (the CurrentUser contract), never through the global
-    // Auth facade, the auth() / session() helpers, or request()->user() /
-    // request()->session(). Those forms resolve through the singleton
-    // Application container, cannot be substituted from a test harness, and
-    // erode the module-boundary contract.
-    //
-    // The allow-list below is the only sanctioned exception surface: the
-    // authentication actions and the Fortify glue genuinely need to drive
-    // the guard. It is a per-file precise list — never a glob. Adding a
-    // file to it requires editing the array AND a code-review
-    // justification; see the Auth module's service-provider docblock for
-    // the rationale behind that surface.
-    //
-    // The scan walks the entire module tree, strips block + line + Blade
-    // comments so PHPDoc references such as `@see Auth::user()` and Blade
-    // `{{-- ... --}}` notes stay legal, skips test files (test harnesses
-    // legitimately call actingAs()) and migration files (anonymous classes
-    // outside the rule), and flags any remaining banned symbol.
+    // Current-user identity travels through the constructor-injected CurrentUser
+    // contract. The Auth facade, the auth()/session() helpers and
+    // request()->user() all resolve through the singleton container and cannot be
+    // substituted from a test harness. The allow-list below is per-file, never a glob.
     $allowList = [
         'Modules/Auth/Public/Actions/LoginAction.php',
         'Modules/Auth/Public/Actions/SignupAction.php',
@@ -1303,10 +1079,6 @@ it('does not allow the Auth facade or auth/session helpers across Modules/* outs
         'Modules/Auth/Internal/Fortify/Authenticator.php',
     ];
 
-    // Banned symbols: the Auth facade import + its static lookups, the auth()
-    // / session() global helpers, and request()->user() / request()->session().
-    // The `(?<![>:])` lookbehind keeps `$this->session(...)` method calls and
-    // `SomeClass::session(...)` static calls out of the helper match.
     $bannedPatterns = [
         '/Illuminate\\\\Support\\\\Facades\\\\Auth\b/',
         '/Auth::user\s*\(/',
@@ -1359,34 +1131,15 @@ it('does not allow the Auth facade or auth/session helpers across Modules/* outs
 });
 
 it('does not allow raw path helpers or hard-coded storage literals outside UserDataPathService (noStoragePathHardCodedOutsideUserDataPathService)', function (): void {
-    // PKG-01 / Phase 13 invariant: every filesystem path flows through
-    // Modules\Core\Public\Services\UserDataPathService so a NativePHP
-    // build can retarget the storage root. The service is the sole
-    // sanctioned caller of base_path(); no other production file may
-    // call database_path() / storage_path() / base_path() or embed the
-    // literals 'database.sqlite' / 'storage/app/'.
-    //
-    // Scope is three roots — Modules, app, config — because config files
-    // call the static accessors directly (the (?<![>:]) lookbehind keeps
-    // UserDataPathService::databaseFile( legal). Test files keep the raw
-    // helpers: they run in a known local dev environment and never ship.
-    // Migration directories are skipped, consistent with
-    // noAuthFacadeOrHelper and phpstan.neon — anonymous-class migrations
-    // resolve the service through the container separately. The grep
-    // strips block + line + Blade comments first so PHPDoc references
-    // stay legal, and .blade.php files are exempt from the literal check
-    // because user-facing <code> tags legitimately display storage paths.
-    //
-    // NOTE: this test stays RED until Plan 02 migrates every call site —
-    // that is expected and correct; it must not be weakened to pass early.
+    // Every filesystem path flows through Modules\Core\Public\Services\
+    // UserDataPathService so a NativePHP build can retarget the storage root; it
+    // is the sole sanctioned caller of base_path(). Blade files are exempt from
+    // the literal check — user-facing <code> tags legitimately display paths.
     $allowList = [
         'Modules/Core/Public/Services/UserDataPathService.php',
     ];
 
-    // Bare function-call shape only — `(?<![>:])` rules out
-    // `$obj->storage_path()` / `Class::base_path()` method calls.
     $bannedHelpers = '/(?<![>:])\b(database_path|storage_path|base_path)\s*\(/';
-    // Literal strings that hard-code the dev-mode storage layout.
     $bannedLiterals = "/['\"](database\\.sqlite|storage\\/app\\/)/";
 
     $hits = [];
@@ -1429,20 +1182,10 @@ it('does not allow raw path helpers or hard-coded storage literals outside UserD
 });
 
 it('does not allow Horizon imports outside the allow-listed provider (noHorizonImportsInShippedBuildCode)', function (): void {
-    // PKG-03 invariant: laravel/horizon is a require-dev package and the
-    // /horizon dashboard serialises transaction data, so no shipped-build
-    // file may reference a `Laravel\Horizon\` namespaced symbol. The sole
-    // allow-listed file is App\Providers\HorizonServiceProvider, which
-    // extends the package provider and gates the dashboard on dev mode.
-    //
-    // bootstrap/providers.php legitimately names the Horizon base class
-    // inside a class_exists() autoload guard — that guard is the mandated
-    // mechanism that keeps a `composer install --no-dev` tree from
-    // fataling. The grep strips `class_exists(\Laravel\Horizon\...)`
-    // arguments before scanning so the guard does not count as an import,
-    // keeping the allow-list at exactly one file. Block + line comments
-    // are stripped first so PHPDoc references stay legal, and `/tests/`
-    // paths are skipped.
+    // laravel/horizon is a require-dev package and the /horizon dashboard
+    // serialises transaction data, so no shipped-build file may name a
+    // Laravel\Horizon\ symbol. The class_exists() guard in bootstrap/providers.php
+    // is stripped before scanning: it is what keeps a --no-dev tree from fataling.
     $allowList = [
         'app/Providers/HorizonServiceProvider.php',
     ];
@@ -1471,9 +1214,6 @@ it('does not allow Horizon imports outside the allow-listed provider (noHorizonI
             }
             $contents = (string) file_get_contents($path);
             $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
-            // Drop the class_exists() autoload guard argument: a defensive
-            // class_exists(\Laravel\Horizon\...) reference does not load
-            // Horizon code and is the sanctioned --no-dev guard.
             $stripped = preg_replace(
                 '/class_exists\s*\(\s*\\\\?Laravel\\\\Horizon\\\\[^)]*\)/',
                 '',
@@ -1492,40 +1232,18 @@ it('does not allow Horizon imports outside the allow-listed provider (noHorizonI
 });
 
 it('does not allow Native\\Desktop imports outside Modules/Desktop (noNativePhpImportsOutsideDesktopModule)', function (): void {
-    // Phase 15 containment invariant: nativephp/desktop's API lives under
-    // the `Native\Desktop\` namespace, and the desktop shell is quarantined
-    // inside the Modules/Desktop module so no other module reaches into
-    // NativePHP directly. No shipped-build file outside Modules/Desktop may
-    // reference a `Native\Desktop\` namespaced symbol.
-    //
-    // Allow-list carve-out for Modules/Community: the suggest-mapping flow
-    // launches an https://github.com/... Compare URL in the system
-    // browser via the OpenExternalUrlAction wrapper. The action validates
-    // https + host allow-list BEFORE delegating to the Shell contract,
-    // and the NoOpShell fallback is bound when the bundle runs outside
-    // the NativePHP runtime. The service provider names the contract FQCN
-    // only to inspect prior bindings via `$this->app->bound(...)`. The
-    // companion `noShellContractOutsideAllowList` invariant locks the
-    // contract-import surface tighter; this rule's allow-list is the
-    // wider net for the `Native\Desktop\` namespace as a whole.
-    //
-    // Block + line comments are stripped first so PHPDoc references stay
-    // legal, and `/tests/` paths are skipped. The Modules/Desktop subtree
-    // is the sanctioned home and is excluded wholesale.
-    //
-    // `app/Providers/NativeAppServiceProvider.php` is the NativePHP-published
-    // app-provider stub scaffolded by `php artisan native:install` and
-    // re-generated by the composer `post-update-cmd` hook — it cannot be
-    // durably edited or deleted, only `Window::open()`s and returns an empty
-    // phpIni() array, and is NOT registered in `bootstrap/providers.php` (the
-    // real desktop provider is `Modules/Desktop/Internal/NativeAppServiceProvider`,
-    // which owns window composition and the Native\Desktop facade allow-list).
-    // phpstan.neon already excludes this same stray stub from analysis for the
-    // identical reason; this allow-list entry mirrors that carve-out.
+    // NativePHP's API lives under Native\Desktop\ and the desktop shell is
+    // quarantined inside Modules/Desktop. Community's carve-out is the
+    // system-browser hop: OpenExternalUrlAction validates https and an
+    // allow-listed host before delegating to the Shell contract.
     $allowList = [
         'Modules/Community/Public/Actions/OpenExternalUrlAction.php',
         'Modules/Community/Internal/Shell/NoOpShell.php',
         'Modules/Community/Providers/CommunityServiceProvider.php',
+        // A NativePHP-published stub, re-generated by the composer
+        // post-update-cmd hook and never registered in bootstrap/providers.php,
+        // so it cannot be durably deleted. The real provider is
+        // Modules/Desktop/Internal/NativeAppServiceProvider.
         'app/Providers/NativeAppServiceProvider.php',
     ];
 
@@ -1569,27 +1287,10 @@ it('does not allow Native\\Desktop imports outside Modules/Desktop (noNativePhpI
 });
 
 it('does not allow a bg-white / text-slate-900 utility without a dark: companion in a themed module view (darkCompanionUtilitiesOnThemedViews)', function (): void {
-    // Phase 15 D-15 invariant: the dark theme is delivered with the
-    // Tailwind v4 class strategy — every element carrying a hard-coded
-    // light surface utility (`bg-white`, `text-slate-900`) must also
-    // carry the matching `dark:` companion so the element renders
-    // correctly when the `dark` class is on `<html>`.
-    //
-    // The guard scans `resources/views` AND every
-    // `Modules/*/Resources/views` directory unconditionally — full
-    // coverage, no allow-list (Plan 15-07 Task 3 closed the gate
-    // after every module was themed). A future view added without a
-    // `dark:` companion fails CI.
-    //
-    // The check is per class-attribute string (the `class="..."` and
-    // `@class([...])` shapes a single element carries): when a string
-    // contains the `bg-white` token it must also contain a `dark:bg-`
-    // utility, and when it contains `text-slate-900` it must also
-    // contain a `dark:text-` utility. Tokens are matched on word
-    // boundaries so `bg-white/50` and `bg-whitesmoke` are handled
-    // correctly and `dark:bg-white` is not mistaken for a violation.
-
-    // Roots to scan: the app-level views, plus each module's views.
+    // The dark theme uses the Tailwind class strategy, so an element carrying a
+    // hard-coded light surface utility must also carry the matching dark:
+    // companion. The check runs per class-attribute string — the set one element
+    // carries — because a dark: utility elsewhere in the file proves nothing.
     $roots = [];
     $appViews = base_path('resources/views');
     if (is_dir($appViews)) {
@@ -1608,9 +1309,6 @@ it('does not allow a bg-white / text-slate-900 utility without a dark: companion
         }
     }
 
-    // Extracts every class-attribute string a Blade file declares —
-    // both `class="..."` / `class='...'` attributes and `@class([...])`
-    // arrays — so the companion check runs per element.
     $classStringsOf = static function (string $contents): array {
         $strings = [];
         if (preg_match_all('/class\s*=\s*"([^"]*)"/', $contents, $m) > 0) {
@@ -1644,17 +1342,14 @@ it('does not allow a bg-white / text-slate-900 utility without a dark: companion
             }
             $path = $file->getPathname();
             $contents = (string) file_get_contents($path);
-            // Strip Blade comments so {{-- ... --}} examples stay legal.
             $stripped = preg_replace('/\{\{--.*?--\}\}/s', '', $contents) ?? $contents;
             $relative = str_replace(base_path().'/', '', $path);
 
             foreach ($classStringsOf($stripped) as $classString) {
-                // `bg-white` token (not `dark:bg-white`, not `bg-whitesmoke`).
                 $hasBgWhite = preg_match('/(?<![:\w-])bg-white(?![\w])/', $classString) === 1;
                 if ($hasBgWhite && preg_match('/dark:bg-/', $classString) !== 1) {
                     $hits[] = $relative.' — bg-white without dark:bg- companion';
                 }
-                // `text-slate-900` token (not `dark:text-slate-900`).
                 $hasInkText = preg_match('/(?<![:\w-])text-slate-900(?![\w])/', $classString) === 1;
                 if ($hasInkText && preg_match('/dark:text-/', $classString) !== 1) {
                     $hits[] = $relative.' — text-slate-900 without dark:text- companion';
@@ -1670,20 +1365,10 @@ it('does not allow a bg-white / text-slate-900 utility without a dark: companion
 });
 
 it('does not allow the impersonation surface to re-appear on disk (impersonationSurfaceRemoved)', function (): void {
-    // Containment invariant for the dropped Phase 12 "Act as partner"
-    // feature: the four files that drove the guard-swap / banner-paint
-    // pipeline must remain absent so a future contributor cannot
-    // re-introduce the surface without also editing this invariant.
-    //
-    // The check is pure filesystem (not class_exists) because
-    // class_exists() triggers the Composer autoloader, which may hold a
-    // stale entry pointing at a recently-deleted file and emit a
-    // misleading "failed to open stream" warning. A direct file_exists
-    // call against base_path() is deterministic.
-    //
-    // A regression here means: someone added back the action / DTO /
-    // middleware / Blade partial without also reviewing the security
-    // posture trade-off recorded in the deletion commit. Fail loudly.
+    // The dropped "Act as partner" feature's guard-swap and banner-paint files
+    // must stay absent. The check is file_exists, not class_exists:
+    // class_exists() runs the Composer autoloader, which can still hold a stale
+    // entry for a just-deleted file and emit a misleading open-stream warning.
     $bannedFiles = [
         'Modules/Auth/Public/Actions/ImpersonateUserAction.php',
         'Modules/Auth/Public/Actions/EndImpersonationAction.php',
@@ -1706,18 +1391,9 @@ it('does not allow the impersonation surface to re-appear on disk (impersonation
 });
 
 it('does not allow the literal `diederik` / `Diederik` anywhere in Modules / tests / resources / config (noDiederikLiteralAfterRename)', function (): void {
-    // Containment invariant for the diederik -> Beatrax rename: every
-    // production-side literal must be flipped so a future contributor
-    // adding a new file does not accidentally re-introduce the old
-    // brand name. The case-insensitive grep matches both `diederik`
-    // and `Diederik` shapes.
-    //
-    // Allow-list: this invariant's own file (needs the literal to
-    // assert the absence), the regression-guard test that asserts no
-    // `diederik:*` artisan signature remains in the kernel, and the
-    // sidebar render test that grep-asserts the rendered HTML carries
-    // no `diederik` literal post-rename. All three deliberately house
-    // the literal `diederik` as their assertion subject.
+    // The diederik -> Beatrax rename must stay complete. The three allow-listed
+    // files deliberately house the literal as their assertion subject: this
+    // invariant, the artisan-signature guard, and the sidebar render test.
     $allowList = [
         'tests/Contracts/BoundaryArchTest.php',
         'tests/Feature/BeatraxCommandsResolveTest.php',
@@ -1741,10 +1417,8 @@ it('does not allow the literal `diederik` / `Diederik` anywhere in Modules / tes
                 continue;
             }
             $path = $file->getPathname();
-            // Pest snapshot baselines belong to the test infrastructure;
-            // they are re-baselined alongside the source rename so the
-            // snapshot diff is reviewable. Skipping `.snap` keeps the
-            // arch test from double-counting that work.
+            // Pest snapshot baselines are re-baselined alongside the source
+            // rename, so scanning them would double-count that work.
             if (str_ends_with($path, '.snap')) {
                 continue;
             }
@@ -1766,22 +1440,10 @@ it('does not allow the literal `diederik` / `Diederik` anywhere in Modules / tes
 });
 
 it('requires every /dev route to apply the ensureDeveloperMode middleware (everyDevModeRouteAppliesEnsureDeveloperModeMiddleware)', function (): void {
-    // Architectural invariant: every Dev Console HTTP route MUST
-    // apply the `ensureDeveloperMode` middleware alias so the
-    // 404-not-403 information-disclosure mitigation covers the
-    // entire /dev/* surface. A new /dev/* route registered without
-    // the alias would silently disclose the Dev Console's
-    // existence to non-developers — this invariant fails CI before
-    // that ships.
-    //
-    // We walk the runtime route table (not the source files) because
-    // the alias name only resolves against gatherMiddleware(),
-    // which expands group-applied middleware. The URI prefix filter
-    // matches both `dev` (the bare overview route) and any uri starting
-    // with `dev/` (every panel route). It deliberately excludes URIs
-    // like `developer/...` or `develop/...` even though no such route
-    // exists today — a precise containment check is cheaper than a
-    // future surprise.
+    // Every /dev/* route must apply ensureDeveloperMode so the 404-not-403
+    // information-disclosure mitigation covers the whole surface. The check walks
+    // the runtime route table rather than the source files, because the alias
+    // only resolves through gatherMiddleware(), which expands group middleware.
     $routes = collect(Illuminate\Support\Facades\Route::getRoutes()->getRoutes())
         ->filter(static fn (Route $r): bool => $r->uri() === 'dev' || str_starts_with($r->uri(), 'dev/'));
 
@@ -1805,33 +1467,10 @@ it('requires every /dev route to apply the ensureDeveloperMode middleware (every
 });
 
 it('keeps PaymentType-unique string literals inside the PaymentType enum (noPaymentTypeStringLeak)', function (): void {
-    // Two PaymentType values — `online`, `direct_debit` — are unique to
-    // the payment_type column and never legitimately appear elsewhere in
-    // the codebase. The invariant scans Modules/ for any
-    // production-source-tree appearance of these literals outside the
-    // canonical enum file and the Database/Migrations carve-out
-    // (where the trigger heredoc enumerates the allowed values inline
-    // as part of the SQLite WHEN clause).
-    //
-    // The other PaymentType values (`pin`, `transfer`, `cash`, `fee`,
-    // `refund`, `unknown`) intentionally collide with other domains, so a
-    // string scan would flag legitimate uses. `transfer`/`cash`/`fee`/
-    // `refund`/`unknown` collide with the pre-existing `transactions.type`
-    // enum, categorisation slugs, and PayPal CSV event-type values.
-    // `pin` — the point-of-sale card-payment type ("pinnen") — collides
-    // with the Auth/Mobile app-lock PIN domain, where `'pin'` is a wholly
-    // unrelated security term: a form-field / validation key
-    // (`AppLockProvisioner`), a pending-credentials session-array key
-    // (`MobileImportBootstrap`), and a `wire:model` binding in the app-lock
-    // Blade views. Callers of every colliding value resolve the payment
-    // type through `PaymentType::Pin`, `PaymentType::Transfer`, etc., by
-    // convention — the per-hinter unit tests in plan 16.1-02 lock in that
-    // convention.
-    //
-    // Test files freely fixture these values to exercise the migration
-    // triggers; the `tests/` exclusion below keeps that legal. The
-    // scan strips PHPDoc / single-line comments before matching so a
-    // comment mentioning the value never flags as an offender.
+    // Only `online` and `direct_debit` are scanned. The other PaymentType values
+    // collide with unrelated domains — transactions.type, categorisation slugs
+    // and PayPal CSV event types take transfer/cash/fee/refund/unknown, and `pin`
+    // is also the Auth/Mobile app-lock term. Callers use PaymentType::* instead.
     $needles = ['online', 'direct_debit'];
     $modulesDir = base_path('Modules');
     if (! is_dir($modulesDir)) {
@@ -1864,17 +1503,13 @@ it('keeps PaymentType-unique string literals inside the PaymentType enum (noPaym
         if (str_contains($path, '/Database/Migrations/')) {
             continue;
         }
-        // The canonical BIP39 mnemonic word list (used to render the
-        // device-pairing safety-number words) legitimately contains the
-        // English dictionary word "online" as fixed list data — it is not a
-        // PaymentType value or usage. Carve out this single data file.
+        // The BIP39 mnemonic word list carries the English word "online" as
+        // fixed list data, not as a PaymentType value.
         if (str_ends_with($path, 'Modules/Sync/Internal/Pairing/Bip39WordList.php')) {
             continue;
         }
-        // The chip label translations are keyed by the enum's own values, and
-        // PaymentType::chipLabel() builds that key from $this->value — no
-        // caller ever types one. Translation data, like the migration
-        // fixtures above, is not a leaked usage.
+        // The chip-label translations are keyed by the enum's own values —
+        // chipLabel() builds the key from $this->value, so no caller types one.
         if (str_ends_with($path, '/payment_type.php') && str_contains($path, '/Resources/lang/')) {
             continue;
         }
@@ -1899,28 +1534,12 @@ it('keeps PaymentType-unique string literals inside the PaymentType enum (noPaym
 });
 
 it('requires every *Hinter class under Modules/Import/Internal/Parsers to implement the PaymentTypeHinter contract (paymentTypeHinterContract)', function (): void {
-    // Plan 16.1-02 invariant: every per-source payment-type hinter
-    // plus the universal description-keyword fallback under
-    // Modules/Import/Internal/Parsers/ is a strategy implementation
-    // of the shared `PaymentTypeHinter` contract. The classifier
-    // stage's container-tag wiring depends on the contract being
-    // uniformly implemented — a class named `*Hinter` that omits the
-    // implements clause would silently fail to satisfy the
-    // iterable<PaymentTypeHinter> type at the classifier seam.
-    //
-    // Filesystem walk over Modules/Import/Internal/Parsers, gated on
-    // the `*Hinter.php` filename suffix so both the
-    // `*PaymentTypeHinter` per-source classes and the
-    // `DescriptionKeywordFallbackHinter` are captured. The class FQN
-    // is reconstructed from the path so the check works against the
-    // shipped classes without booting the framework.
-    // ReflectionClass is consulted to resolve the implements list
-    // because a literal grep would miss subclasses that inherit the
-    // contract.
+    // A class named *Hinter that omits the implements clause silently fails the
+    // iterable<PaymentTypeHinter> type at the classifier seam. Reflection
+    // resolves the implements list rather than a grep, so a subclass that
+    // inherits the contract still counts.
     $parsersDir = base_path('Modules/Import/Internal/Parsers');
     if (! is_dir($parsersDir)) {
-        // Parser tree lands in plan 16.1-02; until it does the rule
-        // is trivially satisfied.
         expect(true)->toBeTrue();
 
         return;
@@ -1943,9 +1562,6 @@ it('requires every *Hinter class under Modules/Import/Internal/Parsers to implem
             continue;
         }
 
-        // Derive the FQN from the on-disk path: every parser-tree class
-        // lives at Modules/Import/Internal/Parsers/<sub>/Foo.php which
-        // maps onto `Modules\\Import\\Internal\\Parsers\\<sub>\\Foo`.
         $relativeFromModules = str_replace(base_path().'/', '', $path);
         $withoutExt = substr($relativeFromModules, 0, -strlen('.php'));
         $fqn = str_replace('/', '\\', $withoutExt);
@@ -1968,27 +1584,10 @@ it('requires every *Hinter class under Modules/Import/Internal/Parsers to implem
 });
 
 it('restricts Native\\Desktop\\Contracts\\Shell imports to the allow-listed action and fallback (noShellContractOutsideAllowList)', function (): void {
-    // Plan 16.1-05 invariant: the NativePHP Shell contract is the
-    // sole outbound system-browser path the community module uses.
-    // To keep that surface auditable, only two files may import the
-    // contract: the OpenExternalUrlAction wrapper (validates https +
-    // allow-listed host before invoking the contract) and the
-    // NoOpShell fallback implementation (in-module impl bound when
-    // NativePHP's NativeServiceProvider is absent).
-    //
-    // Per the W-7 pre-survey, no other module currently imports the
-    // contract; the allow-list below is exact and adding a new file
-    // requires a code-review justification mirroring the auth-facade
-    // allow-list at the top of this file. Tests/ files are skipped
-    // so feature suites can bind a ShellFake or substitute a custom
-    // double without tripping the rule. The grep strips block + line
-    // comments first so PHPDoc references stay legal.
-    // Allow-list also covers the service provider that wires the
-    // optional fallback binding: it imports the contract FQCN to
-    // call `$this->app->bound(ShellContract::class)` before binding
-    // the in-module NoOpShell. The provider performs no runtime
-    // dispatch through the contract — it only inspects whether
-    // another service provider has already registered an impl.
+    // The Shell contract is the only outbound system-browser path. Two files may
+    // import it — OpenExternalUrlAction, which validates https and an
+    // allow-listed host first, and the NoOpShell fallback — plus the provider,
+    // which names the FQCN only to check app->bound() before binding that fallback.
     $allowList = [
         'Modules/Community/Public/Actions/OpenExternalUrlAction.php',
         'Modules/Community/Internal/Shell/NoOpShell.php',
@@ -2033,19 +1632,10 @@ it('restricts Native\\Desktop\\Contracts\\Shell imports to the allow-listed acti
 });
 
 it('every raw merchant_aliases query in production code carries an explicit user_id filter (noMerchantAliasesQueryWithoutUserIdFilter)', function (): void {
-    // Cross-user posture for merchant_aliases: every production reader
-    // and writer that goes through the raw query builder MUST carry an
-    // explicit `where('user_id', ...)` filter (or include a `user_id`
-    // column on the row payload for inserts). The BelongsToUser global
-    // scope on the Eloquent model is a defence-in-depth secondary
-    // guard; it does not fire under queue workers or console commands.
-    //
-    // The scan walks every `.php` file under Modules/Import that is
-    // not a test file. For each occurrence of `->table('merchant_aliases')`
-    // it looks ahead 30 lines for an explicit `user_id` reference
-    // (either `where('user_id'` for reads/updates or `'user_id' =>` for
-    // inserts). A site that fails this check is flagged so a future
-    // contributor cannot silently introduce a cross-user leak.
+    // Every raw merchant_aliases read and write must carry an explicit user_id
+    // filter: the BelongsToUser global scope on the Eloquent model is secondary
+    // defence only and does not fire under queue workers or console commands,
+    // which is exactly where a missing filter becomes a cross-user leak.
     $importRoot = base_path('Modules/Import');
     if (! is_dir($importRoot)) {
         expect(true)->toBeTrue();
@@ -2074,11 +1664,8 @@ it('every raw merchant_aliases query in production code carries an explicit user
             if (! str_contains($line, "table('merchant_aliases')")) {
                 continue;
             }
-            // Look ahead 30 lines for a user_id reference. The window
-            // is generous enough to cover a multi-line update payload
-            // but tight enough that an unrelated downstream
-            // `where('user_id')` on a different table does not falsely
-            // satisfy the check.
+            // The 30-line window covers a multi-line update payload without
+            // letting an unrelated later where('user_id') on another table pass.
             $window = implode("\n", array_slice($lines, $index, 30));
             $hasUserIdFilter = preg_match("/where\\(\\s*['\"]user_id['\"]/", $window) === 1
                 || preg_match("/['\"]user_id['\"]\\s*=>/", $window) === 1;
@@ -2099,30 +1686,10 @@ arch('Modules\\Reports\\Internal is only used inside Modules\\Reports')
     ->toOnlyBeUsedIn('Modules\\Reports');
 
 it('does not allow Recurring/Budgets/DriftAlerts/Position/Ledger to import Modules\\Notifications (noTriggerModuleImportsNotifications)', function (): void {
-    // D-38 invariant 1 (T-18-71) — plan 18-17. This is CONTEXT.md's own
-    // pick for "the decision most likely to erode": nothing else in the
-    // codebase catches a trigger module reaching straight for the
-    // notification store, and the first "just one field" makes a direct
-    // call the path of least resistance.
-    //
-    // D-28 requires every trigger module (Recurring, Budgets, DriftAlerts,
-    // Position, Ledger) to stay wholly ignorant of `Modules\Notifications`:
-    // it emits a readonly Public event (`PaymentReminderDue`,
-    // `TransactionBatchImported`, etc.) and lets one of
-    // `Modules\Notifications`'s `Persist*` listeners subscribe to it.
-    //
-    // The one legitimate exception is `routes/console.php`: application-
-    // level wiring, not module code, which reads
-    // `NotificationPreferenceQuery` and passes the preference-derived
-    // `$leadDays` / `$cadence` into `EmitPaymentRemindersJob` /
-    // `EmitPositionDigestJob` as constructor parameters — this walk never
-    // visits `routes/`, so that bridge needs no allow-list entry.
-    //
-    // Comments are stripped BEFORE matching: `TransactionBatchImported`'s
-    // own docblock names
-    // `Modules\Notifications\Internal\Listeners\PersistCoalescedImport` to
-    // explain who consumes the event, and an uncommented scan would make
-    // the codebase's own explanatory prose trip the rule it is describing.
+    // Trigger modules stay wholly ignorant of Modules\Notifications: each emits a
+    // readonly Public event and one of Notifications' Persist* listeners
+    // subscribes. Comments are stripped before matching because
+    // TransactionBatchImported's own docblock names the listener consuming it.
     $hits = [];
     $triggerDirs = [
         'Modules/Recurring',
@@ -2135,8 +1702,6 @@ it('does not allow Recurring/Budgets/DriftAlerts/Position/Ledger to import Modul
     foreach ($triggerDirs as $dir) {
         $absolute = base_path($dir);
         if (! is_dir($absolute)) {
-            // Module folder lands in a later wave; until it does the rule
-            // is trivially satisfied.
             continue;
         }
         $iterator = new RecursiveIteratorIterator(
@@ -2173,47 +1738,20 @@ it('does not allow Recurring/Budgets/DriftAlerts/Position/Ledger to import Modul
 });
 
 it('does not allow the Desktop NativePHP facade allow-list to grow beyond the pinned set (pinnedDesktopFacadeAllowList)', function (): void {
-    // D-38 invariant 2 (T-18-72) / D-31 — plan 18-17. Turns "the allow-list
-    // and phpstan ignore list do not grow by even one entry" from a promise
-    // into something CI proves. A NEW Desktop file touching a NativePHP
-    // facade is exactly the "just add a helper" move this guards against —
-    // route new native-chrome logic through the existing
-    // `DispatchOsNotification` with plain constructor-DI collaborators
-    // instead.
-    //
-    // Two DIFFERENT lists are pinned here, and they are deliberately NOT
-    // the same length — each is read and pinned to its own real content:
-    //   1. `phpstan.neon`'s `Native\Desktop\Facades\(Menu|Window|System|
-    //      Notification|App|ChildProcess) facade should not be used.`
-    //      ignoreErrors entry's `paths` list — 9 files.
-    //   2. This file's own "no Laravel facade usage in module code" test's
-    //      `->ignoring([...])` list, Desktop-only entries (its
-    //      `Modules\Core\Public\Support\LockStore` entry belongs to a
-    //      DIFFERENT carve-out — the Cache facade, not Native\Desktop — and
-    //      is excluded from this pin) — 7 class names. This ignoring() list
-    //      matches `Illuminate\Support\Facades\*` usage, a different rule
-    //      from the `Native\Desktop\Facades\*` phpstan entry (NativePHP's
-    //      facades are NOT `Illuminate\Support\Facades\*` classes), so the
-    //      two lists cover different symbols and legitimately differ in
-    //      length and membership.
-    //
-    // Scoped to the Desktop list ONLY — plan 18-15 legitimately grew the
-    // separate `Native\Mobile\Facades\*` path list (a genuinely new,
-    // sanctioned crossing point for the mobile local-notifications
-    // plugin), so pinning that list here would fail on correct, reviewed
-    // work.
+    // Two DIFFERENT lists are pinned here, and they legitimately differ in length
+    // and membership: phpstan.neon's ignoreErrors entry covers
+    // Native\Desktop\Facades\*, while this file's own ->ignoring([...]) covers
+    // Illuminate\Support\Facades\* — NativePHP's facades are not that namespace.
     $pinnedPhpstanDesktopPaths = [
         'Modules/Desktop/Internal/NativeAppServiceProvider.php',
         'Modules/Desktop/Internal/Native/AppMenuBuilder.php',
         'Modules/Desktop/Internal/Native/OsThemeProbe.php',
         'Modules/Desktop/Internal/Native/NativeBiometricUnlock.php',
         'Modules/Desktop/Internal/Native/DesktopKeyCustodian.php',
-        // Not new facade surface: the ChildProcess call that starts
-        // `sync:serve` moved here out of NativeAppServiceProvider, so the
-        // boot hook and the DeviceSyncEnabled listener can share one owner.
+        // Not new facade surface: the ChildProcess calls that start sync:serve
+        // and the pairing relay moved here out of NativeAppServiceProvider so the
+        // boot hook and the DeviceSyncEnabled listener share one owner.
         'Modules/Desktop/Internal/Native/SyncListenerProcess.php',
-        // Same relocation rationale: the relay daemon is the pairing
-        // transport, started by the same boot hook as the sync listener.
         'Modules/Desktop/Internal/Native/RelayListenerProcess.php',
         'Modules/Desktop/Internal/Listeners/DispatchOsNotification.php',
         'Modules/Desktop/Internal/Listeners/SurfaceWorkerCrashAlert.php',
@@ -2232,6 +1770,8 @@ it('does not allow the Desktop NativePHP facade allow-list to grow beyond the pi
     ];
 
     // --- 1. phpstan.neon's Native\Desktop\Facades\* ignoreErrors entry ---
+    // Scoped to Desktop: the sibling Native\Mobile\Facades\* path list
+    // legitimately grew for the mobile local-notifications plugin.
     $neon = Yaml::parseFile(base_path('phpstan.neon'));
     /** @var list<array<string, mixed>> $ignoreErrors */
     $ignoreErrors = is_array($neon['parameters']['ignoreErrors'] ?? null)
@@ -2302,58 +1842,18 @@ it('does not allow the Desktop NativePHP facade allow-list to grow beyond the pi
 });
 
 it('derives the deterministic notification key in exactly one place and mutates notifications.state through exactly one class, naming OpLogReplayer as the legitimate read_at/dismissed_at mutator (onlyOneNotificationKeyDeriverAndStateMutator)', function (): void {
-    // D-38 invariant 3 (T-18-73) — the highest-value test in the phase. A
-    // drifting key deriver passes every unit test and breaks Reqs 1/12's
-    // cross-device convergence SILENTLY: two devices independently deciding
-    // "this user's forecast just went into shortfall for period 2026-08"
-    // MUST derive the same sha256 id from the same
-    // `(user_id, trigger_type, subject_key, occurrence)` tuple, or they
-    // never converge on one row — surfacing months later as unexplained
-    // duplicate rows on merge, never as a failing test, unless this arch
-    // test exists.
-    //
-    // Deliberately NOT a blanket `hash('sha256'` ban across the repo: Sync's
-    // signing/pairing paths (`SafetyNumberDeriver`, `PairingTokenService`),
-    // Ledger's `FingerprintComposer`, Receipts' `.eml` content hashing, and
-    // several demo seeders all use sha256 legitimately for unrelated
-    // fingerprints/tokens. Two narrower checks instead:
-    //
-    //   A. Within `Modules/Notifications` itself, `hash('sha256'` may
-    //      appear ONLY in `DeterministicKeyDeriver.php`.
-    //   B. A repo-wide check for a SECOND notification-key derivation: a
-    //      file (other than `DeterministicKeyDeriver.php`) that combines a
-    //      sha256 hash call with the three tuple-member field names
-    //      (`trigger_type`, `subject_key`, `occurrence`) is the specific
-    //      signature of someone having manually rebuilt the same key
-    //      elsewhere — not a blanket sha256 ban.
-    //
-    // `DeterministicKeyDeriver::derive()`'s only legitimate direct callers
-    // are `NotificationWriter` (every fresh write) and two RE-derive sites
-    // that look up an EXISTING row rather than mint a new key:
-    // `ResolveSettledReminder` (Req 13's after-delivery withdrawal, 18-06)
-    // and `DemoNotificationsSeeder` (re-derives an id purely to mark an
-    // already-seeded demo row read/dismissed). No `Persist*` listener may
-    // call `derive()` directly — they all go through `NotificationWriter`.
-    //
-    // Also folds in D-39's single-mutator assertion for `notifications.state`
-    // (T-18-75), naming the replayer explicitly rather than pretending it
-    // does not write: `OpLogReplayer` IS a legitimate second mutator of
-    // `notifications.read_at` / `notifications.dismissed_at` (via its
-    // LWW-per-field merge strategy when applying a peer's ops) and is NOT a
-    // mutator of `notifications.state`, because `state` is a
-    // locally-derived column deliberately left out of
-    // `MergeRulesRegistry['notifications']` (18-01 / 18-04). This is why
-    // D-39's replayer wrinkle does not bite: the invariant can name the
-    // replayer and still hold.
+    // Two devices must derive the SAME sha256 id from the same
+    // (user_id, trigger_type, subject_key, occurrence) tuple or they never
+    // converge on one row. A second deriver surfaces months later as duplicate
+    // rows on merge, never as a failing test — hence the two narrow checks below.
     $notificationsDir = base_path('Modules/Notifications');
     $keyDeriverFile = base_path('Modules/Notifications/Internal/Support/DeterministicKeyDeriver.php');
     $stateMachineFile = base_path('Modules/Notifications/Internal/StateMachines/NotificationStateMachine.php');
     $allowedDirectCallers = [
         base_path('Modules/Notifications/Internal/Support/NotificationWriter.php'),
         base_path('Modules/Notifications/Internal/Listeners/ResolveSettledReminder.php'),
-        // Re-derives an EXISTING row's id purely to mark it read/dismissed
-        // for demo-data purposes — the same "look up, don't mint" shape as
-        // ResolveSettledReminder, never a second key-computation surface.
+        // Re-derives an EXISTING row's id to mark it read/dismissed — the same
+        // "look up, do not mint" shape as ResolveSettledReminder.
         base_path('Modules/Notifications/Database/Seeders/Demo/DemoNotificationsSeeder.php'),
     ];
 
@@ -2389,7 +1889,7 @@ it('derives the deterministic notification key in exactly one place and mutates 
                 }
             }
 
-            // D-39: notifications.state mutated only by NotificationStateMachine.
+            // notifications.state, mutated only by NotificationStateMachine.
             if ($path !== $stateMachineFile && ! str_starts_with($path, base_path('Modules/Notifications/Database/Migrations').DIRECTORY_SEPARATOR)) {
                 if (
                     preg_match("/->table\\(['\"]notifications['\"]\\)[^;]*->update\\s*\\(\\s*\\[\\s*['\"]state['\"]/", $stripped) === 1
@@ -2401,7 +1901,10 @@ it('derives the deterministic notification key in exactly one place and mutates 
         }
     }
 
-    // B. Repo-wide check for a second, independently-built notification key.
+    // B. Repo-wide check for a second, independently-built notification key. Not
+    // a blanket sha256 ban: Sync's pairing, Ledger's FingerprintComposer and
+    // Receipts' .eml hashing all hash legitimately. The signature of a rebuilt
+    // key is a sha256 call alongside all three tuple field names.
     $modulesDir = base_path('Modules');
     $iterator = new RecursiveIteratorIterator(
         new RecursiveDirectoryIterator($modulesDir, RecursiveDirectoryIterator::SKIP_DOTS),
@@ -2454,14 +1957,10 @@ it('derives the deterministic notification key in exactly one place and mutates 
 });
 
 it('evaluates notification-delivery suppression (quiet hours + per-trigger toggles) in exactly one place (onlyOneSuppressionEvaluator)', function (): void {
-    // D-38 invariant 4 (T-18-74) — the other silent-failure-mode test in
-    // the phase. Two independently-written suppression checks WILL drift:
-    // D-31/D-32's two delivery adapters (`DispatchOsNotification` for
-    // desktop, `DispatchMobileNotification` for mobile) both call
-    // `SuppressionEvaluator::shouldDeliver()` and MUST NOT re-implement any
-    // slice of quiet-hours / per-trigger-toggle logic themselves — a user
-    // experiencing "my phone ignores quiet hours" would have no failing
-    // test to point at without this arch invariant.
+    // Two independently-written suppression checks WILL drift, and "my phone
+    // ignores quiet hours" has no failing test to point at. Both delivery
+    // adapters must call SuppressionEvaluator::shouldDeliver() and re-implement
+    // no slice of the quiet-hours / per-trigger-toggle logic themselves.
     $bannedLiterals = [
         'quiet_hours',
         'quietHours',
@@ -2498,9 +1997,7 @@ it('evaluates notification-delivery suppression (quiet hours + per-trigger toggl
         ."adapters are exactly where that drift would land. Offenders:\n  ".implode("\n  ", $literalHits),
     );
 
-    // Second half: no non-test file outside SuppressionEvaluator reads the
-    // notification_preferences table directly, except NotificationPreferenceQuery
-    // (its Public seam).
+    // Second half: notification_preferences is read only through its Public seam.
     $allowedReaders = [
         base_path('Modules/Notifications/Public/Services/NotificationPreferenceQuery.php'),
     ];
@@ -2541,28 +2038,10 @@ it('evaluates notification-delivery suppression (quiet hours + per-trigger toggl
 });
 
 it('requires every module with an Internal namespace to carry a boundary arch rule (everyInternalNamespaceHasABoundaryRule)', function (): void {
-    // Self-policing guard for the per-module `Modules\<X>\Internal is only
-    // used inside Modules\<X>` arch rules above. That list is hand-maintained,
-    // and it silently drifted once already: modules added after the original
-    // block (Budgets, Calendar, CashBook, FX, Goals, Migration, Notifications,
-    // OpenBanking, Position, Pots, Tax) shipped an `Internal/` namespace with
-    // NO boundary rule, so a cross-module reach into their internals via an
-    // inline `\Modules\<X>\Internal\...` FQN — or from a phpstan-excluded
-    // Seeder/Route path — would have passed CI unnoticed.
-    //
-    // This turns "every Internal namespace is guarded" from a promise a
-    // reviewer has to remember into something CI proves. When a future module
-    // lands an `Internal/` directory, this test fails until a matching
-    // `arch('Modules\\<X>\\Internal ...')->expect('Modules\\<X>\\Internal')`
-    // rule is added to this file — mirroring the pinnedDesktopFacadeAllowList
-    // philosophy elsewhere in this suite.
-    //
-    // The needle is the exact single-quoted top-level `expect()` target
-    // (`'Modules\<X>\Internal'`, closing quote right after `Internal`), so a
-    // module that only appears in a deeper sub-namespace rule
-    // (e.g. `'Modules\Ledger\Internal\Console\RederiveFingerprintsCommand'`)
-    // does NOT falsely satisfy the guard — it must have the top-level boundary
-    // rule too.
+    // The per-module boundary rules above are hand-maintained, and the list
+    // silently drifted once: eleven modules shipped an Internal/ namespace with
+    // no rule at all. The needle is the exact top-level `'Modules\<X>\Internal'`
+    // target, so a rule naming a deeper symbol does not falsely satisfy it.
     $selfContents = (string) file_get_contents(__FILE__);
 
     $modulesDir = base_path('Modules');
@@ -2579,8 +2058,7 @@ it('requires every module with an Internal namespace to carry a boundary arch ru
             continue;
         }
 
-        // Only modules with at least one real class under Internal/ need a
-        // boundary rule; an empty skeleton directory is trivially safe.
+        // An empty Internal/ skeleton is trivially safe; only populated ones count.
         $hasInternalClass = false;
         $iterator = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator($internalDir, RecursiveDirectoryIterator::SKIP_DOTS),

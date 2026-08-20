@@ -7,9 +7,6 @@ namespace Modules\Migration\Public\Dto;
 use Illuminate\Support\Collection;
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 final class MigrationBatch extends Data
 {
     /**

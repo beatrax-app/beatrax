@@ -8,9 +8,6 @@ namespace Modules\Chains\Public\Enums;
 // `candidate`, the user (or a high-confidence auto-resolve) makes it
 // `confirmed`, or rejects it. The column stays string; this enum is the
 // one canonical spelling every caller maps through.
-/**
- * @link ../../../../.docs/features/chains/architecture.md
- */
 enum ChainLinkState: string
 {
     case Candidate = 'candidate';

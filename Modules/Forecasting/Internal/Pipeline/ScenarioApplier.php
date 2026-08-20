@@ -20,9 +20,6 @@ use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Psr\Log\LoggerInterface;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final readonly class ScenarioApplier
 {
     // A one-off scenario amount has no variance-tolerance field on the
@@ -192,8 +189,6 @@ final readonly class ScenarioApplier
     }
 
     /**
-     * @link ../../../../.docs/features/forecasting/architecture.md
-     *
      * @param  list<ForecastContribution>  $contributions
      */
     private function pickAccountIdForOneOff(array $contributions, User $user): int
@@ -422,9 +417,6 @@ final readonly class ScenarioApplier
         };
     }
 
-    /**
-     * @link ../../../../.docs/features/forecasting/architecture.md
-     */
     private function logCrossUserMismatchIfAny(string $mutationKind, int $seriesId, User $user): void
     {
         $exists = $this->db->connection()->table('recurring_series')

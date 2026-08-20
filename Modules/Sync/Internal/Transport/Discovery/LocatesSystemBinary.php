@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Transport\Discovery;
 
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 trait LocatesSystemBinary
 {
     private function findBinary(string $name): ?string

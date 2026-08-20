@@ -12,9 +12,6 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
-/**
- * @link ../../../../.docs/features/calendar/architecture.md
- */
 final readonly class CalendarQuery
 {
     public function __construct(

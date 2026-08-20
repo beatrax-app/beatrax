@@ -12,8 +12,6 @@ use Modules\Chains\Models\ChainLink;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
 /**
- * @link ../../../.docs/features/recurring/architecture.md
- *
  * @property int $id
  * @property int|null $user_id
  * @property string $direction

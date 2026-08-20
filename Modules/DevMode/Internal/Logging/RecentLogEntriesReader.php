@@ -7,9 +7,6 @@ namespace Modules\DevMode\Internal\Logging;
 use Modules\Core\Public\Services\UserDataPathService;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/dev-mode/architecture.md
- */
 final readonly class RecentLogEntriesReader
 {
     // The href carries the untruncated start of the message so the

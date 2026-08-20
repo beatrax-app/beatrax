@@ -9,9 +9,6 @@ use Illuminate\Database\Query\Builder;
 use Modules\Sync\Internal\Pairing\Bip39WordList;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class DeviceRegistryService
 {
     public function __construct(

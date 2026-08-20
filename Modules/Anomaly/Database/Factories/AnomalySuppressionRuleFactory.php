@@ -8,10 +8,6 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\Anomaly\Models\AnomalySuppressionRule;
 use Modules\Ledger\Public\Enums\Direction;
 
-// The default state encodes a large-vs-typical expense suppression rule
-// banding ±20% around a €23.49 charge (€18.79 .. €28.19) for a single
-// merchant. Callers override `user_id` + `counterparty_id` to scope the
-// rule, and may override `detector` / `direction` / the band columns.
 /**
  * @extends Factory<AnomalySuppressionRule>
  */

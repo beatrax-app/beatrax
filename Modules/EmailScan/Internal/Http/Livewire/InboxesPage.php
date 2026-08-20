@@ -32,9 +32,6 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
-/**
- * @link ../../../../../.docs/features/email-scan/architecture.md
- */
 final class InboxesPage extends Component
 {
     use DispatchesToast;

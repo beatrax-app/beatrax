@@ -9,21 +9,6 @@ use Modules\Import\Public\Services\AliasMatchPreviewQuery;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 
-/*
- * Covers the safety + correctness properties of
- * AliasMatchPreviewQuery — the read-only "test against my
- * transactions" probe powering Settings → Aliases.
- *
- *   - returns total + first5 sample for a populated match
- *   - returns total=0 when nothing matches
- *   - rejects patterns < 3 chars with the explanatory empty message
- *   - is read-only (transactions table row count is unchanged
- *     before/after preview)
- *   - is bounded at 500 rows so a near-unbounded pattern in a large
- *     history still returns within a single hot scan
- *   - is user-scoped so cross-user descriptions never count
- */
-
 beforeEach(function (): void {
     $this->userA = User::create([
         'username' => 'preview-a',
@@ -62,11 +47,6 @@ beforeEach(function (): void {
     ]);
 });
 
-/**
- * Seeds a single row into the transactions table for the
- * AliasMatchPreviewQuery to scan. Fingerprint uses the description so
- * the composite UNIQUE constraint accepts each fixture row.
- */
 function seedPreviewTransaction(
     int $accountId,
     int $userId,
@@ -167,9 +147,7 @@ it('does not mutate the transactions table during a preview scan', function (): 
 });
 
 it('honours the 500-row scan cap with a larger history', function (): void {
-    // Seed 600 rows so the 500-row cap kicks in. Every row matches
-    // the probe pattern so total reflects whatever subset the cap
-    // surfaces, not all 600.
+    // All 600 match, so the cap — not the pattern — is what bounds `total`.
     for ($i = 0; $i < 600; $i++) {
         seedPreviewTransaction(
             $this->accountA->id,
@@ -187,7 +165,6 @@ it('honours the 500-row scan cap with a larger history', function (): void {
 });
 
 it('excludes another user\'s transactions from the preview scan', function (): void {
-    // User A has rows that DO match the probe pattern.
     seedPreviewTransaction(
         $this->accountA->id,
         $this->userA->id,
@@ -195,7 +172,6 @@ it('excludes another user\'s transactions from the preview scan', function (): v
         0,
         'BCK*SHELL PIETER NIEUW *0123',
     );
-    // User B has a matching row that MUST NOT count.
     seedPreviewTransaction(
         $this->accountB->id,
         $this->userB->id,

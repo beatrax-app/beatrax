@@ -10,9 +10,6 @@ use RuntimeException;
 // redirect cannot be received at all. Internal because it never leaves the
 // module: the serve command is the only caller, and it reports the failure to
 // the console rather than handing it to another module.
-/**
- * @link ../../../../.docs/features/open-banking/architecture.md
- */
 final class LoopbackTlsException extends RuntimeException
 {
     public static function couldNotWriteCertificate(string $directory): self

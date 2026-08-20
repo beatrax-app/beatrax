@@ -10,9 +10,6 @@ use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Internal\Exceptions\SecretFileException;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class DeviceIdentityLoader
 {
     public function __construct(

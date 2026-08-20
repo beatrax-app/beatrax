@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\Import\Public\Pipeline;
 
-use Brick\Math\BigDecimal;
-use Brick\Math\RoundingMode;
 use Modules\Core\Models\User;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FingerprintComposer;
+use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Ledger\Public\ValueObjects\Rate;
 
 /**
  * @link ../../../../.docs/architecture/ingestion-pipeline.md#3-normalize-normalizestage
@@ -38,17 +38,13 @@ final class NormalizeStage
             default => 'adjustment',
         };
 
-        // Substitute settled = native when the source omitted a settled
-        // pair: EUR-native rows leave the settled fields null and inherit
-        // the native pair; foreign-currency rows carry both pairs
-        // verbatim (settled-EUR leg alongside the native amount).
+        // A EUR-native row leaves the settled fields null and inherits the
+        // native pair; a foreign-currency row carries both verbatim.
         $settledMinor = $source->settledAmountMinor ?? $source->amountMinor;
         $settledCurrency = $source->settledCurrency ?? $source->currency;
 
-        // Derive the effective post-markup rate when (and only when) both
-        // legs are present, currencies differ, and the native amount is
-        // non-zero. BigDecimal preserves the decimal(18,8) column's exact
-        // precision; float `/` is forbidden on the money path.
+        // Rate, because the column is decimal(18,8) and float division is
+        // forbidden on the money path.
         $fxRateUsed = null;
         if (
             $source->settledAmountMinor !== null
@@ -56,12 +52,11 @@ final class NormalizeStage
             && $source->amountMinor !== 0
             && $source->settledCurrency !== $source->currency
         ) {
-            $fxRateUsed = (string) BigDecimal::of((string) $source->settledAmountMinor)
-                ->dividedBy(
-                    BigDecimal::of((string) $source->amountMinor),
-                    8,
-                    RoundingMode::HalfUp,
-                );
+            $fxRateUsed = (string) Rate::between(
+                Money::ofMinor($source->settledAmountMinor, $source->settledCurrency),
+                Money::ofMinor($source->amountMinor, $source->currency),
+                8,
+            );
         }
 
         return new CanonicalTransaction(

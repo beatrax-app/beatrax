@@ -22,17 +22,6 @@ use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 
 uses(RefreshDatabase::class);
 
-/*
- * Manual "Sync now" action (19-12 Task 2, UI-SPEC Surface B6, Req 9):
- * `OpenBankingFetchService::preview()` (never `fetchAndConfirm()` — success
- * routes to the EXISTING consolidated import-preview page for the user to
- * review, this button never auto-commits). Two-timestamp accounting mirrors
- * `SyncOpenBankingAccountJob` exactly: a successful fetch (new rows or zero
- * rows) advances `last_successful_sync_at`; a failed fetch advances ONLY
- * `last_attempt_*`, never `last_successful_sync_at` (Req 7's
- * never-stale-as-fresh invariant).
- */
-
 final class OmsStubRemoteSourceAdapter implements RemoteSourceAdapter
 {
     /**

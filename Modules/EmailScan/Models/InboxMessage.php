@@ -9,10 +9,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
-// The lightweight DB index over the raw .eml blobs persisted on disk.
-// (inbox_id, provider_message_id) is UNIQUE so a re-fetch is a no-op
-// via insertOrIgnore; sender + subject are captured at fetch time so
-// the parser never re-opens the .eml just to filter.
+// The index over the .eml blobs on disk. (inbox_id, provider_message_id) is
+// UNIQUE so a re-fetch is a no-op via insertOrIgnore, and sender + subject are
+// captured at fetch time so the parser never re-opens a blob just to filter.
 /**
  * @property int $id
  * @property int|null $user_id

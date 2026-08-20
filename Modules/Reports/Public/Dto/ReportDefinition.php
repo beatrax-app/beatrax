@@ -7,9 +7,6 @@ namespace Modules\Reports\Public\Dto;
 use Modules\Reports\Public\Enums\ReportGranularity;
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final class ReportDefinition extends Data
 {
     /**

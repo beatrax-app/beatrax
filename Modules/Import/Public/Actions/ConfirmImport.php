@@ -48,10 +48,6 @@ final class ConfirmImport implements ConfirmsImports
             ->firstOrFail();
 
         if ($importRun->status === ImportRunStatus::Confirmed->value) {
-            // Re-confirm idempotent result: the SHA256 short-circuit in
-            // RunImport routes a same-file re-upload here, so this
-            // attempt reports zero inserts and the file's full row
-            // count (originally inserted + duplicate) as duplicates.
             return new ImportConfirmResult(
                 importRunId: $importRunId,
                 inserted: 0,
@@ -66,10 +62,8 @@ final class ConfirmImport implements ConfirmsImports
         $preview = $this->cache->getPreview($importRunId);
 
         if ($canonical === null) {
-            // Cache miss (TTL expired/flushed). Leave the import_run row
-            // on its previous status so the SHA256 idempotency short-
-            // circuit doesn't lock the user out; surface a typed
-            // exception so the wizard renders a re-upload prompt.
+            // The run keeps its previous status, or RunImport's SHA256
+            // short-circuit would lock the user out of re-uploading.
             throw new PreviewExpiredException($importRunId);
         }
 
@@ -85,25 +79,16 @@ final class ConfirmImport implements ConfirmsImports
             }
         }
 
-        // Promote WITHOUT an outer transaction: the recorder commits in
-        // bounded, idempotent per-chunk transactions; wrapping it here would
-        // demote those to savepoints. A crash-then-rerun is safe.
-
         // captureForSync: false — this action captures run, accounts and
         // transactions itself below, parents first. Capturing in the recorder
-        // too wrote every imported row to the op log twice.
+        // as well wrote every imported row to the op log twice.
         $recorderResult = ($this->recorder)($canonical, $user, false);
 
-        // The pipeline already filters fingerprint-duplicates out of
-        // `$canonical`; the recorder's own `duplicates` only catches
-        // race-condition collisions between preview and confirm, so
-        // total duplicates = preview-detected + recorder-detected.
+        // The pipeline already filtered fingerprint-duplicates out of
+        // $canonical, so the recorder's own count holds only the collisions
+        // that raced in between preview and confirm. Both are duplicates.
         $totalDuplicates = $previewDuplicateCount + $recorderResult->duplicates;
 
-        // Wrap ONLY the enrichments + status flip + result assembly in one
-        // transaction: a committed `confirmed` status ALWAYS implies the
-        // enrichment writes landed. A mid-enrichment failure rolls both
-        // back together, so a re-confirm replays from a clean slate.
         $result = $this->db->connection()->transaction(function () use (
             $importRun,
             $enrichments,
@@ -134,42 +119,28 @@ final class ConfirmImport implements ConfirmsImports
 
         $this->cache->forget($importRunId);
 
-        // Capture the import for sync, post-commit and parents first. Without
-        // it the ledger rows reached a peer only through the one-time pairing
-        // backfill, so a statement imported afterwards stayed on the device
-        // that read it while the notifications ABOUT it synced perfectly well.
+        // Post-commit, parents first. Without this the ledger rows reached a
+        // peer only through the one-time pairing backfill, so a statement
+        // imported afterwards stayed on the device that read it.
         $this->syncCapture->capture($importRun, $user);
 
-        // Dispatch strictly post-commit, never inside the transaction
-        // closure (the queue driver doesn't share the SQLite transaction
-        // frame). Batched callers pass `$dispatchChain = false` and
-        // dispatch once themselves.
         if ($dispatchChain) {
-            // Stage A — promotes ICS-kind statement_summaries rows into
-            // card_statements (idempotent UNIQUE constraint), decoupled
-            // from the inserted/enriched gate so it also recovers a
-            // manually-deleted row. See ingestion-pipeline.md#confirm.
+            // Outside the inserted/enriched gate below, so a re-import whose
+            // every row is a duplicate still recovers a deleted
+            // card_statements row.
             $this->cardStatementUpserter->upsertForImportRun($importRunId, $user);
 
-            // Stage B — chain + recurring dispatch only fires when the
-            // recorder or enrichment writers actually changed ledger
-            // state; a true no-op confirm skips both dispatches since
-            // there is no new work for the workers.
             if ($result->inserted > 0 || $result->enriched > 0) {
-                // ChainResolutionRun is a Public model surface (the
-                // wizard's wire:poll reads the same table); Eloquent
-                // here so any future cast/boot/default lands
-                // automatically instead of silently NULL via raw insert.
+                // Eloquent rather than a raw insert, so a cast or boot default
+                // added later lands instead of silently writing NULL.
                 ChainResolutionRun::query()->create([
                     'user_id' => $user->id,
                     'status' => JobRunStatus::Pending->value,
                 ]);
                 $this->chainDispatcher->dispatchForUser($user->id);
 
-                // Recurring-series sweep, same post-commit gate as the
-                // chain resolver. Runs via dispatchSync so the decrypt
-                // work happens in-process with the KEK available; no
-                // longer collapses with a same-user re-detect click.
+                // dispatchSync, so the decrypt work runs in-process while the
+                // KEK is still available.
                 $this->recurringDispatcher->dispatchForUser($user->id);
             }
         }

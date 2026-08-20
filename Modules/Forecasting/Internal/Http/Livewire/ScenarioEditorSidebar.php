@@ -22,9 +22,6 @@ use Modules\Forecasting\Public\Services\ScenarioQuery;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../../.docs/features/forecasting/architecture.md
- */
 final class ScenarioEditorSidebar extends Component
 {
     use BuildsMutationForms;

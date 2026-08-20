@@ -15,9 +15,6 @@ use Symfony\Component\HttpFoundation\Response;
 // the module's typed sentinels, parses the Retry-After hint against the
 // injected clock, and caps provider error text so a verbose IdP body
 // cannot contaminate a log line or flash payload.
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final class GraphErrorMapper
 {
     private const UNRECOGNISED_ERROR_BODY = 'unrecognised error body';

@@ -11,9 +11,6 @@ use RuntimeException;
 // into a stored connection: no authorization code, missing wizard credentials,
 // or a session response carrying no session id. Each holds the reason the
 // callback controller flashes, so one catch replaces the post-state returns.
-/**
- * @link ../../../../.docs/features/open-banking/architecture.md
- */
 final class OpenBankingCallbackException extends RuntimeException
 {
     public static function noAuthorizationCode(): self

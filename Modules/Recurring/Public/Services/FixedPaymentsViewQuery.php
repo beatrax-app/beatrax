@@ -15,9 +15,6 @@ use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
 final readonly class FixedPaymentsViewQuery
 {
     use CoercesScalars;

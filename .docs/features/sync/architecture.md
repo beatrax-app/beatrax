@@ -1124,7 +1124,7 @@ sit in `RowOwnership::OWNED_REFERENCES`: `forecast_scenario_id`, and
 lives in another module — so that check is the only thing standing between a
 replayed mutation and another household member's series.
 
-### Round 2 capture: four of the ten travel incrementally
+### Round 2 capture: the write paths that needed no new identity
 
 - `pot_movements` — `PotWriter` dispatches `EntityMutated` for every movement
   it inserts, so a fund, withdrawal or transfer made after pairing reaches the
@@ -1161,18 +1161,60 @@ system-wide row for that reason and captures an owned one, from both paths that
 acknowledge: the banner's button via `AcknowledgeSystemAlert`, and the OAuth
 callback that clears the re-consent banner when the user finishes reconnecting.
 
-### Known gap: incremental capture for five detector-driven tables
+### Round 2 capture: `anomaly_alerts` gets an id both devices compute
 
-`chain_links`, `recurring_series`, `recurring_series_occurrences`,
-`drift_alerts` and `anomaly_alerts` have merge rules and travel in the backfill,
-but no write path emits an op yet, so an edit made after pairing stays on the
-device that made it. They sit in `SyncCaptureCoverageTest`'s
-`uncapturedBacklog()`.
+A detector-written table cannot be captured while its primary key is an
+autoincrement. Both devices run the same detector, so each mints its own id for
+the same logical row; the idempotency UNIQUE then drops whichever create lands
+second, and the losing device's later SETs name a pk it does not hold.
 
-All five are written by detectors, and that is a design question rather than
-missing wiring: both devices can run the same detector and each mints its own
-autoincrement id for the same logical row. The idempotency UNIQUE on each table
-then drops whichever create lands second, leaving that device's later SETs
-pointing at a pk it does not hold. Capture there waits on deciding whether
-detection runs on one device only, or whether those rows need an identity that
-is not the autoincrement.
+`anomaly_alerts` is the first of the five out of that hole. Its id is now
+`Core\Public\Support\DerivedRowId::for('anomaly_alerts', [user_id,
+transaction_id])` — the columns `anomaly_alerts_uniq` already names, folded
+through sha256 into a positive 63-bit integer. Sixty-three and not sixty-four
+because SQLite's `INTEGER` and PHP's `int` are both signed: a set top bit would
+read back as a negative id.
+
+The tuple works because neither half of it moves. An alert is opened against one
+charge and stays against it, and the transaction's own id means the same thing
+on both devices because transactions already sync with their primary key
+preserved. Two devices therefore compute the same number, the second create
+collides harmlessly on `insertOrIgnore`, and a later acknowledge lands on a row
+that exists. `AnomalyAlertConvergenceTest` replays exactly that: two independent
+creates plus one SET, ending as one row in the acknowledged state.
+
+Capture itself is two dispatch sites, because the table has only two writers.
+`AnomalyEvaluator` emits the create. `AnomalyAlertStateMachine` emits the edit,
+and it is the sole legal mutator of `state` — every acknowledge, snooze,
+dismissal and revival already routes through it, so one dispatch covers all of
+them.
+
+Keeping the id off the autoincrement had one consequence worth writing down: a
+derived id does not ascend with insertion, so `AnomalyAlertQuery` could no
+longer order or page on it. That list has always meant to read newest-first, and
+it has an index for it, so it now orders `detected_at DESC` with the id only
+breaking ties, and the cursor carries both halves. `DriftPage` keeps a separate
+cursor per tab for the same reason — drift ids are still autoincrement.
+
+### Known gap: incremental capture for four detector-driven tables
+
+`chain_links`, `recurring_series`, `recurring_series_occurrences` and
+`drift_alerts` have merge rules and travel in the backfill, but no write path
+emits an op yet, so an edit made after pairing stays on the device that made it.
+They sit in `SyncCaptureCoverageTest`'s `uncapturedBacklog()`.
+
+The blocker is no longer the mechanism — `anomaly_alerts` above shows what it
+looks like — but the identity each of these tables would derive from:
+
+- `chain_links` has no UNIQUE at all, and never has. Its two write paths carry
+  different ideas of what a link is, and the column that separates sibling rows
+  is nullable by design for hint and exceeded-tolerance rows.
+- `recurring_series` has a UNIQUE built from `cluster_key` and
+  `latest_currency`, and `SeriesRefresher` rewrites both in place — `cluster_key`
+  encodes the cadence band, so a subscription that slips from monthly to
+  quarterly moves its own key. A constraint the writer mutates identifies
+  nothing. `cluster_counterparty_key` is not a substitute either: one merchant
+  can legitimately run two series, a monthly subscription beside an annual
+  renewal.
+- `recurring_series_occurrences` and `drift_alerts` are keyed through
+  `recurring_series` and unblock only once it has a converging id of its own.

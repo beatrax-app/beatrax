@@ -9,7 +9,7 @@ use League\Csv\Writer;
 use Modules\Core\Models\User;
 
 /**
- * @link ../../../../.docs/features/tax/architecture.md
+ * @link ../../../../.docs/features/tax/tax-year-resolution.md
  */
 final class TaxCsvExporter
 {
@@ -17,15 +17,16 @@ final class TaxCsvExporter
         private readonly TaxYearQuery $query,
     ) {}
 
-    // Returns a header-only CSV when no tagged transactions exist for the
-    // given year (safe, non-error behaviour). See the @link above for the
-    // formula-injection mitigation and the column-order contract.
     public function export(User $user, int $year): string
     {
         $writer = Writer::createFromString();
 
+        // Descriptions, counterparty names and notes are free text, and a
+        // leading =/+/-/@ is a live formula in a spreadsheet.
         $writer->addFormatter(new EscapeFormula);
 
+        // Header first, so a year with no tags still exports a valid CSV
+        // rather than an empty file.
         $writer->insertOne([
             'tax_year',
             'booked_date',

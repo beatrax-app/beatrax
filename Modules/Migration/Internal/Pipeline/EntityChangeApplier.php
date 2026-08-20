@@ -19,9 +19,6 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 final class EntityChangeApplier
 {
     use CoercesScalars;
@@ -61,10 +58,8 @@ final class EntityChangeApplier
                 return false;
             }
         } else {
-            // A reconciled transaction.description must never land as
-            // plaintext in an at-rest-encrypted column — see the
-            // architecture doc's "Encryption interaction" section for the
-            // baseline-snapshot trade-off this implies.
+            // A reconciled transactions.description must never land as plaintext
+            // in an at-rest-encrypted column.
             $storedFields = $this->codec->encryptAttrs($table, $fields, $user->id, ($this->session)());
 
             $this->db->connection()->table($table)
@@ -94,8 +89,6 @@ final class EntityChangeApplier
 
         $beatraxId = $this->sourceMapWriter->resolve($user, $key);
         if ($beatraxId === null) {
-            // Defensive: a conflict only ever exists for an already-mapped
-            // entity.
             return;
         }
 
@@ -110,10 +103,8 @@ final class EntityChangeApplier
 
     public function applyTransactionAmount(User $user, int $transactionId, int $newAmountMinor): bool
     {
-        // Recomputes the stored fingerprint in the same statement as the
-        // amount_minor update, so the second-layer hashed idempotency guard
-        // never drifts from the row's actual content — see the architecture
-        // doc for why no decrypt step is needed here for an encrypted user.
+        // amount_minor is part of the fingerprint tuple, so the recomputed
+        // fingerprint must land in the same UPDATE as the amount itself.
         $connection = $this->db->connection();
 
         /** @var stdClass|null $row */
@@ -161,10 +152,8 @@ final class EntityChangeApplier
                     'fingerprint' => $fingerprint,
                 ]);
         } catch (QueryException $e) {
-            // Only a genuine fingerprint-uniqueness violation is a benign,
-            // expected collision — any OTHER QueryException must NOT be
-            // silently reclassified as "it's just a collision", or a real
-            // failure would be masked. The raw exception is always logged.
+            // Only a fingerprint-uniqueness violation is a benign collision;
+            // reclassifying any other QueryException would mask a real failure.
             $this->logger->warning('EntityChangeApplier: applyTransactionAmount() query failed.', [
                 'transaction_id' => $transactionId,
                 'user_id' => $user->id,
@@ -184,10 +173,8 @@ final class EntityChangeApplier
 
     private static function isFingerprintUniqueViolation(QueryException $e): bool
     {
-        // SQLSTATE 23000 alone is not enough — it could come from an
-        // unrelated constraint, so the message must additionally reference
-        // one of the two fingerprint columns/indexes this UPDATE could hit
-        // (see the architecture doc for the classifier's exact reasoning).
+        // SQLSTATE 23000 alone could come from an unrelated constraint, so the
+        // message must also name a column/index this UPDATE could actually hit.
         if ((string) $e->getCode() !== '23000') {
             return false;
         }

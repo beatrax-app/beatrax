@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Ledger\Models\Account;
 use Modules\Reports\Internal\Http\Livewire\PinnedReportsRow;
 use Modules\Reports\Public\Actions\SaveReport;
 use Modules\Reports\Public\Actions\TogglePin;
@@ -133,4 +135,111 @@ it('mounts the chart using the shared beatraxApplyChartTheme pattern, chart-only
 
     expect($html)->toContain('window.beatraxApplyChartTheme');
     expect($html)->not->toContain('<table');
+});
+
+/*
+ * The pinned mini-card's series is built from every bucket the time-bucket
+ * query emits, and that query emits one row per bucket whether or not the
+ * bucket holds anything. A report whose window opens before the first
+ * transaction therefore started with a run of flat zero periods.
+ */
+
+function prrAccount(User $user): Account
+{
+    /** @var Account */
+    return Account::query()->create([
+        'user_id' => $user->id,
+        'name' => 'ASN',
+        'slug' => 'asn-'.bin2hex(random_bytes(3)),
+        'kind' => 'bank',
+        'iban' => 'NL00PRR'.strtoupper(bin2hex(random_bytes(6))),
+        'default_currency' => 'EUR',
+    ]);
+}
+
+function prrExpense(DatabaseManager $db, User $user, Account $account, string $postedAt, int $settledMinor): void
+{
+    $suffix = bin2hex(random_bytes(8));
+
+    $runId = $db->connection()->table('import_runs')->insertGetId([
+        'user_id' => $user->id,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/prr-'.$suffix.'.csv',
+        'sha256' => hash('sha256', 'prr-run-'.$suffix),
+        'uploaded_at' => now(),
+        'status' => 'committed',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $db->connection()->table('transactions')->insert([
+        'user_id' => $user->id,
+        'account_id' => $account->id,
+        'import_run_id' => $runId,
+        'type' => 'expense',
+        'posted_at' => $postedAt,
+        'booked_at' => $postedAt.' 12:00:00',
+        'value_date' => $postedAt,
+        'amount_minor' => $settledMinor,
+        'currency' => 'EUR',
+        'settled_amount_minor' => $settledMinor,
+        'settled_currency' => 'EUR',
+        'counterparty_name' => 'PRR Vendor',
+        'counterparty_normalized' => 'prr-vendor',
+        'normalization_version' => 1,
+        'source_format' => 'asn-csv',
+        'source_row_index' => 1,
+        'fingerprint' => hash('sha256', 'prr-tx-'.$suffix),
+        'fingerprint_version' => 3,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function prrChartOptions(string $html): array
+{
+    expect($html)->toMatch('/data-options="/');
+    preg_match('/data-options="([^"]*)"/', $html, $matches);
+    $decoded = json_decode(html_entity_decode($matches[1], ENT_QUOTES), true);
+    expect($decoded)->toBeArray();
+
+    /** @var array<string, mixed> $decoded */
+    return $decoded;
+}
+
+it('drops the empty buckets before the first real one but keeps the empty ones between', function (): void {
+    $user = prrUser();
+    test()->actingAs($user);
+    $db = app(DatabaseManager::class);
+    $account = prrAccount($user);
+
+    // Jan and Feb stay empty (the leading run), March spends, April stays
+    // empty (a genuine zero month, in the middle of the data), May spends.
+    prrExpense($db, $user, $account, '2026-03-10', -5_000);
+    prrExpense($db, $user, $account, '2026-05-10', -3_000);
+
+    $definition = new ReportDefinition(
+        metric: 'spend',
+        dimension: 'time_bucket',
+        periodPreset: 'custom',
+        granularity: ReportGranularity::Monthly,
+        currencyMode: 'base',
+        viz: 'line',
+        customFrom: '2026-01-01',
+        customTo: '2026-05-31',
+    );
+
+    $saved = app(SaveReport::class)->save($user, $definition, 'Leading zero series');
+    app(TogglePin::class)->toggle($user, $saved->id);
+
+    $options = prrChartOptions(Livewire::test(PinnedReportsRow::class)->html());
+
+    // json_encode drops the zero fraction, so the wire values are ints.
+    // 50 is March, 0 is the empty April kept in place, 30 is May.
+    expect($options['series'][0]['data'])->toBe([50, 0, 30]);
+    expect($options['xaxis']['categories'])->toHaveCount(3);
+    expect($options['xaxis']['categories'][0])->toBe('Mar 2026');
 });

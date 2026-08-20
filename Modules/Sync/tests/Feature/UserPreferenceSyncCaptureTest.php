@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
 use Modules\Core\Models\UserPreference;
 use Modules\Core\Public\Services\UserPreferenceWriter;
@@ -53,7 +54,7 @@ function bindPreferenceSyncWriter(int $userId): string
     return bin2hex($publicKey);
 }
 
-/** @return Illuminate\Support\Collection<int, stdClass> */
+/** @return Collection<int, stdClass> */
 function preferenceOps(int $userId)
 {
     /** @var DatabaseManager $db */

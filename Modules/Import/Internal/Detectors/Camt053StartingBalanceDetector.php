@@ -51,10 +51,8 @@ final class Camt053StartingBalanceDetector implements DetectsStartingBalance
             ])
             ->get();
 
-        // Earliest opening-balance-date per account wins; multiple CAMT
-        // statements covering overlapping periods can report different
-        // opening balances on the same date, so the aggregator (not
-        // this detector) resolves those cross-source conflicts.
+        // Earliest date per account wins here; a same-date disagreement is
+        // left for the aggregator to resolve.
         $earliestDatePerAccount = [];
         $emittedKeys = [];
         $out = [];
@@ -65,9 +63,7 @@ final class Camt053StartingBalanceDetector implements DetectsStartingBalance
             if (! isset($earliestDatePerAccount[$accountId])) {
                 $earliestDatePerAccount[$accountId] = $isoDate;
             } elseif ($isoDate !== $earliestDatePerAccount[$accountId]) {
-                // Rows are sorted ASC by date — anything beyond the
-                // earliest date for this account is by definition
-                // later and not a candidate.
+                // Sorted ASC, so anything past the earliest date is later.
                 continue;
             }
 
@@ -89,8 +85,7 @@ final class Camt053StartingBalanceDetector implements DetectsStartingBalance
         return $out;
     }
 
-    // Strips the time component so the candidate carries an ISO date
-    // ready for the accounts.starting_balance_date `date` write target.
+    // accounts.starting_balance_date is a `date` column.
     private static function dateOnly(string $raw): string
     {
         $spacePos = strpos($raw, ' ');

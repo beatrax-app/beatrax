@@ -11,9 +11,6 @@ use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/community/architecture.md
- */
 final class CorpusYamlReader
 {
     public function __construct(

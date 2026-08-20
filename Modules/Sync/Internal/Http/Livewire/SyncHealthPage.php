@@ -12,9 +12,6 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 #[Layout('dev::layouts.dev-shell')]
 final class SyncHealthPage extends Component
 {

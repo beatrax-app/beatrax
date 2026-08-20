@@ -6,14 +6,11 @@ namespace Modules\Sync\Internal\Transport\Relay;
 
 use Modules\Core\Public\Contracts\Clock;
 
-// Per-source-IP fixed-window throttle for the OPEN /relay/deliver endpoint.
-// Deliver is unauthenticated by design, so a single source flooding one
-// recipient is bounded here (429) ahead of the mailbox quota. Purely
-// in-process — the daemon is long-lived, so the window map survives requests.
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
-final class RelayDeliverRateLimiter
+// Per-source-IP fixed-window throttle for EVERY relay endpoint, not just the
+// open deliver one it was named for: drain and confirm each resolve a row
+// from the database inside their own auth check, so an unauthenticated flood
+// cost a query per request. In-process; the daemon outlives the window map.
+final class RelayRateLimiter
 {
     public const MAX_PER_WINDOW = 120;
 

@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Ingestion\Internal\Adapters\Paypal;
 
-/**
- * @link ../../../../../.docs/features/ingestion/architecture.md
- */
 final class PaypalCsvColumnMap
 {
     /**
@@ -45,10 +42,8 @@ final class PaypalCsvColumnMap
             return null;
         }
 
-        // PayPal's NL export ships `"Bruto "` and `"Kosten "` with a
-        // trailing space INSIDE the quoted token, so the trailing-space
-        // variant is consulted as a fallback before giving up — both shapes
-        // resolve to the same canonical column.
+        // PayPal's NL export ships `"Bruto "` and `"Kosten "` with a trailing space
+        // INSIDE the quoted token, so both spellings resolve to one canonical column.
         $raw = $row[$header] ?? $row[$header.' '] ?? null;
 
         return $raw === null ? null : trim($raw);

@@ -17,9 +17,6 @@ use Modules\Forecasting\Public\Actions\CreateCancellationScenarioForSeries;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../../.docs/features/forecasting/architecture.md
- */
 final class ModelWhatIfDropdown extends Component
 {
     public int $seriesId = 0;

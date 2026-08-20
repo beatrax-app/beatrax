@@ -10,19 +10,20 @@ use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Modules\Auth\Public\Actions\AddUserAction;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
 
 // The partner's recovery codes are never shown to the owner -- the
 // partner sees them after their own first sign-in.
 final class AddUserPage extends Component
 {
+    use HoldsFlashMessage;
+
     public string $username = '';
 
     public string $initialPassword = '';
 
     public string $initialPasswordConfirmation = '';
-
-    public string $flashMessage = '';
 
     public function submit(CurrentUser $currentUser, AddUserAction $addUser): void
     {

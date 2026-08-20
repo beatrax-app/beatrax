@@ -10,9 +10,6 @@ use Modules\Core\Public\Support\Lang;
 // Irregular is a real outcome rather than an absence: such a series is
 // detected and kept, then excluded from drift comparison and the calendar.
 // Distinct from the digest and report vocabularies that also say weekly.
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
 enum SeriesCadence: string
 {
     case Weekly = 'weekly';

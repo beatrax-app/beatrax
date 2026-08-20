@@ -15,9 +15,6 @@ use stdClass;
 // the shared y-axis range, the day-30 net-difference maths and the
 // all-accounts aggregate rollup. Split out so the component keeps its
 // action surface under the method ceiling.
-/**
- * @link ../../../../../../.docs/features/forecasting/architecture.md
- */
 trait BuildsForecastCharts
 {
     // Panel accent colours. The scenario panel is tinted by whether the
@@ -30,8 +27,6 @@ trait BuildsForecastCharts
     private const WORSE_OFF_INK = '#BE123C';
 
     /**
-     * @link ../../../../../../.docs/features/forecasting/architecture.md
-     *
      * @param  list<array{id: int, name: string, default_currency: string, kind: string}>  $accountList
      * @return array{0: list<array{date: string, point_minor: int}>, 1: int}
      */

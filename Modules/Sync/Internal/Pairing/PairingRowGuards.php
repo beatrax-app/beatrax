@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Pairing;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class PairingRowGuards
 {
     // Re-checks the hash a row was located by, in constant time. The WHERE

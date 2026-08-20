@@ -19,9 +19,6 @@ use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 use Modules\OpenBanking\Public\Services\SecretsWriteFailed;
 use RuntimeException;
 
-/**
- * @link ../../../../../.docs/features/open-banking/architecture.md
- */
 final class OpenBankingCallbackController
 {
     // Kept in sync with the identically-named constant on

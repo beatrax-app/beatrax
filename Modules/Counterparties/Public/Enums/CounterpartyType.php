@@ -8,9 +8,6 @@ namespace Modules\Counterparties\Public\Enums;
 // string (enforced by a trigger); this enum is the one canonical spelling
 // callers map through. The `all`/`self` UI-filter aliases are not stored
 // values and live only in the index/profile view layer.
-/**
- * @link ../../../../.docs/features/counterparties/architecture.md
- */
 enum CounterpartyType: string
 {
     case Merchant = 'merchant';

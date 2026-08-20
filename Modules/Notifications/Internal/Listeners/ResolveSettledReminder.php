@@ -13,9 +13,6 @@ use Psr\Log\LoggerInterface;
 use stdClass;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final class ResolveSettledReminder
 {
     public function __construct(

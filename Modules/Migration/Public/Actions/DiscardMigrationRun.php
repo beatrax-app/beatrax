@@ -11,9 +11,6 @@ use Modules\Migration\Models\MigrationRun;
 use Modules\Migration\Public\Enums\MigrationRunStatus;
 use Modules\Migration\Public\Exceptions\MigrationAlreadyConfirmedException;
 
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 final class DiscardMigrationRun
 {
     /**

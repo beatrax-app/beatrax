@@ -18,9 +18,6 @@ use Modules\Core\Public\Support\Lang;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Throwable;
 
-/**
- * @link ../../../../../.docs/features/core/architecture.md
- */
 final class EncryptedBackupDownload extends Component
 {
     private const MIN_PASSPHRASE_LENGTH = 8;

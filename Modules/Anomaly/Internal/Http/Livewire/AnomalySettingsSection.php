@@ -18,10 +18,6 @@ use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-// Follows the SettingsPage pattern: NO constructor DI — collaborators
-// arrive as parameters on each action/render method. The first save while
-// `users.anomaly_backfilled_at` is still null dispatches the full-history
-// backfill exactly once; subsequent saves never re-dispatch.
 final class AnomalySettingsSection extends Component
 {
     use DispatchesToast;
@@ -64,8 +60,6 @@ final class AnomalySettingsSection extends Component
         $sensitivity = $this->anomalySensitivityPercent;
         $floor = $this->anomalyMinAmountMinor;
 
-        // Server-side bounds: a tampered payload is rejected before any
-        // write reaches the database.
         if ($sensitivity < 1 || $sensitivity > 100) {
             $this->saveError = Lang::get('anomaly::settings.errors.sensitivity_range');
 
@@ -79,8 +73,8 @@ final class AnomalySettingsSection extends Component
 
         $user = $currentUser->user();
 
-        // Read the first-activation guard BEFORE the write so we know
-        // whether this is the first save.
+        // Read before the write: the write itself is what makes this no longer
+        // a first activation.
         $backfilledAt = $db->connection()->table('users')
             ->where('id', $user->id)
             ->value('anomaly_backfilled_at');
@@ -90,9 +84,6 @@ final class AnomalySettingsSection extends Component
             'anomaly_min_amount_minor' => $floor,
         ]);
 
-        // First activation: kick off the full-history backfill once. The
-        // job stamps anomaly_backfilled_at on completion, so subsequent
-        // saves see a non-null guard and do not re-dispatch.
         if ($backfilledAt === null) {
             $bus->dispatch(new BackfillAnomaliesJob($user->id));
         }
@@ -100,8 +91,8 @@ final class AnomalySettingsSection extends Component
         $this->saved = true;
     }
 
-    // The originating anomaly stays dismissed; the user is just pruning
-    // their mute list.
+    // Removing the rule does NOT re-open the originating alert — that is the
+    // separate Undo path in RemoveAnomalySuppressionRule.
     public function removeSuppressionRule(
         int $ruleId,
         CurrentUser $currentUser,
@@ -111,9 +102,8 @@ final class AnomalySettingsSection extends Component
             $action->removeRule($ruleId, $currentUser->user());
             $this->toast(Lang::get('anomaly::settings.suppression.removed_toast'));
         } catch (NotFoundHttpException) {
-            // A rule that vanished between the list render and this click is
-            // already in the desired state, so a missing row is a silent
-            // no-op rather than a surfaced error.
+            // A rule that vanished between render and click is already in the
+            // desired state, so a missing row is a no-op, not an error.
         }
     }
 

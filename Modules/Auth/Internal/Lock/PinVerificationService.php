@@ -12,9 +12,6 @@ use Modules\Auth\Public\Actions\LogoutAction;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
 
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 final class PinVerificationService
 {
     private const BACKOFF_THRESHOLD = 5;

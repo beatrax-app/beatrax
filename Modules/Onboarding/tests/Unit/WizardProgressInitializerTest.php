@@ -10,17 +10,8 @@ use Modules\Onboarding\Internal\Services\WizardStepRegistry;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for WizardProgressInitializer: the seeder that lands one
- * wizard_progress row per step the WizardStepRegistry enumerates for a
- * freshly-installed user, and the idempotency guard that lets re-fires
- * from a UserInstalled listener never duplicate or overwrite already-
- * progressed steps. Step set is currently 9 entries
- * (welcome / connect-bank / connect-paypal / connect-card /
- * connect-email / first-import / budgets / tax-country / done) — the
- * assertions read the registry rather than hard-coding the expected
- * count, so future connector additions don't trip this test.
- */
+// Assertions read the registry rather than hard-coding a step count, so
+// adding a connector does not trip this file.
 
 beforeEach(function (): void {
     $this->user = User::query()->create([
@@ -76,8 +67,7 @@ it('does not overwrite a step that has already progressed past pending', functio
         ->where('step_key', 'welcome')
         ->update(['status' => 'done']);
 
-    // A re-fire (e.g. from a duplicated UserInstalled dispatch) must not
-    // demote the welcome row back to pending.
+    // A duplicated UserInstalled dispatch must not demote welcome to pending.
     $initializer->initialize($this->user->id);
 
     $status = DB::table('wizard_progress')
@@ -93,8 +83,7 @@ it('seeds a registry step added after a user finished the wizard as skipped, not
     $initializer = $this->app->make(WizardProgressInitializer::class);
     $initializer->initialize($this->user->id);
 
-    // Simulate a user who finished onboarding before the step existed:
-    // every row done, and the new step's row removed.
+    // A user who finished onboarding before the step existed.
     DB::table('wizard_progress')->where('user_id', $this->user->id)->update(['status' => 'done']);
     DB::table('wizard_progress')->where('user_id', $this->user->id)->where('step_key', 'budgets')->delete();
 
@@ -109,7 +98,7 @@ it('seeds a newly-added registry step as pending while the user is still mid-wiz
     $initializer = $this->app->make(WizardProgressInitializer::class);
     $initializer->initialize($this->user->id);
 
-    // Mid-wizard: rows still pending, and the new step's row removed.
+    // The same, but mid-wizard.
     DB::table('wizard_progress')->where('user_id', $this->user->id)->where('step_key', 'budgets')->delete();
 
     $initializer->initialize($this->user->id);

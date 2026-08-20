@@ -12,9 +12,6 @@ use Throwable;
 // payloads through: Gmail history unpacking, Graph message-meta field
 // extraction, sender-pattern matching and date normalisation. Owns the
 // project Clock so every unparseable-date fallback honours frozen time.
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final class ScanMessageMapper
 {
     public function __construct(private readonly Clock $clock) {}

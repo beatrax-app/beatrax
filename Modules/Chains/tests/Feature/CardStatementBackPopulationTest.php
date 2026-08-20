@@ -11,22 +11,6 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\StatementSummary;
 
-/*
- * Feature-level coverage for the one-shot back-population migration.
- *
- * The migration walks `statement_summaries` joined to `accounts`,
- * filters on `accounts.kind = 'ics_card'`, and inserts a
- * `card_statements` row per surviving row via `insertOrIgnore`.
- *
- * The three test cases lock:
- *
- *   - sign convention (total_amount_minor preserves the negative
- *     closing-balance value; open_balance_minor is the absolute)
- *   - idempotency on re-run (insertOrIgnore against the UNIQUE
- *     (user_id, account_id, period_start, period_end))
- *   - ICS-kind filter (ASN statement_summaries do NOT back-populate)
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -67,15 +51,9 @@ beforeEach(function (): void {
     ]);
 });
 
-/**
- * Invokes the back-population migration's `up()` method directly.
- *
- * Calling `Artisan::call('migrate')` is a no-op once the migration is
- * already recorded in `migrations` — the auto-migration on test boot
- * runs it once against an empty `statement_summaries`, so subsequent
- * Pest cases need to re-run the `up()` body directly to exercise the
- * idempotency contract and the test's seeded fixture rows.
- */
+// migrate is a no-op once the migration is recorded, and the auto-migration
+// on test boot already ran it against an empty statement_summaries — so the
+// cases below re-run up() directly against their own fixtures.
 function runBackPopulation(): void
 {
     $migration = require base_path('Modules/Chains/Database/Migrations/2026_05_16_010004_backpopulate_card_statements_from_statement_summaries.php');
@@ -171,6 +149,5 @@ it('does not back-populate statement_summaries whose account is not ICS-kind', f
 
     runBackPopulation();
 
-    // No ICS statement_summary exists → no card_statements row should land.
     expect(CardStatement::query()->where('user_id', $this->user->id)->count())->toBe(0);
 });

@@ -17,9 +17,6 @@ use Modules\Forecasting\Public\Actions\SetAccountOpeningBalance;
 use Modules\Forecasting\Public\Exceptions\OpeningBalanceDivergenceWarning;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../../.docs/features/forecasting/architecture.md
- */
 final class OpeningBalanceEditor extends Component
 {
     use DispatchesToast;

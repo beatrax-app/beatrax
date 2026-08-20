@@ -31,15 +31,6 @@ use Modules\Onboarding\Models\WizardProgress;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Models\RecurringSeriesTransition;
 
-/**
- * End-to-end exercise of the `php artisan demo:seed` pipeline as
- * extended by Plan 17-07c. The original 17-07b assertion suite
- * (idempotency + baseline shape + clean-DB run + coexistence with
- * production reference seeders) is preserved; the new assertions
- * verify that every entity table the extended orchestrator writes to
- * carries data, that every enum/type variant appears, and that the
- * `--reset` cycle does not orphan rows across the additional tables.
- */
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -47,10 +38,6 @@ beforeEach(function (): void {
 });
 
 /**
- * Snapshot the row counts that define the extended demo dataset's
- * shape. The before/after equality check in the idempotency test
- * compares the whole picture in one expression.
- *
  * @return array<string, int>
  */
 function demoSeedSnapshot(): array
@@ -152,11 +139,9 @@ function demoSeedSnapshot(): array
     ];
 }
 
+// Re-queried on every call: a single test body wipes and re-seeds the users
+// table between two uses of this helper.
 /**
- * The demo users' id list. Returned fresh each call because the
- * users table may have been wiped + re-seeded between consecutive
- * uses of the helper in a single test body.
- *
  * @return list<int>
  */
 function demoSeedUserIds(): array
@@ -185,8 +170,7 @@ it('produces the documented dataset shape after a single seed run', function ():
 
     expect($snap['users'])->toBe(2);
     expect($snap['accounts'])->toBe(5);
-    // Transaction row count after 17-07c extensions: baseline 158 +
-    // 6 added type-coverage rows + 2 cross-account pair legs = 166.
+    // 158 baseline rows + 6 type-coverage rows + 2 cross-account pair legs.
     expect($snap['transactions'])
         ->toBeGreaterThanOrEqual(160)
         ->toBeLessThanOrEqual(180);
@@ -196,8 +180,6 @@ it('produces the documented dataset shape after a single seed run', function ():
     expect($snap['forecast_scenario_mutations'])->toBeGreaterThanOrEqual(1);
     expect($snap['forecast_shortfall_windows'])->toBeGreaterThanOrEqual(1);
 
-    // Counterparty coverage: every legal type carries ≥2 rows after
-    // the EXTRA_COUNTERPARTIES seed step.
     $countByType = Counterparty::query()
         ->withoutGlobalScopes()
         ->whereIn('user_id', demoSeedUserIds())
@@ -211,8 +193,6 @@ it('produces the documented dataset shape after a single seed run', function ():
             ->toBeGreaterThanOrEqual(2, "Counterparty type {$type} should carry ≥2 rows");
     }
 
-    // Transaction TYPES coverage — every value in Transaction::TYPES
-    // must carry at least two rows on a freshly-seeded dataset.
     $countByTxType = Transaction::query()
         ->where('source_format', 'demo')
         ->selectRaw('type, COUNT(*) as c')
@@ -224,8 +204,6 @@ it('produces the documented dataset shape after a single seed run', function ():
             ->toBeGreaterThanOrEqual(2, "Transaction TYPES value {$type} should carry ≥2 rows");
     }
 
-    // PaymentType coverage — every enum value must carry at least two
-    // rows on a freshly-seeded dataset.
     $countByPaymentType = Transaction::query()
         ->where('source_format', 'demo')
         ->selectRaw('payment_type, COUNT(*) as c')
@@ -237,8 +215,7 @@ it('produces the documented dataset shape after a single seed run', function ():
             ->toBeGreaterThanOrEqual(2, "PaymentType value {$value} should carry ≥2 rows");
     }
 
-    // Chain kinds — every value the trigger pair allows must be
-    // present after the hint-shape extension lands.
+    // The full set of kinds the chain-link trigger pair admits.
     $chainKinds = ChainLink::query()
         ->whereIn('user_id', demoSeedUserIds())
         ->pluck('kind')
@@ -249,9 +226,6 @@ it('produces the documented dataset shape after a single seed run', function ():
         expect($chainKinds)->toContain($kind);
     }
 
-    // RecurringSeries states — approved (4 series), snoozed (1), and
-    // rejected (1) must all be represented after the lifecycle
-    // extension lands.
     $countByRecState = RecurringSeries::query()
         ->whereIn('user_id', demoSeedUserIds())
         ->selectRaw('state, COUNT(*) as c')
@@ -263,8 +237,6 @@ it('produces the documented dataset shape after a single seed run', function ():
             ->toBeGreaterThanOrEqual(1, "RecurringSeries state {$state} should carry ≥1 row");
     }
 
-    // DriftAlert states — open, acknowledged, and dismissed_cancelled
-    // must all be represented.
     $countByDriftState = DriftAlert::query()
         ->whereIn('user_id', demoSeedUserIds())
         ->selectRaw('state, COUNT(*) as c')
@@ -276,7 +248,6 @@ it('produces the documented dataset shape after a single seed run', function ():
             ->toBeGreaterThanOrEqual(1, "DriftAlert state {$state} should carry ≥1 row");
     }
 
-    // SystemAlert kinds — all four production kinds must be present.
     $systemAlertKinds = SystemAlert::query()
         ->whereIn('user_id', demoSeedUserIds())
         ->pluck('kind')
@@ -287,9 +258,7 @@ it('produces the documented dataset shape after a single seed run', function ():
         expect($systemAlertKinds)->toContain($kind);
     }
 
-    // WizardProgress statuses — every legal value (pending,
-    // in_progress, done, skipped) must be represented for the primary
-    // demo user so the ResumeStepResolver branch coverage holds.
+    // Every status must appear or the ResumeStepResolver branches go uncovered.
     $countByWizardStatus = WizardProgress::query()
         ->whereIn('user_id', demoSeedUserIds())
         ->selectRaw('status, COUNT(*) as c')
@@ -301,9 +270,6 @@ it('produces the documented dataset shape after a single seed run', function ():
             ->toBeGreaterThanOrEqual(1, "WizardProgress status {$status} should carry ≥1 row");
     }
 
-    // EmailScan presence — Gmail + Microsoft inboxes both present;
-    // ≥2 known_senders, ≥3 discovered_senders, ≥1 oauth_secret per
-    // provider.
     $inboxProviders = Inbox::query()
         ->whereIn('user_id', demoSeedUserIds())
         ->pluck('provider')
@@ -317,7 +283,6 @@ it('produces the documented dataset shape after a single seed run', function ():
     expect($snap['oauth_secrets'])->toBe(2);
     expect($snap['inbox_messages'])->toBeGreaterThanOrEqual(3);
 
-    // Recovery codes — 3 unused + 2 used = 5 total.
     expect($snap['user_recovery_codes'])->toBe(5);
     $unusedRecoveryCount = UserRecoveryCode::query()
         ->whereIn('user_id', demoSeedUserIds())
@@ -330,27 +295,21 @@ it('produces the documented dataset shape after a single seed run', function ():
         ->count();
     expect($usedRecoveryCount)->toBe(2);
 
-    // Community mappings + merchant aliases + memories.
     expect($snap['community_merchant_mappings'])->toBeGreaterThanOrEqual(3);
     expect($snap['merchant_aliases'])->toBeGreaterThanOrEqual(3);
     expect($snap['merchant_memories'])->toBeGreaterThanOrEqual(5);
 
-    // Receipts: ≥2 file_imports + ≥1 pending_enrichment_conflict.
     expect($snap['file_imports'])->toBeGreaterThanOrEqual(2);
     expect($snap['pending_enrichment_conflicts'])->toBeGreaterThanOrEqual(1);
 
-    // Transfer pairs: at least the original 3 monthly ASN→PayPal
-    // monthly top-ups (6 paired legs) + the new explicit one-off pair
-    // (2 paired legs) = ≥8 total. Lenient lower bound so a wall-clock
-    // shift inside the rolling 90-day window doesn't break the test.
+    // The seed lays down 8 paired legs; the bound is 4 so a wall-clock shift
+    // inside the rolling 90-day window cannot break the test.
     expect($snap['paired_transactions'])->toBeGreaterThanOrEqual(4);
 
-    // UserPreferences: one row per demo user.
     expect($snap['user_preferences'])->toBe(2);
 
-    // Envelope budgeting (Phase 13.2): both demo users are activated (genesis
-    // anchor stamped) and carry a current-period assignment slate, so /budgets
-    // renders a populated grid instead of the D-12b empty result.
+    // Both demo users need the activation anchor and a current-period slate,
+    // or /budgets renders an empty grid.
     $activatedDemoUsers = User::query()
         ->where('username', 'like', 'demo-%@beatrax.local')
         ->whereNotNull('envelope_activated_at')
@@ -358,8 +317,6 @@ it('produces the documented dataset shape after a single seed run', function ():
     expect($activatedDemoUsers)->toBe(2);
     expect($snap['envelope_assignments'])->toBeGreaterThanOrEqual(11);
 
-    // ImportRun lifecycle — every demo transaction must belong to an
-    // ImportRun stamped `source_format = 'demo'`.
     $demoImportRuns = ImportRun::query()
         ->where('source_format', 'demo')
         ->whereIn('user_id', demoSeedUserIds())
@@ -403,17 +360,9 @@ it('cascade-deletes every extended demo row on `--reset` so no orphans remain', 
 
     $this->artisan('demo:seed', ['--reset' => true])->assertSuccessful();
 
-    // After the second reset every extended table must hold the same
-    // counts as the first reset — there should be no orphan rows left
-    // behind from the first wipe cycle. The idempotency test above
-    // already asserts before/after equality; this assertion further
-    // verifies that orphan-prone tables (those with FK chains via
-    // recurring_series or forecast_scenarios) cascaded cleanly.
     $userIds = demoSeedUserIds();
     expect($userIds)->toHaveCount(2);
 
-    // After --reset, no drift_alert_transitions row should exist that
-    // points at a missing drift_alerts row (cascade integrity).
     $orphanTransitions = $this->db->connection()
         ->table('drift_alert_transitions')
         ->leftJoin('drift_alerts', 'drift_alert_transitions.drift_alert_id', '=', 'drift_alerts.id')
@@ -421,7 +370,6 @@ it('cascade-deletes every extended demo row on `--reset` so no orphans remain', 
         ->count();
     expect($orphanTransitions)->toBe(0);
 
-    // Same check for recurring_series_transitions.
     $orphanRecurringTransitions = $this->db->connection()
         ->table('recurring_series_transitions')
         ->leftJoin('recurring_series', 'recurring_series_transitions.recurring_series_id', '=', 'recurring_series.id')
@@ -429,8 +377,6 @@ it('cascade-deletes every extended demo row on `--reset` so no orphans remain', 
         ->count();
     expect($orphanRecurringTransitions)->toBe(0);
 
-    // And for forecast_scenario_mutations / forecast_shortfall_windows
-    // that cascade from forecast_scenarios.
     $orphanMutations = $this->db->connection()
         ->table('forecast_scenario_mutations')
         ->leftJoin('forecast_scenarios', 'forecast_scenario_mutations.forecast_scenario_id', '=', 'forecast_scenarios.id')

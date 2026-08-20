@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Reports\Public\Dto;
 
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final readonly class SavedReportIndexRow
 {
     public function __construct(

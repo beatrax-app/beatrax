@@ -16,9 +16,6 @@ use stdClass;
 // fee and a manual adjustment appear in no report at all — on the demo month,
 // 9,00 of movement missing from a 2.468,11 total with nothing on the page
 // saying so. This sums what the metric leaves out so the page can say it.
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final class OtherMovementQuery
 {
     use CoercesScalars;

@@ -20,28 +20,23 @@ final class PatternGeneralizer
         $lastTokenIndex = count($tokens) - 1;
 
         foreach ($tokens as $i => $token) {
-            // PIN-tail: `*NNNN` is only meaningful as the final token —
-            // PIN-payment statements terminate with the card's last 4 digits.
+            // A PIN statement ends with the card's last 4 digits, so `*NNNN`
+            // only means that as the final token.
             if ($i === $lastTokenIndex && preg_match('/^\*\d{4}$/', $token) === 1) {
                 continue;
             }
-            // Terminal IDs: bare 4..7 digit run, optionally `T`/`#`-
-            // prefixed — ASN PIN rows append a terminal id to the merchant code.
+            // ASN PIN rows append a terminal id to the merchant code.
             if (preg_match('/^[T#]?\d{4,7}$/', $token) === 1) {
                 continue;
             }
-            // SEPA / CAMT noise prefixes (EREF/KENMERK/BKTXCD/MARF/REF) —
-            // provenance hints that never identify the merchant.
+            // SEPA and CAMT provenance hints; never a merchant.
             if (preg_match('/^(EREF|KENMERK|BKTXCD|MARF|REF):/i', $token) === 1) {
                 continue;
             }
-            // Amount tokens (`12.50`, `12,50`, `-12,99`) — statement
-            // narratives sometimes inline the transaction amount as a token.
+            // Statement narratives sometimes inline the amount as a token.
             if (preg_match('/^-?\d+[.,]\d{2}$/', $token) === 1) {
                 continue;
             }
-            // Date fragments: `12-05`, `12-05-2026`, `2026-05-12`,
-            // including `/`- and `.`-separated variants.
             if (preg_match('/^\d{2,4}[-.\/]\d{1,2}([-.\/]\d{1,4})?$/', $token) === 1) {
                 continue;
             }

@@ -10,25 +10,6 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Actions\AcknowledgeSystemAlert;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/*
- * SystemAlertsBanner is the persistent dashboard banner that surfaces
- * un-acknowledged operational alerts. The component reads through
- * SystemAlertQuery::active($currentUser) and dismisses rows via the
- * AcknowledgeSystemAlert action. Tests cover:
- *  (a) calm state — no active rows → the wrapper renders but no
- *      dismiss button is visible.
- *  (b) one critical (backup_corrupt) alert → renders the locked
- *      "failed integrity check" template + the aria-label.
- *  (c) clicking "acknowledge" → AcknowledgeSystemAlert flips the row
- *      and the next render drops it from the banner.
- *  (d) cross-user isolation — userA's banner shows only userA's rows
- *      plus system-wide (user_id NULL) rows.
- *  (e) cross-user acknowledge attempt → NotFoundHttpException raised by
- *      AcknowledgeSystemAlert (Livewire-side guard).
- *  (f) severity ordering — critical row's DOM offset is strictly before
- *      the warning row.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -48,11 +29,8 @@ beforeEach(function (): void {
     ]);
 });
 
+// Raw query builder, so the scenario controls created_at and metadata directly.
 /**
- * Seeds one system_alerts row through the raw query builder so the
- * scenario can control every column (created_at, metadata, severity)
- * without going through Eloquent timestamps. Returns the inserted id.
- *
  * @param  array<string, mixed>  $overrides
  */
 function sabInsert(DatabaseManager $db, array $overrides = []): int
@@ -92,11 +70,10 @@ it('renders the critical backup_corrupt template with its aria-label', function 
     Livewire::actingAs($this->userA)->test(SystemAlertsBanner::class)
         ->assertSee('failed integrity check')
         ->assertSeeHtml('data-testid="resolve-alert-'.$id.'"')
-        // This test is about the announced name, so it asserts the name
-        // itself. It leads with the button's visible text so speech input
-        // can act on what the user can read.
+        // Leads with the button's visible text so speech input can act on what
+        // the user can read.
         ->assertSeeHtml('aria-label="Mark as resolved — system alert #'.$id.'"')
-        ->assertSeeHtml('border-rose-500');
+        ->assertSeeHtml('border-rose-200');
 });
 
 it('removes a row after acknowledging it', function (): void {
@@ -140,12 +117,9 @@ it('does not surface another user\'s alerts (cross-user isolation), but shows sy
 });
 
 it('refuses cross-user acknowledge attempts via the action (NotFoundHttpException bubbles)', function (): void {
-    // The cross-user guard lives at the action layer; a tampered
-    // Livewire payload (acting as userA but passing userB's alert id)
-    // resolves to the action which raises NotFoundHttpException. The
-    // test invokes the action directly — Livewire catches Symfony HTTP
-    // exceptions during synthetic ->call() invocations, so the
-    // architectural guarantee belongs on the action surface.
+    // Livewire swallows Symfony HTTP exceptions during a synthetic ->call(),
+    // so the action is invoked directly — the cross-user guard lives at the
+    // action layer anyway.
     $bId = sabInsert($this->db, [
         'user_id' => $this->userB->id,
         'kind' => 'backup_corrupt',
@@ -195,12 +169,10 @@ it('renders the critical row strictly before the warning row in DOM order', func
     expect($critPos)->toBeLessThan((int) $warnPos);
 });
 
-/*
- * The action buttons never shrink, so a row that is a flex row at every
- * width left the message about 130px on a phone and broke one sentence
- * over six lines — on every page, since the banner sits above all of them.
- * Each severity row therefore stacks below `sm`.
- */
+// The action buttons never shrink, so a row that stays flex at every width left
+// the message about 130px wide on a phone and broke one sentence over six lines
+// — on every page, since the banner sits above all of them. Hence the stack
+// below `sm`.
 it('stacks the message above the actions on a phone, in every severity', function (): void {
     foreach ([['backup_corrupt', 'critical'], ['wal_mode_missing', 'warning'], ['update_available', 'info']] as [$kind, $severity]) {
         sabInsert($this->db, [

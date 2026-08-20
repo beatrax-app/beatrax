@@ -22,24 +22,20 @@ use Modules\Onboarding\Public\Enums\WizardStepStatus;
 use Modules\Onboarding\Public\Services\WizardProgressQuery;
 use Psr\Log\LoggerInterface;
 
-/**
- * @link ../../../../../.docs/features/onboarding/architecture.md
- */
 #[Layout('onboarding::layouts.app-wizard')]
 final class SetupWizard extends Component
 {
     public string $currentStepKey = 'welcome';
 
-    // Rebuilt on every mount so client-side property tampering is
-    // overwritten on the next page render.
+    // Rebuilt on every mount, so tampering with it client-side survives
+    // only until the next page render.
     /** @var array<string, array{status: string, completed_at: ?string}> */
     public array $progress = [];
 
     public bool $isResuming = false;
 
-    // True once every step is done/skipped; the wizard renders the done
-    // step rather than redirecting, so a later hit on the URL still
-    // shows a coherent page instead of restarting.
+    // Renders the done step rather than redirecting, so a later hit on the
+    // URL shows a coherent page instead of restarting the wizard.
     public bool $allComplete = false;
 
     public function mount(
@@ -54,14 +50,13 @@ final class SetupWizard extends Component
     ): mixed {
         $user = $currentUser->user();
 
-        // Idempotent safety net if the UserInstalled listener missed
-        // (e.g. a manual URL hit before the seeder ran).
+        // Safety net for a manual URL hit that raced the UserInstalled
+        // listener; initialize() is idempotent.
         $initializer->initialize($user->id);
 
         if ($request->boolean('force')) {
-            // The log line surfaces tampered/bookmarked URLs when no row
-            // had actually progressed yet; the reset itself is a no-op
-            // in that case since every row is already pending.
+            // The log line surfaces a bookmarked ?force=1 URL: with nothing
+            // yet in progress the reset itself is a no-op.
             $hadInProgress = $db->connection()
                 ->table('wizard_progress')
                 ->where('user_id', $user->id)
@@ -88,9 +83,8 @@ final class SetupWizard extends Component
         $resumeKey = $resolver->resolve($user->id);
 
         if ($resumeKey === '') {
-            // Livewire honours $this->redirect(...) from mount(); a plain
-            // RedirectResponse return is ignored and the component would
-            // render a stale "welcome" view instead.
+            // Livewire ignores a RedirectResponse returned from mount() and
+            // renders the stale "welcome" view instead.
             return $this->redirect('/');
         }
 
@@ -134,8 +128,8 @@ final class SetupWizard extends Component
         $this->advance($db, $currentUser, $registry, $query, $clock, WizardStepStatus::Done->value);
     }
 
-    // The skip button is hidden in the view for non-skippable steps, but
-    // this server-side guard is the load-bearing check.
+    // The view hides skip on non-skippable steps; this guard is the
+    // load-bearing one.
     #[On('wizard.step.skipped')]
     public function skip(
         DatabaseManager $db,
@@ -166,16 +160,14 @@ final class SetupWizard extends Component
                 'updated_at' => $clock->now()->toDateTimeString(),
             ]);
 
-        // $this->redirect(...) so the wire:click protocol's response
-        // actually triggers a navigation; a plain RedirectResponse return
-        // is dropped by Livewire's action dispatcher.
+        // Livewire's action dispatcher drops a returned RedirectResponse;
+        // only $this->redirect(...) reaches the wire:click response.
         return $this->redirect('/');
     }
 
-    // Wired to wire:click.prevent so Electron does not navigate the
-    // wizard window away from /setup-wizard; the URL still passes through
-    // OpenExternalUrlAction's https + host allow-list before it reaches
-    // NativePHP's shell contract.
+    // Wired to wire:click.prevent so Electron does not navigate the wizard
+    // window away from /setup-wizard. The URL still passes OpenExternalUrlAction's
+    // https + host allow-list before reaching NativePHP's shell contract.
     public function openHelp(
         OpenExternalUrlAction $opener,
         ConfigRepository $config,
@@ -192,8 +184,6 @@ final class SetupWizard extends Component
         return $views->make('onboarding::livewire.setup-wizard');
     }
 
-    // Shared helper for next/skip. When the registry is exhausted, leaves
-    // currentStepKey on the terminal done step and flips allComplete true.
     private function advance(
         DatabaseManager $db,
         CurrentUser $currentUser,
@@ -225,9 +215,6 @@ final class SetupWizard extends Component
             $this->allComplete = true;
         }
 
-        // The banner only shows on the first mount of a resumed
-        // session; once the user advances the wizard, the banner
-        // drops away.
         $this->isResuming = false;
         $this->progress = $query->list($userId);
     }

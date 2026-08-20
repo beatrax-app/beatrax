@@ -25,9 +25,6 @@ use Throwable;
 // while a partner remains would leave a device nobody can administer and a
 // signup route that stays closed. The oldest surviving account is promoted in
 // the same transaction rather than leaving that dead end.
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 final class DeleteAccountAction
 {
     public function __construct(

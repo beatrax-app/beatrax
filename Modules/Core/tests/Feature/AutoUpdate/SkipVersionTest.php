@@ -9,15 +9,10 @@ use Modules\Core\Internal\Http\Livewire\SystemAlertsBanner;
 use Modules\Core\Models\User;
 use Modules\Core\Models\UserPreference;
 
-/*
- * The "Skip this version" action persists the dismissed version on
- * the user_preferences.skipped_update_versions JSON column AND
- * acknowledges the alert in one wire round-trip. The
- * SystemAlertsBanner's render path filters update.available alerts
- * whose latestVersion is already in the skip list — but the filter
- * MUST NOT suppress update.stale or update.critical rows (security:
- * those bypass the skip list intentionally).
- */
+// Skipping a version filters later update.available rows for that version out
+// of the banner. It must never filter update.stale or update.critical: those
+// exist precisely to reach a user who has been dismissing the ordinary notice,
+// so they bypass the skip list on purpose.
 
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
@@ -111,8 +106,8 @@ it('suppresses a subsequent update.available row for an already-skipped version'
 
     Livewire::actingAs($this->user)->test(SystemAlertsBanner::class)->call('skipVersion', $firstId);
 
-    // Insert another update.available row for the same latestVersion;
-    // even though it is un-acknowledged, the banner must not render it.
+    // Un-acknowledged, so the banner would render this one on its own; the skip
+    // list is what has to hold it back.
     $secondId = skipInsertAlert($this->db, [
         'user_id' => $this->user->id,
         'kind' => 'update.available',

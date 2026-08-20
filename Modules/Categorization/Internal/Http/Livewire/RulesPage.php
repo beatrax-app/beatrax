@@ -19,6 +19,7 @@ use Modules\Categorization\Public\Enums\ConditionOperator;
 use Modules\Categorization\Public\Enums\ConditionValueType;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -29,9 +30,9 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 // create/edit form lives in RuleFormModal, dispatched via `rule-form:open`.
 final class RulesPage extends Component
 {
-    public ?int $confirmingDeleteId = null;
+    use HoldsFlashMessage;
 
-    public string $flashMessage = '';
+    public ?int $confirmingDeleteId = null;
 
     // True from the moment triggerReapply dispatches the job until
     // render() observes a status='done' cache payload; drives the

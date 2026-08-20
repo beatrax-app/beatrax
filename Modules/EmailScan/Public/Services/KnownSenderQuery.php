@@ -11,10 +11,6 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\EmailScan\Public\Dto\KnownSenderDto;
 use stdClass;
 
-// Public read API over known_senders: returns the user's curated
-// sender list, both system-shipped seeds (user_id IS NULL) and
-// per-user additions, with system rows surfaced first so the calling
-// matcher registry sees seeded patterns before any user overrides.
 final class KnownSenderQuery
 {
     use CoercesScalars;
@@ -33,8 +29,6 @@ final class KnownSenderQuery
                 $q->where('user_id', $user->id)
                     ->orWhereNull('user_id');
             })
-            // System rows first ('system' < 'user' lexicographically;
-            // sort DESC to put 'user' last and 'system' first).
             ->orderBy('source', 'desc')
             ->orderBy('label', 'asc')
             ->select(['id', 'user_id', 'email_pattern', 'label', 'source'])

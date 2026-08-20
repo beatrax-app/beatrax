@@ -265,6 +265,28 @@ it('unsplitDefaultsToTheLargerMagnitudeLegAndCollapsesOnConfirm', function (): v
     expect($tx->category_id)->toBe($this->groceries->id);
 })->group('phase-13.1');
 
+it('namesTheUnsplitSurvivorRadioGroupAndFormatsItsAmountsThroughMoney', function (): void {
+    $tx = tdstExpense($this->user->id, $this->account->id, $this->run->id, $this->groceries->id);
+    app(SaveTransactionSplit::class)->save($this->user, $tx->id, [
+        ['id' => null, 'category_id' => $this->groceries->id, 'settled_amount_minor' => -6000, 'note' => null],
+        ['id' => null, 'category_id' => $this->household->id, 'settled_amount_minor' => -2000, 'note' => null],
+    ]);
+
+    $html = Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
+        ->call('unsplit')
+        ->html();
+
+    // Without the legend a screen reader reads each radio with no question.
+    expect($html)->toContain('<legend class="sr-only">Category to keep</legend>');
+    expect(preg_match('/<fieldset>.*name="unsplit-survivor".*<\/fieldset>/s', $html))->toBe(1);
+
+    // Money::format(), not a literal € glued to the raw input string — hence
+    // the non-breaking space ICU puts after the symbol.
+    expect($html)->toContain("€\u{00A0}60,00")
+        ->and($html)->toContain("€\u{00A0}20,00")
+        ->and($html)->not->toContain('€60,00');
+})->group('phase-13.1');
+
 it('unsplitSurvivorCanBeFlippedBeforeConfirming', function (): void {
     $tx = tdstExpense($this->user->id, $this->account->id, $this->run->id, $this->groceries->id);
     app(SaveTransactionSplit::class)->save($this->user, $tx->id, [

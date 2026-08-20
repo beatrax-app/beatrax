@@ -7,10 +7,8 @@ namespace Modules\FX\Public\Actions;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Modules\FX\Internal\Jobs\FetchFxRatesJob;
 
-// Cross-module callers (e.g. Core's SettingsPage) use this action
-// instead of importing FetchFxRatesJob from Internal directly - the
-// boundary-compliant seam through which any module requests an
-// on-demand or scheduled rate refresh for a given user.
+// The boundary-compliant seam for a rate refresh: cross-module callers must not
+// reach into Internal\Jobs\FetchFxRatesJob directly.
 final class DispatchFxRatesRefresh
 {
     public function __construct(private readonly Dispatcher $bus) {}

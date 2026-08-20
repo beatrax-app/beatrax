@@ -7,9 +7,6 @@ namespace Modules\Calendar\Public\Dto;
 use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/calendar/architecture.md
- */
 final class CalendarDayDto extends Data
 {
     /**

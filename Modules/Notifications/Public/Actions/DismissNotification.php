@@ -11,9 +11,6 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Public\Events\NotificationMutated;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final class DismissNotification
 {
     public function __construct(

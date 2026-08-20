@@ -14,9 +14,6 @@ use Psr\Log\LoggerInterface;
 use stdClass;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/community/architecture.md
- */
 final class SeedCommunityCorpus
 {
     public function __construct(

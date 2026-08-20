@@ -8,9 +8,6 @@ use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 final class MigrationBudgetAssignmentDto extends Data
 {
     public function __construct(

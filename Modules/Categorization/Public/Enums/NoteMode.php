@@ -6,9 +6,6 @@ namespace Modules\Categorization\Public\Enums;
 
 // How a note action writes: Set replaces the transaction note, Append adds
 // to whatever is already there.
-/**
- * @link ../../../../.docs/features/categorization/architecture.md
- */
 enum NoteMode: string
 {
     case Set = 'set';

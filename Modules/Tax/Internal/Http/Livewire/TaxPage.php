@@ -18,9 +18,6 @@ use Modules\Tax\Public\Services\TaxPdfRenderer;
 use Modules\Tax\Public\Services\TaxYearQuery;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-/**
- * @link ../../../../../.docs/features/tax/architecture.md
- */
 final class TaxPage extends Component
 {
     // 0 means "use seasonal default," resolved in mount(). #[Url] so deep

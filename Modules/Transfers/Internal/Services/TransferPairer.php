@@ -17,9 +17,6 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/transfers/architecture.md
- */
 final class TransferPairer implements PairsTransferLegs
 {
     use CoercesScalars;
@@ -194,9 +191,6 @@ final class TransferPairer implements PairsTransferLegs
         return $paired;
     }
 
-    /**
-     * @link ../../../../.docs/features/transfers/architecture.md
-     */
     private function findPartnerByReverseLookup(
         Transaction $tx,
         int $userId,

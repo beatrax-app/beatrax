@@ -14,9 +14,6 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 // value object so the replayer constructor stays within its parameter budget.
 // Every field is nullable; a null field (or a null context) means "resolve
 // from the container", preserving the fail-closed-outside-a-booted-app path.
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class OpLogReplayCrypto
 {
     public function __construct(

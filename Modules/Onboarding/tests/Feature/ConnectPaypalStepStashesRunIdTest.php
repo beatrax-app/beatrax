@@ -11,26 +11,8 @@ use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 use Modules\Onboarding\Models\WizardProgress;
 use Tests\Helpers\UploadIsolation;
 
-/*
- * Verifies the single-file PayPal Activity CSV submit path stashes the
- * resulting ImportRun id into `wizard_progress.data['paypal_import_run_id']`
- * as a single int (mirroring the bank-step pattern, not the card-step
- * array pattern), and that the synthetic PayPal `accounts` row is
- * auto-created on first preview via the shared
- * EnsurePaypalAccountAction.
- *
- * Two behaviours under test:
- *
- *  1. A successful single-file submit dispatches `wizard.step.completed`
- *     and stashes an int paypal_import_run_id; the wizard's first-import
- *     step later reads this key to render the PayPal preview section
- *     between the bank and card sections.
- *
- *  2. The PayPal `accounts` row (iban='PAYPAL', kind='paypal',
- *     EUR-settled) is created during the first submit and the user ends
- *     up with exactly one PayPal row.
- */
-
+// PayPal stashes a single int, following the bank step rather than the
+// card step's array.
 beforeEach(function (): void {
     UploadIsolation::isolate();
 

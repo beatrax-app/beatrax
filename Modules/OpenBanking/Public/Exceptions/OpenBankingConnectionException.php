@@ -10,9 +10,6 @@ use RuntimeException;
 // exist for this user at all. Every one of these is a refusal to start rather
 // than a failure part-way through, so nothing has been written and the caller
 // can present the reason to the user without any cleanup.
-/**
- * @link ../../../../.docs/features/open-banking/architecture.md
- */
 final class OpenBankingConnectionException extends RuntimeException
 {
     public static function notFound(int $connectionId, int $userId): self

@@ -7,9 +7,8 @@ namespace Modules\Import\Public\Exceptions;
 use RuntimeException;
 
 // The UniqueConstraintViolationException that routed here proves the row
-// was committed, so its absence on an immediate re-read is a genuine
-// invariant break rather than a routine miss — raised distinctly so it
-// is never swallowed by the generic upload-failure handler.
+// committed, so its absence on the re-read is an invariant break. Typed so
+// the generic upload-failure handler cannot swallow it.
 /**
  * @link ../../../../.docs/features/import/architecture.md#runimport-preview-idempotency--race-recovery
  */

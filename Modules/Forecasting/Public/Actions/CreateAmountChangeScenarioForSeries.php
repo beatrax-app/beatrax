@@ -12,9 +12,6 @@ use Modules\Forecasting\Public\Enums\ScenarioMutationKind;
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final class CreateAmountChangeScenarioForSeries
 {
     public function __construct(

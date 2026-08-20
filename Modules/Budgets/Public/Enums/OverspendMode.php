@@ -8,9 +8,6 @@ namespace Modules\Budgets\Public\Enums;
 // month's ready-to-assign, `carry_negative` carries the shortfall in the
 // envelope. The column stays string; this enum is the one canonical
 // spelling callers map through.
-/**
- * @link ../../../../.docs/features/budgets/architecture.md
- */
 enum OverspendMode: string
 {
     case ReduceToBudget = 'reduce_to_budget';

@@ -4,14 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Crypto;
 
-use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Auth\Public\Events\AppLockPassphraseChanged;
 use Modules\Core\Models\SystemAlert;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Psr\Log\LoggerInterface;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class RewrapGdkOnPassphraseChange
 {
     // Best-effort, never-throw: AppLockProvisioner::changePin() dispatches

@@ -13,10 +13,8 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Models\ForecastScenario;
 use Modules\Forecasting\Public\Events\ScenarioCreated;
+use Modules\Sync\Public\Events\EntityMutated;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final class CreateScenario
 {
     public function __construct(
@@ -58,6 +56,23 @@ final class CreateScenario
             userId: $user->id,
             scenarioId: $newId,
             name: $trimmed,
+        ));
+
+        // Scenarios had merge rules and no capture, so one created after
+        // pairing stayed on the device that named it. The timestamps ride
+        // along because the scenario picker orders by created_at.
+        $this->events->dispatch(new EntityMutated(
+            table: 'forecast_scenarios',
+            pk: $newId,
+            userId: (int) $user->id,
+            mutationType: 'create',
+            dirtyFields: [
+                'user_id' => (int) $user->id,
+                'name' => $trimmed,
+                'description' => $description,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
         ));
 
         return $newId;

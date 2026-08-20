@@ -11,9 +11,6 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Modules\EmailScan\Public\Exceptions\EmlBlobWriteException;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final class EmlBlobStore
 {
     // Allow-list covering both Gmail's short hex shape and the

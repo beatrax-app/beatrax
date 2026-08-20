@@ -7,9 +7,6 @@ namespace Modules\Sync\Internal\Transport\Discovery;
 // How a peer's address was learned. Was three loose strings duplicated across
 // the browsers, which is exactly the shape that lets a typo become a mode
 // nothing matches on.
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 enum DiscoveryMode: string
 {
     case Mdns = 'mdns';

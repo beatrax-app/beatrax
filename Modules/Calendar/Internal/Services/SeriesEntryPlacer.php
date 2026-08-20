@@ -20,9 +20,6 @@ use stdClass;
 // Owns the entry-placement half of the month query: which approved series
 // land on which grid days, and which counterparty identity each placed
 // entry resolves to.
-/**
- * @link ../../../../.docs/features/calendar/architecture.md
- */
 final readonly class SeriesEntryPlacer
 {
     use CoercesScalars;
@@ -229,8 +226,6 @@ final readonly class SeriesEntryPlacer
     }
 
     /**
-     * @link ../../../../.docs/features/calendar/architecture.md
-     *
      * @return list<CarbonImmutable>
      */
     private function placeSeriesInMonth(

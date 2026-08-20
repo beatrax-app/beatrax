@@ -6,9 +6,6 @@ namespace Modules\Migration\Internal\Parsers;
 
 use Modules\Migration\Public\Enums\MigrationSourceProduct;
 
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 final class Ynab4Parser extends AbstractYnabParser
 {
     public function format(): string

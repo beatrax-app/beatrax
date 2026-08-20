@@ -21,9 +21,6 @@ use Modules\Recurring\Public\Events\RecurringSeriesDetected;
 use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
 final class ExpenseSeriesDetector implements SeriesDetector
 {
     use CoercesScalars;

@@ -6,9 +6,6 @@ namespace Modules\Ingestion\Public\Services;
 
 use Modules\Ingestion\Public\Dto\CsvPreset;
 
-/**
- * @link ../../../../.docs/features/ingestion/architecture.md
- */
 final class CsvPresetRegistry
 {
     public const ISSUER = 'other-bank';
@@ -40,8 +37,6 @@ final class CsvPresetRegistry
     private function build(): array
     {
         $presets = [
-            // N26 (EN export): signed Amount (EUR), ISO dates, clean
-            // IBAN/name.
             new CsvPreset(
                 format: 'n26-csv',
                 label: 'N26',
@@ -60,9 +55,8 @@ final class CsvPresetRegistry
                 fixedCurrency: 'EUR',
             ),
 
-            // Revolut (personal export): signed Amount, per-row Currency,
-            // datetime Completed Date. Only COMPLETED rows import — reversed
-            // and pending (empty Completed Date) rows are skipped.
+            // A pending Revolut row ships an empty Completed Date; the adapter's
+            // no-booking-date branch skips it before acceptedStates is consulted.
             new CsvPreset(
                 format: 'revolut-csv',
                 label: 'Revolut',
@@ -81,8 +75,6 @@ final class CsvPresetRegistry
                 acceptedStates: ['COMPLETED'],
             ),
 
-            // ING Netherlands ("Kommagescheiden CSV"): YYYYMMDD date, comma
-            // decimal, unsigned Bedrag with an "Af"/"Bij" direction column.
             new CsvPreset(
                 format: 'ing-nl-csv',
                 label: 'ING (Netherlands)',

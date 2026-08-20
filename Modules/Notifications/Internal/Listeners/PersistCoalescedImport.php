@@ -15,9 +15,6 @@ use Modules\Notifications\Internal\Support\NotificationWriter;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final class PersistCoalescedImport
 {
     // Wire-format keys the batch event carries when every row

@@ -32,9 +32,6 @@ use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
 // Walks the InboxMessageQuery generator, resolves each row's on-disk
 // .eml bytes, runs RecordReceipt, and bridges a parsed outcome into
 // the canonical import pipeline.
-/**
- * @link ../../../../.docs/features/receipts/architecture.md
- */
 final class ProcessFetchedInboxMessagesJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Dispatchable;

@@ -15,9 +15,6 @@ use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final readonly class BalanceAnchorResolver
 {
     use CoercesScalars;

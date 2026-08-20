@@ -8,9 +8,6 @@ namespace Modules\Sync\Internal\Transport\Discovery;
 // answers across several records and sometimes several datagrams — the port
 // arrives in an SRV, the device id in a TXT — so the parser needs somewhere
 // to accumulate them per instance rather than three arrays passed by hand.
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 final class MdnsInstanceTable
 {
     /** @var array<string, int> */

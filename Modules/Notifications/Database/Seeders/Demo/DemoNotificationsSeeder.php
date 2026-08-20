@@ -31,9 +31,6 @@ use Modules\Recurring\Public\Events\PaymentReminderDue;
 use Modules\Recurring\Public\Events\PaymentSettled;
 use stdClass;
 
-/**
- * @link ../../../../../.docs/features/notifications/architecture.md
- */
 final class DemoNotificationsSeeder
 {
     public function __construct(

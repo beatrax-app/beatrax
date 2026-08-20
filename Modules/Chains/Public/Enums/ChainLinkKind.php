@@ -8,9 +8,6 @@ namespace Modules\Chains\Public\Enums;
 // a bulk iDEAL settlement, or one of the two card-hint links. The column
 // stays string; this enum is the one canonical spelling callers map
 // through.
-/**
- * @link ../../../../.docs/features/chains/architecture.md
- */
 enum ChainLinkKind: string
 {
     case PaypalFunding = 'paypal_funding';

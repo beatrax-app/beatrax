@@ -18,9 +18,6 @@ use Modules\Reports\Internal\Aggregation\Dto\NetWorthSeriesPoint;
 use Modules\Reports\Public\Enums\ReportGranularity;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final class NetWorthSeriesQuery
 {
     use CoercesScalars;

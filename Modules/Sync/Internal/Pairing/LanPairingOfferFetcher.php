@@ -16,9 +16,6 @@ use Throwable;
 // asking every device advertising the sync service on this network for its
 // pairing offer. Discovery authenticates nothing and neither does this: what
 // comes back is a candidate the safety-number comparison still has to prove.
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class LanPairingOfferFetcher
 {
     // Long enough for a desktop on the same subnet to answer, short enough

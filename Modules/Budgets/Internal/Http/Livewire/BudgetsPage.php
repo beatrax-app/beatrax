@@ -22,9 +22,6 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\PeriodQuery;
 
-/**
- * @link ../../../../../.docs/features/budgets/architecture.md
- */
 final class BudgetsPage extends Component
 {
     use DispatchesToast;

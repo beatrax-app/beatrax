@@ -8,9 +8,6 @@ namespace Modules\Reports\Public\Enums;
 // deliberately absent: TimeBucketGenerator widens to it on its own, but the
 // user never selects it and a saved report never holds it. Distinct from the
 // series and digest cadences that also say weekly.
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 enum ReportGranularity: string
 {
     case Monthly = 'monthly';

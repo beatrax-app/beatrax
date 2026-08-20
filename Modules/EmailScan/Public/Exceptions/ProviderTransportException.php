@@ -10,7 +10,4 @@ use RuntimeException;
 // non-2xx the client could not map to something more specific, or a body that
 // would not decode. Separate from a configuration problem because retrying is
 // reasonable — the mailbox and the grant are both fine.
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final class ProviderTransportException extends RuntimeException {}

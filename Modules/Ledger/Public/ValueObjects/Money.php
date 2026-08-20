@@ -4,31 +4,25 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Public\ValueObjects;
 
+use Brick\Money\Exception\UnknownCurrencyException;
 use Brick\Money\Money as BrickMoney;
 use IntlException;
 use Modules\Core\Public\Enums\Locale;
 use Modules\Ledger\Public\Enums\Currency;
+use Modules\Ledger\Public\Exceptions\CurrencyMismatchException;
 use Stringable;
 use ValueError;
 
-// Wraps brick/money so domain code never imports brick directly. The
-// only way to construct a Money is ofMinor(int, string) — no ofFloat
-// or fromString on purpose, since floats and locale-aware string
-// parsing are the exact failure modes the integer-only rules prevent.
 /**
- * @link ../../../../.docs/features/mobile/architecture.md
+ * @link ../../../../.docs/features/ledger/money-formatting.md
  */
 final class Money implements Stringable
 {
-    // The app represents every amount as an integer count of 1/100 of a major
-    // unit — the 2-decimal minor unit shared by its currencies. Parse and
-    // format boundaries scale by this factor; a future non-2-decimal currency
-    // (e.g. JPY) would have to make it per-currency rather than a constant.
+    // The 2-decimal scale factor every parse and format boundary in the repo
+    // multiplies by. Currency::Jpy is declared today and JPY has no minor
+    // unit, so a JPY amount built through this constant is 100x too large.
     public const int MINOR_UNITS_PER_MAJOR = 100;
 
-    // Only reached when ICU is unavailable. A currency with no entry here
-    // renders as its code, which is what ICU itself does for a currency the
-    // locale has no symbol for.
     private const array SYMBOLS = [
         'EUR' => '€',
         'USD' => '$',
@@ -38,21 +32,41 @@ final class Money implements Stringable
 
     private function __construct(private readonly BrickMoney $inner) {}
 
-    // Negative values represent debits (money out); positive values
-    // represent credits (money in).
+    // The only constructor — no ofFloat, no fromString, on purpose. Negative
+    // is a debit (money out), positive a credit (money in).
     public static function ofMinor(int $minor, string $currencyCode): self
     {
         return new self(BrickMoney::ofMinor($minor, $currencyCode));
     }
 
+    // Null for a currency code that is not one. An amount crossing in from a
+    // bank API carries whatever the sender put in that field, and a whole
+    // fetch must not die on one row.
+    public static function tryOfMinor(int $minor, string $currencyCode): ?self
+    {
+        try {
+            return self::ofMinor($minor, $currencyCode);
+        } catch (UnknownCurrencyException) {
+            return null;
+        }
+    }
+
     public function plus(self $other): self
     {
-        return new self($this->inner->plus($other->inner));
+        return new self($this->inner->plus($this->sameCurrencyAs($other)->inner));
     }
 
     public function minus(self $other): self
     {
-        return new self($this->inner->minus($other->inner));
+        return new self($this->inner->minus($this->sameCurrencyAs($other)->inner));
+    }
+
+    // False across currencies rather than a throw: a caller asking whether
+    // two amounts match wants an answer, and EUR 10 does not match USD 10.
+    public function equals(self $other): bool
+    {
+        return $this->currency() === $other->currency()
+            && $this->inner->getAmount()->isEqualTo($other->inner->getAmount());
     }
 
     public function toMinor(): int
@@ -70,40 +84,28 @@ final class Money implements Stringable
         return $this->inner->isNegative();
     }
 
-    // When $locale is null, EUR renders in Dutch locale (nl_NL) and
-    // every other currency in US English (en_US), so foreign amounts
-    // read like a card statement while EUR stays in the NL convention.
-    // An explicit $locale overrides the auto-selection.
-    public function format(?string $locale = null): string
+    // No locale argument: the currency decides. Passing the one you happen to
+    // have renders a dollar amount in Dutch separators, which is how "US$
+    // -1.245,67" reached the transactions list.
+    public function format(): string
     {
-        $resolved = $locale ?? ($this->currency() === 'EUR' ? 'nl_NL' : 'en_US');
-
-        // formatToLocale(), not formatTo(): the latter is deprecated in
-        // brick/money 0.11 and gone in 0.14, and it only forwards here anyway
-        // after raising a deprecation on every rendered amount.
+        // formatToLocale(), not formatTo(): the latter was removed in 0.14.
         try {
-            return $this->inner->formatToLocale($resolved);
+            return $this->inner->formatToLocale($this->language() === Locale::Nl ? 'nl_NL' : 'en_US');
         } catch (IntlException|ValueError) {
-            // Not deletable by bundling fuller ICU: the mobile build's ICU
-            // carries English-only locale data, so nl_NL throws here on every
-            // amount, and the data lives in a gitignored downloaded binary.
-            // See the linked mobile architecture page before touching this.
-            return $this->formatWithoutIcu($resolved);
+            // The mobile build's ICU carries English-only locale data, so
+            // nl_NL throws here on every amount. Not fixable by bundling more.
+            return $this->formatWithoutIcu();
         }
     }
 
-    // Renders the two conventions this class anchors on — Dutch for EUR, US
-    // English otherwise — from marks the repo carries itself, so a runtime
-    // with no locale data still reads € 1.234,50 rather than a bare code and
-    // an ungrouped number. Any other locale resolves to one of those two.
-    private function formatWithoutIcu(string $locale): string
+    // Public so the rendering mobile actually gets can be asserted against the
+    // ICU one. The two reading alike is the guarantee, and it is untestable
+    // while the fallback can only be reached by making ICU throw.
+    public function formatWithoutIcu(): string
     {
-        $language = Locale::tryFrom((string) strtok(strtolower($locale), '_-'));
+        $language = $this->language();
         $amount = (string) $this->inner->getAmount();
-
-        if ($language !== Locale::Nl && $language !== Locale::En) {
-            $language = $this->currency() === Currency::Eur->value ? Locale::Nl : Locale::En;
-        }
 
         $negative = str_starts_with($amount, '-');
         [$whole, $fraction] = array_pad(explode('.', ltrim($amount, '-')), 2, '');
@@ -123,8 +125,25 @@ final class Money implements Stringable
             : $sign.$symbol.$grouped;
     }
 
+    // EUR reads in the Dutch convention, every other currency the way a card
+    // statement does. Nothing else about the app's 26 locales enters here: an
+    // amount is read against its own currency, not the reader's language.
+    private function language(): Locale
+    {
+        return $this->currency() === Currency::Eur->value ? Locale::Nl : Locale::En;
+    }
+
     public function __toString(): string
     {
         return $this->inner->__toString();
+    }
+
+    private function sameCurrencyAs(self $other): self
+    {
+        if ($this->currency() !== $other->currency()) {
+            throw CurrencyMismatchException::between($this->currency(), $other->currency());
+        }
+
+        return $other;
     }
 }

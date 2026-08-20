@@ -25,9 +25,6 @@ use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
 use Modules\Notifications\Public\Services\NotificationQuery;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
-/**
- * @link ../../../.docs/features/notifications/architecture.md
- */
 final class NotificationsServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;

@@ -15,14 +15,6 @@ use Modules\Core\Public\Contracts\Clock;
 
 uses(RefreshDatabase::class);
 
-/*
- * Hybrid snooze-revival tests cloned from the drift SnoozedAlertRevivalTest,
- * re-keyed to anomaly_alerts: the hourly ReviveExpiredAnomalySnoozesJob
- * flips snoozed->open + writes the audit transition; the query-time
- * conditional on AnomalyAlertQuery::openForUser surfaces snoozed-but-
- * expired rows immediately between sweeps (Pattern 4).
- */
-
 function asrUser(string $username): User
 {
     return User::query()->create([
@@ -167,7 +159,6 @@ it('revives every expired snooze across users in one chunked sweep (WR-03)', fun
         )->id;
     }
 
-    // A future snooze and an already-open alert must be untouched.
     $future = asrAlert($userA, state: 'snoozed', snoozedUntil: CarbonImmutable::parse('2026-05-25 12:00:00'))->id;
 
     asrRunJob();

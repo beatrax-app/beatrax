@@ -24,9 +24,6 @@ use Modules\Tax\Public\Services\TaxPdfRenderer;
 use Modules\Tax\Public\Services\TaxTagQuery;
 use Modules\Tax\Public\Services\TaxYearQuery;
 
-/**
- * @link ../../../.docs/features/tax/architecture.md
- */
 final class TaxServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;

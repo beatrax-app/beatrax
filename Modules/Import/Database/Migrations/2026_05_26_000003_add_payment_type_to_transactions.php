@@ -6,33 +6,9 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Adds the `payment_type` column to `transactions` — the closed
- * 8-value enum (pin / online / transfer / direct_debit / cash / fee /
- * refund / unknown) classified by the import pipeline's
- * PaymentTypeClassifierStage and surfaced as the leading Type chip on
- * the import preview row and the `/transactions` list.
- *
- * The column defaults to `unknown` so every existing row carries a
- * valid value the moment the column lands; the explicit backfill
- * statement below is a defensive guard against any historical row
- * landing on NULL before the trigger pair forbids it. The
- * `(user_id, payment_type)` composite index supports the chip-filter
- * hot path on the `/transactions` list.
- *
- * The allowed-value set is enforced by paired BEFORE INSERT / BEFORE
- * UPDATE OF payment_type triggers. SQLite cannot ALTER TABLE ADD CHECK
- * after the fact, so the trigger pair is the only schema-level
- * enforcement path. The triggers fire for every write path — Eloquent
- * create/save AND raw insertOrIgnore — so a single application-layer
- * bypass cannot land a bad value.
- *
- * SQLite's blueprint compiler rebuilds the table on column-add, which
- * drops the `transactions_type_check_*` trigger pair sitting on the
- * `type` column. This migration re-installs both trigger pairs at the
- * end of `up()` so the `type` and `payment_type` invariants stay
- * enforced after the column add.
- */
+// SQLite cannot ALTER TABLE ADD CHECK after the fact, so the paired
+// BEFORE INSERT / BEFORE UPDATE triggers below are the only schema-level
+// guard on the allowed value set.
 return new class extends ModuleMigration
 {
     public function up(): void
@@ -54,10 +30,7 @@ return new class extends ModuleMigration
             });
         }
 
-        // Defensive backfill: the column default takes care of every
-        // existing row, but an explicit UPDATE before the trigger pair
-        // lands guarantees no NULL survives into a trigger that would
-        // reject it.
+        // No NULL may survive into the trigger pair installed below.
         $connection->update("UPDATE transactions SET payment_type = 'unknown' WHERE payment_type IS NULL");
 
         $connection->statement('DROP TRIGGER IF EXISTS transactions_payment_type_check_insert');
@@ -73,11 +46,9 @@ return new class extends ModuleMigration
             BEGIN SELECT RAISE(ABORT, 'Invalid transactions.payment_type value'); END
         SQL);
 
-        // Re-install the transactions.type trigger pair: SQLite's
-        // blueprint compiler can rebuild the transactions table on
-        // column add, which silently drops triggers attached to the
-        // previous incarnation. The allowed-type list must stay in
-        // sync with `Modules\Ledger\Public\Enums\TransactionType`.
+        // SQLite's blueprint compiler rebuilds the table on column add and
+        // silently drops the triggers on the old one, so the type pair has to
+        // be re-installed. Keep the list in sync with TransactionType.
         $connection->statement('DROP TRIGGER IF EXISTS transactions_type_check_insert');
         $connection->statement('DROP TRIGGER IF EXISTS transactions_type_check_update');
         $allowedTypes = "'expense','income','transfer_out','transfer_in','fee','refund','adjustment'";

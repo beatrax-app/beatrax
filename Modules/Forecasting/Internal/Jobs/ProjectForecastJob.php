@@ -17,9 +17,6 @@ use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Support\LockStore;
 use Modules\Forecasting\Internal\Pipeline\ProjectionPipeline;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final class ProjectForecastJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Dispatchable;

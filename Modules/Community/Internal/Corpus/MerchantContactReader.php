@@ -7,9 +7,6 @@ namespace Modules\Community\Internal\Corpus;
 use Modules\Community\Public\Dto\MerchantContactDto;
 use Psr\Log\LoggerInterface;
 
-/**
- * @link ../../../../.docs/features/community/architecture.md
- */
 final class MerchantContactReader
 {
     public const URL_MAX = 512;

@@ -10,9 +10,6 @@ use RuntimeException;
 // would hand it somewhere it does not belong — a non-HTTPS scheme, or a host
 // outside the Enable Banking API and the bank's own SCA origin. Kept apart
 // from EnableBankingApiException because no retry is ever appropriate here.
-/**
- * @link ../../../../.docs/features/open-banking/architecture.md
- */
 final class UnsafeOpenBankingRequestException extends RuntimeException
 {
     public static function nonHttpsScheme(): self

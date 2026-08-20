@@ -13,14 +13,10 @@ use Modules\Sync\Internal\OpLog\OpType;
 
 uses(RefreshDatabase::class);
 
-/*
- * The whole point of the op log: what one device captured must reconstruct
- * on another, byte for byte, with relationships intact. Replaying onto an
- * emptied database is that same journey minus the socket — and it is what
- * catches identity bugs, rows arriving under fresh autoincrement ids that
- * strand every reference to them. Rules are device-local and never captured,
- * so the pair here is a merchant and the memory that points at it.
- */
+// What one device captured must reconstruct on another with relationships
+// intact, and replaying onto an emptied database is that journey minus the
+// socket. It is what catches identity bugs: rows arriving under fresh
+// autoincrement ids that strand every reference to them.
 
 it('reconstructs a captured parent and its children with ids and links intact', function (): void {
     /** @var DatabaseManager $db */

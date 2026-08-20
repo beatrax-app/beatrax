@@ -13,6 +13,7 @@ use Livewire\Component;
 use Modules\Auth\Public\AppLockEvents;
 use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\Lang;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
@@ -24,19 +25,15 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\SyncStatusService;
 use Psr\Log\LoggerInterface;
 
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 final class DevicesAndSyncSettingsSection extends Component
 {
+    use HoldsFlashMessage;
     use ManagesDeviceRenaming;
     use ReadsDeviceState;
 
     public bool $syncEnabled = false;
 
     public bool $appLockConfigured = false;
-
-    public string $flashMessage = '';
 
     /**
      * @var list<array<string, mixed>>

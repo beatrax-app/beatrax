@@ -8,9 +8,6 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Support\LoadsModuleResources;
 
-/**
- * @link ../../../.docs/features/migration/architecture.md
- */
 final class MigrationServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
@@ -47,16 +44,10 @@ final class MigrationServiceProvider extends ServiceProvider
     {
         $this->singletonIfExists(self::PREVIEW_SUMMARY_BUILDER_CLASS);
 
-        // ActualSqliteReader is deliberately NOT registered here — it takes
-        // a required per-invocation $dbPath constructor argument, so
-        // ActualParser constructs it directly once it knows that path.
         $this->singletonIfExists(self::YNAB4_PARSER_CLASS);
         $this->singletonIfExists(self::NYNAB_PARSER_CLASS);
         $this->singletonIfExists(self::ACTUAL_PARSER_CLASS);
 
-        // `Internal\Pipeline\StagingWriter` and `PromoteStagingToDomain` are
-        // likewise not registered here — plain autowired dependencies with no
-        // state and no ctor args requiring a forward-looking guard.
         $this->singletonIfExists(self::SOURCE_MAP_WRITER_CLASS);
         $this->singletonIfExists(self::ENTITY_CHANGE_APPLIER_CLASS);
         $this->singletonIfExists(self::START_MIGRATION_RUN_CLASS);
@@ -85,9 +76,8 @@ final class MigrationServiceProvider extends ServiceProvider
 
     private function singletonIfExists(string $class): void
     {
-        // $class is a runtime-built FQCN string (not a ::class literal), so
-        // static analysis does not fold this guard to an impossible type for
-        // a class that may not exist on disk yet.
+        // $class is a runtime-built FQCN string, never a ::class literal, so static
+        // analysis cannot fold this guard away for a class not yet on disk.
         if (class_exists($class)) {
             $this->app->singleton($class);
         }

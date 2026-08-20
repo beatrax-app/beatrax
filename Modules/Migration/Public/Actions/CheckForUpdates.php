@@ -18,9 +18,6 @@ use Modules\Migration\Public\Dto\ConflictDto;
 use Modules\Migration\Public\Enums\MigrationEntityType;
 use Modules\Migration\Public\Enums\MigrationRunStatus;
 
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 final class CheckForUpdates
 {
     public function __construct(

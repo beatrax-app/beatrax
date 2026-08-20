@@ -15,9 +15,6 @@ use Modules\Ledger\Public\ValueObjects\Money;
 
 // Grouping restores the shape the feature exists to show: three events, not
 // eight rows.
-/**
- * @link ../../../../.docs/features/chains/architecture.md
- */
 final class SettlementGroup
 {
     /**

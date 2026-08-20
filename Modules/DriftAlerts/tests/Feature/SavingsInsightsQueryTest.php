@@ -7,11 +7,6 @@ use Modules\Core\Models\User;
 use Modules\DriftAlerts\Internal\Http\Livewire\SavingsInsightsCard;
 use Modules\DriftAlerts\Public\Services\SavingsInsightsQuery;
 
-/**
- * Coverage for the "You could save here" insight generation: an approved
- * subscription whose resolved counterparty has a support-resource entry yields
- * a suggestion (cheaper plan preferred), dismissible by stable key.
- */
 function siChain(DatabaseManager $db, int $userId, string $merchant, int $monthlyMinor): int
 {
     $cpId = $db->connection()->table('counterparties')->insertGetId([

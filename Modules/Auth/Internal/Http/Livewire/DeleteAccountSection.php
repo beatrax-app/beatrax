@@ -16,10 +16,9 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-// The in-app account-deletion path both stores require. Confirmation is
-// two-step and asks for the password, because this is a device a household
-// shares and the button sits on a settings page anyone signed in can reach. It
-// names the paired devices too, since deletion here cannot reach them.
+// The in-app account-deletion path both app stores require. It asks for the
+// password because a household shares this device and the button sits on a
+// settings page anyone signed in can reach.
 final class DeleteAccountSection extends Component
 {
     public string $password = '';
@@ -53,20 +52,19 @@ final class DeleteAccountSection extends Component
         try {
             $deleteAccount($currentUser->user(), $this->password);
         } catch (ValidationException $e) {
-            // Cleared before it propagates: a failure leaves the component
-            // alive and re-serialised into the browser's wire snapshot, and a
-            // mistyped password would sit there as a near-miss of the real one.
+            // Cleared before it propagates: the component survives a failure
+            // and is re-serialised into the browser's wire snapshot, and a
+            // mistyped password is a near-miss of the real one.
             $this->password = '';
 
-            // A wrong password is the user's answer to a question, not a
-            // failure — Livewire maps it onto the field's error bag.
+            // Rethrown so Livewire maps it onto the field's error bag.
             throw $e;
         } catch (Throwable $e) {
             $this->password = '';
 
-            // Only pre-commit failures reach here: DeleteAccountAction logs
-            // and swallows everything past the commit, precisely so this
-            // message cannot claim a rollback that did not happen.
+            // Only pre-commit failures reach here — DeleteAccountAction swallows
+            // everything past the commit — so this message cannot claim a
+            // rollback that did not happen.
             $log->error('DeleteAccountSection: account deletion failed and was rolled back.', [
                 'exception' => $e->getMessage(),
             ]);
@@ -77,8 +75,7 @@ final class DeleteAccountSection extends Component
         }
 
         // navigate: false because the whole session is gone — a Livewire
-        // navigation would re-use a page state that no longer has an account
-        // behind it. The first-run middleware decides where a guest lands.
+        // navigation would re-use page state with no account behind it.
         $this->redirect('/', navigate: false);
     }
 
@@ -92,8 +89,7 @@ final class DeleteAccountSection extends Component
         ]);
     }
 
-    // Whom the device is left to, when this account is its only administrator
-    // and somebody else is still on it. Mirrors DeleteAccountAction's choice.
+    // Must mirror DeleteAccountAction's successor choice.
     private function successorUsername(DatabaseManager $db, int $userId, bool $isAdministrator): ?string
     {
         if (! $isAdministrator) {

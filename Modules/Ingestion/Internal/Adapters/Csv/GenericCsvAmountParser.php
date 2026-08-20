@@ -7,9 +7,6 @@ namespace Modules\Ingestion\Internal\Adapters\Csv;
 use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 use Modules\Ledger\Public\ValueObjects\Money;
 
-/**
- * @link ../../../../../.docs/features/ingestion/architecture.md
- */
 final class GenericCsvAmountParser
 {
     public function parseMinor(string $cell, string $decimalSeparator): int
@@ -19,16 +16,14 @@ final class GenericCsvAmountParser
             throw new InvalidAmountException('Empty amount cell.');
         }
 
-        // Parenthesised negative, e.g. "(12,34)" — accounting-style sign
-        // notation some fintech exports use in place of a leading "-".
+        // Accounting-style parenthesised negative, "(12,34)", used by some fintech exports.
         $negative = false;
         if (preg_match('/^\((.*)\)$/', $raw, $m) === 1) {
             $negative = true;
             $raw = $m[1];
         }
 
-        // Strip everything that isn't a digit, the decimal separator, or a
-        // sign (currency symbols, thousands separators, spaces, NBSPs).
+        // Currency symbols, thousands separators, spaces and NBSPs are all stripped.
         $thousands = $decimalSeparator === ',' ? '.' : ',';
         $raw = str_replace([$thousands, ' ', "\u{00A0}"], '', $raw);
         $raw = preg_replace('/[^0-9'.preg_quote($decimalSeparator, '/').'+-]/u', '', $raw) ?? '';
@@ -45,9 +40,8 @@ final class GenericCsvAmountParser
 
         [$intPart, $fracPart] = array_pad(explode('.', $raw, 2), 2, '');
 
-        // Guard against integer overflow on absurd inputs (no real amount has
-        // a 16+ digit integer part); fail with the domain exception rather
-        // than letting the (int) cast raise a TypeError.
+        // No real amount has a 16+ digit integer part; fail with the domain
+        // exception rather than letting the (int) cast raise a TypeError.
         if (strlen($intPart) > 15) {
             throw new InvalidAmountException(sprintf("Amount out of range: '%s'.", $cell));
         }

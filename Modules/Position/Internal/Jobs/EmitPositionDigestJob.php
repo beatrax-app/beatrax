@@ -25,9 +25,6 @@ use Modules\Position\Public\Dto\PositionSummaryDto;
 use Modules\Position\Public\Events\PositionDigestDue;
 use Modules\Position\Public\Services\PositionQuery;
 
-/**
- * @link ../../../../.docs/features/position/architecture.md
- */
 final class EmitPositionDigestJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Dispatchable;
@@ -99,8 +96,6 @@ final class EmitPositionDigestJob implements ShouldBeUniqueUntilProcessing, Shou
     }
 
     /**
-     * @link ../../../../.docs/features/position/architecture.md
-     *
      * @template T
      *
      * @param  callable(): T  $callback

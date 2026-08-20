@@ -9,9 +9,6 @@ use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Public\Contracts\AuditWriter;
 use Modules\DevMode\Public\Dto\CommandRunAudit;
 
-/**
- * @link ../../../../.docs/features/dev-mode/architecture.md
- */
 final readonly class FinalizeRunAudit
 {
     // Read up to 32 KiB so the 8 KiB cap has headroom after redaction —

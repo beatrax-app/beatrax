@@ -8,9 +8,6 @@ namespace Modules\Ledger\Public\Enums;
 // reconciled is the edit-lock state every write path guards against. The
 // column and DTOs stay string; this enum is the canonical spelling callers
 // map through, and the source Transaction::STATUSES is built from.
-/**
- * @link ../../../../.docs/features/ledger/architecture.md
- */
 enum ClearedStatus: string
 {
     case Uncleared = 'uncleared';

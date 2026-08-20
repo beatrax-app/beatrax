@@ -14,9 +14,6 @@ use Modules\Core\Public\Services\UserDataPathService;
 // account goes whenever that account goes. Anything the device holds once for
 // everyone — the relay credentials, the backups, the staged secrets — only
 // goes when the account being deleted is the last one on the device.
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 final readonly class UserScopedFilePurge
 {
     private const OWNED = [

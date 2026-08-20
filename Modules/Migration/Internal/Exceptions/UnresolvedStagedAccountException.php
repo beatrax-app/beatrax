@@ -10,9 +10,6 @@ use RuntimeException;
 // account external id that never resolved to a promoted Account.
 // Accounts are promoted before transactions, so this is a broken
 // staging invariant, never a user-correctable data problem.
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 final class UnresolvedStagedAccountException extends RuntimeException
 {
     public function __construct(string $accountExternalId)

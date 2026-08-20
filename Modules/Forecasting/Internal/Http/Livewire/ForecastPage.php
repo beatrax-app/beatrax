@@ -27,9 +27,6 @@ use Modules\Forecasting\Public\Services\ScenarioQuery;
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../../.docs/features/forecasting/architecture.md
- */
 final class ForecastPage extends Component
 {
     use BuildsForecastCharts;

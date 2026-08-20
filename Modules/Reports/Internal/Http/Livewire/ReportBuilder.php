@@ -13,6 +13,7 @@ use Illuminate\Database\Query\Builder;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Scopes\UserScope;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -30,11 +31,10 @@ use Modules\Reports\Public\Enums\ReportGranularity;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-/**
- * @link ../../../../../.docs/features/reports/architecture.md
- */
 final class ReportBuilder extends Component
 {
+    use HoldsFlashMessage;
+
     #[Url(as: 'metric', except: 'spend')]
     public string $metric = 'spend';
 
@@ -95,8 +95,6 @@ final class ReportBuilder extends Component
     public bool $showSaveForm = false;
 
     public string $saveName = '';
-
-    public string $flashMessage = '';
 
     public function mount(CurrentUser $currentUser, ?int $report = null): void
     {

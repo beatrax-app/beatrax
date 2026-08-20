@@ -26,9 +26,6 @@ use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 use Modules\Onboarding\Internal\Services\WizardStepRegistry;
 use Modules\Onboarding\Public\Services\WizardProgressQuery;
 
-/**
- * @link ../../../.docs/features/onboarding/architecture.md
- */
 final class OnboardingServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;

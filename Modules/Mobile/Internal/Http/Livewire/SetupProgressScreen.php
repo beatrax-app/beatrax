@@ -19,7 +19,7 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
- * @link ../../../../../.docs/features/mobile/architecture.md
+ * @link ../../../../../.docs/features/mobile/mobile-initial-sync-gate.md
  */
 final class SetupProgressScreen extends Component
 {
@@ -31,18 +31,14 @@ final class SetupProgressScreen extends Component
 
     public string $phase = 'pending';
 
-    // What the pull is waiting on, or null while it is simply working. Shown
-    // as copy so a stall reads as a state rather than a frozen screen.
+    // Null while the pull is simply working. Rendered as copy, so a stall
+    // reads as a state rather than a frozen screen.
     public ?SyncBlockedReason $blocked = null;
 
-    // The stage the device is on now. Everything before it is finished,
-    // everything after is still to come — the screen shows all of them so a
-    // long stage reads as "step 3 of 4", not as a hang.
     public SetupStep $step = SetupStep::Connect;
 
-    // True the moment the first render already reflects prior progress -
-    // drives the "Resuming setup..." vs "Setting up this device..."
-    // headline, never re-showing the fresh-start copy once resumed.
+    // Picks the "Resuming setup" headline over the fresh-start one, and never
+    // reverts once resumed.
     public bool $isResuming = false;
 
     public function mount(CurrentUser $currentUser, InitialSyncPuller $puller): void
@@ -54,10 +50,6 @@ final class SetupProgressScreen extends Component
         $this->isResuming = $this->recordsApplied > 0 || $this->phase !== 'pending';
     }
 
-    // wire:poll tick - drives the pull forward by one bounded step and
-    // redirects into the app the moment phase reaches complete. Peer
-    // discovery (LAN host/port resolution) is out of scope here; this
-    // tick relies on whatever transport leg syncOnce() can already reach.
     public function poll(
         CurrentUser $currentUser,
         InitialSyncPuller $puller,
@@ -72,9 +64,8 @@ final class SetupProgressScreen extends Component
             return;
         }
 
-        // Hand the puller the desktop's address. Without it only the relay
-        // leg runs, and that drains a mailbox without applying rows — the
-        // screen then reports 0 of 0 forever.
+        // Without the desktop's address only the relay leg runs, and that
+        // drains a mailbox without applying rows: 0 of 0 forever.
         try {
             $progress = $puller->pull(
                 $currentUser->id(),
@@ -85,10 +76,9 @@ final class SetupProgressScreen extends Component
 
             $this->applyProgress($progress);
         } catch (Throwable $e) {
-            // This tick IS the screen. Letting the throw out answered 500,
-            // which Livewire drops on the floor, so the view kept its last
-            // frame and looked alive while nothing ran again. Report it and
-            // let the next tick retry.
+            // This tick IS the screen: letting the throw out answered 500,
+            // which Livewire drops, so the view kept its last frame and
+            // looked alive while nothing ran again.
             $this->blocked = SyncBlockedReason::Retrying;
 
             $logger->warning('SetupProgressScreen: initial-sync tick failed — retrying on the next poll.', [
@@ -98,9 +88,9 @@ final class SetupProgressScreen extends Component
             ]);
         }
 
-        // Hands off to the confirmation rather than the dashboard. Dropping
-        // straight into a populated app gave no answer to the two questions
-        // the wait itself raises: did it work, and what happens from now on.
+        // The confirmation, not the dashboard: dropping straight into a
+        // populated app answered neither question the wait raises — did it
+        // work, and what happens from now on.
         if ($this->phase === 'complete') {
             $this->redirect($urls->route('mobile.setup.done'), navigate: false);
         }
@@ -129,28 +119,24 @@ final class SetupProgressScreen extends Component
         $this->percent = $this->stepPercent($progress['percent']);
     }
 
-    // How far the CURRENT step has got, not how far the whole ceremony has.
-    // A ceremony-wide number sat at 100% through the entire rebuild, because
-    // the transfer it measured was already finished.
+    // The CURRENT step, not the whole ceremony: a ceremony-wide number sat at
+    // 100% through the rebuild, because the transfer it measured was done.
     private function stepPercent(int $transferPercent): int
     {
-        // A determinate bar needs a total the device actually knows. The
-        // cursor's expected count only ever equals what has already been
-        // applied, so treating it as a total renders 100% the instant the
-        // first row lands — a full bar over a transfer that has barely begun.
+        // The cursor's expected count only ever equals what has already been
+        // applied, so treating it as a total renders a full bar the instant
+        // the first row lands.
         $hasRealTotal = $this->recordsExpected !== null && $this->recordsExpected > $this->recordsApplied;
 
         return match (true) {
             $this->phase === 'complete' => 100,
             $this->step === SetupStep::Transfer && $hasRealTotal => $transferPercent,
-            // Everything else reports indeterminate: honest about not knowing
-            // rather than inventing a number that only moves at the end.
+            // Indeterminate beats a number that only moves at the end.
             default => 0,
         };
     }
 
-    // Livewire cannot call enum statics from the view, so the ordered list
-    // is handed over ready to render.
+    // Livewire cannot call enum statics from a view.
     /**
      * @return list<SetupStep>
      */

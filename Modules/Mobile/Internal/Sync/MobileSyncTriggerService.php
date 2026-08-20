@@ -12,9 +12,6 @@ use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/mobile/architecture.md
- */
 final class MobileSyncTriggerService
 {
     public function __construct(

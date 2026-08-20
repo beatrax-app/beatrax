@@ -11,28 +11,24 @@ year override, then rolls those tags up into a per-year cockpit
 Every query resolves the *effective* tax year as
 `COALESCE(tag.tax_year_override, CAST(strftime('%Y', t.booked_at) AS
 INTEGER))`, so a manually-overridden tax year always takes precedence
-over the transaction's booked date (e.g. a January payment that
-belongs to the prior fiscal year). Every read is scoped to the tagging
+over the transaction's booked date. Every read is scoped to the tagging
 user via `where('tag.user_id', $userId)` as the first filter on every
 query — a structural ownership guard, not a defense-in-depth
-afterthought.
+afterthought. [Tax year resolution](tax-year-resolution.md) covers the
+override window, the seasonal default year, and why an empty year is a
+header-only CSV rather than an error.
 
 ## Leg-aware amounts and the supersession policy
 
 A tag can apply to a whole transaction or to a single leg of a split
-transaction (`tax_transaction_tags.transaction_split_id` NOT NULL).
-`TaxYearQuery::forUser()` LEFT JOINs `transaction_splits AS ts` and
-resolves the reported amount via `COALESCE(ts.settled_amount_minor,
-t.settled_amount_minor)` — a leg-scoped tag always reports the leg's
-own amount, never the whole parent's. This is a tax-correctness
-requirement: an €80 transaction split €60 Groceries (tagged
-deductible) / €20 Household (not tagged) must export €60, never €80
-or €0.
-
-Once a transaction has any leg-scoped tag, its whole-transaction tag
-row (`transaction_split_id IS NULL`) is excluded from every result —
-not deleted, just no longer surfaced — so a stale pre-split tag can
-never double-report alongside its legs.
+transaction (`tax_transaction_tags.transaction_split_id` NOT NULL). A
+leg-scoped tag always reports the leg's own amount, never the whole
+parent's, and once a transaction has any leg-scoped tag its
+whole-transaction tag row is excluded from every result — not deleted,
+just no longer surfaced. [Tax year resolution](tax-year-resolution.md)
+works through the arithmetic; [the tag write
+contract](tag-write-contract.md) covers the supersession rule and the
+uniqueness indexes behind it.
 
 The category name shown for a leg-scoped tag always resolves from
 `tag.deduction_category_id` (the tax deduction category), never from
@@ -87,18 +83,12 @@ id). `tax_year_override`, when given, must fall within the current
 year ±10 or the call throws `InvalidArgumentException`.
 
 Re-tagging is idempotent and non-destructive: a bare re-tag with an
-all-null payload (the one-tap "Tag" button on an already-tagged row)
-leaves the existing category/note/year-override untouched —
-`created_at` is never rewritten on update, since it is the "first
-tagged" audit signal. When *any* of the three payload fields is
-non-null, all three are rewritten together as a whole-payload upsert,
-never a per-field patch — a caller that means to change only the
-category must re-send the existing note and year, or a null value
-will clear it. `RuleApplier::applyTaxTag` (the rule-driven internal
-caller) re-reads and forwards the existing note for exactly this
-reason. A `UniqueConstraintViolationException` from a lost
-select-then-insert race is caught and retried as the guarded update
-rather than surfacing a 500.
+all-null payload leaves the existing category/note/year-override
+untouched, and when *any* of the three payload fields is non-null all
+three are rewritten together as a whole-payload upsert, never a
+per-field patch. [The tag write contract](tag-write-contract.md)
+explains what that costs a partial caller, and why the whole-tx
+uniqueness backstop is a second, partial index.
 
 An optional trailing `$transactionSplitId` scopes a tag/untag to one
 leg of a split transaction instead of the whole transaction; it
@@ -141,23 +131,19 @@ throughout the module.
 ## Badge lookup: whole-transaction vs leg-aware
 
 `TaxTagQuery::forTransactionIds()` is whole-transaction only — it
-filters to `transaction_split_id IS NULL`. Leg rows carry the *parent*
-transaction's id, so without this filter a tag on one leg of a split
-would light up the whole-transaction badge for the parent row, while
-the whole-transaction untag path (which also scopes to
-`whereNull('transaction_split_id')`) would then match zero rows on
-click — a silent no-op. Callers that need leg-aware state use
-`forTransactionIdsWithLegs()` instead, which keys its result map by
-`"{transactionId}:{transactionSplitId}"` for a leg-scoped tag or
+filters to `transaction_split_id IS NULL`. Callers that need leg-aware
+state use `forTransactionIdsWithLegs()` instead, which keys its result
+map by `"{transactionId}:{transactionSplitId}"` for a leg-scoped tag or
 `"{transactionId}:whole"` for a whole-transaction tag. Both methods
 issue exactly one `whereIn` query for the full batch, never one per
-row, and treat absence from the result map as "untagged."
+row, and treat absence from the result map as "untagged." [The tag
+write contract](tag-write-contract.md) explains what dropping the
+whole-transaction filter breaks, and why the breakage is silent.
 
 `summaryForUser()`'s `totalMinor` is the deductions total only
-(non-income rows) to match the `/tax` cockpit's "Total deductions" KPI
-— folding income and deductions into one absolute sum produced a
-figure matching neither number on the cockpit. `count` still covers
-every tagged item regardless of type.
+(non-income rows), while `count` covers every tagged item regardless of
+type — the two deliberately describe different sets of rows, as
+[tax year resolution](tax-year-resolution.md) sets out.
 
 ## Year cockpit (`/tax`)
 
@@ -177,8 +163,9 @@ route group's `auth` middleware.
 ## Settings country selection
 
 `TaxSettingsSection` (the Settings page's Tax section) restricts
-country selection to an allow-list (`nl`, `de`, `be`, `fr`, `gb`,
-`us`); any other code is silently ignored. Switching country is
+country selection to the `TaxCountry` enum — 33 lowercase ISO 3166
+alpha-2 codes, one per corpus file under `resources/corpus/tax/`; any
+other code is silently ignored. Switching country is
 additive — it seeds the new country's corpus categories via
 `seedFromCorpus()` (INSERT-only, never deletes) and never removes
 existing categories or tags from a previously-selected country.
@@ -199,31 +186,19 @@ via a shared toast — tax classification is exactly what a reconcile is
 meant to freeze, and the whole-transaction tag path honors the same
 lock the Ledger-side leg toggle does.
 
-**Batch-suggestion snapshot contract.** After a one-tap tag, if the
-counterparty has ≥2 other untagged transactions in the same year, a
-banner offers to tag them all. The suggestion's `categoryId`/`note`
-are snapshotted from the picker at `saveTaxCategory()` time (since
-`closePicker()` wipes the live picker state before the banner can be
-clicked), so a later `applyBatchTag()` always applies the *same*
-category as the trigger tag — never the state of whatever row happens
-to have the picker open when the banner is clicked. The snapshot check
-uses `array_key_exists()`, not `??`, because a snapshotted `null` means
-"the trigger tag was saved with no category" and must not silently
-fall through to unrelated picker state.
+**Batch-suggestion banner.** After a one-tap tag, if the counterparty
+has ≥2 other untagged transactions in the same year, a banner offers to
+tag them all. The category, note and year it applies are snapshotted
+onto the suggestion at `saveTaxCategory()` time, *before*
+`closePicker()` wipes the live picker state.
+[The batch-tag suggestion](batch-tag-suggestion.md) sets out that
+ordering requirement, the `array_key_exists()`-not-`??` rule the
+snapshot depends on, the trigger-row year keying, and the
+reconciled-candidate filter behind the "tagged N more" count.
 
-**Year-keying.** The suggestion's `taxYear` is the *trigger*
-transaction's booked year (not the current seasonal tax year) —
-tagging old history must suggest siblings from the same year as the
-row just tagged, and storing it prevents drift between the tag action
-and the later banner click. `applyBatchTag()` filters out any
-already-reconciled candidate ids in one query before tagging, so the
-reported "tagged N more" count only reflects rows actually written.
-
-**Pitfall guards.** `taxTagStateFor()` issues exactly one query via
+**Pitfall guard.** `taxTagStateFor()` issues exactly one query via
 `TaxTagQuery::forTransactionIds()` for the whole batch, never one per
-row. `batchSuggestionDismissed` is set on both `applyBatchTag()` and
-`dismissBatch()` so a dismissed/applied banner never re-surfaces until
-the next tag action recomputes it.
+row.
 
 ## Module boundary
 

@@ -15,9 +15,9 @@ use Psr\Log\LoggerInterface;
 use SodiumException;
 
 /**
- * @phpstan-import-type FetchedManifest from PublisherManifestFetcher
+ * @link ../../../../.docs/features/desktop/auto-update.md
  *
- * @link ../../../../.docs/features/core/architecture.md
+ * @phpstan-import-type FetchedManifest from PublisherManifestFetcher
  */
 final readonly class ElectronUpdateChannel
 {
@@ -30,9 +30,6 @@ final readonly class ElectronUpdateChannel
         private Repository $config,
     ) {}
 
-    // `stable` resolves the `latest.yml` manifest electron-updater writes for
-    // `v*.*.*` tags; `preview` resolves the `beta.yml` manifest it writes for
-    // `v*-rc.*` tags.
     public function channel(): string
     {
         $value = $this->config->get('auto_update.update_channel', 'stable');
@@ -40,9 +37,8 @@ final readonly class ElectronUpdateChannel
         return is_string($value) ? $value : 'stable';
     }
 
-    // Null on every silent-failure path: nothing was fetched (offline / 404),
-    // the manifest was not signed by us, or this version is already sitting
-    // unacknowledged. They are one answer to the caller — nothing to show.
+    // Null on every silent-failure path — offline, unsigned, or already
+    // announced — because they are one answer to the caller: nothing to show.
     public function poll(PublisherManifestFetcher $fetcher): ?UpdateManifestDto
     {
         $manifest = $fetcher->fetch($this->channel());
@@ -58,10 +54,8 @@ final readonly class ElectronUpdateChannel
         );
     }
 
-    // Separated from poll() so each rejection stays distinguishable in the
-    // log even though the caller cannot tell them apart: an unsigned manifest
-    // is a tampering signal worth seeing, while an already-announced version
-    // is routine and stays quiet.
+    // Split from poll() so the log can distinguish rejections the caller
+    // cannot: an unsigned manifest is a tampering signal, a repeat is routine.
     /**
      * @param  FetchedManifest  $manifest
      */
@@ -79,24 +73,16 @@ final readonly class ElectronUpdateChannel
         return ! $this->hasUnacknowledgedAvailabilityRow($manifest['latest_version']);
     }
 
-    // Returns true iff sodium_crypto_sign_verify_detached succeeds; false on
-    // every failure mode (tampered body/signature, malformed lengths). No
-    // exception ever reaches callers — a failed verification is an in-band
-    // signal the poll loop logs at WARNING and suppresses via null from poll().
+    // No exception ever reaches callers: every failure mode — tampered body,
+    // malformed lengths — comes back as false.
     /**
-     * @param  string  $manifestBody  Raw manifest bytes (the bytes
-     *                                that were signed; not a JSON-
-     *                                decoded value).
-     * @param  string  $detachedSignature  Binary 64-byte Ed25519
-     *                                     signature. Callers holding a
-     *                                     hex signature must `hex2bin`
-     *                                     before invocation.
+     * @param  string  $manifestBody  Raw signed manifest bytes, not a decoded value.
+     * @param  string  $detachedSignature  Binary 64-byte Ed25519 signature.
      */
     public function verifyManifest(string $manifestBody, string $detachedSignature): bool
     {
-        // Checked before the configuration is read, so a caller passing no
-        // signature never provokes the missing-key warning about an install
-        // that may be perfectly fine.
+        // Before the config read, so an empty signature never provokes the
+        // missing-key warning about an install that may be perfectly fine.
         if ($detachedSignature === '') {
             return false;
         }
@@ -107,8 +93,6 @@ final readonly class ElectronUpdateChannel
             && $this->verifiesUnder($publicKeyHex, $manifestBody, $detachedSignature);
     }
 
-    // The two libsodium calls sit together because either can reject
-    // malformed input and the caller cannot act differently on which did.
     /**
      * @param  non-empty-string  $detachedSignature
      */
@@ -117,8 +101,7 @@ final readonly class ElectronUpdateChannel
         try {
             $publicKey = sodium_hex2bin($publicKeyHex);
 
-            // An empty key verifies nothing, so it is refused rather than
-            // handed to libsodium as an argument.
+            // An empty key verifies nothing; refuse it before libsodium sees it.
             return $publicKey !== '' && sodium_crypto_sign_verify_detached(
                 $detachedSignature,
                 $manifestBody,
@@ -133,9 +116,8 @@ final readonly class ElectronUpdateChannel
         }
     }
 
-    // Null when no publisher key is configured. Warned about here rather than
-    // at the call site because an unconfigured key is an install problem,
-    // while a signature that will not verify is a manifest problem.
+    // Warned about here, not at the call site: an unconfigured key is an
+    // install problem, an unverifiable signature is a manifest problem.
     private function configuredPublisherKeyHex(): ?string
     {
         $publicKeyHex = $this->config->get('auto_update.publisher_public_key_hex');
@@ -148,13 +130,10 @@ final readonly class ElectronUpdateChannel
         return $publicKeyHex;
     }
 
-    // Comparison uses hash_equals for a constant-time check so a partial-byte
-    // match cannot leak via timing.
+    // hash_equals so a partial-byte match cannot leak via timing.
     /**
-     * @param  string  $binaryPath  Absolute path to the downloaded
-     *                              binary on disk.
-     * @param  string  $expectedSha512Hex  128-hex-char SHA512 digest
-     *                                     from the verified manifest.
+     * @param  string  $binaryPath  Absolute path to the downloaded binary.
+     * @param  string  $expectedSha512Hex  128-hex-char SHA512 from the verified manifest.
      */
     public function verifyBinary(string $binaryPath, string $expectedSha512Hex): bool
     {
@@ -174,8 +153,7 @@ final readonly class ElectronUpdateChannel
         return hash_equals($expectedSha512Hex, $actualHex);
     }
 
-    // Short-circuits to false whenever $currentVersion === $latestVersion so
-    // a user who has already updated is never shown the stale banner.
+    // False when already on the latest version — no stale banner after updating.
     public function isStale(string $currentVersion, string $latestVersion, CarbonImmutable $latestPublishedAt): bool
     {
         if ($currentVersion === $latestVersion) {

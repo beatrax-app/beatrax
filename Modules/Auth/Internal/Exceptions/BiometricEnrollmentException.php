@@ -10,9 +10,6 @@ use RuntimeException;
 // the produced key-wrap bytes fail the shape the ceremony requires. Worth
 // its own type so the enroll endpoint's catch reports an enrollment fault
 // rather than swallowing an anonymous generic error.
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 final class BiometricEnrollmentException extends RuntimeException
 {
     public static function unexpectedAttestationResponse(): self

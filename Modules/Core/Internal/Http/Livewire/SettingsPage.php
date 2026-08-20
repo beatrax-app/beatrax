@@ -21,9 +21,6 @@ use Modules\Core\Public\Support\Lang;
 use Modules\FX\Public\Actions\DispatchFxRatesRefresh;
 use Modules\Ledger\Public\Services\BaseCurrency;
 
-/**
- * @link ../../../../../.docs/features/core/architecture.md
- */
 final class SettingsPage extends Component
 {
     #[Validate('required|in:eur_only,original')]
@@ -42,15 +39,13 @@ final class SettingsPage extends Component
 
     public string $theme = Theme::DEFAULT;
 
-    // The switcher's "follow the browser" option. A null `users.locale`
-    // stores as this sentinel in the form state so the radio group has a
+    // A null `users.locale` stores as this sentinel so the radio group has a
     // concrete value to bind; setLocale() maps it back to null on write.
     private const string LOCALE_AUTO = 'auto';
 
-    // The allow-list is built in rules() from Locale::codes() rather than
-    // written out in a #[Validate] attribute: an attribute argument has to be
-    // a constant expression, which would freeze the shipped locales into a
-    // second list that drifts the moment a language is added.
+    // Built in rules() from Locale::codes(), not a #[Validate] attribute: an
+    // attribute argument must be a constant expression, which would freeze the
+    // shipped locales into a second list that drifts when a language is added.
     public string $locale = self::LOCALE_AUTO;
 
     #[Validate('boolean')]
@@ -92,9 +87,6 @@ final class SettingsPage extends Component
         }
     }
 
-    // Validates the chosen value against the light,dark,system allow-list
-    // before the preference write so an out-of-enum value can never reach
-    // the users row or the layout's class attribute.
     public function setTheme(string $theme, CurrentUser $currentUser, WriteUserPreference $writeUserPreference): void
     {
         $this->theme = $theme;
@@ -102,17 +94,14 @@ final class SettingsPage extends Component
 
         ($writeUserPreference)($currentUser->user()->id, ['theme' => $this->theme]);
 
-        // The class this drives lives on the root element in the layout, which
-        // Livewire never re-renders — so the preference was written and the
-        // page kept the theme it was served with. Tapping Light repainted the
-        // button and nothing else, until a full navigation happened to occur.
+        // The class this drives lives on the layout's root element, which
+        // Livewire never re-renders: without this event the preference was
+        // written and the page kept the theme it was served with.
         $this->dispatch('theme-changed', theme: $this->theme);
     }
 
-    // Validates against the supported-locale allow-list before the preference
-    // write, so an out-of-enum value never reaches the users row. "auto" persists as NULL
-    // (no override → browser detection). The locale is retargeted in the
-    // same request too, so the page re-renders in the new language at once.
+    // "auto" persists as NULL (no override, so browser detection wins). The
+    // locale is retargeted in the same request so the page re-renders at once.
     public function setLocale(
         string $locale,
         CurrentUser $currentUser,
@@ -127,9 +116,8 @@ final class SettingsPage extends Component
         ($writeUserPreference)($currentUser->user()->id, ['locale' => $storedLocale]);
 
         // Through the application, not the translator alone: Livewire snapshots
-        // `app()->getLocale()` on dehydrate and re-applies it on the next
-        // action, so retargeting only the translator re-rendered this page in
-        // the new language and then reverted the one after it.
+        // `app()->getLocale()` on dehydrate and re-applies it next action, so
+        // retargeting the translator alone reverted the language one action later.
         $app->setLocale($storedLocale ?? Locale::DEFAULT);
     }
 
@@ -142,8 +130,7 @@ final class SettingsPage extends Component
         $user->fill(['is_developer' => $value])->save();
     }
 
-    // Fallback for users who want to grab an installer manually (first
-    // install, or recovery if a future auto-update fails to apply).
+    // Manual-installer fallback for a first install, or if auto-update fails.
     public function openReleasesPage(OpenExternalUrlAction $opener): void
     {
         $opener('https://github.com/beatrax-app/beatrax/releases/latest');
@@ -181,10 +168,8 @@ final class SettingsPage extends Component
 
     public function render(ViewFactory $views, CurrentUser $currentUser, DatabaseManager $db, BaseCurrency $baseCurrency): View
     {
-        // Load every account the user owns (one OpeningBalanceEditor per row)
-        // and the seeded currencies for the picker, sorted alpha by code so
-        // the <select> is stable. Both queries use the DB connection directly
-        // (no facade) per the BoundaryArchTest rule.
+        // Sorted by code so the <select> is stable. Both queries use the DB
+        // connection directly, never a facade, per BoundaryArchTest.
         $accounts = $db->connection()->table('accounts')
             ->where('user_id', $currentUser->user()->id)
             ->orderBy('name')
@@ -205,10 +190,8 @@ final class SettingsPage extends Component
             ->get(['code', 'name']);
 
         return $views->make('core::livewire.settings-page', [
-            // Expose the per-user inbox-drop path so the help text
-            // renders the directory the user must actually create
-            // (storage/app/inbox-drop/{userId}/) rather than the
-            // root inbox-drop folder.
+            // The help text needs the per-user directory the user must create,
+            // not the shared root inbox-drop folder.
             'userId' => $currentUser->user()->id,
             'forecastingAccounts' => $this->mapAccounts($accounts, $baseCurrency->code()),
             'currencyOptions' => $this->mapCurrencyOptions($currencyRows),
@@ -268,10 +251,8 @@ final class SettingsPage extends Component
         return $currencyOptions;
     }
 
-    // The theme and drift-threshold allow-lists are built from their shared
-    // SSoT (the Theme enum, the DriftThresholdOptions constant) rather than
-    // inline in: literals — a #[Validate] attribute cannot reference a
-    // runtime value. Livewire composes this with the attribute rules.
+    // A #[Validate] attribute cannot reference a runtime value, so these
+    // allow-lists are composed here from the enum and the options constant.
     /**
      * @return array<string, string>
      */
@@ -289,9 +270,8 @@ final class SettingsPage extends Component
      */
     public function messages(): array
     {
-        // Pulled through Lang::get so validation copy translates with the
-        // rest of the page; each rule variant maps to one core::settings.errors
-        // key. Resolved per call so a mid-session language switch is reflected.
+        // Resolved per call, through Lang::get, so a mid-session language switch
+        // is reflected in the validation copy.
         $periodDay = Lang::get('core::settings.errors.period_day');
         $windowMonths = Lang::get('core::settings.errors.window_months');
         $amount = Lang::get('core::settings.errors.amount');

@@ -23,7 +23,7 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
- * @link ../../../../.docs/features/categorization/architecture.md
+ * @link ../../../../.docs/features/categorization/field-provenance.md
  */
 final class RuleApplier
 {
@@ -35,10 +35,8 @@ final class RuleApplier
         'tax_tag' => 'tax_tag',
     ];
 
-    // Per-instance User memo, keyed by userId. One ReapplyRulesJob run folds
-    // every chunk through a single RuleApplier, so without this applyAtReapply
-    // reloads the same user once per matched row. Keyed rather than a single
-    // slot so an instance reused across two users stays correct.
+    // Keyed rather than a single slot: one instance is reused across every
+    // chunk of a ReapplyRulesJob run, and could be reused across two users.
     /** @var array<int, User> */
     private array $userCache = [];
 
@@ -55,12 +53,10 @@ final class RuleApplier
         private readonly SessionFactory $session,
     ) {}
 
-    // Folding sequentially over a mutable $tx local makes last-writer-wins
-    // automatic: a later action targeting the same field simply overwrites
-    // the earlier wither's result. `tax_tag` actions are ignored outright
-    // — import-time tax tagging is deferred to re-apply.
     /**
      * @param  list<MatchedRule>  $matched
+     *
+     * @link ../../../../.docs/features/categorization/rule-evaluation-order.md
      */
     public function applyAtImport(array $matched, CanonicalTransaction $tx): CanonicalTransaction
     {
@@ -73,13 +69,11 @@ final class RuleApplier
         return $tx;
     }
 
-    // Reduce-to-desired: rules fold into a single desired action per
-    // action `type`, so last-writer-wins resolves to exactly one write
-    // attempt per field. `field_provenance` is read once up front; any
-    // field already stamped 'manual' is skipped entirely.
     /**
      * @param  list<MatchedRule>  $matched
      * @return array<string, mixed> the fields actually changed (dirtyFields shape)
+     *
+     * @link ../../../../.docs/features/categorization/rule-evaluation-order.md
      */
     public function applyAtReapply(array $matched, int $transactionId, int $userId): array
     {
@@ -121,9 +115,6 @@ final class RuleApplier
         return $changed;
     }
 
-    // `??=` only queries when the key is absent, so findOrFail still throws
-    // ModelNotFoundException on a missing user on the first resolve and
-    // nothing is cached on failure — identical to the pre-memo behavior.
     private function resolveUser(int $userId): User
     {
         return $this->userCache[$userId] ??= User::query()->findOrFail($userId);
@@ -157,10 +148,9 @@ final class RuleApplier
         return ['category_id', $categoryId];
     }
 
-    // False when the row already carries this category, or the update changed
-    // nothing. UpdateTransactionCategory has no write-only-on-change guard —
-    // an unchanged category_id still reports one affected row on SQLite — so
-    // this read is what keeps a re-apply a no-op.
+    // UpdatesTransactionCategory has no write-only-on-change guard, and an
+    // unchanged category_id still reports one affected row on SQLite, so this
+    // read is the only thing that keeps a repeat re-apply a genuine no-op.
     private function writeCategory(int $transactionId, int $categoryId, User $user): bool
     {
         $currentCategoryId = $this->db->connection()
@@ -206,9 +196,8 @@ final class RuleApplier
         return ['counterparty_id', $counterpartyId];
     }
 
-    // `append` concatenates onto the current note, so the final text is
-    // only known AFTER a genuine write — re-read here so dirtyFields
-    // always carries the value actually persisted.
+    // Under `append` the final text is only known after the write, so the
+    // dirtyFields value has to come from a re-read rather than the payload.
     /**
      * @return array{0: string, 1: mixed}|null
      */
@@ -233,9 +222,8 @@ final class RuleApplier
             ->where('id', $transactionId)
             ->where('user_id', $user->id)
             ->value('note');
-        // The re-read note is ciphertext under an encrypted user; decrypt
-        // before it becomes an op-log dirtyFields value, or the op-log's
-        // own encrypt-on-write would double-encrypt it.
+        // Decrypt before this becomes an op-log dirtyFields value, or the
+        // op-log's own encrypt-on-write would double-encrypt it.
         $finalNote = is_string($finalNoteRaw)
             ? $this->codec->decryptValue('transactions', 'note', $finalNoteRaw, $user->id, ($this->session)())['value']
             : null;
@@ -251,10 +239,9 @@ final class RuleApplier
         return ['note', $finalNote];
     }
 
-    // TagTransaction::execute() dispatches its own event and stamps its
-    // own provenance internally, so this method does NOT re-dispatch or
-    // re-stamp. Reads the current tag row first so an identical re-apply
-    // is a genuine no-op rather than relying on the upsert's own idempotency.
+    // TagTransaction::execute() dispatches its own event and stamps its own
+    // provenance, so this path deliberately does neither — doing both would
+    // report the same change twice into the op-log.
     /**
      * @return array{0: string, 1: mixed}|null
      */
@@ -275,9 +262,8 @@ final class RuleApplier
         return ['tax_tag', $deductionCategoryId];
     }
 
-    // False when the tag already says this, or the write refused. Reads the
-    // existing row first so an identical re-apply is a genuine no-op rather
-    // than relying on the upsert's own idempotency.
+    // Reads the existing row first so an identical re-apply is a genuine
+    // no-op rather than relying on the upsert's own idempotency.
     private function writeTaxTag(int $ruleId, int $transactionId, int $userId, int $deductionCategoryId, ?int $year): bool
     {
         $current = $this->db->connection()
@@ -299,9 +285,8 @@ final class RuleApplier
         }
 
         // TagTransaction::updateExisting() rewrites note/category/year
-        // TOGETHER the instant any one is non-null, so a literal null note
-        // would silently wipe a user-authored tax note; read the existing
-        // note (decrypted, mirroring applyNote()) and pass it through unchanged.
+        // together the instant any one is non-null, so passing a literal null
+        // here would silently wipe a user-authored tax note.
         $currentNote = $current !== null && is_string($current->note)
             ? $this->codec->decryptValue('tax_transaction_tags', 'note', $current->note, $userId, ($this->session)())['value']
             : null;
@@ -331,6 +316,8 @@ final class RuleApplier
         ]);
     }
 
+    // `tax_tag` does nothing at import: there is no persisted transaction_id
+    // to tag yet, so tax tagging waits for the re-apply pass.
     private function foldImportAction(int $ruleId, RuleAction $action, CanonicalTransaction $tx): CanonicalTransaction
     {
         return match ($action->type) {

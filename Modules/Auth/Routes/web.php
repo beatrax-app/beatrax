@@ -39,22 +39,19 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
 
     Route::get('/lock', LockScreen::class)->name('auth.lock');
 
-    // Called by lock.js via fetch(keepalive:true) -- with the X-XSRF-TOKEN
-    // CSRF header -- when the grace timer expires or the idle threshold is
-    // met on an app page.
+    // Called by lock.js via fetch(keepalive:true) when the grace timer expires
+    // or the idle threshold is met.
     Route::post('/lock/engage', LockEngageController::class)->name('auth.lock.engage');
 
-    // lock.js POSTs here (throttled) when the user genuinely interacts.
-    // The body is a no-op: simply passing through AppLockMiddleware
-    // refreshes last_activity_at, since this is a plain (non-Livewire)
-    // request -- Livewire/wire:poll traffic deliberately does not count.
+    // The 204 body is the point: merely passing through AppLockMiddleware
+    // refreshes last_activity_at, and only a plain request does — Livewire
+    // and wire:poll traffic deliberately does not count as activity.
     Route::post('/lock/activity', static fn (): Response => new Response('', 204))
         ->name('auth.lock.activity');
 
-    // Deliberately NOT in AppLockMiddleware's allow-list: `resume` has to be
-    // able to receive the redirect to the lock screen, since that redirect is
-    // exactly what tells lock.js the grace window closed while the app was
-    // suspended.
+    // Deliberately NOT in AppLockMiddleware's allow-list: the redirect to the
+    // lock screen is exactly what tells lock.js the grace window closed while
+    // the app was suspended.
     Route::post('/lock/background', [LockLifecycleController::class, 'background'])
         ->name('auth.lock.background');
 

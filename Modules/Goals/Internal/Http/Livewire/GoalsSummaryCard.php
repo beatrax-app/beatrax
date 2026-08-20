@@ -11,9 +11,6 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Goals\Public\Dto\GoalProgressRow;
 use Modules\Goals\Public\Services\GoalProgressQuery;
 
-/**
- * @link ../../../../../.docs/features/goals/architecture.md
- */
 final class GoalsSummaryCard extends Component
 {
     public function render(

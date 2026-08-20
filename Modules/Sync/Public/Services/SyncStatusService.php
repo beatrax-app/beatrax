@@ -8,9 +8,6 @@ use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\DatabaseManager;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class SyncStatusService
 {
     public function __construct(

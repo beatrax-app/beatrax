@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Crypto;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 interface GdkRewrapContract
 {
     // Re-wraps the user's entire GDK keyring (every epoch) under $newKek. A

@@ -2,26 +2,9 @@
 
 declare(strict_types=1);
 
-/*
- * D-07 arch/content guard (19-03 Task 2). OpenBanking credentials
- * (application_id, RSA private-key PEM, session/consent tokens) live
- * ONLY in the chmod-600 file `OpenBankingSecretsRepository` writes at
- * storage/app/secrets/open-banking.json — never a DB column, because
- * any secret in SQLite would leak into DB backups (T-19-03-02).
- *
- * Two falsifiable invariants:
- *   (a) no OpenBanking class other than OpenBankingSecretsRepository
- *       references the filesystem secrets path, and no other class
- *       reads a credential field via a DatabaseManager/Eloquent
- *       surface;
- *   (b) no migration under Modules/OpenBanking/Database/Migrations
- *       adds a column matching the forbidden credential-field regex
- *       (the metadata migration built in 19-05 must stay secret-free).
- *
- * Comments are stripped BEFORE matching: this file's own explanatory
- * prose (and the repository's own docblocks naming the forbidden
- * column names) would otherwise trip the rule it describes.
- */
+// Comments are stripped BEFORE matching: this file's own prose, and the
+// repository's docblocks naming the forbidden column names, would otherwise
+// trip the rule they describe.
 
 function openBankingGuardStripComments(string $contents): string
 {
@@ -35,8 +18,6 @@ function openBankingGuardPhpFiles(string $relativeDir, bool $excludeTests = true
 {
     $absolute = base_path($relativeDir);
     if (! is_dir($absolute)) {
-        // Directory lands in a later wave (e.g. Database/Migrations
-        // before 19-05); until it does the rule is trivially satisfied.
         return [];
     }
 
@@ -102,12 +83,8 @@ it('never reads a credential field via a DatabaseManager/Eloquent surface outsid
         .implode("\n  ", $hits),
     );
 
-    // Falsifiability proof: apply the SAME two patterns to a literal
-    // fixture sample representing exactly the violation this guard
-    // exists to catch (a hypothetical Eloquent accessor reading
-    // application_id straight off a DB row) — proves the regex pair
-    // is not vacuously true just because no such class exists in the
-    // tree yet.
+    // Fire the same pattern pair at a class committing the exact violation, so
+    // an empty offender list is never mistaken for a vacuously-true check.
     $violatingSample = <<<'PHP'
         class FixtureCredentialModel extends Model
         {
@@ -140,10 +117,8 @@ it('forbids any OpenBanking migration from adding a secret column', function ():
         .implode("\n  ", $hits),
     );
 
-    // Falsifiability proof: the exact forbidden-column fixture the
-    // 19-05 metadata migration must never introduce, alongside a
-    // genuinely-safe metadata column (institution_id) that must NOT
-    // trip the same pattern.
+    // The same pattern against a forbidden and a safe column declaration, so a
+    // clean migration tree is never mistaken for a vacuously-true check.
     $violatingMigrationSample = "\$table->string('application_id')->nullable();";
     expect(preg_match($forbiddenPattern, $violatingMigrationSample))->toBe(1);
 

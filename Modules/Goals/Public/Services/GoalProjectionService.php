@@ -13,9 +13,6 @@ use Modules\Goals\Models\Goal;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Pots\Public\Services\PotBalanceQuery;
 
-/**
- * @link ../../../../.docs/features/goals/architecture.md
- */
 final class GoalProjectionService
 {
     use CoercesScalars;

@@ -6,58 +6,24 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Redesigns `categorization_rules` from a flat single-condition/single-
- * action row into the parent half of the new normalized multi-condition/
- * multi-action rules engine (D-01, Req 5):
- *
- *   - DROPPED: `field`, `match`, `value`, `category_id` — these move to
- *     the new `rule_conditions` / `rule_actions` child tables (created
- *     by the 000002 / 000003 migrations that follow).
- *   - ADDED: `priority` (unsigned int, default 0) — evaluation order;
- *     `combinator` ('all' | 'any', default 'all') — how the rule's
- *     conditions combine.
- *   - KEPT: `active`, `notes`, `hits_count`, timestamps.
- *
- * CRITICAL (Req 5, forward migration): the flat condition/action data
- * on every existing row would be lost the instant `dropColumn()` runs.
- * Before dropping anything, this migration stashes a full copy of every
- * `categorization_rules` row into a temporary `_legacy_categorization_rules`
- * table. Migration 000005 (`migrate_existing_rules_to_conditions_actions`)
- * reads that stash to backfill `rule_conditions` + `rule_actions` and
- * drops the stash table once the backfill completes — by then the flat
- * columns no longer exist anywhere else, so the stash is the *only*
- * surviving source of the legacy data.
- *
- * CRITICAL (SQLite trigger hazard): SQLite rebuilds the entire table on
- * any column add/drop via `Blueprint::table()` and SILENTLY DROPS all
- * triggers in the process (see
- * 2026_06_15_000004_add_note_to_transactions.php for the canonical
- * writeup of this hazard against `transactions`). This migration must
- * therefore (re)install a paired `categorization_rules_combinator_check_*`
- * BEFORE INSERT / BEFORE UPDATE OF combinator trigger AFTER the
- * drop+add column change, using the same allow-list `RAISE(ABORT, ...)`
- * idiom as the original `field`/`match` triggers this migration retires.
- */
+// SQLite rebuilds the whole table on any column add/drop and silently drops
+// every trigger with it, so both up() and down() reinstall their enum guards
+// after the shape change rather than before.
 return new class extends ModuleMigration
 {
     public function up(): void
     {
         $connection = $this->db()->connection($this->getConnection());
 
-        // 1. Drop the old field/match enum-guard triggers. The table
-        //    rebuild below would drop them anyway, but doing so
-        //    explicitly documents intent and keeps this migration
-        //    correct even if a future Laravel version stops rebuilding
-        //    SQLite tables on simple column changes.
+        // The rebuild below drops these anyway; going explicit keeps the
+        // migration correct if Laravel ever stops rebuilding SQLite tables.
         $connection->statement('DROP TRIGGER IF EXISTS categorization_rules_match_check_update');
         $connection->statement('DROP TRIGGER IF EXISTS categorization_rules_match_check_insert');
         $connection->statement('DROP TRIGGER IF EXISTS categorization_rules_field_check_update');
         $connection->statement('DROP TRIGGER IF EXISTS categorization_rules_field_check_insert');
 
-        // 2. Stash every existing flat rule row BEFORE the flat columns
-        //    are dropped (Req 5 — the only surviving source of legacy
-        //    condition/action data for migration 000005's backfill).
+        // Stash the flat rows before their columns go: this table is the only
+        // surviving source for migration 000005's condition/action backfill.
         $this->schema()->create('_legacy_categorization_rules', static function (Blueprint $table): void {
             $table->unsignedBigInteger('id');
             $table->unsignedBigInteger('user_id')->nullable();
@@ -79,11 +45,9 @@ return new class extends ModuleMigration
             'FROM categorization_rules',
         );
 
-        // 3. Redesign the parent table shape. The original UNIQUE
-        //    (user_id, field, match, value) index and the category_id
-        //    foreign key must both be dropped FIRST — SQLite's native
-        //    ALTER TABLE ... DROP COLUMN refuses to drop a column still
-        //    referenced by an index or a foreign key constraint.
+        // The UNIQUE index and the category_id foreign key must be dropped
+        // first: SQLite refuses to drop a column an index or a constraint
+        // still references.
         $this->schema()->table('categorization_rules', static function (Blueprint $table): void {
             $table->dropUnique('categorization_rules_user_id_field_match_value_unique');
             $table->dropForeign(['category_id']);
@@ -92,9 +56,6 @@ return new class extends ModuleMigration
             $table->string('combinator', 8)->default('all');
         });
 
-        // 4. The table rebuild above dropped all indexes/triggers on
-        //    categorization_rules. (Re)install the combinator enum-guard
-        //    triggers.
         $allowedCombinators = "'all','any'";
         $connection->statement(sprintf(
             "CREATE TRIGGER categorization_rules_combinator_check_insert BEFORE INSERT ON categorization_rules FOR EACH ROW
@@ -117,14 +78,8 @@ return new class extends ModuleMigration
         $connection->statement('DROP TRIGGER IF EXISTS categorization_rules_combinator_check_update');
         $connection->statement('DROP TRIGGER IF EXISTS categorization_rules_combinator_check_insert');
 
-        // Reverse the shape change. This restores the ORIGINAL columns
-        // verbatim (see 2026_05_17_010003_create_categorization_rules_table.php)
-        // but does NOT restore data — by the time down() runs, the
-        // `_legacy_categorization_rules` stash has already been consumed
-        // and dropped by migration 000005's up(), so a full data
-        // rollback is not possible. down() only restores the schema
-        // shape, matching this migration's own "reverse the shape, not
-        // the data" contract.
+        // Shape only, not data: migration 000005's up() has already consumed
+        // and dropped the stash, so the flat rows cannot be rebuilt.
         $this->schema()->table('categorization_rules', static function (Blueprint $table): void {
             $table->dropColumn(['priority', 'combinator']);
             $table->string('field', 16);
@@ -134,8 +89,6 @@ return new class extends ModuleMigration
             $table->unique(['user_id', 'field', 'match', 'value']);
         });
 
-        // The table rebuild above dropped triggers again — reinstall
-        // the original field/match enum-guard triggers verbatim.
         $allowedFields = "'merchant','description','counterparty'";
         $connection->statement(sprintf(
             "CREATE TRIGGER categorization_rules_field_check_insert BEFORE INSERT ON categorization_rules FOR EACH ROW
@@ -164,8 +117,7 @@ return new class extends ModuleMigration
             $allowedMatches,
         ));
 
-        // Defensive cleanup — harmless no-op if migration 000005 already
-        // dropped this table (the normal forward-migration flow).
+        // A no-op in the normal flow, where 000005 already dropped the stash.
         $this->schema()->dropIfExists('_legacy_categorization_rules');
     }
 };

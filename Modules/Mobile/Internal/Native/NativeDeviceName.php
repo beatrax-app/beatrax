@@ -12,9 +12,6 @@ use Throwable;
 // PHP_OS_FAMILY, which on Android is "Linux" — so a paired desktop labelled
 // the phone "This device (Linux)" and no rename could reach it, because the
 // name travels in the pairing frame.
-/**
- * @link ../../../../.docs/features/mobile/architecture.md
- */
 final readonly class NativeDeviceName implements DeviceNameSource
 {
     public function name(): ?string

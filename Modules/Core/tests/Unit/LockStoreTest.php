@@ -19,12 +19,10 @@ use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
 
 uses()->group('Phase14');
 
-// The test harness (tests/TestCase.php::setUp) deliberately remaps the
-// `redis` cache store onto the `array` driver so no test opens a TCP
-// socket to a Redis daemon. The assertions below therefore prove that
-// forUniqueJobs() resolves the store NAMED by config('cache.locks_store')
-// — they compare against Cache::store($name) directly rather than
-// asserting a concrete driver class for the `redis` name.
+// The harness (tests/TestCase.php::setUp) remaps the `redis` cache store onto
+// the `array` driver so no test opens a socket to a daemon. The assertions
+// below therefore compare against Cache::store($name) rather than asserting a
+// concrete driver class for the `redis` name.
 
 it('resolves the database store when cache.locks_store is database', function (): void {
     config(['cache.locks_store' => 'database']);
@@ -52,8 +50,6 @@ it('resolves the configured store rather than a hard-coded one', function (): vo
     config(['cache.locks_store' => 'database']);
     $databaseStore = LockStore::forUniqueJobs()->getStore();
 
-    // Switching the config key switches the resolved store — proof the
-    // helper reads config('cache.locks_store') rather than hard-coding.
     expect($databaseStore)->toBeInstanceOf(DatabaseStore::class)
         ->and($databaseStore)->not->toBe($redisStore)
         ->and($redisStore)->toBe(Cache::store('redis')->getStore());
@@ -92,17 +88,10 @@ it('routes every ShouldBeUnique job uniqueVia to the configured lock store', fun
     DetectRecurringSeriesJob::class,
 ]);
 
-/*
- * What forUniqueJobs() does with a config value it cannot resolve a store from.
- *
- * Every ShouldBeUnique job in the application routes uniqueVia() through this
- * helper, so falling back to a default store on a bad value would be the worst
- * available outcome: the jobs would keep running, each worker taking a lock in
- * a store the others are not looking at, and the uniqueness the job declares
- * would silently not exist. Two workers would sync the same connection or scan
- * the same inbox concurrently, against the same rows.
- */
-
+// A value it cannot resolve a store from must throw rather than fall back to a
+// default: every ShouldBeUnique job routes uniqueVia() through this helper, so
+// each worker would take its lock in a store the others are not watching and
+// two would scan the same inbox concurrently against the same rows.
 it('refuses a lock store name it cannot use', function (mixed $configured): void {
     config(['cache.locks_store' => $configured]);
 

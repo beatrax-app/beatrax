@@ -14,9 +14,6 @@ use Modules\Auth\Internal\Lock\PinVerificationService;
 use Modules\Auth\Internal\Lock\PlatformDetector;
 use Modules\Core\Public\Contracts\Clock;
 
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 final class MobileLockGateway
 {
     // Where an unlocked session resumes, in precedence order. Two tiers because

@@ -15,9 +15,6 @@ use Symfony\Component\HttpFoundation\Response;
 // migrations bounce to desktop.setup, a fresh (zero-user) install
 // bounces to desktop.welcome. Both first-launch routes plus signup are
 // exempt so the redirect cannot loop.
-/**
- * @link ../../../../../.docs/features/desktop/architecture.md
- */
 final class EnsureDatabaseReady
 {
     /** @var array<int, string> */

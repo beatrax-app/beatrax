@@ -8,9 +8,6 @@ namespace Modules\Sync\Internal\Crypto;
 // unique only among the epochs ONE device holds, so two that rotated apart
 // both reached "epoch 3" over different keys. Nothing reads these in order —
 // every lookup is by exact id — so uniqueness was the only property needed.
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class GdkEpochId
 {
     // 2^53 - 1: the largest integer that survives a JSON round-trip exactly.

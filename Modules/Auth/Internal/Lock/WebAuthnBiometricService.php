@@ -35,9 +35,6 @@ use Webauthn\TrustPath\EmptyTrustPath;
 // origin (http://localhost:8000) is validated separately -- rpId vs.
 // origin must BOTH be validated, or a same-rpId, different-origin
 // attacker page could pass.
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 final class WebAuthnBiometricService
 {
     private const LOCALHOST_ORIGIN = 'http://localhost';

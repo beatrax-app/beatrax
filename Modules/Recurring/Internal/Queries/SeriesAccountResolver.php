@@ -13,9 +13,6 @@ use stdClass;
 // derived from the most recent occurrence and the transaction it points at,
 // with a fallback for series the detector has not emitted occurrences for.
 // It sits beside RecurringSeriesQuery because folding it in cost 27 complexity.
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
 final readonly class SeriesAccountResolver
 {
     use CoercesScalars;

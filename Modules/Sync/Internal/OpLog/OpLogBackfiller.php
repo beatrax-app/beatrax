@@ -18,9 +18,6 @@ use RuntimeException;
 // log as CREATE_ROW ops. Capture is event-driven, so a device that was used
 // before pairing had an empty log and handed its first peer nothing — the
 // phone sat on "0 of 0 records" while the desktop held years of data.
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class OpLogBackfiller
 {
     // Rows per SELECT. The log is written entry-by-entry regardless; this

@@ -7,31 +7,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
 /**
- * Creates the `notification_preferences` table — one row per (user, device)
- * pair (D-34). Every delivery decision (`SuppressionEvaluator`) reads a
- * single device's own row; a device NEVER obeys another device's values
- * (D-07) even though every row is readable everywhere (D-35's own-device
- * write / other-devices read-only split).
- *
- * `id()` autoincrement surrogate is acceptable here — unlike
- * `notifications`, this table is NOT independently generated on two
- * devices from the same logical fact; a device only ever writes its OWN
- * row, so D-05's cross-device-convergence determinism argument does not
- * apply. The UNIQUE composite index on `(user_id, device_id)` is the real
- * identity key.
- *
- * Column defaults are the D-16/D-19/D-15/D-24 locked out-of-box values:
- * reminders ON, budget nudges ON, digest cadence WEEKLY, savings prompts
- * OFF, reminder lead time 3 days, quiet hours OFF with a 22:00-08:00
- * preset window, and OS bodies carry financial detail by default
- * (`hide_details` false). `NotificationPreferencesDto::defaults()` is the
- * single source of truth for these same values in PHP — this migration's
- * column defaults exist for direct-SQL-insert convenience only and must
- * never drift from the DTO factory.
- *
- * NONE of these columns are encrypted — they are structural preference
- * flags that must be readable with no KEK, and D-12's encrypted-column
- * set is scoped to the `notifications` table's content columns only.
+ * @link ../../../../.docs/features/notifications/architecture.md#per-device-preferences
  */
 return new class extends ModuleMigration
 {
@@ -41,6 +17,10 @@ return new class extends ModuleMigration
             $table->id();
             $table->unsignedInteger('user_id');
             $table->string('device_id');
+            // These defaults exist only so a direct SQL insert lands a usable
+            // row; NotificationPreferencesDto::defaults() is the source of
+            // truth and the two must not drift. Nothing here is encrypted —
+            // suppression has to be decidable with no KEK.
             $table->boolean('reminders_enabled')->default(true);
             $table->boolean('budget_nudges_enabled')->default(true);
             $table->string('digest_cadence', 8)->default('weekly');
@@ -52,6 +32,8 @@ return new class extends ModuleMigration
             $table->boolean('hide_details')->default(false);
             $table->timestamps();
 
+            // The real identity key; the surrogate id() is safe here only
+            // because a device writes nobody's row but its own.
             $table->unique(['user_id', 'device_id'], 'notification_preferences_user_device_idx');
         });
     }

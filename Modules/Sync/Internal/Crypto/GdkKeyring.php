@@ -6,9 +6,6 @@ namespace Modules\Sync\Internal\Crypto;
 
 use InvalidArgumentException;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class GdkKeyring
 {
     // Immutable, append-only in-memory collection of a user's GDK epochs —

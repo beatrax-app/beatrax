@@ -8,9 +8,6 @@ use Illuminate\Http\Request;
 use Modules\Reports\Public\Dto\ReportDefinition;
 use Modules\Reports\Public\Enums\ReportGranularity;
 
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final class ReportDefinitionRequestFactory
 {
     // The CSV export route builds its ReportDefinition straight from query

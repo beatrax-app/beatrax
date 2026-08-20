@@ -11,41 +11,10 @@ use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
 
 uses(RefreshDatabase::class, EnablesEncryptionForUser::class);
 
-/*
- * R8 / SPEC acceptance #8 (15-11-PLAN.md Task 1) — the automatable half of
- * "full surface parity on mobile": every primary sidebar route
- * (Modules/Core/Resources/views/livewire/app-sidebar.blade.php) renders
- * without a server error against an on-device-SHAPED fixture — a real
- * user, an unlocked LOCK-04 session, a generated GDK epoch-1 keyring
- * (EnablesEncryptionForUser, the established 14.1 helper), sensitive
- * transaction/counterparty columns written as genuine ciphertext
- * (SensitiveColumnCodec::encryptAttrs — mirrors the direct-write/import
- * hook `RecordTransactions` uses in production, D-02b), and a confirmed
- * `device_registry` peer + `sync_sessions` row standing in for "this
- * device is a paired, synced peer" (T-15-34's "synced fixture").
- *
- * 15-SPIKE-FINDINGS.md's pre-Plan-04 on-device 500 was a missing-migration
- * / DB-path problem (fixed in Plan 04's MobileFirstLaunchBootstrap +
- * reconciled UserDataPathService path) — orthogonal to this test, which
- * runs against the framework's normal RefreshDatabase-migrated connection
- * (the same connection every other Feature test in this suite uses). This
- * test proves the APPLICATION layer renders correctly against
- * encrypted/synced data; it does not re-prove the DB-path reconciliation
- * itself (that is Plan 04's own coverage).
- *
- * Deep responsive/UX polish is explicitly Phase 16 (SPEC Boundaries) — this
- * test asserts "loads and functions without error", not pixel layout.
- *
- * Route enumeration source of truth: every `<a class="side-item" href="{{
- * route(...) }}">` entry in app-sidebar.blade.php EXCLUDING the
- * `href="#"` Receipts placeholder (not yet implemented — nothing to
- * smoke), the developer-only `/dev` Dev Console entry (conditional
- * chrome, not a primary user surface, and already covered by its own
- * EnsureDeveloperMode-gated suite), and the sign-out POST form (not a
- * GET surface). That leaves exactly 24 `route()` calls — the dataset
- * below has exactly 24 entries, so `count(dataset) >= count(side-item
- * route() calls)` holds with equality.
- */
+// Every primary sidebar surface, rendered against a fixture shaped like a
+// real device: encrypted columns, a confirmed peer, a closed sync session.
+// The dataset enumerates every route()-backed `side-item` anchor in
+// app-sidebar.blade.php, minus the `href="#"` placeholder, /dev and sign-out.
 
 function mobileSurfaceParityUser(): User
 {
@@ -57,20 +26,8 @@ function mobileSurfaceParityUser(): User
     ]);
 }
 
-/**
- * Seeds an on-device-shaped fixture for $user: an account, an import run,
- * ONE transaction whose sensitive columns (description, counterparty_name)
- * are written as genuine GDK ciphertext via SensitiveColumnCodec — exactly
- * the direct-write hook `RecordTransactions` uses in production — plus a
- * counterparty row with its own encrypted display_name/merchant_name/iban,
- * an approved recurring series, a confirmed `device_registry` peer, and a
- * closed `sync_sessions` row (a "synced device" — not a fresh/empty one).
- *
- * A raw DB read-back proves the fixture is genuinely ciphertext at rest
- * (T-15-07 posture) BEFORE any route is smoked — a broken fixture that
- * silently stored plaintext would make every downstream assertion below
- * prove nothing.
- */
+// The raw read-backs below are load-bearing: a fixture that silently stored
+// plaintext would make every route assertion in this file prove nothing.
 function seedMobileSurfaceParityFixture(DatabaseManager $db, SensitiveColumnCodec $codec, User $user, Session $session): void
 {
     $suffix = bin2hex(random_bytes(4));
@@ -124,7 +81,6 @@ function seedMobileSurfaceParityFixture(DatabaseManager $db, SensitiveColumnCode
 
     $db->connection()->table('transactions')->insert($transactionAttrs);
 
-    // Ciphertext-at-rest proof (T-15-07) — a raw read never shows plaintext.
     $storedTx = $db->connection()->table('transactions')
         ->where('user_id', $userId)
         ->where('fingerprint', hash('sha256', 'msp-tx-'.$suffix))
@@ -165,9 +121,7 @@ function seedMobileSurfaceParityFixture(DatabaseManager $db, SensitiveColumnCode
         'updated_at' => '2026-06-01 00:00:00',
     ]);
 
-    // A confirmed peer — "this device is a paired, synced peer", not a
-    // fresh/empty on-device install (mirrors
-    // MobileResumableInitialSyncTest's device_registry fixture shape).
+    // A paired, synced peer rather than a fresh install.
     $peerDeviceId = 'msp-desktop-peer-'.$suffix;
     $db->connection()->table('device_registry')->insert([
         'user_id' => $userId,
@@ -211,10 +165,6 @@ beforeEach(function (): void {
 });
 
 /**
- * Every primary sidebar route() call, by [routeName, params]. See the
- * file-header comment for the enumeration rule (24 entries, matching the
- * sidebar's 24 real `route()`-backed `side-item` anchors).
- *
  * @return array<string, array{0: string, 1: array<string, mixed>}>
  */
 function mobileSurfaceParityRoutes(): array
@@ -256,10 +206,8 @@ it('renders every primary sidebar surface without error against an on-device enc
 
     $response->assertSuccessful();
 
-    // No unresolved-view / server-error signature ever leaks into an
-    // otherwise-2xx response body (defense-in-depth alongside
-    // assertSuccessful — belt-and-braces for Livewire full-page mounts
-    // where an inner exception can sometimes render inline).
+    // A Livewire full-page mount can render an inner exception inline and
+    // still answer 2xx, which assertSuccessful() alone would accept.
     expect($response->getContent())
         ->not->toContain('Illuminate\\View\\ViewException')
         ->not->toContain('Server Error');

@@ -15,9 +15,6 @@ use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class HealthCheckListener
 {
     public function __construct(

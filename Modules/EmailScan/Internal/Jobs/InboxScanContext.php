@@ -12,9 +12,6 @@ use Modules\EmailScan\Internal\MimeHeaderParser;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final readonly class InboxScanContext
 {
     // One instance is built per scan-job run and folds every fetched

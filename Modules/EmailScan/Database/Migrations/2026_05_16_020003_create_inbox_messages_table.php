@@ -5,25 +5,10 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Creates the inbox_messages table — the lightweight DB index that
- * sits over the raw .eml blobs persisted on disk.
- *
- * One row per fetched message. The pair (inbox_id, provider_message_id)
- * is UNIQUE so re-fetching the same message id is a no-op via
- * insertOrIgnore — the idempotency contract the background fetcher
- * relies on across retries and back-pagination. Sender + subject are
- * captured at fetch time so the downstream parser does not need to
- * re-open the .eml just to filter by sender; the body parsing happens
- * later via its own pipeline.
- *
- * The `status` column is the lifecycle handoff to the parser stage:
- * Phase 6's fetcher only ever writes 'fetched'. The remaining values
- * ('parsed', 'skipped', 'unmatched') are reserved so the parser-stage
- * code can transition rows in place without a follow-up schema change.
- * The enum is enforced via a paired BEFORE INSERT / BEFORE UPDATE
- * trigger.
- */
+// UNIQUE (inbox_id, provider_message_id) is the idempotency seam the fetcher
+// leans on: a re-fetch of the same id is a no-op via insertOrIgnore.
+// The fetcher only ever writes 'fetched'; 'parsed' / 'skipped' / 'unmatched'
+// are reserved for the parser stage so it can transition rows in place.
 return new class extends ModuleMigration
 {
     public function up(): void
@@ -32,16 +17,14 @@ return new class extends ModuleMigration
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained('users')->cascadeOnDelete();
             $table->foreignId('inbox_id')->constrained('inboxes')->cascadeOnDelete();
-            // Gmail message ids are short hex strings; Microsoft Graph
-            // message ids are ~100 chars base64url with a long prefix.
-            // 128 covers both with margin.
+            // Gmail message ids are short hex; Graph ids run ~100 chars of
+            // prefixed base64url. 128 covers both with margin.
             $table->string('provider_message_id', 128);
             $table->timestamp('internal_date');
             $table->string('sender_email', 320);
             $table->string('sender_name', 320)->nullable();
-            // RFC 5322 caps a single header line at 998 octets; the
-            // Subject header may carry encoded-word run-on. Allow the
-            // full line length so Q-encoded subjects round-trip safely.
+            // RFC 5322 caps a header line at 998 octets, and a Q-encoded
+            // Subject can use all of it.
             $table->string('subject', 998)->nullable();
             $table->string('status', 16)->default('fetched');
             $table->timestamp('fetched_at');

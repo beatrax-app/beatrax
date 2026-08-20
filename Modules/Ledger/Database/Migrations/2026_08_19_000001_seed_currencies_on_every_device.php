@@ -23,8 +23,6 @@ use Illuminate\Support\Facades\DB;
  * the device was set up. Idempotent, so re-running is safe — updateOrInsert,
  * so a re-run also restores the canonical name and minor_unit rather than
  * leaving an edited row in place.
- *
- * @link ../../../../.docs/features/ledger/architecture.md
  */
 return new class extends Migration
 {

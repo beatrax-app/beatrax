@@ -13,15 +13,14 @@ use Modules\Categorization\Public\Actions\DeleteCategorizationRule;
 use Modules\Categorization\Public\Dto\RuleActionDto;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-// Three variants keyed on the prior auto-category provenance: `rule`
-// (rule summary + Update/Remove), `memory` (Override action), `none`
-// (render nothing). Remove rule uses RulesPage's two-step inline
-// confirmation pattern for the same destructive-action posture.
 final class CategorizationProvenancePanel extends Component
 {
+    use HoldsFlashMessage;
+
     public int $transactionId = 0;
 
     public string $variant = 'none';
@@ -33,8 +32,6 @@ final class CategorizationProvenancePanel extends Component
     public string $categoryPath = '';
 
     public bool $confirmingRemove = false;
-
-    public string $flashMessage = '';
 
     public function mount(
         int $transactionId,
@@ -74,10 +71,8 @@ final class CategorizationProvenancePanel extends Component
             return;
         }
 
-        // DeleteCategorizationRule throws NotFoundHttpException when the
-        // rule was deleted in another tab or a tampered payload carries a
-        // foreign id. The catch re-hydrates the panel and surfaces a calm
-        // flash message instead of a 500 — it only affects the UI surface.
+        // NotFoundHttpException here means the rule vanished in another tab or
+        // the payload carried a foreign id — a calm flash, never a 500.
         try {
             ($delete)($currentUser->user(), $this->ruleId);
         } catch (NotFoundHttpException) {
@@ -90,9 +85,6 @@ final class CategorizationProvenancePanel extends Component
 
         $this->confirmingRemove = false;
 
-        // The panel falls back to memory/none because the rule no
-        // longer resolves via findForUser, even though the historical
-        // rule_id still sits in auto_category_provenance.
         $this->hydrateFromProvenance($db, $currentUser, $rules);
     }
 
@@ -119,10 +111,8 @@ final class CategorizationProvenancePanel extends Component
         CurrentUser $currentUser,
         CategorizationRuleQuery $rules,
     ): void {
-        // AssignCategory::readPriorProvenance owns the read-and-decode shape,
-        // returning null for a missing, empty, or corrupt payload — the panel
-        // then renders the empty 'none' variant rather than throwing mid
-        // transaction-detail render.
+        // readPriorProvenance returns null for a missing, empty, or corrupt
+        // payload, so a poisoned column renders 'none' instead of throwing.
         $decoded = AssignCategory::readPriorProvenance($db, $this->transactionId, $currentUser->user()->id);
         if ($decoded === null) {
             $this->applyEmptyVariant('none');
@@ -135,9 +125,8 @@ final class CategorizationProvenancePanel extends Component
             return;
         }
 
-        // A 'memory' provenance shows the Override action; a 'rule' whose row no
-        // longer resolves (deleted — the historical rule_id still sits in the
-        // JSON) falls through here to 'none' alongside every unknown source.
+        // A 'rule' whose row no longer resolves lands here too: the deleted
+        // rule_id still sits in the JSON, so it degrades to 'none'.
         $this->applyEmptyVariant($source === 'memory' ? 'memory' : 'none');
     }
 

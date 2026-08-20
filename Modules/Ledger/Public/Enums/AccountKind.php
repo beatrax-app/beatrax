@@ -8,9 +8,6 @@ namespace Modules\Ledger\Public\Enums;
 // `ics_card` credit card, a `paypal` wallet, a `cash` account, or a
 // `paypal_funding` pseudo-account. Bank identity (ASN etc.) is NOT a kind —
 // it lives in the import format and the OpenBanking institution.
-/**
- * @link ../../../../.docs/features/ledger/architecture.md
- */
 enum AccountKind: string
 {
     case Bank = 'bank';

@@ -7,9 +7,6 @@ namespace Modules\Forecasting\Public\Dto;
 use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final class AccountBalanceLine extends Data
 {
     public function __construct(

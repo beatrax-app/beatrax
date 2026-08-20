@@ -7,9 +7,6 @@ namespace Modules\Sync\Public\Services;
 use Illuminate\Contracts\Session\Session;
 use Modules\Sync\Internal\Crypto\GdkEpochControlHandler;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class GdkEpochDeliveryGateway
 {
     public function __construct(

@@ -12,9 +12,6 @@ use Modules\Budgets\Public\Services\CarryoverQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Public\Services\PeriodQuery;
 
-/**
- * @link ../../../../../.docs/features/budgets/architecture.md
- */
 final class EnvelopeGlanceCard extends Component
 {
     public function render(

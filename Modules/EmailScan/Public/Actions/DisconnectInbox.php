@@ -11,9 +11,6 @@ use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final class DisconnectInbox
 {
     public function __construct(

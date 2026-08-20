@@ -15,16 +15,14 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 /**
- * @link ../../../../.docs/features/counterparties/architecture.md
+ * @link ../../../../.docs/features/counterparties/triage-suggestions.md
  */
 final readonly class CounterpartyTriageQueue
 {
-    // Recency/volume scan cap so the per-render cost stays bounded
-    // regardless of how many unknown counterparties the user has.
+    // The queue is capped, not paged: a user with more than 200 unknowns
+    // only ever sees the 200 most recently updated.
     private const SCAN_LIMIT = 200;
 
-    // Suggestion confidence thresholds — see the confidence ladder at
-    // the @link above.
     private const CONFIDENCE_HIGH = 80;
 
     private const CONFIDENCE_MEDIUM = 60;
@@ -36,18 +34,16 @@ final readonly class CounterpartyTriageQueue
         private Session $session,
     ) {}
 
-    // When $queueFirstId resolves to an unknown counterparty for this
-    // user, that row is pinned to the front of the queue (matches the
-    // ?queue_first={id} link from unknown index cards).
+    // $queueFirstId carries the `?queue_first={id}` param from an unknown
+    // index card: that row is pinned to the front of the queue.
     /**
      * @return list<Counterparty>
      */
     public function forUser(User $user, ?int $queueFirstId = null): array
     {
-        // Raw query builder + hydrate(): Eloquent's dynamic
-        // orderByDesc() triggers a PHPStan staticMethod.dynamicCall
-        // warning, which this sidesteps while preserving the model-rich
-        // return type.
+        // Raw builder + hydrate(): Eloquent's dynamic orderByDesc() trips
+        // larastan-strict `staticMethod.dynamicCall`, and this keeps the
+        // model-rich return type anyway.
         $rawRows = $this->db->connection()->table('counterparties')
             ->where('user_id', $user->id)
             ->where('type', CounterpartyType::Unknown->value)
@@ -82,9 +78,8 @@ final readonly class CounterpartyTriageQueue
         return array_merge([$head], $tail);
     }
 
-    // Returns null when no description matches a known merchant; the
-    // triage page then renders the manual-label section without a
-    // suggestion banner. See the confidence ladder at the class @link.
+    // Null when no description resolves to a known merchant; the triage page
+    // then renders the manual-label section with no suggestion banner.
     public function suggestionFor(Counterparty $unknown): ?TriageSuggestion
     {
         if ($unknown->user_id === null) {
@@ -108,10 +103,8 @@ final readonly class CounterpartyTriageQueue
             if ($description === '') {
                 continue;
             }
-            // Decrypt each candidate before matching — substring/corpus
-            // matching against ciphertext always misses. A pass-through
-            // no-op for a non-encrypted user; the candidate set stays
-            // bounded to the limit(20) read above.
+            // Decrypt before matching: substring/corpus matching against
+            // ciphertext always misses.
             $description = $this->codec->decryptValue('transactions', 'description', $description, $unknown->user_id, $this->session)['value'];
             $total++;
             $resolved = $this->merchantResolver->resolve($description, $unknown->user_id);
@@ -126,8 +119,6 @@ final readonly class CounterpartyTriageQueue
         }
 
         arsort($tally);
-        // `$tally` is non-empty here (guarded above), so
-        // array_key_first never returns null at this point.
         $topName = array_key_first($tally);
         $topHits = $tally[$topName];
         $sharePercent = (int) round(($topHits / $total) * 100);
@@ -139,9 +130,8 @@ final readonly class CounterpartyTriageQueue
         };
 
         // Translated, not sprintf'd: this sentence renders directly beneath a
-        // localised suggestion banner, so an English format string put two
-        // languages in one card. The resolver is named in the banner's own
-        // copy, so the sentence carries only the counts and the name.
+        // localised suggestion banner, and an English format string put two
+        // languages in one card.
         $reasoning = Lang::get('counterparties::triage.reasoning', [
             'hits' => $topHits,
             'total' => $total,
@@ -155,8 +145,6 @@ final readonly class CounterpartyTriageQueue
         );
     }
 
-    // Feeds the sidebar Triage amber badge — hidden when zero, surfaced
-    // otherwise so the user always sees how much triage work remains.
     public function unknownCountForUser(User $user): int
     {
         return $this->db->connection()->table('counterparties')

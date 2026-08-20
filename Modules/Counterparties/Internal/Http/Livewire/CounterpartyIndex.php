@@ -17,9 +17,6 @@ use Modules\Counterparties\Public\Queries\CounterpartyIndexQuery;
 // whose state persists in user_preferences.counterparty_index_view.
 // The #[Url] attribute on $type keeps the active filter shareable via
 // ?type={slug} links.
-/**
- * @link ../../../../../.docs/features/counterparties/architecture.md
- */
 final class CounterpartyIndex extends Component
 {
     #[Url(as: 'type', except: 'all')]

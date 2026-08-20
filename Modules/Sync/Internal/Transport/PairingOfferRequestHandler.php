@@ -16,9 +16,6 @@ use Modules\Sync\Internal\Pairing\PairingOfferService;
 // extra route: the pairing offer a device holding only a typed word-code
 // needs. Everything else is handed to the WebSocket untouched, so this adds
 // a route without adding a router dependency (see @link).
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class PairingOfferRequestHandler implements RequestHandler
 {
     public const string OFFER_PATH = '/pair/offer';

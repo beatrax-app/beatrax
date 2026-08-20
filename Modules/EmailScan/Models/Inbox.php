@@ -8,10 +8,8 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
-// Carries the per-user backfill window plus the JSON progress payload
-// the background fetcher updates as it walks history. Credentials
-// live exclusively in the chmod-600 JSON repository on disk — no
-// column of this model carries any secret.
+// No column here carries a secret: credentials live exclusively in the
+// chmod-600 JSON repository on disk.
 /**
  * @property int $id
  * @property int|null $user_id

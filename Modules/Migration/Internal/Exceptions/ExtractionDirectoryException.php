@@ -10,9 +10,6 @@ use RuntimeException;
 // cannot be created on disk — a local filesystem/permission failure,
 // distinct from the UnrecognizedMigrationFileException raised for a
 // malformed or hostile archive.
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 final class ExtractionDirectoryException extends RuntimeException
 {
     public function __construct(string $targetDir)

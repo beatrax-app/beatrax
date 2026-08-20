@@ -10,9 +10,6 @@ use Modules\Core\Public\Contracts\SecretShield;
 use Modules\EmailScan\Models\OAuthSecret;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/dev-mode/architecture.md
- */
 class OAuthScrubSet
 {
     /** @var list<string>|null */

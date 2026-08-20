@@ -10,9 +10,6 @@ namespace Modules\Auth\Public\Contracts;
 
 // Implementations MUST gate recover() behind the OS authentication prompt and
 // MUST persist nothing the OS cannot re-protect.
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 interface ColdStartVault
 {
     // False on platforms with no biometric gate, so callers can hide the

@@ -13,30 +13,16 @@ return [
      */
     'enabled' => env('ACTIVITYLOG_ENABLED', true),
 
-    /*
-     * Persisted table name for activity rows. The Dev Console's
-     * audit pipeline writes through spatie/laravel-activitylog into
-     * this table — renamed from the package default `activity_log`
-     * so the schema name reflects its purpose ("dev_mode_audit")
-     * and future activity-logging consumers outside the Dev
-     * Console will land in a separate, named table.
-     */
+    // Inert: v5 removed this option and the package no longer reads it.
+    // `DevModeActivity::$table` is what actually binds the renamed table.
     'table_name' => 'dev_mode_audit',
 
-    /*
-     * When the clean command is executed, all recording activities older
-     * than the number of days specified here will be deleted. The
-     * project keeps full audit history forever, so this value is
-     * intentionally high; the clean command is not scheduled.
-     */
+    // Never reached: audit history is kept forever, so the clean command
+    // is not scheduled.
     'clean_after_days' => 365,
 
-    /*
-     * Default log name for entries written via
-     * `activity()->log(...)` without an explicit `->inLog(...)`
-     * channel. The Dev Console pipeline uses `dev_mode` so every
-     * audit row carries a single, filterable log_name.
-     */
+    // One log_name for the whole Dev Console pipeline, so the audit view
+    // can filter on it.
     'default_log_name' => 'dev_mode',
 
     /*
@@ -51,17 +37,8 @@ return [
      */
     'include_soft_deleted_subjects' => false,
 
-    /*
-     * This model will be used to log activity.
-     * It should implement the Spatie\Activitylog\Contracts\Activity interface
-     * and extend Illuminate\Database\Eloquent\Model.
-     *
-     * NOTE: spatie/laravel-activitylog v5 REMOVED the `table_name`
-     * config option (see
-     * vendor/spatie/laravel-activitylog/UPGRADING.md). The
-     * DevModeActivity model overrides $table = 'dev_mode_audit'
-     * so every write lands in the renamed table.
-     */
+    // Overrides $table since v5 dropped the `table_name` option; this is
+    // the only thing keeping writes in `dev_mode_audit`.
     'activity_model' => DevModeActivity::class,
 
     /*

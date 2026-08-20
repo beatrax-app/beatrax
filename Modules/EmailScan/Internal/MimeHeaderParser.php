@@ -10,9 +10,6 @@ use ZBateson\MailMimeParser\Header\AddressHeader;
 use ZBateson\MailMimeParser\Header\DateHeader;
 use ZBateson\MailMimeParser\MailMimeParser;
 
-/**
- * @link ../../../.docs/features/email-scan/architecture.md
- */
 final class MimeHeaderParser
 {
     public function parseHeadersWithFallbackDate(

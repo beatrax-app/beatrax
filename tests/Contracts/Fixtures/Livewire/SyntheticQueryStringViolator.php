@@ -6,14 +6,10 @@ namespace Tests\Contracts\Fixtures\Livewire;
 
 use Livewire\Component;
 
-/**
- * Synthetic Livewire component used by SecretsInLivewireSnapshotTest's
- * self-test pass. It deliberately includes a `$queryString` entry that
- * names a SecretsColumnRegistry column verbatim. A real `$queryString`
- * binding would echo the property value into the URL — explicitly the
- * worst place a stored secret could surface — so the arch invariant
- * must catch this shape.
- */
+// Deliberately broken: the $queryString entry names a SecretsColumnRegistry
+// column verbatim, which would echo the value into the URL.
+// SecretsInLivewireSnapshotTest's inverse pass fails if the scan stops
+// flagging it, so do not "fix" this component.
 final class SyntheticQueryStringViolator extends Component
 {
     /** @var array<int, string> */

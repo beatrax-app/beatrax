@@ -12,9 +12,6 @@ use Modules\Reports\Internal\Support\DefinitionJsonDecoder;
 use Modules\Reports\Public\Dto\SavedReportIndexRow;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final readonly class SavedReportsQuery
 {
     /** @var list<string> */

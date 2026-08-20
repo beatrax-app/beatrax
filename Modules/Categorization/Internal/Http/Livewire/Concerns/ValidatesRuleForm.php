@@ -10,9 +10,6 @@ use Modules\Core\Public\Support\Lang;
 // records every row's problem on its per-row error property in a single
 // sweep so the whole form surfaces its faults at once, then reports pass or
 // fail. Reads and writes the RuleFormModal state it is composed into.
-/**
- * @link ../../../../../../.docs/features/categorization/architecture.md
- */
 trait ValidatesRuleForm
 {
     // Returns the parsed priority, or null when any field failed validation —

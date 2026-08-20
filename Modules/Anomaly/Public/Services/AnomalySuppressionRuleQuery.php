@@ -13,9 +13,6 @@ use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/anomaly/architecture.md
- */
 final readonly class AnomalySuppressionRuleQuery
 {
     use CoercesScalars;

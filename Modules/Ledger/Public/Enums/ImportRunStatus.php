@@ -8,9 +8,6 @@ namespace Modules\Ledger\Public\Enums;
 // committed one is `confirmed` (terminal, the file-layer idempotency key),
 // and an abandoned one is `discarded` (re-previewable). The column stays
 // string; this enum is the one canonical spelling every caller maps through.
-/**
- * @link ../../../../.docs/features/ledger/architecture.md
- */
 enum ImportRunStatus: string
 {
     case Previewed = 'previewed';

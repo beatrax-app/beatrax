@@ -8,9 +8,6 @@ use Modules\Core\Models\User;
 use Modules\Migration\Public\Dto\MigrationBatch;
 use Modules\Migration\Public\Exceptions\UnrecognizedMigrationFileException;
 
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 interface ParsesMigrationSource
 {
     /**

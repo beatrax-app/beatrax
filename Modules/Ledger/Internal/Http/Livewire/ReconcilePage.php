@@ -26,9 +26,6 @@ use Throwable;
 // DI-only: no constructor. Service collaborators arrive as parameters
 // on mount()/render()/action methods — Livewire Component subclasses
 // are barred from constructor injection by phpstan-strict-rules.
-/**
- * @link ../../../../../.docs/features/ledger/architecture.md
- */
 final class ReconcilePage extends Component
 {
     use CoercesScalars;
@@ -174,9 +171,6 @@ final class ReconcilePage extends Component
     // mapping documented in the linked architecture page). Re-validates
     // account ownership before reading anything; a foreign accountId is
     // cleared back to null so no other user's data leaks.
-    /**
-     * @link ../../../../../.docs/features/ledger/architecture.md
-     */
     private function loadAccount(CurrentUser $currentUser, DatabaseManager $db): void
     {
         if ($this->accountId === null) {

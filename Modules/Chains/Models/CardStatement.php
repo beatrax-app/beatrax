@@ -12,7 +12,7 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 
 /**
- * @link ../../../.docs/features/chains/architecture.md
+ * @link ../../../.docs/features/chains/card-statement-lifecycle.md
  *
  * @property int $id
  * @property int|null $user_id

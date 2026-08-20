@@ -20,9 +20,6 @@ use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\LockStore;
 use Psr\Log\LoggerInterface;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final class PruneNotificationsJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Dispatchable;

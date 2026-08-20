@@ -15,9 +15,6 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\Routing\Exception\RouteNotFoundException;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final class PersistIcsStatementReady
 {
     public function __construct(

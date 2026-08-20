@@ -34,9 +34,6 @@ use Modules\Categorization\Public\Services\UncategorizedTriageQuery;
 use Modules\Core\Public\Events\UserInstalled;
 use Modules\Core\Public\Support\LoadsModuleResources;
 
-/**
- * @link ../../../.docs/features/categorization/architecture.md
- */
 final class CategorizationServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;

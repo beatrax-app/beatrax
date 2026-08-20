@@ -9,9 +9,6 @@ use Modules\Migration\Internal\Exceptions\ExtractionDirectoryException;
 use Modules\Migration\Public\Exceptions\UnrecognizedMigrationFileException;
 use ZipArchive;
 
-/**
- * @link ../../../../../.docs/features/migration/architecture.md
- */
 final class ZipExtractor
 {
     private const DEFAULT_MAX_ENTRIES = 500;

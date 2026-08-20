@@ -17,9 +17,6 @@ use stdClass;
 // Builds the per-day end-of-day balance map for the month grid: forecast
 // points for future days, real transaction actuals overlaid on past days,
 // and a computing sentinel while any account's forecast is still warming up.
-/**
- * @link ../../../../.docs/features/calendar/architecture.md
- */
 final readonly class DailyBalanceAggregator
 {
     use CoercesScalars;

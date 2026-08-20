@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Public\Services;
 
-use Modules\Core\Public\Support\SafeExceptionContext;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Import\Public\Contracts\CapturesImportForSync;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Contracts\CapturesTransactionsForSync;
@@ -17,9 +17,6 @@ use Modules\Sync\Internal\OpLog\OpLogWriter;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class ImportSyncCapture implements CapturesImportForSync, CapturesTransactionsForSync
 {
     // Parents before children, so a peer replaying these accepts them: a

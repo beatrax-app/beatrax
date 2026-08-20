@@ -11,23 +11,16 @@ use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\OpLog\OpLogBackfiller;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
-use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
+use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 uses(RefreshDatabase::class);
 
-/*
- * The backfill reads rows straight off the table, and a sensitive column is
- * ciphertext AT REST. OpLogWriter then encrypts whatever it is handed — under
- * a DIFFERENT associated data (`table:pk:field:epoch`, not `table:field:epoch`)
- * — so the stored column went into the log wrapped twice.
- *
- * The peer unwrapped the outer layer, got the inner base64, and projected THAT
- * as the value. Its own read-side decrypt then succeeded, so the ciphertext
- * guard never fired and every synced counterparty and description rendered on
- * the phone as a string of characters.
- */
+// The backfill reads rows straight off the table, where a sensitive column is
+// already ciphertext, and OpLogWriter encrypts again under different associated
+// data. The peer unwrapped one layer, projected the inner base64, and every
+// synced counterparty and description rendered on the phone as gibberish.
 
 function backfillCryptoUser(): User
 {
@@ -237,16 +230,9 @@ it('refuses to capture a sensitive column it cannot read rather than shipping a 
 });
 
 it('leaves a sensitive column readable after a peer has replayed it', function (): void {
-    /*
-     * The tests above stop at the op: they unwrap its value and check the name
-     * is there. Nothing checked the other end — that once a peer REPLAYS that
-     * op, the column it writes still reads back as the name.
-     *
-     * That is the invariant the phone actually depends on, and it is the one
-     * that broke: transactions.counterparty_name arrived wrapped one layer too
-     * many, the read-side decrypt peeled off the outer layer, and the payee
-     * column on the main screen rendered as base64 for every row.
-     */
+    // The tests above stop at the op. This one covers the end the phone
+    // actually depends on: that after a peer replays the op, the column it
+    // writes still reads back as the name.
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     /** @var Session $session */
@@ -313,18 +299,10 @@ it('leaves a sensitive column readable after a peer has replayed it', function (
 });
 
 it('encrypts a note that merely looks like ciphertext', function (): void {
-    /*
-     * A guard here once skipped encryption whenever a value looked like
-     * ciphertext — "pure base64 alphabet, decodes to 40+ bytes", which is any
-     * 54-character alphanumeric run. A pasted payment reference or a hash in a
-     * note therefore went to disk in the clear, came back BLANK on read
-     * (safeUndecrypted blanks what it thinks is ciphertext), and then aborted
-     * the whole backfill for that user, which refuses to capture a value the
-     * codec blanked.
-     *
-     * The double-wrap it was written to stop is prevented a layer down, where
-     * plaintextFields() decrypts before OpLogWriter is handed anything.
-     */
+    // A guard here once skipped encryption for anything that looked like
+    // ciphertext, which any 54-character alphanumeric run does. A pasted
+    // payment reference went to disk in the clear, read back blank, and
+    // aborted the backfill. plaintextFields() prevents the double wrap now.
     /** @var Session $session */
     $session = $this->app->make(Session::class);
     /** @var GdkKeyringService $keyring */
@@ -348,4 +326,3 @@ it('encrypts a note that merely looks like ciphertext', function (): void {
     expect($read['decrypted'])->toBeTrue();
     expect($read['value'])->toBe($reference, 'the note did not survive the round trip');
 });
-

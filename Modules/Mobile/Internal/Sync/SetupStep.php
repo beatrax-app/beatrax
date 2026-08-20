@@ -4,12 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Mobile\Internal\Sync;
 
-// The ordered stages of onboarding a joined device, so the setup screen can
-// show which are done, which is running, and what is still to come. The
-// backing value is the `mobile::setup.step.*` translation key.
-/**
- * @link ../../../../.docs/features/mobile/architecture.md
- */
+// Shown all at once so a long stage reads as "step 3 of 4", not as a hang.
+// The backing value is the `mobile::setup.step.*` translation key.
 enum SetupStep: string
 {
     case Connect = 'connect';
@@ -28,8 +24,7 @@ enum SetupStep: string
         return [self::Connect, self::Keys, self::Transfer, self::Rebuild];
     }
 
-    // Which step a blocked reason belongs to. Absent means the pull is
-    // working rather than waiting, which is the transfer step.
+    // Absent means the pull is working rather than waiting: the transfer step.
     public static function forBlocked(?SyncBlockedReason $blocked): self
     {
         return match ($blocked) {

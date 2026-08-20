@@ -13,9 +13,6 @@ use Modules\Migration\Internal\Exceptions\MigrationRunNotParsedException;
 use Modules\Migration\Internal\Pipeline\PreviewSummaryBuilder;
 use Modules\Migration\Models\MigrationRun;
 
-/**
- * @link ../../../../../.docs/features/migration/architecture.md
- */
 final class MigrationResults extends Component
 {
     public int $runId = 0;

@@ -19,7 +19,6 @@ use Modules\Sync\Internal\Transport\SyncWebSocketHandler;
 use Psr\Log\LoggerInterface;
 
 /**
- * @link ../../../.docs/features/sync/architecture.md
  * @see SyncServiceProvider
  * @see SyncWebSocketHandler
  */

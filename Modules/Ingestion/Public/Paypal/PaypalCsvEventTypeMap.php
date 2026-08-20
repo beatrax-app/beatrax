@@ -7,9 +7,6 @@ namespace Modules\Ingestion\Public\Paypal;
 use Modules\Ingestion\Public\Exceptions\MissingPaypalTransactionTypeMapException;
 use Modules\Ingestion\Public\Exceptions\UnknownPaypalEventTypeException;
 
-/**
- * @link ../../../../.docs/features/ingestion/architecture.md
- */
 final class PaypalCsvEventTypeMap
 {
     /**

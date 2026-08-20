@@ -79,8 +79,7 @@ final class RenameCounterpartyPopover extends Component
         }
 
         if ($this->categoryHint !== null && $this->categoryHint > 0 && $generalizedTrimmed !== '') {
-            // Gap-numbered priority default (13.4-UI-SPEC.md § Priority
-            // field): appends after every existing rule for this user,
+            // Gap-numbered so the new rule appends after every existing one,
             // mirroring RuleFormModal's create-mode default.
             $maxPriority = $db->connection()
                 ->table('categorization_rules')
@@ -98,15 +97,10 @@ final class RenameCounterpartyPopover extends Component
                     actions: [['type' => 'category', 'payload' => ['category_id' => $this->categoryHint]]],
                 ));
             } catch (ValidationException) {
-                // A zero-condition/zero-action rejection can't happen
-                // here (both are always supplied); a duplicate-rule
-                // signal is benign — the alias already persisted, so
-                // swallow it and let the popover close calmly.
             } catch (InvalidArgumentException) {
-                // CreateCategorizationRule throws InvalidArgumentException
-                // when the embedded category_id fails assertCategoryVisible()
-                // — reachable if a stale/tampered categoryHint arrives.
-                // Swallow it; the alias already persisted successfully.
+                // A duplicate rule, or a stale/tampered categoryHint failing
+                // assertCategoryVisible(). Either way the alias itself already
+                // persisted, so the popover closes calmly.
             }
         }
 

@@ -9,9 +9,6 @@ use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\OpenBanking\Public\Dto\FetchWindow;
 use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
 
-/**
- * @link ../../../../.docs/features/open-banking/architecture.md
- */
 interface RemoteSourceAdapter
 {
     public function format(): string;

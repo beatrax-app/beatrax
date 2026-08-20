@@ -15,26 +15,18 @@ use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Identity\BiometricKeyVault;
 use Modules\Mobile\Internal\Identity\BiometricUnlockBridge;
 
-/**
- * @link ../../../../../.docs/features/mobile/architecture.md
- */
 final class MobileLockScreen extends Component
 {
-    public string $flashMessage = '';
+    use HoldsFlashMessage;
 
-    // Whether the device has a registered biometric credential AND the
-    // native mobile-biometrics bridge is reachable right now.
     public bool $biometricAvailable = false;
 
     public string $biometricLabel = 'Use Face ID';
-
-    // -------------------------------------------------------------------------
-    // Lifecycle
-    // -------------------------------------------------------------------------
 
     public function mount(
         CurrentUser $currentUser,
@@ -49,10 +41,8 @@ final class MobileLockScreen extends Component
 
         $this->biometricLabel = $gateway->biometricLabel($ua);
 
-        // The biometric trigger shows when EITHER the warm re-lock path
-        // is available (an armed credential + the native bridge), OR
-        // cold-start unlock is ready (enclave available, enrolled, and
-        // the PIN floor is not yet due).
+        // The trigger shows for either path: warm re-lock (armed credential
+        // plus a reachable bridge) or a ready cold start.
         $coldStartReady = $vault->isAvailable()
             && $gateway->isColdStartEnrolled($user->id)
             && ! $gateway->pinFloorDue($user->id);
@@ -69,13 +59,8 @@ final class MobileLockScreen extends Component
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Primary action — PIN fallback (reused UNCHANGED from the Auth analog)
-    // -------------------------------------------------------------------------
-
-    // Mirrors the Auth module's LockScreen::submit() exactly - same
-    // validation, PIN-verification call, backoff/attempts-remaining copy,
-    // and intendedUrl redirect - reached via the Public gateway.
+    // Mirrors the Auth module's LockScreen::submit(): same validation,
+    // verification call, backoff copy and redirect, via the Public gateway.
     public function submit(
         string $pin,
         CurrentUser $currentUser,
@@ -113,15 +98,9 @@ final class MobileLockScreen extends Component
         $this->redirectToIntendedUrl($session, $urls);
     }
 
-    // -------------------------------------------------------------------------
-    // Biometric prompt (mount-time auto-invoke - biometric-primary means
-    // auto-invoked, not just visually-first)
-    // -------------------------------------------------------------------------
-
-    // Fires the native biometric prompt and, on success, routes through
-    // the same AppLockKeyService::release() read + intendedUrl redirect
-    // submit() uses. Called from the Blade view's x-init the moment the
-    // component mounts, and again on an explicit tap for a manual retry.
+    // Auto-invoked from the view's x-init at mount, and again on an explicit
+    // tap: biometric-primary means fired automatically, not merely listed
+    // first. Success routes through the same release() gate submit() uses.
     public function biometricPrompt(
         BiometricUnlockBridge $bridge,
         AppLockKeyService $keyService,
@@ -131,10 +110,9 @@ final class MobileLockScreen extends Component
         Session $session,
         UrlGenerator $urls,
     ): void {
-        // Warm re-lock: the session still holds the data key. No enclave
-        // read happens, so the bypassable bridge bool prompt is the right
-        // gate - it confirms the holder before letting them back through.
-        // A false/aborted bridge prompt releases nothing.
+        // Warm re-lock: the session still holds the data key, so no enclave
+        // read happens and the bridge's bool prompt is the right gate — it
+        // confirms the holder rather than producing a key.
         if ($keyService->release($session) !== null) {
             if ($bridge->prompt()) {
                 $this->redirectToIntendedUrl($session, $urls);
@@ -143,36 +121,30 @@ final class MobileLockScreen extends Component
             return;
         }
 
-        // Cold start (no session key). Re-enforce the enrollment +
-        // PIN-floor gates HERE at the unlock boundary - every Livewire
-        // method is client-invokable regardless of what rendered, even
-        // when biometricAvailable was true via the warm-credential clause.
+        // Cold start. The gates are re-checked HERE at the unlock boundary
+        // because every Livewire method is client-invokable regardless of
+        // what mount() rendered.
         if (! $gateway->isColdStartEnrolled($currentUser->id()) || $gateway->pinFloorDue($currentUser->id())) {
             return;
         }
 
-        // The enclave-gated vault IS the biometric gate - do not also fire
-        // the bridge prompt, which would be a second, redundant, bypassable
-        // prompt. recover() yields a key only after the OS releases the
-        // enclave entry for a live biometric.
+        // The enclave-gated vault IS the biometric gate: recover() yields a
+        // key only after the OS releases the entry for a live biometric.
+        // Firing the bridge prompt too would add a bypassable second one.
         $result = $vault->recover();
         if ($result->isRecovered() && $result->dataKey !== null) {
-            // Unlock AND stamp last_activity_at so the idle-timeout middleware
-            // does not immediately re-lock this (usually long-idle) cold start.
+            // Also stamps last_activity_at, or the idle-timeout middleware
+            // re-locks this usually long-idle cold start immediately.
             $gateway->unlockWithRecoveredKey($currentUser->id(), $result->dataKey, $session);
             $this->redirectToIntendedUrl($session, $urls);
         }
 
-        // canceled / failed / missing / unavailable / pending_async: no state
-        // change — the always-visible PIN pad completes the unlock. On Android,
-        // recover() returns pending_async and the outcome arrives via the
-        // onColdStartRecovered / onColdStartFailed event handlers below.
+        // Every other outcome changes no state: the PIN pad completes the
+        // unlock. Android returns pending_async and answers via the events.
     }
 
-    // Android async completion: the native BiometricPrompt has already
-    // authenticated and stashed the decrypted blob in a transient native
-    // slot. Collects the blob PHP-side and admits on success; nothing to
-    // admit falls through to the PIN pad.
+    // Android async completion: the native prompt has already authenticated
+    // and stashed the decrypted blob in a transient native slot.
     #[On('cold-start-recovered')]
     public function onColdStartRecovered(
         BiometricKeyVault $vault,
@@ -181,9 +153,8 @@ final class MobileLockScreen extends Component
         Session $session,
         UrlGenerator $urls,
     ): void {
-        // Same unlock-boundary gates as the synchronous cold-start path: a
-        // stale (flag-reset) enrollment or an overdue PIN floor must not admit,
-        // even though the native prompt already ran.
+        // The same boundary gates as the synchronous path: a stale enrollment
+        // or overdue PIN floor must not admit, prompt or no prompt.
         if (! $gateway->isColdStartEnrolled($currentUser->id()) || $gateway->pinFloorDue($currentUser->id())) {
             return;
         }
@@ -195,14 +166,9 @@ final class MobileLockScreen extends Component
         }
     }
 
-    // Android async biometric failed/aborted - no state change; the
-    // always-visible PIN pad remains the fallback.
+    // Nothing to do: the always-visible PIN pad remains the fallback.
     #[On('cold-start-failed')]
     public function onColdStartFailed(): void {}
-
-    // -------------------------------------------------------------------------
-    // Render
-    // -------------------------------------------------------------------------
 
     public function render(ViewFactory $views): View
     {
@@ -214,14 +180,9 @@ final class MobileLockScreen extends Component
         return $view;
     }
 
-    // -------------------------------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------------------------------
-
-    // Two tiers, matching the desktop LockScreen: `url.intended` exists only
-    // when the middleware redirected here, while a client-engaged lock leaves
-    // only the last page. Reading the first tier alone sent every mobile
-    // unlock to the dashboard, which on a first-run device bounces onward.
+    // Two tiers, as on the desktop: `url.intended` exists only when the
+    // middleware redirected here, while a client-engaged lock leaves only the
+    // last page. Reading the first alone sent every unlock to the dashboard.
     private function redirectToIntendedUrl(Session $session, UrlGenerator $urls): void
     {
         $intended = $session->pull(MobileLockGateway::SESSION_INTENDED_URL);

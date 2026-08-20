@@ -11,9 +11,6 @@ use Throwable;
 // persisted, or the secrets file will not parse. Distinct from every API
 // failure because no retry helps and no bank is involved — the user has to
 // finish the wizard, or the on-disk file has to be repaired.
-/**
- * @link ../../../../.docs/features/open-banking/architecture.md
- */
 final class OpenBankingCredentialsException extends RuntimeException
 {
     public static function notConfigured(): self

@@ -18,9 +18,6 @@ use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/ledger/architecture.md
- */
 final class TransactionListQuery
 {
     use CoercesScalars;

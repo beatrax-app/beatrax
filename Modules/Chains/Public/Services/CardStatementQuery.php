@@ -16,9 +16,6 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\ValueObjects\Money;
 
-/**
- * @link ../../../../.docs/features/chains/architecture.md
- */
 final class CardStatementQuery
 {
     use CoercesScalars;
@@ -48,9 +45,6 @@ final class CardStatementQuery
         return CardStatement::query()->where('id', $row->id)->first();
     }
 
-    // Resolves the funder as the ASN account behind the most-recent
-    // confirmed ics_bulk_settle chain_link, falling back to the user's
-    // first ASN account when no history exists; null with zero ASN accounts.
     public function nextSettlementForUser(User $user): ?NextSettlementDto
     {
         $row = $this->db->connection()->table('card_statements')

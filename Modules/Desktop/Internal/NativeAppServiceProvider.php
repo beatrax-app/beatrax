@@ -15,31 +15,24 @@ use Native\Desktop\Facades\Menu;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-// The NativePHP-booted application provider — resolved from
-// config/nativephp.php's `provider` key, so its constructor is
-// container-autowired. Menu::create() has no container-bound
-// alternative, so this file joins the facade allow-list.
-/**
- * @link ../../../.docs/features/desktop/architecture.md
- */
+// Resolved from config/nativephp.php's `provider` key, so its constructor is
+// container-autowired. Menu::create() has no container-bound alternative, so this
+// file joins the facade allow-list.
 final class NativeAppServiceProvider implements ProvidesPhpIni
 {
     private const WINDOW_WIDTH = 1100;
 
     private const WINDOW_HEIGHT = 800;
 
-    // The bundled PHP's stock 2M/8M upload defaults sit below the
-    // wizard's own 10 MB Livewire validator ceiling, so a larger
-    // statement upload fails at the PHP layer with no actionable
-    // error. 20 MB matches the wizard's largest single-file upload.
+    // The bundled PHP's stock 2M/8M defaults sit below the wizard's own 10 MB
+    // Livewire validator ceiling, so a larger statement failed at the PHP layer
+    // with no actionable error. 20M matches the wizard's largest single upload.
     private const UPLOAD_MAX_FILESIZE = '20M';
 
     private const POST_MAX_SIZE = '20M';
 
-    // The stock 30s max_execution_time is too tight for the
-    // auto-updater's feed check on a slow network and for heavy
-    // ingestion on a cold cache; 120s absorbs both without
-    // disappearing the safety net entirely.
+    // The stock 30s is too tight for the auto-updater's feed check on a slow
+    // network and for heavy ingestion on a cold cache.
     private const MAX_EXECUTION_TIME = '120';
 
     public function __construct(
@@ -66,9 +59,8 @@ final class NativeAppServiceProvider implements ProvidesPhpIni
 
     public function boot(): void
     {
-        // Runs the migrator BEFORE the main window opens so the very
-        // first request the just-opened window makes sees a fully
-        // migrated schema. Idempotent — a no-op on re-launch.
+        // Before the window opens, so the first request it makes sees a fully
+        // migrated schema.
         $this->bootstrap->runPendingMigrations();
 
         $this->syncListener->startIfEnabled();
@@ -76,9 +68,7 @@ final class NativeAppServiceProvider implements ProvidesPhpIni
 
         $this->precompileViews();
 
-        // Stateful native window: width/height are first-launch
-        // defaults; rememberState() persists resize/reposition across
-        // launches via NativePHP's window-state-keeper.
+        // Width/height are first-launch defaults only; rememberState() wins after.
         $this->windows->open('main')
             ->width(self::WINDOW_WIDTH)
             ->height(self::WINDOW_HEIGHT)
@@ -87,10 +77,9 @@ final class NativeAppServiceProvider implements ProvidesPhpIni
         Menu::create(...$this->appMenu->build());
     }
 
-    // On Windows, two simultaneous Livewire requests racing to compile
-    // the same view can lose the rename() to an AV-locked destination
-    // — precompiling before the first request removes the race, with
-    // one retry for a transient lock.
+    // On Windows, two simultaneous Livewire requests racing to compile the same
+    // view can lose the rename() to an antivirus-locked destination; precompiling
+    // before the first request removes the race, with one retry for a stray lock.
     private function precompileViews(): void
     {
         foreach ([1, 2] as $attempt) {

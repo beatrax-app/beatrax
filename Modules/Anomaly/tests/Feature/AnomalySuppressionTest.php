@@ -13,13 +13,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 uses(RefreshDatabase::class);
 
-/*
- * Dismiss-as-expected creates a server-computed ±15% suppression rule per
- * tripped reason with provenance, and the evaluator then SKIPS a near-
- * identical in-band future charge while still FIRING on a materially
- * larger charge above the band (D-17 / T-09-11).
- */
-
 function supUser(): User
 {
     return User::query()->create([
@@ -90,7 +83,6 @@ beforeEach(function (): void {
 afterEach(fn () => CarbonImmutable::setTestNow());
 
 it('creates a ±15% suppression rule per reason with provenance, then skips in-band and fires above-band', function (): void {
-    // A large €23.49 charge against the €9.99 baseline.
     $largeTxn = supTxn($this->db, (int) $this->user->id, $this->s, -2349, '2026-06-15');
 
     /** @var AnomalyEvaluator $evaluator */
@@ -100,7 +92,6 @@ it('creates a ±15% suppression rule per reason with provenance, then skips in-b
     $alert = AnomalyAlert::query()->where('transaction_id', $largeTxn)->firstOrFail();
     expect($alert->reasons)->toContain('large');
 
-    // Dismiss as expected -> suppression rule with the server-computed band.
     /** @var DismissAnomalyAlertAsExpected $dismiss */
     $dismiss = $this->app->make(DismissAnomalyAlertAsExpected::class);
     ($dismiss)($alert->id, $this->user);
@@ -116,12 +107,10 @@ it('creates a ±15% suppression rule per reason with provenance, then skips in-b
         ->and((int) $rule->source_anomaly_alert_id)->toBe((int) $alert->id)
         ->and($rule->currency)->toBe('EUR');
 
-    // A near-identical future charge (in band) must be SKIPPED.
     $inBandTxn = supTxn($this->db, (int) $this->user->id, $this->s, -2349, '2026-07-15');
     $evaluator->evaluate($inBandTxn, $this->user);
     expect(AnomalyAlert::query()->where('transaction_id', $inBandTxn)->exists())->toBeFalse();
 
-    // A materially larger charge (€40, below the band's low) must still FIRE.
     $aboveBandTxn = supTxn($this->db, (int) $this->user->id, $this->s, -4000, '2026-08-15');
     $evaluator->evaluate($aboveBandTxn, $this->user);
     $aboveAlert = AnomalyAlert::query()->where('transaction_id', $aboveBandTxn)->first();
@@ -138,9 +127,8 @@ it('does not accumulate a duplicate rule when an identical natural-key rule alre
 
     $cpId = (int) $this->db->connection()->table('transactions')->where('id', $largeTxn)->value('counterparty_id');
 
-    // Pre-seed a rule with the SAME natural key the dismissal would write
-    // (simulates a partial undo: the rule survived but the alert is open
-    // again, then the user re-dismisses).
+    // Same natural key the dismissal would write: a partial undo where the
+    // rule survived, the alert re-opened, and the user dismisses again.
     $this->db->connection()->table('anomaly_suppression_rules')->insert([
         'user_id' => $this->user->id, 'counterparty_id' => $cpId, 'detector' => 'large', 'direction' => 'expense',
         'amount_band_low_minor' => (int) round(1.15 * -2349), 'amount_band_high_minor' => (int) round(0.85 * -2349),
@@ -152,8 +140,6 @@ it('does not accumulate a duplicate rule when an identical natural-key rule alre
     $dismiss = $this->app->make(DismissAnomalyAlertAsExpected::class);
     $wrote = ($dismiss)($alert->id, $this->user);
 
-    // No NEW rule written: the natural key already exists, so the count for
-    // the large detector stays at exactly one.
     expect($wrote)->toBeFalse()
         ->and(
             (int) $this->db->connection()->table('anomaly_suppression_rules')

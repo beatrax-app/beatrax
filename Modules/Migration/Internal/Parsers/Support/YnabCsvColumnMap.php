@@ -7,9 +7,6 @@ namespace Modules\Migration\Internal\Parsers\Support;
 use Modules\Migration\Public\Enums\MigrationSourceProduct;
 use Modules\Migration\Public\Exceptions\UnrecognizedMigrationFileException;
 
-/**
- * @link ../../../../../.docs/features/migration/architecture.md
- */
 final class YnabCsvColumnMap
 {
     /** @var list<string> */
@@ -47,10 +44,6 @@ final class YnabCsvColumnMap
      */
     public function categoryGroupAndName(array $row, string $format): array
     {
-        // YNAB4 reads the two separate Master Category/Sub Category cells;
-        // nYNAB splits the single combined "Category Group/Category" cell
-        // (e.g. "Frequent: Groceries") on the first ':'. A transfer row
-        // resolves to [null, ''].
         if ($format === MigrationSourceProduct::Ynab4->value) {
             $group = trim($row['Master Category'] ?? '');
             $name = trim($row['Sub Category'] ?? '');

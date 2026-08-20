@@ -5,14 +5,12 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Config;
 
 /**
- * @link ../../../../.docs/features/sync/architecture.md
+ * @link ../../../../.docs/features/sync/merge-registry-authoring.md
  */
 final class MergeRulesRegistry
 {
-    // Memoized: strategyFor()/requiredCreateColumns() are called once per
-    // (pk, field) in the replayer's CREATE and SET loops, so re-allocating the
-    // full literal array on every call wastes work in a merge of thousands of
-    // ops. Built once, then reused.
+    // Memoized: strategyFor()/requiredCreateColumns() run once per (pk, field)
+    // in the replayer's CREATE and SET loops, over thousands of ops.
     /** @var array<string, array<string, mixed>>|null */
     private ?array $rules = null;
 
@@ -498,6 +496,11 @@ final class MergeRulesRegistry
             // Same review shape as drift_alerts but keyed per transaction.
             // `dismissed_as` rides along with the dismissal transition, so it
             // merges the same way the state it explains does.
+
+            // Unlike the tables around it this one's `id` is DERIVED, from the
+            // (user_id, transaction_id) its own UNIQUE names, so both devices
+            // compute the same number for the same charge. It stays out of
+            // `_create_required`: the applier seeds it from the op's own pk.
             'anomaly_alerts' => [
                 'state' => ['strategy' => 'lww', 'nullable' => false],
                 'dismissed_as' => ['strategy' => 'lww', 'nullable' => true],

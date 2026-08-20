@@ -12,9 +12,6 @@ use stdClass;
 // filter and the cadence inferrer have both had their say. Both detectors
 // compute these eight values together and then hand them on together, so
 // they travel as one thing rather than as eight positional arguments.
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
 final readonly class DetectedSeries
 {
     /**

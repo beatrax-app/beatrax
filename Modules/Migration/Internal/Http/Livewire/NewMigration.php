@@ -23,9 +23,6 @@ use Modules\Migration\Public\Enums\MigrationSourceProduct;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../../.docs/features/migration/architecture.md
- */
 final class NewMigration extends Component
 {
     use WithFileUploads;

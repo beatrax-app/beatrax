@@ -7,35 +7,9 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Creates the `dev_mode_audit` table — the persistent audit-log
- * surface the Dev Console writes to via the
- * spatie/laravel-activitylog package.
- *
- * The table is the spatie-published `activity_log` schema renamed
- * to dev_mode_audit. The DevModeActivity model overrides $table to
- * point at the renamed table; the column shape is what spatie
- * expects so Activity::query() and the ActivityLogger pipeline
- * resolve rows normally. The rename makes the table's purpose
- * explicit in the database — "Dev Console audit" rather than the
- * generic "activity log".
- *
- * Rows captured here cover every Dev Console action that crosses
- * an operational trust boundary:
- *
- *  - Artisan command runs (SAFE-tier and DESTRUCTIVE-tier), with
- *    the resolved name, args, exit code, stdout/stderr excerpts,
- *    and the causer user_id.
- *  - SELECT-only SQL queries executed through the read-only SQL
- *    panel, with the verbatim query, rowcount, and duration.
- *  - Destructive queue actions (retry-failed, flush-failed,
- *    kill-batch) with the action name, context, and causer
- *    user_id.
- *
- * Uses the anonymous-class-migration shape with an injected
- * DatabaseManager — the same pattern other Core migrations
- * (system_alerts, etc.) follow.
- */
+// This is spatie/laravel-activitylog's published `activity_log` schema under a
+// name that says what it holds. The column shape has to stay verbatim spatie or
+// Activity::query() and the ActivityLogger pipeline stop resolving rows.
 return new class extends ModuleMigration
 {
     public function up(): void

@@ -50,9 +50,8 @@ final class IcsPdfStartingBalanceDetector implements DetectsStartingBalance
             ])
             ->get();
 
-        // Earliest opening-balance-date per account wins; the
-        // aggregator (not this detector) resolves any cross-source
-        // opening-balance conflicts among candidates sharing a date.
+        // Earliest date per account wins here; a same-date disagreement is
+        // left for the aggregator to resolve.
         $earliestDatePerAccount = [];
         $emittedKeys = [];
         $out = [];
@@ -84,8 +83,7 @@ final class IcsPdfStartingBalanceDetector implements DetectsStartingBalance
         return $out;
     }
 
-    // Strips the time component so the candidate carries an ISO date
-    // ready for the accounts.starting_balance_date `date` write target.
+    // accounts.starting_balance_date is a `date` column.
     private static function dateOnly(string $raw): string
     {
         $spacePos = strpos($raw, ' ');

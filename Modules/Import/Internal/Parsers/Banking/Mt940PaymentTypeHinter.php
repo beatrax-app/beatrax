@@ -15,8 +15,8 @@ final class Mt940PaymentTypeHinter extends DescriptionKeywordHinter
 {
     protected const SOURCE_FORMAT = SourceFormat::Mt940->value;
 
-    // Mirrors AsnCsvPaymentTypeHinter::KEYWORDS verbatim — the MT940
-    // :86: narrative emits the same lexemes as the CSV description.
+    // Verbatim from AsnCsvPaymentTypeHinter: the MT940 :86: narrative emits
+    // the same lexemes as the CSV description.
     /**
      * @var list<array{keyword: string, type: PaymentType, confidence: int}>
      */

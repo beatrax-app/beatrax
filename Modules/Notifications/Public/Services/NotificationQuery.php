@@ -16,9 +16,6 @@ use Modules\Notifications\Public\NotificationCopy;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final readonly class NotificationQuery
 {
     use CoercesScalars;

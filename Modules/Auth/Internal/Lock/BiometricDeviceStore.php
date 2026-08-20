@@ -9,9 +9,6 @@ use Illuminate\Support\Collection;
 use Modules\Core\Public\Contracts\Clock;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 final class BiometricDeviceStore
 {
     // Number of consecutive biometric failures after which the credential

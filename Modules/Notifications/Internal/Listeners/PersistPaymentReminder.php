@@ -14,9 +14,6 @@ use Modules\Recurring\Public\Events\PaymentReminderDue;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final class PersistPaymentReminder
 {
     public function __construct(
@@ -30,9 +27,7 @@ final class PersistPaymentReminder
     {
         try {
             $dayLabel = $event->dueDate->dayName;
-            $amountText = $event->expectedAmount->format(
-                $event->expectedAmount->currency() === 'EUR' ? 'nl_NL' : 'en_US',
-            );
+            $amountText = $event->expectedAmount->format();
 
             $draft = $this->copyRenderer->forUser($event->userId, fn (): NotificationDraft => new NotificationDraft(
                 userId: $event->userId,

@@ -10,7 +10,4 @@ use RuntimeException;
 // the write was short, or the chmod or atomic rename failed. put() tears down
 // the temp file before this propagates, so the on-disk tree is never left
 // half-written — the caller's rollback deletes the canonical path regardless.
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final class EmlBlobWriteException extends RuntimeException {}

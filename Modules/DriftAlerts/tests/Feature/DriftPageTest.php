@@ -14,13 +14,6 @@ use Modules\DriftAlerts\Public\Events\DriftAlertDismissedCancelled;
 
 uses(RefreshDatabase::class);
 
-/*
- * /drift page tests — Livewire SFC, the three-tab queue
- * (open / history / dismissed), the three per-row actions (acknowledge
- * / snooze / dismissAsCancelled), the URL-state tab persistence, the
- * cadence-flipped cross-reference hint, and the auth gate.
- */
-
 function dpUser(string $username): User
 {
     return User::query()->create([
@@ -171,7 +164,6 @@ it('renders open alerts on the Open tab and sorts the newest detected_at first',
         ->assertSeeText('Netflix')
         ->assertSeeText('Spotify');
 
-    // Newest (Spotify) appears before oldest (Netflix) in the rendered HTML.
     $content = $response->getContent() ?: '';
     $spotifyPos = strpos($content, 'Spotify');
     $netflixPos = strpos($content, 'Netflix');
@@ -242,20 +234,15 @@ it('renders the cadence-flipped meta line when the underlying series is in state
         ->assertSeeText('Cadence flipped');
 });
 
-/*
- * An open row carries up to five action chips in a shrink-0 flex column
- * beside the text. At 390px that column measured 268px past the right edge
- * of a card that clips it, so "Opzegging simuleren" and "Ik heb dit
- * opgezegd" could not be reached at all on a phone.
- */
+// A shrink-0 chip column beside the text measured 268px past the right edge of
+// the clipping card at 390px, so the last two chips were unreachable on a phone.
 it('lets a phone reach every action chip on an open alert', function (): void {
     dpAlert($this->user, 'Netflix');
 
     $content = (string) $this->actingAs($this->user)->get('/drift')->getContent();
 
-    // The row stacks below sm, and the chip column wraps instead of running
-    // off the card. Both halves are needed: wrapping alone still leaves the
-    // column competing with the text for a 390px line.
+    // Both halves are needed: wrapping alone still leaves the chip column
+    // competing with the text for a 390px line.
     expect($content)->toContain('flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-4')
         ->toContain('flex flex-wrap items-center gap-2 sm:shrink-0')
         ->not->toContain('flex shrink-0 items-center gap-2');

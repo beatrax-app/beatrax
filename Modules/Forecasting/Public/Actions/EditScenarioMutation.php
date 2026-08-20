@@ -15,12 +15,10 @@ use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ChangeSeriesAmountPay
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ScenarioMutationPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayload;
 use Modules\Forecasting\Public\Events\ScenarioMutated;
+use Modules\Sync\Public\Events\EntityMutated;
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final class EditScenarioMutation
 {
     public function __construct(
@@ -56,7 +54,7 @@ final class EditScenarioMutation
 
         $now = $this->clock->now();
 
-        $this->db->connection()->transaction(function () use ($mutationId, $user, $newPayload, $targetSeriesId, $scenarioId, $now): void {
+        $edited = $this->db->connection()->transaction(function () use ($mutationId, $user, $newPayload, $targetSeriesId, $scenarioId, $now): ForecastScenarioMutation {
             $mutation = ForecastScenarioMutation::query()
                 ->where('id', $mutationId)
                 ->where('user_id', $user->id)
@@ -75,7 +73,23 @@ final class EditScenarioMutation
                     ->where('user_id', $user->id)
                     ->update(['updated_at' => $now->toDateTimeString()]);
             }
+
+            return $mutation;
         });
+
+        // Only the two columns an edit can move. `kind` is refused above, so
+        // it is never dirty here and a peer's copy keeps the kind its own
+        // create op already gave it.
+        $this->events->dispatch(new EntityMutated(
+            table: 'forecast_scenario_mutations',
+            pk: $mutationId,
+            userId: (int) $user->id,
+            mutationType: 'edit',
+            dirtyFields: [
+                'target_series_id' => $targetSeriesId,
+                'payload' => $edited->getAttributes()['payload'] ?? null,
+            ],
+        ));
 
         $this->events->dispatch(new ScenarioMutated(
             userId: $user->id,

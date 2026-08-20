@@ -10,9 +10,6 @@ use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 final class RecoveryCodeAuthenticator
 {
     private const GROUP_LENGTH = 4;

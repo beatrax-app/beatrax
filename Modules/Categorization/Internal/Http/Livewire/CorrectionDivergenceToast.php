@@ -16,6 +16,7 @@ use Modules\Categorization\Public\Dto\RuleInput;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -25,6 +26,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 // for — Echo would require Reverb, session-flash would require a redirect.
 final class CorrectionDivergenceToast extends Component
 {
+    use HoldsFlashMessage;
+
     public bool $visible = false;
 
     public ?int $transactionId = null;
@@ -40,8 +43,6 @@ final class CorrectionDivergenceToast extends Component
     public string $oldCategoryPath = '';
 
     public string $newCategoryPath = '';
-
-    public string $flashMessage = '';
 
     public function mount(): void
     {

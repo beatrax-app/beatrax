@@ -17,9 +17,6 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../../.docs/features/dev-mode/architecture.md
- */
 final readonly class ArtisanStreamController
 {
     private const SSE_DATA_PREFIX = 'data: ';

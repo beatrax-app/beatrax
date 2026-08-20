@@ -24,16 +24,10 @@ use function Amp\ByteStream\buffer;
 
 uses(RefreshDatabase::class);
 
-/*
- * The pairing offer a device holding only a typed word-code needs.
- *
- * A QR carries the initiator's device id and both public keys; a word-code
- * carries the token and nothing else, so a fresh responder has no local row
- * to accept against. GET /pair/offer closes that gap over the LAN — and the
- * whole point of these tests is what it must NOT close: it hands out public
- * identity only, never the relay endpoint/token/pin the QR may carry,
- * because a camera is out of band and this endpoint is not.
- */
+// A word-code carries the token and nothing else, so a fresh responder has no
+// local row to accept against, and GET /pair/offer closes that gap over the LAN.
+// It may hand out public identity only, never the relay endpoint, token or pin
+// a QR may carry: a camera is out of band and this endpoint is not.
 
 function pairingOfferUser(string $username): User
 {
@@ -46,9 +40,6 @@ function pairingOfferUser(string $username): User
 }
 
 /**
- * Issue a token as the desktop initiator would, returning the plaintext
- * token alongside the identity the offer is expected to echo back.
- *
  * @return array{token: string, deviceId: string, ed: string, kx: string}
  */
 function pairingOfferIssue(User $user): array
@@ -71,8 +62,6 @@ function pairingOfferIssue(User $user): array
 function pairingOfferHandler(int $userId): PairingOfferRequestHandler
 {
     return new PairingOfferRequestHandler(
-        // The websocket's stand-in: every request that is not the offer route
-        // must arrive here untouched.
         new ClosureRequestHandler(static fn (): AmpResponse => new AmpResponse(101, [], 'delegated-to-websocket')),
         app(PairingOfferService::class),
         new PairingOfferRateLimiter(app(Clock::class)),
@@ -358,16 +347,10 @@ it('labels the offer with this device registry name', function (): void {
 });
 
 it('never accepts the raw token, only its hash', function (): void {
-    /*
-     * The typed word-code is a bearer credential: whoever holds it can walk
-     * the accept path. The phone asks every mDNS responder in turn whether it
-     * holds the token, over plaintext HTTP, before it knows which one is the
-     * real desktop — so sending the token itself hands it to whoever answers
-     * a multicast question first.
-     *
-     * The row is stored under sha256(token), so the hash is all a lookup ever
-     * needed. What can leak now buys public keys and nothing else.
-     */
+    // The word-code is a bearer credential, and the phone asks every mDNS
+    // responder in turn over plaintext HTTP whether it holds the token, before
+    // it knows which one is the real desktop. The row is stored under
+    // sha256(token), so what can leak this way buys public keys and no more.
     $user = pairingOfferUser('offer-hash-only');
     $issued = pairingOfferIssue($user);
 

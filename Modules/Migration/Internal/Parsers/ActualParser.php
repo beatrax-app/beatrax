@@ -25,9 +25,6 @@ use Modules\Migration\Public\Enums\MigrationSourceProduct;
 use Modules\Migration\Public\Exceptions\UnrecognizedMigrationFileException;
 use PDOException;
 
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 final class ActualParser implements ParsesMigrationSource
 {
     public function __construct(
@@ -173,10 +170,6 @@ final class ActualParser implements ParsesMigrationSource
         /** @var Collection<int, MigrationCategoryDto> $categories */
         $categories = new Collection;
 
-        // Materializes each Category Group as a real parent Category BEFORE
-        // any of its member categories (promoteCategories() processes staged
-        // rows in insertion order) — Actual's group id is a stable UUID,
-        // reused verbatim as the parent's sourceExternalId.
         foreach ($reader->categoryGroups() as $group) {
             $categories->push(new MigrationCategoryDto(
                 sourceExternalId: $group['id'],
@@ -279,10 +272,6 @@ final class ActualParser implements ParsesMigrationSource
      */
     private function buildTransactionsGenerator(array $rows, string $currency, array $payeeIsTransfer): Generator
     {
-        // Groups is_child rows under their is_parent sibling (Actual's
-        // explicit parent/child columns) and yields each non-child row
-        // lazily — this method's own return value is the genuine Generator
-        // the caller streams, never iterator_to_array()'d by this parser.
         /** @var array<string, list<int>> $childrenByParent */
         $childrenByParent = [];
         foreach ($rows as $i => $row) {

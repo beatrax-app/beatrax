@@ -6,9 +6,6 @@ namespace Modules\Ingestion\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/ingestion/architecture.md
- */
 abstract class AccountResolution extends Data
 {
     public static function known(int $accountId): KnownAccount

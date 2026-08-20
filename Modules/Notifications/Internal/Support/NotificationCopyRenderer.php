@@ -14,9 +14,6 @@ use Modules\Core\Public\Enums\Locale;
 // digests and reminders fire from jobs with no request locale, and the copy
 // belongs to whoever the notification is for. The draft is built inside a scope
 // where the translator speaks the user's stored locale, then it is restored.
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final class NotificationCopyRenderer
 {
     public function __construct(

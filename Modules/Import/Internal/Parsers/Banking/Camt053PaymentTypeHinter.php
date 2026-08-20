@@ -17,9 +17,8 @@ final class Camt053PaymentTypeHinter implements PaymentTypeHinter
 {
     private const SOURCE_FORMAT = SourceFormat::Camt053->value;
 
-    // Tuple key is domain|family|subFamily; matches are exact — partial
-    // tuples aren't supported since ISO20022 defines meaning at the
-    // full triple-code level.
+    // Keyed domain|family|subFamily and matched exactly: ISO 20022 defines
+    // meaning only at the full triple.
     /**
      * @var array<string, array{type: PaymentType, confidence: int, sourceHint: string}>
      */
@@ -33,9 +32,8 @@ final class Camt053PaymentTypeHinter implements PaymentTypeHinter
         'PMNT|RCDT|ESCT' => ['type' => PaymentType::Transfer, 'confidence' => 95, 'sourceHint' => 'btc:PMNT-RCDT-ESCT'],
     ];
 
-    // Fallback when BkTxCd is missing/unrecognised; mirrors the CSV/
-    // MT940 hinters since CAMT carries the same narrative text merged
-    // into the description.
+    // Used when BkTxCd is missing or unrecognised. CAMT merges the same
+    // narrative text into the description as the CSV and MT940 formats.
     /**
      * @var list<array{keyword: string, type: PaymentType, confidence: int}>
      */
@@ -82,8 +80,6 @@ final class Camt053PaymentTypeHinter implements PaymentTypeHinter
         );
     }
 
-    // The BTC tuple key (domain|family|subFamily) or null when any level
-    // of the nested SEPA structure is missing or not a full string triple.
     private static function btcKey(mixed $rawPayload): ?string
     {
         $sepa = is_array($rawPayload) ? ($rawPayload['sepa'] ?? null) : null;

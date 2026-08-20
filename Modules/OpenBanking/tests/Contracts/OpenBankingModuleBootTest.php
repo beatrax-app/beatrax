@@ -8,12 +8,6 @@ use Modules\OpenBanking\Public\Dto\FetchWindow;
 use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
 
-/*
- * Wave 0 acceptance gate: the OpenBanking module actually boots (closes the
- * Phase 10 modules_statuses.json landmine) and its four Wave 0 Public types
- * autoload cleanly (interface-first blueprints for downstream waves).
- */
-
 it('registers OpenBankingServiceProvider with the application', function (): void {
     expect(app()->getProviders(OpenBankingServiceProvider::class))->not->toBeEmpty();
 });

@@ -11,9 +11,6 @@ use Modules\Core\Models\User;
 // never be imported from Internal\Http or Resources — detector work runs
 // on the queue, never in the request lifecycle.
 
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
 interface SeriesDetector
 {
     public function detectForUser(User $user): void;

@@ -7,9 +7,6 @@ namespace Modules\Sync\Internal\Pairing;
 use BaconQrCode\Common\ErrorCorrectionLevel;
 use BaconQrCode\Encoder\Encoder;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class QrPayloadBuilder
 {
     private const int SIZE = 240;

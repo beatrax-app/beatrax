@@ -10,9 +10,6 @@ use RuntimeException;
 // retryable outcome: the desktop peer failing the confirmed-device auth
 // gate (a security-relevant rejection, never a transient), and the peer
 // vanishing mid-handshake before a Noise session exists to close.
-/**
- * @link ../../../../.docs/features/mobile/architecture.md
- */
 final class LanSyncException extends RuntimeException
 {
     private bool $peerRevocation = false;

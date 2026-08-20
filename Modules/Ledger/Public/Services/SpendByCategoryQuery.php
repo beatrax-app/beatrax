@@ -8,9 +8,6 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Dto\Period;
 
-/**
- * @link ../../../../.docs/features/ledger/architecture.md
- */
 final class SpendByCategoryQuery
 {
     private const TRANSACTIONS_ALIAS = 'transactions as t';

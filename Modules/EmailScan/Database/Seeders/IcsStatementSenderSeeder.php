@@ -9,9 +9,6 @@ use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Seeder;
 
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final class IcsStatementSenderSeeder extends Seeder
 {
     public function __construct(

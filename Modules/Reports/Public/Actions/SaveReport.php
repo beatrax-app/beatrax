@@ -11,9 +11,6 @@ use Modules\Reports\Models\SavedReport;
 use Modules\Reports\Public\Dto\ReportDefinition;
 use Modules\Sync\Public\Events\SavedReportMutated;
 
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final class SaveReport
 {
     public function __construct(

@@ -6,9 +6,6 @@ namespace Modules\Calendar\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/calendar/architecture.md
- */
 final class CalendarEntryDto extends Data
 {
     public function __construct(

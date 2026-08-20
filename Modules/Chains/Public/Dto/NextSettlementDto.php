@@ -8,10 +8,8 @@ use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Spatie\LaravelData\Data;
 
-// accountId is the funder ASN account whose balance the projection
-// deducts the settlement amount from on dueDate — not the ICS card
-// account id. Distinct from CardStatementForecastTile, which carries
-// only the card-side amount + due date for the dashboard tile.
+// accountId is the funder ASN account the projection deducts from on
+// dueDate, not the ICS card account being settled.
 final class NextSettlementDto extends Data
 {
     public function __construct(

@@ -8,31 +8,7 @@ use Livewire\Livewire;
 use Modules\Core\Internal\Http\Livewire\NetWorthCard;
 use Modules\Core\Models\User;
 
-/*
- * Feature tests for the FX transparency layer on the NetWorthCard
- * (Phase 1 plan 05, FX-04, D-11/D-12/D-03/D-07).
- *
- * Tests use real DB fixtures (accounts + exchange_rates rows) to drive the
- * full stack: NetWorthQuery → NetWorth DTO → NetWorthCard Blade render.
- * This exercises both the Livewire rendering layer AND validates that the
- * FX metadata from NetWorthQuery correctly gates the Blade affordances.
- *
- * Invariants asserted:
- *   - Passthrough (base==figure currency): NO fx-disclosure-trigger, NO rates line
- *   - Converted figure: HAS fx-disclosure-trigger + global rates line
- *   - Stale conversion: fx-icon--stale modifier present
- *   - No-rate fallback: "account not converted — no rate available" copy renders
- *   - Old "excludes non-EUR balances" span is gone
- */
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Insert an account row into the DB for the NetWorth roll-up.
- * Guard prevents a redeclaration fatal when multiple test files load together.
- */
+// Guarded against a redeclaration fatal when several test files load together.
 if (! function_exists('nwCardAccount')) {
     function nwCardAccount(DatabaseManager $db, int $userId, string $name, string $kind, int $openingMinor, string $currency = 'EUR'): int
     {
@@ -51,9 +27,6 @@ if (! function_exists('nwCardAccount')) {
     }
 }
 
-/**
- * Insert an exchange_rates row (EUR-based pair).
- */
 if (! function_exists('nwCardFxRate')) {
     function nwCardFxRate(DatabaseManager $db, string $quote, string $rate, string $date = '2026-06-05', string $source = 'ecb'): void
     {
@@ -63,10 +36,6 @@ if (! function_exists('nwCardFxRate')) {
         );
     }
 }
-
-// ---------------------------------------------------------------------------
-// Setup
-// ---------------------------------------------------------------------------
 
 beforeEach(function (): void {
     $this->db = app(DatabaseManager::class);
@@ -85,10 +54,6 @@ beforeEach(function (): void {
 afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 it('renders NO fx-disclosure-trigger and NO rates line for a passthrough (all-EUR) card', function (): void {
     // Only EUR accounts — ratesSource stays null → zero-overhead passthrough
@@ -152,7 +117,7 @@ it('renders the inline fx-disclosure-trigger--inline for non-base-currency accou
     nwCardFxRate($this->db, 'USD', '1.08', '2026-06-05', 'ecb');
 
     Livewire::test(NetWorthCard::class)
-        ->call('toggle') // expand the breakdown list
+        ->call('toggle')
         ->assertSee('fx-disclosure-trigger--inline', escape: false);
 })->group('phase-1');
 
@@ -160,9 +125,8 @@ it('renders the REAL converted base equivalent in the breakdown, not the native 
     nwCardAccount($this->db, $this->user->id, 'USD wallet', 'paypal', 10_000, 'USD');
     nwCardFxRate($this->db, 'USD', '1.08', '2026-06-05', 'ecb');
 
-    // $100 at EUR/USD 1.08 converts to €92,59 — the breakdown must show the
-    // converted figure, never the native 100,00 relabelled as euros (the bug
-    // this upgrade fixes).
+    // $100 at EUR/USD 1.08 is €92,59 — never the native 100,00 relabelled as
+    // euros, which is the bug this guards.
     Livewire::test(NetWorthCard::class)
         ->call('toggle')
         ->assertSee('92,59');

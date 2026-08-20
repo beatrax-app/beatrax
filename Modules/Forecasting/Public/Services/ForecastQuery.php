@@ -17,9 +17,6 @@ use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final readonly class ForecastQuery
 {
     // The two non-terminal run states. 'complete' and 'failed' are answers;
@@ -134,8 +131,6 @@ final readonly class ForecastQuery
     }
 
     /**
-     * @link ../../../../.docs/features/forecasting/architecture.md
-     *
      * @return list<SeriesConfidenceDto>
      */
     private function resolveSeriesConfidenceForAccount(int $accountId, User $user): array

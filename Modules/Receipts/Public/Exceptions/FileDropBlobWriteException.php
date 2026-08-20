@@ -10,9 +10,6 @@ use RuntimeException;
 // a short or failed write, or a rename that could not complete. The
 // writer unwinds its temp file before this surfaces, so a half-written
 // blob is never mistaken for a stored receipt.
-/**
- * @link ../../../../.docs/features/receipts/architecture.md
- */
 final class FileDropBlobWriteException extends RuntimeException
 {
     public static function chmodDirectoryFailed(string $directory): self

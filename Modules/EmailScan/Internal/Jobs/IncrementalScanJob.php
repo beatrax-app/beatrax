@@ -33,9 +33,6 @@ use Modules\EmailScan\Public\Services\EmlBlobStore;
 use Modules\EmailScan\Public\Services\KnownSenderQuery;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable;

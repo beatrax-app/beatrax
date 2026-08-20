@@ -25,9 +25,6 @@ use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Support\LockStore;
 use Modules\Ledger\Public\Dto\Period;
 
-/**
- * @link ../../../../.docs/features/budgets/architecture.md
- */
 final class EmitBudgetNudgesJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Dispatchable;

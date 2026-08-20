@@ -4,13 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Anomaly\Public\Enums;
 
-// The lifecycle of an anomaly_alerts row. The column, its DTOs and the
-// state machine's transition() signature stay string; this enum is the one
-// canonical spelling every caller maps through, and it owns the transition
-// graph the SQLite trigger pair and the state machine both enforce.
-/**
- * @link ../../../../.docs/features/anomaly/architecture.md
- */
 enum AnomalyAlertState: string
 {
     case Open = 'open';
@@ -21,9 +14,8 @@ enum AnomalyAlertState: string
 
     case Dismissed = 'dismissed';
 
-    // `dismissed => [Open]` is the one diverging undo edge: a user who
-    // dismissed an anomaly "as expected" can re-open it. `acknowledged` is
-    // terminal (no legal successor).
+    // `dismissed => [Open]` is the undo edge that diverges from drift-alerts'
+    // otherwise identical map; only RemoveAnomalySuppressionRule uses it.
     /** @return list<self> */
     public function allowedNext(): array
     {

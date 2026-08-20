@@ -8,15 +8,6 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 
-/*
- * Render-level tests for the dashboard's original-currency mode. The
- * Livewire component branches on the user's `default_currency_view`:
- * 'eur_only' renders a single row of In / Out / Net tiles; 'original'
- * renders one labeled tile-row per currency present in the period
- * (alphabetical by ISO code). EUR-only months in original mode collapse
- * to a single captioned row that visually matches the EUR-only layout.
- */
-
 beforeEach(function (): void {
     /** @var User $user */
     $user = User::query()->updateOrCreate(
@@ -93,9 +84,7 @@ it('renders three tiles labeled by currency caption in original mode', function 
     $response->assertOk();
     $html = (string) $response->getContent();
 
-    // Caption label appears for the EUR row.
     expect($html)->toContain('>EUR<');
-    // The three KPI labels are present.
     expect($html)->toContain('>In<');
     expect($html)->toContain('>Out<');
     expect($html)->toContain('>Net<');
@@ -104,7 +93,7 @@ it('renders three tiles labeled by currency caption in original mode', function 
 it('renders the original-mode tile rows in alphabetical order', function (): void {
     $this->user->update(['default_currency_view' => 'original']);
 
-    // Seed in non-alphabetical order: USD, GBP, EUR.
+    // Seeded out of order, so an alphabetical page cannot be insertion order.
     makeDashboardRenderTxn($this, -1299, 'USD', '2026-05-05');
     makeDashboardRenderTxn($this, -999, 'GBP', '2026-05-07');
     makeDashboardRenderTxn($this, -500, 'EUR', '2026-05-09');
@@ -127,17 +116,14 @@ it('renders the original-mode tile rows in alphabetical order', function (): voi
 it('renders the single In/Out/Net layout when default_currency_view is eur_only', function (): void {
     // beforeEach already seeds default_currency_view = 'eur_only'.
     makeDashboardRenderTxn($this, -1299, 'EUR', '2026-05-08');
-    // Add a USD transaction; in eur_only mode it must not produce a USD caption.
     makeDashboardRenderTxn($this, -1500, 'USD', '2026-05-09');
 
     $response = $this->get('/');
     $response->assertOk();
     $html = (string) $response->getContent();
 
-    // EUR-only mode: no per-currency captions render.
     expect($html)->not->toContain('>USD<');
     expect($html)->not->toContain('>EUR<');
-    // Single-row layout: the three labels appear exactly once each.
     expect(substr_count($html, '>In<'))->toBe(1);
     expect(substr_count($html, '>Out<'))->toBe(1);
     expect(substr_count($html, '>Net<'))->toBe(1);

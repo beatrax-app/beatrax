@@ -11,9 +11,6 @@ use Modules\Notifications\Public\Dto\DeliveryDecision;
 use Modules\Notifications\Public\Dto\NotificationPreferencesDto;
 use Psr\Log\LoggerInterface;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final class SuppressionEvaluator
 {
     // Trigger types that carry no control-list toggle - always

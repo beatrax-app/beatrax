@@ -16,9 +16,6 @@ use Modules\Core\Public\Contracts\CurrentUser;
 // own 30s timer cannot be trusted on mobile — a suspended WebView never fires
 // it, and the return handler then cancelled it outright, so the phone came
 // back unlocked. AppLockMiddleware judges the elapsed time from these instead.
-/**
- * @link ../../../../../.docs/features/auth/architecture.md
- */
 final readonly class LockLifecycleController
 {
     public function __construct(

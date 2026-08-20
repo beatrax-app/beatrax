@@ -9,9 +9,6 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Dto\UpdateManifestDto;
 use Modules\Core\Public\Enums\UpdateAlertKind;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final readonly class RecordUpdateAvailableAlert
 {
     public function __construct(

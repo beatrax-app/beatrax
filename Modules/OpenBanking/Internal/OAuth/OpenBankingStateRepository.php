@@ -9,9 +9,6 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/open-banking/architecture.md
- */
 final class OpenBankingStateRepository
 {
     private const SESSION_KEY = 'open_banking_oauth_state';

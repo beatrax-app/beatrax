@@ -11,9 +11,6 @@ use Modules\Reports\Public\Dto\ReportDefinition;
 use stdClass;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final readonly class PinnedReportsQuery
 {
     // TogglePin already enforces the 3-pin cap in the write layer; this

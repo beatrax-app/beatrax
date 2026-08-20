@@ -15,13 +15,6 @@ use Modules\DriftAlerts\Public\Services\DriftAlertQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * Hybrid snooze-revival tests: the hourly RevivedExpiredDriftSnoozesJob
- * flips state and writes the audit transition; the query-time
- * conditional on DriftAlertQuery::openForUser surfaces snoozed-but-
- * expired rows immediately between sweeps.
- */
-
 function sarUser(string $username): User
 {
     return User::query()->create([
@@ -250,11 +243,8 @@ it('exercises the snooze-expiry-revival corpus fixture: detected then snoozed in
     expect($fixture['expected']['transitions'][0]['transition_reason'] ?? null)->toBe('detector_revived_snooze');
 
     $user = sarUser('sar-corpus');
-    // Manually seed the post-detect / mid-snooze state described by the
-    // fixture: an alert previously in 'snoozed' state whose
-    // snoozed_until lies in the past. The fixture's expected.alerts
-    // declares the post-revival shape (state='open', baseline=-999,
-    // latest=-1149); the revival sweep transitions snoozed -> open.
+    // The fixture declares the post-revival shape, so the mid-snooze state it
+    // starts from has to be seeded by hand here.
     $alert = sarAlert($user, state: 'snoozed', snoozedUntil: CarbonImmutable::parse('2026-05-20 08:00:00'), alertOverrides: [
         'baseline_amount_minor' => -999,
         'latest_amount_minor' => -1149,

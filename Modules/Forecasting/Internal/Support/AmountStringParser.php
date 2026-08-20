@@ -6,9 +6,6 @@ namespace Modules\Forecasting\Internal\Support;
 
 use InvalidArgumentException;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final class AmountStringParser
 {
     /**

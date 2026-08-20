@@ -17,18 +17,10 @@ use Modules\Sync\Public\Events\EntityMutated;
 
 uses(RefreshDatabase::class);
 
-/*
- * The anomaly detector runs on EVERY paired device, so both of them open an
- * alert for the same charge. While the id was an autoincrement they each
- * minted a different one, `anomaly_alerts_uniq (transaction_id)` dropped
- * whichever create landed second, and that device's later acknowledge pointed
- * at a pk its peer had never held.
- *
- * The id is now derived from (user_id, transaction_id) — the columns that
- * UNIQUE already names, neither of which ever changes. These tests are the
- * proof of the two properties that buys: both devices compute the same number,
- * and a replayed create followed by a replayed SET land on ONE row.
- */
+// The detector runs on every paired device, so both open an alert for the same
+// charge. Under an autoincrement id each minted a different one, the UNIQUE on
+// transaction_id dropped whichever create landed second, and that device's
+// later acknowledge named a pk its peer had never held.
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-08-20 09:00:00');
@@ -148,11 +140,9 @@ function anomalyConvergeOpsAfter(DatabaseManager $db, int $userId, int $afterId)
         ->all();
 }
 
+// The local row is removed afterwards, so the assertions can only be satisfied
+// by what replay rebuilds.
 /**
- * One device opening the alert for itself: derive the id, write the row, and
- * capture the create the way AnomalyEvaluator does. The local row is removed
- * afterwards so the assertions can only be satisfied by what REPLAY rebuilds.
- *
  * @return array{0: string, 1: list<OpLogEntry>}
  */
 function anomalyConvergeOpenOnDevice(DatabaseManager $db, int $userId, string $deviceId, int $transactionId, int $alertId): array

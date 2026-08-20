@@ -7,9 +7,6 @@ namespace Modules\Core\Internal\Console\Probes;
 use Symfony\Component\Process\Process;
 use Throwable;
 
-/**
- * @link ../../../../../.docs/features/core/architecture.md
- */
 abstract class ExternalToolVersionProbe implements Probe
 {
     private const TIMEOUT_SECONDS = 5.0;

@@ -18,9 +18,6 @@ use Modules\DevMode\Internal\Sql\SelectOnlyValidator;
 use Modules\DevMode\Public\Contracts\AuditWriter;
 use Throwable;
 
-/**
- * @link ../../../../../.docs/features/dev-mode/architecture.md
- */
 #[Layout('dev::layouts.dev-shell')]
 final class SqlPanelPage extends Component
 {

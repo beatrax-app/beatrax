@@ -16,15 +16,13 @@ use Modules\Ingestion\Public\Dto\SourceTransactionDto;
  */
 interface RunsImports
 {
-    // `$formatHint` is required for a bank-specific CSV dialect
-    // (`asn-csv`, `ing-csv`) — CSV is the only ambiguous statement
-    // format and can't be sniffed reliably. Null on a CSV format raises
-    // InvalidArgumentException; ignored (not required) on other formats.
+    // $formatHint is required for asn-csv and ing-csv, the only statement
+    // formats that cannot be sniffed reliably; null on either raises
+    // InvalidArgumentException. Ignored on every other format.
     public function runFromUpload(string $localPath, string $sourceFormat, User $user, string $originalFilename, ?BankCsvFormatHint $formatHint = null): ImportPreviewResult;
 
-    // Preview then immediately confirm — the single entrypoint the
-    // idempotency contract test exercises so adapter rows can be added
-    // uniformly without re-implementing the wizard's two-step dance.
+    // The single entrypoint the idempotency contract test drives, so a new
+    // adapter joins it without re-implementing the wizard's two-step dance.
     public function runAndConfirm(string $localPath, string $sourceFormat, User $user, string $originalFilename = 'fixture.csv', ?BankCsvFormatHint $formatHint = null): ImportConfirmResult;
 
     /**

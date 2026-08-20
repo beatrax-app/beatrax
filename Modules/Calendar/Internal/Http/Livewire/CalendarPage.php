@@ -21,9 +21,6 @@ use Modules\Core\Public\Services\UserPreferenceWriter;
 use Modules\Core\Public\Support\Lang;
 use stdClass;
 
-/**
- * @link ../../../../../.docs/features/calendar/architecture.md
- */
 final class CalendarPage extends Component
 {
     private const int HORIZON_MONTHS = 12;

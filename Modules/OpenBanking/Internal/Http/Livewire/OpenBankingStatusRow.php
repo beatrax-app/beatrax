@@ -11,9 +11,6 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
 use Modules\OpenBanking\Public\Services\OpenBankingConnectionQuery;
 
-/**
- * @link ../../../../../.docs/features/open-banking/architecture.md
- */
 final class OpenBankingStatusRow extends Component
 {
     public string $statusText = '';

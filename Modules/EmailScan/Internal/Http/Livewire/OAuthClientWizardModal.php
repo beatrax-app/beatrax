@@ -14,9 +14,6 @@ use Modules\EmailScan\Public\LoopbackRedirectUri;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Modules\EmailScan\Public\Services\SecretsWriteFailed;
 
-/**
- * @link ../../../../../.docs/features/email-scan/architecture.md
- */
 final class OAuthClientWizardModal extends Component
 {
     // Azure assigns the application (client) ID as a UUID v4, matching

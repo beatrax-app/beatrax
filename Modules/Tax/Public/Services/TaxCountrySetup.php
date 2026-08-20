@@ -11,9 +11,6 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Tax\Internal\Actions\TaxCategoryWriter;
 use Modules\Tax\Public\Enums\TaxCountry;
 
-/**
- * @link ../../../../.docs/features/tax/architecture.md
- */
 final class TaxCountrySetup
 {
     public function __construct(

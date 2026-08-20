@@ -13,8 +13,6 @@ use Modules\Recurring\Public\Contracts\DispatchesRecurringDetection;
 // FirstImportStep) is an unlocked HTTP/Livewire request — see the class @link.
 
 /**
- * @link ../../../../.docs/features/recurring/architecture.md
- *
  * @internal Bound to the public contract — call sites inject the
  *           contract, never this class directly.
  */

@@ -8,9 +8,6 @@ namespace Modules\Counterparties\Public\Events;
 // self_account, which never writes a row). Ships with zero listeners;
 // reserved for future merge/audit/notification surfaces to subscribe
 // without a resolver-service rewrite.
-/**
- * @link ../../../../.docs/features/counterparties/architecture.md
- */
 final readonly class CounterpartyResolved
 {
     public function __construct(

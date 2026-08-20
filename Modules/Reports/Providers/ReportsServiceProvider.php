@@ -8,9 +8,6 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Support\LoadsModuleResources;
 
-/**
- * @link ../../../.docs/features/reports/architecture.md
- */
 final class ReportsServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;

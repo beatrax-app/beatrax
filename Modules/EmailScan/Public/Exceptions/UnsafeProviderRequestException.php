@@ -10,7 +10,4 @@ use RuntimeException;
 // a non-HTTPS scheme, a host outside the provider's own — each guarding a
 // bearer token against going somewhere it does not belong. Extends
 // RuntimeException: most inspect a provider-returned nextLink, not an argument.
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final class UnsafeProviderRequestException extends RuntimeException {}

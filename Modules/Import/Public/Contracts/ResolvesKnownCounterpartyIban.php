@@ -11,9 +11,7 @@ use Modules\Ledger\Models\Account;
  */
 interface ResolvesKnownCounterpartyIban
 {
-    // Cross-module consumers (Transfers, Chains) depend on this Public
-    // surface and never reach into Modules\Import\Internal\* directly.
-    // Null when no alias exists, or the user owns no account of the
-    // alias's target kind; lowest-id account wins on multiple matches.
+    // Null when no alias exists, or the user owns no account of the alias's
+    // target kind. Lowest-id account wins on several matches.
     public function resolveAccount(string $iban, int $userId): ?Account;
 }

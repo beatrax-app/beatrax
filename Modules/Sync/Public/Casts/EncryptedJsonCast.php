@@ -13,7 +13,6 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
 
 /**
- * @link ../../../../.docs/features/sync/architecture.md
  *
  * @implements CastsAttributes<array<int|string, mixed>|null, array<int|string, mixed>|string|null>
  */

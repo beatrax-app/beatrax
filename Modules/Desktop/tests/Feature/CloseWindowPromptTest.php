@@ -8,19 +8,6 @@ use Modules\Core\Models\User;
 use Modules\Desktop\Internal\Http\Livewire\CloseWindowPrompt;
 use Modules\Desktop\Internal\Native\WindowCloseBehavior;
 
-/*
- * Feature tests for the D-08 first-close prompt (Quit vs Keep-in-tray).
- *
- *   - users.close_behavior — nullable per-user preference. NULL means
- *     "no decision yet — prompt on close"; 'quit' / 'tray' map to the
- *     two actions.
- *   - WindowCloseBehavior — decides on each close whether to show the
- *     prompt, quit, or hide-to-tray based on the current user's value.
- *   - CloseWindowPrompt — Livewire flux:modal component with the
- *     UI-SPEC verbatim copy + instant-apply persistence on a remembered
- *     choice.
- */
-
 beforeEach(function (): void {
     $this->user = User::query()->create([
         'username' => 'close-fixture',
@@ -34,8 +21,7 @@ beforeEach(function (): void {
 it('gives the users table a nullable close_behavior column', function (): void {
     expect(DB::getSchemaBuilder()->hasColumn('users', 'close_behavior'))->toBeTrue();
 
-    // Fresh user with no choice yet — column is null, so the next
-    // close shows the prompt.
+    // A null column is the not-yet-decided state that triggers the prompt.
     expect($this->user->fresh()->close_behavior)->toBeNull();
 })->group('phase-15');
 
@@ -64,11 +50,9 @@ it('CloseWindowPrompt has NO constructor (Livewire strict-rules)', function (): 
 })->group('phase-15');
 
 it('auto-opens the flux:modal on mount so navigating to /desktop/close-prompt surfaces the dialog', function (): void {
-    // Without the modal-show dispatch on mount, visiting the route
-    // would render an invisible flux:modal element — the dialog would
-    // never appear and the entire D-08 prompt UX would be unreachable
-    // even after the Electron-side close-intercept navigates the
-    // window here.
+    // Without the modal-show dispatch on mount the flux:modal renders
+    // invisible, so the prompt would be unreachable even after the
+    // Electron-side close-intercept navigates the window here.
     Livewire::test(CloseWindowPrompt::class)
         ->assertDispatched('modal-show', name: CloseWindowPrompt::MODAL_NAME);
 })->group('phase-15');
@@ -83,14 +67,11 @@ it('renders the verbatim UI-SPEC copy + flux:modal + h-12 buttons', function ():
         ->assertSee('Keep running in the tray')
         ->assertSee('Remember my choice');
 
-    // Both buttons render at h-12 (48px target size per UI-SPEC
-    // accessibility note).
+    // h-12 is the 48px minimum target size.
     $html = (string) $rendered->html();
     expect(substr_count($html, 'h-12'))->toBeGreaterThanOrEqual(2);
 
-    // flux:modal is preferred over a native dialog (UI-SPEC) so the
-    // prompt inherits the dark theme — assert the modal name is in
-    // the rendered output.
+    // flux:modal rather than a native dialog, so the prompt inherits the dark theme.
     expect($html)->toContain('close-window-prompt');
 })->group('phase-15');
 
@@ -115,7 +96,6 @@ it('does NOT persist a choice when remember=false (the next close re-prompts)', 
         ->set('rememberChoice', false)
         ->call('chooseKeepInTray');
 
-    // No persistence — the next close will re-prompt.
     expect($this->user->fresh()->close_behavior)->toBeNull();
 
     Livewire::test(CloseWindowPrompt::class)
@@ -126,9 +106,8 @@ it('does NOT persist a choice when remember=false (the next close re-prompts)', 
 })->group('phase-15');
 
 it('rejects an invalid close_behavior value (validation guard)', function (): void {
-    // The WindowCloseBehavior service applies a fixed allow-list when
-    // persisting — passing an unsanctioned value via the URL/payload
-    // never reaches the users row.
+    // The value arrives from the POSTed payload, so the allow-list has to be
+    // enforced at the service rather than in the component.
     /** @var WindowCloseBehavior $behavior */
     $behavior = app(WindowCloseBehavior::class);
 

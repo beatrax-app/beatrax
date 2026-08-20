@@ -6,9 +6,6 @@ namespace Modules\Chains\Public\Contracts;
 
 use Modules\Core\Models\User;
 
-/**
- * @link ../../../../.docs/features/chains/architecture.md
- */
 interface UpsertsCardStatements
 {
     public function upsertForImportRun(int $importRunId, User $user): int;

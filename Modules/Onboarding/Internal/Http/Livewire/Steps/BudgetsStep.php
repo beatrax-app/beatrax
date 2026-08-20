@@ -13,9 +13,6 @@ use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Public\Services\PeriodQuery;
 
-/**
- * @link ../../../../../../.docs/features/onboarding/architecture.md
- */
 final class BudgetsStep extends Component
 {
     /** @var array<int|string, string> */
@@ -31,14 +28,11 @@ final class BudgetsStep extends Component
                 $minor = $writer->parseAmount($raw);
                 if ($minor !== null) {
                     try {
-                        // setAssigned() re-validates the category id
-                        // server-side, but (unlike BudgetWriter::save())
-                        // throws rather than silently returning false — an
-                        // injected/foreign id is caught and ignored here.
+                        // setAssigned() throws on a foreign category id where
+                        // BudgetWriter::save() would silently return false.
                         $writer->setAssigned($user, (int) $categoryId, $periodStart, $minor);
                     } catch (InvalidArgumentException) {
-                        // Not owned/global — silently ignored, an
-                        // IDOR-attempt guard.
+                        // Not owned/global: an IDOR attempt, dropped.
                     }
                 }
             }

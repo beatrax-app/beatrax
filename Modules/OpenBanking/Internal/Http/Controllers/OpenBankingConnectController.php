@@ -18,9 +18,6 @@ use Modules\OpenBanking\Public\Exceptions\OpenBankingConnectException;
 use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 use RuntimeException;
 
-/**
- * @link ../../../../../.docs/features/open-banking/architecture.md
- */
 final class OpenBankingConnectController
 {
     // Enable Banking discovers ASPSPs by country; ASN/SNS (this project's
@@ -150,9 +147,6 @@ final class OpenBankingConnectController
         ));
     }
 
-    /**
-     * @link ../../../../../.docs/features/open-banking/architecture.md
-     */
     private function isPublicScaHost(string $host): bool
     {
         if ($host === '' || $host === 'localhost') {

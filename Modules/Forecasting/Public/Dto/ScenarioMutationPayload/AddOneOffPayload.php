@@ -20,10 +20,8 @@ final class AddOneOffPayload extends ScenarioMutationPayload
         public readonly string $direction,
         public readonly ?string $note = null,
     ) {
-        // The typed JSON cast invokes this constructor on read, so a
-        // corrupted DB row raises here rather than silently flipping an
-        // income mutation into an expense (ScenarioApplier treats any
-        // non-'income' value as expense via a sign flip).
+        // ScenarioApplier reads any non-'income' direction as an expense sign flip,
+        // so a corrupted row has to raise here rather than change the sign.
         if (Direction::tryFrom($direction) === null) {
             throw new InvalidArgumentException(
                 'AddOneOffPayload.direction must be one of: '.implode(' | ', array_map(static fn (Direction $d): string => "'".$d->value."'", Direction::cases()))."; got '{$direction}'."

@@ -21,30 +21,9 @@ use Modules\Core\Public\Services\SystemClock;
 use Modules\Core\Public\Services\UserDataPathService;
 use Tests\Helpers\RealSqliteFixture;
 
-/*
- * Drives each Phase 11-03 probe (WAL mode / synchronous mode / backup
- * freshness) in isolation against a RealSqliteFixture-backed connection
- * + a per-test backups directory under sys_get_temp_dir().
- *
- * The probes share a small contract (Modules\Core\Internal\Console\Probes\Probe)
- * declaring label(): string + run(): ProbeResult. Probes MUST NOT throw
- * — every IO/SQL touchpoint is wrapped in try/catch returning a critical
- * ProbeResult instead.
- */
-
 beforeEach(function (): void {
-    // Build an on-disk SQLite fixture so the WAL + synchronous probes
-    // can read genuine PRAGMA values (the :memory: sqlite_testing
-    // connection answers differently for journal_mode and cannot
-    // express WAL).
-    //
-    // The fixture is also where the freshness probe's SystemAlert::create
-    // write lands — once the framework default is pointed at the on-disk
-    // file, both probes operate against the same connection. The
-    // fixture's DEFAULT_SCHEMAS include a `system_alerts` table; we apply
-    // the schema-level `created_at` default + the severity trigger pair
-    // before any test runs so the alert insert mirrors the production
-    // migration's shape.
+    // On-disk fixture: the :memory: sqlite_testing connection cannot express WAL,
+    // so the journal_mode and synchronous probes would read an impossible value.
     $this->sourcePath = RealSqliteFixture::create('doctor-probe-source', [
         'CREATE TABLE transactions (
             id INTEGER PRIMARY KEY,
@@ -73,11 +52,8 @@ beforeEach(function (): void {
     $db = $this->app->make(DatabaseManager::class);
     $db->purge('sqlite');
 
-    // Force the framework default to the named `sqlite` connection so
-    // the probe's $this->db->connection() lookup hits the on-disk
-    // file. The fixture already wrote `PRAGMA journal_mode = WAL`,
-    // and the SqliteOptimizationsProvider's ConnectionEstablished
-    // listener re-applies synchronous=NORMAL on the next open.
+    // The probes resolve $this->db->connection() from the framework default,
+    // so it has to point at the on-disk file rather than sqlite_testing.
     $config->set('database.default', 'sqlite');
 
     $this->backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-probe-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
@@ -132,8 +108,7 @@ it('ProbeResult is a final readonly value object with severity/message/metadata'
 it('WalModeProbe returns ok when journal_mode is WAL', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
-    // RealSqliteFixture wrote `PRAGMA journal_mode = WAL` against the
-    // on-disk file before any framework connection opened.
+    // The fixture already set journal_mode = WAL; no arrange step needed.
     $probe = new WalModeProbe($db);
     expect($probe->label())->toBe('SQLite WAL mode');
 
@@ -146,8 +121,6 @@ it('WalModeProbe returns ok when journal_mode is WAL', function (): void {
 it('WalModeProbe returns warning when journal_mode drifted off WAL', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
-    // Force the on-disk file off WAL. The probe should observe the
-    // drift on its next read.
     $db->connection('sqlite')->statement('PRAGMA journal_mode = DELETE');
 
     $probe = new WalModeProbe($db);
@@ -204,10 +177,6 @@ it('BackupFreshnessProbe returns warning AND writes a system_alerts row when no 
     expect($result->severity)->toBe('warning');
     expect($result->message)->toContain('backup');
 
-    // The SystemAlert was written to the framework default — which is
-    // pointed at the on-disk fixture in beforeEach. Read directly
-    // against that connection without flipping the default back to
-    // sqlite_testing.
     $alerts = SystemAlert::query()->where('kind', 'backup_overdue')->get();
     expect($alerts)->toHaveCount(1);
 
@@ -228,7 +197,6 @@ it('BackupFreshnessProbe returns ok and does NOT write an alert when a fresh sid
     $backupsDir = $this->backupsDir;
     $files->makeDirectory($backupsDir, 0o755, recursive: true, force: true);
 
-    // Write a sidecar dated 10 minutes ago.
     $tenMinutesAgo = $clock->now()->subMinutes(10);
     $sidecar = $backupsDir.DIRECTORY_SEPARATOR.'beatrax-'.$tenMinutesAgo->format('Y-m-d-His').'.sqlite.meta.json';
     $files->put($sidecar, (string) json_encode([
@@ -258,7 +226,6 @@ it('BackupFreshnessProbe returns warning AND writes an alert when newest sidecar
     $backupsDir = $this->backupsDir;
     $files->makeDirectory($backupsDir, 0o755, recursive: true, force: true);
 
-    // Write a sidecar dated 60h ago.
     $sixtyHoursAgo = $clock->now()->subHours(60);
     $sidecar = $backupsDir.DIRECTORY_SEPARATOR.'beatrax-'.$sixtyHoursAgo->format('Y-m-d-His').'.sqlite.meta.json';
     $files->put($sidecar, (string) json_encode([
@@ -291,12 +258,9 @@ it('BackupFreshnessProbe suppresses a second alert row within the 1-hour recency
 
     $probe = new BackupFreshnessProbe($files, $clock, $db, new UserDataPathService);
 
-    // First run writes the row.
     $probe->run();
-    // Second + third invocations within the same wall-clock minute
-    // must be no-ops on the audit trail — the banner renders one
-    // card per row, so 100 doctor invocations would produce 100
-    // identical cards without this gate.
+    // Repeat runs must be no-ops on the audit trail: the banner renders one
+    // card per row, so 100 doctor invocations would stack 100 identical cards.
     $probe->run();
     $probe->run();
 
@@ -305,9 +269,6 @@ it('BackupFreshnessProbe suppresses a second alert row within the 1-hour recency
 });
 
 it('WalModeProbe never throws — IO failure is captured as a critical ProbeResult', function (): void {
-    // Build a DatabaseManager whose default connection refers to a
-    // missing-file path. The PRAGMA select will throw; the probe must
-    // catch it and return a critical ProbeResult instead.
     /** @var Repository $config */
     $config = $this->app->make(Repository::class);
     $config->set('database.connections.sqlite.database', '/nonexistent/path/to/beatrax-missing.sqlite');
@@ -333,7 +294,6 @@ it('binds WalModeProbe, SynchronousModeProbe, and BackupFreshnessProbe through t
     $fresh = $this->app->make(BackupFreshnessProbe::class);
     expect($fresh)->toBeInstanceOf(BackupFreshnessProbe::class);
 
-    // The SystemClock binding stays intact end-to-end.
     expect($this->app->make(Clock::class))->toBeInstanceOf(SystemClock::class);
 });
 
@@ -359,18 +319,14 @@ it('PhpVersionProbe reports the current interpreter version as ok when at the mi
     $probe = new PhpVersionProbe;
     $result = $probe->run();
 
-    // PHP 8.5+ is the project minimum (matches composer.json + CI
-    // matrix). The test environment is on at least the minimum, so
-    // the probe must read ok and embed the version string in the
-    // message.
+    // The project minimum is PHP 8.5 and the runner is never below it.
     expect($result->severity)->toBe('ok');
     expect($result->message)->toContain(phpversion());
 });
 
 it('PhpVersionProbe reports critical when the interpreter is below the minimum', function (): void {
-    // Drive the below-minimum path via the injectable floor — the runner is
-    // always at/above the shipped minimum, so this is the only deterministic
-    // way to exercise the critical branch.
+    // The runner is never below the shipped minimum, so the injectable floor
+    // is the only deterministic way into the critical branch.
     $probe = new PhpVersionProbe(minPhp: '99.0');
     $result = $probe->run();
 
@@ -397,9 +353,6 @@ it('SynchronousModeProbe never throws — IO failure is captured as a critical P
 });
 
 it('ExternalToolVersionProbe reports warning when the tool is not available', function (): void {
-    // A concrete probe pointed at a binary that cannot exist: runVersion()
-    // fails to launch, so the abstract base must fall to the warning arm and
-    // surface the missing-message hint.
     $probe = new class('Ghost', ['/nonexistent/beatrax-ghost-tool', '--version'], 'install the ghost tool') extends ExternalToolVersionProbe {};
 
     $result = $probe->run();
@@ -415,9 +368,8 @@ it('BackupFreshnessProbe returns critical when the backups directory cannot be r
     /** @var Clock $clock */
     $clock = $this->app->make(Clock::class);
 
-    // A Filesystem whose directory listing throws mid-probe: isDirectory()
-    // passes the guard, then files() blows up, so run()'s try/catch must
-    // surface a critical ProbeResult rather than propagate.
+    // isDirectory() passes the guard, then files() blows up mid-probe — run()'s
+    // try/catch has to turn that into a critical result, not propagate it.
     $files = new class extends Filesystem
     {
         public function isDirectory($directory): bool

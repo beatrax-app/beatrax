@@ -8,9 +8,6 @@ namespace Modules\Migration\Internal\ValueObjects;
 // product/entity-type a foreign id — or, for id-less entities, a
 // natural key — belongs to. SourceMapWriter::resolve()/record() both
 // key on exactly this tuple, so it travels as one value, not four args.
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 final readonly class SourceMapKey
 {
     public function __construct(

@@ -8,9 +8,6 @@ namespace Modules\Core\Public\Support;
 // head: whether to paint dark server-side, whether the pre-paint script
 // must run, and the active UI locale for the lang attribute. Built by
 // AppChromeResolver so every shell derives these the same way.
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final readonly class AppChrome
 {
     public function __construct(

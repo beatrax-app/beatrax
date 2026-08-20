@@ -7,9 +7,8 @@ namespace Modules\Import\Public\Exceptions;
 use RuntimeException;
 use Throwable;
 
-// Raised by the receipt arm of ParseStage — either a receipt format
-// arrived without the User context its recorder needs, or the .eml
-// bytes could not be read off disk. Both abort the parse before any
+// Either a receipt format arrived without the User context its recorder
+// needs, or the bytes could not be read. Both abort the parse before any
 // SourceTransactionDto is yielded.
 /**
  * @link ../../../../.docs/architecture/ingestion-pipeline.md#1-parse-parsestage

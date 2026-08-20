@@ -13,9 +13,6 @@ use Modules\Desktop\Internal\Native\FirstLaunchBootstrap;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../../.docs/features/desktop/architecture.md
- */
 final class SetupScreen extends Component
 {
     // Whether the last attempt to apply the migrations threw. Kept so the

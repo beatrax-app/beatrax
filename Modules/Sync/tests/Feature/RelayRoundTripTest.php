@@ -2,29 +2,21 @@
 
 declare(strict_types=1);
 
-use Amp\Http\Server\Driver\Client as AmpClient;
-use Amp\Http\Server\Request as AmpRequest;
-use Amp\Http\Server\Response as AmpResponse;
-use Amp\Socket\InternetAddress;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\Client\Factory as HttpFactory;
-use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Support\Facades\DB;
-use League\Uri\Http as HttpUri;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Commands\RelayServeCommand;
 use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
-use Modules\Sync\Internal\Transport\Relay\RelayDeliverRateLimiter;
 use Modules\Sync\Internal\Transport\Relay\RelayDrainRegistry;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
+use Modules\Sync\Internal\Transport\Relay\RelayRateLimiter;
 use Modules\Sync\Internal\Transport\Relay\RelayTlsMaterial;
+use Modules\Sync\Tests\Support\RelayHandlerHarness;
 use Psr\Log\NullLogger;
-
-use function Amp\ByteStream\buffer;
 
 uses(RefreshDatabase::class);
 
@@ -37,57 +29,13 @@ uses(RefreshDatabase::class);
  * CR-03 drain response envelope) and the CR-04 per-device drain authorization can
  * never silently regress.
  *
- * Wiring: a fake Illuminate HTTP Factory intercepts the RelayClient's outbound
- * HTTP calls, translates each into an amphp Request, dispatches it through the
- * real RelayServeCommand::route() (via reflection — route() is private), and maps
- * the amphp Response back to an Illuminate client response. No socket server is
- * booted; the actual handler code path (handleDeliver / handleDrain /
- * handleConfirm / isAuthorized) runs for real against a real RelayMailbox + DB.
+ * Wiring: RelayHandlerHarness routes the RelayClient's outbound HTTP through the
+ * real RelayServeCommand::route(). No socket server is booted; the actual handler
+ * code path (handleDeliver / handleDrain / handleConfirm / isAuthorized) runs for
+ * real against a real RelayMailbox + DB.
  *
  * ZK: the test never decrypts the blob — it is opaque random bytes throughout.
  */
-
-/**
- * Build an HttpFactory whose requests are routed through the real
- * RelayServeCommand handler instead of the network.
- */
-function relayServerHttpFactory(RelayServeCommand $command): HttpFactory
-{
-    $factory = new HttpFactory;
-
-    $route = new ReflectionMethod($command, 'route');
-
-    $factory->fake(function (ClientRequest $request) use ($command, $route) {
-        $method = $request->method();
-        $url = $request->url();
-
-        $ampClient = Mockery::mock(AmpClient::class);
-        // Deliver reads the source IP for its rate-limit bucket.
-        $ampClient->shouldReceive('getRemoteAddress')->andReturn(new InternetAddress('127.0.0.1', 12345));
-        $ampUri = HttpUri::new($url);
-
-        $headers = [];
-        if ($request->hasHeader('Authorization')) {
-            $headers['authorization'] = $request->header('Authorization')[0];
-        }
-
-        $body = $request->body();
-
-        $ampRequest = new AmpRequest($ampClient, $method, $ampUri, $headers, $body);
-
-        /** @var AmpResponse $ampResponse */
-        $ampResponse = $route->invoke($command, $ampRequest);
-
-        $status = $ampResponse->getStatus();
-        $respBody = buffer($ampResponse->getBody());
-
-        return HttpFactory::response($respBody, $status, [
-            'Content-Type' => 'application/json',
-        ]);
-    });
-
-    return $factory;
-}
 
 beforeEach(function (): void {
     // Configure the relay endpoint (HTTPS so RelayClient does not reject it) and
@@ -102,10 +50,10 @@ beforeEach(function (): void {
         app(Clock::class),
     );
 
-    $command = new RelayServeCommand(new NullLogger, $mailbox, new RelayDrainRegistry, new RelayDeliverRateLimiter(app(Clock::class)), new RelayTlsMaterial, new DaemonShutdownSignal);
+    $command = new RelayServeCommand(new NullLogger, $mailbox, new RelayDrainRegistry, new RelayRateLimiter(app(Clock::class)), new RelayTlsMaterial, new DaemonShutdownSignal);
 
     $this->relayClient = new RelayClient(
-        relayServerHttpFactory($command),
+        RelayHandlerHarness::httpFactory($command),
         $this->relayConfig,
         new NullLogger,
     );

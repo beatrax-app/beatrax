@@ -18,9 +18,11 @@ it('renders all three toggles with Toggle 3 disabled and a version-agnostic inli
     expect($html)->toContain('Offer to contribute');
     expect($html)->toContain('Update the shared list on app updates');
 
-    // Toggle 3 must render with the `disabled` attribute.
+    // A role="switch" button now, not a styled checkbox: these are on/off
+    // settings and a screen reader has to announce them as one thing.
     expect($html)->toContain('id="toggle-update-on-updates"');
-    expect(preg_match('/<input[^>]*id="toggle-update-on-updates"[^>]*disabled/i', $html))->toBe(1);
+    expect(preg_match('/<button[^>]*id="toggle-update-on-updates"[^>]*disabled/i', $html))->toBe(1);
+    expect(preg_match('/<button[^>]*role="switch"[^>]*id="toggle-update-on-updates"/i', $html))->toBe(1);
 
     // The inline note must mention a future activation without
     // pinning to a version literal — B-5 forbids any `N.M` shape.

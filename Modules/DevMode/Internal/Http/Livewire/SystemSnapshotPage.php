@@ -16,9 +16,6 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Modules\DevMode\Internal\System\ConfigFlattener;
 use Throwable;
 
-/**
- * @link ../../../../../.docs/features/dev-mode/architecture.md
- */
 #[Layout('dev::layouts.dev-shell')]
 final class SystemSnapshotPage extends Component
 {

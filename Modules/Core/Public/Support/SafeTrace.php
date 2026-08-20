@@ -6,9 +6,6 @@ namespace Modules\Core\Public\Support;
 
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class SafeTrace
 {
     // Deep recursions or framework boot frames otherwise dominate the log

@@ -13,9 +13,6 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\DevMode\Internal\Enums\AuditEvent;
 use Modules\DevMode\Public\Contracts\AuditWriter;
 
-/**
- * @link ../../../../.docs/features/dev-mode/architecture.md
- */
 final readonly class QueueActions
 {
     public function __construct(

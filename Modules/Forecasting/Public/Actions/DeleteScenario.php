@@ -8,11 +8,9 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Forecasting\Public\Events\ScenarioDeleted;
+use Modules\Sync\Public\Events\EntityMutated;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final class DeleteScenario
 {
     public function __construct(
@@ -40,6 +38,16 @@ final class DeleteScenario
         $this->events->dispatch(new ScenarioDeleted(
             userId: $user->id,
             scenarioId: $scenarioId,
+        ));
+
+        // The mutations cascade away with the scenario at the database, and
+        // they do the same on the peer: their own foreign key is
+        // cascadeOnDelete, so this one tombstone is the whole deletion.
+        $this->events->dispatch(new EntityMutated(
+            table: 'forecast_scenarios',
+            pk: $scenarioId,
+            userId: (int) $user->id,
+            mutationType: 'delete',
         ));
     }
 }

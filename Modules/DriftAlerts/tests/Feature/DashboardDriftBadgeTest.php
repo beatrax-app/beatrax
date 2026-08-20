@@ -12,13 +12,6 @@ use Modules\DriftAlerts\Models\DriftAlert;
 
 uses(RefreshDatabase::class);
 
-/*
- * Dashboard "Drift alerts" tile tests. The tile reads through
- * DriftAlertQuery for the current user's open-count + EUR-roll-up
- * annualized impact; renders no chrome when count = 0; renders a
- * link to /drift when count > 0.
- */
-
 function ddbUser(string $username): User
 {
     return User::query()->create([
@@ -171,12 +164,8 @@ it('sums annualized impact across open alerts and renders an EUR-roll-up helper 
     $total = $component->viewData('totalAnnualizedImpact');
     expect((int) $total)->toBe(-2400);
 
-    // The Blade renders the absolute magnitude in EUR — Dutch
-    // formatting prints "€\u{00A0}24,00" for -2400 minor units
-    // (brick/money uses a non-breaking space between symbol and
-    // amount). After Blade default escaping the NBSP renders as a
-    // literal NBSP byte sequence; the magnitude and decimal segment
-    // are the load-bearing markers.
+    // Asserted in halves: the Dutch rendering of -2400 puts an NBSP between
+    // the symbol and the amount, which survives Blade escaping as raw bytes.
     $component->assertSee('24,00');
     $component->assertSee('€');
 });

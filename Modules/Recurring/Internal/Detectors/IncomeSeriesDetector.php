@@ -23,13 +23,8 @@ use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
-// counterparty_iban is a SensitiveFieldRegistry-listed column: under an
-// encrypted user it is random-nonce ciphertext that differs per row for
-// the same logical IBAN, so clustering on the raw value would scatter
-// every income row and silently detect nothing — see the class @link.
-
 /**
- * @link ../../../../.docs/features/recurring/architecture.md
+ * @link ../../../../.docs/features/recurring/detection-encryption-posture.md
  */
 final class IncomeSeriesDetector implements SeriesDetector
 {
@@ -54,14 +49,7 @@ final class IncomeSeriesDetector implements SeriesDetector
     ) {}
 
     /**
-     * @param  Session|null  $session  when non-null, `counterparty_iban` is
-     *                                 decrypted (codec no-op for a
-     *                                 plaintext/non-encrypted value) before
-     *                                 clustering. Null (the default) skips
-     *                                 the decrypt call entirely — used by
-     *                                 the generic `SeriesDetector` interface
-     *                                 call shape and by any caller with no
-     *                                 session context.
+     * @param  Session|null  $session
      */
     public function detectForUser(User $user, ?Session $session = null): void
     {
@@ -101,9 +89,8 @@ final class IncomeSeriesDetector implements SeriesDetector
             $counterparty = self::toString($row->counterparty_normalized);
             $iban = self::toString($row->counterparty_iban);
             if ($iban !== '' && $session !== null) {
-                // Decrypt BEFORE the value becomes the cluster key — a
-                // no-op pass-through when the value is already plaintext
-                // (not encrypted / no epoch verifies).
+                // Decrypt BEFORE the value becomes a grouping key; a no-op
+                // pass-through when the stored value is not encrypted.
                 $iban = $this->codec->decryptValue('transactions', 'counterparty_iban', $iban, $user->id, $session)['value'];
             }
             $currency = self::toString($row->currency);

@@ -21,14 +21,12 @@ use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
 
-/**
- * @link ../../../../../.docs/features/auth/architecture.md
- */
 final class LockScreen extends Component
 {
-    public string $flashMessage = '';
+    use HoldsFlashMessage;
 
     public bool $biometricAvailable = false;
 

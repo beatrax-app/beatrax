@@ -7,9 +7,6 @@ namespace Modules\Sync\Internal\Transport\Relay;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 final readonly class RelayMailbox
 {
     // HARD ZK INVARIANT: stores and routes opaque Noise ciphertext blobs by

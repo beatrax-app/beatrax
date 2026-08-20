@@ -12,9 +12,6 @@ use Modules\Reports\Public\Dto\ReportDefinition;
 use Modules\Reports\Public\Dto\ReportResultDto;
 use Modules\Reports\Public\Dto\ReportResultRow;
 
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final class ReportAggregator
 {
     public function __construct(

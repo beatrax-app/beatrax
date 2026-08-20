@@ -10,9 +10,6 @@ use Carbon\CarbonImmutable;
 // the ISO timestamps the settings page holds into the relative + absolute
 // strings the transparency panel and consent banner render. Behaviour, not
 // state — every method reads the component's own iso properties.
-/**
- * @link ../../../../../../.docs/features/open-banking/architecture.md
- */
 trait FormatsConnectionTimestamps
 {
     public function lastSuccessfulSyncRelative(): ?string

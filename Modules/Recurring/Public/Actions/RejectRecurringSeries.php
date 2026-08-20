@@ -16,9 +16,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 // tab; the detector skips rejected clusters on subsequent sweeps so a
 // rejected series never re-prompts on its own.
 
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
 final class RejectRecurringSeries
 {
     public function __construct(

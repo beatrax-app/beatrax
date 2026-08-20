@@ -69,9 +69,6 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Sync\Public\Services\SyncDaemonIdentity;
 use Psr\Log\LoggerInterface;
 
-/**
- * @link ../../../.docs/features/sync/architecture.md
- */
 final class SyncServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;

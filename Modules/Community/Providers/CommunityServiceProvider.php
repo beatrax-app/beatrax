@@ -25,9 +25,6 @@ use Modules\Core\Public\Events\UserInstalled;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Native\Desktop\Contracts\Shell as ShellContract;
 
-/**
- * @link ../../../.docs/features/community/architecture.md
- */
 final class CommunityServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;

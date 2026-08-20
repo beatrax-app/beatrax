@@ -17,9 +17,6 @@ use Modules\Pots\Public\Exceptions\InsufficientUnallocatedException;
 use Modules\Pots\Public\Exceptions\PotNotFoundException;
 use Modules\Sync\Public\Events\EntityMutated;
 
-/**
- * @link ../../../../.docs/features/pots/architecture.md
- */
 final class PotWriter
 {
     private const NOT_FOUND_MESSAGE = 'Pot not found or not owned by user.';

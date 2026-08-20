@@ -11,9 +11,6 @@ use Illuminate\Validation\ValidationException;
 use Modules\Auth\Public\Events\AppLockPassphraseChanged;
 use Modules\Core\Public\Contracts\Clock;
 
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 final class AppLockProvisioner
 {
     // The app-lock PIN's only entropy is its length, so a short one is offline-
@@ -237,9 +234,6 @@ final class AppLockProvisioner
         return true;
     }
 
-    /**
-     * @link ../../../../.docs/features/auth/architecture.md
-     */
     public function primeSessionAfterLogin(int $userId, string $accountPassword, Session $session): void
     {
         $row = $this->db->connection()

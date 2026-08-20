@@ -7,10 +7,8 @@ namespace Modules\EmailScan\Public\Dto;
 use DateTimeImmutable;
 use Spatie\LaravelData\Data;
 
-// Single-inbox health snapshot for the /inboxes table and the
-// dashboard tile aggregator: mirrors the joined inboxes +
-// inbox_scan_state shape, with the backfill counters null (not zero)
-// when no backfill is currently running so the UI branches on absence.
+// The backfill counters are null rather than zero when no backfill is running,
+// so the UI branches on absence instead of on a count of nothing.
 final class InboxHealthDto extends Data
 {
     public function __construct(

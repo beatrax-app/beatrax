@@ -15,9 +15,6 @@ use Modules\Tax\Public\Actions\UntagTransaction;
 use Modules\Tax\Public\Services\TaxCategoryWriter;
 use Modules\Tax\Public\Services\TaxTagQuery;
 
-/**
- * @link ../../../../../../.docs/features/tax/architecture.md
- */
 trait HandlesTaxTagging
 {
     use DispatchesToast;

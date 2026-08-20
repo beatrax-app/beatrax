@@ -20,8 +20,6 @@ use Modules\DevMode\Internal\Queue\QueueRowLoader;
 use Modules\DevMode\Internal\Services\DevModeFlag;
 
 /**
- * @link ../../../../../.docs/features/dev-mode/architecture.md
- *
  * @phpstan-import-type QueueRow from QueueRowLoader
  */
 #[Layout('dev::layouts.dev-shell')]

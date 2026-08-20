@@ -5,22 +5,10 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Creates the inboxes table — one row per connected email account.
- *
- * Each row pairs a user with an OAuth-authenticated mailbox (Gmail or
- * Microsoft 365) and carries the user-chosen backfill window plus a
- * JSON progress payload the background fetcher updates as it walks
- * history. Persistent OAuth credentials live exclusively in a
- * chmod-600 JSON repository on disk — never in any column of this
- * table — so deleting an inboxes row never leaks credentials and
- * cascading deletes simply unbind the in-memory id reference.
- *
- * The `provider` column is an enum-shaped string ('gmail' or
- * 'microsoft') enforced by a paired BEFORE INSERT / BEFORE UPDATE
- * trigger; SQLite cannot ALTER TABLE ADD CHECK after the fact, so the
- * trigger pair is the project-wide pattern for typed string columns.
- */
+// No column of this table carries an OAuth credential — those live only in the
+// chmod-600 JSON repository on disk.
+// SQLite cannot ALTER TABLE ADD CHECK, so a BEFORE INSERT / BEFORE UPDATE
+// trigger pair is this project's stand-in for an enum constraint.
 return new class extends ModuleMigration
 {
     public function up(): void

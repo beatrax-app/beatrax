@@ -6,7 +6,5 @@ namespace Modules\Ingestion\Public\Exceptions;
 
 use RuntimeException;
 
-// Thrown when a source-format amount cell cannot be parsed into integer
-// minor units; the message carries the offending raw string so the upload
-// wizard can surface it back to the user.
+// The message carries the offending raw cell so the upload wizard can surface it.
 final class InvalidAmountException extends RuntimeException {}

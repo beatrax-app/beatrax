@@ -16,9 +16,6 @@ use Modules\Tax\Public\Dto\TaxYearData;
 // floating-point arithmetic on money values anywhere in this class. See
 // the linked doc for year resolution, leg-aware amounts, the
 // supersession policy, and category-name resolution.
-/**
- * @link ../../../../.docs/features/tax/architecture.md
- */
 final class TaxYearQuery
 {
     use CoercesScalars;

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Listeners;
 
-use Modules\Core\Public\Support\SafeExceptionContext;
 use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Contracts\Container\Container;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Notifications\Public\Events\NotificationPreferenceMutated;
 use Modules\Sync\Internal\Listeners\Concerns\CapturesEnvelopeMutations;
 use Modules\Sync\Internal\Listeners\Concerns\CapturesGoalMutations;
@@ -25,9 +25,6 @@ use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
 use Psr\Log\LoggerInterface;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class SyncCaptureListener
 {
     use CapturesEnvelopeMutations;

@@ -15,9 +15,6 @@ use Modules\DevMode\Internal\Logging\RedactSecretsProcessor;
 use Modules\DevMode\Internal\Process\FileTailer;
 use SplFileObject;
 
-/**
- * @link ../../../../../.docs/features/dev-mode/architecture.md
- */
 final readonly class LogStreamController
 {
     use CoercesScalars;

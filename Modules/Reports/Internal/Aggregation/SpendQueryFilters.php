@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Reports\Internal\Aggregation;
 
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final class SpendQueryFilters
 {
     /**

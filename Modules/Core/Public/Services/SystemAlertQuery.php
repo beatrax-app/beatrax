@@ -11,9 +11,6 @@ use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final readonly class SystemAlertQuery
 {
     public function __construct(

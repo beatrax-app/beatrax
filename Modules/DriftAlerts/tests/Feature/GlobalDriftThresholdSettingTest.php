@@ -20,13 +20,6 @@ beforeEach(function (): void {
     Currency::query()->updateOrInsert(['code' => 'EUR'], ['name' => 'Euro', 'minor_unit' => 2]);
 });
 
-/*
- * /settings global drift threshold field tests. Persists to
- * users.drift_alert_threshold_percent; the value propagates to
- * DriftEvaluator's effective-threshold resolution on subsequent
- * detection sweeps.
- */
-
 function gdtUser(string $username, int $threshold = 5): User
 {
     return User::query()->create([
@@ -100,8 +93,6 @@ it('persists 50 as the highest valid threshold', function (): void {
 });
 
 it('changing the global threshold without a per-series override changes subsequent drift detection behaviour', function (): void {
-    // The integration: with threshold=10, a 7% drift produces no alert;
-    // with threshold=5, the same 7% drift produces an alert.
     CarbonImmutable::setTestNow('2026-05-20 09:00:00');
 
     /** @var DatabaseManager $db */
@@ -110,8 +101,7 @@ it('changing the global threshold without a per-series override changes subseque
     $user = gdtUser('gdt-integration', threshold: 10);
     $suffix = bin2hex(random_bytes(4));
 
-    // Seed an approved series with NULL per-series override + 7% drift
-    // (1000 -> 1070).
+    // NULL per-series override, so the user-global threshold is the one applied.
     $seriesId = $db->connection()->table('recurring_series')->insertGetId([
         'user_id' => $user->id,
         'direction' => 'expense',
@@ -188,18 +178,16 @@ it('changing the global threshold without a per-series override changes subseque
         ]);
     };
 
-    // Two occurrences: 1000 cents (Apr) → 1070 cents (May). 7% drift.
+    // 1000 → 1070 cents is a 7% drift: between the two thresholds under test.
     $seedOccurrence('2026-04-15', -1000);
     $seedOccurrence('2026-05-15', -1070);
 
     /** @var DriftEvaluator $evaluator */
     $evaluator = app(DriftEvaluator::class);
 
-    // With user global threshold = 10, the 7% drift is below — no alert.
     $evaluator->evaluateForSeries($seriesId, $user->refresh());
     expect(DriftAlert::query()->where('user_id', $user->id)->count())->toBe(0);
 
-    // Lower the user-global threshold to 5 via Livewire and re-run.
     Livewire::actingAs($user)
         ->test(SettingsPage::class)
         ->set('driftAlertThresholdPercent', 5)

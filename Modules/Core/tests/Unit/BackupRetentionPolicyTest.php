@@ -4,21 +4,6 @@ declare(strict_types=1);
 
 use Modules\Core\Internal\Console\Support\BackupRetentionPolicy;
 
-/*
- * Pure-logic specification for the retention rule that decides which
- * `storage/app/backups/*.sqlite` files the scheduled `db:backup`
- * command should keep after a successful new backup is written. The
- * rule preserves the 7 most-recent timestamped daily files PLUS the
- * 4 most-recent Sunday-dated weekly files, and always passes through
- * any filename that does not match the `beatrax-YYYY-MM-DD-HHMMSS.sqlite`
- * shape (so `.suspect` files, `pre-restore-*` snapshots, and
- * `.meta.json` sidecars survive every prune).
- *
- * The policy is intentionally pure (no Filesystem dependency) so the
- * dataset below proves every relevant edge case in-memory without
- * touching disk.
- */
-
 dataset('retention scenarios', [
     'no candidates yields empty keep list' => [
         'candidates' => [],
@@ -94,19 +79,9 @@ dataset('retention scenarios', [
             'beatrax-2026-05-19-030000.sqlite',
         ],
         'now' => '2026-05-19 04:00:00',
-        // 7 newest dailies: 04-19, 04-26, 05-03, 05-10, 05-17, 05-18, 05-19.
-        // 4 most-recent Sundays: 04-26, 05-03, 05-10, 05-17 (already in 7-daily set).
-        // Older Sundays NOT in the keep list: 03-29, 04-05.
-        // But 04-12 IS one of the 4 most-recent if we only count Sundays
-        // OUTSIDE the 7-daily window? The plan says: "PLUS the 4 most-recent
-        // Sunday-dated weekly files" — the rule selects the 4 most-recent
-        // Sundays from ALL matching files, then unions with the 7-daily set.
-        // 4 most-recent Sundays overall = 04-26, 05-03, 05-10, 05-17 — all
-        // already kept. Pruning targets: 03-29, 04-05, 04-12, 04-19? No:
-        // 04-19 is one of the 7 newest dailies. So pruned = 03-29 + 04-05.
-        // Kept = 04-12 only if it lands in the "4 most-recent Sundays" OR
-        // the 7-daily set. It is NOT in 7-daily (only 04-19 onward); it's
-        // the 5th-most-recent Sunday. So 04-12 should be PRUNED.
+        // 7 newest dailies: 04-19 … 05-19. The 4 most-recent Sundays overall
+        // (04-26, 05-03, 05-10, 05-17) are already in that set, so 04-12 — the
+        // 5th-most-recent Sunday — is pruned alongside 03-29 and 04-05.
         'expectedKeepers' => [
             'beatrax-2026-04-19-030000.sqlite',
             'beatrax-2026-04-26-030000.sqlite',
@@ -119,8 +94,6 @@ dataset('retention scenarios', [
     ],
 
     'two same-day timestamps both count as separate dailies' => [
-        // Same-day pair: 03:00 and 15:30. Plus 6 other dailies. Total 8.
-        // 7 newest by date+time descending should keep both same-day rows.
         'candidates' => [
             'beatrax-2026-05-12-030000.sqlite',
             'beatrax-2026-05-13-030000.sqlite',
@@ -148,15 +121,10 @@ dataset('retention scenarios', [
     ],
 
     'calendar-invalid digit-shaped date is treated as non-Sunday without crashing the sweep' => [
-        // 2026-13-99 passes the digit regex but is not a real calendar
-        // date. The policy must not crash on CarbonImmutable::parse():
-        // calendar-invalid entries are skipped from the Sunday-keep
-        // scan and never promoted into the keep set on their own. They
-        // ARE still subject to the 7-daily window, which sorts by the
-        // raw date_key string — so the calendar-invalid entry sorts
-        // lexicographically (2026-13-99 > 2026-05-19) and lands in the
-        // 7-daily slot. The promise the fix makes is "the sweep never
-        // throws", not "calendar-invalid entries are pruned aggressively".
+        // 2026-13-99 passes the digit regex but is not a real calendar date. It
+        // is skipped from the Sunday scan, yet the 7-daily window sorts on the
+        // raw date_key string, so it sorts above 2026-05-19 and is kept. The
+        // promise is that the sweep never throws, not that it prunes such rows.
         'candidates' => [
             'beatrax-2026-13-99-250000.sqlite',
             'beatrax-2026-05-14-030000.sqlite',

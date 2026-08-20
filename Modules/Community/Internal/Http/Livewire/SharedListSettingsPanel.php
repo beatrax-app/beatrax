@@ -11,9 +11,6 @@ use Modules\Community\Public\Services\CommunityCorpusQuery;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 
-/**
- * @link ../../../../../.docs/features/community/architecture.md
- */
 final class SharedListSettingsPanel extends Component
 {
     public bool $useSharedList = true;

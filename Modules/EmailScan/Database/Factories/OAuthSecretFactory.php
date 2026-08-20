@@ -24,9 +24,8 @@ final class OAuthSecretFactory extends Factory
         $providers = [MailProvider::Gmail->value, MailProvider::Microsoft->value];
         $provider = $providers[array_rand($providers)];
 
-        // client_secret and tokens_blob are plaintext here; OAuthSecret's
-        // encrypted cast performs the actual encryption on write, so
-        // fixtures never need to fabricate ciphertext.
+        // Plaintext is correct here: OAuthSecret's encrypted cast does the
+        // encrypting on write, so fixtures never fabricate ciphertext.
         return [
             'user_id' => fn (): int => User::query()->create([
                 'username' => 'oauth-'.Str::lower(Str::random(12)),

@@ -6,9 +6,6 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Route;
 
-// The four-route migration wizard: index -> upload -> preview -> results —
-// see .docs/features/migration/architecture.md ("Wizard pages") for the
-// `?reconcile_of={run}` query-parameter contract on the upload route.
 Route::middleware(['web', 'auth'])->group(static function (): void {
     Route::view('/migrations', 'migration::index')->name('migrations.index');
 

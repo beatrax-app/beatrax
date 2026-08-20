@@ -7,9 +7,6 @@ namespace Modules\Community\Internal\Services;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Modules\Community\Public\Dto\SuggestMappingDto;
 
-/**
- * @link ../../../../.docs/features/community/architecture.md
- */
 final class GitHubCompareUrlBuilder
 {
     public function __construct(private readonly ConfigRepository $config) {}

@@ -15,9 +15,6 @@ use Modules\DevMode\Public\Contracts\AuditWriter;
 use Modules\DevMode\Public\Dto\CommandRunAudit;
 use Spatie\Activitylog\Support\ActivityLogger;
 
-/**
- * @link ../../../../.docs/features/dev-mode/architecture.md
- */
 final readonly class SpatieAuditWriter implements AuditWriter
 {
     private const AUDIT_TABLE = 'dev_mode_audit';

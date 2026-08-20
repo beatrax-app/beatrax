@@ -8,10 +8,6 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\Anomaly\Models\AnomalyAlertTransition;
 use Modules\Anomaly\Public\Enums\AnomalyAlertState;
 
-// The default state encodes a "user acknowledged an open alert"
-// transition. Callers override `from_state` / `to_state` /
-// `transition_reason` / `actor` for the snooze / dismiss / undo / revive
-// shapes.
 /**
  * @extends Factory<AnomalyAlertTransition>
  */

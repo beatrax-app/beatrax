@@ -15,9 +15,6 @@ use Modules\Tax\Internal\Actions\TaxCategoryWriter;
 use Modules\Tax\Public\Enums\TaxCountry;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../../.docs/features/tax/architecture.md
- */
 final class TaxSettingsSection extends Component
 {
     public string $taxCountryCode = '';

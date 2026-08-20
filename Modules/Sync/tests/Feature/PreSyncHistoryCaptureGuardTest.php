@@ -8,12 +8,10 @@ use Modules\Sync\Internal\OpLog\PreSyncHistoryCapture;
 
 uses(RefreshDatabase::class);
 
-/*
- * A device joining an existing account holds no GDK epoch — it is about to be
- * given the peer's keys. Its only rows are the defaults every install seeds,
- * so capturing them pushed a second copy of the default rule set onto the
- * peer and reported them back as "records received".
- */
+// A device joining an existing account holds no GDK epoch — it is about to be
+// given the peer's keys. Its only rows are the defaults every install seeds, so
+// capturing them pushed a second copy of the default rule set onto the peer and
+// reported them back as "records received".
 
 function captureGuardUser(DatabaseManager $db): int
 {

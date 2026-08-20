@@ -34,9 +34,6 @@ use Modules\EmailScan\Public\Services\KnownSenderQuery;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable;

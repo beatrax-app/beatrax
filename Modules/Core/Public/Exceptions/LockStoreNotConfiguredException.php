@@ -10,7 +10,4 @@ use RuntimeException;
 // its lock through this, so an unusable value has to stop the job rather than
 // fall back to a default — two workers holding no shared lock would each run
 // the same sync or scan against the same rows.
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class LockStoreNotConfiguredException extends RuntimeException {}

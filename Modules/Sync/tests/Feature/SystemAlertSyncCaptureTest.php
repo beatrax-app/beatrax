@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Collection;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Actions\AcknowledgeSystemAlert;
@@ -58,7 +59,7 @@ function bindSystemAlertWriter(int $userId): string
     return bin2hex($publicKey);
 }
 
-/** @return Illuminate\Support\Collection<int, stdClass> */
+/** @return Collection<int, stdClass> */
 function systemAlertOps(int $userId)
 {
     /** @var DatabaseManager $db */

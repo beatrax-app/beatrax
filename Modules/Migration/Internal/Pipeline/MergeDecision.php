@@ -7,9 +7,6 @@ namespace Modules\Migration\Internal\Pipeline;
 use Modules\Migration\Public\Dto\ConflictDto;
 use Modules\Migration\Public\Enums\MigrationEntityType;
 
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 final class MergeDecision
 {
     /**
@@ -26,9 +23,6 @@ final class MergeDecision
      */
     public function conflictedBudgetAssignmentKeys(): array
     {
-        // budget_assignment is the one entity kind promoteBudgetAssignments()
-        // applies unconditionally, so these composite keys are threaded back
-        // in as an explicit skip-list to keep a conflicted row untouched.
         $keys = [];
         foreach ($this->conflicts as $conflict) {
             if ($conflict->entityType === MigrationEntityType::BudgetAssignment->value && $conflict->sourceExternalId !== null) {

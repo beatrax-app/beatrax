@@ -36,9 +36,6 @@ use Modules\Core\Public\Enums\JobRunStatus;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Receipts\Public\Events\ChainHintDetected;
 
-/**
- * @link ../../../.docs/features/chains/architecture.md
- */
 final class ChainsServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
@@ -54,8 +51,6 @@ final class ChainsServiceProvider extends ServiceProvider
         $this->app->bind(UpsertsCardStatements::class, CardStatementUpserter::class);
         $this->app->singleton(CardStatementUpserter::class);
 
-        // Singleton so the listener shares one DatabaseManager + Clock
-        // pair across events.
         $this->app->singleton(CreateChainLinkFromHint::class);
 
         $this->app->singleton(ChainTreeWalker::class);
@@ -83,9 +78,6 @@ final class ChainsServiceProvider extends ServiceProvider
         $events->listen(ChainHintDetected::class, [CreateChainLinkFromHint::class, 'handle']);
     }
 
-    // Resolves the View Factory contract through $this->app->make() rather
-    // than the view() global helper, keeping the project's DI-only
-    // posture visible at the call site.
     private function registerTopNavBadgeComposer(): void
     {
         $app = $this->app;
@@ -103,10 +95,8 @@ final class ChainsServiceProvider extends ServiceProvider
         });
     }
 
-    // Flips the most recent running chain_resolution_runs row for the
-    // job's user to failed when the queue worker exhausts the retry
-    // budget. Uses the injected Dispatcher::listen() rather than the
-    // Queue::failing facade to keep larastan-strict-rules' noFacade rule satisfied.
+    // Injected Dispatcher::listen() rather than the Queue::failing facade,
+    // which larastan-strict-rules' noFacade rule forbids.
     private function registerJobFailedListener(Dispatcher $events): void
     {
         $app = $this->app;
@@ -149,9 +139,8 @@ final class ChainsServiceProvider extends ServiceProvider
         });
     }
 
-    // The job class declares public readonly int $userId, so a defensive
-    // regex isolates the integer value across both the compact and
-    // named-arg serialiser shapes.
+    // The serialised command takes both a compact and a named-arg shape, so
+    // $userId is matched out by regex rather than unserialised.
     private function extractUserIdFromFailedJob(JobFailed $event): ?int
     {
         $data = $event->job->payload()['data'] ?? null;

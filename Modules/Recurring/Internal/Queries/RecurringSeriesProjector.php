@@ -16,9 +16,6 @@ use stdClass;
 // hydration and the paged, state-scoped keyset walk. Extracted from
 // RecurringSeriesQuery so that class stays under the method-count ceiling;
 // row-to-DTO projection is a cohesive slice of its own.
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
 final readonly class RecurringSeriesProjector
 {
     use CoercesScalars;

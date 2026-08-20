@@ -42,16 +42,8 @@ use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
 use Modules\Tax\Public\Services\TaxTagQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-// DI-only: no constructor. Service collaborators arrive as parameters
-// on mount()/render()/action methods — auth()/Auth::user()/facade
-// lookups are out of bounds project-wide.
-/**
- * @link ../../../../../.docs/features/ledger/architecture.md
- */
 final class TransactionDetail extends Component
 {
-    // The one translation key every reconciled-row guard shows, so the
-    // four guards cannot drift apart in wording.
     private const RECONCILED_NOTICE_KEY = 'ledger::detail.toast.reconciled_locked';
 
     use DispatchesToast;
@@ -61,9 +53,8 @@ final class TransactionDetail extends Component
 
     public int $transactionId = 0;
 
-    // Reset to '' after every successful reclassify so the dropdown
-    // returns to "Choose a type..." and the just-applied value is
-    // hidden from the option list.
+    // Reset to '' after a successful reclassify so the dropdown returns to
+    // its placeholder and the applied value leaves the option list.
     public string $reclassifyType = '';
 
     public string $note = '';
@@ -75,10 +66,8 @@ final class TransactionDetail extends Component
         $this->transactionId = $transactionId;
         $userId = $currentUser->user()->id;
 
-        // Raw Query Builder used instead of Eloquent's
-        // Transaction::query()->exists() to clear PHPStan strict-rules
-        // staticMethod.dynamicCall — Eloquent's exists() is a magic
-        // forward over Builder's instance method, rejected on a fresh query.
+        // Query Builder, not Transaction::query()->exists(): PHPStan
+        // strict-rules rejects that magic forward as staticMethod.dynamicCall.
         $row = $db->connection()
             ->table('transactions')
             ->where('id', $transactionId)
@@ -92,8 +81,6 @@ final class TransactionDetail extends Component
             ));
         }
 
-        // Read-side decrypt — the note projection column is ciphertext
-        // at rest once encryption is enabled; pass-through no-op otherwise.
         $this->note = is_string($row->note)
             ? $codec->decryptValue('transactions', 'note', $row->note, $userId, $session)['value']
             : '';
@@ -101,13 +88,6 @@ final class TransactionDetail extends Component
         $this->loadSplitState($currentUser, $db, $taxTagQuery, $codec, $session);
     }
 
-    // Allow-listed via TransactionType — any other value raises
-    // InvalidArgumentException before any DB read. Same-user scoping is
-    // enforced by firstOrFail() on a query filtered by user_id; a
-    // cross-user invocation raises NotFoundHttpException (404).
-    /**
-     * @link ../../../../../.docs/features/ledger/architecture.md
-     */
     public function reclassify(
         string $newType,
         CurrentUser $currentUser,
@@ -130,18 +110,14 @@ final class TransactionDetail extends Component
             ->where('user_id', $user->id)
             ->firstOrFail();
 
-        // Reconciled lock: warn-first, no write. Reads the already
-        // user-scoped $tx just loaded above — no extra query needed.
         if ($tx->status === ClearedStatus::Reconciled->value) {
             $this->toast(Lang::get(self::RECONCILED_NOTICE_KEY));
 
             return;
         }
 
-        // Reclassifying a split transaction to a non-splittable type
-        // would strand its legs (see the linked architecture page) —
-        // collapse the split first, through the sole mutator, before
-        // the type leaves the splittable set.
+        // Collapse the split before the type leaves the splittable set, or
+        // the legs are stranded on a transaction that can no longer show them.
         $didUnsplit = false;
         if (! TransactionType::tryFrom($newType)->isSplittable()) {
             $firstLeg = $db->connection()
@@ -171,10 +147,8 @@ final class TransactionDetail extends Component
             $tx->save();
 
             if ($breaksPair) {
-                // Symmetric break — partner's pair_transaction_id is
-                // cleared atomically in the same transaction. The
-                // partner's own type is preserved; reclassify never
-                // re-types the partner.
+                // Symmetric break, same DB transaction. The partner's own
+                // type is preserved; reclassify never re-types the partner.
                 Transaction::query()
                     ->where('user_id', $user->id)
                     ->where('id', $partnerId)
@@ -182,9 +156,8 @@ final class TransactionDetail extends Component
             }
         });
 
-        // Type reclassify enters the op-log as a per-field Set op. The
-        // pair partner's pair_transaction_id NULL-ing is a structural
-        // FK side-effect handled by the merge engine's cascade.
+        // The partner's pair_transaction_id NULL-ing is deliberately absent
+        // from dirtyFields — the merge engine cascades it as an FK side-effect.
         $events->dispatch(new TransactionMutated(
             transactionId: $this->transactionId,
             userId: $user->id,
@@ -200,21 +173,13 @@ final class TransactionDetail extends Component
 
         $this->reclassifyType = '';
 
-        // If the reclassify collapsed a split, drop the now-stale
-        // in-memory leg state so the component no longer reports
-        // hasPersistedSplit for a transaction that no longer has legs.
         if ($didUnsplit) {
             $this->resetSplitEditor();
         }
     }
 
-    // See the linked architecture page for the correction-divergence
-    // bridge. Cross-user safety: AssignsCategory scopes the UPDATE by
-    // user_id; a foreign-user transaction returns 0 rows affected and
-    // no event fires.
-    /**
-     * @link ../../../../../.docs/features/ledger/architecture.md
-     */
+    // AssignsCategory scopes the UPDATE by user_id, so a foreign-user
+    // transaction affects 0 rows and no divergence event fires.
     public function reclassifyCategory(
         int $newCategoryId,
         CurrentUser $currentUser,
@@ -223,10 +188,8 @@ final class TransactionDetail extends Component
     ): void {
         $user = $currentUser->user();
 
-        // Reconciled lock: warn-first, no write. This is a public
-        // Livewire method invokable directly from the browser, so it
-        // must enforce the same "un-reconcile first" contract as the
-        // sibling mutators; the status read is scoped by user_id.
+        // Invokable straight from the browser, so the reconciled lock has to
+        // be re-checked here and not only in the sibling mutators.
         $status = $db->connection()
             ->table('transactions')
             ->where('id', $this->transactionId)
@@ -239,10 +202,9 @@ final class TransactionDetail extends Component
             return;
         }
 
-        // Single canonical divergence detector: both this Livewire
-        // dispatch and AssignCategory's framework-event dispatch route
-        // through CategorizationDiverged::fromProvenance so the two
-        // channels stay in lockstep on any provenance shape change.
+        // Both this dispatch and AssignCategory's framework-event dispatch go
+        // through fromProvenance(), so the two channels cannot disagree about
+        // what counts as a divergence.
         $priorProvenance = AssignCategory::readPriorProvenance($db, $this->transactionId, $user->id);
 
         $affected = ($assign)($this->transactionId, $newCategoryId, $user);
@@ -270,10 +232,6 @@ final class TransactionDetail extends Component
         );
     }
 
-    // Empty/blank input is normalised to NULL in the DB. Delegates the
-    // write to Ledger's SetsTransactionNote Public action; a
-    // TransactionMutated(edit) event is dispatched so the Sync capture
-    // listener records it.
     public function saveNote(
         CurrentUser $currentUser,
         DatabaseManager $db,
@@ -283,10 +241,8 @@ final class TransactionDetail extends Component
     ): void {
         $user = $currentUser->user();
 
-        // Reconciled lock: warn-first, no write. Pre-checked here
-        // (rather than only inside the action) so this method can show
-        // the specific "un-reconcile first" toast instead of a generic
-        // no-op.
+        // Pre-checked here rather than only inside the action, so the user
+        // gets the "un-reconcile first" toast instead of a silent no-op.
         $status = $db->connection()
             ->table('transactions')
             ->where('id', $this->transactionId)
@@ -312,8 +268,7 @@ final class TransactionDetail extends Component
                 dirtyFields: ['note' => $value],
             ));
 
-            // This is the sole user-driven note write path, so it owns
-            // stamping manual provenance.
+            // The sole user-driven note write path, so it owns the stamp.
             $provenance->stamp($user->id, $this->transactionId, ['note' => 'manual']);
         }
 
@@ -321,9 +276,6 @@ final class TransactionDetail extends Component
         $this->toast(Lang::get('ledger::detail.toast.note_saved'));
     }
 
-    // Delegates to HandlesClearedStatus::toggleClearedStatus(), which
-    // owns the warn-first-on-reconciled guard, the cleared<->uncleared
-    // flip, and the dispatch-after-commit TransactionMutated event.
     public function toggleCleared(
         CurrentUser $currentUser,
         DatabaseManager $db,
@@ -333,10 +285,8 @@ final class TransactionDetail extends Component
         $this->toggleClearedStatus($this->transactionId, $currentUser, $db, $events, $clock);
     }
 
-    // The escape hatch every reconciled-lock warn toast on this page
-    // points to. A foreign, missing, or already non-reconciled
-    // transaction id is a silent no-op, mirroring
-    // ReconciliationWriter::unreconcile()'s own cross-user handling.
+    // The escape hatch every reconciled-lock toast on this page points to. A
+    // foreign, missing or already non-reconciled id is a silent no-op.
     public function unreconcile(
         ReconciliationWriter $writer,
         CurrentUser $currentUser,
@@ -346,10 +296,6 @@ final class TransactionDetail extends Component
         $this->toast(Lang::get('ledger::detail.toast.unreconciled'));
     }
 
-    // Delegates the write to Ledger's ReassignsCounterparty Public
-    // action. Cross-user counterparty, an unchanged value, or a
-    // reconciled row all resolve to a silent no-op. This is the sole
-    // user-driven counterparty_id write path.
     public function reassignCounterparty(
         int $newCounterpartyId,
         CurrentUser $currentUser,
@@ -360,10 +306,7 @@ final class TransactionDetail extends Component
     ): void {
         $user = $currentUser->user();
 
-        // Ownership-check the transaction and read its status in the
-        // same scoped query for the reconciled lock check below.
-        // Pre-checked here so this method can show the specific
-        // "un-reconcile first" toast instead of a generic no-op.
+        // Ownership check and reconciled-lock read in one scoped query.
         $status = $db->connection()
             ->table('transactions')
             ->where('id', $this->transactionId)
@@ -383,8 +326,7 @@ final class TransactionDetail extends Component
         $affected = ($reassign)($this->transactionId, $newCounterpartyId, $user);
 
         if ($affected === 0) {
-            // Cross-user/unknown counterparty or unchanged value —
-            // silent no-op.
+            // Cross-user or unknown counterparty, or an unchanged value.
             return;
         }
 
@@ -395,16 +337,14 @@ final class TransactionDetail extends Component
             dirtyFields: ['counterparty_id' => $newCounterpartyId],
         ));
 
-        // This is the sole user-driven counterparty_id write path, so
-        // it owns stamping manual provenance.
+        // The sole user-driven counterparty_id write path, so it owns the stamp.
         $provenance->stamp($user->id, $this->transactionId, ['counterparty_id' => 'manual']);
 
         $this->toast(Lang::get('ledger::detail.toast.counterparty_updated'));
     }
 
-    // Counts this transaction toward a savings goal. Deliberately NOT
-    // behind the reconciled lock the sibling mutators use: an attribution
-    // is a separate row that leaves the reconciled transaction untouched,
+    // Deliberately NOT behind the reconciled lock the sibling mutators use:
+    // an attribution is a separate row that leaves the transaction untouched,
     // and a reconciled row is exactly the confirmed money a goal wants.
     public function attributeToGoal(
         int $goalId,
@@ -430,9 +370,6 @@ final class TransactionDetail extends Component
         $this->toast(Lang::get('ledger::detail.toast.goal_attribution_removed'));
     }
 
-    // Deletes this transaction and emits a tombstone op so the Sync
-    // engine propagates the deletion across devices; redirects to the
-    // transactions list after a successful delete.
     public function deleteTransaction(
         CurrentUser $currentUser,
         DatabaseManager $db,
@@ -441,8 +378,6 @@ final class TransactionDetail extends Component
     ): void {
         $userId = $currentUser->user()->id;
 
-        // Ownership check before delete — reads status in the same
-        // scoped query for the reconciled lock check below.
         $status = $db->connection()
             ->table('transactions')
             ->where('id', $this->transactionId)
@@ -459,10 +394,9 @@ final class TransactionDetail extends Component
             return;
         }
 
-        // Read the leg ids before deleting the parent (the DB cascade
-        // removes the leg rows locally) — convergence must not rely on
-        // the peer's replay connection having FK cascade active, so an
-        // explicit delete tombstone is emitted per leg below.
+        // Read the leg ids before the parent delete cascades them away:
+        // convergence cannot assume the peer's replay connection has FK
+        // cascade on, so each leg needs its own tombstone below.
         $legRows = $db->connection()
             ->table('transaction_splits')
             ->where('transaction_id', $this->transactionId)
@@ -475,8 +409,6 @@ final class TransactionDetail extends Component
             ->where('user_id', $userId)
             ->delete();
 
-        // The Sync capture listener records a delete_tombstone op for
-        // this dispatch.
         $events->dispatch(new TransactionMutated(
             transactionId: $this->transactionId,
             userId: $userId,
@@ -484,8 +416,6 @@ final class TransactionDetail extends Component
             dirtyFields: [],
         ));
 
-        // One tombstone per leg, dispatched after the parent commit
-        // above.
         foreach ($legRows as $legRow) {
             $legId = is_numeric($legRow->id) ? (int) $legRow->id : 0;
             $events->dispatch(new TransactionSplitMutated(
@@ -499,9 +429,6 @@ final class TransactionDetail extends Component
         $this->redirect($urls->route('transactions.index'), navigate: true);
     }
 
-    // Livewire lifecycle hook: recomputes the server-truthful remaining
-    // figure whenever a leg amount changes. Fires for any
-    // legs.{index}.amount mutation regardless of the debounce binding path.
     public function updated(string $name, mixed $value, CurrentUser $currentUser, DatabaseManager $db): void
     {
         if (str_starts_with($name, 'legs.') && str_ends_with($name, '.amount')) {
@@ -509,8 +436,7 @@ final class TransactionDetail extends Component
         }
     }
 
-    // Normalises a leg's categoryId (which may arrive as a string or
-    // '' from a Livewire <select> binding) to ?int.
+    // A Livewire <select> binding delivers this as a string, or as ''.
     /**
      * @param  array{id: ?int, categoryId: int|string|null, amount: string, note: string, tax: bool}  $leg
      */
@@ -524,16 +450,14 @@ final class TransactionDetail extends Component
         return is_numeric($raw) ? (int) $raw : null;
     }
 
-    // Split legs are entered as positive magnitudes — the sign belongs to
-    // the parent transaction — so a zero or negative entry is not a valid
-    // leg amount.
+    // Legs are entered as positive magnitudes; the sign belongs to the
+    // parent transaction, so zero or negative is not a valid leg amount.
     private static function parseAmount(string $value): ?int
     {
         return MoneyInput::tryToPositiveMinor($value);
     }
 
-    // Integer-only arithmetic (intdiv/modulo), never float division,
-    // per the project's no-float-money rule.
+    // intdiv/modulo, never float division — the no-float-money rule.
     private static function formatAbsAmount(int $absMinor): string
     {
         $whole = intdiv($absMinor, Money::MINOR_UNITS_PER_MAJOR);
@@ -555,17 +479,15 @@ final class TransactionDetail extends Component
     ): View {
         $userId = $currentUser->user()->id;
 
-        // Eager-load the resolved counterparty + category so the Blade
-        // can render both without a second query. The relation is null
-        // for pre-resolver history — the Blade falls back to plain text.
+        // counterparty is null for pre-resolver history; the Blade falls
+        // back to the plain-text name.
         $transaction = Transaction::query()
             ->with(['counterparty', 'category'])
             ->where('id', $this->transactionId)
             ->where('user_id', $userId)
             ->firstOrFail();
 
-        // Read-side decrypt — assigned back onto the in-memory model
-        // attribute only (never re-saved), so the Blade renders plaintext.
+        // Assigned onto the in-memory attribute only, never re-saved.
         if (is_string($transaction->counterparty_name)) {
             $transaction->counterparty_name = $codec->decryptValue(
                 'transactions',
@@ -576,16 +498,11 @@ final class TransactionDetail extends Component
             )['value'];
         }
 
-        // Offered for any non-transfer type. The category options list
-        // is only loaded when needed — transfer detail pages never
-        // render the Split section at all.
         $isSplittable = (TransactionType::tryFrom($transaction->type)?->isSplittable() === true);
         $splitCategories = $isSplittable ? $categoryOptions->for($currentUser->user()) : [];
 
-        // Gates the "View chain" button on whether this transaction
-        // actually participates in any chain_link, so a row with zero
-        // chain coverage doesn't show a button that just opens an
-        // empty drawer.
+        // Gates the "View chain" button, so a row with no chain_link rows
+        // does not offer a button that opens an empty drawer.
         $chainAvailable = $chainQuery->hasChainForTransaction(
             $this->transactionId,
             $currentUser->user(),
@@ -601,10 +518,8 @@ final class TransactionDetail extends Component
         $clearedState = $this->clearedStatusFor([$this->transactionId], $db, $currentUser);
         $clearedStatus = $clearedState[$this->transactionId] ?? ClearedStatus::Cleared->value;
 
-        // Only user-owned rows for the reassignment picker. display_name
-        // is ciphertext at rest once encryption is enabled, so the
-        // DB-level ORDER BY would sort by ciphertext — decrypt first,
-        // then re-sort in PHP so the dropdown stays alphabetical either way.
+        // No ORDER BY: display_name is ciphertext at rest once encryption is
+        // on, so the DB would sort by ciphertext. Decrypt, then sort in PHP.
         $counterparties = $db->connection()
             ->table('counterparties')
             ->where('user_id', $userId)

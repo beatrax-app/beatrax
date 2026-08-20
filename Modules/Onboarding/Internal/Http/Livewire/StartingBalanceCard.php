@@ -11,13 +11,9 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
 
-/**
- * @link ../../../../../.docs/features/onboarding/architecture.md
- */
 final class StartingBalanceCard extends Component
 {
-    // ±€10M caps a typo or tampered-frontend cent value at a sane
-    // bound.
+    // ±€10M caps a typo or a tampered-frontend cent value.
     private const MIN_BALANCE_MINOR = -1_000_000_000_00;
 
     private const MAX_BALANCE_MINOR = 1_000_000_000_00;
@@ -26,20 +22,14 @@ final class StartingBalanceCard extends Component
 
     public string $accountLabel = '';
 
-    // Rendered inside the .funding-tag mono pill on the card eyebrow —
-    // typically "NL18 ASNB · 4321" but free-form for the PayPal/wallet case.
     public string $accountShort = '';
 
     public string $currency = 'EUR';
 
-    // Null when the detector returned no candidate (the manual-entry
-    // case).
     public ?int $detectedMinor = null;
 
     public ?string $detectedDate = null;
 
-    // Bound to a numeric input via wire:model.live while the card is
-    // editing.
     public ?int $editedMinor = null;
 
     public ?string $editedDate = null;
@@ -55,8 +45,7 @@ final class StartingBalanceCard extends Component
     /** @var list<array{minor: int, date: string, sourceLabel: string}> */
     public array $alternativeCandidates = [];
 
-    // Defaults to 0 — the earliest-date candidate, which wins the
-    // tie-break on date alone.
+    // Defaults to 0 — the earliest-date candidate, which wins on date alone.
     public int $selectedConflictIndex = 0;
 
     /**
@@ -153,9 +142,8 @@ final class StartingBalanceCard extends Component
         $this->persistConfirmation($db, $currentUser, $minor, $date);
     }
 
-    // Returns the first validation error for the edited amount/date, or null
-    // when both are valid. The match(true) keeps the ordering that surfaces
-    // the most specific message the user can act on first.
+    // The match(true) arms are ordered most-specific-first, so the message
+    // the user can actually act on wins.
     private function amountDateError(?int $minor, ?string $date): ?string
     {
         $timestamp = ($date === null || $date === '') ? false : strtotime($date);

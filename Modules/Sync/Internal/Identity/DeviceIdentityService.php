@@ -17,9 +17,6 @@ use Modules\Sync\Public\Events\DeviceSyncEnabled;
 use Ramsey\Uuid\Uuid;
 use SodiumException;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class DeviceIdentityService
 {
     public function __construct(

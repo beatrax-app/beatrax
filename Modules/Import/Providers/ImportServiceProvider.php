@@ -54,10 +54,8 @@ final class ImportServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
 
-    // Source-specific hinters lead so their higher-confidence verdicts
-    // win; the fallback is LAST so the registry test's "fallback is
-    // last" invariant holds. A missing class skips its binding via
-    // class_exists(), mirroring ReceiptsServiceProvider's tag loop.
+    // Source-specific hinters lead so their higher-confidence verdicts win;
+    // the fallback must stay last.
     private const PAYMENT_TYPE_HINTER_FQNS = [
         'Modules\\Import\\Internal\\Parsers\\Banking\\Camt053PaymentTypeHinter',
         'Modules\\Import\\Internal\\Parsers\\Banking\\Mt940PaymentTypeHinter',
@@ -67,9 +65,8 @@ final class ImportServiceProvider extends ServiceProvider
         'Modules\\Import\\Internal\\Parsers\\DescriptionKeywordFallbackHinter',
     ];
 
-    // Order matches the documented detector priority: CAMT.053 first
-    // (canonical), MT940 next (legacy fallback), ICS PDF, PayPal CSV
-    // last (always declines). Same class_exists() guard as above.
+    // Detector priority: canonical CAMT.053 first, legacy MT940 next, then
+    // ICS PDF, then PayPal CSV, which always declines.
     private const STARTING_BALANCE_DETECTOR_FQNS = [
         'Modules\\Import\\Internal\\Detectors\\Camt053StartingBalanceDetector',
         'Modules\\Import\\Internal\\Detectors\\Mt940StartingBalanceDetector',
@@ -79,8 +76,8 @@ final class ImportServiceProvider extends ServiceProvider
 
     public function register(): void
     {
-        // Overridden by the Sync module when it is loaded; this default keeps
-        // the import path resolvable on a build without sync.
+        // Sync overrides this when loaded; the default keeps the import path
+        // resolvable on a build without it.
         $this->app->bindIf(CapturesImportForSync::class, NullImportSyncCapture::class);
 
         $this->app->bind(RunsImports::class, RunImport::class);
@@ -95,25 +92,13 @@ final class ImportServiceProvider extends ServiceProvider
         $this->app->singleton(KnownCounterpartyIbanResolver::class);
         $this->app->singleton(DefaultKnownCounterpartyIbansSeeder::class);
 
-        // Merchant-alias collaborators: resolver is stateless/read-only,
-        // generalizer is pure, preview query + create-alias action each
-        // wrap a single DB op — bound as singletons since none hold
-        // per-request state.
         $this->app->singleton(PatternGeneralizer::class);
         $this->app->singleton(MerchantNameResolver::class);
         $this->app->singleton(AliasMatchPreviewQuery::class);
         $this->app->singleton(CreateMerchantAlias::class);
 
-        // Consolidated-preview read query bound as a singleton — the
-        // FirstImportStep resolves it once per step render to project
-        // the per-source preview sections from the stashed ImportRun
-        // ids. Stateless: holds only its three constructor deps.
         $this->app->singleton(BuildConsolidatedPreviewQuery::class);
 
-        // Settings → Aliases collaborators: LongestCommonPrefix is pure,
-        // the YAML exporter wraps a single read, the YAML importer wraps
-        // parse+diff+apply (apply opens a transaction), and the merge
-        // action is a single transactional write — all singletons.
         $this->app->singleton(LongestCommonPrefix::class);
         $this->app->singleton(AliasYamlExporter::class);
         $this->app->singleton(AliasYamlImporter::class);
@@ -173,16 +158,8 @@ final class ImportServiceProvider extends ServiceProvider
         $livewire->component('import.rename-counterparty-popover', RenameCounterpartyPopover::class);
         $livewire->component('import.aliases-settings-page', AliasesSettingsPage::class);
 
-        // .csv FileOpenedFromOs intents land here (Import), not in
-        // Ingestion. The listener filters by extension and persists the
-        // validated path into the Desktop pending-intent store; the user
-        // then lands on the Desktop staging page bound to the file.
         $events->listen(FileOpenedFromOs::class, [HandleFileOpenedFromOs::class, 'handle']);
 
-        // Freshly installed users receive the two seeded institution-IBAN
-        // aliases (PayPal Luxembourg → paypal kind, ICS at ABN AMRO →
-        // ics_card kind). The listener resolves the User from the event's
-        // int `userId` payload and the seeder is idempotent on re-runs.
         $events->listen(UserInstalled::class, SeedDefaultKnownCounterpartyIbans::class);
     }
 }

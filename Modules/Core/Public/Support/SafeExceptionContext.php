@@ -11,9 +11,6 @@ use Throwable;
 // carries the statement AND its bindings, and here the bindings ARE the data:
 // a relay pairing frame, a transaction's counterparty. Logging getMessage()
 // writes what the encryption exists to keep off disk, into a 0644 daily log.
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class SafeExceptionContext
 {
     /**

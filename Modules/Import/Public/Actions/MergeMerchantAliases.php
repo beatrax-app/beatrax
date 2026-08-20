@@ -100,10 +100,9 @@ final class MergeMerchantAliases
         $mergedAt = $this->dates->now()->toIso8601String();
 
         foreach ($absorbed as $row) {
-            // Raw bank-statement text occasionally carries stray bytes
-            // that are not valid UTF8. json_encode() under
-            // JSON_THROW_ON_ERROR aborts the whole transaction for a
-            // single bad byte, so coerce each string field here.
+            // Raw statement text carries the occasional non-UTF8 byte, and
+            // json_encode() under JSON_THROW_ON_ERROR aborts the whole
+            // transaction for one of them.
             $mergedFrom[] = [
                 'pattern' => self::coerceUtf8(self::rowString($row, 'pattern')),
                 'generalized_pattern' => self::coerceUtf8(self::rowString($row, 'generalized_pattern')),
@@ -188,8 +187,8 @@ final class MergeMerchantAliases
         return isset($row->{$field}) && is_string($row->{$field}) ? $row->{$field} : '';
     }
 
-    // Replaces invalid bytes with the Unicode substitution character so
-    // json_encode() stays infallible for legacy-encoded descriptions.
+    // Substitution characters keep json_encode() infallible on a
+    // legacy-encoded description.
     private static function coerceUtf8(string $value): string
     {
         if ($value === '' || mb_check_encoding($value, 'UTF-8')) {

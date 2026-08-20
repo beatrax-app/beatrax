@@ -8,9 +8,6 @@ namespace Modules\Ledger\Public\Enums;
 // reject any value outside this set regardless of write path, and this enum
 // is the code-side source of truth the write paths, the split rules and the
 // direction derivation all read from.
-/**
- * @link ../../../../.docs/features/ledger/architecture.md
- */
 enum TransactionType: string
 {
     case Expense = 'expense';

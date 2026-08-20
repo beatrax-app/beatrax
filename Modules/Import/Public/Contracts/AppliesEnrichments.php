@@ -12,10 +12,9 @@ use Modules\Import\Public\Dto\PendingEnrichment;
  */
 interface AppliesEnrichments
 {
-    // Implementations MUST be idempotent (no-op + not counted when the
-    // stored source_ref already equals the incoming ref) and wrap each
-    // enrichment in its own row-locked transaction so concurrent
-    // importers serialise or short-circuit rather than double-counting.
+    // Implementations must be idempotent on a stored source_ref equal to the
+    // incoming one, and row-lock each enrichment so concurrent importers
+    // serialise instead of double-counting.
     /**
      * @param  list<PendingEnrichment>  $enrichments
      * @return int Number of rows actually enriched (race-condition no-ops excluded).

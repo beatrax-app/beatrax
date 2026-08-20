@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Commands;
 
-use Modules\Core\Public\Support\SafeExceptionContext;
 use Amp\Http\HttpStatus;
 use Amp\Http\Server\DefaultErrorHandler;
 use Amp\Http\Server\Request;
@@ -16,16 +15,16 @@ use Amp\Socket\Certificate;
 use Amp\Socket\InternetAddress;
 use Amp\Socket\ServerTlsContext;
 use Illuminate\Console\Command;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
-use Modules\Sync\Internal\Transport\Relay\RelayDeliverRateLimiter;
 use Modules\Sync\Internal\Transport\Relay\RelayDrainRegistry;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
+use Modules\Sync\Internal\Transport\Relay\RelayRateLimiter;
 use Modules\Sync\Internal\Transport\Relay\RelayTlsMaterial;
 use Psr\Log\LoggerInterface;
 
 /**
- * @link ../../../.docs/features/sync/architecture.md
  * @see SyncServiceProvider
  */
 final class RelayServeCommand extends Command
@@ -60,7 +59,7 @@ final class RelayServeCommand extends Command
         private readonly LoggerInterface $logger,
         private readonly RelayMailbox $mailbox,
         private readonly RelayDrainRegistry $drainRegistry,
-        private readonly RelayDeliverRateLimiter $rateLimiter,
+        private readonly RelayRateLimiter $rateLimiter,
         private readonly RelayTlsMaterial $tls,
         private readonly DaemonShutdownSignal $shutdown,
     ) {
@@ -130,6 +129,14 @@ final class RelayServeCommand extends Command
         $path = $request->getUri()->getPath();
         $confirmId = $this->confirmIdFrom($method, $path);
 
+        // Ahead of the routing, so a flood is refused before ANY work. Drain
+        // and confirm each resolve a row from the database inside their own
+        // authorization check, so an unauthenticated request cost a query;
+        // only deliver was throttled, and it is the one needing it least.
+        if (! $this->rateLimiter->allow($this->clientKey($request))) {
+            return $this->jsonError(HttpStatus::TOO_MANY_REQUESTS, 'rate_limited');
+        }
+
         return match (true) {
             $method === 'POST' && $path === '/relay/deliver' => $this->handleDeliver($request),
             $method === 'GET' && $path === '/relay/drain' => $this->handleDrain($request),
@@ -158,12 +165,6 @@ final class RelayServeCommand extends Command
     // endpoint is intentionally unauthenticated (see class @link).
     private function handleDeliver(Request $request): Response
     {
-        // Per-source-IP throttle first, so a flood is refused before any JSON
-        // parse or DB work — the cheapest possible rejection path.
-        if (! $this->rateLimiter->allow($this->clientKey($request))) {
-            return $this->jsonError(HttpStatus::TOO_MANY_REQUESTS, 'rate_limited');
-        }
-
         $body = json_decode($request->getBody()->buffer(), true, 512, 0);
         $senderDid = $this->stringField($body, 'sender_did');
         $recipientDid = $this->stringField($body, 'recipient_did');
@@ -281,6 +282,7 @@ final class RelayServeCommand extends Command
     {
         return match (true) {
             $did === '' => $this->jsonError(HttpStatus::BAD_REQUEST, 'missing_did'),
+            ! $this->isValidDid($did) => $this->jsonError(HttpStatus::BAD_REQUEST, 'malformed_did'),
             ! $this->isAuthorized($request, $did) => $this->jsonError(HttpStatus::UNAUTHORIZED, 'unauthorized'),
             default => null,
         };
@@ -349,8 +351,6 @@ final class RelayServeCommand extends Command
     {
         return preg_match(self::DID_PATTERN, $did) === 1;
     }
-
-
 
     private function jsonError(int $status, string $errorCode): Response
     {

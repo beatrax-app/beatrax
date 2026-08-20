@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\OpenBanking\Internal\Adapters\EnableBanking;
 
-/**
- * @link ../../../../../.docs/features/open-banking/architecture.md
- */
 final readonly class EnableBankingAccessScope
 {
     public function __construct(

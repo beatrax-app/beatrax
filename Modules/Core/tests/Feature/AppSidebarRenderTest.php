@@ -6,26 +6,6 @@ use Livewire\Livewire;
 use Modules\Core\Internal\Http\Livewire\AppSidebar;
 use Modules\Core\Models\User;
 
-/*
- * AppSidebar rendering invariants.
- *
- *  (1) Authenticated NON-developer → renders → response does NOT
- *      contain the literal substring "side-dev-block". The Dev
- *      block is server-side absent for non-developers so the Dev
- *      Console's existence is never disclosed via HTML.
- *  (2) Authenticated developer (is_developer=true) → renders →
- *      response contains "side-dev-block" + the literal "Developer"
- *      heading + the literal "dot-live" class + the platform-aware
- *      kbd hint binding (JS escape \u2318. — never the raw glyph, IN-03).
- *  (3) The account caption renders "developer · local" for developers
- *      and "local" for non-developers.
- *  (4) The brand row literal is `beatrax` (post-rename string per
- *      D-10), NOT `beatrax` — guards the rename precondition.
- *  (5) The rendered `<aside>` references the `--side-w` CSS custom
- *      property (or the matching 248px width token) somewhere on the
- *      sidebar root, so 16-03's dev-shell can flip it to 220px.
- */
-
 function asbUser(bool $isDeveloper, string $username = 'fixture'): User
 {
     return User::query()->create([
@@ -58,8 +38,8 @@ it('renders the Dev block with heading, dot, and kbd hint for a developer', func
     $component->assertSee('Developer');
     $component->assertSee('Open Dev Console');
     $component->assertSee('dot-live', escape: false);
-    // IN-03: the dev-console kbd hint is platform-aware via Alpine —
-    // the server HTML carries the JS escape sequence, never the raw glyph.
+    // The kbd hint is platform-aware via Alpine, so the server HTML carries the
+    // JS escape sequence, never the raw glyph.
     $component->assertSee('\u2318.', escape: false);
     $component->assertDontSee('⌘.', escape: false);
 });
@@ -80,7 +60,6 @@ it('renders the plain "local" account caption for a non-developer', function ():
     $html = (string) $component->html();
 
     expect($html)->toContain('local');
-    // The caption "developer · local" must not appear for non-developers.
     expect($html)->not->toContain('developer · local');
 });
 
@@ -91,12 +70,8 @@ it('renders the brand row literal "beatrax" (post-rename lock per D-10)', functi
 
     $component->assertSee('beatrax');
 
-    // The brand-row text must be `beatrax`. Post-rename guard: no
-    // `diederik` literal may leak anywhere in the rendered sidebar
-    // HTML. Route URLs already resolve against `https://beatrax.test`
-    // (APP_URL was flipped in 16-02 alongside the brand row), so a
-    // single grep across the entire rendered HTML for any case-
-    // insensitive `diederik` substring is a tight regression guard.
+    // Post-rename guard: no `diederik` literal may leak anywhere in the
+    // rendered sidebar HTML, route URLs included.
     $html = (string) $component->html();
     expect($html)->toContain('>Beatrax</span>')
         ->and(stripos($html, 'diederik'))
@@ -110,10 +85,8 @@ it('references the --side-w CSS custom property so the dev-shell layout can over
 
     $html = (string) $component->html();
 
-    // The `--side-w` token drives the sidebar width (declared in the
-    // @theme block of resources/css/app.css; defaulted to 248px). The
-    // rendered <aside> root references it either inline or through the
-    // `.side` class. We assert either form is present.
+    // `--side-w` (declared in app.css's @theme block, default 248px) drives the
+    // width; the root may reference it inline or through the `.side` class.
     $referencesToken = str_contains($html, '--side-w') || str_contains($html, 'class="side')
         || str_contains($html, "class='side") || str_contains($html, ' class="side ')
         || str_contains($html, 'w-[248px]');

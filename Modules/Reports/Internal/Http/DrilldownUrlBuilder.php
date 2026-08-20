@@ -8,9 +8,6 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Public\Dto\ReportDefinition;
 
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final class DrilldownUrlBuilder
 {
     public function __construct(private readonly UrlGenerator $urls) {}

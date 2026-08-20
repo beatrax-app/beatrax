@@ -24,9 +24,6 @@ use Modules\Sync\Public\Events\TransactionSplitMutated;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/ledger/architecture.md
- */
 final class SaveTransactionSplit implements SavesTransactionSplit
 {
     // A missing row and a cross-user row are deliberately the same

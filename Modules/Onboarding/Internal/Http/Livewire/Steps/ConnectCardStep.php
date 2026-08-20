@@ -24,15 +24,12 @@ use Modules\Onboarding\Models\WizardProgress;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../../../.docs/features/onboarding/architecture.md
- */
 final class ConnectCardStep extends Component
 {
     use WithFileUploads;
 
-    // Mirrors IcsPdfAdapter::ICS_OWN_IBAN — kept in sync by the arch test
-    // ics_pdf_adapter_own_iban_matches_connect_card_step.
+    // Mirrors IcsPdfAdapter::ICS_OWN_IBAN; the arch test
+    // ics_pdf_adapter_own_iban_matches_connect_card_step holds the two together.
     private const ICS_OWN_IBAN = 'ICS-CARD';
 
     public string $selectedFormat = 'ics-pdf';
@@ -40,8 +37,8 @@ final class ConnectCardStep extends Component
     /** @var array<int, TemporaryUploadedFile> */
     public array $statements = [];
 
-    // Surfaced only when every queued file failed; a mixed-result submit
-    // still dispatches wizard.step.completed.
+    // Surfaced only when every queued file failed; a mixed result still
+    // dispatches wizard.step.completed.
     public ?string $uploadError = null;
 
     /**
@@ -79,8 +76,6 @@ final class ConnectCardStep extends Component
         $this->statements = array_values($this->statements);
     }
 
-    // Per-file errors are logged but don't abort the submit — the loop
-    // continues so a single bad statement doesn't waste the rest.
     public function submit(
         RunsImports $importer,
         CurrentUser $currentUser,
@@ -114,8 +109,8 @@ final class ConnectCardStep extends Component
         $this->dispatch('wizard.step.completed');
     }
 
-    // Per-file errors are logged but don't abort the batch: the loop keeps
-    // going so a single bad statement doesn't waste the rest.
+    // A per-file failure is logged and skipped rather than raised: users
+    // download a month per PDF, so one bad file must not waste the batch.
     /**
      * @return array{ids: list<int>, firstError: ?string}
      */
@@ -142,12 +137,12 @@ final class ConnectCardStep extends Component
         return ['ids' => $ids, 'firstError' => $firstError];
     }
 
-    // Auto-creates the ICS account + re-previews when missing — see
-    // architecture.md for why. Raw query builder (not
-    // Account::query()->exists()) to satisfy PHPStan strict-rules
-    // staticMethod.dynamicCall.
+    // Raw query builder rather than Account::query()->exists(), which trips
+    // PHPStan strict-rules staticMethod.dynamicCall.
     /**
      * @param  list<int>  $newRunIds
+     *
+     * @link ../../../../../../.docs/features/onboarding/architecture.md#auto-create-the-account-then-re-preview
      */
     private function ensureIcsAccount(array $newRunIds, User $user, DatabaseManager $db, RunsImports $importer, LoggerInterface $logger, Application $app): void
     {
@@ -174,8 +169,8 @@ final class ConnectCardStep extends Component
         }
     }
 
-    // Re-previews a run from its stable stored path so statement_summaries is
-    // populated and the preview cache reflects the now-resolvable account.
+    // Also repopulates statement_summaries, which the starting-balance
+    // detector on the first-import step reads.
     private function repreview(int $runId, User $user, RunsImports $importer, LoggerInterface $logger, Application $app): void
     {
         /** @var ImportRun|null $run */
@@ -242,8 +237,7 @@ final class ConnectCardStep extends Component
         return $views->make('onboarding::livewire.steps.connect-card-step');
     }
 
-    // Strips path-traversal characters and locks the extension to .pdf,
-    // the only format the ICS step accepts.
+    // Strips path-traversal characters before the name reaches a filesystem path.
     private function sanitiseFilename(string $original): string
     {
         $stem = pathinfo($original, PATHINFO_FILENAME);

@@ -17,9 +17,6 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
 use Psr\Log\LoggerInterface;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final readonly class NotificationPreferenceQuery
 {
     use CoercesScalars;

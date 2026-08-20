@@ -8,9 +8,6 @@ namespace Modules\Sync\Internal\Transport\Discovery;
 // wire format can be tested against crafted packets without a network, which
 // is the only practical way to cover the hostile cases: every byte here comes
 // from whoever answered on the LAN, and nothing about that is trustworthy.
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 final class MdnsResponseParser
 {
     // Wire-format sizes, all RFC 1035 except the SRV preamble (RFC 2782):

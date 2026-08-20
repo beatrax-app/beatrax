@@ -21,11 +21,9 @@ final class PreviewRowDto extends Data
         public readonly ?int $accountId,
         public readonly ?string $bookedAt,
         public readonly ?string $counterpartyName,
-        // Shown in the "Funding source" column and as the second-tier
-        // fallback in "Counterparty" when the name is missing.
         public readonly ?string $counterpartyIban,
-        // Last visible fallback when both counterpartyName and
-        // counterpartyIban are absent (bank-fee, interest, ATM rows).
+        // The last fallback in the Counterparty column, for the bank-fee,
+        // interest and ATM rows that carry neither name nor IBAN.
         public readonly ?string $description,
         public readonly ?string $categoryName,
         public readonly ?int $amountMinor,

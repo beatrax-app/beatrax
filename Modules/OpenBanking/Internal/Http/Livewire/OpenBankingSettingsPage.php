@@ -14,6 +14,7 @@ use Livewire\Component;
 use Livewire\WithFileUploads;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
 use Modules\Import\Public\Dto\PreviewRowDto;
 use Modules\OpenBanking\Internal\Http\Livewire\Concerns\FormatsConnectionTimestamps;
@@ -25,29 +26,20 @@ use Modules\OpenBanking\Public\Services\OpenBankingFetchService;
 use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 use Throwable;
 
-/**
- * @link ../../../../../.docs/features/open-banking/architecture.md
- */
 final class OpenBankingSettingsPage extends Component
 {
     use FormatsConnectionTimestamps;
+    use HoldsFlashMessage;
     use ManagesGuidedIcsImport;
     use WithFileUploads;
 
-    // 2 hours: must comfortably survive not just the wizard dance but a
-    // first-time Enable Banking application registration. Still bounded, so
-    // an abandoned tab cannot leave a standing authorization indefinitely —
-    // a lapse surfaces the visible re-confirm CTA instead of a silent no-op.
+    // 2 hours: long enough for a first-time Enable Banking application
+    // registration plus SCA, short enough that an abandoned tab cannot leave
+    // a standing authorization sitting in the session.
     private const ACK_TTL_SECONDS = 7200;
 
-    // -------------------------------------------------------------------
-    // Connection state (OpenBankingConnectionQuery::current() projection)
-    // -------------------------------------------------------------------
-
-    // Server-authoritative props — only ever assigned server-side
-    // (mount()/refreshState()/enableOpenBanking()), never bound via
-    // wire:model. #[Locked] blocks client-side tampering that could
-    // re-enable / gate-spoof a connection.
+    // Assigned only by mount()/refreshState()/enableOpenBanking(); never
+    // bound via wire:model.
     #[Locked]
     public bool $enabled = false;
 
@@ -74,50 +66,23 @@ final class OpenBankingSettingsPage extends Component
 
     public string $whatsFetched = '';
 
-    // -------------------------------------------------------------------
-    // B2: loud third-party-data warning modal
-    // -------------------------------------------------------------------
-
     public bool $showWarningModal = false;
 
     public bool $acknowledged = false;
 
-    /**
-     * @link ../../../../../.docs/features/open-banking/architecture.md
-     */
     #[Locked]
     public bool $warningShown = false;
 
-    // -------------------------------------------------------------------
-    // Disconnect confirm (shared by the ON->OFF toggle click AND the B4
-    // "Disconnect" button — one action, two entry points)
-    // -------------------------------------------------------------------
-
     public bool $showDisconnectModal = false;
 
-    // -------------------------------------------------------------------
-    // Redirect-flash handoff from OpenBankingCallbackController
-    // -------------------------------------------------------------------
-
-    // Non-null only for the one request immediately following the SCA
-    // redirect back to this page.
     #[Locked]
     public ?int $pendingConnectionId = null;
 
-    /**
-     * @link ../../../../../.docs/features/open-banking/architecture.md
-     */
     #[Locked]
     public bool $needsReconfirm = false;
 
-    public string $flashMessage = '';
-
     /** @var ''|'success'|'error' */
     public string $flashTone = '';
-
-    // -------------------------------------------------------------------
-    // B6: manual "Sync now" result flash
-    // -------------------------------------------------------------------
 
     public string $syncFlashMessage = '';
 
@@ -137,18 +102,12 @@ final class OpenBankingSettingsPage extends Component
         $this->refreshState($currentUser, $query);
         $this->enableOpenBanking($db, $clock, $session, $currentUser, $query);
 
-        // The enable above no-ops (leaving pendingConnectionId set, since it
-        // clears it only on success) when the SCA callback brought back a
-        // real connection but the ack had lapsed. Surface a visible
-        // re-confirm CTA rather than a silent disabled connector.
+        // enableOpenBanking() clears pendingConnectionId only on success, so a
+        // still-set id here means the SCA callback landed on a lapsed ack.
         if ($this->pendingConnectionId !== null && ! $this->hasFreshAcknowledgement($session, $clock)) {
             $this->needsReconfirm = true;
         }
     }
-
-    // -------------------------------------------------------------------
-    // B1: toggle + loud-warning gate
-    // -------------------------------------------------------------------
 
     public function toggleClicked(): void
     {
@@ -181,9 +140,6 @@ final class OpenBankingSettingsPage extends Component
         $this->warningShown = false;
     }
 
-    /**
-     * @link ../../../../../.docs/features/open-banking/architecture.md
-     */
     public function confirmWarning(Session $session, Clock $clock): void
     {
         if (! $this->warningShown) {
@@ -201,9 +157,6 @@ final class OpenBankingSettingsPage extends Component
         $this->dispatch('open-banking-wizard:open');
     }
 
-    /**
-     * @link ../../../../../.docs/features/open-banking/architecture.md
-     */
     public function enableOpenBanking(
         DatabaseManager $db,
         Clock $clock,
@@ -221,10 +174,8 @@ final class OpenBankingSettingsPage extends Component
         $userId = $currentUser->user()->id;
         $now = $clock->now()->toDateTimeString();
 
-        // Single-live-connection model: enabling this row disables every
-        // other row for the same user (and blanks its consent) so a stale
-        // prior-institution row can never keep being picked up by the
-        // daily-sync scheduler.
+        // Single-live-connection model: a stale prior-institution row must
+        // never keep being picked up by the daily-sync scheduler.
         $db->connection()->table('open_banking_connections')
             ->where('user_id', $userId)
             ->where('id', '!=', $this->pendingConnectionId)
@@ -247,9 +198,6 @@ final class OpenBankingSettingsPage extends Component
         $this->refreshState($currentUser, $query);
     }
 
-    /**
-     * @link ../../../../../.docs/features/open-banking/architecture.md
-     */
     public function reconfirmEnable(
         DatabaseManager $db,
         Clock $clock,
@@ -269,10 +217,6 @@ final class OpenBankingSettingsPage extends Component
         $this->needsReconfirm = false;
     }
 
-    // -------------------------------------------------------------------
-    // Disconnect
-    // -------------------------------------------------------------------
-
     public function startDisconnect(): void
     {
         if (! $this->enabled) {
@@ -286,9 +230,6 @@ final class OpenBankingSettingsPage extends Component
         $this->showDisconnectModal = false;
     }
 
-    /**
-     * @link ../../../../../.docs/features/open-banking/architecture.md
-     */
     public function disconnect(
         OpenBankingSecretsRepository $secrets,
         DatabaseManager $db,
@@ -298,10 +239,9 @@ final class OpenBankingSettingsPage extends Component
     ): void {
         $secrets->clear();
 
-        // Scoped to EVERY row belonging to the user, not just the one
-        // connection currently displayed — the disconnect copy promises
-        // unconditionally that syncing stops immediately, so an orphaned
-        // row from a different institution must not keep syncing.
+        // Every row belonging to the user, not just the displayed connection:
+        // an orphaned row from a previously-linked institution must not keep
+        // syncing after the user believes they disconnected.
         $db->connection()->table('open_banking_connections')
             ->where('user_id', $currentUser->user()->id)
             ->update([
@@ -314,13 +254,6 @@ final class OpenBankingSettingsPage extends Component
         $this->refreshState($currentUser, $query);
     }
 
-    // -------------------------------------------------------------------
-    // B5: consent-expiry re-link flow
-    // -------------------------------------------------------------------
-
-    // Re-opens the wizard at Step 4 (bank picker), reusing the already-
-    // registered application, with the previously-connected institution
-    // pre-selected.
     public function reconnect(): void
     {
         if ($this->connectionId <= 0 || $this->institutionId === '') {
@@ -349,13 +282,6 @@ final class OpenBankingSettingsPage extends Component
         };
     }
 
-    // -------------------------------------------------------------------
-    // B6: manual "Sync now" action
-    // -------------------------------------------------------------------
-
-    /**
-     * @link ../../../../../.docs/features/open-banking/architecture.md
-     */
     public function syncNow(
         OpenBankingFetchService $fetchService,
         DatabaseManager $db,
@@ -384,9 +310,8 @@ final class OpenBankingSettingsPage extends Component
                 ->where('id', $this->connectionId)
                 ->where('user_id', $user->id)
                 ->update([
-                    // Deliberately not included: last_successful_sync_at —
-                    // a failed attempt must never advance the freshness
-                    // signal.
+                    // Deliberately omits last_successful_sync_at: a failed
+                    // attempt must never advance the freshness signal.
                     'last_attempt_at' => $now,
                     'last_attempt_status' => $isConsentFailure ? 'consent_failed' : 'error',
                     'updated_at' => $now,
@@ -442,18 +367,13 @@ final class OpenBankingSettingsPage extends Component
     {
         $view = $views->make('openbanking::livewire.open-banking-settings-page');
 
-        // layouts.app is a @yield('content') layout, so a page reaches it by
-        // extending it. Declaring no layout at all rendered the shell with an
-        // empty <main> and left the tab titled just "Beatrax".
+        // layouts.app is a @yield('content') layout: without this extends()
+        // the shell rendered an empty <main> and a tab titled just "Beatrax".
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => Lang::get('openbanking::messages.page.heading').' · Beatrax']);
 
         return $view;
     }
-
-    // -------------------------------------------------------------------
-    // Internals
-    // -------------------------------------------------------------------
 
     private function refreshState(CurrentUser $currentUser, OpenBankingConnectionQuery $query): void
     {
@@ -478,8 +398,6 @@ final class OpenBankingSettingsPage extends Component
         $this->connectionId = $view->connectionId;
         $this->institutionId = $view->institutionId;
         $this->bankDisplayName = $view->bankDisplayName;
-        // Consent status only carries meaning while OB is actually enabled
-        // — a disconnected/never-finalized row never renders as "expired".
         $this->consentStatus = $view->enabled ? $view->consentStatus : 'off';
         $this->consentExpiresAtIso = $view->consentExpiresAt?->toIso8601String();
         $this->lastSuccessfulSyncAtIso = $view->lastSuccessfulSyncAt?->toIso8601String();
@@ -489,9 +407,6 @@ final class OpenBankingSettingsPage extends Component
         $this->whatsFetched = $view->whatsFetched;
     }
 
-    /**
-     * @link ../../../../../.docs/features/open-banking/architecture.md
-     */
     private function hasFreshAcknowledgement(Session $session, Clock $clock): bool
     {
         $ackAt = $session->get('open_banking_acknowledged');

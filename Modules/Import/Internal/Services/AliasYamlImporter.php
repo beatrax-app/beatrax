@@ -151,8 +151,10 @@ final class AliasYamlImporter
     {
         $existing = $this->loadExistingByPattern($user);
         $changed = 0;
+        /** @var list<EntityMutated> $captured */
+        $captured = [];
 
-        $this->db->connection()->transaction(function () use ($user, $entries, $conflictResolutions, $existing, &$changed): void {
+        $this->db->connection()->transaction(function () use ($user, $entries, $conflictResolutions, $existing, &$changed, &$captured): void {
             $now = $this->dates->now()->toDateTimeString();
             $connection = $this->db->connection();
 
@@ -170,9 +172,9 @@ final class AliasYamlImporter
                     ]);
                     $changed++;
 
-                    // Aliases are uploaded by the user on the settings page,
-                    // so they are that user's work and travel with them.
-                    $this->events->dispatch(new EntityMutated(
+                    // The user's own work, uploaded on the settings page, so
+                    // it travels with them.
+                    $captured[] = new EntityMutated(
                         table: 'merchant_aliases',
                         pk: $aliasId,
                         userId: $user->id,
@@ -183,7 +185,7 @@ final class AliasYamlImporter
                             'generalized_pattern' => $entry->generalizedPattern,
                             'friendly_name' => $entry->name,
                         ],
-                    ));
+                    );
 
                     continue;
                 }
@@ -211,6 +213,13 @@ final class AliasYamlImporter
                 $changed++;
             }
         });
+
+        // Only once the rows are committed. Dispatched inside, a rollback left
+        // the op log carrying an alias no local row matched, and the paired
+        // device created it anyway.
+        foreach ($captured as $event) {
+            $this->events->dispatch($event);
+        }
 
         return $changed;
     }

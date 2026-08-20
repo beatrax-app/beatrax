@@ -14,9 +14,6 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../.docs/features/categorization/architecture.md
- */
 final class UpdateCategorizationRule
 {
     use NormalisesRuleInput;

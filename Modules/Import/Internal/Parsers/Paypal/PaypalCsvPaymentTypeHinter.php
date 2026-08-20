@@ -16,8 +16,7 @@ final class PaypalCsvPaymentTypeHinter implements PaymentTypeHinter
 {
     private const SOURCE_FORMAT = 'paypal-csv';
 
-    // Matched case-insensitively on the lower-cased event-type literal
-    // so casing variants between NL/EN exports resolve identically.
+    // Lower-cased on both sides so NL and EN exports resolve identically.
     /**
      * @var array<string, array{type: PaymentType, confidence: int}>
      */
@@ -26,10 +25,9 @@ final class PaypalCsvPaymentTypeHinter implements PaymentTypeHinter
         'express checkout-betaling' => ['type' => PaymentType::Online, 'confidence' => 95],
         'algemene valutaomrekening' => ['type' => PaymentType::Fee, 'confidence' => 95],
 
-        // Forward-compatible EN event types PayPal often leaves
-        // un-localised — added so a future NL → EN export switch
-        // does not regress every row to the description-keyword
-        // fallback.
+        // EN event types PayPal often leaves un-localised. Without them an
+        // export that switches to English regresses every row to the
+        // description-keyword fallback.
         'payment sent' => ['type' => PaymentType::Online, 'confidence' => 95],
         'subscription payment' => ['type' => PaymentType::Online, 'confidence' => 95],
         'recurring payment sent' => ['type' => PaymentType::Online, 'confidence' => 95],
@@ -71,8 +69,6 @@ final class PaypalCsvPaymentTypeHinter implements PaymentTypeHinter
         );
     }
 
-    // Null when the manifest structure is missing/malformed — the
-    // classifier then falls through to the description-keyword fallback.
     private function extractFirstEventType(CanonicalTransaction $tx): ?string
     {
         $rawPayload = $tx->rawPayload;
@@ -81,8 +77,7 @@ final class PaypalCsvPaymentTypeHinter implements PaymentTypeHinter
             return null;
         }
 
-        // array_key_first is non-null because $events is non-empty
-        // (the guard above returned null when $events === []).
+        // $events is non-empty: the guard above returned on [].
         $first = $events[array_key_first($events)];
         if (! is_array($first)) {
             return null;

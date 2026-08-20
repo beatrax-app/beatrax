@@ -6,9 +6,6 @@ namespace Modules\Ingestion\Internal\Adapters\Asn;
 
 use Modules\Ingestion\Public\Enums\SourceFormat;
 
-/**
- * @link ../../../../../.docs/features/ingestion/architecture.md
- */
 final class AsnCsvHeaderProfile
 {
     public const FORMAT = SourceFormat::AsnCsv->value;

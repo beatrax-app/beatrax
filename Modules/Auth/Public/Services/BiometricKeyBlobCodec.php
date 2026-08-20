@@ -6,9 +6,6 @@ namespace Modules\Auth\Public\Services;
 
 use Modules\Auth\Internal\Lock\AppLockKeyWrap;
 
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 final class BiometricKeyBlobCodec
 {
     public function __construct(

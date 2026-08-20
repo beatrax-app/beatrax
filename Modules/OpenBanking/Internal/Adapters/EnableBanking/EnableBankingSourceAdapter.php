@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\OpenBanking\Internal\Adapters\EnableBanking;
 
-use Brick\Math\Exception\MathException;
-use Brick\Money\Exception\MoneyException;
-use Brick\Money\Money;
 use Carbon\CarbonImmutable;
 use Generator;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
+use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\OpenBanking\Public\Contracts\RemoteSourceAdapter;
 use Modules\OpenBanking\Public\Dto\FetchWindow;
 use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
@@ -17,9 +16,6 @@ use Modules\OpenBanking\Public\Exceptions\EnableBankingApiException;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-/**
- * @link ../../../../../.docs/features/open-banking/architecture.md
- */
 final class EnableBankingSourceAdapter implements RemoteSourceAdapter
 {
     public function __construct(
@@ -126,16 +122,19 @@ final class EnableBankingSourceAdapter implements RemoteSourceAdapter
 
         // An empty/unknown currency or a non-numeric/over-precise amount
         // must skip this row, not abort the entire fetch generator.
-        try {
-            $amountMinor = Money::of($row->amount, $currency)->getMinorAmount()->toInt();
-        } catch (MoneyException|MathException $e) {
+        $parsedMinor = MoneyInput::tryToMinor($row->amount);
+        $money = $parsedMinor === null ? null : Money::tryOfMinor($parsedMinor, $currency);
+
+        if ($money === null) {
             $this->logger->warning(
                 'EnableBankingSourceAdapter: skipping booked row with malformed money.',
-                ['currency' => $currency, 'reason' => $e->getMessage()],
+                ['currency' => $currency],
             );
 
             return null;
         }
+
+        $amountMinor = $money->toMinor();
 
         if ($isDebit && $amountMinor > 0) {
             $amountMinor = -$amountMinor;
@@ -171,9 +170,6 @@ final class EnableBankingSourceAdapter implements RemoteSourceAdapter
         );
     }
 
-    /**
-     * @link ../../../../../.docs/features/open-banking/architecture.md
-     */
     private function parseRequiredDate(string $raw, string $fieldName): CarbonImmutable
     {
         if ($raw === '') {

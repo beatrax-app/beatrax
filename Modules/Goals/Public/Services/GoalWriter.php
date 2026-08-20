@@ -15,9 +15,6 @@ use Modules\Goals\Public\Exceptions\InvalidGoalAmountException;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Sync\Public\Events\GoalMutated;
 
-/**
- * @link ../../../../.docs/features/goals/architecture.md
- */
 final class GoalWriter
 {
     public function __construct(private readonly Dispatcher $events) {}

@@ -6,9 +6,6 @@ namespace Modules\DevMode\Internal\Audit;
 
 use Modules\DevMode\Internal\Services\OAuthScrubSet;
 
-/**
- * @link ../../../../.docs/features/dev-mode/architecture.md
- */
 final readonly class RedactionExcerptCap
 {
     public const DEFAULT_MAX_BYTES = 8192;

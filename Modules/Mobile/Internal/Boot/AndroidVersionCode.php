@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Mobile\Internal\Boot;
 
-/**
- * @link ../../../../.docs/features/mobile/architecture.md
- */
 final class AndroidVersionCode
 {
     // Android compares versionCode and nothing else, so it has to rise with

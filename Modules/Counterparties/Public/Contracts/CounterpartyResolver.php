@@ -12,9 +12,6 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 // pipeline cannot abort because a lookup threw) and MUST carry an
 // explicit where('user_id', ...) filter on every counterparties read —
 // BelongsToUser does not fire in the queue/console contexts this runs from.
-/**
- * @link ../../../../.docs/features/counterparties/architecture.md
- */
 interface CounterpartyResolver
 {
     public function resolve(CanonicalTransaction $tx, User $user): ?CounterpartyResolutionDto;

@@ -10,8 +10,6 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\DriftAlerts\Public\Services\SavingsInsightsQuery;
 
-// Service collaborators arrive as render()/action parameters — constructor
-// injection is banned on Livewire Component subclasses.
 final class SavingsInsightsCard extends Component
 {
     public function dismiss(string $key, CurrentUser $currentUser, SavingsInsightsQuery $query): void

@@ -2,8 +2,7 @@
 
 declare(strict_types=1);
 
-use Genkgo\Camt\Config as CamtConfig;
-use Genkgo\Camt\Reader as CamtReader;
+use Modules\Ingestion\Internal\Adapters\Banking\Camt053Adapter;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsPdfAdapter;
 use Modules\Ingestion\Internal\Adapters\Paypal\PaypalCsvAdapter;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
@@ -104,22 +103,19 @@ it('parses the synthesised PayPal CSV via the production PaypalCsvAdapter and su
     expect($bankstortingHandOffFound)->toBeTrue();
 });
 
-it('parses the synthesised ASN CAMT.053 via genkgo/camt and yields one entry of EUR 847.32', function (): void {
+it('parses the synthesised ASN CAMT.053 via the production Camt053Adapter and yields one entry of EUR 847.32', function (): void {
     $xml = $this->fixtureDir.'/asn-camt053.xml';
     expect(file_exists($xml))->toBeTrue();
 
-    $reader = new CamtReader(CamtConfig::getDefault());
-    $message = $reader->readFile($xml);
+    /** @var Camt053Adapter $adapter */
+    $adapter = app(Camt053Adapter::class);
 
-    $statements = $message->getRecords();
-    expect($statements)->toHaveCount(1);
+    /** @var list<SourceTransactionDto> $dtos */
+    $dtos = iterator_to_array($adapter->parse($xml, $this->resolver), false);
 
-    $entries = $statements[0]->getEntries();
-    expect($entries)->toHaveCount(1);
-
-    $entry = $entries[0];
-    expect($entry->getAmount()->getCurrency()->getCode())->toBe('EUR');
-    // genkgo/camt signs DBIT entries negative. The clean variant settles
-    // exactly the ICS statement total (€847,32 = 84732 cents).
-    expect($entry->getAmount()->getAmount())->toBe('-84732');
+    expect($dtos)->toHaveCount(1);
+    expect($dtos[0]->currency)->toBe('EUR');
+    // A DBIT entry is signed negative. The clean variant settles exactly
+    // the ICS statement total (€847,32 = 84732 cents).
+    expect($dtos[0]->amountMinor)->toBe(-84732);
 });

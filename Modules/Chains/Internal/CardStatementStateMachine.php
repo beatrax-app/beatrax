@@ -13,15 +13,12 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 
 /**
- * @link ../../../.docs/features/chains/architecture.md
+ * @link ../../../.docs/features/chains/card-statement-lifecycle.md
  */
 final class CardStatementStateMachine
 {
     use CoercesScalars;
 
-    // Tolerance around zero for the settled state: SQLite decimal rounding
-    // plus the EUR-only rounding step in the ICS adapter can leave a
-    // one-cent residual that should still count as fully settled.
     private const SETTLED_TOLERANCE_MINOR = 1;
 
     public function __construct(
@@ -34,10 +31,8 @@ final class CardStatementStateMachine
         $connection = $this->db->connection();
 
         return $connection->transaction(function () use ($connection, $statementId, $deltaMinor, $user): StatementSettlement {
-            // Promote SQLite's wait-for-writer fence — Laravel opens the
-            // transaction in DEFERRED mode by default; the pragma asks
-            // SQLite to wait up to 5 seconds for a competing writer
-            // before raising SQLITE_BUSY rather than failing instantly.
+            // Laravel opens the transaction DEFERRED, so the write fence is not
+            // taken at BEGIN; wait out a competing writer instead of SQLITE_BUSY.
             $connection->statement('PRAGMA busy_timeout = 5000');
 
             $row = $connection->table('card_statements')

@@ -18,7 +18,8 @@ use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use stdClass;
 
 /**
- * @link ../../../../.docs/features/drift-alerts/architecture.md
+ * @link ../../../../.docs/features/drift-alerts/drift-detection.md
+ * @link ../../../../.docs/features/drift-alerts/snooze-lifecycle.md
  */
 final readonly class DriftAlertQuery
 {
@@ -31,8 +32,7 @@ final readonly class DriftAlertQuery
     ) {}
 
     /**
-     * @return list<DriftAlertDto> open alerts, sorted id DESC (see the class @link's
-     *                             open-tab compound filter note)
+     * @return list<DriftAlertDto> open alerts, sorted id DESC
      */
     public function openForUser(User $user, ?int $cursorId = null, int $limit = 26): array
     {
@@ -65,7 +65,7 @@ final readonly class DriftAlertQuery
 
     /**
      * @return int SUM of annualized_impact_minor across open EXPENSE-direction alerts in
-     *             original-currency-minor units (see the class @link for why expense-only)
+     *             original-currency-minor units (drift-detection.md explains why expense-only)
      */
     public function totalOpenAnnualizedImpactForUser(User $user): int
     {
@@ -180,10 +180,8 @@ final readonly class DriftAlertQuery
         return $result;
     }
 
-    // Rows in state='open', plus state='snoozed' rows whose snoozed_until
-    // has elapsed. The clause sits inside one where(function...) group so
-    // chaining with other predicates (user_id scope, cursor pagination)
-    // reads as intended.
+    // The OR stays inside one where(function...) group: chained at the top
+    // level it would escape the user_id scope and return other users' rows.
     private function applyOpenStateFilter(Builder $query): void
     {
         $now = $this->clock->now()->toDateTimeString();

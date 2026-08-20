@@ -8,28 +8,6 @@ use Livewire\Livewire;
 use Modules\Core\Internal\Http\Livewire\AppSidebar;
 use Modules\Core\Models\User;
 
-/*
- * AppSidebar Dev-block live-data invariants.
- *
- * The Dev block's "Queue N · Worker {N}s ago" pulse row is driven
- * by real cache + jobs.count() reads via render() method-DI. The
- * pulse-row subtree carries `wire:poll.5s` so the live values
- * refresh without re-rendering the whole sidebar.
- *
- *  Test 1 (queue count): seeding N rows into the `jobs` table for
- *      a developer renders "Queue N" in the Dev block.
- *  Test 2 (worker fresh): a recent heartbeat timestamp in cache
- *      renders "Worker {Ns ago}".
- *  Test 3 (worker missing): an absent cache key renders the
- *      em-dash placeholder "Worker —".
- *  Test 4 (wire:poll): the live-data subtree carries wire:poll.5s
- *      so the sidebar refreshes every 5 seconds.
- *  Test 5 (non-developer gate): non-developers do NOT receive the
- *      Dev block at all — guards against a regression where the
- *      method-DI accidentally leaks live data into a non-dev
- *      render.
- */
-
 function sidebarLiveUser(bool $isDeveloper, string $username = 'sidebar-live-fixture'): User
 {
     return User::query()->create([
@@ -110,10 +88,9 @@ it('still hides the Dev block (and the live data) from a non-developer', functio
 
 it('drops the poll on mobile, where it queues ahead of the taps the user is making', function (): void {
     // The mobile shell has no HTTP server: NativePHP serialises every request
-    // through one persistent PHP interpreter. The sidebar is mounted on every
-    // page inside the drawer, so a 5s poll from it competes with navigation —
-    // observed on a device as the drawer scrim painting over a page that then
-    // never changes. The Dev block itself stays; only the timer goes.
+    // through one persistent PHP interpreter. The sidebar is mounted inside the
+    // drawer on every page, so a 5s poll competes with navigation — observed as
+    // the drawer scrim painting over a page that then never changes.
     $user = sidebarLiveUser(true, 'sidebar-live-mobile');
 
     $_SERVER['NATIVEPHP_PLATFORM'] = 'android';

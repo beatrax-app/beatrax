@@ -23,19 +23,13 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
 use Modules\Tax\Public\Services\TaxTagQuery;
 
-// The query service is injected as a parameter on render() — Livewire
-// Component subclasses can't accept constructor injection under the
-// project's strict-rules ruleset.
-/**
- * @link ../../../../../.docs/features/ledger/architecture.md
- */
 final class TransactionsList extends Component
 {
     use HandlesClearedStatus;
     use HandlesTaxTagging;
 
     // ~200-400 bytes JSON-encoded per row, so 500 rows stays well below
-    // Livewire 4's 4MB snapshot limit. See the linked architecture page.
+    // Livewire 4's 4MB snapshot limit. Oldest rows are trimmed past it.
     private const MAX_ACCUMULATED_ROWS = 500;
 
     public bool $fullHistory = false;
@@ -44,9 +38,8 @@ final class TransactionsList extends Component
 
     public ?string $cursorPostedAt = null;
 
-    // Empty string is the "no preference applied yet" sentinel;
-    // mount() resolves it to the user's stored default before the
-    // first render.
+    // '' is the "no preference applied yet" sentinel; mount() resolves it
+    // to the user's stored default before the first render.
     #[Url(as: 'currency', except: '')]
     public string $currency = '';
 
@@ -82,8 +75,6 @@ final class TransactionsList extends Component
 
     public ?bool $preSearchFullHistory = null;
 
-    // See the linked architecture page for the phone-infinite-scroll
-    // and search-mode accumulation rules this array supports.
     /** @var list<array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged?: bool, taxCategoryShortName?: ?string, splitLegs?: list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>, status?: string}> */
     public array $accumulatedRows = [];
 
@@ -108,8 +99,7 @@ final class TransactionsList extends Component
         }
     }
 
-    // When true, render() branches to SearchQuery::search() and all
-    // history is searched regardless of the $fullHistory toggle.
+    // Search mode searches all history regardless of the $fullHistory toggle.
     public function isSearchActive(): bool
     {
         return $this->searchQuery !== ''
@@ -123,9 +113,6 @@ final class TransactionsList extends Component
             || $this->filterAmountDir !== 'both';
     }
 
-    // Restores $fullHistory to its value before the search session
-    // started, so the user returns to the same view mode they were in
-    // before typing.
     public function clearSearch(): void
     {
         $this->searchQuery = '';
@@ -164,10 +151,9 @@ final class TransactionsList extends Component
         $this->nextCursorPostedAt = null;
     }
 
-    // Reads the cursor from the server-side Livewire snapshot rather
-    // than accepting it as a browser-supplied parameter — the
-    // snapshot is encrypted/HMAC-verified before hydration, so a
-    // caller cannot forge a cursor to skip rows.
+    // The cursor comes from the server-side Livewire snapshot, never from a
+    // browser parameter: the snapshot is HMAC-verified before hydration, so
+    // a caller cannot forge a cursor to skip rows.
     public function loadMore(): void
     {
         $this->cursorId = $this->nextCursorId;
@@ -189,9 +175,8 @@ final class TransactionsList extends Component
             : $this->renderList($currentUser, $listQuery, $views, $db, $taxTagQuery, $codec, $session);
     }
 
-    // Search mode keeps the pre-search history preference so leaving the
-    // search box restores the list the user was looking at, rather than
-    // whatever the search happened to span.
+    // Captures $fullHistory on entry so clearSearch() can restore the view
+    // the user was in, rather than whatever the search happened to span.
     private function renderSearch(
         CurrentUser $currentUser,
         ViewFactory $views,
@@ -215,9 +200,6 @@ final class TransactionsList extends Component
             $this->cursorPostedAt,
         );
 
-        // highlightedCounterparty and snippet are re-fetched from SearchQuery
-        // on every render rather than accumulated, so a stale highlight
-        // cannot outlive the query that produced it.
         $this->accumulate(array_map(
             static fn (SearchRowDto $row): array => self::searchRowToArray($row),
             $page->rows,
@@ -230,8 +212,8 @@ final class TransactionsList extends Component
         $rowIds = array_map(static fn (SearchRowDto $row): int => $row->id, $page->rows);
         $state = $this->decorateAccumulatedRows($rowIds, $db, $taxTagQuery, $currentUser, $codec, $session);
 
-        // Transaction id -> SearchRowDto, for highlight/snippet access in
-        // the Blade; recomputed on every render.
+        // Rebuilt per render, never accumulated: a stale highlight must not
+        // outlive the query that produced it.
         $searchRows = [];
         foreach ($page->rows as $row) {
             $searchRows[$row->id] = $row;
@@ -369,8 +351,6 @@ final class TransactionsList extends Component
         return ['taxState' => $taxState, 'splitLegs' => $splitLegs, 'clearedState' => $clearedState];
     }
 
-    // Which rows on this page belong to a chain, so the list can show the
-    // link affordance without asking per row.
     /**
      * @param  list<int>  $rowIds
      * @return array<int, bool>
@@ -469,10 +449,8 @@ final class TransactionsList extends Component
     /** @return list<array{id: int, name: string}> */
     private function availableCategories(DatabaseManager $db, int $userId): array
     {
-        // Categories are visible when global (seeded default tree,
-        // user_id IS NULL) OR owned by the user — filtering on
-        // user_id alone hid the chip on installs using only the
-        // global tree.
+        // Global (user_id IS NULL) OR user-owned: filtering on user_id alone
+        // hid the chip on installs using only the seeded default tree.
         $rows = $db->connection()
             ->table('categories')
             ->where(static function (Builder $query) use ($userId): void {
@@ -490,10 +468,8 @@ final class TransactionsList extends Component
         }, $rows));
     }
 
-    // Money objects are stored as their minor integer + currency code
-    // pair; the blade reconstructs them via Money::ofMinor(). taxTagged
-    // + taxCategoryShortName default here and are overwritten after
-    // batch-load in render().
+    // Money is not Livewire-dehydratable, so a row carries the minor integer
+    // and currency code and the blade rebuilds it via Money::ofMinor().
     /** @return array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged: bool, taxCategoryShortName: ?string, splitLegs: list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>} */
     private static function rowToArray(TransactionRowDto $row): array
     {
@@ -513,8 +489,7 @@ final class TransactionsList extends Component
         ];
     }
 
-    // highlightedCounterparty and snippet are intentionally excluded to
-    // avoid Livewire snapshot bloat.
+    // highlightedCounterparty and snippet are excluded: snapshot bloat.
     /** @return array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged: bool, taxCategoryShortName: ?string, splitLegs: list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>} */
     private static function searchRowToArray(SearchRowDto $row): array
     {
@@ -534,11 +509,9 @@ final class TransactionsList extends Component
         ];
     }
 
-    // See the linked architecture page for why joining on
-    // transaction_id alone cannot leak another user's legs.
+    // No user_id filter: every id arrives already user-scoped by the list
+    // query that produced it, so the transaction_id join cannot leak legs.
     /**
-     * @link ../../../../../.docs/features/ledger/architecture.md
-     *
      * @param  array<int>  $transactionIds
      * @return array<int, list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>>
      */
@@ -573,8 +546,6 @@ final class TransactionsList extends Component
             $legId = is_numeric($row->id) ? (int) $row->id : 0;
             $legTag = $legTaxState[$txId.':'.$legId] ?? null;
 
-            // Read-side decrypt — pass-through no-op when encryption
-            // is not enabled for this user.
             $legNote = is_string($row->note)
                 ? $codec->decryptValue('transaction_splits', 'note', $row->note, $userId, $session)['value']
                 : null;

@@ -10,9 +10,6 @@ use RuntimeException;
 // parent directory could not be created, or the write itself failed. Both
 // are local I/O faults the caller surfaces rather than silently dropping,
 // since a lost toggle would let sync run on a paused connection.
-/**
- * @link ../../../../.docs/features/mobile/architecture.md
- */
 final class NetworkPolicyException extends RuntimeException
 {
     public static function directoryNotCreatable(string $dir): self

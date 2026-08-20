@@ -7,9 +7,6 @@ namespace Modules\Auth\Public\Services;
 use Illuminate\Contracts\Session\Session;
 use Modules\Auth\Internal\Lock\LockStateManager;
 
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 class AppLockKeyService
 {
     public function __construct(

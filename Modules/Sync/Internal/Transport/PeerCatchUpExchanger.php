@@ -11,9 +11,6 @@ use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\Transport\Frame\TransportFramer;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class PeerCatchUpExchanger
 {
     private const int BATCH_OPS = 1024;

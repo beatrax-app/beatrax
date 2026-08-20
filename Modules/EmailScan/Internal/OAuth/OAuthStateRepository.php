@@ -12,9 +12,6 @@ use Modules\Core\Public\Services\SessionFactory;
 use Modules\EmailScan\Public\Enums\MailProvider;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final class OAuthStateRepository
 {
     // Maximum lifetime of an issued state entry in seconds (10 minutes

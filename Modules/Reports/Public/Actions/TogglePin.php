@@ -16,9 +16,6 @@ use Modules\Reports\Models\SavedReport;
 use Modules\Sync\Public\Events\SavedReportMutated;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final class TogglePin
 {
     use CoercesScalars;

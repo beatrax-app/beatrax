@@ -10,9 +10,6 @@ use Livewire\Component;
 use Modules\Core\Public\Actions\WriteUserPreference;
 use Modules\Core\Public\Contracts\CurrentUser;
 
-/**
- * @link ../../../../../.docs/features/core/architecture.md
- */
 final class AutoImportSettingsSection extends Component
 {
     public bool $enabled = false;

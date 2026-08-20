@@ -4,40 +4,6 @@ declare(strict_types=1);
 
 use Modules\Core\Public\Services\UserDataPathService;
 
-/*
- * 15-04 Task 1 — mobile-signal coverage for UserDataPathService.
- *
- * Per 15-SPIKE-FINDINGS.md (Spike B, run on a real iPhone): NATIVEPHP_STORAGE_PATH
- * stays UNSET on-device. NativePHP mobile instead retargets base_path() itself
- * into the app-sandbox container (`…/Documents/app`), so most UserDataPathService
- * accessors (which derive from base_path()) already resolve inside the sandbox
- * with NO dedicated mobile code path. The reliable on-device signal is
- * NATIVEPHP_PLATFORM (`ios`/`android`); this file pins:
- *
- *  - platform() reads NATIVEPHP_PLATFORM via getenv(), returning null when unset.
- *  - storageBase() does NOT branch on NATIVEPHP_PLATFORM alone (NATIVEPHP_STORAGE_PATH
- *    absent) — it stays derived from base_path(), identical to the unsignaled case.
- *  - databaseFile() DOES branch on NATIVEPHP_PLATFORM (device-UAT fix, post-Spike-B):
- *    the sandboxed base_path() is the NativePHP app BUNDLE — wiped and re-shipped on
- *    every app update, and shipping a populated dev database.sqlite (the
- *    `/database/database.sqlite` build-exclude does not match through the
- *    `mobile-app/database -> ../database` symlink). Using it would leak dev/financial
- *    data into every install and keep a fresh phone from ever being empty. On the
- *    mobile runtime (`platform() !== null`), databaseFile() instead targets the
- *    NativePHP PERSISTED store — a sibling of the bundle root, empty on a genuine
- *    fresh install and retained across app updates.
- *  - With base_path() relocated to a sandbox-like directory (simulating what
- *    NativePHP mobile does on-device) AND NATIVEPHP_PLATFORM present,
- *    storageBase()/secretsPath()/backupsPath() resolve under the relocated
- *    (bundle) root as before, while databaseFile() resolves under the sibling
- *    persisted-data root instead — the mobile (NATIVEPHP_PLATFORM-present,
- *    NATIVEPHP_STORAGE_PATH-absent) case.
- *  - appPath() traversal guard still rejects `..` segments under a relocated
- *    base_path().
- *  - No native signal at all (plain web/test) behaves exactly as before
- *    (regression) — databaseFile() stays base_path()-derived on desktop/host.
- */
-
 beforeEach(function (): void {
     putenv('NATIVEPHP_STORAGE_PATH');
     putenv('NATIVEPHP_PLATFORM');
@@ -65,29 +31,20 @@ it('storageBase() does not branch on NATIVEPHP_PLATFORM alone, but databaseFile(
     putenv('NATIVEPHP_PLATFORM=ios');
 
     expect(UserDataPathService::storageBase())->toBe($unsignaledStorageBase);
-    // base_path() rather than storage_path(): this pins the unset-env
-    // fallback, which is projectRoot()/storage. storage_path() is relocated
-    // per test so nothing on disk outlives its test.
+    // base_path(), not storage_path(): storage_path() is relocated per test,
+    // so only base_path() pins the unset-env fallback of projectRoot()/storage.
     expect(UserDataPathService::storageBase())->toBe(base_path('storage'));
 
-    // databaseFile() branches on platform() alone — it no longer matches the
-    // unsignaled (base_path()-derived) value once NATIVEPHP_PLATFORM is set.
     expect(UserDataPathService::databaseFile())->not->toBe($unsignaledDatabaseFile);
     expect(UserDataPathService::databaseFile())
         ->toBe(dirname(base_path()).DIRECTORY_SEPARATOR.'persisted_data'.DIRECTORY_SEPARATOR.'database'.DIRECTORY_SEPARATOR.'database.sqlite');
 });
 
 it('resolves databaseFile() AND storage/app (secrets, backups, keyring) under the sibling persisted-data root, while the disposable storage/ tree stays bundle-rooted, under a relocated base_path() with NATIVEPHP_PLATFORM present and NATIVEPHP_STORAGE_PATH absent (the iOS reality)', function (): void {
-    // secrets/backups moved to the persisted store for exactly the reason
-    // this file already gives for databaseFile(): the sandboxed base_path()
-    // IS the bundle, "wiped and re-shipped on every app update". Leaving
-    // storage/app there destroyed the GDK keyring on every install while the
-    // database it decrypts survived — confirmed on a real device, where 124
-    // synced transactions rendered as raw ciphertext because the keyring that
-    // opened them had been wiped by the reinstall.
-    //
-    // storageBase() still does NOT branch: storage/framework and storage/logs
-    // are disposable caches and may live in the bundle.
+    // The sandboxed base_path() IS the app bundle, wiped and re-shipped on every
+    // update. Leaving storage/app there destroyed the keyring on each install
+    // while the database it decrypts survived — on a real device 124 synced
+    // transactions rendered as raw ciphertext. storage/framework + logs may stay.
     $sandbox = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-sandbox-'.bin2hex(random_bytes(8));
     mkdir($sandbox, 0700, true);
 
@@ -160,11 +117,10 @@ it('behaves unchanged with no native signal at all (plain web/test regression)',
 });
 
 it('detects the mobile runtime STRUCTURALLY when NATIVEPHP_PLATFORM is invisible at config-load — a sibling persisted_data store next to base_path routes databaseFile() to it', function (): void {
-    // Mirrors the persistent-runtime reality: getenv('NATIVEPHP_PLATFORM')
-    // reads null when config/database.php re-evaluates per request, so the
-    // env-only branch silently fell back to the app-bundle DB path on-device.
-    // The structural fallback keys off the NativePHP mobile layout — a
-    // `<app_storage>/laravel` base_path with a sibling `persisted_data` store.
+    // getenv('NATIVEPHP_PLATFORM') reads null when config/database.php
+    // re-evaluates per request, so the env-only branch silently fell back to the
+    // app-bundle DB on-device. The structural fallback keys off the NativePHP
+    // layout instead: a `<app_storage>/laravel` base_path with a sibling store.
     $appStorage = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-appstorage-'.bin2hex(random_bytes(8));
     $bundleRoot = $appStorage.DIRECTORY_SEPARATOR.'laravel';
     $persistedDir = $appStorage.DIRECTORY_SEPARATOR.'persisted_data';
@@ -172,7 +128,7 @@ it('detects the mobile runtime STRUCTURALLY when NATIVEPHP_PLATFORM is invisible
     mkdir($persistedDir, 0700, true);
 
     $originalBasePath = $this->app->basePath();
-    putenv('NATIVEPHP_PLATFORM'); // explicitly UNSET — no env signal at all
+    putenv('NATIVEPHP_PLATFORM');
 
     try {
         $this->app->setBasePath($bundleRoot);

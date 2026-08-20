@@ -8,9 +8,6 @@ namespace Modules\Recurring\Public\Enums;
 // state machine's transition() signature stay string; this enum is the one
 // canonical spelling every caller maps through, and it owns the transition
 // graph the SQLite trigger pair and the state machine both enforce.
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
 enum RecurringSeriesState: string
 {
     case Pending = 'pending';

@@ -57,9 +57,9 @@ it('refuses without a passphrase', function (): void {
 });
 
 it('passes a fully-gated request to the SQLite-guarded restore service', function (): void {
-    // The gate is satisfied, so the request reaches RestoreEncryptedBackup, whose
-    // own guard refuses because the test default connection is not 'sqlite' — so
-    // the destructive swap is never reached. This proves the wiring + the guard.
+    // The gate is satisfied, so the call reaches RestoreEncryptedBackup, whose own
+    // guard refuses because the test connection is not 'sqlite'. The destructive
+    // swap is never reached, and the wiring and the guard are both shown.
     Livewire::test(EncryptedBackupRestore::class)
         ->set('backup', UploadedFile::fake()->create('backup.enc', 4))
         ->set('passphrase', 'secret')
@@ -82,7 +82,6 @@ function rbReadMarker(string $path): string
 }
 
 it('decrypts, integrity-checks, snapshots, then swaps the live SQLite file', function (): void {
-    // A real temp "live" DB and a real temp backup DB (distinct markers).
     $base = sys_get_temp_dir().'/rb-'.bin2hex(random_bytes(5));
     $live = $base.'-live.sqlite';
     $backupPlain = $base.'-backup.sqlite';
@@ -105,9 +104,9 @@ it('decrypts, integrity-checks, snapshots, then swaps the live SQLite file', fun
         $db->purge('sqlite');
     }
 
-    expect(rbReadMarker($live))->toBe('RESTORED');     // live file swapped to the backup
+    expect(rbReadMarker($live))->toBe('RESTORED');
     expect(is_file($snapshot))->toBeTrue();
-    expect(rbReadMarker($snapshot))->toBe('ORIGINAL'); // pre-restore snapshot holds the old data
+    expect(rbReadMarker($snapshot))->toBe('ORIGINAL');
 
     foreach ([$live, $backupPlain, $enc, $snapshot] as $f) {
         @unlink($f);
@@ -142,15 +141,10 @@ it('refuses to swap when the passphrase is wrong — the live file is untouched'
     }
 });
 
-/*
- * A payload that decrypts but is not a database this build can restore.
- *
- * These are BackupFormatException rather than a decryption failure, and the
- * difference is what the user is told to do: the passphrase was right, so
- * offering to retype it would send them down the wrong path entirely. In both
- * cases the live file must still be sitting there untouched — the swap only
- * happens after the payload opens AND passes integrity_check.
- */
+// A payload that decrypts but is not a restorable database raises
+// BackupFormatException rather than a decryption failure, because the passphrase
+// was right and offering to retype it sends the user down the wrong path. The
+// live file survives either way: the swap follows integrity_check, never leads.
 
 it('refuses a payload that decrypts but will not open as a database', function (): void {
     $base = sys_get_temp_dir().'/rb-'.bin2hex(random_bytes(5));

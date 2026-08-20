@@ -8,9 +8,6 @@ use Illuminate\Http\Client\Factory as HttpFactory;
 use Modules\FX\Public\Contracts\RateProvider;
 use Modules\FX\Public\Exceptions\RateFetchException;
 
-/**
- * @link ../../../../.docs/features/fx/architecture.md
- */
 final class FrankfurterRateProvider implements RateProvider
 {
     // The old api.frankfurter.app domain 301-redirects to

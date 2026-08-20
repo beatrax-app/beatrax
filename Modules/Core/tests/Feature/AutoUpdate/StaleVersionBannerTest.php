@@ -7,16 +7,6 @@ use Livewire\Livewire;
 use Modules\Core\Internal\Http\Livewire\SystemAlertsBanner;
 use Modules\Core\Models\User;
 
-/*
- * SystemAlertsBanner is extended in plan 17-04 with three new alert
- * kinds — `update.available`, `update.stale`, and `update.critical` —
- * each driving a verbatim copy + button set from the UI-SPEC §
- * Auto-update banner contract. The banner reuses the existing
- * critical/warning/default severity mapping, so the only render-time
- * change is in `partials/system-alert-message.blade.php` where the
- * three new switch branches live.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -79,7 +69,7 @@ it('renders the update.stale banner with the amber severity and the update-now +
         ->assertSee("You're on version 0.1.0 — version 0.1.1 has been available for 30 days. Update now.", escape: false)
         ->assertSee('Update now')
         ->assertSee('Remind me later')
-        ->assertSeeHtml('border-amber-300');
+        ->assertSeeHtml('border-amber-200');
 });
 
 it('renders the update.critical banner with the rose severity and only the install-on-next-launch action (no skip)', function (): void {
@@ -95,5 +85,5 @@ it('renders the update.critical banner with the rose severity and only the insta
         ->assertSee('Critical update available — version 0.1.2 fixes data corruption on import. Install as soon as possible.', escape: false)
         ->assertSee('Install on next launch')
         ->assertDontSee('Skip this version')
-        ->assertSeeHtml('border-rose-500');
+        ->assertSeeHtml('border-rose-200');
 });

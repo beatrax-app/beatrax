@@ -7,34 +7,6 @@ use Modules\Core\Internal\Http\Livewire\HelpDataLocations;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
 
-/*
- * /help/data-locations — the user-facing "Where is my data?" page that
- * makes the local-only privacy promise tangible. The page is a
- * Livewire component that resolves the three load-bearing paths
- * (SQLite database, OAuth secrets, framework caches) through
- * UserDataPathService and renders them with copy-to-clipboard
- * affordances. Section 2 (Export everything) branches on the
- * authenticated user's `is_developer` flag: Dev Mode ON renders the
- * primary CTA; Dev Mode OFF renders the instructional fallback.
- *
- * Tests cover:
- *  (1) page renders 200 with the verbatim "Where is my data?" title
- *  (2) verbatim intro paragraph rendered
- *  (3) all three resolved paths appear in the rendered HTML, exactly
- *      as UserDataPathService reports them
- *  (4) each path row carries the literal `aria-label="Copy {type}
- *      path to clipboard"` attribute
- *  (5) Dev Mode ON renders the "Export everything as ZIP" primary
- *      button; Dev Mode OFF renders the verbatim instructional
- *      fallback paragraph and does NOT render the primary CTA
- *  (6) Section 3 "Deleting your data" renders verbatim including the
- *      "no telemetry to opt out of" line
- *  (7) Cross-user safety: the page only resolves through the
- *      authenticated user (no request-supplied user id reaches the
- *      path resolver), so userA's render matches userA's paths
- *      regardless of any other seeded users in the database.
- */
-
 function hdlUser(bool $isDeveloper, string $username): User
 {
     return User::query()->create([
@@ -91,7 +63,6 @@ it('renders the primary "Export everything as ZIP" CTA when Dev Mode is ON', fun
     $component = Livewire::actingAs($user)->test(HelpDataLocations::class);
 
     $component->assertSeeText('Export everything as ZIP');
-    // The Dev Mode OFF fallback heading must NOT render in this branch.
     $component->assertDontSeeText('Dev Mode is off.');
 });
 
@@ -100,12 +71,10 @@ it('renders the verbatim instructional fallback paragraph when Dev Mode is OFF',
 
     $component = Livewire::actingAs($user)->test(HelpDataLocations::class);
 
-    // The verbatim fallback prose per 17-UI-SPEC § Section 2 fallback.
     $component->assertSeeText('Dev Mode is off.');
     $component->assertSeeText('Enable Dev Mode in Settings');
     $component->assertSeeText('Manually copy the folders above');
 
-    // The primary CTA must NOT render in this branch.
     $component->assertDontSeeText('Export everything as ZIP');
 });
 
@@ -119,19 +88,15 @@ it('renders Section 3 "Deleting your data" verbatim with the no-telemetry line',
     $component->assertSeeText('Drag Beatrax to the Trash');
     $component->assertSeeText('Delete the folders listed above');
 
-    // Livewire's assertSeeText HTML-escapes the needle by default
-    // (turning the apostrophe into `&#039;`) before searching the
-    // stripped-tags haystack, which still contains the raw `'`
-    // character. Pass `escape: false` so the assertion compares the
-    // literal needle against the rendered text.
+    // assertSeeText escapes the needle by default, turning the apostrophe into
+    // `&#039;`, while the stripped-tags haystack still holds a raw `'` — hence
+    // `escape: false`.
     $component->assertSeeText("There's no telemetry to opt out of and no remote account to close.", escape: false);
 });
 
 it('resolves paths only through the authenticated user (cross-user safety)', function (): void {
-    // Two users exist; only userA is authenticated. The page must render
-    // the canonical paths through UserDataPathService — which is per-app
-    // (not per-user-input) — so no value supplied by a different user
-    // can influence the rendered paths.
+    // UserDataPathService is per-app, not per-user-input, so nothing userB
+    // supplies can influence what userA's render shows.
     $userA = hdlUser(false, 'hdl-cross-a');
     $userB = hdlUser(true, 'hdl-cross-b');
 
@@ -140,7 +105,6 @@ it('resolves paths only through the authenticated user (cross-user safety)', fun
 
     $component = Livewire::actingAs($userA)->test(HelpDataLocations::class);
 
-    // Sanity: userA sees the canonical paths.
     $component->assertSee($paths->databasePath());
 
     // Dev Mode resolves through the AUTHENTICATED user only — userB's
@@ -148,6 +112,6 @@ it('resolves paths only through the authenticated user (cross-user safety)', fun
     $component->assertDontSeeText('Export everything as ZIP');
     $component->assertSeeText('Dev Mode is off.');
 
-    // The page never reads from the second user's row.
+    // Guards the fixture: userB really does carry the flag.
     expect($userB->is_developer)->toBeTrue();
 });

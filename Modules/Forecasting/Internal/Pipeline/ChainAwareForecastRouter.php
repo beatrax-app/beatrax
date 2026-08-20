@@ -10,9 +10,6 @@ use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final readonly class ChainAwareForecastRouter
 {
     public function __construct(

@@ -10,8 +10,6 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\DriftAlerts\Public\Services\DriftAlertQuery;
 
-// Method-parameter DI on render() — constructor injection is banned on
-// Livewire Component subclasses.
 final class DashboardDriftBadge extends Component
 {
     public function render(

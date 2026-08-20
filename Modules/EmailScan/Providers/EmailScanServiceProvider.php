@@ -43,9 +43,6 @@ use Modules\EmailScan\Public\Services\InboxQuery;
 use Modules\EmailScan\Public\Services\KnownSenderQuery;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
-/**
- * @link ../../../.docs/features/email-scan/architecture.md
- */
 final class EmailScanServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;

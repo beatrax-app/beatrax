@@ -10,7 +10,4 @@ use RuntimeException;
 // the RFC 822 byte stream cannot be reconstructed. The bytes are
 // malformed at the source rather than in transit, so the fetch is
 // abandoned rather than retried.
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final class GmailRawDecodeException extends RuntimeException {}

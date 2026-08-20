@@ -57,9 +57,6 @@ use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
 use Modules\Core\Public\Support\LoadsModuleResources;
 
-/**
- * @link ../../../.docs/features/auth/architecture.md
- */
 final class AuthServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;

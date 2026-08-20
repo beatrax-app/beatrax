@@ -22,9 +22,6 @@ use Modules\Sync\Public\Events\EnvelopeAssignmentMutated;
 use Modules\Sync\Public\Events\EnvelopeMoveMutated;
 use Modules\Sync\Public\Events\EnvelopeSettingMutated;
 
-/**
- * @link ../../../../.docs/features/budgets/architecture.md
- */
 final class EnvelopeWriter
 {
     use CoercesScalars;

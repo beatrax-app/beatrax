@@ -17,9 +17,6 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class SyncSession
 {
     // NOT a singleton — mutable crypto state per peer, so each connection

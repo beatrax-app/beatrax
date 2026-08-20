@@ -17,9 +17,6 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 use Symfony\Component\Routing\Exception\RouteNotFoundException;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final readonly class DeepLinkResolver
 {
     // target_kind values that never carry a deletable per-user entity -

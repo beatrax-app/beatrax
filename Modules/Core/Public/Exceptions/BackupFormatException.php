@@ -10,7 +10,4 @@ use RuntimeException;
 // describe one this build can open. Distinct from a decryption failure:
 // the passphrase was never reached, so offering to retype it would send
 // the user down the wrong path.
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class BackupFormatException extends RuntimeException {}

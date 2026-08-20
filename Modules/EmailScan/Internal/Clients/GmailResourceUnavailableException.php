@@ -10,7 +10,4 @@ use RuntimeException;
 // resources this client drives (users.messages / users.history). That
 // is an SDK-shape invariant breaking, not a mailbox condition, so no
 // token refresh or retry can recover it.
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final class GmailResourceUnavailableException extends RuntimeException {}

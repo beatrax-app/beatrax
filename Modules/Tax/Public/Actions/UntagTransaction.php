@@ -11,9 +11,6 @@ use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Public\Events\EntityMutated;
 use Modules\Tax\Public\Events\TransactionUntagged;
 
-/**
- * @link ../../../../.docs/features/tax/architecture.md
- */
 final class UntagTransaction
 {
     public function __construct(

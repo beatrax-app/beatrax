@@ -13,9 +13,6 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 // FingerprintStage::classify() boundary inside ImportPipeline::preview().
 // A null resolution or a self_account DTO (counterpartyId null) leaves
 // the transaction unchanged; otherwise the FK is stamped via withCounterpartyId().
-/**
- * @link ../../../../.docs/features/counterparties/architecture.md
- */
 final class ResolveCounterpartyStage implements ResolvesCounterparties
 {
     public function __construct(

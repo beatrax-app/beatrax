@@ -6,8 +6,6 @@ namespace Modules\Import\Public\Exceptions;
 
 use InvalidArgumentException;
 
-// Thrown by AccountNamer when the trimmed name is empty or exceeds the
-// multibyte length bound — kept in the service layer (not only Livewire
-// rules()) so every entrypoint (CLI, programmatic, future REST) applies
-// the same constraint.
+// Raised in the service layer rather than only in Livewire rules(), so the
+// CLI and programmatic entrypoints apply the same bound.
 final class InvalidAccountNameException extends InvalidArgumentException {}

@@ -11,13 +11,6 @@ use Modules\Core\Public\Services\SystemAlertQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * SystemAlertQuery is the Public read API over the system_alerts table.
- * Locks the per-user scope + system-wide carve-out (user_id IS NULL)
- * and the severity-first ordering the dashboard banner depends on for
- * a stable critical → warning → info stack.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -108,9 +101,8 @@ it('includes system-wide (user_id IS NULL) rows alongside the caller\'s own rows
 });
 
 it('sorts active() rows critical → warning → info, ordering by created_at ascending within each tier', function (): void {
-    // Insert with a deliberately-shuffled severity sequence + spread
-    // created_at so the severity-first sort cannot be confused with a
-    // chronological accident.
+    // Shuffled severities with spread created_at, so a severity-first sort
+    // cannot be mistaken for a chronological accident.
     $this->db->connection()->table('system_alerts')->insert([
         [
             'user_id' => $this->userA->id,
@@ -154,8 +146,7 @@ it('sorts active() rows critical → warning → info, ordering by created_at as
     $query = $this->app->make(SystemAlertQuery::class);
     $messages = $query->active($this->userA)->pluck('message')->all();
 
-    // C0 (critical, earlier) before C1 (critical, later); then W1 (warning);
-    // then I1 (info).
+    // Critical by created_at (C0 then C1), then warning, then info.
     expect($messages)->toBe(['C0', 'C1', 'W1', 'I1']);
 });
 

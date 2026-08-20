@@ -17,9 +17,6 @@ use Throwable;
 // Banking connection it sits beside: it stores no credentials and routes a
 // dropped PDF statement straight to the existing ics-pdf SourceAdapter. Its
 // own validation rules, upload property, and filename hardening travel here.
-/**
- * @link ../../../../../../.docs/features/open-banking/architecture.md
- */
 trait ManagesGuidedIcsImport
 {
     // The leaf format key the existing ICS SourceAdapter consumes. ICS
@@ -55,9 +52,6 @@ trait ManagesGuidedIcsImport
         ];
     }
 
-    /**
-     * @link ../../../../../../.docs/features/open-banking/architecture.md
-     */
     public function importIcsStatement(
         RunsImports $importer,
         CurrentUser $currentUser,

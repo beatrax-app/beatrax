@@ -19,9 +19,6 @@ use Modules\Recurring\Public\Services\FixedPaymentsViewQuery;
 // out #[Computed] getters as a memoisation seam: render() therefore takes
 // the round-trip cost (a 3-query batch + a totals SUM) on every action.
 
-/**
- * @link ../../../../../.docs/features/recurring/architecture.md
- */
 final class RecurringPage extends Component
 {
     use DispatchesToast;

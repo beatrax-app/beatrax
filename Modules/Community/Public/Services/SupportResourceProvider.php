@@ -7,9 +7,6 @@ namespace Modules\Community\Public\Services;
 use Modules\Community\Internal\Corpus\CorpusYamlReader;
 use Modules\Community\Public\Dto\SupportResource;
 
-/**
- * @link ../../../../.docs/features/community/architecture.md
- */
 final class SupportResourceProvider
 {
     // The file every country falls back to, and the only one that is not a

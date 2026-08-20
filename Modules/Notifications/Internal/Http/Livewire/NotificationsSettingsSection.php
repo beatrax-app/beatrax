@@ -13,9 +13,6 @@ use Modules\Notifications\Public\Dto\NotificationPreferencesDto;
 use Modules\Notifications\Public\Enums\DigestCadence;
 use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
 
-/**
- * @link ../../../../../.docs/features/notifications/architecture.md
- */
 final class NotificationsSettingsSection extends Component
 {
     public bool $remindersEnabled = true;

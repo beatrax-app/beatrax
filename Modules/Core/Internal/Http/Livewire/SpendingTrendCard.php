@@ -10,9 +10,6 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Public\Services\CategorySpendTrendQuery;
 
-/**
- * @link ../../../../../.docs/features/core/architecture.md
- */
 final class SpendingTrendCard extends Component
 {
     public function render(CurrentUser $currentUser, CategorySpendTrendQuery $query, ViewFactory $views): View

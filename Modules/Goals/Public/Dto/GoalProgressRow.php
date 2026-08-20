@@ -6,9 +6,6 @@ namespace Modules\Goals\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/goals/architecture.md
- */
 final class GoalProgressRow extends Data
 {
     public function __construct(

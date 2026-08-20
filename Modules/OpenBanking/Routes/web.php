@@ -13,8 +13,6 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
     Route::get('/oauth/callback/open-banking', OpenBankingCallbackController::class)
         ->name('oauth.open-banking.callback');
 
-    // The settings trust surface — toggle + loud-warning gate,
-    // transparency panel, consent-expiry banner + re-link.
     Route::get('/settings/open-banking', OpenBankingSettingsPage::class)
         ->name('settings.open-banking');
 });

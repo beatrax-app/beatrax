@@ -5,25 +5,8 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Creates the drift_alert_transitions append-only audit table — one
- * row per state transition produced by `DriftAlertStateMachine`.
- *
- * Each row carries `from_state`, `to_state`, the actor (`user` or
- * `detector`), and the structured `transition_reason`
- * (`user_action`, `user_dismissed_cancelled`, `detector_opened`,
- * `detector_revived_snooze`). Optional `notes` text holds longer-form
- * context surfaced by the drift page. `transitioned_at` is the
- * canonical timestamp; `created_at` + `updated_at` fall through to
- * Laravel convention.
- *
- * The (drift_alert_id, transitioned_at) index supports the drill-in
- * audit query that walks the history of a single alert in
- * chronological order.
- *
- * No DDL trigger on the transitions table — append-only behaviour is
- * a project-wide schema invariant rather than a per-table SQL guard.
- */
+// Append-only. Unlike drift_alerts there is no SQL trigger here; the
+// append-only rule is a project-wide schema invariant.
 return new class extends ModuleMigration
 {
     public function up(): void

@@ -9,9 +9,6 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Core\Public\Contracts\Clock;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class PairingTokenService
 {
     private const int TTL_MINUTES = 10;

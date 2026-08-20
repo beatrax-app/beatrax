@@ -7,9 +7,6 @@ namespace Modules\Forecasting\Internal\Pipeline;
 use Carbon\CarbonImmutable;
 use InvalidArgumentException;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final readonly class DailyFold
 {
     /**

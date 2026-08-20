@@ -8,9 +8,6 @@ use JsonException;
 use Modules\FX\Public\Contracts\RateProvider;
 use Modules\FX\Public\Exceptions\RateFetchException;
 
-/**
- * @link ../../../../.docs/features/fx/architecture.md
- */
 final class BundledSnapshotProvider implements RateProvider
 {
     private string $snapshotPath;

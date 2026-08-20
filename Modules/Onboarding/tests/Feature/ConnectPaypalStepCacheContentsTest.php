@@ -11,21 +11,9 @@ use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 use Modules\Onboarding\Models\WizardProgress;
 use Tests\Helpers\UploadIsolation;
 
-/*
- * Locks the cache-content invariant for the PayPal connector step: after a
- * successful ConnectPaypalStep submit, the preview cache keyed on the
- * stashed `paypal_import_run_id` MUST contain rows whose status is `'new'`
- * (the rows the FirstImportStep consolidated preview counts towards
- * `totalRows`).
- *
- * The pre-fix behaviour silently leaves the cache in its pre-account-
- * creation state — every row is `'error'` because the AccountResolver
- * returned UnknownAccount for IBAN 'PAYPAL'. That manifests as the
- * consolidated preview rendering "FROM PAYPAL · 0 ROWS · READY" because
- * `BuildConsolidatedPreviewQuery::buildSection()` counts only `'new'` and
- * `'enriched'` rows towards `totalRows`, while still flagging the section
- * as `'ready'` because the cache lookup did not miss.
- */
+// The cached rows must be status 'new', not 'error'. buildSection() counts
+// only 'new'/'enriched' towards totalRows but still reports 'ready' on a
+// cache hit, so an all-error cache renders as "0 ROWS · READY".
 
 beforeEach(function (): void {
     UploadIsolation::isolate();
@@ -80,10 +68,6 @@ it('caches `new`-status rows for the stashed paypal_import_run_id on first submi
         }
     }
 
-    // The whole point of the connector step: every row must resolve
-    // against the just-created synthetic PayPal account, so every row is
-    // a fresh insert candidate (status='new') and nothing falls through
-    // as a still-unresolved account error.
     expect($errorRowCount)->toBe(0);
     expect($newRowCount)->toBe(count($preview->rows));
 });

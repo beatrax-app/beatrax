@@ -17,9 +17,6 @@ use Modules\Sync\Public\Events\TransactionMutated;
 
 // All collaborators arrive as method parameters — no constructor DI,
 // per the Livewire strict-rules prohibition on Component subclasses.
-/**
- * @link ../../../../../../.docs/features/ledger/architecture.md
- */
 trait HandlesClearedStatus
 {
     use DispatchesToast;

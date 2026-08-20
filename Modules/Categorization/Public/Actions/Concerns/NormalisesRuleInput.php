@@ -19,9 +19,6 @@ use Modules\Categorization\Public\Enums\RuleCombinator;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
 
-/**
- * @link ../../../../../.docs/features/categorization/architecture.md
- */
 trait NormalisesRuleInput
 {
     // The one vocabulary that is not an enum: `field` names a transaction

@@ -12,9 +12,6 @@ use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/open-banking/architecture.md
- */
 final class RaiseOpenBankingReconsentAlert
 {
     private const ALERT_KIND = 'open_banking_reconsent_required';
@@ -65,9 +62,6 @@ final class RaiseOpenBankingReconsentAlert
         }
     }
 
-    /**
-     * @link ../../../../.docs/features/open-banking/architecture.md
-     */
     private function alreadyAlerted(int $userId, int $connectionId): bool
     {
         $baseQuery = $this->baseDedupQuery($userId);

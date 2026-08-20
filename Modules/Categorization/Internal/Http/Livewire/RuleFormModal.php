@@ -26,14 +26,10 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Services\TaxCategoryWriter;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-// Global rule-form modal SFC, mounted once in app.blade.php. The open()
-// listener pulls the rule via CategorizationRuleQuery::findForUser
-// (user-scoped); a foreign ruleId falls back to create mode. Each
-// condition row's UI `field` maps to the backend (field, value_type) pair.
+// Mounted once globally in app.blade.php and opened by the `rule-form:open`
+// event, so there is no per-page or per-row instance of this component.
 final class RuleFormModal extends Component
 {
-    // Stateless UI<->backend row mapping (fields, factories, DTO round-trips,
-    // amount parsing) and the form's own row validation, each its own concern.
     use MapsRuleRows;
     use ValidatesRuleForm;
 
@@ -71,10 +67,9 @@ final class RuleFormModal extends Component
     /** @var array<int, string> action row index => error message */
     public array $actionErrors = [];
 
-    // Always start with one blank condition + one blank action row —
-    // never a truly-empty repeater, since a blank array property would
-    // let `conditions.0.field`-style nested set() calls construct a
-    // partial row missing keys updated() assumes are present.
+    // Never a truly-empty repeater: a blank array property lets a nested
+    // `conditions.0.field` set() build a partial row missing keys that
+    // updated() assumes are present.
     public function mount(CurrentUser $currentUser, DatabaseManager $db): void
     {
         $this->resetToCreateDefaults($currentUser, $db);
@@ -89,8 +84,8 @@ final class RuleFormModal extends Component
     ): void {
         $this->resetErrors();
 
-        // Dispatched before the hydration branches below so all paths
-        // (create, foreign-fallback, edit) reliably show the dialog.
+        // Before the hydration branches below, so create, foreign-fallback
+        // and edit all reliably show the dialog.
         $this->dispatch('modal-show', name: 'rule-form');
 
         if ($ruleId === null) {
@@ -115,9 +110,6 @@ final class RuleFormModal extends Component
         $this->actions = array_map(self::actionFromDto(...), $existing->actions);
     }
 
-    // Keeps a condition row's `op` valid whenever its `field` (and thus
-    // its value_type) changes, and clears a stale `value2` whenever the
-    // row's `op` moves away from `between`.
     public function updated(string $name): void
     {
         if (preg_match('/^conditions\.(\d+)\.field$/', $name, $matches) === 1) {
@@ -129,8 +121,6 @@ final class RuleFormModal extends Component
         }
     }
 
-    // A changed `field` can invalidate the row's `op` (its value_type moved),
-    // so snap `op` back to the first operator the new field allows.
     private function realignConditionOp(int $index): void
     {
         if (! isset($this->conditions[$index])) {
@@ -142,8 +132,6 @@ final class RuleFormModal extends Component
         }
     }
 
-    // An `op` that moved away from `between` leaves a stale upper bound behind,
-    // so drop the now-meaningless value2 the row still carries.
     private function clearStaleUpperBound(int $index): void
     {
         if (isset($this->conditions[$index]) && $this->conditions[$index]['op'] !== 'between') {
@@ -151,9 +139,8 @@ final class RuleFormModal extends Component
         }
     }
 
-    // Livewire binds <select> values as strings; re-coerce to ?int after each
-    // update, otherwise a picked id arrives as "20" and blows up
-    // actionRowError().
+    // Livewire delivers <select> values as strings, so without this a picked
+    // id arrives as "20" and blows up actionRowError()'s ?int contract.
     private function coerceActionIds(int $index): void
     {
         if (! isset($this->actions[$index])) {
@@ -236,9 +223,6 @@ final class RuleFormModal extends Component
         $this->resetToBlankForm();
     }
 
-    // Both actions return the rule id, so the create/update choice is one
-    // return; the three failure types share one catch that maps each to its
-    // own message. Returns null on any failure, having set the error state.
     private function persist(
         CurrentUser $currentUser,
         int $priority,
@@ -284,8 +268,8 @@ final class RuleFormModal extends Component
         }
 
         if ($e instanceof NotFoundHttpException) {
-            // $editingRuleId no longer maps to a row visible to the user
-            // (deleted in another tab, or a tampered ruleId) — close the modal.
+            // $editingRuleId no longer maps to a visible row: deleted in
+            // another tab, or a tampered ruleId.
             $this->errorGeneral = Lang::get('categorization::rule_form.error_rule_unavailable');
             $this->dispatch('modal-close', name: 'rule-form');
 
@@ -324,10 +308,9 @@ final class RuleFormModal extends Component
     ): View {
         $user = $currentUser->user();
 
-        // SQL order over ciphertext is meaningless once encryption is
-        // enabled; a stable orderBy('id') keeps row iteration
-        // deterministic, and the real user-facing order is the
-        // post-decrypt sortBy() below.
+        // ORDER BY over ciphertext is meaningless once encryption is on, so
+        // orderBy('id') only makes iteration deterministic — the user-facing
+        // order is the post-decrypt sortBy() below.
         $counterparties = $db->connection()
             ->table('counterparties')
             ->where('user_id', $user->id)

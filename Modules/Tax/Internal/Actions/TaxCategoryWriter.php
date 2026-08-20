@@ -14,9 +14,6 @@ use Modules\Tax\Public\Exceptions\CategoryPersistenceException;
 use Modules\Tax\Public\Exceptions\DuplicateTaxCategoryNameException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../.docs/features/tax/architecture.md
- */
 final class TaxCategoryWriter
 {
     public function __construct(

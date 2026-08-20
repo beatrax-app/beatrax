@@ -10,19 +10,20 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Modules\Auth\Public\Actions\SignupAction;
+use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
 
 // Only reachable while the device has no users; the route guard returns
 // a 404 once one exists.
 final class SignupPage extends Component
 {
+    use HoldsFlashMessage;
+
     public string $username = '';
 
     public string $password = '';
 
     public string $passwordConfirmation = '';
-
-    public string $flashMessage = '';
 
     public function submit(SignupAction $signup, UrlGenerator $urls): void
     {

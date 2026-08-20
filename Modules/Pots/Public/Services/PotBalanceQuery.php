@@ -17,9 +17,6 @@ use Modules\Pots\Public\Dto\PotRow;
 use Modules\Pots\Public\Dto\ReconciliationRow;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/pots/architecture.md
- */
 final class PotBalanceQuery
 {
     use CoercesScalars;

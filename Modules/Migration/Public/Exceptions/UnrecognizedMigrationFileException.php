@@ -6,10 +6,8 @@ namespace Modules\Migration\Public\Exceptions;
 
 use RuntimeException;
 
-// Thrown by a ParsesMigrationSource implementation when the extracted-upload
-// directory does not match its expected shape (missing file, corrupt
-// archive, required column/table absent) — thrown BEFORE yielding any
-// MigrationBatch, so a corrupt file is rejected, never a partial import.
+// Thrown before any MigrationBatch is yielded, so a corrupt source is rejected
+// whole rather than half-imported.
 final class UnrecognizedMigrationFileException extends RuntimeException
 {
     public function __construct(string $reason)

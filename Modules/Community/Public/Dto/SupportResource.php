@@ -6,9 +6,6 @@ namespace Modules\Community\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/community/architecture.md
- */
 final class SupportResource extends Data
 {
     public function __construct(

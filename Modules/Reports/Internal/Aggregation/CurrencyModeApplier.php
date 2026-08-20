@@ -14,9 +14,6 @@ use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Reports\Public\Dto\ReportResultDto;
 use Modules\Reports\Public\Dto\ReportResultRow;
 
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final class CurrencyModeApplier
 {
     public function __construct(

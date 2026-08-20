@@ -13,9 +13,6 @@ use stdClass;
 // Resolves which accounts drive the two calendar lanes: the visible-entries
 // filter and the balance-projection set, plus the account name lookup. Every
 // caller-supplied id list is intersected against the user's owned accounts.
-/**
- * @link ../../../../.docs/features/calendar/architecture.md
- */
 final readonly class AccountResolver
 {
     use CoercesScalars;

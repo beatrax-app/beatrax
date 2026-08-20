@@ -16,8 +16,6 @@ use Modules\Core\Public\Concerns\BelongsToUser;
 // is a SECONDARY guard — every evaluation-time query under queue/console
 // must carry its own explicit `where('user_id', ...)` filter.
 /**
- * @link ../../../.docs/features/anomaly/architecture.md
- *
  * @property int $id
  * @property int|null $user_id
  * @property int|null $counterparty_id

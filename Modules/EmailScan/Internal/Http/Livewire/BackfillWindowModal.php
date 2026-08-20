@@ -15,9 +15,6 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../../.docs/features/email-scan/architecture.md
- */
 final class BackfillWindowModal extends Component
 {
     public ?int $inboxId = null;

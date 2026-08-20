@@ -15,9 +15,6 @@ use Modules\DevMode\Public\Dto\CommandSpec;
 use Modules\DevMode\Public\Exceptions\SpawnProcessException;
 use Symfony\Component\Process\Process;
 
-/**
- * @link ../../../../.docs/features/dev-mode/architecture.md
- */
 final readonly class CommandSpawner
 {
     public function __construct(

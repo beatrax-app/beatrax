@@ -6,10 +6,8 @@ namespace Modules\Import\Public\Exceptions;
 
 use RuntimeException;
 
-// Raised while staging an upload to durable storage — hashing the bytes,
-// reading the temp source, persisting the stable copy, or resolving its
-// absolute path. Each named constructor pins one failure mode so the
-// upload wizard's error surface and the logs can tell them apart.
+// One named constructor per failure mode, so the upload wizard's error
+// surface and the logs can tell them apart.
 /**
  * @link ../../../../.docs/features/import/architecture.md#upload-wizard
  */

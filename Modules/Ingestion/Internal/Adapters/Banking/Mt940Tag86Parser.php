@@ -6,9 +6,6 @@ namespace Modules\Ingestion\Internal\Adapters\Banking;
 
 use Modules\Ingestion\Internal\Adapters\Banking\Dto\Mt940Narrative;
 
-/**
- * @link ../../../../../.docs/features/ingestion/architecture.md
- */
 final class Mt940Tag86Parser
 {
     /**
@@ -92,8 +89,6 @@ final class Mt940Tag86Parser
         foreach ($matches as $row) {
             $code = (int) $row[1];
             $value = $row[2];
-            // Multiple occurrences of the same subfield code (rare in
-            // practice) concatenate in stream order.
             $out[$code] = ($out[$code] ?? '').$value;
         }
 
@@ -133,9 +128,8 @@ final class Mt940Tag86Parser
         }
 
         $keywordAlternation = implode('|', array_filter(self::GVC_KEYWORDS, static fn (string $kw): bool => $kw !== 'BIC'));
-        // A keyword value stops at the next `+KEYWORD+` boundary OR at a
-        // bare `BIC ` (the one keyword that uses the trailing-space form
-        // and may abut its predecessor without an intervening `+`).
+        // A value runs to the next `+KEYWORD+` boundary or to a bare `BIC `,
+        // which can abut its predecessor without an intervening `+`.
         $generalRegex = '/(?<keyword>'.$keywordAlternation.')\+(?<value>.*?)(?=\+(?:'.$keywordAlternation.')\+|BIC |$)/';
 
         if (preg_match_all($generalRegex, $buffer, $matches, PREG_SET_ORDER) !== false) {
@@ -144,8 +138,6 @@ final class Mt940Tag86Parser
             }
         }
 
-        // BIC uses the trailing-space convention rather than the general
-        // KEYWORD+value form the other keywords follow.
         if (preg_match('/BIC (.+?)(?=\+(?:'.$keywordAlternation.')\+|BIC |$)/', $buffer, $bicMatch) === 1) {
             $out['BIC'] = trim($bicMatch[1]) === '' ? null : trim($bicMatch[1]);
         }

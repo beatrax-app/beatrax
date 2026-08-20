@@ -11,9 +11,6 @@ use Modules\Reports\Internal\Aggregation\ReportAggregator;
 use Modules\Reports\Internal\Support\MinorAmountFormatter;
 use Modules\Reports\Public\Dto\ReportDefinition;
 
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final class ReportCsvExporter
 {
     public function __construct(

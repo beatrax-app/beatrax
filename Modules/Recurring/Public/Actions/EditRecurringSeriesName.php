@@ -16,9 +16,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 // touches). Strings over MAX_LENGTH raise InvalidArgumentException rather
 // than a schema-level "Data too long for column" 500.
 
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
 final class EditRecurringSeriesName
 {
     // Below the underlying VARCHAR(255) so a future column-type change

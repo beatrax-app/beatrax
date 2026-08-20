@@ -9,13 +9,9 @@ use Illuminate\Contracts\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
-/**
- * @link ../../../../../../.docs/features/onboarding/architecture.md
- */
 final class ConnectEmailStep extends Component
 {
-    // Cleared after the modal dispatches oauth-client-wizard:saved or the
-    // user cancels; used by the blade to dim the non-clicked button.
+    // Read by the blade to dim the button the user did not click.
     public ?string $authStartedFor = null;
 
     public function authorizeProvider(string $provider): void

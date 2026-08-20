@@ -12,9 +12,6 @@ use Modules\Categorization\Public\Dto\RuleInput;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 
-/**
- * @link ../../../../.docs/features/categorization/architecture.md
- */
 final class CreateCategorizationRule
 {
     use NormalisesRuleInput;

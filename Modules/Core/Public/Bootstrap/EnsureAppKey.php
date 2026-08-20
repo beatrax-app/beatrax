@@ -7,9 +7,6 @@ namespace Modules\Core\Public\Bootstrap;
 use Illuminate\Contracts\Console\Kernel as ConsoleKernel;
 use Modules\Core\Public\Services\UserDataPathService;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class EnsureAppKey
 {
     public const SENTINEL_FILENAME = 'first-launch.app-key-generated';

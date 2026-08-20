@@ -14,9 +14,6 @@ use Modules\Core\Public\Support\DriftThresholdOptions;
 use Modules\Core\Public\Support\Lang;
 use Modules\Recurring\Public\Actions\SetDriftThresholdForSeries;
 
-/**
- * @link ../../../../../.docs/features/drift-alerts/architecture.md
- */
 final class DriftThresholdEditor extends Component
 {
     use DispatchesToast;

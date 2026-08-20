@@ -2,152 +2,282 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Facades\DB;
+use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Sync\Commands\RelayServeCommand;
+use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
+use Modules\Sync\Internal\Transport\Relay\RelayClient;
+use Modules\Sync\Internal\Transport\Relay\RelayConfig;
+use Modules\Sync\Internal\Transport\Relay\RelayDrainRegistry;
+use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
+use Modules\Sync\Internal\Transport\Relay\RelayRateLimiter;
+use Modules\Sync\Internal\Transport\Relay\RelayTlsMaterial;
+use Modules\Sync\Tests\Support\RelayHandlerHarness;
+use Psr\Log\NullLogger;
 
 uses(RefreshDatabase::class);
 
-/*
- * RelayZeroKnowledgeTest — XPORT-03: zero-knowledge relay ciphertext invariant.
+/**
+ * The relay holds no key and performs no cryptographic operation: it stores and
+ * forwards opaque bytes. Asserting that against random_bytes() proves nothing —
+ * random bytes are not JSON and contain no field name whatever the relay does.
+ * These cases push a blob that IS readable structure through the real client,
+ * the real serve handler and the real mailbox, so any decrypt, parse or reshape
+ * shows up as bytes that changed. The source guard below reads the relay's own
+ * code for the two operations it must never contain.
  *
- * RED until Wave 4 ships RelayClient under
- * Modules\Sync\Internal\Transport\Relay\RelayClient.
- *
- * HARD INVARIANT (D-02, T-13-02, XPORT-03):
- * The relay_mailbox table stores ONLY opaque Noise ciphertext. A relay
- * operator with full DB read access MUST learn nothing about:
- *   - Op-log field names (note, category_id, counterparty_id, etc.)
- *   - User data values
- *   - user_id in plaintext
- *   - JSON-decodable structure (the blob must NOT be valid JSON)
- *
- * This test is the executable proof of the ZK invariant. It must remain in
- * Wave 0 so the invariant is visible before any relay implementation lands.
- *
- * relay_stores_only_ciphertext is the single most important test in this
- * file — it is the XPORT-03 hard invariant test referenced in the plan's
- * must_haves.truths[2] and the Per-Task Verification Map.
+ * @return list<string> absolute paths of every file that IS the relay
  */
+function relayZeroKnowledgeSources(): array
+{
+    $files = glob(base_path('Modules/Sync/Internal/Transport/Relay/*.php')) ?: [];
+    $files[] = base_path('Modules/Sync/Commands/RelayServeCommand.php');
+    sort($files);
 
-it('relay_stores_only_ciphertext', function (): void {
-    // This is the XPORT-03 hard invariant test.
-    // The relay_mailbox table must hold ONLY opaque ciphertext — no plaintext
-    // user data, no op-log field names, no JSON-decodable structure.
+    return array_values($files);
+}
 
-    // Wave 0: simulate what a future RelayClient::deliver() would store.
-    // A real Noise-encrypted op blob is random bytes (not valid JSON, not
-    // containing field names). For this Wave 0 stub, we insert a synthetic
-    // ciphertext to validate the schema accepts BINARY and that the ZK
-    // assertion logic is correct.
+/**
+ * @param  list<string>  $paths
+ * @return list<string> one entry per banned operation found, `file:line reason`
+ */
+function relayZeroKnowledgeViolations(array $paths): array
+{
+    $hits = [];
 
-    // Synthetic "ciphertext": random bytes that mimic Noise AEAD output.
-    // Real ciphertext from NoiseSession::encrypt() is indistinguishable
-    // from random bytes — this synthetic blob exercises the same assertion.
-    $ciphertext = random_bytes(128);
+    foreach ($paths as $path) {
+        // Comments are dropped first: the invariant is written down in prose
+        // inside RelayMailbox and RelayServeCommand, and a scanner that reads
+        // it would flag the very sentence forbidding the call.
+        $tokens = array_values(array_filter(
+            token_get_all((string) file_get_contents($path)),
+            static fn (array|string $token): bool => ! is_array($token)
+                || ! in_array($token[0], [T_COMMENT, T_DOC_COMMENT], true),
+        ));
 
-    DB::table('relay_mailbox')->insert([
-        'sender_did' => 'device-a-uuid',
-        'recipient_did' => 'device-b-uuid',
-        'blob' => $ciphertext,
-        'created_at' => '2026-06-15T10:00:00Z',
-        'delivered_at' => null,
-        'expires_at' => '2026-07-15T10:00:00Z',
-    ]);
+        foreach ($tokens as $index => $token) {
+            if (! is_array($token)) {
+                continue;
+            }
 
-    /** @var stdClass $row */
-    $row = DB::table('relay_mailbox')->where('recipient_did', 'device-b-uuid')->first();
+            // A literal reaches sodium through call_user_func just as well as a
+            // direct call does.
+            if ($token[0] === T_CONSTANT_ENCAPSED_STRING && stripos($token[1], 'sodium_') !== false) {
+                $hits[] = "{$path}:{$token[2]} names sodium_ in a string literal";
 
-    // ASSERTION 1: The blob does NOT contain op-log plaintext field names.
-    // A correct Noise-encrypted blob is opaque random bytes; no substring
-    // of the blob should be a known plaintext field name.
-    expect($row->blob)->not->toContain('secret-note');
-    expect($row->blob)->not->toContain('category_id');
-    expect($row->blob)->not->toContain('note');
-    expect($row->blob)->not->toContain('counterparty_id');
-    expect($row->blob)->not->toContain('user_id');
-    expect($row->blob)->not->toContain('transactions');
+                continue;
+            }
 
-    // ASSERTION 2: The blob is NOT valid JSON (it is opaque ciphertext).
-    // json_decode on real Noise ciphertext must return null.
-    expect(json_decode($row->blob))->toBeNull(
-        'relay_mailbox.blob must not be JSON-decodable — it must be opaque Noise ciphertext'
+            if ($token[0] !== T_STRING) {
+                continue;
+            }
+
+            if (str_starts_with(strtolower($token[1]), 'sodium_')) {
+                $hits[] = "{$path}:{$token[2]} calls {$token[1]}()";
+
+                continue;
+            }
+
+            // json_decode of the request envelope is how the relay reads its
+            // routing fields and is fine; json_decode of a blob is the relay
+            // looking inside the ciphertext.
+            if (strtolower($token[1]) === 'json_decode'
+                && preg_match('/blob/i', relayZeroKnowledgeCallArgs($tokens, $index)) === 1) {
+                $hits[] = "{$path}:{$token[2]} json_decode()s a blob";
+            }
+        }
+    }
+
+    return $hits;
+}
+
+/**
+ * @param  list<array{0:int,1:string,2:int}|string>  $tokens
+ * @return string the source text of the call's argument list, or '' when the
+ *                name is not a call at all
+ */
+function relayZeroKnowledgeCallArgs(array $tokens, int $index): string
+{
+    $depth = 0;
+    $args = '';
+
+    for ($i = $index + 1, $count = count($tokens); $i < $count; $i++) {
+        $token = $tokens[$i];
+        $text = is_array($token) ? $token[1] : $token;
+
+        if ($depth === 0) {
+            if ($text === '(') {
+                $depth = 1;
+
+                continue;
+            }
+            if (trim($text) !== '') {
+                return '';
+            }
+
+            continue;
+        }
+
+        if ($text === '(') {
+            $depth++;
+        } elseif ($text === ')') {
+            $depth--;
+            if ($depth === 0) {
+                break;
+            }
+        }
+
+        $args .= $text;
+    }
+
+    return $args;
+}
+
+/** @return string a blob that is readable structure, so a relay that parsed it would show */
+function relayZeroKnowledgeLegibleBlob(): string
+{
+    return '{"table":"transactions","note":"secret-note","user_id":7,"category_id":3}'
+        ."\x00\xff\xfe\x01"
+        .random_bytes(32);
+}
+
+beforeEach(function (): void {
+    $this->relayConfig = new RelayConfig;
+    $this->relayConfig->setEndpointUrl('https://relay.test');
+    $this->relayConfig->setAuthToken('relay-shared-secret');
+
+    $this->mailbox = new RelayMailbox(app(DatabaseManager::class), app(Clock::class));
+
+    $command = new RelayServeCommand(
+        new NullLogger,
+        $this->mailbox,
+        new RelayDrainRegistry,
+        new RelayRateLimiter(app(Clock::class)),
+        new RelayTlsMaterial,
+        new DaemonShutdownSignal,
     );
 
-    // ASSERTION 3: The relay_mailbox row has NO user_id column.
-    // The relay must not store user-identifiable data; device_id (a UUID)
-    // is the only routing identifier (ZK posture per D-02, T-13-02).
-    $columns = array_keys((array) $row);
-    expect(in_array('user_id', $columns, true))->toBeFalse(
-        'relay_mailbox must have NO user_id column — device_id is the only routing key'
+    $this->relayClient = new RelayClient(
+        RelayHandlerHarness::httpFactory($command),
+        $this->relayConfig,
+        new NullLogger,
     );
 });
 
-it('relay_mailbox has no user_id column (schema ZK guard)', function (): void {
-    // Schema-level enforcement: confirm that the relay_mailbox migration
-    // did NOT add a user_id column. This catches accidental schema drift.
-    $columns = DB::getSchemaBuilder()->getColumnListing('relay_mailbox');
+afterEach(function (): void {
+    $secrets = UserDataPathService::secretsPath();
 
-    expect(in_array('user_id', $columns, true))->toBeFalse(
-        'relay_mailbox must have NO user_id column — ZK invariant per D-02 / T-13-02'
+    foreach ([
+        $secrets.DIRECTORY_SEPARATOR.'sync-relay-token.json',
+        $secrets.DIRECTORY_SEPARATOR.'sync-relay-drain-secret.json',
+        $secrets.DIRECTORY_SEPARATOR.'sync-relay-drain-registry.json',
+        UserDataPathService::appPath('sync/relay.json'),
+    ] as $path) {
+        if (is_file($path)) {
+            @unlink($path);
+        }
+    }
+});
+
+it('carries a legible blob through deliver, store and drain without altering one byte', function (): void {
+    $blob = relayZeroKnowledgeLegibleBlob();
+
+    $this->relayClient->deliver('device-sender', 'device-recipient', $blob);
+
+    $stored = DB::table('relay_mailbox')->where('recipient_did', 'device-recipient')->first();
+    expect($stored)->not->toBeNull();
+    expect($stored->blob)->toBe(
+        $blob,
+        'the relay stored something other than the bytes it was handed — it parsed, decoded or re-encoded the blob',
     );
-    expect(in_array('recipient_did', $columns, true))->toBeTrue('routing column recipient_did must exist');
-    expect(in_array('sender_did', $columns, true))->toBeTrue('routing column sender_did must exist');
-    expect(in_array('blob', $columns, true))->toBeTrue('ciphertext column blob must exist');
+
+    $drained = $this->relayClient->drain('device-recipient', $this->relayConfig->deviceDrainSecret());
+    expect($drained)->toHaveCount(1);
+    expect(base64_decode((string) $drained[0]['blob'], true))->toBe(
+        $blob,
+        'the drained bytes differ from the delivered bytes — the relay is not a conduit',
+    );
 });
 
-it('relay_mailbox blob column accepts binary data without modification', function (): void {
-    // Confirm the blob column stores binary faithfully (no charset conversion,
-    // no truncation). Real Noise ciphertext includes arbitrary bytes including
-    // null bytes — the column must not mangle them.
-    $rawBytes = random_bytes(256);
+it('writes only routing metadata when the mailbox itself stores a blob', function (): void {
+    $blob = relayZeroKnowledgeLegibleBlob();
 
-    DB::table('relay_mailbox')->insert([
-        'sender_did' => 'device-c-uuid',
-        'recipient_did' => 'device-d-uuid',
-        'blob' => $rawBytes,
-        'created_at' => '2026-06-15T10:00:00Z',
-        'delivered_at' => null,
-        'expires_at' => '2026-07-15T10:00:00Z',
-    ]);
+    $this->mailbox->deliver('device-a', 'device-b', $blob);
 
-    /** @var stdClass $row */
-    $row = DB::table('relay_mailbox')->where('recipient_did', 'device-d-uuid')->first();
+    $row = (array) DB::table('relay_mailbox')->where('recipient_did', 'device-b')->first();
 
-    expect($row->blob)->toBe($rawBytes, 'binary blob must round-trip without modification');
+    expect(array_keys($row))->toBe(
+        ['id', 'sender_did', 'recipient_did', 'blob', 'created_at', 'delivered_at', 'expires_at'],
+        'a new relay_mailbox column is a new thing the relay operator can read',
+    );
+
+    // The blob's own contents must not have been lifted out into a column the
+    // operator can query. Everything but the blob is routing metadata.
+    unset($row['blob']);
+    foreach ($row as $column => $value) {
+        expect((string) $value)->not->toContain('secret-note', "relay_mailbox.{$column} leaks blob content");
+    }
 });
 
-it('relay delivers ciphertext blob to correct recipient_did (routing integrity)', function (): void {
-    // Assert the pending-index filter works: only the correct recipient's
-    // pending rows are returned (delivered_at IS NULL guard).
-    DB::table('relay_mailbox')->insert([
-        'sender_did' => 'device-x',
-        'recipient_did' => 'device-correct',
-        'blob' => random_bytes(64),
-        'created_at' => '2026-06-15T10:00:00Z',
-        'delivered_at' => null,
-        'expires_at' => '2026-07-15T10:00:00Z',
-    ]);
+it('sends the blob to the relay verbatim and puts nothing else in the envelope', function (): void {
+    $blob = relayZeroKnowledgeLegibleBlob();
 
-    DB::table('relay_mailbox')->insert([
-        'sender_did' => 'device-x',
-        'recipient_did' => 'device-wrong',
-        'blob' => random_bytes(64),
-        'created_at' => '2026-06-15T10:00:00Z',
-        'delivered_at' => null,
-        'expires_at' => '2026-07-15T10:00:00Z',
-    ]);
+    $capturing = new HttpFactory;
+    $capturing->fake(fn () => HttpFactory::response('{"status":"accepted"}', 202));
 
-    $pending = DB::table('relay_mailbox')
-        ->where('recipient_did', 'device-correct')
-        ->whereNull('delivered_at')
-        ->count();
+    (new RelayClient($capturing, $this->relayConfig, new NullLogger))
+        ->deliver('device-sender', 'device-recipient', $blob);
 
-    expect($pending)->toBe(1, 'Only one pending row for device-correct');
+    $recorded = $capturing->recorded();
+    expect($recorded)->toHaveCount(1);
 
-    $wrongPending = DB::table('relay_mailbox')
-        ->where('recipient_did', 'device-correct')
-        ->where('sender_did', 'device-wrong')
-        ->count();
+    /** @var array<string, mixed> $sent */
+    $sent = $recorded[0][0]->data();
+    expect(array_keys($sent))->toBe(['sender_did', 'recipient_did', 'blob']);
+    expect(base64_decode((string) $sent['blob'], true))->toBe(
+        $blob,
+        'RelayClient must forward the blob it was handed, unmodified',
+    );
+});
 
-    expect($wrongPending)->toBe(0, 'device-wrong row must not appear in device-correct drain query');
+it('contains no sodium call and no json_decode of a blob anywhere in the relay', function (): void {
+    $sources = relayZeroKnowledgeSources();
+    expect($sources)->not->toBeEmpty();
+
+    expect(relayZeroKnowledgeViolations($sources))->toBe(
+        [],
+        'The relay performs no cryptographic operation and never looks inside a blob.',
+    );
+});
+
+it('detects a sodium call and a blob json_decode when one is present', function (): void {
+    // Without this the guard above passes on a clean tree whether or not it can
+    // see anything at all, which is the failure mode it replaced.
+    $planted = tempnam(sys_get_temp_dir(), 'relay-zk').'.php';
+    file_put_contents($planted, <<<'PHP'
+        <?php
+        // sodium_crypto_box_open() and json_decode($blob) named in a comment.
+        final class PlantedRelayViolation
+        {
+            public function open(string $blob): mixed
+            {
+                $plain = sodium_crypto_secretbox_open($blob, '', '');
+
+                return json_decode($plain === false ? $blob : $plain, true);
+            }
+        }
+        PHP);
+
+    try {
+        $found = relayZeroKnowledgeViolations([$planted]);
+    } finally {
+        @unlink($planted);
+    }
+
+    expect($found)->toHaveCount(2);
+    expect(implode("\n", $found))->toContain('sodium_crypto_secretbox_open')->toContain('json_decode()s a blob');
 });

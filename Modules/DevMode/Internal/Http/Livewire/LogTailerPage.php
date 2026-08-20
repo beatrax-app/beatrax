@@ -12,9 +12,6 @@ use Livewire\Component;
 use Modules\Core\Public\Support\Lang;
 use Modules\DevMode\Internal\Logging\LogFileStats;
 
-/**
- * @link ../../../../../.docs/features/dev-mode/architecture.md
- */
 #[Layout('dev::layouts.dev-shell')]
 final class LogTailerPage extends Component
 {

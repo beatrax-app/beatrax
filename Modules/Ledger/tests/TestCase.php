@@ -13,26 +13,14 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Tests\TestCase as RootTestCase;
 
-/**
- * Ledger module-local TestCase. Provides a `canonical()` factory that returns
- * a CanonicalTransaction filled with sane defaults so individual tests can
- * override only the field they exercise, plus a `makeTransaction()` helper
- * that persists a fully-formed Transaction row for query-service tests.
- */
 abstract class TestCase extends RootTestCase
 {
-    /**
-     * Row counter for `makeTransaction()`. Lives on the instance (not on a
-     * static inside the method) so each test starts from zero — deterministic
-     * fingerprints and posted_at offsets keep snapshot diffs and debug logs
-     * stable when individual tests are run in isolation.
-     */
+    // Per-instance rather than a static inside the method: each test must start
+    // from zero, or the derived fingerprints and posted_at offsets shift
+    // depending on what ran before it.
     private int $rowIndex = 0;
 
     /**
-     * Build a CanonicalTransaction with sensible defaults. Callers override
-     * only the keys they care about.
-     *
      * @param  array<string, mixed>  $overrides
      */
     protected function canonical(array $overrides = []): CanonicalTransaction
@@ -90,10 +78,6 @@ abstract class TestCase extends RootTestCase
         );
     }
 
-    /**
-     * Create an ImportRun for the given user. Provides the foreign-key target
-     * that every Transaction row needs (`transactions.import_run_id`).
-     */
     protected function makeImportRun(User $user, string $sha = '0000000000000000000000000000000000000000000000000000000000000000'): ImportRun
     {
         return ImportRun::create([
@@ -110,10 +94,6 @@ abstract class TestCase extends RootTestCase
     }
 
     /**
-     * Persist one Transaction row for query-service tests. Defaults align
-     * with the no-counterparty sentinel and the sign-to-type rules so
-     * callers can override only the field under test.
-     *
      * @param  array<string, mixed>  $overrides
      */
     protected function makeTransaction(User $user, Account $account, ImportRun $run, array $overrides = []): Transaction
@@ -154,12 +134,9 @@ abstract class TestCase extends RootTestCase
         ], $overrides));
     }
 
+    // Inserts through DatabaseManager, not Eloquent: observers and fillable
+    // rules would rewrite the supplied fingerprint mid-test.
     /**
-     * Insert one raw transaction row stamped at normalization_version=2.
-     * Uses DatabaseManager directly so the stored fingerprint stays exactly
-     * as supplied — Eloquent observers and fillable bypass rules would
-     * otherwise rewrite the value mid-test.
-     *
      * @param  array<string, mixed>  $overrides
      */
     protected function seedV2Row(array $overrides = []): int
@@ -200,15 +177,9 @@ abstract class TestCase extends RootTestCase
         return (int) $db->connection()->table('transactions')->insertGetId($row);
     }
 
-    /**
-     * Seed two rows that share every v3 tuple dimension but differ on
-     * `source_ref`. The current schema's composite UNIQUE on transactions
-     * already enforces the v3 tuple so the rows cannot coexist with the
-     * index in place — this helper drops it for the duration of the test,
-     * simulating data that pre-dates the v3 index swap. The dropped index
-     * is the trigger for the rederive command's collision pre-check; the
-     * RefreshDatabase trait restores a clean schema for the next test.
-     */
+    // The composite UNIQUE already enforces the v3 tuple, so these two rows
+    // cannot coexist while it is in place; dropping it reproduces data written
+    // before the v3 index swap. RefreshDatabase restores the schema after.
     protected function seedCollidingV2Rows(): void
     {
         /** @var DatabaseManager $db */
@@ -236,10 +207,6 @@ abstract class TestCase extends RootTestCase
         ]));
     }
 
-    /**
-     * Seed two v2 rows whose v3 tuples differ (different bookedAt seconds
-     * + different counterparty_normalized) so re-derive runs cleanly.
-     */
     protected function seedTwoNonCollidingV2Rows(): void
     {
         $this->seedV2Row([
@@ -258,10 +225,6 @@ abstract class TestCase extends RootTestCase
         ]);
     }
 
-    /**
-     * Seed one row that already carries normalization_version=3 so the
-     * rederive command treats it as up-to-date and skips it.
-     */
     protected function seedOneV3Row(): void
     {
         $this->seedV2Row([

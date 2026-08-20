@@ -18,10 +18,8 @@ use Modules\DevMode\Public\Exceptions\SpawnedRunVanishedException;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
-// The dedicated DESTRUCTIVE-tier execution entry point (separate from
-// the SAFE-tier ArtisanSpawnController, which rejects DESTRUCTIVE with
-// 403). Re-validates all three TripleGateModal gates server-side, so a
-// tampered Livewire payload still cannot reach the spawner without them.
+// The only DESTRUCTIVE-tier entry point. All three TripleGateModal gates are
+// re-checked server-side, so a tampered Livewire payload still cannot spawn.
 final readonly class DestructiveSpawnController
 {
     public function __construct(
@@ -37,8 +35,6 @@ final readonly class DestructiveSpawnController
         CurrentUser $user,
         Session $session,
     ): JsonResponse {
-        // Re-validates all three TripleGateModal gates server-side:
-        // Dev Mode env flag, session Advanced toggle, typed-app-name.
         if (! $this->devMode->isOn()) {
             throw new AccessDeniedHttpException('dev_mode_off');
         }
@@ -67,9 +63,8 @@ final readonly class DestructiveSpawnController
         }
         $command = $commandRaw;
 
-        // Command must be a DESTRUCTIVE-tier registry entry. SAFE-tier
-        // commands belong on the other controller; refusing them here
-        // prevents the dual-entry-point ambiguity from being abused.
+        // SAFE-tier names are refused rather than run, so neither controller
+        // doubles as a second route to the other tier.
         $destructiveNames = array_map(
             static fn (CommandSpec $spec): string => $spec->name,
             $this->registry->destructive(),
@@ -83,10 +78,8 @@ final readonly class DestructiveSpawnController
 
         $spec = $this->registry->find($command);
 
-        // Same three-guard discipline as the SAFE controller — Laravel
-        // validate() against ArgSpec::rules BEFORE the shell sees any
-        // value. CommandSpawner adds escapeshellarg + registry
-        // whitelist on top.
+        // Third guard on the args, alongside the command whitelist and
+        // CommandSpawner's escapeshellarg — and the only one before the shell.
         if ($spec->argsSchema !== []) {
             $argRules = [];
             foreach ($spec->argsSchema as $argSpec) {

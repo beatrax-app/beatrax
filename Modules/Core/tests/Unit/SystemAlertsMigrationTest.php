@@ -9,16 +9,6 @@ use Modules\Core\Models\User;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for the system_alerts migration — locks the column shape,
- * the two read indexes, and the schema-level severity trigger pair that
- * rejects out-of-band INSERT / UPDATE statements with a severity value
- * outside the allowed enum (info / warning / critical).
- *
- * The trigger pair mirrors the drift_alerts.state pair: an in-DB rail
- * that survives any future bug in the Eloquent layer.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);

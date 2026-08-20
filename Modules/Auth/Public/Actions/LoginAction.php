@@ -11,9 +11,6 @@ use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\SessionFactory;
 
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 final class LoginAction
 {
     public function __construct(

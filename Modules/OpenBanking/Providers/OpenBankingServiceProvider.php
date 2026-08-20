@@ -25,9 +25,6 @@ use Modules\OpenBanking\Public\Services\OpenBankingConnectionQuery;
 use Modules\OpenBanking\Public\Services\OpenBankingFetchService;
 use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 
-/**
- * @link ../../../.docs/features/open-banking/architecture.md
- */
 final class OpenBankingServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;

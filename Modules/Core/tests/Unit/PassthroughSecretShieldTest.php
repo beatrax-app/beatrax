@@ -4,12 +4,6 @@ declare(strict_types=1);
 
 use Modules\Core\Public\Services\PassthroughSecretShield;
 
-/*
- * Unit tests for PassthroughSecretShield — the default SecretShield on
- * web / mobile. Identity in both directions, so persisted secrets behave
- * exactly as they did before the shield seam existed.
- */
-
 it('returns the plaintext unchanged from protect()', function (): void {
     $shield = new PassthroughSecretShield;
 

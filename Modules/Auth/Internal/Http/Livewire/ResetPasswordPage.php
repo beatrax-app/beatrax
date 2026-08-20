@@ -11,10 +11,13 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Modules\Auth\Public\Actions\ResetPasswordAction;
+use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
 
 final class ResetPasswordPage extends Component
 {
+    use HoldsFlashMessage;
+
     private const FLASH_KEY = 'flash.reset_password';
 
     public string $username = '';
@@ -24,8 +27,6 @@ final class ResetPasswordPage extends Component
     public string $newPassword = '';
 
     public string $newPasswordConfirmation = '';
-
-    public string $flashMessage = '';
 
     public function submit(ResetPasswordAction $reset, UrlGenerator $urls, Session $session): void
     {

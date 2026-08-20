@@ -15,11 +15,9 @@ use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ChangeSeriesAmountPay
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ScenarioMutationPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayload;
 use Modules\Forecasting\Public\Events\ScenarioMutated;
+use Modules\Sync\Public\Events\EntityMutated;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final class AddScenarioMutation
 {
     public function __construct(
@@ -51,7 +49,7 @@ final class AddScenarioMutation
 
         $now = $this->clock->now();
 
-        $newId = $this->db->connection()->transaction(function () use ($scenarioId, $user, $kind, $payload, $targetSeriesId, $now): int {
+        $mutation = $this->db->connection()->transaction(function () use ($scenarioId, $user, $kind, $payload, $targetSeriesId, $now): ForecastScenarioMutation {
             $mutation = new ForecastScenarioMutation;
             $mutation->user_id = $user->id;
             $mutation->forecast_scenario_id = $scenarioId;
@@ -67,10 +65,31 @@ final class AddScenarioMutation
                 ->where('user_id', $user->id)
                 ->update(['updated_at' => $now->toDateTimeString()]);
 
-            $id = $mutation->getAttribute('id');
-
-            return is_numeric($id) ? (int) $id : 0;
+            return $mutation;
         });
+
+        $id = $mutation->getAttribute('id');
+        $newId = is_numeric($id) ? (int) $id : 0;
+
+        // The scenario container synced without its contents, so a peer
+        // showed an empty named what-if. `payload` travels as the STORED
+        // JSON text — the typed cast is a read-side concern, and re-encoding
+        // the DTO here would be a second copy of that encoding to keep true.
+        $this->events->dispatch(new EntityMutated(
+            table: 'forecast_scenario_mutations',
+            pk: $newId,
+            userId: (int) $user->id,
+            mutationType: 'create',
+            dirtyFields: [
+                'user_id' => (int) $user->id,
+                'forecast_scenario_id' => $scenarioId,
+                'kind' => $kind,
+                'target_series_id' => $targetSeriesId,
+                'payload' => $mutation->getAttributes()['payload'] ?? null,
+                'created_at' => $now->toDateTimeString(),
+                'updated_at' => $now->toDateTimeString(),
+            ],
+        ));
 
         $this->events->dispatch(new ScenarioMutated(
             userId: $user->id,

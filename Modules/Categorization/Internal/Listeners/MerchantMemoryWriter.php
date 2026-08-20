@@ -13,9 +13,6 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Import\Public\Pipeline\NormalizeStage;
 use Modules\Sync\Public\Events\EntityMutated;
 
-/**
- * @link ../../../../.docs/features/categorization/architecture.md
- */
 final class MerchantMemoryWriter
 {
     use CoercesScalars;
@@ -38,10 +35,9 @@ final class MerchantMemoryWriter
         $userId = $event->userId;
         $categoryId = $event->categoryId;
 
-        // Try-insert-then-update: the UNIQUE constraint on
-        // merchant_memories makes a naked INSERT race-safe. The first
-        // event for a new triple wins; subsequent events catch the
-        // violation and fall through to the atomic UPDATE below.
+        // Naked INSERT first: the UNIQUE constraint makes it race-safe, so
+        // competing events serialise at the DB rather than racing through the
+        // check-then-insert window a SELECT-first shape would open.
         try {
             $memoryId = $connection->table('merchant_memories')->insertGetId([
                 'user_id' => $userId,
@@ -101,10 +97,9 @@ final class MerchantMemoryWriter
             return;
         }
 
-        // The increment used to travel nowhere, so two devices agreed on which
-        // merchants they had seen and disagreed on how often — and the count is
-        // what breaks the tie when a merchant carries more than one remembered
-        // category. `1` is this device's delta, not the merged column.
+        // `1` is this device's delta, not the merged column — the peer applies
+        // it as an increment. The count is what breaks the tie when a merchant
+        // carries more than one remembered category.
         $this->events->dispatch(new EntityMutated(
             table: 'merchant_memories',
             pk: $memoryId,
@@ -118,10 +113,6 @@ final class MerchantMemoryWriter
         ));
     }
 
-    // The merchant this categorisation should remember against, or null when
-    // there is nothing to remember: the transaction is gone, carries no
-    // counterparty, or matches no merchant row. value() rather than first() so
-    // a missing row and a missing column are one answer.
     private function merchantIdFor(TransactionCategorized $event): ?int
     {
         $connection = $this->db->connection();
@@ -145,9 +136,6 @@ final class MerchantMemoryWriter
         return $merchantId === 0 ? null : $merchantId;
     }
 
-    // What this device learned about a merchant is the user's own
-    // categorising, so it travels. The merchant row itself is emitted with it
-    // because the memory's foreign key names it.
     private function captureMerchant(int $merchantId, int $userId): void
     {
         $merchant = $this->db->connection()

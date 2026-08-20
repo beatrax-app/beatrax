@@ -9,8 +9,6 @@ use Illuminate\Database\Eloquent\Model;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
 /**
- * @link ../../../.docs/features/migration/architecture.md
- *
  * @property int $id
  * @property int|null $user_id
  * @property string $source_product

@@ -6,7 +6,6 @@ namespace Modules\Core\Internal\Http\Livewire;
 
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
-use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Eloquent\Collection;
 use Livewire\Component;
 use Modules\Core\Models\SystemAlert;
@@ -16,10 +15,8 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\UpdateAlertKind;
 use Modules\Core\Public\Events\UpdateInstallRequested;
 use Modules\Core\Public\Services\SystemAlertQuery;
+use Modules\Core\Public\Services\UserPreferenceWriter;
 
-/**
- * @link ../../../../../.docs/features/core/architecture.md
- */
 final class SystemAlertsBanner extends Component
 {
     public function render(
@@ -66,7 +63,7 @@ final class SystemAlertsBanner extends Component
     // an already-present version does not duplicate the entry.
     public function skipVersion(
         int $alertId,
-        DatabaseManager $db,
+        UserPreferenceWriter $preferences,
         CurrentUser $currentUser,
         AcknowledgeSystemAlert $acknowledge,
     ): void {
@@ -84,16 +81,15 @@ final class SystemAlertsBanner extends Component
             return;
         }
 
-        $db->connection()->transaction(static function () use ($user, $latestVersion): void {
-            /** @var UserPreference $pref */
-            $pref = UserPreference::query()->firstOrCreate(['user_id' => $user->id]);
-            $current = $pref->skipped_update_versions ?? [];
-            if (! in_array($latestVersion, $current, true)) {
-                $current[] = $latestVersion;
-                $pref->skipped_update_versions = array_values($current);
-                $pref->save();
-            }
-        });
+        $current = $this->skippedVersionsFor($user->id);
+
+        // Only write when the version is genuinely new to the list: a repeat
+        // skip used to materialise a preference row for nothing, and now it
+        // would put a redundant op on the wire as well.
+        if (! in_array($latestVersion, $current, true)) {
+            $current[] = $latestVersion;
+            $preferences->write($user->id, ['skipped_update_versions' => $current]);
+        }
 
         $acknowledge($alertId, $user);
     }

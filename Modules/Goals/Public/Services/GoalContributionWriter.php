@@ -10,9 +10,6 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Public\Events\GoalContributionMutated;
 
-/**
- * @link ../../../../.docs/features/goals/architecture.md
- */
 final class GoalContributionWriter
 {
     public function __construct(

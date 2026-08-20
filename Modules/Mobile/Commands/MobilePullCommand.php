@@ -12,9 +12,6 @@ use Modules\Mobile\Internal\Sync\MobileSyncTriggerService;
 use Psr\Log\LoggerInterface;
 use stdClass;
 
-/**
- * @link ../../../.docs/features/mobile/architecture.md
- */
 final class MobilePullCommand extends Command
 {
     /** @var string */

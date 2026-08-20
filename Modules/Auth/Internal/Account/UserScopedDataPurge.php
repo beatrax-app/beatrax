@@ -17,9 +17,6 @@ use RuntimeException;
 // Ownership is the user_id column and nothing else. op_log_entries also carries
 // origin_user_id, which is provenance on ANOTHER account's replicated entry —
 // deleting by it would corrupt a household member's log.
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 final readonly class UserScopedDataPurge
 {
     private const OWNERSHIP_COLUMN = 'user_id';

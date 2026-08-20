@@ -8,9 +8,6 @@ namespace Modules\Ledger\Public\Enums;
 // modules persist on their own rows (anomaly_alerts, drift_alerts,
 // recurring_series) and derive from a transaction's type. Owning the
 // type<->direction mapping here keeps it from being re-derived per caller.
-/**
- * @link ../../../../.docs/features/ledger/architecture.md
- */
 enum Direction: string
 {
     case Expense = 'expense';

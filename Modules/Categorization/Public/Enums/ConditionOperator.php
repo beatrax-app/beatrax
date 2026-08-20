@@ -8,9 +8,6 @@ use Modules\Core\Public\Support\Lang;
 
 // The comparison a condition applies. Which operators are valid depends on
 // the condition's value type — see ConditionValueType::operators().
-/**
- * @link ../../../../.docs/features/categorization/architecture.md
- */
 enum ConditionOperator: string
 {
     case Contains = 'contains';

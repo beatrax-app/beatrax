@@ -10,10 +10,9 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Public\Enums\InboxScanStatus;
 
-// Top-nav "Inboxes" badge feed: sums discovered-sender candidates
-// awaiting review (matching DiscoveredSenderQuery's MIN_OCCURRENCES/
-// WITHIN_DAYS threshold, so the badge never surfaces a single-shot
-// sender absent from the panel) plus inboxes needing re-auth.
+// The candidate half reuses DiscoveredSenderQuery's MIN_OCCURRENCES /
+// WITHIN_DAYS threshold, so the badge can never count a sender the panel
+// itself will not show.
 final class InboxesBadgeCount
 {
     use CoercesScalars;
@@ -30,10 +29,9 @@ final class InboxesBadgeCount
             ->modify('-'.DiscoveredSenderQuery::WITHIN_DAYS.' days')
             ->toDateTimeString();
 
-        // One round-trip via subqueries summed in SQL rather than two
-        // COUNT queries summed in PHP. The view composer fires on
-        // every top-nav render (12 queries/min at the dashboard's 5s
-        // poll → 6 queries/min after this).
+        // Summed in SQL rather than as two COUNTs summed in PHP: the view
+        // composer fires on every top-nav render, so the dashboard's 5s poll
+        // costs 6 queries/min here instead of 12.
         $row = $this->db->connection()
             ->selectOne(
                 'SELECT

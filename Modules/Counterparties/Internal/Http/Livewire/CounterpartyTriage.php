@@ -15,9 +15,6 @@ use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Counterparties\Public\Queries\CounterpartyTriageQueue;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
-/**
- * @link ../../../../../.docs/features/counterparties/architecture.md
- */
 final class CounterpartyTriage extends Component
 {
     // Empirical estimate driving the "~{minutes} min remaining" copy on

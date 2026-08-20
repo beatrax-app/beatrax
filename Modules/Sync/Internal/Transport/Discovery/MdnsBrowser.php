@@ -8,9 +8,6 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 final class MdnsBrowser
 {
     use LocatesSystemBinary;

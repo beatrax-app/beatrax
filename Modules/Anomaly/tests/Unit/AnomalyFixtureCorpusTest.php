@@ -2,36 +2,13 @@
 
 declare(strict_types=1);
 
-/*
- * AnomalyFixtureCorpusTest — contract guard for the synthesised anomaly
- * fixture corpus.
- *
- * Each fixture under `Modules/Anomaly/tests/fixtures/anomaly-corpus/`
- * returns an associative array describing one detection scenario:
- *
- *   - `settings`     (per-user anomaly settings: sensitivity + min floor)
- *   - `history`      (list of prior transaction rows establishing the
- *                     per-counterparty / per-category baseline)
- *   - `transaction`  (the single charge under test)
- *   - `expected`     (associative array with at least a `reasons` list —
- *                     the detector reasons the charge is expected to trip)
- *
- * The corpus is the shared input for Plan 02's evaluator tests. If a
- * fixture violates the shape contract the downstream tests become noisy
- * and unreliable, so this guard fires first. The nine named cases are
- * enumerated explicitly so a missing or mis-named fixture is caught.
- */
-
 use function PHPUnit\Framework\assertArrayHasKey;
 use function PHPUnit\Framework\assertContains;
 use function PHPUnit\Framework\assertIsArray;
 use function PHPUnit\Framework\assertIsList;
 
 /**
- * Yields every fixture file under the anomaly-corpus directory as a Pest
- * dataset entry. Each entry is `[$name, $absolutePath]`.
- *
- * @return iterable<int, array{0: string, 1: string}>
+ * @return iterable<int, array{0: string, 1: string}> one `[$name, $absolutePath]` pair per corpus fixture
  */
 function anomalyCorpusFixtures(): iterable
 {

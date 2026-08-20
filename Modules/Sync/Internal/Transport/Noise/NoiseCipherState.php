@@ -9,9 +9,6 @@ use Modules\Sync\Internal\Exceptions\NoiseDecryptionFailedException;
 use Modules\Sync\Internal\Exceptions\NoiseNonceExhaustedException;
 use SodiumException;
 
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 final class NoiseCipherState
 {
     // CRITICAL: uses sodium_crypto_aead_chacha20poly1305_IETF (12-byte

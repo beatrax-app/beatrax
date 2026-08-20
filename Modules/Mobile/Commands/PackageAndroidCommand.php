@@ -12,9 +12,6 @@ use Modules\Mobile\Internal\Boot\NativeBuildPatches;
 use Modules\Mobile\Internal\Boot\PinnedAppId;
 use Symfony\Component\Process\Process;
 
-/**
- * @link ../../../.docs/features/mobile/architecture.md
- */
 final class PackageAndroidCommand extends Command
 {
     /** @var string */

@@ -13,15 +13,8 @@ use Modules\DriftAlerts\Internal\Http\Livewire\DriftPage;
 
 uses(RefreshDatabase::class);
 
-/*
- * /drift?type=anomaly — the anomaly section of the unified alerts home
- * (D-02). The page is owned by DriftAlerts but consumes the Anomaly
- * Public AnomalyAlertQuery + Public Actions. Covers: the type switch
- * default (drift), the anomaly Open/History/Dismissed tabs, reason chips,
- * and the four lifecycle actions (acknowledge / snooze / dismiss /
- * markExpected → suppression rule) each dispatching a toast.
- */
-
+// The page under test is owned by DriftAlerts; it consumes the Anomaly
+// Public query + actions.
 function aahUser(string $username): User
 {
     return User::query()->create([
@@ -116,8 +109,6 @@ it('renders seeded anomaly rows with reason chips on the Open tab under ?type=an
 it('defaults the type to drift so the plain /drift still renders drift rows', function (): void {
     aahAlert($this->user, 'open', 'spotify');
 
-    // No anomaly rows visible on the default drift view; the drift empty
-    // state shows instead (no anomaly seeding affects the drift stream).
     $this->actingAs($this->user)
         ->get('/drift')
         ->assertOk()

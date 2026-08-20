@@ -7,9 +7,6 @@ namespace Modules\Ingestion\Public\Services;
 use Modules\Ingestion\Public\Contracts\SourceAdapter;
 use Modules\Ingestion\Public\Exceptions\UnsupportedFormatException;
 
-/**
- * @link ../../../../.docs/features/ingestion/architecture.md
- */
 final class SourceAdapterRegistry
 {
     /** @param array<string, SourceAdapter> $byFormat */

@@ -10,9 +10,6 @@ use RuntimeException;
 // Serializer this service relies on for both normalize() and deserialize().
 // A dedicated type keeps this library-contract invariant separable from the
 // runtime ceremony failures it sits beside.
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 final class WebAuthnSerializerException extends RuntimeException
 {
     public static function unexpectedType(): self

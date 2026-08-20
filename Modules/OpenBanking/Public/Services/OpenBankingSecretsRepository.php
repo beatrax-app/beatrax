@@ -19,7 +19,7 @@ use Psr\Log\NullLogger;
 use Throwable;
 
 /**
- * @link ../../../../.docs/features/open-banking/architecture.md
+ * @link ../../../../.docs/features/open-banking/secrets-at-rest.md
  */
 class OpenBankingSecretsRepository
 {
@@ -34,13 +34,11 @@ class OpenBankingSecretsRepository
     public function __construct(
         private readonly Filesystem $files,
         private readonly SecretShield $shield,
-        // Second at-rest layer beyond the shield: the Laravel encrypter
-        // (APP_KEY) so the private key + session id stay ciphertext even
-        // where the bound shield is the identity PassthroughSecretShield.
+        // Second at-rest layer: keeps the file ciphertext on the targets where
+        // SecretShield binds to the identity PassthroughSecretShield.
         private readonly Encrypter $encrypter,
-        // Injected (not the Log facade — larastan strict rules forbid
-        // facades here) so the single-user guard can warn. Defaults to
-        // NullLogger so unit construction can omit it.
+        // Injected rather than the Log facade — larastan's strict rules forbid
+        // facades here.
         private readonly LoggerInterface $logger = new NullLogger,
     ) {}
 
@@ -66,10 +64,9 @@ class OpenBankingSecretsRepository
         ]);
     }
 
-    // Gated only on the private key being present, unlike hasApplication()
-    // which gates on both — the onboarding wizard writes the private key
-    // first and the application_id afterwards, and must be able to load()
-    // the just-generated private key to merge the pasted id into it.
+    // Gated on the private key alone, unlike hasApplication(): the wizard
+    // writes the key at step 1 and the application_id at step 3, and step 3
+    // has to load() the half-written file to merge the pasted id into it.
     public function load(): ?OpenBankingCredentials
     {
         $data = $this->readAll();
@@ -91,10 +88,8 @@ class OpenBankingSecretsRepository
         );
     }
 
-    // The non-null companion to load(), for call sites that cannot proceed
-    // without persisted credentials (the EB HTTP boundary signs every request
-    // with them). Fabricating the DTO only here keeps this repository the
-    // single credential source the arch guard checks for.
+    // Fabricating OpenBankingCredentials only here is what lets the arch guard
+    // assert a single credential source for the module.
     public function loadOrThrow(): OpenBankingCredentials
     {
         $credentials = $this->load();
@@ -105,8 +100,6 @@ class OpenBankingSecretsRepository
         return $credentials;
     }
 
-    // A missing file is treated as already-cleared, so this action is
-    // idempotent across repeated disconnect calls.
     public function clear(): void
     {
         $absolute = $this->absolutePath();
@@ -115,17 +108,13 @@ class OpenBankingSecretsRepository
         }
     }
 
-    // Extracted so tests can simulate a rename failure without touching the
-    // filesystem destructively; the caller treats it identically to a
-    // native rename() returning false.
+    // A seam, not an abstraction: tests force the rename-failure branch by
+    // overriding this rather than by breaking the real filesystem.
     protected function performRename(string $tmp, string $final): bool
     {
         return @rename($tmp, $final);
     }
 
-    /**
-     * @see performRename()
-     */
     protected function userCount(): ?int
     {
         try {
@@ -135,9 +124,6 @@ class OpenBankingSecretsRepository
         }
     }
 
-    /**
-     * @link ../../../../.docs/features/open-banking/architecture.md
-     */
     private function guardSingleUser(): void
     {
         $count = $this->userCount();
@@ -162,9 +148,7 @@ class OpenBankingSecretsRepository
             return [];
         }
 
-        // Undo the write layers outer-to-inner: reveal the shield (on the
-        // desktop bundle $raw is safeStorage ciphertext, not JSON), then
-        // decrypt the APP_KEY layer back to the JSON bytes.
+        // Undo the write layers outer-to-inner: shield, then APP_KEY.
         $revealed = $this->shield->reveal($raw);
         $json = $this->decryptAtRest($revealed);
 
@@ -177,9 +161,8 @@ class OpenBankingSecretsRepository
             return [];
         }
 
-        // Narrow array<mixed, mixed> -> array<string, mixed>: the
-        // top-level shape is a JSON object so every key is a string,
-        // but PHPStan's strict mode can't infer that from json_decode.
+        // Narrows array<mixed, mixed> to array<string, mixed>; PHPStan cannot
+        // infer that a decoded JSON object only has string keys.
         $out = [];
         foreach ($decoded as $key => $value) {
             $out[(string) $key] = $value;
@@ -188,10 +171,9 @@ class OpenBankingSecretsRepository
         return $out;
     }
 
-    // Legacy fallback: a file written before the APP_KEY layer existed
-    // holds shielded-but-unencrypted JSON, for which decrypt() raises
-    // DecryptException — treat those revealed bytes as plaintext so the
-    // connection survives, and the next save() re-persists them encrypted.
+    // A file written before the APP_KEY layer existed holds unencrypted JSON,
+    // which raises DecryptException; read it as plaintext so the connection
+    // survives the upgrade and the next save() re-persists it encrypted.
     private function decryptAtRest(string $revealed): string
     {
         try {
@@ -211,10 +193,7 @@ class OpenBankingSecretsRepository
         $absolute = $this->absolutePath();
         $this->ensureSecretsDirectory(dirname($absolute));
 
-        // Two at-rest layers applied inner-to-outer before the bytes touch
-        // disk: the APP_KEY encrypter first (ciphertext even where the shield
-        // is identity), then the shield — safeStorage ciphertext on the
-        // desktop bundle, identity on web/mobile/docker.
+        // Inner-to-outer: APP_KEY encrypter, then the shield.
         $ciphertext = $this->encrypter->encrypt($this->encodePayload($data, $absolute), false);
         $bytes = $this->shield->protect($ciphertext);
 
@@ -231,10 +210,9 @@ class OpenBankingSecretsRepository
 
     private function ensureSecretsDirectory(string $dir): void
     {
-        // chmod 0700 is applied ONLY on first create. Subsequent writes do
-        // NOT re-chmod the directory because that would silently narrow back
-        // any permissions an admin widened on purpose (e.g. for a backup tool
-        // that needs read access).
+        // 0700 is applied only on create: re-chmodding on every write would
+        // silently undo a widening an operator applied on purpose, e.g. for a
+        // backup agent that needs read access.
         if (is_dir($dir)) {
             return;
         }
@@ -269,9 +247,8 @@ class OpenBankingSecretsRepository
 
     private function writeTempFile(string $tmp, string $bytes): void
     {
-        // Narrow umask before opening the temp file so it is born 0600 —
-        // otherwise fopen's default mode leaves it world-readable for the
-        // brief window before the explicit chmod below runs.
+        // Narrowed before fopen so the file is born 0600; otherwise it is
+        // world-readable for the window before the explicit chmod below.
         $prevUmask = umask(0077);
 
         $fp = @fopen($tmp, 'wb');
@@ -316,8 +293,6 @@ class OpenBankingSecretsRepository
                 "OpenBankingSecretsRepository: unexpected failure writing {$tmp}."
             );
         } finally {
-            // Always restore the prior umask so the narrowed value does not
-            // leak into subsequent writes elsewhere in the request lifecycle.
             umask($prevUmask);
         }
     }

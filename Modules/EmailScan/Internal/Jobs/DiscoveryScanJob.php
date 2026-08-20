@@ -28,9 +28,6 @@ use Modules\EmailScan\Public\Services\KnownSenderQuery;
 use stdClass;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
 {
     use CoercesScalars;

@@ -10,7 +10,4 @@ use RuntimeException;
 // tax_deduction_categories row cannot be read back for its id. It extends
 // RuntimeException so the existing UI-layer catches (TaxSettingsSection,
 // HandlesTaxTagging) still degrade gracefully rather than 500.
-/**
- * @link ../../../../.docs/features/tax/architecture.md
- */
 final class CategoryPersistenceException extends RuntimeException {}

@@ -336,7 +336,7 @@ it('preserves the minus sign when the lowest projected balance is negative (over
     $response->assertOk();
     $body = $response->getContent();
     expect($body)->not->toBeFalse();
-    // Money::ofMinor(-12345)->format('nl_NL') yields "€ -123,45"
+    // Money::ofMinor(-12345, 'EUR')->format() yields "€ -123,45"
     // (currency-symbol-then-minus-then-figure under PHP intl rules).
     expect($body)->toContain('-123,45');
 });

@@ -17,9 +17,6 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
 use Modules\Counterparties\Public\Queries\CounterpartyTriageQueue;
 
-/**
- * @link ../../../../../.docs/features/core/architecture.md
- */
 final class AppSidebar extends Component
 {
     private const HEARTBEAT_CACHE_KEY = 'dev_mode.queue_worker_heartbeat';

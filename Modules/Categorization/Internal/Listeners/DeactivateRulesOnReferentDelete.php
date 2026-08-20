@@ -9,9 +9,6 @@ use Illuminate\Database\Eloquent\Model;
 use Modules\Categorization\Public\Enums\ActionType;
 use Modules\Core\Public\Concerns\CoercesScalars;
 
-/**
- * @link ../../../../.docs/features/categorization/architecture.md
- */
 final class DeactivateRulesOnReferentDelete
 {
     use CoercesScalars;

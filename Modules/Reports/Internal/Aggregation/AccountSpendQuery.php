@@ -13,9 +13,6 @@ use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Public\Dto\ReportResultRow;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final class AccountSpendQuery
 {
     use CoercesScalars;

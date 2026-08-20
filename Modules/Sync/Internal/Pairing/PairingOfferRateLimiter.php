@@ -10,9 +10,6 @@ use Modules\Core\Public\Contracts\Clock;
 // bits, so guessing one is already infeasible; this bounds the guessing
 // anyway, and stops the endpoint being usable as a cheap probe for whether a
 // pairing is currently in flight. In-process — the daemon is long-lived.
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class PairingOfferRateLimiter
 {
     // A human types one code, gets it wrong once or twice, and is done.

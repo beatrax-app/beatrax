@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Recurring\Internal\Support;
 
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
 final class SeriesIds
 {
     // Ids arrive from request payloads and other modules as whatever the

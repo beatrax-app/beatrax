@@ -28,9 +28,6 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Import\Public\Events\TransactionImported;
 
-/**
- * @link ../../../.docs/features/anomaly/architecture.md
- */
 final class AnomalyServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
@@ -39,9 +36,6 @@ final class AnomalyServiceProvider extends ServiceProvider
     {
         $this->app->singleton(AnomalyAlertStateMachine::class);
 
-        // Every binding below is a singleton: each collaborator is
-        // stateless and depends only on other singleton bindings
-        // (DatabaseManager / Clock / the Public query services).
         $this->app->singleton(LargeVsTypicalDetector::class);
         $this->app->singleton(FirstTimeMerchantDetector::class);
         $this->app->singleton(DuplicateChargeDetector::class);
@@ -67,27 +61,18 @@ final class AnomalyServiceProvider extends ServiceProvider
 
         $this->registerNavBadgeComposer();
 
-        // The listener stays synchronous but only DISPATCHES the job — the
-        // baseline math runs on the queue, never in the import transaction.
         // class_exists-guarded so a partially-booted module never wires
-        // detection before the evaluator + job exist.
+        // detection before the evaluator and job exist.
         if (class_exists(EvaluateAnomaliesOnTransactionImport::class)) {
             $events->listen(
                 TransactionImported::class,
                 [EvaluateAnomaliesOnTransactionImport::class, 'handle'],
             );
         }
-
-        // The scheduled safety-net sweep + snooze-revival sweep are
-        // registered in routes/console.php (anomaly.safety-net-sweep,
-        // anomaly.revive-snoozes); the full-history backfill is dispatched
-        // on first activation (Plan 05 settings toggle).
     }
 
-    // Injects the anomaly open-alert count into the sidebar's existing
-    // `navCounts` map via the View Factory contract (the global `view()`
-    // helper is forbidden in module code). A boot-scoped memo collapses
-    // repeated renders within a single boot cycle to a single COUNT query.
+    // The per-boot `$cache` collapses repeated sidebar renders in one boot
+    // cycle down to a single COUNT query.
     private function registerNavBadgeComposer(): void
     {
         $app = $this->app;

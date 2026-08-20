@@ -18,9 +18,6 @@ use Modules\Core\Public\Support\LockStore;
 use Modules\FX\Internal\RateProviderRegistry;
 use Psr\Log\LoggerInterface;
 
-/**
- * @link ../../../../.docs/features/fx/architecture.md
- */
 final class FetchFxRatesJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Dispatchable;

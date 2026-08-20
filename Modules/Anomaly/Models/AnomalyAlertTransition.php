@@ -12,9 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Anomaly\Database\Factories\AnomalyAlertTransitionFactory;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
-// Append-only audit trail produced by AnomalyAlertStateMachine, one row
-// per transition. `actor` is `user` (alerts-page affordance) or
-// `detector` (snooze-expiry revival flip back to `open`).
+// `actor` is `user` (alerts-page affordance) or `detector` (snooze-expiry revival).
 /**
  * @property int $id
  * @property int|null $user_id

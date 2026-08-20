@@ -4,13 +4,6 @@ declare(strict_types=1);
 
 use Modules\Core\Public\Enums\Theme;
 
-/*
- * Unit tests for the appearance-preference SSoT: coercion of a stored or
- * guest value, the server-side dark resolution given an OS signal, when the
- * pre-paint prefers-color-scheme script must run, and the validation
- * allow-list.
- */
-
 it('coerces null and unrecognised values onto the system default', function (): void {
     expect(Theme::coerce(null))->toBe(Theme::System);
     expect(Theme::coerce('purple'))->toBe(Theme::System);

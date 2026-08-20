@@ -12,9 +12,6 @@ use Throwable;
 // and an <a download> is dropped silently by the Android webview — no file, no
 // error, no console entry — while the screen claimed it had saved codes that
 // are never shown again. The share sheet is the route a phone actually has.
-/**
- * @link ../../../../.docs/features/mobile/architecture.md
- */
 class RecoveryCodesExportBridge
 {
     private const string EXPORT_SUB = 'exports';

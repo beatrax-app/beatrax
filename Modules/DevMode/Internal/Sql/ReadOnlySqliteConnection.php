@@ -7,9 +7,6 @@ namespace Modules\DevMode\Internal\Sql;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 
-/**
- * @link ../../../../.docs/features/dev-mode/architecture.md
- */
 final readonly class ReadOnlySqliteConnection
 {
     public const int TIMEOUT_SECONDS = 5;

@@ -7,9 +7,6 @@ namespace Modules\Ledger\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use JsonException;
 
-/**
- * @link ../../../../.docs/features/ledger/architecture.md
- */
 final class FieldProvenanceWriter
 {
     public function __construct(

@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\OpLog;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 enum OpType: string
 {
     // Set: a field-level write. DeleteTombstone: a logical delete — the

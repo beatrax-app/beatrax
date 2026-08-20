@@ -14,9 +14,6 @@ use Modules\Notifications\Internal\Support\NotificationWriter;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final class PersistDriftAlert
 {
     public function __construct(

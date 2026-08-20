@@ -19,9 +19,6 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\LockStore;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/anomaly/architecture.md
- */
 final class BackfillAnomaliesJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Dispatchable;
@@ -59,8 +56,6 @@ final class BackfillAnomaliesJob implements ShouldBeUniqueUntilProcessing, Shoul
             return;
         }
 
-        // First-activation guard: a non-null timestamp means the full
-        // history was already walked — the whole job no-ops.
         if ($user->anomaly_backfilled_at !== null) {
             return;
         }

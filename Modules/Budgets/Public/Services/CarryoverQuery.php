@@ -20,9 +20,6 @@ use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Psr\Log\LoggerInterface;
 
-/**
- * @link ../../../../.docs/features/budgets/architecture.md
- */
 final class CarryoverQuery
 {
     use CoercesScalars;

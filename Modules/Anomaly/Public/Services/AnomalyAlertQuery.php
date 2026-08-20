@@ -16,9 +16,6 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/anomaly/architecture.md
- */
 final readonly class AnomalyAlertQuery
 {
     use CoercesScalars;
@@ -40,17 +37,20 @@ final readonly class AnomalyAlertQuery
     /**
      * @return list<AnomalyAlertDto>
      */
-    public function openForUser(User $user, ?int $cursorId = null, int $limit = self::PAGE_SIZE_WITH_LOOKAHEAD): array
-    {
+    public function openForUser(
+        User $user,
+        ?string $cursorDetectedAt = null,
+        ?int $cursorId = null,
+        int $limit = self::PAGE_SIZE_WITH_LOOKAHEAD,
+    ): array {
         $query = $this->db->connection()->table('anomaly_alerts')
             ->where('user_id', $user->id)
             ->where(fn (Builder $q) => $this->applyOpenStateFilter($q))
+            ->orderByDesc('detected_at')
             ->orderByDesc('id')
             ->limit($limit);
 
-        if ($cursorId !== null) {
-            $query->where('id', '<', $cursorId);
-        }
+        $this->applyCursor($query, $cursorDetectedAt, $cursorId);
 
         return $this->materialise($user, $query->get());
     }
@@ -58,17 +58,25 @@ final readonly class AnomalyAlertQuery
     /**
      * @return list<AnomalyAlertDto>
      */
-    public function historyForUser(User $user, ?int $cursorId = null, int $limit = self::PAGE_SIZE_WITH_LOOKAHEAD): array
-    {
-        return $this->scoped($user, [AnomalyAlertState::Acknowledged->value], $cursorId, $limit);
+    public function historyForUser(
+        User $user,
+        ?string $cursorDetectedAt = null,
+        ?int $cursorId = null,
+        int $limit = self::PAGE_SIZE_WITH_LOOKAHEAD,
+    ): array {
+        return $this->scoped($user, [AnomalyAlertState::Acknowledged->value], $cursorDetectedAt, $cursorId, $limit);
     }
 
     /**
      * @return list<AnomalyAlertDto>
      */
-    public function dismissedForUser(User $user, ?int $cursorId = null, int $limit = self::PAGE_SIZE_WITH_LOOKAHEAD): array
-    {
-        return $this->scoped($user, [AnomalyAlertState::Dismissed->value], $cursorId, $limit);
+    public function dismissedForUser(
+        User $user,
+        ?string $cursorDetectedAt = null,
+        ?int $cursorId = null,
+        int $limit = self::PAGE_SIZE_WITH_LOOKAHEAD,
+    ): array {
+        return $this->scoped($user, [AnomalyAlertState::Dismissed->value], $cursorDetectedAt, $cursorId, $limit);
     }
 
     public function openCountForUser(User $user): int
@@ -109,19 +117,36 @@ final readonly class AnomalyAlertQuery
      * @param  list<string>  $states
      * @return list<AnomalyAlertDto>
      */
-    private function scoped(User $user, array $states, ?int $cursorId, int $limit): array
+    private function scoped(User $user, array $states, ?string $cursorDetectedAt, ?int $cursorId, int $limit): array
     {
         $query = $this->db->connection()->table('anomaly_alerts')
             ->where('user_id', $user->id)
             ->whereIn('state', $states)
+            ->orderByDesc('detected_at')
             ->orderByDesc('id')
             ->limit($limit);
 
-        if ($cursorId !== null) {
-            $query->where('id', '<', $cursorId);
-        }
+        $this->applyCursor($query, $cursorDetectedAt, $cursorId);
 
         return $this->materialise($user, $query->get());
+    }
+
+    // The id is derived from the alert's own columns, so it sorts in hash
+    // order, not insertion order — `id < cursor` would skip and repeat rows at
+    // random. `detected_at` is what this list has always claimed to be ordered
+    // by, and the id below it only breaks ties within one timestamp.
+    private function applyCursor(Builder $query, ?string $cursorDetectedAt, ?int $cursorId): void
+    {
+        if ($cursorDetectedAt === null || $cursorId === null) {
+            return;
+        }
+
+        $query->where(function (Builder $page) use ($cursorDetectedAt, $cursorId): void {
+            $page->where('detected_at', '<', $cursorDetectedAt)
+                ->orWhere(function (Builder $tie) use ($cursorDetectedAt, $cursorId): void {
+                    $tie->where('detected_at', $cursorDetectedAt)->where('id', '<', $cursorId);
+                });
+        });
     }
 
     /**

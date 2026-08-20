@@ -11,9 +11,6 @@ use Illuminate\Database\Query\Builder;
 // entries that arrived from another device, so "which rows may this touch" is
 // the question standing between a merge and a cross-user write — it lives in
 // one place because the answer must never differ between call sites.
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class RowOwnership
 {
     // Covered tables that carry no user_id of their own; each reaches its

@@ -10,9 +10,6 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 
-/**
- * @link ../../../../../.docs/features/community/architecture.md
- */
 final class HelpOthersTriageButton extends Component
 {
     public string $raw = '';

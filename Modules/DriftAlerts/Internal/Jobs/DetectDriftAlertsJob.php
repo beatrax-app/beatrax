@@ -16,9 +16,6 @@ use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Support\LockStore;
 use Modules\DriftAlerts\Internal\DriftEvaluator;
 
-/**
- * @link ../../../../.docs/features/drift-alerts/architecture.md
- */
 final class DetectDriftAlertsJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Dispatchable;

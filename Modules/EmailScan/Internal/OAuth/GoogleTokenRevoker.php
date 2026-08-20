@@ -8,9 +8,6 @@ use Illuminate\Http\Client\Factory as HttpClient;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final class GoogleTokenRevoker
 {
     private const REVOKE_URL = 'https://oauth2.googleapis.com/revoke';

@@ -11,9 +11,6 @@ use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final readonly class RangeProjector
 {
     // A series only escalates to the empirical percentile tier once its

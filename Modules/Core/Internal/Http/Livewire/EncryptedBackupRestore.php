@@ -14,9 +14,6 @@ use Modules\Core\Public\Services\RestoreEncryptedBackup;
 use Modules\Core\Public\Support\Lang;
 use RuntimeException;
 
-/**
- * @link ../../../../../.docs/features/core/architecture.md
- */
 final class EncryptedBackupRestore extends Component
 {
     use WithFileUploads;

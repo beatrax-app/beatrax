@@ -8,9 +8,6 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Internal\Exceptions\RelayConfigWriteException;
 use Modules\Sync\Internal\Exceptions\SecretFileException;
 
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 final class RelayConfig
 {
     private const CONFIG_SUB = 'sync/relay.json';

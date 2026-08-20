@@ -11,16 +11,9 @@ use Modules\Sync\Public\Services\PairingGateway;
 
 uses(RefreshDatabase::class);
 
-/**
- * The read-side of PairingGateway, driven against a real database.
- *
- * Its collaborators are all final, so the decision points cannot be reached
- * with doubles — these go through the container with the real services, which
- * is also the only way the user scoping gets exercised for what it is: a
- * pairing token is the thing that admits a new device to someone's account,
- * so a lookup that ignored user_id would let one account's poll observe
- * another's pairing.
- */
+// PairingGateway's collaborators are all final, so its decision points cannot
+// be reached with doubles: these run through the container against a real
+// database, which is also the only way the user scoping gets exercised.
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'wessel',
@@ -80,13 +73,9 @@ it('refuses a word code that is not decodable rather than throwing at the caller
     'plausible but invalid' => ['zzzz-zzzz-zzzz-zzzz'],
 ]);
 
-/*
- * inFlightFor() had no coverage at all, and shipped a SELECT for a
- * `safety_number_words` column that pairing_tokens has never had — that one
- * lives on device_registry. Every load of the pairing screen with a live
- * ceremony 500'd, which on the phone read as the wizard losing its place, the
- * back button landing on the wrong step, and nothing ever syncing.
- */
+// inFlightFor() selected a `safety_number_words` column that pairing_tokens
+// has never had — that one lives on device_registry — so every load of the
+// pairing screen with a live ceremony 500'd, and the wizard lost its place.
 it('resumes a live ceremony without reaching for a column that does not exist', function (): void {
     $id = pairingToken($this->user->id, 'awaiting_confirm');
 

@@ -14,22 +14,6 @@ use Modules\Migration\Tests\Support\MigrationFixturePaths;
 
 uses(RefreshDatabase::class);
 
-/*
- * RED Wave 0 stub (13.5-02 Task 3) pinning the end-to-end parse -> stage ->
- * confirm contract through the REAL public writers (Req 2/3/4/5/6/7/9).
- * `StartMigrationRun`/`ConfirmMigration` do not exist until Plans 05/06 —
- * every test below is EXPECTED to fail now (missing-class error).
- *
- * `StartMigrationRun::__invoke(User $user, string $sourceProduct, string
- * $extractedPath, string $originalFilename): MigrationRun` parses +
- * populates staging, returning the created run (status 'parsed').
- * `ConfirmMigration::__invoke(int $migrationRunId, User $user): void`
- * promotes staging to the real domain tables via the existing public
- * writers (EnvelopeWriter, RecordTransactions, SaveTransactionSplit,
- * ResolvesCounterparties, PairsTransferLegs, GoalWriter) and flips the run
- * to 'confirmed'.
- */
-
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'migration-confirm-fixture-user',
@@ -93,10 +77,9 @@ it('MigrationConfirm: envelope_assignments exact-to-cent per (category, month), 
         ->where('period_start', '2026-01-01')
         ->value('assigned_minor');
 
-    // Fixture's Budget.csv v1: Jan Groceries 200.00, Jan Household 100.00 —
-    // asserted against the STORED row only, never the source's own
-    // "Category Balance" carried-forward figure (which is explicitly NOT
-    // imported per Req 3's acceptance criterion).
+    // Budget.csv v1 has Jan Groceries 200.00 / Household 100.00. Asserted
+    // against the stored row, never the source's carried-forward "Category
+    // Balance", which is deliberately not imported.
     expect((int) $janGroceries)->toBe(20000);
     expect((int) $janHousehold)->toBe(10000);
 });
@@ -104,9 +87,8 @@ it('MigrationConfirm: envelope_assignments exact-to-cent per (category, month), 
 it('MigrationConfirm: split parent + N legs sum to parent, cleared mapping preserved — Req 4', function (): void {
     confirmYnab4V1($this->user);
 
-    // The Supermarket split (20.00 Groceries + 10.00 Household = 30.00) —
-    // located via its counterparty (Supermarket collapses to one
-    // counterparty per Req 6) and its distinctive settled amount.
+    // The Supermarket split: 20.00 Groceries + 10.00 Household = 30.00, found
+    // by its distinctive settled amount.
     $parent = $this->db->connection()->table('transactions')
         ->where('user_id', $this->user->id)
         ->where('settled_amount_minor', -3000)
@@ -181,9 +163,8 @@ it('MigrationConfirm: non-base currency stamped in source currency, no fx rate w
 
     expect($usdTransaction)->not->toBeNull();
     expect($usdTransaction->settled_currency)->toBe('USD');
-    // No FX conversion happens at import time — the migration preserves the
-    // budget-file currency verbatim; Beatrax's own FX engine (v1.3 Phase 1)
-    // handles reporting-currency roll-up separately.
+    // Import preserves the budget-file currency verbatim; reporting-currency
+    // roll-up is the FX engine's job, not the migration's.
     expect($usdTransaction->fx_rate_used)->toBeNull();
 
     @unlink($zipPath);
@@ -201,8 +182,6 @@ it('MigrationConfirm: a re-run yields identical row counts across every promoted
         'accounts' => $this->db->connection()->table('accounts')->where('user_id', $this->user->id)->count(),
     ];
 
-    // Re-run the identical parse -> stage -> confirm pipeline against the
-    // SAME source file.
     $secondRun = app(StartMigrationRun::class)->__invoke(
         $this->user,
         'ynab4',
@@ -231,12 +210,10 @@ it('CR-02: two genuinely distinct same-day same-amount same-account transactions
         'Beatrax Test Budget.zip',
     );
 
-    // Clone the fixture's "Employer" salary row (2000.00 inflow, 01/16/2026,
-    // Checking) into a second, genuinely distinct staged transaction: same
-    // account/date/amount/currency/payee — the exact shape that used to
-    // collide on FingerprintComposer's date-only dedup tuple (CR-02), since
-    // none of the three migration parsers ever carry a transaction
-    // time-of-day.
+    // Clone the fixture's "Employer" salary row into a second, genuinely
+    // distinct staged transaction: same account/date/amount/currency/payee is
+    // the shape that used to collide on FingerprintComposer's date-only dedup
+    // tuple, since no migration parser carries a transaction time-of-day.
     $employerRow = $this->db->connection()->table('migration_staging_transactions')
         ->where('migration_run_id', $run->id)
         ->where('payee_source_external_id', 'Employer')
@@ -254,17 +231,13 @@ it('CR-02: two genuinely distinct same-day same-amount same-account transactions
         ->where('counterparty_name', 'Employer')
         ->get();
 
-    // BOTH survive as two separate transaction rows — neither is silently
-    // dropped as a fingerprint duplicate of the other.
     expect($employerTransactions)->toHaveCount(2);
 
     $bookedAts = $employerTransactions->pluck('booked_at')->map(fn (mixed $v): string => (string) $v)->unique();
     expect($bookedAts)->toHaveCount(2);
 
-    // No genuine collision was silently absorbed — the fingerprint-miss
-    // "extra" unmapped-item path (the CR-02 defense-in-depth surfacing) must
-    // NOT have fired for this pair, because both rows now get distinct
-    // fingerprints via the bookedAt fix.
+    // The fingerprint-miss "extra" surfacing must not have fired either: the
+    // bookedAt fix gives both rows distinct fingerprints.
     $collisionItems = $this->db->connection()->table('migration_staging_unmapped_items')
         ->where('migration_run_id', $run->id)
         ->where('item_type', 'extra')

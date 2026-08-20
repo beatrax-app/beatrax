@@ -29,9 +29,6 @@ use Psr\Log\LoggerInterface;
 // Dispatched daily from routes/console.php's recurring.detect scheduler
 // entry, and on demand from the /recurring re-detect button.
 
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
 final class DetectRecurringSeriesJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Dispatchable;

@@ -5,19 +5,9 @@ declare(strict_types=1);
 use Illuminate\Translation\MessageSelector;
 use Modules\Core\Public\Enums\Locale;
 
-/*
- * Translation parity across every shipped locale (G7).
- *
- * Every module lang file ships in all supported locales with the identical
- * set of (possibly nested) key paths, so a new en key cannot merge without
- * its translations and a removed key cannot leave a stale entry behind. The
- * check compares key paths, not values — a key whose translation is
- * intentionally identical to English (a proper noun, a symbol) still
- * satisfies parity.
- *
- * Placeholders are checked too: a dropped :count or %s renders the token
- * literally to the reader, which is a defect the key-path check cannot see.
- */
+// Parity is on key paths, not values: a translation intentionally identical to
+// English (a proper noun, a symbol) still passes. Placeholders are checked too —
+// a dropped :count or %s renders the token literally to the reader.
 
 /**
  * @param  array<array-key, mixed>  $translations
@@ -94,11 +84,9 @@ function translationParityPlaceholders(string $line, ?string $gluedToken): array
 }
 
 // A numeral glued to a currency sign is an amount, not a count: the "€0" in
-// "Balance dips below €0 on :count days" is the threshold being crossed, and
-// it reads €0 whether the sentence selects one day or five. Amounts are cut
-// before the literal-numeral scan below so the check keeps its aim on a
-// numeral standing in for :count — "1 payment of €5 due" still reports its
-// leading "1".
+// "Balance dips below €0 on :count days" reads €0 whether one day or five. Cut
+// amounts before the numeral scan so it keeps its aim on a numeral standing in
+// for :count — "1 payment of €5 due" still reports its leading "1".
 function translationParityWithoutAmounts(string $segment): string
 {
     return (string) preg_replace(
@@ -215,10 +203,9 @@ it('carries every en placeholder into every supported locale', function (): void
                 $expected = translationParityPlaceholders($line, $glued);
                 $actual = translationParityPlaceholders($translatedStrings[$path], $glued);
 
-                // Containment, not equality. Dropping an en token is the bug —
-                // it renders the literal ":count" to the reader. An extra token
-                // cannot be interpolated, because en defines which keys the
-                // caller passes, and some languages punctuate with a colon:
+                // Containment, not equality. Dropping an en token renders the
+                // literal ":count" to the reader; an extra token cannot be
+                // interpolated, and some languages punctuate with a colon —
                 // Finnish writes "HTTP:tä" and "10 Mt:n".
                 $dropped = array_values(array_diff($expected, $actual));
                 if ($dropped !== []) {

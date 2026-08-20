@@ -7,9 +7,8 @@ namespace Modules\Import\Public\Dto;
 use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Data;
 
-// Cross-module read shape for one merchant_aliases row. `mergedFrom` is
-// a list of {id, pattern, friendly_name, merged_at} triples preserved
-// on the survivor after a bulk-merge action; null on non-merged rows.
+// `mergedFrom` preserves provenance on the survivor of a bulk merge; it is
+// null on a row that was never merged.
 final class MerchantAliasDto extends Data
 {
     /**

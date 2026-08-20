@@ -13,15 +13,6 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
-/*
- * EncryptionMigrationNoteBackfillTest — D-08 (14.1-03-PLAN.md Task 1): the
- * enable-time migration sweep (EncryptionMigrationService::migrate()) now
- * also covers PRE-EXISTING plaintext tax_transaction_tags.note /
- * transaction_splits.note rows — history written before the 14.1-02
- * write-side encrypt hooks landed. Idempotent: re-running never
- * double-encrypts (AEAD-verify guard via alreadyEncryptedProjectionValue()).
- */
-
 beforeEach(function (): void {
     $this->user = User::query()->create([
         'username' => 'note-backfill-user',
@@ -78,9 +69,8 @@ it('encrypts pre-existing plaintext tax_transaction_tags.note and transaction_sp
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
 
-    // Simulate rows written BEFORE the 14.1-02 write-side encrypt hooks
-    // landed — plain raw inserts, mirroring what an older app version
-    // would have left on disk.
+    // Raw inserts, bypassing the write-side encrypt hooks: this is the history an
+    // older app version left on disk before those hooks existed.
     $db->connection()->table('tax_transaction_tags')->insert([
         'user_id' => $this->user->id,
         'transaction_id' => $this->transaction->id,
@@ -123,12 +113,9 @@ it('encrypts pre-existing plaintext tax_transaction_tags.note and transaction_sp
     expect($codec->decryptValue('transaction_splits', 'note', $splitRow->note, $this->user->id, $session)['value'])
         ->toBe('pre-existing split note');
 
-    // Idempotency: re-running migrate() again must never double-encrypt —
-    // the stored ciphertext stays byte-for-byte stable and still decrypts
-    // to the original plaintext (migrate() itself is a no-op once
-    // current_epoch is set, and the AEAD-verify guard in
-    // alreadyEncryptedProjectionValue() protects any future resumed pass
-    // that reaches the sweep again).
+    // Re-running must not double-encrypt: migrate() is a no-op once current_epoch
+    // is set, and the AEAD-verify guard covers any future resumed pass that does
+    // reach the sweep a second time.
     $tagCiphertextBefore = $tagRow->note;
     $splitCiphertextBefore = $splitRow->note;
 

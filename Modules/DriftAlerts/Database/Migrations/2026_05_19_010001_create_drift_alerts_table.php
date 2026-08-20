@@ -5,40 +5,10 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Creates the drift_alerts table — one row per detected drift event for
- * a single approved / cadence-changed recurring series.
- *
- * Money columns follow the project-wide BIGINT signed minor-units
- * convention. `delta_minor` and `annualized_impact_minor` are signed
- * (an expense drift downward is a negative delta on a negative
- * baseline, so the sign reads as a real cash-flow direction). Currency
- * is captured per-alert because the source series may bill in a
- * non-EUR currency (Google Play in USD, ICS cross-currency
- * settlements).
- *
- * The `state` column is an enum-shaped string enforced via a BEFORE
- * INSERT / BEFORE UPDATE trigger pair targeting the `state` column
- * specifically. The single legal mutator is
- * `Modules\DriftAlerts\Internal\StateMachines\DriftAlertStateMachine`;
- * a BoundaryArchTest invariant blocks any other write path. Allowed
- * states: open / acknowledged / snoozed / dismissed_cancelled.
- *
- * The UNIQUE constraint on `(recurring_series_id, latest_occurrence_id)`
- * is the detector's idempotency seam — re-running the evaluator for
- * the same (series, occurrence) pair cannot insert a duplicate alert.
- *
- * Three read indexes support the projection layer's hot paths:
- *   - `(user_id, state)` — top-nav open-count badge query.
- *   - `(user_id, state, detected_at)` — drift page list ordered by
- *     detected_at DESC.
- *   - `(user_id, recurring_series_id, state)` — grouped-by-series
- *     drill-in query.
- *
- * `threshold_percent_used` + `threshold_source` capture the effective
- * threshold at the moment the alert was opened, so subsequent changes
- * to the per-series override or per-user default never rewrite history.
- */
+// UNIQUE(recurring_series_id, latest_occurrence_id) is the detector's idempotency
+// seam: re-evaluating the same occurrence cannot open a second alert.
+// threshold_percent_used/threshold_source snapshot the effective threshold at
+// detection, so a later override change never rewrites an existing alert.
 return new class extends ModuleMigration
 {
     public function up(): void
@@ -70,6 +40,8 @@ return new class extends ModuleMigration
             $table->index(['user_id', 'recurring_series_id', 'state']);
         });
 
+        // Enforced in SQL as well as in DriftAlertStateMachine: an out-of-band
+        // write would otherwise reach a state the projections cannot read.
         $connection = $this->db()->connection($this->getConnection());
         $allowedStates = "'open','acknowledged','snoozed','dismissed_cancelled'";
 

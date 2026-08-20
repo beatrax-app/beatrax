@@ -8,8 +8,6 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * @link ../../../.docs/features/community/architecture.md
- *
  * @property int $id
  * @property int|null $user_id
  * @property string $pattern

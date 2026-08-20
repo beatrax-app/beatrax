@@ -7,21 +7,8 @@ use Illuminate\Routing\Router;
 
 uses()->group('Phase14');
 
-/*
- * SC3 — proves the dev-mode gate on the Horizon dashboard is genuinely
- * effective. App\Providers\HorizonServiceProvider extends the package's
- * route-registering Laravel\Horizon\HorizonServiceProvider and early-exits
- * boot() when config('app.dev_mode') is not exactly true, so a shipped
- * build (dev mode off) registers zero /horizon routes.
- *
- * The assertions inspect the live route collection rather than a Redis
- * connection, so the suite runs without a Redis daemon.
- */
-
-/**
- * Counts routes whose URI or name contains `horizon`, after re-running the
- * provider's boot() against a freshly-set dev-mode config value.
- */
+// Inspects the live route collection rather than opening a Redis connection,
+// so the gate can be proven without a Redis daemon.
 function horizonRouteCount(): int
 {
     /** @var Router $router */

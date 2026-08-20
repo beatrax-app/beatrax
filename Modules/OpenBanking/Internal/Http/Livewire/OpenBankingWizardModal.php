@@ -15,9 +15,6 @@ use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 use Modules\OpenBanking\Public\Services\SecretsWriteFailed;
 
-/**
- * @link ../../../../../.docs/features/open-banking/architecture.md
- */
 final class OpenBankingWizardModal extends Component
 {
     private const STEP_KEYPAIR = 1;
@@ -54,9 +51,6 @@ final class OpenBankingWizardModal extends Component
 
     public string $errorMessage = '';
 
-    /**
-     * @link ../../../../../.docs/features/open-banking/architecture.md
-     */
     #[On('open-banking-wizard:open')]
     public function open(
         OpenBankingSecretsRepository $secrets,
@@ -230,9 +224,6 @@ final class OpenBankingWizardModal extends Component
         return $this->redirectRoute('oauth.open-banking.connect', ['institution_id' => $institutionId]);
     }
 
-    /**
-     * @link ../../../../../.docs/features/open-banking/architecture.md
-     */
     public function cancel(OpenBankingSecretsRepository $secrets, Session $session): void
     {
         if (! $secrets->hasApplication()) {

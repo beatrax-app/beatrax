@@ -9,9 +9,6 @@ use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 // The host portion of this device's configured relay endpoint. Public because
 // Mobile needs the peer's address for a LAN sync dial while RelayConfig stays
 // Internal to Sync. Only the host crosses — never the token or the pin.
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class RelayEndpointHost
 {
     public function __construct(

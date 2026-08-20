@@ -17,17 +17,12 @@ use Modules\Migration\Public\Dto\MigrationPayeeDto;
 use Modules\Migration\Public\Dto\MigrationTransactionDto;
 use Modules\Migration\Public\Dto\UnmappedItemDto;
 
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 final class StagingWriter
 {
     private const CHUNK_SIZE = 500;
 
-    // Neither Ynab4Parser/NynabParser nor ActualParser ever populates
-    // MigrationAccountDto::$kind, but the staging schema's kind column is
-    // NOT NULL; this placeholder is staged verbatim and carries no
-    // promotion-time significance beyond satisfying the column.
+    // No parser populates MigrationAccountDto::$kind, so this placeholder exists
+    // only to satisfy the NOT NULL column; it carries no promote-time meaning.
     private const DEFAULT_ACCOUNT_KIND = 'checking';
 
     public function __construct(
@@ -158,9 +153,6 @@ final class StagingWriter
      */
     private function writeTransactions(iterable $transactions, int $migrationRunId, User $user): void
     {
-        // Never materializes the generator into a PHP array — the foreach
-        // below iterates it lazily one DTO at a time, appending each DTO's
-        // row(s) to a bounded $chunk buffer flushed at CHUNK_SIZE.
         $chunk = [];
 
         foreach ($transactions as $dto) {

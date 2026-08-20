@@ -24,15 +24,14 @@ use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
+use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\Lang;
 
-/**
- * @link ../../../../../.docs/features/auth/architecture.md
- */
 final class AppLockSettingsSection extends Component
 {
     use DispatchesToast;
+    use HoldsFlashMessage;
 
     private const PIN_RULES = 'nullable|regex:/^[0-9]{6,10}$/';
 
@@ -70,8 +69,6 @@ final class AppLockSettingsSection extends Component
     // beyond the request that consumes it.
     #[Validate('nullable|string')]
     public string $accountPassword = '';
-
-    public string $flashMessage = '';
 
     public bool $confirmingDisable = false;
 

@@ -10,7 +10,4 @@ use RuntimeException;
 // or preferences row it needs, or a query/row comes back in a shape the
 // reader cannot map — a structurally-wrong Actual export the reader
 // refuses to read partially rather than returning half a budget.
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 final class ActualSqliteReadException extends RuntimeException {}

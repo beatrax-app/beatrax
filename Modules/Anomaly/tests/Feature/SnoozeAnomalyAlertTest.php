@@ -122,13 +122,10 @@ it('is idempotent when re-snoozing with a non-app source offset that round-trips
     Event::fake([AnomalyAlertSnoozed::class]);
     $action = $this->app->make(SnoozeAnomalyAlert::class);
 
-    // The caller's $until carries a NON-app timezone (America/New_York). The
-    // action persists $until->toDateTimeString() = '2026-06-27 09:00:00',
-    // re-hydrated as app-tz wall-clock. A re-snooze with the SAME NY 09:00
-    // wall-clock has the same toDateTimeString() — so the WR-06 fix
-    // short-circuits — even though getTimestamp() differs (NY 09:00 and
-    // app-tz 09:00 are distinct absolute instants). Under the old
-    // getTimestamp() comparison this re-snooze wrote a redundant transition.
+    // The stored value is $until->toDateTimeString(), re-hydrated as app-tz
+    // wall-clock, so a re-snooze to the same New York 09:00 must compare equal
+    // and short-circuit. The earlier getTimestamp() comparison saw two
+    // distinct instants and wrote a redundant transition.
     $until = CarbonImmutable::parse('2026-06-27 09:00:00', 'America/New_York');
     $alert = snzAlert($this->user, 'snoozed', ['snoozed_until' => $until->toDateTimeString()]);
 

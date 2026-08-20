@@ -12,9 +12,6 @@ use Throwable;
 // transport error, a non-2xx status, a body that would not decode, or one
 // missing a field the caller cannot synthesise. Carries the HTTP status,
 // because whether the failure is terminal turns on it — isConsentFailure().
-/**
- * @link ../../../../.docs/features/open-banking/architecture.md
- */
 final class EnableBankingApiException extends RuntimeException
 {
     private function __construct(

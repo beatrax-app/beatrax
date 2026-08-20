@@ -8,9 +8,6 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\Events\ConnectionEstablished;
 use Illuminate\Support\ServiceProvider;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class SqliteOptimizationsProvider extends ServiceProvider
 {
     // How long a blocked writer waits before giving up, for a connection that

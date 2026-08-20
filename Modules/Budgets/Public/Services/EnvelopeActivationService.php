@@ -9,9 +9,6 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Pots\Public\Services\PotWriter;
 
-/**
- * @link ../../../../.docs/features/budgets/architecture.md
- */
 final class EnvelopeActivationService
 {
     public function __construct(

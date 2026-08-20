@@ -13,7 +13,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Enums\AccountKind;
 
 /**
- * @link ../../../../.docs/features/chains/architecture.md
+ * @link ../../../../.docs/features/chains/card-statement-lifecycle.md
  *
  * @internal Bound to UpsertsCardStatements in ChainsServiceProvider —
  *           call sites depend on the contract, not this class directly.
@@ -39,17 +39,12 @@ final class CardStatementUpserter implements UpsertsCardStatements
 
     public function upsertForUser(User $user): int
     {
-        // User-scoped backfill — drops the import_run_id predicate; the
-        // UNIQUE constraint inside insertOrIgnore short-circuits rows
-        // that already have a matching card_statements row.
         /** @var list<\stdClass> $rows */
         $rows = $this->buildCandidatesQuery($user)->get()->values()->all();
 
         return $this->promoteCandidates($rows, $user);
     }
 
-    // Callers narrow further by import_run_id (per-import path) or leave
-    // it open (backfill).
     private function buildCandidatesQuery(User $user): Builder
     {
         return $this->db->connection()
@@ -93,8 +88,7 @@ final class CardStatementUpserter implements UpsertsCardStatements
             $closing = self::intProp($row, 'closing_balance_minor');
             $importRunId = self::intProp($row, 'import_run_id');
 
-            // insertOrIgnore returns 0/1 per row; summing avoids a second
-            // COUNT(*) round trip per statement.
+            // insertOrIgnore returns 0 or 1 per row, so the sum is the count.
             $inserted += $connection->table('card_statements')->insertOrIgnore([
                 'user_id' => $user->id,
                 'account_id' => self::intProp($row, 'account_id'),

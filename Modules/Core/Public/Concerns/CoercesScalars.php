@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Core\Public\Concerns;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 trait CoercesScalars
 {
     // SQLite hands query-builder columns back as strings on stdClass, and

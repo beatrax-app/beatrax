@@ -6,9 +6,6 @@ namespace Modules\Sync\Internal\Pairing;
 
 use InvalidArgumentException;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class WordCodeEncoder
 {
     private const string ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';

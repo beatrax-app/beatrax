@@ -10,9 +10,6 @@ use RuntimeException;
 // detached background process — the bash wrapper exiting non-zero, the
 // child PID never surfacing on stdout, or the per-run output directory
 // failing to materialise. Each named constructor pins one failure mode.
-/**
- * @link ../../../../.docs/features/dev-mode/architecture.md
- */
 final class SpawnProcessException extends RuntimeException
 {
     public static function bashWrapperFailed(string $stderr): self

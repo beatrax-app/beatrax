@@ -13,7 +13,7 @@ use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
 /**
- * @link ../../../../.docs/features/core/architecture.md
+ * @link ../../../../.docs/features/desktop/auto-update.md
  */
 final readonly class HttpPublisherManifestFetcher implements PublisherManifestFetcher
 {
@@ -23,10 +23,8 @@ final readonly class HttpPublisherManifestFetcher implements PublisherManifestFe
         private HttpClient $http,
         private Repository $config,
         private LoggerInterface $logger,
-        // The OS the running bundle targets. electron-updater names its
-        // channel file per platform, so the manifest to fetch depends on it.
-        // Defaults to the live platform; injected in tests to assert each
-        // platform resolves its own manifest without mocking a constant.
+        // Defaults to the live platform; injected in tests so each platform's
+        // manifest name can be asserted without mocking a constant.
         private string $platformFamily = PHP_OS_FAMILY,
     ) {}
 
@@ -42,9 +40,8 @@ final readonly class HttpPublisherManifestFetcher implements PublisherManifestFe
         try {
             return $this->fetchAndParse($manifestUrl);
         } catch (Throwable $e) {
-            // Offline, DNS failure, a malformed manifest, an unparseable date:
-            // every one is the same answer to the caller — nothing trustworthy
-            // to surface — and none should ever bubble into the update flow.
+            // Offline, DNS failure, malformed manifest, unparseable date: one
+            // answer to the caller, and never a throw into the update flow.
             $this->logger->warning('HttpPublisherManifestFetcher: manifest fetch failed.', [
                 'error' => $e->getMessage(),
             ]);
@@ -53,10 +50,8 @@ final readonly class HttpPublisherManifestFetcher implements PublisherManifestFe
         }
     }
 
-    // electron-updater names its channel file per platform: `latest.yml` on
-    // Windows, `latest-mac.yml`/`latest-linux.yml` elsewhere (`beta*` for the
-    // preview channel). Fetching another platform's manifest would check the
-    // binary against a different OS's SHA512, so a real update never installs.
+    // Fetching another platform's manifest would check the binary against a
+    // different OS's digest, so a real update would never install.
     private function manifestName(string $channel): string
     {
         $base = $channel === 'stable' ? 'latest' : 'beta';
@@ -102,10 +97,8 @@ final readonly class HttpPublisherManifestFetcher implements PublisherManifestFe
         ];
     }
 
-    // The signed manifest is fetched as bytes so verifyManifest() checks the
-    // exact bytes the release pipeline signed. The `.sig` sibling is the hex
-    // encoding sodium_bin2hex produced at signing time, so a non-hex or
-    // odd-length body is a corrupt signature and refused, not fed to hex2bin.
+    // The `.sig` sibling is what sodium_bin2hex produced at signing time, so a
+    // non-hex or odd-length body is a corrupt signature, not hex2bin input.
     private function decodeHexSignature(string $hex): ?string
     {
         if ($hex === '' || strlen($hex) % 2 !== 0 || ! ctype_xdigit($hex)) {
@@ -117,10 +110,9 @@ final readonly class HttpPublisherManifestFetcher implements PublisherManifestFe
         return $binary === '' ? null : $binary;
     }
 
-    // electron-updater manifests carry the installer digest as base64 whereas
-    // verifyBinary() compares hex, so the digest is normalised here. A digest
-    // that is not exactly 64 bytes once decoded is not a SHA512 and drops the
-    // whole manifest rather than reaching the binary check as a bad expectation.
+    // The manifest carries the digest as base64; verifyBinary() compares hex.
+    // A decode that is not exactly 64 bytes is not a SHA512 digest, so the whole
+    // manifest drops rather than reaching the binary check as a bad expectation.
     /**
      * @return array{version: string, sha512_hex: string, published_at: CarbonImmutable}|null
      */

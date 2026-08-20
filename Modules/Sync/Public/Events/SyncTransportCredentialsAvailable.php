@@ -8,9 +8,6 @@ namespace Modules\Sync\Public\Events;
 // opened, so a listener daemon started while locked can be handed its Noise
 // transport keypair. Carries no key material — subscribers read the identity
 // themselves through SyncDaemonIdentity.
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class SyncTransportCredentialsAvailable
 {
     public function __construct(

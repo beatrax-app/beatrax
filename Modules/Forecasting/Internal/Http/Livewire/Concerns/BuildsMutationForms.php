@@ -19,9 +19,6 @@ use Modules\Recurring\Public\Enums\SeriesCadence;
 // form shape, the typed payload it builds, and the field coercion helpers
 // the two share. Split out so the component stays under the method ceiling
 // while these stay one cohesive unit.
-/**
- * @link ../../../../../../.docs/features/forecasting/architecture.md
- */
 trait BuildsMutationForms
 {
     /**

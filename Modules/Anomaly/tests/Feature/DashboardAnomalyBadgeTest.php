@@ -12,12 +12,6 @@ use Modules\Core\Models\User;
 
 uses(RefreshDatabase::class);
 
-/*
- * Dashboard "Unusual charges" tile (D-03). Shows the open count + the
- * per-detector breakdown when there are open anomalies; renders no chrome
- * when openCount === 0 so the dashboard collapses on a quiet day.
- */
-
 function dabUser(string $username): User
 {
     return User::query()->create([

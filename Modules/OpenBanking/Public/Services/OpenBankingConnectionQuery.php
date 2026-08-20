@@ -10,9 +10,6 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Lang;
 use Modules\OpenBanking\Public\Dto\OpenBankingConnectionView;
 
-/**
- * @link ../../../../.docs/features/open-banking/architecture.md
- */
 final class OpenBankingConnectionQuery
 {
     private const AGGREGATOR = 'Enable Banking';

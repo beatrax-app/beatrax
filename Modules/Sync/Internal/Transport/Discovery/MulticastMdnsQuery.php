@@ -8,9 +8,6 @@ namespace Modules\Sync\Internal\Transport\Discovery;
 // out to dns-sd or avahi and a phone has neither. Without this a fresh device
 // could only learn where the desktop is from a scanned QR, which is why the
 // typed-code arm of the import flow could never succeed.
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 final class MulticastMdnsQuery
 {
     public const string MULTICAST_ADDRESS = '224.0.0.251';

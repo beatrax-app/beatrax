@@ -11,9 +11,6 @@ use Modules\OpenBanking\Internal\Console\Concerns\RunsTlsProxyLoop;
 use Modules\OpenBanking\Internal\Tls\LoopbackTlsCertificate;
 use Symfony\Component\Process\Process;
 
-/**
- * @link ../../../../.docs/features/open-banking/architecture.md
- */
 final class ServeOpenBankingTlsCommand extends Command
 {
     use RunsTlsProxyLoop;
@@ -158,9 +155,8 @@ final class ServeOpenBankingTlsCommand extends Command
             return (int) $option;
         }
 
-        // Single source of truth: reuse the exact port the connector prints
-        // and computes for the redirect URI, so the listener can never drift
-        // from what Enable Banking has registered.
+        // Derived from the redirect URI so the listener can never drift from
+        // the port Enable Banking has registered.
         $uri = $this->redirectUri->forProvider('open-banking', scheme: 'https');
         $port = parse_url($uri, PHP_URL_PORT);
 
@@ -200,10 +196,10 @@ final class ServeOpenBankingTlsCommand extends Command
             return null;
         }
 
-        // Deliberately left blocking: the TLS handshake is completed inside
-        // stream_socket_accept(), which needs a blocking socket to finish its
-        // multi-round-trip exchange. We only ever call accept() after
-        // stream_select() reports a pending connection, so it never stalls.
+        // Deliberately left blocking: stream_socket_accept() completes the
+        // multi-round-trip TLS handshake and needs a blocking socket to do it.
+        // accept() only runs after stream_select() reports a pending
+        // connection, so it never stalls the loop.
 
         return $server;
     }

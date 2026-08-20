@@ -16,9 +16,6 @@ use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use RuntimeException;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class OpLogWriter
 {
     // Always-JSON wire contract: PHP null maps to SQL NULL (the

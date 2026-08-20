@@ -22,9 +22,5 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
         ->where('id', '[0-9]+')
         ->name('imports.results');
 
-    // Settings → Aliases. The power-user surface for editing, merging,
-    // exporting, and importing the per-user merchant_aliases table.
-    // Auth-gated; cross-user attempts hit the 404-not-403 boundary
-    // inside the page actions.
     Route::get('/settings/aliases', AliasesSettingsPage::class)->name('settings.aliases');
 });

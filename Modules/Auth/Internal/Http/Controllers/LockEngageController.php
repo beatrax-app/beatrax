@@ -15,9 +15,6 @@ use Modules\Core\Public\Contracts\CurrentUser;
 // navigator.sendBeacon: sendBeacon cannot set headers, and
 // VerifyCsrfToken only accepts the token from a _token body field or
 // the X-CSRF-TOKEN/X-XSRF-TOKEN headers -- a beacon would always 419.
-/**
- * @link ../../../../../.docs/features/auth/architecture.md
- */
 final readonly class LockEngageController
 {
     private const UNLOCK_GRACE_SECONDS = 10;

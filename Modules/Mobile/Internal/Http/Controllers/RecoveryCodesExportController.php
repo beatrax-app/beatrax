@@ -15,9 +15,6 @@ use Modules\Mobile\Internal\Identity\RecoveryCodesExportBridge;
 // worked. A GET with no CSRF token on purpose: a Livewire round-trip from the
 // screen that shows the codes once has already been seen to 419 on device and
 // take them with it. Holding the session that holds the codes is the gate.
-/**
- * @link ../../../../../.docs/features/mobile/architecture.md
- */
 final class RecoveryCodesExportController
 {
     public const string SESSION_KEY = 'auth.signup.recovery_codes_plain';

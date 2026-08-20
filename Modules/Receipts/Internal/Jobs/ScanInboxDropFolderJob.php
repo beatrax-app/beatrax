@@ -28,9 +28,6 @@ use Throwable;
 // Top-level .eml/.mbox files run through RecordReceipt exactly as the
 // wizard upload path does, then atomically move to a processed/ or
 // failed/ subtree keyed by year-month.
-/**
- * @link ../../../../.docs/features/receipts/architecture.md
- */
 final class ScanInboxDropFolderJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Dispatchable;

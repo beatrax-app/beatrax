@@ -7,20 +7,15 @@ namespace Modules\Ingestion\Internal\Adapters\Ics;
 use Carbon\CarbonImmutable;
 use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 
-/**
- * @link ../../../../../.docs/features/ingestion/architecture.md
- */
 final class IcsDateParser
 {
     /** @var array<string, int> */
     private const NL_MONTHS = [
-        // Abbreviations, stored without the trailing period ICS prints
-        // (the parser strips it before lookup).
+        // Abbreviations, stored without the trailing period ICS prints.
         'jan' => 1, 'feb' => 2, 'mrt' => 3, 'apr' => 4,
         'mei' => 5, 'jun' => 6, 'jul' => 7, 'aug' => 8,
         'sep' => 9, 'okt' => 10, 'nov' => 11, 'dec' => 12,
-        // Full names, as seen in the statement-header date rather than the
-        // transaction-line date columns.
+        // Full names, as used in the statement-header date.
         'januari' => 1, 'februari' => 2, 'maart' => 3, 'april' => 4,
         'juni' => 6, 'juli' => 7, 'augustus' => 8,
         'september' => 9, 'oktober' => 10, 'november' => 11, 'december' => 12,
@@ -28,17 +23,14 @@ final class IcsDateParser
 
     public function parse(string $raw): CarbonImmutable
     {
-        // Remove the trailing period ICS prints after abbreviated month
-        // names ("23 jan.") so the regex below normalises across both
-        // shapes, including mid-string in a fully-qualified "23 jan. 2026".
+        // Drop the period ICS prints after an abbreviated month ("23 jan."),
+        // including mid-string in "23 jan. 2026".
         $trimmed = trim(strtolower($raw));
         $trimmed = preg_replace('/([a-z]+)\./', '$1', $trimmed);
         if ($trimmed === null || $trimmed === '') {
             throw new InvalidAmountException('Empty date string.');
         }
 
-        // Shape A: dd-mm-yyyy, as used in the transaction-line date columns
-        // once the adapter has resolved the year.
         if (preg_match('/^(\d{1,2})-(\d{1,2})-(\d{4})$/', $trimmed, $m) === 1) {
             $parsed = CarbonImmutable::createFromFormat(
                 '!d-m-Y',
@@ -52,8 +44,7 @@ final class IcsDateParser
             return $parsed->startOfDay();
         }
 
-        // Shape B: day + Dutch month name (abbreviated or full) + year, as
-        // used in the statement-header date.
+        // The statement-header date: day + Dutch month name + year.
         if (preg_match('/^(\d{1,2})\s+([a-z]+)\s+(\d{4})$/', $trimmed, $m) === 1) {
             $month = self::NL_MONTHS[$m[2]] ?? null;
             if ($month === null) {

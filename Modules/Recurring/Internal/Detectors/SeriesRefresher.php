@@ -17,9 +17,6 @@ use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 // Writes a fresh detection onto an existing series. Both detectors did this
 // identically apart from the direction they report, which is the one thing
 // that genuinely differs between an expense series and an income one.
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
 final readonly class SeriesRefresher
 {
     public function __construct(

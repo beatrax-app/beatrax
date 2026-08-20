@@ -21,9 +21,6 @@ use Modules\Core\Public\Support\LockStore;
 use Modules\EmailScan\Public\Events\IcsStatementReady;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final class DetectIcsStatementReadyJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Dispatchable;

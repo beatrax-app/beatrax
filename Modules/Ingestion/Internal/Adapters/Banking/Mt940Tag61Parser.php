@@ -9,19 +9,11 @@ use Modules\Ingestion\Internal\Adapters\Banking\Dto\Mt940StatementLine;
 use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 use Throwable;
 
-/**
- * @link ../../../../../.docs/features/ingestion/architecture.md
- */
 final class Mt940Tag61Parser
 {
-    // Half-window (years) of the SWIFT two-digit-year sliding pivot: a `yy`
-    // more than this far from the current year rolls to the adjacent century.
+    // SWIFT sliding pivot: a `yy` further than this from now rolls a century.
     private const int SWIFT_YEAR_WINDOW = 50;
 
-    // Greedy regex over the extended :61: dialect: mandatory value date
-    // (YYMMDD), optional entry date (MMDD), status, optional funds-code,
-    // comma-decimal amount, optional transaction-type + 34-char customer
-    // reference + //-prefixed bank reference (full field map in the doc).
     private const REGEX = '/^'
         .'(?P<year>\d{2})(?P<month>\d{2})(?P<day>\d{2})'
         .'(?:(?P<entry_month>\d{2})(?P<entry_day>\d{2}))?'
@@ -53,9 +45,8 @@ final class Mt940Tag61Parser
         $entryDate = null;
         if ($m['entry_month'] !== '' && $m['entry_day'] !== '') {
             $entryMonth = (int) $m['entry_month'];
-            // SWIFT year-rollover rule: when the entry month is later than
-            // the value month, the entry date belongs to the previous year
-            // (e.g. value 2026-01-02, entry 12-31 means entry 2025-12-31).
+            // SWIFT rollover: an entry month later than the value month means
+            // the previous year — value 2026-01-02, entry 12-31 is 2025-12-31.
             $entryYear = $entryMonth > $valueMonth ? $valueYear - 1 : $valueYear;
             $entryDate = $this->parseDate(sprintf('%04d-%02d-%02d', $entryYear, $entryMonth, (int) $m['entry_day']));
         }
@@ -63,10 +54,8 @@ final class Mt940Tag61Parser
         $amountInteger = $this->parseAmountToMinor($m['amount']);
 
         $status = $m['status'];
-        // `(?P<status>R?[CD])` admits exactly C, D, RC and RD, so credit is the
-        // only case worth naming and everything else is a debit. An explicit
-        // 'D', 'RC' arm plus a throwing default reads as defensive but is
-        // unreachable — the regex is the gate, and it already ran.
+        // The regex admits only C, D, RC and RD. RD is a reversed debit and so
+        // signs positive; RC is a reversed credit and signs negative with D.
         $signed = match ($status) {
             'C', 'RD' => abs($amountInteger),
             default => -abs($amountInteger),
@@ -84,8 +73,7 @@ final class Mt940Tag61Parser
         );
     }
 
-    // MT940 sometimes omits the fractional part for whole amounts; normalise
-    // to a two-digit period-decimal before delegating to BankAmountParser.
+    // MT940 omits the fractional part on a whole amount.
     private function parseAmountToMinor(string $raw): int
     {
         $normalised = str_replace(',', '.', $raw);
@@ -116,9 +104,6 @@ final class Mt940Tag61Parser
         return $parsed;
     }
 
-    // SWIFT sliding-window convention: picks the closest four-digit year
-    // within +/-SWIFT_YEAR_WINDOW of "now" so the parser keeps working past
-    // 2100 without a code change.
     private function resolveSwiftYear(int $yy): int
     {
         $today = CarbonImmutable::now();

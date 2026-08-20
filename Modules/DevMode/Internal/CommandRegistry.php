@@ -8,10 +8,9 @@ use InvalidArgumentException;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\CommandSpec;
 
-// NEVER-EXPOSED commands (migrate, migrate:rollback, db:seed) are
-// deliberately absent from the supplied spec list — find() throws
-// InvalidArgumentException for anything not in it. The spec list is
-// configuration, supplied by the DevModeServiceProvider singleton factory.
+// NEVER-EXPOSED commands (migrate, migrate:rollback, db:seed) are kept out of
+// the injected spec list rather than filtered here, so the allow-list is the
+// only thing standing between the Dev Console and a command.
 final readonly class CommandRegistry implements DevCommandRegistry
 {
     /** @var list<CommandSpec> */

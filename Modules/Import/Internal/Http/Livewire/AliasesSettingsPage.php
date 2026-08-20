@@ -15,6 +15,7 @@ use Livewire\WithFileUploads;
 use Modules\Community\Public\Dto\CorpusEntryDto;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
 use Modules\Import\Internal\Services\AliasYamlExporter;
 use Modules\Import\Internal\Services\AliasYamlImporter;
@@ -31,16 +32,15 @@ use Throwable;
  */
 final class AliasesSettingsPage extends Component
 {
+    use HoldsFlashMessage;
     use WithFileUploads;
 
     public int $perPage = 25;
 
-    // 0 = no row in edit mode; stored as int (not ?int) so the Blade
-    // template can branch on a single typed comparison.
+    // 0 means no row is in edit mode; int rather than ?int so the blade
+    // branches on one typed comparison.
     public int $editingId = 0;
 
-    // Bound via wire:model.live.debounce.400ms; each accepted change
-    // fires updatedEditingPattern() to run the live preview probe.
     public string $editingPattern = '';
 
     /**
@@ -48,8 +48,8 @@ final class AliasesSettingsPage extends Component
      */
     public array $previewResult = [];
 
-    // "Merge selected" enables only when ≥2 unique ids are selected (the
-    // LCP service itself rejects size-1 inputs; this is the UI gate).
+    // The UI gate for "Merge selected"; LongestCommonPrefix rejects a
+    // size-1 input on its own.
     /**
      * @var list<int>
      */
@@ -57,19 +57,12 @@ final class AliasesSettingsPage extends Component
 
     public bool $showMergeModal = false;
 
-    // Prefilled from the first selected row's existing friendly name;
-    // the user can edit before confirming.
     public string $mergeFriendlyName = '';
 
-    // Prefilled LCP of the selected rows' generalized_pattern; stays
-    // empty when the LCP service rejects the set (no 4-char shared
-    // prefix), forcing the user to type a pattern manually.
+    // Empty when the rows share no 4-character prefix, which forces the
+    // user to type a pattern by hand.
     public string $mergeGeneralizedPattern = '';
 
-    public string $flashMessage = '';
-
-    // Populated by WithFileUploads from the file input; parseUpload()
-    // reads it via getRealPath() into AliasYamlImporter.
     public ?TemporaryUploadedFile $importFile = null;
 
     /**
@@ -77,8 +70,6 @@ final class AliasesSettingsPage extends Component
      */
     public array $importDiff = [];
 
-    // Populated by parseUpload() with 'keep' defaults; the conflict
-    // preview UI binds each select to a key on this array.
     /**
      * @var array<string, string>
      */
@@ -124,10 +115,9 @@ final class AliasesSettingsPage extends Component
         $this->previewResult = [];
     }
 
-    // 400ms debounce + 500-row scan cap bound the cost of the live
-    // preview so a noisy keystroke stream can't launch a near-unbounded
-    // scan; patterns <3 chars short-circuit via withoutMatches() before
-    // the scan runs at all.
+    // The 400ms debounce and the 500-row scan cap together bound what a
+    // fast keystroke stream can cost; patterns under 3 characters
+    // short-circuit before the scan runs at all.
     public function updatedEditingPattern(AliasMatchPreviewQuery $previewQuery, CurrentUser $currentUser): void
     {
         $value = trim($this->editingPattern);
@@ -167,10 +157,9 @@ final class AliasesSettingsPage extends Component
             return;
         }
 
-        // Cross-user attempts return 0 affected rows; surface a calm
-        // "not found" flash and clear editing state, the same message
-        // shown for a legitimately-stale row. The where('user_id', …)
-        // clause is the structural guard — the flash is only UI.
+        // The where('user_id', …) clause is the structural guard; a
+        // cross-user id simply affects 0 rows and gets the same calm
+        // "not found" flash a genuinely stale row would.
         $affected = $db->connection()
             ->table('merchant_aliases')
             ->where('user_id', $currentUser->user()->id)
@@ -197,10 +186,7 @@ final class AliasesSettingsPage extends Component
 
     public function deleteAlias(int $aliasId, CurrentUser $currentUser, DatabaseManager $db): void
     {
-        // The where('user_id', current) clause is the structural
-        // ownership guard; cross-user ids hit zero affected rows and
-        // surface a calm "not found" flash instead of throwing — a
-        // tampered payload sees the same calm UI a stale row would.
+        // Ownership is the where('user_id', …) clause; the flash is only UI.
         $affected = $db->connection()
             ->table('merchant_aliases')
             ->where('user_id', $currentUser->user()->id)
@@ -237,10 +223,7 @@ final class AliasesSettingsPage extends Component
             ->get(['id', 'generalized_pattern', 'friendly_name']);
 
         if ($rows->count() !== count($uniqueIds)) {
-            // Cross-user / stale id surface — calm flash, no modal,
-            // clear the selection so the user can pick rows again.
-            // The structural guard is the user_id clause; the flash
-            // is only the UI affordance.
+            // Ownership is the where('user_id', …) clause; the flash is only UI.
             $this->selectedIds = [];
             $this->flashMessage = Lang::get('import::aliases.errors.some_not_found');
 
@@ -317,8 +300,7 @@ final class AliasesSettingsPage extends Component
         $this->flashMessage = Lang::get('import::aliases.flash.merged');
     }
 
-    // ResponseFactory is method-DI'd so the page never hits the global
-    // response() helper.
+    // Method-DI'd rather than the global response() helper.
     public function exportYaml(
         AliasYamlExporter $exporter,
         CurrentUser $currentUser,
@@ -367,9 +349,8 @@ final class AliasesSettingsPage extends Component
 
         $diff = $importer->diff($currentUser->user(), $entries);
 
-        // Flatten the CorpusEntryDto instances into primitive-only
-        // arrays so Livewire's wire payload synthesizer can round-trip
-        // the property without a custom synth.
+        // Primitives only, or the wire payload needs a custom Livewire synth
+        // to round-trip the DTOs.
         $this->importDiff = [
             'new' => array_map([$this, 'flattenEntry'], $diff['new']),
             'unchanged' => array_map([$this, 'flattenEntry'], $diff['unchanged']),
@@ -448,8 +429,7 @@ final class AliasesSettingsPage extends Component
         $this->flashMessage = '';
     }
 
-    // `pattern` is loaded (read-only) so the inline-edit panel can show
-    // the immutable raw description alongside the editable
+    // `pattern` is read-only; the edit panel shows it beside the editable
     // generalized_pattern.
     public function render(ViewFactory $views, CurrentUser $currentUser, DatabaseManager $db): View
     {

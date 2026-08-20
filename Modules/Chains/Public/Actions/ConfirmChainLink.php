@@ -12,9 +12,6 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../.docs/features/chains/architecture.md
- */
 final class ConfirmChainLink
 {
     private const AUTO_PROMOTE_THRESHOLD = 3;

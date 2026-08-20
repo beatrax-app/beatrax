@@ -12,9 +12,6 @@ use Modules\Core\Public\Enums\Locale;
 // once, changing the locale and seeding again produced a second copy of every
 // goal, pot and saved report. Matching every locale's rendering keeps a
 // re-seed idempotent whichever language either run used.
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class DemoNames
 {
     /** @var array<string, list<string>> */

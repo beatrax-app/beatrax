@@ -22,9 +22,6 @@ use Modules\Receipts\Public\Contracts\SenderMatcher;
 use Modules\Receipts\Public\Services\FileImportQuery;
 use Modules\Receipts\Public\Services\ReceiptConflictQuery;
 
-/**
- * @link ../../../.docs/features/receipts/architecture.md
- */
 final class ReceiptsServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;

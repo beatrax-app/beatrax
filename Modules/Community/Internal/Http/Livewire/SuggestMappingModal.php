@@ -17,9 +17,6 @@ use Modules\Community\Public\Events\MysteryMerchantSubmitted;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
 
-/**
- * @link ../../../../../.docs/features/community/architecture.md
- */
 final class SuggestMappingModal extends Component
 {
     public string $pattern = '';

@@ -7,9 +7,6 @@ namespace Modules\OpenBanking\Internal\Adapters\EnableBanking;
 use Firebase\JWT\JWT;
 use Modules\Core\Public\Contracts\Clock;
 
-/**
- * @link ../../../../../.docs/features/open-banking/architecture.md
- */
 final class EnableBankingJwtSigner
 {
     private const ISSUER = 'enablebanking.com';

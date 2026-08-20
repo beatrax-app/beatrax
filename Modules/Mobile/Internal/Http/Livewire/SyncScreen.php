@@ -16,9 +16,6 @@ use Modules\Mobile\Internal\Sync\NetworkPolicyResolver;
 use Modules\Mobile\Internal\Sync\PeerLanAddress;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 
-/**
- * @link ../../../../../.docs/features/mobile/architecture.md
- */
 final class SyncScreen extends Component
 {
     // Whether an initial-sync pull is currently mid-flight for this user -

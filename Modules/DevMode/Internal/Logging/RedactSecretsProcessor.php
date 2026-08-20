@@ -8,9 +8,6 @@ use Modules\DevMode\Internal\Services\OAuthScrubSet;
 use Monolog\LogRecord;
 use Monolog\Processor\ProcessorInterface;
 
-/**
- * @link ../../../../.docs/features/dev-mode/architecture.md
- */
 final class RedactSecretsProcessor implements ProcessorInterface
 {
     private const BEARER_PATTERN = '/Authorization:\s*Bearer\s+\S+/i';

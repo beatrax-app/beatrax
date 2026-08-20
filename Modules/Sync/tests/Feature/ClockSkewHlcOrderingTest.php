@@ -13,24 +13,10 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
 uses(RefreshDatabase::class);
 
-/*
- * D-07: Clock skew / HLC ordering scenario.
- *
- * Three SET ops with manually-specified hlc_l values that are intentionally
- * out of wall-clock arrival order:
- *   Op A: hlc_l=2000 (highest) → category_id = C_a
- *   Op B: hlc_l=1500 (lowest)  → category_id = C_b  (skewed-slow clock)
- *   Op C: hlc_l=1999, hlc_c=5  → category_id = C_c
- *
- * HLC total order: B(1500,0) < C(1999,5) < A(2000,0).
- * Expected after LWW merge: category_id = C_a (A has the highest HLC).
- *
- * The test replays the same three ops in three different arrival orderings
- * to prove the result is deterministic regardless of arrival order.
- *
- * RED: The OpLogReplayer skeleton (Wave 1) does not yet apply LWW logic,
- * so the assertion fails until Wave 2 implements the merge.
- */
+// Three ops whose HLCs deliberately disagree with the order they arrive in,
+// one of them from a slow clock and one with a high counter but a lower
+// physical timestamp. Replaying the same three in three different arrival
+// orders is what proves the winner comes from the HLC and not from arrival.
 
 function skewUser(string $username): User
 {
@@ -43,9 +29,6 @@ function skewUser(string $username): User
 }
 
 /**
- * Seeds account → import_run → 3 categories → transaction.
- * Returns [txnId, catA, catB, catC].
- *
  * @return array{0: int, 1: int, 2: int, 3: int}
  */
 function skewTxn(DatabaseManager $db, int $userId, string $suffix): array
@@ -150,17 +133,13 @@ afterEach(function (): void {
 });
 
 /**
- * Builds the three skewed-clock ops for the given txn/user/category IDs.
- * Op A: hlc_l=2000 → catA (expected winner).
- * Op B: hlc_l=1500 → catB (skewed-slow clock, loser).
- * Op C: hlc_l=1999, c=5 → catC (high counter but lower physical ms, loser).
- *
  * @return list<OpLogEntry>
  */
 function buildSkewedOps(DeviceKeySigner $signer, string $sk, int $txnId, int $catA, int $catB, int $catC, int $userId): array
 {
     $makeEntry = static function (int $catId, int $hlcL, int $hlcC, string $deviceId) use ($signer, $sk, $txnId, $userId): OpLogEntry {
-        // Build stub without signature first to get the signing payload.
+        // The signing payload comes from the entry itself, so it is built
+        // unsigned first and reconstructed with the signature after.
         $stub = new OpLogEntry(
             table: 'transactions',
             pk: $txnId,
@@ -206,7 +185,6 @@ it('resolves to category_id=C_a (hlc_l=2000 wins) when ops arrive in forward ord
     $replayer = new OpLogReplayer(app(DatabaseManager::class), $this->deviceKeys);
     $replayer->replay([$opA, $opB, $opC], (int) $this->user->id);
 
-    // RED: LWW not yet implemented in Wave 1 skeleton.
     $catId = app(DatabaseManager::class)
         ->connection()
         ->table('transactions')
@@ -215,8 +193,6 @@ it('resolves to category_id=C_a (hlc_l=2000 wins) when ops arrive in forward ord
 
     expect((int) $catId)->toBe($this->catA);
 
-    // Assert: production path persists ops to op_log_entries (SYNC-01).
-    // RED: fails until Plan 11-02 wires op_log_entries writes.
     $logCount = app(DatabaseManager::class)
         ->connection()
         ->table('op_log_entries')
@@ -233,10 +209,8 @@ it('resolves to category_id=C_a (hlc_l=2000 wins) when ops arrive in reverse ord
     );
 
     $replayer = new OpLogReplayer(app(DatabaseManager::class), $this->deviceKeys);
-    // Reverse arrival order: C, B, A
     $replayer->replay([$opC, $opB, $opA], (int) $this->user->id);
 
-    // RED: LWW not yet implemented in Wave 1 skeleton.
     $catId = app(DatabaseManager::class)
         ->connection()
         ->table('transactions')
@@ -245,8 +219,6 @@ it('resolves to category_id=C_a (hlc_l=2000 wins) when ops arrive in reverse ord
 
     expect((int) $catId)->toBe($this->catA);
 
-    // Assert: production path persists ops to op_log_entries (SYNC-01).
-    // RED: fails until Plan 11-02 wires op_log_entries writes.
     $logCount = app(DatabaseManager::class)
         ->connection()
         ->table('op_log_entries')
@@ -263,10 +235,8 @@ it('resolves to category_id=C_a (hlc_l=2000 wins) when ops arrive in shuffled or
     );
 
     $replayer = new OpLogReplayer(app(DatabaseManager::class), $this->deviceKeys);
-    // Shuffled arrival order: B, A, C
     $replayer->replay([$opB, $opA, $opC], (int) $this->user->id);
 
-    // RED: LWW not yet implemented in Wave 1 skeleton.
     $catId = app(DatabaseManager::class)
         ->connection()
         ->table('transactions')
@@ -275,8 +245,6 @@ it('resolves to category_id=C_a (hlc_l=2000 wins) when ops arrive in shuffled or
 
     expect((int) $catId)->toBe($this->catA);
 
-    // Assert: production path persists ops to op_log_entries (SYNC-01).
-    // RED: fails until Plan 11-02 wires op_log_entries writes.
     $logCount = app(DatabaseManager::class)
         ->connection()
         ->table('op_log_entries')

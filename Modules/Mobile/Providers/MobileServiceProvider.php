@@ -27,9 +27,6 @@ use Modules\Mobile\Internal\Identity\MobileColdStartVault;
 use Modules\Mobile\Internal\Identity\SecureStorageKeyCustodian;
 use Modules\Mobile\Internal\Native\NativeDeviceName;
 
-/**
- * @link ../../../.docs/features/mobile/architecture.md
- */
 final class MobileServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;

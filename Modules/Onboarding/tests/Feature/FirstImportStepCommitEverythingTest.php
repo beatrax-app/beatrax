@@ -22,18 +22,8 @@ use Modules\Onboarding\Models\WizardProgress;
 
 uses(RefreshDatabase::class);
 
-/*
- * Regression lock for FirstImportStep::commit() — proves the happy path
- * confirms every stashed ImportRun and writes every starting balance
- * inside the same atomic flow.
- *
- * The verification is final-state based (no transaction-depth spy, per
- * the no-mocking-DB rule): a recording ConfirmsImports double captures
- * the run ids commit() invoked it with, and the post-commit DB state is
- * asserted to reflect every balance update + the 'done' flip on
- * wizard_progress for the 'first-import' step. The Livewire instance
- * must finish with commitError cleared and dispatch wizard.step.completed.
- */
+// Verification is final-state based rather than a transaction-depth spy,
+// because the repository forbids mocking the database.
 
 beforeEach(function (): void {
     $this->frozenNow = CarbonImmutable::parse('2026-05-15 12:00:00');
@@ -103,11 +93,9 @@ it('commits every stashed ImportRun and writes starting balances atomically', fu
         ->where('step_key', 'connect-card')
         ->update(['data' => json_encode(['card_import_run_ids' => [$cardRunId]])]);
 
-    // Recording double — captures every (importRunId, dispatchChain) pair
-    // commit() invokes ConfirmsImports with, AND marks the ImportRun row
-    // as 'confirmed' so the post-commit ImportRun.status assertion proves
-    // the confirm write landed inside the same transaction as the balance
-    // updates and the wizard_progress 'done' flip.
+    // The double also flips ImportRun.status, which is how the assertions
+    // below prove the confirm landed in the same transaction as the balance
+    // updates and the wizard_progress flip.
     $recorder = new class($this->user->id) implements ConfirmsImports
     {
         /** @var list<array{importRunId: int, dispatchChain: bool}> */
@@ -119,9 +107,6 @@ it('commits every stashed ImportRun and writes starting balances atomically', fu
         {
             $this->received[] = ['importRunId' => $importRunId, 'dispatchChain' => $dispatchChain];
 
-            // Mirror the real ConfirmImport's status flip inside the outer
-            // transaction so the test can prove every stashed run reached
-            // 'confirmed' atomically without seeding canonical rows.
             ImportRun::query()
                 ->where('id', $importRunId)
                 ->where('user_id', $this->expectedUserId)
@@ -146,21 +131,15 @@ it('commits every stashed ImportRun and writes starting balances atomically', fu
         ->call('commitEverything')
         ->assertDispatched('wizard.step.completed');
 
-    // The recorder saw both stashed run ids, in the canonical bank → card
-    // section order BuildConsolidatedPreviewQuery emits. Each inner call
-    // received dispatchChain=false because the wizard owns the outer
-    // dispatch and forwards it ONCE after the transaction returns.
+    // dispatchChain is false on every inner call because the wizard owns the
+    // outer dispatch and forwards it once, after the transaction returns.
     expect($recorder->received)->toBe([
         ['importRunId' => $bankRunId, 'dispatchChain' => false],
         ['importRunId' => $cardRunId, 'dispatchChain' => false],
     ]);
 
-    // Every stashed ImportRun reaches 'confirmed' inside the outer
-    // transaction, proving the ConfirmsImports invocation and the balance
-    // updates land in the same atomic frame.
     expect(ImportRun::query()->where('user_id', $this->user->id)->where('status', 'confirmed')->count())->toBe(2);
 
-    // Both starting balances persist on the accounts table.
     /** @var Account $bankAfter */
     $bankAfter = Account::query()->findOrFail($bankAccount->id);
     expect((int) $bankAfter->starting_balance_minor)->toBe(100000);
@@ -171,7 +150,6 @@ it('commits every stashed ImportRun and writes starting balances atomically', fu
     expect((int) $cardAfter->starting_balance_minor)->toBe(50000);
     expect($cardAfter->starting_balance_date?->toDateString())->toBe('2026-04-30');
 
-    // Wizard step flips to done; no error band surfaces.
     /** @var WizardProgress|null $progress */
     $progress = WizardProgress::query()
         ->where('user_id', $this->user->id)

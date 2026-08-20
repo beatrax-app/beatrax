@@ -14,9 +14,6 @@ use Modules\Reports\Public\Dto\ReportResultRow;
 use Modules\Reports\Public\Enums\ReportGranularity;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final class TimeBucketSpendQuery
 {
     use CoercesScalars;

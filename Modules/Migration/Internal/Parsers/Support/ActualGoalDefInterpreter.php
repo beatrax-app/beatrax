@@ -10,9 +10,6 @@ use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Migration\Public\Dto\MigrationGoalDto;
 use Throwable;
 
-/**
- * @link ../../../../../.docs/features/migration/architecture.md
- */
 final class ActualGoalDefInterpreter
 {
     private const MAX_JSON_BYTES = 65536;
@@ -44,9 +41,6 @@ final class ActualGoalDefInterpreter
      */
     private function flatGoalAmount(array $decoded): ?int
     {
-        // A multi-step template/schedule, or an unrecognised type keyword,
-        // is non-flat — treated conservatively as "no single target"
-        // rather than guessing at its shape.
         if (isset($decoded['steps']) || isset($decoded['schedule'])) {
             return null;
         }

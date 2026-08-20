@@ -7,10 +7,8 @@ namespace Modules\Chains\Public\Exceptions;
 use Modules\Chains\Models\ChainLink;
 use RuntimeException;
 
-// Thrown when confirm/reject is invoked against a hint-shaped row whose
-// to_transaction_id IS NULL — the schema trigger would otherwise crash
-// the request with a raw SQLSTATE[23000] integrity-constraint violation
-// instead of a readable "attach a partner first" message.
+// Raised ahead of the write because the schema's NULL-endpoint trigger
+// would otherwise surface as a raw SQLSTATE[23000] violation.
 final class ChainLinkRequiresConcretePartnerException extends RuntimeException
 {
     public function __construct(

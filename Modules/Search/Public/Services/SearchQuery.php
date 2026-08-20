@@ -20,9 +20,6 @@ use Modules\Search\Public\Dto\SearchResultPage;
 // palette: FTS5 MATCH + SQL filters + highlight + cursor pagination.
 // Every FTS join and transactions read is scoped by user_id; filter
 // IDs are ownership-validated before use.
-/**
- * @link ../../../../.docs/features/search/architecture.md
- */
 final class SearchQuery
 {
     use CoercesScalars;

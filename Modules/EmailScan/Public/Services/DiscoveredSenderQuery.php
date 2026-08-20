@@ -14,9 +14,6 @@ use Modules\EmailScan\Public\Dto\DiscoveredSenderDto;
 use stdClass;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final class DiscoveredSenderQuery
 {
     use CoercesScalars;

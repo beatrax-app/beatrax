@@ -10,9 +10,6 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Forecasting\Public\Services\NetWorthQuery;
 
-/**
- * @link ../../../../../.docs/features/core/architecture.md
- */
 final class NetWorthCard extends Component
 {
     public bool $expanded = false;

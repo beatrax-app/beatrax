@@ -18,9 +18,6 @@ use Symfony\Component\HttpFoundation\Response;
 // VerifyCsrfToken IS enforced -- there is no JSON exemption. lock.js reads
 // the XSRF-TOKEN cookie and sends it back as the X-XSRF-TOKEN request
 // header on every fetch, which Laravel accepts as the supplied token.
-/**
- * @link ../../../../../.docs/features/auth/architecture.md
- */
 final class WebAuthnBiometricController
 {
     public function challenge(

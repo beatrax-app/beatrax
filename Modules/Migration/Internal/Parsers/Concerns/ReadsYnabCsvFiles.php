@@ -12,9 +12,6 @@ use Throwable;
 // normalised row array is the "get bytes off disk" half of the YNAB
 // parsers, kept apart from the "turn rows into DTOs" half so the parser
 // class stays focused on mapping, not file handling.
-/**
- * @link ../../../../../.docs/features/migration/architecture.md
- */
 trait ReadsYnabCsvFiles
 {
     /**

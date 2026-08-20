@@ -6,15 +6,10 @@ use Illuminate\Http\Response;
 use Modules\Core\Internal\Http\Middleware\TrustedHostGuard;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * Feature tests proving the global TrustedHostGuard middleware answers only
- * to the loopback names the bundled shells use and the host baked into
- * APP_URL, and 404s every other Host — the defence that keeps a
- * DNS-rebinding site from reaching the loopback server as a same-origin
- * caller. The test suite runs under the APP_URL host (beatrax.test), so the
- * configured-host case doubles as the guarantee the guard does not break
- * ordinary requests.
- */
+// The guard is the defence against a DNS-rebinding site reaching the loopback
+// server as a same-origin caller. The suite itself runs under the APP_URL host
+// (beatrax.test), so the configured-host case doubles as proof the guard does
+// not break ordinary requests.
 it('refuses a foreign Host with 404', function (): void {
     $this->get('http://evil.example/login')->assertNotFound();
 });

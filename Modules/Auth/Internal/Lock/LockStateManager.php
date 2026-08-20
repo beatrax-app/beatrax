@@ -7,9 +7,6 @@ namespace Modules\Auth\Internal\Lock;
 use Illuminate\Contracts\Session\Session;
 use Modules\Auth\Public\Contracts\KeyCustodian;
 
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 final class LockStateManager
 {
     public const SESSION_KEY = 'beatrax_locked';

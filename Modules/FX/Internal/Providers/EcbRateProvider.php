@@ -9,9 +9,6 @@ use Modules\FX\Public\Contracts\RateProvider;
 use Modules\FX\Public\Exceptions\RateFetchException;
 use SimpleXMLElement;
 
-/**
- * @link ../../../../.docs/features/fx/architecture.md
- */
 final class EcbRateProvider implements RateProvider
 {
     // ECB daily reference feed, published ~16:00 CET on each business

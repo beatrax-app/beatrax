@@ -6,9 +6,6 @@ namespace Modules\EmailScan\Internal\OAuth;
 
 use TheNetworg\OAuth2\Client\Provider\Azure;
 
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final class PkceAzureProvider extends Azure
 {
     // The league base returns null from getPkceMethod, so PKCE stays off

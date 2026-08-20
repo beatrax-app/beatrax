@@ -19,17 +19,10 @@ use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 
 uses(RefreshDatabase::class);
 
-/*
- * OpenBankingFetchService (19-09/19-10): the secrets file holds exactly
- * ONE live Enable Banking session (`session_id` + `institutionId`) at a
- * time — `EnableBankingHttpClient` always resolves its credentials from
- * that single file, never from the `open_banking_connections` row that
- * triggered the fetch. If a SECOND institution has since been (re-)linked
- * — overwriting the secrets file's `institutionId` — a fetch attempt for
- * the FIRST connection's row must fail loudly rather than silently pair
- * one bank's live session with another bank's `account_uid` (T-19-10-01
- * review-gate finding).
- */
+// EnableBankingHttpClient always resolves credentials from the secrets file,
+// which holds exactly one live session, never from the open_banking_connections
+// row that triggered the fetch — so re-linking a second bank silently repoints
+// every existing connection at the new bank's session.
 
 final class OfsStubRemoteSourceAdapter implements RemoteSourceAdapter
 {
@@ -136,9 +129,7 @@ it('proceeds when the connection institution matches the active secrets-file ses
 
 it('throws rather than silently fetching with a mismatched institution session', function (): void {
     $user = ofsUser('ofs-mismatch');
-    // Connection row is for ASN, but the secrets file's LIVE session now
-    // belongs to SNS — e.g. the user connected a second bank without
-    // disconnecting the first.
+    // Connection row is for ASN, but the live session in the secrets file is SNS.
     $connectionId = ofsSeedConnection($user, ['institution_id' => 'ASNBNL21', 'account_uid' => 'acc-uid-asn-1']);
     ofsSeedCredentials('SNSBNL2A');
 
@@ -154,12 +145,9 @@ it('throws rather than silently fetching with a mismatched institution session',
     expect($stub->called)->toBeFalse();
 });
 
-/*
- * The refusals buildFetch() makes before any provider call. Each asserts the
- * adapter was never reached, which is the property that matters: a fetch that
- * starts against a half-configured connection would pair a live session with
- * the wrong account, and no later guard would catch it.
- */
+// Each refusal asserts the adapter was never reached: a fetch that starts
+// against a half-configured connection pairs a live session with the wrong
+// account, and no later guard catches that.
 
 it('refuses a connection id that belongs to a different user', function (): void {
     $owner = ofsUser('ofs-owner');
@@ -217,8 +205,6 @@ it('refuses to fetch before the consent dance has resolved an account uid', func
     expect($stub->called)->toBeFalse();
 });
 
-// The service defers to the repository's loadOrThrow() rather than repeating
-// the null check, so this also pins that the delegation still refuses.
 it('refuses to fetch when no application credentials are persisted', function (): void {
     $user = ofsUser('ofs-no-credentials');
     $connectionId = ofsSeedConnection($user);

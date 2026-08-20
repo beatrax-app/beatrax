@@ -23,9 +23,6 @@ use Modules\OpenBanking\Public\Exceptions\EnableBankingApiException;
 use Modules\OpenBanking\Public\Services\OpenBankingFetchService;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/open-banking/architecture.md
- */
 final class SyncOpenBankingAccountJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Dispatchable;

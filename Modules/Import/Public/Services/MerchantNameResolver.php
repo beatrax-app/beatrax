@@ -13,9 +13,7 @@ use stdClass;
  */
 final class MerchantNameResolver
 {
-    // Defence-in-depth: 500+ live aliases would already indicate a
-    // settings-page misuse, but the bound keeps the PHP-side scan O(1)
-    // memory regardless of dataset size.
+    // Keeps the PHP-side scan bounded whatever the dataset does.
     private const GENERALIZED_SCAN_LIMIT = 500;
 
     public function __construct(

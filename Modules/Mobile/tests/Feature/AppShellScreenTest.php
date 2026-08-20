@@ -6,35 +6,16 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Native\AppShellScreen;
 use Native\Mobile\Testing\Native;
 
-/*
- * Stage B: native chrome around the existing Livewire body.
- *
- * This is the seam that decides whether the app can feel native without a
- * second UI. The chrome (top bar, bottom nav) is real SwiftUI / Jetpack
- * Compose; the body is the same `/`, `/transactions`, `/calendar` and
- * `/settings` the desktop renders, embedded through the app's own PHP
- * runtime. Nothing here re-implements a screen.
- *
- * `Native::test()` renders through `createElement`, which is a DIFFERENT
- * code path from the device's streaming collector — a prop can pass here
- * and be missing on a phone. So these assert structure and state, the parts
- * that are shared, and leave paint to the on-device pass.
- */
-
 beforeEach(function (): void {
-    // The EDGE runtime lives only in mobile-app/vendor (nativephp/desktop
-    // conflicts with nativephp/mobile, hence the sibling roots), so this
-    // file is a no-op under the repo-root toolchain. Skipping beats a
-    // `repo-root-only`-style group here: the reason is a missing package,
-    // and asking the class directly cannot drift out of date.
+    // nativephp/desktop and nativephp/mobile conflict, which is why the mobile
+    // runtime lives in a sibling root and this file is inert under the
+    // repo-root toolchain.
     if (! class_exists(Native::class)) {
         test()->markTestSkipped('nativephp/mobile is installed only under mobile-app/.');
     }
 });
 
 /**
- * Every bottom_nav_item in a rendered tree, in render order.
- *
  * @param  array<string, mixed>  $node
  * @return list<array{props: array{label: string, active: bool}}>
  */
@@ -55,25 +36,27 @@ function navItems(array $node): array
     return $found;
 }
 
+// Native::test() renders through createElement, a different code path from the
+// device's streaming collector, so a prop can pass here and still be missing on
+// a phone. These assert structure and state, the parts that are shared, and
+// leave paint to the on-device pass.
+
 it('wraps the web body in native chrome rather than replacing it', function (): void {
-    // Inline <top-bar> / <bottom-nav> do NOT survive as tree nodes: the
-    // component hoists them onto the native shell, so the root becomes
-    // native_root_tabs carrying nav_title, with the items promoted beside
-    // the content. Asserting on `top_bar` here would fail against a screen
-    // that is in fact correct.
+    // Inline <top-bar> / <bottom-nav> do not survive as tree nodes: the component
+    // hoists them onto the native shell, so the root becomes native_root_tabs with
+    // the items promoted beside the content. Asserting on `top_bar` would fail
+    // against a screen that is in fact correct.
     Native::test(AppShellScreen::class)
         ->assertElement('native_root_tabs')
         ->assertElement('bottom_nav_item')
         // The body stays a webview: if this ever becomes a native tree, the
-        // shared-resources seam has been broken and the whole cost model of
-        // this approach changes.
+        // shared-resources seam has been broken.
         ->assertElement('webview');
 });
 
 it('drops an untitled top bar, which is why the title is not decoration', function (): void {
-    // Recorded because it cost real time: a bare <top-bar /> contributes
-    // nothing to hoist, so the bar never reaches the shell and nav_title is
-    // absent — with no error anywhere. The title is load-bearing.
+    // A bare <top-bar /> contributes nothing to hoist, so the bar never reaches
+    // the shell and nav_title is absent, with no error raised anywhere.
     Native::test(AppShellScreen::class)
         ->assertElement(
             'native_root_tabs',
@@ -82,10 +65,9 @@ it('drops an untitled top bar, which is why the title is not decoration', functi
 });
 
 it('serves the body through the app runtime, not as a foreign page', function (): void {
-    // `php` is what gives the embedded view the shared session, the asset
-    // pipeline and the window.Native bridge. Without it the webview is a
-    // sandboxed foreign document and every authenticated route 302s to
-    // login inside the frame.
+    // `php` is what gives the embedded view the shared session, the asset pipeline
+    // and the window.Native bridge. Without it the webview is a sandboxed foreign
+    // document and every authenticated route 302s to login inside the frame.
     Native::test(AppShellScreen::class)
         ->assertElement('webview', fn (array $el): bool => ($el['props']['php'] ?? false) === true);
 });
@@ -106,9 +88,9 @@ it('moves the web body when a bottom-nav destination is chosen', function (): vo
 });
 
 it('ignores an unknown destination instead of blanking the body', function (): void {
-    // The key arrives from a rendered nav item, but a stale tree or a
-    // client-side call could send anything. Falling through to an empty
-    // $path would load the start URL and look like a random navigation.
+    // The key arrives from a rendered nav item, but a stale tree or a client-side
+    // call could send anything, and falling through to an empty $path loads the
+    // start URL, which reads as a random navigation.
     Native::test(AppShellScreen::class)
         ->call('open', 'transactions')
         ->call('open', 'not-a-destination')
@@ -118,8 +100,8 @@ it('ignores an unknown destination instead of blanking the body', function (): v
 
 it('re-syncs the chrome when the page navigates itself', function (): void {
     // A link tapped inside the webview moves the body without going through
-    // open(). Without the @navigated hook the bottom bar keeps pointing at
-    // whatever was last tapped, which is worse than no highlight at all.
+    // open(), so without the @navigated hook the bottom bar keeps pointing at
+    // whatever was last tapped.
     Native::test(AppShellScreen::class)
         ->call('onNavigated', 'https://beatrax.test/calendar')
         ->assertSet('active', 'calendar');
@@ -177,9 +159,8 @@ it('moves the active marker with the destination', function (): void {
 });
 
 it('renders the bar in the active locale', function (): void {
-    // The whole reason the labels are sidebar keys rather than literals: a
-    // Dutch device must not get an English bottom bar bolted onto a Dutch
-    // page. Asserts against the lang file so it cannot drift from it.
+    // The labels are sidebar keys rather than literals so a Dutch device does not
+    // get an English bottom bar bolted onto a Dutch page.
     app()->setLocale('nl');
 
     $items = navItems(Native::test(AppShellScreen::class)->tree());

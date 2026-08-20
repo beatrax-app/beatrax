@@ -25,9 +25,6 @@ use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
-/**
- * @link ../../../../../.docs/features/chains/architecture.md
- */
 final class ChainDrawer extends Component
 {
     use CoercesScalars;
@@ -105,10 +102,8 @@ final class ChainDrawer extends Component
         ]);
     }
 
-    // Rebuilds ChainTreeNode.children (always empty on the Public DTO) via
-    // one bounded query against chain_links, for every node with 2+
-    // outgoing ics_bulk_settle links. See architecture.md for the fan-out
-    // parent/child rules this implements.
+    // ChainTreeNode.children always arrives empty from the Public DTO; the
+    // fan-out shape is rebuilt here, in one bounded query.
     private function attachFanoutChildren(ChainTree $tree, DatabaseManager $db, CurrentUser $currentUser, SensitiveColumnCodec $codec, Session $session): ChainTree
     {
         if ($tree->nodes === []) {
@@ -129,8 +124,6 @@ final class ChainDrawer extends Component
         );
     }
 
-    // Confirmed and candidate only, so rejected legs stay suppressed exactly
-    // as they are in the parent walker.
     /**
      * @return array<int, list<int>> child transaction ids per fan-out parent
      */
@@ -155,9 +148,8 @@ final class ChainDrawer extends Component
             }
         }
 
-        // Two or more outgoing links make a fan-out parent. A single link is
-        // an ordinary chain hop and stays in the flat waterfall list rather
-        // than rendering a fan-out container of one.
+        // A single outgoing link is an ordinary chain hop and stays in the flat
+        // waterfall, so the drawer never renders a fan-out container of one.
         return array_filter($rawByParent, static fn (array $childIds): bool => count($childIds) >= 2);
     }
 
@@ -255,8 +247,6 @@ final class ChainDrawer extends Component
 
         $settledCurrency = self::toString($row->settled_currency ?? null);
         $nativeCurrency = self::toString($row->currency ?? null);
-        // Settled currency wins, then the native one; EUR is the last resort
-        // for a row that carries neither rather than rendering an empty code.
         $currency = $settledCurrency !== '' ? $settledCurrency : $nativeCurrency;
         if ($currency === '') {
             $currency = 'EUR';
@@ -270,8 +260,6 @@ final class ChainDrawer extends Component
             : CarbonImmutable::parse('1970-01-01 00:00:00');
 
         $storedCounterpartyName = self::toString($row->counterparty_name ?? null);
-        // Read-side decrypt; a pass-through no-op when encryption is not
-        // enabled for this user.
         $counterpartyName = $storedCounterpartyName === ''
             ? ''
             : $codec->decryptValue('transactions', 'counterparty_name', $storedCounterpartyName, $user->id, $session)['value'];

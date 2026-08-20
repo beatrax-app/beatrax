@@ -17,44 +17,6 @@ use Modules\OpenBanking\Public\Exceptions\UnsafeOpenBankingRequestException;
 use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 use Modules\OpenBanking\Tests\Support\EnableBankingFixtures;
 
-/*
- * Req 10 falsifiable local-only egress guard (19-13 Task 2). Drives the
- * REAL `EnableBankingHttpClient` boundary across every documented call
- * path — `initiateAuth`, `createSession`, `aspsps`, `accountDetails`,
- * `transactions`, `balances` — and proves each one:
- *
- *   (a) refuses a URL whose host is neither `api.enablebanking.com` nor
- *       the resolved bank SCA host;
- *   (b) refuses a non-HTTPS scheme, even on the real Enable Banking
- *       host;
- *   (c) does BOTH of the above BEFORE any bearer token is attached;
- *   (d) succeeds against the real Enable Banking host (and, for the
- *       representative `aspsps()` call, the dynamically-resolved bank
- *       SCA host) once mocked at the Guzzle transport layer — proving
- *       the guard is a genuine allow-list, not a deny-list that happens
- *       to also break the happy path.
- *
- * "Before any bearer token is attached" (c) is proven WITHOUT
- * subclassing `EnableBankingJwtSigner` (it is `final`, matching the
- * project's discipline of not leaving cryptographic signing classes
- * extensible) — the rejection-path fixture credentials instead carry a
- * deliberately MALFORMED private-key PEM. If `assertAllowedUrl()` did
- * not run before `EnableBankingJwtSigner::sign()`, signing the
- * malformed key would throw FIRST, and it would throw a DIFFERENT type —
- * so the assertion on `UnsafeOpenBankingRequestException` would fail.
- * This makes the ordering claim falsifiable against a real regression,
- * not merely asserted against a stub. The type is what carries the
- * claim now; the message is only asserted where the specific host
- * rejected is itself part of what is being proven.
- *
- * Function names are prefixed `egressGuard*` — distinct from both
- * `OpenBankingSecretsFileGuardTest`'s `openBankingGuard*` and
- * `OpenBankingAisOnlyArchTest`'s `aisOnlyGuard*` helpers — because Pest
- * loads every test file's top-level functions into the same global
- * namespace within one PHP process, and a shared name would fatal with
- * "cannot redeclare function".
- */
-
 function egressGuardRealSigner(): EnableBankingJwtSigner
 {
     $clock = new class implements Clock
@@ -82,10 +44,10 @@ function egressGuardValidPrivateKeyPem(): string
     return $pem;
 }
 
-/**
- * Rejection-path fixture credentials: a MALFORMED private key proves the
- * assert-before-sign ordering (see file docblock).
- */
+// The rejection fixtures carry a deliberately MALFORMED private-key PEM. If
+// assertAllowedUrl() ever stopped running before EnableBankingJwtSigner::sign(),
+// signing would throw first and with a different type, so every assertion on
+// UnsafeOpenBankingRequestException below would fail rather than silently pass.
 function egressGuardRejectionSecrets(): OpenBankingSecretsRepository
 {
     return new class extends OpenBankingSecretsRepository
@@ -269,9 +231,6 @@ it('accepts the dynamically-resolved bank SCA host once persisted, without weake
 
     expect($acceptedClient->aspsps('NL'))->toBe($mockBody);
 
-    // The SAME resolved SCA host does NOT grant a free pass to a
-    // DIFFERENT attacker host merely because a bank SCA host has been
-    // persisted on the credential.
     $rejectionClient = new class(egressGuardRejectionSecretsWithScaHost('sca.asnbank.example'), egressGuardRealSigner(), 'https://attacker.example.com/') extends EnableBankingHttpClient
     {
         public function __construct(
@@ -300,9 +259,8 @@ function egressGuardRejectionSecretsWithScaHost(string $bankScaHost): OpenBankin
     {
         public function __construct(private readonly string $bankScaHost)
         {
-            // Deliberately does NOT call parent::__construct() — this
-            // fixture never touches the filesystem, so the parent's
-            // Filesystem/SecretShield dependencies are unnecessary.
+            // Skips parent::__construct() on purpose: this fixture never touches
+            // the filesystem, so the parent's Filesystem/SecretShield deps are moot.
         }
 
         public function load(): ?OpenBankingCredentials

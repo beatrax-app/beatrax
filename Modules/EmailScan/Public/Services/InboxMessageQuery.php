@@ -13,10 +13,8 @@ use Modules\Core\Public\Enums\InboxMessageStatus;
 use Modules\EmailScan\Public\Dto\InboxMessageDto;
 use stdClass;
 
-// Public read-side query over inbox_messages. Streams rows in id
-// order via cursor() so downstream parsers iterate large fetch
-// backlogs without materialising the full set; the status value is
-// validated so a typo call site fails loud, not silently zero rows.
+// The status is validated rather than passed through, so a typo at a call site
+// fails loud instead of silently yielding zero rows.
 readonly class InboxMessageQuery
 {
     use CoercesScalars;
@@ -71,9 +69,8 @@ readonly class InboxMessageQuery
         $raw = self::toString($value);
         $dt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $raw);
         if ($dt === false) {
-            // Fall back to the constructor so ISO 8601 + tz-bearing
-            // strings round-trip; SQLite stores 'Y-m-d H:i:s' but
-            // tests may seed with createFromFormat-rejected variants.
+            // SQLite stores 'Y-m-d H:i:s', but fixtures seed ISO 8601 and
+            // tz-bearing strings that createFromFormat rejects.
             return new DateTimeImmutable($raw);
         }
 

@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Services\UserPreferenceWriter;
 use Modules\Core\Public\Support\Lang;
 use Modules\Reports\Public\Actions\DeleteReport;
@@ -17,16 +18,13 @@ use Modules\Reports\Public\Actions\TogglePin;
 use Modules\Reports\Public\Services\SavedReportsQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../../.docs/features/reports/architecture.md
- */
 final class ReportsIndex extends Component
 {
+    use HoldsFlashMessage;
+
     public string $view = 'cards';
 
     public ?int $confirmingDeleteId = null;
-
-    public string $flashMessage = '';
 
     public function mount(CurrentUser $currentUser, DatabaseManager $db): void
     {

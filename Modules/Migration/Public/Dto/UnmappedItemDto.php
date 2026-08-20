@@ -6,9 +6,6 @@ namespace Modules\Migration\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 final class UnmappedItemDto extends Data
 {
     public function __construct(

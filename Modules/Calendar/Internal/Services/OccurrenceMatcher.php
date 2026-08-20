@@ -14,9 +14,6 @@ use stdClass;
 // Decides whether a past-day expected entry was actually paid: loads observed
 // occurrences around the month and matches them to expected dates within a
 // cadence-clamped tolerance window.
-/**
- * @link ../../../../.docs/features/calendar/architecture.md
- */
 final readonly class OccurrenceMatcher
 {
     use CoercesScalars;

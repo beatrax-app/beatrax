@@ -34,22 +34,15 @@ final class IcsSettlementResolver
 {
     use CoercesScalars;
 
-    // Symmetric tolerance arms: the larger of ±€5 absolute or ±2% of the
-    // statement total decides whether a delta auto-confirms.
+    // The tolerance is the larger of the two arms, not both applied.
     public const AMOUNT_TOLERANCE_MINOR = 500;
 
     public const AMOUNT_TOLERANCE_PERCENT = 2;
 
-    // Symmetric window for matching transfer.posted_at to
-    // statement.period_end.
     public const PERIOD_WINDOW_DAYS = 10;
 
-    // Floor below which the statement is considered fully settled
-    // (±€0.01).
     public const SETTLED_TOLERANCE_MINOR = 1;
 
-    // Floor/ceiling confidence applied to exceeded-tolerance candidates;
-    // the ceiling must stay below 1.0.
     private const EXCEEDED_CONFIDENCE_FLOOR = 0.6;
 
     private const EXCEEDED_CONFIDENCE_CEILING = 0.99;
@@ -64,16 +57,10 @@ final class IcsSettlementResolver
         private readonly SessionFactory $session,
     ) {}
 
-    // Idempotent: re-running produces zero net new chain_links, because
-    // the candidate query filters out already-confirmed transfers and
-    // ChainLinkInsertHelper's pre-insert guard refuses duplicate
-    // (from, to, kind, user) rows regardless of state.
     public function resolveForUser(User $user): void
     {
         $connection = $this->db->connection();
 
-        // The left join on chain_links filters out transfers that already
-        // carry a confirmed bulk-settle row.
         $candidateTransfers = $connection
             ->table('transactions')
             ->join('accounts', 'accounts.id', '=', 'transactions.account_id')
@@ -101,25 +88,20 @@ final class IcsSettlementResolver
 
         foreach ($candidateTransfers as $transfer) {
             /** @var stdClass $transfer */
-            // counterparty_iban is an encrypted column; decrypt before
-            // handing it to ResolvesKnownCounterpartyIban, which compares
-            // against the plaintext known_counterparty_ibans.real_iban.
-            // Pass-through no-op when encryption is not enabled for this user.
             $storedCounterpartyIban = self::toString($transfer->counterparty_iban ?? null);
             $counterpartyIban = $storedCounterpartyIban === ''
                 ? ''
                 : $this->codec->decryptValue('transactions', 'counterparty_iban', $storedCounterpartyIban, $user->id, ($this->session)())['value'];
             $aliasAccount = $this->aliasResolver->resolveAccount($counterpartyIban, $user->id);
             if ($aliasAccount === null || $aliasAccount->kind !== AccountKind::IcsCard->value) {
-                // Not an ASN→ICS hop — other transfer_out rows (bank-to-bank,
-                // ASN→PayPal funding) have their own resolvers.
+                // Other transfer_out shapes have their own resolvers.
                 continue;
             }
             $this->resolveOne($transfer, $aliasAccount, $user);
         }
 
-        // Runs after the main pass so any refund chained back above is
-        // already skipped here.
+        // Must follow the main pass: it only walks refunds inside statements
+        // the main pass has already moved to settled/overpaid.
         $this->resolveRefundsAfterClose($user);
     }
 
@@ -144,8 +126,7 @@ final class IcsSettlementResolver
 
         $statement = $this->findCandidateStatement($accountId, $postedAt, $user);
         if ($statement === null) {
-            // Half-state. Statement may roll in on a future import; the
-            // next resolver pass will pick this transfer up again.
+            // The statement may roll in on a later import; the next pass retries.
             return;
         }
 
@@ -163,10 +144,8 @@ final class IcsSettlementResolver
             $expenseSum += self::toInt($expense->settled_amount_minor ?? null);
         }
 
-        // Expenses and the statement total are negative settled amounts;
-        // $settled above already took the transfer's magnitude. Positive
-        // delta = user overpaid; negative = underpaid — see
-        // chain-resolution.md for the full sign-convention writeup.
+        // Expenses and the statement total are negative settled amounts while
+        // $settled is a magnitude; positive delta = overpaid, negative = under.
         $delta = -$expenseSum - $priorCredits - $settled;
 
         $absStatementTotal = abs($statementTotal);
@@ -203,15 +182,11 @@ final class IcsSettlementResolver
                 ], $user);
             }
 
-            // Drive the state machine — the sole legal mutator of
-            // card_statements.state — with the positive settlement delta.
+            // CardStatementStateMachine is the only sanctioned mutator of
+            // card_statements.state.
             $settlement = $this->stateMachine->applySettlement($statementId, $settled, $user);
 
             if ($settlement->newState === CardStatementState::Overpaid->value) {
-                // Overpayment surplus carries forward. to_statement_id
-                // is set on the next resolver pass if/when the next
-                // statement period lands — write NULL here to keep the
-                // audit row complete without speculation.
                 $surplus = abs($settlement->newOpenMinor);
                 $now = $this->clock->now()->toDateTimeString();
                 $connection->table('card_statement_credits')->insert([
@@ -228,9 +203,8 @@ final class IcsSettlementResolver
             return;
         }
 
-        // Exceeded tolerance — surface one candidate row for the review
-        // queue. to_transaction_id stays NULL per the schema's
-        // NULL-endpoint check constraint.
+        // The NULL to_transaction_id is legal only for this exceeded-tolerance
+        // candidate — the chain_links NULL-endpoint trigger rejects every other.
         $confidence = $this->computeExceededConfidence($delta, $statementTotal);
         $this->inserter->insertIfNotExists([
             'from_transaction_id' => $transferId,
@@ -301,9 +275,6 @@ final class IcsSettlementResolver
         $periodEnd = self::toString($refund->period_end ?? null);
         $merchant = self::toString($refund->counterparty_normalized ?? null);
 
-        // Look up the original purchase: same merchant + opposite-sign
-        // amount inside the closed period. Most-recent wins when the
-        // merchant repeats.
         $original = $connection
             ->table('transactions')
             ->where('user_id', $user->id)
@@ -316,16 +287,13 @@ final class IcsSettlementResolver
             ->first(['id']);
 
         if ($original === null) {
-            // Skip silently — a NULL to_transaction_id chain_link is
-            // reserved for the exceeded-tolerance ICS bulk-settle case,
-            // so an unmatched refund simply stays unlinked.
+            // No candidate row: a NULL to_transaction_id is reserved for the
+            // exceeded-tolerance case, so an unmatched refund stays unlinked.
             return;
         }
 
         $originalId = self::toInt($original->id ?? null);
 
-        // Find the next open / partially_settled statement on the same
-        // account so the refund credit carries forward to it.
         $nextStatement = $connection
             ->table('card_statements')
             ->where('user_id', $user->id)
@@ -359,8 +327,6 @@ final class IcsSettlementResolver
             ],
         ], $user);
 
-        // abs() defensively normalizes the magnitude regardless of which
-        // sign the refund row's settled_amount_minor carries.
         $now = $this->clock->now()->toDateTimeString();
         $connection->table('card_statement_credits')->insert([
             'user_id' => $user->id,
@@ -373,16 +339,13 @@ final class IcsSettlementResolver
         ]);
     }
 
-    // Binds the statement by period alone, deliberately without an
-    // amount-tolerance check, so out-of-tolerance transfers still land as
-    // exceeded-tolerance candidates; the tolerance arm applies in
-    // resolveOne() against the computed delta instead.
+    // Binds on period alone, deliberately without an amount check, so an
+    // out-of-tolerance transfer still lands as a candidate in resolveOne().
     private function findCandidateStatement(int $accountId, string $postedAt, User $user): ?stdClass
     {
         $connection = $this->db->connection();
 
-        // Computed in PHP rather than SQLite's date() arithmetic — keeps
-        // the resolver portable to other drivers.
+        // Computed in PHP, not SQLite date() arithmetic, to stay driver-portable.
         $posted = CarbonImmutable::parse($postedAt);
         $windowStart = $posted->subDays(self::PERIOD_WINDOW_DAYS)->startOfDay()->toDateTimeString();
         $windowEnd = $posted->addDays(self::PERIOD_WINDOW_DAYS)->endOfDay()->toDateTimeString();
@@ -447,8 +410,6 @@ final class IcsSettlementResolver
             ]);
     }
 
-    // Sum of card_statement_credits.amount_minor rows already carried
-    // forward into this statement.
     private function priorCreditsMinor(int $statementId, User $user): int
     {
         $sum = $this->db->connection()
@@ -460,9 +421,6 @@ final class IcsSettlementResolver
         return self::toInt($sum);
     }
 
-    // Hashes (account_iban|period_end) so the auto-promotion counter sees
-    // stable patterns; the user id is folded in for cross-user isolation
-    // when two users share the same account-iban literal.
     private function signatureHash(int $accountId, string $periodEnd, User $user): string
     {
         $iban = $this->db->connection()
@@ -477,8 +435,6 @@ final class IcsSettlementResolver
         );
     }
 
-    // Confidence band for exceeded-tolerance candidates: larger delta
-    // yields lower confidence, floored/ceilinged by the two constants above.
     private function computeExceededConfidence(int $delta, int $statementTotal): float
     {
         $base = abs($statementTotal);
@@ -490,8 +446,7 @@ final class IcsSettlementResolver
         return max(self::EXCEEDED_CONFIDENCE_FLOOR, min(self::EXCEEDED_CONFIDENCE_CEILING, $raw));
     }
 
-    // Fixed-precision decimal string matching the chain_links.confidence
-    // column's decimal(4,3) shape, avoiding float-string drift in tests.
+    // Matches the chain_links.confidence decimal(4,3) column shape.
     private function formatConfidence(float $value): string
     {
         return number_format($value, 3, '.', '');

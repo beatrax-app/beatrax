@@ -13,9 +13,6 @@ use Modules\Reports\Public\Dto\ReportDefinition;
 use Modules\Sync\Public\Events\SavedReportMutated;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final class UpdateReport
 {
     public function __construct(

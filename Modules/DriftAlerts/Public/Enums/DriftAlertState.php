@@ -8,9 +8,6 @@ namespace Modules\DriftAlerts\Public\Enums;
 // machine's transition() signature stay string; this enum is the one
 // canonical spelling every caller maps through, and it owns the transition
 // graph the SQLite trigger pair and the state machine both enforce.
-/**
- * @link ../../../../.docs/features/drift-alerts/architecture.md
- */
 enum DriftAlertState: string
 {
     case Open = 'open';

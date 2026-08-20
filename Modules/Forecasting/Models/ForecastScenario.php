@@ -13,8 +13,6 @@ use Modules\Core\Public\Concerns\BelongsToUser;
 use Modules\Forecasting\Database\Factories\ForecastScenarioFactory;
 
 /**
- * @link ../../../.docs/features/forecasting/architecture.md
- *
  * @property int $id
  * @property int $user_id
  * @property string $name

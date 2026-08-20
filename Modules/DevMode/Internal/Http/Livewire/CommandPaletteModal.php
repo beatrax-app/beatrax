@@ -15,9 +15,6 @@ use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Contracts\NavigationRegistry;
 use Modules\Search\Public\Contracts\SearchResultsProvider;
 
-/**
- * @link ../../../../../.docs/features/dev-mode/architecture.md
- */
 final class CommandPaletteModal extends Component
 {
     /**

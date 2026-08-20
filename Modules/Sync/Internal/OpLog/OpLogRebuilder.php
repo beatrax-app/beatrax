@@ -5,15 +5,12 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\OpLog;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\Config\CoveredTableOrder;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Exceptions\RebuildInProgressException;
-use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class OpLogRebuilder
 {
     /** @var list<string> */

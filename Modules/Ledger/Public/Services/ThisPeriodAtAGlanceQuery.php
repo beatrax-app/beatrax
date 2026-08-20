@@ -22,9 +22,6 @@ use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/ledger/architecture.md
- */
 final class ThisPeriodAtAGlanceQuery
 {
     use CoercesScalars;

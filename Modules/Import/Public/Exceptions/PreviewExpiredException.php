@@ -6,10 +6,8 @@ namespace Modules\Import\Public\Exceptions;
 
 use RuntimeException;
 
-// Thrown when the preview cache entry has been evicted (TTL expired,
-// flushed, non-persistent cache driver restart) — distinguishes "cache
-// miss" from "cache hit with an empty batch" (the latter is a
-// legitimate all-duplicates import, not data loss).
+// The cache entry is gone. Distinct from a cache hit carrying an empty
+// batch, which is a legitimate all-duplicates import rather than data loss.
 final class PreviewExpiredException extends RuntimeException
 {
     public function __construct(public readonly int $importRunId)

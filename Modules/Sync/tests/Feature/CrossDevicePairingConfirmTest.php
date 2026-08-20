@@ -16,28 +16,13 @@ use Modules\Sync\Tests\Support\CrossDevicePairingHarness;
 uses(RefreshDatabase::class);
 uses(CrossDevicePairingHarness::class);
 
-/*
- * CrossDevicePairingConfirmTest — Phase 15 HIGH-01 (`15-crossdevice-pairing-
- * PLAN.md` §4, cases 1-7 + case 9). Drives PairingTokenService's cross-device
- * apply methods (`applyResponderAccept()`/`applyPeerConfirm()`) directly
- * against TWO GENUINELY SEPARATE `pairing_tokens`/`device_registry`
- * databases (`CrossDevicePairingHarness`) — the single-DB test convention
- * elsewhere in this suite is exactly what masked this gap (one DB, distinct
- * device_ids on the SAME row can never prove real cross-device propagation).
- *
- * The transport layer (PairingRelayCourier, which delivers these exact
- * frames over the ZK relay) is exercised separately once it lands — this
- * file proves the TRUST DECISIONS the courier will dispatch into are
- * correct in isolation first.
+/**
+ * @link ../../../../.docs/features/sync/cross-device-pairing-confirm.md
  */
 
 const CDP_USER_ID = 4242;
 
 /**
- * A real Ed25519 (signing) + X25519 (routing-only stub) keypair for one
- * simulated device — real keys so signature verification genuinely
- * succeeds/fails rather than being asserted by construction.
- *
  * @return array{deviceId: string, edPub: string, edSec: string, kxPub: string}
  */
 function cdpDevice(string $deviceId): array
@@ -96,10 +81,6 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-// ---------------------------------------------------------------------
-// Case 1 — responder-accept propagation lands on the desktop row.
-// ---------------------------------------------------------------------
-
 it('propagates PAIR_RESPONDER_ACCEPT so the desktop row transitions PENDING -> AWAITING_CONFIRM and both sides derive the SAME safety words', function (): void {
     $this->crossDevicePairingSetUp();
 
@@ -110,9 +91,8 @@ it('propagates PAIR_RESPONDER_ACCEPT so the desktop row transitions PENDING -> A
         ->issue(CDP_USER_ID, $desktop['deviceId'], $desktop['edPub'], $desktop['kxPub']));
     $tokenHash = hash('sha256', $issuedToken);
 
-    // PHONE: seeds a LOCAL row from the scanned QR's initiator identity, then
-    // accepts — binding its OWN responder identity. Mirrors submitCode()'s
-    // import branch on a genuinely fresh, separate database.
+    // The phone seeds its own local row from the scanned QR before accepting;
+    // on a genuinely separate database there is nothing to accept otherwise.
     $this->asDevice('phone', function () use ($desktop, $phone, $issuedToken): void {
         $service = app(PairingTokenService::class);
         $service->seedFromInitiator(CDP_USER_ID, $desktop['deviceId'], $desktop['edPub'], $desktop['kxPub'], $issuedToken);
@@ -120,7 +100,6 @@ it('propagates PAIR_RESPONDER_ACCEPT so the desktop row transitions PENDING -> A
         expect($accepted)->not->toBeFalse();
     });
 
-    // DESKTOP applies the (frame-carried) responder-accept fields.
     $this->asDevice('desktop', function () use ($tokenHash, $phone): void {
         $applied = app(PairingTokenService::class)
             ->applyResponderAccept(CDP_USER_ID, $tokenHash, $phone['deviceId'], $phone['edPub'], $phone['kxPub']);
@@ -142,11 +121,6 @@ it('propagates PAIR_RESPONDER_ACCEPT so the desktop row transitions PENDING -> A
 
     expect($desktopWords)->toBe($phoneWords);
 });
-
-// ---------------------------------------------------------------------
-// Case 2 — both-confirm reached only when BOTH sides confirm; symmetric
-// admission on each device's OWN database.
-// ---------------------------------------------------------------------
 
 it('reaches CONFIRMED on both separate databases only once BOTH sides confirm, admitting the peer symmetrically', function (): void {
     $this->crossDevicePairingSetUp();
@@ -212,11 +186,6 @@ it('reaches CONFIRMED on both separate databases only once BOTH sides confirm, a
     });
 });
 
-// ---------------------------------------------------------------------
-// Case 3 — MITM-substituted responder identity: caught by mismatched
-// safety words; the REAL phone can never be driven to CONFIRMED.
-// ---------------------------------------------------------------------
-
 it('a relay-substituted responder identity yields mismatched safety words; the REAL phone can never reach CONFIRMED via the attacker', function (): void {
     $this->crossDevicePairingSetUp();
 
@@ -231,9 +200,8 @@ it('a relay-substituted responder identity yields mismatched safety words; the R
     $this->asDevice('desktop', fn () => cdpInsertSelfRow(app(DatabaseManager::class), $desktop));
     $this->asDevice('phone', fn () => cdpInsertSelfRow(app(DatabaseManager::class), $phone));
 
-    // The REAL phone accepts normally — its row binds the REAL desktop
-    // identity as `initiator` from the out-of-band, physically-scanned QR,
-    // which the relay cannot alter.
+    // The phone binds the real desktop identity from the physically-scanned
+    // QR, which never crosses the relay.
     $this->asDevice('phone', function () use ($desktop, $phone, $issuedToken): void {
         $service = app(PairingTokenService::class);
         $service->seedFromInitiator(CDP_USER_ID, $desktop['deviceId'], $desktop['edPub'], $desktop['kxPub'], $issuedToken);
@@ -245,7 +213,6 @@ it('a relay-substituted responder identity yields mismatched safety words; the R
     $this->asDevice('desktop', fn () => app(PairingTokenService::class)
         ->applyResponderAccept(CDP_USER_ID, $tokenHash, $attacker['deviceId'], $attacker['edPub'], $attacker['kxPub']));
 
-    // T1: the two sides now derive DIFFERENT safety words.
     $desktopWords = $this->asDevice('desktop', function () use ($tokenHash): array {
         $row = cdpTokenRow($tokenHash);
 
@@ -258,12 +225,9 @@ it('a relay-substituted responder identity yields mismatched safety words; the R
     });
     expect($desktopWords)->not->toBe($phoneWords, 'a MITM-substituted identity must yield different safety words on the two screens — the human-catches-it invariant');
 
-    // Even in the worst case where the desktop human confirms WITHOUT
-    // checking the (now-mismatched) words, the attacker — who legitimately
-    // owns the key it substituted — CAN complete that one row. This is the
-    // documented human gate, not a crypto failure: the narrower invariant
-    // under test is that the attacker can NEVER also complete the REAL
-    // phone's row.
+    // A human who ignores the mismatched words lets the attacker complete
+    // this one row — an accepted human gate. What follows is the narrower
+    // invariant: the attacker can never complete the real phone's row too.
     $this->asDevice('desktop', function () use ($tokenHash, $desktop): void {
         $row = cdpTokenRow($tokenHash);
         app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $desktop['deviceId']);
@@ -280,25 +244,17 @@ it('a relay-substituted responder identity yields mismatched safety words; the R
         app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $phone['deviceId']);
     });
 
-    // The attacker attempts to forge a PAIR_CONFIRM claiming to be the
-    // desktop, addressed to the phone — it does NOT hold the REAL desktop's
-    // Ed25519 secret key, so the signature fails verification against the
-    // phone-bound REAL desktop public key.
+    // The attacker does not hold the desktop's Ed25519 secret, so a confirm
+    // claiming to be the desktop fails against the phone-bound desktop key.
     $forgedSigClaimingDesktop = cdpSign($attacker, PairingFrame::confirmSigningMessage($tokenHash, $desktop['deviceId'], $phone['deviceId'], $desktop['kxPub'], $phone['kxPub']));
     $phoneState = $this->asDevice('phone', fn () => app(PairingTokenService::class)
         ->applyPeerConfirm(CDP_USER_ID, $tokenHash, $desktop['deviceId'], $phone['deviceId'], $forgedSigClaimingDesktop));
     expect($phoneState)->toBeNull();
 
-    // Zero keys ever reach the phone: no confirmed desktop peer in ITS
-    // device_registry.
     $this->asDevice('phone', function () use ($desktop): void {
         expect(app(DeviceRegistryService::class)->deviceKeys(CDP_USER_ID))->not->toHaveKey($desktop['deviceId']);
     });
 });
-
-// ---------------------------------------------------------------------
-// Case 4 — a bare forged PAIR_CONFIRM (correct ids, random signing key).
-// ---------------------------------------------------------------------
 
 it('rejects a PAIR_CONFIRM with correct device ids but a signature from a random, unrelated key', function (): void {
     $this->crossDevicePairingSetUp();
@@ -326,9 +282,8 @@ it('rejects a PAIR_CONFIRM with correct device ids but a signature from a random
         app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $desktop['deviceId']);
     });
 
-    // A forged frame: correct token_hash + correct claimed device ids, but
-    // signed by a totally unrelated random key — neither the relay nor an
-    // attacker holds the phone's real Ed25519 secret key.
+    // Correct token hash and device ids, signed by an unrelated key: what a
+    // relay that never held the phone's Ed25519 secret can actually produce.
     $randomKeypair = sodium_crypto_sign_keypair();
     $forgedSig = sodium_bin2hex(sodium_crypto_sign_detached(
         PairingFrame::confirmSigningMessage($tokenHash, $phone['deviceId'], $desktop['deviceId'], $phone['kxPub'], $desktop['kxPub']),
@@ -345,11 +300,6 @@ it('rejects a PAIR_CONFIRM with correct device ids but a signature from a random
         expect($row->state)->not->toBe(PairingState::Confirmed->value);
     });
 });
-
-// ---------------------------------------------------------------------
-// Case 5 — the local-confirm precondition: a valid peer confirm delivered
-// BEFORE the local human confirms must defer, never complete alone.
-// ---------------------------------------------------------------------
 
 it('defers a valid, correctly-signed PAIR_CONFIRM delivered before the local side has confirmed — never completes alone', function (): void {
     $this->crossDevicePairingSetUp();
@@ -380,8 +330,6 @@ it('defers a valid, correctly-signed PAIR_CONFIRM delivered before the local sid
         ->applyPeerConfirm(CDP_USER_ID, $tokenHash, $phone['deviceId'], $desktop['deviceId'], $sigFromPhone));
     expect($deferred)->toBe('deferred');
 
-    // Nothing was written: the peer column is still unset and the row is
-    // NOT confirmed — a valid frame alone can never drive this.
     $this->asDevice('desktop', function () use ($tokenHash): void {
         $row = cdpTokenRow($tokenHash);
         expect($row->responder_confirmed_at)->toBeNull();
@@ -399,10 +347,6 @@ it('defers a valid, correctly-signed PAIR_CONFIRM delivered before the local sid
         ->applyPeerConfirm(CDP_USER_ID, $tokenHash, $phone['deviceId'], $desktop['deviceId'], $sigFromPhone));
     expect($applied)->toBe(PairingState::Confirmed->value);
 });
-
-// ---------------------------------------------------------------------
-// Case 6 — replay / duplicate idempotency.
-// ---------------------------------------------------------------------
 
 it('re-delivering an already-applied PAIR_RESPONDER_ACCEPT and an already-applied PAIR_CONFIRM is idempotent — no duplicate rows, no exception', function (): void {
     $this->crossDevicePairingSetUp();
@@ -423,7 +367,6 @@ it('re-delivering an already-applied PAIR_RESPONDER_ACCEPT and an already-applie
         $service->accept($issuedToken, CDP_USER_ID, $phone['deviceId'], $phone['edPub'], $phone['kxPub']);
     });
 
-    // Deliver the SAME PAIR_RESPONDER_ACCEPT TWICE.
     $this->asDevice('desktop', function () use ($tokenHash, $phone): void {
         $service = app(PairingTokenService::class);
         $first = $service->applyResponderAccept(CDP_USER_ID, $tokenHash, $phone['deviceId'], $phone['edPub'], $phone['kxPub']);
@@ -444,8 +387,7 @@ it('re-delivering an already-applied PAIR_RESPONDER_ACCEPT and an already-applie
 
     $sigFromPhone = cdpSign($phone, PairingFrame::confirmSigningMessage($tokenHash, $phone['deviceId'], $desktop['deviceId'], $phone['kxPub'], $desktop['kxPub']));
 
-    // Deliver the SAME PAIR_CONFIRM THREE TIMES (simulates the courier
-    // re-draining an undeleted or duplicated relay row).
+    // Simulates the courier re-draining an undeleted or duplicated relay row.
     $this->asDevice('desktop', function () use ($tokenHash, $phone, $desktop, $sigFromPhone): void {
         $service = app(PairingTokenService::class);
         expect($service->applyPeerConfirm(CDP_USER_ID, $tokenHash, $phone['deviceId'], $desktop['deviceId'], $sigFromPhone))
@@ -456,7 +398,6 @@ it('re-delivering an already-applied PAIR_RESPONDER_ACCEPT and an already-applie
             ->toBe(PairingState::Confirmed->value);
     });
 
-    // No duplicate device_registry row for the phone on the desktop's DB.
     $this->asDevice('desktop', function () use ($phone): void {
         /** @var DatabaseManager $db */
         $db = app(DatabaseManager::class);
@@ -467,10 +408,6 @@ it('re-delivering an already-applied PAIR_RESPONDER_ACCEPT and an already-applie
         expect($count)->toBe(1);
     });
 });
-
-// ---------------------------------------------------------------------
-// Case 7 — expired / cancelled propagates nothing.
-// ---------------------------------------------------------------------
 
 it('an expired local row rejects a PAIR_CONFIRM — no admission, propagates nothing', function (): void {
     CarbonImmutable::setTestNow('2026-07-14 09:00:00');
@@ -500,8 +437,7 @@ it('an expired local row rejects a PAIR_CONFIRM — no admission, propagates not
         app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $desktop['deviceId']);
     });
 
-    // Cancel the desktop's in-flight handshake (mirrors cancelPairing()'s
-    // expire() call) BEFORE the peer confirm arrives.
+    // Cancel the handshake before the peer confirm arrives.
     $this->asDevice('desktop', function () use ($tokenHash): void {
         $row = cdpTokenRow($tokenHash);
         app(PairingTokenService::class)->expire((int) $row->id, CDP_USER_ID);

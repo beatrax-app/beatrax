@@ -12,7 +12,7 @@ use Native\Desktop\Events\AutoUpdater\UpdateAvailable;
 use Psr\Log\LoggerInterface;
 
 /**
- * @link ../../../../.docs/features/desktop/architecture.md
+ * @link ../../../../.docs/features/desktop/auto-update.md
  */
 final readonly class VerifyAndAnnounceUpdate
 {
@@ -25,9 +25,8 @@ final readonly class VerifyAndAnnounceUpdate
 
     public function handle(UpdateAvailable $event): void
     {
-        // A desktop-only event, but the mobile runtime must never act on a
-        // desktop binary update — the app stores own that path — so it is
-        // refused here as well as gated at registration.
+        // The mobile runtime must never act on a desktop binary update — the app
+        // stores own that path — so it is refused here as well as at registration.
         if (UserDataPathService::isMobileRuntime()) {
             return;
         }
@@ -37,10 +36,8 @@ final readonly class VerifyAndAnnounceUpdate
             return;
         }
 
-        // electron-updater found an update; announce it only when the
-        // publisher-signed manifest agrees on the version, so a feed serving a
-        // signed manifest for one version and a binary for another never
-        // reaches the banner the user consents from.
+        // A feed serving a signed manifest for one version and a binary for another
+        // must never reach the banner the user consents from.
         if ($manifest->latestVersion !== $event->version) {
             $this->logger->warning('VerifyAndAnnounceUpdate: signed manifest version disagrees with the update offered.', [
                 'offered' => $event->version,

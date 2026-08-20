@@ -4,12 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Onboarding\Public\Enums;
 
-// The per-step state of a wizard_progress row: `pending`, `in_progress`,
-// `done`, or `skipped`. The column stays string (enforced by a trigger);
-// this enum is the one canonical spelling callers map through.
-/**
- * @link ../../../../.docs/features/onboarding/architecture.md
- */
+// wizard_progress.status stays a string column, constrained by a database
+// trigger; this enum is the one canonical spelling callers map through.
 enum WizardStepStatus: string
 {
     case Pending = 'pending';

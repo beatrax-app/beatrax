@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Migration\Internal\Pipeline;
 
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 final class ConflictValueCodec
 {
     /** @var list<string> Fields whose stored value is an integer minor-unit amount. */
@@ -24,9 +21,8 @@ final class ConflictValueCodec
 
     public static function fromStorage(?string $stored, string $fieldName): string|int
     {
-        // A NULL/missing stored value degrades to the type's zero value (0 /
-        // '') rather than null, since every call site immediately hands this
-        // to a writer that expects a concrete scalar.
+        // A missing stored value degrades to the type's zero value, never null:
+        // every call site hands the result straight to a writer expecting a scalar.
         if ($stored === null) {
             return self::isMoneyField($fieldName) ? 0 : '';
         }

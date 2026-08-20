@@ -12,9 +12,6 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
 use Modules\Migration\Public\Enums\MigrationRunStatus;
 
-/**
- * @link ../../../../../.docs/features/migration/architecture.md
- */
 final class MigrationsIndex extends Component
 {
     public function render(ViewFactory $views, CurrentUser $currentUser, DatabaseManager $db): View

@@ -12,17 +12,10 @@ use Modules\Mobile\Internal\Http\Livewire\MobilePairingScan;
 
 uses(RefreshDatabase::class);
 
-/*
- * A locked app-lock is the one pairing failure the user can actually fix, and
- * the flow used to be a dead end about it: the confirm button answered "Your
- * device identity is locked. Unlock the app and try again." and nothing on
- * that screen opened the PIN pad. Driving a real iPhone, the only way through
- * was to type the lock URL by hand — which a user cannot do.
- *
- * Redirecting was only half of it. The reason was written to a public property
- * of the component being navigated AWAY from, and navigate:false is a full
- * page load, so the reader arrived at a PIN pad that explained nothing.
- */
+// The confirm button used to say the device identity was locked and leave the
+// user there, with nothing on that screen opening the PIN pad. Redirecting was
+// only half of it: the reason lived on a public property of the component being
+// navigated away from, and navigate:false is a full page load.
 
 it('carries the reason across to the lock screen', function (): void {
     $user = User::query()->create([
@@ -84,12 +77,10 @@ it('returns an importing device to the import arm after it unlocks', function ()
         base_path('Modules/Mobile/Internal/Http/Livewire/MobilePairingScan.php')
     );
 
-    /*
-     * Unlocking fell through to redirectToIntendedUrl()'s dashboard default,
-     * so a device sent to the PIN pad mid-import came back to a pairing screen
-     * that no longer knew it was importing — and therefore offered the typed
-     * code arm, which the import path hides because it cannot succeed there.
-     */
+    // Unlocking fell through to redirectToIntendedUrl()'s dashboard default, so a
+    // device sent to the PIN pad mid-import came back to a pairing screen that no
+    // longer knew it was importing, and therefore offered the typed code arm the
+    // import path hides because it cannot succeed there.
     expect($component)->toContain('MobileLockGateway::SESSION_INTENDED_URL')
         ->and($component)->toContain("'?mode=import'");
 

@@ -6,15 +6,12 @@ namespace Modules\EmailScan\Internal\Listeners;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
-use Modules\Core\Models\SystemAlert;
+use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Events\InboxTokenFailed;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final class RaiseReconsentAlertOnTokenFailure
 {
     private const ALERT_KIND = 'oauth_reconsent_required';
@@ -28,6 +25,7 @@ final class RaiseReconsentAlertOnTokenFailure
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly LoggerInterface $logger,
+        private readonly SystemAlertWriter $alerts,
     ) {}
 
     public function handle(InboxTokenFailed $event): void
@@ -40,16 +38,20 @@ final class RaiseReconsentAlertOnTokenFailure
         }
 
         try {
-            SystemAlert::query()->create([
-                'user_id' => $userId,
-                'kind' => self::ALERT_KIND,
-                'severity' => self::ALERT_SEVERITY,
-                'message' => $this->messageFor($event->provider),
-                'metadata' => [
+            // A lapsed mail token is a fact about the ACCOUNT, not about
+            // this machine, so unlike the operational probes this row is
+            // owned and travels — otherwise the other device keeps telling
+            // the user to reconnect long after they have.
+            $this->alerts->raiseForUser(
+                userId: $userId,
+                kind: self::ALERT_KIND,
+                severity: self::ALERT_SEVERITY,
+                message: $this->messageFor($event->provider),
+                metadata: [
                     'inbox_id' => $inboxId,
                     'provider' => $event->provider,
                 ],
-            ]);
+            );
         } catch (Throwable $e) {
             // Defence-in-depth: the listener must never throw upward,
             // since the upstream caller is mid-error-recovery already.

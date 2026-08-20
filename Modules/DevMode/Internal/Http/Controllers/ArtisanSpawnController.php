@@ -15,10 +15,8 @@ use Modules\DevMode\Public\Dto\CommandSpec;
 use Modules\DevMode\Public\Exceptions\SpawnedRunVanishedException;
 use Symfony\Component\HttpFoundation\Response;
 
-// SAFE-tier spawn endpoint; DESTRUCTIVE-tier commands are rejected at
-// this layer — that path lives behind the TripleGate modal +
-// DestructiveSpawnController instead, isolating the SAFE-tier surface so
-// a palette bug leaking a DESTRUCTIVE name cannot fire it through here.
+// SAFE tier only. DESTRUCTIVE names are refused rather than handled, so a
+// palette bug that leaks one cannot fire it without the triple gate.
 final readonly class ArtisanSpawnController
 {
     public function __construct(
@@ -61,10 +59,8 @@ final readonly class ArtisanSpawnController
 
         $spec = $this->registry->find($command);
 
-        // Per-arg rules enforcement: ArgSpec::$rules is a Laravel-ready
-        // rule array, so we validate the args sub-array here before the
-        // shell ever sees them. This is the third guard alongside the
-        // command whitelist and escapeshellarg in CommandSpawner.
+        // Third guard on the args, alongside the command whitelist and
+        // CommandSpawner's escapeshellarg — and the only one before the shell.
         if ($spec->argsSchema !== []) {
             $argRules = [];
             foreach ($spec->argsSchema as $argSpec) {
@@ -89,10 +85,6 @@ final readonly class ArtisanSpawnController
         ], 202);
     }
 
-    // DESTRUCTIVE-tier commands are rejected here (403) — the runner's
-    // triple-gate pathway owns destructive execution; unknown names 422
-    // before the spawner's whitelist is ever consulted. Null lets the
-    // SAFE-tier command through.
     /**
      * @param  list<string>  $safeNames
      * @param  list<string>  $destructiveNames

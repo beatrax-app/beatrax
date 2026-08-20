@@ -13,10 +13,8 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-// Plain dismiss: the alert leaves the Open tab WITHOUT recording a
-// suppression rule (that is DismissAnomalyAlertAsExpected's job).
-// Idempotent when already dismissed; cross-user invocation raises
-// NotFoundHttpException.
+// Plain dismiss: records no suppression rule — that is
+// DismissAnomalyAlertAsExpected's job.
 final class DismissAnomalyAlert
 {
     public function __construct(

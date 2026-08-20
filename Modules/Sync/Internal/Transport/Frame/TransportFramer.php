@@ -7,9 +7,6 @@ namespace Modules\Sync\Internal\Transport\Frame;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
 
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 final class TransportFramer
 {
     private const MAX_PAYLOAD_BYTES = 65536;

@@ -18,9 +18,6 @@ use Modules\OpenBanking\Public\Contracts\RemoteSourceAdapter;
 use Modules\OpenBanking\Public\Dto\FetchWindow;
 use Modules\OpenBanking\Public\Exceptions\OpenBankingConnectionException;
 
-/**
- * @link ../../../../.docs/features/open-banking/architecture.md
- */
 final class OpenBankingFetchService
 {
     // Enable Banking's live transaction window is documented as ~90-730

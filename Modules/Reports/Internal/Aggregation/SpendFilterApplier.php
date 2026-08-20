@@ -6,9 +6,6 @@ namespace Modules\Reports\Internal\Aggregation;
 
 use Illuminate\Database\Query\Builder as QueryBuilder;
 
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final class SpendFilterApplier
 {
     // The single home for the shared account/category/counterparty/amount

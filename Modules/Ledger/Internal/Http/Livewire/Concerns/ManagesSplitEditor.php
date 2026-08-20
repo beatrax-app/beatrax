@@ -24,9 +24,6 @@ use Modules\Tax\Public\Services\TaxTagQuery;
 // and the two mutator calls that make any of it durable. It sits beside
 // TransactionDetail rather than inside it because it was fifteen of that
 // component's twenty-five methods and answers a question of its own.
-/**
- * @link ../../../../../../.docs/features/ledger/architecture.md
- */
 trait ManagesSplitEditor
 {
     use DispatchesToast;

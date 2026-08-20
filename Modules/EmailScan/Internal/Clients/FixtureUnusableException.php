@@ -10,7 +10,4 @@ use RuntimeException;
 // These clients back demo mode, so reaching this means the shipped fixture set
 // is wrong rather than anything about a user's mailbox — no live provider is
 // involved and no retry can help.
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final class FixtureUnusableException extends RuntimeException {}

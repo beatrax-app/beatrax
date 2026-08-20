@@ -10,16 +10,6 @@ use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for ResumeStepResolver: the three-branch decision that
- * decides which step the wizard lands the user on when they re-enter
- * /setup mid-flow. Matches the open-question #2 contract:
- *  - any in_progress row wins (drops the user back where they were),
- *  - else the first pending row in registry order,
- *  - else the empty-string sentinel meaning all-done/skipped (caller
- *    redirects to /).
- */
-
 beforeEach(function (): void {
     $this->user = User::query()->create([
         'username' => 'resume',
@@ -45,8 +35,6 @@ it('returns the step_key of the in_progress row when one exists', function (): v
 });
 
 it('returns the first pending step in registry order when nothing is in_progress', function (): void {
-    // All rows are pending after initialize() — the resolver should return
-    // 'welcome' (the first registry step).
     /** @var ResumeStepResolver $resolver */
     $resolver = $this->app->make(ResumeStepResolver::class);
 
@@ -67,9 +55,7 @@ it('skips pending steps that appear before a later-pending step when earlier one
     /** @var ResumeStepResolver $resolver */
     $resolver = $this->app->make(ResumeStepResolver::class);
 
-    // Registry order is welcome → connect-bank → connect-paypal → … so
-    // after marking welcome=done + connect-bank=skipped, the next still-
-    // pending step is connect-paypal.
+    // Registry order is welcome → connect-bank → connect-paypal → …
     expect($resolver->resolve($this->user->id))->toBe('connect-paypal');
 });
 

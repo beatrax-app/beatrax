@@ -13,9 +13,6 @@ use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Modules\Sync\Public\Events\NotificationMutated;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final class NotificationWriter
 {
     public function __construct(

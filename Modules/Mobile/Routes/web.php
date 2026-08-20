@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 
-/**
- * @link ../../../.docs/features/mobile/architecture.md
- */
 
 // Deliberately OUTSIDE the `auth` group - it renders BEFORE any user
 // account exists on the device, gated in front of it by

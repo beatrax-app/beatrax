@@ -19,9 +19,6 @@ use Modules\Core\Public\Support\Lang;
 use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
 use Modules\DevMode\Internal\Logging\RecentLogEntriesReader;
 
-/**
- * @link ../../../../../.docs/features/dev-mode/architecture.md
- */
 #[Layout('dev::layouts.dev-shell')]
 final class DevOverviewPage extends Component
 {

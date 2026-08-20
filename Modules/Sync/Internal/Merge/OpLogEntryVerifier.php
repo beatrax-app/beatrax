@@ -16,9 +16,6 @@ use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\OpLog\QuarantineReason;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class OpLogEntryVerifier
 {
     /**

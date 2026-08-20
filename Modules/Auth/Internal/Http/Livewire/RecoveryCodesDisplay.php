@@ -14,20 +14,17 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-// The plaintext codes are never stored on a public component property --
-// every method reads them fresh from the session, so the plaintext never
-// round-trips to the browser wire snapshot.
+// Every method reads the codes fresh from the session rather than holding them
+// on a public property, so the plaintext never reaches the wire snapshot.
 final class RecoveryCodesDisplay extends Component
 {
     public const SESSION_KEY = 'auth.signup.recovery_codes_plain';
 
-    // Which surface sent the user here. The ceremony is reached from two
-    // places now — signup, and regenerating from Settings — and finishing it
-    // must return to whichever asked, not to a fixed destination.
+    // Signup and Settings both reach this ceremony, and finishing it must
+    // return to whichever asked.
     public const SESSION_RETURN_KEY = 'auth.recovery_codes.return_to';
 
-    // Settings is the only alternative to the wizard, and it is matched as a
-    // token rather than used as a URL: a session value that becomes a
+    // Matched as a token, never used as a URL: a session value that becomes a
     // redirect target is an open redirect the moment anything can write it.
     public const RETURN_TO_SETTINGS = 'settings';
 
@@ -35,8 +32,8 @@ final class RecoveryCodesDisplay extends Component
 
     public function mount(Session $session): void
     {
-        // Reaching this page outside the post-signup ceremony has no
-        // codes to show — present a 404 rather than an empty page.
+        // Called for the 404: arriving outside the ceremony has no codes to
+        // show, and an empty page would be worse than a miss.
         $this->codesFromSession($session);
     }
 
@@ -49,9 +46,8 @@ final class RecoveryCodesDisplay extends Component
         $returnTo = $session->pull(self::SESSION_RETURN_KEY);
         $session->forget(self::SESSION_KEY);
 
-        // Default is the setup wizard, because this screen is now the step
-        // between signup and setup: sending the user onward to the dashboard
-        // would silently drop the nine-step onboarding they have not seen yet.
+        // The default is the setup wizard, not the dashboard: this screen sits
+        // between signup and setup, and onboarding has not run yet.
         $target = $returnTo === self::RETURN_TO_SETTINGS
             ? $urls->route('settings')
             : $urls->route('setup');

@@ -53,9 +53,6 @@ use Modules\Recurring\Public\Events\RecurringSeriesCadenceFlipped;
 use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 use Modules\Recurring\Public\Events\RecurringSeriesRejected;
 
-/**
- * @link ../../../.docs/features/forecasting/architecture.md
- */
 final class ForecastingServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;

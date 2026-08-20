@@ -14,8 +14,6 @@ use Modules\Receipts\Public\Dto\ChainHintPayload\RefundOfPayload;
 use Modules\Receipts\Public\Events\ChainHintDetected;
 
 /**
- * @link ../../../../.docs/features/chains/architecture.md
- *
  * @internal Row consumed exclusively by the Chains module's own resolvers
  *           + review-queue UI. Subscription wired in ChainsServiceProvider::boot().
  */

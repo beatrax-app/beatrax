@@ -18,9 +18,6 @@ use Modules\Sync\Internal\Exceptions\SecretFileException;
 use Modules\Sync\Internal\Identity\SecureTempFile;
 use SodiumException;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class GdkKeyringService
 {
     // Wide enough that two distinct KEKs cannot collide onto one cache entry;

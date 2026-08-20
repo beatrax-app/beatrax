@@ -11,9 +11,6 @@ use Modules\DriftAlerts\Public\Dto\DriftAlertDto;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/drift-alerts/architecture.md
- */
 final class DriftAlertDtoMapper
 {
     use CoercesScalars;
@@ -40,8 +37,8 @@ final class DriftAlertDtoMapper
             $eurEquivalent = Money::ofMinor($eurEquivalentMinor, 'EUR');
         }
 
-        // Fail loud (see the class @link) rather than letting Carbon raise
-        // a bare InvalidFormatException out of an unscoped parse('').
+        // Fail loud rather than letting Carbon raise a bare
+        // InvalidFormatException out of an unscoped parse('').
         $rawDetected = $row->detected_at ?? null;
         if (! is_string($rawDetected) || $rawDetected === '') {
             $rowId = isset($row->id) && is_numeric($row->id) ? (string) $row->id : '?';

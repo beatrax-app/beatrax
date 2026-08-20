@@ -7,9 +7,6 @@ namespace Modules\Core\Internal\Console\Probes;
 use Illuminate\Database\DatabaseManager;
 use Throwable;
 
-/**
- * @link ../../../../../.docs/features/core/architecture.md
- */
 final class WalModeProbe implements Probe
 {
     public function __construct(

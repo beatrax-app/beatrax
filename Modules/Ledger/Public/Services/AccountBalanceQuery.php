@@ -9,9 +9,6 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Enums\ClearedStatus;
 
-/**
- * @link ../../../../.docs/features/ledger/architecture.md
- */
 final class AccountBalanceQuery
 {
     public function __construct(

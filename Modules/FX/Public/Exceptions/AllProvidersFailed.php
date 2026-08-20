@@ -6,8 +6,6 @@ namespace Modules\FX\Public\Exceptions;
 
 use RuntimeException;
 
-// Thrown by RateProviderRegistry when every provider in the fallback
-// chain raises a RateFetchException - a terminal failure with no rate
-// available. Callers that need a safe fallback should catch it and
-// apply the passthrough path instead of converting.
+// Terminal: the whole fallback chain failed and no rate is available, so a
+// caller catching this must take the passthrough path rather than converting.
 final class AllProvidersFailed extends RuntimeException {}

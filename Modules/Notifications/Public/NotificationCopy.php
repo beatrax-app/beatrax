@@ -7,9 +7,6 @@ namespace Modules\Notifications\Public;
 use InvalidArgumentException;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 
-/**
- * @link ../../../.docs/features/notifications/architecture.md
- */
 final class NotificationCopy
 {
     // The type chip shown beside each notification row. The titles/bodies

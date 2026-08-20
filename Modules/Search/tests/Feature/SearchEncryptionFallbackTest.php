@@ -20,25 +20,10 @@ use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
 
 uses(EnablesEncryptionForUser::class);
 
-/*
- * SearchEncryptionFallbackTest — 14.1-09 (D-06): closes the Search
- * fallback/entity cluster the CONTEXT snapshot missed entirely.
- * `SearchQuery::likeFallbackIds`, `EntityNameSearch`, and
- * `DidYouMeanSuggester` all used to predicate directly on ciphertext
- * columns (`counterparty_name`/`description`/`display_name`) and would
- * silently return zero/empty/null hits for a genuinely encrypted user.
- * Every test here runs against a REAL encrypted user
- * (`EnablesEncryptionForUser`) whose fixtures are written through the
- * actual encrypting write path (`RecordTransactions` — mirrors
- * `FtsSurvivesEncryptionTest`'s "real import path" test) rather than a
- * raw plaintext DB insert, so a still-broken predicate would genuinely
- * fail here, not pass vacuously against a plaintext fixture.
- *
- * The primary FTS path (>= 3-char queries) is unaffected by this plan —
- * `FtsSurvivesEncryptionTest` already proves it works via the decrypted
- * plaintext shadow (D-02c). This file only covers the fallback/entity
- * paths this plan converts.
- */
+// The fallback and entity lookups used to predicate straight on the ciphertext
+// columns and returned nothing for an encrypted user. Every fixture here is
+// written through the real encrypting path, so a predicate that still reads
+// ciphertext fails outright instead of passing against a plaintext row.
 
 function sefUser(): User
 {
@@ -73,13 +58,6 @@ function sefImportRun(User $user): ImportRun
     ]);
 }
 
-/**
- * Records ONE transaction through the real encrypting write path
- * (`RecordTransactions`) and returns its id, looked up via the
- * non-sensitive `source_ref` column (`counterparty_name`/`description`
- * are ciphertext at rest post-write and cannot be used to look the row
- * back up).
- */
 function sefRecordTransaction(User $user, Account $account, ImportRun $run, string $counterpartyName, string $description, string $sourceRef): int
 {
     /** @var RecordTransactions $action */

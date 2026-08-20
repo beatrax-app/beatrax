@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Crypto;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class SensitiveFieldRegistry
 {
     // Single source-of-truth enumerating the (table, field) pairs the two

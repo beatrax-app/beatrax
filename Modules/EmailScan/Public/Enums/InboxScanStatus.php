@@ -8,9 +8,6 @@ namespace Modules\EmailScan\Public\Enums;
 // and applyStatus()'s signature stay string; this enum is the one
 // canonical spelling every caller maps through, and it owns the transition
 // graph InboxScanStateMachine's guard enforces.
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 enum InboxScanStatus: string
 {
     case Idle = 'idle';

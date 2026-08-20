@@ -13,8 +13,6 @@ use Illuminate\Support\Collection;
 // columns into the single predictable QueueRow array shape the Blade view
 // consumes, keeping larastan-strict happy off the Livewire component.
 /**
- * @link ../../../../.docs/features/dev-mode/architecture.md
- *
  * @phpstan-type QueueRow array{
  *   key: string,
  *   queue?: string,

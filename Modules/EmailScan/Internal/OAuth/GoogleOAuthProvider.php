@@ -16,9 +16,6 @@ use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use RuntimeException;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 class GoogleOAuthProvider
 {
     private const GMAIL_READONLY_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';

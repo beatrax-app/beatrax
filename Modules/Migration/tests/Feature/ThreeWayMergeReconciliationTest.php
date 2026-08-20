@@ -18,24 +18,6 @@ use Modules\Migration\Tests\Support\MigrationFixturePaths;
 
 uses(RefreshDatabase::class);
 
-/*
- * RED Wave 0 stub (13.5-02 Task 3) pinning the Req 10 3-way-merge
- * reconciliation scenario, concretized in 13.5-RESEARCH.md's own algorithm
- * walkthrough: import v1, LOCALLY edit one category's budget assignment,
- * re-import v2 which ALSO changed that SAME category (a CONFLICT — the
- * local edit is untouched, the conflict is listed) AND changed a
- * DIFFERENT category (a clean APPLY — untouched locally, source wins).
- *
- * `CheckForUpdates` does not exist until Plan 07 — every test below is
- * EXPECTED to fail now (missing-class error).
- *
- * Scope note: this file targets the budget-assignment field per
- * RESEARCH.md's own concrete walkthrough (the algorithm's only fully
- * worked example). A transaction-field 3-way-merge conflict follows the
- * identical algorithm against a different entity kind and is not
- * separately re-proven here.
- */
-
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'migration-3wm-fixture-user',
@@ -46,7 +28,6 @@ beforeEach(function (): void {
 });
 
 it('ThreeWayMerge: a category changed on BOTH source and local is a conflict (untouched + listed); a category changed only on source applies cleanly — Req 10', function (): void {
-    // 1. Import v1.
     $firstRun = app(StartMigrationRun::class)->__invoke(
         $this->user,
         'ynab4',
@@ -59,19 +40,16 @@ it('ThreeWayMerge: a category changed on BOTH source and local is a conflict (un
     $household = Category::query()->where('user_id', $this->user->id)->where('name', 'Household')->firstOrFail();
     $jan = CarbonImmutable::parse('2026-01-01');
 
-    // 2. LOCAL edit: the user bumps Groceries' Jan assignment to 300.00
-    // (30000 minor) via the real public writer — simulating manual local
-    // budgeting activity between the two migration imports. Household is
-    // left untouched.
+    // Local edit between the two imports: Groceries to 300.00, Household
+    // left alone.
     app(EnvelopeWriter::class)->setAssigned($this->user, $groceries->id, $jan, 30000);
 
-    // 3. Re-import v2, which changed BOTH Groceries (200.00 -> 250.00,
-    // colliding with the local edit above) AND Household (100.00 -> 120.00,
-    // untouched locally).
+    // v2 changes BOTH Groceries (200.00 -> 250.00, colliding with the local
+    // edit) AND Household (100.00 -> 120.00, untouched locally).
     app(CheckForUpdates::class)->__invoke($firstRun->id, $this->user, 'ynab4', MigrationFixturePaths::ynab4Dir('v2'));
 
-    // Groceries: CONFLICT — the local value (300.00) survives untouched;
-    // the source's 250.00 is NOT silently applied.
+    // Groceries: CONFLICT — the local 300.00 survives, the source's 250.00
+    // is not applied.
     $groceriesAssigned = $this->db->connection()->table('envelope_assignments')
         ->where('user_id', $this->user->id)
         ->where('category_id', $groceries->id)
@@ -79,8 +57,7 @@ it('ThreeWayMerge: a category changed on BOTH source and local is a conflict (un
         ->value('assigned_minor');
     expect((int) $groceriesAssigned)->toBe(30000);
 
-    // Household: clean APPLY — no local edit existed, so the source's
-    // 120.00 change is applied automatically.
+    // Household: clean APPLY — no local edit, so the source's 120.00 lands.
     $householdAssigned = $this->db->connection()->table('envelope_assignments')
         ->where('user_id', $this->user->id)
         ->where('category_id', $household->id)
@@ -109,9 +86,6 @@ it('ThreeWayMerge: the conflict is listed for the user, not silently swallowed �
         MigrationFixturePaths::ynab4Dir('v2'),
     );
 
-    // The reconciliation attempt is surfaced with a distinct lifecycle
-    // status when unresolved conflicts exist (D-06/D-07's 'needs_attention'
-    // status) rather than silently reporting 'confirmed'.
     expect($reconciliationRun->status)->toBe('needs_attention');
 
     $unmappedConflicts = $this->db->connection()->table('migration_staging_unmapped_items')
@@ -133,8 +107,7 @@ it('CR-01: confirming a needs_attention reconciliation run does NOT overwrite th
     $groceries = Category::query()->where('user_id', $this->user->id)->where('name', 'Groceries')->firstOrFail();
     $jan = CarbonImmutable::parse('2026-01-01');
 
-    // LOCAL edit that will collide with v2's Groceries change (200.00 ->
-    // 250.00), producing a conflict CheckForUpdates leaves unresolved.
+    // Local edit that collides with v2's Groceries change (200.00 -> 250.00).
     app(EnvelopeWriter::class)->setAssigned($this->user, $groceries->id, $jan, 30000);
 
     $reconciliationRun = app(CheckForUpdates::class)->__invoke(
@@ -145,10 +118,9 @@ it('CR-01: confirming a needs_attention reconciliation run does NOT overwrite th
     );
     expect($reconciliationRun->status)->toBe('needs_attention');
 
-    // The wizard's own docblock (PreviewMigration.php:52-58) documents
-    // clicking Confirm on a needs_attention run as expected/safe — this is
-    // the exact call CR-01 found silently defeating D-14's keep-local
-    // guarantee on its SECOND promote() pass.
+    // Confirming a needs_attention run re-enters promote(); its second,
+    // unconditional pass over budget assignments is what used to overwrite
+    // the kept-local value.
     app(ConfirmMigration::class)->__invoke($reconciliationRun->id, $this->user);
 
     $groceriesAssigned = $this->db->connection()->table('envelope_assignments')
@@ -157,33 +129,16 @@ it('CR-01: confirming a needs_attention reconciliation run does NOT overwrite th
         ->where('period_start', '2026-01-01')
         ->value('assigned_minor');
 
-    // The local 300.00 value must survive Confirm untouched — NOT silently
-    // reset to the source's conflicting 250.00.
     expect((int) $groceriesAssigned)->toBe(30000);
 
     $confirmedRun = MigrationRun::query()->findOrFail($reconciliationRun->id);
     expect($confirmedRun->status)->toBe('confirmed');
 });
 
-/*
- * Req 10 gap-fix (13.5-VERIFICATION.md): the SPEC's own Target language
- * explicitly promises conflict-flagging "when a newer export changes a
- * transaction or budget amount" — the tests above only ever pinned the
- * budget-assignment half. These three pin the TRANSACTION-amount half
- * against the SAME v1/v2 ynab4 fixture pair: v2's Register.csv changes two
- * plain (non-split) transactions' Outflow amount —
- * 'row-0' (Albert Heijn 01/15: 45.00 -> 50.00, left with no local edit) and
- * 'row-1' (Albert Heijn 01/19: 15.00 -> 18.00, given a colliding local edit
- * below) — while every other row (including the salary/split/transfer rows)
- * is byte-for-byte identical between v1 and v2, so 'row-0'/'row-1' isolate
- * the amount-reconciliation behavior without disturbing any other test.
- *
- * There is no public "edit a transaction amount" writer anywhere in this
- * codebase yet (Req 10's own transaction-amount reconciliation is the first
- * feature to even read/write that field post-import) — so a "local edit" is
- * simulated the only way it can currently happen: a direct table update,
- * exactly like a hypothetical future edit screen would eventually perform.
- */
+// v2's Register.csv changes exactly two plain rows: 'row-0' (45.00 -> 50.00,
+// no local edit) and 'row-1' (15.00 -> 18.00, given a colliding local edit).
+// Every other row is byte-identical to v1. No public writer can edit a
+// transaction amount yet, so a "local edit" has to be a direct table update.
 
 it('ThreeWayMerge: a transaction amount changed only on source applies cleanly; an untouched transaction stays untouched — Req 10', function (): void {
     $firstRun = app(StartMigrationRun::class)->__invoke(
@@ -210,8 +165,7 @@ it('ThreeWayMerge: a transaction amount changed only on source applies cleanly; 
         ->value('beatrax_id');
     expect($salaryTxId)->toBeGreaterThan(0);
 
-    // No local edit to either transaction — re-import v2, which changes
-    // 'row-0' (45.00 -> 50.00) but leaves the salary row untouched.
+    // No local edit to either transaction.
     $reconciliationRun = app(CheckForUpdates::class)->__invoke(
         $firstRun->id,
         $this->user,
@@ -219,7 +173,7 @@ it('ThreeWayMerge: a transaction amount changed only on source applies cleanly; 
         MigrationFixturePaths::ynab4Dir('v2'),
     );
 
-    // Clean APPLY: no local edit existed, so the source's new amount lands.
+    // Clean APPLY: no local edit, so the source's new amount lands.
     $groceryAmount = (int) $this->db->connection()->table('transactions')->where('id', $groceryTxId)->value('amount_minor');
     expect($groceryAmount)->toBe(-5000);
 
@@ -252,8 +206,7 @@ it('ThreeWayMerge: a transaction amount changed on BOTH source and local is a co
         ->value('beatrax_id');
     expect($txId)->toBeGreaterThan(0);
 
-    // LOCAL edit: -1500 (15.00 outflow) -> -1600 (16.00 outflow), colliding
-    // with v2's source change to -1800 (18.00 outflow).
+    // Local edit -1500 -> -1600, colliding with v2's -1800.
     $this->db->connection()->table('transactions')->where('id', $txId)->update(['amount_minor' => -1600]);
 
     $reconciliationRun = app(CheckForUpdates::class)->__invoke(
@@ -265,8 +218,7 @@ it('ThreeWayMerge: a transaction amount changed on BOTH source and local is a co
 
     expect($reconciliationRun->status)->toBe('needs_attention');
 
-    // CONFLICT — the local value (-1600) survives untouched; the source's
-    // -1800 is NOT silently applied.
+    // CONFLICT — the local -1600 survives, the source's -1800 is not applied.
     $amount = (int) $this->db->connection()->table('transactions')->where('id', $txId)->value('amount_minor');
     expect($amount)->toBe(-1600);
 
@@ -307,13 +259,9 @@ it('a kept-local transaction-amount conflict survives BOTH CheckForUpdates and a
     $amountAfterCheckForUpdates = (int) $this->db->connection()->table('transactions')->where('id', $txId)->value('amount_minor');
     expect($amountAfterCheckForUpdates)->toBe(-1600);
 
-    // Clicking Confirm on the needs_attention run must NOT silently
-    // overwrite the kept-local transaction amount — unlike budget_assignment
-    // (CR-01), a transaction is never revisited a second time by
-    // PromoteStagingToDomain::promote() at all once it has a
-    // migration_source_map row, so no separate skip-list is required here;
-    // this test proves that protection holds for the transaction-amount
-    // field specifically.
+    // Unlike a budget assignment, a transaction with a migration_source_map
+    // row is never revisited by promote() at all, so no skip-list is needed
+    // to protect the kept-local amount here.
     app(ConfirmMigration::class)->__invoke($reconciliationRun->id, $this->user);
 
     $amountAfterConfirm = (int) $this->db->connection()->table('transactions')->where('id', $txId)->value('amount_minor');
@@ -344,15 +292,10 @@ it('WR-03: a genuine fingerprint-uniqueness collision on transaction-amount appl
     $groceryRow = $this->db->connection()->table('transactions')->where('id', $groceryTxId)->first();
     $originalAmount = (int) $groceryRow->amount_minor;
 
-    // v2 changes 'row-0' from 45.00 to 50.00 outflow (amount_minor -5000).
-    // Plant a synthetic "clone" transaction that already occupies EVERY
-    // column `transactions_fingerprint_uq` covers for exactly that target
-    // value — so the real reconciliation UPDATE genuinely collides with
-    // this row's own composite unique index, not a contrived/mocked
-    // exception. amount_minor differs from the original row right now
-    // (only becomes identical once CheckForUpdates tries to apply -5000),
-    // and the fingerprint is a distinct fabricated value, so this INSERT
-    // itself does not collide with anything.
+    // Plant a clone occupying every column `transactions_fingerprint_uq`
+    // covers at v2's target amount (-5000), so the reconciliation UPDATE hits
+    // a real composite-unique collision rather than a mocked exception. The
+    // clone's own fingerprint is fabricated, so this INSERT collides with nothing.
     $cloneId = $this->db->connection()->table('transactions')->insertGetId([
         'user_id' => $groceryRow->user_id,
         'account_id' => $groceryRow->account_id,
@@ -383,9 +326,7 @@ it('WR-03: a genuine fingerprint-uniqueness collision on transaction-amount appl
     ]);
     expect($cloneId)->toBeGreaterThan(0);
 
-    // Must not throw — a genuine fingerprint collision is an EXPECTED,
-    // benign outcome that CheckForUpdates itself handles by recording a
-    // conflict row and leaving the transaction untouched.
+    // Must not throw: a genuine fingerprint collision is a handled outcome.
     $reconciliationRun = app(CheckForUpdates::class)->__invoke(
         $firstRun->id,
         $this->user,
@@ -393,8 +334,7 @@ it('WR-03: a genuine fingerprint-uniqueness collision on transaction-amount appl
         MigrationFixturePaths::ynab4Dir('v2'),
     );
 
-    // The original row must be left byte-for-byte untouched — the source's
-    // -5000 was NOT silently applied (it collided with the planted clone).
+    // The source's -5000 collided with the clone, so nothing was applied.
     $amountAfter = (int) $this->db->connection()->table('transactions')->where('id', $groceryTxId)->value('amount_minor');
     expect($amountAfter)->toBe($originalAmount);
 
@@ -407,16 +347,9 @@ it('WR-03: a genuine fingerprint-uniqueness collision on transaction-amount appl
     expect($collisionRows)->not->toBeEmpty();
 });
 
-/*
- * 13.5-HUMAN-UAT.md Test 3c gap-fix: the "Keep local"/"Take source" toggle
- * was a cosmetic no-op — `CheckForUpdates` committed the keep-local decision
- * synchronously, before the preview page ever rendered, so there was
- * nothing left for the toggle to actually change. These tests pin the
- * DEFERRED design: `CheckForUpdates` records the conflict with `resolution`
- * NULL; `ConfirmMigration` is the only place a resolution (from whichever
- * choice the user last persisted via `PreviewMigration::resolveConflict()`)
- * is actually applied.
- */
+// The resolution is deferred: `CheckForUpdates` records a conflict with
+// `resolution` NULL, and `ConfirmMigration` is the only place one is applied.
+// Committing the decision at CheckForUpdates time left the toggle cosmetic.
 
 it('UAT-3c: take_source resolution on a budget-assignment conflict applies the SOURCE value at Confirm', function (): void {
     $firstRun = app(StartMigrationRun::class)->__invoke(
@@ -430,7 +363,7 @@ it('UAT-3c: take_source resolution on a budget-assignment conflict applies the S
     $groceries = Category::query()->where('user_id', $this->user->id)->where('name', 'Groceries')->firstOrFail();
     $jan = CarbonImmutable::parse('2026-01-01');
 
-    // LOCAL edit that collides with v2's Groceries change (200.00 -> 250.00).
+    // Local edit that collides with v2's Groceries change (200.00 -> 250.00).
     app(EnvelopeWriter::class)->setAssigned($this->user, $groceries->id, $jan, 30000);
 
     $reconciliationRun = app(CheckForUpdates::class)->__invoke(
@@ -441,8 +374,7 @@ it('UAT-3c: take_source resolution on a budget-assignment conflict applies the S
     );
     expect($reconciliationRun->status)->toBe('needs_attention');
 
-    // The conflict is left UNRESOLVED by CheckForUpdates (Test 3c gap-fix)
-    // — the local 300.00 is NOT yet touched.
+    // CheckForUpdates leaves the conflict unresolved — 300.00 is untouched.
     $groceriesAssignedBeforeConfirm = $this->db->connection()->table('envelope_assignments')
         ->where('user_id', $this->user->id)
         ->where('category_id', $groceries->id)
@@ -450,7 +382,6 @@ it('UAT-3c: take_source resolution on a budget-assignment conflict applies the S
         ->value('assigned_minor');
     expect((int) $groceriesAssignedBeforeConfirm)->toBe(30000);
 
-    // The user picks "Take source" for the Groceries conflict.
     $this->db->connection()->table('migration_staging_unmapped_items')
         ->where('migration_run_id', $reconciliationRun->id)
         ->where('item_type', 'conflict')
@@ -465,8 +396,7 @@ it('UAT-3c: take_source resolution on a budget-assignment conflict applies the S
         ->where('period_start', '2026-01-01')
         ->value('assigned_minor');
 
-    // Take-source means the SOURCE value (250.00) now wins over the
-    // previously-kept-local 300.00.
+    // The source's 250.00 now wins over the previously-kept-local 300.00.
     expect((int) $groceriesAssigned)->toBe(25000);
 
     $confirmedRun = MigrationRun::query()->findOrFail($reconciliationRun->id);
@@ -493,8 +423,7 @@ it('UAT-3c: keep_local (default, no toggle interaction) leaves the Beatrax value
         MigrationFixturePaths::ynab4Dir('v2'),
     );
 
-    // No toggle interaction at all — the resolution column stays NULL
-    // (D-14's default), never "committed" ahead of time.
+    // No toggle interaction: the resolution column stays NULL.
     $resolution = $this->db->connection()->table('migration_staging_unmapped_items')
         ->where('migration_run_id', $reconciliationRun->id)
         ->where('item_type', 'conflict')
@@ -510,8 +439,7 @@ it('UAT-3c: keep_local (default, no toggle interaction) leaves the Beatrax value
         ->where('period_start', '2026-01-01')
         ->value('assigned_minor');
 
-    // The CR-01 guarantee still holds under the new deferred-resolution
-    // design: a NULL resolution behaves exactly like keep_local.
+    // A NULL resolution behaves exactly like keep_local.
     expect((int) $groceriesAssigned)->toBe(30000);
 });
 
@@ -560,8 +488,7 @@ it('UAT-3c: switching the toggle keep_local -> take_source -> keep_local persist
         ->where('period_start', '2026-01-01')
         ->value('assigned_minor');
 
-    // The FINAL choice (keep_local) is what Confirm honors — the local
-    // 300.00 survives even though "Take source" was selected in between.
+    // The last choice wins: 300.00 survives despite the take_source in between.
     expect((int) $groceriesAssigned)->toBe(30000);
 });
 
@@ -626,10 +553,9 @@ it('UAT-3a/3b: the conflict row renders formatted currency and a human label, no
     $response = $this->actingAs($this->user)->get("/migrations/{$reconciliationRun->id}/preview");
 
     $response->assertOk();
-    // 3a: values render as formatted currency, e.g. "€ 300,00" / "€ 250,00".
+    // Formatted currency, e.g. "€ 300,00" — never a raw minor-unit integer.
     $response->assertSee('€', false);
-    // 3b: a human label naming the category + budget month, not the raw
-    // internal "Budget_assignment budgeted_minor" shape.
+    // A human label naming the category and budget month.
     $response->assertSee('Groceries', false);
     $response->assertDontSee('Budget_assignment budgeted_minor', false);
 });

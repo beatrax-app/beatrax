@@ -6,9 +6,6 @@ namespace Modules\Migration\Internal\Parsers\Support;
 
 use Modules\Migration\Public\Exceptions\UnrecognizedMigrationFileException;
 
-/**
- * @link ../../../../../.docs/features/migration/architecture.md
- */
 final class YnabSplitReconstructor
 {
     private const SPLIT_MEMO_PATTERN = '/^Split\s*\(?\s*\d+\s*\/\s*\d+\s*\)?$/i';
@@ -63,10 +60,8 @@ final class YnabSplitReconstructor
      */
     public function assertSumSane(array $legAmountsMinor): void
     {
-        // A full running-balance cross-check needs an adjacent non-split
-        // anchor row this class does not have visibility into — this guard
-        // catches only the structurally-impossible cases (empty group, legs
-        // that exactly cancel) without over-claiming a stronger proof.
+        // Catches only the structurally-impossible cases: a full running-balance
+        // cross-check needs an adjacent non-split anchor row this class cannot see.
         if ($legAmountsMinor === []) {
             throw new UnrecognizedMigrationFileException('reconstructed split group has zero legs');
         }

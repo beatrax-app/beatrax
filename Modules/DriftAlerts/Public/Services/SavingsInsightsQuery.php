@@ -18,9 +18,6 @@ use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
-/**
- * @link ../../../../.docs/features/drift-alerts/architecture.md
- */
 final class SavingsInsightsQuery
 {
     private const REVIEW_FLOOR = 500;
@@ -37,8 +34,8 @@ final class SavingsInsightsQuery
     ) {}
 
     /**
-     * @return list<SavingsInsight> cached per user (see the class @link) — invalidated on
-     *                              dismiss() and expires within CACHE_TTL
+     * @return list<SavingsInsight> cached per user — invalidated on dismiss() and
+     *                              expires within CACHE_TTL
      */
     public function forUser(User $user): array
     {

@@ -9,10 +9,6 @@ use Modules\Core\Models\User;
 use Modules\Onboarding\Models\WizardProgress;
 use Modules\Onboarding\Public\Enums\WizardStepStatus;
 
-// Materialises a mixed-state wizard_progress slate (done/in_progress/
-// skipped/pending) for the primary demo user. Hard-codes the step keys
-// rather than importing WizardStepRegistry so cross-module access rules
-// stay clean; upserts on (user_id, step_key).
 final class DemoWizardProgressSeeder
 {
     /**

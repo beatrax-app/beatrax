@@ -13,18 +13,10 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
 uses(RefreshDatabase::class);
 
-/*
- * D-05: Concurrent same-field edit conflict scenario.
- *
- * Two devices (device-a, device-b) each apply a SET op on the SAME
- * transactions.category_id field with an identical HLC timestamp [1000, 0].
- * The tie-break is device_id: strcmp('device-a', 'device-b') < 0, so
- * 'device-b' wins (highest HLC order via device-id).
- *
- * Expected: category_id === C_b after replay; exactly one row.
- * RED: The OpLogReplayer skeleton (Wave 1) does not yet apply LWW logic,
- * so the assertion fails until Wave 2 implements the merge.
- */
+// Two devices edit the same field at an identical HLC, so the merge has
+// nothing left to order them by but the device id. Without that last
+// tie-break the two would resolve differently on each device and the field
+// would never converge.
 
 function concurrentUser(string $username): User
 {
@@ -37,9 +29,6 @@ function concurrentUser(string $username): User
 }
 
 /**
- * Seeds account → import_run → category → transaction and returns
- * [transactionId, categoryA_id, categoryB_id].
- *
  * @return array{0: int, 1: int, 2: int}
  */
 function concurrentTxn(DatabaseManager $db, int $userId, string $suffix): array
@@ -126,8 +115,7 @@ afterEach(function (): void {
 });
 
 it('resolves concurrent same-field category_id edit via HLC + device-id tie-break (device-b wins)', function (): void {
-    // Both devices edit category_id at identical HLC [l=1000, c=0].
-    // device-b > device-a lexicographically → device-b wins.
+    // Identical HLCs, so the lexicographically higher device id wins.
     $keypair = sodium_crypto_sign_keypair();
     $sk = sodium_crypto_sign_secretkey($keypair);
     $pk = sodium_crypto_sign_publickey($keypair);
@@ -160,7 +148,7 @@ it('resolves concurrent same-field category_id edit via HLC + device-id tie-brea
         userId: (int) $this->user->id,
     );
 
-    // Re-create with signatures (OpLogEntry is readonly, reconstruct with sig).
+    // OpLogEntry is readonly, so signing means reconstructing it.
     $sigA = $signer->sign($entryA->signingPayload(), $sk);
     $sigB = $signer->sign($entryB->signingPayload(), $sk);
 
@@ -197,7 +185,6 @@ it('resolves concurrent same-field category_id edit via HLC + device-id tie-brea
 
     $replayer->replay([$entryA, $entryB], (int) $this->user->id);
 
-    // Assert: device-b wins the tie; exactly one row.
     $row = app(DatabaseManager::class)
         ->connection()
         ->table('transactions')
@@ -207,10 +194,8 @@ it('resolves concurrent same-field category_id edit via HLC + device-id tie-brea
 
     expect($row)->not->toBeNull();
 
-    // RED: category_id === C_b — fails until Wave 2 implements LWW.
     expect((int) $row->category_id)->toBe($this->catB);
 
-    // Exactly one transaction row for this user.
     $count = app(DatabaseManager::class)
         ->connection()
         ->table('transactions')
@@ -218,8 +203,6 @@ it('resolves concurrent same-field category_id edit via HLC + device-id tie-brea
         ->count();
     expect($count)->toBe(1);
 
-    // Assert: production path persists both ops to op_log_entries (SYNC-01).
-    // RED: fails until Plan 11-02 wires op_log_entries writes in the production replayer.
     $logCount = app(DatabaseManager::class)
         ->connection()
         ->table('op_log_entries')

@@ -14,9 +14,9 @@ final class IcsPdfPaymentTypeHinter extends DescriptionKeywordHinter
 {
     protected const SOURCE_FORMAT = 'ics-pdf';
 
-    // Order is deliberate: `kosten kasopname` precedes the bare
-    // `geldmaat` token so the per-withdrawal fee row classifies as Fee
-    // rather than Pin even though both lexemes appear nearby on the page.
+    // `kosten kasopname` precedes the bare `geldmaat` so the per-withdrawal
+    // fee row classifies as Fee, not Pin; both lexemes sit near each other
+    // on the page.
     /**
      * @var list<array{keyword: string, type: PaymentType, confidence: int}>
      */

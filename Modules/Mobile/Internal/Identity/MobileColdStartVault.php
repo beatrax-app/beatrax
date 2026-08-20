@@ -12,7 +12,6 @@ use Modules\Auth\Public\Services\MobileLockGateway;
 // of branching on which native stack happens to be installed.
 /**
  * @link ../../../../.docs/design/cold-start-biometric-unlock.md
- * @link ../../../../.docs/features/mobile/architecture.md
  */
 final readonly class MobileColdStartVault implements ColdStartVault
 {

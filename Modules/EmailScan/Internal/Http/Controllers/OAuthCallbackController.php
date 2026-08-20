@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\EmailScan\Internal\OAuth\AccessTokenWithEmail;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
@@ -26,9 +27,6 @@ use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Modules\EmailScan\Public\Services\SecretsWriteFailed;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../../.docs/features/email-scan/architecture.md
- */
 final class OAuthCallbackController
 {
     public function __construct(
@@ -41,6 +39,7 @@ final class OAuthCallbackController
         private readonly Clock $clock,
         private readonly Redirector $redirector,
         private readonly LoopbackRedirectUri $loopback,
+        private readonly SystemAlertWriter $alerts,
     ) {}
 
     public function __invoke(Request $request, string $provider): RedirectResponse
@@ -313,9 +312,10 @@ final class OAuthCallbackController
             ->whereNull('acknowledged_at');
 
         try {
-            (clone $base)
-                ->whereRaw("json_extract(metadata, '$.inbox_id') = ?", [$inboxId])
-                ->update(['acknowledged_at' => $now]);
+            $matching = (clone $base)
+                ->whereRaw("json_extract(metadata, '$.inbox_id') = ?", [$inboxId]);
+            $ids = (clone $matching)->pluck('id');
+            $matching->update(['acknowledged_at' => $now]);
         } catch (\Throwable) {
             // Fallback for SQLite builds without JSON1 — same shape as
             // the listener's de-dup fallback. Anchor the trailing
@@ -323,12 +323,22 @@ final class OAuthCallbackController
             // `inbox_id=1` does not collide with `inbox_id=10`.
             $withComma = '%"inbox_id":'.$inboxId.',%';
             $withBrace = '%"inbox_id":'.$inboxId.'}%';
-            (clone $base)
+            $matching = (clone $base)
                 ->where(static function (Builder $q) use ($withComma, $withBrace): void {
                     $q->where('metadata', 'like', $withComma)
                         ->orWhere('metadata', 'like', $withBrace);
-                })
-                ->update(['acknowledged_at' => $now]);
+                });
+            $ids = (clone $matching)->pluck('id');
+            $matching->update(['acknowledged_at' => $now]);
+        }
+
+        // Reconnecting is the same user action the banner's Acknowledge
+        // button is, so it has to travel the same way — left uncaptured,
+        // the other device kept prompting for an inbox already reconnected.
+        foreach ($ids as $id) {
+            if (is_numeric($id)) {
+                $this->alerts->captureAcknowledgement((int) $id, $userId, $now);
+            }
         }
     }
 }

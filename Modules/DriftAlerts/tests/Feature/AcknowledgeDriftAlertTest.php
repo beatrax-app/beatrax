@@ -15,14 +15,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 uses(RefreshDatabase::class);
 
-/*
- * AcknowledgeDriftAlert — promotes open / snoozed alerts to
- * acknowledged. Idempotent when already acknowledged. Inserts exactly
- * one drift_alert_transitions row per successful invocation. Dispatches
- * `DriftAlertAcknowledged`. Cross-user invocation raises
- * NotFoundHttpException via the `(id, user_id)` guard.
- */
-
 function ackdaUser(string $username): User
 {
     return User::query()->create([
@@ -83,10 +75,6 @@ function ackdaTransaction(DatabaseManager $db, int $userId): int
     ]);
 }
 
-/**
- * Seed an open drift_alerts row for the given user, with realistic
- * series + occurrence FKs. Returns the alert id.
- */
 function ackdaAlert(User $user, string $state = 'open'): DriftAlert
 {
     /** @var DatabaseManager $db */

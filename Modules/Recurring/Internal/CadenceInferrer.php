@@ -7,9 +7,6 @@ namespace Modules\Recurring\Internal;
 use Carbon\CarbonImmutable;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 
-/**
- * @link ../../../.docs/features/recurring/architecture.md
- */
 final class CadenceInferrer
 {
     private const WEEKLY_MAX_EXCLUSIVE = 10;

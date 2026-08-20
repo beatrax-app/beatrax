@@ -16,9 +16,6 @@ use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Exceptions\ScanStateNotFoundException;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 class OAuthSecretsRepository
 {
     use CoercesScalars;

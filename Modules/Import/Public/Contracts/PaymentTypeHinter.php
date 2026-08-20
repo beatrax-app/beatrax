@@ -12,8 +12,7 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
  */
 interface PaymentTypeHinter
 {
-    // Pure function of its input — no DB reads, no per-call state,
-    // bound as a singleton. `null` means "no signal for this row";
-    // the classifier stage then consults the next tagged hinter.
+    // Pure and bound as a singleton. null means no signal for this row, and
+    // the stage consults the next tagged hinter.
     public function hint(CanonicalTransaction $tx, string $sourceFormat): ?PaymentTypeHint;
 }

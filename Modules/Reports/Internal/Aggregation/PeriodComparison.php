@@ -8,9 +8,6 @@ use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Public\Dto\ReportResultDto;
 use Modules\Reports\Public\Dto\ReportResultRow;
 
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final class PeriodComparison
 {
     /**

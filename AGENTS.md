@@ -55,14 +55,19 @@ An IMAP library is not a shortcut here; it is a specification violation.
 - **The gate is three checks, all blocking:** `vendor/bin/pint --test`,
   `vendor/bin/phpstan analyse` at **level 10 in strict mode**, and
   `vendor/bin/pest` — unit, feature, contract, and architecture in one run.
-- Comments explain *why*, never *what*. No lone one-liners — an informative line
-  comment is a **2–4 line block** or it does not exist. No prose in a docblock:
-  they are tag-only.
+- Comments explain *why*, never *what*, and the bar is high: if the code says it,
+  the comment does not need to. An inline `//` block is **at most 4 lines**, and
+  a thought worth one line should BE one line — there is no floor, and padding to
+  reach one is how comment noise got made here. No prose in a docblock: tag-only.
 - **No requirement identifiers in comments** (`GOV-R6`). They go in the commit
   trailer and the PR body, which is where the gate reads them.
-- A class carries an `@link` into `.docs/`, not a prose summary. **That link is
-  verified to resolve (`M6`) — a broken one fails the build**, so moving or
-  deleting a `.docs` page means fixing every reference to it.
+- An `@link` into `.docs/` is for a target a reader could not have guessed — a
+  specific page or section. Do NOT add one pointing at the module's own
+  `architecture.md`: the file path already says which module this is, and a
+  thousand copies of that line said nothing. **A link that IS present is verified
+  to resolve (`M6`) — a broken one fails the build.**
+- Material too involved to sit in four lines belongs in `.docs/` as its own page,
+  with an `@link` to it. That is the case an `@link` exists for.
 - Repo-specific technical detail goes in [`.docs/`](.docs/00-index.md). Product
   decisions and requirements go in the spec. Where the two disagree, the spec
   wins and the page here is corrected (`REPO-R36`).

@@ -11,9 +11,6 @@ use RuntimeException;
 // is unfinished, no bank was chosen, or Enable Banking answered with a missing,
 // unparseable, non-public, or open-redirect consent URL. Each carries the
 // reason the connect controller flashes, so one catch replaces eight returns.
-/**
- * @link ../../../../.docs/features/open-banking/architecture.md
- */
 final class OpenBankingConnectException extends RuntimeException
 {
     public static function wizardIncomplete(): self

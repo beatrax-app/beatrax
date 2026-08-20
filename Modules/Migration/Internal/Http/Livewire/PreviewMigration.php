@@ -16,9 +16,6 @@ use Modules\Migration\Public\Actions\ConfirmMigration;
 use Modules\Migration\Public\Actions\DiscardMigrationRun;
 use Modules\Migration\Public\Dto\PreviewSummary;
 
-/**
- * @link ../../../../../.docs/features/migration/architecture.md
- */
 final class PreviewMigration extends Component
 {
     public int $runId = 0;

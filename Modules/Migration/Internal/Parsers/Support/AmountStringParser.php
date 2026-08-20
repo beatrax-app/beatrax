@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Migration\Internal\Parsers\Support;
 
-/**
- * @link ../../../../../.docs/features/migration/architecture.md
- */
 final class AmountStringParser
 {
     public function parse(string $value): ?int

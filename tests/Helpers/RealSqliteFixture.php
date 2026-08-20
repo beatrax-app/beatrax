@@ -7,55 +7,17 @@ namespace Tests\Helpers;
 use PDO;
 use RuntimeException;
 
-/**
- * Builds a real on-disk SQLite file for tests that cannot use the
- * default `:memory:` `sqlite_testing` connection. The Phase 11 backup
- * + restore commands rely on a filesystem path under the hood
- * (`VACUUM INTO '<path>'` and `PRAGMA integrity_check` against a fresh
- * `PDO` connection), and neither is meaningful against an in-memory
- * database.
- *
- * `create()` returns the absolute path to a freshly-opened `.sqlite`
- * file under `storage/framework/testing/<random>/<name>.sqlite`,
- * applies the supplied `$schemas` DDL list in order (defaulting to
- * `DEFAULT_SCHEMAS` which seeds the minimal `transactions` +
- * `system_alerts` tables Phase 11 needs), and switches the file to
- * WAL journal mode so the fixture matches the production substrate's
- * posture out of the box.
- *
- * `cleanup()` removes the `.sqlite` file and its enclosing temp
- * directory, leaving no residue between tests. Callers are expected
- * to wire `RealSqliteFixture::cleanup($path)` into a `try/finally`
- * or a Pest `afterEach()` block — the fixture intentionally does NOT
- * register a shutdown handler so multi-fixture tests can fail loudly
- * if a leak is introduced.
- *
- * The helper does not use any Laravel facade or framework binding.
- * It opens a raw `PDO('sqlite:<path>')`, calls `mkdir()` / `unlink()`
- * / `rmdir()` directly, and lives outside the Modules/ tree so the
- * arch invariants against facade usage in module code do not apply.
- *
- * Extension hook: callers needing additional tables pass a custom
- * `$schemas` list, typically as
- * `[...RealSqliteFixture::DEFAULT_SCHEMAS, 'CREATE TABLE foo (...)']`,
- * so the baseline tables stay present without forking the helper.
- */
+// The backup and restore commands run `VACUUM INTO '<path>'` and open a fresh
+// PDO for `PRAGMA integrity_check`; neither is meaningful against the default
+// `:memory:` sqlite_testing connection. No shutdown handler is registered on
+// purpose, so a fixture a test forgets to clean up fails loudly.
 final class RealSqliteFixture
 {
+    // Truncated on purpose — no triggers, no foreign keys — because the only
+    // property under test is that the file round-trips a VACUUM INTO with
+    // integrity_check clean. Callers needing more tables pass their own
+    // $schemas list rather than growing this one.
     /**
-     * Minimal DDL set Phase 11 needs: the transactions table (so
-     * VACUUM INTO has at least one domain table to copy and the
-     * sqlite_master is non-empty) plus the system_alerts table (so
-     * post-restore integrity checks can assert against the operational
-     * surface). Future phases needing more tables MUST pass a custom
-     * `$schemas` list rather than mutating this constant.
-     *
-     * Schemas mirror the column shape of the real migrations closely
-     * enough for backup / restore tests; they are intentionally
-     * truncated (no triggers, no foreign keys) because the only
-     * property under test is "the file exists and round-trips through
-     * a VACUUM INTO without integrity_check tripping."
-     *
      * @var list<string>
      */
     public const array DEFAULT_SCHEMAS = [
@@ -79,11 +41,6 @@ final class RealSqliteFixture
     ];
 
     /**
-     * Creates a fresh on-disk SQLite file under
-     * `storage/framework/testing/<random>/<name>.sqlite`, applies the
-     * supplied DDL statements in order, sets WAL journal mode, and
-     * returns the absolute path to the file.
-     *
      * @param  list<string>  $schemas
      */
     public static function create(string $name = 'fixture', array $schemas = self::DEFAULT_SCHEMAS): string
@@ -102,29 +59,20 @@ final class RealSqliteFixture
 
         $pdo = new PDO('sqlite:'.$path);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        // PRAGMA journal_mode = WAL must be set on a fresh, valid DB
-        // file; calling it before any DDL ensures the WAL header is
-        // committed before user tables exist.
+        // Before any DDL, so the WAL header is committed on a still-empty file.
         $pdo->exec('PRAGMA journal_mode = WAL');
 
         foreach ($schemas as $ddl) {
             $pdo->exec($ddl);
         }
 
-        // Drop the PDO handle so any subsequent VACUUM INTO / fresh
-        // PDO open against the same path does not race against an
-        // open write connection.
+        // A later VACUUM INTO or fresh PDO open must not race an open write
+        // connection to the same path.
         unset($pdo);
 
         return $path;
     }
 
-    /**
-     * Removes the `.sqlite` file (plus any WAL / SHM sidecars SQLite
-     * may have produced) and the enclosing per-fixture temp
-     * directory. Safe to call multiple times — missing files are
-     * silently ignored.
-     */
     public static function cleanup(string $path): void
     {
         foreach ([$path, $path.'-wal', $path.'-shm', $path.'-journal'] as $candidate) {
@@ -139,11 +87,8 @@ final class RealSqliteFixture
         }
     }
 
-    /**
-     * Base directory for all fixture files. Lives under
-     * `storage/framework/testing/` so the existing framework gitignore
-     * already excludes it from version control.
-     */
+    // Under storage/framework/testing/ so the framework gitignore already
+    // covers it.
     private static function baseDirectory(): string
     {
         return rtrim(getcwd() ?: sys_get_temp_dir(), DIRECTORY_SEPARATOR)

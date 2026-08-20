@@ -6,9 +6,6 @@ namespace Modules\Sync\Internal\Pairing;
 
 use Modules\Sync\Internal\Exceptions\CryptoOperationFailedException;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class SafetyNumberDeriver
 {
     /**

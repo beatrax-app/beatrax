@@ -22,9 +22,6 @@ use Modules\Pots\Public\Exceptions\PotNotFoundException;
 use Modules\Pots\Public\Services\PotBalanceQuery;
 use Modules\Pots\Public\Services\PotWriter;
 
-/**
- * @link ../../../../../.docs/features/goals/architecture.md
- */
 final class GoalsPage extends Component
 {
     use DispatchesToast;

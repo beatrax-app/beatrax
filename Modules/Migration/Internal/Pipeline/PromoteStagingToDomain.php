@@ -30,9 +30,6 @@ use Modules\Migration\Public\Enums\MigrationRunStatus;
 use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 final class PromoteStagingToDomain
 {
     use CoercesScalars;
@@ -92,18 +89,11 @@ final class PromoteStagingToDomain
         );
     }
 
-    // -------------------------------------------------------------------
-    // Step 1: Categories
-    // -------------------------------------------------------------------
-
     /**
      * @return array{idMap: array<string, int>, created: int}
      */
     private function promoteCategories(int $runId, User $user, string $sourceProduct): array
     {
-        // Ordered by id (== staging-insert order) so a group's synthetic
-        // parent row is guaranteed to already be in $idMap by the time a
-        // child row resolves its parent_source_external_id below.
         $rows = $this->db->connection()->table('migration_staging_categories')
             ->where('user_id', $user->id)
             ->where('migration_run_id', $runId)
@@ -164,10 +154,6 @@ final class PromoteStagingToDomain
         return ['idMap' => $idMap, 'created' => $created];
     }
 
-    // -------------------------------------------------------------------
-    // Step 2: Budget grid
-    // -------------------------------------------------------------------
-
     /**
      * @param  array<string, int>  $categoryIdMap
      * @param  list<string>  $skipKeys  `{categoryExternalId}|{period_start}` composite keys to leave
@@ -191,18 +177,11 @@ final class PromoteStagingToDomain
             $periodStart = CarbonImmutable::parse(self::toString($row->period_start));
 
             if (in_array($categoryExternalId.'|'.$periodStart->toDateString(), $skipKeys, true)) {
-                // Reconciliation conflict: the local value ALSO diverged from
-                // the baseline, so this row's source change is applied to
-                // NOTHING — the beatrax value stays untouched until the user
-                // resolves it via ThreeWayMergeResolver/CheckForUpdates.
                 continue;
             }
 
             $minor = self::toInt($row->budgeted_minor);
 
-            // setAssigned() is idempotent by value: re-setting the same
-            // amount on a re-run is a no-op — no separate resolve-gate
-            // needed here, unlike categories/accounts/transactions.
             $this->envelopeWriter->setAssigned($user, $categoryId, $periodStart, $minor);
 
             $assignmentId = $this->db->connection()->table('envelope_assignments')
@@ -211,8 +190,7 @@ final class PromoteStagingToDomain
                 ->where('period_start', $periodStart->toDateString())
                 ->value('id');
 
-            // A zero-minor assignment DELETES the row (absence == 0) —
-            // nothing persisted to map in that case.
+            // setAssigned() deletes the row outright on a zero amount (absence == 0).
             if ($assignmentId !== null) {
                 $externalId = $categoryExternalId.'|'.$periodStart->toDateString();
 
@@ -226,10 +204,6 @@ final class PromoteStagingToDomain
             }
         }
     }
-
-    // -------------------------------------------------------------------
-    // Step 3: Accounts
-    // -------------------------------------------------------------------
 
     /**
      * @return array{idMap: array<string, int>, created: int}
@@ -260,10 +234,6 @@ final class PromoteStagingToDomain
                     'name' => $name,
                     'slug' => $this->uniqueSlug('accounts', $user, $name),
                     'kind' => self::toString($row->kind),
-                    // No real bank IBAN exists for a migrated account — this
-                    // synthesizes a deterministic pseudo-IBAN (mirrors the
-                    // codebase's 'PAYPAL'/'ICS-CARD' convention) so
-                    // PairsTransferLegs can still match by IBAN like any other.
                     'iban' => self::syntheticIban($externalId),
                     'default_currency' => $currency,
                 ]);
@@ -291,10 +261,6 @@ final class PromoteStagingToDomain
 
         return ['idMap' => $idMap, 'created' => $created];
     }
-
-    // -------------------------------------------------------------------
-    // Step 4: Transactions (+ splits, + payee->counterparty mapping)
-    // -------------------------------------------------------------------
 
     /**
      * @param  array<string, int>  $categoryIdMap
@@ -339,10 +305,8 @@ final class PromoteStagingToDomain
                     return;
                 }
 
-                // RecordResult::$duplicates is inspected per-row below (via
-                // the fingerprint-lookup miss) rather than trusted as a bare
-                // count — a genuine collision must be traceable back to the
-                // exact staged row that lost, not merely tallied.
+                // The RecordResult is discarded on purpose: the per-row fingerprint
+                // lookup below names the exact staged row a collision dropped.
                 ($this->recordTransactions)($prepared['canonicals'], $user);
 
                 $counts = $this->persistPromotedRows(
@@ -401,9 +365,6 @@ final class PromoteStagingToDomain
 
             $canonical = $this->buildCanonicalTransaction($runId, $user, $sourceProduct, $row, $categoryIdMap, $accountIdMap, $payeeNameMap);
 
-            // MUST run before RecordTransactions (Pitfall 3) — the stamped
-            // counterpartyId is what RecordTransactions persists; it never
-            // resolves counterparties itself.
             $canonical = $this->resolvesCounterparties->run($canonical, $user);
 
             $newRows[] = $row;
@@ -453,10 +414,6 @@ final class PromoteStagingToDomain
                 : null;
 
             if ($transactionId === null) {
-                // RecordTransactions silently dropped this row as a
-                // fingerprint-duplicate of an unrelated row (rare, since
-                // buildCanonicalTransaction() seeds a distinct bookedAt) —
-                // surfaced as a visible unmapped item.
                 $this->db->connection()->table('migration_staging_unmapped_items')->insert([
                     'user_id' => $user->id,
                     'migration_run_id' => $runId,
@@ -469,9 +426,8 @@ final class PromoteStagingToDomain
                 continue;
             }
 
-            // CanonicalTransaction::toAttributes() always stamps 'cleared'
-            // for a non-'manual' sourceFormat, so the real staged status is
-            // applied explicitly right after insert.
+            // CanonicalTransaction::toAttributes() hard-stamps 'cleared' for any
+            // non-'manual' sourceFormat, so the staged status is re-applied here.
             $this->db->connection()->table('transactions')
                 ->where('id', $transactionId)
                 ->where('user_id', $user->id)
@@ -628,10 +584,8 @@ final class PromoteStagingToDomain
 
         $postedAt = CarbonImmutable::parse(self::toString($row->posted_at));
 
-        // Seeds bookedAt with a deterministic sub-day offset derived from the
-        // staged row's own stable id, so two same-day rows get distinct
-        // fingerprints — see the architecture doc's "Idempotency" section
-        // for why a shared midnight value would defeat FingerprintComposer.
+        // Every postedAt is midnight (no source carries a time-of-day); the
+        // per-row offset keeps two same-day rows off one fingerprint.
         $bookedAt = $postedAt->addSeconds(self::toInt($row->id) % Duration::Day->seconds());
 
         return new CanonicalTransaction(
@@ -724,10 +678,6 @@ final class PromoteStagingToDomain
 
     private function migrationImportRunId(User $user, string $sourceProduct): int
     {
-        // Finds-or-creates a single per-(user, sourceProduct) synthetic
-        // import_runs row so migrated transactions can satisfy
-        // transactions.import_run_id's required FK (mirrors CashBook's
-        // manual-entry synthetic-fixture precedent).
         $sourceFormat = 'migration_'.$sourceProduct;
         $connection = $this->db->connection();
 
@@ -754,10 +704,6 @@ final class PromoteStagingToDomain
         ]));
     }
 
-    // -------------------------------------------------------------------
-    // Step 7: Goals (Actual only)
-    // -------------------------------------------------------------------
-
     private function promoteGoals(int $runId, User $user, string $sourceProduct): int
     {
         $rows = $this->db->connection()->table('migration_staging_goals')
@@ -779,10 +725,6 @@ final class PromoteStagingToDomain
             $name = self::toString($row->name);
 
             if (! is_string($targetDate) || $targetDate === '') {
-                // Beatrax's Goal model requires a non-null target_date; a
-                // dateless flat goal_def cannot be represented without
-                // inventing one, so it is surfaced as unmapped instead of a
-                // lossy approximation.
                 $this->db->connection()->table('migration_staging_unmapped_items')->insert([
                     'user_id' => $user->id,
                     'migration_run_id' => $runId,
@@ -818,10 +760,6 @@ final class PromoteStagingToDomain
 
         return $created;
     }
-
-    // -------------------------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------------------------
 
     private function uniqueSlug(string $table, User $user, string $name): string
     {

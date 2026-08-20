@@ -13,6 +13,7 @@ use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\Lang;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
@@ -34,11 +35,10 @@ use Modules\Sync\Public\Services\PairingGateway;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 final class PairingFlowModal extends Component
 {
+    use HoldsFlashMessage;
+
     // Translation key (resolved via Lang::get at each use site) rather than
     // literal copy, so the const stays free of the banned container call.
     private const IDENTITY_LOCKED_MESSAGE = 'sync::pairing.identity_locked';
@@ -64,8 +64,6 @@ final class PairingFlowModal extends Component
     public string $qrSvg = '';
 
     public int $expiresInSeconds = 600;
-
-    public string $flashMessage = '';
 
     public bool $awaitingPeer = false;
 

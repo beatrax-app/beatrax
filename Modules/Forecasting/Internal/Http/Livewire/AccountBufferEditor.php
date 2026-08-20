@@ -40,10 +40,8 @@ final class AccountBufferEditor extends Component
         CurrentUser $currentUser,
         DatabaseManager $db,
     ): void {
-        // Cross-user safety: refuse to mount with another user's account id
-        // — the query below scopes the lookup to the current user, so a
-        // tampered accountId prop resolves to no row and throws 404
-        // instead of leaking another user's buffer.
+        // Scoped to the current user so a tampered accountId prop resolves to no
+        // row and 404s instead of leaking another user's buffer.
         $row = $db->connection()->table('accounts')
             ->where('id', $accountId)
             ->where('user_id', $currentUser->user()->id)

@@ -20,9 +20,6 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\UserDataPathService;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * @link ../../../../../.docs/features/auth/architecture.md
- */
 final readonly class AppLockMiddleware
 {
     /**

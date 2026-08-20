@@ -10,21 +10,10 @@ use Modules\Core\Models\User;
 
 uses(RefreshDatabase::class);
 
-/*
- * No queued job inherits the user the last one was acting for.
- *
- * A job that acts for somebody binds them onto the guard. Nothing unbound
- * them: `auth` is registered as a SINGLETON, so the worker's
- * forgetScopedInstances() does not drop it, and forgetGuards() is called
- * nowhere in the queue. The binding therefore outlived the job and the next
- * one in that worker process started already signed in as somebody else —
- * and UserScope reads exactly this guard to decide which rows a query sees.
- *
- * Guarding it per-job was the obvious fix and the wrong one: a job that
- * forgets to restore looks identical to one that succeeds, and the damage
- * lands on a DIFFERENT job later. This clears the guard as each job starts,
- * so forgetting is not possible.
- */
+// `auth` is a singleton, so the worker's forgetScopedInstances() never drops a
+// user a job bound and the next job in that process starts signed in as somebody
+// else — the same guard UserScope reads to decide which rows a query sees.
+// Clearing per job beats restoring per job, which a job can silently forget.
 
 function guardTestUser(string $username): User
 {

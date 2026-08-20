@@ -10,9 +10,6 @@ use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Auth\Public\Services\AppLockKeyService;
 
-/**
- * @link ../../../../../.docs/features/auth/architecture.md
- */
 final class AppLockKeyProbe extends Component
 {
     // Withholding the key only affects THIS session. Background

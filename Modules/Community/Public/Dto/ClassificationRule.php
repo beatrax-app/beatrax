@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Community\Public\Dto;
 
-/**
- * @link ../../../../.docs/features/community/architecture.md
- */
 final class ClassificationRule
 {
     public function __construct(

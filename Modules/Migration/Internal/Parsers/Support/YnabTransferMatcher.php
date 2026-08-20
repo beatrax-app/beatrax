@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Migration\Internal\Parsers\Support;
 
-/**
- * @link ../../../../../.docs/features/migration/architecture.md
- */
 final class YnabTransferMatcher
 {
     private const PREFIX = 'Transfer : ';
@@ -29,10 +26,7 @@ final class YnabTransferMatcher
      */
     public function pair(array $legs): array
     {
-        // Returns a bidirectional row-index-to-row-index map; a leg with no
-        // match is absent from the result (an orphan for this textual pass —
-        // PairsTransferLegs::pairOrphansForUser() is the authoritative
-        // real-domain sweep that runs after promotion).
+        // The map is bidirectional; an unmatched leg is simply absent from it.
         $pairs = [];
         $used = [];
 
@@ -46,10 +40,6 @@ final class YnabTransferMatcher
                     continue;
                 }
 
-                // A real transfer pair is one inflow leg + one outflow leg —
-                // same date/magnitude/cross-referenced account names alone
-                // could otherwise pair two erroneous same-sign rows into a
-                // bogus transfer link downstream.
                 $oppositeSign = ($legA['amountMinor'] < 0) !== ($legB['amountMinor'] < 0);
 
                 $matches = $legA['date'] === $legB['date']

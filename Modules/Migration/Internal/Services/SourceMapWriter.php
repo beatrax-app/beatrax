@@ -10,9 +10,6 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Migration\Internal\ValueObjects\SourceMapKey;
 
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 final class SourceMapWriter
 {
     use CoercesScalars;

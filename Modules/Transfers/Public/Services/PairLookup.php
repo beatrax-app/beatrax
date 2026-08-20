@@ -8,9 +8,6 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 
-/**
- * @link ../../../../.docs/features/transfers/architecture.md
- */
 final class PairLookup
 {
     use CoercesScalars;

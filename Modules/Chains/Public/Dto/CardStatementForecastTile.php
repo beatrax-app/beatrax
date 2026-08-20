@@ -8,9 +8,6 @@ use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Spatie\LaravelData\Data;
 
-// Payload for the dashboard "Next ICS settlement" tile; the dashboard
-// hides the tile entirely when this DTO is null (no open card_statement)
-// rather than serializing a placeholder. $dueDate = period_end + 5 days.
 final class CardStatementForecastTile extends Data
 {
     public function __construct(

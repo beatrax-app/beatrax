@@ -6,9 +6,6 @@ namespace Modules\Categorization\Public\Enums;
 
 // How a rule's conditions combine: All fires only when every condition
 // matches (an empty condition set never fires); Any fires on the first match.
-/**
- * @link ../../../../.docs/features/categorization/architecture.md
- */
 enum RuleCombinator: string
 {
     case All = 'all';

@@ -21,8 +21,8 @@ final class AccountNamer implements NamesAccounts
 
     public const NAME_MAX_LENGTH = 80;
 
-    // Per ISO 13616: 15-char floor admits the shortest national format
-    // (Norway); 34-char ceiling is the published global maximum.
+    // ISO 13616: 15 is Norway, the shortest national format; 34 is the
+    // published global maximum.
     private const IBAN_MIN_LENGTH = 15;
 
     private const IBAN_MAX_LENGTH = 34;
@@ -31,10 +31,9 @@ final class AccountNamer implements NamesAccounts
     {
         [$trimmed, $slugBody] = self::validateName($userSuppliedName);
 
-        // Structural IBAN guard only — Mod-97 checksum validation is
-        // intentionally not enforced since counterparty IBANs from
-        // MT940/CAMT extracts can already be truncated. Catches the
-        // common-case corruption without rejecting legitimate edge cases.
+        // Structural only. Mod-97 is deliberately not enforced: counterparty
+        // IBANs from MT940 and CAMT extracts arrive truncated, and rejecting
+        // them would lose legitimate rows.
         $pattern = sprintf(
             '/^[A-Z0-9]{%d,%d}$/',
             self::IBAN_MIN_LENGTH,
@@ -61,8 +60,8 @@ final class AccountNamer implements NamesAccounts
         return $account->id;
     }
 
-    // Shared by the IBAN-naming and synthetic-IBAN-naming paths so the
-    // 1..80 character bound and slug-body guard stay in lock step.
+    // Shared by both naming paths so the bound and the slug guard cannot
+    // drift apart.
     /**
      * @return array{0: string, 1: string}
      */
@@ -78,10 +77,9 @@ final class AccountNamer implements NamesAccounts
             ]));
         }
 
-        // Str::slug() strips characters it cannot transliterate (emoji,
-        // punctuation, untransliterable scripts). A name composed
-        // entirely of such characters passes the length bound but
-        // produces an empty slug — reject so every account gets a slug.
+        // A name made entirely of characters Str::slug() cannot transliterate
+        // — emoji, punctuation, some scripts — clears the length bound and
+        // still slugs to nothing.
         $slugBody = Str::slug($trimmed);
         if ($slugBody === '') {
             throw new InvalidAccountNameException(

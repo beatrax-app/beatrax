@@ -16,9 +16,6 @@ use Modules\Search\Public\Services\SearchQuery;
 // dev-shell layouts. Every result is scoped to the authenticated user
 // via CurrentUser feeding SearchQuery/EntityNameSearch's user_id
 // predicates, so a cross-user query is structurally impossible.
-/**
- * @link ../../../../../.docs/features/search/architecture.md
- */
 final class PaletteSearchEndpoint extends Component
 {
     public string $query = '';

@@ -9,9 +9,6 @@ use Modules\Core\Models\User;
 
 // Binds the owning user onto the guard for the length of a queued scan, so
 // the guard-scoped services a job reaches can resolve who it is acting for.
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final readonly class JobUserContext
 {
     public function __construct(

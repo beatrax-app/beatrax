@@ -9,24 +9,7 @@ use Modules\Ingestion\Public\Exceptions\MissingPaypalTransactionTypeMapException
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
-/*
- * Coverage for the ClassifyTransactionType pipeline stage.
- *
- * The stage decouples typing from pairing:
- *
- *   1. Refund / fee / adjustment rows preserve their pre-classified type
- *   2. counterparty_iban matching one of the user's OWN Account.iban rows
- *      flips the type to transfer_out (negative) or transfer_in (positive)
- *   3. PayPal-specific source-format event-type map: parent event type
- *      resolves via PaypalCsvEventTypeMap::transactionType()
- *   4. Subtractive income rule: positive amount NOT classified as
- *      transfer/refund/fee becomes income
- *   5. Default: NormalizeStage's amount-sign default survives unchanged
- *
- * Listener-purity invariant: the stage NEVER queries the transactions
- * table — the grep gate in this file asserts zero `Transaction::`
- * occurrences in the stage source (comment-stripped).
- */
+/** @link ../../../../.docs/architecture/ingestion-pipeline.md#4-transaction-type-classification-classifytransactiontype */
 
 beforeEach(function (): void {
     /** @var ClassifyTransactionType $stage */
@@ -59,9 +42,6 @@ beforeEach(function (): void {
 });
 
 /**
- * Build a CanonicalTransaction with sane defaults; tests override only
- * the keys they exercise.
- *
  * @param  array<string, mixed>  $overrides
  */
 function classifyCanonical(array $overrides = []): CanonicalTransaction
@@ -258,8 +238,6 @@ it('does not flip across users — counterparty matches a different user\'s acco
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);
-    // Other user owns an account whose IBAN our primary user's tx references
-    // as counterparty. The stage MUST NOT flip the primary user's row.
     Account::create([
         'user_id' => $otherUser->id,
         'name' => 'Other ICS',
@@ -290,9 +268,8 @@ it('never queries the transactions table from within ClassifyTransactionType (li
     expect($contents)->toBeString();
     /** @var string $contents */
 
-    // Strip single-line `//` and block `/** ... */` comments before
-    // greping so the rule of "no Transaction:: in code" tolerates
-    // documentary references in PHPDoc.
+    // Comments are stripped first so a documentary `Transaction::` in PHPDoc
+    // does not read as a query.
     $stripped = preg_replace('!/\*.*?\*/!s', '', $contents);
     expect($stripped)->toBeString();
     /** @var string $stripped */
@@ -317,19 +294,10 @@ it('keeps a negative non-transfer row as expense (NormalizeStage default unchang
 });
 
 it('re-throws MissingPaypalTransactionTypeMapException when transactionType() reports a code-internal inconsistency', function (): void {
-    // `'Bankstorting naar PP-rekening'` is mapped as `child-fee` in
-    // MAP — it exists in MAP but deliberately has no TRANSACTION_TYPE
-    // entry. Calling transactionType() against it triggers the
-    // narrower MissingPaypalTransactionTypeMapException, which
-    // signals a code-internal inconsistency (in practice: a future
-    // `parent` MAP entry whose TRANSACTION_TYPE row was forgotten).
-    // The catch ordering in ClassifyTransactionType MUST surface
-    // this as a hard failure rather than swallowing it via the
-    // supertype catch and falling through to the amount-sign
-    // default. The runtime can drive the child-fee event type
-    // here because rawPayload.events[0].type is whatever string the
-    // adapter put there — a regression in event-rollup logic could
-    // surface child-fee rows here, and the listener MUST scream.
+    // `Bankstorting naar PP-rekening` is in MAP as `child-fee` and deliberately
+    // has no TRANSACTION_TYPE row, so it reaches the narrower exception. The
+    // catch ordering must not let the supertype catch swallow it into the
+    // amount-sign default — a code-internal inconsistency has to be loud.
     $tx = classifyCanonical([
         'accountId' => $this->asnAccount->id,
         'type' => 'expense',
@@ -349,10 +317,8 @@ it('re-throws MissingPaypalTransactionTypeMapException when transactionType() re
 });
 
 it('still swallows UnknownPaypalEventTypeException and falls through to the subtractive default for an unmapped parent event type', function (): void {
-    // An event type that does not exist in MAP at all raises the
-    // broader UnknownPaypalEventTypeException (user-data condition).
-    // The stage MUST catch it and let the amount-sign default
-    // classify the row rather than aborting the import.
+    // An event type absent from MAP is a user-data condition, not a code bug,
+    // so the import must survive it rather than abort.
     $tx = classifyCanonical([
         'accountId' => $this->asnAccount->id,
         'type' => 'expense',
@@ -369,7 +335,5 @@ it('still swallows UnknownPaypalEventTypeException and falls through to the subt
 
     $result = $this->stage->run($tx, $this->primaryUser);
 
-    // Subtractive default keeps the row at `expense` (negative
-    // amount, not transfer / refund / fee, not income).
     expect($result->type)->toBe('expense');
 });

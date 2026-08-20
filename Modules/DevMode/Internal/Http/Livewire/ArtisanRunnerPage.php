@@ -26,9 +26,6 @@ use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\ArgSpec;
 
-/**
- * @link ../../../../../.docs/features/dev-mode/architecture.md
- */
 #[Layout('dev::layouts.dev-shell')]
 final class ArtisanRunnerPage extends Component
 {

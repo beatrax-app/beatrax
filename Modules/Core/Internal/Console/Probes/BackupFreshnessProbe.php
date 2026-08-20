@@ -13,9 +13,6 @@ use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Services\UserDataPathService;
 use Throwable;
 
-/**
- * @link ../../../../../.docs/features/core/architecture.md
- */
 final class BackupFreshnessProbe implements Probe
 {
     private const BACKUP_AGE_MESSAGE = 'Most recent verified backup is %dh old.';

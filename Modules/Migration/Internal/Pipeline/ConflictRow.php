@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Migration\Internal\Pipeline;
 
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 final class ConflictRow
 {
     public function __construct(

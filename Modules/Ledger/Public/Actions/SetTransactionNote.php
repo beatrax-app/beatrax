@@ -16,9 +16,6 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 // normalises to NULL. mode='append': trimmed $text is concatenated
 // onto the current note separated by a newline; appending onto a
 // null/empty note is equivalent to set; a blank $text is a no-op.
-/**
- * @link ../../../../.docs/features/ledger/architecture.md
- */
 final class SetTransactionNote implements SetsTransactionNote
 {
     public function __construct(

@@ -10,9 +10,6 @@ use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
-/**
- * @link ../../../../.docs/features/drift-alerts/architecture.md
- */
 final readonly class CancellationImpactQuery
 {
     public function __construct(private RecurringSeriesQuery $recurringQuery) {}

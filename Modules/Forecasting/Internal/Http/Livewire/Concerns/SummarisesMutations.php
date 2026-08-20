@@ -16,9 +16,6 @@ use Modules\Forecasting\Public\Enums\ShiftScope;
 // Human-readable one-line summaries for each scenario mutation kind, shown
 // in the sidebar's mutation list. Kept beside ScenarioEditorSidebar rather
 // than inside it so the component stays under the method ceiling.
-/**
- * @link ../../../../../../.docs/features/forecasting/architecture.md
- */
 trait SummarisesMutations
 {
     private function summaryFor(string $kind, ScenarioMutationPayload $payload): string

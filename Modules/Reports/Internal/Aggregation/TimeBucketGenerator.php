@@ -8,9 +8,6 @@ use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Public\Enums\ReportGranularity;
 
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final class TimeBucketGenerator
 {
     // ~5 years of monthly points. A monthly request whose uncapped bucket

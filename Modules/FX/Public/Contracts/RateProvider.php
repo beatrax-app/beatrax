@@ -6,9 +6,6 @@ namespace Modules\FX\Public\Contracts;
 
 use Modules\FX\Public\Exceptions\RateFetchException;
 
-/**
- * @link ../../../../.docs/features/fx/architecture.md
- */
 interface RateProvider
 {
     // Stable lowercase key ('ecb', 'frankfurter', 'bundled'), persisted

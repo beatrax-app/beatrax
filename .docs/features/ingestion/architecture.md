@@ -177,9 +177,9 @@ logical transaction produce identical `FingerprintComposer` v3 hashes;
 an `<Ntry>` with neither `<BookgDt>` nor `<ValDt>` is rejected as a
 parse error rather than falling back to the wall clock. Security: before
 any `Reader` construction, `libxml_set_external_entity_loader()` is
-installed to allow local-filesystem entity reads only (the CAMT.053
-XSDs reference each other by relative path) and deny every remote URI
-scheme, mitigating XXE regardless of the underlying PHP/libxml defaults;
+installed and returns `null` for every entity — file, scheme-less, or
+network — mitigating XXE regardless of the underlying PHP/libxml defaults
+(with XSD validation disabled, nothing legitimate needs to resolve);
 XSD validation is disabled deliberately (the shipped XSDs are pedantic
 and would reject unforeseen optional elements) since the sniffer +
 downstream IBAN/amount validators enforce structure instead. Money

@@ -13,9 +13,6 @@ use Modules\Ledger\Public\Dto\TopCategoryRow;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/ledger/architecture.md
- */
 final class TopCategoriesByPeriodQuery
 {
     use CoercesScalars;

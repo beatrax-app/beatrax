@@ -16,9 +16,6 @@ use Modules\Position\Public\Events\PositionDigestDue;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final class PersistPositionDigest
 {
     public function __construct(

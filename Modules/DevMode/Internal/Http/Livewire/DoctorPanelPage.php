@@ -12,9 +12,6 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Modules\DevMode\Internal\Doctor\ProbeOutputParser;
 
-/**
- * @link ../../../../../.docs/features/dev-mode/architecture.md
- */
 #[Layout('dev::layouts.dev-shell')]
 final class DoctorPanelPage extends Component
 {

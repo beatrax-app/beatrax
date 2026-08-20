@@ -10,10 +10,6 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Public\Enums\DiscoveredSenderState;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-// Promotes a discovered_senders candidate into known_senders and
-// transitions the row to state='added'. Cross-user 404 via the (id,
-// user_id) scoped lookup; idempotent (already added/dismissed is a
-// silent no-op) via one busy_timeout-fenced transaction.
 final class PromoteDiscoveredSender
 {
     public function __construct(

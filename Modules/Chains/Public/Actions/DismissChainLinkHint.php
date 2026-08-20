@@ -9,9 +9,6 @@ use Modules\Chains\Public\Exceptions\ChainLinkNotDismissableException;
 use Modules\Core\Models\User;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../.docs/features/chains/architecture.md
- */
 final class DismissChainLinkHint
 {
     public function __invoke(int $chainLinkId, User $user): void

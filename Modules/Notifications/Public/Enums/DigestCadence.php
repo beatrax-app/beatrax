@@ -8,9 +8,6 @@ namespace Modules\Notifications\Public\Enums;
 // Distinct from the recurring series cadence in C2 despite sharing the word
 // and the value weekly: a series is never off, and a digest is never
 // quarterly. C8-R22 requires the two never share a type.
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 enum DigestCadence: string
 {
     case Daily = 'daily';

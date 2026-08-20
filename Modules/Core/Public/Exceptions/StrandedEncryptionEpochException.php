@@ -10,7 +10,4 @@ use RuntimeException;
 // usable key for it — a crash in the commit-then-finalize window stranded
 // the epoch. Sensitive writes must stop until the keyring file is
 // finalized or restored, never silently continue over plaintext.
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class StrandedEncryptionEpochException extends RuntimeException {}

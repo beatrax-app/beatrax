@@ -12,9 +12,6 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
 // identity, looked up by the token the human typed. Public keys and a device
 // id only — this endpoint is in-band on the LAN, so nothing that would let a
 // listener reach a relay is handed out here (see @link).
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class PairingOfferService
 {
     // A row is offerable while the handshake is still live. AWAITING_CONFIRM
@@ -43,7 +40,6 @@ final readonly class PairingOfferService
         if ($tokenHash === '' || $userId <= 0) {
             return null;
         }
-
 
         // expires_at is TEXT compared lexically, which is correct only
         // because every value is written via toIso8601String() in UTC —

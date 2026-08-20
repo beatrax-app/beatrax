@@ -9,9 +9,6 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Models\Category;
 use Modules\Ledger\Public\Enums\CategoryKind;
 
-/**
- * @link ../../../../.docs/features/categorization/architecture.md
- */
 final class DefaultCategoryTreeSeeder extends Seeder
 {
     /**

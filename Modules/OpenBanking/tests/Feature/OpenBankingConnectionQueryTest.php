@@ -16,13 +16,6 @@ use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 
 uses(RefreshDatabase::class);
 
-/*
- * What the settings page and the status row are told about the live
- * connection. The consent status is the part that drives UI the user acts on —
- * 'expiring' is what surfaces the re-link prompt before a sync starts
- * failing — so each boundary is pinned rather than inferred from one example.
- */
-
 function obcqUser(string $username): User
 {
     return User::query()->create([
@@ -111,8 +104,7 @@ it('reports no connection when the secrets file names no institution', function 
 })->with([[null], ['']]);
 
 // The secrets file and the connections table are written by different steps of
-// the consent dance, so the file can name an institution the user has no row
-// for — a link that was started and abandoned.
+// the consent dance, so the file can name an institution the user has no row for.
 it('reports no connection when no row matches the live session', function (): void {
     $user = obcqUser('obcq-no-row');
     obcqSeedCredentials('ASNBNL21');
@@ -140,9 +132,8 @@ it('reads the consent status from how much of the window is left', function (?st
     'beyond the window' => ['2026-10-19 00:00:00', 'connected'],
 ]);
 
-// bank_display_name is a column the callback controller never populates, so
-// the name shown comes from this mapping — an unmapped institution has to
-// fall back to its own id rather than render blank.
+// bank_display_name is a column the callback controller never populates, so an
+// unmapped institution has to fall back to its own id rather than render blank.
 it('derives the bank display name from the institution id', function (string $institutionId, string $expected): void {
     $user = obcqUser('obcq-name-'.$institutionId);
     obcqSeedCredentials($institutionId);

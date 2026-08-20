@@ -81,8 +81,6 @@ it('plain-dismisses an open alert with dismissed_as=dismissed and NO suppression
         ->and($fresh->dismissed_as)->toBe('dismissed')
         ->and($fresh->actioned_at)->not->toBeNull();
 
-    // No suppression rule written by a plain dismiss (that is the
-    // dismiss-as-expected action's job).
     $ruleCount = app(DatabaseManager::class)->connection()->table('anomaly_suppression_rules')
         ->where('user_id', $this->user->id)->count();
     expect($ruleCount)->toBe(0);

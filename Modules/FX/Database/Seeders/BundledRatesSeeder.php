@@ -7,9 +7,6 @@ namespace Modules\FX\Database\Seeders;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Seeder;
 
-/**
- * @link ../../../../.docs/features/fx/architecture.md
- */
 final class BundledRatesSeeder extends Seeder
 {
     private string $snapshotPath;
