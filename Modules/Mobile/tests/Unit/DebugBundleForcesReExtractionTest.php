@@ -68,6 +68,21 @@ it('ships the real version when the flag is off', function (): void {
     expect(debugBundleConfigVersion('false'))->toBe('9.9.9');
 });
 
+it('reads every ordinary spelling of off as off', function (): void {
+    // env() only types the literal true/false/null spellings; everything else
+    // arrives as a non-empty string, and a truthiness test shipped a release
+    // build stamped DEBUG for each of these.
+    foreach (['off', 'no', 'OFF', 'No', '0', ''] as $spelling) {
+        expect(debugBundleConfigVersion($spelling))->toBe('9.9.9', "flag '{$spelling}' enabled the debug bundle");
+    }
+});
+
+it('reads every ordinary spelling of on as on', function (): void {
+    foreach (['true', 'TRUE', '1', 'yes', 'on'] as $spelling) {
+        expect(debugBundleConfigVersion($spelling))->toBe('DEBUG', "flag '{$spelling}' did not enable the debug bundle");
+    }
+});
+
 it('never enables the debug bundle in a release workflow', function (): void {
     // A release that re-extracted on every launch would be slow to start for
     // no reason, and would mask a genuinely failed update.

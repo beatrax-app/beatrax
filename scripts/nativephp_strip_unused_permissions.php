@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+// Without this libxml_get_errors() is always empty, and the per-line
+// detail below never printed — the failure was loud but unreadable.
+libxml_use_internal_errors(true);
+
 /*
  * Strip the Android permissions the app declares but never exercises.
  *

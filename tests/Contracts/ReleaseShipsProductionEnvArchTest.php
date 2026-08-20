@@ -12,8 +12,28 @@ declare(strict_types=1);
  * paths. The .env pulled off that build read APP_DEBUG=true.
  */
 
+// The suite runs from BOTH composer roots, and from mobile-app/ the workflow
+// sits one level up. Resolving only the desktop path made file_get_contents
+// return false there, the loop find nothing, and the guard pass by reading
+// an empty string.
+function releaseWorkflowSource(): string
+{
+    foreach (['.github/workflows/release.yml', '../.github/workflows/release.yml'] as $candidate) {
+        $path = base_path($candidate);
+
+        if (is_file($path)) {
+            return (string) file_get_contents($path);
+        }
+    }
+
+    return '';
+}
+
 it('never stages a shipped bundle without forcing production and debug off', function (): void {
-    $workflow = (string) file_get_contents(base_path('.github/workflows/release.yml'));
+    $workflow = releaseWorkflowSource();
+
+    expect($workflow)->not->toBe('', 'release.yml was not found from either composer root');
+
     $lines = explode("\n", $workflow);
 
     $unhardened = [];
@@ -47,5 +67,10 @@ it('never stages a shipped bundle without forcing production and debug off', fun
 });
 
 it('still leaves the local template debuggable, which is what it is for', function (): void {
-    expect((string) file_get_contents(base_path('.env.example')))->toContain('APP_DEBUG=true');
+    $template = is_file(base_path('.env.example'))
+        ? base_path('.env.example')
+        : base_path('../.env.example');
+
+    expect(is_file($template))->toBeTrue('.env.example was not found from either composer root')
+        ->and((string) file_get_contents($template))->toContain('APP_DEBUG=true');
 });

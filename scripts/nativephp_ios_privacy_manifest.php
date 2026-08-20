@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+// Without this libxml_get_errors() is always empty, and the per-line
+// detail below never printed — the failure was loud but unreadable.
+libxml_use_internal_errors(true);
+
 /*
  * Write the iOS app privacy manifest.
  *
@@ -25,9 +29,18 @@ declare(strict_types=1);
  * is its own kind of false statement.
  *
  * NSPrivacyCollectedDataTypes and NSPrivacyTrackingDomains are OMITTED rather
- * than shipped empty. There is no server and no tracking, so an empty array
- * says nothing an absent key does not — and an empty collected-types array is
- * a known ITMS-91056 trigger.
+ * than shipped empty, and an empty collected-types array is a known
+ * ITMS-91056 trigger besides.
+ *
+ * The justification is not that the app makes no network calls — it makes
+ * several. Open banking, e-mail receipt scanning, FX rates, the sync relay and
+ * the update feed all reach the network. Every one of them addresses an
+ * endpoint the READER chooses and holds credentials for: their own bank, their
+ * own mailbox, a relay they run, a feed they opt into. Apple's key covers data
+ * collected by the developer or its partners, and none of it reaches us; there
+ * is no Beatrax server for it to reach. Nothing is linked to an identity for
+ * advertising or measurement either, which is what NSPrivacyTrackingDomains
+ * asks about.
  *
  * The file lands in NativePHP/, which the Xcode project declares as a
  * PBXFileSystemSynchronizedRootGroup: every file in that directory is a target
@@ -79,7 +92,7 @@ $pbxproj = (string) file_get_contents($ios.'/NativePHP.xcodeproj/project.pbxproj
 // group the manifest needs a PBXBuildFile and a Resources phase entry, and
 // writing one silently would be worse than stopping here.
 if (! str_contains($pbxproj, 'isa = PBXFileSystemSynchronizedRootGroup;')
-    || preg_match('#PBXFileSystemSynchronizedRootGroup;\s*exceptions = \([^)]*\);\s*path = NativePHP;#s', $pbxproj) !== 1) {
+    || preg_match('#PBXFileSystemSynchronizedRootGroup;\s*(?:exceptions = \([^)]*\);\s*)?path = NativePHP;#s', $pbxproj) !== 1) {
     fwrite(STDERR, "nativephp_ios_privacy_manifest: the NativePHP folder is no longer a synchronized root group.\n");
     fwrite(STDERR, "PrivacyInfo.xcprivacy would not be copied into the app bundle; add it to the Resources build phase by hand.\n");
     exit(1);

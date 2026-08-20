@@ -34,7 +34,10 @@ return [
     // ships a new binary over the OLD PHP code, because the update gate
     // compares version+build and both are pinned — which presented as an
     // unexplainable whole-app 404 that survived restarts.
-    'version' => env('NATIVEPHP_DEBUG_BUNDLE', false)
+    // FILTER_VALIDATE_BOOL, not truthiness: env() types only the literal
+    // true/false/null spellings, so `off` and `no` arrived as non-empty
+    // strings and shipped a release build whose version was DEBUG.
+    'version' => filter_var(env('NATIVEPHP_DEBUG_BUNDLE', false), FILTER_VALIDATE_BOOL)
         ? 'DEBUG'
         : env('NATIVEPHP_APP_VERSION', '0.0.0-dev'),
 
