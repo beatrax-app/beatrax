@@ -30,6 +30,9 @@ return [
     'recovery_copied' => 'Kopyalandı',
     'recovery_copy_failed' => 'Kopyalanamadı. Kodları not edin.',
     'recovery_saved' => 'İndirilenler klasörüne kaydedildi.',
+    'recovery_share_title' => 'Beatrax kurtarma kodları',
+    'recovery_share_message' => 'Bunları güvenli bir yerde saklayın.',
+    'recovery_save_failed' => 'Dosya kaydedilemedi. Kodları not edin.',
     'recovery_confirm' => 'Bu kodları güvenli bir yere kaydettim.',
     'continue_to_pairing' => 'Eşleştirmeye devam et',
 

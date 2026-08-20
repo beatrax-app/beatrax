@@ -30,6 +30,9 @@ return [
     'recovery_copied' => 'Kopioitu',
     'recovery_copy_failed' => 'Kopiointi ei onnistunut. Kirjoita koodit muistiin.',
     'recovery_saved' => 'Tallennettu lataustesi joukkoon.',
+    'recovery_share_title' => 'Beatraxin palautuskoodit',
+    'recovery_share_message' => 'Säilytä ne turvallisessa paikassa.',
+    'recovery_save_failed' => 'Tiedoston tallennus ei onnistunut. Kirjoita koodit muistiin.',
     'recovery_confirm' => 'Olen tallentanut nämä koodit turvalliseen paikkaan.',
     'continue_to_pairing' => 'Jatka laiteparin muodostukseen',
 

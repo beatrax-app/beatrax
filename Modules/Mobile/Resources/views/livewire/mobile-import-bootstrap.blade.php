@@ -133,6 +133,7 @@
                     copied: false,
                     saved: false,
                     failed: false,
+                    saveFailed: false,
                     codes: @js($codes),
                     async copy() {
                         // Guarding on navigator.clipboard and returning left
@@ -150,7 +151,30 @@
 
                         this.failed = true;
                     },
-                    save() {
+                    async save() {
+                        this.saveFailed = false;
+
+                        // On a phone the OS share sheet is the only route that
+                        // works: the Android webview drops a blob download
+                        // without an error, a console entry or a file, and the
+                        // screen used to report success regardless.
+                        if (@js($nativeExport)) {
+                            try {
+                                const response = await fetch(@js($exportUrl), { headers: { 'Accept': 'application/json' } });
+                                const result = await response.json();
+
+                                // No success line here: the share sheet is
+                                // the OS telling the user, and "Saved to your
+                                // downloads" would be untrue — they have not
+                                // chosen where it goes yet.
+                                this.saveFailed = result.saved !== true;
+                            } catch (e) {
+                                this.saveFailed = true;
+                            }
+
+                            return;
+                        }
+
                         const url = URL.createObjectURL(new Blob([this.codes.join('\n')], { type: 'text/plain' }));
                         const link = document.createElement('a');
                         link.href = url;
@@ -201,6 +225,7 @@
 
                     <p x-show="saved" x-cloak aria-live="polite" class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('mobile::import.recovery_saved') }}</p>
                     <p x-show="failed" x-cloak role="alert" aria-live="assertive" class="text-sm text-rose-600 dark:text-rose-400">{{ Lang::get('mobile::import.recovery_copy_failed') }}</p>
+                    <p x-show="saveFailed" x-cloak role="alert" aria-live="assertive" class="text-sm text-rose-600 dark:text-rose-400">{{ Lang::get('mobile::import.recovery_save_failed') }}</p>
                 </div>
 
                 <label class="flex items-start gap-2">

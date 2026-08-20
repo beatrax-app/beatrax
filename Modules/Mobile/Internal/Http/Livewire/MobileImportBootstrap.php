@@ -13,6 +13,7 @@ use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Modules\Auth\Public\Actions\SignupAction;
 use Modules\Auth\Public\Recovery\RecoveryCodeFormatter;
+use Modules\Mobile\Internal\Identity\RecoveryCodesExportBridge;
 use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
@@ -219,6 +220,7 @@ final class MobileImportBootstrap extends Component
         UrlGenerator $urls,
         CurrentUser $currentUser,
         RecoveryCodeFormatter $formatter,
+        RecoveryCodesExportBridge $exportBridge,
     ): View {
         // Only the recovery step has an authenticated user: every earlier step
         // renders before signup completes, so resolving the user up front
@@ -234,6 +236,11 @@ final class MobileImportBootstrap extends Component
                 ? $formatter->filenameFor($currentUser->user()->username)
                 : '',
             'pairingUrl' => $urls->route('mobile.pair', ['mode' => 'import']),
+            // The Android webview drops a blob download without a word, so on
+            // a phone the file goes out through the OS share sheet instead —
+            // and the screen only claims to have saved it when that answers.
+            'nativeExport' => $showingCodes && $exportBridge->isAvailable(),
+            'exportUrl' => $urls->route('mobile.recovery-codes.export'),
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */

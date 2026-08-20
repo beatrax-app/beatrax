@@ -30,6 +30,9 @@ return [
     'recovery_copied' => 'Gekopieerd',
     'recovery_copy_failed' => 'Kopiëren is niet gelukt. Schrijf de codes op.',
     'recovery_saved' => 'Opgeslagen in je downloads.',
+    'recovery_share_title' => 'Beatrax-herstelcodes',
+    'recovery_share_message' => 'Bewaar deze op een veilige plek.',
+    'recovery_save_failed' => 'Het bestand kon niet worden opgeslagen. Schrijf de codes op.',
     'recovery_confirm' => 'Ik heb deze codes op een veilige plek bewaard.',
     'continue_to_pairing' => 'Doorgaan naar koppelen',
 

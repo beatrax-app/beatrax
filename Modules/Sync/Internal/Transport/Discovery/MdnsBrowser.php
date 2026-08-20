@@ -29,10 +29,6 @@ final class MdnsBrowser
     // first "can be reached at" line, so it is bounded tighter than a browse.
     private const int RESOLVE_TIMEOUT_SECONDS = 2;
 
-    private const string DISCOVERY_MODE_MDNS = 'mdns';
-
-    private const string DISCOVERY_MODE_MANUAL = 'manual';
-
     private const int AVAHI_MIN_FIELDS = 10;
 
     public function __construct(
@@ -62,7 +58,7 @@ final class MdnsBrowser
                         deviceId: $manual['deviceId'],
                         host: $manual['host'],
                         port: $manual['port'],
-                        discoveryMode: self::DISCOVERY_MODE_MANUAL,
+                        discoveryMode: DiscoveryMode::Manual,
                     );
                 }
             }
@@ -178,7 +174,7 @@ final class MdnsBrowser
             deviceId: $deviceId,
             host: $fields['host'] !== '' ? $fields['host'] : 'localhost',
             port: $fields['port'],
-            discoveryMode: self::DISCOVERY_MODE_MDNS,
+            discoveryMode: DiscoveryMode::Mdns,
         );
     }
 
@@ -237,7 +233,7 @@ final class MdnsBrowser
             deviceId: $deviceId,
             host: $resolved['host'],
             port: $resolved['port'],
-            discoveryMode: self::DISCOVERY_MODE_MDNS,
+            discoveryMode: DiscoveryMode::Mdns,
         );
     }
 

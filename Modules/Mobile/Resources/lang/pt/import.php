@@ -30,6 +30,9 @@ return [
     'recovery_copied' => 'Copiado',
     'recovery_copy_failed' => 'Não foi possível copiar. Anote os códigos.',
     'recovery_saved' => 'Guardado nas tuas transferências.',
+    'recovery_share_title' => 'Códigos de recuperação do Beatrax',
+    'recovery_share_message' => 'Guarde-os num local seguro.',
+    'recovery_save_failed' => 'Não foi possível guardar o ficheiro. Anote os códigos.',
     'recovery_confirm' => 'Guardei estes códigos num sítio seguro.',
     'continue_to_pairing' => 'Continuar para o emparelhamento',
 

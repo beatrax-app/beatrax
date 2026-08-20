@@ -30,6 +30,9 @@ return [
     'recovery_copied' => 'Skopírované',
     'recovery_copy_failed' => 'Kopírovanie sa nepodarilo. Kódy si radšej opíšte.',
     'recovery_saved' => 'Uložené medzi stiahnuté súbory.',
+    'recovery_share_title' => 'Obnovovacie kódy Beatrax',
+    'recovery_share_message' => 'Uschovajte ich na bezpečnom mieste.',
+    'recovery_save_failed' => 'Súbor sa nepodarilo uložiť. Kódy si radšej opíšte.',
     'recovery_confirm' => 'Tieto kódy mám uložené na bezpečnom mieste.',
     'continue_to_pairing' => 'Pokračovať na párovanie',
 

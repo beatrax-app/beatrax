@@ -30,6 +30,9 @@ return [
     'recovery_copied' => 'Nukopijuota',
     'recovery_copy_failed' => 'Nepavyko nukopijuoti. Užsirašykite kodus.',
     'recovery_saved' => 'Išsaugota atsisiuntimų aplanke.',
+    'recovery_share_title' => 'Beatrax atkūrimo kodai',
+    'recovery_share_message' => 'Laikykite juos saugioje vietoje.',
+    'recovery_save_failed' => 'Nepavyko išsaugoti failo. Užsirašykite kodus.',
     'recovery_confirm' => 'Išsaugojau šiuos kodus saugioje vietoje.',
     'continue_to_pairing' => 'Tęsti į susiejimą',
 

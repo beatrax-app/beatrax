@@ -15,6 +15,7 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use LogicException;
 use Modules\Auth\Public\Services\AppLockClientConfig;
+use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\Lang;
@@ -274,6 +275,18 @@ final class MobilePairingScan extends Component
         // component's property sent the user to a PIN pad with no explanation
         // — the same dead end, one screen further along.
         $session->flash(self::LOCKED_IDENTITY_FLASH, Lang::get('mobile::pairing.errors.identity_locked'));
+
+        // Come back to the arm they were on. Unlocking fell through to the
+        // dashboard default, which dropped mode=import — so an importing
+        // device returned to a pairing screen that no longer knew it was
+        // importing, offering the arm import deliberately hides.
+        $session->put(
+            MobileLockGateway::SESSION_INTENDED_URL,
+            $this->importMode
+                ? $urls->route('mobile.pair').'?mode=import'
+                : $urls->route('mobile.pair'),
+        );
+
         $this->redirect($urls->route('mobile.lock'), navigate: false);
     }
 

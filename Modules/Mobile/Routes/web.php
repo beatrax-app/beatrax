@@ -29,6 +29,16 @@ Route::middleware(['web'])->group(static function (): void {
 
         return app($component)();
     })->name('mobile.import');
+
+    // Sits beside /mobile/import rather than inside the auth group: the step
+    // that shows the codes runs during signup, and the session holding them is
+    // the only thing that can reach them.
+    Route::get('/mobile/recovery-codes/export', static function () {
+        $controller = 'Modules\\Mobile\\Internal\\Http\\Controllers\\RecoveryCodesExportController';
+        abort_unless(class_exists($controller), 404);
+
+        return app()->call(app($controller));
+    })->name('mobile.recovery-codes.export');
 });
 
 Route::middleware(['web', 'auth'])->group(static function (): void {

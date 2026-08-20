@@ -78,3 +78,24 @@ it('keeps a lock route to send them to', function (): void {
 
     expect($routes)->toContain("name('mobile.lock')");
 });
+
+it('returns an importing device to the import arm after it unlocks', function (): void {
+    $component = (string) file_get_contents(
+        base_path('Modules/Mobile/Internal/Http/Livewire/MobilePairingScan.php')
+    );
+
+    /*
+     * Unlocking fell through to redirectToIntendedUrl()'s dashboard default,
+     * so a device sent to the PIN pad mid-import came back to a pairing screen
+     * that no longer knew it was importing — and therefore offered the typed
+     * code arm, which the import path hides because it cannot succeed there.
+     */
+    expect($component)->toContain('MobileLockGateway::SESSION_INTENDED_URL')
+        ->and($component)->toContain("'?mode=import'");
+
+    $sendToUnlock = substr($component, (int) strpos($component, 'private function sendToUnlock('));
+    $sendToUnlock = substr($sendToUnlock, 0, (int) strpos($sendToUnlock, "\n    }"));
+
+    expect(str_contains($sendToUnlock, 'SESSION_INTENDED_URL'))
+        ->toBeTrue('sendToUnlock() sends the user to the PIN pad without recording where to return');
+});

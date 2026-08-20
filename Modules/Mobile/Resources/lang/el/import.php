@@ -30,6 +30,9 @@ return [
     'recovery_copied' => 'Αντιγράφηκε',
     'recovery_copy_failed' => 'Η αντιγραφή απέτυχε. Σημειώστε τους κωδικούς.',
     'recovery_saved' => 'Αποθηκεύτηκε στις λήψεις σου.',
+    'recovery_share_title' => 'Κωδικοί ανάκτησης Beatrax',
+    'recovery_share_message' => 'Φυλάξτε τους σε ασφαλές μέρος.',
+    'recovery_save_failed' => 'Δεν ήταν δυνατή η αποθήκευση του αρχείου. Σημειώστε τους κωδικούς.',
     'recovery_confirm' => 'Αποθήκευσα αυτούς τους κωδικούς σε ασφαλές σημείο.',
     'continue_to_pairing' => 'Συνέχεια στη σύζευξη',
 

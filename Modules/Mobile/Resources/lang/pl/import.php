@@ -30,6 +30,9 @@ return [
     'recovery_copied' => 'Skopiowano',
     'recovery_copy_failed' => 'Nie udało się skopiować. Zapisz kody.',
     'recovery_saved' => 'Zapisano w pobranych plikach.',
+    'recovery_share_title' => 'Kody odzyskiwania Beatrax',
+    'recovery_share_message' => 'Przechowuj je w bezpiecznym miejscu.',
+    'recovery_save_failed' => 'Nie udało się zapisać pliku. Zapisz kody.',
     'recovery_confirm' => 'Zapisano te kody w bezpiecznym miejscu.',
     'continue_to_pairing' => 'Przejdź do parowania',
 

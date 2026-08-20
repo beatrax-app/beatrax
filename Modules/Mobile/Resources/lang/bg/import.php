@@ -30,6 +30,9 @@ return [
     'recovery_copied' => 'Копирано',
     'recovery_copy_failed' => 'Копирането не бе успешно. Запишете кодовете.',
     'recovery_saved' => 'Запазено в изтеглянията ти.',
+    'recovery_share_title' => 'Кодове за възстановяване на Beatrax',
+    'recovery_share_message' => 'Съхранявайте ги на сигурно място.',
+    'recovery_save_failed' => 'Файлът не можа да бъде запазен. Запишете кодовете.',
     'recovery_confirm' => 'Запазих тези кодове на сигурно място.',
     'continue_to_pairing' => 'Продължи към сдвояване',
 

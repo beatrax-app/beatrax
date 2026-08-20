@@ -30,6 +30,9 @@ return [
     'recovery_copied' => 'Kopirano',
     'recovery_copy_failed' => 'Kopiranje ni uspelo. Zapišite kode.',
     'recovery_saved' => 'Shranjeno v mapo Prenosi.',
+    'recovery_share_title' => 'Beatrax kode za obnovitev',
+    'recovery_share_message' => 'Shranite jih na varnem mestu.',
+    'recovery_save_failed' => 'Datoteke ni bilo mogoče shraniti. Zapišite kode.',
     'recovery_confirm' => 'Te kode so shranjene na varnem mestu.',
     'continue_to_pairing' => 'Nadaljuj na seznanjanje',
 

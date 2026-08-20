@@ -30,6 +30,9 @@ return [
     'recovery_copied' => 'Nokopēts',
     'recovery_copy_failed' => 'Neizdevās nokopēt. Pierakstiet kodus.',
     'recovery_saved' => 'Saglabāts lejupielāžu mapē.',
+    'recovery_share_title' => 'Beatrax atkopšanas kodi',
+    'recovery_share_message' => 'Glabājiet tos drošā vietā.',
+    'recovery_save_failed' => 'Failu neizdevās saglabāt. Pierakstiet kodus.',
     'recovery_confirm' => 'Šie kodi ir saglabāti drošā vietā.',
     'continue_to_pairing' => 'Turpināt uz sapārošanu',
 

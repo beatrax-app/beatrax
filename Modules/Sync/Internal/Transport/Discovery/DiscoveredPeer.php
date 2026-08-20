@@ -13,13 +13,13 @@ final readonly class DiscoveredPeer
      * @param  string  $deviceId  The peer's device_id (from the `did=` TXT record).
      * @param  string  $host  Resolved hostname or IP address.
      * @param  int  $port  WebSocket port the peer is listening on.
-     * @param  string  $discoveryMode  How this peer was discovered: 'mdns' | 'manual' | 'relay'.
+     * @param  DiscoveryMode  $discoveryMode  How this peer's address was learned.
      */
     public function __construct(
         public readonly string $deviceId,
         public readonly string $host,
         public readonly int $port,
-        public readonly string $discoveryMode,
+        public readonly DiscoveryMode $discoveryMode,
     ) {}
 
     // Intentionally emits plaintext ws:// (not wss://): the Noise IK/XX
