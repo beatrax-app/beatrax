@@ -7,13 +7,10 @@ namespace Modules\Core\Public\Support;
 use Illuminate\Database\QueryException;
 use Throwable;
 
-// What went wrong, without what it went wrong ON.
-//
-// A QueryException's message carries the statement AND its bindings, and in
-// this app the bindings are the data: a relay pairing frame, a transaction's
-// amount and counterparty, an op-log entry's signed value. Logging
-// getMessage() therefore writes the very thing the encryption exists to keep
-// off disk — into a 0644 daily log at debug level.
+// What went wrong, without what it went wrong ON. A QueryException's message
+// carries the statement AND its bindings, and here the bindings ARE the data:
+// a relay pairing frame, a transaction's counterparty. Logging getMessage()
+// writes what the encryption exists to keep off disk, into a 0644 daily log.
 /**
  * @link ../../../../.docs/features/core/architecture.md
  */

@@ -14,7 +14,7 @@ use Illuminate\Database\Query\Builder;
 /**
  * @link ../../../../.docs/features/sync/architecture.md
  */
-final readonly class RowOwnership
+final class RowOwnership
 {
     // Covered tables that carry no user_id of their own; each reaches its
     // owner through the parent named here. Mirrors OpLogBackfiller.
@@ -23,45 +23,45 @@ final readonly class RowOwnership
         'rule_actions' => ['rule_id', 'categorization_rules'],
     ];
 
-    // Owner-scoped references on covered tables. A row's local autoincrement
-    // id is its cross-device identity, so an id minted on one device can name
-    // a different row on another: a phone created accounts id 4, and on the
-    // desktop id 4 already belonged to the other household member.
-    private const OWNED_REFERENCES = [
-        'transactions' => [
-            'account_id' => 'accounts',
-            'category_id' => 'categories',
-            'counterparty_id' => 'counterparties',
-            'import_run_id' => 'import_runs',
-        ],
-        'transaction_splits' => ['transaction_id' => 'transactions', 'category_id' => 'categories'],
-        // Both legs of a transfer name a pot, and the counterpart leg is the
-        // one that could quietly credit another household member's pot.
-        'pot_movements' => ['pot_id' => 'pots', 'counterpart_pot_id' => 'pots'],
-        'merchant_memories' => ['merchant_id' => 'merchants', 'category_id' => 'categories'],
-        'tax_transaction_tags' => ['transaction_id' => 'transactions'],
-        'chain_links' => ['from_transaction_id' => 'transactions', 'to_transaction_id' => 'transactions'],
-        'recurring_series' => ['latest_funding_chain_link_id' => 'chain_links'],
-        'recurring_series_occurrences' => [
-            'recurring_series_id' => 'recurring_series',
-            'transaction_id' => 'transactions',
-        ],
-        'anomaly_alerts' => ['transaction_id' => 'transactions'],
-        'drift_alerts' => [
-            'recurring_series_id' => 'recurring_series',
-            'latest_occurrence_id' => 'recurring_series_occurrences',
-        ],
-        // `target_series_id` deliberately carries no database foreign key —
-        // the series lives in another module — so this check is the only
-        // thing stopping a mutation from naming another member's series.
-        'forecast_scenario_mutations' => [
-            'forecast_scenario_id' => 'forecast_scenarios',
-            'target_series_id' => 'recurring_series',
-        ],
+    // Owner-scoped references carrying no foreign key, so derivation is blind
+    // to them and this list is the only thing checking them. Everything with a
+    // real FK is derived — the hand-written list of those had drifted twelve
+    // tables behind the schema. ReferenceCoverageArchTest catches a new one.
+    private const UNENFORCED_REFERENCES = [
+        'transactions' => ['counterparty_id' => 'counterparties'],
+        'forecast_scenario_mutations' => ['target_series_id' => 'recurring_series'],
     ];
 
+    // A reference whose TARGET TABLE is named by another column on the same
+    // row, so no foreign key can express it and no static map can either.
+    // migration_source_map holds one row per migrated entity and beatrax_id
+    // means whatever beatrax_entity_type says it means.
+    private const POLYMORPHIC_REFERENCES = [
+        'migration_source_map' => ['beatrax_id' => 'beatrax_entity_type'],
+    ];
+
+    // The closed vocabulary MigrationEntityType writes, mapped to the tables
+    // it resolves against. A value outside this set is refused rather than
+    // waved through — an unknown type is precisely the shape an op would take
+    // to slip a reference past a check that only understands four words.
+    private const POLYMORPHIC_TABLES = [
+        'transaction' => 'transactions',
+        'account' => 'accounts',
+        'category' => 'categories',
+        'envelope_assignment' => 'envelope_assignments',
+    ];
+
+    /** @var array<string, bool> */
+    private array $userIdColumns = [];
+
+    /** @var array<string, array<string, string>> */
+    private array $ownedReferences = [];
+
+    /** @var array<string, int> */
+    private array $owners = [];
+
     public function __construct(
-        private DatabaseManager $db,
+        private readonly DatabaseManager $db,
     ) {}
 
     // Bounds a write to rows this user owns. A child table is bounded through
@@ -88,21 +88,15 @@ final readonly class RowOwnership
         );
     }
 
-    // Memoised in a function static rather than a property: this class is
-    // readonly, and a schema probe per created row would turn one catch-up
-    // into thousands of PRAGMA reads.
+    // Memoised per instance rather than per process: OpLogReplayer builds one
+    // of these per replay, so the cache spans exactly the window in which the
+    // schema cannot change, and a migration between two runs is never read
+    // through a stale answer.
     public function hasUserIdColumn(string $table): bool
     {
-        /** @var array<string, bool> $cache */
-        static $cache = [];
-
-        if (! isset($cache[$table])) {
-            $cache[$table] = $this->db->connection()
-                ->getSchemaBuilder()
-                ->hasColumn($table, 'user_id');
-        }
-
-        return $cache[$table];
+        return $this->userIdColumns[$table] ??= $this->db->connection()
+            ->getSchemaBuilder()
+            ->hasColumn($table, 'user_id');
     }
 
     // True for user-scoped tables (already proven by their own user_id) and
@@ -133,6 +127,55 @@ final readonly class RowOwnership
                 ->exists();
     }
 
+    // Every column on this table that names a row belonging to a user, read
+    // from the live foreign keys. Derived rather than listed because the list
+    // is the kind that rots silently: it named eleven tables while the schema
+    // had twenty-three, and nothing failed to say so.
+    /**
+     * @return array<string, string>
+     */
+    public function ownedReferences(string $table): array
+    {
+        if (isset($this->ownedReferences[$table])) {
+            return $this->ownedReferences[$table];
+        }
+
+        $schema = $this->db->connection()->getSchemaBuilder();
+        $references = self::UNENFORCED_REFERENCES[$table] ?? [];
+
+        if ($schema->hasTable($table)) {
+            foreach ($schema->getForeignKeys($table) as $foreignKey) {
+                $target = $foreignKey['foreign_table'];
+
+                if (! $this->hasUserIdColumn($target)) {
+                    continue;
+                }
+
+                foreach ($foreignKey['columns'] as $column) {
+                    // A composite key may carry user_id alongside the column
+                    // that does the naming; scoping is already handled, and
+                    // the user's own id is not a reference to check.
+                    if ($column !== 'user_id') {
+                        $references[$column] = $target;
+                    }
+                }
+            }
+        }
+
+        return $this->ownedReferences[$table] = $references;
+    }
+
+    // The polymorphic columns on this table, mapped to the column naming
+    // their target. Exposed so the coverage contract can tell a reference
+    // that is checked elsewhere from one that is not checked at all.
+    /**
+     * @return array<string, string>
+     */
+    public function polymorphicReferences(string $table): array
+    {
+        return self::POLYMORPHIC_REFERENCES[$table] ?? [];
+    }
+
     // Whether every owner-scoped id this row names belongs to the same user.
     // parentBelongsToUser() answers for the row itself and returns true the
     // moment a table carries its own user_id, so a row that IS the user's
@@ -140,9 +183,13 @@ final readonly class RowOwnership
     /**
      * @param  array<string, mixed>  $payload
      */
-    public function referencesBelongToUser(string $table, array $payload, int $userId): bool
+    public function referencesBelongToUser(string $table, array $payload, int $userId, int|string|null $pk = null): bool
     {
-        foreach (self::OWNED_REFERENCES[$table] ?? [] as $column => $referencedTable) {
+        if (! $this->polymorphicReferenceBelongsToUser($table, $payload, $userId, $pk)) {
+            return false;
+        }
+
+        foreach ($this->ownedReferences($table) as $column => $referencedTable) {
             $referenced = $payload[$column] ?? null;
 
             // A null reference is the column being unset rather than a bad
@@ -159,16 +206,88 @@ final readonly class RowOwnership
             // An absent parent is an ordering problem, not a cross-user one —
             // children legitimately arrive before their parent — and the
             // deferral and foreign-key paths already handle that case.
-            $owner = $this->db->connection()
-                ->table($referencedTable)
-                ->where('id', $referenced)
-                ->value('user_id');
+            $owner = $this->ownerOf($referencedTable, $referenced);
 
-            if ($owner !== null && (int) $owner !== $userId) {
+            if ($owner !== null && $owner !== $userId) {
                 return false;
             }
         }
 
         return true;
+    }
+
+    // Resolves the target table from its sibling type column, then asks the
+    // ordinary ownership question. A single-field Set carries no sibling, so
+    // the type is read back from the row being updated; with neither the
+    // write is refused, because an unresolvable target cannot be cleared.
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function polymorphicReferenceBelongsToUser(string $table, array $payload, int $userId, int|string|null $pk): bool
+    {
+        foreach (self::POLYMORPHIC_REFERENCES[$table] ?? [] as $column => $typeColumn) {
+            $referenced = $payload[$column] ?? null;
+
+            if ($referenced === null) {
+                continue;
+            }
+
+            if (! is_int($referenced) && ! is_string($referenced)) {
+                return false;
+            }
+
+            $type = $payload[$typeColumn] ?? $this->siblingValue($table, $pk, $typeColumn);
+            $referencedTable = is_string($type) ? (self::POLYMORPHIC_TABLES[$type] ?? null) : null;
+
+            if ($referencedTable === null) {
+                return false;
+            }
+
+            $owner = $this->ownerOf($referencedTable, $referenced);
+
+            if ($owner !== null && $owner !== $userId) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // The type column as the row already holds it, for a Set that carries
+    // only the id. Not memoised: this is the value an earlier op in the very
+    // same replay may have just rewritten.
+    private function siblingValue(string $table, int|string|null $pk, string $column): ?string
+    {
+        if ($pk === null) {
+            return null;
+        }
+
+        $value = $this->db->connection()->table($table)->where('id', $pk)->value($column);
+
+        return is_string($value) ? $value : null;
+    }
+
+    // Null when the row is absent. Only a found owner is memoised: a replay
+    // seeds every row it writes with the session's own user id, so an id that
+    // is missing now cannot come back owned by somebody else, but caching the
+    // miss would still be answering a later question with an older fact.
+    private function ownerOf(string $table, int|string $id): ?int
+    {
+        $key = $table.':'.$id;
+
+        if (isset($this->owners[$key])) {
+            return $this->owners[$key];
+        }
+
+        $owner = $this->db->connection()
+            ->table($table)
+            ->where('id', $id)
+            ->value('user_id');
+
+        if (! is_numeric($owner)) {
+            return null;
+        }
+
+        return $this->owners[$key] = (int) $owner;
     }
 }

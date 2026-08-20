@@ -184,7 +184,7 @@ final readonly class OpLogEntryApplier
         // The ids a row NAMES are minted per device, so one can land on a
         // different household member's row entirely. Refuse rather than write
         // a transaction pointing at somebody else's account.
-        if ($payload !== null && ! $this->ownership->referencesBelongToUser($table, $payload, $userId)) {
+        if ($payload !== null && ! $this->ownership->referencesBelongToUser($table, $payload, $userId, $pk)) {
             $firstField = reset($fields);
 
             if ($firstField !== false) {
@@ -385,6 +385,16 @@ final readonly class OpLogEntryApplier
         try {
             $columnValue = $this->projector->encodeColumnValue($this->projector->resolveStrategy($table, $field)->resolve($fieldEntries));
             $columnValue = $this->projector->reencryptForProjection($table, $field, $columnValue, $userId);
+
+            // The create path gates the ids a row NAMES, but a Set rewrites
+            // that same column afterwards: create a transaction against your
+            // own account, then Set account_id to another member's, and the
+            // row scopes to you while reading their balance.
+            if (! $this->ownership->referencesBelongToUser($table, [$field => $columnValue], $userId, $pk)) {
+                $this->quarantine->record($fieldEntries[0], QuarantineReason::CrossUser, $now);
+
+                return;
+            }
 
             $query = $this->db->connection()
                 ->table($table)
