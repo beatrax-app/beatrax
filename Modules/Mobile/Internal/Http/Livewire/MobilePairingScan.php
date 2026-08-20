@@ -502,6 +502,18 @@ final class MobilePairingScan extends Component
             }
         }
 
+        // A token that expired, was refused, or was cancelled on the other
+        // device leaves nothing to wait for — and the poll used to keep
+        // spinning on it forever, with the phone showing a live handshake that
+        // had already ended somewhere it could not see.
+        if ($state === null || $state === PairingGateway::STATE_EXPIRED) {
+            $this->resetPairingAttempt();
+            $this->awaitingPeer = false;
+            $this->flashMessage = Lang::get('mobile::pairing.errors.invalid_code');
+
+            return;
+        }
+
         if ($state === PairingGateway::STATE_CONFIRMED && $this->step !== 'success') {
             $this->step = 'success';
 

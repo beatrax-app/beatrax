@@ -30,6 +30,10 @@ final class PairingGateway
 
     public const string STATE_CONFIRMED = PairingState::Confirmed->value;
 
+    // Exposed alongside CONFIRMED because a caller polling for the happy end
+    // needs to recognise the unhappy one too, without reaching into Internal.
+    public const string STATE_EXPIRED = PairingState::Expired->value;
+
     public function __construct(
         private readonly DeviceIdentityLoader $identityLoader,
         private readonly PairingTokenService $tokenService,
