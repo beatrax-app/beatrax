@@ -30,10 +30,20 @@ beforeEach(function (): void {
     test()->actingAs($this->chromeUser);
 });
 
-it('renders the base currency the chart axis formats with', function (): void {
+it('renders the reader own reporting currency, not the app-wide fallback', function (): void {
+    // Asserted against a currency the config does NOT hold. The first version
+    // of this test compared the attribute with config('currency.base') — the
+    // same value the page was reading — so it passed whatever the page did,
+    // and missed that every chart axis ignored the user's own setting.
+    $this->chromeUser->base_currency = 'GBP';
+    $this->chromeUser->save();
+
+    expect(config('currency.base', 'EUR'))->not->toBe('GBP');
+
     $html = $this->followingRedirects()->get('/')->getContent();
 
-    expect($html)->toContain('data-base-currency="'.config('currency.base', 'EUR').'"');
+    expect($html)->toContain('data-base-currency="GBP"')
+        ->and($html)->not->toContain('data-base-currency="'.config('currency.base', 'EUR').'"');
 });
 
 it('hands the client a localised name for every chart type', function (): void {

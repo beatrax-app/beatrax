@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Ledger\Public\Services\BaseCurrency')
 @inject('currentUser', \Modules\Core\Public\Contracts\CurrentUser::class)
 @inject('container', \Illuminate\Contracts\Container\Container::class)
 @php
@@ -11,6 +12,14 @@
     // Chart chrome the ApexCharts helpers in app.js read off <html>: the
     // money axis needs the base currency, and ApexCharts names its own
     // <svg> in English ("donut chart with 14 data series") unless told.
+    // The reader's OWN reporting currency, not the app-wide fallback: a user
+    // who picks GBP in Settings had every chart axis drawn in euros beside
+    // pounds everywhere else. Guests have no preference, so they get the
+    // fallback.
+    $chartCurrency = $currentUser->isAuthenticated()
+        ? $currentUser->user()->base_currency
+        : BaseCurrency::value();
+
     $chartLabels = json_encode([
         'donut' => Lang::get('core::components.chart.donut'),
         'bar' => Lang::get('core::components.chart.bar'),
@@ -21,7 +30,7 @@
 <!doctype html>
 <html
     lang="{{ $chrome->locale }}"
-    data-base-currency="{{ \Modules\Ledger\Public\Services\BaseCurrency::value() }}"
+    data-base-currency="{{ $chartCurrency }}"
     data-chart-labels="{{ $chartLabels }}"
     class="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 {{ $chrome->isDark ? 'dark' : '' }}"
     {{-- Only when the server already KNOWS the theme. An inline style beats
