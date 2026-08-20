@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Pots\Database\Seeders\Demo;
 
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\DemoNames;
 use Modules\Core\Public\Support\Lang;
 use Modules\Goals\Models\Goal;
 use Modules\Ledger\Models\Account;
@@ -62,9 +63,11 @@ final class DemoPotsSeeder
     {
         $name = Lang::get('core::demo.'.$row['nameKey']);
 
+        // Every locale's rendering, not just today's: the dedupe key is a
+        // translated string, so a re-seed in another language duplicated it.
         $existing = Pot::query()
             ->where('user_id', $user->id)
-            ->where('name', $name)
+            ->whereIn('name', DemoNames::everyRendering($row['nameKey']))
             ->first();
 
         if ($existing !== null) {
@@ -73,9 +76,11 @@ final class DemoPotsSeeder
 
         $goalId = null;
         if ($row['goalKey'] !== null) {
+            // The goal may have been seeded in another language; resolving
+            // by today's rendering alone left the pot unlinked.
             $goalId = Goal::query()
                 ->where('user_id', $user->id)
-                ->where('name', Lang::get('core::demo.'.$row['goalKey']))
+                ->whereIn('name', DemoNames::everyRendering($row['goalKey']))
                 ->value('id');
             $goalId = is_numeric($goalId) ? (int) $goalId : null;
         }

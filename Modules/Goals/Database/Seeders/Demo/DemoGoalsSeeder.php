@@ -7,6 +7,7 @@ namespace Modules\Goals\Database\Seeders\Demo;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\DemoNames;
 use Modules\Core\Public\Support\Lang;
 use Modules\Goals\Models\Goal;
 use Modules\Goals\Public\Services\GoalContributionWriter;
@@ -62,9 +63,12 @@ final class DemoGoalsSeeder
         // in the interface language rather than in English.
         $name = Lang::get('core::demo.'.$row['nameKey']);
 
+        // Matched against every locale's rendering, not just today's: the
+        // dedupe key is a translated string, so a re-seed under a different
+        // APP_LOCALE otherwise made a second copy of every goal.
         $existing = Goal::query()
             ->where('user_id', $user->id)
-            ->where('name', $name)
+            ->whereIn('name', DemoNames::everyRendering($row['nameKey']))
             ->first();
 
         if ($existing !== null) {

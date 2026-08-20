@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Reports\Database\Seeders\Demo;
 
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\DemoNames;
 use Modules\Core\Public\Support\Lang;
 use Modules\Reports\Models\SavedReport;
 use Modules\Reports\Public\Actions\SaveReport;
@@ -77,9 +78,11 @@ final class DemoSavedReportsSeeder
     {
         $name = Lang::get('core::demo.'.$row['nameKey']);
 
+        // Every locale's rendering, not just today's: the dedupe key is a
+        // translated string, so a re-seed in another language duplicated it.
         $existing = SavedReport::query()
             ->where('user_id', $user->id)
-            ->where('name', $name)
+            ->whereIn('name', DemoNames::everyRendering($row['nameKey']))
             ->exists();
 
         if ($existing) {
