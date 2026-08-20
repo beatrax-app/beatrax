@@ -30,7 +30,10 @@ function deviceLocalTables(): array
 /**
  * Reference data: written by migrations, seeders and the bundled corpus, never
  * by a user action, so every device derives the same rows from the same build.
- * Capturing them would put identical rows on the wire for no one to merge.
+ * That is the whole justification — no runtime writer means nothing to capture.
+ * It is not that these rows never travel: the backfill excludes only the
+ * device-local tables, so `categories` does reach a peer, and
+ * RulesStayOnTheDeviceTest asserts exactly that.
  *
  * @return list<string>
  */
@@ -111,12 +114,17 @@ function capturedTables(): array
                 continue;
             }
 
-            // Only the declared table list, not every quoted string in the
-            // file — log-context keys and column names are quoted too.
-            preg_match_all("/const [A-Z_]+ = \[([^\]]*)\];/", $source, $lists);
+            // Only a list the file actually WALKS. Counting every const array
+            // meant a table struck out of the capture loop still read as
+            // captured for as long as its name sat in the constant.
+            preg_match_all("/const ([A-Z_]+) = \[([^\]]*)\];/", $source, $lists, PREG_SET_ORDER);
 
-            foreach ($lists[1] as $list) {
-                preg_match_all("/'([a-z_]{3,})'/", $list, $bulk);
+            foreach ($lists as $list) {
+                if (! str_contains($source, 'foreach (self::'.$list[1])) {
+                    continue;
+                }
+
+                preg_match_all("/'([a-z_]{3,})'/", $list[2], $bulk);
 
                 foreach ($bulk[1] as $table) {
                     $found[$table] = true;

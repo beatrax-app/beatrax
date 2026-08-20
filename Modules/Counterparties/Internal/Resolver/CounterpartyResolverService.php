@@ -386,6 +386,10 @@ final class CounterpartyResolverService implements CounterpartyResolver
                     'display_name' => $displayName,
                     'iban' => $iban,
                     'merchant_name' => $merchantName,
+                    // website and logo_url live in here and nowhere else, so
+                    // omitting it landed the counterparty on the peer with
+                    // both fields blank.
+                    'metadata' => $metadata === [] ? null : $metadata,
                 ],
             ));
         }
