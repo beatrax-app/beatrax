@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Lang;
 use Livewire\Livewire;
 use Modules\CashBook\Internal\Http\Livewire\CashBookPage;
 use Modules\Core\Models\User;
@@ -133,4 +134,22 @@ it('drops a foreign (cross-user) category id rather than attaching it', function
 
     $tx = DB::table('transactions')->where('user_id', $this->user->id)->where('source_format', 'manual')->first();
     expect($tx->category_id)->toBeNull(); // foreign category never attached
+});
+
+// CarbonImmutable::parse('') returns NOW rather than throwing, so a cleared
+// date field fell through the catch and booked the entry today. The twin at
+// Ledger\ReconcilePage::parseDate() guards the empty string first; this one
+// did not, and the invalid-date error it raises could never be reached.
+it('refuses a cleared date instead of silently booking the entry today', function (): void {
+    Livewire::actingAs($this->user)
+        ->test(CashBookPage::class)
+        ->set('direction', 'expense')
+        ->set('amount', '9,99')
+        ->set('date', '')
+        ->set('counterparty', 'Nowhere')
+        ->call('add')
+        ->assertSet('error', Lang::get('cashbook::cash-book.errors.invalid_date'));
+
+    expect(DB::table('transactions')->where('user_id', $this->user->id)->where('counterparty_name', 'Nowhere')->exists())
+        ->toBeFalse('a cleared date must not write a transaction dated today');
 });

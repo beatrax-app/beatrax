@@ -229,8 +229,16 @@ final class CashBookPage extends Component
 
     private static function parseDate(string $raw): ?CarbonImmutable
     {
+        $trimmed = trim($raw);
+
+        // parse('') returns NOW rather than throwing, so a cleared field fell
+        // straight past the catch and booked the entry today.
+        if ($trimmed === '') {
+            return null;
+        }
+
         try {
-            return CarbonImmutable::parse(trim($raw))->startOfDay();
+            return CarbonImmutable::parse($trimmed)->startOfDay();
         } catch (\Throwable) {
             return null;
         }
