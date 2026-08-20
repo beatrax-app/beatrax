@@ -80,6 +80,11 @@ it('pins out every permission the app never exercises', function (): void {
 
     $patched = (string) file_get_contents($manifest);
 
+    // What the merger will see: comments are invisible to it, and one of them
+    // deliberately carries a plain declaration so the plugin compiler's
+    // substring check finds the permission and stops re-adding it.
+    $merged = (string) preg_replace('/<!--.*?-->/s', '', $patched);
+
     foreach ([
         'android.permission.USE_EXACT_ALARM',
         'android.permission.SCHEDULE_EXACT_ALARM',
@@ -88,9 +93,12 @@ it('pins out every permission the app never exercises', function (): void {
         'android.permission.FOREGROUND_SERVICE',
         'android.permission.USE_FINGERPRINT',
     ] as $gone) {
-        expect($patched)
+        expect($merged)
             ->toContain('<uses-permission android:name="'.$gone.'" tools:node="remove" />')
             ->not->toContain('<uses-permission android:name="'.$gone.'" />');
+
+        // And the decoy the compiler reads is present in the raw file.
+        expect($patched)->toContain('<!-- <uses-permission android:name="'.$gone.'" />');
     }
 });
 
