@@ -55,11 +55,16 @@ Notable per-table quirks:
   the `id` NOT NULL constraint. `notifications.state` is the opposite case:
   deliberately absent from the registry entirely, since it is locally derived
   by `NotificationStateMachine` and never synced.
-- `envelope_moves` and `goal_contributions` are append-only ledgers: a row
-  exists or it does not, so both carry `_create_required` and `_delete_wins`
-  and **no** strategy key at all. A SET op against either is meaningless, and
+- `envelope_moves`, `goal_contributions`, `pot_movements` and
+  `recurring_series_occurrences` are append-only ledgers: a row exists or it
+  does not, so each carries `_create_required` and `_delete_wins` and **no**
+  strategy key at all. A SET op against one is meaningless, and
   `SyncCaptureListener` logs an `edit` on `goal_contributions` as an unknown
   mutation type rather than writing one.
+- `system_alerts` rows with a NULL `user_id` are system-wide and belong to no
+  one. The backfill scopes every table on `user_id`, so those rows are never
+  captured — deliberately, since an operational alert is about the machine
+  that raised it.
 
 ## At-rest encryption (Group Data Key)
 
@@ -577,6 +582,36 @@ device's public identity + a single-use token, rendered as an inline SVG QR
 and `&rtok=<token>` so a fresh phone can auto-configure its own transport
 before the cross-device handshake needs one.
 
+`PairingOfferService` answers the one question a typed word-code leaves
+open. The QR carries the initiator's device id and both public keys; the
+word-code carries the 16-byte token and nothing else, so a fresh responder
+has no local `pairing_tokens` row for `acceptToken()` to bind against. Given
+the token, this looks up the row by `sha256(token)` — the table stores the
+hash, never the token — requires it to be `pending`/`awaiting_confirm` and
+unexpired, and returns the initiator's `device_id`, `ed25519`, `x25519` and
+display `name`. Nothing else. In particular **no relay endpoint, token or
+pin**: the QR may bootstrap a relay because a camera is an out-of-band
+channel the network cannot touch, whereas this answer travels the very
+network an attacker would be sitting on. Every refusal — unknown token,
+expired token, another user's token, a ceremony already finished — is the
+same bare 404, so probing the endpoint teaches nothing.
+
+`PairingOfferRateLimiter` is the per-source-IP fixed-window throttle in
+front of it (10 per minute). The token is 128 bits of `random_bytes(16)`, so
+brute force was never the concern; the limit is defence in depth and stops
+the endpoint being a cheap probe for whether a pairing is in flight.
+
+`LanPairingOfferFetcher` is the responder half: it decodes the typed
+word-code, browses `_beatrax-sync._tcp` via `MulticastMdnsQuery`, and asks
+each discovered peer for its offer until one holds the token. Discovery
+authenticates nothing and neither does the fetch — an mDNS answer can be
+spoofed by anyone on the network, so what comes back is a candidate
+identity, and the mandatory both-sides safety-number comparison remains the
+sole gate establishing who the peer is, exactly as on the QR path. The
+fetched identity is fed to `PairingGateway::seedResponderToken()` and the
+flow then continues through the unchanged `acceptToken()` ceremony. Neither
+the token nor the offer body is ever logged.
+
 `PairingFrame` defines the two cross-device pairing handshake frame types
 `PairingRelayCourier` carries over the zero-knowledge relay:
 `PAIR_RESPONDER_ACCEPT` (public identity fields only) and `PAIR_CONFIRM`
@@ -743,6 +778,15 @@ in `MdnsAdvertiser` and `MdnsBrowser`.
 
 No `sharkydog/mdns` dependency — both classes shell out via Symfony Process,
 already in the dependency tree.
+
+`MulticastMdnsQuery` speaks mDNS on the wire instead of shelling out, because
+a phone has neither `dns-sd` nor `avahi`. It sends one PTR question to
+`224.0.0.251:5353` from an ephemeral port with the unicast-response bit set —
+receiving the multicast reply would need a group join, which Android gates
+behind a multicast lock — and accumulates the answers through
+`MdnsResponseParser` into an `MdnsInstanceTable`. It applies no registry
+filter of its own: the fresh device using it has no confirmed peers yet, which
+is the whole reason it is browsing.
 
 ### Zero-knowledge relay (`Commands\RelayServeCommand`, `Internal\Transport\Relay\*`)
 
@@ -914,6 +958,15 @@ handler carries empty placeholder credentials and closes all incoming
 connections at the auth gate. The NativePHP `persistent:true` host
 auto-restarts the command after setup completes.
 
+**Pairing-offer route.** `PairingOfferRequestHandler` is mounted in front of
+the `Websocket` handler and serves exactly one route, `GET /pair/offer`,
+delegating every other request to `Websocket::handleRequest()`. It is a
+hand-written `RequestHandler` rather than `amphp/http-server-router`, which is
+not a dependency of this project and is not worth becoming one for a single
+path. The lookup is scoped to `SyncWebSocketHandler::localUserId()` — the user
+the daemon was spawned for — and answers from `PairingOfferService` behind
+`PairingOfferRateLimiter`.
+
 ## Status and UI surfaces
 
 ### Sync status service (`Public\Services\SyncStatusService`)
@@ -1052,10 +1105,74 @@ devices editing different fields of the same row both keep their change.
 by a migration run and never edited by hand; a partial replay of one would
 describe a state neither device was ever in.
 
-### Known gap: pot balances
+### Round 2: nine tables brought under merge rules, then a tenth
 
-`pots` is syncable and now captured, but `pot_movements` — which is where a
-pot's balance actually lives — has no merge rules at all. Pot definitions
-therefore sync while their balances do not. Closing that means giving an
-append-only money ledger merge semantics, which is a larger change than adding
-capture and is not attempted here.
+`pot_movements`, `user_preferences`, `recurring_series`,
+`recurring_series_occurrences`, `chain_links`, `anomaly_alerts`,
+`drift_alerts`, `system_alerts` and `forecast_scenarios` now carry merge rules,
+insertion-order placement and owner scoping, so a paired device receives them
+in the backfill instead of an empty table. `pot_movements` was the sharp end:
+`pots` synced without it, so every pot on the phone read EUR 0,00 while the
+page promised the balances add up to the real account balance.
+
+`forecast_scenario_mutations` closed the tenth gap. `forecast_scenarios` is
+only the named container; the mutations are what the scenario actually changes,
+so a synced scenario arrived as an empty what-if. It carries its own `user_id`
+and needs no `PARENT_SCOPE` entry, but both ids it names are owner-scoped and
+sit in `RowOwnership::OWNED_REFERENCES`: `forecast_scenario_id`, and
+`target_series_id`, which is deliberately not FK-constrained because the series
+lives in another module — so that check is the only thing standing between a
+replayed mutation and another household member's series.
+
+### Round 2 capture: four of the ten travel incrementally
+
+- `pot_movements` — `PotWriter` dispatches `EntityMutated` for every movement
+  it inserts, so a fund, withdrawal or transfer made after pairing reaches the
+  peer.
+- `user_preferences` — `Core\Public\Services\UserPreferenceWriter` is the
+  single write seam. Four Livewire components each ran their own
+  `UserPreference::updateOrCreate`, which would have meant the same dispatch
+  copied four times and forgotten by the fifth caller.
+- `forecast_scenarios` and `forecast_scenario_mutations` — create, rename and
+  delete, plus add, edit and remove for the mutations, all in
+  `Forecasting\Public\Actions`. Deleting a scenario emits one tombstone: the
+  mutations cascade away behind it on the peer exactly as they do locally.
+
+### Round 2 capture: `system_alerts` travels only where it is owned
+
+`system_alerts` captures in part, and the split is the point. Six probe write
+sites across Core and Desktop raise rows with a NULL `user_id`: a corrupt
+backup, a stale backup, SQLite out of WAL mode, a crashed worker, an available
+update. Those describe the machine that noticed, not the account, and the peer
+raises its own from its own probes — so they stay uncaptured, which is also why
+the `user_id`-scoped backfill has never carried them.
+
+The three that are owned do travel:
+`Core\Public\Services\SystemAlertWriter::raiseForUser()` is the only way one
+is written, and it takes a non-nullable owner so the rule is enforced by the
+signature rather than remembered at each call site. Its callers are the two
+EmailScan re-consent listeners and the OpenBanking one — a lapsed mail token or
+bank consent is a fact about the account, and the user re-grants it on whichever
+device is to hand.
+
+Acknowledging is the one user action on this table, and it is a SET, so it can
+only travel for a row the peer already holds. `captureAcknowledgement()` drops a
+system-wide row for that reason and captures an owned one, from both paths that
+acknowledge: the banner's button via `AcknowledgeSystemAlert`, and the OAuth
+callback that clears the re-consent banner when the user finishes reconnecting.
+
+### Known gap: incremental capture for five detector-driven tables
+
+`chain_links`, `recurring_series`, `recurring_series_occurrences`,
+`drift_alerts` and `anomaly_alerts` have merge rules and travel in the backfill,
+but no write path emits an op yet, so an edit made after pairing stays on the
+device that made it. They sit in `SyncCaptureCoverageTest`'s
+`uncapturedBacklog()`.
+
+All five are written by detectors, and that is a design question rather than
+missing wiring: both devices can run the same detector and each mints its own
+autoincrement id for the same logical row. The idempotency UNIQUE on each table
+then drops whichever create lands second, leaving that device's later SETs
+pointing at a pk it does not hold. Capture there waits on deciding whether
+detection runs on one device only, or whether those rows need an identity that
+is not the autoincrement.

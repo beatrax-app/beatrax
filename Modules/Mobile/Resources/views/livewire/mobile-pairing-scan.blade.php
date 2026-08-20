@@ -179,8 +179,15 @@
                      at all makes Livewire try to resolve a ?string from the
                      container, which 500s. --}}
                 wire:click="submitCode(null)"
+                {{-- Submitting an import code asks the network who holds it,
+                     which takes a couple of seconds. Without this the button
+                     sat live and unresponsive for the whole browse, which
+                     reads as a tap that did not register. --}}
+                wire:loading.attr="disabled"
+                wire:target="submitCode"
                 class="flex-1 min-h-[44px] rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white
                        hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
+                       disabled:opacity-50 disabled:cursor-wait
                        dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
             >
                 {{ Lang::get('mobile::pairing.submit_code') }}

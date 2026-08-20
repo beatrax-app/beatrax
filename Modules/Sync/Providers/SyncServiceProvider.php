@@ -40,6 +40,8 @@ use Modules\Sync\Internal\Merge\Strategies\LwwPerFieldStrategy;
 use Modules\Sync\Internal\Merge\Strategies\OrSetStrategy;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
 use Modules\Sync\Internal\Pairing\Bip39WordList;
+use Modules\Sync\Internal\Pairing\PairingOfferRateLimiter;
+use Modules\Sync\Internal\Pairing\PairingOfferService;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
@@ -414,6 +416,8 @@ final class SyncServiceProvider extends ServiceProvider
                 handler: fn () => $this->app->make(SyncWebSocketHandler::class),
                 advertiser: $this->app->make(MdnsAdvertiser::class),
                 shutdown: $this->app->make(DaemonShutdownSignal::class),
+                offers: $this->app->make(PairingOfferService::class),
+                offerRateLimiter: $this->app->make(PairingOfferRateLimiter::class),
             ));
         }
 

@@ -13,6 +13,7 @@ use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Identity\DeviceNameDetector;
 use Modules\Sync\Internal\Pairing\InvalidPublicKeyException;
+use Modules\Sync\Internal\Pairing\LanPairingOfferFetcher;
 use Modules\Sync\Internal\Pairing\PairingRelayCourier;
 use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
@@ -46,7 +47,20 @@ final class PairingGateway
         private readonly DeviceNameDetector $deviceNameDetector,
         private readonly PairingRelayCourier $relayCourier,
         private readonly Clock $clock,
+        private readonly LanPairingOfferFetcher $lanOfferFetcher,
     ) {}
+
+    // Recover the initiator's public identity for a code the user typed. A
+    // word-code carries the token alone, so a fresh responder has no local
+    // row to accept against; this asks the LAN for the half the code cannot
+    // carry. Null when nothing answers, or nothing answering holds the token.
+    /**
+     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null}|null
+     */
+    public function discoverInitiatorOnLan(string $wordCode): ?array
+    {
+        return $this->lanOfferFetcher->fetchForWordCode($wordCode);
+    }
 
     // Auto-configures this device's relay endpoint (+ optional token) from a
     // scanned QR: a fresh phone has no relay otherwise. No new trust decision

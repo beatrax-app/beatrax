@@ -98,6 +98,14 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
         return $this->localDeviceId;
     }
 
+    // Scopes the pairing-offer lookup SyncServeCommand mounts alongside this
+    // handler. Zero when the daemon spawned without a resolvable identity,
+    // which the offer service reads as "no user" and refuses.
+    public function localUserId(): int
+    {
+        return $this->userId;
+    }
+
     public function handleClient(WebsocketClient $client, Request $request, Response $response): void
     {
         try {

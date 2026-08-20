@@ -10,8 +10,11 @@ use Amp\Websocket\Server\Rfc6455Acceptor;
 use Amp\Websocket\Server\Websocket;
 use Closure;
 use Illuminate\Console\Command;
+use Modules\Sync\Internal\Pairing\PairingOfferRateLimiter;
+use Modules\Sync\Internal\Pairing\PairingOfferService;
 use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
 use Modules\Sync\Internal\Transport\Discovery\MdnsAdvertiser;
+use Modules\Sync\Internal\Transport\PairingOfferRequestHandler;
 use Modules\Sync\Internal\Transport\SyncWebSocketHandler;
 use Psr\Log\LoggerInterface;
 
@@ -34,6 +37,8 @@ final class SyncServeCommand extends Command
         private readonly Closure $handler,
         private readonly MdnsAdvertiser $advertiser,
         private readonly DaemonShutdownSignal $shutdown,
+        private readonly PairingOfferService $offers,
+        private readonly PairingOfferRateLimiter $offerRateLimiter,
     ) {
         parent::__construct();
     }
@@ -72,8 +77,19 @@ final class SyncServeCommand extends Command
             $acceptor = new Rfc6455Acceptor;
             $wsServer = new Websocket($httpServer, $this->logger, $acceptor, $handler);
 
+            // One extra route in front of the upgrade: a device holding only
+            // a typed word-code has no way to learn this device's public
+            // identity, and a fresh responder cannot accept a token without
+            // it. Everything that is not that route reaches the WebSocket.
+            $requestHandler = new PairingOfferRequestHandler(
+                $wsServer,
+                $this->offers,
+                $this->offerRateLimiter,
+                $handler->localUserId(),
+            );
+
             $errorHandler = new DefaultErrorHandler;
-            $httpServer->start($wsServer, $errorHandler);
+            $httpServer->start($requestHandler, $errorHandler);
 
             // advertise() is a best-effort shell-out (dns-sd / avahi-publish-service);
             // it silently no-ops when neither CLI is available, falling through to
