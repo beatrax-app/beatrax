@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Support\Fmt')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
@@ -92,7 +93,7 @@
                         <div style="min-width: 0; flex: 1 1 auto;">
                             <span class="primary">{{ $entry->counterparty_name }}</span>
                             <span class="secondary">
-                                {{ \Carbon\CarbonImmutable::parse((string) $entry->posted_at)->isoFormat('L') }}
+                                {{ Fmt::shortDate((string) $entry->posted_at) }}
                                 @if ($entry->category_name)· {{ $entry->category_name }}@endif
                             </span>
                         </div>
@@ -127,7 +128,7 @@
                         <div class="min-w-0 flex-1">
                             <p class="truncate text-slate-900 dark:text-slate-100">{{ $entry->counterparty_name }}</p>
                             <p class="text-xs text-slate-500 dark:text-slate-400">
-                                {{ \Carbon\CarbonImmutable::parse((string) $entry->posted_at)->isoFormat('L') }}
+                                {{ Fmt::shortDate((string) $entry->posted_at) }}
                                 @if ($entry->category_name)· {{ $entry->category_name }}@endif
                             </p>
                         </div>

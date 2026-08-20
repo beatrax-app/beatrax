@@ -1,7 +1,9 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
     App Lock settings section — UI-SPEC §3.
-    Mounted into the Core settings page via @livewire('auth.app-lock-settings-section').
+    Mounted on the Data & Devices screen, not the settings page: enabling sync
+    requires a lock ("Set an app lock first to enable sync"), so the two belong
+    on one screen.
 
     Security decisions enforced here:
       - Enable flow collects the account password (D-21 recovery wrap requirement).

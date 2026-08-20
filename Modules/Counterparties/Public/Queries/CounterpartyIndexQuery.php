@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\Counterparties\Public\Queries;
 
-use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\Fmt;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
@@ -148,11 +148,11 @@ final readonly class CounterpartyIndexQuery
             $counterpartyName = $this->codec->decryptValue('transactions', 'counterparty_name', $counterpartyName, $userId, $this->session)['value'];
         }
 
-        // isoFormat('L'), not a substr of the ISO column: 'L' is the rendering
-        // locale's short-date pattern, the same source the date field takes its
-        // own from, so the two agree by construction rather than by luck.
+        // Fmt, not a substr of the ISO column: it renders the locale's own
+        // short-date pattern, the same source the date field takes its own
+        // from, so the two agree by construction rather than by luck.
         $date = is_string($postedAt) && $postedAt !== ''
-            ? CarbonImmutable::parse($postedAt)->isoFormat('L')
+            ? Fmt::shortDate($postedAt)
             : '';
         $label = match (true) {
             is_string($description) && $description !== '' => $description,

@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Support\Fmt')
 @use('Carbon\CarbonImmutable')
 {{--
     /counterparties/triage focused single-card queue.
@@ -97,7 +98,7 @@
             <p class="triage-meta">
                 {{ Lang::choice('counterparties::triage.meta', count($recentTransactions), [
                     'count' => count($recentTransactions),
-                    'date' => ! empty($recentTransactions) ? CarbonImmutable::parse((string) $recentTransactions[0]->posted_at)->isoFormat('L') : '—',
+                    'date' => ! empty($recentTransactions) ? Fmt::shortDate((string) $recentTransactions[0]->posted_at) : '—',
                 ]) }}
             </p>
 
@@ -149,13 +150,11 @@
                     <ul style="margin: 0; padding: 0; list-style: none;">
                         @foreach ($recentTransactions as $tx)
                             @php
-                                // isoFormat('L'), not a substr of the ISO string: this
-                                // list sat inside a Dutch page writing 2026-08-13
-                                // while every other date in the app read 13-08-2026.
-                                // 'L' is the short-date pattern of whatever locale is
-                                // rendering, so it follows the reader rather than the
-                                // database.
-                                $date = is_string($tx->posted_at ?? null) ? CarbonImmutable::parse($tx->posted_at)->isoFormat('L') : '';
+                                // Fmt, not a substr of the ISO string: this list sat
+                                // inside a Dutch page writing 2026-08-13 while every
+                                // other date in the app read 13-08-2026. Fmt follows
+                                // the reader's locale, day-first in all of them.
+                                $date = is_string($tx->posted_at ?? null) ? Fmt::shortDate($tx->posted_at) : '';
                             @endphp
                             <li class="triage-tx">
                                 <span class="triage-tx__date">{{ $date }}</span>

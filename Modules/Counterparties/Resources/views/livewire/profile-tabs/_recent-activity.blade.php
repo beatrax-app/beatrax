@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Support\Fmt')
 {{--
     Recent-activity partial reused by every profile-tab body to render
     a uniform list of the counterparty's most-recent transactions.
@@ -19,7 +20,7 @@
         @foreach ($rows as $tx)
             @php
                 $date = is_string($tx->posted_at ?? null) && $tx->posted_at !== ''
-                    ? \Carbon\CarbonImmutable::parse($tx->posted_at)->isoFormat('L')
+                    ? Fmt::shortDate($tx->posted_at)
                     : '';
                 $desc = $tx->description ?? '';
                 $amount = (int) ($tx->amount_minor ?? 0);

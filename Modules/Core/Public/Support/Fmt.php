@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Core\Public\Support;
 
+use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Container\Container;
 use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Support\Number;
@@ -38,5 +40,53 @@ final class Fmt
         $marks = Locale::tryFrom($locale) ?? Locale::En;
 
         return number_format($value, $decimals, $marks->decimalMark(), $marks->groupMark());
+    }
+
+    // The locale's own short-date pattern, corrected where it writes the month
+    // before the day. English is the only shipped locale that does, and it is
+    // what a fresh install runs on, so 08/20/2026 is what a new reader met.
+
+    // Year-first locales are left alone: sv's 2026-08-20 is unambiguous, and
+    // reordering it would be the odd thing to a Swedish reader.
+    public static function datePattern(): string
+    {
+        $pattern = CarbonImmutable::now()->getIsoFormats(self::locale())['L'] ?? 'DD-MM-YYYY';
+
+        if (! is_string($pattern)) {
+            return 'DD-MM-YYYY';
+        }
+
+        $month = strpos($pattern, 'MM');
+        $day = strpos($pattern, 'DD');
+
+        if ($month === false || $day === false || $month > $day) {
+            return $pattern;
+        }
+
+        $year = strpos($pattern, 'YYYY');
+
+        if ($year !== false && $year < $month) {
+            return $pattern;
+        }
+
+        // Both tokens are two characters, so swapping them in place keeps the
+        // locale's own separators.
+        return substr_replace(substr_replace($pattern, 'DD', $month, 2), 'MM', $day, 2);
+    }
+
+    // Every short date on screen, so the lists, the search results and the
+    // date field cannot disagree about what day it is.
+    public static function shortDate(CarbonInterface|string $when): string
+    {
+        $date = $when instanceof CarbonInterface
+            ? CarbonImmutable::instance($when)
+            : CarbonImmutable::parse($when);
+
+        return $date->settings(['locale' => self::locale()])->isoFormat(self::datePattern());
+    }
+
+    private static function locale(): string
+    {
+        return Container::getInstance()->make(Translator::class)->getLocale();
     }
 }

@@ -98,12 +98,16 @@
         <div class="pots-phone-list rounded-lg border border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-700 overflow-hidden">
             @foreach ($groups as $accountId => $pots)
                 @foreach ($pots as $pot)
-                    <div class="card-list-item">
+                    <div class="card-list-item flex-wrap">
                         <div class="flex-1 min-w-0">
                             <p class="primary truncate">{{ $pot->name }}</p>
                             <p class="secondary">{{ $pot->accountName }}</p>
                         </div>
                         <span class="amount">{{ $fmt($pot->balanceMinor, $pot->currency) }}</span>
+                        {{-- Actions on their own line. Five 44px targets and
+                             the amount left the name 6px wide on a 375pt
+                             screen, so the row said which pot it was not. --}}
+                        <div class="flex w-full items-center justify-end gap-1">
                         {{-- Row actions always visible on phone (D-12) --}}
                         <button
                             type="button"
@@ -158,6 +162,7 @@
                             title="{{ Lang::get('pots::messages.actions.archive') }}"
                             aria-label="{{ Lang::get('pots::messages.actions.archive') }}"
                         ><span aria-hidden="true">⊟</span></button>
+                        </div>
                     </div>
                 @endforeach
             @endforeach
