@@ -1908,6 +1908,47 @@ td.date,
 
     /* "5 rows shown · 132 more" footer below the table when totalRows
        exceeds the sample window. */
+    /*
+     * Six classes in this family were written into the markup and never given
+     * a rule, so the onboarding preview rendered them as bare browser default
+     * text — in the first flow a new user sees. They follow the eyebrow and
+     * the more-row above: muted, small, indented to the section's gutter.
+     */
+    .preview-section-label {
+        font-size: var(--text-sm);
+        font-weight: 600;
+        color: var(--color-text);
+    }
+
+    .preview-section-count {
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .preview-section-empty,
+    .preview-section-filtered {
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+        margin: 0 0 var(--space-4);
+        padding-left: var(--space-3);
+    }
+
+    /* Reads as a problem rather than a note, matching .wiz-error's pairing. */
+    .preview-section-error {
+        font-size: var(--text-xs);
+        color: var(--color-rose);
+        margin: 0 0 var(--space-4);
+        padding-left: var(--space-3);
+    }
+
+    .wiz-empty {
+        font-size: var(--text-sm);
+        color: var(--color-text-muted);
+        text-align: center;
+        margin: var(--space-6) 0;
+    }
+
     .preview-section-more {
         font-size: var(--text-xs);
         color: var(--color-text-muted);

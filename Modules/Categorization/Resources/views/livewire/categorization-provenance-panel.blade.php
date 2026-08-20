@@ -31,19 +31,14 @@
                 {{ $conditionSummary }} → {{ $categoryPath }}
             </p>
             @if ($confirmingRemove)
-                <div class="mt-3 flex items-center gap-2">
-                    <span class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('categorization::detail.remove_confirm') }}</span>
-                    <button
-                        type="button"
-                        wire:click="removeRule"
-                        class="rounded-md bg-rose-600 px-2 py-1 text-xs font-medium text-white hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 dark:bg-rose-500 dark:hover:bg-rose-400"
-                    >{{ Lang::get('categorization::detail.remove_yes') }}</button>
-                    <button
-                        type="button"
-                        wire:click="cancelRemove"
-                        class="rounded-md px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:bg-slate-800"
-                    >{{ Lang::get('categorization::detail.cancel') }}</button>
-                </div>
+                <x-core::confirm-strip
+                    class="mt-3"
+                    :question="Lang::get('categorization::detail.remove_confirm')"
+                    :cancel-label="Lang::get('categorization::detail.cancel')"
+                    :confirm-label="Lang::get('categorization::detail.remove_yes')"
+                    cancel="cancelRemove"
+                    confirm="removeRule"
+                />
             @else
                 <div class="mt-3 flex items-center gap-2">
                     <button

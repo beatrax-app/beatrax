@@ -9,8 +9,8 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\Url;
 use Livewire\Component;
-use Modules\Core\Models\UserPreference;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Services\UserPreferenceWriter;
 use Modules\Counterparties\Public\Queries\CounterpartyIndexQuery;
 
 // Cards-default index with type-filter chips and a Cards/List toggle
@@ -50,10 +50,10 @@ final class CounterpartyIndex extends Component
         }
     }
 
-    // updateOrCreate materialises the row on first write and updates it
-    // idempotently thereafter — the unique index on user_preferences.user_id
-    // enforces one row per user at the DB boundary.
-    public function setView(string $view, CurrentUser $currentUser): void
+    // Routed through the shared writer: it materialises the row on first
+    // write, and it is the single place the preference change is put on the
+    // op log, so a toggle made after pairing reaches the other device.
+    public function setView(string $view, CurrentUser $currentUser, UserPreferenceWriter $preferences): void
     {
         if (! in_array($view, ['cards', 'list'], true)) {
             return;
@@ -61,10 +61,7 @@ final class CounterpartyIndex extends Component
 
         $this->view = $view;
 
-        UserPreference::query()->updateOrCreate(
-            ['user_id' => $currentUser->id()],
-            ['counterparty_index_view' => $view],
-        );
+        $preferences->write($currentUser->id(), ['counterparty_index_view' => $view]);
     }
 
     public function render(

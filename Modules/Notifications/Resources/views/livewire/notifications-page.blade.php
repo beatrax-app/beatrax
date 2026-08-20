@@ -49,27 +49,18 @@
         >{{ Lang::get('notifications::inbox.settings_link') }}</a>
     </header>
 
-    {{-- Single-level lifecycle tabs, cloned verbatim from DriftPage's Level-2 tabs (D-04). --}}
+    {{-- Single-level lifecycle tabs. The strip and its label are this page's;
+         the buttons are the shared x-core::tab the copy here used to duplicate. --}}
     <nav class="mb-6 flex items-center gap-2 border-b border-slate-200 dark:border-slate-700" role="tablist" aria-label="{{ Lang::get('notifications::inbox.tablist_aria') }}">
         @foreach ($tabs as $key => $label)
-            <button
-                type="button"
-                role="tab"
-                aria-selected="{{ $tab === $key ? 'true' : 'false' }}"
-                wire:click="setTab('{{ $key }}')"
-                @class([
-                    'px-3 py-2 text-sm',
-                    'border-b-2 border-slate-900 font-medium text-slate-900 dark:border-slate-100 dark:text-slate-100' => $tab === $key,
-                    'border-b-2 border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100' => $tab !== $key,
-                ])
-            >{{ $label }}</button>
+            <x-core::tab :active="$tab === $key" wire:click="setTab('{{ $key }}')">{{ $label }}</x-core::tab>
         @endforeach
     </nav>
 
     @if (count($rows) === 0)
         @php [$emptyHeading, $emptyBody] = $emptyStates[$tab] ?? $emptyStates['unread']; @endphp
         <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ $emptyHeading }}</h2>
+            <x-core::section-heading :title="$emptyHeading" />
             <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">{{ $emptyBody }}</p>
         </div>
     @else

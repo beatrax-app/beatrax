@@ -74,19 +74,18 @@
     @endif
 
     @if (count($rules) === 0)
-        <div class="rounded-lg border border-slate-200 bg-slate-50 p-6 text-center dark:bg-slate-900 dark:border-slate-700">
-            <h2 class="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('categorization::rules.empty_heading') }}</h2>
-            <p class="mx-auto mt-2 max-w-md text-sm text-slate-500 dark:text-slate-400">
-                {{ Lang::get('categorization::rules.empty_body') }}
-            </p>
+        <x-core::empty-state
+            :heading="Lang::get('categorization::rules.empty_heading')"
+            :body="Lang::get('categorization::rules.empty_body')"
+        >
             <button
                 type="button"
                 wire:click="openCreateModal"
-                class="mt-8 inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                class="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
             >
                 {{ Lang::get('categorization::rules.empty_cta') }}
             </button>
-        </div>
+        </x-core::empty-state>
     @else
         {{-- overflow-x-auto, not overflow-hidden: this table is the only
                  rendering of these rows at every width, and hidden CLIPPED the
@@ -139,19 +138,13 @@
                             </td>
                             <td class="px-4 py-3 text-right text-sm">
                                 @if ($confirmingDeleteId === $rule->id)
-                                    <div class="flex items-center justify-end gap-2">
-                                        <span class="text-slate-500 dark:text-slate-400">{{ Lang::get('categorization::rules.delete_confirm') }}</span>
-                                        <button
-                                            type="button"
-                                            wire:click="deleteRule({{ $rule->id }})"
-                                            class="rounded-md bg-rose-600 px-2 py-1 text-xs font-medium text-white hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 dark:bg-rose-500 dark:hover:bg-rose-400"
-                                        >{{ Lang::get('categorization::rules.delete_yes') }}</button>
-                                        <button
-                                            type="button"
-                                            wire:click="cancelDelete"
-                                            class="rounded-md px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:bg-slate-800"
-                                        >{{ Lang::get('categorization::rules.cancel') }}</button>
-                                    </div>
+                                    <x-core::confirm-strip
+                                        :question="Lang::get('categorization::rules.delete_confirm')"
+                                        :cancel-label="Lang::get('categorization::rules.cancel')"
+                                        :confirm-label="Lang::get('categorization::rules.delete_yes')"
+                                        cancel="cancelDelete"
+                                        :confirm="'deleteRule('.$rule->id.')'"
+                                    />
                                 @else
                                     <div class="flex items-center justify-end gap-2">
                                         <button

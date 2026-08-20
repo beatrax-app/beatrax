@@ -113,19 +113,14 @@
                         </div>
 
                         @if ($deletingEntryId === (int) $entry->id)
-                            <div class="mt-2 flex items-center gap-3 rounded-md bg-slate-50 px-3 py-2 dark:bg-slate-900">
-                                <p class="flex-1 text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('cashbook::cash-book.delete_confirm') }}</p>
-                                <button
-                                    type="button"
-                                    wire:click="cancelDelete"
-                                    class="text-sm text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-                                >{{ Lang::get('cashbook::cash-book.delete_keep') }}</button>
-                                <button
-                                    type="button"
-                                    wire:click="delete({{ (int) $entry->id }})"
-                                    class="text-sm font-medium text-rose-600 hover:text-rose-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 dark:text-rose-400 dark:hover:text-rose-200"
-                                >{{ Lang::get('cashbook::cash-book.delete') }}</button>
-                            </div>
+                            <x-core::confirm-strip
+                                class="mt-2"
+                                :question="Lang::get('cashbook::cash-book.delete_confirm')"
+                                :cancel-label="Lang::get('cashbook::cash-book.delete_keep')"
+                                :confirm-label="Lang::get('cashbook::cash-book.delete')"
+                                cancel="cancelDelete"
+                                :confirm="'delete('.(int) $entry->id.')'"
+                            />
                         @endif
                     </div>
                 @endforeach
@@ -153,17 +148,14 @@
                             {{ $fmt((int) $entry->settled_amount_minor) }}
                         </span>
                         @if ($deletingEntryId === $dEntryId)
-                            <span class="shrink-0 text-xs text-slate-600 dark:text-slate-300">{{ Lang::get('cashbook::cash-book.delete_confirm') }}</span>
-                            <button
-                                type="button"
-                                wire:click="cancelDelete"
-                                class="shrink-0 rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
-                            >{{ Lang::get('cashbook::cash-book.delete_keep') }}</button>
-                            <button
-                                type="button"
-                                wire:click="delete({{ (int) $entry->id }})"
-                                class="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950"
-                            >{{ Lang::get('cashbook::cash-book.delete') }}</button>
+                            <x-core::confirm-strip
+                                class="shrink-0"
+                                :question="Lang::get('cashbook::cash-book.delete_confirm')"
+                                :cancel-label="Lang::get('cashbook::cash-book.delete_keep')"
+                                :confirm-label="Lang::get('cashbook::cash-book.delete')"
+                                cancel="cancelDelete"
+                                :confirm="'delete('.(int) $entry->id.')'"
+                            />
                         @else
                             <button
                                 type="button"

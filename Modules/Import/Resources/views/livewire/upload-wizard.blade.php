@@ -26,40 +26,32 @@
     @endif
 
     <form wire:submit="submit" class="space-y-4">
-        <div class="space-y-1">
-            <label for="issuer" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('import::upload.source_label') }}</label>
-            <select
-                id="issuer"
-                name="issuer"
-                wire:model.live="issuer"
-                class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
-            >
-                <option value="asn">ASN</option>
-                <option value="ics">ICS</option>
-                <option value="paypal">PayPal</option>
-                <option value="other-bank">{{ Lang::get('import::upload.issuer_other_bank') }}</option>
-                <option value="email-file">{{ Lang::get('import::upload.issuer_email_file') }}</option>
-            </select>
-            @error('issuer')
-                <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
-            @enderror
-        </div>
+        <x-core::form-field
+            name="issuer"
+            type="select"
+            :label="Lang::get('import::upload.source_label')"
+            wire:model.live="issuer"
+        >
+            <option value="asn">ASN</option>
+            <option value="ics">ICS</option>
+            <option value="paypal">PayPal</option>
+            <option value="other-bank">{{ Lang::get('import::upload.issuer_other_bank') }}</option>
+            <option value="email-file">{{ Lang::get('import::upload.issuer_email_file') }}</option>
+        </x-core::form-field>
 
-        <div class="space-y-1" aria-live="polite">
-            <label for="sourceFormat" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('import::upload.format_label') }}</label>
-            <select
-                id="sourceFormat"
+        {{-- aria-live wraps the field: the option list is rebuilt whenever the
+             issuer above changes, and that swap has to be announced. --}}
+        <div aria-live="polite">
+            <x-core::form-field
                 name="sourceFormat"
+                type="select"
+                :label="Lang::get('import::upload.format_label')"
                 wire:model="sourceFormat"
-                class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
             >
                 @foreach ($this->availableFormats() as $fmt)
                     <option value="{{ $fmt['value'] }}">{{ $fmt['label'] }}</option>
                 @endforeach
-            </select>
-            @error('sourceFormat')
-                <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
-            @enderror
+            </x-core::form-field>
         </div>
 
         <div class="space-y-1">

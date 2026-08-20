@@ -86,7 +86,7 @@
     {{-- Envelope grid --}}
     @if (count($rows) === 0)
         <x-core::card>
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('budgets::messages.no_categories.heading') }}</h2>
+            <x-core::section-heading :title="Lang::get('budgets::messages.no_categories.heading')" />
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.no_categories.body') }}</p>
         </x-core::card>
     @else
@@ -301,9 +301,7 @@
     {{-- ------------------------------------------------------------------- --}}
     <flux:modal name="envelope-move" dismissible>
         <div class="pt-[44px]" style="max-width: 480px;">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">
-                {{ Lang::get('budgets::messages.modal.move_from', ['name' => $moveFromCategory?->categoryName ?? Lang::get('budgets::messages.modal.move_from_fallback')]) }}
-            </h2>
+            <x-core::section-heading :title="Lang::get('budgets::messages.modal.move_from', ['name' => $moveFromCategory?->categoryName ?? Lang::get('budgets::messages.modal.move_from_fallback')])" />
             <form wire:submit="moveMoney" class="mt-6 space-y-4">
                 <div>
                     <label for="envelope-move-to" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.modal.move_to') }}</label>

@@ -5,9 +5,9 @@
      gate. `role="alert"` — an urgent, unprompted state change the user
      must notice. --}}
 @if ($enabled && $consentStatus === 'expired')
-    <div
+    <x-core::alert
+        tone="danger"
         role="alert"
-        class="rounded-xl border border-rose-300 bg-rose-50 p-4 dark:border-rose-800 dark:bg-rose-950"
         data-testid="open-banking-consent-expired-banner"
     >
         <p class="text-sm font-semibold text-rose-700 dark:text-rose-300">{{ Lang::get('openbanking::messages.consent_banner.heading') }}</p>
@@ -22,5 +22,5 @@
                    dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
             data-testid="ob-reconnect-button"
         >{{ Lang::get('openbanking::messages.consent_banner.reconnect') }}</button>
-    </div>
+    </x-core::alert>
 @endif

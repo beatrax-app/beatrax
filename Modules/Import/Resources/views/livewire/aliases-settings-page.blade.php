@@ -272,22 +272,19 @@
                 <p class="text-sm text-slate-500 dark:text-slate-400">
                     {!! Lang::get('import::aliases.merge_modal_help_html') !!}
                 </p>
-                <div class="space-y-2">
-                    <label for="merge-friendly-name" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('import::aliases.friendly_name_label') }}</label>
-                    <input
-                        type="text"
-                        id="merge-friendly-name"
-                        wire:model="mergeFriendlyName"
-                        class="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-                    />
-                </div>
-                <div class="space-y-2">
-                    <label for="merge-generalized-pattern" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('import::aliases.generalized_pattern_label') }}</label>
-                    <input
-                        type="text"
-                        id="merge-generalized-pattern"
+                <x-core::form-field
+                    field-id="merge-friendly-name"
+                    name="mergeFriendlyName"
+                    :label="Lang::get('import::aliases.friendly_name_label')"
+                    wire:model="mergeFriendlyName"
+                />
+                <div class="space-y-1">
+                    <x-core::form-field
+                        field-id="merge-generalized-pattern"
+                        name="mergeGeneralizedPattern"
+                        :label="Lang::get('import::aliases.generalized_pattern_label')"
                         wire:model="mergeGeneralizedPattern"
-                        class="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-mono dark:border-slate-700 dark:bg-slate-900"
+                        class="font-mono"
                     />
                     @if ($mergeGeneralizedPattern === '')
                         <p class="text-xs text-amber-600 dark:text-amber-400">

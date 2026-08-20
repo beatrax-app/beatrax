@@ -52,20 +52,15 @@
                      literally (not as &#039;). No user data is interpolated. --}}
                 <p class="text-sm text-slate-500 dark:text-slate-400">{!! Lang::get('import::preview.ics.help') !!}</p>
                 <div class="flex items-end gap-2">
-                    <div class="flex-1 space-y-1">
-                        <label class="block text-xs text-slate-500 dark:text-slate-400" for="icsAccountName">{{ Lang::get('import::preview.account_name_label') }}</label>
-                        <input
-                            type="text"
-                            id="icsAccountName"
+                    <div class="flex-1">
+                        <x-core::form-field
+                            name="icsAccountName"
+                            :label="Lang::get('import::preview.account_name_label')"
                             wire:model="icsAccountName"
-                            placeholder="{{ Lang::get('import::preview.ics.placeholder') }}"
+                            :placeholder="Lang::get('import::preview.ics.placeholder')"
                             required
                             maxlength="80"
-                            class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
                         />
-                        @error('icsAccountName')
-                            <p class="text-xs text-rose-700 dark:text-rose-500">{{ $message }}</p>
-                        @enderror
                     </div>
                     <button
                         type="button"
@@ -85,20 +80,15 @@
                      literally (not as &#039;). No user data is interpolated. --}}
                 <p class="text-sm text-slate-500 dark:text-slate-400">{!! Lang::get('import::preview.paypal.help') !!}</p>
                 <div class="flex items-end gap-2">
-                    <div class="flex-1 space-y-1">
-                        <label class="block text-xs text-slate-500 dark:text-slate-400" for="paypalAccountName">{{ Lang::get('import::preview.account_name_label') }}</label>
-                        <input
-                            type="text"
-                            id="paypalAccountName"
+                    <div class="flex-1">
+                        <x-core::form-field
+                            name="paypalAccountName"
+                            :label="Lang::get('import::preview.account_name_label')"
                             wire:model="paypalAccountName"
-                            placeholder="{{ Lang::get('import::preview.paypal.placeholder') }}"
+                            :placeholder="Lang::get('import::preview.paypal.placeholder')"
                             required
                             maxlength="80"
-                            class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
                         />
-                        @error('paypalAccountName')
-                            <p class="text-xs text-rose-700 dark:text-rose-500">{{ $message }}</p>
-                        @enderror
                     </div>
                     <button
                         type="button"
@@ -119,20 +109,15 @@
                             {{ Lang::get('import::preview.unknown_iban_prefix') }} <strong class="font-medium">{{ $unknown->iban }}</strong>. {{ Lang::get('import::preview.unknown_iban_suffix') }}
                         </p>
                         <div class="flex items-end gap-2">
-                            <div class="flex-1 space-y-1">
-                                <label class="block text-xs text-slate-500 dark:text-slate-400" for="accountName">{{ Lang::get('import::preview.account_name_label') }}</label>
-                                <input
-                                    type="text"
-                                    id="accountName"
+                            <div class="flex-1">
+                                <x-core::form-field
+                                    name="accountName"
+                                    :label="Lang::get('import::preview.account_name_label')"
                                     wire:model="accountName"
-                                    placeholder="{{ Lang::get('import::preview.account_placeholder') }}"
+                                    :placeholder="Lang::get('import::preview.account_placeholder')"
                                     required
                                     maxlength="80"
-                                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
                                 />
-                                @error('accountName')
-                                    <p class="text-xs text-rose-700 dark:text-rose-500">{{ $message }}</p>
-                                @enderror
                             </div>
                             <button
                                 type="button"

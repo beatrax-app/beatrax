@@ -140,20 +140,16 @@
                          which the phone hides — so the archive button set the
                          id and then nothing appeared. The control looked dead
                          because its answer was rendered somewhere unreachable. --}}
-                    <li class="flex items-center gap-3 border-t border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
-                        <p class="flex-1 text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('goals::messages.archive.confirm_question') }}</p>
-                        <button
-                            type="button"
-                            wire:click="cancelArchive"
-                            class="text-sm text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100 dark:text-slate-400"
-                        >{{ Lang::get('goals::messages.archive.close') }}</button>
-                        <button
-                            type="button"
-                            wire:click="archive({{ $row->id }})"
-                            aria-label="{{ Lang::get('goals::messages.archive.confirm_aria', ['name' => $row->name]) }}"
-                            class="text-sm font-medium text-rose-600 hover:text-rose-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 dark:text-rose-400 dark:hover:text-rose-200"
-                        >{{ Lang::get('goals::messages.archive.archive') }}</button>
-                    </li>
+                    <x-core::confirm-strip
+                        tag="li"
+                        class="border-t border-slate-200 dark:border-slate-700"
+                        :question="Lang::get('goals::messages.archive.confirm_question')"
+                        :cancel-label="Lang::get('goals::messages.archive.close')"
+                        :confirm-label="Lang::get('goals::messages.archive.archive')"
+                        :confirm-aria="Lang::get('goals::messages.archive.confirm_aria', ['name' => $row->name])"
+                        cancel="cancelArchive"
+                        :confirm="'archive('.$row->id.')'"
+                    />
                 @endif
             @endforeach
         </ul>
@@ -229,20 +225,15 @@
 
                     {{-- Archive micro-confirm or footer actions --}}
                     @if ($archivingGoalId === $row->id)
-                        <div class="mt-3 flex items-center gap-3 rounded-md bg-slate-50 px-3 py-2 dark:bg-slate-900">
-                            <p class="flex-1 text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('goals::messages.archive.confirm_question') }}</p>
-                            <button
-                                type="button"
-                                wire:click="cancelArchive"
-                                class="text-sm text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100 dark:text-slate-400"
-                            >{{ Lang::get('goals::messages.archive.close') }}</button>
-                            <button
-                                type="button"
-                                wire:click="archive({{ $row->id }})"
-                                aria-label="{{ Lang::get('goals::messages.archive.confirm_aria', ['name' => $row->name]) }}"
-                                class="text-sm font-medium text-rose-600 hover:text-rose-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 dark:text-rose-400 dark:hover:text-rose-200"
-                            >{{ Lang::get('goals::messages.archive.archive') }}</button>
-                        </div>
+                        <x-core::confirm-strip
+                            class="mt-3"
+                            :question="Lang::get('goals::messages.archive.confirm_question')"
+                            :cancel-label="Lang::get('goals::messages.archive.close')"
+                            :confirm-label="Lang::get('goals::messages.archive.archive')"
+                            :confirm-aria="Lang::get('goals::messages.archive.confirm_aria', ['name' => $row->name])"
+                            cancel="cancelArchive"
+                            :confirm="'archive('.$row->id.')'"
+                        />
                     @else
                         <div class="mt-3 flex items-center gap-2">
                             <x-core::emoji-action

@@ -25,7 +25,7 @@
     </p>
 
     <x-core::card>
-        <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('openbanking::messages.ics.heading') }}</h2>
+        <x-core::section-heading :title="Lang::get('openbanking::messages.ics.heading')" />
 
         <ol class="mt-4 grid grid-cols-3 gap-3">
             <li class="rounded-md bg-slate-50 p-3 text-center dark:bg-slate-900">
@@ -52,17 +52,18 @@
         </div>
 
         @if ($icsImportError !== null)
-            <div
+            <x-core::alert
+                tone="danger"
+                class="mt-3"
                 role="alert"
-                class="mt-3 rounded-lg border border-rose-300 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300"
                 data-testid="ob-ics-import-error"
-            >{{ $icsImportError }}</div>
+            >{{ $icsImportError }}</x-core::alert>
         @endif
 
         @error('icsStatement')
-            <div role="alert" class="mt-3 rounded-lg border border-rose-300 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300">
+            <x-core::alert tone="danger" class="mt-3" role="alert">
                 {{ $message }}
-            </div>
+            </x-core::alert>
         @enderror
 
         <div class="mt-4">
@@ -103,11 +104,7 @@
                            dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                     data-testid="ob-ics-import-button"
                 >
-                    <span
-                        wire:loading
-                        wire:target="importIcsStatement"
-                        class="mr-2 inline-block h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white dark:border-slate-900/40 dark:border-t-slate-900"
-                    ></span>
+                    <x-core::spinner size="sm" wire:loading wire:target="importIcsStatement" class="mr-2" />
                     {{ Lang::get('openbanking::messages.ics.import_button') }}
                 </button>
             </div>

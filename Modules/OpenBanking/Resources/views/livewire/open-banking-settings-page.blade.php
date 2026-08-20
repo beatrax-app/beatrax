@@ -1,3 +1,4 @@
+@use('Illuminate\View\ComponentAttributeBag')
 @use('Modules\Core\Public\Support\Lang')
 {{-- `/settings/open-banking` trust surface (19-11, UI-SPEC Surface B). --}}
 
@@ -12,14 +13,11 @@
     </header>
 
     @if ($flashMessage !== '')
-        <div
+        <x-core::alert
+            :tone="$flashTone === 'error' ? 'danger' : 'positive'"
             role="{{ $flashTone === 'error' ? 'alert' : 'status' }}"
-            class="rounded-xl border p-4 text-sm
-                {{ $flashTone === 'error'
-                    ? 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300'
-                    : 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' }}"
             data-testid="ob-page-flash"
-        >{{ $flashMessage }}</div>
+        >{{ $flashMessage }}</x-core::alert>
     @endif
 
     {{-- ===== B1: header + toggle ===== --}}
@@ -52,10 +50,9 @@
          acknowledgement TTL lapsed before mount() could finalize the
          enable. Surface a visible re-confirm instead of a silent no-op. ===== --}}
     @if ($needsReconfirm)
-        <div
+        <x-core::alert
+            tone="warning"
             role="alert"
-            class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800
-                   dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
             data-testid="ob-reconfirm-banner"
         >
             <p>{{ Lang::get('openbanking::messages.page.reconfirm_body') }}</p>
@@ -69,7 +66,7 @@
                        dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                 data-testid="ob-reconfirm-button"
             >{{ Lang::get('openbanking::messages.page.reconfirm_button') }}</button>
-        </div>
+        </x-core::alert>
     @endif
 
     {{-- ===== B5: consent-expiry banner (Req 7/8) — rendered above the
@@ -86,15 +83,25 @@
     @if ($enabled)
         <div class="space-y-2" data-testid="open-banking-sync-now">
             @if ($syncFlashMessage !== '')
-                <div
+                {{-- Only the zero-result flash clears itself, so those two
+                     attributes cannot be written on the tag: a Blade @if
+                     inside a component tag is not parsed. They ride in as a
+                     bag instead. --}}
+                @php
+                    $syncFlashName = match ($syncFlashTone) {
+                        'error' => 'danger',
+                        'success' => 'positive',
+                        default => 'neutral',
+                    };
+                    $syncFlashSelfClear = new ComponentAttributeBag($syncFlashTone === 'zero' ? [
+                        'wire:init' => "\$set('syncFlashMessage', '')",
+                        'wire:transition.duration.4000ms' => true,
+                    ] : []);
+                @endphp
+                <x-core::alert
+                    :tone="$syncFlashName"
                     role="{{ $syncFlashTone === 'error' ? 'alert' : 'status' }}"
-                    @if ($syncFlashTone === 'zero') wire:init="$set('syncFlashMessage', '')" wire:transition.duration.4000ms @endif
-                    class="rounded-lg border p-3 text-sm
-                        {{ $syncFlashTone === 'error'
-                            ? 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300'
-                            : ($syncFlashTone === 'success'
-                                ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                                : 'border-slate-200 bg-white text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400') }}"
+                    :attributes="$syncFlashSelfClear"
                     data-testid="ob-sync-flash"
                 >
                     {{ $syncFlashMessage }}
@@ -105,7 +112,7 @@
                             data-testid="ob-review-import-link"
                         >{{ Lang::get('openbanking::messages.sync.review_import') }} &rarr;</a>
                     @endif
-                </div>
+                </x-core::alert>
             @endif
 
             <div class="flex items-center justify-between gap-3">
@@ -126,11 +133,7 @@
                            dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                     data-testid="ob-sync-now-button"
                 >
-                    <span
-                        wire:loading
-                        wire:target="syncNow"
-                        class="mr-2 inline-block h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white dark:border-slate-900/40 dark:border-t-slate-900"
-                    ></span>
+                    <x-core::spinner size="sm" wire:loading wire:target="syncNow" class="mr-2" />
                     {{ Lang::get('openbanking::messages.sync.sync_now') }}
                 </button>
             </div>

@@ -80,7 +80,7 @@
     {{-- No accounts / no pots: empty state --}}
     @if (count($accounts) === 0 || count($groups) === 0)
         <x-core::card>
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('pots::messages.empty.heading') }}</h2>
+            <x-core::section-heading :title="Lang::get('pots::messages.empty.heading')" />
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('pots::messages.empty.body') }}
             </p>
@@ -150,9 +150,7 @@
                 <div>
                     {{-- Account group header row --}}
                     <div class="flex items-center justify-between gap-4 mb-2">
-                        <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">
-                            {{ $firstPot->accountName }}
-                        </h2>
+                        <x-core::section-heading :title="$firstPot->accountName" />
                         <button
                             type="button"
                             x-on:click="
@@ -170,15 +168,12 @@
 
                     {{-- Negative-unallocated amber warning banner (D-02) --}}
                     @if ($rec !== null && $rec->isOverAllocated)
-                        <div
-                            class="mb-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-400"
-                            role="alert"
-                        >
+                        <x-core::alert tone="warning" class="mb-2" role="alert">
                             <span class="mr-1" aria-hidden="true">
                                 <flux:icon.exclamation-triangle class="inline-block h-4 w-4 align-text-bottom" />
                             </span>
                             {{ Lang::get('pots::messages.recon.over_allocated', ['amount' => $fmt(abs($rec->unallocatedMinor), $rec->currency)]) }}
-                        </div>
+                        </x-core::alert>
                     @endif
 
                     {{-- Reconciliation line (D-15) --}}
@@ -619,9 +614,7 @@
     {{-- ------------------------------------------------------------------- --}}
     <flux:modal name="pot-form" dismissible>
         <div class="pt-[44px]" style="max-width: 520px;">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">
-                {{ $editPotId ? Lang::get('pots::messages.form.edit_title') : Lang::get('pots::messages.form.create_title') }}
-            </h2>
+            <x-core::section-heading :title="$editPotId ? Lang::get('pots::messages.form.edit_title') : Lang::get('pots::messages.form.create_title')" />
             <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 {{ $editPotId ? Lang::get('pots::messages.form.edit_subtitle') : Lang::get('pots::messages.form.create_subtitle') }}
             </p>
@@ -744,9 +737,7 @@
                     ? $reconciliations[$fundPot->accountId]
                     : null;
             @endphp
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">
-                {{ Lang::get('pots::messages.fund.heading', ['name' => $fundPot?->name ?? Lang::get('pots::messages.pot_fallback')]) }}
-            </h2>
+            <x-core::section-heading :title="Lang::get('pots::messages.fund.heading', ['name' => $fundPot?->name ?? Lang::get('pots::messages.pot_fallback')])" />
             <form wire:submit="fundPot" class="mt-6 space-y-4">
                 <div>
                     <label for="fund-amount" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.common.amount') }}</label>
@@ -806,9 +797,7 @@
                     ? array_filter($potsForMove[$moveSrcPot->accountId] ?? [], static fn($p) => $p->id !== $operationPotId)
                     : [];
             @endphp
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">
-                {{ Lang::get('pots::messages.move.heading', ['name' => $moveSrcPot?->name ?? Lang::get('pots::messages.pot_fallback')]) }}
-            </h2>
+            <x-core::section-heading :title="Lang::get('pots::messages.move.heading', ['name' => $moveSrcPot?->name ?? Lang::get('pots::messages.pot_fallback')])" />
             <form wire:submit="movePot" class="mt-6 space-y-4">
                 <div>
                     <label for="move-to" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.move.to') }}</label>
@@ -867,9 +856,7 @@
     {{-- ------------------------------------------------------------------- --}}
     <flux:modal name="pot-withdraw" dismissible>
         <div class="pt-[44px]" style="max-width: 480px;">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">
-                {{ Lang::get('pots::messages.withdraw.heading', ['name' => $withdrawPot?->name ?? Lang::get('pots::messages.pot_fallback')]) }}
-            </h2>
+            <x-core::section-heading :title="Lang::get('pots::messages.withdraw.heading', ['name' => $withdrawPot?->name ?? Lang::get('pots::messages.pot_fallback')])" />
             <form wire:submit="withdrawPot" class="mt-6 space-y-4">
                 <div>
                     <label for="withdraw-amount" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.common.amount') }}</label>

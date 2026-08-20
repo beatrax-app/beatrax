@@ -25,24 +25,19 @@
     @endif
 
     <form wire:submit="submit" class="space-y-4">
-        <div class="space-y-1">
-            <label for="sourceProduct" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('migration::new.source_label') }}</label>
-            <select
-                id="sourceProduct"
-                name="sourceProduct"
-                wire:model="sourceProduct"
-                @disabled($formatLocked)
-                class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-                <option value="ynab4">YNAB4</option>
-                <option value="nynab">New YNAB (nYNAB)</option>
-                <option value="actual">Actual Budget</option>
-            </select>
-            @error('sourceProduct')
-                <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
-            @enderror
-            <p class="text-xs text-slate-500 dark:text-slate-400">{{ $this->formatHint() }}</p>
-        </div>
+        <x-core::form-field
+            name="sourceProduct"
+            type="select"
+            :label="Lang::get('migration::new.source_label')"
+            :hint="$this->formatHint()"
+            wire:model="sourceProduct"
+            :disabled="$formatLocked"
+            class="disabled:cursor-not-allowed disabled:opacity-60"
+        >
+            <option value="ynab4">YNAB4</option>
+            <option value="nynab">New YNAB (nYNAB)</option>
+            <option value="actual">Actual Budget</option>
+        </x-core::form-field>
 
         <div class="space-y-1">
             <label for="file" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('migration::new.file_label') }}</label>
