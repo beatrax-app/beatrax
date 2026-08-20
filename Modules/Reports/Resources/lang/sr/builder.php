@@ -140,4 +140,6 @@ return [
         'min_aria' => 'Najmanji iznos',
         'max_aria' => 'Najveći iznos',
     ],
+
+    'other_movement' => 'Naknade i usklađivanja (nisu uračunata)',
 ];

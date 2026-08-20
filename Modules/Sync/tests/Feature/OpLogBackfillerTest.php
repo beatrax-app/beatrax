@@ -77,7 +77,7 @@ it('captures rows that existed before sync was enabled', function (): void {
         ->and($entries->pluck('field')->all())->toContain('name');
 });
 
-it('leaves a user with existing history untouched', function (): void {
+it('captures nothing on a second run, every row already carrying a create op', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $userId = backfillFixtureUser($db);
@@ -114,4 +114,68 @@ it('never captures another user rows', function (): void {
             ->where('pk', (string) $theirAccount)
             ->exists()
     )->toBeFalse();
+});
+
+it('still captures pre-sync rows when an import already wrote ops for other rows', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $userId = backfillFixtureUser($db);
+
+    // The account that predates sync — the one that must reach the new peer.
+    $preSyncAccount = backfillSeedAccount($db, $userId);
+
+    $writer = backfillWriter($userId);
+
+    // An import runs between switching sync on and pairing, capturing its own
+    // rows. That is the only op-log history this user has.
+    $importedAccount = backfillSeedAccount($db, $userId);
+    /** @var OpLogBackfiller $backfiller */
+    $backfiller = app(OpLogBackfiller::class);
+    $backfiller->captureRowsById('accounts', [$importedAccount], $userId, $writer);
+
+    expect($db->connection()->table('op_log_entries')->where('user_id', $userId)->exists())->toBeTrue();
+
+    // Pairing confirm. The whole backfill used to be skipped here because the
+    // user "had history", and the pre-sync account never left the desktop.
+    $captured = $backfiller->backfill($userId, $writer);
+
+    expect($captured)->toBeGreaterThan(0);
+
+    $entries = $db->connection()->table('op_log_entries')
+        ->where('user_id', $userId)
+        ->where('table_name', 'accounts')
+        ->where('pk', (string) $preSyncAccount)
+        ->get();
+
+    expect($entries)->not->toBeEmpty()
+        ->and($entries->pluck('field')->all())->toContain('name');
+});
+
+it('does not write a second create op for a row the import already captured', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $userId = backfillFixtureUser($db);
+    $accountId = backfillSeedAccount($db, $userId);
+
+    $writer = backfillWriter($userId);
+
+    /** @var OpLogBackfiller $backfiller */
+    $backfiller = app(OpLogBackfiller::class);
+    $backfiller->captureRowsById('accounts', [$accountId], $userId, $writer);
+
+    $afterImport = $db->connection()->table('op_log_entries')
+        ->where('user_id', $userId)
+        ->where('table_name', 'accounts')
+        ->where('pk', (string) $accountId)
+        ->count();
+
+    $backfiller->backfill($userId, $writer);
+
+    // Replaying two create ops for one pk is what the all-or-nothing guard
+    // was protecting against; the row-wise skip has to keep that promise.
+    expect($db->connection()->table('op_log_entries')
+        ->where('user_id', $userId)
+        ->where('table_name', 'accounts')
+        ->where('pk', (string) $accountId)
+        ->count())->toBe($afterImport);
 });

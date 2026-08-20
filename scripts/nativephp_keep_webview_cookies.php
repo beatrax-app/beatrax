@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__.'/nativephp_scaffold_root.php';
+
 /*
  * Stop the Android shell wiping the session on every cold start.
  *
@@ -22,7 +24,7 @@ declare(strict_types=1);
  * tree, and a missing anchor is a hard failure rather than a silent skip.
  */
 
-$target = __DIR__.'/../mobile-app/nativephp/android/app/src/main/java/com/nativephp/mobile/ui/MainActivity.kt';
+$target = beatraxScaffoldPath('android/app/src/main/java/com/nativephp/mobile/ui/MainActivity.kt') ?? '';
 
 if (! is_file($target)) {
     fwrite(STDOUT, "nativephp_keep_webview_cookies: no Android scaffold yet — skipping.\n");

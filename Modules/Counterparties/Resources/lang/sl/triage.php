@@ -13,7 +13,7 @@ return [
     'all_caught_heading' => '🎉 Vse je urejeno — vsaka nasprotna stranka je označena.',
     'back_to_index' => 'Nazaj na nasprotne stranke →',
 
-    'meta' => 'transakcij: :count · nazadnje vidno :date',
+    'meta' => ':count transakcija · nazadnje vidno :date|:count transakciji · nazadnje vidno :date|:count transakcije · nazadnje vidno :date|:count transakcij · nazadnje vidno :date',
 
     'suggested_aria' => 'Predlagano ujemanje',
     'suggestion_medium' => '✨ Morda **:name** — srednja zanesljivost',

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__.'/nativephp_scaffold_root.php';
+
 /*
  * Give the bundle copy a timeout that fits a real machine.
  *
@@ -30,7 +32,7 @@ declare(strict_types=1);
 
 const COPY_TIMEOUT_SECONDS = 900;
 
-$vendorRoot = __DIR__.'/../mobile-app/vendor/nativephp/mobile/src';
+$vendorRoot = beatraxMobileVendorPath('nativephp/mobile/src') ?? '';
 
 // Every step that shells out on the critical path. The copy inherits
 // Laravel's 60s default; the autoloader step declares 60s outright and

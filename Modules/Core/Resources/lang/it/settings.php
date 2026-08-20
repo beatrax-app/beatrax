@@ -124,6 +124,13 @@ return [
         'open_releases' => 'Apri la pagina delle release →',
     ],
 
+    'privacy' => [
+        'heading' => 'Informativa sulla privacy',
+        'body' => 'Beatrax tiene le tue finanze sui tuoi dispositivi. L’informativa spiega che cosa significa, che cosa inviano le funzioni online facoltative e come rimuovere i tuoi dati.',
+        'open' => 'Leggi l’informativa sulla privacy →',
+        'url_hint' => 'Se il link non si apre, vai su:',
+    ],
+
     'first_run_tour' => [
         'heading' => 'Tour iniziale',
         'body' => 'Riavvia la procedura guidata se vuoi ripercorrere il flusso introduttivo.',

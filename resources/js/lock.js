@@ -163,7 +163,7 @@ document.addEventListener('alpine:init', () => {
             this._enterTopLayer(veil);
             veil.setAttribute('role', 'dialog');
             veil.setAttribute('aria-modal', 'true');
-            veil.setAttribute('aria-label', 'App locked');
+            veil.setAttribute('aria-label', veil.dataset.lockedLabel || '');
         },
 
         /**

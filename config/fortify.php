@@ -25,7 +25,12 @@ return [
 
     'email' => 'email',
 
-    'views' => true,
+    // No Fortify view is ever rendered here: the app owns its own auth
+    // screens, and 'features' is empty. Leaving this on registered
+    // /user/confirm-password, which then 500'd on a
+    // ConfirmPasswordViewResponse nothing binds — a dead route whose only
+    // behaviour was to crash, and on a debug build to print a stack trace.
+    'views' => false,
 
     'home' => '/',
 

@@ -124,6 +124,13 @@ return [
         'open_releases' => 'Sürümler sayfasını aç →',
     ],
 
+    'privacy' => [
+        'heading' => 'Gizlilik politikası',
+        'body' => 'Beatrax finanslarını kendi cihazlarında tutar. Politika bunun ne demek olduğunu, isteğe bağlı çevrim içi özelliklerin ne gönderdiğini ve verilerini nasıl kaldıracağını anlatır.',
+        'open' => 'Gizlilik politikasını oku →',
+        'url_hint' => 'Bağlantı açılmazsa şuraya git:',
+    ],
+
     'first_run_tour' => [
         'heading' => 'İlk çalıştırma turu',
         'body' => 'Tanıtım akışını yeniden gözden geçirmek istersen kurulum sihirbazını yeniden başlat.',

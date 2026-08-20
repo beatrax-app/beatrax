@@ -99,6 +99,111 @@ function closeOpenDialogs() {
     }
 }
 
+/*
+ * ApexCharts ships English month names and prints raw numbers unless told
+ * otherwise, so a Dutch page drew an axis reading "Oct 2026" and "3233.89"
+ * beside money the rest of the page had rendered as "€ 3.233,89".
+ *
+ * The month names come from the browser's own Intl for <html lang>, not from
+ * a table baked in here, so a new interface language needs no change.
+ */
+window.beatraxLocaliseChart = function (options) {
+    const tag = document.documentElement.lang || 'en';
+    const months = [];
+    const shortMonths = [];
+    const days = [];
+    const shortDays = [];
+
+    for (let m = 0; m < 12; m++) {
+        const d = new Date(Date.UTC(2021, m, 1));
+        months.push(d.toLocaleDateString(tag, { month: 'long', timeZone: 'UTC' }));
+        shortMonths.push(d.toLocaleDateString(tag, { month: 'short', timeZone: 'UTC' }));
+    }
+
+    // 2021-08-01 was a Sunday, which is where ApexCharts starts its week.
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(Date.UTC(2021, 7, 1 + i));
+        days.push(d.toLocaleDateString(tag, { weekday: 'long', timeZone: 'UTC' }));
+        shortDays.push(d.toLocaleDateString(tag, { weekday: 'short', timeZone: 'UTC' }));
+    }
+
+    options.chart = Object.assign({}, options.chart || {}, {
+        defaultLocale: tag,
+        locales: [{
+            name: tag,
+            options: { months, shortMonths, days, shortDays, toolbar: {} },
+        }],
+    });
+
+    // Axis numbers are money on every chart this app draws.
+    const currency = document.documentElement.dataset.baseCurrency || 'EUR';
+    const money = new Intl.NumberFormat(tag, {
+        style: 'currency',
+        currency,
+        maximumFractionDigits: 0,
+    });
+
+    const withFormatter = (axis) => {
+        if (!axis || Array.isArray(axis)) return axis;
+        const labels = axis.labels || {};
+        if (labels.formatter) return axis;
+
+        return Object.assign({}, axis, {
+            labels: Object.assign({}, labels, {
+                formatter: (value) => (typeof value === 'number' ? money.format(value) : value),
+            }),
+        });
+    };
+
+    options.yaxis = withFormatter(options.yaxis);
+
+    beatraxNameChart(options);
+
+    return options;
+};
+
+/*
+ * ApexCharts writes its own accessible name onto the <svg> it renders —
+ * "donut chart with 14 data series" — in English, whatever the page
+ * language is. There is no option for it, so the name is replaced on mount
+ * and after every update from the localised table on <html>.
+ *
+ * A partial that knows something better than the chart type (a report
+ * title, say) sets `beatraxAriaLabel` on its options and wins.
+ */
+function beatraxNameChart(options) {
+    let labels = {};
+    try {
+        labels = JSON.parse(document.documentElement.dataset.chartLabels || '{}');
+    } catch {
+        labels = {};
+    }
+
+    const name = options.beatraxAriaLabel || labels[options.chart.type];
+    if (!name) {
+        return;
+    }
+
+    const apply = (chartContext) => {
+        const el = chartContext?.el || chartContext?.w?.globals?.dom?.baseEl;
+        el?.querySelector('svg')?.setAttribute('aria-label', name);
+    };
+
+    // Wrapped, not replaced: the drilldown charts already listen for
+    // mounted/updated and dropping their handler would take the click
+    // targets with it.
+    const events = Object.assign({}, options.chart.events || {});
+    const wrap = (existing) => function (chartContext, ...rest) {
+        apply(chartContext);
+        if (typeof existing === 'function') {
+            existing.call(this, chartContext, ...rest);
+        }
+    };
+    events.mounted = wrap(events.mounted);
+    events.updated = wrap(events.updated);
+    options.chart.events = events;
+}
+
 // Adjust ApexCharts options for the active theme so chart lines,
 // grid lines, and axis labels stay legible when `<html class="dark">`
 // flips the page into dark mode. Server-rendered options bake in
@@ -106,8 +211,14 @@ function closeOpenDialogs() {
 // this helper swaps them at hydration time. Mutates and returns the
 // same object for chained use.
 window.beatraxApplyChartTheme = function (options) {
+    if (!options || typeof options !== 'object') {
+        return options;
+    }
+
+    window.beatraxLocaliseChart(options);
+
     const isDark = document.documentElement.classList.contains('dark');
-    if (!isDark || !options || typeof options !== 'object') {
+    if (!isDark) {
         return options;
     }
     const slate300 = '#cbd5e1';

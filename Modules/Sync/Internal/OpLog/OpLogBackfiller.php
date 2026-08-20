@@ -7,6 +7,7 @@ namespace Modules\Sync\Internal\OpLog;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Collection;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Sync\Internal\Config\CoveredTableOrder;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
@@ -25,6 +26,12 @@ final readonly class OpLogBackfiller
     // Rows per SELECT. The log is written entry-by-entry regardless; this
     // only bounds how much of a table is held in memory at once.
     private const CHUNK = 200;
+
+    // Rules stay on the device that authored them, so they are never put on
+    // the wire — not in the pairing snapshot and not incrementally. They keep
+    // merge rules so a peer can still apply an op from an older build, but
+    // nothing here produces one. The rules screen says so.
+    private const DEVICE_LOCAL_TABLES = ['categorization_rules', 'rule_conditions', 'rule_actions'];
 
     // Never emitted as a field: the row's identity travels as the op's pk,
     // and re-stating it invites a create whose pk and user_id disagree.
@@ -45,33 +52,110 @@ final readonly class OpLogBackfiller
         private SessionFactory $session,
     ) {}
 
-    // Returns the number of rows captured. Idempotent by construction: a
-    // user with any op-log history has already been captured (or has been
-    // syncing all along), and re-running would duplicate every row.
+    // Returns the number of rows captured. Idempotent row-wise: a row already
+    // carrying a create op is skipped. Skipping the whole backfill when the
+    // user had ANY entry meant one import between enabling sync and pairing
+    // kept every older account, budget, goal and pot off the new peer.
     public function backfill(int $userId, OpLogWriter $writer): int
     {
         $connection = $this->db->connection();
-
-        if ($this->hasHistory($connection, $userId)) {
-            return 0;
-        }
 
         $captured = 0;
 
         // Parents first, so the entries a peer replays arrive in an order its
         // foreign keys accept.
         foreach ($this->order->insertionOrder() as $table) {
+            if (in_array($table, self::DEVICE_LOCAL_TABLES, true)) {
+                continue;
+            }
+
             $captured += $this->captureTable($connection, $table, $userId, $writer);
         }
 
         return $captured;
     }
 
-    private function hasHistory(Connection $connection, int $userId): bool
+    // Capture specific rows as create ops, for writes that happen AFTER the
+    // one-time backfill — an import, above all. Shares plaintextFields() with
+    // the backfill rather than restating it: a second copy of which columns
+    // are ciphertext at rest is the one that would rot.
+    /**
+     * @param  list<int|string>  $ids
+     */
+    public function captureRowsById(string $table, array $ids, int $userId, OpLogWriter $writer): int
     {
-        return $connection->table('op_log_entries')
+        if ($ids === []) {
+            return 0;
+        }
+
+        $connection = $this->db->connection();
+        $columns = $this->columnsOf($connection, $table);
+
+        if ($columns === []) {
+            return 0;
+        }
+
+        $captured = 0;
+
+        $this->scopedQuery($connection, $table, $userId, $columns)
+            ->whereIn($table.'.id', $ids)
+            ->orderBy($table.'.id')
+            ->chunk(self::CHUNK, function ($rows) use ($table, $userId, $writer, &$captured): void {
+                foreach ($rows as $row) {
+                    /** @var array<string, mixed> $fields */
+                    $fields = (array) $row;
+                    $pk = $fields['id'] ?? null;
+                    unset($fields['id']);
+
+                    if (! is_int($pk) && ! is_string($pk)) {
+                        continue;
+                    }
+
+                    $writer->writeCreateRow($table, $pk, $this->plaintextFields($table, $fields, $userId));
+                    $captured++;
+                }
+            });
+
+        return $captured;
+    }
+
+    // Which of THIS chunk's rows already carry a create op, as a lookup keyed
+    // by pk. Asked per chunk rather than per table so neither the result set
+    // nor the IN list grows with the size of the table.
+    /**
+     * @param  Collection<int, \stdClass>  $rows
+     * @return array<string, true>
+     */
+    private function alreadyCaptured(Connection $connection, string $table, int $userId, $rows): array
+    {
+        $pks = [];
+        foreach ($rows as $row) {
+            $pk = ((array) $row)['id'] ?? null;
+            if (is_int($pk) || is_string($pk)) {
+                $pks[] = (string) $pk;
+            }
+        }
+
+        if ($pks === []) {
+            return [];
+        }
+
+        $found = $connection->table('op_log_entries')
             ->where('user_id', $userId)
-            ->exists();
+            ->where('table_name', $table)
+            ->where('op_type', OpType::CreateRow->value)
+            ->whereIn('pk', $pks)
+            ->distinct()
+            ->pluck('pk');
+
+        $lookup = [];
+        foreach ($found as $pk) {
+            if (is_int($pk) || is_string($pk)) {
+                $lookup[(string) $pk] = true;
+            }
+        }
+
+        return $lookup;
     }
 
     private function captureTable(
@@ -90,7 +174,9 @@ final readonly class OpLogBackfiller
 
         $this->scopedQuery($connection, $table, $userId, $columns)
             ->orderBy($table.'.id')
-            ->chunk(self::CHUNK, function ($rows) use ($table, $userId, $writer, &$captured): void {
+            ->chunk(self::CHUNK, function ($rows) use ($connection, $table, $userId, $writer, &$captured): void {
+                $already = $this->alreadyCaptured($connection, $table, $userId, $rows);
+
                 foreach ($rows as $row) {
                     /** @var array<string, mixed> $fields */
                     $fields = (array) $row;
@@ -98,6 +184,10 @@ final readonly class OpLogBackfiller
                     unset($fields['id']);
 
                     if (! is_int($pk) && ! is_string($pk)) {
+                        continue;
+                    }
+
+                    if (isset($already[(string) $pk])) {
                         continue;
                     }
 

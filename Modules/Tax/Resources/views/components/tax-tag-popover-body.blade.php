@@ -20,7 +20,7 @@
             placeholder="{{ Lang::get('tax::picker.note_placeholder') }}"
             style="
                 width: 100%;
-                font-size: var(--text-base, 15px);
+                font-size: 16px;
                 border: 1px solid var(--color-border, #e2e8f0);
                 border-radius: var(--radius-sm, 0.25rem);
                 padding: 6px 8px;
@@ -121,7 +121,7 @@
                     placeholder="{{ Lang::get('tax::picker.new_category_placeholder') }}"
                     style="
                         flex: 1 1 auto;
-                        font-size: var(--text-base, 15px);
+                        font-size: 16px;
                         border: 1px solid var(--color-border, #e2e8f0);
                         border-radius: var(--radius-sm, 0.25rem);
                         padding: 6px 8px;

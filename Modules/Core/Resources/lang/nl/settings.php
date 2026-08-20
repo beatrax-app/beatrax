@@ -122,6 +122,13 @@ return [
         'open_releases' => 'Releasespagina openen →',
     ],
 
+    'privacy' => [
+        'heading' => 'Privacybeleid',
+        'body' => 'Beatrax houdt je financiën op je eigen apparaten. Het beleid legt uit wat dat betekent, wat de optionele online functies versturen en hoe je je gegevens verwijdert.',
+        'open' => 'Privacybeleid lezen →',
+        'url_hint' => 'Als de link niet opent, ga naar:',
+    ],
+
     'first_run_tour' => [
         'heading' => 'Rondleiding voor de eerste keer',
         'body' => 'Start de installatiewizard opnieuw als je de introductie nog eens wilt doorlopen.',

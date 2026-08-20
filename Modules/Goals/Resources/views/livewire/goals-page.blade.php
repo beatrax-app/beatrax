@@ -117,7 +117,28 @@
                             }
                         "
                         class="text-xs text-slate-400 hover:text-slate-900 focus:outline-none dark:hover:text-slate-100 min-w-[44px] min-h-[44px] flex items-center justify-center"
-                    >{{ Lang::get('goals::messages.row.edit') }}</button>
+                     title="{{ Lang::get('goals::messages.row.edit') }}"
+                            aria-label="{{ Lang::get('goals::messages.row.edit') }}"
+                        ><span aria-hidden="true" class="sm:hidden">✎</span><span class="sr-only sm:not-sr-only">{{ Lang::get('goals::messages.row.edit') }}</span></button>
+                    {{-- Complete and archive existed only in the desktop kebab,
+                         which the phone list hides — so a goal could be created
+                         and edited on a phone but never finished or put away. --}}
+                    @if ($row->status !== \Modules\Goals\Public\Enums\GoalStatus::Completed->value)
+                        <button
+                            type="button"
+                            wire:click="markComplete({{ $row->id }})"
+                            class="text-xs text-slate-400 hover:text-slate-900 focus:outline-none dark:hover:text-slate-100 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                            title="{{ Lang::get('goals::messages.actions.mark_complete') }}"
+                            aria-label="{{ Lang::get('goals::messages.actions.mark_complete') }}"
+                        ><span aria-hidden="true">✓</span></button>
+                    @endif
+                    <button
+                        type="button"
+                        wire:click="confirmArchive({{ $row->id }})"
+                        class="text-xs text-slate-400 hover:text-slate-900 focus:outline-none dark:hover:text-slate-100 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                        title="{{ Lang::get('goals::messages.actions.archive') }}"
+                        aria-label="{{ Lang::get('goals::messages.actions.archive') }}"
+                    ><span aria-hidden="true">⊟</span></button>
                 </li>
             @endforeach
         </ul>
@@ -220,7 +241,9 @@
                                     }
                                 "
                                 class="text-sm text-slate-400 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100"
-                            >{{ Lang::get('goals::messages.row.edit') }}</button>
+                             title="{{ Lang::get('goals::messages.row.edit') }}"
+                            aria-label="{{ Lang::get('goals::messages.row.edit') }}"
+                        ><span aria-hidden="true" class="sm:hidden">✎</span><span class="sr-only sm:not-sr-only">{{ Lang::get('goals::messages.row.edit') }}</span></button>
 
                             <flux:dropdown>
                                 <flux:button

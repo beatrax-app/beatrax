@@ -49,4 +49,15 @@ return [
         'hour' => 'Sat',
         'minute' => 'Minut',
     ],
+
+    'veil_locked' => 'Aplikacija je zaključana',
+
+    'chart' => [
+        'donut' => 'Prstenasti grafikon',
+        'bar' => 'Stubičasti grafikon',
+        'line' => 'Linijski grafikon',
+        'range_area' => 'Grafikon opsega',
+    ],
+
+    'sheet_untitled' => 'Dijalog',
 ];

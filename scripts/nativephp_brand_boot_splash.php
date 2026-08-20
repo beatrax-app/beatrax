@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__.'/nativephp_scaffold_root.php';
+
 /*
  * Brand the Android boot splash: app-coloured wash and a breathing logo.
  *
@@ -32,7 +34,7 @@ declare(strict_types=1);
  * unpatched splash is exactly the state this exists to fix.
  */
 
-$androidRoot = __DIR__.'/../mobile-app/nativephp/android/app/src/main';
+$androidRoot = beatraxScaffoldPath('android/app/src/main') ?? '';
 $target = $androidRoot.'/java/com/nativephp/mobile/ui/MainActivity.kt';
 
 if (! is_file($target)) {

@@ -13,7 +13,7 @@ return [
     'all_caught_heading' => '🎉 Tutto fatto — ogni controparte è etichettata.',
     'back_to_index' => 'Torna alle controparti →',
 
-    'meta' => ':count transazioni · ultima volta :date',
+    'meta' => ':count transazione · ultima volta :date|:count transazioni · ultima volta :date',
 
     'suggested_aria' => 'Corrispondenza suggerita',
     'suggestion_medium' => '✨ Forse **:name** — affidabilità media',

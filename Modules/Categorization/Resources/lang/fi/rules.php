@@ -6,6 +6,7 @@ return [
     'page_title' => 'Säännöt',
     'heading' => 'Säännöt',
     'intro' => 'Esiluokittele tapahtumat tuonnin yhteydessä. Säännöt koskevat kaikkia lähteitä — pankkia, korttia, PayPalia ja sähköpostikuitteja.',
+    'device_local_note' => 'Säännöt pysyvät tässä laitteessa. Niitä ei jaeta muiden laitteidesi kanssa.',
 
     'reapply' => 'Käytä sääntöjä historiaan uudelleen',
     'reapplying' => 'Käytetään uudelleen…',

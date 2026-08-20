@@ -8,7 +8,7 @@ return [
     'migrate_prompt' => 'Pereini iš kitos biudžeto programėlės?',
     'migrate_link' => 'Importuoti iš YNAB arba Actual',
     'subtitle' => 'Įkelk banko, kortelės ar PayPal eksportą arba el. pašto kvito failą.',
-    'mime_hint' => 'Šis failas nepanašus į palaikomą išrašo eksportą. Įkelk banko CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, kortelės išrašo PDF, el. laišką (.eml) arba pašto dėžutės archyvą (.mbox).',
+    'mime_hint' => 'Palaikomi failai: banko CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, kortelės išrašo PDF, el. laiškas (.eml) arba pašto dėžutės archyvas (.mbox).',
 
     'source_label' => 'Šaltinis',
 

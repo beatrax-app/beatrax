@@ -49,4 +49,15 @@ return [
         'hour' => 'Oră',
         'minute' => 'Minut',
     ],
+
+    'veil_locked' => 'Aplicație blocată',
+
+    'chart' => [
+        'donut' => 'Diagramă inelară',
+        'bar' => 'Diagramă cu bare',
+        'line' => 'Diagramă liniară',
+        'range_area' => 'Diagramă de interval',
+    ],
+
+    'sheet_untitled' => 'Casetă de dialog',
 ];

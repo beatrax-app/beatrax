@@ -6,6 +6,7 @@ return [
     'page_title' => 'Taisyklės',
     'heading' => 'Taisyklės',
     'intro' => 'Iš anksto priskirk kategorijas importuojamoms operacijoms. Taisyklės taikomos visiems šaltiniams — bankui, kortelei, PayPal ir el. pašto kvitams.',
+    'device_local_note' => 'Taisyklės lieka šiame įrenginyje. Jos nėra bendrinamos su kitais jūsų įrenginiais.',
 
     'reapply' => 'Taikyti taisykles istorijai iš naujo',
     'reapplying' => 'Taikoma iš naujo…',

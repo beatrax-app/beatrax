@@ -13,7 +13,7 @@ return [
     'all_caught_heading' => '🎉 Viskas atlikta — kiekviena kita šalis pažymėta.',
     'back_to_index' => 'Atgal į kitas šalis →',
 
-    'meta' => 'Operacijų: :count · paskutinį kartą matyta :date',
+    'meta' => ':count operacija · paskutinį kartą matyta :date|:count operacijos · paskutinį kartą matyta :date|:count operacijų · paskutinį kartą matyta :date',
 
     'suggested_aria' => 'Siūlomas atitikmuo',
     'suggestion_medium' => '✨ Galbūt **:name** — vidutinis patikimumas',

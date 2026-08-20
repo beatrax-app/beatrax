@@ -1,3 +1,5 @@
+@use('Modules\Core\Public\Support\Lang')
+@use('Modules\Ledger\Public\Services\BaseCurrency')
 @inject('currentUser', \Modules\Core\Public\Contracts\CurrentUser::class)
 @inject('container', \Illuminate\Contracts\Container\Container::class)
 @php
@@ -6,10 +8,30 @@
     // lang from the SetLocale-primed translator) so all four page shells
     // derive them the same way rather than repeating the block inline.
     $chrome = $container->make(\Modules\Core\Public\Support\AppChromeResolver::class)->resolve();
+
+    // Chart chrome the ApexCharts helpers in app.js read off <html>: the
+    // money axis needs the base currency, and ApexCharts names its own
+    // <svg> in English ("donut chart with 14 data series") unless told.
+    // The reader's OWN reporting currency, not the app-wide fallback: a user
+    // who picks GBP in Settings had every chart axis drawn in euros beside
+    // pounds everywhere else. Guests have no preference, so they get the
+    // fallback.
+    $chartCurrency = $currentUser->isAuthenticated()
+        ? $currentUser->user()->base_currency
+        : BaseCurrency::value();
+
+    $chartLabels = json_encode([
+        'donut' => Lang::get('core::components.chart.donut'),
+        'bar' => Lang::get('core::components.chart.bar'),
+        'line' => Lang::get('core::components.chart.line'),
+        'rangeArea' => Lang::get('core::components.chart.range_area'),
+    ], JSON_THROW_ON_ERROR);
 @endphp
 <!doctype html>
 <html
     lang="{{ $chrome->locale }}"
+    data-base-currency="{{ $chartCurrency }}"
+    data-chart-labels="{{ $chartLabels }}"
     class="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 {{ $chrome->isDark ? 'dark' : '' }}"
     {{-- Only when the server already KNOWS the theme. An inline style beats
          every stylesheet rule, so emitting it while the pre-paint script is
@@ -185,15 +207,22 @@
                 `load` event ensures the SW registration does not block the
                 initial render or compete with critical resource fetches.
             --}}
-            <script nonce="{{ Vite::cspNonce() }}">
-                if ('serviceWorker' in navigator) {
-                    window.addEventListener('load', function () {
-                        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {
-                            // SW registration failed — app continues to work without offline support.
+            @unless (\Modules\Core\Public\Services\UserDataPathService::isMobileRuntime())
+                {{-- Not in the mobile shells. A service-worker script fetch does
+                     not pass through the WebView's request interceptor, so it
+                     escapes to a real network that has nothing on 127.0.0.1 and
+                     fails on every single page load. There is no offline story
+                     to lose: the app IS local there. --}}
+                <script nonce="{{ Vite::cspNonce() }}">
+                    if ('serviceWorker' in navigator) {
+                        window.addEventListener('load', function () {
+                            navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {
+                                // SW registration failed — app continues to work without offline support.
+                            });
                         });
-                    });
-                }
-            </script>
+                    }
+                </script>
+            @endunless
             @if (Route::has('desktop.close-action'))
                 {{--
                     D-08 close-window JS glue (plan 15-04). The
@@ -274,9 +303,13 @@
                    opacity-0 pointer-events-none
                    transition-opacity duration-[80ms] motion-reduce:duration-0"
             aria-hidden="true"
+            {{-- lock.js promotes the veil to role="dialog" when it raises it,
+                 and a dialog needs an accessible name. The name is authored
+                 here rather than in the script so it localises. --}}
+            data-locked-label="{{ Lang::get('core::components.veil_locked') }}"
         >
             <img
-                src="/icon.png"
+                src="{{ Vite::asset('resources/brand/logo.svg') }}"
                 width="48"
                 height="48"
                 alt=""

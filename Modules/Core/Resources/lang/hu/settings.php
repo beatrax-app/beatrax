@@ -124,6 +124,13 @@ return [
         'open_releases' => 'Kiadások oldalának megnyitása →',
     ],
 
+    'privacy' => [
+        'heading' => 'Adatvédelmi tájékoztató',
+        'body' => 'A Beatrax a saját eszközeiden tartja a pénzügyeidet. A tájékoztató elmondja, mit jelent ez, mit küldenek az opcionális online funkciók, és hogyan távolíthatod el az adataidat.',
+        'open' => 'Adatvédelmi tájékoztató elolvasása →',
+        'url_hint' => 'Ha a hivatkozás nem nyílik meg, keresd fel:',
+    ],
+
     'first_run_tour' => [
         'heading' => 'Első indítás bemutatója',
         'body' => 'Indítsd újra a beállítási varázslót, ha újra végig szeretnél menni a bevezető folyamaton.',

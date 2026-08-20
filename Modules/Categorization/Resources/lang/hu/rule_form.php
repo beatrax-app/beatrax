@@ -11,6 +11,11 @@ return [
     'match_any' => 'Bármelyik feltétel teljesül',
 
     'condition_label' => ':number. feltétel',
+    'between_and' => 'és',
+    'field_description' => 'Leírás',
+    'field_counterparty' => 'Partner',
+    'field_amount' => 'Összeg',
+    'field_date' => 'Dátum',
     'condition_field_aria' => ':number. feltétel mezője',
     'condition_operator_aria' => ':number. feltétel operátora',
     'condition_value_aria' => ':number. feltétel értéke',

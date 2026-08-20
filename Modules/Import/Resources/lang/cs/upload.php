@@ -8,7 +8,7 @@ return [
     'migrate_prompt' => 'Přecházíš z jiné rozpočtové aplikace?',
     'migrate_link' => 'Import z YNAB nebo Actual',
     'subtitle' => 'Vlož export z banky, z karty nebo z účtu PayPal, případně soubor s účtenkou z e-mailu.',
-    'mime_hint' => 'Tenhle soubor nevypadá jako podporovaný export výpisu. Vlož bankovní CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, PDF s výpisem z karty, e-mailovou zprávu (.eml) nebo archiv schránky (.mbox).',
+    'mime_hint' => 'Podporované soubory: bankovní CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, PDF výpisu z karty, e-mailová zpráva (.eml) nebo archiv schránky (.mbox).',
 
     'source_label' => 'Zdroj',
 

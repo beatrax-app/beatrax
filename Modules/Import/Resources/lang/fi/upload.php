@@ -8,7 +8,7 @@ return [
     'migrate_prompt' => 'Vaihdatko toisesta budjetointisovelluksesta?',
     'migrate_link' => 'Tuo YNAB- tai Actual-sovelluksesta',
     'subtitle' => 'Pudota pankin, kortin tai PayPalin vienti tai sähköpostikuittitiedosto.',
-    'mime_hint' => 'Tämä tiedosto ei näytä tuetulta tiliotevienniltä. Pudota pankin CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, korttitiliotteen PDF, sähköpostiviesti (.eml) tai postilaatikkoarkisto (.mbox).',
+    'mime_hint' => 'Tuetut tiedostot: pankin CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, korttitiliotteen PDF, sähköpostiviesti (.eml) tai postilaatikkoarkisto (.mbox).',
 
     'source_label' => 'Lähde',
 

@@ -13,7 +13,7 @@ return [
     'all_caught_heading' => '🎉 Wszystko gotowe — każdy kontrahent ma etykietę.',
     'back_to_index' => 'Wróć do kontrahentów →',
 
-    'meta' => 'Transakcje: :count · ostatnio widziano :date',
+    'meta' => ':count transakcja · ostatnio widziano :date|:count transakcje · ostatnio widziano :date|:count transakcji · ostatnio widziano :date',
 
     'suggested_aria' => 'Sugerowane dopasowanie',
     'suggestion_medium' => '✨ Może **:name** — pewność średnia',

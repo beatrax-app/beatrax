@@ -11,6 +11,11 @@ return [
     'match_any' => 'Corresponder a qualquer condição',
 
     'condition_label' => 'Condição :number',
+    'between_and' => 'e',
+    'field_description' => 'Descrição',
+    'field_counterparty' => 'Contraparte',
+    'field_amount' => 'Montante',
+    'field_date' => 'Data',
     'condition_field_aria' => 'Campo da condição :number',
     'condition_operator_aria' => 'Operador da condição :number',
     'condition_value_aria' => 'Valor da condição :number',

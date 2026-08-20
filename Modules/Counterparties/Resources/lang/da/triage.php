@@ -13,7 +13,7 @@ return [
     'all_caught_heading' => '🎉 Alt er klaret — hver modpart er mærket.',
     'back_to_index' => 'Tilbage til modparter →',
 
-    'meta' => ':count transaktioner · sidst set :date',
+    'meta' => ':count transaktion · sidst set :date|:count transaktioner · sidst set :date',
 
     'suggested_aria' => 'Foreslået match',
     'suggestion_medium' => '✨ Måske **:name** — middel sikkerhed',

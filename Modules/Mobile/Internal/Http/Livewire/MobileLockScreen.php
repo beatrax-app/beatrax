@@ -42,6 +42,7 @@ final class MobileLockScreen extends Component
         BiometricUnlockBridge $bridge,
         BiometricKeyVault $vault,
         Request $request,
+        Session $session,
     ): void {
         $user = $currentUser->user();
         $ua = $request->userAgent() ?? '';
@@ -58,6 +59,14 @@ final class MobileLockScreen extends Component
 
         $this->biometricAvailable = ($gateway->hasArmedBiometricCredential($user->id) && $bridge->isAvailable())
             || $coldStartReady;
+
+        // Why pairing sent them here. Without it the redirect landed on a PIN
+        // pad that explained nothing, which is the dead end it exists to fix.
+        $flashed = $session->get(MobilePairingScan::LOCKED_IDENTITY_FLASH);
+
+        if (is_string($flashed) && $flashed !== '') {
+            $this->flashMessage = $flashed;
+        }
     }
 
     // -------------------------------------------------------------------------

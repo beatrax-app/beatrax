@@ -49,4 +49,15 @@ return [
         'hour' => 'Tund',
         'minute' => 'Minut',
     ],
+
+    'veil_locked' => 'Rakendus lukustatud',
+
+    'chart' => [
+        'donut' => 'Sõõrikdiagramm',
+        'bar' => 'Tulpdiagramm',
+        'line' => 'Joondiagramm',
+        'range_area' => 'Vahemikudiagramm',
+    ],
+
+    'sheet_untitled' => 'Dialoogiaken',
 ];

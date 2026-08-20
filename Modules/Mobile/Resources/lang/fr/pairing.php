@@ -35,8 +35,8 @@ return [
 
     'errors' => [
         'relay_unreachable' => 'Impossible de joindre l\'autre appareil. Vérifie que les deux sont sur le même réseau et que la synchronisation est activée sur l\'ordinateur.',
-        'import_needs_qr' => 'Scanne le code QR affiché sur l\'autre appareil pour importer.',
         'invalid_code' => 'Ce code est invalide ou a expiré. Demande à l\'autre appareil d\'en générer un nouveau.',
         'identity_locked' => 'L\'identité de ton appareil est verrouillée. Déverrouille l\'application et réessaie.',
+        'identity_needs_lock' => 'Configurez d\'abord le verrouillage de l\'application — il protège l\'identité de votre appareil.',
     ],
 ];

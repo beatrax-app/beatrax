@@ -20,6 +20,7 @@ use Modules\Categorization\Public\Enums\ConditionValueType;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 // The `/rules` CRUD page. Reads via CategorizationRuleQuery
@@ -137,14 +138,31 @@ final class RulesPage extends Component
         $opLabel = RuleFormModal::operatorOptionsFor($displayField)[$condition->op] ?? $condition->op;
 
         if ($condition->valueType !== ConditionValueType::Text->value) {
+            $value = self::readableValue($condition->valueType, $condition->value);
+            $and = Lang::get('categorization::rule_form.between_and');
+
             if ($condition->op === ConditionOperator::Between->value && $condition->value2 !== null) {
-                return "{$displayField} {$opLabel} {$condition->value} and {$condition->value2}";
+                $upper = self::readableValue($condition->valueType, $condition->value2);
+
+                return "{$displayField} {$opLabel} {$value} {$and} {$upper}";
             }
 
-            return "{$displayField} {$opLabel} {$condition->value}";
+            return "{$displayField} {$opLabel} {$value}";
         }
 
         return "{$displayField} {$opLabel} \"{$condition->value}\"";
+    }
+
+    // Amount conditions are stored in minor units, and the list printed them
+    // raw: a rule the user entered as 10,00-25,00 read back as "1000 and
+    // 2500", which could be ten euros or a thousand.
+    private static function readableValue(string $valueType, string $value): string
+    {
+        if ($valueType !== ConditionValueType::Amount->value || ! is_numeric($value)) {
+            return $value;
+        }
+
+        return MoneyInput::formatMinor((int) $value);
     }
 
     public static function actionChipLabel(RuleActionDto $action): string

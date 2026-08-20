@@ -6,6 +6,7 @@ return [
     'page_title' => 'Reglas',
     'heading' => 'Reglas',
     'intro' => 'Precategoriza las transacciones al importarlas. Las reglas se aplican a todas las fuentes: banco, tarjeta, PayPal y recibos por correo.',
+    'device_local_note' => 'Las reglas permanecen en este dispositivo. No se comparten con tus otros dispositivos.',
 
     'reapply' => 'Volver a aplicar las reglas al historial',
     'reapplying' => 'Aplicando de nuevo…',

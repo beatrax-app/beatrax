@@ -15,6 +15,8 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Exceptions\NotAuthenticatedException;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\LoadsModuleResources;
+use Modules\Import\Public\Contracts\CapturesImportForSync;
+use Modules\Ledger\Public\Contracts\CapturesTransactionsForSync;
 use Modules\Notifications\Public\Events\NotificationPreferenceMutated;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Commands\RelayServeCommand;
@@ -60,6 +62,7 @@ use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\EncryptionMigrationSupport;
+use Modules\Sync\Public\Services\ImportSyncCapture;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Sync\Public\Services\SyncDaemonIdentity;
 use Psr\Log\LoggerInterface;
@@ -73,6 +76,11 @@ final class SyncServiceProvider extends ServiceProvider
 
     public function register(): void
     {
+        // Sync is loaded, so an import can be recorded for the user's other
+        // devices. Overrides the Import module's no-op default.
+        $this->app->singleton(CapturesImportForSync::class, ImportSyncCapture::class);
+        $this->app->singleton(CapturesTransactionsForSync::class, ImportSyncCapture::class);
+
         $this->registerMergeAndSigning();
         $this->registerCryptoServices();
         $this->registerReplayer();

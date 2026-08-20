@@ -43,7 +43,7 @@
                 </span>
             @else
                 <span style="color: var(--color-rose);">
-                    {{ Lang::choice('calendar::messages.summary.risk', $riskCount, ['count' => $riskCount, 'date' => $riskDayList[0]->date->translatedFormat('M j')]) }}
+                    {{ Lang::choice('calendar::messages.summary.risk', $riskCount, ['count' => $riskCount, 'date' => $riskDayList[0]->date->translatedFormat('j M')]) }}
                 </span>
             @endif
         </div>
@@ -228,7 +228,7 @@
 
                             $entriesWord = Lang::choice('calendar::messages.cell.entry', $entryCount);
                             $ariaLabel = Lang::get('calendar::messages.cell.aria', [
-                                'date' => $day->date->translatedFormat('F j, Y'),
+                                'date' => $day->date->translatedFormat('j F Y'),
                                 'count' => $entryCount,
                                 'entries' => $entriesWord,
                             ]);
@@ -331,7 +331,7 @@
     </div>
 
     {{-- §6.5 Phone bottom sheet (open-sheet event dispatched from selectDay()) --}}
-    <x-core::bottom-sheet name="day-detail" :title="$selectedDayDto ? $selectedDayDto->date->translatedFormat('M j') : ''">
+    <x-core::bottom-sheet name="day-detail" :title="$selectedDayDto ? $selectedDayDto->date->translatedFormat('j M') : ''">
         @if ($selectedDayDto !== null)
             @include('calendar::livewire.partials.day-panel', ['dayDto' => $selectedDayDto])
         @endif

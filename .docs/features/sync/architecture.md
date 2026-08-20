@@ -422,8 +422,8 @@ with a null `gdk_epoch`.
 `OpLogRebuilder` is the trigger-safe deterministic full-rebuild path
 (device onboarding / disaster recovery): drop covered-table triggers,
 delete only rows the op-log can recreate (rows with a `create_row` op —
-import-created rows are immutable and never enter the log, so deleting
-everything would leave them unrecoverable), replay the full persisted
+anything predating capture has none, so deleting everything would leave it
+unrecoverable), replay the full persisted
 op-log via the same production `OpLogReplayer`, then restore triggers — all
 inside one DB transaction so any failure rolls everything back. Deletion
 runs in FK-safe order (children before parents). An in-process maintenance

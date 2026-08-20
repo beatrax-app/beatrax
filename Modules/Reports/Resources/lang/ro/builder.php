@@ -140,4 +140,6 @@ return [
         'min_aria' => 'Sumă minimă',
         'max_aria' => 'Sumă maximă',
     ],
+
+    'other_movement' => 'Comisioane și ajustări (necontabilizate mai sus)',
 ];

@@ -11,6 +11,11 @@ return [
     'match_any' => 'Aan een van de voorwaarden voldoen',
 
     'condition_label' => 'Voorwaarde :number',
+    'between_and' => 'en',
+    'field_description' => 'Omschrijving',
+    'field_counterparty' => 'Tegenpartij',
+    'field_amount' => 'Bedrag',
+    'field_date' => 'Datum',
     'condition_field_aria' => 'Veld van voorwaarde :number',
     'condition_operator_aria' => 'Operator van voorwaarde :number',
     'condition_value_aria' => 'Waarde van voorwaarde :number',

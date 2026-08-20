@@ -4,7 +4,7 @@
         <div class="flex justify-center">
             {{-- Brand mark — same surface the desktop welcome screen uses. --}}
             <img
-                src="{{ asset('icon.png') }}"
+                src="{{ Vite::asset('resources/brand/logo.svg') }}"
                 alt="Beatrax"
                 class="h-20 w-20"
             />

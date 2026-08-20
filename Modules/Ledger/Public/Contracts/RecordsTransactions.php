@@ -20,5 +20,5 @@ interface RecordsTransactions
     /**
      * @param  iterable<CanonicalTransaction>  $canonical
      */
-    public function __invoke(iterable $canonical, User $user): RecordResult;
+    public function __invoke(iterable $canonical, User $user, bool $captureForSync = true): RecordResult;
 }

@@ -11,6 +11,11 @@ return [
     'match_any' => 'Splnit libovolnou podmínku',
 
     'condition_label' => 'Podmínka :number',
+    'between_and' => 'a',
+    'field_description' => 'Popis',
+    'field_counterparty' => 'Protistrana',
+    'field_amount' => 'Částka',
+    'field_date' => 'Datum',
     'condition_field_aria' => 'Pole podmínky :number',
     'condition_operator_aria' => 'Operátor podmínky :number',
     'condition_value_aria' => 'Hodnota podmínky :number',

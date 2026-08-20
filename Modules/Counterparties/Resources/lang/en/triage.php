@@ -13,7 +13,7 @@ return [
     'all_caught_heading' => '🎉 All caught up — every counterparty is labeled.',
     'back_to_index' => 'Back to counterparties →',
 
-    'meta' => ':count transactions · last seen :date',
+    'meta' => ':count transaction · last seen :date|:count transactions · last seen :date',
 
     'suggested_aria' => 'Suggested match',
     'suggestion_medium' => '✨ Maybe **:name** — confidence medium',

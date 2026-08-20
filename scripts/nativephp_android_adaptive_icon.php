@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__.'/nativephp_scaffold_root.php';
+
 /*
  * Regenerates the Android adaptive launcher icon from resources/brand art.
  *
@@ -20,7 +22,7 @@ declare(strict_types=1);
 
 $root = dirname(__DIR__);
 $source = $root.'/public/icon.png';
-$res = $root.'/mobile-app/nativephp/android/app/src/main/res';
+$res = beatraxScaffoldPath('android/app/src/main/res') ?? '';
 
 if (! is_file($source)) {
     fwrite(STDERR, "adaptive-icon: source {$source} not found\n");

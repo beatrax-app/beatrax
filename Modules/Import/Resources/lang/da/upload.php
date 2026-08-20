@@ -8,7 +8,7 @@ return [
     'migrate_prompt' => 'Skifter du fra en anden budgetapp?',
     'migrate_link' => 'Importér fra YNAB eller Actual',
     'subtitle' => 'Slip en eksport fra bank, kort eller PayPal ind, eller en fil med kvitteringsmails.',
-    'mime_hint' => 'Filen ligner ikke en understøttet eksport af kontoudtog. Slip en bank-CSV, MT940 (.sta / .mt940 / .txt), CAMT.053-XML, et kortudtog i PDF, en e-mail (.eml) eller et postkassearkiv (.mbox) ind.',
+    'mime_hint' => 'Understøttede filer: bank-CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, PDF med kortudtog, e-mailbesked (.eml) eller postkassearkiv (.mbox).',
 
     'source_label' => 'Kilde',
 

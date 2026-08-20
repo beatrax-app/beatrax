@@ -92,7 +92,7 @@
                         <div style="min-width: 0; flex: 1 1 auto;">
                             <span class="primary">{{ $entry->counterparty_name }}</span>
                             <span class="secondary">
-                                {{ \Illuminate\Support\Str::limit((string) $entry->posted_at, 10, '') }}
+                                {{ \Carbon\CarbonImmutable::parse((string) $entry->posted_at)->isoFormat('L') }}
                                 @if ($entry->category_name)· {{ $entry->category_name }}@endif
                             </span>
                         </div>
@@ -127,7 +127,7 @@
                         <div class="min-w-0 flex-1">
                             <p class="truncate text-slate-900 dark:text-slate-100">{{ $entry->counterparty_name }}</p>
                             <p class="text-xs text-slate-500 dark:text-slate-400">
-                                {{ \Illuminate\Support\Str::limit((string) $entry->posted_at, 10, '') }}
+                                {{ \Carbon\CarbonImmutable::parse((string) $entry->posted_at)->isoFormat('L') }}
                                 @if ($entry->category_name)· {{ $entry->category_name }}@endif
                             </p>
                         </div>

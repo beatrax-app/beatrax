@@ -49,4 +49,15 @@ return [
         'hour' => 'Valanda',
         'minute' => 'Minutė',
     ],
+
+    'veil_locked' => 'Programa užrakinta',
+
+    'chart' => [
+        'donut' => 'Žiedinė diagrama',
+        'bar' => 'Stulpelinė diagrama',
+        'line' => 'Linijinė diagrama',
+        'range_area' => 'Intervalų diagrama',
+    ],
+
+    'sheet_untitled' => 'Dialogo langas',
 ];

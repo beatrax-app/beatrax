@@ -6,6 +6,7 @@ return [
     'page_title' => 'Reguli',
     'heading' => 'Reguli',
     'intro' => 'Categorisește tranzacțiile încă de la import. Regulile se aplică fiecărei surse — bancă, card, PayPal și bonuri primite pe e-mail.',
+    'device_local_note' => 'Regulile rămân pe acest dispozitiv. Nu sunt partajate cu celelalte dispozitive ale tale.',
 
     'reapply' => 'Reaplică regulile pe istoric',
     'reapplying' => 'Se reaplică…',

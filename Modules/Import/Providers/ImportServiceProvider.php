@@ -26,12 +26,14 @@ use Modules\Import\Internal\Services\AliasYamlExporter;
 use Modules\Import\Internal\Services\AliasYamlImporter;
 use Modules\Import\Internal\Services\KnownCounterpartyIbanResolver;
 use Modules\Import\Internal\Services\LongestCommonPrefix;
+use Modules\Import\Internal\Sync\NullImportSyncCapture;
 use Modules\Import\Public\Actions\ApplyEnrichments;
 use Modules\Import\Public\Actions\ConfirmImport;
 use Modules\Import\Public\Actions\CreateMerchantAlias;
 use Modules\Import\Public\Actions\MergeMerchantAliases;
 use Modules\Import\Public\Actions\RunImport;
 use Modules\Import\Public\Contracts\AppliesEnrichments;
+use Modules\Import\Public\Contracts\CapturesImportForSync;
 use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Import\Public\Contracts\DetectsStartingBalance;
 use Modules\Import\Public\Contracts\NamesAccounts;
@@ -77,6 +79,10 @@ final class ImportServiceProvider extends ServiceProvider
 
     public function register(): void
     {
+        // Overridden by the Sync module when it is loaded; this default keeps
+        // the import path resolvable on a build without sync.
+        $this->app->bindIf(CapturesImportForSync::class, NullImportSyncCapture::class);
+
         $this->app->bind(RunsImports::class, RunImport::class);
         $this->app->bind(ConfirmsImports::class, ConfirmImport::class);
         $this->app->bind(NamesAccounts::class, AccountNamer::class);

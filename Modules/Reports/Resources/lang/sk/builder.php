@@ -140,4 +140,6 @@ return [
         'min_aria' => 'Minimálna suma',
         'max_aria' => 'Maximálna suma',
     ],
+
+    'other_movement' => 'Poplatky a úpravy (nezapočítané vyššie)',
 ];

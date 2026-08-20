@@ -13,7 +13,7 @@ return [
     'all_caught_heading' => '🎉 Kaikki käsitelty — jokainen vastapuoli on merkitty.',
     'back_to_index' => 'Takaisin vastapuoliin →',
 
-    'meta' => ':count tapahtumaa · viimeksi nähty :date',
+    'meta' => ':count tapahtuma · viimeksi nähty :date|:count tapahtumaa · viimeksi nähty :date',
 
     'suggested_aria' => 'Ehdotettu osuma',
     'suggestion_medium' => '✨ Ehkä **:name** — varmuus keskitasoa',

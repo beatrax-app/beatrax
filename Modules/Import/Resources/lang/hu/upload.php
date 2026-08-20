@@ -8,7 +8,7 @@ return [
     'migrate_prompt' => 'Másik költségvetési alkalmazásról váltasz?',
     'migrate_link' => 'Import YNAB-ból vagy Actualból',
     'subtitle' => 'Húzz ide egy banki, kártya- vagy PayPal-exportot, vagy egy e-mailes bizonylatfájlt.',
-    'mime_hint' => 'Ez a fájl nem tűnik támogatott kivonatexportnak. Húzz ide egy banki CSV-t, MT940-et (.sta / .mt940 / .txt), CAMT.053 XML-t, kártyakivonatot PDF-ben, e-mail-üzenetet (.eml) vagy postafiók-archívumot (.mbox).',
+    'mime_hint' => 'Támogatott fájlok: banki CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, kártyakivonat PDF, e-mail üzenet (.eml) vagy postafiók-archívum (.mbox).',
 
     'source_label' => 'Forrás',
 

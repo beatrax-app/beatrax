@@ -49,4 +49,15 @@ return [
         'hour' => 'Saat',
         'minute' => 'Dakika',
     ],
+
+    'veil_locked' => 'Uygulama kilitli',
+
+    'chart' => [
+        'donut' => 'Halka grafik',
+        'bar' => 'Çubuk grafik',
+        'line' => 'Çizgi grafik',
+        'range_area' => 'Aralık grafiği',
+    ],
+
+    'sheet_untitled' => 'İletişim kutusu',
 ];

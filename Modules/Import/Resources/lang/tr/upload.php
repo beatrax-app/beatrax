@@ -8,7 +8,7 @@ return [
     'migrate_prompt' => 'Başka bir bütçe uygulamasından mı geçiyorsun?',
     'migrate_link' => "YNAB veya Actual'dan içe aktar",
     'subtitle' => 'Bir banka, kart veya PayPal dışa aktarma dosyasını ya da bir e-posta fiş dosyasını buraya bırak.',
-    'mime_hint' => 'Bu dosya desteklenen bir hesap ekstresi dışa aktarmasına benzemiyor. Bir banka CSV dosyası, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, kart ekstresi PDF dosyası, e-posta iletisi (.eml) veya posta kutusu arşivi (.mbox) bırak.',
+    'mime_hint' => 'Desteklenen dosyalar: banka CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, kart ekstresi PDF, e-posta iletisi (.eml) veya posta kutusu arşivi (.mbox).',
 
     'source_label' => 'Kaynak',
 

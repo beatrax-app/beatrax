@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__.'/nativephp_scaffold_root.php';
+
 /*
  * Open the Android document picker for `<input type="file">`.
  *
@@ -35,7 +37,7 @@ declare(strict_types=1);
  * exists to fix.
  */
 
-$root = __DIR__.'/../mobile-app/nativephp/android/app/src/main/java/com/nativephp/mobile';
+$root = beatraxScaffoldPath('android/app/src/main/java/com/nativephp/mobile') ?? '';
 
 $webViewTarget = $root.'/network/WebViewManager.kt';
 $activityTarget = $root.'/ui/MainActivity.kt';

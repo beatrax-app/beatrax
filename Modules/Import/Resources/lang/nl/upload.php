@@ -8,7 +8,7 @@ return [
     'migrate_prompt' => 'Overstappen van een andere budget-app?',
     'migrate_link' => 'Importeren uit YNAB of Actual',
     'subtitle' => 'Voeg een bank-, kaart- of PayPal-export toe, of een e-mailbon.',
-    'mime_hint' => 'Dat bestand lijkt geen ondersteunde afschrift-export. Voeg een bank-CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, een kaartafschrift-PDF, een e-mailbericht (.eml) of een mailbox-archief (.mbox) toe.',
+    'mime_hint' => 'Ondersteunde bestanden: bank-CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, kaartafschrift-PDF, e-mailbericht (.eml) of mailbox-archief (.mbox).',
 
     'source_label' => 'Bron',
     'issuer_other_bank' => 'Andere bank (N26, Revolut, ING…)',

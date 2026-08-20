@@ -72,6 +72,10 @@
                 name="file"
                 wire:model="file"
                 accept=".csv,.xml,.sta,.mt940,.940,.txt,.pdf,.eml,.mbox,.zip"
+                {{-- The hint has always carried this id; nothing pointed at
+                     it, so a screen reader met the list on page entry with no
+                     idea which control it described. --}}
+                aria-describedby="upload-statement-mime-hint"
             />
             @error('file')
                 <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>

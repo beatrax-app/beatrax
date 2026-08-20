@@ -8,7 +8,7 @@ return [
     'migrate_prompt' => 'Tu viens d\'une autre application de budget ?',
     'migrate_link' => 'Importer depuis YNAB ou Actual',
     'subtitle' => 'Dépose un export bancaire, de carte ou PayPal, ou un fichier de reçu par e-mail.',
-    'mime_hint' => 'Ce fichier ne ressemble pas à un export de relevé pris en charge. Dépose un CSV bancaire, un MT940 (.sta / .mt940 / .txt), un XML CAMT.053, un PDF de relevé de carte, un message e-mail (.eml) ou une archive de boîte aux lettres (.mbox).',
+    'mime_hint' => 'Fichiers pris en charge : CSV bancaire, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, PDF de relevé de carte, message e-mail (.eml) ou archive de boîte aux lettres (.mbox).',
 
     'source_label' => 'Source',
 

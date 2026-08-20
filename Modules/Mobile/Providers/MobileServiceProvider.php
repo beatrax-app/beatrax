@@ -21,6 +21,7 @@ use Modules\Mobile\Commands\MobilePullCommand;
 use Modules\Mobile\Commands\PackageAndroidCommand;
 use Modules\Mobile\Internal\Boot\NativeBuildPatches;
 use Modules\Mobile\Internal\Http\BridgeSignedUploadUrl;
+use Modules\Mobile\Internal\Http\Middleware\ClientSideRedirect;
 use Modules\Mobile\Internal\Http\Middleware\EncodedUploadTransport;
 use Modules\Mobile\Internal\Identity\MobileColdStartVault;
 use Modules\Mobile\Internal\Identity\SecureStorageKeyCustodian;
@@ -168,6 +169,10 @@ final class MobileServiceProvider extends ServiceProvider
         // Livewire's controller reads one. Gated on its own marker, not the
         // platform: an ordinary request is one array lookup and out.
         $router->pushMiddlewareToGroup('web', EncodedUploadTransport::class);
+
+        // Same reasoning as above: pushed everywhere, gated on the runtime
+        // inside, so a desktop response is one isRedirection() check and out.
+        $router->pushMiddlewareToGroup('web', ClientSideRedirect::class);
 
         // Gated on the runtime, not merely on this provider loading: modules
         // are auto-discovered, so this boots in the DESKTOP root too, and an

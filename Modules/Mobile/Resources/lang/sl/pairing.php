@@ -35,8 +35,8 @@ return [
 
     'errors' => [
         'relay_unreachable' => 'Druge naprave ni mogoče doseči. Preveri, ali sta obe v istem omrežju in ali je sinhronizacija na namizju vklopljena.',
-        'import_needs_qr' => 'Za uvoz poskeniraj kodo QR, prikazano na drugi napravi.',
         'invalid_code' => 'Ta koda ni veljavna ali je potekla. Prosi drugo napravo, naj ustvari novo.',
         'identity_locked' => 'Identiteta tvoje naprave je zaklenjena. Odkleni aplikacijo in poskusi znova.',
+        'identity_needs_lock' => 'Najprej nastavite zaklepanje aplikacije — ščiti identiteto vaše naprave.',
     ],
 ];

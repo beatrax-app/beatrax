@@ -11,6 +11,11 @@ return [
     'match_any' => 'Atitinka bet kurią sąlygą',
 
     'condition_label' => 'Sąlyga :number',
+    'between_and' => 'ir',
+    'field_description' => 'Aprašymas',
+    'field_counterparty' => 'Kita šalis',
+    'field_amount' => 'Suma',
+    'field_date' => 'Data',
     'condition_field_aria' => 'Sąlygos :number laukas',
     'condition_operator_aria' => 'Sąlygos :number operatorius',
     'condition_value_aria' => 'Sąlygos :number reikšmė',

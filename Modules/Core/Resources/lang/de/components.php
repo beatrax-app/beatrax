@@ -49,4 +49,15 @@ return [
         'hour' => 'Stunde',
         'minute' => 'Minute',
     ],
+
+    'veil_locked' => 'App gesperrt',
+
+    'chart' => [
+        'donut' => 'Ringdiagramm',
+        'bar' => 'Balkendiagramm',
+        'line' => 'Liniendiagramm',
+        'range_area' => 'Bandbreitendiagramm',
+    ],
+
+    'sheet_untitled' => 'Dialogfeld',
 ];

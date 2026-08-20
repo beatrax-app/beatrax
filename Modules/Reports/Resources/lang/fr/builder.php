@@ -140,4 +140,6 @@ return [
         'min_aria' => 'Montant minimum',
         'max_aria' => 'Montant maximum',
     ],
+
+    'other_movement' => 'Frais et ajustements (non comptés ci-dessus)',
 ];

@@ -120,7 +120,10 @@ it('hydrates the nested conditions/actions arrays in edit mode', function (): vo
         ->assertCount('conditions', 2)
         ->assertCount('actions', 2);
 
-    expect($component->get('conditions')[0]['field'])->toBe('merchant');
+    // A rule stored under the old `merchant` name hydrates as `counterparty`:
+    // they are one field, the select no longer offers both, and a value with
+    // no matching option would silently display as the first one instead.
+    expect($component->get('conditions')[0]['field'])->toBe('counterparty');
     expect($component->get('conditions')[0]['value'])->toBe('SPOTIFY');
     expect($component->get('conditions')[1]['field'])->toBe('amount');
     // Stored minor units (-5000 = -50.00 EUR) round-trip to the Dutch-decimal
@@ -536,4 +539,37 @@ it('escapes HTML payloads in rendered condition value (T-07-06)', function (): v
     Livewire::test(RuleFormModal::class)
         ->call('open', ruleId: $ruleId)
         ->assertDontSee('<script>alert(1)</script>', escape: false);
+});
+
+it('never offers two options that read the same in any locale', function (): void {
+    $blade = (string) file_get_contents(
+        base_path('Modules/Categorization/Resources/views/livewire/rule-form-modal.blade.php')
+    );
+
+    preg_match('/<select\s+wire:model\.live="conditions\.\{\{ \$i \}\}\.field".*?<\/select>/s', $blade, $select);
+    expect($select)->not->toBeEmpty();
+
+    preg_match_all("/Lang::get\('categorization::rule_form\.(field_[a-z_]+)'\)/", $select[0], $keys);
+    expect($keys[1])->not->toBeEmpty();
+
+    // `merchant` and `counterparty` both resolved to the counterparty name and
+    // both rendered "Counterparty" in en, "Tiers" in fr, "Contraparte" in es —
+    // 25 of 26 locales showed the user the same word twice in the select that
+    // decides which column the rule matches.
+    $duplicates = [];
+    foreach (glob(base_path('Modules/Categorization/Resources/lang/*/rule_form.php')) as $file) {
+        /** @var array<string, string> $messages */
+        $messages = require $file;
+
+        $labels = [];
+        foreach ($keys[1] as $key) {
+            $label = $messages[$key] ?? $key;
+            if (isset($labels[$label])) {
+                $duplicates[] = basename(dirname($file)).': '.$label;
+            }
+            $labels[$label] = true;
+        }
+    }
+
+    expect($duplicates)->toBe([], 'the condition-field select renders the same label twice in: '.implode(', ', $duplicates));
 });

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Import\Public\Enums;
 
+use Modules\Core\Public\Support\Lang;
+
 // A schema-level BEFORE INSERT/UPDATE trigger on transactions.payment_type
 // rejects any value outside this set. `Unknown` is the safe default for
 // every existing row at migration time and every import whose hinters
@@ -21,19 +23,22 @@ enum PaymentType: string
 
     // Kept inside the enum so the import preview's legend bar copy
     // matches the chip copy on every row (also rendered on /transactions
-    // and /community/mystery-merchants).
+    // and /community/mystery-merchants). The glyph is the same in every
+    // language; only the word beside it comes from the lang file.
     public function chipLabel(): string
     {
-        return match ($this) {
-            self::Pin => '⛁ PIN',
-            self::Online => '⌘ Online',
-            self::Transfer => '↔ Transfer',
-            self::DirectDebit => '⤓ Direct debit',
-            self::Cash => '€ Cash',
-            self::Fee => '◷ Fee',
-            self::Refund => '↺ Refund',
-            self::Unknown => '? Unknown',
+        $glyph = match ($this) {
+            self::Pin => '⛁',
+            self::Online => '⌘',
+            self::Transfer => '↔',
+            self::DirectDebit => '⤓',
+            self::Cash => '€',
+            self::Fee => '◷',
+            self::Refund => '↺',
+            self::Unknown => '?',
         };
+
+        return $glyph.' '.Lang::get('import::payment_type.'.$this->value);
     }
 
     // Bare modifier (e.g. `pin`, `dd`); consumers build the full class

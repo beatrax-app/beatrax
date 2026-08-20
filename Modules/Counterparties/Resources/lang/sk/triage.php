@@ -13,7 +13,7 @@ return [
     'all_caught_heading' => '🎉 Hotovo — každá protistrana je označená.',
     'back_to_index' => 'Späť na protistrany →',
 
-    'meta' => 'transakcie: :count · naposledy :date',
+    'meta' => ':count transakcia · naposledy :date|:count transakcie · naposledy :date|:count transakcií · naposledy :date',
 
     'suggested_aria' => 'Navrhovaná zhoda',
     'suggestion_medium' => '✨ Možno **:name** — stredná istota',

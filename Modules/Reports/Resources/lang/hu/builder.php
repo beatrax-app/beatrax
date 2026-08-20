@@ -140,4 +140,6 @@ return [
         'min_aria' => 'Minimális összeg',
         'max_aria' => 'Maximális összeg',
     ],
+
+    'other_movement' => 'Díjak és korrekciók (a fentiben nem szerepel)',
 ];

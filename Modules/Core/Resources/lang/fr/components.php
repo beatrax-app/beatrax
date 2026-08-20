@@ -49,4 +49,15 @@ return [
         'hour' => 'Heure',
         'minute' => 'Minute',
     ],
+
+    'veil_locked' => 'Application verrouillée',
+
+    'chart' => [
+        'donut' => 'Graphique en anneau',
+        'bar' => 'Graphique à barres',
+        'line' => 'Graphique linéaire',
+        'range_area' => 'Graphique de plage',
+    ],
+
+    'sheet_untitled' => 'Boîte de dialogue',
 ];

@@ -140,4 +140,6 @@ return [
         'min_aria' => 'En düşük tutar',
         'max_aria' => 'En yüksek tutar',
     ],
+
+    'other_movement' => 'Ücretler ve düzeltmeler (yukarıda sayılmadı)',
 ];

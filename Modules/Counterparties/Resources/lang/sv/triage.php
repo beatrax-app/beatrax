@@ -13,7 +13,7 @@ return [
     'all_caught_heading' => '🎉 Allt är avklarat — varje motpart är märkt.',
     'back_to_index' => 'Tillbaka till motparter →',
 
-    'meta' => ':count transaktioner · senast sedd :date',
+    'meta' => ':count transaktion · senast sedd :date|:count transaktioner · senast sedd :date',
 
     'suggested_aria' => 'Föreslagen matchning',
     'suggestion_medium' => '✨ Kanske **:name** — medelhög säkerhet',

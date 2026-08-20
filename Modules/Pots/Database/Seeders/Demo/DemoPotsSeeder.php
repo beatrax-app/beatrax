@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Pots\Database\Seeders\Demo;
 
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\DemoNames;
+use Modules\Core\Public\Support\Lang;
 use Modules\Goals\Models\Goal;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Enums\AccountKind;
@@ -17,15 +19,16 @@ use Modules\Pots\Public\Services\PotWriter;
 // name, and leaves headroom so the account still reconciles.
 final class DemoPotsSeeder
 {
-    // goalName links the pot to a demo goal (one pot per goal is the
-    // writer's rule); null leaves it free-standing. Amounts stay well
-    // under the seeded ASN balance so unallocated never goes negative.
-    /** @var list<array{name: string, amount: string, goalName: ?string}> */
+    // goalKey links the pot to a demo goal; null leaves it free-standing.
+    // Amounts stay under the seeded ASN balance so unallocated never goes
+    // negative. Both keys resolve through core::demo, so the pot finds the
+    // goal under the same string DemoGoalsSeeder wrote it under.
+    /** @var list<array{nameKey: string, amount: string, goalKey: ?string}> */
     private const POTS = [
-        ['name' => 'Emergency fund', 'amount' => '1250,00', 'goalName' => 'Emergency fund'],
-        ['name' => 'Japan trip', 'amount' => '780,00', 'goalName' => 'Japan trip'],
-        ['name' => 'New laptop', 'amount' => '450,00', 'goalName' => 'Replace the laptop'],
-        ['name' => 'Annual insurance', 'amount' => '220,00', 'goalName' => null],
+        ['nameKey' => 'pot_emergency_fund', 'amount' => '1250,00', 'goalKey' => 'goal_emergency_fund'],
+        ['nameKey' => 'pot_japan_trip', 'amount' => '780,00', 'goalKey' => 'goal_japan_trip'],
+        ['nameKey' => 'pot_new_laptop', 'amount' => '450,00', 'goalKey' => 'goal_replace_laptop'],
+        ['nameKey' => 'pot_annual_insurance', 'amount' => '220,00', 'goalKey' => null],
     ];
 
     public function __construct(
@@ -54,13 +57,17 @@ final class DemoPotsSeeder
     }
 
     /**
-     * @param  array{name: string, amount: string, goalName: ?string}  $row
+     * @param  array{nameKey: string, amount: string, goalKey: ?string}  $row
      */
     private function upsertPot(User $user, array $row, int $accountId): void
     {
+        $name = Lang::get('core::demo.'.$row['nameKey']);
+
+        // Every locale's rendering, not just today's: the dedupe key is a
+        // translated string, so a re-seed in another language duplicated it.
         $existing = Pot::query()
             ->where('user_id', $user->id)
-            ->where('name', $row['name'])
+            ->whereIn('name', DemoNames::everyRendering($row['nameKey']))
             ->first();
 
         if ($existing !== null) {
@@ -68,15 +75,17 @@ final class DemoPotsSeeder
         }
 
         $goalId = null;
-        if ($row['goalName'] !== null) {
+        if ($row['goalKey'] !== null) {
+            // The goal may have been seeded in another language; resolving
+            // by today's rendering alone left the pot unlinked.
             $goalId = Goal::query()
                 ->where('user_id', $user->id)
-                ->where('name', $row['goalName'])
+                ->whereIn('name', DemoNames::everyRendering($row['goalKey']))
                 ->value('id');
             $goalId = is_numeric($goalId) ? (int) $goalId : null;
         }
 
-        $this->writer->save($user, $row['name'], $row['amount'], $accountId, $goalId, null);
+        $this->writer->save($user, $name, $row['amount'], $accountId, $goalId, null);
     }
 
     private function currentAccountId(User $user): ?int

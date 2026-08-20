@@ -14,6 +14,7 @@ use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use LogicException;
+use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\Lang;
@@ -29,6 +30,10 @@ use Throwable;
  */
 final class MobilePairingScan extends Component
 {
+    // Read once by MobileLockScreen::mount(). A public property cannot carry
+    // it across navigate:false, which is a full page load.
+    public const LOCKED_IDENTITY_FLASH = 'mobile.pairing.locked_identity';
+
     // The scanner plugin reaches the WebView by dispatching a Livewire
     // event named `native:` plus the PHP event class it fired. Spelled as
     // plain strings because the plugin lives only in mobile-app/vendor and
@@ -217,6 +222,8 @@ final class MobilePairingScan extends Component
         Session $session,
         LoggerInterface $logger,
         DeviceRegistryService $devices,
+        UrlGenerator $urls,
+        AppLockClientConfig $lock,
         string $data = '',
         string $format = '',
         ?string $id = null,
@@ -225,7 +232,7 @@ final class MobilePairingScan extends Component
             return;
         }
 
-        $this->submitCode($data, $currentUser, $qrBridge, $gateway, $session, $logger, $devices);
+        $this->submitCode($data, $currentUser, $qrBridge, $gateway, $session, $logger, $devices, $urls, $lock);
     }
 
     // Fired when the user backs out of the scanner or the OS refuses the
@@ -245,6 +252,29 @@ final class MobilePairingScan extends Component
     {
         $this->cameraUnavailableNotice = true;
         $this->step = 'enter_code';
+    }
+
+    // A locked identity is the one failure the user can actually fix, and the
+    // message alone was a dead end: nothing on this screen opens the PIN pad,
+    // so "unlock the app and try again" left them with no way to do either.
+    private function sendToUnlock(UrlGenerator $urls, Session $session, AppLockClientConfig $lock, int $userId): void
+    {
+        // The lock screen can only be passed with a PIN, so sending a device
+        // that has no app lock there is a dead end of its own — the identity
+        // is unreadable because no lock was ever set up, not because one is
+        // engaged. Say so, and leave the reader where they can act.
+        if (! $lock->isEnabled($userId)) {
+            $this->flashMessage = Lang::get('mobile::pairing.errors.identity_needs_lock');
+
+            return;
+        }
+
+        // Flashed, not set on $this: navigate:false is a full page load into
+        // MobileLockScreen, which renders its own flashMessage. Setting this
+        // component's property sent the user to a PIN pad with no explanation
+        // — the same dead end, one screen further along.
+        $session->flash(self::LOCKED_IDENTITY_FLASH, Lang::get('mobile::pairing.errors.identity_locked'));
+        $this->redirect($urls->route('mobile.lock'), navigate: false);
     }
 
     // -------------------------------------------------------------------------
@@ -268,15 +298,17 @@ final class MobilePairingScan extends Component
         Session $session,
         LoggerInterface $logger,
         DeviceRegistryService $devices,
+        UrlGenerator $urls,
+        AppLockClientConfig $lock,
     ): void {
         $userId = $currentUser->user()->id;
 
-        // The typed word-code carries only the token - no initiator
-        // identity to seed a cross-device row from - so import supports
-        // the QR path only. Never a dead end: the copy directs the user
-        // back to the QR.
+        // A typed code carries the token and nothing else, so an import has
+        // no initiator identity to seed a cross-device row from. The import
+        // flow no longer offers the arm at all; this stays because a Livewire
+        // action is callable from the client whatever the UI renders.
         if ($this->importMode && $scannedPayload === null) {
-            $this->flashMessage = Lang::get('mobile::pairing.errors.import_needs_qr');
+            $this->flashMessage = Lang::get('mobile::pairing.errors.invalid_code');
 
             return;
         }
@@ -330,7 +362,7 @@ final class MobilePairingScan extends Component
                 // Self-minting one here would strand the peer's.
                 $gateway->enableSyncIdentityWithoutEpoch($userId, $session);
             } catch (LogicException) {
-                $this->flashMessage = Lang::get('mobile::pairing.errors.identity_locked');
+                $this->sendToUnlock($urls, $session, $lock, $userId);
 
                 return;
             }
@@ -350,9 +382,13 @@ final class MobilePairingScan extends Component
             // An identity that cannot be opened means locked, not a bad
             // code. Sending that user to the other device for a fresh QR is
             // advice that can never work.
-            $this->flashMessage = $gateway->hasUsableIdentity($userId, $session)
-                ? Lang::get('mobile::pairing.errors.invalid_code')
-                : Lang::get('mobile::pairing.errors.identity_locked');
+            if (! $gateway->hasUsableIdentity($userId, $session)) {
+                $this->sendToUnlock($urls, $session, $lock, $userId);
+
+                return;
+            }
+
+            $this->flashMessage = Lang::get('mobile::pairing.errors.invalid_code');
 
             return;
         }
@@ -500,6 +536,8 @@ final class MobilePairingScan extends Component
         MobileImportIntentGate $importIntent,
         DatabaseManager $db,
         LoggerInterface $logger,
+        UrlGenerator $urls,
+        AppLockClientConfig $lock,
     ): void {
         if ($this->pairingTokenId === '') {
             return;
@@ -512,7 +550,7 @@ final class MobilePairingScan extends Component
         // client state.
         $deviceId = $gateway->currentDeviceId($userId, $session);
         if ($deviceId === null) {
-            $this->flashMessage = Lang::get('mobile::pairing.errors.identity_locked');
+            $this->sendToUnlock($urls, $session, $lock, $userId);
 
             return;
         }

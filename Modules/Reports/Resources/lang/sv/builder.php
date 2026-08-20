@@ -140,4 +140,6 @@ return [
         'min_aria' => 'Minsta belopp',
         'max_aria' => 'Största belopp',
     ],
+
+    'other_movement' => 'Avgifter och justeringar (ej medräknade)',
 ];

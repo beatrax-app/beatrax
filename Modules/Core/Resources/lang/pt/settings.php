@@ -124,6 +124,13 @@ return [
         'open_releases' => 'Abrir a página de lançamentos →',
     ],
 
+    'privacy' => [
+        'heading' => 'Política de privacidade',
+        'body' => 'O Beatrax mantém as tuas finanças nos teus próprios dispositivos. A política explica o que isso significa, o que enviam as funcionalidades online opcionais e como remover os teus dados.',
+        'open' => 'Ler a política de privacidade →',
+        'url_hint' => 'Se a ligação não abrir, visita:',
+    ],
+
     'first_run_tour' => [
         'heading' => 'Visita da primeira utilização',
         'body' => 'Volta a iniciar o assistente de configuração se quiseres percorrer outra vez o fluxo introdutório.',

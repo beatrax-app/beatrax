@@ -124,6 +124,13 @@ return [
         'open_releases' => 'Öppna releasesidan →',
     ],
 
+    'privacy' => [
+        'heading' => 'Integritetspolicy',
+        'body' => 'Beatrax håller din ekonomi på dina egna enheter. Policyn förklarar vad det innebär, vad de valfria onlinefunktionerna skickar och hur du tar bort dina uppgifter.',
+        'open' => 'Läs integritetspolicyn →',
+        'url_hint' => 'Om länken inte öppnas, gå till:',
+    ],
+
     'first_run_tour' => [
         'heading' => 'Rundtur vid första starten',
         'body' => 'Starta installationsguiden igen om du vill gå igenom introduktionen en gång till.',

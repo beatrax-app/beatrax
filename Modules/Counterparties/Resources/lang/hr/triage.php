@@ -13,7 +13,7 @@ return [
     'all_caught_heading' => '🎉 Sve je riješeno — svaka protustranka je označena.',
     'back_to_index' => 'Natrag na protustranke →',
 
-    'meta' => ':count transakcija · zadnji put viđeno :date',
+    'meta' => ':count transakcija · zadnji put viđeno :date|:count transakcije · zadnji put viđeno :date|:count transakcija · zadnji put viđeno :date',
 
     'suggested_aria' => 'Predloženo podudaranje',
     'suggestion_medium' => '✨ Možda **:name** — srednja pouzdanost',

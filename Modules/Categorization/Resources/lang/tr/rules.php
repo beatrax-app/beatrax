@@ -6,6 +6,7 @@ return [
     'page_title' => 'Kurallar',
     'heading' => 'Kurallar',
     'intro' => 'İşlemleri içe aktarırken önceden kategorilendir. Kurallar her kaynağa uygulanır — banka, kart, PayPal ve e-posta fişleri.',
+    'device_local_note' => 'Kurallar bu cihazda kalır. Diğer cihazlarınızla paylaşılmaz.',
 
     'reapply' => 'Kuralları geçmişe yeniden uygula',
     'reapplying' => 'Yeniden uygulanıyor…',

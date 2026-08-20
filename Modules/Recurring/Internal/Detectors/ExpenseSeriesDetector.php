@@ -42,6 +42,7 @@ final class ExpenseSeriesDetector implements SeriesDetector
         private readonly Dispatcher $events,
         private readonly OccurrenceWriter $occurrences,
         private readonly SeriesRefresher $refresher,
+        private readonly MerchantDisplayName $merchantNames,
     ) {}
 
     public function detectForUser(User $user): void
@@ -258,10 +259,14 @@ final class ExpenseSeriesDetector implements SeriesDetector
         $now = $this->clock->now()->toDateTimeString();
         $connection = $this->db->connection();
 
+        // The clustering key is normalised; the review screen is not the
+        // place to show it back. See MerchantDisplayName.
+        $displayName = $this->merchantNames->forNormalized($user->id, $counterparty) ?? $counterparty;
+
         $newId = $connection->table('recurring_series')->insertGetId([
             'user_id' => $user->id,
             'direction' => Direction::Expense->value,
-            'detected_name' => $counterparty,
+            'detected_name' => $displayName,
             'state' => RecurringSeriesState::Pending->value,
             'cadence' => $detected->cadence->value,
             'latest_amount_minor' => $detected->latestAmountMinor,
@@ -282,7 +287,7 @@ final class ExpenseSeriesDetector implements SeriesDetector
             seriesId: $newId,
             userId: $user->id,
             direction: Direction::Expense->value,
-            detectedName: $counterparty,
+            detectedName: $displayName,
             cadence: $detected->cadence->value,
         ));
 

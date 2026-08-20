@@ -9,7 +9,6 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
-use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
@@ -30,7 +29,6 @@ use Throwable;
 /**
  * @link ../../../../../.docs/features/import/architecture.md#merchant-aliases
  */
-#[Layout('layouts.app')]
 final class AliasesSettingsPage extends Component
 {
     use WithFileUploads;

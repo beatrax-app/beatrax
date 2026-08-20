@@ -8,7 +8,7 @@ return [
     'migrate_prompt' => 'Prehajaš iz druge aplikacije za proračun?',
     'migrate_link' => 'Uvozi iz YNAB ali Actual',
     'subtitle' => 'Spusti sem izvoz iz banke, kartice ali PayPala ali datoteko z e-poštnim potrdilom.',
-    'mime_hint' => 'Ta datoteka ni videti kot podprt izvoz izpiska. Spusti sem bančni CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, PDF s kartičnim izpiskom, e-poštno sporočilo (.eml) ali arhiv nabiralnika (.mbox).',
+    'mime_hint' => 'Podprte datoteke: bančni CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, PDF izpiska kartice, e-poštno sporočilo (.eml) ali arhiv nabiralnika (.mbox).',
 
     'source_label' => 'Vir',
 

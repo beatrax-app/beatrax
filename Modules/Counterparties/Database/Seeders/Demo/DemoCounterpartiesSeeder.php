@@ -6,6 +6,7 @@ namespace Modules\Counterparties\Database\Seeders\Demo;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Contracts\CounterpartyResolver;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
@@ -63,13 +64,14 @@ final class DemoCounterpartiesSeeder
     // known-institution seed list), so the type-chip strip shows all six
     // legal type buckets. updateOrCreate on (user_id, slug) keeps re-seeds idempotent.
     /**
-     * @var list<array{type: string, slug: string, displayName: string, iban: ?string, merchantName: ?string}>
+     * @var list<array{type: string, slug: string, displayName: ?string, displayNameKey: ?string, iban: ?string, merchantName: ?string}>
      */
     private const EXTRA_COUNTERPARTIES = [
         [
             'type' => 'bank',
             'slug' => 'asn-bank',
             'displayName' => 'ASN Bank',
+            'displayNameKey' => null,
             'iban' => 'NL57ASNB0123456789',
             'merchantName' => null,
         ],
@@ -77,20 +79,23 @@ final class DemoCounterpartiesSeeder
             'type' => 'bank',
             'slug' => 'international-card-services',
             'displayName' => 'International Card Services',
+            'displayNameKey' => null,
             'iban' => 'NL09ABNA0596780870',
             'merchantName' => null,
         ],
         [
             'type' => CounterpartyType::SelfAccount->value,
             'slug' => 'self-asn-checking',
-            'displayName' => 'My ASN checking account',
+            'displayName' => null,
+            'displayNameKey' => 'counterparty_own_bank_account',
             'iban' => 'NL57ASNB0123456789',
             'merchantName' => null,
         ],
         [
             'type' => CounterpartyType::SelfAccount->value,
             'slug' => 'self-paypal-wallet',
-            'displayName' => 'My PayPal wallet',
+            'displayName' => null,
+            'displayNameKey' => 'counterparty_own_paypal',
             'iban' => 'PAYPAL-DEMO-1',
             'merchantName' => null,
         ],
@@ -98,6 +103,7 @@ final class DemoCounterpartiesSeeder
             'type' => CounterpartyType::Personal->value,
             'slug' => 'maria-van-buren',
             'displayName' => 'Maria van Buren',
+            'displayNameKey' => null,
             'iban' => 'NL51ABNA0987654321',
             'merchantName' => null,
         ],
@@ -105,6 +111,7 @@ final class DemoCounterpartiesSeeder
             'type' => CounterpartyType::Personal->value,
             'slug' => 'jeroen-de-vries',
             'displayName' => 'Jeroen de Vries',
+            'displayNameKey' => null,
             'iban' => 'NL92RABO0001234567',
             'merchantName' => null,
         ],
@@ -136,7 +143,11 @@ final class DemoCounterpartiesSeeder
                 ],
                 [
                     'type' => $row['type'],
-                    'display_name' => $row['displayName'],
+                    // A bank and a person are named the same in every
+                    // language; "my current account" is not.
+                    'display_name' => $row['displayNameKey'] === null
+                        ? (string) $row['displayName']
+                        : Lang::get('core::demo.'.$row['displayNameKey']),
                     'iban' => $row['iban'],
                     'merchant_name' => $row['merchantName'],
                     'metadata' => null,

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__.'/nativephp_scaffold_root.php';
+
 /*
  * Keep the on-device database out of Google's cloud backup.
  *
@@ -27,7 +29,7 @@ declare(strict_types=1);
  * Spec: E5-R23
  */
 
-$root = __DIR__.'/../mobile-app/nativephp/android/app/src/main';
+$root = beatraxScaffoldPath('android/app/src/main') ?? '';
 $manifest = $root.'/AndroidManifest.xml';
 
 if (! is_file($manifest)) {
@@ -136,7 +138,7 @@ fwrite(STDOUT, $androidDone
 // Application Support is backed up to iCloud by default, and that is where the
 // database, the keyring and the staged secrets live. iOS has no manifest flag;
 // the exclusion is a per-URL resource value, set as each directory is created.
-$app = __DIR__.'/../mobile-app/nativephp/ios/NativePHP/NativePHPApp.swift';
+$app = beatraxScaffoldPath('ios/NativePHP/NativePHPApp.swift') ?? '';
 
 if (! is_file($app)) {
     fwrite(STDOUT, "nativephp_exclude_data_from_backup: no iOS scaffold yet — skipping that half.\n");

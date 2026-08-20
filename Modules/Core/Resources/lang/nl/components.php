@@ -48,4 +48,15 @@ return [
         'hour' => 'Uur',
         'minute' => 'Minuut',
     ],
+
+    'veil_locked' => 'App vergrendeld',
+
+    'chart' => [
+        'donut' => 'Ringdiagram',
+        'bar' => 'Staafdiagram',
+        'line' => 'Lijndiagram',
+        'range_area' => 'Bandbreedtediagram',
+    ],
+
+    'sheet_untitled' => 'Dialoogvenster',
 ];

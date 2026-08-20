@@ -1871,6 +1871,13 @@ it('keeps PaymentType-unique string literals inside the PaymentType enum (noPaym
         if (str_ends_with($path, 'Modules/Sync/Internal/Pairing/Bip39WordList.php')) {
             continue;
         }
+        // The chip label translations are keyed by the enum's own values, and
+        // PaymentType::chipLabel() builds that key from $this->value — no
+        // caller ever types one. Translation data, like the migration
+        // fixtures above, is not a leaked usage.
+        if (str_ends_with($path, '/payment_type.php') && str_contains($path, '/Resources/lang/')) {
+            continue;
+        }
 
         $contents = (string) file_get_contents($path);
         $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;

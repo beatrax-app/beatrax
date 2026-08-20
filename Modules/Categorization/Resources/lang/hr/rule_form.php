@@ -11,6 +11,11 @@ return [
     'match_any' => 'Podudaranje s bilo kojim uvjetom',
 
     'condition_label' => 'Uvjet :number',
+    'between_and' => 'i',
+    'field_description' => 'Opis',
+    'field_counterparty' => 'Protustranka',
+    'field_amount' => 'Iznos',
+    'field_date' => 'Datum',
     'condition_field_aria' => 'Polje uvjeta :number',
     'condition_operator_aria' => 'Operator uvjeta :number',
     'condition_value_aria' => 'Vrijednost uvjeta :number',

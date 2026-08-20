@@ -44,6 +44,10 @@
             'always-show-touch' => $showAlways,
         ])
         aria-label="{{ Lang::get('tax::badge.tag_aria') }}"
+        title="{{ Lang::get('tax::badge.tag') }}"
         data-testid="tax-badge-untagged-{{ $txId }}"
-    >{{ Lang::get('tax::badge.tag') }}</button>
+    {{-- A label per row costs more width than a transaction row has on a
+         phone. The word stays for screen readers and as the tooltip, and
+         returns at sm: where there is room for it. --}}
+    ><span aria-hidden="true" class="sm:hidden">🏷</span><span class="sr-only sm:not-sr-only">{{ Lang::get('tax::badge.tag') }}</span></button>
 @endif

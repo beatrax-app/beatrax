@@ -5040,6 +5040,41 @@ mark {
 }
 
 /*
+ * A 44px floor under every button a finger can reach — Apple's minimum, and
+ * what Android's own guidance rounds to 48dp for the same reason.
+ *
+ * Measured on device before this rule: 29 of 30 routes carried buttons under
+ * it. Search chip toggles were 19px tall, the transaction status pill 22px,
+ * the /rules row actions 23px, report chips 28px, the /settings and /cash
+ * segment buttons 30px, triage pills 35px, and the h-10 icon buttons on the
+ * dashboard and /budgets 40px.
+ *
+ * min-height rather than height, so a button that is already taller keeps its
+ * size; min-width so a single-glyph icon button is not a 44x20 sliver. Inline
+ * text links are deliberately excluded — a link inside a sentence cannot be
+ * 44px without breaking the line it sits in, and the guideline exempts them.
+ *
+ * The file picker is matched through the input it wraps: the real control is
+ * hidden inside the label, so the label IS the button to a finger.
+ *
+ * Coarse pointers only and unlayered, for the same two reasons as the rule
+ * above: the desktop density the design specifies is untouched, and `h-10` is
+ * a utility that would otherwise win.
+ */
+@media (pointer: coarse) {
+    button,
+    summary,
+    [role='button'],
+    input[type='button'],
+    input[type='submit'],
+    input[type='reset'],
+    label:has(> input[type='file']) {
+        min-height: 44px;
+        min-width: 44px;
+    }
+}
+
+/*
  * The rules table, restacked below the tablet breakpoint.
  *
  * Six columns — priority, conditions, actions, hits, created, row actions —

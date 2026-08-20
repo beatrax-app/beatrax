@@ -6,6 +6,7 @@ return [
     'page_title' => 'Pravila',
     'heading' => 'Pravila',
     'intro' => 'Unapred kategorizuj transakcije pri uvozu. Pravila važe za svaki izvor — banku, karticu, PayPal i potvrde iz e-pošte.',
+    'device_local_note' => 'Pravila ostaju na ovom uređaju. Ne dele se sa vašim drugim uređajima.',
 
     'reapply' => 'Ponovo primeni pravila na istoriju',
     'reapplying' => 'Ponovna primena…',

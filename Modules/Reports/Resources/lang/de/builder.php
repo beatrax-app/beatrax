@@ -140,4 +140,6 @@ return [
         'min_aria' => 'Mindestbetrag',
         'max_aria' => 'Höchstbetrag',
     ],
+
+    'other_movement' => 'Gebühren und Korrekturen (oben nicht enthalten)',
 ];

@@ -6,6 +6,7 @@ return [
     'page_title' => 'Reguły',
     'heading' => 'Reguły',
     'intro' => 'Wstępnie kategoryzuj transakcje podczas importu. Reguły działają dla każdego źródła — banku, karty, PayPal i paragonów z e-maili.',
+    'device_local_note' => 'Reguły pozostają na tym urządzeniu. Nie są udostępniane innym Twoim urządzeniom.',
 
     'reapply' => 'Zastosuj reguły ponownie do historii',
     'reapplying' => 'Ponowne stosowanie…',

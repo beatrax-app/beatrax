@@ -6,6 +6,7 @@ return [
     'page_title' => 'Regole',
     'heading' => 'Regole',
     'intro' => "Pre-categorizza le transazioni durante l'importazione. Le regole si applicano a ogni fonte — banca, carta, PayPal e ricevute email.",
+    'device_local_note' => 'Le regole restano su questo dispositivo. Non vengono condivise con gli altri tuoi dispositivi.',
 
     'reapply' => 'Riapplica le regole alla cronologia',
     'reapplying' => 'Riapplicazione…',

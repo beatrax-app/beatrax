@@ -11,6 +11,11 @@ return [
     'match_any' => 'Съвпадение с което и да е условие',
 
     'condition_label' => 'Условие :number',
+    'between_and' => 'и',
+    'field_description' => 'Описание',
+    'field_counterparty' => 'Контрагент',
+    'field_amount' => 'Сума',
+    'field_date' => 'Дата',
     'condition_field_aria' => 'Поле на условие :number',
     'condition_operator_aria' => 'Оператор на условие :number',
     'condition_value_aria' => 'Стойност на условие :number',

@@ -49,4 +49,15 @@ return [
         'hour' => 'Tunti',
         'minute' => 'Minuutti',
     ],
+
+    'veil_locked' => 'Sovellus lukittu',
+
+    'chart' => [
+        'donut' => 'Rengaskaavio',
+        'bar' => 'Pylväskaavio',
+        'line' => 'Viivakaavio',
+        'range_area' => 'Vaihteluvälikaavio',
+    ],
+
+    'sheet_untitled' => 'Valintaikkuna',
 ];

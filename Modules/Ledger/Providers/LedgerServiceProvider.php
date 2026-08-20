@@ -11,11 +11,13 @@ use Modules\Ledger\Internal\Console\RederiveFingerprintsCommand;
 use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
 use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
 use Modules\Ledger\Internal\Services\FingerprintRederiveService;
+use Modules\Ledger\Internal\Sync\NullTransactionSyncCapture;
 use Modules\Ledger\Public\Actions\ReassignCounterparty;
 use Modules\Ledger\Public\Actions\RecordTransactions;
 use Modules\Ledger\Public\Actions\SaveTransactionSplit;
 use Modules\Ledger\Public\Actions\SetTransactionNote;
 use Modules\Ledger\Public\Actions\UpdateTransactionCategory;
+use Modules\Ledger\Public\Contracts\CapturesTransactionsForSync;
 use Modules\Ledger\Public\Contracts\ReassignsCounterparty;
 use Modules\Ledger\Public\Contracts\RecordsStatementSummary;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
@@ -40,6 +42,10 @@ final class LedgerServiceProvider extends ServiceProvider
 
     public function register(): void
     {
+        // Overridden by Sync when it is loaded; this default keeps every
+        // transaction writer resolvable on a build without sync.
+        $this->app->bindIf(CapturesTransactionsForSync::class, NullTransactionSyncCapture::class);
+
         $this->app->bind(RecordsTransactions::class, RecordTransactions::class);
         $this->app->bind(UpdatesTransactionCategory::class, UpdateTransactionCategory::class);
         $this->app->bind(RecordsStatementSummary::class, StatementSummaryWriter::class);
