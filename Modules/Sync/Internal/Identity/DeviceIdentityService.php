@@ -28,9 +28,49 @@ final class DeviceIdentityService
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
         private readonly DeviceNameDetector $nameDetector,
+        private readonly DeviceIdentityLoader $loader,
         private readonly SodiumPrimitives $sodium,
         private readonly Dispatcher $events,
     ) {}
+
+    // Puts back the self-row for an identity whose key-file is still on disk.
+    // Keyed on device_id so a row that survived is refreshed rather than
+    // duplicated, and confirmed_at is set because deviceKeys() only hands a
+    // peer the keys of confirmed devices — an unconfirmed self-row would keep
+    // this device's own entries unverifiable.
+    private function restoreSelfRow(int $userId, DeviceIdentityDto $identity): void
+    {
+        $now = $this->clock->now()->toIso8601String();
+
+        $row = [
+            'name' => $this->nameDetector->detect(),
+            'ed25519_public_key_hex' => $identity->ed25519PublicKeyHex,
+            'x25519_public_key_hex' => $identity->x25519PublicKeyHex,
+            'safety_number_words' => '',
+            'is_self' => 1,
+            'paired_at' => $identity->createdAt,
+            'confirmed_at' => $identity->createdAt,
+            'updated_at' => $now,
+        ];
+
+        $existing = $this->db->connection()->table('device_registry')
+            ->where('user_id', $userId)
+            ->where('device_id', $identity->deviceId);
+
+        if ((clone $existing)->exists()) {
+            $existing->update($row);
+
+            return;
+        }
+
+        $this->db->connection()->table('device_registry')->insert([
+            ...$row,
+            'user_id' => $userId,
+            'device_id' => $identity->deviceId,
+            'last_seen_at' => null,
+            'created_at' => $identity->createdAt,
+        ]);
+    }
 
     // Generates the device identity, encrypts the key-file, and persists the
     // device_registry self-row. Returns the in-memory identity DTO (which
@@ -44,6 +84,21 @@ final class DeviceIdentityService
         $kek = $this->appLockKeyService->release($session);
         if ($kek === null) {
             throw new \LogicException('Cannot generate device identity: app-lock not unlocked.');
+        }
+
+        // Switching sync off and on again MUST NOT mint a second identity.
+        // Every op this device has ever written is signed by the identity
+        // that wrote it, and a peer verifies each entry against the sender's
+        // registry, so replacing the key-file orphans the entire history: the
+        // device keeps its data and quietly loses the ability to hand it to
+        // anyone. Restoring the self-row from the key-file that is already on
+        // disk keeps the device the same device.
+        $existing = $this->loader->load($userId, $session);
+        if ($existing !== null) {
+            $this->restoreSelfRow($userId, $existing);
+            $this->events->dispatch(new DeviceSyncEnabled($userId));
+
+            return $existing;
         }
 
         try {

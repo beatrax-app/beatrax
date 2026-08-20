@@ -148,3 +148,40 @@ it('it_throws_without_app_lock_kek', function (): void {
     expect(fn () => $service->generateAndPersist((int) $user->id, $session))
         ->toThrow(LogicException::class);
 });
+
+it('keeps the same identity when sync is switched on a second time', function (): void {
+    $user = identityUser('identity-continuity');
+
+    /** @var DeviceIdentityService $service */
+    $service = $this->app->make(DeviceIdentityService::class);
+
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+
+    $first = $service->generateAndPersist((int) $user->id, $session);
+
+    // Turning sync off clears the registry, and re-enabling it used to mint a
+    // brand-new identity over the top of the key-file. Every op this device
+    // had ever signed was then authored by a device the registry no longer
+    // held, so each peer dropped the lot as missing_device_key: the desktop
+    // handed a new phone thousands of entries and it applied none of them.
+    $this->app->make(DatabaseManager::class)->connection()
+        ->table('device_registry')
+        ->where('user_id', $user->id)
+        ->delete();
+
+    $second = $service->generateAndPersist((int) $user->id, $session);
+
+    expect($second->deviceId)->toBe($first->deviceId)
+        ->and($second->ed25519PublicKeyHex)->toBe($first->ed25519PublicKeyHex);
+
+    $selfRow = $this->app->make(DatabaseManager::class)->connection()
+        ->table('device_registry')
+        ->where('user_id', $user->id)
+        ->where('is_self', 1)
+        ->first();
+
+    expect($selfRow)->not->toBeNull('re-enabling sync left the device with no self-row');
+    expect($selfRow->device_id)->toBe($first->deviceId);
+    expect($selfRow->confirmed_at)->not->toBeNull('an unconfirmed self-row keeps this device out of deviceKeys()');
+});

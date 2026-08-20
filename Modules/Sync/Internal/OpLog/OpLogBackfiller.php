@@ -119,9 +119,18 @@ final readonly class OpLogBackfiller
         return $captured;
     }
 
-    // Which of THIS chunk's rows already carry a create op, as a lookup keyed
-    // by pk. Asked per chunk rather than per table so neither the result set
-    // nor the IN list grows with the size of the table.
+    // Which of THIS chunk's rows already carry a create op a peer could
+    // actually verify, as a lookup keyed by pk. Asked per chunk rather than
+    // per table so neither the result set nor the IN list grows with the size
+    // of the table.
+    //
+    // Coverage is counted only for ops whose author is still a confirmed
+    // device, mirroring the key map DeviceRegistryService::deviceKeys() hands
+    // the wire. An op signed by an identity the registry no longer holds is
+    // dropped as missing_device_key by every receiving peer, so treating it as
+    // coverage retires the row from the backfill while leaving it unable to
+    // replicate: the desktop sends thousands of entries and the phone applies
+    // none of them.
     /**
      * @param  Collection<int, \stdClass>  $rows
      * @return array<string, true>
@@ -145,6 +154,12 @@ final readonly class OpLogBackfiller
             ->where('table_name', $table)
             ->where('op_type', OpType::CreateRow->value)
             ->whereIn('pk', $pks)
+            ->whereIn('device_id', static function (Builder $query) use ($userId): void {
+                $query->select('device_id')
+                    ->from('device_registry')
+                    ->where('user_id', $userId)
+                    ->whereNotNull('confirmed_at');
+            })
             ->distinct()
             ->pluck('pk');
 
