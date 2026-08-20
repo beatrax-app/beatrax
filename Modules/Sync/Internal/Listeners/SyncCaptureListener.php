@@ -224,10 +224,18 @@ final class SyncCaptureListener
     }
 
     // One op per touched column, so two devices editing different fields of
-    // the same row both keep their change.
+    // the same row both keep their change. A field named in incrementFields
+    // carries this device's delta and is resolved against what this device has
+    // already published, because a g_counter op must carry a per-device total.
     private function writeEntityEdit(EntityMutated $event, OpLogWriter $writer): void
     {
         foreach ($event->dirtyFields as $field => $value) {
+            if (in_array($field, $event->incrementFields, true) && is_int($value)) {
+                $writer->writeIncrement($event->table, $event->pk, $field, $value);
+
+                continue;
+            }
+
             $writer->writeSet($event->table, $event->pk, $field, $value);
         }
     }

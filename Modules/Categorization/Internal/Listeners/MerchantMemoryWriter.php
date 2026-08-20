@@ -89,6 +89,33 @@ final class MerchantMemoryWriter
                 'last_seen_at' => $now,
                 'updated_at' => $now,
             ]);
+
+        $memoryId = $connection
+            ->table('merchant_memories')
+            ->where('user_id', $userId)
+            ->where('merchant_id', $merchantId)
+            ->where('category_id', $categoryId)
+            ->value('id');
+
+        if (! is_int($memoryId) && ! is_string($memoryId)) {
+            return;
+        }
+
+        // The increment used to travel nowhere, so two devices agreed on which
+        // merchants they had seen and disagreed on how often — and the count is
+        // what breaks the tie when a merchant carries more than one remembered
+        // category. `1` is this device's delta, not the merged column.
+        $this->events->dispatch(new EntityMutated(
+            table: 'merchant_memories',
+            pk: $memoryId,
+            userId: $userId,
+            mutationType: 'edit',
+            dirtyFields: [
+                'occurrence_count' => 1,
+                'last_seen_at' => $now,
+            ],
+            incrementFields: ['occurrence_count'],
+        ));
     }
 
     // The merchant this categorisation should remember against, or null when

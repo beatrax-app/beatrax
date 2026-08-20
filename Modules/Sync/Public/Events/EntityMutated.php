@@ -17,6 +17,10 @@ final readonly class EntityMutated
      *                                             every column for a create,
      *                                             the changed ones for an
      *                                             edit, empty for a delete.
+     * @param  list<string>  $incrementFields  Fields of $dirtyFields whose
+     *                                         value is the amount this device
+     *                                         just added, not the new column
+     *                                         value. For g_counter fields only.
      */
     public function __construct(
         public string $table,
@@ -24,5 +28,6 @@ final readonly class EntityMutated
         public int $userId,
         public string $mutationType,
         public array $dirtyFields = [],
+        public array $incrementFields = [],
     ) {}
 }
