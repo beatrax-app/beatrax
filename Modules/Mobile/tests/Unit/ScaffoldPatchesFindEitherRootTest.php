@@ -31,9 +31,16 @@ function scaffoldPatchScripts(): array
 
 function scaffoldScriptsDirectory(): string
 {
-    $here = base_path('scripts');
+    // Probed by the file, not the directory: the mobile-app composer root has
+    // a scripts/ of its own carrying two shell scripts and none of these, so
+    // is_dir() answered yes and every read then failed.
+    foreach ([base_path('scripts'), base_path('../scripts')] as $candidate) {
+        if (is_file($candidate.DIRECTORY_SEPARATOR.'nativephp_scaffold_root.php')) {
+            return $candidate;
+        }
+    }
 
-    return is_dir($here) ? $here : base_path('../scripts');
+    return base_path('scripts');
 }
 
 it('resolves no scaffold path by hand any more', function (): void {
