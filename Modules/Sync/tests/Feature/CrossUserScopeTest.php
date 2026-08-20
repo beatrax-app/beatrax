@@ -398,3 +398,97 @@ it('cross-user scope holds even when entry references u2 pk but uses u1 userId i
 
     expect($u2CatIdAfter)->toBe($u2CatIdBefore);
 });
+
+it('refuses a created row whose account belongs to the other household member', function (): void {
+    /*
+     * Sync carries a row's local autoincrement id as its cross-device
+     * identity. A fresh phone only ever held ONE user's rows, so its accounts
+     * ran 1,2,3 and the next it minted was 4 — while on the desktop id 4
+     * already belonged to the other member of the household.
+     *
+     * Adding a cash entry on the phone therefore sent the desktop a
+     * transaction pointing at somebody else's account. It was written, linked,
+     * and nothing was quarantined: the only trace was the wrong name on a row.
+     */
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $u1 = (int) $this->u1->id;
+
+    $theirAccountId = (int) $db->connection()->table('accounts')
+        ->where('user_id', $this->u2->id)
+        ->value('id');
+
+    expect($theirAccountId)->toBeGreaterThan(0);
+
+    // u1's OWN import run, so account_id is the only thing pointing elsewhere
+    // and the create is otherwise complete — a create missing a required
+    // column is refused before it ever reaches the ownership gate.
+    $ourRunId = (int) $db->connection()->table('import_runs')
+        ->where('user_id', $u1)
+        ->value('id');
+
+    $fields = [
+        'type' => json_encode('expense'),
+        'account_id' => (string) $theirAccountId,
+        'amount_minor' => '-1250',
+        'currency' => json_encode('EUR'),
+        'settled_amount_minor' => '-1250',
+        'settled_currency' => json_encode('EUR'),
+        'counterparty_normalized' => json_encode('bakkerij'),
+        'normalization_version' => '3',
+        'source_format' => json_encode('asn-csv'),
+        'import_run_id' => (string) $ourRunId,
+        'source_row_index' => '9',
+        'fingerprint' => json_encode(hash('sha256', 'cash-collision')),
+        'fingerprint_version' => '3',
+        'posted_at' => json_encode('2026-06-14'),
+        'booked_at' => json_encode('2026-06-14 09:00:00'),
+    ];
+
+    $entries = [];
+    $counter = 0;
+    foreach ($fields as $field => $value) {
+        $stub = new OpLogEntry(
+            table: 'transactions',
+            pk: 999_001,
+            field: $field,
+            value: $value,
+            hlcL: 5000,
+            hlcC: $counter,
+            deviceId: 'device-scope',
+            opType: OpType::CreateRow,
+            signature: '',
+            userId: $u1,
+        );
+
+        $entries[] = new OpLogEntry(
+            table: 'transactions',
+            pk: 999_001,
+            field: $field,
+            value: $value,
+            hlcL: 5000,
+            hlcC: $counter,
+            deviceId: 'device-scope',
+            opType: OpType::CreateRow,
+            signature: $this->signer->sign($stub->signingPayload(), $this->sk),
+            userId: $u1,
+        );
+
+        $counter++;
+    }
+
+    (new OpLogReplayer($db, $this->deviceKeys))->replay($entries, $u1);
+
+    $written = $db->connection()->table('transactions')->where('id', 999_001)->first();
+
+    expect($written)->toBeNull('a transaction was linked to another user\'s account');
+
+    $quarantined = $db->connection()->table('op_log_quarantine')
+        ->where('user_id', $u1)
+        ->where('table_name', 'transactions')
+        ->where('pk', '999001')
+        ->count();
+
+    expect($quarantined)->toBeGreaterThan(0, 'the cross-user reference was dropped without a trace');
+});

@@ -181,6 +181,19 @@ final readonly class OpLogEntryApplier
 
         $payload = $this->buildCreatePayload($table, $pk, $fields, $userId, $now);
 
+        // The ids a row NAMES are minted per device, so one can land on a
+        // different household member's row entirely. Refuse rather than write
+        // a transaction pointing at somebody else's account.
+        if ($payload !== null && ! $this->ownership->referencesBelongToUser($table, $payload, $userId)) {
+            $firstField = reset($fields);
+
+            if ($firstField !== false) {
+                $this->quarantine->record($firstField[0], QuarantineReason::CrossUser, $now);
+            }
+
+            return null;
+        }
+
         // A child row carries no user_id, so nothing above proves it belongs
         // here: without this, an op could attach a condition to ANOTHER
         // user's rule simply by naming its id.

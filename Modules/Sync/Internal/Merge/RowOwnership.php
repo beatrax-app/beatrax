@@ -23,6 +23,25 @@ final readonly class RowOwnership
         'rule_actions' => ['rule_id', 'categorization_rules'],
     ];
 
+    // Owner-scoped references on covered tables. Sync carries a row's local
+    // autoincrement id as its cross-device identity, so an id minted on one
+    // device can name a completely different row on another — a phone whose
+    // accounts ran 1,2,3 created id 4, and on the desktop id 4 already
+    // belonged to the OTHER household member. The transaction arrived and
+    // pointed at their account, silently.
+    private const OWNED_REFERENCES = [
+        'transactions' => [
+            'account_id' => 'accounts',
+            'category_id' => 'categories',
+            'counterparty_id' => 'counterparties',
+            'import_run_id' => 'import_runs',
+        ],
+        'transaction_splits' => ['transaction_id' => 'transactions', 'category_id' => 'categories'],
+        'pot_movements' => ['pot_id' => 'pots'],
+        'merchant_memories' => ['merchant_id' => 'merchants', 'category_id' => 'categories'],
+        'tax_transaction_tags' => ['transaction_id' => 'transactions'],
+    ];
+
     public function __construct(
         private DatabaseManager $db,
     ) {}
@@ -94,5 +113,40 @@ final readonly class RowOwnership
                 ->where('id', $parentId)
                 ->where('user_id', $userId)
                 ->exists();
+    }
+
+    // Whether every owner-scoped id this row names belongs to the same user.
+    // parentBelongsToUser() answers for the row itself and returns true the
+    // moment a table carries its own user_id, so a row that IS the user's
+    // while pointing at somebody else's account passed unchallenged.
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    public function referencesBelongToUser(string $table, array $payload, int $userId): bool
+    {
+        foreach (self::OWNED_REFERENCES[$table] ?? [] as $column => $referencedTable) {
+            $referenced = $payload[$column] ?? null;
+
+            // A null reference is the column being unset, not a bad one.
+            if ($referenced === null) {
+                continue;
+            }
+
+            if (! is_int($referenced) && ! is_string($referenced)) {
+                return false;
+            }
+
+            $belongs = $this->db->connection()
+                ->table($referencedTable)
+                ->where('id', $referenced)
+                ->where('user_id', $userId)
+                ->exists();
+
+            if (! $belongs) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
