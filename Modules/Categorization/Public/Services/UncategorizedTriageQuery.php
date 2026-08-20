@@ -11,6 +11,7 @@ use Modules\Categorization\Public\Dto\TriageRow;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Core\Public\Support\Fmt;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -104,7 +105,7 @@ final class UncategorizedTriageQuery
 
         return new TriageRow(
             transactionId: self::toInt($row->id),
-            bookedAt: $bookedAt->format('d-m-Y'),
+            bookedAt: Fmt::shortDate($bookedAt),
             counterpartyName: $counterpartyName,
             amountMinor: self::toInt($row->amount_minor),
             currency: self::toString($row->currency),

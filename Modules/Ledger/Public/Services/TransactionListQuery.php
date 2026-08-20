@@ -11,6 +11,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Core\Public\Support\Fmt;
 use Modules\Ledger\Public\Dto\TransactionListPage;
 use Modules\Ledger\Public\Dto\TransactionRowDto;
 use Modules\Ledger\Public\ValueObjects\Money;
@@ -187,7 +188,7 @@ final class TransactionListQuery
 
         return new TransactionRowDto(
             id: self::toInt($row->id),
-            bookedAt: $bookedAt->format('d-m-Y'),
+            bookedAt: Fmt::shortDate($bookedAt),
             counterpartyName: $counterpartyName,
             categoryId: $categoryId,
             categoryName: $categoryName,
