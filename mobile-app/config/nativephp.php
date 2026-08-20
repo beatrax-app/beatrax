@@ -93,7 +93,7 @@ return [
      * and must be declared here.
      */
     'permissions' => [
-        'NSLocalNetworkUsageDescription' => 'beatrax uses your local network to sync your finances directly with your other beatrax devices — nothing ever leaves your home network for this.',
+        'NSLocalNetworkUsageDescription' => 'Beatrax uses your local network to sync your finances directly with your other Beatrax devices — nothing ever leaves your home network for this.',
     ],
 
     /*
