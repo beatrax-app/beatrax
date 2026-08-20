@@ -96,8 +96,13 @@ final class CurrencyModeApplier
 
         /** @var array<string, array{key: int|string|null, label: string, amount: int}> $merged */
         $merged = [];
-        $hasExcluded = false;
-        $excludedCount = 0;
+
+        // A set, not a tally. The row loop counted once per ROW and the fee
+        // loop once per CURRENCY, so a report with 12 unconvertible USD rows
+        // and USD fees reported 13. A rate is missing per currency, which is
+        // the only unit both loops can agree on.
+        /** @var array<string, true> $excludedCurrencies */
+        $excludedCurrencies = [];
 
         foreach ($currencies as $currency) {
             /** @var list<ReportResultRow> $rows */
@@ -112,8 +117,7 @@ final class CurrencyModeApplier
                 // available at all — exclude + count, exactly like
                 // NetWorthSeriesQuery's own never-1:1 guard.
                 if ($conversion->converted->currency() !== $baseCurrency) {
-                    $hasExcluded = true;
-                    $excludedCount++;
+                    $excludedCurrencies[$currency] = true;
 
                     continue;
                 }
@@ -146,12 +150,10 @@ final class CurrencyModeApplier
         foreach ($otherTotalsByCurrency as $currency => $amount) {
             $conversion = $this->fx->convertToBase(Money::ofMinor($amount, $currency), $baseCurrency);
             if ($conversion->converted->currency() !== $baseCurrency) {
-                // Counted, not just flagged. The banner reads ":count not
-                // converted", so raising the flag without the count would
-                // render a literal zero beside a warning that something was
-                // dropped. The row loop above counts the same way.
-                $hasExcluded = true;
-                $excludedCount++;
+                // Counted, not just flagged: the banner reads ":count not
+                // converted", so raising the flag alone would render a literal
+                // zero beside a warning that something was dropped.
+                $excludedCurrencies[(string) $currency] = true;
 
                 continue;
             }
@@ -162,8 +164,8 @@ final class CurrencyModeApplier
             rows: $resultRows,
             totalMinor: $total,
             currency: $baseCurrency,
-            hasExcludedAccounts: $hasExcluded,
-            accountsWithoutRate: $excludedCount,
+            hasExcludedAccounts: $excludedCurrencies !== [],
+            accountsWithoutRate: count($excludedCurrencies),
             otherMovementMinor: $other,
         );
     }
