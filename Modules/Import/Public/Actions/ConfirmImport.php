@@ -86,10 +86,13 @@ final class ConfirmImport implements ConfirmsImports
         }
 
         // Promote WITHOUT an outer transaction: the recorder commits in
-        // bounded, idempotent per-chunk transactions; wrapping it here
-        // would demote those to savepoints and re-form the year-sized
-        // transaction this design avoids. A crash-then-rerun is safe.
-        $recorderResult = ($this->recorder)($canonical, $user);
+        // bounded, idempotent per-chunk transactions; wrapping it here would
+        // demote those to savepoints. A crash-then-rerun is safe.
+
+        // captureForSync: false — this action captures run, accounts and
+        // transactions itself below, parents first. Capturing in the recorder
+        // too wrote every imported row to the op log twice.
+        $recorderResult = ($this->recorder)($canonical, $user, false);
 
         // The pipeline already filters fingerprint-duplicates out of
         // `$canonical`; the recorder's own `duplicates` only catches

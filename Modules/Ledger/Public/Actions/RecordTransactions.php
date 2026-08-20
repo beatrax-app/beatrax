@@ -38,7 +38,10 @@ final class RecordTransactions implements RecordsTransactions
         private readonly CapturesTransactionsForSync $syncCapture,
     ) {}
 
-    public function __invoke(iterable $canonical, User $user): RecordResult
+    // $captureForSync is the import path's opt-out, and only its: that
+    // caller captures the run and its accounts before the transactions, so
+    // capturing here as well wrote every imported row twice.
+    public function __invoke(iterable $canonical, User $user, bool $captureForSync = true): RecordResult
     {
         /** @var list<int> $insertedIds */
         $insertedIds = [];
@@ -77,10 +80,12 @@ final class RecordTransactions implements RecordsTransactions
                 sourceFormats: $distinctFormats,
             ));
 
-            // Post-commit, and here rather than at each caller: imports, the
-            // cash book, e-mail receipts and the migration pipeline all record
-            // through this one action, and only the import path was covered.
-            $this->syncCapture->captureTransactions($insertedIds, $user);
+            // Post-commit, and here rather than at each caller: the cash book,
+            // e-mail receipts and the migration pipeline all record through
+            // this one action, and none of them was covered.
+            if ($captureForSync) {
+                $this->syncCapture->captureTransactions($insertedIds, $user);
+            }
         }
 
         return new RecordResult(inserted: $inserted, duplicates: $duplicates);

@@ -51,16 +51,13 @@ final readonly class OpLogBackfiller
         private SessionFactory $session,
     ) {}
 
-    // Returns the number of rows captured. Idempotent by construction: a
-    // user with any op-log history has already been captured (or has been
-    // syncing all along), and re-running would duplicate every row.
+    // Returns the number of rows captured. Idempotent row-wise: a row already
+    // carrying a create op is skipped. Skipping the whole backfill when the
+    // user had ANY entry meant one import between enabling sync and pairing
+    // kept every older account, budget, goal and pot off the new peer.
     public function backfill(int $userId, OpLogWriter $writer): int
     {
         $connection = $this->db->connection();
-
-        if ($this->hasHistory($connection, $userId)) {
-            return 0;
-        }
 
         $captured = 0;
 
@@ -121,11 +118,41 @@ final readonly class OpLogBackfiller
         return $captured;
     }
 
-    private function hasHistory(Connection $connection, int $userId): bool
+    // Which of THIS chunk's rows already carry a create op, as a lookup keyed
+    // by pk. Asked per chunk rather than per table so neither the result set
+    // nor the IN list grows with the size of the table.
+    /**
+     * @param  \Illuminate\Support\Collection<int, object>  $rows
+     * @return array<string, true>
+     */
+    private function alreadyCaptured(Connection $connection, string $table, int $userId, $rows): array
     {
-        return $connection->table('op_log_entries')
+        $pks = [];
+        foreach ($rows as $row) {
+            $pk = ((array) $row)['id'] ?? null;
+            if (is_int($pk) || is_string($pk)) {
+                $pks[] = (string) $pk;
+            }
+        }
+
+        if ($pks === []) {
+            return [];
+        }
+
+        $found = $connection->table('op_log_entries')
             ->where('user_id', $userId)
-            ->exists();
+            ->where('table_name', $table)
+            ->where('op_type', OpType::CreateRow->value)
+            ->whereIn('pk', $pks)
+            ->distinct()
+            ->pluck('pk');
+
+        $lookup = [];
+        foreach ($found as $pk) {
+            $lookup[(string) $pk] = true;
+        }
+
+        return $lookup;
     }
 
     private function captureTable(
@@ -144,7 +171,9 @@ final readonly class OpLogBackfiller
 
         $this->scopedQuery($connection, $table, $userId, $columns)
             ->orderBy($table.'.id')
-            ->chunk(self::CHUNK, function ($rows) use ($table, $userId, $writer, &$captured): void {
+            ->chunk(self::CHUNK, function ($rows) use ($connection, $table, $userId, $writer, &$captured): void {
+                $already = $this->alreadyCaptured($connection, $table, $userId, $rows);
+
                 foreach ($rows as $row) {
                     /** @var array<string, mixed> $fields */
                     $fields = (array) $row;
@@ -152,6 +181,10 @@ final readonly class OpLogBackfiller
                     unset($fields['id']);
 
                     if (! is_int($pk) && ! is_string($pk)) {
+                        continue;
+                    }
+
+                    if (isset($already[(string) $pk])) {
                         continue;
                     }
 

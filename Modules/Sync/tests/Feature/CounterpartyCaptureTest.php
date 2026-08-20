@@ -104,8 +104,11 @@ it('routes the display name through the op log\'s own encryption, not the column
 
     expect($row)->not->toBeNull();
 
-    // Whatever the op log stores, it must round-trip to the plaintext we sent
-    // — the point is that it was never double-encrypted on the way in.
+    // It must round-trip to the exact plaintext the event carried. Asserting
+    // only that it was non-empty passed for a base64 blob as well, which is
+    // the single failure this file exists to catch.
     $stored = is_string($row->value) ? $row->value : '';
-    expect($stored)->not->toBe('');
+
+    expect($stored)->not->toBe('')
+        ->and(json_decode($stored, true, 512, JSON_THROW_ON_ERROR))->toBe('Versio');
 });

@@ -50,21 +50,7 @@ final readonly class ImportSyncCapture implements CapturesImportForSync, Capture
             'transactions' => $transactionIds,
         ];
 
-        foreach (self::ORDER as $table) {
-            try {
-                $this->backfiller->captureRowsById($table, $ids[$table], $userId, $writer);
-            } catch (Throwable $e) {
-                // Never throw into the import. A capture failure costs the
-                // peer this import, not the user their data.
-                $this->log->warning('ImportSyncCapture: capture failed for a table; the import itself stands.', [
-                    'table' => $table,
-                    'importRunId' => $importRun->id,
-                    'userId' => $userId,
-                    'exception' => $e::class,
-                    'message' => $e->getMessage(),
-                ]);
-            }
-        }
+        $this->captureInOrder($ids, $userId, $writer, ['importRunId' => $importRun->id]);
     }
 
     // Every writer of ledger rows goes through RecordTransactions, so this is
@@ -91,16 +77,31 @@ final readonly class ImportSyncCapture implements CapturesImportForSync, Capture
             'transactions' => $transactionIds,
         ];
 
+        $this->captureInOrder($ids, $userId, $writer, []);
+    }
+
+    // Stops at the first failure rather than carrying on: ORDER is a
+    // dependency order, and children emitted after their parent failed name
+    // rows the peer never received, so its foreign keys drop them. Never
+    // throws out — a capture failure costs the peer this write, not the data.
+    /**
+     * @param  array<string, list<int|string>>  $ids
+     * @param  array<string, mixed>  $context
+     */
+    private function captureInOrder(array $ids, int $userId, OpLogWriter $writer, array $context): void
+    {
         foreach (self::ORDER as $table) {
             try {
                 $this->backfiller->captureRowsById($table, $ids[$table], $userId, $writer);
             } catch (Throwable $e) {
-                $this->log->warning('ImportSyncCapture: capture failed for a table; the write itself stands.', [
+                $this->log->warning('ImportSyncCapture: capture failed; stopped before emitting any child rows.', [
                     'table' => $table,
                     'userId' => $userId,
                     'exception' => $e::class,
                     'message' => $e->getMessage(),
-                ]);
+                ] + $context);
+
+                return;
             }
         }
     }

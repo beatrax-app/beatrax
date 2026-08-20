@@ -120,3 +120,27 @@ it('writes the description as plaintext, not the column\'s stored ciphertext', f
     // the peer projects base64 as a description.
     expect($descriptionOps)->toBeGreaterThan(0);
 });
+
+it('emits no child rows once a parent capture has failed', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    // Fails the accounts capture the way a real one fails — at the op-log
+    // insert — leaving import_runs already written and transactions to come.
+    $db->connection()->statement(
+        "CREATE TRIGGER block_account_ops BEFORE INSERT ON op_log_entries
+         WHEN NEW.table_name = 'accounts'
+         BEGIN SELECT RAISE(ABORT, 'accounts capture refused'); END",
+    );
+
+    confirmTheFixtureImport($this->fixtureUser);
+
+    // The loop used to catch per table and carry on, so transaction ops went
+    // out naming an account the peer had never been sent. transactions.
+    // account_id is NOT NULL: the peer's foreign key rejects the row and it
+    // is lost, with nothing but a warning on the device that sent it.
+    expect(importedOps('accounts'))->toBeEmpty()
+        ->and(importedOps('transactions'))->toBeEmpty();
+
+    $db->connection()->statement('DROP TRIGGER block_account_ops');
+});
