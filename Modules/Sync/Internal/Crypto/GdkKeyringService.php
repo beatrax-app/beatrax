@@ -132,6 +132,12 @@ final class GdkKeyringService
     {
         $encPath = $this->keyringPath($stage->userId);
 
+        // The same reason writeKeyringFile() drops it, arriving by the other
+        // door. Anything that read the keyring while this epoch was still
+        // staged memoised an EMPTY one — the real file did not exist yet — and
+        // that answer outlived the rename that made it wrong.
+        $this->keyringCache = [];
+
         if (! @rename($stage->tmpEncPath, $encPath)) {
             // Do NOT @unlink the staged file on rename failure. At this point
             // current_epoch is already committed and this .tmp is the ONLY
@@ -275,26 +281,21 @@ final class GdkKeyringService
      */
     public function currentEpoch(int $userId, Session $session): GdkEpoch
     {
-        $kek = $this->appLockKeyService->release($session);
-        if ($kek === null) {
-            throw new \LogicException('Cannot resolve current GDK epoch: app-lock not unlocked.');
+        $epochId = $this->currentEpochId($userId);
+        if ($epochId === null) {
+            throw KeyringStateException::noCurrentEpoch($userId);
         }
 
-        try {
-            $epochId = $this->currentEpochId($userId);
-            if ($epochId === null) {
-                throw KeyringStateException::noCurrentEpoch($userId);
-            }
-
-            $keyHex = $this->readKeyringFile($userId, $kek)->keyFor($epochId);
-            if ($keyHex === null) {
-                throw KeyringStateException::missingKeyForEpoch($userId, $epochId);
-            }
-
-            return new GdkEpoch(epochId: $epochId, keyHex: $keyHex);
-        } finally {
-            sodium_memzero($kek);
+        // Through the memo, not readKeyringFile(): this runs on every write
+        // hook, and decrypting the keyring per call is the cost loadKeyring()
+        // was built to stop paying. It holds the app-lock check too, so the
+        // KEK is released once here rather than twice.
+        $keyHex = $this->loadKeyring($userId, $session)->keyFor($epochId);
+        if ($keyHex === null) {
+            throw KeyringStateException::missingKeyForEpoch($userId, $epochId);
         }
+
+        return new GdkEpoch(epochId: $epochId, keyHex: $keyHex);
     }
 
     // Re-encrypts the SAME keyring contents (every epoch, unchanged) under

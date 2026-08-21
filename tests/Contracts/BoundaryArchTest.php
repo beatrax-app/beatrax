@@ -1886,8 +1886,10 @@ it('pins every cross-module raw-table write to the allow-list (crossModuleRawTab
         'Modules/Categorization/Internal/Listeners/MerchantMemoryWriter.php merchant_memories 2',
         'Modules/Chains/Internal/Resolvers/RetypeByAliasResolver.php transactions 1',
         'Modules/Core/Internal/Console/FailedJobsCommand.php failed_jobs 1',
-        'Modules/Core/Internal/Encryption/PreMigrationSnapshot.php op_log_entries 1',
-        'Modules/Core/Public/Services/EncryptionMigrationService.php op_log_entries 1',
+        // The enable-time sweep and its rollback restore reach six tables this
+        // module does not own, all through one table-agnostic batched writer in
+        // PreMigrationSnapshot, so no table literal reaches this scan. The five
+        // projection tables were already written that way; op_log_entries now is too.
         'Modules/Core/Public/Services/EncryptionMigrationService.php sync_encryption_state 4',
         'Modules/Counterparties/Internal/Jobs/CounterpartyGarbageCollectorJob.php transactions 1',
         'Modules/DevMode/Internal/Queue/QueueActions.php jobs 3',
@@ -2039,6 +2041,8 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Chains/tests/Unit/FixtureParseSmokeTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\IcsPdfAdapter',
         'Modules/Chains/tests/Unit/FixtureParseSmokeTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Paypal\\PaypalCsvAdapter',
         'Modules/Core/tests/Feature/Bootstrap/AppKeyRegenerationTest.php -> Modules\\Desktop\\Internal\\Native\\FirstLaunchBootstrap',
+        'Modules/Core/tests/Feature/DatesFollowTheLanguageSwitchTest.php -> Modules\\Auth\\Internal\\Http\\Livewire\\SignupPage',
+        'Modules/Core/tests/Feature/DatesFollowTheLanguageSwitchTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Core/tests/Feature/LocaleSelectionTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\Chains\\Internal\\Jobs\\ResolveChainLinksJob',
         'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\DriftAlerts\\Internal\\Jobs\\DetectDriftAlertsJob',
@@ -2111,6 +2115,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Mobile/tests/Feature/MobileImportInstallAndDecryptTest.php -> Modules\\Sync\\Internal\\OpLog\\OpLogRebuilder',
         'Modules/Mobile/tests/Feature/MobileImportInstallAndDecryptTest.php -> Modules\\Sync\\Internal\\OpLog\\OpType',
         'Modules/Mobile/tests/Feature/MobileImportInstallAndDecryptTest.php -> Modules\\Sync\\Internal\\Signing\\DeviceKeySigner',
+        'Modules/Mobile/tests/Feature/MobileLockScreenForgottenPinSignpostTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockProvisioner',
         'Modules/Mobile/tests/Feature/MobilePairingResumeOwnershipTest.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityService',
         'Modules/Mobile/tests/Feature/MobilePairingScanCrossDeviceTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkEpochControlHandler',
         'Modules/Mobile/tests/Feature/MobilePairingScanCrossDeviceTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkEpochWrapSignature',
