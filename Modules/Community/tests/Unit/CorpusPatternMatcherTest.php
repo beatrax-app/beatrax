@@ -16,6 +16,29 @@ it('matches a literal pattern as a case-insensitive substring', function (): voi
     expect(matcher()->matches('JUMBO', 'ALBERT HEIJN'))->toBeFalse();
 });
 
+// Corpus tokens are short by nature, so an unanchored search does not merely
+// risk matching inside a longer word — it does it routinely. A phone bill's
+// "Europese incasso internet en mobiel" was renamed after a DIY chain because
+// OBI sits inside "mobiel", and an employer was typed as government because RDW
+// sits inside "Nordwind".
+it('does not match a literal pattern buried inside a longer word', function (string $haystack, string $pattern): void {
+    expect(matcher()->matches($pattern, $haystack))->toBeFalse();
+})->with([
+    'OBI inside mobiel' => ['Europese incasso internet en mobiel', 'OBI'],
+    'RDW inside Nordwind' => ['Nordwind Media BV', 'RDW'],
+    'ING inside PARKING' => ['PARKING GARAGE CENTRUM', 'ING'],
+]);
+
+it('still matches a literal pattern that stands as its own token', function (string $haystack, string $pattern): void {
+    expect(matcher()->matches($pattern, $haystack))->toBeTrue();
+})->with([
+    'bounded by a space' => ['KPN BV', 'KPN'],
+    'bounded by punctuation' => ['CCV*ALBERT HEIJN 1234', 'ALBERT HEIJN'],
+    'at the very start' => ['RDW WEGENBELASTING', 'RDW'],
+    'at the very end' => ['INCASSO KPN', 'KPN'],
+    'accented, case-insensitively' => ['Café Zürich', 'café'],
+]);
+
 it('matches a regex: pattern anchored against the whole haystack', function (): void {
     expect(matcher()->matches('regex:^ALBERT HEIJN \d+$', 'ALBERT HEIJN 1234'))->toBeTrue();
     expect(matcher()->matches('regex:^ALBERT HEIJN \d+$', 'MIJN ALBERT HEIJN 1234'))->toBeFalse();
