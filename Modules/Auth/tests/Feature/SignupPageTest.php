@@ -67,7 +67,7 @@ it('rejects mismatched passwords', function (): void {
         ->set('passwordConfirmation', 'a-different-password')
         ->call('submit')
         ->assertNoRedirect()
-        ->assertSet('flashMessage', 'Passwords do not match.');
+        ->assertHasErrors(['passwordConfirmation' => 'Passwords do not match.']);
 
     expect(User::query()->count())->toBe(0);
 });
@@ -79,7 +79,7 @@ it('rejects passwords shorter than twelve characters', function (): void {
         ->set('passwordConfirmation', 'short')
         ->call('submit')
         ->assertNoRedirect()
-        ->assertSet('flashMessage', 'Use at least 12 characters.');
+        ->assertHasErrors(['password' => 'Use at least 12 characters.']);
 
     expect(User::query()->count())->toBe(0);
 });
@@ -94,7 +94,7 @@ it('rejects an empty username with a message rather than an unhandled exception'
         ->set('passwordConfirmation', '')
         ->call('submit')
         ->assertNoRedirect()
-        ->assertSet('flashMessage', 'Use up to 32 letters, digits, dots, dashes or underscores.');
+        ->assertHasErrors(['username' => 'Use up to 32 letters, digits, dots, dashes or underscores.']);
 
     expect(User::query()->count())->toBe(0);
 });
@@ -106,7 +106,7 @@ it('rejects a whitespace-only username, which normalises to empty', function ():
         ->set('passwordConfirmation', 'a-long-password-12chars')
         ->call('submit')
         ->assertNoRedirect()
-        ->assertSet('flashMessage', 'Use up to 32 letters, digits, dots, dashes or underscores.');
+        ->assertHasErrors(['username' => 'Use up to 32 letters, digits, dots, dashes or underscores.']);
 
     expect(User::query()->count())->toBe(0);
 });

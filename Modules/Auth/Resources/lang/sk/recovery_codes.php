@@ -12,6 +12,8 @@ return [
     'download' => 'Stiahnuť ako .txt',
 
     'saved_as' => 'Uložené ako beatrax-recovery-codes-:username.txt',
+
+    'saved_native' => 'Beatrax požiadal tvoje zariadenie o uloženie súboru. Ak sa nič neobjavilo, použi namiesto toho Kopírovať kódy. Kópiu, ktorú si Beatrax ponecháva, zmaže preinštalovanie aplikácie.',
     'confirm' => 'Kódy mám uložené na bezpečnom mieste.',
     'continue' => 'Pokračovať do aplikácie Beatrax',
 

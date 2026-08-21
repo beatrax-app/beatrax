@@ -1,12 +1,15 @@
 @use('Modules\Core\Public\Support\Lang')
-<div class="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
+{{-- The system bars are drawn over this screen, not beside it: without the
+     inset the "Create the first account" button sits under the Android
+     navigation bar and the back link under the status bar. --}}
+<div class="min-h-screen flex items-center justify-center bg-white pb-[var(--safe-bottom)] pl-[var(--safe-left)] pr-[var(--safe-right)] pt-[var(--safe-top)] dark:bg-slate-950">
     <div
         class="w-full max-w-md mx-auto px-6 space-y-6"
         x-data="{
-            pw: '',
-            pwc: '',
-            get lengthOk() { return this.pw.length >= 12; },
-            get matchOk() { return this.pwc.length > 0 && this.pw === this.pwc; },
+            get typedPassword() { return $wire.password ?? ''; },
+            get typedConfirmation() { return $wire.passwordConfirmation ?? ''; },
+            get lengthOk() { return this.typedPassword.length >= 12; },
+            get matchOk() { return this.typedConfirmation.length > 0 && this.typedPassword === this.typedConfirmation; },
         }"
     >
         @if ($backUrl !== null)
@@ -45,7 +48,6 @@
                 :label="Lang::get('auth::signup.password')"
                 :hint="Lang::get('auth::signup.password_hint')"
                 wire:model="password"
-                x-on:input="pw = $event.target.value"
                 autocomplete="new-password"
                 aria-describedby="password-requirements"
             />
@@ -56,11 +58,15 @@
                 type="password"
                 :label="Lang::get('auth::signup.confirm_password')"
                 wire:model="passwordConfirmation"
-                x-on:input="pwc = $event.target.value"
                 autocomplete="new-password"
             />
 
-            {{-- Live requirement checklist — each row ticks as the field is typed (client-side, no roundtrip). --}}
+            {{-- Live requirement checklist — each row ticks as the field is typed
+                 (client-side, no roundtrip). It reads the SAME binding the server
+                 validates rather than a private mirror of it: a mirror fed only by
+                 input events went on showing two green ticks after a re-render
+                 emptied both boxes, under an error saying the password was too
+                 short. --}}
             <ul id="password-requirements" class="space-y-1.5" aria-live="polite" aria-label="{{ Lang::get('auth::signup.requirements_aria') }}">
                 <template x-for="req in [
                     { label: '{{ Lang::get('auth::signup.req_length') }}', ok: lengthOk },

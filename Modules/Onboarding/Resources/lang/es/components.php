@@ -6,6 +6,7 @@ return [
 
     'drop_zone_lead' => 'Suelta aquí el archivo de tu extracto',
     'drop_zone_sublink' => 'o busca un archivo',
+    'drop_zone_touch_lead' => 'Toca para elegir un archivo',
 
     'vd_optional' => ' — opcional',
 

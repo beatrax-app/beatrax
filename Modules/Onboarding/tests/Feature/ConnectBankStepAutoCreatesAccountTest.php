@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
@@ -54,4 +55,26 @@ it('creates a bank account for an unknown IBAN and stashes the run id', function
 
     expect($row)->not->toBeNull();
     expect($row->data['bank_import_run_id'] ?? null)->toBeInt();
+});
+
+it('gives the auto-created account a name-derived slug that carries no IBAN characters', function (): void {
+    $fixturePath = base_path('tests/fixtures/asn-camt053-sample-1.xml');
+    $contents = file_get_contents($fixturePath);
+    $upload = UploadedFile::fake()->createWithContent('statement.xml', $contents !== false ? $contents : '');
+
+    Livewire::test(ConnectBankStep::class)
+        ->set('selectedFormat', 'camt053')
+        ->set('file', $upload)
+        ->call('submit')
+        ->assertDispatched('wizard.step.completed');
+
+    /** @var Account $created */
+    $created = Account::query()
+        ->where('user_id', $this->user->id)
+        ->where('iban', 'NL57ASNB0123456789')
+        ->firstOrFail();
+
+    expect($created->slug)->toBe(Str::slug($created->name));
+    expect($created->slug)->not->toContain('456789');
+    expect($created->slug)->not->toContain('0123456789');
 });

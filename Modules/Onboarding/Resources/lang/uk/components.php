@@ -6,6 +6,7 @@ return [
 
     'drop_zone_lead' => 'Перетягни сюди файл виписки',
     'drop_zone_sublink' => 'або вибери файл',
+    'drop_zone_touch_lead' => 'Торкніться, щоб вибрати файл',
 
     'vd_optional' => ' — необов’язково',
 

@@ -12,6 +12,8 @@ return [
     'download' => '.txt olarak indir',
 
     'saved_as' => 'beatrax-recovery-codes-:username.txt olarak kaydedildi',
+
+    'saved_native' => 'Beatrax, dosyayı kaydetmesi için cihazına istek gönderdi. Hiçbir şey görünmediyse bunun yerine Kodları kopyala düğmesini kullan. Beatrax’in kendi kopyası, uygulamayı yeniden kurduğunda silinir.',
     'confirm' => 'Bu kodları güvenli bir yere kaydettim.',
     'continue' => "Beatrax'a devam et",
 

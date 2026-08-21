@@ -12,6 +12,8 @@ return [
     'download' => 'Pobierz jako .txt',
 
     'saved_as' => 'Zapisano jako beatrax-recovery-codes-:username.txt',
+
+    'saved_native' => 'Beatrax poprosił Twoje urządzenie o zapisanie pliku. Jeśli nic się nie pojawiło, użyj przycisku Kopiuj kody. Kopia, którą przechowuje Beatrax, zostanie usunięta po ponownej instalacji aplikacji.',
     'confirm' => 'Mam te kody zapisane w bezpiecznym miejscu.',
     'continue' => 'Przejdź do Beatrax',
 

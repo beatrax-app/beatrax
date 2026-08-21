@@ -12,6 +12,8 @@ return [
     'download' => 'Lejupielādēt kā .txt',
 
     'saved_as' => 'Saglabāts kā beatrax-recovery-codes-:username.txt',
+
+    'saved_native' => 'Beatrax lūdza tavai ierīcei saglabāt failu. Ja nekas neparādījās, izmanto pogu Kopēt kodus. Kopiju, ko glabā pats Beatrax, dzēš lietotnes pārinstalēšana.',
     'confirm' => 'Šie kodi ir saglabāti drošā vietā.',
     'continue' => 'Turpināt uz Beatrax',
 

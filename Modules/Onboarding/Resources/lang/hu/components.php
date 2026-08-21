@@ -6,6 +6,7 @@ return [
 
     'drop_zone_lead' => 'Húzd ide a számlakivonat fájlt',
     'drop_zone_sublink' => 'vagy tallózz egy fájlt',
+    'drop_zone_touch_lead' => 'Koppints egy fájl kiválasztásához',
 
     'vd_optional' => ' — opcionális',
 

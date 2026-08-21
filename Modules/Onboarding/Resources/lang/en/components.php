@@ -6,6 +6,7 @@ return [
 
     'drop_zone_lead' => 'Drop your statement file here',
     'drop_zone_sublink' => 'or browse for a file',
+    'drop_zone_touch_lead' => 'Tap to choose a file',
 
     'vd_optional' => ' — optional',
 

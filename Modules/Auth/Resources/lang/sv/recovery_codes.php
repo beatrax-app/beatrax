@@ -12,6 +12,8 @@ return [
     'download' => 'Ladda ner som .txt',
 
     'saved_as' => 'Sparad som beatrax-recovery-codes-:username.txt',
+
+    'saved_native' => 'Beatrax bad din enhet att spara filen. Om inget dök upp, använd Kopiera koder i stället. Kopian som Beatrax själv sparar tas bort om du installerar om appen.',
     'confirm' => 'Jag har sparat koderna på ett säkert ställe.',
     'continue' => 'Fortsätt till Beatrax',
 

@@ -6,6 +6,7 @@ return [
 
     'drop_zone_lead' => 'Lohista oma väljavõtte fail siia',
     'drop_zone_sublink' => 'või otsi fail üles',
+    'drop_zone_touch_lead' => 'Puuduta faili valimiseks',
 
     'vd_optional' => ' — valikuline',
 

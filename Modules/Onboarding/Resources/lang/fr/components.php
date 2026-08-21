@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'drop_zone_lead' => 'Dépose ton fichier de relevé ici',
     'drop_zone_sublink' => 'ou parcours tes fichiers',
+    'drop_zone_touch_lead' => 'Touchez pour choisir un fichier',
 
     'vd_optional' => ' — facultatif',
 

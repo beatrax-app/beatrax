@@ -8,7 +8,6 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Support\Str;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
@@ -25,6 +24,7 @@ use Modules\Import\Public\Enums\BankCsvFormatHint;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Enums\AccountKind;
+use Modules\Ledger\Public\Services\AccountSlugResolver;
 use Modules\Onboarding\Models\WizardProgress;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -98,6 +98,7 @@ final class ConnectBankStep extends Component
         LoggerInterface $logger,
         Application $app,
         DatabaseManager $db,
+        AccountSlugResolver $slugs,
     ): void {
         $this->uploadError = null;
         $this->validate();
@@ -127,7 +128,7 @@ final class ConnectBankStep extends Component
         }
 
         if ($result->accountsToName !== []) {
-            $this->ensureBankAccounts($result, $user, $db, $importer, $formatHint, $logger, $app);
+            $this->ensureBankAccounts($result, $user, $db, $slugs, $importer, $formatHint, $logger, $app);
         }
 
         $this->stashRunId($user, $result->importRunId);
@@ -152,13 +153,13 @@ final class ConnectBankStep extends Component
         }
     }
 
-    private function ensureBankAccounts(ImportPreviewResult $result, User $user, DatabaseManager $db, RunsImports $importer, ?BankCsvFormatHint $formatHint, LoggerInterface $logger, Application $app): void
+    private function ensureBankAccounts(ImportPreviewResult $result, User $user, DatabaseManager $db, AccountSlugResolver $slugs, RunsImports $importer, ?BankCsvFormatHint $formatHint, LoggerInterface $logger, Application $app): void
     {
         $bankLabel = $this->bankLabelFor($this->selectedFormat, $this->selectedBankFormatHint);
 
         $created = 0;
         foreach ($result->accountsToName as $unknown) {
-            if ($this->createBankAccount($unknown, $bankLabel, $user, $db)) {
+            if ($this->createBankAccount($unknown, $bankLabel, $user, $db, $slugs)) {
                 $created++;
             }
         }
@@ -168,7 +169,7 @@ final class ConnectBankStep extends Component
         }
     }
 
-    private function createBankAccount(UnknownIban $unknown, string $bankLabel, User $user, DatabaseManager $db): bool
+    private function createBankAccount(UnknownIban $unknown, string $bankLabel, User $user, DatabaseManager $db, AccountSlugResolver $slugs): bool
     {
         $exists = $db->connection()
             ->table('accounts')
@@ -182,7 +183,7 @@ final class ConnectBankStep extends Component
         Account::query()->create([
             'user_id' => $user->id,
             'name' => $bankLabel,
-            'slug' => $this->slugFor($bankLabel, $unknown->iban),
+            'slug' => $slugs->resolveUnique($user->id, $bankLabel),
             'kind' => AccountKind::Bank->value,
             'iban' => $unknown->iban,
             'default_currency' => 'EUR',
@@ -249,15 +250,6 @@ final class ConnectBankStep extends Component
                 default => AccountKind::Bank->value,
             },
         };
-    }
-
-    // The IBAN tail keeps two bank accounts under one user off the same
-    // unique(user_id, slug) row.
-    private function slugFor(string $label, string $iban): string
-    {
-        $tail = strtolower(substr($iban, -6));
-
-        return Str::slug($label).'-'.$tail;
     }
 
     public function skip(): void
