@@ -7,23 +7,6 @@ use Modules\Core\Models\User;
 use Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
-/*
- * OAuth-client-registration wizard modal (Microsoft 365 variant).
- *
- * Exercises:
- *  - open('microsoft') sets the provider.
- *  - The Blade view renders the six Azure-specific numbered steps when
- *    $provider === 'microsoft'.
- *  - submit() validates the client_id is a UUID v4 and the
- *    client_secret is non-empty. Each failure surfaces the locked
- *    error copy from the UI-SPEC and the secrets file is not written.
- *  - The happy path writes via OAuthSecretsRepository, dispatches
- *    modal-hide, and redirects to /oauth/connect/microsoft.
- *  - The publishedConfirmed checkbox does NOT gate Microsoft submit —
- *    that gate is Google-only because Azure has no equivalent "push
- *    to production" step.
- */
-
 beforeEach(function (): void {
     $this->path = storage_path('app/secrets/email-oauth.json');
     if (is_file($this->path)) {
@@ -141,9 +124,8 @@ it('happy path: writes the provider client via OAuthSecretsRepository + dispatch
 it('Microsoft submit succeeds with publishedConfirmed=false — the checkbox does not gate the Microsoft variant', function (): void {
     $user = ocwmUser('no-published-ms@example.com');
 
-    // Defensive test: if the Microsoft branch ever inherited the
-    // Google publishedConfirmed check, this would fail on submit even
-    // though the user never sees that checkbox in the Microsoft UI.
+    // publishedConfirmed is a Google-only gate — Azure has no "push to
+    // production" step — and the Microsoft UI never shows the checkbox.
     Livewire::actingAs($user)
         ->test(OAuthClientWizardModal::class)
         ->call('open', 'microsoft')

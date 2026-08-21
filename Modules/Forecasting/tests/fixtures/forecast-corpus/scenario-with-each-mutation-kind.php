@@ -2,13 +2,7 @@
 
 declare(strict_types=1);
 
-// Scenario reference fixture: same as multi-account-baseline +
-// a `scenarios` sub-block with ONE saved scenario containing FIVE
-// mutations — one per kind: cancel_series, add_one_off, add_recurring,
-// change_series_amount, shift_series_date. The projection.scenario
-// sub-block lists the deltas per horizon. A later wave is the
-// consumer; this fixture only locks the input shape + expected
-// output structure.
+/** @link ../../../../../.docs/features/forecasting/forecast-corpus.md#scenario-with-each-mutation-kind */
 
 return [
     'accounts' => [

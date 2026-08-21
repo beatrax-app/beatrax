@@ -11,14 +11,6 @@ use Modules\DriftAlerts\Models\DriftAlert;
 
 uses(RefreshDatabase::class);
 
-/*
- * Effective threshold lookup for DriftEvaluator: per-series override
- * beats user-global setting beats the hard 5% default. The audit pair
- * (threshold_percent_used + threshold_source) is captured on the
- * resulting drift_alerts row so subsequent edits to either setting
- * never rewrite history.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -35,7 +27,7 @@ it('the per-series threshold override beats the user global setting', function (
     $user->drift_alert_threshold_percent = 10;
     $user->save();
 
-    // recurring_series.drift_threshold_percent = 50 → 25% drift is below threshold → no alert.
+    // -12000 → -15000 is a 25% move: over the global 10%, under the series's 50%.
     $seriesId = devetSeries($this->db, $user->id, driftThreshold: 50);
     devetOccurrence($this->db, $user->id, $seriesId, '2026-04-15', -12000, 'EUR');
     devetOccurrence($this->db, $user->id, $seriesId, '2026-05-15', -15000, 'EUR');
@@ -50,8 +42,6 @@ it('falls back to the user-global setting when no per-series override exists', f
     $user->drift_alert_threshold_percent = 10;
     $user->save();
 
-    // 25% drift is above the user-global 10% → alert fires with
-    // threshold_percent_used=10 / threshold_source='global'.
     $seriesId = devetSeries($this->db, $user->id, driftThreshold: null);
     devetOccurrence($this->db, $user->id, $seriesId, '2026-04-15', -12000, 'EUR');
     devetOccurrence($this->db, $user->id, $seriesId, '2026-05-15', -15000, 'EUR');
@@ -66,21 +56,19 @@ it('falls back to the user-global setting when no per-series override exists', f
 
 it('falls back to the hard 5 default when neither series override nor user global apply', function (): void {
     $user = devetUser('hard-default');
-    // User model attribute default is already 5, but we set it to 0 here
-    // so the evaluator must specifically rely on the hard floor.
+    // The model attribute already defaults to 5; zeroing it forces the evaluator
+    // onto the hard floor instead.
     $user->drift_alert_threshold_percent = 0;
     $user->save();
 
-    // 6% drift > 5% default → alert fires with threshold_percent_used=5
-    // and threshold_source='default'. The 'default' label distinguishes
-    // the hard floor from a user-set global value so the audit trail
-    // and renderer can tell them apart.
     $seriesId = devetSeries($this->db, $user->id, driftThreshold: null);
     devetOccurrence($this->db, $user->id, $seriesId, '2026-04-15', -10000, 'EUR');
     devetOccurrence($this->db, $user->id, $seriesId, '2026-05-15', -10600, 'EUR');
 
     $this->app->make(DriftEvaluator::class)->evaluateForSeries($seriesId, $user);
 
+    // The 'default' label is what distinguishes the hard floor from a
+    // user-set global of the same value.
     /** @var DriftAlert $row */
     $row = DriftAlert::query()->where('user_id', $user->id)->firstOrFail();
     expect($row->threshold_percent_used)->toBe(5);

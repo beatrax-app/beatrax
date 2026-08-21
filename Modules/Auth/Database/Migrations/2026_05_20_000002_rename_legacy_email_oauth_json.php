@@ -7,9 +7,9 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Public\Services\UserDataPathService;
 
-// Filesystem-only: the shared secrets JSON is renamed aside once the per-user
-// oauth_secrets table takes over. The presence guards make a second run a
-// no-op, since a plain rename would otherwise clobber the rollback artefact.
+// Filesystem-only: the shared secrets JSON is renamed aside once oauth_secrets
+// takes over. The presence guards keep a second run from clobbering the
+// rollback artefact.
 return new class extends Migration
 {
     private const LEGACY_FILENAME = 'email-oauth.json';

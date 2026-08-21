@@ -5,16 +5,6 @@ declare(strict_types=1);
 use Modules\Sync\Internal\Pairing\QrPayloadBuilder;
 use Modules\Sync\Internal\Pairing\RelayBootstrap;
 
-/*
- * QrPayloadBuilderTest — PAIR-02 QR payload encoding.
- *
- * RED until Plan 03 ships QrPayloadBuilder. References the planned FQCN
- * Modules\Sync\Internal\Pairing\QrPayloadBuilder. Failure is "class not found".
- *
- * The builder must encode a `beatrax://pair?` URI carrying the token, ed and
- * kx params and render it as SVG (via the already-installed bacon/bacon-qr-code).
- */
-
 it('builds an SVG QR encoding a beatrax://pair URI with token, ed and kx params', function (): void {
     $builder = new QrPayloadBuilder;
 
@@ -24,10 +14,8 @@ it('builds an SVG QR encoding a beatrax://pair URI with token, ed and kx params'
 
     $svg = $builder->buildSvg('device-init', $edHex, $kxHex, $token);
 
-    // Output is an SVG document.
     expect($svg)->toContain('<svg');
 
-    // The encoded URI carries the pairing scheme and all three params.
     $uri = $builder->buildUri('device-init', $edHex, $kxHex, $token);
 
     expect($uri)->toStartWith('beatrax://pair?');
@@ -36,13 +24,9 @@ it('builds an SVG QR encoding a beatrax://pair URI with token, ed and kx params'
     expect($uri)->toContain('kx='.$kxHex);
 });
 
-/*
- * Phase 15 HIGH-01 (Task 1) — the QR now optionally carries the relay
- * endpoint (+ bearer token) so a fresh phone can bootstrap its own
- * RelayConfig before the cross-device confirm handshake needs a transport.
- * Omitting both params must produce the IDENTICAL URI as before this change
- * (no behavior change to existing callers).
- */
+// The QR optionally carries the relay endpoint and bearer token so a fresh phone
+// can bootstrap its own RelayConfig before the confirm handshake needs a
+// transport. Omitting both must leave the URI exactly as it was.
 
 it('omits the relay/rtok params entirely when no relay is configured — no behavior change', function (): void {
     $builder = new QrPayloadBuilder;
@@ -108,11 +92,10 @@ it('renders relay params into the SVG-encoded URI too', function (): void {
 });
 
 it('renders the QR without any xmlwriter-backed renderer', function (): void {
-    // The PHP binary NativePHP bundles with the desktop app has no
-    // ext-xmlwriter, so bacon's SvgImageBackEnd threw "You need to install the
-    // libxml extension and enable the xmlwriter extension" and Show my code —
-    // the one surface pairing depends on — failed there while every test
-    // passed on a host PHP that ships the extension.
+    // The PHP binary NativePHP bundles has no ext-xmlwriter, so bacon's
+    // SvgImageBackEnd threw "You need to install the libxml extension and enable
+    // the xmlwriter extension" and Show my code failed on the desktop while every
+    // test passed on a host PHP that ships the extension.
     $source = (string) file_get_contents(
         base_path('Modules/Sync/Internal/Pairing/QrPayloadBuilder.php'),
     );

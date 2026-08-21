@@ -34,9 +34,8 @@ final class TaxCategoryWriter
         $connection = $this->db->connection();
         $now = Carbon::now()->toDateTimeString();
 
-        // sort_order continues after the user's existing categories (as
-        // add() does) so seeding a second country appends its block
-        // instead of interleaving pairwise with the first country's set.
+        // Continuing past the user's existing categories keeps a second country's
+        // block together instead of interleaving it with the first country's.
         $maxOrder = $connection->table('tax_deduction_categories')
             ->where('user_id', $user->id)
             ->max('sort_order');
@@ -80,10 +79,9 @@ final class TaxCategoryWriter
             return false;
         }
 
-        // INSERT-only contract: skip a corpus_key already seeded (preserving
-        // any later rename) and skip a name the user's own category already
-        // holds, which would otherwise violate unique(user_id, name) and 500
-        // the settings/wizard country pickers.
+        // Insert-only: re-seeding a corpus_key would undo a rename, and a name the
+        // user already holds breaks unique(user_id, name), which 500'd the
+        // settings and wizard country pickers.
         if ($this->userAlreadyHas($connection, $userId, $key, $name)) {
             return false;
         }
@@ -156,8 +154,7 @@ final class TaxCategoryWriter
         $connection = $this->db->connection();
         $now = Carbon::now()->toDateTimeString();
 
-        // Check for existing name (the unique constraint will also catch this at DB level,
-        // but we surface a friendly message before the DB exception).
+        // The unique index catches this too, but only as a QueryException.
         $exists = $connection->table('tax_deduction_categories')
             ->where('user_id', $userId)
             ->where('name', $name)
@@ -193,8 +190,7 @@ final class TaxCategoryWriter
             ->value('id');
 
         if (! is_int($id)) {
-            // Defensive: the row was just inserted, so a non-int id here
-            // means the write was silently lost or the connection is broken.
+            // The row was just inserted, so a missing id means a lost write.
             throw new CategoryPersistenceException('Failed to retrieve new category id.');
         }
 
@@ -224,8 +220,7 @@ final class TaxCategoryWriter
             throw new NotFoundHttpException;
         }
 
-        // Duplicate-name guard mirroring add() — surfaces a friendly message
-        // instead of an uncaught unique(user_id, name) QueryException.
+        // Same guard as add(): unique(user_id, name) would otherwise surface raw.
         $nameTaken = $connection->table('tax_deduction_categories')
             ->where('user_id', $userId)
             ->where('name', $name)

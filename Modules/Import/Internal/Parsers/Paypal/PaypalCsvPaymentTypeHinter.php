@@ -9,9 +9,6 @@ use Modules\Import\Public\Dto\PaymentTypeHint;
 use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
-/**
- * @link ../../../../../.docs/features/import/architecture.md#payment-type-hinters
- */
 final class PaypalCsvPaymentTypeHinter implements PaymentTypeHinter
 {
     private const SOURCE_FORMAT = 'paypal-csv';

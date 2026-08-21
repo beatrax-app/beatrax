@@ -47,9 +47,6 @@ use Modules\Import\Public\Services\DetectStartingBalancesQuery;
 use Modules\Import\Public\Services\MerchantNameResolver;
 use Modules\Import\Public\Services\PatternGeneralizer;
 
-/**
- * @link ../../../.docs/features/import/architecture.md#module-boundary
- */
 final class ImportServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;

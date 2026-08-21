@@ -9,21 +9,9 @@ use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
-/*
- * OAuthConnectController scenarios.
- *
- * Covers:
- *  - cross-provider reconnect rebind (CR-02 iter-2 regression):
- *    /oauth/connect/gmail?inbox_id={microsoft_inbox_id} must 404.
- *    Allowing it would write a Gmail refresh token under a
- *    provider='microsoft' row and break every subsequent
- *    IncrementalScanJob.
- *  - the happy-path same-provider reconnect: /oauth/connect/microsoft
- *    ?inbox_id={microsoft_inbox_id} proceeds normally.
- *  - cross-user reconnect: 404 (existing invariant — guard test
- *    reaffirms the cross-provider 404 does not regress the cross-user
- *    behaviour).
- */
+// A cross-provider reconnect must 404: allowing it would write a Gmail refresh
+// token under a provider='microsoft' row and break every IncrementalScanJob
+// that followed.
 
 beforeEach(function (): void {
     $this->path = storage_path('app/secrets/email-oauth.json');
@@ -89,10 +77,6 @@ function occSeedInbox(DatabaseManager $db, User $user, string $provider): int
 }
 
 /**
- * Returns the two stub provider instances the tests bind into the
- * container. Both override only `getAuthorizationUrl` — the controller
- * is the unit under test, not the providers.
- *
  * @return array{0: GoogleOAuthProvider, 1: MicrosoftOAuthProvider}
  */
 function occMakeOAuthMocks(): array
@@ -133,12 +117,11 @@ it('refuses a Gmail reconnect on a Microsoft inbox row (cross-provider rebind 40
     $db = $this->app->make(DatabaseManager::class);
     $microsoftInboxId = occSeedInbox($db, $user, 'microsoft');
 
-    // Crafted URL: Gmail consent dance for a Microsoft-provider row.
+    // The Gmail consent dance aimed at a Microsoft-provider row.
     $response = $this->get('/oauth/connect/gmail?inbox_id='.$microsoftInboxId);
 
-    // Must respond with 404 — the same shape the cross-user case
-    // already used, so an attacker cannot enumerate which mismatch
-    // (cross-user vs cross-provider) tripped the guard.
+    // The same 404 the cross-user case gives, so which mismatch tripped the
+    // guard cannot be told apart from outside.
     $response->assertNotFound();
 });
 
@@ -175,7 +158,6 @@ it('allows a same-provider reconnect (happy path) to proceed into consent', func
     $microsoftInboxId = occSeedInbox($db, $user, 'microsoft');
 
     $response = $this->get('/oauth/connect/microsoft?inbox_id='.$microsoftInboxId);
-    // 302 to the stubbed Microsoft consent URL.
     $response->assertStatus(302);
     expect($response->headers->get('Location'))
         ->toStartWith('https://login.microsoftonline.com/common/oauth2/v2.0/authorize?state=');
@@ -185,8 +167,8 @@ it("returns 404 when reconnect targets another user's inbox", function (): void 
     $user = occUser('owner@example.com');
     $other = occUser('other@example.com');
 
-    // The per-user OAuth secrets store requires an authenticated user
-    // before a provider client is saved.
+    // The secrets store is per-user: no provider client can be saved before
+    // someone is bound to the guard.
     $this->actingAs($user);
     $secrets = $this->app->make(OAuthSecretsRepository::class);
     occSeedBothProviderClients($secrets);

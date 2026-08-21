@@ -9,15 +9,9 @@ use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
 
 uses(RefreshDatabase::class, EnablesEncryptionForUser::class);
 
-/*
- * Smoke test for the shared EnablesEncryptionForUser Wave-0 fixture (14.1-01
- * Task 2): proves the trait actually turns encryption on — a value encrypted
- * afterwards is stored as ciphertext (not the plaintext) and decrypts back to
- * the original plaintext. Every downstream 14.1 regression test relies on
- * this trait to avoid the documented pitfall of testing against a plaintext
- * user, where decrypt-of-plaintext is a no-op and a broken path passes
- * silently.
- */
+// Every encryption regression test leans on this trait, and decrypt of
+// plaintext is a no-op — so a fixture that quietly failed to turn encryption
+// on would let a broken read path pass everywhere.
 
 function enablesEncryptionForUserTestUser(): User
 {

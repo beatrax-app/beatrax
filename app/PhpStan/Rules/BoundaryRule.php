@@ -94,9 +94,8 @@ final class BoundaryRule implements Rule
         return $matches[1];
     }
 
-    // Allow-list, not a deny-list: anything whose tail does not match
-    // PUBLIC_PREFIXES is a violation, so private directories added later are
-    // covered without touching this rule.
+    // An allow-list, so a private directory added later is covered without
+    // touching this rule.
     private function violatesBoundary(string $fqn, string $targetModule): bool
     {
         $prefix = 'Modules\\'.$targetModule.'\\';

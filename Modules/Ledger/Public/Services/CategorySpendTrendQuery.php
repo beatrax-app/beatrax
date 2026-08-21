@@ -13,9 +13,8 @@ use Modules\Ledger\Public\Dto\CategoryDelta;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Dto\SpendTrend;
 
-// Spend is the same definition the rest of the ledger uses —
-// EUR-settled outflow within the period's [start, endExclusive) window
-// — so the figures reconcile with "this month at a glance".
+// Spend is EUR-settled outflow over [start, endExclusive), the same definition
+// the rest of the ledger uses, so the figures reconcile with the dashboard.
 final class CategorySpendTrendQuery
 {
     use CoercesScalars;
@@ -73,10 +72,8 @@ final class CategorySpendTrendQuery
      */
     private function spendByCategory(int $userId, Period $period): array
     {
-        // Delegates to the shared legs-union-unsplit-parents read model
-        // — a split transaction's legs count individually, never the
-        // parent row. includeUncategorized keeps uncategorised outflow
-        // under id 0 so the period total is the full EUR-settled outflow.
+        // A split transaction's legs count individually, never the parent row,
+        // and uncategorised outflow lands under id 0 so the total stays whole.
         return $this->spendByCategoryQuery->forUserAndPeriod($userId, $period, self::DISPLAY_CURRENCY, includeUncategorized: true);
     }
 
@@ -90,8 +87,6 @@ final class CategorySpendTrendQuery
             return [];
         }
 
-        // Own-or-global guard: a name is only ever resolved for the
-        // user's own categories or shared globals.
         $rows = $this->db->connection()->table('categories')
             ->whereIn('id', array_values($categoryIds))
             ->where(static function (Builder $query) use ($userId): void {

@@ -52,10 +52,8 @@ final class NotificationsSettingsSection extends Component
         $this->hideDetails = $dto->hideDetails;
     }
 
-    // Bounds-checks every input before any write - a tampered Livewire
-    // payload cannot persist an out-of-range value. The query layer
-    // re-validates and throws as defence in depth, but this method never
-    // relies on that; it rejects first.
+    // Rejects first: the query layer re-validates as defence in depth, but
+    // this method never relies on that.
     public function save(CurrentUser $currentUser, NotificationPreferenceQuery $prefs): void
     {
         $this->saveError = '';

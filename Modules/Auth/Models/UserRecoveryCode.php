@@ -11,8 +11,6 @@ use Illuminate\Database\Eloquent\Model;
 use Modules\Auth\Database\Factories\UserRecoveryCodeFactory;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
-// Consuming a code stamps used_at rather than deleting the row, so the
-// issued/consumed set survives as an audit chain.
 /**
  * @property int $id
  * @property int|null $user_id
@@ -37,9 +35,7 @@ final class UserRecoveryCode extends Model
         'used_at',
     ];
 
-    // The table writes its own created_at via a SQLite useCurrent() default
-    // and carries no updated_at column, so Eloquent's auto-managed
-    // timestamps are disabled.
+    // The table defaults created_at itself and has no updated_at column.
     /** @var bool */
     public $timestamps = false;
 

@@ -20,8 +20,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class TaxPage extends Component
 {
-    // 0 means "use seasonal default," resolved in mount(). #[Url] so deep
-    // links (?year=2025) and the back button work.
+    // 0 means "use the seasonal default", resolved in mount(). #[Url] keeps
+    // ?year=2025 deep links and the back button working.
     #[Url(as: 'year', except: 0)]
     public int $year = 0;
 
@@ -46,9 +46,8 @@ final class TaxPage extends Component
     ): StreamedResponse {
         if (! $currentUser->isAuthenticated()) {
             return new StreamedResponse(static function (): void {
-                // Guests get an empty 200 body rather than a download; the
-                // route's 'auth' middleware already makes this unreachable in
-                // practice, so nothing is streamed here.
+                // Unreachable behind the route's 'auth' middleware; a guest
+                // gets an empty 200 rather than a download.
             });
         }
 
@@ -71,9 +70,8 @@ final class TaxPage extends Component
     ): StreamedResponse {
         if (! $currentUser->isAuthenticated()) {
             return new StreamedResponse(static function (): void {
-                // Guests get an empty 200 body rather than a download; the
-                // route's 'auth' middleware already makes this unreachable in
-                // practice, so nothing is streamed here.
+                // Unreachable behind the route's 'auth' middleware; a guest
+                // gets an empty 200 rather than a download.
             });
         }
 
@@ -95,9 +93,8 @@ final class TaxPage extends Component
         ViewFactory $views,
         DatabaseManager $db,
     ): View {
-        // Defense-in-depth: the route group's 'auth' middleware makes this
-        // unreachable for guests, but guard anyway so an unauthenticated
-        // render degrades gracefully.
+        // Unreachable behind the route group's 'auth' middleware; kept so an
+        // unauthenticated render degrades to the empty page instead of throwing.
         if (! $currentUser->isAuthenticated()) {
             $view = $views->make('tax::livewire.tax-page', [
                 'data' => null,
@@ -115,9 +112,8 @@ final class TaxPage extends Component
         $data = $query->forUser($user->id, $this->year);
         $availableYears = $query->availableYears($user->id);
 
-        // Read from the DB, not the model, since tax_country_code is not
-        // typed on User; TaxSettingsSection writes it via DatabaseManager
-        // directly.
+        // tax_country_code is not typed on User; TaxSettingsSection writes it
+        // through the query builder too.
         $taxCountryCode = $db->connection()
             ->table('users')
             ->where('id', $user->id)

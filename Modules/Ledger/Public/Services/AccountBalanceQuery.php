@@ -9,6 +9,9 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Enums\ClearedStatus;
 
+/**
+ * @link ../../../../.docs/features/ledger/architecture.md#accountbalancequery--caveats-shared-by-all-three-methods
+ */
 final class AccountBalanceQuery
 {
     public function __construct(
@@ -40,10 +43,9 @@ final class AccountBalanceQuery
             ->sum('amount_minor');
     }
 
-    // Date-bounded sibling of clearedBalance(): lets /reconcile compute
-    // its "matched" check over the same posted_at <= $asOf window
-    // ReconciliationWriter::completeReconcile() locks, so it never
-    // counts rows the write correctly leaves untouched.
+    // /reconcile checks "matched" over the same posted_at <= $asOf window
+    // ReconciliationWriter::completeReconcile() locks, so it never counts
+    // rows the write correctly leaves untouched.
     public function clearedBalanceAsOf(int $accountId, User $user, CarbonImmutable $asOf): int
     {
         return (int) $this->db->connection()

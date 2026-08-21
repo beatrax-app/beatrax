@@ -9,15 +9,9 @@ use Modules\Auth\Internal\Http\Livewire\AppLockSettingsSection;
 use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
 use Modules\Core\Models\User;
 
-/*
- * Choosing a longer auto-lock window did not take effect: the value was saved
- * correctly, but nothing that enforces it was told.
- *
- * The client's idle watcher reads window.beatraxIdleMs, which the layout emits
- * once at render — a Livewire action never re-renders that — and the
- * middleware caches the config in the session. So the lock kept firing on the
- * previous window, which reads exactly like "it did not save".
- */
+// A longer auto-lock window saved correctly but changed nothing: the client
+// reads window.beatraxIdleMs, emitted once at render, and the middleware
+// cached the config, so the lock kept firing on the old window.
 
 beforeEach(function (): void {
     $this->user = User::create([

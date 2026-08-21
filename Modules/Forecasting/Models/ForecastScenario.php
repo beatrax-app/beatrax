@@ -22,8 +22,7 @@ use Modules\Forecasting\Database\Factories\ForecastScenarioFactory;
  */
 final class ForecastScenario extends Model
 {
-    // Max scenario name length, mirrored by the forecast_scenarios.name column
-    // limit; CreateScenario and RenameScenario both validate against it.
+    // Mirrors the forecast_scenarios.name column limit.
     public const int MAX_NAME_LENGTH = 120;
 
     use BelongsToUser;

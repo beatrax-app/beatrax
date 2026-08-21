@@ -12,17 +12,10 @@ use Modules\Mobile\Internal\Http\Livewire\MobileImportBootstrap;
 
 uses(RefreshDatabase::class);
 
-/*
- * MobileImportBootstrapTest — Task 5 (Phase 15 import-join, 6g): the
- * fresh-device local-identity bootstrap the mobile welcome screen's
- * "Import from another device" CTA now leads into.
- *
- * Mirrors MobileFirstLaunchWelcomeGateTest's precedent of neutralizing the
- * shared-test-harness collision with Desktop's own EnsureDatabaseReady
- * middleware (both boot the same repo-root bootstrap/app.php in this
- * process — a test-infrastructure artifact, never a production concern,
- * where mobile-app is a fully separate application root).
- */
+// Desktop's EnsureDatabaseReady boots in this process too, because both modules
+// share the repo-root bootstrap/app.php here. The collision is a test-harness
+// artifact — in production mobile-app is a fully separate application root — so
+// the middleware is dropped rather than satisfied.
 
 it('GET /mobile/import renders 200 for a genuinely fresh (0-user) device', function (): void {
     $this->withoutMiddleware(EnsureDatabaseReady::class);
@@ -67,8 +60,7 @@ it('provisions a local user + app-lock + sync identity (no epoch) and advances t
     expect($selfRow)->not->toBeNull('a self device_registry row must exist after identity bootstrap');
     expect($selfRow->confirmed_at)->not->toBeNull();
 
-    // B2: no epoch minted — enableSyncIdentityWithoutEpoch() never touches
-    // sync_encryption_state / the GDK keyring.
+    // The bootstrap enables the sync identity without minting an epoch.
     expect($db->connection()->table('sync_encryption_state')->where('user_id', $user->id)->exists())->toBeFalse();
 });
 
@@ -92,18 +84,15 @@ it('continueToPairing() forgets the recovery-codes session key and redirects int
     expect(session('auth.signup.recovery_codes_plain'))->toBeNull('the recovery-codes ceremony must forget the session key exactly once, mirroring RecoveryCodesDisplay');
 });
 
-// -------------------------------------------------------------------------
-// HIGH-02 (15-import-join-REVIEW.md) — retryProvisioning() must use the
-// ORIGINALLY submitted credentials, never the emptied public properties.
-// -------------------------------------------------------------------------
+// retryProvisioning() has to reach the originally submitted credentials: the
+// public properties are emptied by then, and provisioning from those would mint a
+// KEK from an empty passphrase.
 
 it('retryProvisioning() without a pending-credentials session copy never provisions and returns to collect_pin (HIGH-02)', function (): void {
     $this->withoutMiddleware(EnsureDatabaseReady::class);
 
-    // Simulates a `provisioning_failed` device whose session-stashed
-    // credentials are genuinely gone (e.g. a new session) — mirrors what a
-    // real interrupted submit() would leave the account/session in
-    // (SignupAction already committed; nothing provisioned yet).
+    // A provisioning_failed device whose session-stashed credentials are gone: the
+    // account is already committed and nothing is provisioned yet.
     $user = User::query()->create([
         'username' => 'phone-owner-retry-nopending',
         'password' => bcrypt('a-genuinely-long-password'),
@@ -133,9 +122,7 @@ it('retryProvisioning() succeeds with the ORIGINALLY submitted credentials after
     ]);
     test()->actingAs($user);
 
-    // Simulates exactly what submit() stashes before attempting
-    // provisionDeviceLocally() — the real, non-empty PIN/password from the
-    // original submission, server-side only.
+    // What submit() stashes server-side before attempting provisionDeviceLocally().
     session()->put('mobile.import.pending_credentials', [
         'pin' => '426900',
         'password' => 'a-genuinely-long-password',

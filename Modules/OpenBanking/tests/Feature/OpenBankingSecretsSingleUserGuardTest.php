@@ -11,14 +11,7 @@ use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 
 uses(RefreshDatabase::class);
 
-/*
- * WR-08: the on-disk secrets file is a single GLOBAL blob with no per-user
- * keying (SINGLE-USER v1). save() carries a defensive guard that logs
- * loudly — but never throws — if it is ever asked to write while more than
- * one user account exists, so the missing per-user isolation is auditable
- * without breaking the (single-user) green suites.
- */
-
+/** @link ../../../../.docs/features/open-banking/secrets-at-rest.md#single-user-caveat */
 function obssgUser(string $username): User
 {
     return User::query()->create([
@@ -60,8 +53,7 @@ it('WR-08: a save while a SECOND user exists logs the single-user-constraint war
     $repo = app(OpenBankingSecretsRepository::class);
     $repo->save(obssgCredentials());
 
-    // The guard logs but never blocks the write (SINGLE-USER v1 is a
-    // documented-and-audited constraint, not a hard failure).
+    // The guard logs but never blocks the write.
     expect($repo->load())->not->toBeNull();
 
     Log::shouldHaveReceived('warning')

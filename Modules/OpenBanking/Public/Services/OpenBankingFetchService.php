@@ -20,9 +20,8 @@ use Modules\OpenBanking\Public\Exceptions\OpenBankingConnectionException;
 
 final class OpenBankingFetchService
 {
-    // Enable Banking's live transaction window is documented as ~90-730
-    // days; 90 is the conservative end, matching this project's explicit
-    // "not a backfill mechanism" boundary for this connector.
+    // Enable Banking documents a ~90-730 day live window; 90 is the conservative
+    // end, and this connector is deliberately not a backfill mechanism.
     private const INITIAL_LOOKBACK_DAYS = 90;
 
     public function __construct(
@@ -34,8 +33,6 @@ final class OpenBankingFetchService
         private readonly Clock $clock,
     ) {}
 
-    // Preview-only: parses/normalizes/fingerprints the fetched window but
-    // does not commit anything to the ledger.
     public function preview(int $connectionId, User $user): ImportPreviewResult
     {
         [$sourceRows, $idempotencyKey] = $this->buildFetch($connectionId, $user);
@@ -43,8 +40,7 @@ final class OpenBankingFetchService
         return $this->importer->runFromRemoteFetch($sourceRows, $this->adapter->format(), $user, $idempotencyKey);
     }
 
-    // Preview immediately followed by confirm — the scheduled/auto-sync
-    // path, which has no user in the loop to review a preview screen.
+    // The scheduled path: no user is in the loop to review a preview screen.
     public function fetchAndConfirm(int $connectionId, User $user): ImportConfirmResult
     {
         $preview = $this->preview($connectionId, $user);
@@ -67,9 +63,8 @@ final class OpenBankingFetchService
             throw OpenBankingConnectionException::notFound($connectionId, $user->id);
         }
 
-        // Self-guard on enabled + consent-not-expired, re-loaded from the
-        // row, using the same predicate SyncOpenBankingAccountJob applies on
-        // pickup — makes this service safe regardless of caller state.
+        // Re-checked from the row with the same predicate the sync job applies
+        // on pickup, so this service is safe regardless of caller state.
         $enabled = (bool) $connection->enabled;
         $consentExpiresAtRaw = $connection->consent_expires_at ?? null;
         $consentValid = is_string($consentExpiresAtRaw)
@@ -91,10 +86,8 @@ final class OpenBankingFetchService
 
         $credentials = $this->secrets->loadOrThrow();
 
-        // The secrets file holds exactly one live session at a time. If the
-        // user has re-linked a different institution since this row was
-        // created, the session would pair one bank's credentials with
-        // another bank's account_uid — fail loudly rather than proceed.
+        // The secrets file holds one live session, so a re-link since this row
+        // was created would pair one bank's credentials with another's uid.
         if ($credentials->institutionId !== null && $credentials->institutionId !== $institutionId) {
             throw OpenBankingConnectionException::institutionMismatch(
                 $connectionId,
@@ -106,10 +99,8 @@ final class OpenBankingFetchService
         $window = $this->resolveWindow($connection);
         $idempotencyKey = self::idempotencyKey($institutionId, $accountUid, $window);
 
-        // Materialize the generator eagerly here rather than handing it raw
-        // to the import pipeline, which swallows mid-iteration exceptions
-        // into an opaque per-row error status this service's callers need
-        // as a real, catchable exception.
+        // Materialized eagerly: the import pipeline swallows mid-iteration
+        // exceptions into a per-row error status, and callers here need to catch.
         $rows = iterator_to_array($this->adapter->fetch($accountUid, $window, $credentials));
 
         /** @var Generator<int, SourceTransactionDto> $sourceRows */
@@ -120,9 +111,8 @@ final class OpenBankingFetchService
         return [$sourceRows, $idempotencyKey];
     }
 
-    // dateFrom resumes from the last successful sync (a never-synced
-    // connection falls back to INITIAL_LOOKBACK_DAYS); dateTo is always
-    // "now" so a manual sync always wants the freshest available rows.
+    // dateFrom resumes from the last successful sync, falling back to
+    // INITIAL_LOOKBACK_DAYS; dateTo is always now.
     private function resolveWindow(\stdClass $connection): FetchWindow
     {
         $now = $this->clock->now();

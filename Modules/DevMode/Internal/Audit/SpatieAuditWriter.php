@@ -89,9 +89,7 @@ final readonly class SpatieAuditWriter implements AuditWriter
         return true;
     }
 
-    // Locates the eager spawn-time row for this run and its integer id,
-    // returning null when no row exists or the id is not an int — both
-    // route the caller to the append-only fallback record instead.
+    // null routes the caller to the append-only fallback record.
     /**
      * @return array{id: int, properties: mixed}|null
      */
@@ -160,9 +158,6 @@ final readonly class SpatieAuditWriter implements AuditWriter
         ]);
     }
 
-    // causedBy() accepts the model OR a raw id; prefer the model when the
-    // caller equals the authenticated user so the polymorphic causer
-    // relation resolves directly, otherwise fall back to the integer id.
     /**
      * @param  array<string, mixed>  $properties
      */
@@ -181,9 +176,8 @@ final readonly class SpatieAuditWriter implements AuditWriter
         $logger->log($event->value);
     }
 
-    // Returns null when no matching user exists so spatie's
-    // causerResolver doesn't blow up on a synthetic id (test fixtures,
-    // deleted-user rows) — a missing causer beats losing the audit row.
+    // null when the id matches no user: spatie's causerResolver throws on a
+    // synthetic one, and a missing causer beats losing the audit row.
     private function resolveCauser(int $callerUserId): ?User
     {
         try {
@@ -192,10 +186,8 @@ final readonly class SpatieAuditWriter implements AuditWriter
                 return $authed;
             }
         } catch (NotAuthenticatedException) {
-            // No authenticated user in scope (queue worker, console, or a
-            // request whose session has since expired) — fall through to
-            // the id-based lookup below rather than treating an
-            // unauthenticated caller as an error.
+            // A queue worker or console caller has no authenticated user;
+            // that is not an error, so fall through to the id lookup.
         }
 
         if ($callerUserId <= 0) {

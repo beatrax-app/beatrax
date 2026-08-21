@@ -76,8 +76,7 @@ final class PreviewWizard extends Component
     }
 
     // Writes into the cache so the next render shows the new name without
-    // re-running the pipeline. An out-of-bounds rowIndex no-ops, so a stale
-    // dispatch from an earlier render never throws.
+    // re-running the pipeline. An out-of-bounds rowIndex no-ops.
     #[On('rename-counterparty:saved')]
     public function applyRenameInPlace(int $rowIndex, string $friendlyName, PreviewCache $cache, CurrentUser $currentUser): void
     {
@@ -265,9 +264,8 @@ final class PreviewWizard extends Component
         $this->paypalAccountName = '';
     }
 
-    // The pipeline refuses a hint-less CSV import at the contract boundary,
-    // and on a re-run the stored source_format is the only surviving record
-    // of the dialect the user declared on the original upload.
+    // The pipeline refuses a hint-less CSV import, and on a re-run the stored
+    // source_format is the only record of the dialect the user declared.
     private function formatHintForReRun(string $sourceFormat): ?BankCsvFormatHint
     {
         return match ($sourceFormat) {
@@ -339,9 +337,8 @@ final class PreviewWizard extends Component
         ]);
     }
 
-    // Anchored on source_format rather than the unknown-IBAN list, so drift
-    // in the synthetic IBAN literal still raises the prompt. Raw query
-    // builder keeps phpstan strict-rules' staticMethod.dynamicCall quiet.
+    // Anchored on source_format rather than the unknown-IBAN list, so drift in
+    // the synthetic IBAN literal still raises the prompt.
     private function needsIcsAccountName(CurrentUser $currentUser, DatabaseManager $db): bool
     {
         $user = $currentUser->user();

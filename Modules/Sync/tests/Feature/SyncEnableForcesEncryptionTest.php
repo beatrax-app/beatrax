@@ -16,19 +16,8 @@ use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 
 uses(RefreshDatabase::class);
 
-/*
- * SyncEnableForcesEncryptionTest — D-07: enabling sync / confirming pairing
- * on a not-yet-encrypted device AUTO-runs the migration and leaves
- * encryption ON with NO decline path (mandatory-when-synced).
- * 14-VALIDATION.md D-07 row.
- *
- * RED until Plan 09 wires DevicesAndSyncSettingsSection::enableSync() (and
- * the pairing-confirm flow) to auto-invoke
- * Modules\Core\Public\Services\EncryptionMigrationService::migrate() with no
- * decline affordance. This test references the planned production FQCN,
- * which does not yet exist — the failure is "class not found", the correct
- * Wave 0 RED state.
- */
+// Encryption is mandatory once a device syncs, so enabling sync and completing a
+// pairing both run the migration themselves and offer no decline path.
 
 function syncEnableForcesEncryptionUser(string $username): User
 {
@@ -47,8 +36,8 @@ it('auto-runs the encryption migration and turns encryption ON when enableSync s
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
 
-    // Precondition per the D-02 gate: an app-lock must already be configured
-    // before sync (and therefore encryption) can be enabled.
+    // An app-lock must already be configured before sync — and therefore
+    // encryption — can be enabled at all.
     $db->connection()->table('user_app_lock_configs')->insert([
         'user_id' => $user->id,
         'lock_enabled' => 1,
@@ -68,30 +57,16 @@ it('auto-runs the encryption migration and turns encryption ON when enableSync s
     expect($state->enabled_at)->not->toBeNull();
     expect((bool) $state->migration_in_progress)->toBeFalse();
 
-    // Sanity: the planned migration service exists and is the sole authority
-    // for turning encryption on — no separate "decline" affordance exists in
-    // the enable-sync flow for a synced device (D-07 mandatory-when-synced).
+    // The migration service is the sole authority for turning encryption on;
+    // the enable-sync flow carries no decline affordance beside it.
     expect(class_exists(EncryptionMigrationService::class))->toBeTrue();
 });
 
 it('auto-runs the encryption migration when a pairing both-confirm admits a peer — no decline path (D-07)', function (): void {
-    // This device already ran enableSync() at some earlier point (its own
-    // identity key-file + self device_registry row already exist) but
-    // encryption is NOT yet on — mirrors a pre-Phase-14 device, or one where
-    // an earlier auto-migrate attempt never ran. It now completes pairing a
-    // NEW peer device: this is the second, independent D-07 trigger point
-    // ("the responder becomes a peer here") beyond enableSync() itself.
-    //
-    // This device plays the INITIATOR side (showMyCode) so its own real,
-    // loadable identity is used as the initiator_device_id — the fake
-    // "responder" is accepted directly via PairingTokenService::accept()
-    // with an independent device id (mirrors PairingFlowTest.php's own
-    // service-level fixture idiom), which keeps this test clear of the
-    // unrelated WR-05 self-collision guard (admitResponderDevice() refuses
-    // to admit a responder whose device_id equals the LOCAL self-row — that
-    // guard would fire spuriously if the "responder" reused this device's
-    // own identity, since only one identity file per user exists in a
-    // single test process).
+    // This device plays the initiator so its own real, loadable identity is the
+    // initiator; the responder is accepted straight through PairingTokenService
+    // with an independent device id, because admitResponderDevice() refuses a
+    // responder whose device_id equals the local self row.
     $user = syncEnableForcesEncryptionUser('pairing-forces-encryption-user');
     $this->actingAs($user);
 
@@ -115,9 +90,8 @@ it('auto-runs the encryption migration when a pairing both-confirm admits a peer
 
     expect($db->connection()->table('sync_encryption_state')->where('user_id', $user->id)->exists())->toBeFalse();
 
-    // This device shows its own code — sets $pairingTokenId/$side inside the
-    // component via the real showMyCode() action (both are #[Locked] and
-    // cannot be set directly in a test).
+    // $pairingTokenId and $side are both #[Locked], so only the real
+    // showMyCode() action can set them.
     $pairing = Livewire::test(PairingFlowModal::class)
         ->call('showMyCode')
         ->assertSet('step', 'show_code')
@@ -128,12 +102,10 @@ it('auto-runs the encryption migration when a pairing both-confirm admits a peer
     /** @var PairingTokenService $tokenService */
     $tokenService = $this->app->make(PairingTokenService::class);
 
-    // An independent responder device accepts the code out of band, then
-    // confirms first — bothConfirmed() is not yet true, so THIS component's
-    // own confirmMatch() call below is the second/deciding confirmation. The
-    // plaintext token is only ever known via the component's own displayed
-    // $wordCode (the DB stores only its SHA-256 hash) — decode that back to
-    // the plaintext hex the same way a real responder device would type it in.
+    // The responder accepts out of band and confirms first, so this component's
+    // confirmMatch() below is the deciding second confirmation. Only the displayed
+    // word code reveals the plaintext token — the row holds its SHA-256 — so it is
+    // decoded back the way a responder device typing it in would.
     /** @var WordCodeEncoder $wordEncoder */
     $wordEncoder = $this->app->make(WordCodeEncoder::class);
     $plaintextToken = $wordEncoder->decode($pairing->get('wordCode'));

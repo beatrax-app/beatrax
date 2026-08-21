@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 use Modules\Auth\Internal\Lock\AppLockKeyWrap;
 
-/*
- * Unit tests for AppLockKeyWrap — secretbox-based data-key wrap/unwrap.
- */
-
 it('round-trips a 32-byte data key through wrap and unwrap', function (): void {
     $wrapper = new AppLockKeyWrap;
 

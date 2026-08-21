@@ -20,9 +20,8 @@ final readonly class AnomalyAlertQuery
 {
     use CoercesScalars;
 
-    // 25 rows shown plus 1 look-ahead row the caller uses to decide
-    // whether a "next page" cursor exists; the look-ahead row is never
-    // rendered.
+    // Despite the name, nothing is held back: the page renders all 26 and reads
+    // a full 26 as "there may be more", seeding the next cursor off the last row.
     public const PAGE_SIZE_WITH_LOOKAHEAD = 26;
 
     public function __construct(
@@ -31,9 +30,8 @@ final readonly class AnomalyAlertQuery
         private CounterpartyProfileQuery $counterpartyQuery,
     ) {}
 
-    // The state filter is widened to include rows in `state='snoozed'`
-    // whose `snoozed_until` has elapsed: the sweep is the durable write,
-    // this query is the fresh read reflecting "open again" between sweeps.
+    // Elapsed snoozes count as open here: the sweep is the durable write, this
+    // is the fresh read that covers the gap between sweeps.
     /**
      * @return list<AnomalyAlertDto>
      */
@@ -87,10 +85,8 @@ final readonly class AnomalyAlertQuery
             ->count();
     }
 
-    // A multi-reason alert contributes to every reason it carries, so
-    // counts across detectors can exceed openCountForUser. Computed in
-    // PHP since `reasons` is a JSON list (SQLite has no first-class
-    // JSON-array aggregation here).
+    // A multi-reason alert contributes to every reason it carries, so these
+    // counts can sum to more than openCountForUser.
     /**
      * @return array<string, int>
      */
@@ -131,10 +127,9 @@ final readonly class AnomalyAlertQuery
         return $this->materialise($user, $query->get());
     }
 
-    // The id is derived from the alert's own columns, so it sorts in hash
-    // order, not insertion order — `id < cursor` would skip and repeat rows at
-    // random. `detected_at` is what this list has always claimed to be ordered
-    // by, and the id below it only breaks ties within one timestamp.
+    // The id is derived from the alert's own columns, so it sorts in hash order,
+    // not insertion order — paging on `id < cursor` alone would skip and repeat
+    // rows at random. detected_at leads; id only breaks ties within a timestamp.
     private function applyCursor(Builder $query, ?string $cursorDetectedAt, ?int $cursorId): void
     {
         if ($cursorDetectedAt === null || $cursorId === null) {
@@ -159,9 +154,6 @@ final readonly class AnomalyAlertQuery
             return [];
         }
 
-        // Resolve transaction_id -> counterparty_id (a permitted ledger
-        // READ — the anomaly table keys per-transaction, not per-merchant),
-        // then transaction_id -> display name via the resolved counterparty.
         $counterpartyByTxn = $this->counterpartyIdsForTransactions($user, $rows);
         $displayNames = $this->loadDisplayNames($user, $counterpartyByTxn);
 
@@ -176,9 +168,9 @@ final readonly class AnomalyAlertQuery
         return $result;
     }
 
-    // A permitted READ of the ledger (noTransactionWritesFromAnomaly
-    // forbids only writes); the anomaly table keys per-transaction so the
-    // merchant id lives on the transaction.
+    // A permitted cross-module READ of the ledger (the boundary test pins only
+    // writes); anomaly_alerts keys per-transaction, so the merchant id is over
+    // on the transaction.
     /**
      * @param  Collection<int, stdClass>  $rows
      * @return array<int, int>
@@ -216,8 +208,6 @@ final readonly class AnomalyAlertQuery
         return $map;
     }
 
-    // Rows in `state='open'`, plus rows in `state='snoozed'` whose
-    // `snoozed_until` has elapsed.
     private function applyOpenStateFilter(Builder $query): void
     {
         $now = $this->clock->now()->toDateTimeString();

@@ -14,9 +14,8 @@ return new class extends ModuleMigration
             $table->char('base_currency', 3);
             $table->char('quote_currency', 3);
             $table->date('rate_date');
-            // Same precision as transactions.fx_rate_used, so comparing a cached
-            // rate against the rate a transaction settled at is never a float
-            // truncation away from equal.
+            // Same precision as transactions.fx_rate_used, so a cached rate and
+            // a settled one are never a truncation away from equal.
             $table->decimal('rate', 18, 8);
             $table->string('source', 20);
             $table->timestamps();

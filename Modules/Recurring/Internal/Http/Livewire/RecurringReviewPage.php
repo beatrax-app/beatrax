@@ -20,16 +20,11 @@ use Modules\Recurring\Public\Actions\UnRejectRecurringSeries;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-// Service collaborators arrive as parameters on action methods and
-// render() — constructor injection is banned on Livewire Component
-// subclasses by phpstan-strict-rules; the pattern mirrors the
-// chains-side ChainReviewQueue shape.
 final class RecurringReviewPage extends Component
 {
     use DispatchesToast;
 
-    // Previous page's tail recurring_series.id, null on the first page.
-    // Cursor pagination keyed on id matches the rest of the Public read API.
+    // Previous page's tail recurring_series.id; null on the first page.
     public ?int $cursorId = null;
 
     /**
@@ -82,10 +77,6 @@ final class RecurringReviewPage extends Component
         $this->toastWithUndo(Lang::get('recurring::review.toast.un_rejected'), undoAction: 'reject', undoPayload: $seriesId);
     }
 
-    // Foreign-user ids are skipped silently — the underlying Public Action
-    // raises NotFoundHttpException for cross-user lookups and the loop
-    // swallows it so a partially-poisoned select does not break the batch;
-    // the toast records only the successfully-applied count.
     public function bulkApprove(CurrentUser $currentUser, ApproveRecurringSeries $action): void
     {
         $user = $currentUser->user();
@@ -99,17 +90,14 @@ final class RecurringReviewPage extends Component
                 ($action)($id, $user);
                 $applied++;
             } catch (NotFoundHttpException) {
-                // Deliberately empty: the id belongs to another user, and a
-                // bulk action reports how many rows it applied to rather than
-                // failing the whole batch on one it was never allowed to see.
+                // Deliberately empty: the id belongs to another user, and a bulk
+                // action reports what it applied rather than failing the batch.
             }
         }
         $this->selectedIds = [];
         $this->toastWithUndo(Lang::get('recurring::review.toast.bulk_approved', ['count' => $applied]), undoAction: 'bulkUndo', undoPayload: null);
     }
 
-    // Same shape as bulkApprove() but calls RejectRecurringSeries;
-    // foreign-user ids are skipped silently.
     public function bulkReject(CurrentUser $currentUser, RejectRecurringSeries $action): void
     {
         $user = $currentUser->user();
@@ -123,9 +111,8 @@ final class RecurringReviewPage extends Component
                 ($action)($id, $user);
                 $applied++;
             } catch (NotFoundHttpException) {
-                // Deliberately empty: the id belongs to another user, and a
-                // bulk action reports how many rows it applied to rather than
-                // failing the whole batch on one it was never allowed to see.
+                // Deliberately empty: the id belongs to another user, and a bulk
+                // action reports what it applied rather than failing the batch.
             }
         }
         $this->selectedIds = [];
@@ -146,10 +133,8 @@ final class RecurringReviewPage extends Component
             default => $query->pendingForUser($user, $this->cursorId),
         };
 
-        // Snooze targets are domain timestamps computed server-side
-        // off the injected clock, not Blade-time `now()` calls. This
-        // keeps `CarbonImmutable::setTestNow()` deterministic for the
-        // test suite and routes timing through the DI-only seam.
+        // Snooze targets come off the injected clock rather than a Blade-time
+        // now(), which is what keeps CarbonImmutable::setTestNow() deterministic.
         $now = $clock->now();
         $snoozeTargets = [
             '1w' => $now->addWeek()->toIso8601String(),

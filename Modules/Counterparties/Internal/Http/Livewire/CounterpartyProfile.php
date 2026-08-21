@@ -18,10 +18,8 @@ use Modules\Tax\Public\Services\TaxCountrySetup;
 use Modules\Tax\Public\Services\TaxTagQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-// Cross-user 404 is enforced at mount time (throws NotFoundHttpException,
-// not 403) so the route resolver never signals that a slug exists in
-// another user's namespace. The body then routes to the profile-tabs
-// partial matching the resolved profile's type.
+// mount() raises a 404, never a 403, on another user's slug: a 403 would
+// confirm the slug exists in someone else's namespace.
 final class CounterpartyProfile extends Component
 {
     use HandlesTaxTagging;
@@ -67,9 +65,8 @@ final class CounterpartyProfile extends Component
         $user = $currentUser->user();
         $profile = $query->bySlug($user, $this->slug);
 
-        // Belt-and-suspenders re-check — the cross-user invariant is
-        // enforced at mount time, but the render cycle re-runs after
-        // every wire action so the read is also re-guarded here.
+        // render() re-runs after every wire action, so the mount-time cross-user
+        // guard is re-asserted here rather than trusted once.
         if ($profile === null) {
             throw new NotFoundHttpException('Counterparty not found.');
         }
@@ -103,9 +100,7 @@ final class CounterpartyProfile extends Component
             ? $recurring->approvedSeriesForCounterparty($profile->id, $user)
             : [];
 
-        // Batch-loads tax-tag state for every recent-activity row in one
-        // query rather than one per row, avoiding an N+1 pattern when the
-        // tax badge renders across the whole list.
+        // One tax-tag query for the whole list, not one per rendered badge.
         $recentActivity = $query->recentActivity($cpModel, 10);
         $recentIds = array_map(static fn (object $row): int => is_numeric($row->id) ? (int) $row->id : 0, $recentActivity->all());
         $taxState = $this->taxTagStateFor($recentIds, $taxTagQuery, $currentUser);

@@ -16,16 +16,10 @@ use Modules\Sync\Internal\OpLog\OpType;
 
 uses(RefreshDatabase::class);
 
-/*
- * One row per user, holding the calendar account filters, both index view
- * modes and the skipped-update list. It had merge rules and no capture, so the
- * settings a user chose after pairing stayed on the device they chose them on:
- * the phone kept re-showing an update they had already skipped on the desktop.
- *
- * Four Livewire components wrote this row, each with its own updateOrCreate.
- * The capture lives on the shared writer they now all go through, because the
- * same dispatch pasted four times is the one the fifth caller forgets.
- */
+// One row per user, with merge rules but no capture, so a setting chosen after
+// pairing stayed on the device that chose it — the phone kept re-showing an
+// update already skipped on the desktop. The capture lives on the shared writer
+// now, because the same dispatch pasted into four callers is what a fifth forgets.
 
 function preferenceSyncUser(): User
 {
@@ -37,8 +31,8 @@ function preferenceSyncUser(): User
     ]);
 }
 
-// Binds the device identity the capture listener resolves, and hands back the
-// public key so the same history can be verified as a peer would verify it.
+// Hands the public key back so the captured history can be verified the way a
+// peer would verify it.
 function bindPreferenceSyncWriter(int $userId): string
 {
     $keypair = sodium_crypto_sign_keypair();

@@ -6,19 +6,6 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 
-/*
- * /inboxes status badge matrix + inline action rendering.
- *
- * Verifies the connected-inboxes table renders the correct Flux Badge
- * color + label for each of the six inbox_scan_state.status enum
- * values, plus the inline-action surface:
- *
- *   - Reconnect link present ONLY when status='needs_reauth' and points
- *     to /oauth/connect/{provider}?inbox_id={id}.
- *   - Scan-now button rendered disabled (aria-disabled="true") when
- *     status='backfilling' or 'scanning'; otherwise enabled.
- */
-
 function ihbrUser(string $username): User
 {
     return User::query()->create([
@@ -72,9 +59,6 @@ it('renders the slate Idle badge for status=idle', function (): void {
 
     $response = $this->get(route('inboxes.index'));
     $response->assertStatus(200);
-    // Flux Badge with color=slate renders >Idle< content with a
-    // slate-coloured pill — the verbatim label text is the gate the
-    // matrix exposes.
     $response->assertSee('Idle', false);
     $response->assertSee('Scan now', false);
 });
@@ -118,10 +102,8 @@ it('renders the amber Rate limited badge + retrying-in detail when status=rate_l
 });
 
 it('renders sub-minute retry-after as seconds for very short waits', function (): void {
-    // No direct path through the matrix produces a sub-minute backoff
-    // (BACKOFF_SCHEDULE starts at 60s). Skip the seconds-format branch
-    // as covered by code-shape only — the production schedule never
-    // emits <60s waits.
+    // BACKOFF_SCHEDULE starts at 60s, so no path through the matrix reaches
+    // the Blade's seconds-format branch and there is nothing to render.
     expect(true)->toBeTrue();
 });
 
@@ -134,7 +116,6 @@ it('renders the rose Needs reauth badge + Reconnect link when status=needs_reaut
     $response->assertStatus(200);
     $response->assertSee('Needs reauth', false);
     $response->assertSee('Reconnect', false);
-    // Reconnect link target = /oauth/connect/{provider}?inbox_id={id}.
     $response->assertSee("/oauth/connect/microsoft?inbox_id={$inboxId}", false);
 });
 
@@ -157,8 +138,6 @@ it('does NOT render a Reconnect link for non-reauth rows', function (): void {
 
     $response = $this->get(route('inboxes.index'));
     $response->assertStatus(200);
-    // Asserting on the link's button copy text is the cleanest signal —
-    // the page must NOT render the Reconnect button when no row needs
-    // it. (The needs_reauth row, when present, is the only emitter.)
+    // A needs_reauth row is the only thing that emits this copy.
     $response->assertDontSee('Reconnect', false);
 });

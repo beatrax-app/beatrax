@@ -6,9 +6,8 @@ namespace Modules\Tax\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-// One counterparty suggestion for TaxPage's batch-tag prompt: "this
-// counterparty has N other untagged transactions in this year — tag
-// them all?", shown after tagging a row.
+// untaggedCount is the counterparty's OTHER untagged transactions in the same
+// tax year, counted right after a row is tagged.
 final class BatchTagSuggestion extends Data
 {
     public function __construct(

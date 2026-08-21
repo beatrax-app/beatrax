@@ -10,15 +10,14 @@ return new class extends ModuleMigration
     public function up(): void
     {
         $this->schema()->table('users', static function (Blueprint $table): void {
-            // Nullable so existing rows need no backfill, and deliberately with
-            // no DB DEFAULT: User's Eloquent $attributes owns 'EUR', and two
-            // competing defaults would drift.
+            // No DB DEFAULT on purpose: User's Eloquent $attributes owns 'EUR',
+            // and two competing defaults drift.
             $table->char('base_currency', 3)
                 ->nullable()
                 ->after('default_currency_view');
 
-            // Off by default: rate fetches are the only outbound traffic the app
-            // makes, so they are opt-in and bundled rates are the fallback.
+            // Rate fetches are the app's only outbound traffic, so they are
+            // opt-in with bundled rates as the fallback.
             $table->boolean('fx_online_enabled')
                 ->default(false)
                 ->after('base_currency');

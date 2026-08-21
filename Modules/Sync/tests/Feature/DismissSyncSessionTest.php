@@ -6,12 +6,9 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Sync\Public\Services\SyncStatusService;
 
-/*
- * sync_sessions rows outlive the device_registry rows they name, so a failed
- * handshake or a peer that has since been removed stayed on the settings
- * screen forever — holding the whole section on "Sync error on one or more
- * devices" with no control that could clear it.
- */
+// sync_sessions rows outlive the registry rows they name, so a failed
+// handshake or a since-removed peer stayed on the settings screen forever,
+// holding the whole section in an error state with no control to clear it.
 
 function dismissUser(string $username): int
 {

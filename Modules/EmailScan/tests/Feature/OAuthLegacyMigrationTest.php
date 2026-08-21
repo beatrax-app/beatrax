@@ -8,13 +8,9 @@ use Modules\Core\Models\User;
 use Modules\EmailScan\Internal\Listeners\EmitOAuthReauthRequiredAlert;
 use Modules\EmailScan\Models\OAuthSecret;
 
-/*
- * Covers the legacy-JSON rename migration and the first-boot
- * re-authorize alert. The migration and listener resolve paths via
- * UserDataPathService; each test points NATIVEPHP_STORAGE_PATH at a
- * throwaway temp directory so the developer's real secrets directory
- * is never touched.
- */
+// Both the migration and the listener resolve paths through
+// UserDataPathService, so NATIVEPHP_STORAGE_PATH is pointed at a throwaway
+// directory to keep the developer's real secrets directory out of reach.
 
 function oauthLegacyMigration(): object
 {

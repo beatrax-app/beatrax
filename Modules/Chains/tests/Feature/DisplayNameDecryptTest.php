@@ -17,16 +17,9 @@ use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
 
 uses(EnablesEncryptionForUser::class);
 
-/*
- * 14.1-10 Task 3 (D-06 fold-in, per 14.1-AUDIT.md Cluster 1) — under an
- * encrypted user, `transactions.counterparty_name` is ciphertext at
- * rest. None of ChainLinkQuery::makeNode()/makeChainLinkRow()'s
- * from/to lookups, ChainDrawer's fan-out child hydration, or
- * UncategorizedTriageQuery::mapRow() do a SQL predicate/ORDER BY on
- * this column (every WHERE clause is scoped by id/user_id), so the
- * D-09 predicate guard cannot catch this class of leak — only a
- * decrypt-for-display test proves it.
- */
+// No WHERE or ORDER BY touches transactions.counterparty_name on these read
+// paths — every clause is scoped by id/user_id — so the encrypted-predicate
+// guard cannot catch this leak; only a decrypt-for-display test can.
 
 function cddUser(): User
 {
@@ -61,11 +54,6 @@ function cddImportRun(User $user, string $sha): ImportRun
     ]);
 }
 
-/**
- * Inserts a transaction row whose counterparty_name (and optionally
- * description) is ciphertext at rest — mirrors what a direct-write
- * import would have produced for an already-encrypted user.
- */
 function cddEncryptedTx(
     DatabaseManager $db,
     Session $session,

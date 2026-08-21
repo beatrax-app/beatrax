@@ -5,10 +5,9 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-// Three separate ALTER TABLE passes: SQLite rebuilds the table for each
-// structural change and can neither drop nor add a uniquely-indexed column
-// within one. `unique()` is case-sensitive; case-insensitive uniqueness comes
-// from the application lowercasing every username before a write path.
+// Three ALTER TABLE passes: SQLite rebuilds the table for each structural
+// change and cannot drop and add a uniquely-indexed column in one. `unique()`
+// is case-sensitive; the application lowercases every username before a write.
 return new class extends ModuleMigration
 {
     public function up(): void

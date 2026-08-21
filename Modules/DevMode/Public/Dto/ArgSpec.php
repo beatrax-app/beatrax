@@ -6,10 +6,8 @@ namespace Modules\DevMode\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-// Declarative schema for one artisan-command argument; the runner page
-// reads argsSchema off a CommandSpec and emits a Flux widget per entry,
-// and the spawn endpoint validates submitted values against the same
-// `rules` before spawning. `options` is required only for type==='select'.
+// `rules` drives both the rendered widget and the server-side validation, so
+// the two cannot drift. `options` is required only for type 'select'.
 final class ArgSpec extends Data
 {
     /**

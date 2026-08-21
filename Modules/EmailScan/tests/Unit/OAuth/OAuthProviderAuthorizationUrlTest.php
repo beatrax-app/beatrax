@@ -10,16 +10,12 @@ use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
 uses(RefreshDatabase::class);
 
-/**
- * The authorization URL is the one part of the OAuth dance this application
- * builds itself, and it carries two things worth pinning: the CSRF state, and
- * the scopes the user is asked to grant. Both are built offline, so they can be
- * asserted without reaching Google or Microsoft.
- */
+// The authorization URL is the one part of the dance this application builds
+// itself, and it is built offline — so the CSRF state and the requested scopes
+// can both be asserted without reaching Google or Microsoft.
 beforeEach(function (): void {
-    // The secrets repository is user-scoped: it resolves the owner from the
-    // guard rather than taking one, so there has to be a signed-in user before
-    // a client can be stored or read at all.
+    // The secrets repository resolves its owner from the guard rather than
+    // taking one, so nothing can be stored or read before a user is signed in.
     $this->user = User::create([
         'username' => 'wessel',
         'password' => 'opensesame',
@@ -37,9 +33,8 @@ it('asks Google for read-only mail and nothing wider', function (): void {
     $url = app(GoogleOAuthProvider::class)->getAuthorizationUrl('state-token-123', $this->redirect)->url;
     parse_str((string) parse_url($url, PHP_URL_QUERY), $params);
 
-    // The League provider prepends its own openid/email/profile defaults, so
-    // this asserts what was asked for and — the part that matters — what was
-    // not: any of these would let the app alter or send the user's mail.
+    // The part that matters is what was not asked for: any of these would let
+    // the app alter or send the user's mail.
     expect($params['scope'])->toContain('https://www.googleapis.com/auth/gmail.readonly')
         ->and($params['scope'])->toContain('https://www.googleapis.com/auth/userinfo.email')
         ->and($params['scope'])->not->toContain('gmail.modify')
@@ -64,9 +59,8 @@ it('asks Google for a refresh token, which only offline consent returns', functi
 });
 
 // Microsoft's authorization URL is asserted in MicrosoftOAuthExchangeTest
-// instead, because Azure resolves tenant metadata over the network before it
-// will build one — it needs the transport the factory injects, which the tests
-// here deliberately do without.
+// instead: Azure resolves tenant metadata over the network before it will
+// build one, so it needs a transport these tests deliberately do without.
 
 it('carries the state through verbatim, since it is the CSRF check', function (string $state): void {
     $this->secrets->saveProviderClient('gmail', 'google-client', 'google-secret', $this->redirect);

@@ -11,14 +11,6 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\Category;
 use Modules\Ledger\Public\Services\PeriodQuery;
 
-/*
- * Phase 13.2 Plan 07 Task 1: the rebuilt `/budgets` zero-based envelope grid
- * (Req 3/6/8/12). Supersedes the flat `category_budgets`-era test suite this
- * file used to hold — the rebuilt page no longer exposes
- * setBudget/updateBudget/removeBudget/newCategoryId; that flow is retired by
- * CarryoverQuery/EnvelopeWriter.
- */
-
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'envelopegrid-'.bin2hex(random_bytes(4)),
@@ -27,9 +19,8 @@ beforeEach(function (): void {
     ]);
     $this->actingAs($this->user);
 
-    // Genesis anchor well before "current" so month-nav + copy-last-month
-    // fixtures below always have a real prior period to read from (mirrors
-    // the CarryoverQueryTest/EnvelopeMoveTest genesis-anchor precedent).
+    // Genesis anchor well before "current" so the copy-last-month fixtures
+    // below always have a real prior period to read from.
     DB::table('users')->where('id', $this->user->id)->update([
         'envelope_activated_at' => CarbonImmutable::now()->subMonths(3)->startOfMonth(),
     ]);

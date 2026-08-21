@@ -17,9 +17,6 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Import\Public\Actions\CreateMerchantAlias;
 use Modules\Import\Public\Services\PatternGeneralizer;
 
-/**
- * @link ../../../../../.docs/features/import/architecture.md#rename-counterparty-popover
- */
 final class RenameCounterpartyPopover extends Component
 {
     public string $raw = '';

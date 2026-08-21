@@ -8,13 +8,11 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Enums\AccountKind;
 
-// updateOrCreate keyed on (user_id, slug) keeps account IDs stable
-// across runs, so transactions seeded against these accounts in a
-// prior run still point at the same account_id on the next run.
+// updateOrCreate on (user_id, slug) keeps account ids stable across runs, so
+// transactions seeded in a prior run still point at the same account_id.
 final class DemoAccountsSeeder
 {
-    // Keyed by username, matching the user map DemoUsersSeeder
-    // returns.
+    // Keyed by username, matching the map DemoUsersSeeder returns.
     /** @var array<string, list<array{name: string, slug: string, kind: string, iban: string, default_currency: string, starting_balance_minor: int}>> */
     private const ACCOUNTS = [
         'demo-1@beatrax.local' => [
@@ -29,10 +27,8 @@ final class DemoAccountsSeeder
             [
                 'name' => 'ICS Card',
                 'slug' => 'ics-demo-1',
-                // Production code (ReconcilePage, ThisPeriodAtAGlanceQuery,
-                // IcsSettlementResolver, Chains backpopulate) keys ICS
-                // behaviour on 'ics_card'; 'ics' leaves the demo's ICS
-                // reconcile pre-fill / chains features dormant.
+                // Production code keys ICS behaviour on 'ics_card'; 'ics' would
+                // leave the demo's reconcile pre-fill and chains dormant.
                 'kind' => AccountKind::IcsCard->value,
                 'iban' => 'ICS-DEMO-1-CARD',
                 'default_currency' => 'EUR',
@@ -67,9 +63,7 @@ final class DemoAccountsSeeder
         ],
     ];
 
-    // Returns the materialised Account models keyed first by username,
-    // then by slug, so downstream seeders can address an exact account
-    // without re-querying the database.
+    // Keyed username then slug, so downstream seeders need no re-query.
     /**
      * @param  array<string, User>  $users
      * @return array<string, array<string, Account>>

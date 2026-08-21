@@ -13,33 +13,7 @@ use Modules\Ledger\Models\Transaction;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for RetypeByAliasResolver — the post-import healing
- * pass that flips `expense` / `income` rows whose counterparty_iban
- * matches a known-counterparty alias whose target Account now exists.
- *
- * Locks the invariants that make the wizard-order race recoverable:
- *
- *   1. Retypes a negative-amount expense row whose counterparty_iban
- *      resolves through the alias bridge → `transfer_out`.
- *   2. Retypes a positive-amount income row through the same path →
- *      `transfer_in`.
- *   3. Idempotent — a second pass touches zero rows (every retyped
- *      row is now out of the `('expense', 'income')` set).
- *   4. Per-user scoped — user A's alias never retypes user B's rows.
- *   5. Skips rows whose alias resolves to the row's OWN account
- *      (degenerate self-transfer guard).
- *   6. Skips rows without a counterparty_iban (null or empty).
- *   7. Skips rows whose counterparty_iban is in the alias table but
- *      no destination-kind account exists yet (the wizard-order race
- *      at first-run preview; this row stays `expense` until the
- *      account materialises and a subsequent pass picks it up).
- */
-
 /**
- * Build a User + 3 Accounts (bank / paypal / ics_card) + an ImportRun.
- * Returns the bag the per-test helper functions consume.
- *
  * @return array{user: User, bank: Account, paypal: Account, ics: Account, run: ImportRun}
  */
 function retypeFixture(string $username): array
@@ -87,10 +61,6 @@ function retypeFixture(string $username): array
     return compact('user', 'bank', 'paypal', 'ics', 'run');
 }
 
-/**
- * Persist a transaction on a given account with the supplied type,
- * amount, and counterparty_iban. Returns the saved Transaction.
- */
 function retypeTx(
     User $user,
     Account $account,
@@ -176,9 +146,6 @@ it('is idempotent — a second pass touches zero rows', function (): void {
 it('does not touch user B rows when user A is being resolved (per-user scoping)', function (): void {
     $a = retypeFixture('user-a');
     $b = retypeFixture('user-b');
-    // Both users have an alias for the same real_iban but for
-    // different target kinds — irrelevant to the test, what matters is
-    // that B's row never gets retyped while A's call runs.
     KnownCounterpartyIban::withoutGlobalScopes()->create([
         'user_id' => $a['user']->id,
         'real_iban' => 'LU89751000135104200E',
@@ -232,9 +199,8 @@ it('skips rows whose counterparty_iban is null or empty', function (): void {
 });
 
 it('skips rows whose alias points at a destination kind with no Account yet (the wizard-order race at first preview)', function (): void {
-    // User created but NO paypal account exists (the canonical race
-    // shape). The alias still points at `paypal`, so the alias query
-    // matches but the EXISTS subquery against `accounts` does not.
+    // The alias still points at `paypal`, so the alias query matches while the
+    // EXISTS subquery against `accounts` does not.
     $user = User::query()->create([
         'username' => 'frank-incomplete',
         'password' => 'fixture-password',

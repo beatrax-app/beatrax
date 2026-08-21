@@ -5,16 +5,8 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Services\NavCountsService;
 
-/*
- * Phase 13.3 Finding C regression: NavCountsService's 'tax_tagged' sidebar
- * badge counted raw tax_transaction_tags rows, so a transaction with a
- * stale (superseded) whole-transaction tag PLUS leg-scoped tags on its
- * splits was over-counted — the sidebar badge read one higher than the
- * /tax cockpit, which already excludes the superseded whole-tx row (see
- * TaxYearQuery's supersession policy). The fix mirrors that same
- * whereNotNull/orWhereNotExists visibility shape directly in
- * NavCountsService's raw-table count so the two surfaces always agree.
- */
+// The sidebar badge must agree with the /tax cockpit, which already excludes a
+// whole-transaction tag superseded by leg tags.
 
 function ncstUser(DatabaseManager $db, string $username): int
 {
@@ -146,7 +138,6 @@ it('tax_tagged excludes a superseded whole-tx row when leg tags exist — 1 whol
 
     // Stale whole-tx tag predates the split.
     ncstTag($db, $userId, $txId, $catId, null);
-    // Both legs now carry their own leg-scoped tags.
     ncstTag($db, $userId, $txId, $catId, $legA);
     ncstTag($db, $userId, $txId, $catId, $legB);
 

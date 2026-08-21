@@ -2,23 +2,6 @@
 
 declare(strict_types=1);
 
-/*
- * The manual pairing-code arm on a phone, and why it is offered again.
- *
- * The submit button was `wire:click="submitCode"` with no argument, and
- * submitCode()'s first parameter is the scanned QR payload — a `?string`.
- * Livewire therefore tried to resolve it from the container and the request
- * died with a BindingResolutionException, 500, no message on screen. Typed
- * codes could not be submitted at all.
- *
- * The arm was then hidden from the import flow, because a typed code carries
- * the token alone and the desktop never learned the joining device's
- * identity. That left a fresh phone with a camera it could not use — or a
- * user who would not use one — no route in at all. The importing device now
- * asks the LAN for the public half the code cannot carry, so the arm can
- * finish rather than only ever error, and it is offered again.
- */
-
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -47,6 +30,11 @@ function manualArmBlade(): string
     );
 }
 
+// The submit button was wire:click="submitCode" with no argument, and
+// submitCode()'s first parameter is the scanned QR payload, so Livewire tried to
+// resolve it from the container and the request died with a
+// BindingResolutionException: a 500, no message, and no way to submit a code.
+
 it('submits a typed code without asking the container for the QR payload', function (): void {
     $blade = manualArmBlade();
 
@@ -65,15 +53,18 @@ it('reads the import mode off the request that opened the screen', function (): 
     Livewire::test(MobilePairingScan::class)->assertSet('importMode', true);
 });
 
+// The arm was once hidden from the import flow, because a typed code carries the
+// token alone and the desktop never learned the joining device's identity. The
+// importing device now asks the LAN for the public half the code cannot carry, so
+// a phone whose camera is unusable has a route in again.
+
 it('offers the typed-code arm while importing, not only outside import', function (): void {
     $blade = manualArmBlade();
 
-    // Asserted on the blade because the arm lives on the `scan` step, and a
-    // test never reaches it: with no native scanner the component falls
-    // through to `enter_code` at mount. The conditional IS the behaviour.
-    //
-    // Walked as balanced directives rather than by the offset of the first
-    // @unless, which said nothing about whether the arm was inside that one.
+    // Asserted on the blade because the arm lives on the `scan` step and a test
+    // never reaches it: with no native scanner the component falls through to
+    // `enter_code` at mount. Walked as balanced directives, since the offset of
+    // the first @unless said nothing about whether the arm sat inside that one.
     $armAt = strpos($blade, 'wire:click="useWordCode"');
     expect($armAt)->not->toBeFalse('the typed-code control is gone entirely');
 
@@ -98,9 +89,9 @@ it('answers a typed code in import mode by looking for the other device on the n
     $user = manualArmUser('armlan');
     test()->actingAs($user);
 
-    // Whatever the multicast question turns up on the machine running this,
-    // no peer holds this token — so the arm must end in the "cannot reach
-    // the other device" message, never a spinner and never a 500.
+    // Whatever the multicast question turns up on the machine running this, no peer
+    // holds this token, so the arm has to end in the "cannot reach the other
+    // device" message rather than a spinner or a 500.
     Http::fake(['*' => Http::response(['error' => 'not_found'], 404)]);
 
     app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));

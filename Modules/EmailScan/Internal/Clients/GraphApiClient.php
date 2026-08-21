@@ -64,9 +64,8 @@ final class GraphApiClient implements GraphApiClientContract
         $client = $this->makeHttpClient();
 
         if ($nextLink !== null && $nextLink !== '') {
-            // Graph embeds the skip token + the original filter in the
-            // nextLink, so it is followed verbatim — reconstructing the
-            // query would be lossy on the skip token's opaque value.
+            // Graph bakes the skip token and the original filter into
+            // nextLink; rebuilding the query would lose the opaque token.
             $url = $nextLink;
             $body = $this->getJson($client, $accessToken, $url);
         } else {
@@ -141,9 +140,8 @@ final class GraphApiClient implements GraphApiClientContract
             $url = $deltaLink;
             $body = $this->getJson($client, $accessToken, $url, [], expectsDelta: true);
         } else {
-            // The caller's pinned anchor wins: a multi-hour backfill
-            // must fix this lower bound before the walk starts, or
-            // messages arriving mid-walk slip past both filters.
+            // The caller's pinned anchor wins: without one, messages arriving
+            // during a multi-hour backfill slip past both filters.
             $sinceIso = ($sinceOverride ?? $this->clock->now()->toDateTimeImmutable())
                 ->format('Y-m-d\TH:i:s\Z');
             $body = $this->getJson(
@@ -305,9 +303,8 @@ final class GraphApiClient implements GraphApiClientContract
         array $query = [],
         bool $expectsDelta = false,
     ): array {
-        // The guard sits at the HTTP boundary, not at the parse site: a
-        // malformed @odata.nextLink/@odata.deltaLink is followed
-        // verbatim, so any response could otherwise redirect the token.
+        // The guard sits at the HTTP boundary, not the parse site: a malformed
+        // @odata.nextLink/@odata.deltaLink is followed verbatim.
         $this->assertAllowedUrl($url);
 
         try {
@@ -340,8 +337,8 @@ final class GraphApiClient implements GraphApiClientContract
             return [];
         }
 
-        // Narrows array<mixed, mixed> -> array<string, mixed>: PHPStan
-        // cannot infer key shape from json_decode.
+        // json_decode yields array<mixed, mixed>; the key cast is what lets
+        // PHPStan narrow it to array<string, mixed>.
         $out = [];
         foreach ($decoded as $key => $value) {
             $out[(string) $key] = $value;
@@ -426,9 +423,8 @@ final class GraphApiClient implements GraphApiClientContract
         ];
     }
 
-    // Refreshes within 60 seconds of the stamped expiry, never on it.
-    // Microsoft rotates refresh tokens single-use, so the returned one
-    // must be persisted on every refresh or the next one is rejected.
+    // Microsoft rotates refresh tokens single-use, so the returned one must
+    // be persisted on every refresh or the next refresh is rejected.
     private function ensureFreshAccessToken(int $inboxId): string
     {
         $creds = $this->secrets->loadInbox($inboxId);
@@ -483,9 +479,8 @@ final class GraphApiClient implements GraphApiClientContract
         );
     }
 
-    // Returns 0 rather than throwing when the row is gone: the inbox
-    // can be deleted between scan kick-off and the failed refresh, and
-    // the error-recovery path still has to complete.
+    // Returns 0 rather than throwing: the inbox can be deleted between scan
+    // kick-off and a failed refresh, and recovery still has to complete.
     private function lookupInboxUserId(int $inboxId): int
     {
         $value = $this->db->connection()
@@ -501,9 +496,8 @@ final class GraphApiClient implements GraphApiClientContract
         return $this->httpClient ?? new GuzzleClient([
             'timeout' => 30,
             'connect_timeout' => 10,
-            // assertAllowedUrl runs per request, before the bearer is
-            // attached — a followed 3xx would carry the token to
-            // another host past that check. Graph never 3xx's these.
+            // assertAllowedUrl runs before the bearer is attached, so a
+            // followed 3xx would carry the token to another host past it.
             'allow_redirects' => false,
         ]);
     }

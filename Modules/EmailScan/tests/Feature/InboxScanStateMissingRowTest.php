@@ -8,13 +8,8 @@ use Modules\EmailScan\Public\Exceptions\ScanStateNotFoundException;
 
 uses(RefreshDatabase::class);
 
-/*
- * resetRetryAttempts() takes a row lock and updates the scan state, so it has
- * to have a row to lock. An inbox with no inbox_scan_state row means the
- * caller is working from an id that no longer refers to anything — updating
- * zero rows and reporting success would leave the retry counter looking reset
- * when nothing was.
- */
+// Updating zero rows and reporting success would leave the retry counter
+// looking reset when nothing was.
 it('refuses to reset retry attempts for an inbox with no scan state', function (): void {
     /** @var InboxScanStateMachine $machine */
     $machine = $this->app->make(InboxScanStateMachine::class);

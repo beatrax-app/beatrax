@@ -66,12 +66,6 @@ function makeAutoCanonical(int $userId, int $accountId): CanonicalTransaction
     );
 }
 
-/**
- * Seeds a single-condition/single-action rule on the new normalized
- * schema (`categorization_rules` parent + one `rule_conditions` row +
- * one `rule_actions` row) — the flat `field`/`match`/`value`/
- * `category_id` columns were dropped by 13.4-01 (D-01/D-02/D-03).
- */
 function seedAutoRule(int $userId, int $categoryId): int
 {
     $ruleId = (int) DB::table('categorization_rules')->insertGetId([
@@ -180,10 +174,8 @@ it('returns auto outcome with memory provenance when only memory matches', funct
 });
 
 it('returns manual when the evaluator throws (Validation Axis 7 — side-effect-free)', function (): void {
-    // Trigger a real RuleEvaluator failure by dropping the
-    // categorization_rules table before the stage runs. The evaluator's
-    // first query throws a SQL exception; ApplyAutoCategoryStage swallows
-    // it (per the side-effect-free invariant) and returns manual outcome.
+    // A real evaluator failure: its first query throws, and the stage swallows
+    // that into a manual outcome to stay side-effect-free.
     DB::statement('DROP TABLE categorization_rules');
 
     $stage = $this->app->make(ApplyAutoCategoryStage::class);
@@ -285,14 +277,9 @@ it('rolls back an earlier rule\'s hits_count bump when a later matched rule fail
     // fire in the same apply() call and both attempt a hits_count bump.
     $secondRuleId = seedAutoRule($this->user->id, $this->streamingId);
 
-    // A transient SQLite trigger that aborts ONLY the second rule's
-    // hits_count UPDATE — simulates a mid-loop failure (e.g. rule 3 of 4
-    // in the review's own scenario) without needing to mock the query
-    // builder. Laravel's DatabaseManager::transaction() catches the
-    // resulting QueryException, ROLLBACKs the WHOLE transaction (undoing
-    // the first rule's already-applied increment too), then rethrows —
-    // which ApplyAutoCategoryStage's outer try/catch swallows into a
-    // manual() outcome.
+    // A trigger that aborts only the second rule's hits_count UPDATE, so the
+    // mid-loop failure needs no mocked query builder. The rollback undoes the
+    // first rule's increment too, and the rethrow lands in the stage's catch.
     DB::statement(sprintf(
         "CREATE TRIGGER wr01_boom BEFORE UPDATE OF hits_count ON categorization_rules
          WHEN NEW.id = %d
@@ -307,14 +294,11 @@ it('rolls back an earlier rule\'s hits_count bump when a later matched rule fail
 
         $outcome = $stage->apply($canonical, $this->user);
 
-        // The stage is side-effect-free on failure (fail-open, T-13.4-18):
-        // the whole categorization folds back to manual...
+        // Fail-open: the whole categorisation folds back to manual...
         expect($outcome->provenance)->toBe('manual');
 
-        // ...and the first rule's hits_count bump — which happened BEFORE
-        // the second rule's UPDATE aborted, inside the SAME transaction —
-        // must be rolled back too, not permanently stuck at 1 while the
-        // outcome claims no rule was applied.
+        // ...and the first rule's bump, applied before the abort inside the
+        // same transaction, rolls back with it rather than sticking at 1.
         $firstHits = (int) DB::table('categorization_rules')->where('id', $firstRuleId)->value('hits_count');
         expect($firstHits)->toBe(0);
     } finally {

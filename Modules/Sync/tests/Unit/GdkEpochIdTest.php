@@ -4,17 +4,10 @@ declare(strict_types=1);
 
 use Modules\Sync\Internal\Crypto\GdkEpochId;
 
-/*
- * Epoch ids used to be a local counter: the first was 1 and a rotation took
- * max(held) + 1. That is unique only among the epochs one device happens to
- * hold, so a phone set up standalone and a desktop that had rotated twice both
- * arrived at "epoch 3" holding different keys.
- *
- * The desktop then threw away everything the phone wrote as gdk_decrypt_failed
- * — silently, seventeen ops at a time — while the phone's sync status sat on
- * "Syncing…". Nothing on either device said the two disagreed about what the
- * name meant.
- */
+// Epoch ids used to be a local counter — first 1, then max(held) + 1 — which is
+// unique only among the epochs one device happens to hold, so a standalone phone
+// and a twice-rotated desktop both arrived at "epoch 3" holding different keys.
+// The desktop then dropped everything the phone wrote as gdk_decrypt_failed.
 
 it('never mints an id the keyring already holds', function (): void {
     $held = [1, 2, 3];

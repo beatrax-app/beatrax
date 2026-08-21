@@ -35,18 +35,15 @@ final readonly class QueueActions
         );
     }
 
-    // Looks up the failed_jobs row by uuid, pushes the payload back onto
-    // the original connection + queue, then forgets the failed_jobs row.
-    // Mirrors RetryCommand::retryJob but injects via Queue::connection(...)
-    // so the call respects the project's no-facade rule.
+    // Mirrors RetryCommand::retryJob, but through the injected QueueFactory
+    // rather than the Queue facade this project does not use.
     public function retryFailed(string $uuid): void
     {
         $job = $this->failed->find($uuid);
 
         if ($job === null) {
-            // Idempotent — a row that vanished between list and click
-            // is not an error worth surfacing; the audit row reflects
-            // the intent.
+            // A row that vanished between list and click is not an error;
+            // the audit row still records the intent.
             $this->audit->recordDestructiveQueueAction(
                 AuditEvent::QueueFailedRetry->value,
                 ['uuid' => $uuid, 'missing' => true],
@@ -56,10 +53,6 @@ final readonly class QueueActions
             return;
         }
 
-        // FailedJobProviderInterface::find() returns `object|null` with
-        // dynamic properties (id/uuid/connection/queue/payload/etc.);
-        // readObjectStringProp() reads them via get_object_vars() so
-        // larastan-strict-rules doesn't flag the dynamic-name access.
         $connection = $this->readObjectStringProp($job, 'connection', 'database');
         $queueName = $this->readObjectStringProp($job, 'queue', 'default');
         $payload = $this->readObjectStringProp($job, 'payload', '');
@@ -137,8 +130,6 @@ final readonly class QueueActions
             return;
         }
 
-        // Batch::$failedJobIds is a list of uuids; mirror the
-        // framework's `queue:retry-batch` semantics.
         $uuids = $batch->failedJobIds;
         $retried = [];
         foreach ($uuids as $uuid) {
@@ -156,8 +147,6 @@ final readonly class QueueActions
         );
     }
 
-    // Non-destructive — the Livewire layer surfaces a single-confirm
-    // modal before calling.
     /**
      * @param  list<string>  $uuids
      */
@@ -179,9 +168,6 @@ final readonly class QueueActions
         );
     }
 
-    // Destructive — the Livewire layer routes the call through the
-    // TripleGateModal before invoking this method. $kind is one of:
-    // pending | failed | batches.
     /**
      * @param  list<int|string>  $ids
      */
@@ -223,9 +209,8 @@ final readonly class QueueActions
         );
     }
 
-    // CurrentUser throws when no user is bound; keep a sentinel fallback
-    // (0) so the audit row still writes when the action runs from a
-    // background context (e.g. a console command).
+    // CurrentUser throws with no bound user, so 0 is the sentinel that lets a
+    // console-triggered action still write its audit row.
     private function callerId(): int
     {
         try {

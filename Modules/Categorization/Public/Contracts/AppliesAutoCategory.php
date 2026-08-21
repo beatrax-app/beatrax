@@ -8,10 +8,9 @@ use Modules\Categorization\Public\Dto\AutoCategorizationOutcomeDto;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
-// Cross-module by design: ImportPipeline must not import a
-// Modules\Categorization\Internal\* class. Implementations MUST be
-// side-effect-free on stage failure: a thrown RuleEvaluator returns
-// AutoCategorizationOutcomeDto::manual($tx) so the import never aborts.
+// Cross-module by design: ImportPipeline must not reach into
+// Modules\Categorization\Internal. Implementations must be side-effect-free
+// on failure — a throwing evaluator returns manual($tx), so no import aborts.
 interface AppliesAutoCategory
 {
     public function apply(CanonicalTransaction $tx, User $user): AutoCategorizationOutcomeDto;

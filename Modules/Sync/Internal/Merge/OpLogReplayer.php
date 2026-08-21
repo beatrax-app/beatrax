@@ -19,6 +19,9 @@ use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
+/**
+ * @link ../../../../.docs/features/sync/op-log-merge-rules.md
+ */
 final readonly class OpLogReplayer
 {
     // Cascade ops are deterministically re-derived by the replayer on every

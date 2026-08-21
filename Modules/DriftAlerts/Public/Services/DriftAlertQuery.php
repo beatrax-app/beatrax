@@ -40,7 +40,7 @@ final readonly class DriftAlertQuery
     }
 
     /**
-     * @return list<DriftAlertDto> acknowledged alerts (state='acknowledged')
+     * @return list<DriftAlertDto>
      */
     public function historyForUser(User $user, ?int $cursorId = null, int $limit = 26): array
     {
@@ -48,7 +48,7 @@ final readonly class DriftAlertQuery
     }
 
     /**
-     * @return list<DriftAlertDto> dismissed alerts (state='dismissed_cancelled')
+     * @return list<DriftAlertDto>
      */
     public function dismissedForUser(User $user, ?int $cursorId = null, int $limit = 26): array
     {
@@ -64,8 +64,8 @@ final readonly class DriftAlertQuery
     }
 
     /**
-     * @return int SUM of annualized_impact_minor across open EXPENSE-direction alerts in
-     *             original-currency-minor units (drift-detection.md explains why expense-only)
+     * @return int summed annualized_impact_minor over open expense alerts, in
+     *             original-currency minor units. drift-detection.md says why expense-only
      */
     public function totalOpenAnnualizedImpactForUser(User $user): int
     {
@@ -78,9 +78,7 @@ final readonly class DriftAlertQuery
 
     /**
      * @param  list<int>  $seriesIds
-     * @return array<int, string> recurring_series.state per id, scoped to the user. Used
-     *                            by the /drift renderer to surface the "Cadence flipped" meta line; delegates to
-     *                            RecurringSeriesQuery instead of a raw cross-module SELECT
+     * @return array<int, string> recurring_series.state per id, scoped to the user
      */
     public function seriesStatesForUser(User $user, array $seriesIds): array
     {
@@ -88,9 +86,8 @@ final readonly class DriftAlertQuery
     }
 
     /**
-     * @return array<int, list<DriftAlertDto>> open alerts grouped by recurring_series_id.
-     *                                         Series order follows the newest alert in each group (descending); within a group,
-     *                                         alerts sort by id DESC
+     * @return array<int, list<DriftAlertDto>> open alerts grouped by recurring_series_id;
+     *                                         series order follows each group's newest alert, and within a group id DESC
      */
     public function groupedBySeriesForUser(User $user): array
     {
@@ -141,7 +138,7 @@ final readonly class DriftAlertQuery
     }
 
     /**
-     * @return list<DriftAlertDto> open-tab projection via applyOpenStateFilter()
+     * @return list<DriftAlertDto>
      */
     private function scopedOpen(User $user, ?int $cursorId, int $limit): array
     {
@@ -195,8 +192,7 @@ final readonly class DriftAlertQuery
 
     /**
      * @param  array<int|string, mixed>  $seriesIds
-     * @return array<int, string> delegates to RecurringSeriesQuery so every cross-module
-     *                            read of recurring_series flows through Recurring's Public service surface
+     * @return array<int, string>
      */
     private function loadSeriesDisplayNames(User $user, array $seriesIds): array
     {

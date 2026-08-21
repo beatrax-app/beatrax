@@ -253,9 +253,8 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
 
     private function parseBudgetedMinor(string $raw): int
     {
-        // AmountStringParser::parse() nulls any non-positive result, so a negative
-        // Budgeted cell would collapse to the 0 a blank cell gives — hence the
-        // parse-magnitude-then-re-apply-sign shape.
+        // AmountStringParser::parse() nulls a non-positive result, so a negative
+        // Budgeted cell would read as the 0 a blank cell gives.
         $trimmed = trim($raw);
         $isNegative = str_starts_with($trimmed, '-');
         $magnitude = $isNegative ? ltrim(substr($trimmed, 1)) : $trimmed;

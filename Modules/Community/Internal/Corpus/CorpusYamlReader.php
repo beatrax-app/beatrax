@@ -21,10 +21,8 @@ final class CorpusYamlReader
 
     public function resolve(string $configKey, string $default = ''): string
     {
-        // An empty result means "no path configured" (the caller skips) —
-        // the single, shared meaning of an empty corpus path across every
-        // consumer; `community.app_root` lets a test override the root with
-        // a temporary fixture directory.
+        // An empty result means "no path configured" and every caller skips;
+        // `community.app_root` lets a test point the root at a fixture dir.
         $configured = $this->stringConfig($configKey);
         if ($configured === '') {
             $configured = $default;

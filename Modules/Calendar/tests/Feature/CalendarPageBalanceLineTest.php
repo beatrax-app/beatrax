@@ -8,22 +8,6 @@ use Livewire\Livewire;
 use Modules\Calendar\Internal\Http\Livewire\CalendarPage;
 use Modules\Core\Models\User;
 
-/*
- * CalendarPage — daily balance line sourced from ForecastQuery (CAL-02).
- *
- * RED state (Phase 6 Plan 01): CalendarPage does not yet call ForecastQuery;
- * these tests will fail until Plan 02/03 wire the balance line.
- *
- * Contract being tested:
- *   - With two balance-included accounts and seeded forecast_runs, the
- *     day-cell eodBalanceMinor equals the sum of each account's
- *     ForecastPointDto.pointMinor for that date.
- *   - The balance is rendered in the cell in a recognisable format
- *     (e.g. "€ 1.234,56" or the formatted equivalent).
- *   - Cross-user isolation: balance is derived only from the authenticated
- *     user's accounts; no foreign account data leaks.
- */
-
 function cpblUser(string $suffix = 'cpbl'): User
 {
     return User::query()->create([
@@ -52,16 +36,11 @@ function cpblAccount(DatabaseManager $db, int $userId, string $name, string $cur
     ]);
 }
 
-/**
- * Seed or update a forecast_run for the given user with one account's data.
- *
- * ForecastQuery reads a SINGLE forecast_runs row per (user_id, horizon_days,
- * scenario_id) tuple, then looks up accounts[$accountId] inside result_json.
- * Multiple calls for the same user upsert into the same row's accounts block.
- */
+// ForecastQuery reads a single forecast_runs row per (user_id, horizon_days,
+// scenario_id), so repeat calls for one user have to merge into that row's
+// accounts block rather than insert a second run.
 function cpblForecastRun(DatabaseManager $db, int $userId, int $accountId, string $date, int $pointMinor, string $currency = 'EUR'): void
 {
-    // Check if a run already exists for this user+horizon combination
     $existing = $db->connection()->table('forecast_runs')
         ->where('user_id', $userId)
         ->where('horizon_days', 365)
@@ -85,7 +64,6 @@ function cpblForecastRun(DatabaseManager $db, int $userId, int $accountId, strin
     ];
 
     if ($existing !== null) {
-        // Merge the new account block into the existing result_json
         $decoded = json_decode($existing->result_json, associative: true); // @phpstan-ignore-line
         if (! is_array($decoded)) {
             $decoded = ['as_of' => '2026-06-12', 'accounts' => []];
@@ -129,7 +107,7 @@ it('renders the day-end balance from summed forecast points for balance-included
     $account1 = cpblAccount($db, $user->id, 'ASN Checking');
     $account2 = cpblAccount($db, $user->id, 'PayPal');
 
-    // Seed forecast for 2026-06-20: 50000 + 25000 = 75000 minor (€750.00)
+    // 50000 + 25000 = 75000 minor, i.e. the €750.00 asserted below.
     cpblForecastRun($db, $user->id, $account1, '2026-06-20', 50000);
     cpblForecastRun($db, $user->id, $account2, '2026-06-20', 25000);
 
@@ -139,7 +117,7 @@ it('renders the day-end balance from summed forecast points for balance-included
             'year' => 2026,
             'balanceAccountIds' => [$account1, $account2],
         ])
-        ->assertSee('750');  // The summed balance €750.00 appears in the cell
+        ->assertSee('750');
 });
 
 it('FX-converts a USD account\'s forecast points to the base currency instead of adding raw minor units (CR-02)', function (): void {
@@ -159,7 +137,6 @@ it('FX-converts a USD account\'s forecast points to the base currency instead of
         'updated_at' => '2026-06-12 00:00:00',
     ]);
 
-    // EUR account: €1 234.00 on June 20; USD account: $2 000.00 on June 20.
     cpblForecastRun($db, $user->id, $eurAccount, '2026-06-20', 123400, 'EUR');
     cpblForecastRun($db, $user->id, $usdAccount, '2026-06-20', 200000, 'USD');
 
@@ -189,7 +166,5 @@ it('does not render balance data from another user\'s accounts', function (): vo
             'year' => 2026,
             'balanceAccountIds' => [$otherAccount],  // foreign account id
         ])
-        // The foreign account balance must not be rendered;
-        // the page either throws NotFoundHttpException or shows no balance
         ->assertDontSee('9999');
 });

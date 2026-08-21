@@ -8,11 +8,8 @@ use Modules\Core\Models\User;
 use Modules\EmailScan\Public\Dto\InboxCredentials;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
-/*
- * Unit coverage for the per-user SQLite-backed OAuthSecretsRepository.
- * Every assertion runs against a real authenticated user so the
- * repository's CurrentUser scoping resolves a concrete id.
- */
+// The repository scopes on CurrentUser, so every case needs a real
+// authenticated user for the scoping to resolve a concrete id.
 
 uses(RefreshDatabase::class);
 

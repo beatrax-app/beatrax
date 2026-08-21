@@ -14,16 +14,9 @@ use Modules\Reports\Internal\Http\Livewire\ReportBuilder;
 use Modules\Reports\Public\Dto\ReportDefinition;
 use Modules\Reports\Public\Enums\ReportGranularity;
 
-/*
- * Every report metric is defined over expense and income alone, so a bank fee
- * and a manual adjustment appear in no report: measured on the demo data,
- * "Uitgaven · per categorie · Deze maand" totalled EUR 2.459,11 where the
- * transactions add to EUR 2.468,11 — exactly transaction 137 (fee, -1,50) and
- * 139 (adjustment, -7,50) missing, with nothing on the page saying so.
- *
- * The exclusion stays: a fee is not category spending. What changes is that
- * the page now says what it left out.
- */
+// Report metrics cover expense and income alone, so fees and adjustments fell
+// out silently: the demo month read EUR 2.459,11 against EUR 2.468,11, exactly a
+// -1,50 fee and a -7,50 adjustment. The exclusion stays; the page now says so.
 
 function feesUser(): User
 {
@@ -171,9 +164,8 @@ it('reads a fee the same way as the total it sits beside', function (string $met
         customTo: '2026-08-31',
     );
 
-    // A spend report reads positive, so its fee does too. Income and net read
-    // signed, so the same 9.00 of fees reads as money leaving — which is what
-    // the row beside those totals is telling the reader.
+    // A spend report reads positive, so its fee does too; income and net read
+    // signed, so the same 9.00 of fees reads as money leaving.
     expect(app(ReportAggregator::class)->run($user, $definition)->otherMovementMinor)->toBe($expected);
 })->with([
     ['spend', 900],

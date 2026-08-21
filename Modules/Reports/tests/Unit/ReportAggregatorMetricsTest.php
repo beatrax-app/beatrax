@@ -13,36 +13,9 @@ use Modules\Reports\Public\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 
-/*
- * Wave 0 RED stub (999.6-03 Task 2, Req 2 + cross-dimension consistency).
- *
- * Pins Modules\Reports\Internal\Aggregation\ReportAggregator::run(User,
- * ReportDefinition): ReportResultDto against the ONE canonical type-based
- * spend/income/net definition already established by
- * ThisPeriodAtAGlanceQuery::incomeForPeriod() (Pitfall 1):
- *   - spend  = SUM(-settled_amount_minor) over type = 'expense' rows (positive minor)
- *   - income = SUM(settled_amount_minor) over type = 'income' rows (positive minor)
- *   - net    = SUM(settled_amount_minor) over type IN ('income','expense')
- * A transfer_out/transfer_in row (internal move between own accounts) MUST
- * contribute 0 to every one of these totals, exactly like the dashboard tile.
- *
- * `cross_dimension_total_consistency` locks the second half of Pitfall 1:
- * the SAME spend total for the SAME (metric, period, currency) must come
- * back regardless of which dimension (category/counterparty/account/
- * time_bucket) the report is grouped by — a category-dimension total that
- * disagrees with a counterparty-dimension total for the identical query
- * means two different "spend" definitions silently exist, which is exactly
- * the class of bug this stub exists to prevent before any implementation
- * ships (T-999.6-07).
- *
- * RED as intended: ReportAggregator does not exist yet — every test below
- * fails on `app(ReportAggregator::class)` (missing class), not on any
- * absent DTO (ReportDefinition/ReportResultDto already exist, Task 1).
- */
-
-// ---------------------------------------------------------------------------
-// Shared fixture helpers (prefixed ramt_ to avoid cross-file collisions)
-// ---------------------------------------------------------------------------
+// Two dimensions disagreeing on the same (metric, period, currency) total would
+// mean two different "spend" definitions exist; the canonical one is
+// ThisPeriodAtAGlanceQuery's.
 
 function ramtUser(): User
 {
@@ -100,11 +73,8 @@ function ramtImportRun(DatabaseManager $db, User $user): int
 function ramtTransaction(DatabaseManager $db, User $user, Account $account, array $overrides = []): int
 {
     $suffix = bin2hex(random_bytes(8));
-    // amount_minor tracks settled_amount_minor by default (native = settled
-    // currency in these fixtures) so distinct settled amounts on the same
-    // account/date never collide against the composite fingerprint UNIQUE
-    // index (user_id, account_id, posted_at, booked_at, amount_minor,
-    // currency, counterparty_normalized).
+    // amount_minor tracks settled_amount_minor so two rows differing only in
+    // settled amount cannot collide on the composite fingerprint UNIQUE.
     $settledMinor = $overrides['settled_amount_minor'] ?? -1000;
 
     $defaults = [
@@ -149,10 +119,6 @@ function ramtDefinition(string $metric, string $dimension): ReportDefinition
     );
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
 it('sums spend/income/net using the canonical type-based definition, excluding transfers', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -162,7 +128,7 @@ it('sums spend/income/net using the canonical type-based definition, excluding t
 
     ramtTransaction($db, $user, $account, ['type' => 'expense', 'settled_amount_minor' => -12_000, 'category_id' => $groceries->id]);
     ramtTransaction($db, $user, $account, ['type' => 'income', 'settled_amount_minor' => 50_000]);
-    // Internal move between own accounts — MUST contribute 0 to spend/income/net.
+    // Internal move between own accounts — must contribute 0.
     ramtTransaction($db, $user, $account, ['type' => 'transfer_out', 'settled_amount_minor' => -20_000]);
 
     $spend = app(ReportAggregator::class)->run($user, ramtDefinition('spend', 'category'));

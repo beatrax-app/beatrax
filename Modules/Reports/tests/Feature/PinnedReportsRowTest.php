@@ -15,13 +15,6 @@ use Modules\Reports\Public\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 
-/*
- * 999.6-10 Task 1 (Req 10, T-999.6-28/29) — the dashboard "pinned reports"
- * mini-card row: up to 3 chart-only mini cards built from the caller's own
- * pinned saved reports, user-scoped, rendering nothing when there are zero
- * pins, each linking to /reports?report={id}.
- */
-
 function prrUser(string $prefix = 'prr'): User
 {
     /** @var User */
@@ -89,10 +82,8 @@ it('caps at 3 mini cards even if a 4th pinned row somehow exists (defense in dep
         app(TogglePin::class)->toggle($user, $report->id);
     }
 
-    // Simulate a data anomaly bypassing TogglePin's own 3-pin cap (T-999.6-21)
-    // — the query's independent LIMIT 3 (T-999.6-29) must still hold, since
-    // this row's dashboard rendering must never trust a single enforcement
-    // point.
+    // A fourth pin written past TogglePin's own cap: the query's independent
+    // LIMIT 3 has to hold on its own, not trust the writer.
     $reports[3]->update(['pinned' => true, 'pin_order' => 4]);
 
     $chartCount = substr_count(Livewire::test(PinnedReportsRow::class)->html(), 'data-testid="pinned-report-chart"');
@@ -137,12 +128,8 @@ it('mounts the chart using the shared beatraxApplyChartTheme pattern, chart-only
     expect($html)->not->toContain('<table');
 });
 
-/*
- * The pinned mini-card's series is built from every bucket the time-bucket
- * query emits, and that query emits one row per bucket whether or not the
- * bucket holds anything. A report whose window opens before the first
- * transaction therefore started with a run of flat zero periods.
- */
+// The time-bucket query emits a row per bucket regardless, so a window opening
+// before the first transaction starts with a run of flat zero periods.
 
 function prrAccount(User $user): Account
 {

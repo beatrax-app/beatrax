@@ -15,28 +15,10 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
 uses(RefreshDatabase::class);
 
-/*
- * D-08: Import dedup under merge scenario.
- *
- * Both device A and device B import the SAME transaction (same fingerprint
- * via FingerprintComposer). Only ONE row must exist in transactions after
- * both device imports, even though both devices also produced edit op-log
- * entries for that same row.
- *
- * The dedup happens at the import layer (FingerprintComposer + UNIQUE INDEX
- * transactions_fingerprint_sha_uq on (user_id, fingerprint)), not in the
- * merge layer. The merge layer only handles post-import edits.
- *
- * Assertions:
- * - count(transactions WHERE fingerprint=FP AND user_id=u1) === 1
- * - No IntegrityConstraintViolationException thrown during duplicate insert
- *   (insertOrIgnore silently discards the second insert).
- *
- * RED: The OpLogReplayer skeleton (Wave 1) does not yet apply LWW logic,
- * so the category_id assertion fails until Wave 2 implements the merge.
- * The dedup count assertion may pass already (the UNIQUE index handles it
- * regardless of replay), making this test partially RED.
- */
+// Two devices importing the same statement dedup at the import layer, on the
+// fingerprint UNIQUE — not in the merge. The merge only ever sees the edits
+// that follow, so a change that moved dedup into the replayer would leave the
+// duplicate row standing here.
 
 function dedupUser(string $username): User
 {
@@ -56,7 +38,6 @@ beforeEach(function (): void {
     $db = app(DatabaseManager::class);
     $userId = (int) $this->user->id;
 
-    // Account required by the transactions FK.
     $this->accountId = $db->connection()->table('accounts')->insertGetId([
         'user_id' => $userId,
         'name' => 'ASN dedup test',
@@ -68,7 +49,6 @@ beforeEach(function (): void {
         'updated_at' => '2026-06-01 00:00:00',
     ]);
 
-    // Import run required by the transactions FK.
     $this->runId = $db->connection()->table('import_runs')->insertGetId([
         'user_id' => $userId,
         'source_format' => 'asn-csv',
@@ -101,7 +81,6 @@ beforeEach(function (): void {
     $this->catA = $catA;
     $this->catB = $catB;
 
-    // Compose the canonical fingerprint for this transaction.
     /** @var FingerprintComposer $composer */
     $composer = app(FingerprintComposer::class);
 
@@ -131,7 +110,6 @@ beforeEach(function (): void {
 
     $this->fingerprint = $composer->compose($tx);
 
-    // Shared row payload used for both device inserts.
     $this->rowPayload = [
         'user_id' => $userId,
         'account_id' => $this->accountId,
@@ -171,14 +149,11 @@ it('deduplicates via FingerprintComposer UNIQUE index and merges edit op-logs wi
     $db = app(DatabaseManager::class);
     $userId = (int) $this->user->id;
 
-    // Device A: imports the transaction (insert succeeds).
     $txnId = $db->connection()->table('transactions')->insertGetId($this->rowPayload);
 
-    // Device B: imports the SAME transaction — insertOrIgnore silently discards the duplicate.
-    // No IntegrityConstraintViolationException is thrown.
+    // The same transaction again: insertOrIgnore drops it without raising.
     $db->connection()->table('transactions')->insertOrIgnore($this->rowPayload);
 
-    // Assert: exactly ONE row with this fingerprint.
     $count = $db->connection()
         ->table('transactions')
         ->where('fingerprint', $this->fingerprint)
@@ -187,7 +162,6 @@ it('deduplicates via FingerprintComposer UNIQUE index and merges edit op-logs wi
 
     expect($count)->toBe(1);
 
-    // Build op-log entries from both devices editing category_id on the surviving row.
     $makeEntry = function (int $catId, int $hlcL, string $deviceId) use ($txnId, $userId): OpLogEntry {
         $stub = new OpLogEntry(
             table: 'transactions',
@@ -227,7 +201,6 @@ it('deduplicates via FingerprintComposer UNIQUE index and merges edit op-logs wi
 
     $replayer->replay([$entryA, $entryB], $userId);
 
-    // Assert: still exactly one row after merge (no duplicate created).
     $countAfter = $db->connection()
         ->table('transactions')
         ->where('fingerprint', $this->fingerprint)
@@ -236,8 +209,6 @@ it('deduplicates via FingerprintComposer UNIQUE index and merges edit op-logs wi
 
     expect($countAfter)->toBe(1);
 
-    // RED: device-b wins (hlc_l=1001 > 1000) → category_id === catB.
-    // Fails until Wave 2 implements LWW.
     $catIdAfter = $db->connection()
         ->table('transactions')
         ->where('id', $txnId)
@@ -245,8 +216,6 @@ it('deduplicates via FingerprintComposer UNIQUE index and merges edit op-logs wi
 
     expect((int) $catIdAfter)->toBe($this->catB);
 
-    // Assert: production path persists ops to op_log_entries (SYNC-01).
-    // RED: fails until Plan 11-02 wires op_log_entries writes.
     $logCount = $db->connection()
         ->table('op_log_entries')
         ->where('user_id', $userId)

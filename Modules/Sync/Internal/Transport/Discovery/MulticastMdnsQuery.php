@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Transport\Discovery;
 
-// Browses for a service by speaking mDNS directly, because MdnsBrowser shells
-// out to dns-sd or avahi and a phone has neither. Without this a fresh device
+// Browses for a service by speaking mDNS on the wire rather than shelling out
+// to dns-sd or avahi, which a phone has neither of. Without this a fresh device
 // could only learn where the desktop is from a scanned QR, which is why the
 // typed-code arm of the import flow could never succeed.
 final class MulticastMdnsQuery

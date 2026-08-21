@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Counterparties\Public\Events;
 
-// Dispatched on every counterparty upsert (all types except
-// self_account, which never writes a row). Ships with zero listeners;
-// reserved for future merge/audit/notification surfaces to subscribe
-// without a resolver-service rewrite.
+// Dispatched on every counterparty upsert except the self_account branch,
+// which never writes a row. No listeners yet.
 final readonly class CounterpartyResolved
 {
     public function __construct(

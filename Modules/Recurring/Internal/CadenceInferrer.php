@@ -7,6 +7,9 @@ namespace Modules\Recurring\Internal;
 use Carbon\CarbonImmutable;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 
+/**
+ * @link ../../../.docs/features/recurring/series-detection.md#missed-periods-and-why-the-cadence-snaps-on-the-unfiltered-median
+ */
 final class CadenceInferrer
 {
     private const WEEKLY_MAX_EXCLUSIVE = 10;
@@ -53,10 +56,8 @@ final class CadenceInferrer
             ];
         }
 
-        // The contract on $sortedTimestamps is "ascending", so the
-        // signed diff between consecutive entries is non-negative.
-        // No defensive abs() — a caller that supplies an unsorted
-        // list breaks the cadence math anyway.
+        // No defensive abs(): the ascending contract makes the diff
+        // non-negative, and an unsorted caller breaks the cadence math anyway.
         $intervals = [];
         $previous = null;
         foreach ($sortedTimestamps as $timestamp) {
@@ -83,10 +84,8 @@ final class CadenceInferrer
             $missedFlags[] = false;
         }
 
-        // Rolling-window guard: if any window of MISSED_WINDOW_SIZE
-        // consecutive intervals contains more than MAX_MISSED_PER_WINDOW
-        // missed periods the cluster is too unstable to snap into a
-        // cadence band.
+        // Too many misses in any rolling window means the cluster is too
+        // unstable to snap into a band at all.
         if (self::exceedsMissedWindowCap($missedFlags)) {
             return [
                 'cadence' => SeriesCadence::Irregular,
@@ -101,9 +100,9 @@ final class CadenceInferrer
         $stddev = self::stddev($filtered);
         $confidenceLow = $stddev > self::CONFIDENCE_LOW_STDDEV_THRESHOLD;
 
-        // Snap on the provisional (not refined) median — see the class
-        // @link doc for why a noisy one-outlier cluster must classify
-        // `irregular` rather than get rescued by the missed-interval filter.
+        // Provisional, not refined: snapping on the refined median would let
+        // the missed-interval filter rescue a one-outlier noise cluster into a
+        // cadence it does not have. The class link works the case through.
         $cadence = self::snapToBand($provisionalMedian);
 
         $nextExpectedAt = null;
@@ -123,9 +122,8 @@ final class CadenceInferrer
 
     private static function snapToBand(float $medianDays): SeriesCadence
     {
-        // A band table, so it reads as one: each arm is a row, and the gaps
-        // between the bands fall through to irregular rather than being
-        // silently absorbed by whichever comparison came last.
+        // The gaps between bands fall through to irregular rather than being
+        // absorbed by whichever comparison happened to come last.
         return match (true) {
             $medianDays > 0.0 && $medianDays < self::WEEKLY_MAX_EXCLUSIVE => SeriesCadence::Weekly,
             $medianDays >= self::MONTHLY_MIN && $medianDays <= self::MONTHLY_MAX => SeriesCadence::Monthly,

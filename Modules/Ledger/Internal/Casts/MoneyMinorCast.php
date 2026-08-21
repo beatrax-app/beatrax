@@ -10,9 +10,7 @@ use InvalidArgumentException;
 use Modules\Ledger\Public\Exceptions\MoneyColumnMissingException;
 use Modules\Ledger\Public\ValueObjects\Money;
 
-// Reads/writes a paired (minor, currency) column tuple as a Money
-// value object; pass column names as cast arguments to point at a
-// different pair than the default amount_minor/currency.
+// Cast arguments override the default (amount_minor, currency) column pair.
 /**
  * @implements CastsAttributes<Money, Money>
  */

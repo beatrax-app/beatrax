@@ -5,20 +5,6 @@ declare(strict_types=1);
 use Illuminate\Console\Scheduling\Event as ScheduledEvent;
 use Illuminate\Console\Scheduling\Schedule;
 
-/*
- * Task 1 (D-14) — pins the five `routes/console.php` schedule entries this
- * plan owns: `notifications.reminders` / `notifications.digest` /
- * `notifications.savings-prompts` at 09:15 daily, `notifications.budget-nudges`
- * hourly, and `notifications.prune` at 04:30 daily. Also asserts none of
- * the five collides with the pre-existing `fx.daily-refresh` (09:00),
- * `db:backup` (03:00) or `counterparties.gc` (04:00) windows — the classic
- * silent failure this test exists to catch is an entry registered with the
- * wrong cadence or a duplicated name.
- *
- * Cloned from `CounterpartyGarbageCollectorJobTest`'s "Test 5" schedule-
- * registration-shape pattern (`$schedule->events()` + description match).
- */
-
 function swtFindEvent(Schedule $schedule, string $description): ?ScheduledEvent
 {
     foreach ($schedule->events() as $event) {

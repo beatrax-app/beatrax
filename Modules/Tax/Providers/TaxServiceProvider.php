@@ -42,19 +42,16 @@ final class TaxServiceProvider extends ServiceProvider
         $this->app->singleton(TaxCorpusLoader::class);
         $this->app->singleton(TaxCategoryWriter::class);
 
-        // The surface consumed by HandlesTaxTagging inside other modules'
-        // components.
+        // The Public writer, not the Internal one imported above: this is what
+        // HandlesTaxTagging resolves inside other modules' components.
         $this->app->singleton(\Modules\Tax\Public\Services\TaxCategoryWriter::class);
 
-        // Cross-module consumers, e.g. the Onboarding wizard's
-        // tax-country step.
         $this->app->singleton(TaxCountrySetup::class);
     }
 
     public function boot(LivewireManager $livewire, Dispatcher $events): void
     {
-        // Drops the per-user nav-counts cache on every tag/untag so the
-        // sidebar tax_tagged badge refreshes promptly.
+        // Without this the sidebar tax_tagged badge stays stale for the cache TTL.
         $events->listen(TransactionTagged::class, [InvalidateNavCounts::class, 'handle']);
         $events->listen(TransactionUntagged::class, [InvalidateNavCounts::class, 'handle']);
 

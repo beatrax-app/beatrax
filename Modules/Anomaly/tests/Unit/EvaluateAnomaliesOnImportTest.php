@@ -9,17 +9,8 @@ use Modules\Core\Models\User;
 use Modules\Import\Public\Events\TransactionImported;
 use Modules\Ledger\Models\Transaction;
 
-/*
- * Confirms the EvaluateAnomaliesOnTransactionImport listener QUEUES
- * exactly one DetectAnomaliesJob per inbound TransactionImported event,
- * carrying the event's user id + transaction id verbatim — and never
- * runs the evaluator inline (T-09-14: detection must not slow the
- * synchronous import transaction).
- *
- * No DB needed: the event carries unsaved-but-id-stamped models and
- * Bus::fake() captures the dispatch without booting a queue worker.
- */
-
+// The listener must queue rather than evaluate inline: detection may not
+// slow the synchronous import transaction.
 it('queues exactly one DetectAnomaliesJob per inbound TransactionImported event', function (): void {
     Bus::fake();
 
@@ -41,9 +32,8 @@ it('queues exactly one DetectAnomaliesJob per inbound TransactionImported event'
 });
 
 it('does NOT invoke the evaluator synchronously in the listener (queues only)', function (): void {
-    // The listener source must contain no AnomalyEvaluator reference at
-    // all — detection happens only inside the queued job. A grep-style
-    // guard mirrored as an assertion so the contract is test-enforced.
+    // Source-level guard: any AnomalyEvaluator reference in the listener
+    // would mean detection can run inline.
     $source = file_get_contents(
         base_path('Modules/Anomaly/Internal/Listeners/EvaluateAnomaliesOnTransactionImport.php'),
     );
@@ -51,8 +41,8 @@ it('does NOT invoke the evaluator synchronously in the listener (queues only)', 
     expect($source)->not->toContain('AnomalyEvaluator');
     // It must read the event's model property, not a flat ->transactionId.
     expect($source)->toContain('$event->transaction->id');
-    // No `$event->transactionId` access in the CODE (the docblock may
-    // mention it as a warning). Strip comment lines, then assert.
+    // Comments are stripped first so a comment warning against
+    // `$event->transactionId` cannot itself fail the guard.
     $codeOnly = preg_replace('/^\s*(\*|\/\/).*$/m', '', $source) ?? $source;
     expect($codeOnly)->not->toContain('$event->transactionId');
 });

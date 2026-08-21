@@ -51,10 +51,9 @@ final class OAuthCallbackController
             return $canceled;
         }
 
-        // Resolve the current user before consuming the state, so the
-        // consume call can verify the state's stored user_id matches —
-        // a mismatch tears down the flow with InvalidStateException,
-        // since the inbox must only attach to the initiating user.
+        // Resolved before the state is consumed so consumeState() can verify
+        // the stored user_id: an inbox must only attach to the user who
+        // initiated the dance.
         $userId = $this->currentUser->user()->id;
         $existingInboxId = $this->consumeStateOrFail($request, $provider, $userId);
 
@@ -75,8 +74,6 @@ final class OAuthCallbackController
         };
     }
 
-    // Returns the user-cancelled redirect when the provider bounced back
-    // an ?error= param, or null to let the happy path continue.
     private function canceledRedirect(Request $request): ?RedirectResponse
     {
         $errorParam = $request->query('error');
@@ -87,10 +84,8 @@ final class OAuthCallbackController
         $description = $request->query('error_description');
         $message = is_string($description) && $description !== '' ? $description : $errorParam;
 
-        // Cap the provider-supplied text before flashing it — it renders
-        // escaped so it is not an XSS vector, but the length is attacker
-        // controlled and SafeMessage keeps every forwarded provider string
-        // to one bounded shape.
+        // The text renders escaped, so the cap is about length rather than
+        // XSS: this string is provider-supplied and attacker-influenced.
         return $this->redirector
             ->route('inboxes.index')
             ->with('oauth_canceled', SafeMessage::cap($message));
@@ -108,9 +103,7 @@ final class OAuthCallbackController
         return $existingInboxId;
     }
 
-    // Returns the exchanged token on success, or a user-facing flash
-    // message when the callback carried no code or the provider rejected
-    // the exchange — both surface as an oauth_failed banner at /inboxes.
+    // A string return is the user-facing oauth_failed flash message.
     private function exchangeToken(
         Request $request,
         GoogleOAuthProvider|MicrosoftOAuthProvider $oauth,
@@ -139,10 +132,9 @@ final class OAuthCallbackController
     ): RedirectResponse {
         $refreshToken = $token->refreshToken;
 
-        // Refuse to persist a brand-new inbox without a refresh token —
-        // the next IncrementalScanJob would mark it needs_reauth on
-        // first run. For Google this typically means the consent
-        // screen is still in "Testing" status; surface a flash instead.
+        // A brand-new inbox with no refresh token would be marked
+        // needs_reauth by the first IncrementalScanJob. For Google this
+        // usually means the consent screen is still in "Testing".
         if ($existingInboxId === 0 && ($refreshToken === null || $refreshToken === '')) {
             return $this->failRedirect($this->missingRefreshTokenMessage($provider));
         }
@@ -150,10 +142,8 @@ final class OAuthCallbackController
         $now = $this->clock->now()->toDateTimeString();
         $inboxId = $this->persistInbox($existingInboxId, $userId, $provider, $token->email, $now);
 
-        // The chmod-600 JSON write happens after the DB commit, since
-        // the inbox id is only assigned by insertGetId(); a write
-        // failure on the new-inbox branch deletes both just-inserted
-        // rows, while the reconnect branch just surfaces a flash.
+        // The secrets write can only follow the commit — insertGetId() is
+        // what assigns the inbox id — so a failure has to compensate by hand.
         try {
             $this->writeSecrets($existingInboxId, $inboxId, $provider, $token);
         } catch (SecretsWriteFailed $e) {
@@ -164,9 +154,8 @@ final class OAuthCallbackController
             return $this->failRedirect($e->getMessage());
         }
 
-        // Clears any active oauth_reconsent_required banner row for
-        // this inbox so the SystemAlertsBanner stops surfacing the
-        // Reconnect prompt the moment the dance completes.
+        // Stops SystemAlertsBanner surfacing a Reconnect prompt the moment
+        // the dance completes.
         $this->acknowledgeReconsentAlerts($userId, $inboxId);
 
         return $this->connectedRedirect($existingInboxId, $inboxId);
@@ -242,9 +231,8 @@ final class OAuthCallbackController
             return;
         }
 
-        // Already guarded in completeConnection: refreshToken is
-        // non-null and non-empty on the new-inbox path (the early
-        // return rejects null / '' there).
+        // Guarded in completeConnection: refreshToken is non-null and
+        // non-empty on the new-inbox path.
         $this->secrets->saveInboxRefreshToken(
             inboxId: $inboxId,
             provider: $provider,
@@ -255,9 +243,8 @@ final class OAuthCallbackController
         );
     }
 
-    // Compensating rollback for the just-inserted rows so a failed
-    // secret write does not leave a ghost inbox visible on /inboxes
-    // with no credentials.
+    // So a failed secret write does not leave a ghost inbox visible on
+    // /inboxes with no credentials behind it.
     private function rollbackInbox(int $inboxId, int $userId): void
     {
         $this->db->connection()->transaction(function () use ($inboxId, $userId): void {
@@ -281,10 +268,8 @@ final class OAuthCallbackController
             ->with('open_backfill_modal', $inboxId);
 
         if ($existingInboxId > 0) {
-            // Reconnect path: signal the SystemAlertsBanner-aware
-            // surface to also self-acknowledge (defence in depth) so a
-            // future refactor that moves alert resolution off the
-            // callback still sees the signal land at /inboxes.
+            // Defence in depth: a future refactor that moves alert resolution
+            // off this callback still sees the signal land at /inboxes.
             $redirect = $redirect->with('oauth_reconnect_acknowledged', $inboxId);
         }
 
@@ -298,9 +283,6 @@ final class OAuthCallbackController
             ->with('oauth_failed', $message);
     }
 
-    // Acknowledges every active oauth_reconsent_required system_alerts
-    // row scoped to (user_id, inbox_id) via a single UPDATE, skipping
-    // already-acknowledged rows through the WHERE predicate.
     private function acknowledgeReconsentAlerts(int $userId, int $inboxId): void
     {
         $now = $this->clock->now()->toDateTimeString();
@@ -317,10 +299,9 @@ final class OAuthCallbackController
             $ids = (clone $matching)->pluck('id');
             $matching->update(['acknowledged_at' => $now]);
         } catch (\Throwable) {
-            // Fallback for SQLite builds without JSON1 — same shape as
-            // the listener's de-dup fallback. Anchor the trailing
-            // boundary with separate comma + brace needles so
-            // `inbox_id=1` does not collide with `inbox_id=10`.
+            // SQLite builds without JSON1: anchor the trailing boundary with
+            // separate comma + brace needles so `inbox_id=1` cannot collide
+            // with `inbox_id=10`.
             $withComma = '%"inbox_id":'.$inboxId.',%';
             $withBrace = '%"inbox_id":'.$inboxId.'}%';
             $matching = (clone $base)
@@ -332,9 +313,9 @@ final class OAuthCallbackController
             $matching->update(['acknowledged_at' => $now]);
         }
 
-        // Reconnecting is the same user action the banner's Acknowledge
-        // button is, so it has to travel the same way — left uncaptured,
-        // the other device kept prompting for an inbox already reconnected.
+        // Reconnecting is the same user action as the banner's Acknowledge,
+        // so it has to sync the same way — left uncaptured, the other device
+        // kept prompting for an inbox already reconnected.
         foreach ($ids as $id) {
             if (is_numeric($id)) {
                 $this->alerts->captureAcknowledgement((int) $id, $userId, $now);

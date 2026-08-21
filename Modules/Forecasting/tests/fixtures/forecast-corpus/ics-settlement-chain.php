@@ -2,14 +2,7 @@
 
 declare(strict_types=1);
 
-// ICS settlement chain: TWO accounts (ASN + ICS). ICS has 6 cleared
-// small expense lines since last settlement (Adobe €19.99, Cloudflare
-// $20, etc.); Phase 5 card_statements.nextSettlement payload is
-// included in the chain_state sub-key. Expected 30-day ASN band dips
-// by the settlement amount on the settlement date (chain-aware
-// routing — a later wave's ChainAwareForecastRouter consumes this
-// fixture). The ICS account view shows running owed amount unchanged
-// (chain-aware deducts only from funder).
+/** @link ../../../../../.docs/features/forecasting/forecast-corpus.md#ics-settlement-chain */
 
 return [
     'accounts' => [

@@ -62,17 +62,13 @@ final readonly class ArtisanStreamController
         return $response;
     }
 
-    // Long-poll SSE loop: tail the run's stdout, emit each new chunk, and
-    // close with a terminal `done` event once the detached child's PID is
-    // gone or the client disconnects — bounded by STREAM_TIMEOUT_SECONDS.
     private function streamLoop(RunRecord $record, int $startOffset, string $runId): void
     {
         @ini_set('output_buffering', '0');
         @ini_set('zlib.output_compression', '0');
         @ignore_user_abort(true);
-        // PHP's max_execution_time is wall-clock — without this the SSE
-        // loop is killed at the php.ini default (30s in the shipped
-        // nativephp/php-bin) long before STREAM_TIMEOUT_SECONDS.
+        // max_execution_time is wall-clock here, and the shipped php-bin
+        // defaults to 30s — well short of STREAM_TIMEOUT_SECONDS.
         @set_time_limit(0);
 
         $offset = $startOffset;
@@ -86,9 +82,8 @@ final readonly class ArtisanStreamController
                 $this->flushOutput();
             }
 
-            // A gone PID means the spawner-detached child has finished;
-            // emit the terminal `done` event with whatever exit code is
-            // recoverable (the audit pipeline reads it authoritatively).
+            // A gone PID is the only completion signal a detached child
+            // gives; the audit pipeline owns the authoritative exit code.
             if (! $this->liveness->isAlive($record->pid)) {
                 $this->emitTerminal($runId, $record->outPath, $offset);
                 break;
@@ -102,9 +97,6 @@ final readonly class ArtisanStreamController
         }
     }
 
-    // Flush any last chunk, pin a terminal status in the registry so SSE
-    // reconnects observe it, write the authoritative audit row, then emit
-    // the SSE `done` event carrying the recoverable exit code.
     private function emitTerminal(string $runId, string $outPath, int $offset): void
     {
         $offset = $this->emitFinalChunk($outPath, $offset);
@@ -127,8 +119,7 @@ final readonly class ArtisanStreamController
         $this->flushOutput();
     }
 
-    // Reads once more in case the child wrote a final chunk between the
-    // previous tail and its exit; returns the advanced byte offset.
+    // Catches a final chunk written between the last tail and the exit.
     private function emitFinalChunk(string $outPath, int $offset): int
     {
         $finalChunk = $this->tailer->tailOnce($outPath, $offset);
@@ -142,9 +133,8 @@ final readonly class ArtisanStreamController
         return $offset;
     }
 
-    // The finalize audit write happens-before the terminal done event; a
-    // failure never propagates out of the SSE handler but is still logged
-    // best-effort so an operator can see a corrupt row or a DB error.
+    // Ordered before the terminal done event, and never allowed to propagate
+    // out of the SSE handler — a failed audit write must not kill the stream.
     private function safelyFinalize(string $runId, ?int $exit, bool $cancelled): void
     {
         try {
@@ -164,8 +154,7 @@ final readonly class ArtisanStreamController
                     'exception_class' => get_class($error),
                 ]);
         } catch (\Throwable) {
-            // Last-resort no-op — the SSE frame still closes cleanly even
-            // if the logger itself cannot be resolved or fails to write.
+            // Even an unresolvable logger must let the SSE frame close.
         }
     }
 
@@ -181,9 +170,8 @@ final readonly class ArtisanStreamController
         @flush();
     }
 
-    // Browser EventSource sends Last-Event-ID on auto-reconnect; tests +
-    // the run-card "show output" affordance use `?from=` as a manual
-    // override. Default 0 replays the whole captured stdout.
+    // EventSource sends Last-Event-ID on auto-reconnect; `?from=` is the
+    // manual override. 0 replays the whole captured stdout.
     private function resolveStartOffset(Request $request): int
     {
         $lastEventId = $request->header('Last-Event-ID');

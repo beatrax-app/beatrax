@@ -9,10 +9,8 @@ use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 
 final class NotificationCopy
 {
-    // The type chip shown beside each notification row. The titles/bodies
-    // themselves now live in the notifications::copy lang files, rendered per
-    // recipient by NotificationCopyRenderer, so only this presentation map and
-    // its lookup remain here.
+    // Only the type chip lives here; titles and bodies moved to the
+    // notifications::copy lang files, rendered by NotificationCopyRenderer.
     /**
      * @var array<string, array{glyph: string, word: string}>
      */

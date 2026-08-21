@@ -122,8 +122,7 @@ it('reads the consent status from how much of the window is left', function (?st
     expect($view)->not->toBeNull()
         ->and($view->consentStatus)->toBe($expected);
 })->with([
-    // Never recorded reads as expired rather than connected: an unknown
-    // expiry is not evidence of a live consent.
+    // An unknown expiry is not evidence of a live consent.
     'never recorded' => [null, 'expired'],
     'already past' => ['2026-07-18 06:00:00', 'expired'],
     'exactly now' => ['2026-07-19 06:30:00', 'expired'],

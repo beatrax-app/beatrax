@@ -12,8 +12,7 @@ enum RuleCombinator: string
 
     case Any = 'any';
 
-    // What an unspecified or unrecognised stored combinator falls back to,
-    // named once here rather than repeated as an 'all' literal at each read
+    // Named once here rather than repeated as an 'all' literal at each read
     // boundary (a DB row, a hydrating form).
     public static function coerce(?string $value): self
     {

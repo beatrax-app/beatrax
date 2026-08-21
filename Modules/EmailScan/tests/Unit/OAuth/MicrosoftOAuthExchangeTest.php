@@ -16,15 +16,9 @@ use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
 uses(RefreshDatabase::class);
 
-/**
- * The Microsoft side of the exchange.
- *
- * Azure needs one more mocked response than Google does: it resolves its
- * endpoints from the tenant's OpenID configuration document before it will
- * build a URL or post to a token endpoint. That fetch is what made this
- * provider untestable before OAuthProviderFactory could hand it a transport —
- * even the authorization URL reached the network.
- */
+// Azure needs one mocked response more than Google: it resolves its endpoints
+// from the tenant's OpenID configuration document before it will build a URL
+// or post to a token endpoint, so even the authorization URL hits the network.
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'wessel',
@@ -53,8 +47,7 @@ function microsoftProviderReturning(array $responses): MicrosoftOAuthProvider
     return new MicrosoftOAuthProvider(app(OAuthSecretsRepository::class), $factory);
 }
 
-// Azure asks for this first and caches it per tenant, so it is the first
-// response every one of these tests has to queue.
+// Cached per tenant, so it has to be the first queued response every time.
 function azureOpenIdConfigResponse(): Response
 {
     return new Response(200, ['Content-Type' => 'application/json'], (string) json_encode([
@@ -131,9 +124,8 @@ it('refreshes an access token without a fresh authorization', function (): void 
 });
 
 it('reports a rejected refresh as needing reconsent', function (): void {
-    // Same reasoning as the Google side: invalid_grant is the failure no retry
-    // can fix, and treating it as transient leaves an inbox looping on a token
-    // that will never work again.
+    // invalid_grant is the failure no retry can fix; treating it as transient
+    // leaves an inbox looping on a token that will never work again.
     $provider = microsoftProviderReturning([
         azureOpenIdConfigResponse(),
         new Response(400, ['Content-Type' => 'application/json'], (string) json_encode([

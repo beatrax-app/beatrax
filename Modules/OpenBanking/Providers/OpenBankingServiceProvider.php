@@ -55,9 +55,8 @@ final class OpenBankingServiceProvider extends ServiceProvider
         $livewire->component('openbanking.open-banking-settings-page', OpenBankingSettingsPage::class);
         $livewire->component('openbanking.open-banking-status-row', OpenBankingStatusRow::class);
 
-        // Local dev/UAT only: the HTTPS-loopback TLS listener that lets the
-        // Enable Banking consent dance run against the https://127.0.0.1:PORT
-        // redirect URI. Guarded so it never binds on web requests.
+        // The HTTPS-loopback listener is local UAT tooling, guarded so it never
+        // binds on a web request.
         if ($this->app->runningInConsole()) {
             $this->commands([ServeOpenBankingTlsCommand::class]);
         }

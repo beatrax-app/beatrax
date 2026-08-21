@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-// Plan 05-05 — WebAuthn biometric unlock (server-side logic, GREEN)
-
 use Illuminate\Contracts\Session\Session;
 use Modules\Auth\Internal\Lock\AppLockKeyWrap;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
@@ -12,28 +10,9 @@ use Modules\Auth\Internal\Lock\WebAuthnBiometricService;
 use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Models\User;
 
-/*
- * Feature coverage for WebAuthnBiometricService server-side logic.
- *
- * Full browser-level WebAuthn (actual navigator.credentials.get) is
- * manually verified per 05-VALIDATION (Manual-Only table). These tests
- * exercise the SERVER-side unlock, wrap/unwrap, and arm/disarm logic
- * independently of the browser prompt.
- *
- * The biometric wrap + release cycle is tested end-to-end through the
- * store and key wrap helpers (no mocking of the validator — the validator
- * requires real CBOR public keys, which only the browser provides).
- *
- * Tests:
- *   1. WebAuthnBiometricService class exists.
- *   2. creationOptions() returns the expected JSON-serializable structure.
- *   3. requestOptions() lists armed credentials and filters disarmed ones.
- *   4. extractDataKey helper: wrap + unwrap produces the original data key.
- *   5. verifyAndRelease returns false when the credential is disarmed (D-16).
- *   6. verifyAndRelease returns false when no challenge is in the session.
- *   7. AppLockKeyService returns null when the session is locked.
- *   8. After LockStateManager->unlock() AppLockKeyService->release returns the key.
- */
+// The validator is never mocked: it needs a real CBOR public key, which only
+// the browser can produce. So the wrap/release cycle is driven through the
+// store and the key-wrap helpers instead.
 
 it('WebAuthnBiometricService class exists (RED until 05-05)', function (): void {
     expect(class_exists(WebAuthnBiometricService::class))->toBeTrue();
@@ -60,7 +39,6 @@ it('creationOptions returns a JSON-serializable structure with expected keys', f
     expect($options)->toHaveKey('user');
     expect($options)->toHaveKey('pubKeyCredParams');
 
-    // Challenge should have been stored in the session.
     expect($session->has(WebAuthnBiometricService::CREATION_CHALLENGE_SESSION))->toBeTrue();
 });
 
@@ -80,11 +58,9 @@ it('requestOptions lists only armed credentials', function (): void {
     /** @var Session $session */
     $session = $this->app->make(Session::class);
 
-    // Enroll two credentials.
     $store->store($user->id, base64_encode('cred-armed'), 'Armed Device', str_repeat("\xAA", 32), 'fake-cbor', 'webauthn');
     $store->store($user->id, base64_encode('cred-disarmed'), 'Disarmed Device', str_repeat("\xBB", 32), 'fake-cbor', 'webauthn');
 
-    // Disarm the second credential.
     $disarmed = $store->findByCredentialId($user->id, base64_encode('cred-disarmed'));
     /** @var stdClass $disarmed */
     for ($i = 0; $i < BiometricDeviceStore::BIOMETRIC_DISABLE_THRESHOLD; $i++) {
@@ -96,12 +72,10 @@ it('requestOptions lists only armed credentials', function (): void {
     expect($options)->toBeArray();
     expect($options)->toHaveKey('challenge');
 
-    // allowCredentials should list only the armed one.
     $allowCredentials = $options['allowCredentials'] ?? [];
     /** @var array<int, array<string, mixed>> $allowCredentials */
     expect($allowCredentials)->toHaveCount(1);
 
-    // Challenge stored in session.
     expect($session->has(WebAuthnBiometricService::REQUEST_CHALLENGE_SESSION))->toBeTrue();
 });
 
@@ -133,7 +107,6 @@ it('verifyAndRelease returns false when no challenge is in the session', functio
     /** @var Session $session */
     $session = $this->app->make(Session::class);
 
-    // No challenge in session → must return false.
     $result = $service->verifyAndRelease($user->id, ['rawId' => ''], $session);
 
     expect($result)->toBeFalse();
@@ -164,10 +137,10 @@ it('verifyAndRelease returns false when the credential is disarmed (D-16)', func
         $store->incrementFailureCount($cred->id);
     }
 
-    // Plant a valid challenge so we get past the challenge check.
+    // A valid challenge, so the disarm check is what rejects this and not the
+    // missing-challenge branch.
     $session->put(WebAuthnBiometricService::REQUEST_CHALLENGE_SESSION, base64_encode(random_bytes(32)));
 
-    // The assertion body references the disarmed credential.
     $result = $service->verifyAndRelease($user->id, ['rawId' => $credentialId], $session);
 
     expect($result)->toBeFalse();
@@ -189,17 +162,17 @@ it('verifyAndRelease increments biometric_failed_count when validation throws on
     /** @var Session $session */
     $session = $this->app->make(Session::class);
 
-    // Enrollment stores credential_id in STANDARD base64.
     $rawCredentialBytes = random_bytes(16);
     $credentialId = base64_encode($rawCredentialBytes);
     $store->store($user->id, $credentialId, 'Frank Device', str_repeat("\xDD", 32), 'fake-cbor', 'webauthn');
 
     $session->put(WebAuthnBiometricService::REQUEST_CHALLENGE_SESSION, base64_encode(random_bytes(32)));
 
-    // The browser (lock.js) sends rawId base64url-encoded WITHOUT padding.
+    // Enrollment stores credential_id in standard base64, but lock.js sends the
+    // rawId base64url-encoded without padding — the mismatch under test.
     $rawIdBase64url = sodium_bin2base64($rawCredentialBytes, SODIUM_BASE64_VARIANT_URLSAFE_NO_PADDING);
 
-    // Structurally-plausible assertion with garbage payload — validation throws.
+    // Structurally plausible, payload garbage: validation throws.
     $result = $service->verifyAndRelease($user->id, [
         'id' => $rawIdBase64url,
         'rawId' => $rawIdBase64url,
@@ -214,7 +187,7 @@ it('verifyAndRelease increments biometric_failed_count when validation throws on
 
     expect($result)->toBeFalse();
 
-    // D-16: the failure throttle must engage despite the encoding mismatch.
+    // The throttle must still engage despite the encoding mismatch.
     $cred = $store->findByCredentialId($user->id, $credentialId);
     expect($cred)->not->toBeNull();
     /** @var stdClass $cred */
@@ -233,11 +206,9 @@ it('LockStateManager unlock then AppLockKeyService release returns the data key'
 
     $dataKey = random_bytes(32);
 
-    // Start locked.
     $lockState->lock($session);
     expect($keyService->release($session))->toBeNull();
 
-    // Unlock with the data key.
     $lockState->unlock($session, $dataKey);
     $released = $keyService->release($session);
 

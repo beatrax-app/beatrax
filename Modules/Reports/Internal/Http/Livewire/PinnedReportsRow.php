@@ -67,10 +67,8 @@ final class PinnedReportsRow extends Component
         return $optionsJson === false ? '{}' : $optionsJson;
     }
 
-    // The mini card is chart-only, so a 'table' viz (the builder's own
-    // default, not a renderable chart form) falls back to the same
-    // metric-based default the full builder's Visualization selector uses:
-    // net-worth/time-series -> line, else -> bar.
+    // The mini card is chart-only, so a 'table' viz falls back to the builder's
+    // own metric default: net-worth/time-series -> line, else -> bar.
     private function chartTypeFor(ReportDefinition $definition): string
     {
         if (in_array($definition->viz, ['bar', 'line', 'donut'], true)) {
@@ -126,10 +124,9 @@ final class PinnedReportsRow extends Component
      */
     private static function withoutLeadingEmptyBuckets(array $rows): array
     {
-        // The time-bucket query emits a row per bucket whether or not the
-        // bucket holds anything, so a window opening before the first
-        // transaction begins with a flat run that says nothing. Only the
-        // LEADING run goes: a zero between two funded buckets is data.
+        // The time-bucket query emits a row per bucket regardless, so a window
+        // opening before the first transaction starts with a meaningless flat
+        // run. Only the leading run goes: a zero between funded buckets is data.
         $firstFunded = null;
         foreach ($rows as $index => $row) {
             if ($row->amountMinor !== 0) {
@@ -138,9 +135,8 @@ final class PinnedReportsRow extends Component
             }
         }
 
-        // Every bucket empty is not a leading run with something behind it —
-        // there is nothing to lead into. A flat line at zero reads as "zero
-        // in every period"; an emptied series reads as "no such report".
+        // With every bucket empty there is nothing to lead into: a flat line at
+        // zero reads as "zero everywhere", an empty series as "no such report".
         if ($firstFunded === null) {
             return $rows;
         }
@@ -155,10 +151,8 @@ final class PinnedReportsRow extends Component
     private function donutOptions(array $rows): array
     {
         $labels = array_map(static fn (ReportResultRow $row): string => $row->groupLabel, $rows);
-        // ApexCharts donut series expects non-negative magnitudes; a report
-        // total is signed (spend renders as a negative settled amount) —
-        // slice size is the absolute value, mirroring report-donut-chart's
-        // own precedent.
+        // ApexCharts donut series wants non-negative magnitudes, but a report
+        // total is signed, so slice size is the absolute value.
         $series = array_map(static fn (ReportResultRow $row): float => abs($row->amountMinor) / 100, $rows);
 
         $colors = [];
@@ -180,10 +174,8 @@ final class PinnedReportsRow extends Component
             'labels' => $labels,
             'colors' => $colors,
             'dataLabels' => ['enabled' => false],
-            // A donut with no legend and no data labels is a ring of colours
-            // that says nothing, and hovering to tell which slice is which is
-            // not available on a phone. The bar and line cards carry meaning
-            // in the axis; this one has nowhere else to put it.
+            // The bar and line cards carry meaning in the axis; a donut has
+            // nowhere else to put it, and hover is unavailable on a phone.
             'legend' => [
                 'show' => true,
                 'position' => 'bottom',

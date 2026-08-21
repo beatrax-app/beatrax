@@ -9,15 +9,8 @@ use Modules\Counterparties\Internal\Http\Livewire\CounterpartyTriage;
 
 uses(RefreshDatabase::class);
 
-/*
- * An empty triage queue must not claim to be finished work.
- *
- * With nothing to label, the header read "0 of 0 · 100 % · ~1 min remaining"
- * above a completely filled progress bar — asserting both that there was work
- * and that it was complete, from a queue that never held anything. Zero of
- * zero is not a hundred per cent, and "nothing to do" is a different state
- * from "done", which the all-caught-up card below already states correctly.
- */
+// Regression: with nothing to label the header read "0 of 0 · 100 % · ~1 min
+// remaining" over a full progress bar. "Nothing to do" is not "done".
 
 it('shows no progress figure or bar when nothing is queued', function (): void {
     $user = User::query()->create([
@@ -33,7 +26,6 @@ it('shows no progress figure or bar when nothing is queued', function (): void {
     $rendered->assertDontSee('progress-fill', false);
     $rendered->assertDontSee('100 %');
 
-    // And the state that IS true is still on screen.
     $rendered->assertSee(__('counterparties::triage.all_caught_heading'));
 });
 
@@ -44,7 +36,6 @@ it('reports zero per cent rather than one hundred for an empty queue', function 
         'period_start_day' => 1,
     ]);
 
-    // Guards every other reader of the view data, not just the bar's width.
     Livewire::actingAs($user)->test(CounterpartyTriage::class)
         ->assertViewHas('percent', 0)
         ->assertViewHas('total', 0)

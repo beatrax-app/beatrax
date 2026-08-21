@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 use Modules\Auth\Internal\Lock\AppLockKdf;
 
-/*
- * Unit tests for AppLockKdf — Argon2id key derivation for app-lock wrap keys.
- */
-
 it('derives a key of exactly SODIUM_CRYPTO_SECRETBOX_KEYBYTES length', function (): void {
     $kdf = new AppLockKdf;
 

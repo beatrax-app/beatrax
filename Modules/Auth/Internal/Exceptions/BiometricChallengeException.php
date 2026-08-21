@@ -6,10 +6,8 @@ namespace Modules\Auth\Internal\Exceptions;
 
 use RuntimeException;
 
-// The pending creation challenge could not be pulled back from the session
-// during enrollment, either absent or not decodable. Distinct because it
-// signals a broken or replayed ceremony handshake, not a validation error
-// over otherwise well-formed input.
+// The pending creation challenge was absent or undecodable. Distinct because
+// it means a broken or replayed handshake, not bad input.
 final class BiometricChallengeException extends RuntimeException
 {
     public static function missing(): self

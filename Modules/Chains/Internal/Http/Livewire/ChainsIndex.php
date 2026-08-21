@@ -24,8 +24,6 @@ final class ChainsIndex extends Component
         $user = $currentUser->user();
         $chains = $query->allChainsForUser($user, limit: 100);
 
-// Grouped by the charge each link settles into: one flat row per link
-// repeated the same settlement once per card.
         $view = $views->make('chains::livewire.chains-index', [
             'settlements' => SettlementGroup::fromRows($chains),
         ]);

@@ -10,22 +10,6 @@ use Modules\Core\Models\User;
 use Modules\EmailScan\Public\Dto\EmailScanHealthTile;
 use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
 
-/*
- * Dashboard "Email scan health" tile invariants:
- *
- *  - emailScanHealth(User) returns null when the user has zero
- *    connected inboxes (the dashboard reads null as "hide the
- *    tile entirely" — no "—" placeholder).
- *  - When one inbox is connected and successfully scanned within
- *    24 h, the tile renders one healthy line and overall status
- *    'healthy'.
- *  - When a second inbox is in needs_reauth, overall status flips
- *    to 'reauth' and the affected line carries status='reauth'
- *    with the "needs reconnect" copy.
- *  - When more than three inboxes are connected, only the first
- *    three render and the overflow count == total - 3.
- */
-
 function ehtUser(string $username): User
 {
     return User::query()->create([
@@ -86,12 +70,8 @@ it('returns null when the user has zero connected inboxes', function (): void {
 
     expect($glance->emailScanHealth($user))->toBeNull();
 
-    // The dashboard partial must not appear in the rendered page
-    // either (null = hide the tile entirely).
-    // Render the Livewire Dashboard component directly to verify the
-    // tile is hidden when emailScanHealth() returns null. Going via
-    // the full HTTP route would hit the "zero transactions → /imports/new"
-    // first-run redirect which is unrelated to the tile assertion.
+    // The component directly rather than the HTTP route: with zero
+    // transactions the route redirects to /imports/new before rendering.
     Livewire::test(Dashboard::class)
         ->assertDontSee('Email scan health');
 });
@@ -254,11 +234,8 @@ it('cross-user isolation: another user\'s inboxes never appear on this user\'s t
     /** @var ThisPeriodAtAGlanceQuery $glance */
     $glance = $this->app->make(ThisPeriodAtAGlanceQuery::class);
 
-    // User A has zero inboxes — tile must be null even though user B
-    // has a needs_reauth inbox.
     expect($glance->emailScanHealth($userA))->toBeNull();
 
-    // User B sees their own inbox in 'reauth' overall state.
     $tileB = $glance->emailScanHealth($userB);
     expect($tileB)->not->toBeNull();
     expect($tileB->overallStatus)->toBe('reauth');

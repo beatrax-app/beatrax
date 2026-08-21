@@ -63,9 +63,8 @@ final class ForecastingServiceProvider extends ServiceProvider
         $this->app->singleton(ProjectForecastOnDriftDismissed::class);
         $this->app->singleton(ProjectForecastOnScenarioChange::class);
 
-        // The job itself is constructor-positional (userId, scenarioId,
-        // horizonDays) so it is dispatched, not container-resolved — no
-        // singleton entry.
+        // ProjectForecastJob has no entry here: its constructor is positional,
+        // so it is dispatched rather than container-resolved.
         $this->app->singleton(BalanceAnchorResolver::class);
         $this->app->singleton(NetWorthQuery::class);
         $this->app->singleton(RangeProjector::class);
@@ -76,8 +75,6 @@ final class ForecastingServiceProvider extends ServiceProvider
         $this->app->singleton(ChainAwareForecastRouter::class);
         $this->app->singleton(ShortfallDetector::class);
 
-        // Scenario applier (in-memory transform on top of the baseline
-        // routed contributions — the scenario-isolation boundary).
         $this->app->singleton(ScenarioApplier::class);
 
         $this->app->singleton(SetAccountForecastBuffer::class);
@@ -92,16 +89,12 @@ final class ForecastingServiceProvider extends ServiceProvider
         $this->app->singleton(RemoveScenarioMutation::class);
         $this->app->singleton(EditScenarioMutation::class);
 
-        // Launchpad Public Actions (atomic CreateScenario +
-        // AddScenarioMutation pairs wrapped in a DB transaction).
         $this->app->singleton(CreateCancellationScenarioForAlert::class);
         $this->app->singleton(CreateCancellationScenarioForSeries::class);
         $this->app->singleton(CreateAmountChangeScenarioForSeries::class);
 
-        // Livewire Components are intentionally NOT bound as singletons:
-        // the mount/render lifecycle resolves a fresh instance per request,
-        // and singleton-binding would leak stale public-property state
-        // across requests under a future long-running process (Octane).
+        // No Livewire component is bound here on purpose: a singleton would
+        // leak stale public-property state between requests under Octane.
 
         $this->app->singleton(ForecastDtoMapper::class);
         $this->app->singleton(ForecastQuery::class);
@@ -132,17 +125,13 @@ final class ForecastingServiceProvider extends ServiceProvider
 
         $events->listen(DriftAlertDismissedCancelled::class, [ProjectForecastOnDriftDismissed::class, 'handle']);
 
-        // Scenario lifecycle events fan out into baseline +
-        // affected-scenario projection horizons via the listener below.
         $events->listen(ScenarioCreated::class, [ProjectForecastOnScenarioChange::class, 'handle']);
         $events->listen(ScenarioMutated::class, [ProjectForecastOnScenarioChange::class, 'handle']);
         $events->listen(ScenarioDeleted::class, [ProjectForecastOnScenarioChange::class, 'handle']);
     }
 
-    // The View Factory contract is resolved through $this->app->make() to
-    // keep the DI-only invariant visible at the call site; the global
-    // view() helper is forbidden in module code. $cache memoizes the
-    // per-user count for the lifetime of this composer's boot scope.
+    // The global view() helper is forbidden in module code, so the factory is
+    // resolved explicitly. $cache memoises the per-user count for this scope.
     private function registerTopNavBadgeComposer(): void
     {
         $app = $this->app;

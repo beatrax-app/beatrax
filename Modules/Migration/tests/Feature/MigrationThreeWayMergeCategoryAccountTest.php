@@ -11,14 +11,6 @@ use Modules\Migration\Public\Enums\MigrationEntityType;
 
 uses(RefreshDatabase::class);
 
-/*
- * Covers the category + account arms of ThreeWayMergeResolver — a source name
- * that diverged from the import baseline either auto-applies (local untouched)
- * or raises a conflict (local also diverged). The transaction/budget arms have
- * their own coverage; these exercise the two arms this enum touches that were
- * otherwise unhit.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -31,12 +23,6 @@ beforeEach(function (): void {
     ]);
 });
 
-/**
- * Seeds the 3-way-merge fixture for one category or account: the live Beatrax
- * row (name = $localName), a source-map + baseline snapshot of $baselineName,
- * and a staging row carrying the re-import's $sourceName. Returns the new run
- * id to resolve against.
- */
 function twmSeedName(User $user, string $entityType, string $localName, string $baselineName, string $sourceName): int
 {
     $db = app(DatabaseManager::class);

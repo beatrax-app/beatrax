@@ -13,31 +13,6 @@ use Modules\Ledger\Models\Transaction;
 
 uses(RefreshDatabase::class);
 
-/*
- * Feature coverage for the dashboard "Forecast highlights" Livewire tile.
- *
- * Replaces Modules/Chains/tests/Feature/NextIcsSettlementTileTest as a
- * strict superset:
- *   - The earlier next-settlement tile case (case 1) is ported verbatim
- *     here — the new tile STILL renders the next-settlement line.
- *   - The earlier hidden-state test (case 6 — "Dashboard hides ... when
- *     nextIcsSettlement returns null") is ported.
- *
- * New Phase 10 cases:
- *   - Lowest projected balance line surfaces in slate-900 with no shortfall.
- *   - Lowest projected balance line surfaces in rose-700 with active shortfalls.
- *   - Pluralisation: "1 active shortfall window" vs "N active shortfall windows".
- *   - Renders both lines (next-settlement + lowest-projected) when both exist.
- *   - Cross-user safety — tile drill-through does not leak other users' rows.
- *   - Tile is a link to /forecast (NEW — was a non-link tile previously).
- *
- * The Phase 5 failed-job toast tests are NOT migrated here — they have
- * nothing to do with the tile and remain in their original module
- * (Modules/Chains/tests/Feature) when re-purposed; here they're dropped
- * as part of the Phase 5 test file deletion. The failed-job toast still
- * renders from Dashboard.php's render() path, exercised by other tests.
- */
-
 function fhtUser(string $username): User
 {
     return User::query()->create([
@@ -113,10 +88,6 @@ beforeEach(function (): void {
     ]);
 });
 
-/*
- * --- Ported Phase 5 cases ---
- */
-
 it('renders the next ICS settlement amount when one is upcoming (Phase 5 → Phase 10 ported)', function (): void {
     CardStatement::query()->create([
         'user_id' => $this->user->id,
@@ -137,16 +108,11 @@ it('renders the next ICS settlement amount when one is upcoming (Phase 5 → Pha
 });
 
 it('hides the Forecast highlights tile when no settlement is upcoming AND no projection exists (Phase 5 → Phase 10 ported)', function (): void {
-    // No card_statement seeded + no forecast_runs → tile is hidden.
     $this->actingAs($this->user)
         ->get('/')
         ->assertOk()
         ->assertDontSeeText('Next ICS settlement');
 });
-
-/*
- * --- Phase 10 new cases ---
- */
 
 it('renders the lowest-projected-balance line when a baseline forecast run exists with no shortfall', function (): void {
     /** @var DatabaseManager $db */
@@ -318,7 +284,6 @@ it('preserves the minus sign when the lowest projected balance is negative (over
                     'anchor_source' => 'user_input_opening_balance',
                     'points' => [
                         ['date' => '2026-05-19', 'low_minor' => 5000, 'point_minor' => 5000, 'high_minor' => 5000, 'currency' => 'EUR'],
-                        // Projection dips into overdraft.
                         ['date' => '2026-05-25', 'low_minor' => -12345, 'point_minor' => -12345, 'high_minor' => -12345, 'currency' => 'EUR'],
                     ],
                 ],
@@ -328,16 +293,12 @@ it('preserves the minus sign when the lowest projected balance is negative (over
         'updated_at' => '2026-05-19 00:00:00',
     ]);
 
-    // The rendered tile must contain the negative-formatted figure
-    // (locale "-123,45" or "€ -123,45"). The earlier abs()-stripping
-    // bug rendered "€ 123,45" with no sign, masking the overdraft.
-    // We verify the negative sign appears in proximity to the digits.
     $response = $this->actingAs($this->user)->get('/');
     $response->assertOk();
     $body = $response->getContent();
     expect($body)->not->toBeFalse();
-    // Money::ofMinor(-12345, 'EUR')->format() yields "€ -123,45"
-    // (currency-symbol-then-minus-then-figure under PHP intl rules).
+    // An earlier abs() in the tile rendered "€ 123,45" and hid the overdraft, so
+    // the sign is the assertion; intl formats this one as "€ -123,45".
     expect($body)->toContain('-123,45');
 });
 
@@ -369,8 +330,6 @@ it('does not surface another user shortfall in the tile (cross-user isolation)',
         'updated_at' => '2026-05-19 00:00:00',
     ]);
 
-    // User A sees no Forecast tile rendered (no statement, no run, no
-    // shortfall for them).
     $this->actingAs($this->user)
         ->get('/')
         ->assertOk()

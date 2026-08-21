@@ -10,7 +10,6 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 /** @link ../../../../.docs/architecture/ingestion-pipeline.md#4-transaction-type-classification-classifytransactiontype */
-
 beforeEach(function (): void {
     /** @var ClassifyTransactionType $stage */
     $stage = $this->app->make(ClassifyTransactionType::class);

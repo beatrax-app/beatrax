@@ -14,18 +14,16 @@ final class ConversionResult extends Data
         public readonly Money $original,
         public readonly Money $converted,
         public readonly bool $isPassthrough,
-        // Never float — the DECIMAL(18,8) value read from
-        // exchange_rates.rate, kept as a string to avoid floating-point
-        // precision loss during conversion.
+        // Never float: the DECIMAL(18,8) exchange_rates.rate, kept a string so
+        // conversion loses no precision.
         public readonly ?string $rate,
         public readonly ?string $source,
         public readonly ?CarbonImmutable $asOf,
         public readonly bool $isStale,
     ) {}
 
-    // Zero-overhead passthrough for figures already in the base
-    // currency: no conversion runs, original === converted, all rate
-    // metadata is null, isStale is false.
+    // A passthrough for figures already in the base currency: no conversion
+    // runs and every rate field stays null.
     public static function passthrough(Money $money): self
     {
         return new self(

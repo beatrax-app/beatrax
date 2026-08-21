@@ -12,18 +12,9 @@ use Modules\Ledger\Models\Category;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 
-/*
- * A user who has never assigned anything has no envelope_activated_at, so
- * CarryoverQuery had nothing to fold and returned no rows — and the grid reads
- * "no rows" as "no expense categories".
- *
- * Measured on a synced phone: 24 rows of kind='expense' in the categories
- * table, and the page saying "Nog geen uitgavencategorieën. Voeg een
- * uitgavencategorie toe om er geld aan toe te wijzen." Following that advice
- * cannot help, and the page's other hint — click a cell to assign your first
- * month — had no cell to click. Budgets could not be started at all.
- */
-
+// A user who has never assigned anything has no envelope_activated_at, so
+// CarryoverQuery folded nothing and returned no rows — and the grid read
+// "no rows" as "no expense categories", leaving budgets unstartable.
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'unstarted-'.bin2hex(random_bytes(4)),
@@ -110,9 +101,7 @@ it('offers the income there is to assign, not zero', function (): void {
         'fingerprint_version' => 1,
     ]);
 
-    // The fold one branch down is income + carry - assigned, and before the
-    // first assignment carry and assigned are both nought — so income is what
-    // it would answer. Zero told a reader with a month's pay in the account
-    // that they had nothing to assign, on the page titled "assign every euro".
+    // Before the first assignment, carry and assigned are both zero, so the
+    // fold answers plain income; a zero here was the reported bug.
     expect(Livewire::test(BudgetsPage::class)->viewData('toBudgetMinor'))->toBe(80000);
 });

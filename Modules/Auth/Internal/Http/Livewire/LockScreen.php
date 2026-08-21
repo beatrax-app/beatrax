@@ -32,14 +32,9 @@ final class LockScreen extends Component
 
     public string $biometricLabel = 'Use Touch ID';
 
-    // The OS-gated key vault (Touch ID on desktop, the enclave on mobile) as
-    // distinct from the WebAuthn credential above: this one hands back the
-    // data key, so it can unlock on its own.
+    // The OS vault hands back the data key itself, so unlike the WebAuthn
+    // credential behind $biometricAvailable it can unlock on its own.
     public bool $nativeUnlockAvailable = false;
-
-    // -------------------------------------------------------------------------
-    // Lifecycle
-    // -------------------------------------------------------------------------
 
     public function mount(
         CurrentUser $currentUser,
@@ -59,18 +54,13 @@ final class LockScreen extends Component
             fn (object $cred): bool => $biometricStore->isArmed($cred)
         );
 
-        // The stored flag as well as the vault's own answer. The desktop vault
-        // reports enrolment from a file keyed on nothing but the user id, so a
-        // database reset behind it offered the next account to take that id an
-        // enrolment it never made. The mobile vault already reads this flag.
+        // The flag as well as the vault: the desktop vault keys its file on
+        // the user id alone, so after a database reset it offered the next
+        // account to take that id an enrolment it never made.
         $this->nativeUnlockAvailable = $vault->isAvailable()
             && $vault->isEnrolled($user->id)
             && $gateway->isColdStartEnrolled($user->id);
     }
-
-    // -------------------------------------------------------------------------
-    // Primary action
-    // -------------------------------------------------------------------------
 
     public function submit(
         string $pin,
@@ -94,9 +84,8 @@ final class LockScreen extends Component
         $dataKey = $verifier->verify($user->id, $pin, $session);
 
         if ($dataKey === null) {
-            // During an active locked_until window, verify() returns null
-            // BEFORE checking the PIN, so even a correct PIN lands here --
-            // this must distinguish "backoff active" from "wrong PIN".
+            // verify() returns null before checking the PIN during a backoff
+            // window, so a correct PIN lands here too and must be told apart.
             $lockedUntil = $verifier->lockedUntil($user->id);
             if ($lockedUntil !== null) {
                 $seconds = max(1, (int) ceil($clock->now()->diffInMilliseconds($lockedUntil, absolute: true) / 1000));
@@ -113,10 +102,9 @@ final class LockScreen extends Component
             return;
         }
 
-        // Enrol on the way through: this is the only moment the raw data key
-        // is in hand, and the vault re-protects it under the OS gate. The flag
-        // is written with it, so the enrolment dies with the account row
-        // instead of surviving as a file that outlives the user it was for.
+        // The only moment the raw data key is in hand. The flag is written
+        // alongside so the enrolment dies with the account row rather than
+        // surviving as a file that outlives the user it was for.
         if ($vault->isAvailable() && ! $vault->isEnrolled($user->id) && $vault->enroll($user->id, $dataKey)) {
             $gateway->markColdStartEnrolled($user->id, true);
         }
@@ -124,9 +112,8 @@ final class LockScreen extends Component
         $this->redirect($this->intendedUrl($session, $urls), navigate: false);
     }
 
-    // Unlocks from the OS-gated vault. The vault prompts and returns the key
-    // only on a successful authentication, so a false/null here is a refusal
-    // and never a partial unlock.
+    // The vault returns the key only on a successful prompt, so a null here
+    // is a refusal and never a partial unlock.
     public function nativeUnlock(
         CurrentUser $currentUser,
         ColdStartVault $vault,
@@ -148,16 +135,13 @@ final class LockScreen extends Component
         $this->redirect($this->intendedUrl($session, $urls), navigate: false);
     }
 
-    // Shared by both unlock paths so a PIN and a biometric unlock land on
-    // the same page.
     private function intendedUrl(Session $session, UrlGenerator $urls): string
     {
         $intended = $session->pull('url.intended');
         $lastPage = $session->pull(AppLockMiddleware::SESSION_LAST_PAGE);
 
-        // `url.intended` only exists when the middleware itself redirected
-        // here; an idle lock engaged from the client leaves only the last
-        // page the user was on.
+        // `url.intended` exists only when the middleware redirected here; a
+        // client-engaged idle lock leaves nothing but the last page.
         return match (true) {
             is_string($intended) && $intended !== '' => $intended,
             is_string($lastPage) && $lastPage !== '' => $lastPage,
@@ -165,19 +149,12 @@ final class LockScreen extends Component
         };
     }
 
-    // -------------------------------------------------------------------------
-    // Biometric prompt (button-tap-to-prompt, no auto-fire)
-    // -------------------------------------------------------------------------
-
-    // lock.js listens for 'beatrax:webauthn-get', calls
-    // navigator.credentials.get with the requestOptions fetched from
-    // /lock/biometric/challenge, then POSTs the assertion to
-    // /lock/biometric/verify.
+    // Half of a browser round trip: lock.js answers 'beatrax:webauthn-get' by
+    // POSTing an assertion to /lock/biometric/verify.
     public function biometricPrompt(ConfigRepository $config): void
     {
-        // No WebAuthn platform authenticator exists behind the desktop shell,
-        // so the prompt would resolve to nothing and the button would read as
-        // broken. The OS-gated vault above is that platform's real path.
+        // navigator.credentials.get() resolves to nothing behind the desktop
+        // shell, reading as a dead button; the OS vault is its real path.
         if ($config->get('nativephp-internal.running') === true) {
             $this->flashMessage = Lang::get('auth::lock_screen.native_unlock_failed');
 
@@ -186,10 +163,6 @@ final class LockScreen extends Component
 
         $this->dispatch('beatrax:webauthn-get');
     }
-
-    // -------------------------------------------------------------------------
-    // Render
-    // -------------------------------------------------------------------------
 
     public function render(ViewFactory $views): View
     {
@@ -201,12 +174,6 @@ final class LockScreen extends Component
         return $view;
     }
 
-    // -------------------------------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------------------------------
-
-    // Returns null when the config row is absent or the failed-attempt
-    // count cannot be read.
     private function remainingAttempts(int $userId, DatabaseManager $db): ?int
     {
         $row = $db->connection()->table('user_app_lock_configs')

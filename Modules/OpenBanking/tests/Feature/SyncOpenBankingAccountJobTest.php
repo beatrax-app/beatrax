@@ -21,21 +21,6 @@ use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 
 uses(RefreshDatabase::class);
 
-/*
- * SyncOpenBankingAccountJob (19-09 Task 1): two-timestamp success/attempt
- * accounting (RESEARCH.md Pitfall 5 — the load-bearing invariant), the
- * defensive off/expired re-check on pickup (mirrors IncrementalScanJob's
- * "Early exit #1"), and the consent-failure -> OpenBankingConsentFailed
- * dispatch (feeds 19-06's alert listener).
- *
- * Exercises the real OpenBankingFetchService end-to-end (real
- * RunsImports/ConfirmsImports, real secrets repository) but substitutes a
- * stub RemoteSourceAdapter for EnableBankingSourceAdapter — this job's own
- * contract is the timestamp/dispatch bookkeeping around a fetch, not the
- * adapter's field-mapping (covered by EnableBankingSourceAdapterTest) or
- * the dedup pipeline (covered by OpenBankingFingerprintParityTest).
- */
-
 final class SojaStubRemoteSourceAdapter implements RemoteSourceAdapter
 {
     public bool $called = false;
@@ -54,9 +39,7 @@ final class SojaStubRemoteSourceAdapter implements RemoteSourceAdapter
             throw $this->throws;
         }
 
-        // Empty generator — this job's own contract is the
-        // timestamp/dispatch bookkeeping, not the dedup pipeline (covered
-        // by OpenBankingFingerprintParityTest).
+        // This job's contract is the bookkeeping around a fetch, not dedup.
         yield from [];
     }
 }
@@ -285,24 +268,16 @@ it('is a no-op when the connection row was deleted between dispatch and pickup',
     app()->instance(RemoteSourceAdapter::class, $stub);
 
     $job = new SyncOpenBankingAccountJob($connectionId);
-    app()->call([$job, 'handle']); // must not throw — asserted implicitly:
-    // an uncaught exception here would fail this test.
+    app()->call([$job, 'handle']);
 
     expect($stub->called)->toBeFalse();
 });
 
-/*
- * The exits taken before any provider call, and the queue-uniqueness contract.
- *
- * Each early return leaves the row untouched — no last_attempt_at, no status.
- * That is deliberate: these are not failed attempts, they are the job
- * declining to run, and writing a timestamp would make a deleted user look
- * like a bank that would not answer.
- */
+// The early returns leave the row untouched: they are the job declining to run,
+// and a timestamp would make a deleted user look like an unresponsive bank.
 
-// user_id is nullable and the constraint is ON DELETE CASCADE, so an orphaned
-// row is the one shape this can take: the column cleared rather than the row
-// pointing at a user that never existed, which the foreign key forbids.
+// user_id is nullable under ON DELETE CASCADE, so a cleared column is the only
+// shape an orphaned row can take — the foreign key forbids a dangling id.
 it('exits without touching the row when the connection has no user to sync for', function (): void {
     $user = sojaUser('soja-orphan');
     $connectionId = sojaSeedConnection($user, ['user_id' => null]);
@@ -321,10 +296,8 @@ it('exits without touching the row when the connection has no user to sync for',
         ->and($row->last_attempt_status)->toBeNull();
 });
 
-// Queue uniqueness is keyed on the connection, not the job instance: two
-// schedule ticks landing while a sync is still running must collapse into
-// one, or the same window gets fetched twice and the second run reconciles
-// against rows the first has not committed yet.
+// Uniqueness is keyed on the connection, not the job: two schedule ticks would
+// otherwise reconcile the same window against rows the first has not committed.
 it('scopes queue uniqueness to the connection for ten minutes', function (): void {
     $job = new SyncOpenBankingAccountJob(17);
 

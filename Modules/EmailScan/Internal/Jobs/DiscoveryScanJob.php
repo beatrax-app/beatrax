@@ -39,9 +39,7 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
 
     public int $timeout = ScanJobBudget::TIMEOUT_SECONDS;
 
-    // Locked keyword list for the broad discovery subject filter; the
-    // mix of English + Dutch terms reflects the user's likely
-    // receipt-sender pool (PayPal, ICS Cards, Bol.com, Coolblue, etc.).
+    // Mixed English + Dutch to match the user's likely receipt-sender pool.
     /** @var list<string> */
     private const DISCOVERY_KEYWORDS = [
         'receipt',
@@ -52,9 +50,7 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         'bevestiging',
     ];
 
-    // Defensive cap on discovery-candidate pages walked per inbox per
-    // day (see architecture.md for the sizing rationale and the
-    // FALLBACK_WALK_HARD_CAP parallel in IncrementalScanJob).
+    // 10 pages x 100 candidates = 1000 observations per inbox per day.
     private const DISCOVERY_MAX_PAGES = 10;
 
     public function __construct(public readonly int $userId) {}
@@ -88,10 +84,9 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
 
         $connection = $db->connection();
 
-        // Sets busy_timeout once for the whole handle(): the daily
-        // discovery scan runs concurrently with the hourly incremental
-        // scan (different ShouldBeUnique keys), and without it a
-        // contended write would throw mid-loop and silently abort.
+        // Discovery (per-user lock) runs concurrently with the hourly
+        // incremental scan (per-inbox lock); without this pragma one
+        // contended write throws mid-loop and silently aborts the pass.
         $connection->statement('PRAGMA busy_timeout = 5000');
 
         /** @var User $user */
@@ -111,9 +106,8 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         }
     }
 
-    // Builds the exclude list from known_senders patterns plus
-    // dismissed/added discovered_senders rows (see architecture.md for
-    // why both discovered-sender states mean "do not resurface").
+    // dismissed = explicit no, added = already promoted; both mean
+    // "do not surface again".
     /**
      * @return list<string>
      */
@@ -138,9 +132,7 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         return array_values(array_unique(array_merge($knownPatterns, $dismissedSenders)));
     }
 
-    // Runs discovery for one inbox row, swallowing per-inbox failures so
-    // one bad inbox never aborts the pass. Returns false only on a rate
-    // limit, which signals handle() to stop the whole daily sweep.
+    // Returns false only on a rate limit, which stops the whole daily sweep.
     /**
      * @param  list<string>  $allExcludes
      */
@@ -159,21 +151,17 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
             try {
                 $this->runDiscoveryForInbox($connection, $clock, $gmail, $graph, $inboxId, $provider, $allExcludes);
             } catch (RateLimitedException) {
-                // Discovery is daily — abort silently and retry
-                // tomorrow; discovered_senders has no per-inbox
-                // lifecycle column to transition.
+                // Retried by tomorrow's tick; discovered_senders has no
+                // per-inbox lifecycle column to transition.
                 return false;
             } catch (Throwable) {
-                // Best-effort surface — one inbox's failure must not
-                // abort the per-user pass.
+                // Best-effort: one inbox's failure must not abort the pass.
             }
         }
 
         return true;
     }
 
-    // Walks one inbox's discovery results and upserts
-    // discovered_senders rows.
     /**
      * @param  list<string>  $allExcludes
      */
@@ -207,9 +195,6 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         }
     }
 
-    // Walks pages of Gmail discovery candidates up to the defensive hard
-    // cap (see architecture.md for why a single-page call previously
-    // made discovery silently fail on busy inboxes).
     /**
      * @param  list<string>  $allExcludes
      * @return list<array{sender_email: string, sender_name: ?string, internalDate: DateTimeImmutable}>
@@ -237,9 +222,8 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         return $messages;
     }
 
-    // Defensively narrows every field at the boundary, since the
-    // contract exposes entries as array<string, mixed> precisely so a
-    // future response-shape drift cannot crash the daily scan.
+    // Narrowed at the boundary so a response-shape drift returns null
+    // instead of crashing the daily scan.
     /**
      * @param  array<string, mixed>  $msg
      * @return array{sender_email: string, sender_name: ?string, internalDate: DateTimeImmutable}|null
@@ -297,10 +281,6 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
     {
         [$sender, $senderName] = $this->extractMicrosoftSender($rawMsg);
 
-        // Falls back to the injected clock (not the magic 'now' string
-        // literal) when Graph omits receivedDateTime, keeping the
-        // missing-data path explicit rather than reaching for
-        // natural-language parsing.
         $received = $rawMsg['receivedDateTime'] ?? null;
         $internalDate = is_string($received) && $received !== ''
             ? $this->safeParseDate($received, $clock)
@@ -334,10 +314,8 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         return [$sender, $senderName];
     }
 
-    // Defensive exclude — re-check the sender against the full exclude
-    // list even though the provider query already applied it
-    // server-side. Patterns starting with '@' match by domain suffix;
-    // otherwise a substring containment match.
+    // Re-checked client-side even though the provider query already
+    // excluded these: a query-syntax failure must not reach an upsert.
     /**
      * @param  list<string>  $lowerExcludes
      */
@@ -355,10 +333,8 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         return false;
     }
 
-    // Upsert on UNIQUE (user_id, inbox_id, sender_email): the existence
-    // read + insert / update branch mirrors the schema's uniqueness
-    // contract. Only candidates are resurfaced — a dismissed/added row
-    // is never re-touched (second line of defence past isExcluded).
+    // Only candidates are updated: a dismissed/added row is never
+    // re-touched, the second line of defence past isExcluded.
     /**
      * @param  array{sender_email: string, sender_name: ?string, internalDate: DateTimeImmutable}  $msg
      */

@@ -29,9 +29,9 @@ final class InboxesBadgeCount
             ->modify('-'.DiscoveredSenderQuery::WITHIN_DAYS.' days')
             ->toDateTimeString();
 
-        // Summed in SQL rather than as two COUNTs summed in PHP: the view
-        // composer fires on every top-nav render, so the dashboard's 5s poll
-        // costs 6 queries/min here instead of 12.
+        // Summed in SQL, not as two COUNTs: the composer fires on every
+        // top-nav render, so the dashboard's 5s poll costs 6 queries/min
+        // instead of 12.
         $row = $this->db->connection()
             ->selectOne(
                 'SELECT

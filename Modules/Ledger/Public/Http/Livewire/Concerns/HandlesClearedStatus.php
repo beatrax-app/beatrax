@@ -15,15 +15,12 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Sync\Public\Events\TransactionMutated;
 
-// All collaborators arrive as method parameters — no constructor DI,
-// per the Livewire strict-rules prohibition on Component subclasses.
 trait HandlesClearedStatus
 {
     use DispatchesToast;
 
-    // Any id missing from the result set defaults to 'cleared' (the
-    // column's DB default) — a missing row must render as the safe
-    // default, never as falsy/uncleared.
+    // An id missing from the result set defaults to the column's DB default,
+    // 'cleared' — never to a falsy/uncleared render.
     /**
      * @param  array<int>  $transactionIds
      * @return array<int, string>
@@ -52,10 +49,8 @@ trait HandlesClearedStatus
         return $result;
     }
 
-    // Dispatched by x-ledger::cleared-badge via wire:click, letting the
-    // badge fire the same toggle from any component that mixes this
-    // trait in without a direct method call keyed to a specific
-    // component's own transactionId property.
+    // x-ledger::cleared-badge dispatches this, so the badge works in any
+    // component mixing the trait in, whatever it calls its own row id.
     #[On('cleared-toggle')]
     public function toggleClearedRow(
         int $id,
@@ -67,10 +62,6 @@ trait HandlesClearedStatus
         $this->toggleClearedStatus($id, $currentUser, $db, $events, $clock);
     }
 
-    // Mirrors TransactionDetail::saveNote()'s raw-update +
-    // dispatch-after-commit shape: read status scoped by id+user_id,
-    // flip cleared<->uncleared, validate against Transaction::STATUSES,
-    // write scoped by id+user_id, then dispatch after the write.
     public function toggleClearedStatus(
         int $transactionId,
         CurrentUser $currentUser,
@@ -97,8 +88,7 @@ trait HandlesClearedStatus
         }
 
         // Both branches are ClearedStatus cases, so the value is a member of
-        // Transaction::STATUSES by construction — the membership guard that
-        // used to sit here could never fail.
+        // Transaction::STATUSES by construction — hence no membership guard.
         $next = $current === ClearedStatus::Cleared->value ? ClearedStatus::Uncleared->value : ClearedStatus::Cleared->value;
 
         $db->connection()
@@ -107,9 +97,8 @@ trait HandlesClearedStatus
             ->where('user_id', $userId)
             ->update([
                 'status' => $next,
-                // Raw QB updates don't auto-touch timestamps; bump
-                // updated_at from the same injected Clock
-                // ReconciliationWriter uses.
+                // Raw QB updates don't auto-touch timestamps; this is the
+                // same injected Clock ReconciliationWriter bumps from.
                 'updated_at' => $clock->now(),
             ]);
 

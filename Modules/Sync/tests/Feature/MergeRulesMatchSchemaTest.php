@@ -9,12 +9,10 @@ use Modules\Sync\Internal\Config\MergeRulesRegistry;
 
 uses(RefreshDatabase::class);
 
-/*
- * The merge rules are a contract against the schema, and nothing enforced it.
- * A covered table or column that does not exist surfaces only at sync time,
- * as a SQL error deep inside a catch-up that then aborts and takes the rest
- * of the peer's history with it.
- */
+// The merge rules are a contract against the schema and nothing enforced it. A
+// covered table or column that does not exist surfaces only at sync time, as a
+// SQL error deep inside a catch-up that aborts and takes the rest of the peer's
+// history with it.
 
 it('covers only tables that exist, with columns that exist', function (): void {
     /** @var DatabaseManager $db */

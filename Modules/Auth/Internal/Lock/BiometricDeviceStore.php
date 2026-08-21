@@ -11,8 +11,7 @@ use stdClass;
 
 final class BiometricDeviceStore
 {
-    // Number of consecutive biometric failures after which the credential
-    // is disarmed until the next successful PIN unlock re-arms it.
+    // Consecutive failures before the credential is disarmed until a PIN unlock.
     public const BIOMETRIC_DISABLE_THRESHOLD = 5;
 
     public function __construct(
@@ -76,8 +75,6 @@ final class BiometricDeviceStore
         return $row;
     }
 
-    // When the count reaches BIOMETRIC_DISABLE_THRESHOLD the credential is
-    // disarmed until resetFailureCount() or resetAllForUser() is called.
     public function incrementFailureCount(int $id): void
     {
         $this->db->connection()
@@ -102,9 +99,8 @@ final class BiometricDeviceStore
             ->update(['biometric_failed_count' => 0]);
     }
 
-    // Replay protection: a non-increasing counter means the authenticator
-    // may have been cloned. The caller must reject a non-increasing counter
-    // BEFORE calling this method.
+    // Replay protection: a non-increasing counter suggests a cloned
+    // authenticator, and the caller must reject it before reaching here.
     public function updateCounter(int $id, int $counter): void
     {
         $this->db->connection()

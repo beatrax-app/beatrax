@@ -17,15 +17,6 @@ use Modules\Ledger\Public\Services\PeriodQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * Wave 0 RED stub for Req 7 (13.2-VALIDATION.md): month navigation shows
- * each period's own data; a future period shows income=0 unless real income
- * transactions exist there. BudgetsPage's rebuilt `nextPeriod()`/
- * `prevPeriod()` actions (Plan 07) do not exist yet on the current
- * (pre-rebuild) component -- expected to fail with a Livewire
- * "method not found" error, never a parse error.
- */
-
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'monthnav-'.bin2hex(random_bytes(4)),
@@ -54,14 +45,9 @@ beforeEach(function (): void {
 
     $this->groceries = Category::create(['user_id' => null, 'name' => 'Groceries', 'slug' => 'monthnav-groceries-'.bin2hex(random_bytes(3)), 'kind' => 'expense', 'display_order' => 1]);
 
-    // Rule 1 fix (mirrors the identical EnvelopeMoveTest/CarryoverQueryTest
-    // gap already fixed in 13.2-04-SUMMARY.md): CarryoverQuery returns an
-    // all-zero result for a null `envelope_activated_at` (D-12b, pre-cutover
-    // user), so the Wave-0 fixture's missing genesis stamp would make every
-    // assertion below fail regardless of BudgetsPage's own correctness.
-    // Stamped 3 periods back (not just "this month") so the previous-period
-    // walk this file's first test depends on is never clamped back to
-    // genesis.
+    // CarryoverQuery returns all zeros for a null `envelope_activated_at`,
+    // and the stamp is three periods back rather than this month so the
+    // previous-period walk below is never clamped to genesis.
     DB::table('users')->where('id', $this->user->id)->update([
         'envelope_activated_at' => CarbonImmutable::now()->subMonths(3)->startOfMonth(),
     ]);

@@ -10,18 +10,10 @@ use Modules\EmailScan\Models\OAuthSecret;
 
 uses(RefreshDatabase::class);
 
-/*
- * Proves OAuthScrubSet::load() reveals keychain-SHIELDED secrets before
- * building the redaction set — the guard against the desktop-only regression
- * where the set would otherwise collect safeStorage ciphertext and the REAL
- * plaintext secret (the value that leaks into logs) would never be scrubbed.
- *
- * Uses a marker shield (non-identity) so that deleting the reveal() calls in
- * load() would make this test fail — which the default PassthroughSecretShield
- * cannot detect (identity hides the wiring).
- */
-
-/** A non-identity SecretShield: protect() marks + base64s, reveal() reverses. */
+// Without reveal(), the desktop build's scrub set collects safeStorage
+// ciphertext while the plaintext — the form that reaches the log — goes
+// unscrubbed. The shield below is deliberately non-identity: the default
+// PassthroughSecretShield would pass whether or not reveal() is called.
 function markerShield(): SecretShield
 {
     return new class implements SecretShield
@@ -54,8 +46,8 @@ it('reveals shielded client_secret and tokens_blob into the scrub set as plainte
         'is_developer' => true,
     ]);
 
-    // Persist SHIELDED values (as the repository would on the desktop bundle).
-    // The model's `encrypted` cast additionally APP_KEY-encrypts them at rest.
+    // Shielded on the way in, as the repository writes them on the desktop
+    // bundle; the model's `encrypted` cast layers APP_KEY on top of that.
     $tokensJson = json_encode(['42' => ['id' => 42, 'refresh_token' => 'RT-topsecret']]);
     $row = new OAuthSecret;
     $row->user_id = $user->id;
@@ -68,7 +60,6 @@ it('reveals shielded client_secret and tokens_blob into the scrub set as plainte
 
     $set = (new OAuthScrubSet($shield))->all();
 
-    // The set holds the revealed PLAINTEXT, not the shielded/ciphertext form.
     expect($set)->toContain('GOCSPX-realsecret')
         ->and($set)->toContain('RT-topsecret')
         ->and($set)->not->toContain($shield->protect('GOCSPX-realsecret'));
@@ -85,7 +76,7 @@ it('treats an unshielded (legacy) row as plaintext via reveal-is-identity', func
         'is_developer' => true,
     ]);
 
-    // A legacy row written before shielding: the stored value is bare plaintext.
+    // Bare plaintext, the shape rows written before shielding still have.
     $row = new OAuthSecret;
     $row->user_id = $user->id;
     $row->provider = 'gmail';

@@ -6,10 +6,8 @@ namespace Modules\Migration\Internal\Exceptions;
 
 use RuntimeException;
 
-// Thrown by ZipExtractor when the per-run scoped extraction directory
-// cannot be created on disk — a local filesystem/permission failure,
-// distinct from the UnrecognizedMigrationFileException raised for a
-// malformed or hostile archive.
+// A local filesystem or permission failure, distinct from the
+// UnrecognizedMigrationFileException raised for a malformed or hostile archive.
 final class ExtractionDirectoryException extends RuntimeException
 {
     public function __construct(string $targetDir)

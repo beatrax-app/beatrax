@@ -8,19 +8,9 @@ use Modules\DevMode\Internal\Logging\PushRedactProcessor;
 use Modules\DevMode\Internal\Services\OAuthScrubSet;
 use Modules\EmailScan\Models\OAuthSecret;
 
-/*
- * Documented limitation: once an OAuthSecret row is DELETED, the
- * cache busts and the deleted string disappears from the scrub
- * set. A subsequent log line containing the now-revoked string is
- * NOT scrubbed.
- *
- * This is INTENTIONAL behaviour — a revoked + removed token is no
- * longer sensitive in this app's threat model (the secret is dead;
- * the audit trail cares about new lines, not old). The test
- * exists so a future change that silently keeps scrubbing deleted
- * values (e.g. a tombstone table) is surfaced at PR time.
- */
-
+// Deleting a row drops its string from the scrub set, so later log lines
+// carrying it go unscrubbed. Accepted: a revoked and removed token is dead.
+// The test is here so a tombstone table added later has to argue its case.
 function deletionUser(string $username): User
 {
     return User::query()->create([
@@ -50,16 +40,10 @@ it('STOPS scrubbing a string after the OAuthSecret row is deleted (documented li
     $scrubSet = app(OAuthScrubSet::class);
     expect($scrubSet->all())->toContain('REVOKED_SECRET');
 
-    // Delete the secret. The deleted observer fires; the next call
-    // to compiledPattern() lazy-rebuilds from the now-empty table.
     $secret->delete();
 
     expect($scrubSet->all())->not->toContain('REVOKED_SECRET');
 
-    // End-to-end: log the now-revoked string — it is NOT scrubbed
-    // because the row no longer exists in the live table. This is
-    // the acceptable behavior described in the plan's <interfaces>
-    // block and the documented limitation in the SUMMARY.
     $tmpPath = tempnam(sys_get_temp_dir(), 'deletion-').'.log';
     /** @var LogManager $manager */
     $manager = app(LogManager::class);
@@ -81,6 +65,6 @@ it('STOPS scrubbing a string after the OAuthSecret row is deleted (documented li
     $contents = (string) file_get_contents($tmpPath);
     @unlink($tmpPath);
 
-    // The intentional limitation: deleted strings are not scrubbed.
+    // Asserting the leak on purpose — see the note at the top of the file.
     expect($contents)->toContain('REVOKED_SECRET');
 });

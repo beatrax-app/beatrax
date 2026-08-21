@@ -10,19 +10,8 @@ use Modules\EmailScan\Database\Seeders\IcsStatementSenderSeeder;
 use Modules\EmailScan\Internal\Jobs\DetectIcsStatementReadyJob;
 use Modules\EmailScan\Public\Events\IcsStatementReady;
 
-/*
- * Req 14 (D-14/D-15) — the ICS "statement ready" metadata-only detector.
- *
- *  - A fixture inbox_messages row whose sender_email + subject match the
- *    tunable config pattern dispatches exactly one IcsStatementReady event.
- *  - A non-matching sender/subject dispatches none.
- *  - The detector's own source file never references EmlBlobStore — its
- *    entire input surface is the sender_email/subject columns, never the
- *    .eml body (Req 14, T-19-16-01).
- *  - IcsStatementSenderSeeder lands the missing 'icscards.nl' system
- *    known_sender row idempotently, without duplicating the pre-existing
- *    '@ics.nl' system row.
- */
+// The detector's entire input surface is the sender_email and subject
+// columns; it must never reach the .eml body.
 
 function isrUser(string $username): User
 {
@@ -134,10 +123,8 @@ it('never imports EmlBlobStore/RecordReceipt — the detector reads only sender_
     $source = (string) file_get_contents(
         base_path('Modules/EmailScan/Internal/Jobs/DetectIcsStatementReadyJob.php'),
     );
-    // Strip comments/docblocks before asserting: the class docblock
-    // legitimately DISCUSSES EmlBlobStore (to explain what it deliberately
-    // does NOT do) — the structural guarantee this test proves is that no
-    // executable line imports or instantiates it.
+    // Comments are stripped first because the detector's own comments name
+    // EmlBlobStore to say it is not used; only executable lines count.
     $codeOnly = (string) preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $source);
 
     expect($codeOnly)->not->toContain('EmlBlobStore');
@@ -145,11 +132,8 @@ it('never imports EmlBlobStore/RecordReceipt — the detector reads only sender_
 });
 
 it('runs idempotently — re-running the seeder never duplicates the system @ics.nl or @icscards.nl rows', function (): void {
-    // The companion data migration already ran IcsStatementSenderSeeder
-    // once during this test's own RefreshDatabase migrate pass (mirrors
-    // Modules/EmailScan/tests/Integration/MigrationsTest.php's updated
-    // "4 system rows" assertion) — re-running it here must be a no-op,
-    // not a duplicate insert.
+    // RefreshDatabase's migrate pass already ran the seeder once, so running
+    // it again here has to be a no-op rather than a duplicate insert.
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 

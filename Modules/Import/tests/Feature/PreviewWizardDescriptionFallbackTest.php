@@ -7,17 +7,8 @@ use Modules\Import\Internal\Http\Livewire\PreviewWizard;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
 
-/**
- * Locks in the third-tier description fallback in the preview-wizard
- * Counterparty column. ASN bank-fee / interest / ATM rows arrive with no
- * counterparty name AND no counterparty IBAN; before this fix the cell
- * rendered "—" and the operator could not tell what the row was.
- *
- * The fixture `asn-sample-1.csv` includes several such rows (rente over
- * negatief saldo, fuel BEA pin payments, etc.). The wizard now surfaces
- * the joined payment-reference + description as italic muted text so the
- * row is identifiable without clicking through.
- */
+// ASN bank-fee, interest and ATM rows arrive with neither a counterparty name
+// nor an IBAN, and asn-sample-1.csv carries several of them.
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
@@ -35,7 +26,6 @@ it('renders the description in the Counterparty column when name and IBAN are bo
     );
 
     Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])
-        // A literal substring from one of the description-only rows in
-        // the fixture (the BEA fuel-pump payment narrative).
+        // Verbatim from the fixture's BEA fuel-pump row, which has no name.
         ->assertSee('SHELL PIETER NIEUW');
 });

@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-// Stable monthly Spotify subscription — 18 occurrences, identical amount
-// and day-of-month. Detector expectation: ONE expense series, monthly
-// cadence, no drift.
+// The no-drift baseline: identical amount and day-of-month, 18 months running.
 
 $transactions = [];
 for ($i = 0; $i < 18; $i++) {

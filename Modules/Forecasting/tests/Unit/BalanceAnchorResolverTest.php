@@ -12,19 +12,6 @@ use Modules\Forecasting\Public\Dto\BalanceAnchorDto;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for BalanceAnchorResolver — the per-account
- * opening-balance source-of-truth router.
- *
- * Covers each branch:
- *   - asn with a statement_summaries row
- *   - asn with no statement → transactions-sum fallback
- *   - ics_card with a card_statements row
- *   - paypal with accounts.opening_balance_minor populated
- *   - paypal with no opening balance → transactions-sum fallback
- *   - cross-user account miss → ModelNotFoundException
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -177,8 +164,8 @@ it('routes ics_card to the most recent card_statements row (negated open_balance
 
     $anchor = $this->resolver->forAccount($accountId, $this->user);
 
-    // Open balance 50000 means the user OWES 50000 → signed running-
-    // balance position is -50000.
+    // An open balance of 50000 is money owed, so the signed running-balance
+    // position is its negation.
     expect($anchor->openingBalanceMinor)->toBe(-50000);
     expect($anchor->source)->toBe('ics_card_statement');
 });

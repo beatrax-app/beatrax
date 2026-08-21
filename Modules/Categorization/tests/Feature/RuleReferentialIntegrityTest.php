@@ -12,14 +12,9 @@ use Modules\Ledger\Models\Category;
 
 uses(RefreshDatabase::class);
 
-/*
- * 13.4-03 Task 3: DeactivateRulesOnReferentDelete — the app-level
- * referential-integrity guard that replaces the FK cascade lost by
- * D-03's JSON-payload rule_actions design (RESEARCH.md Pitfall 2 /
- * T-13.4-09). Deleting a category/counterparty a rule's action
- * payload references must deactivate the owning rule so no active
- * rule is ever left pointing at a dangling id.
- */
+// The JSON-payload design of rule_actions carries no FK cascade, so deleting a
+// category or counterparty a rule's action references has to deactivate the
+// owning rule instead: no active rule may point at a dangling id.
 
 function rriUser(string $suffix): User
 {

@@ -13,14 +13,9 @@ use Modules\Position\Public\Services\PositionQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * PositionQueryTest — Task 1's acceptance gate for D-30: PositionQuery is
- * the single Public definition of "position", composed ONLY from other
- * modules' Public seams, and its `summary` field is value-identical to
- * calling ThisPeriodAtAGlanceQuery::for() directly for the same (user,
- * period) — the "the digest and the dashboard can never disagree" property
- * this whole extraction exists to guarantee, and 18-18's regression anchor.
- */
+// A position's `summary` must stay value-identical to
+// ThisPeriodAtAGlanceQuery::for() for the same (user, period), or the digest
+// and the dashboard disagree.
 
 function pqUser(string $username): User
 {

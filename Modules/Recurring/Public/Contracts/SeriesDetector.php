@@ -6,10 +6,9 @@ namespace Modules\Recurring\Public\Contracts;
 
 use Modules\Core\Models\User;
 
-// Implementations MUST NOT write the transactions table (analytical-only;
-// enforced by the noTransactionWritesFromRecurring arch test) and must
-// never be imported from Internal\Http or Resources — detector work runs
-// on the queue, never in the request lifecycle.
+// Implementations are analytical only: they must never write the transactions
+// table, and must never be imported from Internal\Http or Resources. The job
+// that drives them is the sole entry point, whether queued or dispatched sync.
 
 interface SeriesDetector
 {

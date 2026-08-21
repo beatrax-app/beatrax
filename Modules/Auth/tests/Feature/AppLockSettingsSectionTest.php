@@ -9,13 +9,6 @@ use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Core\Models\User;
 
-/*
- * Feature tests for the App Lock settings section (plan 05-04).
- *
- * These tests go GREEN when AppLockSettingsSection is shipped with the
- * correct enable/disable/idle-timeout flows and D-23 confirmation logic.
- */
-
 function appLockSettingsUser(string $username = 'settings-user'): User
 {
     return User::query()->create([
@@ -47,7 +40,7 @@ it('user with no lock can enable it by setting a valid PIN with matching confirm
         ->set('accountPassword', 'settings-pass')
         ->call('setPin')
         ->assertHasNoErrors()
-        // Sibling app-lock-gated sections (Devices & Sync, D-02) refresh on this.
+        // The sibling app-lock-gated sections refresh on this.
         ->assertDispatched('app-lock-configured');
 
     expect($provisioner->isEnabled($user->id))->toBeTrue();
@@ -120,7 +113,6 @@ it('de-enrolling biometric keeps the lock enabled and both wrapped keys intact (
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
 
-    // Enroll a biometric credential.
     /** @var BiometricDeviceStore $store */
     $store = $this->app->make(BiometricDeviceStore::class);
     $store->store($user->id, base64_encode('deenroll-cred'), 'Test Device', str_repeat("\xAA", 32), 'fake-cbor', 'webauthn');
@@ -130,7 +122,6 @@ it('de-enrolling biometric keeps the lock enabled and both wrapped keys intact (
         ->first(['pin_hash', 'kdf_salt', 'pin_wrapped_key', 'password_wrapped_key']);
     expect($before)->not->toBeNull();
 
-    // Wrong PIN: credentials stay, lock untouched.
     Livewire::test(AppLockSettingsSection::class)
         ->set('deenrollPin', '000000')
         ->call('deenroll')
@@ -139,7 +130,6 @@ it('de-enrolling biometric keeps the lock enabled and both wrapped keys intact (
     expect($db->connection()->table('user_biometric_credentials')->where('user_id', $user->id)->count())->toBe(1);
     expect($provisioner->isEnabled($user->id))->toBeTrue();
 
-    // Correct PIN: only credentials deleted — lock stays enabled, key material intact.
     Livewire::test(AppLockSettingsSection::class)
         ->set('deenrollPin', '432100')
         ->call('deenroll')
@@ -167,13 +157,11 @@ it('disabling the lock requires the correct PIN — wrong PIN keeps lock enabled
     /** @var AppLockProvisioner $provisioner */
     $provisioner = $this->app->make(AppLockProvisioner::class);
 
-    // Enable the lock first.
     $provisioner->enable($user->id, '432100', 'settings-pass');
     expect($provisioner->isEnabled($user->id))->toBeTrue();
 
-    // Wrong PIN: lock stays enabled. IN-10: must be a NUMERIC wrong PIN —
-    // a non-numeric value fails the #[Validate] regex so the property would
-    // stay '' and the test would pass by coincidence (empty PIN also fails).
+    // The wrong PIN must be numeric: a non-numeric one fails the #[Validate]
+    // regex, leaves the property at '', and passes by coincidence.
     Livewire::test(AppLockSettingsSection::class)
         ->set('currentPin', '000000')
         ->call('disable')
@@ -181,7 +169,6 @@ it('disabling the lock requires the correct PIN — wrong PIN keeps lock enabled
 
     expect($provisioner->isEnabled($user->id))->toBeTrue();
 
-    // Correct PIN: lock disabled.
     Livewire::test(AppLockSettingsSection::class)
         ->set('currentPin', '432100')
         ->call('disable')

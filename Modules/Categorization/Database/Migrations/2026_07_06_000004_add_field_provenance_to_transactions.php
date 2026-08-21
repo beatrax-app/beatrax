@@ -6,43 +6,12 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
+// A separate column from `auto_category_provenance`, which keeps its own
+// shape and its own reader. SQLite rebuilds `transactions` on a column
+// add or drop and silently drops every trigger with it, so up() and down()
+// both reinstall them: this is the latest migration to touch the table.
 /**
- * Adds a nullable JSON `field_provenance` column to `transactions`
- * (D-04) — a generic per-field manual-vs-rule provenance map consumed
- * by the re-apply-rules manual-edit guard (Req 6): a field the user
- * has hand-edited must never be silently overwritten by a rule
- * re-application.
- *
- * Payload shape: `{ "<logical field>": "manual" | "rule" }` — e.g.
- * `{"category": "manual", "note": "rule"}`. IN-02: every writer found
- * across the codebase (`FieldProvenanceWriter`, `RuleApplier`,
- * `TagTransaction`, `AssignCategory`, `TransactionDetail::saveNote`/
- * `reassignCounterparty`) only ever stamps `"manual"` or `"rule"` — a
- * third `"import"` state was originally documented here but never
- * implemented; an absent key is treated identically to `"import"`
- * would have been by every guard that reads this map (both mean
- * "not manually set, safe to overwrite"), so the two-state contract
- * above is the actual, implemented one.
- *
- * COEXIST, not replace (RESEARCH.md Assumption A1, corrected recommendation):
- * this column is entirely separate from the existing
- * `auto_category_provenance` column added by
- * 2026_05_17_010006_add_auto_category_provenance_to_transactions.php.
- * `auto_category_provenance` keeps its existing
- * `{source, rule_id, memory_id, category_id}` shape and continues to
- * feed the `CategorizationDiverged` correction-divergence toast
- * unchanged. `field_provenance` is new and generic, feeding only the
- * re-apply manual-edit guard. Do NOT touch or drop
- * `auto_category_provenance` in this migration.
- *
- * CRITICAL: SQLite rebuilds the entire `transactions` table on any
- * column-add via `Blueprint::table()` and SILENTLY DROPS all triggers
- * in the process. This migration's timestamp (2026_07_06_000004) is
- * later than 2026_06_15_000004_add_note_to_transactions.php, making it
- * the new last-toucher of `transactions` — it now owns the trigger
- * re-install from this point forward. The four
- * transactions_*_check_* triggers below are reinstalled verbatim
- * (identical DDL) from that migration in BOTH up() and down().
+ * @link ../../../../.docs/features/categorization/field-provenance.md
  */
 return new class extends ModuleMigration
 {
@@ -64,18 +33,11 @@ return new class extends ModuleMigration
         $this->reinstallTransactionsTriggers();
     }
 
-    /**
-     * Re-creates all four transactions_*_check_* triggers. Verbatim
-     * copy of the DDL in
-     * 2026_06_15_000004_add_note_to_transactions.php — column-add and
-     * column-drop both rebuild the SQLite table and drop every trigger,
-     * so both up() and down() must call this.
-     */
+    // DDL copied verbatim from 2026_06_15_000004_add_note_to_transactions.php.
     private function reinstallTransactionsTriggers(): void
     {
         $connection = $this->db()->connection($this->getConnection());
 
-        // --- type triggers ---
         $connection->statement('DROP TRIGGER IF EXISTS transactions_type_check_insert');
         $connection->statement('DROP TRIGGER IF EXISTS transactions_type_check_update');
 
@@ -93,7 +55,6 @@ return new class extends ModuleMigration
             $allowedTypes,
         ));
 
-        // --- payment_type triggers ---
         $connection->statement('DROP TRIGGER IF EXISTS transactions_payment_type_check_insert');
         $connection->statement('DROP TRIGGER IF EXISTS transactions_payment_type_check_update');
 

@@ -16,17 +16,13 @@ use Modules\EmailScan\Public\Services\SecretsWriteFailed;
 
 final class OAuthClientWizardModal extends Component
 {
-    // Azure assigns the application (client) ID as a UUID v4, matching
-    // the canonical RFC 4122 v4 shape (8-4-4-4-12 hex digits, fixed 4
-    // in the third group, 8/9/a/b in the fourth group's high nibble).
+    // Azure issues the application (client) ID as an RFC 4122 UUID.
     private const MICROSOFT_CLIENT_ID_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i';
 
     public ?string $provider = null;
 
-    // Optional inbox id threaded through from the InboxesPage
-    // re-consent surface; when set, submit()'s redirect appends
-    // ?inbox_id={id} so the consent dance binds to the existing row
-    // instead of creating a fresh one. Null on the first-connect path.
+    // Null on the first-connect path; set from the re-consent surface, where
+    // submit() appends ?inbox_id={id} to bind the dance to the existing row.
     public ?int $reconnectInboxId = null;
 
     public string $clientId = '';
@@ -49,9 +45,7 @@ final class OAuthClientWizardModal extends Component
         $this->publishedConfirmed = false;
         $this->errorMessage = '';
 
-        // Dispatches modal-show from here (not from the caller) so it
-        // targets the now-correct oauth-client-wizard-{provider} name
-        // — this component is the only surface that knows its own
+        // Dispatched here, not by the caller: only this component knows its
         // provider-suffixed name once $provider is set above.
         if ($this->provider !== null) {
             $this->dispatch('modal-show', name: 'oauth-client-wizard-'.$this->provider);
@@ -72,10 +66,8 @@ final class OAuthClientWizardModal extends Component
 
         $validationError = $this->validateCredentials($provider);
         if ($validationError !== null) {
-            // Wipe the secret on a rejected submit too, not only on the
-            // success path: otherwise the plaintext lingers on the component
-            // and re-serialises into the wire:snapshot on every later render.
-            // The user re-enters it alongside fixing what the message flags.
+            // Wiped on a rejected submit too: otherwise the plaintext lingers
+            // on the component and re-serialises into every wire:snapshot.
             $this->errorMessage = $validationError;
             $this->clientSecret = '';
 
@@ -122,10 +114,9 @@ final class OAuthClientWizardModal extends Component
     ): mixed {
         $redirectUri = $loopback->forProvider($provider);
 
-        // Captures the secret into a local so the property can be
-        // wiped before the external call — a thrown exception then
-        // cannot leave the secret on the component instance, which
-        // would otherwise round-trip inside the wire:snapshot payload.
+        // Copied to a local so the property can be wiped before the external
+        // call: a throw must not leave the secret on the component, where it
+        // would round-trip inside the wire:snapshot payload.
         $clientId = $this->clientId;
         $clientSecret = $this->clientSecret;
         $this->clientId = '';
@@ -147,10 +138,8 @@ final class OAuthClientWizardModal extends Component
 
     private function afterSaveRedirect(string $provider): mixed
     {
-        // Re-consent flow: threads the inbox id back through the
-        // connect route so the consent dance binds to the existing row
-        // (preserving inbox_messages/.eml blobs/cursor) instead of
-        // creating a fresh one.
+        // Binding to the existing row preserves its inbox_messages, .eml
+        // blobs and cursor; a fresh row would start from nothing.
         $reconnectInboxId = $this->reconnectInboxId;
         if ($reconnectInboxId !== null && $reconnectInboxId > 0) {
             $this->dispatch('oauth-client-wizard:reconsented', inboxId: $reconnectInboxId);

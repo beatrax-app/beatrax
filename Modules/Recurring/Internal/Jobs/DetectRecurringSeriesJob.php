@@ -90,10 +90,8 @@ final class DetectRecurringSeriesJob implements ShouldBeUniqueUntilProcessing, S
 
         $this->expireSnoozes($db, $clock, $stateMachine, $logger, $user);
 
-        // Only gate on KEK-absence when a real Session/AppLockKeyService/
-        // EncryptionMigrationService context was resolved. The legacy
-        // 4-arg test-call shape leaves all three null, defaulting to
-        // "full capability" — correct for those always-plaintext fixtures.
+        // The shorter test-call shape leaves all three null and gets full
+        // capability, which is right for those always-plaintext fixtures.
         $canDecryptIban = true;
         if ($session !== null && $appLockKeyService !== null && $encryptionMigrationService !== null) {
             $hasKek = $appLockKeyService->release($session) !== null;
@@ -111,9 +109,8 @@ final class DetectRecurringSeriesJob implements ShouldBeUniqueUntilProcessing, S
         foreach ($detectors as $detector) {
             if ($detector instanceof IncomeSeriesDetector) {
                 if (! $canDecryptIban) {
-                    // Explicit skip — never call the iban-dependent detector
-                    // at all, so it never runs and silently produces an
-                    // empty/garbage result.
+                    // Not called at all, rather than called and left to
+                    // silently cluster on undecryptable IBANs.
                     continue;
                 }
                 $detector->detectForUser($user, $session);
@@ -142,10 +139,8 @@ final class DetectRecurringSeriesJob implements ShouldBeUniqueUntilProcessing, S
         foreach ($rows as $row) {
             $id = is_numeric($row->id) ? (int) $row->id : 0;
             if ($id === 0) {
-                // The schema's autoincrement PK makes a numeric 0 id
-                // structurally impossible — logging this rather than
-                // silently continuing turns a schema corruption into a
-                // visible warning instead of a no-op.
+                // The autoincrement PK makes a 0 id structurally impossible, so
+                // reaching here is schema corruption and must not stay silent.
                 if ($logger !== null) {
                     $logger->warning(
                         'DetectRecurringSeriesJob: encountered non-numeric recurring_series.id during snooze expiry; skipping.',

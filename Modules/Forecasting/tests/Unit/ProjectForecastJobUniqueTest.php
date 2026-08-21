@@ -8,19 +8,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Bus;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 
-/*
- * Locks the ProjectForecastJob single-flight contract: implements
- * ShouldBeUniqueUntilProcessing keyed on
- * "{userId}:{scenarioKey}:{horizonDays}" with `scenarioKey='baseline'`
- * for null. The load-bearing assertion is that the `'baseline'` sentinel
- * disambiguates the null case from any literal scenario id of 0 — the
- * lock key is plain string equality, so (5, null, 30) and (5, 0, 30)
- * must produce DIFFERENT keys.
- *
- * uniqueFor=600, uniqueVia()=Cache repository, tries=3,
- * backoff=[60,300,900]. Plus constructor-time validation on
- * horizonDays ∈ {30, 60, 90, 180, 365} (Phase 6 extended HORIZON_DAYS).
- */
+// The unique lock is plain string equality on the key, which is why null and a
+// literal scenario id of 0 must not both render as "0".
 
 it('declares ShouldBeUniqueUntilProcessing and ShouldQueue', function (): void {
     $reflection = new ReflectionClass(ProjectForecastJob::class);

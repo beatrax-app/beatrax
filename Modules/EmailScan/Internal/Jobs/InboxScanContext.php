@@ -14,10 +14,6 @@ use Throwable;
 
 final readonly class InboxScanContext
 {
-    // One instance is built per scan-job run and folds every fetched
-    // message of that inbox through the same connection, blob store,
-    // header parser and clock, so the per-run collaborators live here
-    // as state and only the message id + raw bytes vary per call.
     public function __construct(
         public int $inboxId,
         public Clock $clock,
@@ -28,8 +24,7 @@ final readonly class InboxScanContext
         private int $userId,
     ) {}
 
-    // Read by the job to bind the guard before any API client runs; the
-    // property itself stays private so nothing else re-scopes off it.
+    // The property stays private so nothing but the guard bind reads it.
     public function userId(): int
     {
         return $this->userId;
@@ -37,10 +32,9 @@ final readonly class InboxScanContext
 
     public function alreadyIndexed(string $messageId): bool
     {
-        // Skips a message already fetched+indexed before any provider
-        // call: the history/delta walk, the "extend window" re-run and
-        // the cursor-expiry fallback walk can each re-surface a message
-        // a prior pass persisted, and refetching would burn quota.
+        // Checked before any provider call: the delta walk, an extended
+        // window and the cursor-expiry fallback can each re-surface a message
+        // a prior pass already landed, and refetching burns quota.
         return $this->connection->table('inbox_messages')
             ->where('inbox_id', $this->inboxId)
             ->where('provider_message_id', $messageId)
@@ -52,10 +46,8 @@ final readonly class InboxScanContext
         string $rawEml,
         ?DateTimeImmutable $providerInternalDate,
     ): void {
-        // Provider-stamped internal date (Microsoft) vs. in-body Date:
-        // header (Gmail); when the provider stamps nothing the fallback
-        // goes through the project Clock so test-frozen time is honoured
-        // rather than a raw new DateTimeImmutable('now').
+        // Microsoft stamps an internal date, Gmail leaves only the in-body
+        // Date: header; the Clock fallback keeps frozen test time honoured.
         $fallbackDate = $providerInternalDate ?? $this->clock->now()->toDateTimeImmutable();
         $headers = $this->mime->parseHeadersWithFallbackDate($rawEml, $fallbackDate);
 

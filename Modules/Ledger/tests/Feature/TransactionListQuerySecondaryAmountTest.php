@@ -6,15 +6,6 @@ use Carbon\CarbonImmutable;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Services\TransactionListQuery;
 
-/*
- * Feature tests for the secondaryAmount projection on TransactionRowDto +
- * TransactionListQuery. The query exposes the settled pair as a typed
- * Money on the row DTO whenever the rendered amount is the native pair
- * AND the row is a true FX row (settled currency differs from native
- * currency). EUR-native rows render a single line; FX rows render the
- * native amount primary + settled-EUR secondary line.
- */
-
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);

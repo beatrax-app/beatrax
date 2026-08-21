@@ -12,6 +12,9 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
 // identity, looked up by the token the human typed. Public keys and a device
 // id only — this endpoint is in-band on the LAN, so nothing that would let a
 // listener reach a relay is handed out here (see @link).
+/**
+ * @link ../../../../.docs/features/sync/pairing-handshake.md
+ */
 final readonly class PairingOfferService
 {
     // A row is offerable while the handshake is still live. AWAITING_CONFIRM

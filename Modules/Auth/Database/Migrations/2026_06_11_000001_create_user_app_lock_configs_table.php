@@ -6,9 +6,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
 // Blob shapes the column types cannot carry: pin_hash is the self-describing
-// sodium_crypto_pwhash_str() Argon2id verifier, kdf_salt is 16 raw bytes for
-// AppLockKdf, and the *_wrapped_key columns are base64 nonce||ciphertext
-// produced by AppLockKeyWrap.
+// sodium_crypto_pwhash_str() verifier, kdf_salt is 16 raw bytes, and the
+// *_wrapped_key columns are AppLockKeyWrap's base64 nonce||ciphertext.
 return new class extends ModuleMigration
 {
     public function up(): void

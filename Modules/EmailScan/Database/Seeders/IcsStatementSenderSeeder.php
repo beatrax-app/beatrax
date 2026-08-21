@@ -33,10 +33,9 @@ final class IcsStatementSenderSeeder extends Seeder
 
             $pattern = '@'.$domain;
 
-            // Existence check, not upsert(): known_senders'
-            // UNIQUE(user_id, email_pattern) index does not fire for a
-            // NULL user_id on SQLite, so a naive upsert on that index
-            // would insert a duplicate system row on every re-run.
+            // SQLite's UNIQUE(user_id, email_pattern) does not fire for a
+            // NULL user_id, so upsert() would insert a duplicate system row
+            // on every re-run.
             $exists = $connection->table('known_senders')
                 ->whereNull('user_id')
                 ->where('email_pattern', $pattern)

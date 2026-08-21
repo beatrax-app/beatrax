@@ -9,10 +9,9 @@ return new class extends ModuleMigration
 {
     public function up(): void
     {
-        // Third leg of the 3-way merge: the source value as of the last import,
-        // so a re-import can compare source vs baseline vs local and pick skip /
-        // apply / conflict. One row per (source map row, field) gives per-field
-        // granularity; baseline_value stays untyped text to fit every field shape.
+        // Third leg of the merge: the source value as of the last import, so a
+        // re-import can pick skip / apply / conflict. One row per (map row,
+        // field), with baseline_value untyped to fit every field shape.
         $this->schema()->create('migration_import_baseline', static function (Blueprint $table): void {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained('users')->cascadeOnDelete();

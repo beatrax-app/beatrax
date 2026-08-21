@@ -66,9 +66,8 @@ final class ChangePasswordPage extends Component
                 'force_password_change_at_next_login' => false,
             ]);
 
-        // Drop every other session this user holds, so a password changed after
-        // a suspected compromise actually severs them; the current one survives
-        // only so this request can complete its redirect.
+        // A password changed after a suspected compromise must sever the other
+        // sessions; this one survives only to finish the redirect.
         $db->connection()->table('sessions')
             ->where('user_id', $user->id)
             ->where('id', '!=', $session->getId())

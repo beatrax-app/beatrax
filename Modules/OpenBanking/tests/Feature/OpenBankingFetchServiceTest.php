@@ -19,10 +19,9 @@ use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 
 uses(RefreshDatabase::class);
 
-// EnableBankingHttpClient always resolves credentials from the secrets file,
-// which holds exactly one live session, never from the open_banking_connections
-// row that triggered the fetch — so re-linking a second bank silently repoints
-// every existing connection at the new bank's session.
+// Credentials come from the secrets file, which holds exactly one live session,
+// never from the connection row that triggered the fetch — so re-linking a
+// second bank silently repoints every existing connection at its session.
 
 final class OfsStubRemoteSourceAdapter implements RemoteSourceAdapter
 {
@@ -145,9 +144,8 @@ it('throws rather than silently fetching with a mismatched institution session',
     expect($stub->called)->toBeFalse();
 });
 
-// Each refusal asserts the adapter was never reached: a fetch that starts
-// against a half-configured connection pairs a live session with the wrong
-// account, and no later guard catches that.
+// Each refusal asserts the adapter was never reached: starting a fetch against
+// a half-configured connection pairs a live session with the wrong account.
 
 it('refuses a connection id that belongs to a different user', function (): void {
     $owner = ofsUser('ofs-owner');

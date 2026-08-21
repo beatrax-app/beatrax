@@ -22,9 +22,8 @@ final class DeleteReport
 
     public function delete(User $user, int $reportId): void
     {
-        // Cross-user safety: user-scoped lookup before the write. A
-        // foreign/missing id throws NotFoundHttpException (404, never 403)
-        // so another user's report existence is never leaked via the error.
+        // A foreign or missing id 404s rather than 403s, so another user's
+        // report existence never leaks through the error.
         /** @var SavedReport|null $existing */
         $existing = SavedReport::query()
             ->withoutGlobalScope(UserScope::class)
@@ -50,10 +49,8 @@ final class DeleteReport
                 mutationType: 'delete',
             );
 
-            // Deleting a pinned report must not leave a gap in the pin
-            // order (mirrors TogglePin's unpin invariant) — each changed
-            // row gets its own SavedReportMutated 'edit' so every device's
-            // Sync op-log stays in step.
+            // Deleting a pinned report must not leave a gap in the pin order;
+            // each changed row gets its own event so every op-log stays in step.
             if ($wasPinned) {
                 foreach (PinOrderCompactor::compact($this->db->connection(), $user) as $compacted) {
                     $events[] = new SavedReportMutated(

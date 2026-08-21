@@ -18,14 +18,9 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
-/*
- * Req 6 — the over-budget nudge trigger, redirected (D-20 AMENDMENT — see
- * 18-07's <planner_decisions>) to read the LIVE envelope model via
- * CarryoverQuery::forUserAndPeriod() rather than the write-dead
- * BudgetProgressQuery/category_budgets path. Seeds via real envelope
- * assignments + settled transactions (never category_budgets) so
- * CarryoverQuery computes genuine spentMinor/availableMinor figures.
- */
+// The nudge reads the live envelope model through CarryoverQuery, not the
+// write-dead category_budgets path, so the fixtures below seed real envelope
+// assignments and settled transactions rather than budget rows.
 
 function bntUser(string $username): User
 {
@@ -36,7 +31,7 @@ function bntUser(string $username): User
     ]);
 }
 
-/** Activates the envelope genesis anchor at the start of the current period. */
+// Without the genesis anchor the envelope model has no period to compute in.
 function bntActivate(User $user): void
 {
     app(DatabaseManager::class)->connection()->table('users')->where('id', $user->id)->update([
@@ -79,7 +74,6 @@ function bntImportRun(User $user): ImportRun
     ]);
 }
 
-/** Persists a settled expense transaction, categorized, dated within the given period. */
 function bntSpend(User $user, Account $account, ImportRun $run, Category $category, int $spentMinor, CarbonImmutable $postedAt): void
 {
     static $i = 700000;
@@ -118,7 +112,7 @@ function bntSetThreshold(User $user, Category $category, int $percent): void
     app(EnvelopeWriter::class)->setNotifyThreshold($user, $category->id, $percent);
 }
 
-/** Runs the nudge job for $user with delivery globally suppressed (D-43) — no test ever attempts a real OS notification. */
+// Delivery is suppressed so no case here attempts a real OS notification.
 function bntRunJob(User $user): void
 {
     /** @var SuppressionEvaluator $suppression */
@@ -193,8 +187,8 @@ it('does not re-fire when the job runs again in the SAME period after further sp
     bntRunJob($user);
     expect(bntNudgeCount($user->id))->toBe(1);
 
-    // Further spend, still within the same period — the envelope is now
-    // even further over, but the occurrence key (the period) is unchanged.
+    // Further over, but within the same period — the occurrence key is the
+    // period, so nothing new is derivable.
     bntSpend($user, $account, $run, $groceries, 200, CarbonImmutable::now());
     bntRunJob($user);
 
@@ -214,9 +208,8 @@ it('re-fires in the NEXT period when the budget is still over (Req 6, D-06)', fu
     bntRunJob($user);
     expect(bntNudgeCount($user->id))->toBe(1);
 
-    // Advance into the next monthly period; re-assign + re-spend past
-    // threshold there too — the period key rolls, so the nudge legitimately
-    // fires again (never suppressed by the D-06 occurrence key).
+    // The period key rolls with the clock, so this is a genuinely new
+    // occurrence rather than a re-fire of the same one.
     CarbonImmutable::setTestNow('2026-08-04 10:00:00');
     bntAssign($user, $groceries, 10000);
     bntSpend($user, $account, $run, $groceries, 9500, CarbonImmutable::now());

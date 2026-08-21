@@ -17,17 +17,6 @@ use Modules\Ledger\Public\Services\PeriodQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * Wave 0 RED stub for Req 4 (13.2-VALIDATION.md): the two overspend modes,
- * isolated from the rest of the fold. CarryoverQuery (Plan 03) and
- * EnvelopeSetting (Plan 02) do not exist yet — expected to fail on the
- * missing class/table, never a parse error.
- *
- * D-10: a `reduce_to_budget`-mode envelope that overspends resets to
- * carried_in = 0 next period and debits the pool ONCE; a `carry_negative`-
- * mode envelope keeps its negative in carried_in and never touches the pool.
- */
-
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-07-04 10:00:00');
 
@@ -67,7 +56,6 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-/** Persist an expense transaction dated within the given period, in the given category. */
 function overspendTx(int $userId, int $accountId, int $runId, int $settledMinor, int $categoryId, CarbonImmutable $postedAt): void
 {
     static $i = 500000;
@@ -100,8 +88,7 @@ it('default reduce_to_budget resets carried_in to zero next period and debits th
     $current = app(PeriodQuery::class)->current();
     $next = app(PeriodQuery::class)->next($current);
 
-    // default overspend_mode is 'reduce_to_budget' -- no explicit setting row needed,
-    // but assert the default applies even with none (D-12a implicit envelope).
+    // No EnvelopeSetting row at all: the implicit default is reduce_to_budget.
     EnvelopeAssignment::create([
         'user_id' => $this->user->id,
         'category_id' => $this->groceries->id,
@@ -144,6 +131,5 @@ it('carry_negative keeps the negative in the envelope and leaves the pool untouc
 
     $nextRow = $nextResult['rows'][$this->groceries->id];
     expect($nextRow->carriedInMinor)->toBe(-3000);
-    // The pool is untouched by this envelope's overspend.
     expect($nextResult['toBudgetMinor'])->toBe($before['toBudgetMinor']);
 });

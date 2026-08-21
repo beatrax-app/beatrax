@@ -6,10 +6,8 @@ namespace Modules\DevMode\Public\Exceptions;
 
 use RuntimeException;
 
-// Raised while CommandSpawner launches a whitelisted artisan command as a
-// detached background process — the bash wrapper exiting non-zero, the
-// child PID never surfacing on stdout, or the per-run output directory
-// failing to materialise. Each named constructor pins one failure mode.
+// Raised while CommandSpawner detaches a child process. Each named
+// constructor pins one failure mode of that launch.
 final class SpawnProcessException extends RuntimeException
 {
     public static function bashWrapperFailed(string $stderr): self

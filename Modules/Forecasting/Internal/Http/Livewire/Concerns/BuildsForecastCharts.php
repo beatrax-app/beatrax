@@ -11,15 +11,9 @@ use Modules\Forecasting\Public\Dto\ForecastDto;
 use Modules\Forecasting\Public\Services\ForecastQuery;
 use stdClass;
 
-// The chart-building half of ForecastPage: the ApexCharts option payload,
-// the shared y-axis range, the day-30 net-difference maths and the
-// all-accounts aggregate rollup. Split out so the component keeps its
-// action surface under the method ceiling.
+// Split out of ForecastPage to keep it under the method-count ceiling.
 trait BuildsForecastCharts
 {
-    // Panel accent colours. The scenario panel is tinted by whether the
-    // scenario leaves the user better or worse off at day 30; the
-    // baseline panel is always neutral.
     private const NEUTRAL_INK = '#0F172A';
 
     private const BETTER_OFF_INK = '#047857';
@@ -67,10 +61,8 @@ trait BuildsForecastCharts
         return [$aggregatePoints, $bufferFloor];
     }
 
-    // Computed here rather than left to ApexCharts auto-scale so both
-    // panels render against identical y-axis bounds — otherwise the
-    // scenario panel's independent auto-scale would visually distort
-    // the baseline-vs-scenario delta.
+    // Computed rather than left to ApexCharts auto-scale: independent scaling
+    // per panel would visually distort the baseline-vs-scenario delta.
     /**
      * @return array{0: float, 1: float}
      */
@@ -99,8 +91,7 @@ trait BuildsForecastCharts
         return [$yMin, $yMax];
     }
 
-    // Tints the scenario panel by the day-30 net difference. Exactly
-    // zero is neutral rather than green: an unchanged balance is not an
+    // Exactly zero is neutral, not green: an unchanged balance is not an
     // improvement, and colouring it as one overstates the scenario.
     private function panelColorFor(int $netDiffMinor): string
     {
@@ -126,9 +117,8 @@ trait BuildsForecastCharts
             }
             $b = $this->pointAtIndex($baseline, $horizonKey);
             $s = $this->pointAtIndex($scenario, $horizonKey);
-            // If either DTO is missing the day-N point (malformed
-            // result_json), skip this horizon rather than substituting
-            // the last-available point's value as if it were day-N.
+            // A malformed result_json can be short of day N. Skipping the
+            // horizon beats passing off the last point as if it were day N.
             if ($b === null || $s === null) {
                 continue;
             }
@@ -145,8 +135,6 @@ trait BuildsForecastCharts
             return null;
         }
         if ($dayOffset > count($points) - 1) {
-            // Missing day-N point — surface a "skip" signal rather than
-            // silently substituting the last available point.
             return null;
         }
 
@@ -178,10 +166,8 @@ trait BuildsForecastCharts
         $yMin = $yMinOverride ?? (($lows === [] ? 0 : min($lows)) / 100 - 1);
         $yMax = $yMaxOverride ?? (($highs === [] ? 0 : max($highs)) / 100 + 1);
 
-        // Render the shortfall-band region BELOW the buffer floor so the
-        // user sees immediately where the projected balance dips below it.
-        // ApexCharts v5 requires the full annotations object shape: a bare
-        // [] serializes to a JSON array and crashes drawImageAnnos.
+        // ApexCharts v5 needs the full annotations object: a bare [] serializes
+        // to a JSON array and crashes drawImageAnnos.
         $annotations = ['yaxis' => [], 'xaxis' => [], 'points' => [], 'images' => []];
         if ($effectiveBufferMinor !== null) {
             $bufferValue = $effectiveBufferMinor / 100;
@@ -227,9 +213,6 @@ trait BuildsForecastCharts
             'legend' => ['show' => false],
             'tooltip' => ['shared' => true, 'intersect' => false],
             'annotations' => $annotations,
-            // Phone-tuned responsive breakpoints baked into server-rendered
-            // options so the chart fills the container at phone width with
-            // fewer x-axis labels and no legend — no extra JS required.
             'responsive' => [
                 [
                     'breakpoint' => 768,

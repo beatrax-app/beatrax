@@ -6,9 +6,6 @@ namespace Modules\Import\Internal\Parsers;
 
 use Modules\Import\Public\Enums\PaymentType;
 
-/**
- * @link ../../../../.docs/features/import/architecture.md#payment-type-hinters
- */
 final class DescriptionKeywordFallbackHinter extends DescriptionKeywordHinter
 {
     private const CONFIDENCE = 40;

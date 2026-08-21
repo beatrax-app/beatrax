@@ -5,15 +5,9 @@ declare(strict_types=1);
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Auth\Tests\TestCase;
 
-/*
- * Per-module Pest.php is intentionally inert. Pest's BootFiles
- * bootstrapper only auto-loads the project-root tests/Pest.php, which
- * carries the load-bearing foreach map that binds every module's
- * Feature / Unit / Integration / Contracts directories to the right
- * TestCase + RefreshDatabase. Keeping this file present (mirroring
- * Modules/EmailScan/tests/Pest.php) preserves the discoverability
- * convention without introducing a second wire-up path.
- */
+// Inert: Pest's BootFiles bootstrapper auto-loads only the project-root
+// tests/Pest.php, which binds every module's directories. This keeps the
+// convention visible.
 
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)

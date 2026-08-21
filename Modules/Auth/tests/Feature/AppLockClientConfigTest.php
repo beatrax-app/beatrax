@@ -2,18 +2,13 @@
 
 declare(strict_types=1);
 
-// Code-review fix CR-03 — per-user, lock-gated window.beatraxIdleMs emission.
-
 use Illuminate\Database\DatabaseManager;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Core\Models\User;
 
-/*
- * The authenticated layout must emit window.beatraxIdleMs ONLY when the app
- * lock is enabled for the current user, and with the user's configured
- * idle_timeout_minutes — never a hardcoded constant for every user (CR-03).
- */
+// The layout emits window.beatraxIdleMs only for a lock-enabled user, and from
+// that user's own idle_timeout_minutes rather than one constant for everybody.
 
 function clientConfigUser(string $username): User
 {

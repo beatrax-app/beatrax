@@ -39,9 +39,7 @@ final class CheckForUpdates
             ->where('status', MigrationRunStatus::Confirmed->value)
             ->firstOrFail();
 
-        // Reuses StartMigrationRun (rather than duplicating parser-selection/
-        // staging logic) to parse + stage the newer export into its own
-        // fresh run; nothing domain-side is written by this call.
+        // Stages the newer export; nothing domain-side is written by this call.
         $newRun = $this->startMigrationRun->__invoke($user, $sourceProduct, $extractedPath, $prior->original_filename);
 
         $decision = $this->resolver->resolve($newRun->id, $user, $sourceProduct);
@@ -50,10 +48,8 @@ final class CheckForUpdates
             $this->recordConflict($newRun->id, $user, $conflict);
         }
 
-        // Every other entity kind already resolve-gates per-row inside
-        // promote(); budget assignments are the one unconditional-apply
-        // exception, so the conflicted composite keys are threaded through
-        // as an explicit skip-list.
+        // Budget assignments are the one kind promote() applies unconditionally,
+        // so the conflicted composite keys go through as an explicit skip-list.
         $this->promoter->promote($newRun->id, $user, $decision->conflictedBudgetAssignmentKeys());
 
         $this->applyNonBudgetAssignmentChanges($newRun->id, $user, $sourceProduct, $decision);
@@ -107,10 +103,8 @@ final class CheckForUpdates
             $applied = $this->applier->apply($user, $sourceProduct, $apply['entityType'], $apply['sourceExternalId'], $apply['fields']);
 
             if (! $applied && $apply['entityType'] === MigrationEntityType::Transaction->value && array_key_exists('amount_minor', $apply['fields'])) {
-                // Vanishingly rare: the new amount collides with another
-                // row's fingerprint tuple. Left byte-for-byte untouched
-                // rather than silently dropped or half-applied — surfaced
-                // as a visible unmapped item instead.
+                // The new amount collides with another row's fingerprint tuple.
+                // Left untouched and surfaced, never half-applied.
                 $this->recordAmountApplyCollision($runId, $user, $apply['sourceExternalId']);
             }
         }

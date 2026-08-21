@@ -294,7 +294,6 @@ it('stale pending intent is discarded; login proceeds normally', function (): vo
 
     expect($intent->pending())->toBeNull();
 
-    // Nothing was continued, so the staging page shows its empty state.
     $response = $this->get('/desktop/file-staging');
     $response->assertOk();
     $response->assertSee("We couldn't open that file");

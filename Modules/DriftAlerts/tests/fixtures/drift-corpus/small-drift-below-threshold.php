@@ -2,10 +2,6 @@
 
 declare(strict_types=1);
 
-// Spotify €9.99 → €10.20 (+2.1% month-over-month). The
-// drift sits below the default ±5% threshold so the detector skips
-// the alert. Expected: zero drift alerts.
-
 $transactions = [];
 $amounts = [-999, -999, -999, -1020, -1020, -1020];
 for ($i = 0; $i < 6; $i++) {

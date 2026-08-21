@@ -18,24 +18,6 @@ use Modules\DevMode\Public\Contracts\AuditWriter;
 use Modules\DevMode\Public\Dto\CommandRunAudit;
 use Modules\EmailScan\Models\OAuthSecret;
 
-/*
- * Audit-pipeline invariants.
- *
- * Covers:
- *   - AuditEvent enum taxonomy (locks audit-action strings as
- *     enum cases — no free-form descriptions).
- *   - RedactionExcerptCap baseline (Bearer + JWT + 8 KiB cap).
- *   - SpatieAuditWriter writes dev_mode_audit rows with the
- *     expected shape and basic redaction applied.
- *   - FinalizeRunAudit reads the per-run tmp file + writes via the
- *     AuditWriter; the row reflects the recorded run + redacted
- *     content.
- *   - DevModeServiceProvider binds AuditWriter to
- *     SpatieAuditWriter.
- *   - PruneDevAuditCommand validates --older-than + deletes only
- *     old rows.
- */
-
 function auditDeveloper(string $username): User
 {
     return User::query()->create([
@@ -118,10 +100,8 @@ it('redacts an oauth_secrets value AND a Bearer header in the audit row (Test 7 
     $user = auditDeveloper('audit-redact-oauth');
     $this->actingAs($user);
 
-    // Seed an oauth_secret row so the container's RedactionExcerptCap
-    // picks up the value via the OAuthScrubSet singleton on its next
-    // compiledPattern() call. The DevModeServiceProvider-registered
-    // observer busts the cache on save.
+    // Creating the row is the whole setup: the observer busts OAuthScrubSet,
+    // so the next compiledPattern() call already carries this literal.
     OAuthSecret::query()->create([
         'user_id' => $user->id,
         'provider' => 'gmail',
@@ -134,10 +114,8 @@ it('redacts an oauth_secrets value AND a Bearer header in the audit row (Test 7 
     /** @var SpatieAuditWriter $writer */
     $writer = app(AuditWriter::class);
 
-    // Feed a "stdout" excerpt that contains both a Bearer header AND
-    // the literal of the oauth_secret. The audit-row writer routes
-    // through RedactionExcerptCap which now applies the full
-    // three-layer scrub (scrub-set + Bearer + JWT).
+    // Both a Bearer header and the stored secret in one excerpt, so the
+    // scrub-set and pattern layers of the cap are exercised together.
     $writer->recordCommandRun(new CommandRunAudit(
         command: 'cache:clear',
         args: [],
@@ -256,15 +234,12 @@ it('FinalizeRunAudit records a cancelled run with cancelled=true + negative exit
 it('PruneDevAuditCommand requires --older-than to be a positive integer', function (): void {
     auditDeveloper('prune-validation');
 
-    // Missing --older-than
     $exit = Artisan::call('beatrax:prune-dev-audit');
     expect($exit)->toBe(1);
 
-    // Zero is rejected
     $exit = Artisan::call('beatrax:prune-dev-audit', ['--older-than' => '0']);
     expect($exit)->toBe(1);
 
-    // Negative / non-integer values rejected
     $exit = Artisan::call('beatrax:prune-dev-audit', ['--older-than' => '-3']);
     expect($exit)->toBe(1);
 
@@ -277,7 +252,6 @@ it('PruneDevAuditCommand deletes only rows older than the given days', function 
     /** @var SpatieAuditWriter $writer */
     $writer = app(AuditWriter::class);
 
-    // Seed: 3 fresh + 2 stale rows
     foreach (range(1, 3) as $_) {
         $writer->recordCommandRun(new CommandRunAudit(
             command: 'cache:clear', args: [], tier: 'safe',
@@ -296,7 +270,7 @@ it('PruneDevAuditCommand deletes only rows older than the given days', function 
             exitCode: 0, stdoutExcerpt: 'stale', errorExcerpt: '',
         ));
     }
-    // Backdate the last two rows
+    // 30 days back, well clear of the 7-day cutoff used below.
     DB::table('dev_mode_audit')
         ->orderByDesc('id')
         ->limit(2)

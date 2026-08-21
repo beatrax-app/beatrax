@@ -9,22 +9,6 @@ use Modules\Calendar\Internal\Services\CalendarQuery;
 use Modules\Core\Models\User;
 use Modules\Recurring\Models\RecurringSeries;
 
-/*
- * CalendarQuery — series placement bounds and stepping (WR-03, WR-04).
- *
- * Inception bound (WR-03): the backward projection from nextExpectedAt
- * must not fabricate expected occurrences from before the series existed.
- * The floor is the earliest observed occurrence (created_at fallback)
- * minus a small slack, so history months before a subscription's first
- * payment never render phantom "Expected — not found" entries.
- *
- * Anchor-indexed stepping (WR-04): monthly+ occurrences are computed by
- * index from the nextExpectedAt anchor, so an end-of-month billing day
- * (the 31st) is preserved in months that have it — chained no-overflow
- * stepping permanently drifted to the 28th after February — and the same
- * bill lands on the same day no matter which month is being viewed.
- */
-
 function cqplUser(string $suffix): User
 {
     return User::query()->create([
@@ -147,14 +131,13 @@ afterEach(function (): void {
 it('places no entries in history months before the series existed (WR-03)', function (): void {
     $user = cqplUser('inception-history');
 
-    // Monthly series created "today" (2026-06-12), no occurrences yet.
+    // Created "today", with no occurrences at all.
     cqplSeries($user, 'New-Subscription', CarbonImmutable::parse('2026-06-15'));
 
     /** @var CalendarQuery $calendarQuery */
     $calendarQuery = app(CalendarQuery::class);
 
-    // March 2024: years before the subscription existed — the backward walk
-    // must NOT fabricate a phantom missed entry on 2024-03-15.
+    // Years before the subscription existed.
     $days = $calendarQuery->forMonth($user, 2024, 3);
 
     expect(cqplEntryDates($days, 'New-Subscription'))->toBe([]);
@@ -164,18 +147,15 @@ it('uses the first observed occurrence as the inception floor (WR-03)', function
     $db = app(DatabaseManager::class);
     $user = cqplUser('inception-occurrence');
 
-    // Series first observed 2026-04-15; nextExpectedAt in the future.
     $series = cqplSeries($user, 'April-Born', CarbonImmutable::parse('2026-07-15'));
     cqplOccurrence($db, $user->id, $series->id, '2026-04-15');
 
     /** @var CalendarQuery $calendarQuery */
     $calendarQuery = app(CalendarQuery::class);
 
-    // April 2026 (first occurrence month): the entry renders.
     $april = $calendarQuery->forMonth($user, 2026, 4);
     expect(cqplEntryDates($april, 'April-Born'))->toBe(['2026-04-15']);
 
-    // February 2026 (before inception): no phantom entry.
     $february = $calendarQuery->forMonth($user, 2026, 2);
     expect(cqplEntryDates($february, 'April-Born'))->toBe([]);
 });
@@ -184,8 +164,7 @@ it('preserves an end-of-month anchor across short months (WR-04 drift)', functio
     $db = app(DatabaseManager::class);
     $user = cqplUser('eom-anchor');
 
-    // Bill anchored on the 31st (nextExpectedAt 2026-07-31), observed since
-    // January so history months are inside the inception floor.
+    // Observed since January, so history months clear the inception floor.
     $series = cqplSeries($user, 'EndOfMonth-Bill', CarbonImmutable::parse('2026-07-31'));
     cqplOccurrence($db, $user->id, $series->id, '2026-01-31');
 
@@ -196,8 +175,8 @@ it('preserves an end-of-month anchor across short months (WR-04 drift)', functio
     $february = $calendarQuery->forMonth($user, 2026, 2);
     expect(cqplEntryDates($february, 'EndOfMonth-Bill'))->toBe(['2026-02-28']);
 
-    // …but March must return to the 31st (chained stepping drifted to Mar 28
-    // and never recovered), and May likewise.
+    // …but March must return to the 31st; chained stepping drifted to Mar 28
+    // and never recovered.
     $march = $calendarQuery->forMonth($user, 2026, 3);
     expect(cqplEntryDates($march, 'EndOfMonth-Bill'))->toBe(['2026-03-31']);
 
@@ -209,8 +188,7 @@ it('places the anchor month itself on the anchor day (WR-04 invertibility)', fun
     $db = app(DatabaseManager::class);
     $user = cqplUser('eom-invert');
 
-    // Backward-then-forward symmetry: viewing the anchor's own month after
-    // having stepped through short months must still land on the 31st.
+    // Stepping through short months must not move the anchor's own month.
     $series = cqplSeries($user, 'July-Anchor', CarbonImmutable::parse('2026-07-31'));
     cqplOccurrence($db, $user->id, $series->id, '2026-01-31');
 
@@ -225,16 +203,13 @@ it('steps a quarterly series by three-month index from the anchor (WR-04)', func
     $db = app(DatabaseManager::class);
     $user = cqplUser('quarterly-step');
 
-    // Quarterly bill anchored 2026-07-15, first observed 2026-01-15 so the
-    // inception floor admits the backward-stepped occurrences.
+    // Observed since January, so the floor admits the backward steps.
     $series = cqplSeries($user, 'Quarterly-Bill', CarbonImmutable::parse('2026-07-15'), 'quarterly');
     cqplOccurrence($db, $user->id, $series->id, '2026-01-15');
 
     /** @var CalendarQuery $calendarQuery */
     $calendarQuery = app(CalendarQuery::class);
 
-    // April is one quarter before the July anchor; the intervening months
-    // must carry no entry.
     expect(cqplEntryDates($calendarQuery->forMonth($user, 2026, 4), 'Quarterly-Bill'))->toBe(['2026-04-15']);
     expect(cqplEntryDates($calendarQuery->forMonth($user, 2026, 5), 'Quarterly-Bill'))->toBe([]);
     expect(cqplEntryDates($calendarQuery->forMonth($user, 2026, 7), 'Quarterly-Bill'))->toBe(['2026-07-15']);
@@ -244,8 +219,7 @@ it('steps a yearly series by one-year index from the anchor (WR-04)', function (
     $db = app(DatabaseManager::class);
     $user = cqplUser('yearly-step');
 
-    // Yearly bill anchored 2026-07-15, first observed 2024-07-15 so a prior
-    // year is inside the inception floor.
+    // Observed since 2024, so a prior year is inside the floor.
     $series = cqplSeries($user, 'Yearly-Bill', CarbonImmutable::parse('2026-07-15'), 'yearly');
     cqplOccurrence($db, $user->id, $series->id, '2024-07-15');
 

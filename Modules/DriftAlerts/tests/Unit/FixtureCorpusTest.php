@@ -2,33 +2,12 @@
 
 declare(strict_types=1);
 
-/*
- * FixtureCorpusTest — contract guard for the synthesised drift fixture
- * corpus.
- *
- * Each fixture under `Modules/DriftAlerts/tests/fixtures/drift-corpus/`
- * must return an associative array with two top-level keys:
- *
- *   - `transactions` (list of synthetic transaction rows the recurring
- *     detector would cluster into a single recurring series)
- *   - `expected`     (associative array with at least an `alerts` key
- *     whose value is a list of expected drift_alerts column tuples)
- *
- * The corpus is the shared input for `DriftEvaluatorTest` (Pest
- * dataset) and `DriftDetectionContractTest` (end-to-end). If a fixture
- * violates the shape contract the downstream tests become noisy and
- * unreliable, so this guard fires first.
- */
-
 use function PHPUnit\Framework\assertArrayHasKey;
 use function PHPUnit\Framework\assertContains;
 use function PHPUnit\Framework\assertIsArray;
 use function PHPUnit\Framework\assertIsList;
 
 /**
- * Yields every fixture file under the drift-corpus directory as a
- * Pest dataset entry. Each entry is `[$name, $absolutePath]`.
- *
  * @return iterable<int, array{0: string, 1: string}>
  */
 function driftCorpusFixtures(): iterable

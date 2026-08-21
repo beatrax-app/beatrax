@@ -31,10 +31,9 @@ final class DisconnectInbox
             throw new NotFoundHttpException('Inbox not found.');
         }
 
-        // Revoke server-side before the local copy goes, so a leaked refresh
-        // token cannot outlive the disconnect. Only Gmail exposes a revoke
-        // endpoint; Microsoft consent is withdrawn by the user in their own
-        // account, so there the local delete is the whole story.
+        // Revoked before the local copy goes, so a leaked refresh token
+        // cannot outlive the disconnect. Only Gmail exposes a revoke endpoint;
+        // Microsoft consent is withdrawn by the user in their own account.
         $credentials = $this->secrets->loadInbox($inboxId);
         if ($credentials !== null && $credentials->provider === MailProvider::Gmail->value) {
             $this->revoker->revoke($credentials->refreshToken);

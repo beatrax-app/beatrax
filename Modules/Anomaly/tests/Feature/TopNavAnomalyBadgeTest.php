@@ -11,14 +11,6 @@ use Modules\Core\Models\User;
 
 uses(RefreshDatabase::class);
 
-/*
- * Sidebar "Unusual charges" nav badge (D-03/UI-SPEC §5). The Anomaly
- * service provider attaches the revival-aware open count to the sidebar's
- * navCounts['anomaly'] via the View Factory contract (NEVER the view()
- * global helper); the sidebar renders the amber .side-badge.alert only
- * when the count is > 0.
- */
-
 function tabUser(string $username): User
 {
     return User::query()->create([

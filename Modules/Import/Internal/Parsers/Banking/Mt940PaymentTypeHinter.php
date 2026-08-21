@@ -8,9 +8,6 @@ use Modules\Import\Internal\Parsers\DescriptionKeywordHinter;
 use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ingestion\Public\Enums\SourceFormat;
 
-/**
- * @link ../../../../../.docs/features/import/architecture.md#payment-type-hinters
- */
 final class Mt940PaymentTypeHinter extends DescriptionKeywordHinter
 {
     protected const SOURCE_FORMAT = SourceFormat::Mt940->value;

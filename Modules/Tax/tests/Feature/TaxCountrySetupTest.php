@@ -7,13 +7,6 @@ use Modules\Core\Models\User;
 use Modules\Tax\Public\Enums\TaxCountry;
 use Modules\Tax\Public\Services\TaxCountrySetup;
 
-/*
- * Feature tests for the TaxCountrySetup public facade — the cross-module
- * surface the Onboarding wizard's tax-country step consumes. Mirrors the
- * TaxSettingsSection country-picker contract (D-07 / T-07-12): allow-listed
- * codes only, additive corpus seeding, users.tax_country_code persistence.
- */
-
 function taxCountrySetupUser(string $username): User
 {
     return User::query()->create([
@@ -30,9 +23,8 @@ it('offers every allow-listed country with a display label', function (): void {
 
     $available = $setup->availableCountries();
 
-    // Asserted against the enum rather than a hardcoded list: the allow-list
-    // grew from six to twenty-six as the tax corpus gained countries, and a
-    // literal copy of it here only ever fails on the day someone adds one.
+    // Asserted against the enum, not a literal list: a copy of the allow-list
+    // here would only ever fail on the day someone adds a country.
     $expectedCodes = array_map(
         static fn (TaxCountry $case): string => $case->value,
         TaxCountry::cases(),
@@ -41,7 +33,6 @@ it('offers every allow-listed country with a display label', function (): void {
     expect(array_keys($available))->toBe($expectedCodes)
         ->and($available)->each->toBeString();
 
-    // The originals still read the way they always did.
     expect($available['nl'])->toBe('Netherlands')
         ->and($available['gb'])->toBe('United Kingdom');
 });
@@ -124,7 +115,6 @@ it('selectCountry is additive when switching countries — earlier categories su
     $countryCode = $db->connection()->table('users')->where('id', $user->id)->value('tax_country_code');
     expect($countryCode)->toBe('de');
 
-    // The NL rows must still be there after the switch.
     $nlAfter = $db->connection()->table('tax_deduction_categories')
         ->where('user_id', $user->id)
         ->where('country_code', 'nl')

@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\EmailScan\Public\Enums;
 
-// The lifecycle of an inbox_scan_state.status row. The column, its DTOs
-// and applyStatus()'s signature stay string; this enum is the one
-// canonical spelling every caller maps through, and it owns the transition
-// graph InboxScanStateMachine's guard enforces.
+// The column, its DTOs and applyStatus()'s signature all stay string; this
+// enum is the canonical spelling callers map through, and it owns the
+// transition graph InboxScanStateMachine's guard enforces.
 enum InboxScanStatus: string
 {
     case Idle = 'idle';

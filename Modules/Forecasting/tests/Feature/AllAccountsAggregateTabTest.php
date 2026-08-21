@@ -9,19 +9,6 @@ use Modules\Core\Models\User;
 
 uses(RefreshDatabase::class);
 
-/*
- * Feature coverage for the All accounts aggregate tab.
- *
- * Asserts:
- *   - /forecast (no URL params) lands on the All accounts tab.
- *   - The aggregate chart variant is `line` (NOT rangeArea).
- *   - The aggregate sums per-account point estimates in EUR.
- *   - The buffer floor on the aggregate is the sum of per-account
- *     forecast_min_buffer_minor values.
- *   - Switching to a per-account tab swaps the variant back to
- *     rangeArea.
- */
-
 function aatUser(): User
 {
     return User::query()->create([
@@ -47,11 +34,9 @@ function aatAccount(DatabaseManager $db, int $userId, string $name, ?int $buffer
     ]);
 }
 
+// One row per (user, horizon) carrying every account: ForecastQuery reads only
+// the latest row for the tuple, so per-account inserts would shadow each other.
 /**
- * Insert ONE forecast_runs row per (user, horizon) tuple that contains
- * every account's projection block. ForecastQuery returns the LATEST
- * row for the tuple, so per-account inserts would shadow each other.
- *
  * @param  array<int, int>  $pointMinorByAccount  accountId => point estimate (minor)
  */
 function aatForecastRun(DatabaseManager $db, int $userId, array $pointMinorByAccount, int $horizon): void
@@ -109,10 +94,8 @@ it('renders the All accounts tab as the default landing tab with line chart vari
 
     $content = (string) $response->getContent();
 
-    // The All-accounts tab is selected by default.
     expect($content)->toContain('aria-selected="true"');
     expect($content)->toContain('>All accounts<');
-    // The aggregate chart container is present with line variant.
     expect($content)->toContain('data-testid="all-accounts-aggregate-chart"');
     expect($content)->toContain('data-chart-variant="line"');
 });
@@ -125,7 +108,6 @@ it('does NOT render the rangeArea chart on the default All accounts landing', fu
 
     $content = (string) $response->getContent();
 
-    // No per-account rangeArea chart on the All accounts tab.
     expect($content)->not->toContain('forecast-chart-baseline-'.$a);
 });
 
@@ -138,9 +120,7 @@ it('sums per-account point estimates in EUR on the aggregate chart payload', fun
 
     $content = (string) $response->getContent();
 
-    // Extract the data-options blob from the aggregate chart marker and
-    // assert the aggregated y value (100000 + 50000 = 1500 EUR-major)
-    // appears in the decoded JSON.
+    // 100000 + 50000 minor, rendered as 1500 in major units.
     $matches = [];
     expect(preg_match('/data-options="([^"]*)"\s*>\s*<div\b[^>]*?data-testid="all-accounts-aggregate-chart"/s', $content, $matches))->toBe(1);
     $decoded = json_decode(html_entity_decode($matches[1], ENT_QUOTES), associative: true);
@@ -157,9 +137,7 @@ it('renders the buffer floor as the sum of per-account forecast_min_buffer_minor
 
     $content = (string) $response->getContent();
 
-    // Extract the data-options blob; the y2 annotation value (= the
-    // total buffer floor in major units) should equal 800 = (50000 +
-    // 30000) / 100.
+    // The y2 annotation is the combined buffer floor: (50000 + 30000) / 100.
     $matches = [];
     expect(preg_match('/data-options="([^"]*)"\s*>\s*<div\b[^>]*?data-testid="all-accounts-aggregate-chart"/s', $content, $matches))->toBe(1);
     $decoded = json_decode(html_entity_decode($matches[1], ENT_QUOTES), associative: true);
@@ -176,9 +154,7 @@ it('renders the per-account rangeArea chart when the URL pin selects an account'
 
     $content = (string) $response->getContent();
 
-    // Per-account chart is back.
     expect($content)->toContain('forecast-chart-baseline-'.$a);
     expect($content)->toMatch('/data-options="[^"]*rangeArea/');
-    // No aggregate chart on a per-account tab.
     expect($content)->not->toContain('data-testid="all-accounts-aggregate-chart"');
 });

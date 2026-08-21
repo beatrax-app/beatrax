@@ -15,21 +15,10 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
 
-/*
- * 14.1-13 (CRYPT-01, Cluster 2 gap closure) — Counterparty merchant-triage
- * flow encrypts at rest and matches suggestions correctly under an
- * encrypted user.
- *
- * Task 1 (write fix): acceptSuggestion()/manualLabel() must encrypt
- * counterparties.display_name/merchant_name before save() — the
- * Counterparty model has no auto-encrypt hook, so a plain Eloquent save()
- * writes plaintext straight through.
- *
- * Task 2 (match fix): CounterpartyTriageQueue::suggestionFor() must
- * decrypt each candidate transactions.description before feeding it to
- * MerchantNameResolver::resolve() — otherwise substring/corpus matching
- * runs against ciphertext and always returns no suggestion.
- */
+// Two ways the triage flow leaks or breaks under encryption: the Counterparty
+// model has no auto-encrypt hook, so a bare save() writes plaintext through;
+// and suggestionFor() feeding an undecrypted description to
+// MerchantNameResolver matches against ciphertext and never suggests anything.
 
 uses(RefreshDatabase::class, EnablesEncryptionForUser::class);
 
@@ -123,12 +112,9 @@ it('encrypts display_name/merchant_name at rest when acceptSuggestion() promotes
 
     /** @var SensitiveColumnCodec $codec */
     $codec = $this->app->make(SensitiveColumnCodec::class);
-    // Task 1 (write fix) is tested in isolation from Task 2 (match fix):
-    // the transaction description is stored in plaintext here so
-    // suggestionFor() can resolve a suggestion regardless of whether
-    // the Task 2 decrypt-before-match fix has landed yet — this test
-    // only proves what acceptSuggestion() does with the suggestion it
-    // receives.
+    // Plaintext description on purpose: this case is only about what
+    // acceptSuggestion() writes, not about whether a suggestion can be found
+    // under encryption.
     cpteTx($user, $account, $unknown, $run, 'SPOTIFY P AMSTERDAM');
 
     DB::table('merchant_aliases')->insert([
@@ -145,12 +131,9 @@ it('encrypts display_name/merchant_name at rest when acceptSuggestion() promotes
 
     $rawRow = DB::table('counterparties')->where('id', $unknown->id)->first();
     expect($rawRow)->not->toBeNull();
-    // The stored bytes must not be the plaintext merchant name — proves
-    // the write went through the codec rather than a bare assignment.
     expect($rawRow->display_name)->not->toBe('Spotify');
     expect($rawRow->merchant_name)->not->toBe('Spotify');
 
-    // But it must decrypt back to the intended plaintext.
     expect($codec->decryptValue('counterparties', 'display_name', $rawRow->display_name, $user->id, $session)['value'])->toBe('Spotify');
     expect($codec->decryptValue('counterparties', 'merchant_name', $rawRow->merchant_name, $user->id, $session)['value'])->toBe('Spotify');
 
@@ -233,9 +216,8 @@ it('decrypts each candidate description before matching so suggestionFor() retur
         'updated_at' => now()->toDateTimeString(),
     ]);
 
-    // Confirm the fixture rows are genuinely ciphertext at rest — a
-    // still-broken matcher would otherwise pass vacuously against
-    // plaintext (Pitfall 2 from the CR-04 precedent).
+    // Without this the case passes vacuously: a still-broken matcher would
+    // match fine against a fixture that was never encrypted.
     $storedDescription = DB::table('transactions')->where('counterparty_id', $unknown->id)->value('description');
     expect($storedDescription)->not->toContain('NETFLIX');
 

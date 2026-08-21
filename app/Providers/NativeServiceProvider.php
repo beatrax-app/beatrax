@@ -15,17 +15,13 @@ use NativePHP\BackgroundTasks\BackgroundTasksServiceProvider;
 use NativePHP\LocalNotifications\LocalNotificationsServiceProvider;
 
 // Only providers listed in plugins() compile into a native build, and only
-// mobile-app/bootstrap/providers.php loads this — the desktop build uses
+// mobile-app/bootstrap/providers.php loads this; the desktop build has
 // nativephp/desktop's own plugin surface.
 class NativeServiceProvider extends ServiceProvider
 {
-    public function register(): void
-    {
-    }
+    public function register(): void {}
 
-    public function boot(): void
-    {
-    }
+    public function boot(): void {}
 
     /**
      * @return array<int, class-string<ServiceProvider>>
@@ -42,12 +38,11 @@ class NativeServiceProvider extends ServiceProvider
             // Backs Mobile\Internal\Listeners\DispatchMobileNotification.
             LocalNotificationsServiceProvider::class,
             // Backs Mobile\Internal\Identity\BiometricKeyVault, whose guards
-            // go through the facade's class_exists() — so leaving this out
+            // run through the facade's class_exists(), so omitting this
             // degrades silently rather than failing.
             BiometricVaultServiceProvider::class,
             // The core registers only layout, content and navigation chrome;
-            // button, the text inputs, toggle and webview are left to a UI
-            // plugin, and none of them resolve without this.
+            // button, the inputs, toggle and webview resolve only through this.
             NativeUIServiceProvider::class,
         ];
     }

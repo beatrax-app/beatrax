@@ -2,10 +2,8 @@
 
 declare(strict_types=1);
 
-// Coverage for the shared newPinValidationError() guard that the Auth Sonar
-// refactor factored out ahead of the changePin() and resetForgottenPin()
-// actions: an invalid new PIN must flash the validation copy and return
-// before any provisioner / password work runs.
+// The shared new-PIN guard runs ahead of changePin() and resetForgottenPin():
+// an invalid PIN must flash and return before any provisioner work happens.
 
 use Livewire\Livewire;
 use Modules\Auth\Internal\Http\Livewire\AppLockSettingsSection;
@@ -30,7 +28,6 @@ it('changePin flashes the too-short copy and bails before touching the provision
         ->set('confirmPin', '12')
         ->call('changePin')
         ->assertSet('flashMessage', 'PIN must be at least 6 digits.')
-        // Guard returns early — the success message never gets set.
         ->assertSet('changePinSuccessMessage', '');
 });
 

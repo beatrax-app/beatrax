@@ -49,10 +49,9 @@ final class FetchFxRatesJob implements ShouldBeUniqueUntilProcessing, ShouldQueu
 
     public function handle(RateProviderRegistry $registry, DatabaseManager $db, LoggerInterface $logger): void
     {
-        // Defense-in-depth privacy gate: online fetch is opt-in and off by
-        // default. Re-checking here (rather than trusting the caller) means
-        // no dispatch path can leak network calls for a user who never
-        // enabled it — the UI gate alone is not a security boundary.
+        // Re-checked here rather than trusted from the caller: the UI gate is
+        // not a security boundary, and no dispatch path may make a network
+        // call for a user who never opted in.
         $fxOnlineEnabled = $db->connection()->table('users')
             ->where('id', $this->userId)
             ->value('fx_online_enabled');
@@ -91,10 +90,9 @@ final class FetchFxRatesJob implements ShouldBeUniqueUntilProcessing, ShouldQueu
                 continue;
             }
 
-            // rate_date is the provider's own feed date, never now() — on a
-            // weekend or ECB holiday the feed still publishes the previous
-            // business day's date, and keying on now() would write a false
-            // "today" row.
+            // The provider's feed date, never now(): on a weekend or holiday
+            // the feed still carries the previous business day, and now()
+            // would write a false "today" row.
             $rows[] = [
                 'base_currency' => 'EUR',
                 'quote_currency' => $quoteCurrency,

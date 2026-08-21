@@ -11,15 +11,6 @@ use Modules\Mobile\Internal\Http\Livewire\SyncCompleteScreen;
 
 uses(RefreshDatabase::class);
 
-/*
- * The confirmation the setup gate hands off to.
- *
- * Reaching parity used to redirect straight into the dashboard, so the one
- * moment the user was owed an answer — did it work, and what happens now —
- * went past in a flash of a progress bar. This screen answers both, and its
- * copy has to stay true to what this particular device can actually do: the
- * away-from-home promise is only honest once a relay is configured.
- */
 function syncCompleteUser(): User
 {
     return User::query()->create([
@@ -50,6 +41,9 @@ function syncCompletePeer(int $userId, string $name): void
         'updated_at' => $now,
     ]);
 }
+
+// Reaching parity used to redirect straight into the dashboard, so the one moment
+// the user was owed an answer went past in a flash of a progress bar.
 
 it('names the device it caught up from', function (): void {
     $user = syncCompleteUser();

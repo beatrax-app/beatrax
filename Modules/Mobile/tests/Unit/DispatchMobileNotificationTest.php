@@ -12,24 +12,10 @@ use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
 uses(RefreshDatabase::class);
 
-/*
- * Tests the D-32 mobile mirror of DispatchOsNotificationTest:
- * DispatchMobileNotification consumes the SAME NotificationDeliverable
- * event, calling the SAME SuppressionEvaluator::shouldDeliver() (D-38
- * invariant 4) before ever reaching the native fire path — there is no
- * focus-gate (a phone has no window-focus concept), unlike Desktop.
- *
- * `nativephp/mobile-local-notifications` v0.0.2 ships no fake for its
- * `LocalNotifications` facade (there is no client to intercept, same
- * limitation NATIVEPHP-FAKES.md records for Desktop's `Notification`
- * facade). `RecordingDispatchMobileNotification` below overrides the
- * protected `fire()` seam instead of asserting an outbound HTTP call —
- * mirrors `Modules\Mobile\Internal\Identity\BiometricUnlockBridge`'s own
- * documented "intentionally NOT final, subclass to simulate" precedent.
- * The REAL class (not the recording subclass) is exercised directly in
- * the plugin-absent test below, proving the class_exists() guard holds —
- * this is the exact case every CI machine runs.
- */
+// nativephp/mobile-local-notifications ships no fake for its LocalNotifications
+// facade, so the recording subclass below overrides the protected fire() seam
+// rather than asserting an outbound call. The real class is exercised in the
+// plugin-absent test, which is the case every CI machine runs.
 
 /**
  * @param  array<int, array{notificationId: string, title: string, body: string, deepLinkRoute: string|null}>  $fired

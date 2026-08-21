@@ -7,15 +7,10 @@ use Modules\Core\Internal\Http\Livewire\SettingsPage;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\LegalLinks;
 
-/*
- * Both stores require the privacy policy to be reachable from inside the app
- * and not only from the store listing — Play's User Data policy asks for "a
- * privacy policy link or text within the app itself", and Apple's 5.1.1(i)
- * asks for the same.
- *
- * The URL is asserted as well as the affordance, because the failure mode is
- * a link that renders and points nowhere useful.
- */
+// Both stores require the privacy policy to be reachable from inside the app and
+// not only from the store listing — Play's User Data policy and Apple's 5.1.1(i)
+// both ask for it. The URL is asserted as well as the affordance, because the
+// failure mode is a link that renders and points nowhere useful.
 
 beforeEach(function (): void {
     $this->user = User::create([

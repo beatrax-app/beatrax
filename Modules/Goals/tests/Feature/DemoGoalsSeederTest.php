@@ -11,13 +11,6 @@ use Modules\Goals\Public\Services\GoalProgressQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * The demo install has to stay coherent under the attribution model: the
- * pot-backed goals read their pot, and the one goal without a pot reads the
- * credits the seeder attributed to it — never an account-wide sum that could
- * overshoot its own target.
- */
-
 /** @return array<string, GoalProgressRow> */
 function demoGoalRowsByName(User $user): array
 {
@@ -51,11 +44,11 @@ it('seeds a pot-less demo goal whose progress comes from attributed transactions
 
     $rows = demoGoalRowsByName($user);
 
-    // The whole point of the change: a goal reads only what was attributed to
-    // it, so a 600,00 target can no longer be swamped by a month's salary.
+    // A goal reads only what was attributed to it, so a 600,00 target can no
+    // longer be swamped by a month's salary.
     expect($rows['Winter tyres']->contributedMinor)->toBeGreaterThan(0);
     expect($rows['Winter tyres']->contributedMinor)->toBeLessThanOrEqual($rows['Winter tyres']->targetMinor);
 
-    // A pot-backed goal still reads its pot, untouched by the change.
+    // 125000 is the seeded Emergency fund pot: a pot-backed goal still reads it.
     expect($rows['Emergency fund']->contributedMinor)->toBe(125000);
 });

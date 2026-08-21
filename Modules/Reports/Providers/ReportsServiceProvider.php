@@ -41,12 +41,9 @@ final class ReportsServiceProvider extends ServiceProvider
         $this->singletonIfExists(self::REPORT_AGGREGATOR_CLASS);
         $this->singletonIfExists(self::TIME_BUCKET_GENERATOR_CLASS);
         $this->singletonIfExists(self::REPORT_CSV_EXPORTER_CLASS);
-        // Stateless aggregation/HTTP collaborators — singletons avoid a
-        // fresh instantiation per report run and per export request.
+        // All stateless, so singletons avoid re-instantiating per request.
         $this->singletonIfExists(self::SPEND_FILTER_APPLIER_CLASS);
         $this->singletonIfExists(self::REPORT_DEFINITION_REQUEST_FACTORY_CLASS);
-        // Actions are stateless — safe as singletons, avoiding a fresh
-        // instantiation per request.
         $this->singletonIfExists(self::SAVE_REPORT_CLASS);
         $this->singletonIfExists(self::UPDATE_REPORT_CLASS);
         $this->singletonIfExists(self::DELETE_REPORT_CLASS);
@@ -57,8 +54,6 @@ final class ReportsServiceProvider extends ServiceProvider
     {
         $this->loadModuleResources('reports');
 
-        // Builder/index/pinned-row Livewire components, each registered
-        // only once its class exists on disk.
         if (class_exists(self::REPORT_BUILDER_CLASS)) {
             $livewire->component('reports.report-builder', self::REPORT_BUILDER_CLASS);
         }

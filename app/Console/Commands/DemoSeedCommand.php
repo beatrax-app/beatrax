@@ -88,8 +88,7 @@ final class DemoSeedCommand extends Command
             $this->resetDemoData();
         }
 
-        // The install flow normally populates these; seeding them here is
-        // what makes demo:seed safe on a database that never ran it.
+        // Makes demo:seed safe on a database the install flow never touched.
         $this->line('Ensuring reference data (currencies + default category tree)…');
         $this->currencies->run();
         $this->categories->run();
@@ -199,20 +198,20 @@ final class DemoSeedCommand extends Command
         $reportCount = $this->savedReports->run($userMap);
         $this->info(sprintf('  %d demo saved reports present', $reportCount));
 
-        // Runs the real detectors, so it has to follow every transaction and
-        // split write rather than sit with the other alert seeders above.
+        // Runs the real detectors, so it must follow every transaction and
+        // split write rather than join the alert seeders above.
         $this->line('Running anomaly detection across the demo ledger…');
         $anomalyCount = $this->anomalyAlerts->run($userMap);
         $this->info(sprintf('  %d demo anomaly alerts detected', $anomalyCount));
 
-        // Last: it dispatches the real trigger events against rows every
-        // seeder above wrote, with delivery suppressed so nothing surfaces.
+        // Last: dispatches real trigger events over every row above, with
+        // delivery suppressed.
         $this->line('Seeding demo notification inbox (all 8 types, mixed read/unread/dismissed/resolved/dead-link)…');
         $notificationCount = $this->notifications->run($userMap);
         $this->info(sprintf('  %d demo notifications present', $notificationCount));
 
-        // Nothing above fired TransactionImported, so the index the listener
-        // maintains is empty until this rebuild.
+        // Nothing above fired TransactionImported, so the listener's index is
+        // empty until this rebuild.
         $this->line('Rebuilding the full-text search index over the demo ledger…');
         $this->call('search:reindex', ['--force' => true]);
 
@@ -222,9 +221,8 @@ final class DemoSeedCommand extends Command
         return self::SUCCESS;
     }
 
-    // Ordered by the FK dependency graph, and bounded to demo rows by the
-    // system_alerts seed_key marker and the demo:// file_imports eml_path
-    // prefix — so it stays safe against a populated production database.
+    // Bounded to demo rows by the system_alerts seed_key marker and the
+    // demo:// eml_path prefix, so it is safe against a real database.
     private function resetDemoData(): void
     {
         $connection = $this->db->connection();
@@ -258,10 +256,8 @@ final class DemoSeedCommand extends Command
         ));
     }
 
-    // The composite UNIQUE index on transactions(user_id, fingerprint)
-    // means a stale row with the same fingerprint would block a re-seed;
-    // wipe transactions explicitly first so the order is observable in
-    // the logs rather than relying on the FK cascade.
+    // A stale row would block a re-seed on the UNIQUE (user_id, fingerprint)
+    // index. Wiped explicitly, not by cascade, so the order shows in the logs.
     private function purgeDemoImportRuns(ConnectionInterface $connection): void
     {
         $importRunIds = $connection->table('import_runs')
@@ -281,8 +277,8 @@ final class DemoSeedCommand extends Command
         $connection->table('import_runs')->whereIn('id', $importRunIds)->delete();
     }
 
-    // Rule children hang off rule_id rather than user_id, so they are
-    // cleared through their parent rules' ids before the rules themselves.
+    // Rule children hang off rule_id, not user_id, so they clear through the
+    // parent rules' ids first.
     /**
      * @param  list<int>  $demoUserIds
      */
@@ -302,10 +298,8 @@ final class DemoSeedCommand extends Command
         $connection->table('categorization_rules')->whereIn('id', $ruleIds)->delete();
     }
 
-    // Deletion order honours the FK dependency graph; SQLite's ON DELETE
-    // CASCADE collapses the rest. Each table carries a user_id column but
-    // isn't necessarily owned by an ImportRun, so wiping them explicitly
-    // lets a partial reset still finish.
+    // These tables carry a user_id but are not necessarily owned by an
+    // ImportRun, so wiping them explicitly lets a partial reset finish.
     /**
      * @param  list<int>  $demoUserIds
      */
@@ -317,9 +311,8 @@ final class DemoSeedCommand extends Command
 
         $this->purgeCategorizationRules($connection, $demoUserIds);
 
-        // Pot movements precede pots, and pots precede goals, so a partial
-        // reset never leaves a movement pointing at a deleted pot or a pot
-        // pointing at a deleted goal.
+        // Movements before pots before goals, so a partial reset never strands
+        // a row pointing at something already deleted.
         $connection->table('pot_movements')->whereIn('user_id', $demoUserIds)->delete();
         $connection->table('pots')->whereIn('user_id', $demoUserIds)->delete();
         $connection->table('goal_contributions')->whereIn('user_id', $demoUserIds)->delete();
@@ -351,9 +344,8 @@ final class DemoSeedCommand extends Command
         $connection->table('file_imports')->whereIn('user_id', $demoUserIds)->delete();
         $connection->table('known_senders')->whereIn('user_id', $demoUserIds)->delete();
 
-        // EmailScan child tables cascade from inboxes; wipe child rows
-        // first so a partial-reset state with orphan inbox_messages still
-        // cleans up before the parent inboxes and accounts go.
+        // Children first, so a partial-reset state holding orphan
+        // inbox_messages still cleans up before their parents go.
         $connection->table('discovered_senders')->whereIn('user_id', $demoUserIds)->delete();
         $connection->table('inbox_messages')->whereIn('user_id', $demoUserIds)->delete();
         $connection->table('inbox_scan_state')->whereIn('user_id', $demoUserIds)->delete();

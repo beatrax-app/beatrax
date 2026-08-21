@@ -13,10 +13,6 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\UserPreferenceWriter;
 use Modules\Counterparties\Public\Queries\CounterpartyIndexQuery;
 
-// Cards-default index with type-filter chips and a Cards/List toggle
-// whose state persists in user_preferences.counterparty_index_view.
-// The #[Url] attribute on $type keeps the active filter shareable via
-// ?type={slug} links.
 final class CounterpartyIndex extends Component
 {
     #[Url(as: 'type', except: 'all')]
@@ -26,10 +22,8 @@ final class CounterpartyIndex extends Component
 
     public function mount(CurrentUser $currentUser, DatabaseManager $db): void
     {
-        // Materialise the user's persisted view-mode preference. The
-        // row may not exist yet (the foundation table is created lazily
-        // on first preference write), in which case the locked default
-        // `cards` applies.
+        // The user_preferences row is materialised lazily on the first preference
+        // write, so its absence is what the `cards` default stands in for.
         $existing = $db->connection()->table('user_preferences')
             ->where('user_id', $currentUser->id())
             ->value('counterparty_index_view');

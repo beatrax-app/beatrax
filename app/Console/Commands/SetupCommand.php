@@ -181,10 +181,9 @@ final class SetupCommand extends Command
         $lines = $contents === '' ? [] : explode("\n", rtrim(str_replace("\r\n", "\n", $contents), "\n"));
 
         foreach ($values as $key => $value) {
-            // Replace the existing line by array assignment (not preg_replace,
-            // whose replacement string would treat `$1`/`\1` in a password as
-            // backreferences). Match a live OR commented occurrence so a
-            // `# DB_HOST=` template line gets set rather than duplicated.
+            // Array assignment, not preg_replace, whose replacement would read
+            // `$1` in a password as a backreference. A commented occurrence
+            // matches too, so a `# DB_HOST=` line is set, not duplicated.
             $line = $key.'='.$this->encodeEnvValue($value);
             $pattern = '/^#?\s*'.preg_quote($key, '/').'=/';
             $replaced = false;
@@ -215,9 +214,8 @@ final class SetupCommand extends Command
             return $value;
         }
 
-        // Double-quote and escape so the app's own DotEnv parser reads back the
-        // exact value: backslash first, then quote, then `$` (so a password
-        // like `a${b}` is not treated as ${} interpolation).
+        // Escaped backslash, then quote, then `$`, so DotEnv reads back the
+        // exact value and a password like `a${b}` is not interpolated.
         $escaped = str_replace(['\\', '"', '$'], ['\\\\', '\\"', '\\$'], $value);
 
         return '"'.$escaped.'"';

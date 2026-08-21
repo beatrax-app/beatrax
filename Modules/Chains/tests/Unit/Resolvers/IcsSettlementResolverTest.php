@@ -145,7 +145,7 @@ beforeEach(function (): void {
     // Seed 23 expense rows summing to €847.32 (84732 minor cents).
     [$expenseIds, $sum] = seedIcsExpenses($this->user, $this->icsAccount, $this->run, 23, 84732);
     $this->expenseIds = $expenseIds;
-    expect($sum)->toBe(84732); // sanity — fixture is wired correctly
+    expect($sum)->toBe(84732);
 
     $statement = CardStatement::query()->create([
         'user_id' => $this->user->id,
@@ -360,7 +360,7 @@ it('handles refund-after-close per D-98', function (): void {
         'posted_at' => '2026-05-20',
         'booked_at' => '2026-05-20 12:00:00',
         'value_date' => '2026-05-20',
-        'amount_minor' => -$original->settled_amount_minor,   // positive
+        'amount_minor' => -$original->settled_amount_minor,
         'currency' => 'EUR',
         'settled_amount_minor' => -$original->settled_amount_minor,
         'settled_currency' => 'EUR',

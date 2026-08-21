@@ -5,18 +5,6 @@ declare(strict_types=1);
 use Modules\Mobile\Internal\Boot\NativeBuildPatches;
 use Symfony\Component\Process\Process;
 
-/*
- * End-to-end guards for scripts/nativephp_strip_unused_permissions.php.
- *
- * The script exists because `native:install` writes USE_EXACT_ALARM into the
- * manifest, Play restricts that permission to alarm clocks and calendars, and
- * shipping it is grounds for removal from the store.
- *
- * These run the real script against a fixture copy of the real generated
- * manifest — including its quirk of putting FLASHLIGHT and USE_BIOMETRIC on
- * the same line, which is what makes a line-based edit dangerous.
- */
-
 function stripPermissionsFixtureManifest(): string
 {
     return <<<'XML'
@@ -70,6 +58,11 @@ function runStripPermissions(string $root): Process
 
     return $process;
 }
+
+// native:install writes USE_EXACT_ALARM into the manifest, Play restricts that
+// permission to alarm clocks and calendars, and shipping it is grounds for removal
+// from the store. The fixture keeps the generated manifest's quirk of putting two
+// permissions on one line, which is what makes a line-based edit dangerous.
 
 it('pins out every permission the app never exercises', function (): void {
     [$root, $manifest] = stripPermissionsScaffold(stripPermissionsFixtureManifest());

@@ -14,15 +14,11 @@ use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
-// Builds the per-day end-of-day balance map for the month grid: forecast
-// points for future days, real transaction actuals overlaid on past days,
-// and a computing sentinel while any account's forecast is still warming up.
 final readonly class DailyBalanceAggregator
 {
     use CoercesScalars;
 
-    // 365 days covers a full calendar year so any month the user navigates
-    // to has balance projection data available.
+    // A full year, so any month the user navigates to has projection data.
     private const int FORECAST_HORIZON_DAYS = 365;
 
     public function __construct(
@@ -58,8 +54,7 @@ final readonly class DailyBalanceAggregator
 
         $map = $this->overlayActualBalances($map, $effectiveBalance, $user, $monthStart, $monthEnd, $baseCurrency);
 
-        // A partially-computing aggregate has no honest SoD anchor to
-        // report, so todayAnchorMinor is forced null in that case.
+        // A partially-computing aggregate has no honest SoD anchor to report.
         return ['map' => $map, 'todayAnchorMinor' => $isComputingAny ? null : $todayAnchorMinor];
     }
 
@@ -89,8 +84,6 @@ final readonly class DailyBalanceAggregator
         $isComputingAny = false;
         $todayAnchorMinor = null;
 
-        // Each account's forecast is fetched once here, not re-fetched per
-        // grid day below.
         foreach ($effectiveBalance as $accountId) {
             $dto = $this->forecastQuery->forUser($accountId, self::FORECAST_HORIZON_DAYS, null, $user);
 
@@ -127,8 +120,6 @@ final readonly class DailyBalanceAggregator
      */
     private function bucketsToBalanceMap(array $byDateCurrency, string $baseCurrency, bool $isComputingAny): array
     {
-        // Build the map for the dates we have data for, FX-converting each
-        // currency bucket to the user's base reporting currency before summing.
         $map = [];
         foreach ($byDateCurrency as $dateStr => $byCurrency) {
             $map[$dateStr] = [$this->sumBucketToBase($byCurrency, $baseCurrency), $isComputingAny];
@@ -143,8 +134,6 @@ final readonly class DailyBalanceAggregator
      */
     private function applyComputingSentinel(array $map, CarbonImmutable $monthStart, CarbonImmutable $monthEnd): array
     {
-        // If any account is computing, propagate the sentinel to every day,
-        // including dates with no forecast data yet.
         $cur = $monthStart;
         while ($cur->lte($monthEnd)) {
             $dateStr = $cur->toDateString();
@@ -168,9 +157,8 @@ final readonly class DailyBalanceAggregator
         CarbonImmutable $monthEnd,
         string $baseCurrency,
     ): array {
-        // Overwrite every grid day before today with the real cumulative
-        // balance — actuals are derived from transactions, not forecast
-        // runs, so they also override the computing fill above.
+        // Runs last on purpose: actuals come from transactions, so they must
+        // also overwrite the computing sentinel the previous step laid down.
         $today = $this->clock->now()->startOfDay();
         $gridStart = $monthStart->startOfWeek(CarbonImmutable::MONDAY);
         $gridEnd = $monthEnd->startOfDay()->endOfWeek(CarbonImmutable::SUNDAY)->startOfDay();
@@ -184,10 +172,8 @@ final readonly class DailyBalanceAggregator
         $cumByCurrency = $this->cumulativeBalanceBefore($effectiveBalance, $user, $gridStart);
         $deltaByDateCurrency = $this->dailyDeltasBetween($effectiveBalance, $user, $gridStart, $pastEnd);
 
-        // Walk the past grid days, carrying the cumulative balance forward.
         // convertToBase is a zero-query passthrough for base-currency buckets;
-        // non-base buckets hit the cached exchange_rates lookup per (day,
-        // currency).
+        // non-base ones hit the cached exchange_rates lookup per day/currency.
         $cursor = $gridStart;
         while ($cursor->lte($pastEnd)) {
             $dateStr = $cursor->toDateString();

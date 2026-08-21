@@ -21,15 +21,12 @@ use Psr\Log\NullLogger;
 
 uses(RefreshDatabase::class);
 
+// The relay holds no key and performs no cryptographic operation. Asserting
+// that against random_bytes() proves nothing: random bytes are not JSON and
+// carry no field name whatever the relay does, so these cases push a blob that
+// IS readable structure through the real client, handler and mailbox.
+
 /**
- * The relay holds no key and performs no cryptographic operation: it stores and
- * forwards opaque bytes. Asserting that against random_bytes() proves nothing —
- * random bytes are not JSON and contain no field name whatever the relay does.
- * These cases push a blob that IS readable structure through the real client,
- * the real serve handler and the real mailbox, so any decrypt, parse or reshape
- * shows up as bytes that changed. The source guard below reads the relay's own
- * code for the two operations it must never contain.
- *
  * @return list<string> absolute paths of every file that IS the relay
  */
 function relayZeroKnowledgeSources(): array

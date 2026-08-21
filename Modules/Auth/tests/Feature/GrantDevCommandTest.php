@@ -5,18 +5,8 @@ declare(strict_types=1);
 use Illuminate\Contracts\Hashing\Hasher;
 use Modules\Core\Models\User;
 
-/*
- * beatrax:grant-dev CLI invariants (Phase 16 plan 04 Task 3).
- *
- * The CLI counterpart of the Dev Console's DESTRUCTIVE-tier
- * grant-dev action. Phase 12 auto-promotes the FIRST signed-up user
- * to developer; this command promotes any subsequently-added user
- * after the operator has decided to share Dev Console access (the
- * common case once a partner account exists).
- *
- * Idempotent: a re-grant against a user who is already a developer
- * reports it and exits SUCCESS without writing.
- */
+// Signup auto-promotes the first user; this command is how any later account
+// gets Dev Console access once the operator decides to share it.
 
 function makeGrantDevUser(string $username, bool $isDeveloper = false): User
 {

@@ -8,10 +8,8 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 
 final class SpendFilterApplier
 {
-    // The single home for the shared account/category/counterparty/amount
-    // predicates, applied against unqualified transactions columns. The
-    // split-aware CategorySpendQuery keeps its own t./ts.-qualified variant
-    // inline, so it does not route through here.
+    // Applied against unqualified transactions columns. The split-aware
+    // CategorySpendQuery keeps its own t./ts.-qualified variant inline.
     public function apply(QueryBuilder $query, SpendQueryFilters $filters): QueryBuilder
     {
         return $query

@@ -7,25 +7,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 
+// source_format is persisted on every imported row, so the code rename has to
+// move the data with it. asn-csv stays as it is: that one really does name a
+// single bank's CSV layout. The fingerprint does not hash source_format, so
+// this cannot resurface duplicates on a later re-import.
 /**
- * Renames the two generic statement-format identifiers from their old
- * ASN-prefixed spelling to their bank-agnostic spelling, now that the
- * CAMT.053 (ISO 20022) and MT940 (SWIFT) parsers are no longer treated as
- * ASN-specific:
- *
- *   asn-camt053 -> camt053
- *   asn-mt940   -> mt940
- *
- * `source_format` is the wire identifier persisted on every imported row, so
- * existing data must be migrated in lock-step with the code rename. The
- * ASN-specific CSV format (`asn-csv`) is intentionally left untouched — it
- * describes ASN's particular CSV column layout, which is one bank's format
- * among many, not a generic standard.
- *
- * The transaction fingerprint does NOT include source_format (it hashes
- * user/account/dates/amount/currency/counterparty), so this rename cannot
- * create or resurface duplicates on a subsequent re-import.
- *
  * @see FingerprintComposer
  */
 return new class extends Migration

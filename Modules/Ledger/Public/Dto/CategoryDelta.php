@@ -6,8 +6,7 @@ namespace Modules\Ledger\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-// deltaMinor = currentMinor - previousMinor (positive = spent more);
-// used by the month-over-month movers list.
+// deltaMinor = current − previous, so positive means spent more.
 final class CategoryDelta extends Data
 {
     public function __construct(

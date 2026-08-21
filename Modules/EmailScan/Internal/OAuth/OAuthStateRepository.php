@@ -14,9 +14,7 @@ use Throwable;
 
 final class OAuthStateRepository
 {
-    // Maximum lifetime of an issued state entry in seconds (10 minutes
-    // covers a typical OAuth round-trip including an MFA prompt);
-    // consumeState rejects entries older than this.
+    // 10 minutes covers a typical OAuth round-trip including an MFA prompt.
     private const MAX_AGE_SECONDS = 600;
 
     public function __construct(
@@ -39,10 +37,8 @@ final class OAuthStateRepository
         return $state;
     }
 
-    // Single-use: the session entry is removed regardless of match
-    // outcome. Returns the stored inbox id on match (0 = new-inbox
-    // flow), null on any mismatch/missing/malformed/expired entry or
-    // a stored user_id that doesn't match the caller-supplied one.
+    // Single-use: the session entry is removed whatever the outcome. Returns
+    // the stored inbox id on a match, where 0 means the new-inbox flow.
     public function consumeState(string $provider, string $candidateState, int $currentUserId): ?int
     {
         $this->assertProvider($provider);
@@ -63,17 +59,15 @@ final class OAuthStateRepository
      */
     private function entryIsValid(array $entry, string $candidateState, int $currentUserId): bool
     {
-        // hash_equals avoids the timing-attack a naive `===` would
-        // expose; the comparison cost is constant in the prefix
-        // match length regardless of input difference position.
+        // hash_equals, not `===`: the comparison must not leak the position
+        // of the first differing byte through its running time.
         $storedState = $entry['state'] ?? null;
         if (! is_string($storedState) || $storedState === '' || ! hash_equals($storedState, $candidateState)) {
             return false;
         }
 
-        // User-id binding: a change of session-bound user between
-        // authorize and callback (shared browser, multi-user host)
-        // must not attach the inbox to the wrong account.
+        // A change of session-bound user between authorize and callback
+        // (shared browser) must not attach the inbox to the wrong account.
         $storedUserId = $entry['user_id'] ?? null;
         if (! is_int($storedUserId) || $storedUserId !== $currentUserId) {
             return false;
@@ -82,9 +76,8 @@ final class OAuthStateRepository
         return $this->issuedAtWithinWindow($entry['issued_at'] ?? null);
     }
 
-    // Issued-at expiry: reject state tokens older than the configured
-    // window so a long-lived session cannot replay a stale state value.
-    // Any missing/malformed/unparseable timestamp is treated as expired.
+    // Bounds replay of a stale state value from a long-lived session; a
+    // missing or unparseable timestamp counts as expired.
     private function issuedAtWithinWindow(mixed $issuedAtRaw): bool
     {
         if (! is_string($issuedAtRaw) || $issuedAtRaw === '') {
@@ -110,8 +103,7 @@ final class OAuthStateRepository
         ($this->session)()->put($this->pkceSessionKey($provider), $verifier);
     }
 
-    // Single-use like the state entry: the callback pulls the code_verifier to
-    // send on the token exchange, and it is gone from the session afterwards.
+    // Single-use like the state entry: gone from the session once read.
     public function consumePkceVerifier(string $provider): ?string
     {
         $this->assertProvider($provider);

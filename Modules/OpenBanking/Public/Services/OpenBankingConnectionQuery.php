@@ -83,9 +83,8 @@ final class OpenBankingConnectionQuery
         };
     }
 
-    // open_banking_connections.bank_display_name exists but is never
-    // populated by the callback controller, so the display name is derived
-    // from the institution id at read time instead.
+    // open_banking_connections.bank_display_name exists but is never populated,
+    // so the name is derived from the institution id at read time.
     private static function bankDisplayNameFor(string $institutionId): string
     {
         return match ($institutionId) {

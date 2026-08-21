@@ -9,10 +9,9 @@ return new class extends ModuleMigration
 {
     public function up(): void
     {
-        // Conflicts live on migration_staging_unmapped_items (item_type =
-        // 'conflict') rather than a table of their own, so preview and confirm
-        // keep one read path. Nullable throughout: only conflict rows populate
-        // them.
+        // Conflicts live here under item_type = 'conflict' rather than in a table
+        // of their own, so preview and confirm keep one read path. Nullable
+        // throughout, since only conflict rows populate them.
         $this->schema()->table('migration_staging_unmapped_items', static function (Blueprint $table): void {
             $table->string('entity_type')->nullable()->after('source_external_id');
             $table->string('field_name')->nullable()->after('entity_type');

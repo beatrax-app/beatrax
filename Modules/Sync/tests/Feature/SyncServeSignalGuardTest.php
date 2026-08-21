@@ -2,20 +2,14 @@
 
 declare(strict_types=1);
 
-/*
- * The desktop app runs `sync:serve` as a persistent NativePHP ChildProcess,
- * using the PHP binary NativePHP bundles — which ships WITHOUT ext-pcntl.
- * An unguarded `\Amp\trapSignal([\SIGTERM, \SIGINT])` is then an undefined
- * constant, so the command fatals the instant after it has bound the port and
- * the supervisor restarts it, forever. The symptom is the worst kind: a
- * listener process visible in `ps`, a port that never answers, and a console
- * repeating "Trying to access array offset on null" from the restart path.
- *
- * These are source assertions rather than a run, because the failure only
- * reproduces on a runtime this suite cannot create: the test process has
- * ext-pcntl, so calling the command here takes the trapping branch and proves
- * nothing about the branch that broke.
- */
+// The desktop runs `sync:serve` on the PHP binary NativePHP bundles, which ships
+// without ext-pcntl: an unguarded \Amp\trapSignal([\SIGTERM, \SIGINT]) is then an
+// undefined constant that fatals the instant after the port is bound, and the
+// supervisor restarts it forever. A listener in `ps`, a port that never answers.
+
+// Source assertions rather than a run: this test process HAS ext-pcntl, so
+// calling the command takes the trapping branch and proves nothing about the
+// branch that broke.
 
 $source = static fn (): string => (string) file_get_contents(
     base_path('Modules/Sync/Commands/SyncServeCommand.php'),

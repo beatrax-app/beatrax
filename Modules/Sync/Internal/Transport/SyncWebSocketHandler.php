@@ -30,6 +30,9 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
+/**
+ * @link ../../../../.docs/features/sync/peer-session-lifecycle.md
+ */
 final class SyncWebSocketHandler implements WebsocketClientHandler
 {
     // Caps attacker-paced unbounded receive/op_log growth from a peer's

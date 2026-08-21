@@ -11,10 +11,8 @@ use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 
-// lock.js posts here via fetch with keepalive:true, not
-// navigator.sendBeacon: sendBeacon cannot set headers, and
-// VerifyCsrfToken only accepts the token from a _token body field or
-// the X-CSRF-TOKEN/X-XSRF-TOKEN headers -- a beacon would always 419.
+// lock.js posts here with keepalive, not sendBeacon: a beacon cannot set
+// headers, so VerifyCsrfToken would 419 it every time.
 final readonly class LockEngageController
 {
     private const UNLOCK_GRACE_SECONDS = 10;
@@ -28,33 +26,30 @@ final readonly class LockEngageController
 
     public function __invoke(Session $session): Response
     {
-        // Authoritative half of the never-lock-a-lockless-user gate:
-        // withhold() here would strand the session on a PIN pad that no
-        // PIN opens. lock.js is gated too, but a stale tab or replayed
-        // request must not be able to reach past it.
+        // The authoritative half of the never-lock-a-lockless-user gate:
+        // lock.js checks too, but a stale tab must not reach past it onto a
+        // PIN pad no PIN opens.
         if (! $this->currentUser->isAuthenticated()
             || ! $this->lockConfig->isEnabled($this->currentUser->user()->id)) {
             return new Response('', 204);
         }
 
-        // A fire-and-forget engage can land AFTER the user has already
-        // unlocked — the idle timer posts with keepalive and does not wait —
-        // and locking then demands a second PIN for presence they just
-        // proved. Recent activity wins over a request already in flight.
+        // A keepalive engage does not wait, so it can land after the user has
+        // already unlocked. Recent activity wins over a request in flight,
+        // or they are asked for a second PIN.
         if ($this->unlockedWithinGrace()) {
             return new Response('', 204);
         }
 
-        // Idempotent: withhold() on an already-locked session is a
-        // harmless no-op, so a request racing an already-locked session
-        // (this route is allow-listed in AppLockMiddleware) is safe.
+        // withhold() on an already-locked session is a no-op, which is what
+        // makes this allow-listed route safe to race.
         $this->keyService->withhold($session);
 
         return new Response('', 204);
     }
 
-    // Wide enough to cover an in-flight request plus the unlock round trip,
-    // far short of any idle timeout the user can configure.
+    // Covers an in-flight request plus the unlock round trip, and stays far
+    // short of the shortest configurable idle timeout.
     private function unlockedWithinGrace(): bool
     {
         $lastActivity = $this->lockConfig->lastActivityAt($this->currentUser->user()->id);

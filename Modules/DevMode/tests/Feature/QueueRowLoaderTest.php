@@ -6,19 +6,6 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Modules\DevMode\Internal\Queue\QueueRowLoader;
 
-/*
- * QueueRowLoader — per-tab row reader extracted off QueueInspectorPage.
- *
- * Covers:
- *   - load('pending') maps jobs rows to the QueueRow shape (int id
- *     coerced to a string key, queue/attempts/payload carried).
- *   - load('failed') maps failed_jobs rows (uuid becomes both key and
- *     uuid; failed_at parsed to a CarbonImmutable).
- *   - load('batches') maps job_batches rows (name/pending/failed
- *     counts + options blob).
- *   - An unknown tab falls through to the pending mapping.
- */
-
 function queueRowLoaderSeedPending(string $queue = 'default'): int
 {
     return (int) DB::table('jobs')->insertGetId([

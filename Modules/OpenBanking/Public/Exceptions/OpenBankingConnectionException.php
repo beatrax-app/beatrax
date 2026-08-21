@@ -6,10 +6,8 @@ namespace Modules\OpenBanking\Public\Exceptions;
 
 use RuntimeException;
 
-// A connection row exists in a state a fetch cannot run against, or does not
-// exist for this user at all. Every one of these is a refusal to start rather
-// than a failure part-way through, so nothing has been written and the caller
-// can present the reason to the user without any cleanup.
+// Every one of these refuses before the fetch starts, so nothing has been
+// written and the caller can show the reason without any cleanup.
 final class OpenBankingConnectionException extends RuntimeException
 {
     public static function notFound(int $connectionId, int $userId): self
@@ -32,9 +30,8 @@ final class OpenBankingConnectionException extends RuntimeException
         );
     }
 
-    // The secrets file holds exactly one live session at a time, so a re-link
-    // to a different institution would otherwise pair one bank's credentials
-    // with another bank's account_uid.
+    // The secrets file holds one live session, so a re-link to a different
+    // institution would pair one bank's credentials with another's uid.
     public static function institutionMismatch(int $connectionId, string $connectionInstitution, string $sessionInstitution): self
     {
         return new self(

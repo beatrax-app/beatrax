@@ -9,20 +9,6 @@ use Modules\Core\Models\User;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for the five Phase 10 migrations:
- *
- *   1. forecast_scenarios          — table create + UNIQUE(user_id, name)
- *   2. forecast_scenario_mutations — JSON payload column + indexes
- *   3. forecast_shortfall_windows  — signed bigInteger lowest_balance_minor + buffer_used_minor
- *   4. forecast_runs               — non-nullable user_id, status lifecycle column
- *   5. accounts column-add         — three nullable forecast/opening-balance columns
- *
- * Locks the column shape, the index set, the signed-BIGINT round-trip,
- * the UNIQUE constraint, and the NOT-NULL user_id constraint on
- * forecast_runs.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -206,7 +192,7 @@ it('rejects an unknown kind on forecast_scenario_mutations via the kind-enum tri
         $this->db->connection()->table('forecast_scenario_mutations')->insert([
             'user_id' => $this->user->id,
             'forecast_scenario_id' => $scenarioId,
-            'kind' => 'definitely_not_allowed', // out-of-enum
+            'kind' => 'definitely_not_allowed',
             'target_series_id' => null,
             'payload' => json_encode(['kind' => 'definitely_not_allowed']),
             'created_at' => '2026-05-19 00:00:00',
@@ -221,8 +207,8 @@ it('rejects an unknown kind on forecast_scenario_mutations via the kind-enum tri
 });
 
 it('rejects NULL user_id on forecast_scenario_mutations (NOT NULL constraint)', function (): void {
-    // Seed a parent scenario so the FK is satisfiable; the NOT-NULL
-    // on user_id is what we're isolating.
+    // A satisfiable FK keeps the NOT NULL on user_id as the only thing that
+    // can fail the insert below.
     $scenarioId = $this->db->connection()->table('forecast_scenarios')->insertGetId([
         'user_id' => $this->user->id,
         'name' => 'parent',
@@ -292,9 +278,8 @@ it('adds three nullable forecast columns to accounts without breaking existing i
     expect($schema->hasColumn('accounts', 'opening_balance_minor'))->toBeTrue();
     expect($schema->hasColumn('accounts', 'opening_balance_as_of_date'))->toBeTrue();
 
-    // Insert an accounts row without the three new columns — must succeed
-    // because each column is nullable. This is the load-bearing
-    // backward-compat assertion for Phases 1-9.
+    // Every pre-existing accounts writer omits the three new columns, so this
+    // insert failing would mean the migration broke them.
     $accountId = $this->db->connection()->table('accounts')->insertGetId([
         'user_id' => $this->user->id,
         'name' => 'phase1-9 compat',
@@ -346,28 +331,24 @@ it('registers the documented indexes on the four new tables', function (): void 
             ->all();
     };
 
-    // forecast_scenarios: UNIQUE(user_id, name) + INDEX(user_id, created_at)
     $scenarios = $indexNamesFor('forecast_scenarios');
     expect(collect($scenarios)->first(static fn (string $name): bool => str_contains($name, 'user_id')
         && str_contains($name, 'name')))->not->toBeNull();
     expect(collect($scenarios)->first(static fn (string $name): bool => str_contains($name, 'user_id')
         && str_contains($name, 'created_at')))->not->toBeNull();
 
-    // forecast_scenario_mutations: INDEX(user_id, forecast_scenario_id) + INDEX(kind)
     $mutations = $indexNamesFor('forecast_scenario_mutations');
     expect(collect($mutations)->first(static fn (string $name): bool => str_contains($name, 'user_id')
         && str_contains($name, 'forecast_scenario_id')))->not->toBeNull();
     expect(collect($mutations)->first(static fn (string $name): bool => str_contains($name, 'forecast_scenario_mutations')
         && str_contains($name, 'kind')))->not->toBeNull();
 
-    // forecast_shortfall_windows: three indexes
     $shortfalls = $indexNamesFor('forecast_shortfall_windows');
     expect(collect($shortfalls)->first(static fn (string $name): bool => str_contains($name, 'account_id')
         && str_contains($name, 'starts_at')))->not->toBeNull();
     expect(collect($shortfalls)->first(static fn (string $name): bool => str_contains($name, 'scenario_id')))->not->toBeNull();
     expect(collect($shortfalls)->first(static fn (string $name): bool => str_contains($name, 'ends_at')))->not->toBeNull();
 
-    // forecast_runs: (user_id, scenario_id, horizon_days, status) + (user_id, started_at)
     $runs = $indexNamesFor('forecast_runs');
     expect(collect($runs)->first(static fn (string $name): bool => str_contains($name, 'horizon_days')
         && str_contains($name, 'status')))->not->toBeNull();

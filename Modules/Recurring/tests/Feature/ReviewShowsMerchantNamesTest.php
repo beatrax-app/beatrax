@@ -10,18 +10,8 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Recurring\Internal\Detectors\ExpenseSeriesDetector;
 use Modules\Recurring\Models\RecurringSeries;
 
-/*
- * /recurring/review is the one screen whose whole job is "do you recognise
- * this?" — and it listed the clustering key, which is lower-cased with the
- * punctuation stripped: `netflix international bv`, `asn bank gea`, and
- * `domino s pizza` with the apostrophe gone rather than escaped. The same
- * merchants read correctly as `Netflix International BV` on /transactions.
- *
- * `merchants` maps the normalised key back to the name as written and is
- * plaintext (rule evaluation joins on it), so the detector can read it with
- * no key material.
- */
-
+// detected_name used to be the clustering key, so the review screen showed
+// `domino s pizza`. merchants maps that key back to the name as written.
 function rsmnUser(): User
 {
     return User::query()->create([
@@ -164,8 +154,8 @@ it('heals the rows that already carry the normalised key', function (): void {
         'updated_at' => '2026-05-17 12:00:00',
     ]);
 
-    // The rows already in the database were written before the detector
-    // learned to do this, and no sweep revisits them.
+    // The rows already in the database were written before the detector learned
+    // to do this, and no sweep revisits them.
     $migration = require base_path('Modules/Recurring/Database/Migrations/2026_08_19_000002_show_merchant_names_on_recurring_review.php');
     $migration->up();
 
@@ -213,9 +203,9 @@ it('heals only the owner rows, never another account with the same key', functio
     $migration = require base_path('Modules/Recurring/Database/Migrations/2026_08_19_000002_show_merchant_names_on_recurring_review.php');
     $migration->up();
 
-    // The per-merchant loop scoped every UPDATE by user_id; the single
-    // correlated statement that replaced it has to scope the same way, or one
-    // household member's naming of a merchant renames the other's series.
+    // The per-merchant loop scoped every UPDATE by user_id; the single correlated
+    // statement that replaced it has to scope the same way, or one household
+    // member's naming of a merchant renames the other's series.
     expect($db->connection()->table('recurring_series')->where('id', $rows[$mine->id])->value('detected_name'))
         ->toBe('ASN Bank GEA')
         ->and($db->connection()->table('recurring_series')->where('id', $rows[$theirs->id])->value('detected_name'))

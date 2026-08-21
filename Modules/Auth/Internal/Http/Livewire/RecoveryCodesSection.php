@@ -13,8 +13,7 @@ use Modules\Auth\Public\Actions\RegenerateRecoveryCodesAction;
 use Modules\Core\Public\Contracts\CurrentUser;
 
 // Codes are stored hashed and shown once, so the only honest way back is to
-// mint a fresh set. Like RecoveryCodesDisplay, the plaintext goes through the
-// session rather than a public property, never the browser wire snapshot.
+// mint a fresh set. The plaintext travels by session, never a public property.
 final class RecoveryCodesSection extends Component
 {
     public function regenerate(

@@ -4,14 +4,6 @@ declare(strict_types=1);
 
 use Modules\OpenBanking\Internal\Tls\LoopbackTlsCertificate;
 
-/*
- * Unit coverage for the self-signed loopback certificate the
- * `open-banking:serve-tls` listener presents (19-VALIDATION follow-up:
- * the HTTPS-loopback TLS listener that unblocks the live Enable Banking
- * consent dance). The socket pump itself is exercised by manual UAT; here
- * we prove the certificate material is well-formed and loopback-scoped.
- */
-
 beforeEach(function (): void {
     $this->tlsDir = sys_get_temp_dir().'/ob-tls-test-'.bin2hex(random_bytes(6));
 });
@@ -39,7 +31,6 @@ it('generates a self-signed cert covering the loopback host and localhost', func
         ->and($parsed['subject']['CN'])->toBe('127.0.0.1')
         ->and($parsed['extensions']['subjectAltName'])->toContain('127.0.0.1')
         ->and($parsed['extensions']['subjectAltName'])->toContain('localhost')
-        // notAfter must be comfortably in the future.
         ->and($parsed['validTo_time_t'])->toBeGreaterThan(time() + 86400);
 });
 
@@ -79,16 +70,9 @@ it('regenerates when forced', function (): void {
     expect($secondSerial)->not->toBe($firstSerial);
 });
 
-/*
- * When a stored certificate is not reusable.
- *
- * ensure() only regenerates if stillValid() says no, so each way of saying no
- * is pinned separately. Getting this wrong is quiet in the worst way: the
- * serve command would present an expired or corrupt certificate, the browser
- * would refuse the redirect, and the consent dance would fail with nothing in
- * the logs pointing at the certificate.
- */
-
+// ensure() regenerates only when stillValid() says no, so each way of saying no
+// is pinned. Getting it wrong is quiet: the browser refuses the redirect and
+// the consent dance fails with nothing in the logs naming the certificate.
 it('regenerates rather than presenting a certificate it cannot read', function (string $replacement): void {
     $cert = new LoopbackTlsCertificate($this->tlsDir);
     $paths = $cert->ensure();
@@ -129,8 +113,7 @@ it('regenerates a certificate that expires within the day', function (): void {
 });
 
 it('refuses when the certificate directory cannot be created', function (): void {
-    // A plain file where the directory belongs: is_dir() is false and mkdir()
-    // cannot succeed, which is the pair of conditions the guard needs.
+    // A plain file where the directory belongs: is_dir() false, mkdir() failing.
     $path = sys_get_temp_dir().DIRECTORY_SEPARATOR.'ob-tls-blocked-'.bin2hex(random_bytes(6));
     file_put_contents($path, 'not a directory');
 

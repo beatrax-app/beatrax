@@ -19,15 +19,6 @@ use Modules\Position\Public\Services\PositionQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * PositionDigestCadenceTest (Req 5) — the test Req 5's acceptance criterion
- * literally names: "each asserted by a test that runs the schedule across a
- * simulated span". Exercises the full chain — EmitPositionDigestJob ->
- * PositionDigestDue -> PersistPositionDigest -> a notifications row — via
- * CarbonImmutable::setTestNow() time-travel, mirroring
- * BudgetNudgeTriggerTest's bntRunJob() shape.
- */
-
 function pdcUser(string $username): User
 {
     return User::query()->create([
@@ -38,7 +29,7 @@ function pdcUser(string $username): User
     ]);
 }
 
-/** Runs the digest job for $userId at the cadence, with delivery globally suppressed (D-43) — no test ever attempts a real OS notification. */
+// Delivery is suppressed so no case here attempts a real OS notification.
 function pdcRunDigest(int $userId, string $cadence): void
 {
     /** @var SuppressionEvaluator $suppression */
@@ -79,8 +70,8 @@ it('daily cadence emits exactly one digest row per day across a 7-day span, dedu
         pdcRunDigest((int) $user->id, 'daily');
     }
 
-    // Running twice on the SAME day (day 6 again) must still yield 7 rows —
-    // the date occurrence key dedupes via NotificationWriter's insertOrIgnore.
+    // A second run on day 6 still leaves 7 rows: the date occurrence key
+    // dedupes it at insert.
     pdcRunDigest((int) $user->id, 'daily');
 
     expect(pdcDigestCount((int) $user->id))->toBe(7);

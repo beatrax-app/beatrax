@@ -5,14 +5,8 @@ declare(strict_types=1);
 use Modules\Ingestion\Internal\Adapters\Ics\IcsAmountParser;
 use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 
-/*
- * Coverage for the nl_NL amount parser used by the ICS PDF adapter.
- * Empirical formats sourced from
- * Modules/Ingestion/tests/fixtures/ics/ics-sample-1.md "Dutch amount
- * formats" section: comma decimal separator (`50,00`), period
- * thousands separator (`1.416,50`), `€ ` prefix for EUR amounts,
- * ISO code suffix for foreign-currency amounts (`50,00 USD`).
- */
+// Every format below is copied from a real statement; the catalogue lives in
+// tests/fixtures/ics/ics-sample-1.md under "Dutch amount formats".
 
 it('parses a positive EUR amount with comma decimal: € 22,75 → 2275', function (): void {
     $parser = new IcsAmountParser;

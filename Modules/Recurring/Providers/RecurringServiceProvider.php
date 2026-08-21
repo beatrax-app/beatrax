@@ -41,9 +41,6 @@ use Modules\Recurring\Public\Services\FixedPaymentsViewQuery;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Psr\Log\LoggerInterface;
 
-// The dashboard fixed-payments card is rendered directly via the
-// @livewire('recurring.fixed-payments-card') directive on the dashboard
-// view, so this provider registers no composer for it.
 final class RecurringServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
@@ -62,10 +59,8 @@ final class RecurringServiceProvider extends ServiceProvider
             IncomeSeriesDetector::class,
         ], 'recurring.detector');
 
-        // Bind handle()'s resolution explicitly: it takes `iterable
-        // $detectors`, which Container::call cannot auto-resolve. The extra
-        // args let both real dispatch origins reach handle() with their
-        // true per-run context (see DetectRecurringSeriesJob's @link).
+        // handle() takes `iterable $detectors`, which Container::call cannot
+        // auto-resolve, so its resolution is bound explicitly.
         $this->app->bindMethod(
             [DetectRecurringSeriesJob::class, 'handle'],
             static function (DetectRecurringSeriesJob $job, Container $c): void {
@@ -111,10 +106,6 @@ final class RecurringServiceProvider extends ServiceProvider
         $this->registerTopNavBadgeComposer();
     }
 
-    // Resolved through $this->app->make() to keep the DI-only invariant
-    // visible at the call site; the global view() helper is forbidden.
-    // The composer only fires when the top-nav view actually renders, at
-    // most once per HTTP request that surfaces the nav.
     private function registerTopNavBadgeComposer(): void
     {
         $app = $this->app;

@@ -99,9 +99,8 @@ final class CalendarPage extends Component
             return;
         }
 
-        // The shape regex alone admits impossible dates that would make
-        // CarbonImmutable::parse() throw — validate the calendar date
-        // strictly before parsing.
+        // The shape regex admits impossible dates like 2026-02-31, which would
+        // make CarbonImmutable::parse() throw.
         [$y, $m, $d] = array_map(intval(...), explode('-', $date));
         if (! checkdate($m, $d, $y)) {
             return;
@@ -116,8 +115,7 @@ final class CalendarPage extends Component
 
         $this->selectedDay = $date;
 
-        // On phone width the bottom sheet handles its own show; the JS
-        // event triggers the <x-bottom-sheet name="day-detail"> open state.
+        // Consumed by <x-bottom-sheet name="day-detail"> at phone width.
         $this->dispatch('open-sheet', name: 'day-detail');
     }
 
@@ -137,8 +135,6 @@ final class CalendarPage extends Component
         }
     }
 
-    // Independent from the entries toggle above — the two controls never
-    // affect each other.
     public function toggleBalanceAccount(int $accountId, DatabaseManager $db, CurrentUser $currentUser): void
     {
         $ownedIds = $this->fetchOwnedAccountIds($db, $currentUser->id());
@@ -159,9 +155,7 @@ final class CalendarPage extends Component
     {
         $ownedIds = $this->fetchOwnedAccountIds($db, $currentUser->id());
 
-        // Public Livewire array properties are client-controlled — filter to
-        // ints and intersect against owned accounts before persisting, so
-        // the DB never stores attacker-shaped payloads or foreign ids.
+        // Client-controlled input, so the DB never stores a foreign id.
         $this->visibleAccountIds = self::sanitizeAccountIds($this->visibleAccountIds, $ownedIds);
         $this->balanceAccountIds = self::sanitizeAccountIds($this->balanceAccountIds, $ownedIds);
 
@@ -191,9 +185,9 @@ final class CalendarPage extends Component
 
         $accountRoster = self::buildAccountRoster($accounts);
 
-        // A user with zero accounts has nothing to filter on — pass null
-        // ("no filter") so series not yet linked to any account still
-        // render, since an explicit [] would otherwise mean deselect-all.
+        // With zero accounts there is nothing to filter on, and [] would read
+        // as deselect-all — null is the only value that still shows unlinked
+        // series.
         $days = $calendarQuery->forMonth(
             $user,
             $year,
@@ -222,10 +216,6 @@ final class CalendarPage extends Component
 
         return $view;
     }
-
-    // -------------------------------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------------------------------
 
     /**
      * @param  Collection<int, stdClass>  $accounts
@@ -304,9 +294,8 @@ final class CalendarPage extends Component
             ? $this->month
             : $now->month;
 
-        // Also clamps to the 12-month forward ceiling so a tampered
-        // ?year=&month= URL cannot render a month beyond the forecast
-        // horizon — the same invariant nextMonth() enforces.
+        // Clamps to the same ceiling nextMonth() enforces, so a tampered
+        // ?year=&month= cannot render past the forecast horizon.
         $ceiling = $now->addMonths(self::HORIZON_MONTHS);
         if ($year > $ceiling->year || ($year === $ceiling->year && $month > $ceiling->month)) {
             $year = $ceiling->year;
@@ -346,9 +335,8 @@ final class CalendarPage extends Component
         return $ids;
     }
 
-    // Typed array<array-key, mixed> deliberately: public Livewire array
-    // properties are client-controlled and their docblock list<int> shape
-    // cannot be trusted at this boundary.
+    // array<array-key, mixed> deliberately: a public Livewire array property is
+    // client-controlled, so its declared list<int> shape is not trustworthy.
     /**
      * @param  array<array-key, mixed>  $ids
      * @param  list<int>  $ownedIds

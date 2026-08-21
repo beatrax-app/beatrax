@@ -32,42 +32,35 @@ final readonly class AppLockMiddleware
         'auth.lock.engage',
         'mobile.lock',
         'logout',
-        // The onboarding ceremony is driven entirely by wire:poll, and a
-        // Livewire request deliberately does not count as activity below — so
-        // the idle timer expired while the user sat watching a working screen
-        // and the PIN dropped over it. These screens show no financial data.
+        // Driven entirely by wire:poll, which does not count as activity, so
+        // the PIN dropped over a working screen. No financial data here.
         'mobile.pair',
         'mobile.setup',
         'mobile.setup.done',
     ];
 
-    // The route name, never the `X-Livewire` header: the Android runtime's
-    // persistent process leaks that header across every later request, which
-    // froze `last_activity_at`. See the auth architecture doc.
+    /**
+     * @link ../../../../../.docs/features/auth/architecture.md#why-the-mobile-runtime-forced-two-changes-here
+     */
     private const LIVEWIRE_UPDATE_ROUTE = '*livewire.update';
 
-    // 60s balances "settings change takes effect quickly" against DB load:
-    // the per-request write of last_activity_at keeps the DB fresh
-    // independent of this cache anyway.
+    // Only the config is cached; last_activity_at is written per request, so
+    // a longer TTL would buy nothing and delay a settings change.
     private const SESSION_CONFIG_TTL_SECONDS = 60;
 
-    // Public so a successful unlock can invalidate it. The cache holds
-    // last_activity_at, and a stale copy re-locked the session on the very
-    // next request — making the user enter their PIN twice.
+    // Public so an unlock can invalidate it: a stale copy re-locked the
+    // session on the next request and asked for the PIN twice.
     public const SESSION_CONFIG_CACHE = 'beatrax_lock_config_cache';
 
-    // The last page this user was actually on, kept so an unlock can restore
-    // it even when the lock was engaged from the client.
+    // Restorable across a lock engaged from the client, which never reaches
+    // this middleware.
     public const SESSION_LAST_PAGE = 'beatrax_lock_last_page';
 
-    // When the client last reported leaving the foreground, as a unix
-    // timestamp. Written by lock.js the moment it happens, so the elapsed
-    // time can be judged here rather than by a timer in the page.
+    // Written by lock.js on backgrounding, as a unix timestamp.
     public const SESSION_BACKGROUNDED_AT = 'beatrax_lock_backgrounded_at';
 
-    // Mirrors lock.js's GRACE_MS. Its timer is the fast path where it runs at
-    // all: an Android WebView is suspended while backgrounded, so the timeout
-    // never fires there and only this clock can measure the absence.
+    // Mirrors lock.js's GRACE_MS, and is the only clock that works on Android:
+    // a suspended WebView never fires the page timer.
     private const BACKGROUND_GRACE_SECONDS = 30;
 
     public function __construct(
@@ -100,10 +93,8 @@ final readonly class AppLockMiddleware
     {
         $lockedConfig = $this->resolveConfig($session, $userId);
 
-        // A locked session whose user has no enabled lock can never be
-        // opened -- no PIN hash to verify against, no enrolled biometric.
-        // Release it rather than redirect, so a session locked before the
-        // lock was turned off is not stranded.
+        // Nothing left to verify against, so redirecting would strand a
+        // session that was locked before the lock was turned off.
         if ($lockedConfig === null || ! $lockedConfig['lock_enabled']) {
             $this->lockState->clearStaleLock($session);
 
@@ -126,9 +117,8 @@ final readonly class AppLockMiddleware
             return $this->pass($request, $next);
         }
 
-        // Before the idle check: a request proves the app is in the
-        // foreground, so the marker is spent either way — it either locks now
-        // or is cleared as a return within grace.
+        // Ahead of the idle check because the marker is spent either way:
+        // this request itself proves the app is back in the foreground.
         if ($this->backgroundGraceExpired($session)) {
             return $this->lockForIdle($request, $next, $session, $routeName);
         }
@@ -143,19 +133,16 @@ final readonly class AppLockMiddleware
         return $this->pass($request, $next);
     }
 
-    // Turns a just-completed unlock into recorded activity, before anything
-    // reads the idle clock. Proving presence and then being told the session
-    // has been idle too long is the same contradiction whichever way it
-    // arrives — a re-lock here, or a racing engage POST at the controller.
+    // Runs before anything reads the idle clock: a user who just proved
+    // presence must not then be told the session went idle.
     private function settleUnlockActivity(Session $session, int $userId): void
     {
         if ($session->pull(LockStateManager::SESSION_UNLOCK_ACTIVITY_PENDING, false) !== true) {
             return;
         }
 
-        // Both halves matter. The row is what LockEngageController's grace
-        // window consults, and the cached copy still carries the stale
-        // timestamp the lock screen was rendered with.
+        // Cache and row both: LockEngageController's grace window reads the
+        // row, and the cache still holds the timestamp the lock rendered with.
         $session->forget(self::SESSION_CONFIG_CACHE);
 
         $this->db->connection()
@@ -164,10 +151,9 @@ final readonly class AppLockMiddleware
             ->update(['last_activity_at' => $this->clock->now()->toDateTimeString()]);
     }
 
-    // The page to come back to after an unlock. The idle timer locks from
-    // JAVASCRIPT and goes straight to the lock screen, so the middleware never
-    // sees the request that would have set `url.intended` — and every idle
-    // unlock dropped the user on the dashboard.
+    // A client-side idle lock goes straight to the lock screen, so the
+    // middleware never sees the request that would set `url.intended` --
+    // and every idle unlock landed on the dashboard.
     private function rememberPage(Request $request, Session $session, ?string $routeName): void
     {
         if ($this->isExemptRoute($routeName) || ! $this->isRestorablePage($request)) {
@@ -177,9 +163,8 @@ final readonly class AppLockMiddleware
         $session->put(self::SESSION_LAST_PAGE, $request->fullUrl());
     }
 
-    // Only a plain GET page is worth restoring. Replaying a POST after an
-    // unlock would re-submit it, and the Livewire endpoint is not a page a
-    // user can be returned to at all.
+    // Restoring a POST would re-submit it, and the Livewire endpoint is not
+    // a page anyone can be returned to.
     private function isRestorablePage(Request $request): bool
     {
         return $request->isMethod('GET')
@@ -187,17 +172,15 @@ final readonly class AppLockMiddleware
             && ! $request->expectsJson();
     }
 
-    // The router's current route, not the request handed in: a Livewire update
-    // re-runs this middleware against a synthesised request wearing the
-    // original page's path and method, which looks like an ordinary GET.
+    // The router's route, not the request: a Livewire update re-runs this
+    // middleware against a synthesised request that looks like a plain GET.
     private function isLivewireUpdate(): bool
     {
         return $this->routes->currentRouteNamed(self::LIVEWIRE_UPDATE_ROUTE);
     }
 
-    // Whether the app was backgrounded longer ago than the grace window. The
-    // marker is PULLED, not read: any request at all means the app is in the
-    // foreground again, so it has served its purpose on either branch.
+    // Pulled, not read: any request at all means the app is in the foreground
+    // again, so the marker is spent on either branch.
     private function backgroundGraceExpired(Session $session): bool
     {
         $markedAt = $session->pull(self::SESSION_BACKGROUNDED_AT);
@@ -237,9 +220,8 @@ final readonly class AppLockMiddleware
         return $this->pass($request, $next);
     }
 
-    // Sends the user to the lock screen, remembering where they were so
-    // unlocking returns them there instead of the dashboard. LockScreen
-    // already pulls `url.intended`; nothing ever put anything in it.
+    // LockScreen has always pulled `url.intended`; this is the only writer of
+    // it, so before this the unlock landed on the dashboard.
     private function redirectToLock(Request $request, Session $session): Response
     {
         if ($this->isRestorablePage($request)) {
@@ -249,27 +231,21 @@ final readonly class AppLockMiddleware
         $lockUrl = $this->urls->route($this->lockRouteName());
 
         if ($this->isLivewireUpdate()) {
-            // Thrown, not returned: Livewire's own pipeline stops for a
-            // RedirectResponse and discards every other response before
-            // running the action, so returning would have served the lock
-            // answer and done the thing the lock exists to prevent.
+            // Thrown, not returned: Livewire's pipeline discards a non-redirect
+            // response and runs the action anyway -- the thing the lock exists
+            // to prevent.
             throw new HttpResponseException($this->livewireLockResponse($lockUrl));
         }
 
         return new RedirectResponse($lockUrl);
     }
 
-    // The lock answer for a Livewire XHR, which cannot be a redirect: the
-    // client reads the body as JSON, and on Android neither of its escape
-    // routes from a 302 is available, so the lock page's HTML reached
-    // JSON.parse and left the app unusable. See the auth architecture doc.
-
-    // `components: []` is what makes this inert rather than merely different:
-    // Livewire iterates it to find each message's payload, so empty morphs and
-    // throws nothing. The redirect travels in the body, the one part of the
-    // answer no transport in this stack rewrites.
+    // `components: []` is what makes this inert: Livewire iterates it to find
+    // each message's payload, so empty morphs and throws nothing. The redirect
+    // rides in the body, the one part no transport in this stack rewrites.
     /**
      * @see resources/js/lock.js — the interceptor that acts on this.
+     * @link ../../../../../.docs/features/auth/architecture.md#why-the-mobile-runtime-forced-two-changes-here
      */
     private function livewireLockResponse(string $lockUrl): JsonResponse
     {
@@ -279,10 +255,8 @@ final readonly class AppLockMiddleware
         ]);
     }
 
-    // The mobile runtime has its own full-screen lock screen with safe-area
-    // chrome; `auth.lock` is the desktop one, which renders as a narrow
-    // centred card. Nothing routed here before, so a locked phone always got
-    // the desktop screen — a small panel with margins instead of a lock.
+    // `auth.lock` is the desktop card; without this a locked phone rendered it
+    // as a small centred panel instead of a full-screen lock.
     private function lockRouteName(): string
     {
         return UserDataPathService::isMobileRuntime() && $this->routes->has('mobile.lock')
@@ -290,9 +264,8 @@ final readonly class AppLockMiddleware
             : 'auth.lock';
     }
 
-    // Exempt routes (lock screen, logout) don't count as activity, and
-    // neither do Livewire update requests: wire:poll traffic would otherwise
-    // hold the idle timer open forever.
+    // Livewire updates are not activity: wire:poll traffic would hold the idle
+    // timer open forever.
     private function recordActivity(Request $request, Session $session, int $userId, ?string $routeName): void
     {
         if ($this->isExemptRoute($routeName) || $this->isLivewireUpdate()) {
@@ -305,8 +278,6 @@ final readonly class AppLockMiddleware
             ->where('user_id', $userId)
             ->update(['last_activity_at' => $now->toDateTimeString()]);
 
-        // Update the cached last_activity_at so the next request within
-        // the TTL window uses the refreshed timestamp without a DB read.
         $this->refreshCachedActivity($session, $now);
     }
 
@@ -330,8 +301,7 @@ final readonly class AppLockMiddleware
     {
         $cached = $session->get(self::SESSION_CONFIG_CACHE);
 
-        // Uses the injected Clock (not raw time()) so the TTL window honours
-        // time-travel in tests like every other time read here.
+        // The injected Clock, not time(), so the TTL honours test time-travel.
         $now = $this->clock->now()->getTimestamp();
 
         if (is_array($cached)

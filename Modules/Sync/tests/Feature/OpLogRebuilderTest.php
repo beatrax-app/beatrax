@@ -15,23 +15,10 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
 uses(RefreshDatabase::class);
 
-/*
- * CR-04 / CR-03 / IN-01: real coverage for OpLogRebuilder::rebuild().
- *
- * Before this test no test instantiated OpLogRebuilder or called rebuild(),
- * and the class docblock claimed a grep-guard test that did not exist. This
- * file:
- *   - drives rebuild() end-to-end and asserts the rebuilt state equals the
- *     incrementally-merged state for an op-log that includes an originally
- *     IMPORTED row (preserved) AND an op-log-CREATED row (recreated);
- *   - asserts FK-safe deletion does not abort under foreign_keys=ON;
- *   - asserts triggers are restored after rebuild;
- *   - asserts the pair-link cascade reclassification SURVIVES a full rebuild
- *     (CR-03 — the compensating op now carries a real monotonic HLC and is
- *     allow-listed past the signature gate);
- *   - enforces the "DROP TRIGGER only in the rebuilder / trigger-owning
- *     migrations" contract via a real grep arch test (IN-01).
- */
+// A rebuild has to land on exactly what incremental replay produced, for
+// imported rows it preserves and op-log-created rows it deletes and recreates
+// alike. Nothing instantiated the rebuilder before this file, and its own
+// docblock cited a guard test that did not exist.
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-06-15 10:00:00');
@@ -48,8 +35,6 @@ afterEach(function (): void {
 });
 
 /**
- * Seeds a user + account + import_run and returns [userId, accountId, runId].
- *
  * @return array{0: int, 1: int, 2: int}
  */
 function rebuildSeedBase(DatabaseManager $db, string $suffix): array
@@ -111,9 +96,6 @@ function rebuildSeedImportedTxn(DatabaseManager $db, int $userId, int $accountId
     ]);
 }
 
-/**
- * Builds a signed OpLogEntry.
- */
 function rebuildSignedEntry(
     DeviceKeySigner $signer,
     string $sk,
@@ -146,7 +128,6 @@ it('rebuild() preserves an imported row and reproduces its SET edits — rebuilt
     $db = $this->db;
     [$userId, $accountId, $runId] = rebuildSeedBase($db, 'imp');
 
-    // An imported (immutable, op-logless) transaction.
     $txnId = rebuildSeedImportedTxn($db, $userId, $accountId, $runId);
 
     $catId = $db->connection()->table('categories')->insertGetId([
@@ -154,7 +135,6 @@ it('rebuild() preserves an imported row and reproduces its SET edits — rebuilt
         'kind' => 'expense', 'created_at' => '2026-06-15 00:00:00', 'updated_at' => '2026-06-15 00:00:00',
     ]);
 
-    // Incremental merge: a user SET edit of category_id + note on the imported row.
     $deviceKeys = ['device-rebuild' => $this->pkHex];
     $replayer = new OpLogReplayer($db, $deviceKeys);
     $replayer->replay([
@@ -162,16 +142,14 @@ it('rebuild() preserves an imported row and reproduces its SET edits — rebuilt
         rebuildSignedEntry($this->signer, $this->sk, $userId, 'transactions', $txnId, 'note', json_encode('hello', JSON_THROW_ON_ERROR), OpType::Set, 1001),
     ], $userId);
 
-    // Snapshot the incremental state.
     $incremental = $db->connection()->table('transactions')->where('id', $txnId)->first();
     expect((int) $incremental->category_id)->toBe($catId);
     expect($incremental->note)->toBe('hello');
 
-    // Full rebuild — covered tables limited to transactions for a focused assertion.
     $rebuilder = new OpLogRebuilder($db, $replayer, new MergeRulesRegistry, ['transactions']);
     $rebuilder->rebuild($userId);
 
-    // The imported row STILL exists (was preserved, not wiped) and carries its edits.
+    // The imported row is preserved rather than wiped, and keeps its edits.
     $rebuilt = $db->connection()->table('transactions')->where('id', $txnId)->first();
     expect($rebuilt)->not->toBeNull();
     expect((int) $rebuilt->category_id)->toBe($catId);
@@ -184,17 +162,9 @@ it('rebuild() recreates an op-log-CREATED row from CreateRow ops (CR-04)', funct
     $db = $this->db;
     [$userId] = rebuildSeedBase($db, 'cr');
 
-    // CreateRow ops assemble a categorization_rules row from the fields the
-    // MergeRulesRegistry replicates for the redesigned (multi-condition)
-    // parent table: priority, combinator, active, hits_count. The flat
-    // field/match/value/category_id columns moved to rule_conditions /
-    // rule_actions in the 2026_07_06 redesign and no longer exist here.
-    //
-    // The pk is the numeric row id, carried as an explicit `id` field op. The
-    // redesign dropped the old UNIQUE (user_id, field, match, value) that used
-    // to make re-applied CreateRows idempotent; idempotency now comes from the
-    // PK via insertOrIgnore, and rebuild's createdRowPks (numeric-pk only)
-    // deletes the op-log-created row by that id before recreating it.
+    // Idempotency comes from the primary key now: the natural-key UNIQUE that
+    // used to make a re-applied create harmless is gone, so the pk travels as
+    // an explicit id field and the rebuild deletes by that id before recreating.
     $pk = 8801;
     $deviceKeys = ['device-rebuild' => $this->pkHex];
     $replayer = new OpLogReplayer($db, $deviceKeys);
@@ -211,7 +181,6 @@ it('rebuild() recreates an op-log-CREATED row from CreateRow ops (CR-04)', funct
     $beforeCount = $db->connection()->table('categorization_rules')->where('user_id', $userId)->where('id', $pk)->count();
     expect($beforeCount)->toBe(1);
 
-    // Rebuild: the created row is deleted then recreated from its CreateRow ops.
     $rebuilder = new OpLogRebuilder($db, $replayer, new MergeRulesRegistry, ['categorization_rules']);
     $rebuilder->rebuild($userId);
 
@@ -244,21 +213,19 @@ it('pair-link cascade reclassification survives a full rebuild (CR-03)', functio
     $db = $this->db;
     [$userId, $accountId, $runId] = rebuildSeedBase($db, 'cascade');
 
-    // Two paired transfer rows (imported), with distinct natural keys.
     $txnA = rebuildSeedImportedTxn($db, $userId, $accountId, $runId, 'transfer_out', -5000, 1);
     $txnB = rebuildSeedImportedTxn($db, $userId, $accountId, $runId, 'transfer_in', 5000, 2);
     $db->connection()->table('transactions')->where('id', $txnA)->update(['pair_transaction_id' => $txnB]);
     $db->connection()->table('transactions')->where('id', $txnB)->update(['pair_transaction_id' => $txnA]);
 
-    // Incremental: tombstone A → cascade reclassifies B (transfer_in → income).
+    // Tombstoning one leg reclassifies the survivor: it is no longer a transfer.
     $replayer = new OpLogReplayer($db, ['device-rebuild' => $this->pkHex]);
     $tomb = rebuildSignedEntry($this->signer, $this->sk, $userId, 'transactions', $txnA, '__tombstone__', null, OpType::DeleteTombstone, 2000);
     $replayer->replay([$tomb], $userId);
 
-    // B reclassified incrementally.
     expect($db->connection()->table('transactions')->where('id', $txnB)->value('type'))->toBe('income');
 
-    // A compensating op was persisted with a real (non-zero) HLC that sorts after the tombstone.
+    // The compensating op carries a real HLC that sorts after the tombstone.
     $comp = $db->connection()->table('op_log_entries')
         ->where('user_id', $userId)
         ->where('device_id', OpLogReplayer::SYSTEM_CASCADE_DEVICE_ID)
@@ -269,14 +236,13 @@ it('pair-link cascade reclassification survives a full rebuild (CR-03)', functio
     expect((int) $comp->hlc_l)->toBe(2000);
     expect((int) $comp->hlc_c)->toBe(1); // tombstone counter + 1
 
-    // Full rebuild: B must STAY reclassified (the old [0,0] compensating op
-    // would have been quarantined and B would revert to transfer_in).
+    // The rebuild must keep the reclassification: a compensating op at HLC
+    // [0,0] sorted first and the survivor reverted on every rebuild.
     $rebuilder = new OpLogRebuilder($db, $replayer, new MergeRulesRegistry, ['transactions']);
     $rebuilder->rebuild($userId);
 
     expect($db->connection()->table('transactions')->where('id', $txnB)->value('type'))->toBe('income');
 
-    // The cascade op is NOT quarantined as missing_device_key/forged_signature.
     $badQuarantine = $db->connection()->table('op_log_quarantine')
         ->where('user_id', $userId)
         ->where('device_id', OpLogReplayer::SYSTEM_CASCADE_DEVICE_ID)
@@ -314,14 +280,10 @@ it('confines DROP TRIGGER to the rebuilder and trigger-owning migrations (IN-01 
 });
 
 it('re-derives the full-text index after a rebuild instead of leaving it behind', function (): void {
-    /*
-     * The rebuild deletes and replays every covered row inside one
-     * transaction, deliberately without a search writer so FTS writes are
-     * suppressed there. Nothing put them back afterwards, so every rebuilt
-     * row lost its search doc — on a real phone 18 of 141 transactions had
-     * become unfindable, and the only symptom was search quietly returning
-     * fewer results than the screen showed.
-     */
+    // The rebuild suppresses search writes inside its transaction, and nothing
+    // put them back afterwards: every rebuilt row lost its search doc. On a
+    // real phone 18 of 141 transactions simply stopped being findable, with no
+    // symptom but fewer results than the screen showed.
     $searchWriter = new class implements SearchIndexWriterContract
     {
         /** @var list<int> */

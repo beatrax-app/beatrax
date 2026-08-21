@@ -12,17 +12,8 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Enums\Locale;
 use Symfony\Component\HttpFoundation\Response;
 
-/*
- * Feature tests for language selection (G7): the SetLocale middleware's
- * resolution of the active locale from user / session / browser signals,
- * and the Settings switcher's persistence of the choice onto users.locale
- * (including the "auto" → NULL mapping) plus Dutch rendering.
- */
-
-// Runs SetLocale against a request and returns the locale it left on the
-// translator. The translator is reset to English first so each assertion
-// starts from a known state. Resolved via $this->app (no app() global,
-// per the project's DI-only rule).
+// The translator is reset to English first, so every case starts from a known
+// state rather than from whatever the case before it left behind.
 function localeAfterMiddleware(Request $request): string
 {
     /** @var Translator $translator */
@@ -72,7 +63,6 @@ it('detects every shipped language from a guest Accept-Language header', functio
 it('honours a stored user override above the browser preference', function (): void {
     $this->actingAs(makeLocaleUser('nl'));
 
-    // Browser says English, but the user pinned Dutch — the override wins.
     expect(localeAfterMiddleware(localeBrowserRequest('en')))->toBe('nl');
 });
 

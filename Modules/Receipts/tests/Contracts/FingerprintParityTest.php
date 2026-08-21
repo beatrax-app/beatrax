@@ -17,35 +17,10 @@ use Modules\Receipts\Internal\Matchers\PaypalReceiptMatcher;
 use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
 
-/**
- * LOAD-BEARING contract: receipts and CSVs MUST produce
- * fingerprint-equivalent transactions.
- *
- * The cross-format dedup mechanism inherited from Phase 2 (the
- * ENRICHED disposition in FingerprintStage::classify) requires that
- * a PayPal CSV row and its corresponding PayPal `.eml` receipt hash
- * to the same fingerprint. If they don't, every receipt import
- * silently duplicates the matching CSV rows — the cross-format dedup
- * pay-off breaks.
- *
- * The 'paypal' dataset row pairs the PayPal Activity Download CSV
- * with the matching PayPal `.eml` receipt.
- *
- * The 'ics' dataset row pairs the Mijn ICS tiny consumer-portal PDF
- * with a matching ICS `.eml` receipt. ICS has no CSV ingestion path
- * (the consumer portal is PDF-only), so the PDF row is the only
- * available twin source. The receipt fixture is intentionally aligned
- * with the single row the tiny PDF contains (`SYNTHETIC ICS TINY`,
- * EUR 1,00, 12 apr 2026) so both paths converge bit-for-bit at
- * FingerprintComposer.compose.
- *
- * The 'google-play' row still skips with a wave-pointer message —
- * Google Play has no CSV/PDF twin in v1 (no second ingestion path
- * exists), so a same-row fingerprint parity assertion is not
- * meaningful. The matcher's output flows through the same
- * NormalizeStage as every other receipt so behaviour is exercised
- * via the matcher unit tests instead.
- */
+// A CSV row and its .eml receipt have to hash to the same fingerprint: the
+// ENRICHED disposition in FingerprintStage::classify is what makes cross-format
+// dedup work, and without parity every receipt import silently duplicates the
+// CSV rows it matches.
 dataset('fingerprintParityPairs', [
     'paypal' => [
         'emlPath' => __DIR__.'/../fixtures/paypal/current-receipt.eml',
@@ -55,11 +30,9 @@ dataset('fingerprintParityPairs', [
     ],
     'ics' => [
         'emlPath' => __DIR__.'/../fixtures/ics/current-receipt.eml',
-        // Reuses the Phase 3 tiny ICS PDF fixture as the twin source.
-        // ICS has no CSV ingestion path — PDF is the only sibling.
-        // Compute the path lexically from the test file location so it
-        // resolves at dataset-build time (before the app has booted —
-        // base_path() is unavailable here).
+        // ICS has no CSV ingestion path, so the tiny PDF is the only twin
+        // source. The path is lexical because datasets are built before the
+        // app boots, where base_path() does not exist yet.
         'csvPath' => __DIR__.'/../../../Ingestion/tests/fixtures/ics/ics-sample-tiny.pdf',
         'matcherKey' => 'ics-receipt',
         'wave' => 2,
@@ -72,11 +45,8 @@ dataset('fingerprintParityPairs', [
     ],
 ]);
 
-/**
- * Minimal in-test AccountResolver: returns a fixed KnownAccount for
- * any IBAN. The fingerprint tuple uses accountId so as long as both
- * sides receive the same id the hash collapses.
- */
+// The fingerprint tuple includes accountId, so both sides only have to agree on
+// the id for the two hashes to collapse onto each other.
 final class FixedPaypalAccountResolver implements AccountResolver
 {
     public function __construct(private readonly int $accountId) {}
@@ -87,14 +57,8 @@ final class FixedPaypalAccountResolver implements AccountResolver
     }
 }
 
-/**
- * AccountResolver double for the ICS-PDF arm of the parity test. The
- * IcsPdfAdapter calls `$accounts->resolve($ownIban)` (fire-and-forget)
- * once before the row iteration begins. The production
- * EloquentAccountResolver returns an `AccountResolution` sum-type; the
- * test only needs a non-throwing implementation that satisfies the
- * `AccountResolver` interface contract.
- */
+// IcsPdfAdapter resolves the own-IBAN once before it starts iterating and does
+// nothing with the answer, so a non-throwing implementation is all this arm needs.
 final class FixedIcsAccountResolver implements AccountResolver
 {
     public function __construct(private readonly int $accountId) {}
@@ -121,11 +85,6 @@ it('produces equivalent fingerprints from receipt and CSV for the same logical t
     }
 
     if ($matcherKey === 'google-play-receipt') {
-        // Google Play has no second ingestion path in v1 — no CSV/PDF
-        // twin exists, so a same-row fingerprint parity assertion is
-        // not meaningful. Matcher behaviour is covered by its unit
-        // tests; the downstream NormalizeStage path is exercised by
-        // every other receipt arm.
         $this->markTestSkipped(
             "Matcher '{$matcherKey}' has no twin ingestion path in v1 — "
             .'parity covered by GooglePlayReceiptMatcherTest + the shared '
@@ -144,7 +103,6 @@ it('produces equivalent fingerprints from receipt and CSV for the same logical t
         $accountId = $seeded['paypalAccount']->id;
         $accounts = new FixedPaypalAccountResolver($accountId);
 
-        // Receipt-side: matcher → adapter → SourceTransactionDto → normalize.
         $matcher = new PaypalReceiptMatcher(new EmlMimeReader, app(BaseCurrency::class));
         $rawEml = (string) file_get_contents($emlPath);
         $matchOutcome = $matcher->match($rawEml);
@@ -154,7 +112,6 @@ it('produces equivalent fingerprints from receipt and CSV for the same logical t
         $receiptSource = (new ReceiptSourceAdapter)->toSourceDto($matchOutcome->parsed, sourceRowIndex: 0);
         $receiptCanonical = $normalize->run($receiptSource, $accountId, $user, $importRunId, 'eml');
 
-        // CSV-side: adapter parse → first SourceTransactionDto → normalize.
         /** @var PaypalCsvAdapter $csvAdapter */
         $csvAdapter = $this->app->make(PaypalCsvAdapter::class);
         /** @var SourceTransactionDto|null $csvSource */
@@ -179,10 +136,9 @@ it('produces equivalent fingerprints from receipt and CSV for the same logical t
         return;
     }
 
-    // ICS arm — receipt vs ICS PDF (the only available twin source
-    // since ICS has no CSV ingestion path). The fixture pair is
-    // deliberately aligned: the receipt's merchant + amount + booked
-    // date map to the SYNTHETIC ICS TINY row the tiny PDF contains.
+    // The ICS fixtures are deliberately aligned: the receipt's merchant, amount
+    // and booked date map onto the single row the tiny PDF contains, which is
+    // what lets the two paths converge bit-for-bit.
     $accountId = $seeded['icsAccount']->id;
     $accounts = new FixedIcsAccountResolver($accountId);
 

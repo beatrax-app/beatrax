@@ -26,23 +26,11 @@ use function Amp\ByteStream\buffer;
 
 uses(RefreshDatabase::class);
 
-/*
- * RelayResourceLimitsTest — server-side resource-exhaustion guards for the
- * OPEN POST /relay/deliver endpoint (confirmed security finding: the relay
- * accepts unauthenticated blobs by design, but had no server-side blob size
- * cap, no did format/length validation, no per-mailbox quota, and GET
- * /relay/drain returned every pending row in one response).
- *
- * These tests exercise the REAL RelayServeCommand route handlers directly
- * (via reflection, mirroring RelayRoundTripTest's pattern) so the guards are
- * proven against the actual HTTP boundary — not just the client, which an
- * attacker hitting the socket directly would never go through.
- */
+// POST /relay/deliver accepts unauthenticated blobs by design, so its size,
+// did-format and quota guards are all that stands between a stranger and the
+// mailbox table. These drive the real route handlers through reflection: an
+// attacker at the socket never goes through RelayClient, so guarding it proves nothing.
 
-/**
- * Build a bare amphp Request for direct dispatch through
- * RelayServeCommand::route() (private — invoked via reflection).
- */
 function buildRelayLimitsRequest(string $method, string $path, string $body = '', array $headers = [], string $clientIp = '203.0.113.1'): AmpRequest
 {
     $client = Mockery::mock(AmpClient::class);
@@ -54,9 +42,6 @@ function buildRelayLimitsRequest(string $method, string $path, string $body = ''
 }
 
 /**
- * Dispatch a request through the command's private route() method and decode
- * the JSON response body alongside the HTTP status.
- *
  * @return array{status: int, body: array<string, mixed>}
  */
 function dispatchRelayLimitsRequest(RelayServeCommand $command, AmpRequest $request): array
@@ -336,8 +321,8 @@ it('throttles a burst of deliveries from one source IP with 429 rate_limited (L1
         expect($deliver($flooderIp)['status'])->toBe(202);
     }
 
-    // The next delivery from the SAME IP is throttled — and it is the rate
-    // limit, not the mailbox_full quota (distinct error code proves which).
+    // The next delivery from the same IP is throttled, and the distinct error
+    // code is what proves it is the rate limit and not the mailbox quota.
     $throttled = $deliver($flooderIp);
     expect($throttled['status'])->toBe(429);
     expect($throttled['body']['error'] ?? null)->toBe('rate_limited');

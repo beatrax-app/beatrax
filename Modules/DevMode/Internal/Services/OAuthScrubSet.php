@@ -17,16 +17,12 @@ class OAuthScrubSet
 
     protected ?string $compiled = null;
 
-    // Tracks whether the next load() is happening during framework boot
-    // (missing table / unbooted encrypter expected, must not halt boot)
-    // or at runtime (same failure means redaction is silently disabled).
-    // Starts true; the first successful load() flips it to false.
+    // During boot a missing table or unbooted encrypter is expected and must
+    // not halt boot; the identical failure at runtime means redaction is off.
     protected bool $bootPhase = true;
 
-    // Reveals the keychain-shielded client_secret/tokens_blob on the
-    // desktop bundle so the scrub set holds the real plaintext secrets —
-    // without this it would collect safeStorage ciphertext and the true
-    // secret that leaks into logs would never be redacted.
+    // Without the shield the set would hold desktop safeStorage ciphertext,
+    // and the plaintext that actually reaches the logs would go unredacted.
     public function __construct(
         private readonly SecretShield $shield,
     ) {}
@@ -51,9 +47,7 @@ class OAuthScrubSet
         return $this->set;
     }
 
-    // Returns null when the set is empty so callers can skip the
-    // preg_replace call entirely (single-pass O(n) vs O(n*m)). Pattern
-    // shape: '/(s1|s2|s3)/' with each `s` preg_quote'd.
+    // null means "nothing to scrub", so callers skip preg_replace entirely.
     public function compiledPattern(): ?string
     {
         if ($this->compiled !== null) {
@@ -77,10 +71,8 @@ class OAuthScrubSet
         return $this->compiled;
     }
 
-    // Reads bypass the per-user OAuthSecretsRepository since the scrub
-    // set is a system-wide surface. During boot a missing table is
-    // expected (empty set); after first success a failure instead
-    // writes a critical system_alerts row (recordRuntimeFailure).
+    // Bypasses the per-user OAuthSecretsRepository because the scrub set is a
+    // system-wide surface: every secret must be redacted for every reader.
     /**
      * @return list<string>
      */
@@ -102,25 +94,20 @@ class OAuthScrubSet
             return [];
         }
 
-        // First successful load — leave the boot-phase window so
-        // future failures route through the runtime alert branch.
         $this->bootPhase = false;
 
         return array_keys($collected);
     }
 
-    // Collects one row, tolerating a secret this app can no longer read. A
-    // row encrypted under a superseded APP_KEY throws, and letting that reach
-    // load()'s catch emptied the WHOLE set — so a single stale credential
-    // turned redaction off everywhere rather than for itself.
+    // A row encrypted under a superseded APP_KEY throws; reaching load()'s
+    // catch emptied the WHOLE set, so one stale credential used to turn
+    // redaction off everywhere instead of just for itself.
     /**
      * @param  array<string, true>  $collected
      */
     private function collectRow(OAuthSecret $row, array &$collected): void
     {
         try {
-            // Reveal the keychain shield so the scrub set holds the true
-            // plaintext secret, not desktop safeStorage ciphertext.
             $clientSecret = $this->shield->reveal($row->client_secret);
             if (trim($clientSecret) !== '') {
                 $collected[$clientSecret] = true;
@@ -139,9 +126,6 @@ class OAuthScrubSet
         }
     }
 
-    // Best-effort: a SystemAlert write that also fails (e.g. DB fully
-    // down) is swallowed — the alternative is crashing every request
-    // that emits a log line.
     protected function recordRuntimeFailure(Throwable $e): void
     {
         try {
@@ -156,8 +140,8 @@ class OAuthScrubSet
                 ],
             ]);
         } catch (Throwable) {
-            // Last-resort no-op: a SystemAlert write failure here must
-            // never propagate and break the surrounding logger call.
+            // Swallowed: this runs inside a logger call, so a failing alert
+            // write would crash every request that emits a log line.
         }
     }
 

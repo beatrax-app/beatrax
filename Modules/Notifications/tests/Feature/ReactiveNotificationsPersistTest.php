@@ -12,20 +12,9 @@ use Modules\Ledger\Public\Events\TransactionBatchImported;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
-/*
- * Req 3's first acceptance criterion, verbatim: "Triggering each of the 4
- * reactive events produces a corresponding inbox row." All 8 notification
- * types (4 reactive + 4 proactive) now write to the same `notifications`
- * store; this test proves the reactive half — the four events that already
- * fired through `DispatchOsNotification` alone now ALSO persist.
- *
- * The four locked titles are asserted as LITERAL STRINGS so a future reword
- * fails this test (D-29 — the copy is locked, this phase persists and
- * governs it, it does not reword it).
- *
- * Event dispatch is wrapped in SuppressionEvaluator::suppressDelivery()
- * (D-43) so no test ever attempts a real OS notification.
- */
+// The four titles are asserted as literal strings, not constants, so a reword
+// has to fail here. Dispatch runs inside suppressDelivery() so no case attempts
+// a real OS notification.
 
 function rnpUser(string $username): User
 {

@@ -13,15 +13,9 @@ use Modules\Sync\Internal\Transport\Discovery\MulticastMdnsQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * The responder half of the typed-code path: what a phone accepts back from
- * a peer it found on the LAN.
- *
- * Discovery authenticates nothing, so every field here arrives from whoever
- * answered a multicast question. The fetcher's whole job is to hand on a
- * well-formed candidate identity — or nothing — and never to treat having
- * answered as having proved anything.
- */
+// Discovery authenticates nothing, so every field here arrives from whoever
+// answered a multicast question. The fetcher hands on a well-formed candidate
+// identity or nothing at all, and never treats having answered as proof.
 
 function lanOfferFetcher(): LanPairingOfferFetcher
 {

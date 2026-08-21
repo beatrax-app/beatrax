@@ -31,9 +31,7 @@ final class CommandPaletteModal extends Component
         $this->recent = $this->loadRecent($user, $cache);
     }
 
-    // The Alpine palette() factory handles the actual open transition;
-    // this endpoint exists purely so the dispatch has a sink and the
-    // server-side Recent list seed refreshes on demand.
+    // Alpine owns the open transition; this exists only to reseed Recent.
     #[On('palette:open')]
     public function open(CurrentUser $user, CacheRepository $cache): void
     {
@@ -41,9 +39,8 @@ final class CommandPaletteModal extends Component
         $this->dispatch('palette:opened');
     }
 
-    // Navigation itself is handled client-side by the palette() Alpine
-    // factory; this method exists solely to persist the selection to
-    // the Recent cache so the rail rebuilds on the next open.
+    // Alpine has already navigated by the time this fires; it only persists
+    // the pick so the Recent rail rebuilds on the next open.
     /**
      * @param  array{id?: mixed, label?: mixed, icon?: mixed, hint?: mixed, source?: mixed, url?: mixed, handler?: mixed, name?: mixed, tier?: mixed}  $entry
      */
@@ -57,9 +54,6 @@ final class CommandPaletteModal extends Component
 
         $row = $this->normalizeRecentEntry($entry, $id);
 
-        // Dedup: drop any prior occurrence so the new entry lands at
-        // the head of the list. Cap at RECENT_LIMIT after the
-        // prepend so the oldest evicts cleanly.
         $existing = $this->loadRecent($user, $cache);
         $filtered = array_values(array_filter(
             $existing,
@@ -92,9 +86,6 @@ final class CommandPaletteModal extends Component
         ]);
     }
 
-    // Filters dev rows by is_developer at this layer — non-developers
-    // receive ZERO source:'dev' rows, so the labels are never on the
-    // client — defense-in-depth on top of EnsureDeveloperMode.
     /**
      * @return list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string, hasArgs: bool, keywords: list<string>}>
      */
@@ -109,9 +100,8 @@ final class CommandPaletteModal extends Component
         $isDeveloper = $user->isAuthenticated() && $user->user()->is_developer === true;
 
         foreach ($nav->all() as $entry) {
-            // Filter Dev-Console sub-route entries (`dev.` prefix) for
-            // non-developers so the JSON never exposes those labels —
-            // defense-in-depth on top of the EnsureDeveloperMode guard.
+            // The rendered JSON reaches the client, so dev labels have to be
+            // withheld here, not merely hidden by the route middleware.
             if (! $isDeveloper && str_starts_with($entry->id, 'dev.')) {
                 continue;
             }
@@ -132,10 +122,9 @@ final class CommandPaletteModal extends Component
         }
 
         if ($isDeveloper) {
-            // SAFE-tier only — DESTRUCTIVE stays reachable via the
-            // Re-run affordance's triple-gate. `hasArgs` lets
-            // palette.js choose direct-spawn vs. the arg-prompt modal
-            // without an extra round trip.
+            // Safe tier only: destructive commands stay behind the Re-run
+            // affordance's triple gate. `hasArgs` lets palette.js pick
+            // direct-spawn or the arg prompt without a round trip.
             foreach ($commands->safe() as $spec) {
                 $hasArgs = count($spec->argsSchema) > 0;
                 $registry[] = [
@@ -173,9 +162,6 @@ final class CommandPaletteModal extends Component
         return $registry;
     }
 
-    // Returns an empty array if the key is absent or the cached value
-    // isn't the expected shape — defensive, since the cache store is
-    // shared with other features.
     /**
      * @return list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string}>
      */
@@ -205,9 +191,6 @@ final class CommandPaletteModal extends Component
         return $rows;
     }
 
-    // Single source of truth for the Recent row's nine-field shape, used
-    // by both the pick handler and the cache reader so the defensive
-    // string-coercions never drift between the two paths.
     /**
      * @param  array<array-key, mixed>  $entry
      * @return array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string}

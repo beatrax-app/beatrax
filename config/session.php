@@ -14,8 +14,7 @@ return [
     'expire_on_close' => false,
 
     // Flash data, validation errors and search inputs land in the sessions
-    // table; encryption keeps them unreadable to anything reading that table
-    // from outside the app.
+    // table, unreadable to anything opening it outside the app.
     'encrypt' => true,
 
     'files' => UserDataPathService::frameworkPath('sessions'),

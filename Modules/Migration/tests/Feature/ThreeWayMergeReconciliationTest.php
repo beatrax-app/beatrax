@@ -40,16 +40,14 @@ it('ThreeWayMerge: a category changed on BOTH source and local is a conflict (un
     $household = Category::query()->where('user_id', $this->user->id)->where('name', 'Household')->firstOrFail();
     $jan = CarbonImmutable::parse('2026-01-01');
 
-    // Local edit between the two imports: Groceries to 300.00, Household
-    // left alone.
+    // Local edit between the two imports: Groceries only, Household left alone.
     app(EnvelopeWriter::class)->setAssigned($this->user, $groceries->id, $jan, 30000);
 
     // v2 changes BOTH Groceries (200.00 -> 250.00, colliding with the local
     // edit) AND Household (100.00 -> 120.00, untouched locally).
     app(CheckForUpdates::class)->__invoke($firstRun->id, $this->user, 'ynab4', MigrationFixturePaths::ynab4Dir('v2'));
 
-    // Groceries: CONFLICT — the local 300.00 survives, the source's 250.00
-    // is not applied.
+    // Conflict: the local 300.00 survives, the source's 250.00 is not applied.
     $groceriesAssigned = $this->db->connection()->table('envelope_assignments')
         ->where('user_id', $this->user->id)
         ->where('category_id', $groceries->id)
@@ -135,10 +133,9 @@ it('CR-01: confirming a needs_attention reconciliation run does NOT overwrite th
     expect($confirmedRun->status)->toBe('confirmed');
 });
 
-// v2's Register.csv changes exactly two plain rows: 'row-0' (45.00 -> 50.00,
-// no local edit) and 'row-1' (15.00 -> 18.00, given a colliding local edit).
-// Every other row is byte-identical to v1. No public writer can edit a
-// transaction amount yet, so a "local edit" has to be a direct table update.
+// v2's Register.csv changes exactly two rows: 'row-0' (45.00 -> 50.00) and
+// 'row-1' (15.00 -> 18.00); every other row is byte-identical to v1. No public
+// writer can edit a transaction amount, so a local edit is a direct update.
 
 it('ThreeWayMerge: a transaction amount changed only on source applies cleanly; an untouched transaction stays untouched — Req 10', function (): void {
     $firstRun = app(StartMigrationRun::class)->__invoke(
@@ -173,7 +170,6 @@ it('ThreeWayMerge: a transaction amount changed only on source applies cleanly; 
         MigrationFixturePaths::ynab4Dir('v2'),
     );
 
-    // Clean APPLY: no local edit, so the source's new amount lands.
     $groceryAmount = (int) $this->db->connection()->table('transactions')->where('id', $groceryTxId)->value('amount_minor');
     expect($groceryAmount)->toBe(-5000);
 
@@ -218,7 +214,6 @@ it('ThreeWayMerge: a transaction amount changed on BOTH source and local is a co
 
     expect($reconciliationRun->status)->toBe('needs_attention');
 
-    // CONFLICT — the local -1600 survives, the source's -1800 is not applied.
     $amount = (int) $this->db->connection()->table('transactions')->where('id', $txId)->value('amount_minor');
     expect($amount)->toBe(-1600);
 
@@ -292,10 +287,9 @@ it('WR-03: a genuine fingerprint-uniqueness collision on transaction-amount appl
     $groceryRow = $this->db->connection()->table('transactions')->where('id', $groceryTxId)->first();
     $originalAmount = (int) $groceryRow->amount_minor;
 
-    // Plant a clone occupying every column `transactions_fingerprint_uq`
-    // covers at v2's target amount (-5000), so the reconciliation UPDATE hits
-    // a real composite-unique collision rather than a mocked exception. The
-    // clone's own fingerprint is fabricated, so this INSERT collides with nothing.
+    // A clone occupying every column of `transactions_fingerprint_uq` at v2's
+    // target amount, so the reconciliation UPDATE hits a real composite-unique
+    // collision. Its own fingerprint is fabricated, so this INSERT collides with nothing.
     $cloneId = $this->db->connection()->table('transactions')->insertGetId([
         'user_id' => $groceryRow->user_id,
         'account_id' => $groceryRow->account_id,
@@ -396,7 +390,6 @@ it('UAT-3c: take_source resolution on a budget-assignment conflict applies the S
         ->where('period_start', '2026-01-01')
         ->value('assigned_minor');
 
-    // The source's 250.00 now wins over the previously-kept-local 300.00.
     expect((int) $groceriesAssigned)->toBe(25000);
 
     $confirmedRun = MigrationRun::query()->findOrFail($reconciliationRun->id);
@@ -555,7 +548,6 @@ it('UAT-3a/3b: the conflict row renders formatted currency and a human label, no
     $response->assertOk();
     // Formatted currency, e.g. "€ 300,00" — never a raw minor-unit integer.
     $response->assertSee('€', false);
-    // A human label naming the category and budget month.
     $response->assertSee('Groceries', false);
     $response->assertDontSee('Budget_assignment budgeted_minor', false);
 });

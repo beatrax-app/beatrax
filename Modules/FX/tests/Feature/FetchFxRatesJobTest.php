@@ -12,9 +12,8 @@ use Modules\FX\Internal\RateProviderRegistry;
 use Modules\FX\Public\Contracts\RateProvider;
 use Psr\Log\LoggerInterface;
 
-// All job runs require a user who has opted into online fetch (D-04). The job
-// re-checks fx_online_enabled as a defense-in-depth privacy gate, so every
-// "happy path" test must seed an opted-in user.
+// The job re-checks fx_online_enabled as a privacy gate of its own, so every
+// happy-path case has to seed a user who opted into online fetch.
 beforeEach(function (): void {
     $this->fxUserId = User::create([
         'username' => 'fx-job-fixture',
@@ -26,8 +25,6 @@ beforeEach(function (): void {
 });
 
 /**
- * Creates a fake RateProvider that always returns the given result.
- *
  * @param  array{date: string, rates: array<string, string>}  $rates
  */
 function makeFakeRateProvider(string $key, int $priority, array $rates): RateProvider
@@ -78,7 +75,6 @@ describe('FetchFxRatesJob', function (): void {
             ),
         ]);
 
-        // Bind a registry that uses the real ECB provider so we test the full stack
         $cache = app(Repository::class);
         $ecbProvider = app(EcbRateProvider::class);
         $registry = new RateProviderRegistry([$ecbProvider], $cache);
@@ -124,7 +120,6 @@ describe('FetchFxRatesJob', function (): void {
         $logger = app(LoggerInterface::class);
         $job = new FetchFxRatesJob($this->fxUserId);
 
-        // Run twice
         $job->handle($registry, $db, $logger);
         $job->handle($registry, $db, $logger);
 
@@ -154,7 +149,6 @@ describe('FetchFxRatesJob', function (): void {
         $job = new FetchFxRatesJob($this->fxUserId);
         $job->handle($registry, $db, $logger);
 
-        // Verify row has feed date, not today
         expect(DB::table('exchange_rates')->where('rate_date', $feedDate)->exists())->toBeTrue();
         expect(DB::table('exchange_rates')->where('rate_date', now()->toDateString())->exists())->toBeFalse();
     });
@@ -188,8 +182,7 @@ describe('FetchFxRatesJob', function (): void {
             'fx_online_enabled' => false,
         ]);
 
-        // A provider that fails the test if it is ever consulted — the job must
-        // not reach the provider chain for an opted-out user.
+        // A tripwire: the job must not reach the provider chain for an opted-out user.
         $tripwire = new class implements RateProvider
         {
             public function key(): string

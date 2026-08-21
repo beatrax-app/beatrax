@@ -4,23 +4,6 @@ declare(strict_types=1);
 
 use Modules\DevMode\Internal\System\ConfigFlattener;
 
-/*
- * ConfigFlattener invariants for the env + effective-config
- * snapshot redaction surface.
- *
- * Covers:
- *   - flatten() walks nested arrays into dot-keys.
- *   - redactSecretSuffixes() masks values for keys matching the
- *     denylist (*password*, *passphrase*, *secret*, *token*,
- *     *credential*, *key, *keys) with [REDACTED].
- *   - The plural `keys` suffix specifically, so Laravel's
- *     app.previous_keys retired-APP_KEY list cannot render in the
- *     clear on /dev/system.
- *   - Non-matching keys keep their plain value (e.g.
- *     BEATRAX_DEV_MODE, BEATRAX_RUNTIME).
- *   - Empty / nested / scalar-leaf shapes handled.
- */
-
 it('flattens nested arrays into dot-key shape', function (): void {
     $flattener = new ConfigFlattener;
 
@@ -56,7 +39,6 @@ it('masks values for keys ending with password / secret / key / token suffixes (
     expect($redacted['mail.password'])->toBe('[REDACTED]');
     expect($redacted['auth.oauth_secret'])->toBe('[REDACTED]');
     expect($redacted['queue.access_token'])->toBe('[REDACTED]');
-    // Plain values stay readable.
     expect($redacted['app.cipher'])->toBe('AES-256-CBC');
     expect($redacted['beatrax.dev_mode'])->toBeTrue();
     expect($redacted['app.name'])->toBe('beatrax');
@@ -102,10 +84,9 @@ it('returns empty array when given an empty config', function (): void {
 it('masks app.previous_keys — the retired APP_KEY list still decrypts data at rest', function (): void {
     $flattener = new ConfigFlattener;
 
-    // The singular-suffix check alone cannot catch this: 'app.previous_keys'
-    // does not end in 'key'. Exercised through flatten() as well as
-    // redactSecretSuffixes() because a scalar list is json_encode'd into a
-    // single leaf, which is exactly the shape that leaked.
+    // 'app.previous_keys' does not end in 'key', and flatten() folds the
+    // scalar list into a single json_encode'd leaf — that combination is
+    // exactly the shape that leaked, so the test runs both steps.
     $flat = $flattener->flatten([
         'app' => [
             'key' => 'base64:current=',
@@ -130,7 +111,7 @@ it('masks passphrase and credential keys the singular suffixes miss', function (
 
     expect($redacted['backup.passphrase'])->toBe('[REDACTED]');
     expect($redacted['sync.relay_credentials'])->toBe('[REDACTED]');
-    // A benign key that merely looks close to the denylist stays readable.
+    // 'kind' is the near-miss a substring check would have masked.
     expect($redacted['app.kind'])->toBe('desktop');
 });
 

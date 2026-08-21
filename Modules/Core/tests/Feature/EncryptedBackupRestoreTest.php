@@ -145,7 +145,6 @@ it('refuses to swap when the passphrase is wrong — the live file is untouched'
 // BackupFormatException rather than a decryption failure, because the passphrase
 // was right and offering to retype it sends the user down the wrong path. The
 // live file survives either way: the swap follows integrity_check, never leads.
-
 it('refuses a payload that decrypts but will not open as a database', function (): void {
     $base = sys_get_temp_dir().'/rb-'.bin2hex(random_bytes(5));
     $live = $base.'-live.sqlite';

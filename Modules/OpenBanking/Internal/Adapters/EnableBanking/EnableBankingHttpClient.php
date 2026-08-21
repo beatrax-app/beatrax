@@ -61,9 +61,8 @@ class EnableBankingHttpClient
         return $this->postJson('sessions', ['code' => $code]);
     }
 
-    // Callers index the response through this rather than directly: a guard
-    // test asserts no file referencing DatabaseManager also names a raw
-    // credential field.
+    // Callers index the response through this: a guard test bans naming a raw
+    // credential field in any file that also references DatabaseManager.
     /**
      * @param  array<string, mixed>  $sessionResponse
      */
@@ -138,23 +137,20 @@ class EnableBankingHttpClient
         return $this->getJson(self::ACCOUNTS_PATH.rawurlencode($uid).'/balances');
     }
 
-    // Protected so the SSRF regression test can point it at attacker,
-    // look-alike, non-HTTPS and unparseable hosts.
+    // Protected so the SSRF test can substitute a hostile base.
     protected function baseUri(): string
     {
         return 'https://'.self::EB_API_HOST.'/';
     }
 
-    // Protected so the SSRF test's accepted-host case can inject a
-    // MockHandler client instead of reaching the network.
+    // Protected so the SSRF test can inject a MockHandler instead of the network.
     protected function makeHttpClient(): GuzzleClient
     {
         return new GuzzleClient([
             'timeout' => 30,
             'connect_timeout' => 10,
             // A followed Location would reach the network after the once-only
-            // assertAllowedUrl() check, bypassing the allow-list and the
-            // https requirement with a bearer token attached.
+            // assertAllowedUrl() check, with a bearer token already attached.
             'allow_redirects' => false,
         ]);
     }
@@ -262,8 +258,7 @@ class EnableBankingHttpClient
             return [];
         }
 
-        // Narrows array<mixed, mixed> to array<string, mixed>; PHPStan cannot
-        // infer that a decoded JSON object only has string keys.
+        // PHPStan cannot infer that a decoded JSON object has only string keys.
         $out = [];
         foreach ($decoded as $key => $value) {
             $out[(string) $key] = $value;

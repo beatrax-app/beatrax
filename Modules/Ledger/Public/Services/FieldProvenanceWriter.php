@@ -60,9 +60,7 @@ final class FieldProvenanceWriter
         return is_string($raw) && $raw !== '' ? self::decodeProvenance($raw) : [];
     }
 
-    // Decodes a stored provenance map, returning [] for corrupt JSON or a
-    // non-object payload — provenance is best-effort audit metadata, never
-    // a crash surface.
+    // [] for corrupt JSON or a non-object payload.
     /**
      * @return array<string, string>
      */

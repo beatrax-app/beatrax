@@ -5,31 +5,11 @@ declare(strict_types=1);
 use Illuminate\Database\QueryException;
 use Modules\Migration\Internal\Pipeline\EntityChangeApplier;
 
-/**
- * WR-03 (13.5 deep review): `applyTransactionAmount()` previously treated ANY
- * `QueryException` as a benign fingerprint collision, masking unrelated DB
- * failures behind the same "it's just a collision, left unchanged"
- * user-facing message. These tests exercise the classification helper
- * (`isFingerprintUniqueViolation()`) directly via reflection — it is the
- * exact boundary the fix narrows, and constructing synthetic
- * `QueryException`s lets every branch be pinned deterministically without
- * needing to engineer a real DB failure of each specific kind.
- *
- * Relocated from `Modules/Migration/tests/Unit/Actions/
- * CheckForUpdatesFingerprintClassificationTest.php` during the
- * 13.5-HUMAN-UAT.md Test 3c gap-fix: `applyTransactionAmount()` and
- * `isFingerprintUniqueViolation()` moved from `CheckForUpdates` to this
- * shared `EntityChangeApplier` so `ConfirmMigration`'s new take-source
- * conflict-apply step reuses the SAME fingerprint-safe writer instead of
- * duplicating it. The classification rules themselves are unchanged.
- */
 function migrationBuildQueryException(string $sqlState, string $driverMessage): QueryException
 {
     $previous = new PDOException($driverMessage);
-    // PDOException::$code is the one Exception subclass PHP lets a real PDO
-    // driver populate with a string SQLSTATE (e.g. '23000') rather than an
-    // int — the constructor only accepts an int, so reflection is needed to
-    // fabricate a realistic driver exception for this test.
+    // PDOException::$code holds a string SQLSTATE the constructor will not take,
+    // so reflection is the only way to fabricate a realistic driver exception.
     $codeProperty = new ReflectionProperty(PDOException::class, 'code');
     $codeProperty->setValue($previous, $sqlState);
 
@@ -59,10 +39,9 @@ it('WR-03: a genuine SQLite composite (amount_minor) unique violation IS classif
 });
 
 it('WR-03: a 23000 violation against an UNRELATED constraint is NOT classified as a collision (must be re-thrown by the caller)', function (): void {
-    // Same SQLSTATE (23000) a NOT NULL/CHECK/other-unique violation would
-    // also report, but naming columns this UPDATE never touches — this is
-    // exactly the "unrelated failure silently reclassified as a benign
-    // collision" bug WR-03 describes.
+    // The same SQLSTATE a NOT NULL / CHECK / other-unique violation reports,
+    // but naming columns this UPDATE never touches: the unrelated failure that
+    // used to be reclassified as a benign collision.
     $e = migrationBuildQueryException('23000', 'SQLSTATE[23000]: Integrity constraint violation: 19 UNIQUE constraint failed: transactions.user_id, transactions.status');
 
     expect(migrationInvokeIsFingerprintUniqueViolation($e))->toBeFalse();

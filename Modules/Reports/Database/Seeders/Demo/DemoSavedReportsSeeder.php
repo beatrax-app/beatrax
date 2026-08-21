@@ -13,9 +13,7 @@ use Modules\Reports\Public\Actions\TogglePin;
 use Modules\Reports\Public\Dto\ReportDefinition;
 use Modules\Reports\Public\Enums\ReportGranularity;
 
-// Saved report definitions covering the questions the demo ledger can
-// actually answer, two of them pinned so the dashboard shows its mini-card
-// row. Definitions go through the public action, so what lands in the DB is
+// Definitions are written through the public action, so what lands in the DB is
 // exactly what the builder would have written.
 final class DemoSavedReportsSeeder
 {

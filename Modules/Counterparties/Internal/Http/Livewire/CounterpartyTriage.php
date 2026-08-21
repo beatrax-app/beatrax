@@ -136,8 +136,7 @@ final class CounterpartyTriage extends Component
             return;
         }
 
-        // Routes display_name/merchant_name through the codec before
-        // save(), mirroring acceptSuggestion() above.
+        // Codec-before-save, mirroring acceptSuggestion() above.
         $attrs = ['display_name' => $name];
         if ($type === CounterpartyType::Merchant->value) {
             $attrs['merchant_name'] = $name;
@@ -213,8 +212,8 @@ final class CounterpartyTriage extends Component
         ]);
     }
 
-    // Returns null when the queue is empty or the cursor has walked past
-    // the last item; wire actions then no-op rather than throwing.
+    // Null once the cursor walks past the last item, so wire actions no-op
+    // rather than throw.
     private function resolveCurrent(CurrentUser $currentUser, CounterpartyTriageQueue $queue): ?Counterparty
     {
         $items = $queue->forUser($currentUser->user(), $this->queueFirstId);

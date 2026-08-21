@@ -2,11 +2,7 @@
 
 declare(strict_types=1);
 
-// Salary €3500 → €3850 (+10.0% month-over-month, above
-// the default ±5% threshold). The detector fires exactly one
-// income-direction alert. Math:
-//   delta_minor = 385000 - 350000 = +35000 (signed income, positive)
-//   annualized_impact_minor = +35000 × 12 = +420000 (+€4200/yr)
+// +10.0%, over the default 5% threshold.
 
 $transactions = [];
 $amounts = [350000, 350000, 350000, 385000, 385000, 385000];

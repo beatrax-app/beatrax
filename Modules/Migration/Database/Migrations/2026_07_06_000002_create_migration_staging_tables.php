@@ -77,9 +77,8 @@ return new class extends ModuleMigration
             $table->text('description')->nullable();
             $table->string('cleared_status');
             $table->boolean('is_split_parent')->default(false);
-            // Points at the split parent in this same staging table,
-            // reconstructed heuristically for YNAB4/nYNAB and read straight
-            // from Actual's explicit parent_id.
+            // The split parent in this same staging table: reconstructed
+            // heuristically for YNAB, read from Actual's explicit parent_id.
             $table->string('parent_source_external_id')->nullable();
             $table->string('transfer_counterpart_source_external_id')->nullable();
 

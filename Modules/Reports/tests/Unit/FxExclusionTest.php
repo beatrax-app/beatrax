@@ -13,16 +13,8 @@ use Modules\Reports\Public\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 
-/*
- * Covers 999.6-05 Task 2 (Req 5, T-999.6-12): pins the never-1:1 FX
- * contract for NetWorthSeriesQuery's base-mode totals — a DIFFERENT code
- * path than Modules/Reports/tests/Unit/CurrencyModeExclusionTest.php's
- * fx_exclusion_never_1to1_transactions test (that one exercises
- * ReportAggregator/CurrencyModeApplier over transaction-level
- * settled_currency rows; this one exercises NetWorthSeriesQuery's
- * account-level balances). Fixture helpers prefixed fxe_ to avoid
- * cross-file global-function collisions.
- */
+// NetWorthSeriesQuery's account-level balances — a different path from
+// CurrencyModeExclusionTest, which covers transaction-level settled_currency.
 
 function fxeUser(): User
 {
@@ -120,12 +112,10 @@ it('fx_exclusion_never_1to1: an unconvertible account is excluded and counted, n
     expect($points)->toHaveCount(1);
     $point = $points[0];
 
-    // Only the EUR account's contribution is counted.
     expect($point->totalMinor)->toBe(20_000);
     expect($point->excludedCount)->toBe(1);
 
-    // Never a silent 1:1 fallback: a 1:1 leak would have added the raw JPY
-    // minor amount straight into the EUR total (20_000 + 500_000).
+    // A 1:1 leak would have added the raw JPY minor amount into the EUR total.
     $wouldBeOneToOneTotal = 20_000 + 500_000;
     expect($point->totalMinor)->not->toBe($wouldBeOneToOneTotal);
 });

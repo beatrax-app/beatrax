@@ -12,13 +12,8 @@ use Modules\Ledger\Models\Category;
 
 uses(RefreshDatabase::class);
 
-/**
- * Expected fixture row count, computed once from the canonical
- * default-categorization-rules.php so every assertion below uses the
- * same source of truth. Avoids the magic-number drift where a
- * fixture shrink to 79 rows silently passes a hardcoded `>=80`
- * floor (and masks the regression).
- */
+// Read from the canonical fixture so a shrink to 79 rows cannot silently pass
+// a hardcoded `>= 80` floor.
 function fixtureRuleCount(): int
 {
     /** @var list<array{category: string, field: string, match: string, value: string}> $fixture */
@@ -27,11 +22,7 @@ function fixtureRuleCount(): int
     return count($fixture);
 }
 
-/**
- * Finds a seeded parent rule for the given user by joining through its
- * rule_conditions row (13.4-01 — field/match/value moved off the
- * parent onto the child table).
- */
+// field/match/value live on the child row, so the lookup joins through it.
 function findSeededRule(int $userId, string $field, string $match, string $value): ?CategorizationRule
 {
     return CategorizationRule::withoutGlobalScopes()
@@ -174,8 +165,7 @@ it('seeds the transfers-internal anchor rule against the description field', fun
 });
 
 it('runs from the beatrax:install command via the UserInstalled listener end-to-end', function (): void {
-    // Drive the install command — categories AND rules must land via
-    // the two listeners on UserInstalled.
+    // Both listeners on UserInstalled must fire, so drive the real command.
     $exit = $this->app->make(ConsoleKernel::class)->call('beatrax:install', [
         '--username' => 'install-rules',
         '--password' => 'opensesame',

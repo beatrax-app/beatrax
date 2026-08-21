@@ -50,18 +50,15 @@ final class ConfirmMigration
             );
         }
 
-        // Symmetric guard to DiscardMigrationRun's own already-confirmed
-        // check — staging for a discarded run is already truncated, so
-        // falling through to promote() would silently flip status back to
-        // 'confirmed' with all-zero counts, corrupting the audit trail.
+        // Staging for a discarded run is already truncated, so falling through
+        // to promote() would flip the status back to 'confirmed' with all-zero
+        // counts. DiscardMigrationRun carries the symmetric guard.
         if ($run->status === MigrationRunStatus::Discarded->value) {
             throw new MigrationAlreadyDiscardedException($migrationRunId);
         }
 
-        // A run left in 'needs_attention' has every conflict recorded with
-        // resolution NULL until the user's toggle choice persists one.
-        // Loading them here (rather than re-deriving an empty default) is
-        // what keeps a keep-local decision from being silently overwritten.
+        // A 'needs_attention' run records every conflict with resolution NULL,
+        // so re-deriving a default here would overwrite a keep-local decision.
         $conflicts = $this->loadConflicts($migrationRunId, $user);
 
         $skipBudgetAssignmentKeys = [];
@@ -71,10 +68,8 @@ final class ConfirmMigration
             }
         }
 
-        // Promote WITHOUT an outer transaction — PromoteStagingToDomain's own
-        // per-entity-type writes are already bounded/chunked; wrapping them
-        // here would collapse those independent commits back into one
-        // unbounded transaction.
+        // No outer transaction: promote()'s per-entity writes are already
+        // chunked, and wrapping them would collapse them into one unbounded one.
         $promoteResult = $this->promoter->promote($migrationRunId, $user, $skipBudgetAssignmentKeys);
 
         $this->applyTakeSourceConflicts($conflicts, $user, $run->source_product);
@@ -101,8 +96,6 @@ final class ConfirmMigration
         /** @var stdClass $row */
         foreach ($rows as $row) {
             if (! is_string($row->entity_type) || ! is_string($row->field_name)) {
-                // Defensive: only a fully-structured conflict row is
-                // actionable here.
                 continue;
             }
 
@@ -112,8 +105,7 @@ final class ConfirmMigration
                 fieldName: $row->field_name,
                 localValue: is_string($row->local_value) ? $row->local_value : null,
                 sourceValue: is_string($row->source_value) ? $row->source_value : null,
-                // NULL and 'keep_local' are equivalent — the user simply
-                // never touched the toggle.
+                // NULL means the user never touched the toggle.
                 resolution: is_string($row->resolution) ? $row->resolution : 'keep_local',
             );
         }
@@ -147,9 +139,8 @@ final class ConfirmMigration
     private function advanceKeepLocalConflictBaselines(array $conflicts, User $user, string $sourceProduct): void
     {
         foreach ($conflicts as $conflict) {
-            // A take-source budget_assignment already got its baseline
-            // advanced by promoteBudgetAssignments()'s own writer call, so
-            // it is correctly excluded here by the resolution check alone.
+            // A take-source budget_assignment had its baseline advanced by
+            // promoteBudgetAssignments() already.
             if ($conflict->resolution === 'take_source') {
                 continue;
             }

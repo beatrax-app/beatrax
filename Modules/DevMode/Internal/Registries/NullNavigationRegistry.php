@@ -7,8 +7,8 @@ namespace Modules\DevMode\Internal\Registries;
 use Modules\DevMode\Public\Contracts\NavigationRegistry;
 use Modules\DevMode\Public\Dto\NavigationEntry;
 
-// Fallback so consumer code can resolve the contract without bound()
-// guards when NavigationRegistryImpl has not been wired (ad-hoc tests).
+// Lets consumers resolve the contract without a bound() guard when the real
+// implementation has not been wired.
 final class NullNavigationRegistry implements NavigationRegistry
 {
     /**

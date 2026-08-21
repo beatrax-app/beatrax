@@ -82,9 +82,8 @@ final class TaxCategoryWriter
         return $this->writer->listForUser($userId, $includeArchived);
     }
 
-    // Deduction categories had no capture, so a category added on one device
-    // could not be chosen on another — and any tag referencing it arrived
-    // pointing at a row the peer did not have.
+    // Deduction categories had no capture, so a tag synced to a peer arrived
+    // pointing at a category row that peer did not have.
     /**
      * @param  array<string, mixed>  $fields
      */

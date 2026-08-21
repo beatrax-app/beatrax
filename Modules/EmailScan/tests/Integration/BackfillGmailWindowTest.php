@@ -15,20 +15,9 @@ use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
 
 uses(RefreshDatabase::class);
 
-/*
- * Gmail backfill window plumbing regression test (WR-01 iter-2).
- *
- * Asserts that the user-selected backfill window (the slider value
- * in the BackfillWindowModal, stored as inboxes.backfill_window_months
- * and forwarded to BackfillInboxJob as the windowMonths constructor
- * arg) propagates into the Gmail listSenderMessages call as a
- * `$windowStart` argument — without which Gmail walks the full
- * sender-allow-list history back to inbox creation.
- *
- * The Fake captures every `listSenderMessages` call's args; the test
- * inspects the recorded args to prove the window lower bound matches
- * `now() - windowMonths months`.
- */
+// Without a $windowStart on the listSenderMessages call, Gmail walks the full
+// sender-allow-list history back to inbox creation, and the user's chosen
+// backfill window means nothing.
 
 beforeEach(function (): void {
     Sleep::fake();
@@ -46,7 +35,6 @@ afterEach(function (): void {
 });
 
 it('passes the user-selected window (3 months) into the Gmail listSenderMessages windowStart arg', function (): void {
-    // Freeze clock so the windowStart arithmetic is deterministic.
     $fixedNow = CarbonImmutable::create(2026, 5, 17, 12, 0, 0, 'UTC');
     CarbonImmutable::setTestNow($fixedNow);
 
@@ -97,11 +85,7 @@ it('passes the user-selected window (3 months) into the Gmail listSenderMessages
     $job = $this->app->make(BackfillInboxJob::class, ['inboxId' => $inboxId, 'windowMonths' => 3]);
     $this->app->call([$job, 'handle']);
 
-    // The Fake captures the windowStart in the first
-    // listSenderMessages call's args. Confirm:
-    //  - the call WAS made with a non-null windowStart (regression
-    //    guard: previously this was null, so Gmail walked all-time).
-    //  - the windowStart is exactly 3 months before the fixed now.
+    // A null windowStart is the regression: Gmail then walks all-time.
     $calls = array_values(array_filter(
         $fake->getRequestedCalls(),
         static fn (array $c): bool => $c['method'] === 'listSenderMessages',

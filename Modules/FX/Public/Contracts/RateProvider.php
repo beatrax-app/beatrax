@@ -8,13 +8,11 @@ use Modules\FX\Public\Exceptions\RateFetchException;
 
 interface RateProvider
 {
-    // Stable lowercase key ('ecb', 'frankfurter', 'bundled'), persisted
-    // as the `source` column value in `exchange_rates` so audit paths
-    // can trace which provider supplied a given rate.
+    // Persisted as the `source` column in `exchange_rates`, so a rate can be
+    // traced back to the provider that supplied it.
     public function key(): string;
 
-    // Higher value = tried earlier.
-    // ECB=200, Frankfurter=100, Bundled=0.
+    // Higher is tried earlier: ECB=200, Frankfurter=100, Bundled=0.
     public function priority(): int;
 
     /**

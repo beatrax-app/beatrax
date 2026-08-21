@@ -6,9 +6,6 @@ namespace Modules\Import\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/import/architecture.md#consolidated-preview-multi-run-commit
- */
 final class ConsolidatedPreviewSection extends Data
 {
     /**

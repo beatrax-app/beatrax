@@ -39,10 +39,9 @@ class GoogleOAuthProvider
             'state' => $state,
         ]);
 
-        // The league provider mints the PKCE verifier while building the URL
-        // (pkceMethod is set on the factory); it is captured so the callback
-        // can send code_verifier on the exchange — the RFC 8252 defence that
-        // keeps an intercepted loopback code useless on its own.
+        // The league provider mints the PKCE verifier while building the URL;
+        // capturing it lets the callback send code_verifier on the exchange,
+        // which is what makes an intercepted loopback code useless alone.
         $verifier = $provider->getPkceCode();
 
         return new AuthorizationRequest($url, is_string($verifier) ? $verifier : '');
@@ -83,9 +82,8 @@ class GoogleOAuthProvider
             accessToken: $accessTokenString,
             refreshToken: is_string($refreshToken) && $refreshToken !== '' ? $refreshToken : null,
             expiresAt: $expiresAt,
-            // Persists the full scope set asked for (not just
-            // gmail.readonly), so a later out-of-band revoke of
-            // userinfo surfaces as needs_reauth, not a generic failure.
+            // The full scope set, not just gmail.readonly: an out-of-band
+            // revoke of userinfo then surfaces as needs_reauth.
             scope: self::GMAIL_READONLY_SCOPE.' '.self::USERINFO_EMAIL_SCOPE,
             email: $email,
         );
@@ -93,9 +91,8 @@ class GoogleOAuthProvider
 
     public function refreshAccessToken(string $refreshToken): AccessTokenWithEmail
     {
-        // Refresh exchanges don't strictly need a redirect URI, but
-        // the league provider still validates it against Google's
-        // allow-list, so the configured one is reused here.
+        // A refresh needs no redirect URI, but the league provider still
+        // validates one against Google's allow-list.
         $client = $this->secrets->loadProviderClient(MailProvider::Gmail->value);
         if ($client === null) {
             throw new InboxNotConfiguredException(
@@ -129,8 +126,8 @@ class GoogleOAuthProvider
             accessToken: $token->getToken(),
             refreshToken: is_string($newRefresh) && $newRefresh !== '' ? $newRefresh : null,
             expiresAt: $expiresAt,
-            // Mirrors exchangeAuthorizationCode's full scope string so
-            // the recorded value stays consistent across refreshes.
+            // Mirrors exchangeAuthorizationCode so the recorded scope string
+            // stays identical across refreshes.
             scope: self::GMAIL_READONLY_SCOPE.' '.self::USERINFO_EMAIL_SCOPE,
             email: '',
         );
@@ -161,9 +158,7 @@ class GoogleOAuthProvider
                 'access_token' => $accessToken,
             ]);
             $owner = $provider->getResourceOwner($tokenObj);
-            // The Google provider always returns a GoogleUser; the
-            // narrower instanceof check keeps the strict static
-            // analyser honest about the getEmail() call below.
+            // The narrower instanceof is what lets PHPStan see getEmail().
             if (! $owner instanceof GoogleUser) {
                 throw new OAuthExchangeFailed(
                     'Google userinfo response was not a GoogleUser.',
@@ -201,9 +196,7 @@ class GoogleOAuthProvider
 
     private function safeMessage(Throwable $e): string
     {
-        // Delegate to the shared utility so the cap shape stays
-        // consistent across every module-internal surface that
-        // forwards provider error text.
+        // Shared so every provider-error surface caps the same way.
         return SafeMessage::cap($e->getMessage());
     }
 }

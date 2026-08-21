@@ -14,15 +14,10 @@ use Psr\Log\NullLogger;
 
 uses(RefreshDatabase::class);
 
-/*
- * The two ways a relay call ends badly, kept apart on purpose.
- *
- * The relay is a store-and-forward hop holding ciphertext it cannot read, so
- * an unreachable relay is a transient condition worth retrying. A refusal is
- * not: it means the client declined to send at all, and sending anyway would
- * either exceed what the relay carries or put routing metadata — which device
- * is talking to which — on the wire in the clear.
- */
+// An unreachable relay is transient and worth retrying; a refusal is not. A
+// refusal means the client declined to send at all, because sending would either
+// exceed what the relay carries or put routing metadata — which device is talking
+// to which — on the wire in the clear.
 
 beforeEach(function (): void {
     $this->storageRoot = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-relayclient-'.bin2hex(random_bytes(6)).DIRECTORY_SEPARATOR.'storage';

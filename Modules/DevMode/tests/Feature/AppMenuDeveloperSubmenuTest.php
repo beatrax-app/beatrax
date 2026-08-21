@@ -5,30 +5,6 @@ declare(strict_types=1);
 use Modules\Core\Models\User;
 use Modules\Desktop\Internal\Native\AppMenuBuilder;
 
-/*
- * AppMenuBuilder Developer-submenu invariants.
- *
- * AppMenuBuilder builds the standard App/File/Edit/View/Window/Help
- * menu set + the beatrax-specific File + Help entries, and
- * conditionally appends a Developer submenu that appears only for
- * is_developer=true users:
- *
- *   Developer → "Open Dev Console" (⌘.) + "⌘K Run a command"
- *
- * "Open Dev Console" carries an OS-menu accelerator (Cmd+.); the
- * "Run a command" entry retains the ⌘K visual hint in its label
- * but does NOT register an OS-menu accelerator (the body-level
- * Blade keybind handler owns the actual ⌘K → palette:open dispatch).
- *
- * NativePHP caveat: app-menu changes do NOT propagate until full
- * bundle relaunch. The build() output is correct here — what
- * changes a running bundle's menu is a separate concern.
- *
- * Test design: AppMenuBuilder is a non-Livewire pure-composition
- * class. The fixture uses actingAs(...) to seed the CurrentUser
- * the container resolves into the builder's constructor.
- */
-
 function devMenuUser(bool $isDeveloper, string $username = 'menu-fixture'): User
 {
     return User::query()->create([
@@ -59,12 +35,8 @@ it('appends a Developer submenu with the Open Dev Console + Run-a-command entrie
     expect($rendered)->toContain(AppMenuBuilder::DEV_OPEN_CONSOLE);
     expect($rendered)->toContain(AppMenuBuilder::DEV_RUN_COMMAND);
 
-    // "Open Dev Console" carries the Cmd+. accelerator. "Run a command"
-    // does NOT register an OS-menu accelerator — the ⌘K visual hint
-    // lives in its label, and the body-level Blade keybind handler
-    // owns the actual ⌘K → palette:open dispatch. Letting the OS menu
-    // intercept Cmd+K would navigate to /dev instead of opening the
-    // palette.
+    // ⌘K stays a label hint with no OS accelerator: if the menu claimed it,
+    // Cmd+K would navigate to /dev instead of opening the palette.
     expect($rendered)->toContain('Cmd+.');
     expect($rendered)->not->toContain('Cmd+K');
 });

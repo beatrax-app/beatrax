@@ -24,8 +24,8 @@ beforeEach(function (): void {
 });
 
 it('sums EUR account balances into a single net-worth figure with a breakdown', function (): void {
-    nwAccount($this->db, $this->user->id, 'Checking', 'bank', 200000);   // +€2,000 asset
-    nwAccount($this->db, $this->user->id, 'PayPal', 'paypal', -30000);   // −€300 (negative balance)
+    nwAccount($this->db, $this->user->id, 'Checking', 'bank', 200000);
+    nwAccount($this->db, $this->user->id, 'PayPal', 'paypal', -30000);
 
     $netWorth = app(NetWorthQuery::class)->forUser($this->user);
 
@@ -41,8 +41,8 @@ it('excludes non-EUR accounts from the figure but keeps them in the breakdown', 
 
     $netWorth = app(NetWorthQuery::class)->forUser($this->user);
 
-    expect($netWorth->totalMinor)->toBe(200000);      // USD account excluded from the sum
-    expect($netWorth->accounts)->toHaveCount(2);       // …but still listed
+    expect($netWorth->totalMinor)->toBe(200000);
+    expect($netWorth->accounts)->toHaveCount(2);
     expect($netWorth->hasExcludedAccounts)->toBeTrue();
 });
 

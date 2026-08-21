@@ -13,9 +13,6 @@ use Modules\Import\Public\Dto\ConsolidatedPreviewSection;
 use Modules\Import\Public\Dto\PreviewRowDto;
 use Modules\Ledger\Public\Enums\ImportRunStatus;
 
-/**
- * @link ../../../../.docs/features/import/architecture.md#consolidated-preview-multi-run-commit
- */
 final readonly class BuildConsolidatedPreviewQuery
 {
     // The 30-minute cache TTL empties the rows long before this matters;

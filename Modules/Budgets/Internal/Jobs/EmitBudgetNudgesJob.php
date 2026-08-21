@@ -97,9 +97,9 @@ final class EmitBudgetNudgesJob implements ShouldBeUniqueUntilProcessing, Should
         }
     }
 
-    // Mirrors PeriodQuery::containing()'s exact window algorithm, scoped
-    // to $user->period_start_day directly instead of the request-bound
-    // CurrentUser contract (see architecture.md for why).
+    // PeriodQuery::containing() resolves the period through the request-bound
+    // CurrentUser, which a queued job does not have: same window algorithm,
+    // read off $user->period_start_day instead.
     private function currentPeriodFor(User $user, Clock $clock): Period
     {
         $instant = $clock->now();

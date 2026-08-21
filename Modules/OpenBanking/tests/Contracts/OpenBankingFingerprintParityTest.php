@@ -16,10 +16,9 @@ use Modules\OpenBanking\Tests\Support\EnableBankingFixtures;
 
 uses(RefreshDatabase::class);
 
-// The paired fixtures are what make this falsifiable: two rows exist verbatim
-// in both the Enable Banking JSON and the ASN CAMT.053 file (the overlap that
-// must dedup), one is PDNG (dropped by the adapter), and one has no CAMT twin
-// (the row that must still commit, proving nothing is passing by dropping all).
+// The fixtures make this falsifiable: two rows exist verbatim in both the EB
+// JSON and the ASN CAMT.053 file (must dedup), one is PDNG (dropped), and one
+// has no CAMT twin — so a run that dropped everything could not pass.
 
 final class ParityStubHttpClient extends EnableBankingHttpClient
 {

@@ -4,18 +4,10 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 
-/*
- * Drives the `/health` endpoint contract used by the release pipeline's
- * per-platform smoke probe. The shape is deterministic by design — exactly
- * four keys, no timestamp — so a single jq filter on the response can
- * assert both liveness and that the running bundle reports the version
- * string that was pushed as a tag.
- *
- * The route registers outside the `web` middleware group so the smoke
- * probe can reach it before any session machinery exists on a fresh
- * install (the `EnsureDatabaseReady` gate on the `web` group would
- * otherwise redirect a pre-migration probe to `desktop.setup`).
- */
+// The shape is deterministic on purpose — four keys, no timestamp — so the
+// release smoke probe can assert liveness and the built version with one jq
+// filter. The route sits outside the `web` group because EnsureDatabaseReady
+// would otherwise redirect a pre-migration probe to desktop.setup.
 
 it('responds with HTTP 200 and JSON content type', function (): void {
     $response = $this->get('/health');
@@ -103,9 +95,8 @@ it('reports the SQLite library version reported by the default connection', func
 });
 
 it('is reachable without any authenticated session and does not redirect to login', function (): void {
-    // No actingAs() call. A guest hitting an auth-gated route returns
-    // a 302 to /login; the /health route must short-circuit that path
-    // because the smoke probe runs before any user exists.
+    // No actingAs(): the smoke probe runs before any user exists, so the 302 to
+    // /login an auth-gated route answers with would fail it.
     $response = $this->get('/health');
 
     $response->assertOk();

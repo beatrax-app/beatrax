@@ -10,13 +10,6 @@ use Modules\Anomaly\Tests\Support\AnomalyCorpusSeeder;
 
 uses(RefreshDatabase::class);
 
-/*
- * Duplicate-charge detector (D-10): same counterparty + exact settled
- * amount + currency + direction within 7 days fires `duplicate`; a pair
- * where BOTH charges are on the same approved recurring series is excluded
- * (legit cadence-landed-twice). The min floor gates it.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -40,6 +33,8 @@ it('fires for an exact duplicate within the 7-day window', function (): void {
     expect($detector->fires($txn, $user, $user->anomaly_min_amount_minor))->toBeTrue();
 });
 
+// Two charges on one approved series are a legitimate cadence that landed
+// twice, not a double charge.
 it('does NOT fire when both charges are on the same approved recurring series', function (): void {
     $user = AnomalyCorpusSeeder::makeUser();
     $fixture = AnomalyCorpusSeeder::load('duplicate-recurring-excluded');
@@ -68,8 +63,6 @@ it('fires on the later charge but not its earlier sibling — one alert per real
     $laterRow = AnomalyCorpusSeeder::transactionRow($this->db, $laterId);
     $earlierRow = AnomalyCorpusSeeder::transactionRow($this->db, $earlierId);
 
-    // Across both the reactive (later-row) and a sweep re-evaluation of the
-    // earlier row, exactly ONE side fires — the later charge.
     expect($detector->fires($laterRow, $user, $user->anomaly_min_amount_minor))->toBeTrue()
         ->and($detector->fires($earlierRow, $user, $user->anomaly_min_amount_minor))->toBeFalse();
 });

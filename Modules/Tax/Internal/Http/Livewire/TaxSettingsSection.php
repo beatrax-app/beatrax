@@ -29,9 +29,8 @@ final class TaxSettingsSection extends Component
 
     public function mount(CurrentUser $currentUser, DatabaseManager $db): void
     {
-        // Guard unauth at mount, mirroring render()'s guard — a Livewire
-        // hydrate whose session expired must still mount and render rather
-        // than throw when it reaches user().
+        // A hydrate whose session expired must still mount and render, not throw
+        // when it reaches user().
         if (! $currentUser->isAuthenticated()) {
             return;
         }
@@ -86,8 +85,6 @@ final class TaxSettingsSection extends Component
         }
     }
 
-    // Guards against empty and duplicate names with a friendly inline
-    // error instead of an uncaught exception.
     public function renameCategory(
         int $categoryId,
         string $name,
@@ -96,14 +93,10 @@ final class TaxSettingsSection extends Component
     ): void {
         $this->renameError = '';
 
-        // A NotFoundHttpException here means a cross-user attempt; every
-        // catch in this class silently ignores it in the UI layer rather
-        // than surfacing a signal that the id exists.
         try {
             $writer->rename($currentUser->user()->id, $categoryId, $name);
         } catch (NotFoundHttpException) {
-            // Cross-user id — swallow silently so the UI never signals that
-            // the row exists for another owner (see the note above).
+            // A cross-user id stays silent: reporting it confirms the row exists.
         } catch (\InvalidArgumentException|\RuntimeException $e) {
             $this->renameError = $e->getMessage();
         }
@@ -117,8 +110,7 @@ final class TaxSettingsSection extends Component
         try {
             $writer->archive($currentUser->user()->id, $categoryId);
         } catch (NotFoundHttpException) {
-            // Cross-user id — swallow silently so the UI never signals that
-            // the row exists for another owner.
+            // A cross-user id stays silent: reporting it confirms the row exists.
         }
     }
 
@@ -130,8 +122,7 @@ final class TaxSettingsSection extends Component
         try {
             $writer->unarchive($currentUser->user()->id, $categoryId);
         } catch (NotFoundHttpException) {
-            // Cross-user id — swallow silently so the UI never signals that
-            // the row exists for another owner.
+            // A cross-user id stays silent: reporting it confirms the row exists.
         }
     }
 

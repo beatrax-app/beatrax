@@ -7,18 +7,8 @@ use Illuminate\Session\Store;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Auth\Public\Contracts\KeyCustodian;
 
-/*
- * Unit tests for LockStateManager's KeyCustodian wiring. A spy custodian
- * proves the session never holds the raw key on a native bundle: unlock()
- * stores the custodian HANDLE, heldKey() reads it back through the custodian,
- * and lock() releases the handle via forget().
- */
-
-/**
- * Spy custodian that models a native (out-of-session) store: the handle is
- * "handle:" . base64(key) so it is provably NOT the raw key, and forget()
- * records the handles it was asked to release.
- */
+// Models a native out-of-session store. The handle is "handle:" . base64(key)
+// so it is provably not the raw key, and forget() records what it released.
 function spyCustodian(): KeyCustodian
 {
     return new class implements KeyCustodian

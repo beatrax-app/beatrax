@@ -10,13 +10,6 @@ use Modules\Migration\Internal\ValueObjects\SourceMapKey;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for `SourceMapWriter` (13.5-06 Task 1). Not pinned by a
- * Plan 02 RED stub — added per this task's own acceptance criteria, mirroring
- * Plan 05's precedent of authoring dedicated coverage for classes with no
- * pre-existing RED stub of their own.
- */
-
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'source-map-writer-fixture-user',

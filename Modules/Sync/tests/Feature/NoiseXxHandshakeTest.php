@@ -5,29 +5,12 @@ declare(strict_types=1);
 use Modules\Sync\Internal\Transport\Noise\NoiseCipherState;
 use Modules\Sync\Internal\Transport\Noise\NoiseHandshakeState;
 
-/*
- * NoiseXxHandshakeTest — XPORT-01: Noise XX pattern handshake.
- *
- * Validates that a complete XX handshake (3-message, 1.5 RTT) between an
- * initiator and a responder:
- *   1. Produces a symmetric session key pair (split keys) after message 3.
- *   2. The derived keys are directional (initiator-send ≠ responder-send).
- *   3. The handshake is deterministic given fixed ephemeral keys (test
- *      vector matching for the 3-message exchange).
- *
- * The official cacophony test vectors for Noise_XX_25519_ChaChaPoly_BLAKE2b
- * are vendored in Modules/Sync/tests/Fixtures/noise_test_vectors.json.
- * All three message ciphertexts from the vector are asserted so no cipher-
- * suite drift can go undetected (anti-Pitfall: wrong ChaCha vs XChaCha).
- *
- * Usage context: XX is the fallback pattern when the responder's static
- * X25519 key is not yet known (first connect or after static key mismatch).
- * IK is the primary pattern for reconnecting paired devices.
- */
+// XX is the fallback for a first connect, where the responder's static key is
+// not known yet; IK carries every reconnect. All three message ciphertexts are
+// asserted against the vendored cacophony vectors, because cipher-suite drift
+// otherwise stays invisible until a peer on the old build cannot connect.
 
 /**
- * Loads the XX test vector from the vendored fixtures file.
- *
  * @return array<string, mixed>
  */
 function loadXxVector(): array
@@ -65,7 +48,6 @@ it('XX handshake produces split keys after 3-message exchange', function (): voi
     $initHs = NoiseHandshakeState::initXxInitiator($initStaticSecret, $initStaticPublic);
     $respHs = NoiseHandshakeState::initXxResponder($respStaticSecret, $respStaticPublic);
 
-    // XX: 3 messages
     $msg1 = $initHs->writeMessage('');
     $respHs->readMessage($msg1);
 
@@ -130,8 +112,6 @@ it('XX handshake all 3 message ciphertexts match official Noise_XX_25519_ChaChaP
         expect($msg)->toHaveKey('ciphertext');
     }
 
-    // Decode the fixed keys from the vector.
-    // The vector stores private keys and pre-computed public keys (*_pub fields).
     $initStaticSecret = sodium_hex2bin((string) $xxVector['init_static']);
     $initStaticPublic = sodium_hex2bin((string) $xxVector['init_static_pub']);
 
@@ -146,7 +126,6 @@ it('XX handshake all 3 message ciphertexts match official Noise_XX_25519_ChaChaP
 
     $prologue = sodium_hex2bin((string) $xxVector['init_prologue']);
 
-    // --- Initiator side ---
     $initHs = NoiseHandshakeState::initXxInitiator(
         $initStaticSecret,
         $initStaticPublic,
@@ -154,7 +133,6 @@ it('XX handshake all 3 message ciphertexts match official Noise_XX_25519_ChaChaP
     );
     $initHs->setEphemeralKeypair($initEphemeralSecret, $initEphemeralPublic);
 
-    // --- Responder side ---
     $respHs = NoiseHandshakeState::initXxResponder(
         $respStaticSecret,
         $respStaticPublic,
@@ -162,7 +140,6 @@ it('XX handshake all 3 message ciphertexts match official Noise_XX_25519_ChaChaP
     );
     $respHs->setEphemeralKeypair($respEphemeralSecret, $respEphemeralPublic);
 
-    // Message 1: initiator writes
     $payload1 = sodium_hex2bin($messages[0]['payload']);
     $msg1 = $initHs->writeMessage($payload1);
 
@@ -173,7 +150,6 @@ it('XX handshake all 3 message ciphertexts match official Noise_XX_25519_ChaChaP
     $decodedPayload1 = $respHs->readMessage($msg1);
     expect($decodedPayload1)->toBe($payload1);
 
-    // Message 2: responder writes
     $payload2 = sodium_hex2bin($messages[1]['payload']);
     $msg2 = $respHs->writeMessage($payload2);
 
@@ -184,7 +160,6 @@ it('XX handshake all 3 message ciphertexts match official Noise_XX_25519_ChaChaP
     $decodedPayload2 = $initHs->readMessage($msg2);
     expect($decodedPayload2)->toBe($payload2);
 
-    // Message 3: initiator writes
     $payload3 = sodium_hex2bin($messages[2]['payload']);
     $msg3 = $initHs->writeMessage($payload3);
 
@@ -231,14 +206,12 @@ it('XX initiator static key is revealed and authenticated in message 3', functio
     $msg3 = $initHs->writeMessage('');
     $respHs->readMessage($msg3);
 
-    // After XX completes, the responder has the initiator's static public key.
     [, , $peerStaticFromResp] = $respHs->split();
 
     expect(sodium_bin2hex($peerStaticFromResp))->toBe(sodium_bin2hex($initStaticPublic),
         'XX: after handshake, responder peerStaticPublicKey() must match initiator static public key from vector'
     );
 
-    // Initiator has the responder's static public key.
     [, , $peerStaticFromInit] = $initHs->split();
     expect(sodium_bin2hex($peerStaticFromInit))->toBe(sodium_bin2hex($respStaticPublic),
         'XX: after handshake, initiator peerStaticPublicKey() must match responder static public key from vector'

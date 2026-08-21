@@ -8,17 +8,10 @@ use Illuminate\Support\Collection;
 use Modules\CashBook\Internal\Actions\RecordManualTransaction;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
 
-/*
- * Capturing only the import path was too narrow. Every writer of ledger rows —
- * imports, the cash book, e-mail receipts, the migration pipeline — records
- * through RecordTransactions, so that is where capture belongs.
- *
- * Measured on a paired iPhone: a cash entry wrote transaction 165 and produced
- * five `notifications` op-log rows and nothing else. The newest `transactions`
- * op was still the pairing snapshot, hours earlier, while goals and envelope
- * assignments written in the same session were captured — so the mechanism was
- * alive and transactions simply were not wired to it.
- */
+// Every writer of ledger rows — imports, the cash book, receipts, migration —
+// records through the same action, so that is where capture belongs. Capturing
+// only the import path meant a cash entry produced notification ops and nothing
+// else, while goals written in the same session travelled fine.
 
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();

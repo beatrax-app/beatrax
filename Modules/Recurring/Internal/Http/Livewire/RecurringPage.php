@@ -14,18 +14,17 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
 use Modules\Recurring\Public\Services\FixedPaymentsViewQuery;
 
-// Method-parameter DI on every action and on render() (constructor
-// injection is banned on Livewire Component subclasses), which also rules
-// out #[Computed] getters as a memoisation seam: render() therefore takes
-// the round-trip cost (a 3-query batch + a totals SUM) on every action.
+// Constructor injection is banned on Livewire components, which also rules
+// out #[Computed] as a memoisation seam — so render() pays a 3-query batch
+// plus a totals SUM on every action.
 
+/**
+ * @link ../../../../../.docs/features/recurring/detection-encryption-posture.md#the-two-dispatch-origins
+ */
 final class RecurringPage extends Component
 {
     use DispatchesToast;
 
-    // Transfers-section disclosure state, default closed; the Blade view
-    // renders the panel inside a <details> element whose open attribute
-    // reflects this flag.
     public bool $transfersExpanded = false;
 
     public function toggleTransfers(): void
@@ -33,10 +32,8 @@ final class RecurringPage extends Component
         $this->transfersExpanded = ! $this->transfersExpanded;
     }
 
-    // Dispatches via dispatchSync (see the class @link's KEK-posture
-    // note) so the always-unlocked request Session's KEK is available in
-    // process; short-circuits when unauthenticated as a defence-in-depth
-    // check (the route is already auth-gated upstream).
+    // dispatchSync, not dispatch: the detector needs the request Session's KEK
+    // in process, and a queued worker would not have it.
     public function reDetect(CurrentUser $currentUser, Dispatcher $bus): void
     {
         if (! $currentUser->isAuthenticated()) {

@@ -160,14 +160,13 @@ final class SetupWizard extends Component
                 'updated_at' => $clock->now()->toDateTimeString(),
             ]);
 
-        // Livewire's action dispatcher drops a returned RedirectResponse;
-        // only $this->redirect(...) reaches the wire:click response.
+        // A returned RedirectResponse is dropped; only $this->redirect() navigates.
         return $this->redirect('/');
     }
 
-    // Wired to wire:click.prevent so Electron does not navigate the wizard
-    // window away from /setup-wizard. The URL still passes OpenExternalUrlAction's
-    // https + host allow-list before reaching NativePHP's shell contract.
+    // Wired to wire:click.prevent so Electron does not navigate the wizard window
+    // away from /setup-wizard. The URL still clears OpenExternalUrlAction's
+    // https + host allow-list before NativePHP's shell contract sees it.
     public function openHelp(
         OpenExternalUrlAction $opener,
         ConfigRepository $config,

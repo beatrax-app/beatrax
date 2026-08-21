@@ -39,19 +39,16 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
 
     Route::get('/lock', LockScreen::class)->name('auth.lock');
 
-    // Called by lock.js via fetch(keepalive:true) when the grace timer expires
-    // or the idle threshold is met.
+    // Called by lock.js when the grace timer expires or the idle threshold hits.
     Route::post('/lock/engage', LockEngageController::class)->name('auth.lock.engage');
 
-    // The 204 body is the point: merely passing through AppLockMiddleware
-    // refreshes last_activity_at, and only a plain request does — Livewire
-    // and wire:poll traffic deliberately does not count as activity.
+    // The empty body is the point: passing through AppLockMiddleware is what
+    // refreshes last_activity_at, and only a plain request does.
     Route::post('/lock/activity', static fn (): Response => new Response('', 204))
         ->name('auth.lock.activity');
 
-    // Deliberately NOT in AppLockMiddleware's allow-list: the redirect to the
-    // lock screen is exactly what tells lock.js the grace window closed while
-    // the app was suspended.
+    // Deliberately not allow-listed: the redirect to the lock screen is what
+    // tells lock.js the grace window closed while the app was suspended.
     Route::post('/lock/background', [LockLifecycleController::class, 'background'])
         ->name('auth.lock.background');
 

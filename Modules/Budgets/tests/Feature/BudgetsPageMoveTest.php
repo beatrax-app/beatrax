@@ -11,15 +11,8 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\Category;
 use Modules\Ledger\Public\Services\PeriodQuery;
 
-/*
- * Phase 13.2 Plan 07 Task 2: the /budgets move-money modal + per-envelope
- * recent-moves list with undo (Req 5 grid half). EnvelopeWriter::move()/
- * undoMove() (Plan 04) already exist and are unit-tested by
- * EnvelopeMoveTest.php; this file exercises the Livewire-layer wiring
- * (openMove/moveMoney/undoMove actions + the modal's error-mapping/undo
- * contract) that BudgetsPage adds on top of them.
- */
-
+// The Livewire wiring only; EnvelopeWriter::move()/undoMove() themselves are
+// covered by EnvelopeMoveTest.
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'envelopemove-'.bin2hex(random_bytes(4)),

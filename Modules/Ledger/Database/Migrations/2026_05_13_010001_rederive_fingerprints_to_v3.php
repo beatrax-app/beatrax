@@ -9,8 +9,6 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Migrations receive no constructor injection, so container resolution here
-        // is the documented exception to the DI-only rule.
         /** @var FingerprintRederiveService $service */
         $service = app(FingerprintRederiveService::class);
 

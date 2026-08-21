@@ -7,13 +7,6 @@ use Livewire\Livewire;
 use Modules\Core\Internal\Http\Livewire\SettingsPage;
 use Modules\Core\Models\User;
 
-/*
- * Feature tests for the /settings page. Covers the round-trip of
- * `default_currency_view` and `period_start_day` into the users row via
- * the SettingsPage Livewire component, including validation rejection
- * for out-of-bounds values and the unchanged-row guarantee.
- */
-
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'wessel',
@@ -87,7 +80,6 @@ it('rejects period_start_day outside 1..28', function (): void {
 
     expect($high->errors()->first('periodStartDay'))->toBe('Choose a day from 1 to 28.');
 
-    // Database row stays at the beforeEach default; nothing was persisted.
     expect($this->user->fresh()->period_start_day)->toBe(1);
 })->group('phase-3');
 
@@ -114,13 +106,10 @@ it('round-trips default_currency_view = original into the user row', function ()
     expect($this->user->period_start_day)->toBe(25);
 })->group('phase-3');
 
-/*
- * A `1fr` grid track takes min-content as its automatic minimum, so the tax
- * deduction-category rows — a long label plus two ghost buttons, ~367px of
- * min-content — pushed their whole settings section 92px past its container
- * and 35px off a 390px screen, clipping the Rename and Archive buttons. The
- * track is capped and the row wraps.
- */
+// A `1fr` track takes min-content as its automatic minimum, so a deduction
+// category row — a long label plus two ghost buttons, ~367px of min-content —
+// pushed its settings section 92px past the container and 35px off a 390px
+// screen, clipping the buttons. The track is capped and the row wraps.
 it('keeps a settings section inside its container on a phone', function (): void {
     $css = (string) file_get_contents(base_path('resources/css/app.css'));
 

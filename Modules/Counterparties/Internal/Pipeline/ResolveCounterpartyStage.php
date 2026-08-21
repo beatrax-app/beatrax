@@ -9,10 +9,8 @@ use Modules\Counterparties\Public\Contracts\CounterpartyResolver;
 use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
-// Sits between ApplyAutoCategoryStage::apply() and the post-commit
+// Runs between ApplyAutoCategoryStage::apply() and the post-commit
 // FingerprintStage::classify() boundary inside ImportPipeline::preview().
-// A null resolution or a self_account DTO (counterpartyId null) leaves
-// the transaction unchanged; otherwise the FK is stamped via withCounterpartyId().
 final class ResolveCounterpartyStage implements ResolvesCounterparties
 {
     public function __construct(

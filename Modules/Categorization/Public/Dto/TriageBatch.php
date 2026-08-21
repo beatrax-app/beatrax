@@ -6,10 +6,8 @@ namespace Modules\Categorization\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-// The cursor pair (nextCursorPostedAt, nextCursorId) carries the last
-// visible row's ordering key when more rows exist; using the pair rather
-// than the id alone prevents rows with a matching posted_at and a higher
-// id from silently dropping out of the inbox between pages.
+// The cursor is a pair rather than an id alone, so rows sharing a posted_at
+// cannot drop out of the inbox between pages.
 final class TriageBatch extends Data
 {
     public function __construct(

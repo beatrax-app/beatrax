@@ -9,10 +9,8 @@ use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
 use Psr\Log\LoggerInterface;
 
-// Both the database queue driver and Horizon delete successful rows
-// from `jobs` on completion, so /dev/queue has no Completed tab — this
-// listener writes `queue.processed` (INFO) / `queue.failed` (WARNING) to
-// the Laravel log instead, filterable via the tailer's `contains` field.
+// The database driver and Horizon both delete successful rows from `jobs`, so
+// /dev/queue can have no Completed tab. The log is the only surviving trace.
 final readonly class LogQueueLifecycle
 {
     public function __construct(

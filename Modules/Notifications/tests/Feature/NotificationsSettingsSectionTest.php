@@ -12,19 +12,9 @@ use Modules\Notifications\Public\Events\NotificationPreferenceMutated;
 
 uses(RefreshDatabase::class);
 
-/*
- * NotificationsSettingsSectionTest — the Settings "Notifications" section
- * (D-36): the ~9-control preferences form + the D-35 read-only "Other
- * devices" panel.
- *
- * Local helpers are uniquely named (notificationsSettingsUser /
- * settingsSeedRegistryDevice) rather than reusing prefUser() /
- * seedRegistryDevice() from NotificationPreferenceQueryTest.php — this file
- * must also pass when run standalone (`pest <this file>`), so it cannot
- * depend on another test file having been loaded first, and a same-named
- * global function declared in both files would fatal on redeclaration when
- * the full suite runs both.
- */
+// The helpers below duplicate NotificationPreferenceQueryTest's rather than
+// sharing them: Pest declares these globally, so a shared name fatals on
+// redeclaration when the whole suite runs.
 
 function notificationsSettingsUser(string $username): User
 {

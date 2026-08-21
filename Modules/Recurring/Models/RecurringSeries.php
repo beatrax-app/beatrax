@@ -76,10 +76,8 @@ final class RecurringSeries extends Model
 
     protected static function booted(): void
     {
-        // Default cluster_counterparty_key to detected_name when a caller
-        // (typically a test fixture) doesn't supply it — detector code
-        // paths always set the column explicitly, so this hook only fires
-        // for direct Eloquent inserts that pre-date the column.
+        // Only fires for direct Eloquent inserts, typically fixtures: every
+        // detector path sets cluster_counterparty_key explicitly.
         self::saving(static function (self $series): void {
             if ($series->cluster_counterparty_key === null) {
                 $series->cluster_counterparty_key = $series->detected_name;

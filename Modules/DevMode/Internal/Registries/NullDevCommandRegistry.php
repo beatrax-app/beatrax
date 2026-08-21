@@ -8,9 +8,8 @@ use InvalidArgumentException;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\CommandSpec;
 
-// Fallback so consumer code can resolve the contract without bound()
-// guards when the real CommandRegistry binding has not been wired
-// (ad-hoc tests); find($name) always throws.
+// Lets consumers resolve the contract without a bound() guard when the real
+// implementation has not been wired.
 final class NullDevCommandRegistry implements DevCommandRegistry
 {
     /**

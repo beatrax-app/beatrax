@@ -6,9 +6,7 @@ namespace Modules\Budgets\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-// direction is 'in' | 'out'; amountMinor is signed (positive for 'in',
-// negative for 'out'). counterpartCategoryId/Name are always non-null --
-// every envelope move has a real counterpart category.
+// direction is 'in' | 'out'; amountMinor is signed (+ for 'in', − for 'out').
 final class EnvelopeMoveRow extends Data
 {
     public function __construct(

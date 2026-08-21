@@ -18,10 +18,9 @@ final class MigrationsIndex extends Component
     {
         $userId = $currentUser->user()->id;
 
-        // Raw DatabaseManager read (never a chained dynamic Eloquent
-        // ->orderByDesc() call) — mirrors PreviewSummaryBuilder/
-        // GoalProgressQuery's established discipline against
-        // phpstan-strict-rules' staticMethod.dynamicCall false positive.
+        // A raw DatabaseManager read rather than a chained Eloquent
+        // ->orderByDesc(), which trips phpstan-strict-rules'
+        // staticMethod.dynamicCall false positive.
         $runs = $db->connection()->table('migration_runs')
             ->where('user_id', $userId)
             ->where('status', '!=', MigrationRunStatus::Discarded->value)

@@ -19,29 +19,10 @@ use Modules\Sync\Public\Events\TransactionMutated;
 
 uses(RefreshDatabase::class);
 
-/*
- * Wave 0 stub for SC-3/D-10 (13.3-VALIDATION.md), mirroring
- * EnvelopeConcurrentEditConvergenceTest's shape.
- *
- * Per D-10/RESEARCH.md, `SyncCaptureListener`/`OpLogReplayer` are already
- * fully field-agnostic for the `transactions` table — capturing/replaying
- * an arbitrary `status` edit needs zero listener changes, and
- * `MergeRulesRegistry::strategyFor()` already defaults an unregistered
- * field to 'lww'. This test may therefore already be GREEN before 13.3-02
- * lands the explicit registry line; its role is to PIN the convergence
- * contract as a regression guard for the real toggle/reconcile write paths
- * (13.3-02/03/04), not to gate on new production code — mirroring
- * StatusSurvivesReimportTest's already-green role for D-04.
- *
- * Scenario: one transaction is seeded 'cleared' -- both "device A" and
- * "device B" hold an IDENTICAL row (same stable PK). Offline (no
- * cross-sync yet): device A sets status to 'uncleared'; device B (unaware
- * of A's edit) independently sets the SAME field to a DIFFERENT value,
- * 'reconciled'. Both devices' real, captured op-log entries are merged and
- * replayed. Per-(table,pk,field) LWW must converge DETERMINISTICALLY --
- * replaying the merged op set in either application order must yield the
- * IDENTICAL final state.
- */
+// Capture and replay are field-agnostic for transactions, and strategyFor()
+// defaults an unregistered field to lww, so this converges whether or not
+// `status` has an explicit registry line: it pins the convergence contract as a
+// regression guard on the toggle and reconcile write paths, not as a gate.
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-07-04 11:00:00');
@@ -97,11 +78,7 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-/**
- * Constructs a fresh OpLogWriter for the given device, binds it into the
- * container (so SyncCaptureListener's lazy resolution picks it up), and
- * returns its hex-encoded public key for the replayer's device-key map.
- */
+// Bound into the container because SyncCaptureListener resolves its writer lazily.
 function bindStatusDeviceWriter(int $userId, string $deviceId): string
 {
     $keypair = sodium_crypto_sign_keypair();
@@ -162,7 +139,6 @@ it('two devices concurrently editing the SAME transaction status field converge 
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
-    // --- Device A (offline): sets status to 'uncleared'. ---
     $pkA = bindStatusDeviceWriter((int) $this->user->id, 'device-a');
     $watermarkA = statusMaxOpLogId($db);
     $db->connection()->table('transactions')->where('id', $this->tx->id)->update(['status' => 'uncleared']);
@@ -175,12 +151,10 @@ it('two devices concurrently editing the SAME transaction status field converge 
     $aOps = statusOpsAfter($db, (int) $this->user->id, $watermarkA);
     expect($aOps)->not->toBeEmpty();
 
-    // Restore the live row to its ORIGINAL value -- device B is offline and
-    // has NOT seen A's edit (scratch-state manipulation only; the final
-    // converged state is entirely determined by replaying the merged ops).
+    // Back to the original value: device B is offline and has not seen A's edit.
+    // Only the merged replay below decides the converged state.
     $db->connection()->table('transactions')->where('id', $this->tx->id)->update(['status' => 'cleared']);
 
-    // --- Device B (offline, independently): sets the SAME field to a DIFFERENT value. ---
     $pkB = bindStatusDeviceWriter((int) $this->user->id, 'device-b');
     $watermarkB = statusMaxOpLogId($db);
     $db->connection()->table('transactions')->where('id', $this->tx->id)->update(['status' => 'reconciled']);
@@ -195,12 +169,10 @@ it('two devices concurrently editing the SAME transaction status field converge 
 
     $deviceKeys = ['device-a' => $pkA, 'device-b' => $pkB];
 
-    // Replay in one order.
     $replayerForward = new OpLogReplayer($db, $deviceKeys, new MergeRulesRegistry);
     $replayerForward->replay([...$aOps, ...$bOps], (int) $this->user->id);
     $forwardResult = (string) $db->connection()->table('transactions')->where('id', $this->tx->id)->value('status');
 
-    // Reset and replay in the REVERSE order -- LWW must converge to the SAME value.
     $db->connection()->table('transactions')->where('id', $this->tx->id)->update(['status' => 'cleared']);
     $replayerReverse = new OpLogReplayer($db, $deviceKeys, new MergeRulesRegistry);
     $replayerReverse->replay([...$bOps, ...$aOps], (int) $this->user->id);
@@ -209,10 +181,9 @@ it('two devices concurrently editing the SAME transaction status field converge 
     expect($reverseResult)->toBe($forwardResult);
     expect(['uncleared', 'reconciled'])->toContain($forwardResult);
 
-    // Exactly one row -- no duplicate/lost transaction.
     expect($db->connection()->table('transactions')->where('id', $this->tx->id)->count())->toBe(1);
 
-    // No quarantine -- both devices' keys were known, signatures verified,
-    // and every _create_required/strategy path resolved cleanly.
+    // Anything in quarantine would mean an unknown device key, a signature that
+    // did not verify, or a strategy that did not resolve.
     expect($db->connection()->table('op_log_quarantine')->where('user_id', $this->user->id)->count())->toBe(0);
 });

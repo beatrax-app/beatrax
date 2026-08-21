@@ -26,10 +26,8 @@ final class LogTailerPage extends Component
     #[Url(as: 'contains')]
     public string $contains = '';
 
-    // Preserves the inode so LogStreamController's poll loop sees the
-    // size shrink via its `?since` past-current-size branch and signals
-    // reset; the listener Blade also dispatches `logs:truncated` so the
-    // client zeros its cached offset immediately.
+    // Preserving the inode is what lets the poll loop see the size shrink and
+    // tell the client to zero its cursor.
     public function truncate(LogFileStats $stats): void
     {
         $freed = $stats->truncateToday();
@@ -50,10 +48,8 @@ final class LogTailerPage extends Component
             static fn (string $s): bool => $s !== '',
         ));
 
-        // Initial stats snapshot so the chip labels + totals strip
-        // render correctly on first paint, before the JS stats poll
-        // has fired. The Alpine x-data overwrites these as soon as
-        // the first /dev/logs/stats response lands.
+        // Seeds first paint; the stats poll overwrites these on its first
+        // response.
         $today = $stats->forToday();
         $allFiles = $stats->allFiles();
 

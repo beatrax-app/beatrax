@@ -24,8 +24,8 @@ it('renders all three toggles with Toggle 3 disabled and a version-agnostic inli
     expect(preg_match('/<button[^>]*id="toggle-update-on-updates"[^>]*disabled/i', $html))->toBe(1);
     expect(preg_match('/<button[^>]*role="switch"[^>]*id="toggle-update-on-updates"/i', $html))->toBe(1);
 
-    // The inline note must mention a future activation without
-    // pinning to a version literal — B-5 forbids any `N.M` shape.
+    // The note must promise a future activation without naming a version:
+    // no `N.M` shape may appear anywhere in the rendered panel.
     expect($html)->toContain('Activates with a future app update');
     expect(preg_match('/\b\d+\.\d+/', $html))->toBe(0);
 });

@@ -8,17 +8,10 @@ use Modules\Ledger\Models\Category;
 
 uses(RefreshDatabase::class);
 
-/*
- * The default category tree is created for every real user, so its names are
- * product copy, not fixtures — a Dutch user's own budget screen listed
- * Groceries, Eating out and Fees & charges in English.
- *
- * The second half is subtler and is what these tests mostly defend: the tree
- * is shared (`user_id => null`) and re-seeded whenever a user is installed.
- * Writing the name on every run would retranslate a second user's categories
- * into whichever locale was active then, and would discard any rename the
- * first user had made.
- */
+// The tree is shared (`user_id => null`) and re-seeded whenever a user is
+// installed. Writing the name on every run would retranslate a second user's
+// categories into whichever locale was active then, and would discard any
+// rename the first user had made.
 
 it('writes the default names in the active language', function (): void {
     app()->setLocale('nl');
@@ -34,7 +27,6 @@ it('does not retranslate an existing tree when the locale changes', function ():
     app()->setLocale('nl');
     app(DefaultCategoryTreeSeeder::class)->run();
 
-    // A second install, with a different language active.
     app()->setLocale('de');
     app(DefaultCategoryTreeSeeder::class)->run();
 

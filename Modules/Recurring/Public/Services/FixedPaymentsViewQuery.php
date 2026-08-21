@@ -36,10 +36,9 @@ final readonly class FixedPaymentsViewQuery
 
         $fallbackMap = $this->resolveFallbackChainIds($user, $rows);
 
-        // Batch decorate counterparty names — the DTO does not surface
-        // a category id today, but priming the merchant-memory query
-        // here keeps the cross-module read on the happy path so the
-        // boundary arch invariant catches any future regression.
+        // The merchant-memory result below is deliberately discarded: no DTO
+        // field needs it yet, but keeping the cross-module read on the happy
+        // path is what lets the boundary arch test catch a regression.
         $counterpartyNames = [];
         foreach ($rows as $row) {
             /** @var stdClass $row */
@@ -236,10 +235,9 @@ final readonly class FixedPaymentsViewQuery
      */
     private function toDto(stdClass $row, array $fallbackMap): RecurringSeriesDto
     {
-        // Prefers the latest chain link when confirmed/candidate; otherwise
-        // walks back through the series' occurrences for the first usable
-        // chain. RecurringSeriesQuery skips this walk — its consumers don't
-        // need the fallback.
+        // Falls back to walking the series' occurrences for the first usable
+        // chain. RecurringSeriesQuery skips that walk; its callers don't need
+        // the fallback and would pay for it on every row.
         $chainLinkId = null;
         $primaryChainLinkId = $row->latest_funding_chain_link_id ?? null;
         $primaryChainState = $row->chain_link_state ?? null;

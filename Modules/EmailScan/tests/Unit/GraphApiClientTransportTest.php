@@ -19,15 +19,6 @@ use Modules\EmailScan\Public\Dto\InboxCredentials;
 use Modules\EmailScan\Public\Exceptions\UnsafeProviderRequestException;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
-/**
- * GraphApiClient driven through a mocked transport.
- *
- * The HTTP boundary used to be a private factory whose comment offered it as a
- * seam "a future test subclass could override" — but the class is final, so
- * that subclass could never exist and everything past the SSRF guard went
- * untested. The client is injectable now, so the paging, the raw-message
- * fetch and the error mapping can be exercised without reaching Microsoft.
- */
 beforeEach(function (): void {
     $this->secrets = new class extends OAuthSecretsRepository
     {
@@ -168,12 +159,9 @@ it('carries the delta link forward so the next scan resumes where this one stopp
     expect($result['deltaLink'])->toBe('https://graph.microsoft.com/v1.0/me/messages/delta?$deltatoken=xyz');
 });
 
-// Graph's error envelope is a contract we do not control, and a proxy or a
-// gateway in front of it can return something that parses as JSON but is not
-// the documented {"error": {"code", "message"}} shape at all. Each of the
-// three ways that shape can be wrong falls back to the same phrase, and the
-// point of the case is that the client keeps its footing instead of
-// surfacing a type error while already handling a failure.
+// A proxy or gateway in front of Graph can return something that parses as
+// JSON but is not the documented {"error": {"code", "message"}} shape. The
+// client must keep its footing rather than raise a type error mid-failure.
 it('falls back to a fixed phrase when the error body is not the documented shape', function (string $body): void {
     $client = ($this->makeClient)([
         new Response(500, ['Content-Type' => 'application/json'], $body),
@@ -187,10 +175,8 @@ it('falls back to a fixed phrase when the error body is not the documented shape
     'error object carries neither message nor code' => ['{"error":{}}'],
 ]);
 
-// An HTTP error status on a paging call reaches the BadResponseException
-// arm of getJson, which forwards the response to the error mapper — the
-// same collaborator getRawMessage uses — so the Graph error envelope is
-// surfaced through the typed sentinel here too.
+// A paging call reaches getJson's BadResponseException arm, a different route
+// to the same error mapper getRawMessage uses.
 it('maps a Graph error status on a paging call through the error mapper', function (): void {
     $client = ($this->makeClient)([
         new Response(500, ['Content-Type' => 'application/json'], (string) json_encode(['error' => ['message' => 'graph exploded']])),
@@ -200,10 +186,9 @@ it('maps a Graph error status on a paging call through the error mapper', functi
         ->toThrow(RuntimeException::class, 'graph exploded');
 });
 
-// A transport failure that never produced a response — DNS, a refused
-// connection, a timeout — is a different shape from an HTTP error, and reaches
-// a different arm. Graph's own error envelope does not exist in this case, so
-// the message is the transport's, capped by safeMessage().
+// A failure that never produced a response — DNS, refused connection, timeout
+// — reaches a different arm, where Graph's error envelope does not exist and
+// the message is the transport's own, capped by safeMessage().
 it('reports a transport failure with no response while fetching a raw message', function (): void {
     $client = ($this->makeClient)([
         new ConnectException('could not resolve host', new Request('GET', 'https://graph.microsoft.com/v1.0/me')),
@@ -234,9 +219,8 @@ it('reports a successful response whose body is not JSON', function (): void {
         ->toThrow(RuntimeException::class, 'failed to decode Graph response JSON');
 });
 
-// An inbox row whose OAuth credentials were never persisted, or were revoked
-// and cleared. Reaching the transport with no token would produce a 401 the
-// caller could mistake for an expired grant, so it is refused first.
+// Reaching the transport with no token produces a 401 the caller would mistake
+// for an expired grant, so it is refused first.
 it('refuses to act on an inbox with no persisted credentials', function (): void {
     $secrets = new class extends OAuthSecretsRepository
     {

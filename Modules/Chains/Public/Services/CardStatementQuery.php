@@ -40,8 +40,8 @@ final class CardStatementQuery
             return null;
         }
 
-        // The user-scope filter above is the cross-user safety boundary;
-        // this where('id', ...)->first() trusts the id it returns.
+        // The raw read above is the cross-user boundary; this lookup trusts the
+        // id it returned.
         return CardStatement::query()->where('id', $row->id)->first();
     }
 

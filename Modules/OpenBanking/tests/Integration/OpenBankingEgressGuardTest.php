@@ -44,10 +44,9 @@ function egressGuardValidPrivateKeyPem(): string
     return $pem;
 }
 
-// The rejection fixtures carry a deliberately MALFORMED private-key PEM. If
-// assertAllowedUrl() ever stopped running before EnableBankingJwtSigner::sign(),
-// signing would throw first and with a different type, so every assertion on
-// UnsafeOpenBankingRequestException below would fail rather than silently pass.
+// The rejection fixtures carry a deliberately malformed private-key PEM: if
+// assertAllowedUrl() stopped running before the signer, signing would throw a
+// different type first and these assertions would fail rather than pass emptily.
 function egressGuardRejectionSecrets(): OpenBankingSecretsRepository
 {
     return new class extends OpenBankingSecretsRepository
@@ -259,8 +258,7 @@ function egressGuardRejectionSecretsWithScaHost(string $bankScaHost): OpenBankin
     {
         public function __construct(private readonly string $bankScaHost)
         {
-            // Skips parent::__construct() on purpose: this fixture never touches
-            // the filesystem, so the parent's Filesystem/SecretShield deps are moot.
+            // No parent::__construct(): this fixture never touches the filesystem.
         }
 
         public function load(): ?OpenBankingCredentials

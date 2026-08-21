@@ -20,14 +20,10 @@ final class DiscoveredSenderQuery
 
     public const MIN_OCCURRENCES = 2;
 
-    // Days back from now() counting toward MIN_OCCURRENCES;
-    // observations older than this are ignored, not deleted (the row
-    // stays for audit).
+    // Older observations are ignored, not deleted — the row stays for audit.
     public const WITHIN_DAYS = 90;
 
-    // Hard cap on rows returned, since the panel paginates
-    // client-side; prevents a runaway-growth render while staying
-    // scrollable without taking over the page.
+    // The panel paginates client-side, so this bounds the render.
     public const PANEL_PAGE_SIZE = 25;
 
     public function __construct(
@@ -45,10 +41,9 @@ final class DiscoveredSenderQuery
     ): array {
         $threshold = $this->clock->now()->modify("-{$withinDays} days")->toDateTimeString();
 
-        // Defence-in-depth: joins to inboxes on both inbox_id and
-        // user_id so a candidate row whose denormalised user_id
-        // disagrees with the parent's is dropped by the SQL filter
-        // rather than leaked into the UI (see architecture.md).
+        // Joined on inbox_id AND user_id, so a candidate whose denormalised
+        // user_id disagrees with its parent inbox is dropped in SQL rather
+        // than leaked into the UI.
         $rows = $this->db->connection()
             ->table('discovered_senders')
             ->join('inboxes', function (JoinClause $join) use ($user): void {
@@ -83,9 +78,8 @@ final class DiscoveredSenderQuery
         return $out;
     }
 
-    // Counts panel-eligible candidates for the top-nav badge, using
-    // the same threshold as candidatesForUser so a count > 0 on the
-    // badge means at least one row will appear on the panel.
+    // Same threshold as candidatesForUser, so a non-zero badge always means
+    // at least one row is actually on the panel.
     public function candidatesCountForUser(
         User $user,
         int $minOccurrences = self::MIN_OCCURRENCES,

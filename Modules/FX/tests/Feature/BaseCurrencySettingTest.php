@@ -7,20 +7,8 @@ use Modules\Core\Internal\Http\Livewire\SettingsPage;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Currency;
 
-/*
- * Feature tests for the base-currency picker in the Settings page.
- *
- * FX-01 / T-04-01 / T-04-02:
- *  - A valid ISO-4217 code persists to users.base_currency.
- *  - An invalid code (or a code not in the currencies table) fails the
- *    `exists:currencies,code` validation — nothing is written to the DB.
- *  - All writes are scoped to the CurrentUser's own row; user_id is never
- *    taken from the request (V4 access-control).
- */
-
 beforeEach(function (): void {
-    // Seed at least two currencies so the picker has options and the
-    // `exists:currencies,code` rule works correctly.
+    // Two currencies, so the picker has options and exists:currencies,code can pass.
     Currency::query()->updateOrInsert(['code' => 'EUR'], ['name' => 'Euro', 'minor_unit' => 2]);
     Currency::query()->updateOrInsert(['code' => 'USD'], ['name' => 'US Dollar', 'minor_unit' => 2]);
 
@@ -42,7 +30,7 @@ it('mounts with baseCurrency hydrated from the user row', function (): void {
 })->group('phase-1-fx');
 
 it('defaults baseCurrency to EUR when user.base_currency is null', function (): void {
-    // Directly nullify without going through Eloquent defaults
+    // Straight to the table: Eloquent's $attributes default would put 'EUR' back.
     DB::table('users')->where('id', $this->user->id)->update(['base_currency' => null]);
 
     Livewire::test(SettingsPage::class)
@@ -59,13 +47,12 @@ it('persists a valid base_currency code to the users row on save', function (): 
 })->group('phase-1-fx');
 
 it('rejects an invalid base_currency code that is not in the currencies table', function (): void {
-    // 'XXX' is a well-formed 3-char code but NOT seeded — exists:currencies,code blocks it.
+    // A well-formed but unseeded code, so exists:currencies,code is what blocks it.
     $component = Livewire::test(SettingsPage::class)
         ->set('baseCurrency', 'XXX')
         ->call('save')
         ->assertHasErrors(['baseCurrency']);
 
-    // The users row must be unchanged
     expect($this->user->fresh()->base_currency)->toBe('EUR');
 })->group('phase-1-fx');
 
@@ -96,12 +83,10 @@ it('does not write another user\'s base_currency (V4 access-control)', function 
         'base_currency' => 'EUR',
     ]);
 
-    // Acting as $this->user — the write must only touch $this->user's row
     Livewire::test(SettingsPage::class)
         ->set('baseCurrency', 'USD')
         ->call('save')
         ->assertHasNoErrors();
 
-    // The other user's row must be untouched
     expect($other->fresh()->base_currency)->toBe('EUR');
 })->group('phase-1-fx');

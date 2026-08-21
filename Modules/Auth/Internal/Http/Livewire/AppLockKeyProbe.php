@@ -12,9 +12,8 @@ use Modules\Auth\Public\Services\AppLockKeyService;
 
 final class AppLockKeyProbe extends Component
 {
-    // Withholding the key only affects THIS session. Background
-    // queue/scheduler workers hold their own in-memory copy independent
-    // of any session lock state, so a running worker is unaffected.
+    // Withholding the key affects this session only: queue and scheduler
+    // workers hold their own copy, independent of any session lock state.
     public function lock(AppLockKeyService $keyService, Session $session): void
     {
         $keyService->withhold($session);
@@ -22,8 +21,7 @@ final class AppLockKeyProbe extends Component
 
     public function refresh(): void
     {
-        // No-op: Livewire re-renders automatically after any action call,
-        // so this button only needs to exist to trigger that round-trip.
+        // The round trip is the point; Livewire re-renders after any action.
     }
 
     public function render(ViewFactory $views, AppLockKeyService $keyService, Session $session): View

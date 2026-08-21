@@ -5,36 +5,11 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
+// `field` names the text property a `string` condition compares; `amount` and
+// `date` conditions always read the canonical settled amount and posted date,
+// so it is inert for them. `value2` is the second operand of `between`.
 /**
- * Creates the `rule_conditions` child table (D-02) — one row per
- * condition on a `categorization_rules` parent. A rule with `combinator
- * = 'all'` requires every condition to match; `combinator = 'any'`
- * requires at least one.
- *
- * Schema:
- *
- *   - id, rule_id (FK -> categorization_rules, cascade delete).
- *   - field (16) — which transaction property to compare. Meaningful
- *     only when `value_type = 'string'` (merchant/description/
- *     counterparty); `amount`/`date` value_types always compare
- *     against the transaction's canonical settled-amount / posted-date
- *     property and do not need a distinct field selector (see
- *     13.4-RESEARCH.md Open Question #1, resolved).
- *   - op (16) — comparison operator. String ops: contains, equals,
- *     starts_with. Amount ops: >, <, between. Date ops: before, after
- *     (between reuses the same amount-style two-value shape via
- *     `value`/`value2`).
- *   - value_type (8) — string | amount | date — which comparison
- *     branch RuleEngine dispatches to.
- *   - value — the primary comparison operand (always stored as a
- *     string; the engine parses it per value_type).
- *   - value2 (nullable) — the second operand for the `between` op.
- *
- * The field / op / value_type enums are enforced via paired BEFORE
- * INSERT / BEFORE UPDATE triggers — mirrors the
- * categorization_rules_field_check_* precedent from
- * 2026_05_17_010003_create_categorization_rules_table.php so a typo in
- * the action layer fails loud at the database boundary.
+ * @link ../../../../.docs/features/categorization/rule-evaluation-order.md
  */
 return new class extends ModuleMigration
 {

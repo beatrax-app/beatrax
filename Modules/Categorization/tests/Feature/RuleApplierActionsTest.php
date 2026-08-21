@@ -19,19 +19,6 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Sync\Public\Events\TransactionMutated;
 
-/*
- * Plan 13.4-05 — RuleApplier dual-mode action executor (D-06, Req 2/3).
- *
- * Task 1: import-mode folding — category/counterparty/note withers,
- * tax_tag import-deferred (Pitfall 4), last-writer-wins across
- * same-field actions, zero side effects (no DB write, no event
- * dispatch).
- *
- * Task 2 (below): re-apply mode — provenance guard (manual-preserving),
- * write-only-on-change idempotency, TransactionMutated sync dispatch,
- * fail-open on a dangling payload id.
- */
-
 function baseCanonicalForRuleApplier(): CanonicalTransaction
 {
     return new CanonicalTransaction(
@@ -59,11 +46,8 @@ function baseCanonicalForRuleApplier(): CanonicalTransaction
     );
 }
 
+// Unpersisted: import-mode folding never touches the DB.
 /**
- * Builds an unpersisted `RuleAction` model — import-mode folding never
- * touches the DB, so a `MatchedRule`'s `actions` list can be built
- * directly against the fillable attributes without an `insert()`.
- *
  * @param  array<string, mixed>  $payload
  */
 function ruleActionFor(string $type, array $payload, int $position = 0): RuleAction
@@ -170,8 +154,6 @@ function makeRuleApplierDeductionCategory(DatabaseManager $db, User $user, strin
     ]);
 }
 
-// --- Task 1: import mode ---
-
 it('folds category + counterparty + note onto the DTO at import; tax_tag is ignored', function (): void {
     $matched = [
         new MatchedRule(ruleId: 1, priority: 0, actions: [
@@ -216,8 +198,6 @@ it('skips a malformed category action (missing category_id) without throwing', f
     expect($result->categoryId)->toBeNull();
 });
 
-// --- Task 2: re-apply mode ---
-
 it('applies all four actions to a persisted transaction', function (): void {
     Event::fake([TransactionMutated::class]);
 
@@ -251,9 +231,8 @@ it('applies all four actions to a persisted transaction', function (): void {
     $tagRow = DB::table('tax_transaction_tags')->where('transaction_id', $tx->id)->first();
     expect((int) $tagRow->deduction_category_id)->toBe($deductionCategoryId);
 
-    // category + counterparty + note each dispatch their own
-    // TransactionMutated — tax_tag delegates to TagTransaction, which
-    // dispatches its own TransactionTagged event instead (no double-report).
+    // Three, not four: tax_tag delegates to TagTransaction, which dispatches
+    // TransactionTagged itself rather than a second TransactionMutated.
     Event::assertDispatched(TransactionMutated::class, 3);
 });
 
@@ -370,11 +349,9 @@ it('preserves an existing user-typed tax note when a rule-driven re-apply change
     $originalDeductionCategoryId = makeRuleApplierDeductionCategory(app(DatabaseManager::class), $user, 'Original');
     $newDeductionCategoryId = makeRuleApplierDeductionCategory(app(DatabaseManager::class), $user, 'Changed');
 
-    // Seed a pre-existing tax tag carrying a user-typed note WITHOUT
-    // stamping field_provenance.tax_tag as 'manual' — mirrors any tag row
-    // RuleApplier's manual-provenance guard does not exclude (e.g. a
-    // legacy tag predating field_provenance, or a prior rule-applied tag).
-    // This is exactly the row applyTaxTag() reads-before-writing.
+    // A user-typed note on a tag that is NOT stamped manual — a legacy tag
+    // predating field_provenance, or a previously rule-applied one. The
+    // provenance guard does not exclude it, so applyTaxTag() rewrites it.
     DB::table('tax_transaction_tags')->insert([
         'user_id' => $user->id,
         'transaction_id' => $tx->id,
@@ -399,9 +376,8 @@ it('preserves an existing user-typed tax note when a rule-driven re-apply change
 
     $tagRow = DB::table('tax_transaction_tags')->where('transaction_id', $tx->id)->first();
     expect((int) $tagRow->deduction_category_id)->toBe($newDeductionCategoryId);
-    // ...but the user-typed note MUST survive the category change (CR-02) —
-    // before the fix, TagTransaction::updateExisting() wiped it to null the
-    // instant a non-null deduction_category_id triggered the rewrite branch.
+    // ...but the user-typed note must survive it: updateExisting() used to
+    // wipe the note to null the moment the rewrite branch fired.
     expect($tagRow->note)->toBe('matched to invoice #1234');
 });
 

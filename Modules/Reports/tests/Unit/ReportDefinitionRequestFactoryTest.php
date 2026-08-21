@@ -6,14 +6,6 @@ use Illuminate\Http\Request;
 use Modules\Reports\Internal\Http\ReportDefinitionRequestFactory;
 use Modules\Reports\Public\Enums\ReportGranularity;
 
-/*
- * Covers ReportDefinitionRequestFactory: the CSV export route's query-string
- * coercion, extracted out of the route closure to keep its cognitive
- * complexity low. Exercises both the "nothing provided" fallbacks and the
- * "everything provided" coercion, including the non-numeric id filtering and
- * the empty-string-to-null amount handling.
- */
-
 function rdrfFactory(): ReportDefinitionRequestFactory
 {
     return app(ReportDefinitionRequestFactory::class);

@@ -15,9 +15,8 @@ use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
 
-// The Blade view renders a <select wire:model.live="categoryId">; the
-// updatedCategoryId hook fires the AssignsCategory action through the
-// public contract so Ledger remains the only mutator of category_id.
+// Going through the AssignsCategory contract is what keeps Ledger the only
+// mutator of category_id.
 final class InlineCategoryPicker extends Component
 {
     use DispatchesToast;
@@ -40,10 +39,9 @@ final class InlineCategoryPicker extends Component
     ): void {
         $user = $currentUser->user();
 
-        // Reconciled lock: warn-first, no write. The <select> is
-        // wire:model.live-bound, so Livewire has already flipped
-        // $categoryId before this hook runs; revert to the persisted
-        // value so the row doesn't show a phantom unsaved selection.
+        // Warn-first, no write. The <select> is wire:model.live-bound, so
+        // Livewire has already flipped $categoryId; reverting to the persisted
+        // value stops the row showing a phantom unsaved selection.
         if ($status->isReconciled($user->id, $this->transactionId)) {
             $this->toast(Lang::get('categorization::detail.reconciled_toast'));
 

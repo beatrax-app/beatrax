@@ -4,35 +4,7 @@ declare(strict_types=1);
 
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 
-/**
- * D-09 durable source-scanning guard, structurally mirroring
- * OpLogRebuilderTest's "confines DROP TRIGGER..." IN-01 grep-guard
- * (RecursiveIteratorIterator scan + curated allowlist + toBe([])).
- *
- * Scans production `Modules/**\/*.php` for, per {@see SensitiveFieldRegistry::columns()}
- * bare column name: a `where`/`whereIn` predicate, an `orderBy`/`groupBy`,
- * a join `->on(...)`, a `whereRaw(...LIKE...)`, a `json_decode(...)` raw
- * read, or a raw `update`/`insert` array write — unless the same file
- * routes through `SensitiveColumnCodec`/`decryptValue`/`encryptValue`/
- * `encryptAttrs`. Offenders not on {@see sensitiveColumnGuardAllowlist()}
- * fail the build.
- *
- * A higher-precision follow-up — an AST-based custom PHPStan rule modeled
- * on `app/PhpStan/Rules/BoundaryRule.php` (matching `MethodCall` nodes with
- * a sensitive string-literal argument instead of a coarse substring scan)
- * — is deferred to a future phase; this source-scan is the pragmatic
- * backstop for now.
- *
- * To add an allowlist entry: confirm the site is genuinely safe (a
- * different, non-sensitive table sharing the bare column name; a
- * `whereNull`/`whereNotNull` presence check; or an already-decrypting
- * reader the codec-marker heuristic missed), then add
- * `'relative/path.php' => 'reason'` to
- * `sensitive-column-guard-allowlist.php`. Never allowlist a genuinely
- * broken site — fix it instead.
- *
- * @link ../../../../.docs/conventions/00-index.md
- */
+/** @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md */
 
 /** @return list<string> bare column names derived from the registry's {table}.{column} pairs */
 function sensitiveColumnGuardBareColumns(): array

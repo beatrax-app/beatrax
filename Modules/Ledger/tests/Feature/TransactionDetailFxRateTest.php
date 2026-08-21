@@ -6,13 +6,6 @@ use App\Models\User;
 use Carbon\CarbonImmutable;
 use Modules\Ledger\Models\Account;
 
-/*
- * Feature tests for the `/transactions/{id}` detail-page FX-rate row:
- * the "Effective rate" `<dl>` line conditional on `fx_rate_used` being
- * non-null, the three-decimal display format, the "Includes any ICS
- * markup." helper text, and the 404 invariant for cross-user lookups.
- */
-
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
@@ -116,9 +109,6 @@ it('returns 404 when the transaction belongs to a different user', function (): 
         'counterparty_name' => 'USD Merchant',
     ]);
 
-    // Sign in as a different user and try to view the first user's
-    // transaction. The detail page must return 404 — never 200, never
-    // a redirect.
     $intruder = User::query()->create([
         'username' => 'intruder',
         'password' => 'intruder-password',

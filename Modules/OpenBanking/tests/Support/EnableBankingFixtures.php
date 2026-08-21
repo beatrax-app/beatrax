@@ -6,26 +6,9 @@ namespace Modules\OpenBanking\Tests\Support;
 
 use RuntimeException;
 
-/**
- * Shared accessors for the synthetic Enable Banking JSON fixtures under
- * `Modules/OpenBanking/tests/Fixtures/`, plus the path to the existing
- * ASN CAMT.053 fixture representing the SAME real-world booked
- * transactions (Albert Heijn -3.99 EUR on 2026-02-02, Coolblue 2 +11.67
- * EUR on 2026-02-05).
- *
- * This pairing is what the Wave 2 `OpenBankingFingerprintParityTest`
- * consumes to prove the EB adapter and the CAMT.053 adapter converge on
- * identical `FingerprintComposer` hashes for the overlapping rows — i.e.
- * zero net-new duplicates when both sources describe the same account.
- *
- * Per D-01's field-mapping table (RESEARCH.md Architecture Patterns §2),
- * `booking_date` drives both `bookedAt` and `postedAt` (zeroed to
- * midnight) and the sign convention is DBIT-negates — the two overlapping
- * rows in `enable-banking-transactions.json` were chosen because they
- * exist verbatim (same date, amount, currency, counterparty) in the
- * committed CAMT.053 fixture, one DBIT and one CRDT so both direction
- * rules are exercised.
- */
+// Two rows in enable-banking-transactions.json (Albert Heijn -3.99 EUR on
+// 2026-02-02, Coolblue 2 +11.67 EUR on 2026-02-05) exist verbatim in the ASN
+// CAMT.053 fixture, one DBIT and one CRDT, so both adapters must hash them alike.
 final class EnableBankingFixtures
 {
     public static function root(): string
@@ -49,14 +32,8 @@ final class EnableBankingFixtures
         return self::decode(self::root().'/enable-banking-balances.json');
     }
 
-    /**
-     * Absolute path to the existing ASN CAMT.053 fixture that carries the
-     * SAME real-world booked transactions as the overlapping rows in
-     * `enable-banking-transactions.json` (entry_reference
-     * 20260202-898406 / 20260205-2850362), for the Wave 2 fingerprint-
-     * parity contract test. Reused rather than duplicated per this
-     * plan's "do not invent a new CAMT fixture" instruction.
-     */
+    // The same two real-world entries as the overlapping EB rows
+    // (entry_reference 20260202-898406 / 20260205-2850362).
     public static function overlappingCamt053FixturePath(): string
     {
         return base_path('tests/fixtures/asn-camt053-sample-1.xml');

@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-// Series whose cadence='irregular' (the recurring detector flags
-// series that don't fit weekly/monthly/quarterly/yearly). The
-// cadence-to-year multiplier match() returns 0 for 'irregular' so an
-// annualized impact of zero is meaningless; the detector guards
-// against this upstream by excluding irregular series. Zero alerts.
+// An 'irregular' cadence has a year multiplier of 0, so any annualised impact
+// would be meaningless; such series are excluded before evaluation.
 
 $transactions = [];
 $amounts = [-999, -999, -999, -1199, -1199, -1199];

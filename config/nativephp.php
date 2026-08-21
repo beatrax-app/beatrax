@@ -5,22 +5,8 @@ use Modules\Desktop\Internal\NativeAppServiceProvider;
 return [
     'version' => env('NATIVEPHP_APP_VERSION', '0.0.0-dev'),
 
-    /**
-     * The ID of your application. This should be a unique identifier
-     * usually in the form of a reverse domain name.
-     * For example: com.nativephp.app
-     */
     'app_id' => env('NATIVEPHP_APP_ID', 'com.nativephp.app'),
 
-    /**
-     * If your application allows deep linking, you can specify the scheme
-     * to use here. This is the scheme that will be used to open your
-     * application from within other applications.
-     * For example: "nativephp"
-     *
-     * This would allow you to open your application using a URL like:
-     * nativephp://some/path
-     */
     'deeplink_scheme' => env('NATIVEPHP_DEEPLINK_SCHEME'),
 
     'author' => env('NATIVEPHP_APP_AUTHOR'),
@@ -33,11 +19,7 @@ return [
 
     'provider' => NativeAppServiceProvider::class,
 
-    /**
-     * A list of environment keys that should be removed from the
-     * .env file when the application is bundled for production.
-     * You may use wildcards to match multiple keys.
-     */
+    // Stripped from the .env the production bundle ships. Wildcards allowed.
     'cleanup_env_keys' => [
         'AWS_*',
         'AZURE_*',
@@ -96,26 +78,21 @@ return [
         // Catches copies nested under vendor/ from earlier builds.
         '*/.claude',
 
-        // Excluded by name, never as `*/nativephp`: fnmatch spans slashes
-        // here, so that pattern would also strip `vendor/nativephp` and the
-        // app would boot to "Class Native\Desktop\NativeServiceProvider
-        // not found".
+        // By name, never `*/nativephp`: fnmatch spans slashes here, so that
+        // would also strip `vendor/nativephp` and the app boots to
+        // "Class Native\Desktop\NativeServiceProvider not found".
         'mobile-app',
 
-        // `bootstrap/cache/*.php` is deliberately absent from this list:
-        // PackageManifest requires the directory to already exist and will
-        // not create it, and package:discover overwrites the stale copies
-        // anyway. Excluding it turns a working build into a failing one.
+        // `bootstrap/cache/*.php` is deliberately absent: PackageManifest
+        // needs the directory to already exist and will not create it, and
+        // package:discover overwrites the stale copies anyway.
     ],
 
     'updater' => [
         'enabled' => env('NATIVEPHP_UPDATER_ENABLED', true),
 
-        /**
-         * The updater provider to use.
-         * Supported: "github", "s3", "spaces"
-         * Note: The "s3" provider is compatible with S3-compatible services like Cloudflare R2.
-         */
+        // "github", "s3" or "spaces"; "s3" also covers S3-compatible services
+        // such as Cloudflare R2.
         'default' => env('NATIVEPHP_UPDATER_PROVIDER', 'spaces'),
 
         'providers' => [
@@ -139,12 +116,8 @@ return [
                 'bucket' => env('AWS_BUCKET'),
                 'endpoint' => env('AWS_ENDPOINT'),
                 'path' => env('NATIVEPHP_UPDATER_PATH', null),
-                /**
-                 * Optional public URL for serving updates (e.g., CDN or custom domain).
-                 * When set, updates will be downloaded from this URL instead of the S3 endpoint.
-                 * Useful for S3 with CloudFront or Cloudflare R2 with public access
-                 * Example: 'https://updates.yourdomain.com'
-                 */
+                // Set this and updates download from here rather than the S3
+                // endpoint — a CDN or a custom domain in front of the bucket.
                 'public_url' => env('AWS_PUBLIC_URL'),
             ],
 
@@ -159,17 +132,16 @@ return [
         ],
     ],
 
-    // One worker drains everything: the shipped bundle has no Redis, so
-    // every job arrives on the `database` driver's default queue. The
-    // scheduler needs no entry here — NativePHP runs it in-process.
+    // One worker drains everything: with no Redis in the shipped bundle every
+    // job lands on the `database` default queue. NativePHP runs the scheduler
+    // in-process, so it needs no entry.
     'queue_workers' => [
         'default' => [
             'queues' => ['default'],
             'memory_limit' => 128,
-            // A 60s ceiling killed inbox scans mid-flight and recorded them
-            // as failed — paging the Gmail/Graph API is network-bound and
-            // routinely needs longer. Scan jobs carry their own lower timeout
-            // so they still fail on their own alarm, not on this one.
+            // A 60s ceiling killed network-bound inbox scans mid-flight and
+            // recorded them as failed. Scan jobs carry their own lower
+            // timeout, so they still fail on their own alarm.
             'timeout' => 300,
             'sleep' => 3,
         ],
@@ -205,8 +177,8 @@ return [
         'php scripts/nativephp_patch_electron_imports.php',
 
         // Replaces NativePHP's MenuBar facade, whose tray items bind to the
-        // focused BrowserWindow — so after the user closes the window with X
-        // there is nothing focused and "Open beatrax" silently does nothing.
+        // focused BrowserWindow: after the window is closed nothing is
+        // focused and the tray's open item silently did nothing.
         'php scripts/nativephp_inject_persistent_tray.php',
 
         // The yauzl streaming extractor inflates the arm64 Mach-O by ~5 MB
@@ -216,7 +188,6 @@ return [
     ],
 
     'postbuild' => [
-        // 'rm -rf public/build',
     ],
 
     /**

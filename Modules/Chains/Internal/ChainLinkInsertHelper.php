@@ -56,10 +56,7 @@ final class ChainLinkInsertHelper
             JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
         );
         if ($encoded === false) {
-            // json_encode returns false on encoding failure (e.g. a
-            // resource value sneaking into the evidence array). Loud
-            // failure surfaces the bug at write time rather than
-            // silently writing the empty string into a NOT NULL column.
+            // Loud, rather than writing the empty string into a NOT NULL column.
             throw new EvidenceEncodingFailedException('insert helper');
         }
 

@@ -12,10 +12,7 @@ use Modules\Recurring\Internal\Mapping\RecurringSeriesDtoMapper;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use stdClass;
 
-// Turns recurring_series rows into RecurringSeriesDto — both the single-row
-// hydration and the paged, state-scoped keyset walk. Extracted from
-// RecurringSeriesQuery so that class stays under the method-count ceiling;
-// row-to-DTO projection is a cohesive slice of its own.
+// Split out of RecurringSeriesQuery to keep it under the method-count ceiling.
 final readonly class RecurringSeriesProjector
 {
     use CoercesScalars;
@@ -41,10 +38,9 @@ final readonly class RecurringSeriesProjector
 
         if ($cursorId !== null) {
             if ($primarySort === 'monthly_equivalent_minor') {
-                // Composite cursor: the next page is every row whose value is
-                // strictly smaller than the cursor row's, plus rows that tie
-                // the cursor but whose id sorts lower — otherwise rows are
-                // skipped or repeated when neighbours share the same value.
+                // The cursor has to carry the sort value as well as the id:
+                // on an id alone, rows tying on the sort value get skipped or
+                // repeated across the page boundary.
                 $cursorRow = $this->db->connection()->table('recurring_series')
                     ->where('id', $cursorId)
                     ->first(['monthly_equivalent_minor']);
@@ -75,9 +71,8 @@ final readonly class RecurringSeriesProjector
 
     public function toDto(stdClass $row): RecurringSeriesDto
     {
-        // RecurringSeriesQuery reads the raw chain-link column with
-        // no occurrence-walk fallback — that fallback lives only in
-        // FixedPaymentsViewQuery where it is load-bearing.
+        // The raw column only. The occurrence-walk fallback lives in
+        // FixedPaymentsViewQuery, the one caller it is load-bearing for.
         $chainLinkId = isset($row->latest_funding_chain_link_id)
             ? self::toInt($row->latest_funding_chain_link_id)
             : null;

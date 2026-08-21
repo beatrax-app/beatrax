@@ -165,10 +165,8 @@ it('normalises a date-only BookgDt to 00:00:00 so cross-format dedup with CSV su
         preserve_keys: false,
     );
 
-    // The committed CAMT fixture has all BookgDt entries as date-only
-    // (<Dt>2026-02-02</Dt>); the adapter must zero the time so the
-    // FingerprintComposer v3 hash matches a CSV row whose bookedAt is
-    // `startOfDay()`.
+    // Every BookgDt in the fixture is date-only, and the fingerprint hash only
+    // matches the equivalent CSV row if the time is zeroed the same way.
     foreach ($dtos as $dto) {
         expect($dto->bookedAt->format('H:i:s'))->toBe('00:00:00');
     }

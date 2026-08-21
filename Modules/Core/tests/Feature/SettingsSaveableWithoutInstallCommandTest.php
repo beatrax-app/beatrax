@@ -7,19 +7,10 @@ use Livewire\Livewire;
 use Modules\Core\Internal\Http\Livewire\SettingsPage;
 use Modules\Core\Models\User;
 
-/*
- * /settings could not be saved at all on a device that joined by pairing.
- *
- * `currencies` was seeded only by beatrax:install, which a paired device never
- * runs, so the "Rapportagevaluta" select rendered with zero options. The empty
- * select synced "" back through wire:model, `exists:currencies,code` rejected
- * it, and save() threw in validate() before reaching $user->save().
- *
- * That validator gates the whole Money/period block, so period start day,
- * currency view, the recurring window and the drift threshold were all
- * unchangeable — measured on a Galaxy: period_start_day stayed 1 across two
- * attempts and users.updated_at never moved.
- */
+// `currencies` was seeded only by beatrax:install, which a device that joined by
+// pairing never runs, so the reporting-currency select rendered empty, synced ""
+// back through wire:model, and exists:currencies,code failed validate() before
+// save() reached the row — taking the whole Money and period block down with it.
 
 beforeEach(function (): void {
     $this->settingsUser = User::query()->create([

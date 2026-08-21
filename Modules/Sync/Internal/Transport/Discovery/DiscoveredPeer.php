@@ -27,9 +27,8 @@ final readonly class DiscoveredPeer
         return "ws://{$this->host}:{$this->port}/sync";
     }
 
-    // dns-sd -B (macOS browse) yields a peer with host=''/port=0 because it
-    // does not resolve host/port without a -L step — such peers are
-    // filtered out by MdnsBrowser before reaching callers.
+    // A PTR answer names an instance without addressing it, so a peer learned
+    // before its SRV arrives carries host=''/port=0 and cannot be dialled.
     public function isConnectable(): bool
     {
         return $this->host !== '' && $this->port > 0;

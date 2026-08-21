@@ -12,10 +12,6 @@ use Modules\Tax\Internal\Http\Livewire\TaxPage;
 
 uses(RefreshDatabase::class);
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Fixtures
-// ─────────────────────────────────────────────────────────────────────────────
-
 function taxPageUser(string $username = 'tax-page-user', bool $withCountry = true): User
 {
     $user = User::query()->create([
@@ -26,10 +22,9 @@ function taxPageUser(string $username = 'tax-page-user', bool $withCountry = tru
         'default_currency_view' => 'eur_only',
     ]);
 
-    // tax_country_code is NOT mass-assignable on User (it is written via
-    // DatabaseManager by TaxSettingsSection) — persist it the same way here.
-    // Passing it to create() silently drops it, which previously masked the
-    // CR-01 @return blade bug.
+    // tax_country_code is not mass-assignable, so create() would silently drop
+    // it — which once masked a real blade bug. Write it the way
+    // TaxSettingsSection does.
     if ($withCountry) {
         app(DatabaseManager::class)->connection()
             ->table('users')
@@ -40,9 +35,6 @@ function taxPageUser(string $username = 'tax-page-user', bool $withCountry = tru
     return $user;
 }
 
-/**
- * Seeds a tagged transaction for a user and returns the tag id.
- */
 function taxPageTaggedTransaction(
     DatabaseManager $db,
     int $userId,
@@ -112,7 +104,6 @@ function taxPageTaggedTransaction(
         'updated_at' => now(),
     ]);
 
-    // Reuse existing category for this user+name, or create a new one.
     $existingCat = $db->connection()->table('tax_deduction_categories')
         ->where('user_id', $userId)
         ->where('name', $categoryName)
@@ -133,7 +124,6 @@ function taxPageTaggedTransaction(
         ]);
     }
 
-    // Tag the transaction
     return $db->connection()->table('tax_transaction_tags')->insertGetId([
         'user_id' => $userId,
         'transaction_id' => $txId,
@@ -144,10 +134,6 @@ function taxPageTaggedTransaction(
         'updated_at' => now(),
     ]);
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Tests
-// ─────────────────────────────────────────────────────────────────────────────
 
 it('renders the /tax page for an authenticated user', function (): void {
     $user = taxPageUser();
@@ -160,7 +146,6 @@ it('renders the /tax page for an authenticated user', function (): void {
 it('redirects unauthenticated requests to the login page', function (): void {
     $response = $this->get('/tax');
 
-    // The 'auth' middleware redirects guests to /login (route name 'login').
     $response->assertRedirect('/login');
 });
 
@@ -235,7 +220,6 @@ it('changes results when the year switcher is used', function (): void {
     $component->assertSee('Current Year Merchant BV')
         ->assertDontSee('Past Year Merchant BV');
 
-    // Switch to 2025
     $component->set('year', 2025);
     $component->assertSee('Past Year Merchant BV')
         ->assertDontSee('Current Year Merchant BV');
@@ -250,10 +234,9 @@ it('shows the empty-year calm note when no tagged transactions exist for the yea
     $clock->allows('now')->andReturn(CarbonImmutable::create(2026, 8, 1));
     app()->instance(Clock::class, $clock);
 
-    // Tag something in a different year so "other years" count shows
+    // A tag in another year, so the "other years" count has something to show.
     taxPageTaggedTransaction($db, $user->id, 'Old Merchant BV', 2025, 'Zorgkosten', -1500);
 
-    // Current year (2026) is empty
     $component = Livewire::actingAs($user)->test(TaxPage::class);
 
     $component->assertSee('Nothing tagged for 2026 yet.');
@@ -317,11 +300,9 @@ it('asks for the tax country above the figures rather than instead of them', fun
         ->get('/tax')
         ->assertOk()
         ->assertSee('Which country do you file taxes in?')
-        // CR-01 regression: the (non-existent) @return directive must not leak
-        // into the output.
+        // A blade directive that does not exist must not leak into the output.
         ->assertDontSee('@return')
         // The prompt used to replace the whole page, so a dashboard card
-        // reading "Tax 2026 · 18 items tagged" led to a screen that showed
-        // none of it. The country refines the figures; it does not gate them.
+        // promising tagged items led to a screen showing none of them.
         ->assertSee('Total deductions');
 });

@@ -18,17 +18,6 @@ use Modules\Recurring\Models\RecurringSeriesTransition;
 use Modules\Recurring\Public\Contracts\SeriesDetector;
 use Modules\Recurring\Public\Events\RecurringSeriesCadenceFlipped;
 
-/*
- * Feature-level coverage for the DetectRecurringSeriesJob orchestration.
- *
- * The job is invoked synchronously via `handle(...)` so the test
- * exercises the snooze-expiry pass, the container-tagged detector
- * iteration, and the per-fixture cluster outcomes against the
- * synthesised fixture corpus. Queue dispatch + worker lifecycle is
- * covered by the Chains job tests and is intentionally out of scope
- * here.
- */
-
 function drsjUser(string $username): User
 {
     return User::query()->create([
@@ -63,15 +52,6 @@ function drsjImportRun(User $user, string $sha): ImportRun
     ]);
 }
 
-/**
- * Seeds a transactions row mirroring the canonical fixture shape. The
- * fixture corpus uses `original_amount_minor` / `original_currency` as
- * the per-fixture key names; the transactions schema names the native-
- * currency columns `amount_minor` / `currency` and the settled-side
- * pair `settled_amount_minor` / `settled_currency`. The detector reads
- * `amount_minor` + `currency` as the original/native pair (the schema
- * docblock describes them as "native currency").
- */
 function drsjSeedTx(
     DatabaseManager $db,
     User $user,
@@ -111,14 +91,9 @@ function drsjSeedTx(
     ]);
 }
 
-/**
- * Loads a fixture file and seeds the matching transactions. Each
- * fixture row's `original_amount_minor` / `original_currency` becomes
- * the transactions native-currency pair; the `amount_minor` /
- * `currency` fixture pair becomes the settled-currency pair (this is
- * how the schema describes mixed-currency rows: USD native settles to
- * EUR). Returns the seeded transaction row count.
- */
+// The fixture's original_* pair becomes the transaction's native amount and its
+// amount_minor/currency becomes the settled one. That crossover is deliberate:
+// it is how the schema models USD settling to EUR.
 function drsjSeedFixture(DatabaseManager $db, User $user, Account $account, ImportRun $run, string $fixtureName): int
 {
     $fixture = require base_path('Modules/Recurring/tests/fixtures/synthesised/'.$fixtureName.'.php');
@@ -160,10 +135,7 @@ afterEach(function (): void {
 });
 
 it('runs the job for the user and detects one stable monthly expense series', function (): void {
-    // Widen the user's detection window so every fixture row sits
-    // inside the look-back window regardless of the frozen test
-    // clock — the 2-month default would clip everything but the
-    // most recent occurrence.
+    // The 2-month default would clip everything but the newest occurrence.
     $this->user->recurring_detection_window_months = 36;
     $this->user->save();
 
@@ -197,8 +169,7 @@ it('runs the job for the user and detects one stable monthly expense series', fu
 })->group('expense-cluster');
 
 it('clusters the drifting-monthly fixture as ONE series under the 25% variance tolerance', function (): void {
-    // Widen past the new 2-month default so the fixture's full
-    // year-plus history falls inside the look-back.
+    // Past the 2-month default: the fixture spans a year and more.
     $this->user->recurring_detection_window_months = 36;
     $this->user->save();
 
@@ -355,13 +326,10 @@ it('leaves a snoozed series alone when snoozed_until is still in the future', fu
 it('flips an approved series to cadence_changed and dispatches RecurringSeriesCadenceFlipped on a cadence flip', function (): void {
     Event::fake([RecurringSeriesCadenceFlipped::class]);
 
-    // Widen past the new 2-month default — the cadence-flip probe seeds
-    // six quarterly-spaced transactions back to 2024-08, well outside a
-    // two-month look-back.
+    // Past the 2-month default: the flip probe seeds back to 2024-08.
     $this->user->recurring_detection_window_months = 36;
     $this->user->save();
 
-    // Seed an approved monthly series that the detector will revisit.
     $series = RecurringSeries::query()->create([
         'user_id' => $this->user->id,
         'direction' => 'expense',
@@ -374,8 +342,7 @@ it('flips an approved series to cadence_changed and dispatches RecurringSeriesCa
         'cluster_key' => 'expense::cadence-flip-probe::eur::quarterly',
     ]);
 
-    // Seed 6 quarterly-spaced transactions matching the cluster — the
-    // detector will infer quarterly cadence and flip the row's state.
+    // Quarterly spacing, so the detector infers a cadence change.
     $start = CarbonImmutable::parse('2024-08-15');
     for ($i = 0; $i < 6; $i++) {
         $date = $start->addDays($i * 90)->toDateString();
@@ -421,8 +388,7 @@ it('flips an approved series to cadence_changed and dispatches RecurringSeriesCa
 })->group('cadence-flip-flips-to-cadence_changed');
 
 it('skips rejected clusters and never re-prompts them', function (): void {
-    // Seed a rejected expense series matching what the fixture would
-    // otherwise produce; the detector must NOT touch it.
+    // The exact key the fixture would produce, so the detector must skip it.
     $cluster = 'expense::spotify::eur::monthly';
     $series = RecurringSeries::query()->create([
         'user_id' => $this->user->id,
@@ -455,8 +421,7 @@ it('skips rejected clusters and never re-prompts them', function (): void {
 })->group('rejected-skipped');
 
 it('clusters mixed-currency Netflix on the original USD amount, not settled EUR', function (): void {
-    // Widen past the new 2-month default so the fixture's monthly
-    // Netflix charges across the year all fall inside the look-back.
+    // Past the 2-month default: the fixture spans a year of charges.
     $this->user->recurring_detection_window_months = 36;
     $this->user->save();
 
@@ -483,15 +448,12 @@ it('clusters mixed-currency Netflix on the original USD amount, not settled EUR'
 })->group('original-currency-clustering');
 
 it('respects the per-user recurring_detection_window_months when filtering transactions', function (): void {
-    // Pin the window explicitly so the test isolates the
-    // window-clipping behaviour from whatever the model default
-    // happens to be. Out-of-window cluster sits 30 months back;
-    // in-window cluster sits inside the chosen 18-month window.
+    // Pinned explicitly so this isolates clipping from the model default.
     $this->user->recurring_detection_window_months = 18;
     $this->user->save();
 
-    // Out-of-window cluster (3 transactions ~ 30 months ago).
-    $oldStart = CarbonImmutable::parse('2024-01-15')->subMonths(12); // ~2023-01
+    // Starts 2023-01, over three years before the pinned now — outside 18.
+    $oldStart = CarbonImmutable::parse('2024-01-15')->subMonths(12);
     for ($i = 0; $i < 3; $i++) {
         drsjSeedTx(
             $this->db, $this->user, $this->account, $this->run,
@@ -500,7 +462,7 @@ it('respects the per-user recurring_detection_window_months when filtering trans
             'old-spotify', 'expense', 100 + $i, 'old-'.$i,
         );
     }
-    // In-window cluster (3 transactions in last 4 months).
+    // Inside the window.
     $newStart = CarbonImmutable::parse('2026-02-15');
     for ($i = 0; $i < 3; $i++) {
         drsjSeedTx(

@@ -26,22 +26,6 @@ use Psr\Log\LoggerInterface;
 
 uses(RefreshDatabase::class, EnablesEncryptionForUser::class);
 
-/*
- * 14.1-04 (CRYPT-01) — the "enabler" regression guard for every
- * queued-job decrypt fix in Wave 3. Proves that RulesPage's
- * `triggerReapply` REQUEST-context dispatch origin now runs
- * `ReapplyRulesJob` via `dispatchSync` — fully in-process, to
- * completion, before the Livewire call returns — rather than being
- * handed to a KEK-less `queue:work` daemon. The test runs against a
- * REAL encrypted user (via EnablesEncryptionForUser) so the assertion
- * is not vacuously true against a still-plaintext fixture: if the
- * dispatch were still queued, the progress cache key would remain
- * `status: running` (or absent) immediately after the call returns,
- * since nothing would have executed the job body yet. This plan does
- * NOT fix ReapplyRulesJob's own ciphertext text-match bug (CR-04,
- * owned by plan 07) — it only proves the dispatch mechanics.
- */
-
 function rrjeUser(): User
 {
     return User::query()->create([
@@ -106,17 +90,9 @@ it('runs ReapplyRulesJob synchronously to completion, in-process, for an encrypt
     $component = Livewire::test(RulesPage::class)
         ->call('triggerReapply');
 
-    // dispatchSync means ReapplyRulesJob::handle() runs to completion
-    // BEFORE triggerReapply() returns, and Livewire's automatic
-    // post-action render() therefore already observes
-    // progress.status === 'done' on the SAME round trip: render()'s
-    // existing done-reconciliation branch fires immediately, flipping
-    // reapplyDispatched back to false and replacing the "in-flight"
-    // flash with the completion summary in one request — no wire:poll
-    // tick, no separate worker, ever needed. If the dispatch were
-    // still queued (pre-14.1-04 behaviour), reapplyDispatched would
-    // still read true here (render() would take the "still running"
-    // branch since the cache payload wouldn't exist yet).
+    // dispatchSync runs the job to completion before triggerReapply() returns,
+    // so the post-action render() already sees status 'done' on the same round
+    // trip. A queued dispatch would leave reapplyDispatched true here.
     $component->assertSet('reapplyDispatched', false);
     expect($component->get('flashMessage'))
         ->toBe('No changes — your history already matches your rules.');
@@ -131,16 +107,9 @@ it('runs ReapplyRulesJob synchronously to completion, in-process, for an encrypt
     expect($progress['checked'] ?? null)->toBe(1);
 })->group('ReapplyRulesJobEncryption');
 
-/*
- * 14.1-07 (CR-04) — ReapplyRulesJob must decrypt counterparty_name/
- * description before RuleEngine::match() so substring conditions fire
- * against plaintext, not the ciphertext the two columns carry at rest
- * once encryption is enabled. Rows below are inserted with GENUINELY
- * encrypted values (via SensitiveColumnCodec::encryptValue, mirroring
- * what RecordTransactions writes at import time) — not plaintext — so
- * a still-broken predicate would fail this test exactly as it would
- * fail against real encrypted history (Pitfall 2).
- */
+// The rows below carry genuinely encrypted values, as RecordTransactions
+// writes them at import: against a plaintext fixture the decrypt-before-match
+// assertion would pass vacuously.
 
 it('decrypts counterparty_name/description before matching so a rule fires against an encrypted user\'s stored ciphertext (CR-04)', function (): void {
     $user = rrjeUser();

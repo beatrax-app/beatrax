@@ -13,9 +13,6 @@ use Modules\Import\Models\MerchantAlias;
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../.docs/features/import/architecture.md#merchant-aliases
- */
 final class MergeMerchantAliases
 {
     public function __construct(

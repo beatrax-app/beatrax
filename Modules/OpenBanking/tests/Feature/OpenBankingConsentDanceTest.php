@@ -21,9 +21,8 @@ use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 use Modules\OpenBanking\Public\Services\SecretsWriteFailed;
 
-// State is issued straight through OpenBankingStateRepository rather than by
-// chaining an HTTP hit to the connect route, so none of these scenarios depend
-// on cross-request session/cookie persistence in the test client.
+// State is issued straight through OpenBankingStateRepository, so no scenario
+// here depends on cross-request session persistence in the test client.
 
 beforeEach(function (): void {
     $this->obSecretsPath = storage_path('app/secrets/open-banking.json');
@@ -275,8 +274,7 @@ it('compensating rollback: secret-write failure after a NEW row insert deletes t
     {
         public function __construct(private readonly OpenBankingSecretsRepository $real)
         {
-            // No parent constructor: every method delegates to the real repository
-            // except the throw point.
+            // No parent constructor: every method below delegates to $real.
         }
 
         public function hasApplication(): bool
@@ -315,10 +313,6 @@ it('compensating rollback: secret-write failure after a NEW row insert deletes t
     $db = $this->app->make(DatabaseManager::class);
     expect($db->connection()->table('open_banking_connections')->where('user_id', $user->id)->count())->toBe(0);
 });
-
-// Each of these drives one refusal in resolveConsentUrl()/resolveScaHost()/
-// guardConsentRedirect(). The flashed message must be the matching
-// OpenBankingConnectException factory's user-facing reason, never a raw error.
 
 it('connect flashes when Enable Banking returns no consent URL', function (): void {
     $user = ocdUser('connect-no-url');
@@ -468,9 +462,7 @@ it('compensating rollback: secret-write failure on a RE-LINK restores the row pr
 
     $throwingSecrets = new class($secrets) extends OpenBankingSecretsRepository
     {
-        public function __construct(private readonly OpenBankingSecretsRepository $real)
-        {
-        }
+        public function __construct(private readonly OpenBankingSecretsRepository $real) {}
 
         public function hasApplication(): bool
         {

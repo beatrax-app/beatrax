@@ -158,9 +158,7 @@ it('mirrors settled = native and leaves fx_rate_used NULL when source omits the 
     $source = makeSourceDto([
         'amountMinor' => -1500,
         'currency' => 'EUR',
-        // settledAmountMinor / settledCurrency / fxRateUsed all default to null —
-        // the EUR-native ASN row shape. NormalizeStage must mirror native into
-        // the settled pair without deriving any rate.
+        // The EUR-native ASN row shape: no settled pair supplied at all.
     ]);
 
     $canonical = $stage->run($source, accountId: 1, user: makeUserForNormalize(), importRunId: 1, sourceFormat: 'asn-csv');

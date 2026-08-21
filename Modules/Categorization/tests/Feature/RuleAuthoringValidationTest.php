@@ -16,18 +16,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 uses(RefreshDatabase::class);
 
-/*
- * 13.4-03 Task 2: CreateCategorizationRule / UpdateCategorizationRule
- * multi-condition/multi-action authoring — the op x value_type
- * validity matrix (Req 1 / D-02 Pitfall 6) and per-payload-id
- * ownership validation (Req 2 / D-03 FLAG / T-13.4-07) must both be
- * enforced BEFORE any write.
- *
- * Also exercises Task 1's CategorizationRuleQuery round-trip (nested
- * conditions/actions, priority/id ordering, cross-user 404-safe null)
- * since Task 1 ships no dedicated read-side test file of its own.
- */
-
 function ruleAuthoringUser(string $suffix): User
 {
     return User::query()->create([

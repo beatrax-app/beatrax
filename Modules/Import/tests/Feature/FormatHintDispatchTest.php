@@ -6,22 +6,9 @@ use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
 use Modules\Ledger\Models\ImportRun;
 
-/*
- * Verifies the optional format-hint parameter on the public RunsImports
- * contract reaches the ImportPipeline and is honoured at adapter dispatch
- * time.
- *
- * The hint is the load-bearing signal the wizard sends when the user
- * chose the CSV branch on the bank connector step. CAMT.053 / MT940 are
- * unambiguous formats, so the hint is null on those paths; CSV is
- * ambiguous (every bank exports its own dialect), so the hint must be
- * carried through or the pipeline must refuse the call.
- *
- * The third assertion is the backstop guard at the public-contract
- * boundary: any caller that bypasses the wizard's server-side validation
- * (other modules, future programmatic surfaces, tests like this one)
- * still cannot land a CSV import without naming the bank.
- */
+// CAMT.053 and MT940 are unambiguous, so the hint is null on those paths. Every
+// bank exports its own CSV dialect, so a CSV import without a hint has to be
+// refused at the contract boundary, not only by the wizard's own validation.
 
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
@@ -49,12 +36,9 @@ it('passes asn-csv format hint through RunsImports to ImportPipeline', function 
 });
 
 it('passes ing-csv format hint through RunsImports to ImportPipeline', function (): void {
-    // There is no ing-csv adapter registered yet; the wiring under test
-    // is the contract-level dispatch path. The ImportRun row must be
-    // created with source_format='ing-csv' (RunImport creates the row
-    // before the pipeline runs) and the unsupported-format error must
-    // surface as a single error preview row rather than blowing the
-    // whole call up.
+    // No ing-csv adapter is registered. RunImport still creates the ImportRun
+    // row before the pipeline runs, and the unsupported-format error has to
+    // surface as one error preview row rather than blowing up the call.
     $fixture = __DIR__.'/../../../../tests/fixtures/asn-sample-1.csv';
 
     $preview = $this->importer->runFromUpload(

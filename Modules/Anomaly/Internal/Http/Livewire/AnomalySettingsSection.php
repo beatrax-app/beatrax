@@ -91,8 +91,8 @@ final class AnomalySettingsSection extends Component
         $this->saved = true;
     }
 
-    // Removing the rule does NOT re-open the originating alert — that is the
-    // separate Undo path in RemoveAnomalySuppressionRule.
+    // Removing the rule does NOT re-open the originating alert; that is the
+    // sibling undoSuppression() path.
     public function removeSuppressionRule(
         int $ruleId,
         CurrentUser $currentUser,

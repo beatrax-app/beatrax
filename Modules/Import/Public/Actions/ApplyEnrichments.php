@@ -18,9 +18,6 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/import/architecture.md#applying-enrichments
- */
 final class ApplyEnrichments implements AppliesEnrichments
 {
     // Mirrors FingerprintStage::detectConflicts(). Anything else is dropped

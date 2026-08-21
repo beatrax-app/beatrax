@@ -7,10 +7,9 @@ namespace Modules\OpenBanking\Public\Exceptions;
 use Modules\Core\Public\Support\Lang;
 use RuntimeException;
 
-// A consent callback that reached a valid OAuth state but could not be turned
-// into a stored connection: no authorization code, missing wizard credentials,
-// or a session response carrying no session id. Each holds the reason the
-// callback controller flashes, so one catch replaces the post-state returns.
+// A callback that reached a valid OAuth state but could not become a stored
+// connection. Each carries the reason the controller flashes, so one catch
+// replaces every post-state return.
 final class OpenBankingCallbackException extends RuntimeException
 {
     public static function noAuthorizationCode(): self

@@ -12,16 +12,6 @@ use Modules\Ledger\Models\Transaction;
 
 uses(RefreshDatabase::class);
 
-/*
- * Failed-job toast (D-103 / issue #1 + #8) tests preserved from the
- * retired NextIcsSettlementTileTest. The dashboard tile assertions
- * migrated to Modules/Forecasting/tests/Feature/ForecastHighlightsTileTest.php;
- * the failed-job toast tests live on here because the toast remains
- * Phase 5 functionality (Dashboard.php reads chain_resolution_runs
- * filtered by exact user_id match — issue #1 + #8 substring-attack
- * guard).
- */
-
 function fcrtUser(string $username, bool $isDeveloper = true): User
 {
     return User::query()->create([

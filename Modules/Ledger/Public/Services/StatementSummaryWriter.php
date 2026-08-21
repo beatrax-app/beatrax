@@ -10,9 +10,8 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Contracts\RecordsStatementSummary;
 use Modules\Ledger\Public\Dto\StatementSummaryData;
 
-// Upserts a single statement_summaries row per (user_id,
-// import_run_id). CSV imports never reach this writer because their
-// adapter returns null from SourceAdapter::statementMetadata().
+// CSV imports never reach this writer: their adapter returns null from
+// SourceAdapter::statementMetadata().
 final class StatementSummaryWriter implements RecordsStatementSummary
 {
     public function __construct(

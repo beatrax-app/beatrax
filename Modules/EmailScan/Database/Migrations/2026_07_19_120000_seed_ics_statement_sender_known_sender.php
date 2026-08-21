@@ -6,10 +6,9 @@ use Illuminate\Container\Container;
 use Illuminate\Database\Migrations\Migration;
 use Modules\EmailScan\Database\Seeders\IcsStatementSenderSeeder;
 
-// Lands the system known_senders row without which IncrementalScanJob never
-// fetches the message the ICS "statement ready" nudge detects. Separate from
-// the known_senders table migration, which is immutable history, and a
-// migration rather than a seeder so existing installs pick it up on `migrate`.
+// Without this system known_senders row IncrementalScanJob never fetches the
+// message the ICS "statement ready" nudge detects. A migration rather than a
+// seeder so existing installs pick it up on `migrate`.
 return new class extends Migration
 {
     public function up(): void

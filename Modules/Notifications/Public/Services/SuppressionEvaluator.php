@@ -13,10 +13,8 @@ use Psr\Log\LoggerInterface;
 
 final class SuppressionEvaluator
 {
-    // Trigger types that carry no control-list toggle - always
-    // deliverable, rather than falling into triggerEnabled()'s default
-    // arm, whose "unrecognised trigger" fallback suppresses + logs a
-    // warning for a genuinely forgotten pref-wiring bug.
+    // Trigger types with no toggle. Without this list they would hit
+    // triggerEnabled()'s default arm, which suppresses and logs a wiring bug.
     private const ALWAYS_DELIVERABLE = [
         DeterministicKeyDeriver::TRIGGER_IMPORT_FINISHED,
         DeterministicKeyDeriver::TRIGGER_RECEIPTS_FOUND,
@@ -32,10 +30,7 @@ final class SuppressionEvaluator
         private readonly LoggerInterface $logger,
     ) {}
 
-    // Evaluation order: seeding -> suppress 'seeding'; per-trigger
-    // toggle off -> suppress 'trigger_disabled'; inside quiet-hours ->
-    // suppress 'quiet_hours'; otherwise -> deliver 'ok'. hideDetails
-    // always reflects the stored preference regardless of the outcome.
+    // hideDetails reflects the stored preference whatever the outcome.
     public function shouldDeliver(int $userId, string $triggerType, CarbonImmutable $at): DeliveryDecision
     {
         /** @var User $user */
@@ -51,10 +46,9 @@ final class SuppressionEvaluator
         };
     }
 
-    // Runs $callback with delivery globally suppressed, restoring the
-    // prior flag value in a finally (reentrant-safe). The demo seeder
-    // and feature tests wrap their event dispatch in this so rows are
-    // stored but never pushed to the OS.
+    // Restores the prior flag in a finally, so nesting is safe. The demo
+    // seeder and feature tests wrap dispatch in this so rows are stored
+    // without ever reaching the OS.
     /**
      * @template T
      *
@@ -84,9 +78,8 @@ final class SuppressionEvaluator
             DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE => $prefs->budgetNudgesEnabled,
             DeterministicKeyDeriver::TRIGGER_SAVINGS_PROMPT => $prefs->savingsPromptsEnabled,
             DeterministicKeyDeriver::TRIGGER_POSITION_DIGEST => ! $prefs->digestCadence->isOff(),
-            // No permissive default arm: an unrecognised trigger type
-            // fails loudly at review rather than silently bypassing
-            // every toggle and quiet-hours window.
+            // No permissive default arm: an unrecognised trigger must fail
+            // loudly rather than bypass every toggle and quiet-hours window.
             default => $this->rejectUnknownTrigger($triggerType),
         };
     }
@@ -101,10 +94,8 @@ final class SuppressionEvaluator
         return false;
     }
 
-    // True when $at's local time falls inside the half-open window
-    // [quiet_hours_from, quiet_hours_to). Handles the wrap-around case
-    // (22:00-08:00 spans midnight): when from > to, the window is
-    // time >= from OR time < to.
+    // Half-open [from, to). When from > to the window spans midnight, so the
+    // test becomes time >= from OR time < to.
     private function insideQuietHours(NotificationPreferencesDto $prefs, CarbonImmutable $at): bool
     {
         $from = $prefs->quietHoursFrom;

@@ -4,13 +4,6 @@ declare(strict_types=1);
 
 use Modules\Anomaly\Internal\Support\RobustStatistics;
 
-/*
- * Pure-math coverage for the RobustStatistics helper: median, MAD, the
- * MAD-floored robust z-score, the category percentile, and the
- * sensitivity -> k mapping. No database — these are deterministic
- * arithmetic assertions guarding the named-constant tunables.
- */
-
 it('computes the median of an odd- and even-length sample', function (): void {
     expect(RobustStatistics::median([5, 1, 3]))->toBe(3.0);
     expect(RobustStatistics::median([1, 2, 3, 4]))->toBe(2.5);
@@ -48,7 +41,7 @@ it('yields a z near zero for a charge at the median', function (): void {
 });
 
 it('computes a high percentile of a category sample', function (): void {
-    // p95 of a 5-sample groceries band sits at/above the largest sample.
+    // At n=5 interpolation puts p95 between the second-largest and the max.
     $sample = [2750, 2890, 3100, 3400, 2600];
     $p95 = RobustStatistics::percentile($sample, 95.0);
     expect($p95)->toBeGreaterThanOrEqual(3100.0);
@@ -56,9 +49,8 @@ it('computes a high percentile of a category sample', function (): void {
 });
 
 it('treats a charge tying the percentile as exceeding it (WR-04 tie-inclusive boundary)', function (): void {
-    // For a small constant-ish sample p95 collapses onto the max; a repeat
-    // of that max must register as "exceeds" so a repeat-of-the-extreme
-    // charge is never a silent false negative.
+    // At small n p95 collapses onto the max, so a strict `>` would let a
+    // repeat of the largest-ever charge pass as a false negative.
     $sample = [1000, 1000, 1000, 1000, 1000];
     $p95 = RobustStatistics::percentile($sample, 95.0);
     expect($p95)->toBe(1000.0);
@@ -72,12 +64,10 @@ it('exceedsPercentile fires on a charge equal to the historical max for a thin s
     $sample = [2750, 2890, 3100, 3400, 2600];
     $p95 = RobustStatistics::percentile($sample, 95.0);
 
-    // p95 sits at or below the 3400 max; a repeat of the 3400 extreme fires.
     expect(RobustStatistics::exceedsPercentile(3400, $sample, 95.0))->toBeTrue();
 });
 
 it('exceedsPercentile reduces the sample to absolute magnitudes (signed-safe)', function (): void {
-    // Expense-side negative sample; an equally-large negative charge ties.
     $sample = [-2750, -2890, -3100, -3400, -2600];
     expect(RobustStatistics::exceedsPercentile(-3400, $sample, 95.0))->toBeTrue();
     expect(RobustStatistics::exceedsPercentile(-2000, $sample, 95.0))->toBeFalse();

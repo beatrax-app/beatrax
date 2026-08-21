@@ -16,10 +16,6 @@ use Modules\Recurring\Public\Dto\RecurringSeriesAmountTrendDto;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-// Constructor injection is banned on Livewire Component subclasses, so
-// collaborators arrive as method parameters on mount(), action methods,
-// and render(). Cross-user 404 is enforced at mount() time by re-loading
-// the series and throwing NotFoundHttpException when the lookup misses.
 final class RecurringSeriesDetailPage extends Component
 {
     use DispatchesToast;
@@ -90,13 +86,7 @@ final class RecurringSeriesDetailPage extends Component
     }
 
     /**
-     * @return array<string, mixed> ApexCharts option object the Blade view injects via
-     *
-     *     @json. The native-currency line is always present; an EUR shadow series is
-     *     appended when any point carries a non-null eur_amount_minor. Amount values convert
-     *     from minor units to floats so the client-side y-axis formatter renders them;
-     *     negative expense amounts stay negative (ApexCharts renders below-zero lines
-     *     without extra config)
+     * @return array<string, mixed>
      */
     private function buildApexOptions(RecurringSeriesAmountTrendDto $trend): array
     {

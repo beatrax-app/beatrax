@@ -15,14 +15,6 @@ use Modules\Reports\Public\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 
-/*
- * 999.6-08 Task 2 (Req 1/8, D-01) — pins the live single-page builder:
- * changing a control updates the rendered result without a page reload,
- * an empty selection shows the friendly empty state (never an error),
- * net_worth hides the Group-by control, and ?report={id} restores a
- * user-owned saved definition (never a foreign one, T-999.6-22).
- */
-
 function rbUser(string $prefix = 'rb'): User
 {
     /** @var User */
@@ -224,7 +216,6 @@ it('CR-01: editing a loaded report updates the same row (no duplicate); a fresh 
     $user = rbUser();
     test()->actingAs($user);
 
-    // Save the original report (id 1).
     $definition = new ReportDefinition(
         metric: 'spend',
         dimension: 'category',
@@ -237,14 +228,12 @@ it('CR-01: editing a loaded report updates the same row (no duplicate); a fresh 
 
     expect(SavedReport::query()->count())->toBe(1);
 
-    // Open it (?report={id}), change the period, and save again under the
-    // same name — this must UPDATE row 1, never create a second row.
     Livewire::test(ReportBuilder::class, ['report' => $saved->id])
         ->assertSet('loadedReportId', $saved->id)
         ->assertSet('periodPreset', 'this_month')
         ->set('periodPreset', 'last_6_months')
         ->call('openSaveForm')
-        ->assertSet('saveName', 'Grocery spend') // CR-01: pre-filled from the loaded report, not blank
+        ->assertSet('saveName', 'Grocery spend') // Pre-filled from the loaded report.
         ->call('save')
         ->assertSee('Report updated.')
         ->assertSet('loadedReportId', $saved->id);
@@ -255,11 +244,10 @@ it('CR-01: editing a loaded report updates the same row (no duplicate); a fresh 
     expect($saved->name)->toBe('Grocery spend')
         ->and($saved->definition['periodPreset'])->toBe('last_6_months');
 
-    // A brand-new (never-loaded) builder still CREATES a new row on save.
     Livewire::test(ReportBuilder::class)
         ->set('metric', 'income')
         ->call('openSaveForm')
-        ->assertSet('saveName', '') // never loaded — starts blank, not pre-filled
+        ->assertSet('saveName', '')
         ->set('saveName', 'Income overview')
         ->call('save')
         ->assertSee('Report saved.');
@@ -278,7 +266,7 @@ it('renders each of the four visualizations without error, always alongside the 
 
     $component = Livewire::test(ReportBuilder::class)->set('viz', $viz)->assertOk();
 
-    // Table is always rendered (Req 8), regardless of the chosen viz.
+    // The table renders regardless of the chosen viz.
     $component->assertSeeHtml('<table');
 
     if ($viz === 'table') {
@@ -303,9 +291,8 @@ it('the donut viz uses a flat series + top-level labels shape, never {name,data}
     $account = rbAccount($user);
     rbTransaction($db, $user, $account, ['settled_amount_minor' => -5_000]);
 
-    // The chart mount block's data-options JSON is emitted through Blade's
-    // default {{ }} HTML-entity escaping (matches the aggregate-line-chart
-    // analog exactly), so quotes appear as &quot; in the rendered markup.
+    // The data-options JSON goes through Blade's default {{ }} escaping, so its
+    // quotes arrive as &quot; in the markup.
     $html = Livewire::test(ReportBuilder::class)->set('viz', 'donut')->html();
 
     expect($html)->toContain('&quot;labels&quot;:')
@@ -325,21 +312,18 @@ it('the bar viz uses a {name,data} series shape', function (): void {
 });
 
 it('refreshes the donut by destroy+recreate (never updateOptions, which throws on the axis-less donut)', function (): void {
-    // Regression guard for the Phase 999.6 UAT donut fix: the axis-less donut
-    // must NOT use chart.updateOptions() on report-updated (it throws inside
-    // ApexCharts' convertedCatToNumeric / revertDefaultAxisMinMax axis code),
-    // it must destroy() the old instance and recreate a fresh one. Reverting
-    // the donut partial back to updateOptions makes this spec fail in CI.
+    // updateOptions() throws inside ApexCharts' convertedCatToNumeric /
+    // revertDefaultAxisMinMax axis code on an axis-less donut, so the partial
+    // has to destroy() and recreate instead.
     $user = rbUser();
     test()->actingAs($user);
     $db = app(DatabaseManager::class);
     $account = rbAccount($user);
     rbTransaction($db, $user, $account, ['settled_amount_minor' => -5_000]);
 
-    // Blade strips {{-- --}} comments from rendered output, and the
-    // x-on:report-updated.window attribute body is emitted as plain HTML text
-    // (not entity-escaped like the data-options JSON), so the handler tokens
-    // appear verbatim in the rendered markup.
+    // The x-on:report-updated.window body is emitted as plain HTML text, not
+    // entity-escaped like the data-options JSON, so the handler tokens appear
+    // verbatim in the rendered markup.
     $html = Livewire::test(ReportBuilder::class)->set('viz', 'donut')->html();
 
     expect($html)->toContain('chart.destroy()')

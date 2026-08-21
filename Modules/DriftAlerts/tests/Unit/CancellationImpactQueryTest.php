@@ -9,13 +9,6 @@ use Modules\DriftAlerts\Public\Services\CancellationImpactQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * CancellationImpactQuery unit-style tests. The Public service exposes
- * exactly one `forSeries` entry point that reads through
- * RecurringSeriesQuery, preserves the series's original currency, and
- * returns null on cross-user / missing series invocations.
- */
-
 function ciqUser(string $username): User
 {
     return User::query()->create([
@@ -27,10 +20,6 @@ function ciqUser(string $username): User
 }
 
 /**
- * Seeds a single approved recurring_series row owned by $user. The
- * caller supplies the columns the test cares about; defaults match the
- * shape of a stable EUR monthly subscription.
- *
  * @param  array<string, mixed>  $overrides
  */
 function ciqSeries(User $user, array $overrides = []): int

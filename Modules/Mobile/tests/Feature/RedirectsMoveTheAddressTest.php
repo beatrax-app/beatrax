@@ -8,21 +8,6 @@ use Modules\Core\Models\User;
 use Modules\Mobile\Internal\Http\Middleware\ClientSideRedirect;
 use Symfony\Component\HttpFoundation\Response;
 
-/*
- * A server redirect never moved the address bar inside the Android shell.
- *
- * Every request is served from shouldInterceptRequest(), which can only hand
- * the WebView a body for the URL it was asked for — so PHPWebViewClient
- * follows the 3xx itself and returns the target's HTML under the original
- * path. Measured on device: /login, /signup and /reset-password each returned
- * HTTP 200 with the full dashboard (147093 bytes, "Dashboard · Beatrax") while
- * the address still read /reset-password. The same flattening put the import
- * wizard under "/" on a fresh install.
- *
- * The remedy has to be a document that navigates itself, because nothing the
- * server sends in a header can reach the address bar through that API.
- */
-
 beforeEach(function (): void {
     putenv('NATIVEPHP_PLATFORM=android');
     $_SERVER['NATIVEPHP_PLATFORM'] = 'android';
@@ -39,6 +24,11 @@ afterEach(function (): void {
     putenv('NATIVEPHP_PLATFORM');
     unset($_SERVER['NATIVEPHP_PLATFORM'], $_ENV['NATIVEPHP_PLATFORM']);
 });
+
+// A server redirect never moved the address bar inside the Android shell. Every
+// request is served from shouldInterceptRequest(), which can only hand the WebView
+// a body for the URL it was asked for, so the client follows the 3xx itself and
+// returns the target's HTML under the original path.
 
 it('sends a guest route somewhere the address bar can follow', function (): void {
     $response = $this->get('/login', ['Accept' => 'text/html']);
@@ -66,9 +56,8 @@ it('carries the query string and fragment across', function (): void {
     );
 
     // Decoded, because which branch renders depends on whether a CSP nonce was
-    // minted, and the meta-refresh branch escapes the ampersand. Asserting only
-    // that the target was a same-origin path passed just as well with the query
-    // dropped, which is the one thing the name promises.
+    // minted and the meta-refresh branch escapes the ampersand. Asserting only a
+    // same-origin path passed just as well with the query dropped.
     expect(html_entity_decode((string) $response->getContent()))
         ->toContain('/budgets?month=2026-08&view=table#totals');
 });
@@ -103,10 +92,9 @@ it('never navigates the shell off this origin', function (): void {
     );
 
     // A browser normalises the backslash in a URL path to a slash, so
-    // "/\evil.example" would reach location.replace() as "//evil.example" —
-    // protocol-relative, and off this origin. These are refused outright:
-    // the redirect is handed back untouched for the shell to flatten as it
-    // always did, which is no worse than before and navigates nowhere new.
+    // "/\evil.example" would reach location.replace() as "//evil.example":
+    // protocol-relative, and off this origin. These are handed back untouched for
+    // the shell to flatten as it always did.
     foreach (['/\\evil.example/steal', '\\\\evil.example/steal'] as $location) {
         $response = $rewrite($location);
 
@@ -116,15 +104,13 @@ it('never navigates the shell off this origin', function (): void {
             );
     }
 
-    // A Location naming another host keeps only its path — the same
-    // reduction the Android client already performs on every redirect it
-    // follows, so the host never reaches the page either way.
+    // A Location naming another host keeps only its path, the same reduction the
+    // Android client already performs on every redirect it follows.
     foreach (['https://evil.example/steal', '//evil.example/steal'] as $location) {
         $body = (string) $rewrite($location)->getContent();
 
-        // Asserted on the target rather than on the mechanism: the document
-        // navigates with a script when a CSP nonce is available and with a
-        // meta refresh when one is not, and both forms are correct.
+        // Asserted on the target rather than the mechanism: the document navigates
+        // with a script when a CSP nonce is available and a meta refresh when not.
         expect(str_contains($body, 'evil.example'))->toBeFalse('"'.$location.'" leaked its host')
             ->and(str_contains($body, '/steal'))->toBeTrue('"'.$location.'" did not reduce to its path');
     }
@@ -143,10 +129,9 @@ it('keeps a same-origin path from a fully-qualified Location', function (): void
 });
 
 it('leaves iOS redirects alone, because its shell already follows them', function (): void {
-    // iOS serves the app from a php:// custom scheme whose PHPSchemeHandler
-    // reads Location, rewrites a rooted path to php://127.0.0.1<path> and
-    // performs a real navigation. Rewriting the redirect there would replace
-    // a working native mechanism with a weaker JavaScript one.
+    // iOS serves the app from a php:// custom scheme whose handler reads Location,
+    // rewrites a rooted path to php://127.0.0.1<path> and performs a real
+    // navigation. Rewriting there would trade it for a weaker JavaScript one.
     putenv('NATIVEPHP_PLATFORM=ios');
     $_SERVER['NATIVEPHP_PLATFORM'] = 'ios';
 

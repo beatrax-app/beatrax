@@ -12,12 +12,8 @@ use Modules\Core\Models\User;
 
 uses(RefreshDatabase::class);
 
-/*
- * Task 2 (13.4-02): RuleEngine::match() ordering is a deterministic
- * pure function of (rule set, input) — DB-level ORDER BY
- * priority,id, never a PHP re-sort. Asserts priority-asc ordering,
- * id-asc tiebreak on equal priority, and byte-identical repeat calls.
- */
+// match() ordering is a deterministic function of (rule set, input): the
+// ORDER BY priority, id runs in SQL, never as a PHP re-sort.
 
 beforeEach(function (): void {
     $this->user = User::query()->create([
@@ -96,10 +92,9 @@ it('tiebreaks same-position rule_actions by id ascending (WR-02)', function (): 
     // capture its id before adding two more rows at the SAME position.
     $seededActionId = (int) $rule->actions()->firstOrFail()->id;
 
-    // rule_actions.position carries no uniqueness enforcement at the write
-    // layer (only RuleFormModal's own UI always assigns unique sequential
-    // positions) — insert two more actions sharing position=0 directly,
-    // exactly as a non-UI caller (direct-action/DevTools call) could reach.
+    // Nothing at the write layer enforces a unique rule_actions.position —
+    // only RuleFormModal assigns them sequentially — so a non-UI caller can
+    // land two actions sharing position=0, exactly as here.
     $secondActionId = (int) DB::table('rule_actions')->insertGetId([
         'rule_id' => $rule->id,
         'position' => 0,
@@ -122,9 +117,8 @@ it('tiebreaks same-position rule_actions by id ascending (WR-02)', function (): 
     $result = $this->engine->match(orderingMatchInput(), $this->user);
 
     expect($result)->toHaveCount(1);
-    // All three actions share position=0, so the id tiebreak alone
-    // determines the order — without it, a DB-incidental order would be
-    // free to return them in any sequence.
+    // All three share position=0, so the id tiebreak alone fixes the order;
+    // without it the DB is free to return any sequence.
     expect(array_map(fn ($a) => $a->id, $result[0]->actions))
         ->toBe([$seededActionId, $secondActionId, $thirdActionId]);
 });

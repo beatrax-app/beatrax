@@ -8,21 +8,6 @@ use Modules\Core\Models\User;
 use Modules\Import\Internal\Http\Livewire\RenameCounterpartyPopover;
 use Modules\Ledger\Models\Category;
 
-/*
- * RENAME-03 coverage: when the user picks an optional category hint
- * inside the rename popover, saving the popover both writes the
- * merchant_aliases row AND seeds a categorization_rules row (+ its
- * rule_conditions/rule_actions children, D-01/D-02/D-03) via the
- * existing CreateCategorizationRule action. Leaving the category
- * hint blank persists only the alias.
- *
- * The seeded rule keys on a single `field='description'`,
- * `op='contains'`, `value_type='string'`, `value=$generalized_pattern`
- * condition plus a single `category` action so future imports of the
- * same merchant code auto-categorize without the user touching the
- * rules surface.
- */
-
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'rename-popover-rule',
@@ -86,10 +71,9 @@ it('saves the alias and closes calmly when categoryHint is a foreign/tampered ca
         'display_order' => 999,
     ]);
 
-    // A stale/foreign/tampered categoryHint — CreateCategorizationRule's
-    // assertCategoryVisible() throws InvalidArgumentException for it.
-    // Before the fix, save() only caught ValidationException, so this
-    // would surface as an uncaught 500 AFTER the alias already persisted.
+    // assertCategoryVisible() throws InvalidArgumentException here. save() used
+    // to catch only ValidationException, so a foreign id surfaced as a 500
+    // AFTER the alias had already persisted.
     Livewire::test(RenameCounterpartyPopover::class)
         ->dispatch('rename-counterparty:open', raw: 'BCK*SHELL Z', rowIndex: 0)
         ->set('friendly', 'Shell')
@@ -97,16 +81,13 @@ it('saves the alias and closes calmly when categoryHint is a foreign/tampered ca
         ->call('save')
         ->assertDispatched('rename-counterparty:saved');
 
-    // The alias still persisted — the popover closed calmly rather than
-    // leaving the user with a half-completed action.
     $alias = DB::table('merchant_aliases')
         ->where('user_id', $this->user->id)
         ->where('pattern', 'BCK*SHELL Z')
         ->first();
     expect($alias)->not->toBeNull();
 
-    // No rule was created (the rule-authoring attempt was rejected and
-    // swallowed, not silently succeeded with the wrong category).
+    // Rejected and swallowed, not quietly written against the wrong category.
     expect(DB::table('categorization_rules')->where('user_id', $this->user->id)->exists())->toBeFalse();
 });
 

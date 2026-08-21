@@ -16,13 +16,6 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 uses(RefreshDatabase::class);
 
-/*
- * Pins the /reports/export GET route: an authenticated request streams a CSV
- * built from the query string via ReportDefinitionRequestFactory, and the
- * defensive unauthenticated branch (unreachable behind the 'auth' middleware)
- * still returns an empty StreamedResponse rather than throwing.
- */
-
 function rerUser(): User
 {
     /** @var User */

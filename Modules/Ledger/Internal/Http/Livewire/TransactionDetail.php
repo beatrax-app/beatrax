@@ -147,8 +147,7 @@ final class TransactionDetail extends Component
             $tx->save();
 
             if ($breaksPair) {
-                // Symmetric break, same DB transaction. The partner's own
-                // type is preserved; reclassify never re-types the partner.
+                // Reclassify breaks the pair; it never re-types the partner.
                 Transaction::query()
                     ->where('user_id', $user->id)
                     ->where('id', $partnerId)
@@ -306,7 +305,6 @@ final class TransactionDetail extends Component
     ): void {
         $user = $currentUser->user();
 
-        // Ownership check and reconciled-lock read in one scoped query.
         $status = $db->connection()
             ->table('transactions')
             ->where('id', $this->transactionId)
@@ -450,8 +448,8 @@ final class TransactionDetail extends Component
         return is_numeric($raw) ? (int) $raw : null;
     }
 
-    // Legs are entered as positive magnitudes; the sign belongs to the
-    // parent transaction, so zero or negative is not a valid leg amount.
+    // The sign belongs to the parent transaction, so a leg carries a
+    // positive magnitude and zero is not a valid leg amount.
     private static function parseAmount(string $value): ?int
     {
         return MoneyInput::tryToPositiveMinor($value);

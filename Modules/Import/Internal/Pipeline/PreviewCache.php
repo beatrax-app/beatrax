@@ -13,9 +13,6 @@ use Modules\Import\Public\Dto\PreviewRowDto;
 use Modules\Import\Public\Exceptions\PreviewCacheCorruptedException;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
-/**
- * @link ../../../../.docs/features/import/architecture.md#preview-cache
- */
 final class PreviewCache
 {
     private const int TTL_MINUTES = 30;

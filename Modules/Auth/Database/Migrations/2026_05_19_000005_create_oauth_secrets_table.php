@@ -5,10 +5,9 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-// `client_secret` and `tokens_blob` hold ciphertext: the owning model applies
-// the `encrypted` cast, so plaintext exists only in the attribute layer.
-// The trigger pair stands in for a CHECK constraint, which SQLite cannot add
-// to a table after the fact.
+// `client_secret` and `tokens_blob` hold ciphertext: the owning model's
+// `encrypted` cast keeps plaintext in the attribute layer only. The trigger
+// pair stands in for a CHECK, which SQLite cannot add after the fact.
 return new class extends ModuleMigration
 {
     public function up(): void

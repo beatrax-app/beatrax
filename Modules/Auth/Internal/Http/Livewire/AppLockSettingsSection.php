@@ -39,8 +39,7 @@ final class AppLockSettingsSection extends Component
 
     public bool $biometricEnrolled = false;
 
-    // Server-side cannot know WebAuthn capability; JS overwrites this to
-    // true on mount when the browser reports it is capable.
+    // Overwritten by JS on mount; the server cannot see WebAuthn capability.
     public bool $biometricCapable = false;
 
     public string $biometricLabel = 'biometric unlock';
@@ -50,9 +49,8 @@ final class AppLockSettingsSection extends Component
     #[Validate(self::PIN_RULES)]
     public string $deenrollPin = '';
 
-    // Applied without PIN confirmation -- unlike every other mutation on
-    // this component, narrowing the auto-lock window never touches key
-    // material, so it is exempt from the confirmation requirement.
+    // Exempt from the PIN confirmation every other mutation here requires:
+    // narrowing the auto-lock window touches no key material.
     #[Validate('required|integer|in:1,5,15,30')]
     public int $idleTimeoutMinutes = 5;
 
@@ -65,8 +63,7 @@ final class AppLockSettingsSection extends Component
     #[Validate(self::PIN_RULES)]
     public string $currentPin = '';
 
-    // Used transiently to build the password recovery wrap; never stored
-    // beyond the request that consumes it.
+    // Transient input for the password recovery wrap; never stored.
     #[Validate('nullable|string')]
     public string $accountPassword = '';
 
@@ -76,14 +73,8 @@ final class AppLockSettingsSection extends Component
 
     public bool $confirmingForgotPin = false;
 
-    // Distinct from $flashMessage (reserved for error/alert copy) -- set
-    // only after a successful changePin(), gated on an encrypted keyring
-    // already existing for this user. Empty string renders nothing.
+    // Success copy only; $flashMessage is reserved for errors.
     public string $changePinSuccessMessage = '';
-
-    // -------------------------------------------------------------------------
-    // Lifecycle
-    // -------------------------------------------------------------------------
 
     public function mount(
         CurrentUser $currentUser,
@@ -102,9 +93,7 @@ final class AppLockSettingsSection extends Component
             ->first(['lock_enabled', 'idle_timeout_minutes']);
 
         if ($row === null) {
-            // Bootstrap a default row so subsequent reads never need
-            // null-guarding. updateOrInsert does not manage timestamps, so
-            // they are set explicitly.
+            // updateOrInsert does not manage timestamps, so they are set here.
             $now = $clock->now()->toDateTimeString();
             $db->connection()->table('user_app_lock_configs')->updateOrInsert(
                 ['user_id' => $user->id],
@@ -133,22 +122,15 @@ final class AppLockSettingsSection extends Component
         $ua = $request->userAgent() ?? '';
         $this->biometricLabel = $detector->detectLabel($ua);
 
-        // $biometricCapable is set client-side via JS (window.PublicKeyCredential
-        // check) and overwritten by lock.js — except where the OS owns the
-        // biometric, which the browser check cannot see at all.
+        // Seeded server-side because lock.js's browser probe cannot see an
+        // OS-owned biometric at all.
         $this->biometricCapable = $vault->isAvailable();
     }
 
-    // -------------------------------------------------------------------------
-    // Action: enable lock / set PIN
-    // -------------------------------------------------------------------------
-
     public function setPin(CurrentUser $currentUser, AppLockProvisioner $provisioner, Hasher $hasher, Session $session): void
     {
-        // enable() generates a NEW data key (and clears biometric
-        // enrollments). Re-running it on an already-enabled lock would
-        // silently rotate the key; PIN changes must go through changePin()
-        // instead.
+        // enable() mints a new data key, so re-running it on an enabled lock
+        // would silently rotate it. PIN changes go through changePin().
         if ($this->lockEnabled) {
             return;
         }
@@ -168,9 +150,8 @@ final class AppLockSettingsSection extends Component
             return;
         }
 
-        // Passing the session lets enable() store the data key immediately:
-        // the user just authenticated, so the session should be unlocked
-        // with the key available, not key-less/locked.
+        // The session is passed so enable() stores the data key straight away:
+        // the user just authenticated, so leave them unlocked, not key-less.
         $provisioner->enable($user->id, $this->newPin, $this->accountPassword, $session);
 
         $this->lockEnabled = true;
@@ -180,15 +161,10 @@ final class AppLockSettingsSection extends Component
         $this->confirmPin = '';
         $this->accountPassword = '';
 
-        // Plain browser-event name (no cross-module PHP dependency) so
-        // sibling sections update their app-lock-gated UI live, without a
-        // reload, the moment a lock now exists.
+        // A browser event, not a PHP one: sibling sections refresh their
+        // lock-gated UI live without a cross-module dependency.
         $this->dispatch(AppLockEvents::CONFIGURED);
     }
-
-    // -------------------------------------------------------------------------
-    // Action: idle timeout (instant-apply, no PIN confirmation)
-    // -------------------------------------------------------------------------
 
     public function setIdleTimeout(CurrentUser $currentUser, DatabaseManager $db, Clock $clock, Session $session): void
     {
@@ -203,10 +179,8 @@ final class AppLockSettingsSection extends Component
                 'updated_at' => $clock->now()->toDateTimeString(),
             ]);
 
-        // The middleware caches this config in the session for a minute, and
-        // the client's idle watcher holds the value the layout rendered with.
-        // Neither notices a change on its own, so the new window is pushed to
-        // both rather than waiting out a TTL or a full page reload.
+        // Both the middleware's session cache and the client's idle watcher
+        // hold a stale window until pushed; neither expires usefully.
         $session->forget(AppLockMiddleware::SESSION_CONFIG_CACHE);
 
         $this->dispatch(
@@ -216,10 +190,6 @@ final class AppLockSettingsSection extends Component
 
         $this->toast(Lang::get('core::settings.saved'));
     }
-
-    // -------------------------------------------------------------------------
-    // Action: disable lock (requires current PIN)
-    // -------------------------------------------------------------------------
 
     public function confirmDisable(): void
     {
@@ -239,17 +209,12 @@ final class AppLockSettingsSection extends Component
         }
 
         $this->lockEnabled = false;
-        // provisioner->disable() deleted all biometric credentials (their
-        // wraps held the now-destroyed data key) -- mirror that in the UI.
+        // disable() destroyed the data key, so every biometric wrap went with it.
         $this->biometricEnrolled = false;
         $this->confirmingDisable = false;
         $this->currentPin = '';
         $this->flashMessage = '';
     }
-
-    // -------------------------------------------------------------------------
-    // Action: change PIN (requires current PIN + new PIN)
-    // -------------------------------------------------------------------------
 
     public function confirmChangePin(): void
     {
@@ -260,10 +225,8 @@ final class AppLockSettingsSection extends Component
         $this->changePinSuccessMessage = '';
     }
 
-    // On success, $changePinSuccessMessage surfaces the re-secured-encryption
-    // note purely for the user-visible confirmation copy -- the keyring
-    // re-wrap itself happens invisibly via the AppLockPassphraseChanged
-    // event, dispatched inside AppLockProvisioner::changePin().
+    // The keyring re-wrap is not done here: AppLockProvisioner::changePin()
+    // dispatches AppLockPassphraseChanged and that does the work.
     public function changePin(CurrentUser $currentUser, AppLockProvisioner $provisioner, EncryptionMigrationService $migrationService): void
     {
         $error = $this->newPinValidationError();
@@ -292,10 +255,6 @@ final class AppLockSettingsSection extends Component
             ? Lang::get('auth::app_lock.change_pin_success')
             : '';
     }
-
-    // -------------------------------------------------------------------------
-    // Action: forgot PIN — password-based recovery
-    // -------------------------------------------------------------------------
 
     public function confirmForgotPin(): void
     {
@@ -342,14 +301,9 @@ final class AppLockSettingsSection extends Component
         $this->flashMessage = '';
     }
 
-    // -------------------------------------------------------------------------
-    // Biometric enrollment (only available when lock is enabled)
-    // -------------------------------------------------------------------------
-
-    // Dispatches 'beatrax:webauthn-create', which lock.js answers by
-    // fetching creationOptions, calling navigator.credentials.create(),
-    // POSTing the attestation to /lock/biometric/enroll, then dispatching
-    // 'biometric-enrolled' back to this component on success.
+    // Half of a browser round trip: lock.js answers 'beatrax:webauthn-create'
+    // by POSTing an attestation to /lock/biometric/enroll, then dispatching
+    // 'biometric-enrolled' back here.
     public function startEnroll(
         CurrentUser $currentUser,
         ColdStartVault $vault,
@@ -363,19 +317,17 @@ final class AppLockSettingsSection extends Component
             return;
         }
 
-        // Where the OS owns the biometric, enrol against it directly.
-        // WebAuthn is a browser API and the desktop shell has no platform
-        // authenticator behind it, so navigator.credentials.create()
-        // resolved to nothing and the button appeared dead.
+        // An OS-owned biometric is enrolled directly: WebAuthn is a browser
+        // API, and navigator.credentials.create() resolves to nothing behind
+        // the desktop shell, which read as a dead button.
         if ($vault->isAvailable()) {
             $this->enrollNatively($currentUser, $vault, $keyService, $session);
 
             return;
         }
 
-        // The desktop shell has no WebAuthn platform authenticator behind
-        // navigator.credentials.create(), so dispatching there resolves to
-        // nothing and the button reads as broken. Say so instead.
+        // Same dead-button case with no OS vault to fall back on: say so
+        // rather than dispatching into nothing.
         if ($config->get('nativephp-internal.running') === true) {
             $this->flashMessage = Lang::get('auth::app_lock.error_enroll_unsupported');
 
@@ -385,8 +337,8 @@ final class AppLockSettingsSection extends Component
         $this->dispatch('beatrax:webauthn-create');
     }
 
-    // Enrolling stores the LIVE data key under the OS gate, so it only works
-    // while unlocked — which is exactly when this settings screen is reachable.
+    // Stores the live data key under the OS gate, so it only works unlocked --
+    // which is the only state this settings screen is reachable in.
     private function enrollNatively(
         CurrentUser $currentUser,
         ColdStartVault $vault,
@@ -447,13 +399,6 @@ final class AppLockSettingsSection extends Component
         $this->flashMessage = '';
     }
 
-    // -------------------------------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------------------------------
-
-    // Shared by every flow that sets a new PIN (set / change / forgot):
-    // returns the user-facing error string, or null when the entered PIN
-    // passes the minimum-length and confirmation-match checks.
     private function newPinValidationError(): ?string
     {
         return match (true) {
@@ -462,10 +407,6 @@ final class AppLockSettingsSection extends Component
             default => null,
         };
     }
-
-    // -------------------------------------------------------------------------
-    // Render
-    // -------------------------------------------------------------------------
 
     public function render(ViewFactory $views): View
     {

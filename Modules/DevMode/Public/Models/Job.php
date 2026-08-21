@@ -6,10 +6,9 @@ namespace Modules\DevMode\Public\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-// Read-only for Dev Console consumers: no $fillable, no factory; the
-// Laravel queue worker is the sole writer. The inspector's inline JSON
-// viewer passes `payload` through RedactSecretsProcessor::scrub() before
-// rendering, so every Bearer/JWT/OAuth literal is masked first.
+// Read-only here: the queue worker is the sole writer. `payload` reaches the
+// inspector only through RedactSecretsProcessor::scrub() — it routinely
+// carries Bearer/JWT/OAuth literals.
 /**
  * @property int $id
  * @property string $queue
@@ -24,8 +23,8 @@ final class Job extends Model
     /** @var string|null */
     protected $table = 'jobs';
 
-    // Framework jobs table uses unix timestamps (int) directly; Eloquent
-    // auto-managed timestamps would overwrite `created_at` on save.
+    // `created_at` is a unix int here, so Eloquent's auto-timestamps would
+    // overwrite it with a datetime string on save.
     /**
      * @var bool
      */

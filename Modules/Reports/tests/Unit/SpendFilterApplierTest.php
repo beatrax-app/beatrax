@@ -15,12 +15,8 @@ use Modules\Reports\Public\Dto\ReportResultRow;
 
 uses(RefreshDatabase::class);
 
-/*
- * Exercises SpendFilterApplier — the shared account/category/counterparty/
- * amount/direction predicate the single-table dimension queries delegate to.
- * Driven through AccountSpendQuery (its host) so each predicate is asserted
- * against a real query rather than a mock. Helpers prefixed sfa_.
- */
+// Driven through AccountSpendQuery, one of its hosts, so every predicate is
+// asserted against a real query rather than a mock.
 
 function sfaUser(): User
 {

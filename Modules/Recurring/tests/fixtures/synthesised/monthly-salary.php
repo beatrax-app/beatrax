@@ -2,10 +2,8 @@
 
 declare(strict_types=1);
 
-// Monthly salary — 12 occurrences at +€3500 from a single employer IBAN.
-// Income detector clusters on the stable counterparty IBAN. Expectation:
-// ONE income series, monthly cadence; passes the default €2000 income
-// minimum threshold.
+// A single employer IBAN at +€3500, which clears the default €2000 income
+// minimum. The income detector clusters on that counterparty IBAN.
 
 $transactions = [];
 $start = new DateTimeImmutable('2025-04-25');

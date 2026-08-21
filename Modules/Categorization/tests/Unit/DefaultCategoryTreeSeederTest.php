@@ -84,12 +84,10 @@ it('never demotes a per-user category that shares a slug with a global default',
 
     $this->app->make(DefaultCategoryTreeSeeder::class)->run();
 
-    // The user's row is untouched: same id, same user_id, same name.
     $userOverride->refresh();
     expect($userOverride->user_id)->toBe($user->id);
     expect($userOverride->name)->toBe('My Groceries');
 
-    // A separate global row exists with user_id = NULL.
     $globalCount = Category::withoutGlobalScopes()
         ->where('slug', 'groceries')
         ->whereNull('user_id')
@@ -98,8 +96,7 @@ it('never demotes a per-user category that shares a slug with a global default',
 });
 
 it('runs from the beatrax:install command via the UserInstalled listener', function (): void {
-    // Drive the install command end-to-end (NOT Event::fake — we want the
-    // SeedDefaultCategoryTree listener to actually fire on UserInstalled).
+    // Not Event::fake: the SeedDefaultCategoryTree listener has to really fire.
     $exit = $this->app->make(ConsoleKernel::class)->call('beatrax:install', [
         '--username' => 'wessel',
         '--password' => 'opensesame',

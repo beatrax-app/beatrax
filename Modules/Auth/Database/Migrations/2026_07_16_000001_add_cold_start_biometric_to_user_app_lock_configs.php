@@ -6,10 +6,9 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-// cold_start_biometric_enrolled mirrors the enclave vault as a plain boolean
-// so the lock screen can read enrollment state without raising a Face ID
-// prompt to do it. last_pin_unlock_at anchors the PIN floor: biometric is
-// offered only while MobileLockGateway::PIN_FLOOR_DAYS has not elapsed.
+// cold_start_biometric_enrolled mirrors the enclave vault as a boolean, so the
+// lock screen reads enrolment without raising a Face ID prompt to do it.
+// last_pin_unlock_at anchors MobileLockGateway::PIN_FLOOR_DAYS.
 return new class extends Migration
 {
     public function up(): void

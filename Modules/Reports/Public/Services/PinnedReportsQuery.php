@@ -13,9 +13,8 @@ use Throwable;
 
 final readonly class PinnedReportsQuery
 {
-    // TogglePin already enforces the 3-pin cap in the write layer; this
-    // query's own LIMIT is a second, independent enforcement point so a
-    // stray fourth pinned row can never render a 4th mini card.
+    // A second enforcement point independent of TogglePin's write-layer cap, so
+    // a stray fourth pinned row can never render a fourth mini card.
     private const MAX_PINS = 3;
 
     public function __construct(private DatabaseManager $db) {}
@@ -46,9 +45,8 @@ final readonly class PinnedReportsQuery
             try {
                 $definition = ReportDefinition::from($definitionArray);
             } catch (Throwable) {
-                // A malformed/incomplete definition must never break the
-                // dashboard — skip the row rather than 500, mirroring the
-                // aggregation layer's own never-crash-the-dashboard posture.
+                // A malformed definition skips its row rather than 500 the
+                // whole dashboard.
                 continue;
             }
 

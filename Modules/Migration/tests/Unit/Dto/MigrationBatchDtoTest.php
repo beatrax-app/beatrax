@@ -17,13 +17,6 @@ use Modules\Migration\Public\Dto\MigrationTransactionDto;
 use Modules\Migration\Public\Dto\UnmappedItemDto;
 use Spatie\LaravelData\Data;
 
-/*
- * Wave 0 contract-pinning tests for the IR Dto shapes (13.5-02 Task 1).
- * These MUST pass now — Task 1 authors real, final DTOs (unlike Task 3's
- * RED parser/wizard stubs), so this file is a GREEN regression suite, not
- * a RED stub.
- */
-
 /** @return array<int, class-string> */
 function migrationDtoClasses(): array
 {
@@ -91,8 +84,6 @@ it('Dto: every money-bearing Dto field is typed Modules\Ledger\Public\ValueObjec
 });
 
 it('Dto: reflection sweep confirms NO bare int/float field is used for money anywhere in the money-bearing Dtos', function (): void {
-    // Guards against a future field addition silently reintroducing a bare
-    // int/float money field alongside the typed Money fields above.
     $suspectNames = ['amount_minor', 'amountminor', 'targetminor', 'budgetedminor'];
 
     foreach ([MigrationTransactionDto::class, MigrationBudgetAssignmentDto::class, MigrationGoalDto::class] as $class) {
@@ -162,15 +153,12 @@ it('Dto: passing a Generator to MigrationBatch.transactions never eagerly materi
         transactions: $generator,
     );
 
-    // Constructing the batch (and holding the field) must not have touched
-    // the generator at all — proves the Dto layer never calls
-    // iterator_to_array() on it (D-05).
+    // Proves the Dto layer never calls iterator_to_array() on the generator.
     expect($yieldedCount)->toBe(0);
     expect($batch->transactions)->toBeInstanceOf(Generator::class);
 
-    // Consuming ONE item advances the generator by exactly one step, not
-    // all three — proves genuine laziness, not an eager pre-materialization
-    // disguised as a Generator return type.
+    // One step, not three: genuine laziness, not an eager pre-fill wearing a
+    // Generator return type.
     $one = null;
     foreach ($batch->transactions as $item) {
         $one = $item;

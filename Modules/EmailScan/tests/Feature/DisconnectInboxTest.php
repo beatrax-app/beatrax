@@ -11,12 +11,9 @@ use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/*
- * DisconnectInbox is the token-revocation path: a leaked Gmail refresh token
- * cannot outlive the disconnect, and the local inbox + credentials are gone
- * afterwards. The provider revoke is best-effort — a failed revoke still
- * completes the local delete rather than stranding the row.
- */
+// A leaked refresh token must not outlive the disconnect, but the provider
+// revoke is best-effort: a failed revoke still completes the local delete
+// rather than stranding the row.
 
 function disconnectSetupInbox(string $email, string $provider, string $refreshToken): array
 {

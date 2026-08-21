@@ -15,22 +15,10 @@ use Modules\EmailScan\Internal\Jobs\DiscoveryScanJob;
 
 uses(RefreshDatabase::class);
 
-/*
- * WR-03 iter-2 regression: DiscoveryScanJob must walk past the first
- * page of discovery candidates. Previously each branch issued exactly
- * one provider call and ignored nextPageToken / nextLink, so any inbox
- * whose receipt senders sat past the first 100 newest broad-keyword
- * matches was silently invisible to the discovery loop.
- *
- * These tests queue MULTIPLE pages of fixture responses and assert
- * that:
- *   1. The job walks every queued page until the cursor terminates.
- *   2. discovered_senders carries one row per unique sender across
- *      all pages.
- *   3. The DISCOVERY_MAX_PAGES hard cap stops a runaway provider (an
- *      infinite-nextLink response shape returns at most 10 pages of
- *      observations rather than burning the worker's heap).
- */
+// Ignoring nextPageToken / nextLink left any sender past the first 100 newest
+// broad-keyword matches invisible to the discovery loop. DISCOVERY_MAX_PAGES
+// bounds the other direction: a runaway infinite-cursor response stops at 10
+// pages rather than burning the worker's heap.
 
 beforeEach(function (): void {
     $this->path = storage_path('app/secrets/email-oauth.json');
@@ -76,8 +64,7 @@ it('walks multiple Gmail discovery pages, capturing senders past the first 100',
     ]);
 
     $fakeGmail = new FakeGmailApiClient($this->app->make(Filesystem::class));
-    // Queue three pages: each carries one synthetic candidate the
-    // production scan would never have surfaced with single-page behaviour.
+    // One candidate per page, so a single-page walk would find only the first.
     $fakeGmail->queueDiscoveryResponse(
         [['id' => 'm-1', 'fromAddress' => 'page1-sender@example.com', 'fromName' => 'Page 1 Sender', 'internalDate' => '2026-05-10T00:00:00Z']],
         nextPageToken: 'page-2-token',
@@ -92,7 +79,6 @@ it('walks multiple Gmail discovery pages, capturing senders past the first 100',
     );
     $this->app->instance(GmailApiClientContract::class, $fakeGmail);
 
-    // Bind a no-op Graph client so the Microsoft branch is inert.
     $fakeGraph = new FakeGraphApiClient($this->app->make(Filesystem::class));
     $this->app->instance(GraphApiClientContract::class, $fakeGraph);
 
@@ -100,7 +86,6 @@ it('walks multiple Gmail discovery pages, capturing senders past the first 100',
     $job = $this->app->make(DiscoveryScanJob::class, ['userId' => $user->id]);
     $this->app->call([$job, 'handle']);
 
-    // Assert: three discovered_senders rows landed, one per page.
     $rows = $db->connection()
         ->table('discovered_senders')
         ->where('inbox_id', $inboxId)
@@ -118,15 +103,11 @@ it('walks multiple Gmail discovery pages, capturing senders past the first 100',
         'page3-sender@example.com',
     ]);
 
-    // Assert: the Fake recorded THREE listDiscoveryCandidates calls
-    // (not the previously-broken single call).
     $calls = array_values(array_filter(
         $fakeGmail->getRequestedCalls(),
         static fn (array $c): bool => $c['method'] === 'listDiscoveryCandidates',
     ));
     expect($calls)->toHaveCount(3);
-    // Confirm page tokens were forwarded: first call has pageToken
-    // null, second has 'page-2-token', third has 'page-3-token'.
     expect($calls[0]['args']['pageToken'])->toBeNull();
     expect($calls[1]['args']['pageToken'])->toBe('page-2-token');
     expect($calls[2]['args']['pageToken'])->toBe('page-3-token');
@@ -236,8 +217,7 @@ it('caps Gmail discovery at DISCOVERY_MAX_PAGES (10) when the provider hands bac
     ]);
 
     $fakeGmail = new FakeGmailApiClient($this->app->make(Filesystem::class));
-    // Queue 20 always-non-null-page-token responses; the job must
-    // stop after 10 (the DISCOVERY_MAX_PAGES cap).
+    // Twenty pages that never stop offering a next token, against a cap of 10.
     for ($i = 0; $i < 20; $i++) {
         $fakeGmail->queueDiscoveryResponse(
             [[
@@ -268,6 +248,6 @@ it('caps Gmail discovery at DISCOVERY_MAX_PAGES (10) when the provider hands bac
         ->table('discovered_senders')
         ->where('inbox_id', $inboxId)
         ->count();
-    // Each fixture page returns one synthetic sender; the cap is 10.
+    // One sender per page, so the row count is the page count.
     expect($rowCount)->toBe(10);
 });

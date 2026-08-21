@@ -13,9 +13,8 @@ use Symfony\Component\Yaml\Yaml;
  */
 function bundledMerchantEntries(): array
 {
-    // Parsed once for the whole file. Every case below walks the same corpus,
-    // and at ~6,700 entries across 46 files re-reading it per case turned a
-    // fast structural check into the slowest test in the module.
+    // Parsed once: at ~6,700 entries across 46 files, re-reading per case turned
+    // a fast structural check into the slowest test in the module.
     static $cached = null;
     if ($cached !== null) {
         return $cached;
@@ -71,10 +70,9 @@ it('gives every bundled merchant entry a pattern and a name', function (): void 
 });
 
 it('keeps every merchant pattern unique across the whole corpus', function (): void {
-    // The global corpus tier is keyed on (pattern) alone, so a duplicate
-    // across two country files is not a cosmetic clash: the later file's
-    // entry overwrites the earlier row wholesale, including replacing its
-    // contact data with the nulls of a copy that carries none.
+    // The global corpus tier is keyed on (pattern) alone, so a duplicate across
+    // two country files is not cosmetic: the later file overwrites the earlier
+    // row wholesale, replacing its contact data with the copy's nulls.
     $seen = [];
     $duplicates = [];
     foreach (bundledMerchantEntries() as $entry) {
@@ -112,8 +110,7 @@ it('compiles every regex pattern in the bundled corpus', function (): void {
 it('lands every contact value in the bundled corpus without being dropped', function (): void {
     // MerchantContactReader silently skips a malformed contact value at seed
     // time, so a typo in a cancel_url would ship as a missing link nobody
-    // notices. Reading the real corpus through the real reader and failing on
-    // any warning turns that silent drop into a red build.
+    // notices; failing on any warning turns that silent drop into a red build.
     $logger = recordingCorpusLogger();
     $reader = new MerchantContactReader($logger);
 
@@ -126,9 +123,9 @@ it('lands every contact value in the bundled corpus without being dropped', func
 });
 
 it('gives every classification rule a compiling pattern', function (string $type): void {
-    // Government and bank-fee rules are matched against EVERY user's
-    // descriptions regardless of their country, so a rule that fails to
-    // compile is a whole country's classification silently going missing.
+    // Government and bank-fee rules are matched against every user's descriptions
+    // regardless of country, so one that fails to compile silently loses a whole
+    // country's classification.
     $found = glob(base_path("resources/corpus/{$type}/*.yaml"));
     $files = $found !== false ? $found : [];
     sort($files);
@@ -160,10 +157,9 @@ it('gives every classification rule a compiling pattern', function (string $type
 })->with(['government', 'bank-fees']);
 
 it('keeps every regex classification rule ASCII-only', function (string $type): void {
-    // CorpusPatternMatcher delimits a regex body as `#...#i` with no /u flag,
-    // so case folding and \b are ASCII-only inside one. A Greek or Cyrillic
-    // term there would match one casing at best; those belong in the literal
-    // path, where mb_stripos folds multibyte correctly.
+    // CorpusPatternMatcher delimits a regex body as `#...#i` with no /u flag, so
+    // case folding and \b are ASCII-only there; a Greek or Cyrillic term belongs
+    // in the literal path, where mb_stripos folds multibyte correctly.
     $found = glob(base_path("resources/corpus/{$type}/*.yaml"));
 
     $offenders = [];

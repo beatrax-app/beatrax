@@ -14,6 +14,9 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Sync\Public\Events\TransactionMutated;
 
+/**
+ * @link ../../../../.docs/features/ledger/architecture.md#reconciliationwriter--the-terminal-reconcile-write-path
+ */
 final class ReconciliationWriter
 {
     use CoercesScalars;

@@ -17,14 +17,9 @@ use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
 
 uses(EnablesEncryptionForUser::class);
 
-/*
- * 14.1-10 Task 1 (D-06 cosmetic-display cluster) — under an encrypted
- * user, `counterparties.display_name` is ciphertext at rest.
- * RuleFormModal's counterparty picker and CategorizationRuleQuery's
- * counterparty-action label must decrypt it for display rather than
- * leaking ciphertext into a dropdown/label. Both sites also dropped
- * their ORDER BY on the ciphertext column.
- */
+// Under an encrypted user counterparties.display_name is ciphertext at rest;
+// the picker and the rule-action label have to decrypt it rather than leak it,
+// and neither may ORDER BY the ciphertext column.
 
 function ddUser(): User
 {
@@ -35,20 +30,14 @@ function ddUser(): User
     ]);
 }
 
-/**
- * Inserts a counterparty row whose display_name is ciphertext at rest
- * — mirrors what CounterpartyResolverService's creation-time write
- * would have produced for an already-encrypted user.
- */
 function ddEncryptedCounterparty(User $user, Session $session, string $slug, string $displayName): int
 {
     /** @var SensitiveColumnCodec $codec */
     $codec = Container::getInstance()->make(SensitiveColumnCodec::class);
     $ciphertext = $codec->encryptValue('counterparties', 'display_name', $displayName, (int) $user->id, $session);
 
-    // A pass-through (encryption not usable) would return the value
-    // unchanged — assert it actually encrypted so this fixture never
-    // silently degrades into a vacuous test.
+    // A pass-through would return the value unchanged; asserting it encrypted
+    // stops the fixture degrading into a vacuous test.
     expect($ciphertext)->not->toBe($displayName);
 
     return (int) DB::table('counterparties')->insertGetId([

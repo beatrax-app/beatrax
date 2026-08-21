@@ -2,26 +2,13 @@
 
 declare(strict_types=1);
 
-/*
- * Static-fixture regression guards for `scripts/nativephp_inject_persistent_tray.php`.
- *
- * The injector is the central plank of the UAT-2 / UAT-3 fix: it patches
- * the NativePHP-published `nativephp/electron/src/main/index.js` to create
- * a persistent macOS menu-bar `Tray` directly in the Electron main process,
- * replacing the NativePHP `MenuBar` facade (which couples tray menu items
- * to a focused BrowserWindow and breaks "Open Beatrax" once the user
- * closes the main window via the X button).
- *
- * The tests below verify the patch on representative input shapes so a
- * future drift in either upstream or our own template surfaces as a
- * failing test rather than a silently-broken build.
- */
+// The script patches NativePHP's Electron entrypoint to build the macOS
+// menu-bar Tray in the main process: the `MenuBar` facade couples its items to
+// a focused BrowserWindow, so "Open Beatrax" dies once the window is closed.
 
 beforeEach(function (): void {
-    // Loading the script registers its helpers. The top-level executable
-    // block is guarded by an `$isDirectlyInvoked` check that is false
-    // under the Pest runner, so requiring the file is a pure
-    // function-definition side effect.
+    // The script's top-level block is guarded by an `$isDirectlyInvoked` check
+    // that is false under Pest, so requiring it only defines its helpers.
     require_once base_path('scripts/nativephp_inject_persistent_tray.php');
 });
 
@@ -59,9 +46,8 @@ it('emits a Tray construction that flags the loaded image as a macOS template im
 
     [$patched] = injectPersistentTray($upstream);
 
-    // The whole point of the new architecture: the Tray's NativeImage is
-    // flagged as a template so macOS auto-tints it for the active menu
-    // bar appearance (white in dark, black in light).
+    // A template image is what makes macOS auto-tint the tray icon for the
+    // active menu-bar appearance: white in dark, black in light.
     expect($patched)->toContain('nativeImage.createFromPath');
     expect($patched)->toContain('setTemplateImage(true)');
     expect($patched)->toContain('new Tray(image)');
@@ -80,10 +66,8 @@ it('builds the verbatim D-09 three-row context menu — Open Beatrax / Scan emai
 });
 
 it('wires the show-or-recreate helper to the NativePHP /api/window/open endpoint with the secret header', function (): void {
-    // The fallback path when the main window has been closed: POST to the
-    // Electron API to construct a fresh BrowserWindow with the same
-    // payload `WindowManager::open(\'main\')` would have produced. The
-    // request must carry the NativePHP shared secret.
+    // With the main window closed there is nothing to show, so the tray POSTs to
+    // the Electron API to build a fresh one; the shared secret gates that call.
     $upstream = "import { app } from 'electron';\nNativePHP.bootstrap(app);\n";
 
     [$patched] = injectPersistentTray($upstream);
@@ -93,11 +77,9 @@ it('wires the show-or-recreate helper to the NativePHP /api/window/open endpoint
 });
 
 it('keeps the window-open payload aligned with NativeAppServiceProvider dimensions', function (): void {
-    // Soft contract: the dimensions in the JS payload must mirror the
-    // `WINDOW_WIDTH` / `WINDOW_HEIGHT` constants in
-    // `NativeAppServiceProvider`. A drift in either side produces a
-    // re-opened window with different geometry than the originally-
-    // opened one (jarring for the user).
+    // The dimensions in the JS payload mirror the WINDOW_WIDTH / WINDOW_HEIGHT
+    // constants in NativeAppServiceProvider; a drift on either side re-opens the
+    // window at a different size than the one the user closed.
     $upstream = "import { app } from 'electron';\nNativePHP.bootstrap(app);\n";
 
     [$patched] = injectPersistentTray($upstream);
@@ -123,9 +105,8 @@ it('is idempotent — a source containing the marker is returned unchanged', fun
 });
 
 it('reports failure when the upstream import line is missing', function (): void {
-    // A future NativePHP release that reshapes the electron import (e.g.
-    // splits it across multiple lines, switches to default-import syntax)
-    // must surface as a loud failure rather than a silently-broken patch.
+    // A future NativePHP release that reshapes the electron import must fail
+    // loudly rather than leave a silently-broken patch.
     $upstream = "import electron from 'electron';\nNativePHP.bootstrap(app);\n";
 
     [$patched, $status] = injectPersistentTray($upstream);
@@ -144,23 +125,20 @@ it('reports failure when the NativePHP.bootstrap(...) call site is missing', fun
 });
 
 it('balances nested parens inside NativePHP.bootstrap arguments so a future refactor stays patchable', function (): void {
-    // Defensive: a NativePHP release that reshapes the bootstrap call to
-    // pass an expression like `path.join('a', 'b')` must still parse.
+    // A NativePHP release that passes an expression like `path.join('a', 'b')`
+    // to bootstrap must still parse.
     $upstream = "import { app } from 'electron';\nNativePHP.bootstrap(app, path.join('a', 'b'), c);\n";
 
     [$patched, $status] = injectPersistentTray($upstream);
 
     expect($status)->toBe('patched');
-    // The bootstrap call itself must remain intact in the patched output.
     expect($patched)->toContain("NativePHP.bootstrap(app, path.join('a', 'b'), c);");
 });
 
 it('splices the injection AFTER the bootstrap statement, not before', function (): void {
-    // Critical ordering: NativePHP.bootstrap() registers
-    // `app.whenReady()` first. Our additional `app.whenReady()` listener
-    // must come after, otherwise NativePHP could clobber our handler
-    // (Electron supports multiple listeners but ordering matters for the
-    // electronApiPort polling).
+    // NativePHP.bootstrap() registers its own `app.whenReady()` first. Ours has
+    // to come after: Electron allows multiple listeners, but the ordering is
+    // what the electronApiPort polling depends on.
     $upstream = <<<'JS'
         import { app } from 'electron';
         NativePHP.bootstrap(app);

@@ -173,8 +173,8 @@ final class DismissAnomalyAlertAsExpected
         return ['amount_minor' => (int) $amount, 'currency' => $currency];
     }
 
-    // A permitted ledger read (noTransactionWritesFromAnomaly forbids only
-    // writes). Null means an unresolved merchant and a counterparty_id IS NULL
+    // A permitted ledger read (crossModuleRawTableWrites pins only writes).
+    // Null means an unresolved merchant and a counterparty_id IS NULL
     // fallback rule, which the evaluator still matches.
     private function counterpartyIdForTransaction(User $user, int $transactionId): ?int
     {

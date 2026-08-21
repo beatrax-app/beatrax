@@ -6,10 +6,8 @@ namespace Modules\OpenBanking\Public\Exceptions;
 
 use RuntimeException;
 
-// A request refused before it was sent, because attaching the bearer token
-// would hand it somewhere it does not belong — a non-HTTPS scheme, or a host
-// outside the Enable Banking API and the bank's own SCA origin. Kept apart
-// from EnableBankingApiException because no retry is ever appropriate here.
+// Refused before sending, because the bearer token would go somewhere outside
+// the API host and the bank's SCA origin. Never retryable.
 final class UnsafeOpenBankingRequestException extends RuntimeException
 {
     public static function nonHttpsScheme(): self

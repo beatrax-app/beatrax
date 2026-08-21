@@ -12,10 +12,6 @@ use Modules\Ledger\Models\Account;
 uses(RefreshDatabase::class);
 
 /**
- * Build a user with the three canonical accounts the resolver
- * targets (bank / paypal / ics_card). Optionally seeds the default
- * known-counterparty-IBAN aliases for that user.
- *
  * @return array{user: User, bank: Account, paypal: Account, icsCard: Account}
  */
 function seedUserWithAccounts(string $username, bool $runAliasSeeder = true): array
@@ -122,19 +118,15 @@ it('returns null on empty or whitespace IBAN', function (): void {
 });
 
 it('returns the lowest-id account when the user owns two accounts of the alias target kind', function (): void {
-    // Multi-account-per-kind scenario: the schema permits N accounts
-    // per kind per user, and the resolver must disambiguate
-    // deterministically. The contract is lowest-id wins; this test
-    // pins that invariant so future SQLite or storage-engine changes
-    // cannot silently flip the resolution.
+    // The schema permits N accounts per kind per user, so the resolver needs a
+    // deterministic tie-break. Pinned here so a storage-engine change cannot
+    // silently flip which one comes back.
     $user = User::query()->create([
         'username' => 'resolver-multi-bank',
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);
 
-    // Two `bank`-kind accounts on the same user. The first row
-    // created has the lowest id and must win the disambiguation.
     $firstBank = Account::create([
         'user_id' => $user->id,
         'name' => 'First ASN',
@@ -152,8 +144,6 @@ it('returns the lowest-id account when the user owns two accounts of the alias t
         'default_currency' => 'EUR',
     ]);
 
-    // Alias whose target_account_kind is `bank` — both accounts above
-    // qualify; the resolver must pick the lowest-id one.
     KnownCounterpartyIban::query()->create([
         'user_id' => $user->id,
         'real_iban' => 'NL85THRD0000000000',

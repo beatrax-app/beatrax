@@ -11,10 +11,8 @@ beforeEach(function (): void {
     $this->sniffer = $this->app->make(HeaderSniffer::class);
 });
 
-// A zero-byte upload survives the extension check, so every CSV sniff path
-// has to answer for it separately. Each path reads its own first line, so
-// each one needs its own case — a single shared test would leave two of the
-// three branches unexercised.
+// A zero-byte upload survives the extension check, and each sniff path reads
+// its own first line, so one shared case would leave two branches unexercised.
 it('rejects an empty file on every CSV sniff path', function (string $format): void {
     $tmp = tempnam(sys_get_temp_dir(), 'sniff-empty-').'.csv';
     file_put_contents($tmp, '');

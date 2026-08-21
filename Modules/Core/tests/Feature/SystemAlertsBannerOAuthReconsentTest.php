@@ -7,21 +7,6 @@ use Livewire\Livewire;
 use Modules\Core\Internal\Http\Livewire\SystemAlertsBanner;
 use Modules\Core\Models\User;
 
-/*
- * SystemAlertsBanner rendering for the oauth_reconsent_required kind.
- *
- * The system-alert-message blade partial gains a new @case branch that
- * pulls inbox_id + provider out of the alert's metadata column and
- * renders a "Reconnect →" link routing back to
- * /inboxes?reconnect={inbox_id}. Gmail and Microsoft alerts use the
- * same template; only the message column copy differs ("Reconnect your
- * Gmail" vs "Reconnect your Outlook"). When the inbox_id is missing
- * from the metadata, the row still renders its message but omits the
- * reconnect link — the SystemAlertQuery would never see such a row in
- * practice because the listener always writes both fields, but the
- * defensive read keeps the partial safe against a future regression.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);

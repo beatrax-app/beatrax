@@ -7,10 +7,8 @@ namespace Modules\OpenBanking\Public\Exceptions;
 use Modules\Core\Public\Support\Lang;
 use RuntimeException;
 
-// A consent handoff refused before the browser is ever redirected: the wizard
-// is unfinished, no bank was chosen, or Enable Banking answered with a missing,
-// unparseable, non-public, or open-redirect consent URL. Each carries the
-// reason the connect controller flashes, so one catch replaces eight returns.
+// A consent handoff refused before the browser is ever redirected. Each carries
+// the reason the connect controller flashes, so one catch replaces every return.
 final class OpenBankingConnectException extends RuntimeException
 {
     public static function wizardIncomplete(): self

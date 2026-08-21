@@ -11,12 +11,6 @@ use Modules\DriftAlerts\Models\DriftAlert;
 
 uses(RefreshDatabase::class);
 
-/*
- * Series in state='cadence_changed' must still produce drift alerts —
- * a series whose detector cadence flipped is awaiting user re-approval
- * but the underlying amount drift is independently actionable signal.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);

@@ -86,8 +86,8 @@ it('deletes only the user\'s own manual entry', function (): void {
 
     $id = (int) DB::table('transactions')->where('user_id', $this->user->id)->where('source_format', 'manual')->value('id');
 
-    // Two steps now: deleting fired on the first tap with no confirmation and
-    // no undo, on a row whose only other control is an amount.
+    // Two steps: deleting fired on the first tap with no confirmation and no
+    // undo, on a row whose only other control is an amount.
     $component->call('confirmDelete', $id)->call('delete', $id);
 
     expect(DB::table('transactions')->where('id', $id)->exists())->toBeFalse();
@@ -115,8 +115,7 @@ it('records two identical same-day entries without silently dropping the second'
     $component->set('amount', '3,00')->set('counterparty', 'Coffee')->set('date', '2026-06-05')->call('add');
     $component->set('amount', '3,00')->set('counterparty', 'Coffee')->set('date', '2026-06-05')->call('add');
 
-    // Both must persist — the earlier per-day bookedAt would have collided on
-    // the fingerprint unique index and dropped the second.
+    // A per-day bookedAt collided on the fingerprint index and dropped one.
     expect(DB::table('transactions')->where('user_id', $this->user->id)->where('source_format', 'manual')->count())->toBe(2);
 });
 
@@ -137,9 +136,8 @@ it('drops a foreign (cross-user) category id rather than attaching it', function
 });
 
 // CarbonImmutable::parse('') returns NOW rather than throwing, so a cleared
-// date field fell through the catch and booked the entry today. The twin at
-// Ledger\ReconcilePage::parseDate() guards the empty string first; this one
-// did not, and the invalid-date error it raises could never be reached.
+// date field fell through the catch and booked the entry today. SafeDate
+// rejects the empty string before parsing.
 it('refuses a cleared date instead of silently booking the entry today', function (): void {
     Livewire::actingAs($this->user)
         ->test(CashBookPage::class)

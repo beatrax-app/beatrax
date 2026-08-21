@@ -13,15 +13,6 @@ use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 
 uses(RefreshDatabase::class);
 
-/*
- * 19-11 Task 3: the B5 consent-expiry banner, the reconnect() re-link
- * flow (re-opens the wizard at Step 4, bank-picker, reusing the
- * already-registered application), and the never-stale-as-fresh
- * invariant (Req 7/8): the transparency panel's "Last successful sync"
- * is the ONLY freshness indicator anywhere on this page, and reconnect()
- * itself never touches it.
- */
-
 function orfUser(string $username): User
 {
     return User::query()->create([
@@ -152,11 +143,8 @@ it('stale data is never labeled fresh: the panel Last-successful-sync stays put 
 
     $originalLastSync = $component->get('lastSuccessfulSyncAtIso');
 
-    // Simulate the callback controller's re-link branch: consent is
-    // restored, but nothing here ever touches last_successful_sync_at —
-    // that column only ever advances inside SyncOpenBankingAccountJob's
-    // own success branch (out of this plan's scope; already proven by
-    // SyncOpenBankingAccountJobTest).
+    // The re-link branch restores consent without touching
+    // last_successful_sync_at; only a successful sync advances that column.
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $db->connection()->table('open_banking_connections')

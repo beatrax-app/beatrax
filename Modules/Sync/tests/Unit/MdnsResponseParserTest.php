@@ -6,13 +6,10 @@ use Modules\Sync\Internal\Transport\Discovery\DiscoveryMode;
 use Modules\Sync\Internal\Transport\Discovery\MdnsInstanceTable;
 use Modules\Sync\Internal\Transport\Discovery\MdnsResponseParser;
 
-/*
- * Every byte the parser sees came from whoever answered a multicast question
- * on the local network, which is anyone attached to it. These cover the wire
- * format it is supposed to read and, at least as importantly, the packets a
- * hostile or broken responder can send: compression loops, lengths that
- * overrun the buffer, and TXT values that are not what they claim to be.
- */
+// Every byte the parser sees came from whoever answered a multicast question on
+// the local network, which is anyone attached to it. These cover the wire format
+// it is meant to read and, just as importantly, what a hostile or broken
+// responder can send: compression loops, overrunning lengths, lying TXT values.
 
 const MDNS_TYPE_A = 1;
 const MDNS_TYPE_PTR = 12;
@@ -261,15 +258,10 @@ it('carries no key material, so a spoofed answer cannot authenticate anything', 
 });
 
 it('refuses an A record that tries to claim the instance before its SRV', function (): void {
-    /*
-     * The address is first-wins, and record order is chosen by whoever
-     * answered. An A record naming the SERVICE INSTANCE and placed BEFORE the
-     * SRV therefore used to take the slot ahead of the datagram's real sender
-     * — pointing the pairing-token fetch at any IPv4 the answerer liked, which
-     * is token exfiltration off the LAN and an SSRF probe from inside it.
-     *
-     * Only the host a datagram actually arrived from can address an instance.
-     */
+    // The address is first-wins and record order is the answerer's choice, so an
+    // A record naming the service instance and placed before the SRV took the slot
+    // ahead of the datagram's real sender — pointing the pairing-token fetch at any
+    // IPv4 it liked. Only the host a datagram arrived from may address an instance.
     $datagram = mdnsMessage(
         mdnsRecord(MDNS_INSTANCE, MDNS_TYPE_A, "\xcb\x00\x71\x05")
         .mdnsRecord(MDNS_INSTANCE, MDNS_TYPE_SRV, mdnsSrv(51337))

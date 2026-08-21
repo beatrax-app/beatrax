@@ -13,28 +13,16 @@ use Modules\EmailScan\Public\Dto\InboxCredentials;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use PHPUnit\Framework\MockObject\MockObject;
 
-/*
- * SSRF / bearer-token-leak regression test for GraphApiClient.
- *
- * The Graph delta + pagination contract follows @odata.nextLink /
- * @odata.deltaLink URLs verbatim. A hostile / malformed Graph response
- * substituting an attacker-controlled host into the nextLink would,
- * absent the host allow-list, see a valid Mail.Read bearer attached on
- * the next request — exfiltrating the token to the attacker.
- *
- * These tests assert that the allow-list rejects the request BEFORE
- * any bearer header is attached. The OAuth provider is stubbed to
- * succeed at refresh — if the request were allowed through, the test
- * would hit a real HTTP call (not what we want). The expected RuntimeException
- * fires from the assertAllowedUrl guard inside getJson() / getRawMessage().
- */
+// The delta and pagination contract follows @odata.nextLink / @odata.deltaLink
+// verbatim, so a response substituting an attacker's host would carry a valid
+// Mail.Read bearer straight to them. The allow-list has to reject the URL
+// before any Authorization header is attached, not after.
 
 beforeEach(function (): void {
     $expiresAt = (new DateTimeImmutable)->setTimestamp(time() + 3600);
 
-    // Stub the secrets repository to return a fresh, valid access token
-    // so the request reaches assertAllowedUrl rather than tripping over
-    // a missing credential.
+    // A valid token, so the request reaches assertAllowedUrl instead of
+    // tripping over a missing credential first.
     $this->secrets = new class extends OAuthSecretsRepository
     {
         public function __construct() {}
@@ -74,9 +62,6 @@ beforeEach(function (): void {
 });
 
 it('rejects a deltaPage follow-up against an attacker-controlled host before any bearer token is attached', function (): void {
-    // A crafted deltaLink pointing at an attacker host would, without
-    // the SSRF guard, see Authorization: Bearer <token> attached on
-    // the request. The assertAllowedUrl gate rejects the URL first.
     expect(fn () => $this->client->deltaPage(
         inboxId: 1,
         deltaLink: 'https://attacker.example.com/v1.0/me/messages/delta?$deltatoken=evil',
@@ -87,9 +72,7 @@ it('rejects a deltaPage follow-up against an attacker-controlled host before any
 });
 
 it('rejects a listSenderMessagesPaged follow-up against an attacker-controlled host', function (): void {
-    // The nextLink path: the first page returns a malformed
-    // @odata.nextLink pointing at attacker.example.com. The next call
-    // is refused before any bearer token leaves the box.
+    // The nextLink a malformed first page would have handed back.
     expect(fn () => $this->client->listSenderMessagesPaged(
         inboxId: 1,
         senderPatterns: ['paypal.com'],

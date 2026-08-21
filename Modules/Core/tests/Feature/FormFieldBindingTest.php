@@ -7,24 +7,6 @@ use Illuminate\Support\Facades\View;
 use Illuminate\Support\MessageBag;
 use Illuminate\Support\ViewErrorBag;
 
-/*
- * The labelled-field component's forwarding contract.
- *
- * `x-core::form-field` replaced the hand-written label + control + error block
- * across the sign-in, sign-up, password, settings, import and backup screens.
- * Every one of those call sites binds through Livewire, and the modifier on
- * that binding is what decides WHEN the server hears about a keystroke:
- * `wire:model` waits for the next roundtrip, `.live` fires per input, `.blur`
- * waits for focus to leave, `.debounce.300ms` throttles.
- *
- * A component that took the property NAME as a prop and re-rendered
- * `wire:model="{$prop}"` would drop every one of those modifiers while still
- * rendering a field that looks correct and passes a render test. So the
- * caller writes the real directive on the component tag and the whole wire:*
- * attribute is forwarded verbatim. These assert exactly that, plus the label
- * and error wiring an accessible form depends on.
- */
-
 it('forwards every wire:model modifier to the rendered control verbatim', function (string $directive): void {
     $html = Blade::render('<x-core::form-field name="query" label="Search" '.$directive.'="query" />');
 
@@ -41,9 +23,9 @@ it('forwards every wire:model modifier to the rendered control verbatim', functi
 it('renders no bare wire:model when the caller supplied a modified one', function (): void {
     $html = Blade::render('<x-core::form-field name="query" label="Search" wire:model.live.debounce.300ms="query" />');
 
-    // The whole failure mode this component exists to avoid: a second,
-    // modifier-less binding written from a prop would sit alongside the real
-    // one and win, turning a debounced field into a per-keystroke roundtrip.
+    // The failure this component exists to avoid: a second, modifier-less binding
+    // written from a name prop would sit beside the real one and win, turning a
+    // debounced field into a roundtrip per keystroke.
     expect(substr_count($html, 'wire:model'))->toBe(1)
         ->and($html)->not->toContain('wire:model="query"');
 });

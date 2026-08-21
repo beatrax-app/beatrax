@@ -8,22 +8,6 @@ use Modules\Tax\Public\Actions\TagTransaction;
 use Modules\Tax\Public\Actions\UntagTransaction;
 use Modules\Tax\Public\Services\TaxTagQuery;
 
-/*
- * Feature tests for Plan 02 Task 2:
- *   - TaxTagQuery: keyed badge map, user-scope isolation, summary, batch suggestion
- *   - NavCountsService: tax_tagged key present and correct
- *
- * Covers: T-07-06 (cross-user badge isolation), D-03 (batch suggestion).
- */
-
-// ---------------------------------------------------------------------------
-// Shared fixture helpers (reuse the taxTest* helpers from TaxTagActionTest
-// if defined in a shared helper, or inline them here)
-// ---------------------------------------------------------------------------
-
-/**
- * Inserts a minimal user row and returns its id.
- */
 function nctUser(DatabaseManager $db, string $username): int
 {
     return $db->connection()->table('users')->insertGetId([
@@ -36,9 +20,6 @@ function nctUser(DatabaseManager $db, string $username): int
 }
 
 /**
- * Inserts an account + import run + transaction for the user.
- * Returns the transaction id.
- *
  * @param  array<string, mixed>  $overrides
  */
 function nctTransaction(DatabaseManager $db, int $userId, array $overrides = []): int
@@ -96,9 +77,6 @@ function nctTransaction(DatabaseManager $db, int $userId, array $overrides = [])
     );
 }
 
-/**
- * Inserts a deduction category for the user and returns its id.
- */
 function nctCategory(DatabaseManager $db, int $userId, string $name = 'NCT Category'): int
 {
     return $db->connection()->table('tax_deduction_categories')->insertGetId([
@@ -113,8 +91,6 @@ function nctCategory(DatabaseManager $db, int $userId, string $name = 'NCT Categ
 }
 
 /**
- * Inserts a tag row for the given user + transaction and returns the tag id.
- *
  * @param  array<string, mixed>  $overrides
  */
 function nctTag(DatabaseManager $db, int $userId, int $txId, ?int $catId = null, array $overrides = []): int
@@ -134,9 +110,6 @@ function nctTag(DatabaseManager $db, int $userId, int $txId, ?int $catId = null,
     );
 }
 
-/**
- * Inserts a counterparty and returns its id.
- */
 function nctCounterparty(DatabaseManager $db, int $userId, string $name = 'NCT CP'): int
 {
     $suffix = bin2hex(random_bytes(4));
@@ -150,10 +123,6 @@ function nctCounterparty(DatabaseManager $db, int $userId, string $name = 'NCT C
         'updated_at' => now(),
     ]);
 }
-
-// ---------------------------------------------------------------------------
-// TaxTagQuery tests
-// ---------------------------------------------------------------------------
 
 it('forTransactionIds returns only tagged ids keyed by transaction id', function (): void {
     /** @var DatabaseManager $db */
@@ -190,7 +159,6 @@ it('forTransactionIds is user-scoped — another user tag does not leak into the
     /** @var TaxTagQuery $query */
     $query = app(TaxTagQuery::class);
 
-    // The requester asks about the same transaction id — must get empty map (T-07-06)
     $result = $query->forTransactionIds($requester, [$txId]);
 
     expect($result)->toBe([]);
@@ -231,7 +199,7 @@ it('summaryForUser returns totalMinor and count for the year', function (): void
 
     $tx1 = nctTransaction($db, $userId, ['settled_amount_minor' => -1000, 'booked_at' => '2025-02-01 00:00:00']);
     $tx2 = nctTransaction($db, $userId, ['settled_amount_minor' => -2000, 'booked_at' => '2025-05-01 00:00:00']);
-    // Tx3 in different year — must NOT be included
+    // A different year: must not be included.
     $tx3 = nctTransaction($db, $userId, ['settled_amount_minor' => -500, 'booked_at' => '2024-12-01 00:00:00']);
 
     nctTag($db, $userId, $tx1, $catId);
@@ -264,7 +232,7 @@ it('summaryForUser totalMinor counts deductions only — tagged income is exclud
     $query = app(TaxTagQuery::class);
     $summary = $query->summaryForUser($userId, 2025);
 
-    // Matches the /tax cockpit headline (€500 deductions), NOT €1.000.
+    // Matches the /tax cockpit headline of 500 in deductions, not 1000.
     expect($summary->totalMinor)->toBe(50000)
         ->and($summary->count)->toBe(2);
 });
@@ -277,7 +245,6 @@ it('untaggedCountForCounterparty excludes the just-tagged transaction', function
     $catId = nctCategory($db, $userId, 'Batch CP Cat');
     $cpId = nctCounterparty($db, $userId, 'Gym Subscription');
 
-    // 3 transactions for the same counterparty in 2025
     $txJustTagged = nctTransaction($db, $userId, [
         'booked_at' => '2025-01-01 00:00:00',
         'counterparty_id' => $cpId,
@@ -291,7 +258,6 @@ it('untaggedCountForCounterparty excludes the just-tagged transaction', function
         'counterparty_id' => $cpId,
     ]);
 
-    // Only tag the "just-tagged" one
     nctTag($db, $userId, $txJustTagged, $catId);
 
     /** @var TaxTagQuery $query */
@@ -310,7 +276,6 @@ it('untaggedCountForCounterparty returns zero when transaction has no counterpar
     $userId = nctUser($db, 'ttq-nocp');
     $catId = nctCategory($db, $userId, 'NoCp Cat');
 
-    // Transaction without a counterparty
     $txNoCp = nctTransaction($db, $userId, [
         'booked_at' => '2025-01-01 00:00:00',
         'counterparty_id' => null,
@@ -323,10 +288,6 @@ it('untaggedCountForCounterparty returns zero when transaction has no counterpar
 
     expect($suggestion->untaggedCount)->toBe(0);
 });
-
-// ---------------------------------------------------------------------------
-// NavCountsService tests
-// ---------------------------------------------------------------------------
 
 it('NavCountsService.compute includes a tax_tagged integer key', function (): void {
     /** @var DatabaseManager $db */
@@ -359,13 +320,12 @@ it('tagging a transaction invalidates the cached nav counts (WR-06)', function (
     /** @var NavCountsService $service */
     $service = app(NavCountsService::class);
 
-    // Warm the cache BEFORE tagging.
+    // Warm the cache before tagging.
     expect($service->forUser($userId)['tax_tagged'])->toBe(0);
 
     app(TagTransaction::class)->execute($userId, $txId, null, null, null);
 
-    // Without invalidation this would still read the stale cached 0 for up
-    // to 300 seconds.
+    // Without invalidation this would read the stale cached 0 for the whole TTL.
     expect($service->forUser($userId)['tax_tagged'])->toBe(1);
 });
 
@@ -380,7 +340,7 @@ it('untagging a transaction invalidates the cached nav counts (WR-06)', function
     /** @var NavCountsService $service */
     $service = app(NavCountsService::class);
 
-    // Warm the cache BEFORE untagging.
+    // Warm the cache before untagging.
     expect($service->forUser($userId)['tax_tagged'])->toBe(1);
 
     app(UntagTransaction::class)->execute($userId, $txId);

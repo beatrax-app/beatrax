@@ -9,15 +9,6 @@ use Modules\Ledger\Public\Dto\PerCurrencyTile;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
 
-/*
- * Feature tests for the dashboard's GROUP-BY-currency mode. The query
- * exposes a sibling `forByCurrency()` method that returns one tile-row
- * per distinct `settled_currency` with non-zero activity in the period,
- * ordered alphabetically by ISO code. The existing EUR-only `for()`
- * method stays untouched — these tests pin both modes so the original-
- * mode dashboard never regresses the EUR-only path.
- */
-
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
@@ -37,7 +28,6 @@ afterEach(function (): void {
 });
 
 it('returns one tile-row per currency in original mode for a mixed EUR/USD month', function (): void {
-    // EUR income + EUR expense — both EUR-native (settled mirrors native).
     $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
         'amount_minor' => 250000,
         'currency' => 'EUR',
@@ -54,9 +44,7 @@ it('returns one tile-row per currency in original mode for a mixed EUR/USD month
         'posted_at' => '2026-05-08',
         'booked_at' => '2026-05-08 12:00:00',
     ]);
-    // USD FX expense — native USD, settled USD (preserved on the
-    // settled column so the GROUP-BY actually splits on the original
-    // currency).
+    // settled_currency stays USD, which is what the GROUP BY splits on.
     $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
         'amount_minor' => -1299,
         'currency' => 'USD',
@@ -110,7 +98,6 @@ it('collapses an EUR-only month to one tile-row in original mode', function (): 
 })->group('phase-3');
 
 it('omits zero-activity currencies from the original-mode tile rows', function (): void {
-    // EUR row in the current period.
     $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
         'amount_minor' => -1299,
         'currency' => 'EUR',
@@ -119,7 +106,7 @@ it('omits zero-activity currencies from the original-mode tile rows', function (
         'posted_at' => '2026-05-08',
         'booked_at' => '2026-05-08 12:00:00',
     ]);
-    // USD row OUTSIDE the period — should not appear in the tile rows.
+    // Outside the current period.
     $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
         'amount_minor' => -2500,
         'currency' => 'USD',
@@ -157,9 +144,6 @@ it('returns one summary in eur_only mode (settled-EUR sum)', function (): void {
     $period = $this->periods->current();
     $summary = $this->query->for($this->fixtureUser, $period);
 
-    // Regression guard: for() returns a DashboardSummary (not an array),
-    // and the inflow/outflow/net pair is the settled-EUR sum that the
-    // eur_only dashboard mode renders.
     expect($summary)->toBeInstanceOf(DashboardSummary::class);
     expect($summary->inflow->currency())->toBe('EUR');
     expect($summary->inflow->toMinor())->toBe(250000);
@@ -168,7 +152,7 @@ it('returns one summary in eur_only mode (settled-EUR sum)', function (): void {
 })->group('phase-3');
 
 it('orders the original-mode tile rows by settled_currency alphabetically', function (): void {
-    // Seed in non-alphabetical order: USD first, then GBP, then EUR.
+    // Seeded out of alphabetical order on purpose.
     $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
         'amount_minor' => -1299,
         'currency' => 'USD',

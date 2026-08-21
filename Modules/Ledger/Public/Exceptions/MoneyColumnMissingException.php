@@ -6,9 +6,8 @@ namespace Modules\Ledger\Public\Exceptions;
 
 use RuntimeException;
 
-// Surfaces partial-SELECT misuse loudly rather than fabricating a
-// silent (0, 'EUR') sentinel the caller cannot distinguish from a
-// legitimate zero amount.
+// A partial SELECT has to fail loudly rather than fabricate a (0, 'EUR') the
+// caller cannot tell from a real zero.
 final class MoneyColumnMissingException extends RuntimeException
 {
     public function __construct(string $minorColumn, string $currencyColumn)

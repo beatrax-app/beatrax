@@ -6,8 +6,7 @@ namespace Modules\Ledger\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-// Currencies are global — they do not belong to a single user — so
-// this model intentionally skips the BelongsToUser trait.
+// Global reference data, so deliberately no BelongsToUser trait.
 /**
  * @property string $code
  * @property string $name

@@ -10,14 +10,6 @@ use Modules\EmailScan\Public\Events\IcsStatementReady;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
-/*
- * Req 14 (D-14/D-15) — the ICS "statement ready" nudge listener.
- * `PersistIcsStatementReady` persists a once-per-statement-month
- * notification deep-linking to the guided ICS import
- * (`settings.open-banking#ics-import`), and never carries transaction data
- * (Req 14's "metadata only" guarantee holds all the way through delivery).
- */
-
 function isrtUser(string $username): User
 {
     return User::query()->create([
@@ -27,7 +19,8 @@ function isrtUser(string $username): User
     ]);
 }
 
-/** Fires IcsStatementReady with delivery globally suppressed (D-43) — no test ever attempts a real OS notification. */
+// Delivery is globally suppressed so no case here ever reaches a real OS
+// notification.
 function isrtFire(User $user, CarbonImmutable $internalDate, int $messageId = 1): void
 {
     /** @var SuppressionEvaluator $suppression */
@@ -77,9 +70,8 @@ it('deep-links to the guided ICS import anchor and carries no transaction data i
     $params = json_decode((string) $row->params, true);
     expect($params)->toBe(['target_kind' => 'ics-import']);
 
-    // No amount, currency symbol, or merchant name in the stored copy —
-    // the whole pipeline is metadata-only, so there was never any
-    // transaction data to leak into the body.
+    // The nudge pipeline is metadata-only end to end, so no amount or currency
+    // should ever have reached the stored body.
     expect((string) $row->body)->not->toContain('EUR');
     expect((string) $row->body)->not->toContain('€');
 });
@@ -90,19 +82,16 @@ it('WR-12: dedups a same-DAY re-dispatch but fires a second nudge for a differen
     isrtFire($user, CarbonImmutable::parse('2026-07-15'), messageId: 1);
     expect(isrtCount($user->id))->toBe(1);
 
-    // Same DAY, a different message id (e.g. the detector re-scanning the
-    // same row on the next hourly tick, or a bank-side resend) — must still
-    // collapse to one row (same-day idempotency holds).
+    // A new message id for the same day is a re-scan or a bank-side resend,
+    // and still collapses to one row.
     isrtFire($user, CarbonImmutable::parse('2026-07-15'), messageId: 2);
     expect(isrtCount($user->id))->toBe(1);
 
-    // WR-12: a SECOND distinct statement arriving on a DIFFERENT day in the
-    // SAME calendar month is a genuinely separate nudge — the old Y-m key
-    // wrongly swallowed it; the Y-m-d key keeps it.
+    // A second statement on a different day of the same month is a genuinely
+    // separate nudge; the old Y-m occurrence key swallowed it, Y-m-d keeps it.
     isrtFire($user, CarbonImmutable::parse('2026-07-28'), messageId: 3);
     expect(isrtCount($user->id))->toBe(2);
 
-    // Next month's statement legitimately fires a third, distinct nudge.
     isrtFire($user, CarbonImmutable::parse('2026-08-16'), messageId: 4);
     expect(isrtCount($user->id))->toBe(3);
 });

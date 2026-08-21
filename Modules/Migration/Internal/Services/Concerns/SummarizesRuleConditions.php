@@ -6,10 +6,6 @@ namespace Modules\Migration\Internal\Services\Concerns;
 
 use JsonException;
 
-// Decoding and human-summarising an Actual rule's `conditions` JSON blob
-// is its own concern, distinct from ActualSqliteReader's SQLite querying.
-// It sits in a trait beside the reader rather than inside it so the reader
-// stays a table-reader, not also a rule-grammar interpreter.
 trait SummarizesRuleConditions
 {
     private const MAX_JSON_BYTES = 65536;
@@ -18,9 +14,8 @@ trait SummarizesRuleConditions
 
     private function boundedJsonDecode(string $json): mixed
     {
-        // Bounds decoding of untrusted source-blob content by byte size and
-        // nesting depth — returns null on an oversized, malformed, or empty
-        // blob rather than throwing.
+        // The blob is untrusted source content, so decoding is bounded by size
+        // and depth and returns null rather than throwing.
         if ($json === '' || strlen($json) > self::MAX_JSON_BYTES) {
             return null;
         }

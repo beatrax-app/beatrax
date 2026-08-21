@@ -55,10 +55,6 @@ final class ExchangeRateService
         return $this->convertWithRows($money, $targetCurrency, $rows);
     }
 
-    // -------------------------------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------------------------------
-
     /**
      * @return Collection<int, \stdClass>
      */

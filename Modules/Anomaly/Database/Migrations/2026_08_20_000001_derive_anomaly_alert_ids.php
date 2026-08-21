@@ -8,9 +8,6 @@ use Modules\Core\Database\Support\ModuleMigration;
 use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Ledger\Public\Enums\Direction;
 
-/**
- * @link ../../../../.docs/features/anomaly/architecture.md
- */
 return new class extends ModuleMigration
 {
     public function up(): void

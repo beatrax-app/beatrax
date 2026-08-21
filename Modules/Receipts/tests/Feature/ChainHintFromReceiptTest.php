@@ -27,12 +27,6 @@ beforeEach(function (): void {
     $this->actingAs($this->fixtureUser);
 });
 
-/**
- * End-to-end: dropping an ICS receipt fixture through the upload
- * wizard lands one canonical transaction AND one candidate chain_links
- * row (kind=funded_by_card_hint) keyed on the just-inserted
- * transaction id.
- */
 it('lands a transaction + a candidate chain_links row from an ICS receipt with a card last-four', function (): void {
     $emlBytes = (string) file_get_contents(__DIR__.'/../fixtures/ics/current-receipt.eml');
     $file = UploadedFile::fake()->createWithContent('ics-receipt.eml', $emlBytes);
@@ -49,7 +43,6 @@ it('lands a transaction + a candidate chain_links row from an ICS receipt with a
     $confirm = $this->app->make(ConfirmsImports::class);
     $confirm($importRunId, $this->fixtureUser);
 
-    // One canonical transaction landed.
     $transactions = Transaction::query()->where('user_id', $this->fixtureUser->id)->get();
     expect($transactions)->toHaveCount(1);
     $tx = $transactions->first();
@@ -60,7 +53,6 @@ it('lands a transaction + a candidate chain_links row from an ICS receipt with a
     expect($tx->raw_payload['chain_hints'][0]['hint_type'])->toBe('funded_by_card');
     expect($tx->raw_payload['chain_hints'][0]['card_last4'])->toBe('1234');
 
-    // One candidate chain_links row landed, scoped by the user.
     $chainLinks = DB::table('chain_links')
         ->where('user_id', $this->fixtureUser->id)
         ->get();
@@ -71,7 +63,7 @@ it('lands a transaction + a candidate chain_links row from an ICS receipt with a
     expect($link->from_transaction_id)->toBe((int) $tx->id);
     expect($link->to_transaction_id)->toBeNull();
     expect($link->resolver)->toBe('auto');
-    // confidence stored as decimal string.
+    // The column stores confidence as a decimal string.
     expect((float) $link->confidence)->toBeGreaterThan(0.0);
 
     $evidence = json_decode((string) $link->evidence, associative: true);
@@ -79,11 +71,6 @@ it('lands a transaction + a candidate chain_links row from an ICS receipt with a
     expect($evidence['card_last4'])->toBe('1234');
 });
 
-/**
- * The ChainHintDetected event MUST be dispatched with the
- * just-inserted transactions.id as `sourceTransactionId` and with the
- * importing user's id as `userId`.
- */
 it('dispatches ChainHintDetected with the canonical transaction id and the importing user id', function (): void {
     Event::fake([ChainHintDetected::class]);
 
@@ -112,11 +99,6 @@ it('dispatches ChainHintDetected with the canonical transaction id and the impor
     });
 });
 
-/**
- * Spy on the Dispatcher to confirm ParseStage NEVER dispatches
- * ChainHintDetected — the responsibility lives in the post-persistence
- * listener `DispatchChainHintsFromReceipt`, not the parse stage.
- */
 it('does not dispatch ChainHintDetected from ParseStage (the bridge is post-persistence)', function (): void {
     $spy = new class
     {
@@ -149,20 +131,14 @@ it('does not dispatch ChainHintDetected from ParseStage (the bridge is post-pers
         @unlink($tmp);
     }
 
-    // ParseStage runs pre-persistence; the bridge listener has not
-    // received any TransactionImported event because no transactions
-    // row exists yet. The spy MUST be empty.
+    // The hint is dispatched by DispatchChainHintsFromReceipt on
+    // TransactionImported, which cannot have fired with no row inserted.
     expect($spy->events)->toBe([]);
 });
 
-/**
- * Re-importing the same receipt is a no-op: the file_imports UNIQUE
- * makes the second drop short-circuit, no second canonical row is
- * inserted, and the listener never fires a second time. The
- * chain_links idempotency check on (user, from, kind) is therefore
- * not exercised in the wizard path — but the second drop MUST still
- * not introduce a second chain_link row.
- */
+// The second drop short-circuits on the file_imports UNIQUE, so what is covered
+// here is the wizard path; the chain_links idempotency check on
+// (user, from, kind) is never reached.
 it('keeps chain_links at exactly one row across re-drops of the same .eml', function (): void {
     $emlBytes = (string) file_get_contents(__DIR__.'/../fixtures/ics/current-receipt.eml');
 
@@ -186,18 +162,12 @@ it('keeps chain_links at exactly one row across re-drops of the same .eml', func
     expect(DB::table('chain_links')->where('user_id', $this->fixtureUser->id)->count())->toBe(1);
 });
 
-/**
- * Minimal AccountResolver double for the spy test — returns the
- * fixture user's ICS account regardless of the IBAN argument.
- */
 final class ChainHintFromReceiptTestAccountResolver implements AccountResolver
 {
     public function resolve(string $iban): AccountResolution
     {
-        // The fixture user's ICS account row id is reused for any
-        // IBAN; the ParseStage test only iterates the row generator
-        // — it does not write to the transactions table, so the id
-        // value does not matter beyond being non-null.
+        // The spy test only iterates the row generator and never writes, so any
+        // non-null account id will do.
         return AccountResolution::known(1);
     }
 }

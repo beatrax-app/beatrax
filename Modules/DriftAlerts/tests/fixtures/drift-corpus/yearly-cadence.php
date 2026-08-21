@@ -2,11 +2,6 @@
 
 declare(strict_types=1);
 
-// Yearly domain renewal €10/yr → €15/yr (+50.0%).
-// The yearly cadence multiplier is ×1. Math:
-//   delta_minor = -1500 - (-1000) = -500
-//   annualized_impact_minor = -500 × 1 = -500 (-€5/yr)
-
 $transactions = [
     [
         'account_id' => null,

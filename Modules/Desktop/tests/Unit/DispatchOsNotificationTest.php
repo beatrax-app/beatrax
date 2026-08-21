@@ -15,25 +15,6 @@ use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
 uses(RefreshDatabase::class);
 
-/*
- * Tests the D-31 collapsed OS-notification model: DispatchOsNotification is
- * now the SOLE listener on `NotificationDeliverable`, deciding only
- * whether/how to deliver an ALREADY-PERSISTED row to the OS —
- * SuppressionEvaluator (D-38 invariant 4) then the D-13 focus-gate then
- * D-24 hide-details.
- *
- * NATIVEPHP-FAKES.md records the `Notification` facade as ABSENT in
- * NativePHP v2 — there is no fakeable client we can intercept the
- * `Notification::title(...)->message(...)->event(...)->reference(...)
- * ->show()` chain against. Where the test needs to assert the FIRED
- * payload (event class + reference URL), the assertion is deferred
- * `->todo()`. Where the test asserts the DELIVERY DECISION (fire vs stay
- * quiet), the assertion is always automated: we `Http::fake()` the
- * NativePHP HTTP client so a fired notification surfaces as an outbound
- * POST to `/api/notification`, and assert the presence / absence of that
- * POST.
- */
-
 function donUser(string $username): User
 {
     return User::query()->create([
@@ -107,6 +88,9 @@ function donDriftDeliverable(int $userId): NotificationDeliverable
     );
 }
 
+// The `Notification` facade has no v2 fake, so a fired notification is observed
+// as an outbound POST on the NativePHP HTTP client. Payload detail — the exact
+// title and click event — cannot be intercepted, so it stays a todo below.
 it('notification suppressed when focused (D-13 — does not fire when the window is focused)', function (): void {
     Http::fake();
     $user = donUser('don-focused-forecast');
@@ -136,10 +120,6 @@ it('fires an OS notification when the window is unfocused (D-13 unfocused branch
 
     $listener->handleNotificationDeliverable(donForecastDeliverable($user->id));
 
-    // The Notification facade has no v2 fake — the delivery decision
-    // surfaces as an outbound POST to `notification` on the NativePHP
-    // HTTP client. Asserting the POST happened proves the listener took
-    // the "fire" branch.
     Http::assertSent(fn ($request) => str_ends_with((string) $request->url(), '/notification'));
 });
 
@@ -173,9 +153,8 @@ it('does not fire even when unfocused when SuppressionEvaluator suppresses deliv
     /** @var SuppressionEvaluator $suppression */
     $suppression = app(SuppressionEvaluator::class);
 
-    // The D-43 seeding/test suppression flag: shouldDeliver() returns
-    // deliver=false regardless of the trigger type or focus state — the
-    // ONE suppression site the listener consults BEFORE the focus gate.
+    // Suppression is consulted before the focus gate, so it wins regardless of
+    // the trigger type or the focus state.
     $suppression->suppressDelivery(function () use ($listener, $user): void {
         $listener->handleNotificationDeliverable(donForecastDeliverable($user->id));
     });

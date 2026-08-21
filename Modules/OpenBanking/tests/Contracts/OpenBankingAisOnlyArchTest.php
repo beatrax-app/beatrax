@@ -5,9 +5,8 @@ declare(strict_types=1);
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingAccessScope;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 
-// Helpers are prefixed `aisOnlyGuard*` rather than the `openBankingGuard*` of
-// OpenBankingSecretsFileGuardTest: both files load as global functions in the
-// same test process, and a shared name fatals with "cannot redeclare function".
+// Prefixed `aisOnlyGuard*` because OpenBankingSecretsFileGuardTest's helpers
+// load as globals in the same process and a shared name fatals on redeclare.
 
 function aisOnlyGuardStripComments(string $contents): string
 {
@@ -43,10 +42,9 @@ function aisOnlyGuardPhpFiles(string $relativeDir): array
     return $files;
 }
 
-// The `u` flag is load-bearing: without it `\b` matches on BYTE boundaries, so
-// the multibyte `ý` in the Czech and Slovak "výpis" (bank statement) reads as a
-// word break and `\bPIS\b` fires on ordinary translated copy. It produced two
-// false offenders the day those locales landed.
+// The `u` flag is load-bearing: without it `\b` matches on byte boundaries, so
+// the `ý` in the Czech/Slovak "výpis" reads as a word break and `\bPIS\b` fires
+// on ordinary copy. That produced two false offenders when those locales landed.
 const AIS_ONLY_FORBIDDEN_PATTERN = '#[\'"]/?payments[\'"]|\bPIS\b|payment[-_]initiation#iu';
 
 it('never references a PIS/payments endpoint or scope anywhere in Modules/OpenBanking outside tests/comments', function (): void {
@@ -127,8 +125,7 @@ it('builds the /auth access body only from EnableBankingAccessScope::toArray(), 
 
     expect($body)->toContain("'access' => array_merge(\$scope->toArray()");
 
-    // A free-form array literal — the anti-pattern this rejects — must not
-    // satisfy the assertion above.
+    // The free-form array literal this rejects must fail the assertion above.
     $violatingBody = "'access' => ['balances' => true, 'payments' => true],";
     expect($violatingBody)->not->toContain("'access' => array_merge(\$scope->toArray()");
 });

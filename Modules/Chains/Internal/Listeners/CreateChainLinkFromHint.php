@@ -59,10 +59,8 @@ final class CreateChainLinkFromHint
 
         $connection = $this->db->connection();
 
-        // Idempotency: skip when a row for the (user, from, kind)
-        // triple already exists in any state. A manually-rejected row
-        // stays rejected — a repeated event will not propose a fresh
-        // candidate over it.
+        // Any state, so a manually-rejected row stays rejected — a repeated
+        // event will not propose a fresh candidate over it.
         $exists = $connection->table('chain_links')
             ->where('user_id', $event->userId)
             ->where('from_transaction_id', $event->sourceTransactionId)
@@ -77,10 +75,7 @@ final class CreateChainLinkFromHint
             JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
         );
         if ($encoded === false) {
-            // Loud failure: a non-encodable evidence payload is a bug
-            // upstream (e.g. a resource value sneaking into the
-            // payload). Surface it at write time rather than silently
-            // writing an empty string into a NOT NULL column.
+            // Loud, rather than writing the empty string into a NOT NULL column.
             throw new EvidenceEncodingFailedException('hint event');
         }
 

@@ -63,9 +63,8 @@ final class CounterpartyResolverService implements CounterpartyResolver
         private readonly ClassificationRuleProvider $ruleProvider,
         private readonly CorpusPatternMatcher $matcher,
         private readonly SensitiveColumnCodec $codec,
-        // A factory, not the session itself: resolving a session builds the
-        // encrypter, and this class is reachable from a console command that
-        // Artisan constructs merely to list it.
+        // A factory, not the session: resolving a session builds the encrypter,
+        // and Artisan constructs this class merely to list a console command.
         private readonly SessionFactory $session,
         private readonly CounterpartySlugResolver $slugResolver,
     ) {}
@@ -292,9 +291,8 @@ final class CounterpartyResolverService implements CounterpartyResolver
         $hasIban = $iban !== null;
         $hasDescription = $description !== null && trim($description) !== '';
 
-        // Returning null leaves the transaction without a counterparty_id;
-        // the writer layer still persists the row. There is simply nothing
-        // for the triage queue to show.
+        // The writer layer still persists the row; it just carries no
+        // counterparty_id, and the triage queue has nothing to show for it.
         if (! $hasName && ! $hasIban && ! $hasDescription) {
             return null;
         }

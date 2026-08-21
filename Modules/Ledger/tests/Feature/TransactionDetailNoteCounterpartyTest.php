@@ -10,15 +10,6 @@ use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
 use Modules\Ledger\Models\Account;
 use Modules\Sync\Public\Events\TransactionMutated;
 
-/*
- * Feature tests for the note editor, counterparty reassignment, and delete
- * affordances added in Plan 11-04 (Task 2).
- *
- * All tests use Event::fake([TransactionMutated::class]) to suppress the
- * SyncCaptureListener — the Sync behaviour is covered separately in
- * Modules/Sync/tests/Feature/OpLogCaptureWiringTest.
- */
-
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
@@ -31,16 +22,13 @@ beforeEach(function (): void {
 
     $this->run = $this->makeImportRun($this->fixtureUser);
 
-    // Suppress SyncCaptureListener — Sync capture requires OpLogWriter with
-    // device creds not available in this test context.
+    // The Sync capture listener wants device creds nothing binds here.
     Event::fake([TransactionMutated::class]);
 });
 
 afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
-
-// ── Note editor ───────────────────────────────────────────────────────────────
 
 it('saveNote — sets transactions.note and dispatches TransactionMutated(edit,{note})', function (): void {
     $tx = $this->makeTransaction($this->fixtureUser, $this->asnAccount, $this->run, [
@@ -73,15 +61,14 @@ it('saveNote — blank note stores NULL and dispatches {note: null}', function (
         'booked_at' => '2026-06-14 12:00:00',
     ]);
 
-    // Plan 13.4-04 (SetTransactionNote's write-only-on-change guard):
-    // blanking an ALREADY-null note is a genuine no-op — seed a real
-    // note first so this test exercises an actual null-clearing change.
+    // The writer only writes on change, so blanking an already-null note is a
+    // no-op; seed a real note to exercise the clearing path.
     DB::table('transactions')
         ->where('id', $tx->id)
         ->update(['note' => 'Existing note']);
 
     Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
-        ->set('note', '   ')  // whitespace-only
+        ->set('note', '   ')
         ->call('saveNote');
 
     $tx->refresh();
@@ -102,7 +89,6 @@ it('saveNote — loads existing note into the wire:model on mount', function ():
         'booked_at' => '2026-06-14 12:00:00',
     ]);
 
-    // Set an initial note via DB.
     DB::table('transactions')
         ->where('id', $tx->id)
         ->update(['note' => 'Pre-existing note']);
@@ -110,8 +96,6 @@ it('saveNote — loads existing note into the wire:model on mount', function ():
     $component = Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id]);
     $component->assertSet('note', 'Pre-existing note');
 })->group('phase-11');
-
-// ── Counterparty reassignment ─────────────────────────────────────────────────
 
 it('reassignCounterparty — sets counterparty_id and dispatches TransactionMutated(edit,{counterparty_id})', function (): void {
     $tx = $this->makeTransaction($this->fixtureUser, $this->asnAccount, $this->run, [
@@ -121,7 +105,6 @@ it('reassignCounterparty — sets counterparty_id and dispatches TransactionMuta
         'booked_at' => '2026-06-14 12:00:00',
     ]);
 
-    // Create a counterparty owned by the same user.
     $cpId = (int) DB::table('counterparties')->insertGetId([
         'user_id' => $this->fixtureUser->id,
         'display_name' => 'Albert Heijn',
@@ -154,7 +137,6 @@ it('reassignCounterparty — silent no-op for counterparty owned by another user
         'booked_at' => '2026-06-14 12:00:00',
     ]);
 
-    // Create a user B and a counterparty owned by user B.
     $otherUserId = (int) DB::table('users')->insertGetId([
         'username' => 'other-user-cp-'.bin2hex(random_bytes(4)),
         'password' => 'fixture',
@@ -173,7 +155,6 @@ it('reassignCounterparty — silent no-op for counterparty owned by another user
 
     $originalCpId = $tx->counterparty_id;
 
-    // Should be a silent no-op — no write, no event.
     Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
         ->call('reassignCounterparty', $crossUserCpId);
 
@@ -182,11 +163,8 @@ it('reassignCounterparty — silent no-op for counterparty owned by another user
         ->first();
     expect($fresh->counterparty_id)->toBe($originalCpId);
 
-    // No TransactionMutated event dispatched.
     Event::assertNotDispatched(TransactionMutated::class);
 })->group('phase-11');
-
-// ── Delete ─────────────────────────────────────────────────────────────────────
 
 it('deleteTransaction — removes the row and dispatches TransactionMutated(delete)', function (): void {
     $tx = $this->makeTransaction($this->fixtureUser, $this->asnAccount, $this->run, [
@@ -201,17 +179,13 @@ it('deleteTransaction — removes the row and dispatches TransactionMutated(dele
     Livewire::test(TransactionDetail::class, ['transactionId' => $txId])
         ->call('deleteTransaction');
 
-    // Row must be gone.
     $row = DB::table('transactions')->where('id', $txId)->first();
     expect($row)->toBeNull();
 
-    // TransactionMutated(delete) dispatched.
     Event::assertDispatched(TransactionMutated::class, function (TransactionMutated $e) use ($txId): bool {
         return $e->transactionId === $txId && $e->mutationType === 'delete';
     });
 })->group('phase-11');
-
-// ── Blade rendering ────────────────────────────────────────────────────────────
 
 it('renders the note textarea on the transaction detail page', function (): void {
     $tx = $this->makeTransaction($this->fixtureUser, $this->asnAccount, $this->run, [

@@ -13,27 +13,10 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
 uses(RefreshDatabase::class);
 
-/*
- * CrossUserReferenceGuardTest — the ids a row NAMES, on the Set path.
- *
- * admissiblePayload() gates references on CreateRow, so a create pointing at
- * another household member's account is refused. Nothing gated the Set that
- * follows it. Both entries are validly signed and both carry the attacker's
- * OWN userId, so every existing scope check passes: the row is theirs, and
- * scopeToUser() bounds the UPDATE to their own rows. What was unguarded is
- * the VALUE — an id naming a row belonging to somebody else.
- *
- * Two shapes, because they fail differently:
- *
- * R1 — transactions.category_id, a field the merge registry names, resolved
- *      by its declared LWW strategy.
- *
- * R2 — pots.account_id, a field the registry does NOT name. resolveStrategy()
- *      falls back to a default rather than refusing, so the registry is not
- *      an allow-list and the guard cannot rely on it being one. pots was also
- *      absent from the hand-written reference list entirely, which is what
- *      moved that list to being derived from the live foreign keys.
- */
+// References were gated on creates but not on the Set that follows one. Both
+// entries are validly signed under the sender's own user, so every scope check
+// passes and the UPDATE is bounded to their own rows. What was unguarded is the
+// value: an id naming a row that belongs to somebody else.
 
 function refUser(string $username): User
 {

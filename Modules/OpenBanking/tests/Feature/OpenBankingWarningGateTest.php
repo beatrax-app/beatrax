@@ -14,15 +14,8 @@ use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 
 uses(RefreshDatabase::class);
 
-/*
- * 19-11 Task 1: the off-by-default toggle + B2 loud-warning gate + Surface
- * A entry row. The load-bearing scenario (Req 4 / RESEARCH.md Pitfall 7):
- * `enableOpenBanking()` — the ONE sink that ever sets
- * `open_banking_connections.enabled = true` — is called DIRECTLY,
- * bypassing the wizard's client-side sequencing entirely, and proven to be
- * a structural no-op without the session-persisted acknowledgement flag.
- */
-
+// enableOpenBanking() is the one sink that sets enabled = true. It is called
+// directly, bypassing the wizard, to prove it no-ops without a session ack.
 function owgUser(string $username): User
 {
     return User::query()->create([
@@ -100,9 +93,8 @@ it('WR-06: confirmWarning WITHOUT a prior requestEnable is a no-op even with a f
     $user = owgUser('owg-forged-ack-no-request');
     $this->actingAs($user);
 
-    // A crafted client can set the wire:model.live $acknowledged property
-    // directly, but never the #[Locked] $warningShown flag — so skipping
-    // requestEnable() leaves the server-side "warning shown" gate closed.
+    // A crafted client can set the wire:model.live $acknowledged property, but
+    // never the #[Locked] $warningShown flag, so the server-side gate stays shut.
     Livewire::test(OpenBankingSettingsPage::class)
         ->assertSet('warningShown', false)
         ->set('acknowledged', true)
@@ -171,10 +163,8 @@ it('a redirect flash WITHOUT acknowledgement leaves OB off (Req 4 server-side pr
     $this->actingAs($user);
     $connectionId = owgSeedConnection($user);
 
-    // WR-05: pendingConnectionId is #[Locked] — it can only be populated
-    // by the server-set redirect flash, never a client ->set(). mount()
-    // consumes the flash and runs enableOpenBanking(), which no-ops here
-    // because no session acknowledgement is present.
+    // pendingConnectionId is #[Locked], so only the server-set redirect flash
+    // populates it; mount() consumes it but no-ops without a session ack.
     session(['open_banking_connected' => $connectionId]);
 
     Livewire::test(OpenBankingSettingsPage::class)
@@ -192,9 +182,8 @@ it('the full acknowledged path enables OB', function (): void {
     owgSeedInstitutionSecrets('ASNBNL21');
     $connectionId = owgSeedConnection($user);
 
-    // WR-05: drive the enable through the legitimate server path — the
-    // redirect flash (server-set) + a fresh session ack. mount() consumes
-    // both and finalizes the enable.
+    // The legitimate server path: the server-set redirect flash plus a fresh
+    // session ack, both consumed by mount().
     session([
         'open_banking_connected' => $connectionId,
         'open_banking_acknowledged' => CarbonImmutable::now()->getTimestamp(),
@@ -219,8 +208,7 @@ it('WR-07: a post-callback mount with a pending connection but a STALE ack sets 
     owgSeedInstitutionSecrets('ASNBNL21');
     $connectionId = owgSeedConnection($user);
 
-    // Consent dance completed (pending connection flashed back) but the ack
-    // lapsed — 3 hours old, past the new 2-hour TTL.
+    // Consent completed, but the ack is 3 hours old — past the 2-hour TTL.
     session([
         'open_banking_connected' => $connectionId,
         'open_banking_acknowledged' => CarbonImmutable::now()->subHours(3)->getTimestamp(),
@@ -270,8 +258,7 @@ it('WR-07: a fresh ack within the raised 2-hour TTL still finalizes at mount wit
     owgSeedInstitutionSecrets('ASNBNL21');
     $connectionId = owgSeedConnection($user);
 
-    // 90 minutes old — lapsed under the OLD 30-minute TTL, still fresh
-    // under the raised 2-hour one, so it finalizes silently.
+    // 90 minutes old — inside the 2-hour TTL, so it finalizes silently.
     session([
         'open_banking_connected' => $connectionId,
         'open_banking_acknowledged' => CarbonImmutable::now()->subMinutes(90)->getTimestamp(),
@@ -288,10 +275,8 @@ it('enableOpenBanking cannot flip a DIFFERENT user\'s connection', function (): 
     $connectionId = owgSeedConnection($owner);
 
     $this->actingAs($attacker);
-    // Even if a foreign connection id somehow reaches the attacker's
-    // server-set redirect flash, enableOpenBanking()'s user_id predicate
-    // blocks the cross-user flip (pendingConnectionId is #[Locked], so a
-    // client ->set() is no longer even possible — WR-05).
+    // Even if a foreign connection id reached the attacker's server-set redirect
+    // flash, enableOpenBanking()'s user_id predicate blocks the cross-user flip.
     session([
         'open_banking_connected' => $connectionId,
         'open_banking_acknowledged' => CarbonImmutable::now()->getTimestamp(),
@@ -321,23 +306,15 @@ it('mount auto-finalizes the enable when both the redirect flash and the session
         ->assertSet('pendingConnectionId', null);
 });
 
-/*
- * D-16 Wave 3 review-and-fix gate (19-14): a STALE session-ack timestamp
- * (older than enableOpenBanking()'s TTL) must not authorize a flip, even
- * though it satisfies a naive "is the flag present" check. This is the
- * server-side proof that the acknowledgement itself expires rather than
- * remaining a standing authorization for the lifetime of the session —
- * closing the gap where an abandoned (never explicitly cancelled) wizard
- * tab could otherwise leave a live "enable" token sitting in session
- * indefinitely.
- */
+// A stale ack passes a naive "is the flag present" check, so an abandoned
+// wizard tab would otherwise leave a live enable token for the whole session.
 it('a STALE session ack (older than the TTL) does not authorize enableOpenBanking (Req 4 hardening)', function (): void {
     $user = owgUser('owg-stale-ack');
     $this->actingAs($user);
     owgSeedInstitutionSecrets('ASNBNL21');
     $connectionId = owgSeedConnection($user);
 
-    // WR-07: 121 minutes old — one minute past the raised 2-hour TTL.
+    // 121 minutes old — one minute past the two-hour TTL.
     session([
         'open_banking_connected' => $connectionId,
         'open_banking_acknowledged' => CarbonImmutable::now()->subMinutes(121)->getTimestamp(),
@@ -390,9 +367,6 @@ it('Surface A status row renders the correct one-line status for each state', fu
     $this->actingAs($off);
     Livewire::test(OpenBankingStatusRow::class)
         ->assertSet('expired', false)
-        // The row no longer explains that statements can be imported by hand:
-        // it sits on Data & Devices beside the import controls themselves, so
-        // the sentence was telling the user about a thing already on screen.
         ->assertSee('No bank connected. Connect one to import transactions automatically.');
 
     $connected = owgUser('owg-status-connected');
@@ -418,10 +392,6 @@ it('Surface A status row renders the correct one-line status for each state', fu
         ->assertSee('Consent expired — reconnect needed.');
 });
 
-/**
- * Seeds the ONE global secrets-file session `OpenBankingConnectionQuery`
- * resolves the active connection from (see that class's docblock).
- */
 function owgSeedInstitutionSecrets(string $institutionId): void
 {
     $path = storage_path('app/secrets/open-banking.json');

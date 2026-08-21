@@ -77,9 +77,8 @@ it('MigrationConfirm: envelope_assignments exact-to-cent per (category, month), 
         ->where('period_start', '2026-01-01')
         ->value('assigned_minor');
 
-    // Budget.csv v1 has Jan Groceries 200.00 / Household 100.00. Asserted
-    // against the stored row, never the source's carried-forward "Category
-    // Balance", which is deliberately not imported.
+    // Budget.csv v1 has Jan Groceries 200.00 / Household 100.00. The source's
+    // carried-forward "Category Balance" is deliberately not imported.
     expect((int) $janGroceries)->toBe(20000);
     expect((int) $janHousehold)->toBe(10000);
 });
@@ -210,10 +209,9 @@ it('CR-02: two genuinely distinct same-day same-amount same-account transactions
         'Beatrax Test Budget.zip',
     );
 
-    // Clone the fixture's "Employer" salary row into a second, genuinely
-    // distinct staged transaction: same account/date/amount/currency/payee is
-    // the shape that used to collide on FingerprintComposer's date-only dedup
-    // tuple, since no migration parser carries a transaction time-of-day.
+    // A second, genuinely distinct row with the same account/date/amount/
+    // currency/payee: the shape that used to collide on the date-only dedup
+    // tuple, since no migration parser carries a time-of-day.
     $employerRow = $this->db->connection()->table('migration_staging_transactions')
         ->where('migration_run_id', $run->id)
         ->where('payee_source_external_id', 'Employer')

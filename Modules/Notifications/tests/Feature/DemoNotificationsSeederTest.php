@@ -20,20 +20,9 @@ use Modules\Recurring\Models\RecurringSeries;
 
 uses(RefreshDatabase::class);
 
-/*
- * Proves 18-16's demo inbox seeder actually delivers what D-41/D-42/D-43
- * promise: all 8 trigger types land, the interesting states (unread, read,
- * dismissed, resolved, dead-link) are all genuinely present, zero OS
- * notifications ever fire (D-43), a re-run is idempotent (D-05), and the
- * volume knob reaches Req 2's 50+ case.
- *
- * The fixture below stands up ONLY what `DemoNotificationsSeeder` actually
- * references (four recurring series, two global expense categories, one
- * account, two open drift alerts) rather than running the full
- * `demo:seed` pipeline — faster, and every referenced entity is under this
- * test's direct control. Runs entirely against the TEST database via
- * RefreshDatabase; no `migrate:fresh` anywhere in this file.
- */
+// The fixture stands up only what DemoNotificationsSeeder actually references
+// rather than running the whole demo:seed pipeline, so every entity the seeder
+// touches is under this file's control.
 
 /**
  * @return array{id: int, users: array<string, User>}
@@ -98,7 +87,8 @@ function dnsAccount(User $user): int
     return (int) $account->id;
 }
 
-/** Materialises the minimal transaction -> occurrence -> open drift-alert chain a real DriftEvaluator run would leave behind. */
+// The transaction -> occurrence -> alert chain a real DriftEvaluator run leaves
+// behind; the seeder reads all three links.
 function dnsOpenDriftAlert(DatabaseManager $db, User $user, int $accountId, int $seriesId, int $baselineMinor, int $latestMinor): void
 {
     /** @var ImportRun $run */
@@ -263,7 +253,7 @@ function dnsResolvedCount(int $userId): int
         ->count();
 }
 
-/** True when at least one PAYMENT_REMINDER row's deep link resolves as disabled (D-25's dead-link case). */
+// True when at least one reminder row's deep link resolves as disabled.
 function dnsHasDeadLink(User $user): bool
 {
     /** @var DatabaseManager $db */

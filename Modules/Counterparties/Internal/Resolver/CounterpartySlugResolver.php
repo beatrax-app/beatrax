@@ -16,9 +16,8 @@ final readonly class CounterpartySlugResolver
     public function __construct(
         private DatabaseManager $db,
         private SensitiveColumnCodec $codec,
-        // A factory, not the session: resolving a session builds the
-        // encrypter, and Artisan constructs this class merely to list a
-        // console command.
+        // A factory, not the session: resolving a session builds the encrypter,
+        // and Artisan constructs this class merely to list a console command.
         private SessionFactory $session,
     ) {}
 

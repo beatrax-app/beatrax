@@ -45,10 +45,9 @@ final class BundledSnapshotProvider implements RateProvider
             /** @var mixed $decoded */
             $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
-            // JsonException extends Exception, not RateFetchException — without
-            // this catch a corrupt snapshot would escape the whole provider
-            // fallback chain, since the registry only catches
-            // RateFetchException, bypassing the safe-fallback contract.
+            // JsonException is not a RateFetchException, which is all the
+            // registry catches, so a corrupt snapshot would otherwise escape
+            // the fallback chain entirely.
             throw new RateFetchException('Bundled snapshot JSON is malformed: '.$e->getMessage(), previous: $e);
         }
 
@@ -79,9 +78,8 @@ final class BundledSnapshotProvider implements RateProvider
             $rates[(string) $currency] = (string) $rate;
         }
 
-        // An empty rate set is a failure, not a success — otherwise the
-        // registry would treat the (final) bundled provider as having
-        // succeeded and write zero rows (mirrors EcbRateProvider).
+        // An empty rate set must fail, or the registry counts this final
+        // provider as a success and writes zero rows.
         if ($rates === []) {
             throw new RateFetchException('Bundled snapshot contains no usable rates.');
         }

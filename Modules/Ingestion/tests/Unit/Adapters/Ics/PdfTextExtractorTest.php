@@ -5,16 +5,6 @@ declare(strict_types=1);
 use Modules\Ingestion\Internal\Adapters\Ics\PdfTextExtractor;
 use Modules\Ingestion\Public\Exceptions\PdfExtractionFailed;
 
-/*
- * Wire-level coverage for the exec() boundary that wraps `pdftotext` via
- * spatie/pdf-to-text. The four cases exercise: real-binary extraction
- * against the tiny synthetic PDF; typed exception when the binary path
- * is bogus; the locked flag set is applied uniformly; and a path
- * containing characters that would be unsafe in a shell string still
- * extracts cleanly (Symfony Process argv-array escaping verified
- * end-to-end).
- */
-
 function tinyPdfPathForExtractorTest(): string
 {
     return base_path('Modules/Ingestion/tests/fixtures/ics/ics-sample-tiny.pdf');
@@ -38,12 +28,9 @@ it('throws PdfExtractionFailed when the binary is missing or non-zero exits', fu
 })->group('phase-3');
 
 it('applies the locked flag set: -layout -enc UTF-8 -eol unix -nopgbrk', function (): void {
-    // Source-level invariant: the extractor wires the four flags via a
-    // private constant `PDFTOTEXT_OPTIONS`. Re-extracting them from the
-    // source file is the cheapest correct gate; the integration smoke
-    // test (Modules/Ingestion/tests/Integration/PdfTextExtractorSmokeTest.php)
-    // exercises the real `pdftotext` binary end-to-end against the same
-    // flag set.
+    // The flags live in a private constant, so reading the source is the only
+    // way to gate them without running the binary; the integration smoke test
+    // covers the behavioural half.
     $source = file_get_contents(base_path('Modules/Ingestion/Internal/Adapters/Ics/PdfTextExtractor.php'));
     if ($source === false) {
         throw new RuntimeException('Could not read PdfTextExtractor source.');
@@ -56,13 +43,10 @@ it('applies the locked flag set: -layout -enc UTF-8 -eol unix -nopgbrk', functio
 })->group('phase-3');
 
 it('escapes the path argument before exec to defend against shell injection', function (): void {
-    // Symfony Process invokes the binary with an argv array — each
-    // argument is escaped before the syscall. We verify by copying the
-    // tiny PDF to a path containing characters that would be unsafe in
-    // a shell-string context (space, semicolon, ampersand) and asserting
-    // the extraction still returns the SYNTHETIC anchor. A shell-string
-    // injection regression would either fail to extract OR return text
-    // from an unintended invocation.
+    // The space, semicolon and ampersand in the path below would all be live
+    // in a shell string. Symfony Process passes an argv array instead, so a
+    // regression to shell-string invocation either fails or extracts the
+    // wrong thing.
     $tinyPdfPath = tinyPdfPathForExtractorTest();
     $tmpDir = sys_get_temp_dir();
     $hostilePath = $tmpDir.'/ics test;space&hostile.pdf';

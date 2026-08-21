@@ -8,14 +8,6 @@ use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\ValueObjects\Money;
 
-/*
- * Feature tests for the /transactions currency-view toggle UX: the
- * URL-bound #[Url(except: '')] property, mount() falling back to the
- * user's `default_currency_view` preference when the URL has no
- * override, and the conditional secondary-line render on FX rows in
- * original mode.
- */
-
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
@@ -110,13 +102,10 @@ it('renders one line for an EUR-native row in original mode', function (): void 
         'counterparty_name' => 'EUR Merchant',
     ]);
 
-    // The Blade conditionally emits a `text-xs text-slate-500` second
-    // line ONLY when `$row->secondaryAmount !== null`. For an EUR-native
-    // row in original mode, secondaryAmount is null, so that secondary-
-    // line class signature should not appear in the rendered fragment
-    // for the amount cell. The EUR amount appears exactly twice since
-    // Phase 4: once in the desktop table row and once in the phone
-    // card-list item (the two are toggled by CSS, both are in the DOM).
+    // secondaryAmount is null on a EUR-native row in original mode, so the
+    // second-line class signature must be absent. The amount still appears
+    // twice: the desktop table row and the phone card are both in the DOM,
+    // toggled by CSS rather than by rendering only one of them.
     $eur = Money::ofMinor(-2500, 'EUR')->format();
 
     $component = Livewire::test(TransactionsList::class)
@@ -128,11 +117,9 @@ it('renders one line for an EUR-native row in original mode', function (): void 
 })->group('phase-3');
 
 it('keeps the URL clean when the toggle is on the default value', function (): void {
-    // The Url(except: '') modifier means the `?currency=` query param only
-    // appears on the URL when $this->currency differs from the empty
-    // sentinel. The Livewire test exposes the dehydrated effects array;
-    // we verify the URL effect carries `except: ''` so a no-op refresh
-    // strips the query parameter when the property is the sentinel.
+    // Asserted on the dehydrated effects array rather than on a URL: what
+    // matters is that the effect carries `except: ''`, so a refresh at the
+    // sentinel value strips `?currency=` instead of pinning it.
     $this->fixtureUser->update(['default_currency_view' => 'eur_only']);
 
     $component = Livewire::test(TransactionsList::class);

@@ -22,10 +22,8 @@ final class UpdateReport
 
     public function update(User $user, int $reportId, ReportDefinition $definition, string $name): SavedReport
     {
-        // Cross-user safety: user-scoped lookup before the write, resolved
-        // before any transaction opens. A foreign/missing id throws
-        // NotFoundHttpException (404, never 403); the caller's $user is
-        // trusted over the ambient auth guard the global UserScope applies.
+        // A foreign or missing id 404s rather than 403s, and the caller's $user
+        // is trusted over the ambient guard the global UserScope applies.
         /** @var SavedReport|null $existing */
         $existing = SavedReport::query()
             ->withoutGlobalScope(UserScope::class)
@@ -39,8 +37,7 @@ final class UpdateReport
 
         $newDefinition = $definition->toArray();
 
-        // Only genuinely-changed fields are written and emitted; a no-op
-        // update short-circuits before ever opening a transaction or
+        // A no-op update short-circuits before opening a transaction or
         // dispatching an event.
         /** @var array<string, mixed> $dirty */
         $dirty = [];
@@ -79,10 +76,9 @@ final class UpdateReport
         return $report;
     }
 
-    // For dirty-comparison purposes only: sorts the list-valued filter
-    // fields so a semantically-unchanged filter set compares equal
-    // regardless of element order. The persisted $newDefinition above is
-    // never passed through this method — only the two `!==` operands are.
+    // Sorts the list-valued filter fields so a reordered but unchanged filter
+    // set compares equal. Only the two `!==` operands go through here, never
+    // the $newDefinition that gets persisted.
     /**
      * @param  array<array-key, mixed>  $definition
      * @return array<array-key, mixed>

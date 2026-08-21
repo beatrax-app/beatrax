@@ -7,9 +7,6 @@ namespace Modules\Import\Internal\Parsers\Ics;
 use Modules\Import\Internal\Parsers\DescriptionKeywordHinter;
 use Modules\Import\Public\Enums\PaymentType;
 
-/**
- * @link ../../../../../.docs/features/import/architecture.md#payment-type-hinters
- */
 final class IcsPdfPaymentTypeHinter extends DescriptionKeywordHinter
 {
     protected const SOURCE_FORMAT = 'ics-pdf';

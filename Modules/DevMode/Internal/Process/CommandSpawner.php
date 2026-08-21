@@ -29,10 +29,8 @@ final readonly class CommandSpawner
      */
     public function start(string $command, array $args, int $callerUserId, string $tier): string
     {
-        // Whitelist guard — throws InvalidArgumentException for any
-        // unknown name (NEVER-EXPOSED commands such as `migrate`
-        // never reach the shell). The spec also tells us which args
-        // are positional vs option (the leading `--` discriminator).
+        // Throws on any unregistered name, so a never-exposed command such
+        // as `migrate` cannot reach the shell below.
         $spec = $this->commands->find($command);
 
         $runId = (string) Str::uuid();
@@ -66,10 +64,8 @@ final readonly class CommandSpawner
             outPath: $outPath,
         ));
 
-        // Eager audit row (exit_code=null, finished_at=null) so the
-        // timeline reflects the spawn immediately. FinalizeRunAudit
-        // updates this same row in place via properties.run_id when the
-        // stream's done event fires.
+        // Deliberately incomplete: FinalizeRunAudit updates this same row in
+        // place, keyed on properties.run_id, when the stream reports done.
         $this->audit->recordCommandRun(new CommandRunAudit(
             command: $command,
             args: $args,
@@ -86,9 +82,8 @@ final readonly class CommandSpawner
         return $runId;
     }
 
-    // Every interpolated value is escapeshellarg'd, including $command
-    // (already whitelist-enforced by find()) for belt-and-braces in case
-    // a future registry entry contains a shell metacharacter.
+    // $command is escaped too, though find() already vetted it, so a future
+    // registry entry carrying a shell metacharacter stays harmless.
     /**
      * @param  array<string, mixed>  $args
      */
@@ -113,18 +108,16 @@ final readonly class CommandSpawner
         $invocation = implode(' ', $parts);
         $redirect = '> '.escapeshellarg($outPath).' 2>&1';
 
-        // Plain bash background detach: `&` puts the child in the
-        // background; the closed stdin (`< /dev/null`) prevents SIGHUP
-        // propagation when the parent HTTP request exits. `setsid` would
-        // also work but isn't part of macOS' default toolchain.
+        // `< /dev/null` stops the child holding the request's stdin open.
+        // setsid would detach more cleanly but is absent from macOS' default
+        // toolchain, so plain `&` it is.
         $detach = $invocation.' '.$redirect.' < /dev/null &';
 
         return 'bash -c '.escapeshellarg($detach.' echo $!');
     }
 
-    // Positional args come first in $spec->argsSchema order; option args
-    // (name begins with `--`) emit as `--name=value`. Boolean args render
-    // as the literal `--name` flag when truthy, omitted otherwise.
+    // Tokens emit in $spec->argsSchema order, so a schema that lists an
+    // option before a positional produces that order on the command line.
     /**
      * @param  array<string, mixed>  $args
      * @return list<string>
@@ -161,16 +154,13 @@ final readonly class CommandSpawner
 
         $stringValue = is_scalar($value) ? (string) $value : '';
 
-        // Options escapeshellarg the entire `name=value` string as one
-        // unit so the argv item reaches artisan intact, not split or
-        // doubled by a mid-string quote; positionals escape the value.
+        // An option escapes `name=value` as one unit, so a mid-string quote
+        // cannot split it into two argv items.
         return $isOption
             ? [escapeshellarg($argSpec->name.'='.$stringValue)]
             : [escapeshellarg($stringValue)];
     }
 
-    // Boolean args render as the bare `--name` flag only when both truthy
-    // and an option; a truthy positional or any falsy value emits nothing.
     /**
      * @return list<string>
      */
@@ -181,8 +171,7 @@ final readonly class CommandSpawner
         return $truthy && $isOption ? [escapeshellarg($argSpec->name)] : [];
     }
 
-    // The bash wrapper has already detached the child, so this returns
-    // within ms with the child's PID on stdout.
+    // The bash wrapper detaches, so the 5s timeout below is generous.
     private function spawnDetached(string $shellCommand): int
     {
         $cwd = UserDataPathService::projectPath();
@@ -203,10 +192,9 @@ final readonly class CommandSpawner
         return (int) $pidLine;
     }
 
-    // Walks one level at a time so every intermediate gets mode 0700 (not
-    // PHP's default 0755) — on a shared multi-user host the per-run UUID
-    // filenames would otherwise be world-readable through the parent
-    // path. The mkdir()||is_dir() check keeps concurrent spawns race-safe.
+    // One level at a time so every intermediate gets 0700 rather than PHP's
+    // 0755, which would leave the per-run output world-readable through the
+    // parent. The mkdir()||is_dir() pair keeps concurrent spawns race-safe.
     private function ensureRunsDirectory(string $dir): void
     {
         $parent = dirname($dir);

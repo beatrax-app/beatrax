@@ -5,9 +5,9 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-// One row per enrolled device: biometric_wrap_secret is raw binary that wraps
-// the data key for that device alone, and counter is the authenticator's
-// signature counter, kept so a replayed assertion can be spotted.
+// One row per enrolled device. biometric_wrap_secret is raw binary wrapping
+// the data key for that device alone; counter is the authenticator's signature
+// counter, kept so a replayed assertion is visible.
 return new class extends ModuleMigration
 {
     public function up(): void

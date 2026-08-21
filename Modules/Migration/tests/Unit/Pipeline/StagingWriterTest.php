@@ -15,13 +15,6 @@ use Modules\Migration\Tests\Support\MigrationFixturePaths;
 
 uses(RefreshDatabase::class);
 
-/*
- * Task 1's own acceptance criteria describe testable behavior with no
- * pre-existing RED stub targeting StagingWriter directly (unlike the parsers,
- * which had Plan 02's RED tests) — mirrors the Rule 3 precedent Plans 03/04
- * established for Support-class/ActualSqliteReader coverage.
- */
-
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'staging-writer-fixture-user',
@@ -30,9 +23,7 @@ beforeEach(function (): void {
     ]);
     $this->db = app(DatabaseManager::class);
 
-    // StagingWriter itself never creates the migration_runs row (that's
-    // StartMigrationRun's job) — the FK on every migration_staging_* table
-    // requires a real parent row to exist first.
+    // StagingWriter never creates the run row every staging FK points at.
     $this->run = MigrationRun::create([
         'user_id' => $this->user->id,
         'source_product' => 'ynab4',
@@ -54,9 +45,8 @@ it('StagingWriter: lands the parsed batch into all six staging tables scoped by 
         ->where('user_id', $this->user->id)
         ->where('migration_run_id', $this->run->id);
 
-    // 3 real categories (Groceries, Household, Salary) + 2 category-group
-    // parents (Frequent, Income) materialized as real parent categories
-    // (WR-03).
+    // 3 real categories (Groceries, Household, Salary) plus the 2 group parents
+    // (Frequent, Income), which are materialized as real parent categories.
     expect($scoped('migration_staging_categories')->count())->toBe(5);
 
     // 2 accounts (Checking, Savings).
@@ -68,9 +58,8 @@ it('StagingWriter: lands the parsed batch into all six staging tables scoped by 
     // 2 months x 2 categories = 4 budget assignment rows.
     expect($scoped('migration_staging_budget_assignments')->count())->toBe(4);
 
-    // 6 logical transactions (top-level rows) + 2 extra split-leg rows = 8
-    // total migration_staging_transactions rows; only 6 have a NULL
-    // parent_source_external_id (the split's 2 legs carry the parent's id).
+    // 6 top-level rows + 2 split legs = 8; only the 6 have a NULL
+    // parent_source_external_id, since the legs carry the parent's id.
     expect($scoped('migration_staging_transactions')->count())->toBe(8);
     expect($scoped('migration_staging_transactions')->whereNull('parent_source_external_id')->count())->toBe(6);
     expect($scoped('migration_staging_transactions')->whereNotNull('parent_source_external_id')->count())->toBe(2);
@@ -152,8 +141,8 @@ it('StagingWriter: lands the ONE flat goal_def as a migration_staging_goals row 
         ->where('migration_run_id', $actualRun->id)
         ->get();
 
-    // Only "Groceries" carries a FLAT goal_def; "Emergency Fund"'s non-flat
-    // template reduces to an unmapped item instead (Req 8), never a row here.
+    // Only "Groceries" carries a flat goal_def; "Emergency Fund"'s template one
+    // becomes an unmapped item, never a row here.
     expect($goals)->toHaveCount(1);
     expect($goals->first()->name)->toBe('Groceries');
     expect((int) $goals->first()->target_minor)->toBe(20000);

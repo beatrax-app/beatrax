@@ -9,16 +9,10 @@ use Modules\Sync\Public\Services\SyncStatusService;
 
 uses(RefreshDatabase::class);
 
-/*
- * The two derivations the sync status panel renders from sync_sessions.
- *
- * SyncStatusSectionTest drives these through Livewire and covers four of the
- * five statuses; what it never reaches is 'offline', and it asserts
- * lastSyncedHuman() only as null. Both gaps matter to a user reading the
- * panel: 'offline' versus 'all_synced' is the difference between "your devices
- * are up to date" and "nothing has connected", and the relative time is the
- * only signal for how stale that answer is.
- */
+// SyncStatusSectionTest never reaches 'offline' and asserts lastSyncedHuman()
+// only as null. Both gaps matter to whoever reads the panel: offline versus
+// all_synced is the difference between "your devices are up to date" and
+// "nothing has connected", and the relative time says how stale that answer is.
 
 function sssSeed(int $userId, array $rows): void
 {
@@ -48,9 +42,8 @@ it('reports unknown when the user has no sessions at all', function (): void {
     expect(sssService()->overallStatus(1))->toBe('unknown');
 });
 
-// The ladder, asserted at each rung including the one the Livewire test never
-// reaches. A row that errored outranks one that is mid-handshake, because a
-// peer that needs attention should not be hidden behind one that is busy.
+// A row that errored outranks one that is mid-handshake, because a peer needing
+// attention should not be hidden behind one that is merely busy.
 it('ranks an errored peer above a syncing one, and a syncing one above a finished one', function (array $rows, string $expected): void {
     sssSeed(1, $rows);
 
@@ -72,9 +65,8 @@ it('ranks an errored peer above a syncing one, and a syncing one above a finishe
     'failed but seen before' => [[['status' => 'failed', 'last_seen_at' => '2026-07-19 05:00:00']], 'all_synced'],
 ]);
 
-// A failure that never connected is not a completed sync. Reading it as
-// 'all_synced' would tell the user their devices agree when in fact nothing
-// ever reached the other end.
+// A failure that never connected is not a completed sync: calling it all_synced
+// would claim the devices agree when nothing ever reached the other end.
 it('reports offline for a peer that failed without ever being seen', function (): void {
     sssSeed(1, [['status' => 'failed', 'error_message' => '', 'last_seen_at' => null]]);
 
@@ -95,10 +87,9 @@ it('has no last-synced time before any peer has been seen', function (): void {
     expect(sssService()->lastSyncedHuman(CarbonImmutable::parse('2026-07-19 06:00:00'), 1))->toBeNull();
 });
 
-// Each magnitude, and each boundary between them. Carbon truncates rather than
-// rounds, so 119 seconds is one minute and not two. The strings come from its
-// short forms, which is what makes them translate — the ladder these replaced
-// returned English literals whatever the locale.
+// Carbon truncates rather than rounds, so 119 seconds is one minute and not two.
+// The strings are its short forms, which is what makes them translate; the
+// ladder they replaced returned English literals whatever the locale.
 it('renders the gap since the newest last_seen_at', function (string $seenAt, ?string $expected): void {
     sssSeed(1, [['status' => 'closed', 'last_seen_at' => $seenAt]]);
 
@@ -129,7 +120,6 @@ it('takes the newest last_seen_at across peers', function (): void {
     expect(sssService()->lastSyncedHuman(CarbonImmutable::parse('2026-07-19 12:00:00'), 1))->toBe('1h ago');
 });
 
-// Rows with no timestamp must not mask one that has it.
 it('ignores peers with no last_seen_at when picking the newest', function (): void {
     sssSeed(1, [
         ['status' => 'connecting', 'last_seen_at' => null],

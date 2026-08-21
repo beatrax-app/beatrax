@@ -6,20 +6,6 @@ use Livewire\Livewire;
 use Modules\Core\Internal\Http\Livewire\SettingsPage;
 use Modules\Core\Models\User;
 
-/*
- * Feature tests for the two recurring-related preferences on the
- * /settings page:
- *
- *   - users.recurring_detection_window_months — bounded 3..60 months.
- *   - users.recurring_income_min_amount_minor — bounded 0..100_000_000
- *     in signed BIGINT minor units (€0.00..€1,000,000.00).
- *
- * Mirrors the SettingsPageTest pattern: beforeEach() seeds a user,
- * Livewire::test() drives the page, save() round-trips into the users
- * row, and out-of-range values are rejected with the calm validation
- * message + unchanged-row guarantee.
- */
-
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'rec-settings',

@@ -88,6 +88,8 @@ function sefRecordTransaction(User $user, Account $account, ImportRun $run, stri
         ),
     ], $user);
 
+    // counterparty_name and description are ciphertext the moment the write
+    // lands, so source_ref is the only column left to find the row by.
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $stored = $db->connection()->table('transactions')
@@ -109,8 +111,7 @@ it('a short (<3-char) query fallback returns hits for a genuinely encrypted user
 
     $txId = sefRecordTransaction($user, $account, $run, 'Zx Superstore', 'weekly shop', 'sef-like-1');
 
-    // Confirm this row genuinely went through the encrypt hook — ciphertext
-    // at rest, not the plaintext fixture value.
+    // Ciphertext at rest proves the row went through the real encrypt hook.
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $stored = $db->connection()->table('transactions')->where('id', $txId)->first(['counterparty_name']);
@@ -119,28 +120,23 @@ it('a short (<3-char) query fallback returns hits for a genuinely encrypted user
     /** @var SearchQuery $query */
     $query = app(SearchQuery::class);
 
-    // 'zx' is a 2-char query — below the FTS5 trigram floor (Pitfall-6), so
-    // this exercises ONLY likeFallbackIds(). Lowercase input also proves the
-    // decrypt-then-substring match is case-insensitive, mirroring the old
-    // SQL LIKE's default case-insensitivity.
+    // Two characters is below the FTS5 trigram floor, so only likeFallbackIds
+    // runs. The lowercase input also pins the decrypt-then-substring match as
+    // case-insensitive, the way the SQL LIKE it replaced was.
     $page = $query->search($user, 'zx', SearchFilters::empty());
 
     expect(collect($page->rows)->pluck('id'))->toContain($txId);
 })->group('SearchEncryptionFallback');
 
 it('the short-query fallback candidate scan is bounded, not an unbounded full-history decrypt (Task 1)', function (): void {
-    // RESEARCH Pitfall 3 / T-14.1-06: assert the fallback's candidate
-    // window is a genuinely bounded constant (not, say, PHP_INT_MAX or an
-    // unbounded ->get() with no limit()) — the mechanism a naive
-    // full-history decrypt regression would violate. The cap now lives on
-    // FtsCandidateResolver, which owns the fallback scan.
+    // Matching by decrypting means the scan has to stop somewhere, and this
+    // constant is what a naive full-history decrypt would have to remove.
     $reflection = new ReflectionClass(FtsCandidateResolver::class);
     $constant = $reflection->getConstant('LIKE_FALLBACK_CANDIDATE_CAP');
 
     expect($constant)->toBeInt();
     expect($constant)->toBeGreaterThan(0);
-    // A cap in the low thousands (or fewer) is a genuine bound; anything
-    // approaching PHP_INT_MAX would defeat the point of bounding at all.
+    // A cap anywhere near PHP_INT_MAX would be no bound at all.
     expect($constant)->toBeLessThan(100_000);
 })->group('SearchEncryptionFallback');
 
@@ -156,8 +152,8 @@ it('the primary >= 3-char FTS path is unaffected by the fallback fix, for an enc
     /** @var SearchQuery $query */
     $query = app(SearchQuery::class);
 
-    // 3+ char query — goes through the FTS5 MATCH path (decrypted plaintext
-    // shadow, D-02c), never through likeFallbackIds. Unaffected by this plan.
+    // Three characters or more goes through the FTS5 MATCH path over the
+    // plaintext shadow, never through likeFallbackIds.
     $page = $query->search($user, 'groceries', SearchFilters::empty());
 
     expect(collect($page->rows)->pluck('id'))->toContain($txId);
@@ -169,10 +165,9 @@ it('EntityNameSearch (⌘K) matches a decrypted counterparty display_name for an
 
     $account = sefAccount($user);
 
-    // Same merchant-alias creation-write fixture as CounterpartyEncryptionTest
-    // — CounterpartyResolverService encrypts display_name/merchant_name on
-    // creation (already-fixed precedent), giving us a genuinely encrypted
-    // counterparties row rather than a raw plaintext insert.
+    // Going through CounterpartyResolverService encrypts display_name on
+    // creation, so the counterparties row is genuinely ciphertext rather than
+    // a raw plaintext insert.
     DB::table('merchant_aliases')->insert([
         'user_id' => $user->id,
         'pattern' => 'NETFLIX.COM AMSTERDAM',
@@ -212,7 +207,7 @@ it('EntityNameSearch (⌘K) matches a decrypted counterparty display_name for an
     $dto = $resolver->resolve($tx, $user);
     expect($dto)->not->toBeNull();
 
-    // Ciphertext at rest — proves this went through the real encrypting write.
+    // Ciphertext at rest proves this went through the real encrypting write.
     $stored = DB::table('counterparties')->where('id', $dto->counterpartyId)->first(['display_name']);
     expect($stored->display_name)->not->toBe('Netflix');
 
@@ -236,11 +231,9 @@ it('did-you-mean suggests a close match derived from decrypted counterparty_name
     /** @var SearchQuery $query */
     $query = app(SearchQuery::class);
 
-    // "heijm" (a 1-edit typo of "heijn") matches nothing via FTS or the LIKE
-    // fallback — the zero-result search then falls through to
-    // DidYouMeanSuggester, which must decrypt the stored counterparty_name
-    // to build its corpus (it is ciphertext at rest) before it can find
-    // "heijn" as the closest word.
+    // "heijm" is a one-edit typo that matches nothing via FTS or the fallback,
+    // so the zero-result path hands over to DidYouMeanSuggester, which has to
+    // decrypt counterparty_name before it has a corpus to suggest from.
     $page = $query->search($user, 'heijm', SearchFilters::empty());
 
     expect($page->totalCount)->toBe(0);
@@ -248,10 +241,9 @@ it('did-you-mean suggests a close match derived from decrypted counterparty_name
 })->group('SearchEncryptionFallback');
 
 it('the did-you-mean candidate row scan is bounded, not an unbounded full-history decrypt (Task 2)', function (): void {
-    // RESEARCH Pitfall 3 / T-14.1-06: DidYouMeanSuggester can no longer
-    // GROUP BY the ciphertext counterparty_name column, so it must fetch
-    // ungrouped rows to decrypt-then-tally in PHP — assert that fetch is
-    // capped at a genuinely bounded constant, not an unbounded ->get().
+    // GROUP BY over a ciphertext column tallies nothing, so the suggester
+    // fetches ungrouped rows and tallies in PHP after decrypting — which only
+    // stays affordable while that fetch is capped.
     $reflection = new ReflectionClass(DidYouMeanSuggester::class);
     $constant = $reflection->getConstant('CANDIDATE_ROW_CAP');
 

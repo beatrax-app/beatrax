@@ -246,8 +246,7 @@ final class RunImport implements RunsImports
     }
 
     // raw_file_path is a required audit string with no FK to storage, so the
-    // remote-fetch path needs a marker that is deterministic and obviously
-    // not a filesystem path.
+    // remote-fetch path needs a deterministic, obviously-not-a-path marker.
     private function syntheticRawFilePath(string $idempotencyKey): string
     {
         return sprintf('open-banking://%s', $idempotencyKey);

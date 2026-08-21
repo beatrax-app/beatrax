@@ -8,9 +8,6 @@ use Modules\Import\Internal\Parsers\DescriptionKeywordHinter;
 use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ingestion\Public\Enums\SourceFormat;
 
-/**
- * @link ../../../../../.docs/features/import/architecture.md#payment-type-hinters
- */
 final class AsnCsvPaymentTypeHinter extends DescriptionKeywordHinter
 {
     protected const SOURCE_FORMAT = SourceFormat::AsnCsv->value;

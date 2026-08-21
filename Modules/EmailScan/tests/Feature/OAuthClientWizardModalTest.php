@@ -7,19 +7,6 @@ use Modules\Core\Models\User;
 use Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
-/*
- * OAuth-client-registration wizard modal (Google variant).
- *
- * Exercises:
- *  - open() sets the provider.
- *  - submit() validates the client_id ends in .apps.googleusercontent.com,
- *    the secret starts with GOCSPX-, and the publishedConfirmed checkbox
- *    is ticked. Each failure surfaces the locked error copy and the
- *    secrets file is not written.
- *  - The happy path writes via OAuthSecretsRepository, dispatches
- *    modal-hide, and redirects to /oauth/connect/gmail.
- */
-
 beforeEach(function (): void {
     $this->path = storage_path('app/secrets/email-oauth.json');
     if (is_file($this->path)) {

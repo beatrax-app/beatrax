@@ -40,10 +40,8 @@ final class GitHubCompareUrlBuilder
 
     private function quoteYaml(string $value): string
     {
-        // YAML 1.2 double-quoted strings recognise the C-style escapes below;
-        // a raw description with a stray newline/tab must be encoded as the
-        // escape sequence rather than included verbatim, or GitHub's PR
-        // composer rejects the YAML on submit.
+        // A stray newline or tab has to go out as a C-style escape, not
+        // verbatim, or GitHub's PR composer rejects the YAML on submit.
         $escaped = strtr($value, [
             '\\' => '\\\\',
             '"' => '\\"',

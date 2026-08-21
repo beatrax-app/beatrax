@@ -13,16 +13,6 @@ use Modules\Reports\Internal\Aggregation\CategorySpendQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * Covers 999.6-04 Task 2 / Req 2/3: CategorySpendQuery's canonical
- * type-based, split-leg-aware category aggregation. Written directly
- * against CategorySpendQuery (not through the not-yet-built
- * ReportAggregator, Plan 06) so the split-leg join + canonical predicate
- * is proven correct in this plan rather than only transitively via a
- * later plan's test. Fixture helpers prefixed csq_ to avoid cross-file
- * global-function collisions.
- */
-
 function csqUser(): User
 {
     /** @var User */
@@ -203,7 +193,6 @@ it('falls back to the parent category when split legs do not sum to the parent (
         $byLabel[$row->groupLabel] = $row->amountMinor;
     }
 
-    // Parent's OWN category (Groceries) is counted, the broken leg (Fuel) is ignored.
     expect($byLabel['Groceries'] ?? null)->toBe(10_000);
     expect($byLabel)->not->toHaveKey('Fuel');
 });

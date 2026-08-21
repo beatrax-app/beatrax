@@ -11,10 +11,8 @@ use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 use stdClass;
 
-// Shared hydrator so RecurringSeriesQuery and FixedPaymentsViewQuery don't
-// each carry a near-identical toDto() that must be bugfixed twice. Chain-
-// link resolution differs per caller (raw column vs. occurrence-walk
-// fallback), so it's the one field the caller resolves and supplies.
+// Shared by RecurringSeriesQuery and FixedPaymentsViewQuery. Chain-link
+// resolution differs between them, so the caller supplies that one field.
 final class RecurringSeriesDtoMapper
 {
     use CoercesScalars;
@@ -70,9 +68,8 @@ final class RecurringSeriesDtoMapper
                 : null,
             state: self::toString($row->state),
             // from() rather than tryFrom(): a trigger built from
-            // SeriesCadence::values() constrains the column, so a value with
-            // no case is a broken database, and a silent fallback would turn
-            // that into a series which quietly stops projecting.
+            // SeriesCadence::values() constrains the column, so an unmapped value
+            // is a broken database and a silent fallback would hide it.
             cadence: SeriesCadence::from(self::toString($row->cadence)),
             latestAmount: $latestAmount,
             eurEquivalent: $eurEquivalent,

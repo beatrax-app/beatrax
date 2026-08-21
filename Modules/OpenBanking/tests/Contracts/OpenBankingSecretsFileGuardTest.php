@@ -2,9 +2,8 @@
 
 declare(strict_types=1);
 
-// Comments are stripped BEFORE matching: this file's own prose, and the
-// repository's docblocks naming the forbidden column names, would otherwise
-// trip the rule they describe.
+// Comments are stripped before matching, or this file's own prose and the
+// repository's docblocks would trip the rule they describe.
 
 function openBankingGuardStripComments(string $contents): string
 {
@@ -83,8 +82,8 @@ it('never reads a credential field via a DatabaseManager/Eloquent surface outsid
         .implode("\n  ", $hits),
     );
 
-    // Fire the same pattern pair at a class committing the exact violation, so
-    // an empty offender list is never mistaken for a vacuously-true check.
+    // Fire the same patterns at a real violation, so an empty offender list is
+    // never mistaken for a vacuously-true check.
     $violatingSample = <<<'PHP'
         class FixtureCredentialModel extends Model
         {
@@ -117,8 +116,6 @@ it('forbids any OpenBanking migration from adding a secret column', function ():
         .implode("\n  ", $hits),
     );
 
-    // The same pattern against a forbidden and a safe column declaration, so a
-    // clean migration tree is never mistaken for a vacuously-true check.
     $violatingMigrationSample = "\$table->string('application_id')->nullable();";
     expect(preg_match($forbiddenPattern, $violatingMigrationSample))->toBe(1);
 

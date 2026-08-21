@@ -9,8 +9,6 @@ use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Ledger\Public\ValueObjects\Money;
 
 /**
- * Seeds exchange_rates rows for testing.
- *
  * @param  array<string, string>  $rates  Map of quote_currency => rate string
  */
 function seedRates(string $date, array $rates, string $source = 'ecb'): void
@@ -73,7 +71,6 @@ describe('ExchangeRateService', function (): void {
     it('derives cross-rate USD→GBP via EUR base', function (): void {
         seedRates('2026-06-05', ['USD' => '1.1359', 'GBP' => '0.83895']);
 
-        // USD 113.59 — should convert to approximately GBP 83.90
         $money = Money::ofMinor(11359, 'USD');
 
         $result = $this->service->convertToBase($money, 'GBP');
@@ -110,8 +107,8 @@ describe('ExchangeRateService', function (): void {
     });
 
     it('convertAtDate uses the supplied knownRate string for the conversion', function (): void {
-        // No rows in exchange_rates needed — knownRate is used directly
-        $money = Money::ofMinor(10000, 'EUR'); // EUR 100.00
+        // No exchange_rates rows seeded: knownRate has to be used directly.
+        $money = Money::ofMinor(10000, 'EUR');
 
         $result = $this->service->convertAtDate($money, 'USD', '2026-01-15', '1.20000000');
 

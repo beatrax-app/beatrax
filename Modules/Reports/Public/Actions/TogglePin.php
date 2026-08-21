@@ -29,8 +29,7 @@ final class TogglePin
 
     public function toggle(User $user, int $reportId): SavedReport
     {
-        // Cross-user safety: user-scoped lookup before the write. A
-        // foreign/missing id throws NotFoundHttpException (404, never 403).
+        // A foreign or missing id 404s rather than 403s.
         /** @var SavedReport|null $existing */
         $existing = SavedReport::query()
             ->withoutGlobalScope(UserScope::class)
@@ -58,10 +57,8 @@ final class TogglePin
                     dirtyFields: ['pinned' => false, 'pin_order' => null],
                 );
 
-                // Unpinning compacts the remaining pinned reports' pin_order
-                // back to a dense 1..N sequence; each changed row gets its
-                // own SavedReportMutated 'edit' to keep every device's Sync
-                // op-log in step.
+                // Unpinning compacts the rest back to a dense 1..N; each changed
+                // row gets its own event so every device's op-log stays in step.
                 foreach (PinOrderCompactor::compact($this->db->connection(), $user) as $compacted) {
                     $events[] = new SavedReportMutated(
                         reportId: $compacted['id'],
@@ -74,10 +71,8 @@ final class TogglePin
                 return $existing;
             }
 
-            // TOCTOU guard: the cap check runs inside this write
-            // transaction, not before it opens — two concurrent toggle()
-            // calls reading the count pre-transaction could both pass and
-            // together pin a 4th report; the blocked one re-reads here.
+            // The cap check runs inside the write transaction: read before it
+            // opens, two concurrent toggles could both pass and pin a 4th.
             $pinnedCount = $this->db->connection()
                 ->table('saved_reports')
                 ->where('user_id', $user->id)

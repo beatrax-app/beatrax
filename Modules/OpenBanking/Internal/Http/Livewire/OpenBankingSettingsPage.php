@@ -33,13 +33,10 @@ final class OpenBankingSettingsPage extends Component
     use ManagesGuidedIcsImport;
     use WithFileUploads;
 
-    // 2 hours: long enough for a first-time Enable Banking application
-    // registration plus SCA, short enough that an abandoned tab cannot leave
-    // a standing authorization sitting in the session.
+    // 2 hours covers a first-time application registration plus SCA, without
+    // letting an abandoned tab leave a standing authorization in the session.
     private const ACK_TTL_SECONDS = 7200;
 
-    // Assigned only by mount()/refreshState()/enableOpenBanking(); never
-    // bound via wire:model.
     #[Locked]
     public bool $enabled = false;
 
@@ -239,9 +236,8 @@ final class OpenBankingSettingsPage extends Component
     ): void {
         $secrets->clear();
 
-        // Every row belonging to the user, not just the displayed connection:
-        // an orphaned row from a previously-linked institution must not keep
-        // syncing after the user believes they disconnected.
+        // Every row, not just the displayed one: an orphaned row from a previous
+        // institution would keep syncing after the user believes they are off.
         $db->connection()->table('open_banking_connections')
             ->where('user_id', $currentUser->user()->id)
             ->update([

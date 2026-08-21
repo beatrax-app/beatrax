@@ -52,7 +52,6 @@ beforeEach(function (): void {
     ]);
 });
 
-/** Persist a transaction in the current period (dated today) for $user. */
 function budgetTx(int $userId, int $accountId, int $runId, int $settledMinor, ?int $categoryId): void
 {
     static $i = 0;

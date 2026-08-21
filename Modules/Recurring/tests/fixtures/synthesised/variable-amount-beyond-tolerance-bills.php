@@ -2,13 +2,8 @@
 
 declare(strict_types=1);
 
-// Variable-amount utility bills — 6 monthly occurrences where amounts
-// swing from −€40 to −€140 (well beyond the ±25% default variance
-// tolerance applied against any reference anchor). Detector should
-// FRAGMENT the candidate so a single "series" is NOT produced under
-// default tolerance. Expectation: zero stable series (the corpus test
-// asserts the fixture is structurally valid; the contract test in a
-// later wave asserts the fragmentation invariant).
+// Amounts swinging from −€40 to −€140, far beyond the ±25% default variance
+// tolerance, so the candidate has to fragment rather than survive as one series.
 
 $transactions = [];
 $start = new DateTimeImmutable('2025-10-12');

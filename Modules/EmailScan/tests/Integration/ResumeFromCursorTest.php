@@ -15,30 +15,9 @@ use Modules\EmailScan\Public\Services\EmlBlobStore;
 
 uses(RefreshDatabase::class);
 
-/*
- * IncrementalScanJob kill-restart resume invariant.
- *
- * Plan 07 success criterion SC#3: the hourly scanner must pick up
- * from inbox_scan_state.last_history_id (Gmail) on every run — a
- * worker crash mid-scan must not lose or duplicate messages on the
- * NEXT scheduler tick.
- *
- * Test flow:
- *  1. Seed user + Gmail inbox + inbox_scan_state with last_history_id='12345'.
- *  2. Bind FakeGmailApiClient with a queued listHistory response that
- *     returns 2 new messages (paypal + ics) + new historyId='12400'.
- *  3. Dispatch IncrementalScanJob — 2 inbox_messages rows land,
- *     last_history_id='12400', status='idle'.
- *  4. Dispatch the job AGAIN (simulating "process restarted") — the
- *     Fake's queue is empty, so listHistory falls back to the 404
- *     fixture → CursorExpiredException → fallback walk over
- *     listSenderMessages.
- *
- * The simpler kill-restart shape: run the job, kill, run again with
- * the same seed cursor unchanged — assert idempotency. We do that
- * here by queueing a SECOND empty history response (no new messages,
- * cursor unchanged).
- */
+// A worker crash mid-scan must neither lose nor duplicate messages: the next
+// tick resumes from inbox_scan_state.last_history_id, which the second run
+// here re-enters with nothing new to fetch.
 
 beforeEach(function (): void {
     Sleep::fake();
@@ -87,8 +66,7 @@ it('walks the gmail historyId cursor, persists new messages, and resumes idempot
         'updated_at' => $now,
     ]);
 
-    // First run — queue a success listHistory response with two
-    // new message ids + a fresh historyId.
+    // First run: two new message ids and a fresh historyId.
     $fake = new FakeGmailApiClient($this->app->make(Filesystem::class));
     $fake->queueHistoryResponse(['paypal-sample-receipt', 'ics-sample-statement-notice'], '12400');
     $this->app->instance(GmailApiClientContract::class, $fake);
@@ -97,7 +75,6 @@ it('walks the gmail historyId cursor, persists new messages, and resumes idempot
     $job = $this->app->make(IncrementalScanJob::class, ['inboxId' => $inboxId]);
     $this->app->call([$job, 'handle']);
 
-    // Assert: 2 inbox_messages rows + 2 .eml blobs + cursor advanced.
     $rows = $db->connection()
         ->table('inbox_messages')
         ->where('inbox_id', $inboxId)
@@ -123,9 +100,8 @@ it('walks the gmail historyId cursor, persists new messages, and resumes idempot
     expect($scanState->status)->toBe('idle');
     expect($scanState->last_history_id)->toBe('12400');
 
-    // Second run — simulating "process restarted, scanner re-picks
-    // up from the new cursor". Queue an empty history response so
-    // the second run is a no-op.
+    // Second run stands in for a restarted process: an empty history response
+    // from the advanced cursor, so the tick should be a no-op.
     $fake2 = new FakeGmailApiClient($this->app->make(Filesystem::class));
     $fake2->queueHistoryResponse([], '12400');
     $this->app->instance(GmailApiClientContract::class, $fake2);
@@ -134,8 +110,6 @@ it('walks the gmail historyId cursor, persists new messages, and resumes idempot
     $job2 = $this->app->make(IncrementalScanJob::class, ['inboxId' => $inboxId]);
     $this->app->call([$job2, 'handle']);
 
-    // Assert: still 2 rows (no duplicates landed on the second run),
-    // cursor unchanged, status idle.
     $rowsAfter = $db->connection()
         ->table('inbox_messages')
         ->where('inbox_id', $inboxId)
@@ -151,8 +125,8 @@ it('walks the gmail historyId cursor, persists new messages, and resumes idempot
     expect($scanStateAfter->status)->toBe('idle');
     expect($scanStateAfter->last_history_id)->toBe('12400');
 
-    // Assert: the second run's listHistory call started from the
-    // updated cursor '12400' (not the seeded '12345').
+    // '12400', not the seeded '12345': the restart resumed from the cursor the
+    // first run wrote.
     $secondRunCalls = $fake2->getRequestedCalls();
     $listHistoryCalls = array_values(array_filter(
         $secondRunCalls,

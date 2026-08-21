@@ -12,10 +12,9 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use stdClass;
 
-// Visibility rule: a row is offered when its user_id is null (the seeded
-// default tree) OR matches the supplied user. Both halves of the
-// self-join apply the rule, so a leaf whose parent_id points to a
-// foreign user's category never leaks the foreign parent name.
+// A row is offered when its user_id is null (the seeded default tree) or
+// matches the user. Both halves of the self-join apply that, so a leaf whose
+// parent belongs to another user never leaks the foreign parent name.
 final class CategoryOptionsQuery
 {
     use CoercesScalars;

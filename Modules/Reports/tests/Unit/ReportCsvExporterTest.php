@@ -12,22 +12,6 @@ use Modules\Reports\Public\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 
-/*
- * Wave 0 RED stub (999.6-03 Task 2, Req 11).
- *
- * Pins Modules\Reports\Internal\Services\ReportCsvExporter::export(User,
- * ReportDefinition): string — mirrors TaxCsvExporterTest's structure. The
- * header's FIRST (group) column MUST reflect the driving definition's
- * dimension — 'Category' | 'Counterparty' | 'Account' | 'Month' — never a
- * generic 'group' literal (Req 11, PATTERNS.md ReportCsvExporter excerpt).
- * This is the dimension-reflective header contract Plan 07 Task 2 turns
- * GREEN.
- *
- * RED as intended: ReportCsvExporter does not exist yet — every test below
- * fails on `app(ReportCsvExporter::class)` (missing class), not on the
- * (already-existing) ReportDefinition DTO it's built from.
- */
-
 function rceUser(): User
 {
     /** @var User */
@@ -144,7 +128,6 @@ it('data rows match the aggregator totals for the same definition', function ():
     $csv = app(ReportCsvExporter::class)->export($user, rceDefinition('category'));
     $lines = array_values(array_filter(explode("\n", trim($csv))));
 
-    // Header + exactly 1 data row for the single seeded expense.
     expect(count($lines))->toBe(2);
     $dataRow = str_getcsv($lines[1]);
     expect($dataRow[1])->toBe('spend');
@@ -158,8 +141,7 @@ it('escapes formula-leading group labels so the CSV is safe to open in Excel', f
     $user = rceUser();
     test()->actingAs($user);
 
-    // A free-text account name that leads with a spreadsheet formula — the
-    // account name becomes the group label for dimension=account.
+    // Free text: for dimension=account the account name becomes the group label.
     $account = Account::query()->create([
         'user_id' => $user->id,
         'name' => '=HYPERLINK("http://evil.example","click")',
@@ -205,9 +187,8 @@ it('escapes formula-leading group labels so the CSV is safe to open in Excel', f
 
     $csv = app(ReportCsvExporter::class)->export($user, rceDefinition('account'));
 
-    // league/csv EscapeFormula prefixes a formula-leading cell with a single
-    // quote. Without the formatter the label would ship as a live =HYPERLINK
-    // formula, so this fails if the EscapeFormula line is removed.
+    // EscapeFormula prefixes the cell with a single quote; without it the label
+    // ships as a live =HYPERLINK formula.
     expect($csv)->toContain("'=HYPERLINK")
         ->and($csv)->not->toContain('"=HYPERLINK');
 });

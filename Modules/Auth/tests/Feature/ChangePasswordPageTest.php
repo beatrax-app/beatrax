@@ -7,13 +7,6 @@ use Livewire\Livewire;
 use Modules\Auth\Internal\Http\Livewire\ChangePasswordPage;
 use Modules\Core\Models\User;
 
-/*
- * Feature coverage for the forced-password-change page: it renders the
- * UI-SPEC copy, a correct current password + matching 12+ char new
- * password updates the hash and clears the force flag, and a wrong
- * current password flashes an error without touching the password.
- */
-
 it('renders the change-password heading, subhead and button', function (): void {
     $user = User::query()->create([
         'username' => 'partner',

@@ -24,19 +24,13 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-// The `/rules` CRUD page. Reads via CategorizationRuleQuery
-// (priority/id-ordered — the same order RuleEngine::match() executes
-// rules in, so the table visually IS the execution order); the
-// create/edit form lives in RuleFormModal, dispatched via `rule-form:open`.
 final class RulesPage extends Component
 {
     use HoldsFlashMessage;
 
     public ?int $confirmingDeleteId = null;
 
-    // True from the moment triggerReapply dispatches the job until
-    // render() observes a status='done' cache payload; drives the
-    // disabled "Re-applying..." button and the poll progress strip.
+    // True from the dispatch until render() sees a status='done' payload.
     public bool $reapplyDispatched = false;
 
     public function openCreateModal(): void
@@ -61,9 +55,8 @@ final class RulesPage extends Component
 
     public function deleteRule(int $ruleId, CurrentUser $currentUser, DeleteCategorizationRule $delete): void
     {
-        // A tampered Livewire payload would otherwise surface as a 500;
-        // catching NotFoundHttpException here only affects the UI
-        // surface — the action's own ownership guard is the real boundary.
+        // A tampered Livewire payload would otherwise surface as a 500; the
+        // action's own ownership guard is the real boundary.
         try {
             ($delete)($currentUser->user(), $ruleId);
         } catch (NotFoundHttpException) {
@@ -87,9 +80,8 @@ final class RulesPage extends Component
         $this->flashMessage = '';
     }
 
-    // Always reads the target user id from CurrentUser. Runs via
-    // dispatchSync: the job's decryption KEK is only reachable through
-    // the live Session on THIS request — a queued dispatch would hand it
+    // dispatchSync: the job's decryption KEK is reachable only through the
+    // live Session on this request, and a queued dispatch would hand the work
     // to the KEK-less queue:work daemon.
     public function triggerReapply(CurrentUser $currentUser, Dispatcher $bus): void
     {

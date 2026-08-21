@@ -11,15 +11,13 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Recurring\Models\RecurringSeries;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-// A null or empty-after-trim value clears the override (read site falls
-// back to the detector-refreshed detected_name, which this write never
-// touches). Strings over MAX_LENGTH raise InvalidArgumentException rather
-// than a schema-level "Data too long for column" 500.
+// Clearing the override is what an empty value means; the read site then falls
+// back to detected_name, which this never writes. Over-long input raises rather
+// than reaching the column as a "Data too long" 500.
 
 final class EditRecurringSeriesName
 {
-    // Below the underlying VARCHAR(255) so a future column-type change
-    // cannot silently break the cap.
+    // Well under the column's VARCHAR(255), so this cap always binds first.
     private const MAX_LENGTH = 120;
 
     public function __construct(

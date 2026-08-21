@@ -13,16 +13,9 @@ use Modules\DriftAlerts\Internal\Http\Livewire\DriftPage;
 
 uses(RefreshDatabase::class);
 
-/*
- * The alert id is derived from the row's own columns so two devices agree on
- * it, which means it no longer ascends with insertion. The list used to be
- * ordered `id DESC` and paged with `id < cursor`, so on derived ids it would
- * have rendered in hash order and the "load more" button would have skipped
- * and repeated rows at random.
- *
- * These tests pin the replacement: `detected_at DESC` with the id only
- * breaking ties, and a cursor that carries both.
- */
+// The alert id is derived from the row's own columns so two devices agree on
+// it, which means it no longer ascends with insertion: `id DESC` paged by
+// `id < cursor` would render in hash order and skip or repeat rows.
 
 function anomPageUser(): User
 {
@@ -85,9 +78,8 @@ function anomPageTransaction(DatabaseManager $db, int $userId): int
     ]);
 }
 
-// Seeds one open alert carrying the id the evaluator would derive for it, so
-// the ids under test are the real, non-ascending ones rather than rowids the
-// fixture happened to allocate in order.
+// Carries the id the evaluator would derive, so the ids under test are the
+// real non-ascending ones rather than rowids allocated in order.
 function anomPageAlert(DatabaseManager $db, int $userId, string $detectedAt): int
 {
     $transactionId = anomPageTransaction($db, $userId);
@@ -214,13 +206,10 @@ it('breaks a detected_at tie on the id so a page boundary inside the tie is stab
     expect($seen[1])->toBeGreaterThan($seen[2]);
 });
 
-/*
- * The derived id is a 63-bit integer and every value crossing the Livewire
- * boundary goes through JSON, whose numbers are IEEE doubles. An id past 2^53
- * therefore comes back from the browser ROUNDED — the action would be applied
- * to a row id that does not exist, silently. These pin the string carriage
- * that prevents it.
- */
+// The derived id is a 63-bit integer and everything crossing the Livewire
+// boundary goes through JSON, whose numbers are IEEE doubles: past 2^53 an id
+// returns from the browser rounded, and the action silently hits a row that
+// does not exist.
 
 it('mints anomaly ids well past what a JSON number can hold', function (): void {
     $userId = (int) $this->user->id;

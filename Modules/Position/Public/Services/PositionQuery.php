@@ -26,9 +26,8 @@ final readonly class PositionQuery
     {
         $summary = $this->glance->for($user, $period);
 
-        // Mirrors the dashboard's own toggle byte-for-byte: per-currency
-        // tiles ONLY in 'original' mode, null (hidden) otherwise — this is
-        // what makes a later dashboard seam-swap a pure no-op.
+        // Mirrors the dashboard's toggle byte for byte, which is what makes a
+        // later seam-swap a pure no-op.
         $tilesByCurrency = $user->default_currency_view === 'original'
             ? $this->glance->forByCurrency($user, $period)
             : null;

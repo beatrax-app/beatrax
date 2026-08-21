@@ -6,18 +6,8 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Sync\NetworkPolicyResolver;
 use Native\Mobile\Facades\Network;
 
-/*
- * NetworkPolicyResolverTest — D-09/D-10 mobile network policy (15-05-PLAN.md
- * Task 1).
- *
- * D-09: sync on ANY network by default, including cellular.
- * D-10: "Pause sync on cellular" toggle, default OFF, persisted to
- * mobile/network-policy.json (never .env).
- *
- * The policy file is device-scoped (not per-user), at a FIXED path — clean
- * it up before/after each test so runs never interfere with each other.
- */
-
+// The policy file is device-scoped rather than per-user, at a fixed path, so runs
+// interfere with each other unless it is cleaned up around every test.
 function networkPolicyFilePath(): string
 {
     return UserDataPathService::appPath('mobile/network-policy.json');
@@ -71,26 +61,17 @@ it('setPauseOnCellular(false) reverts to the D-09 default (sync everywhere)', fu
 });
 
 it('degrades to "sync now" when the native Network facade is unavailable (class_exists-guarded)', function (): void {
-    // nativephp/mobile-network only ships under mobile-app/vendor (the
-    // on-device Composer root) — the repo-root vendor/ the host toolchain
-    // runs this test against does NOT have it installed (15-05-PLAN.md
-    // environment note). shouldSyncNow() must never fatal here.
-    //
-    // ->group('repo-root-only'): this assertion is ONLY true when this
-    // suite runs against the repo-root Composer tree. The 15-11-PLAN.md
-    // Task 2 mobile-app/-rooted CI job runs the SAME test file against
-    // mobile-app/vendor, where nativephp/mobile-network genuinely IS
-    // installed — the opposite of what this test asserts, by design. The
-    // mobile-app-rooted job excludes this group; every other test in this
-    // file is context-agnostic and still runs there.
+    // nativephp/mobile-network ships only under mobile-app/vendor, so this
+    // assertion holds only against the repo-root tree. The mobile-app-rooted CI job
+    // runs the same file where the plugin genuinely is installed and excludes this
+    // group. shouldSyncNow() must never fatal either way.
     expect(class_exists(Network::class))->toBeFalse();
 
     $resolver = new NetworkPolicyResolver;
     $resolver->setPauseOnCellular(true);
 
-    // Even with the pause gate ON, we can never positively confirm a
-    // cellular/expensive connection without the plugin — the gate only
-    // fires on a positive signal, never on ambiguity.
+    // Without the plugin a cellular connection can never be positively confirmed,
+    // and the gate fires only on a positive signal, never on ambiguity.
     expect($resolver->shouldSyncNow())->toBeTrue();
 })->group('repo-root-only');
 

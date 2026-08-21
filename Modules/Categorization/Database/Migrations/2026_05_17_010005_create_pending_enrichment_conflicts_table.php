@@ -5,23 +5,10 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Creates the pending_enrichment_conflicts table — the side-channel
- * store for receipt-vs-CSV field disagreements that surface while the
- * per-user receipt_conflict_resolution setting is still `unset`.
- *
- * One row per (user_id, transaction_id, field_name) conflict — the
- * UNIQUE constraint makes the table re-conflict-idempotent so a
- * second receipt import does not duplicate the pending row. Once the
- * user chooses a policy on the conflict toast, the row is either
- * applied to the transaction (prefer_receipt) or archived
- * (prefer_first_write) and pruned from this table.
- *
- * `stored_value` and `incoming_value` are stored as nullable text
- * because the conflicting field may be merchant_name (short string)
- * or description (long string). The (user_id, created_at) index
- * supports the TTL sweep job that prunes resolved rows.
- */
+// Holds a receipt-vs-CSV disagreement until the user picks a policy. The
+// UNIQUE constraint is the idempotency seam: re-importing the same receipt
+// cannot duplicate a pending row. The (user_id, created_at) index serves the
+// TTL sweep that prunes resolved rows.
 return new class extends ModuleMigration
 {
     public function up(): void

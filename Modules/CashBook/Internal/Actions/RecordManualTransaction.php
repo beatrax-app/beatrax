@@ -52,9 +52,8 @@ final class RecordManualTransaction
 
         $counterpartyNormalized = $this->fingerprints->normalize($counterpartyName);
 
-        // Both fingerprint indexes key on booked_at at second precision, so two
-        // identical same-second cash spends collide; bump bookedAt a second at a
-        // time until the insert lands.
+        // Both fingerprint indexes key booked_at at second precision, so two
+        // identical same-second cash spends collide.
         $now = $this->clock->now();
         for ($attempt = 0; $attempt < self::MAX_ATTEMPTS; $attempt++) {
             $canonical = new CanonicalTransaction(
@@ -122,8 +121,8 @@ final class RecordManualTransaction
         ]);
     }
 
-    // Re-selects on a unique-constraint violation so two adds racing to create
-    // the singleton Cash account / manual run never surface as a 500.
+    // Re-selects on a unique violation, so two adds racing to create the
+    // singleton Cash account never surface as a 500.
     /**
      * @param  array<string, mixed>  $match
      * @param  array<string, mixed>  $attributes

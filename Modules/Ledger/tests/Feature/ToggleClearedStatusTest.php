@@ -11,16 +11,6 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Transaction;
 use Modules\Sync\Public\Events\TransactionMutated;
 
-/*
- * Wave 0 RED stub (SC-1, GREEN in 13.3-03). `TransactionDetail` has no
- * `toggleCleared()` method yet. Per RESEARCH.md Pattern 2 (mirrors the
- * existing `saveNote()` raw-update + dispatch-after-commit shape), the
- * toggle flips cleared<->uncleared, is scoped by `user_id` (a cross-user
- * transactionId never seats the component — same 404 guard as every other
- * TransactionDetail mutator), and refuses to mutate a `reconciled` row
- * (D-08, warn-first per Claude's Discretion).
- */
-
 beforeEach(function (): void {
     $this->user = User::create(['username' => 'toggle-fixture', 'password' => 'fixture-password', 'period_start_day' => 1]);
     $this->actingAs($this->user);
@@ -36,9 +26,7 @@ beforeEach(function (): void {
 
     $this->run = $this->makeImportRun($this->user);
 
-    // Suppress SyncCaptureListener — the toggle's own capture wiring is not
-    // this stub's concern (covered separately by MergeRulesRegistryStatusTest
-    // / StatusConcurrentEditConvergenceTest).
+    // The toggle's Sync capture wiring has its own tests.
     Event::fake([TransactionMutated::class]);
 });
 

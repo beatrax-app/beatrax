@@ -48,6 +48,5 @@ it('refuses to discard an already-confirmed import run', function (): void {
     expect(fn () => $action($run->id, $this->fixtureUser))
         ->toThrow(ImportAlreadyConfirmedException::class);
 
-    // Audit row is untouched.
     expect(ImportRun::query()->find($run->id)?->status)->toBe('confirmed');
 });

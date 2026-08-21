@@ -12,13 +12,10 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
 uses(RefreshDatabase::class);
 
-/*
- * Covered tables are not all user-scoped: rule_conditions and rule_actions
- * hang off categorization_rules and have no user_id column of their own. The
- * create path seeded one regardless, so every catch-up carrying one died with
- * "table rule_conditions has no column named user_id" and the whole exchange
- * aborted — taking the rest of the peer's history with it.
- */
+// Covered tables are not all user-scoped: rule_conditions and rule_actions hang
+// off categorization_rules and have no user_id of their own. The create path
+// seeded one regardless, so a catch-up carrying one aborted the whole exchange
+// and took the rest of the peer's history with it.
 
 function unscopedSignedEntry(
     DeviceKeySigner $signer,

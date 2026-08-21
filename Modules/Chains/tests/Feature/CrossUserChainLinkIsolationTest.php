@@ -15,13 +15,6 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/*
- * HTTP-layer cross-user isolation for the /chains/review surface +
- * the top-nav "Review chains" badge fed by the View Factory composer
- * (issue #12 fix). User A must never observe user B's chain_link
- * candidates or open candidate count.
- */
-
 function cucUser(string $username): User
 {
     return User::query()->create([
@@ -134,7 +127,6 @@ beforeEach(function (): void {
     $bAsn = cucAccount($this->userB, 'cuc-b-asn', 'asn', 'NL86ASNB0000000002');
     $bRun = cucImportRun($this->userB, str_repeat('b', 64));
 
-    // 3 candidates for user A.
     for ($i = 1; $i <= 3; $i++) {
         $f = cucTx($this->userA, $aPaypal, $aRun, -1000 * $i, 'expense', 'A'.$i, '2026-05-0'.$i, 'cuc-a-'.$i.'a', $i * 2);
         $t = cucTx($this->userA, $aAsn, $aRun, 1000 * $i, 'transfer_in', 'A-fn'.$i, '2026-05-0'.$i, 'cuc-a-'.$i.'b', $i * 2 + 1);
@@ -148,16 +140,13 @@ beforeEach(function (): void {
 });
 
 it('cross-user 404 on /chains/review confirm — userA cannot confirm userB\'s chain_link', function (): void {
-    // Livewire wraps action exceptions in its own boundary; we exercise
-    // the underlying Public action directly (same code path the SFC
-    // delegates to) to assert the cross-user 404 contract. Mirrors
-    // ConfirmChainLinkTest's cross-user assertion shape.
+    // Livewire wraps action exceptions in its own boundary, so the Public
+    // action is exercised directly here.
     /** @var ConfirmChainLink $confirm */
     $confirm = $this->app->make(ConfirmChainLink::class);
     expect(fn () => ($confirm)($this->userBCandidateId, $this->userA))
         ->toThrow(NotFoundHttpException::class);
 
-    // Also verify the chain_link wasn't mutated.
     $link = ChainLink::query()->find($this->userBCandidateId);
     expect($link)->not->toBeNull();
     expect($link->state)->toBe('candidate');
@@ -175,11 +164,8 @@ it('cross-user 404 on /chains/review reject — userA cannot reject userB\'s cha
 });
 
 it('cross-user 404 via Livewire harness — confirm raises Livewire 404 response status', function (): void {
-    // Livewire's testing harness catches the NotFoundHttpException at
-    // the framework boundary and surfaces it as a 404 status on the
-    // wire response. We assert the response status path explicitly so
-    // the contract is testable through the SFC's action dispatcher
-    // too, not only through the Public action class.
+    // The Livewire harness converts the NotFoundHttpException into a 404 on
+    // the wire response, so the SFC path is asserted on status.
     Livewire::actingAs($this->userA)
         ->test(ChainReviewQueue::class)
         ->call('confirm', $this->userBCandidateId)
@@ -209,9 +195,8 @@ it('top-nav "Review chains" badge hides entirely when openCandidateCount === 0',
         ->get('/')
         ->assertOk()
         ->assertSeeText('Review chains')
-        // The badge `bg-slate-900` rounded-full pill must not render
-        // for this user. We assert by checking the rendered count is
-        // not present (3, 2, 1).
+        // The pill carries no unique marker, so absence is asserted on the
+        // rendered counts.
         ->assertDontSee('rounded-full bg-slate-900', false);
 })->todo('16-01 replaced the top-nav with the app sidebar. The Chains "Review chains" badge chrome (bg-slate-900 rounded-full) no longer ships in the new sidebar markup; a follow-up plan re-wires the composer onto core::livewire.app-sidebar and re-introduces the badge slot, at which point this assertion is updated to match the new chrome.');
 
@@ -224,17 +209,10 @@ it('top-nav "Review chains" badge for userB shows userB\'s open-candidate count 
 })->todo('16-01 replaced the top-nav with the app sidebar. The Chains "Review chains" badge slot exists on the .side-item but is not yet wired to the View Factory composer; a follow-up plan re-points registerTopNavBadgeComposer at core::livewire.app-sidebar and re-enables this assertion against the new .side-badge chrome.');
 
 it('substring-attack guard — user_id="1" vs user_id="11" in chain_links lookup uses exact match', function (): void {
-    // This guard mirrors the issue #8 lock for chain_resolution_runs but
-    // is just as critical for chain_links. The query path must use
-    // `where('user_id', $user->id)` (exact), not a `LIKE '%user_id%'`
-    // substring. To exercise the worst case: seed user_id=1 with NO
-    // candidates and user_id=11 with one; ensure user_id=1 sees zero
-    // candidates.
-    //
-    // RefreshDatabase assigns fresh sequential ids so we can't pin to 1
-    // and 11 directly. Instead we exercise the predicate by force:
-    // create a 3rd user whose db id starts with the same digit as one
-    // of our existing users; assert they see only their own candidates.
+    // The lookup must use where(user_id, id) exactly, never a LIKE substring:
+    // user_id 1 must not match 11. RefreshDatabase hands out fresh sequential
+    // ids, so rather than pinning 1 and 11 this seeds a user whose id shares a
+    // leading digit with an existing one.
     $tinyId = cucUser('cuc-tiny');
     $bigId = cucUser('cuc-big');
 
@@ -245,7 +223,6 @@ it('substring-attack guard — user_id="1" vs user_id="11" in chain_links lookup
     $bt = cucTx($bigId, $bigAsn, $bigRun, 1234, 'transfer_in', 'BigOnlyFn', '2026-05-10', 'cuc-big-1b', 201);
     cucSeedLink($this->db, $bigId, (int) $bf->id, (int) $bt->id, 'paypal_funding', 'candidate', '0.900', 'auto', ['signature_hash' => 'sig-big']);
 
-    // Tiny user has no candidates — must see none, never BigOnly.
     $this->actingAs($tinyId)
         ->get(route('chains.review'))
         ->assertOk()

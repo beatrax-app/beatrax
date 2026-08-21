@@ -17,21 +17,9 @@ use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Public\Exceptions\EnableBankingApiException;
 use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 
-/*
- * What EnableBankingHttpClient turns a failed call into.
- *
- * This is where the HTTP status becomes a typed exception, and it is the only
- * place that status is ever observed — SyncOpenBankingAccountJob and
- * OpenBankingSettingsPage both decide whether a connection is terminally
- * unconsented from what this file produces. So the mapping is asserted from a
- * real Guzzle response rather than by constructing the exception directly:
- * a test that built the exception itself would still pass if the client
- * stopped reading the status off the response.
- *
- * Helpers are prefixed `ebErr*` — Pest loads every test file's top-level
- * functions into one global namespace, so a name shared with
- * EnableBankingHttpClientSsrfTest's `ebFixture*` would fatal.
- */
+// Asserted from a real Guzzle response, not by constructing the exception: the
+// status is the only thing telling a lapsed consent from a bank having a bad
+// day, and a hand-built exception would pass even if the client stopped reading it.
 
 function ebErrSecrets(string $privateKeyPem): OpenBankingSecretsRepository
 {
@@ -94,9 +82,6 @@ beforeEach(function (): void {
     $this->signer = new EnableBankingJwtSigner($clock);
 });
 
-// The status has to survive the trip from the response onto the exception,
-// because that is the only thing distinguishing a consent that must be
-// re-granted from a bank having a bad afternoon.
 it('carries the response status onto the exception', function (int $status, bool $terminal): void {
     $mock = new MockHandler([new Response($status, [], 'upstream said no')]);
     $client = ebErrClient(ebErrSecrets($this->privateKeyPem), $this->signer, $mock);
@@ -116,9 +101,8 @@ it('carries the response status onto the exception', function (int $status, bool
     'server error' => [500, false],
 ]);
 
-// A connection that never produced a response has no status to read. It must
-// still be retryable — reporting it as terminal would strand a connection
-// that only needed the network back.
+// A connection that never produced a response has no status to read, and
+// calling that terminal would strand a connection that needed the network back.
 it('reports a transport failure with no status at all', function (): void {
     $mock = new MockHandler([
         new ConnectException('Connection refused', new Request('GET', 'https://api.enablebanking.com/aspsps')),
@@ -143,9 +127,8 @@ it('refuses a 2xx whose body is not JSON', function (): void {
         ->toThrow(EnableBankingApiException::class, 'did not decode as JSON');
 });
 
-// A bare scalar is valid JSON but carries no fields to read. Treated as an
-// empty result rather than an error: the call succeeded, the body simply had
-// nothing in it, and every caller already handles an empty list.
+// A bare scalar is valid JSON with no fields: the call succeeded and the body
+// was empty, which every caller already handles.
 it('reads a well-formed non-object body as an empty result', function (string $body): void {
     $mock = new MockHandler([new Response(200, ['Content-Type' => 'application/json'], $body)]);
     $client = ebErrClient(ebErrSecrets($this->privateKeyPem), $this->signer, $mock);
@@ -157,9 +140,8 @@ it('reads a well-formed non-object body as an empty result', function (string $b
     'null' => ['null'],
 ]);
 
-// postJson() and getJson() each carry their own try/catch, so the POST side
-// has to be driven separately — the two blocks are the kind that drift when
-// only one of them is exercised.
+// postJson() and getJson() carry their own try/catch, so the two drift unless
+// both are driven.
 it('maps a POST failure the same way it maps a GET failure', function (): void {
     $mock = new MockHandler([new Response(401, [], 'session expired')]);
     $client = ebErrClient(ebErrSecrets($this->privateKeyPem), $this->signer, $mock);

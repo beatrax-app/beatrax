@@ -14,6 +14,9 @@ use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Throwable;
 
+/**
+ * @link ../../../../.docs/features/sync/pairing-handshake.md
+ */
 final class PairingRelayCourier
 {
     // Mirrors GdkEpochControlHandler::MSG_GDK_EPOCH_WRAP — that class belongs

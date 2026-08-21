@@ -15,10 +15,9 @@ use Modules\DevMode\Internal\Services\DevModeFlag;
 
 final class TripleGateModal extends Component
 {
-    // #[Locked] on both — the typed-name gate is a confirmation that THIS
-    // command runs with THESE args. Only the open() listener may set them;
-    // a client that could rewrite them between open() and confirm() would
-    // keep the ceremony while swapping what it authorises.
+    // Locked on both: the typed-name gate confirms THIS command with THESE
+    // args, so a client that could rewrite them between open() and confirm()
+    // would keep the ceremony while swapping what it authorises.
     #[Locked]
     public string $command = '';
 
@@ -50,8 +49,6 @@ final class TripleGateModal extends Component
     ): void {
         $this->gateError = '';
 
-        // Three server-side gates: Dev Mode env flag, session Advanced
-        // toggle, then the typed-name comparison below.
         if (! $devMode->isOn()) {
             $this->gateError = 'dev_mode_off';
             throw ValidationException::withMessages(['_gate' => 'dev_mode_off']);
@@ -62,16 +59,13 @@ final class TripleGateModal extends Component
             throw ValidationException::withMessages(['_gate' => 'advanced_off']);
         }
 
-        // Case-sensitive, timing-safe comparison against the lowercase
-        // token "beatrax".
         if (! hash_equals('beatrax', $this->typed)) {
             $this->gateError = 'app_name_mismatch';
             throw ValidationException::withMessages(['typed' => 'app_name_mismatch']);
         }
 
-        // Downstream listeners (DestructiveSpawnController,
-        // QueueInspectorPage) re-validate all three gates a second
-        // time before acting — defense-in-depth against a spoofed event.
+        // Every listener re-validates all three gates itself, so a spoofed
+        // confirm event gains nothing by reaching one.
         $this->dispatch(
             'triple-gate:confirmed',
             command: $this->command,

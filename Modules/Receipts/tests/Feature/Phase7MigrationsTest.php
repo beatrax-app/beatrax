@@ -100,11 +100,9 @@ it('creates the categorization_rules table with the redesigned parent-rule colum
 
     expect($schema->hasTable('categorization_rules'))->toBeTrue();
 
-    // The 2026_07_06 redesign replaced the flat single-condition shape with a
-    // multi-condition parent: field/match/value/category_id moved to the
-    // rule_conditions/rule_actions child tables, and priority/combinator were
-    // added. (New-schema behaviour is covered in depth by
-    // Modules\Categorization\tests\Feature\RuleSchemaMigrationTest.)
+    // The redesign moved field, match, value and category_id out to the
+    // rule_conditions and rule_actions child tables and added priority and
+    // combinator, so the flat columns have to be gone rather than merely unused.
     expect($schema->hasColumn('categorization_rules', 'priority'))->toBeTrue();
     expect($schema->hasColumn('categorization_rules', 'combinator'))->toBeTrue();
     expect($schema->hasColumn('categorization_rules', 'field'))->toBeFalse();
@@ -123,7 +121,6 @@ it('creates the categorization_rules table with the redesigned parent-rule colum
         'updated_at' => '2026-05-17 00:00:00',
     ];
 
-    // A well-formed parent row inserts cleanly under the new schema.
     $db->connection()->table('categorization_rules')->insert($row);
     expect($db->connection()->table('categorization_rules')->where('user_id', 1)->count())->toBe(1);
 });
@@ -133,8 +130,6 @@ it('rejects an invalid categorization_rules.combinator via the BEFORE INSERT tri
     $db = $this->app->make(DatabaseManager::class);
     seedFileImportUser($db);
 
-    // The old field/match enum triggers were retired by the 2026_07_06 redesign
-    // and replaced with a combinator enum-guard trigger ('all' | 'any').
     $insert = static function () use ($db): void {
         $db->connection()->table('categorization_rules')->insert([
             'user_id' => 1,

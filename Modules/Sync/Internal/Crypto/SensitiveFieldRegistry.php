@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Crypto;
 
+/**
+ * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md
+ */
 final class SensitiveFieldRegistry
 {
-    // Single source-of-truth enumerating the (table, field) pairs the two
-    // encryption hooks treat as sensitive content requiring GDK-encryption at
-    // rest. New entries land here after an explicit scope decision. Excluded
-    // and knowingly-accepted-plaintext columns are documented at @link.
+    // The only list either encryption hook consults. A new entry lands here
+    // after an explicit scope decision; the columns deliberately left out, and
+    // the ones knowingly accepted as plaintext, are argued on the linked page.
     /**
      * @return list<string>
      */

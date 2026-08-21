@@ -14,7 +14,6 @@ uses(RefreshDatabase::class);
 /**
  * @link ../../../../.docs/features/sync/cross-device-pairing-confirm.md
  */
-
 function crossDeviceUser(string $username): User
 {
     return User::query()->create([

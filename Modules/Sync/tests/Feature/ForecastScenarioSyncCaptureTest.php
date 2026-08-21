@@ -22,15 +22,9 @@ use Modules\Sync\Internal\OpLog\OpType;
 
 uses(RefreshDatabase::class);
 
-/*
- * `forecast_scenarios` is only the named box. What a what-if actually DOES
- * lives in `forecast_scenario_mutations`, which was not covered at all — so
- * even once the container synced, the peer received "Cancel Netflix" as an
- * empty scenario that projected exactly the baseline.
- *
- * Both tables are captured here, and the replay proves the pair arrives
- * together: the scenario first, then the mutation that references it.
- */
+// forecast_scenarios is only the named box; what a what-if actually does lives
+// in forecast_scenario_mutations, which was uncovered. Even once the container
+// synced, the peer received the scenario as empty and projected the baseline.
 
 function scenarioSyncUser(): User
 {

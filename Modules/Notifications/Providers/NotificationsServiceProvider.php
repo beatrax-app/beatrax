@@ -78,8 +78,6 @@ final class NotificationsServiceProvider extends ServiceProvider
         $this->app->singleton(DismissNotification::class);
         $this->app->singleton(UndoDismissNotification::class);
 
-        // The /notifications inbox's render-time deep-link existence
-        // check.
         $this->app->singleton(DeepLinkResolver::class);
     }
 
@@ -95,10 +93,8 @@ final class NotificationsServiceProvider extends ServiceProvider
         $this->registerTriggerListeners($events);
     }
 
-    // Injects the unread count into the sidebar nav as
-    // navCounts['notifications'] via the View Factory contract. A
-    // boot-scoped per-user memo array collapses repeated renders to one
-    // COUNT query; the unauthenticated branch zeroes the count first.
+    // A boot-scoped per-user memo collapses repeated renders down to one
+    // COUNT query.
     private function registerNavBadgeComposer(): void
     {
         $app = $this->app;
@@ -132,9 +128,8 @@ final class NotificationsServiceProvider extends ServiceProvider
         });
     }
 
-    // Not every listener class or trigger event class necessarily
-    // exists yet - an unguarded reference would fatal the boot, so every
-    // pair is checked with class_exists() before Dispatcher::listen() runs.
+    // A listener or trigger event class may be absent, and an unguarded
+    // reference would fatal the boot.
     private function registerTriggerListeners(Dispatcher $events): void
     {
         foreach (self::triggerBindings() as [$event, $listener]) {

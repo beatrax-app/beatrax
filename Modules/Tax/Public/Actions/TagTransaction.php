@@ -154,8 +154,7 @@ final class TagTransaction
         $this->searchIndex?->upsertForTransaction($transactionId, $userId);
     }
 
-    // The row's identity is composite, so the pk is read back after the
-    // write rather than derived from the arguments.
+    // The row's identity is composite, so the pk is read back, not derived.
     private function captureTag(
         int $userId,
         int $transactionId,

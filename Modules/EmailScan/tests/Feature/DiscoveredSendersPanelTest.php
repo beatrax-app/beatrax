@@ -10,19 +10,6 @@ use Modules\EmailScan\Internal\Http\Livewire\InboxesPage;
 use Modules\EmailScan\Public\Services\DiscoveredSenderQuery;
 use Modules\EmailScan\Public\Services\InboxesBadgeCount;
 
-/*
- * /inboxes Discovered senders panel + Promote / Dismiss action invariants.
- *
- * Plan 09:
- *  - Panel renders ONLY candidate rows with occurrence_count >= 2 AND
- *    last_seen_at within last 90 days (DiscoveredSenderQuery threshold).
- *  - Panel rows sort by occurrence_count DESC then last_seen_at DESC.
- *  - promoteSender inserts a user-sourced known_senders row + transitions
- *    discovered_senders.state to 'added'.
- *  - dismissSender transitions state to 'dismissed' (no known_senders write).
- *  - Both actions are cross-user 404 + idempotent on non-candidate state.
- */
-
 function dspUser(string $username): User
 {
     return User::query()->create([
@@ -92,16 +79,12 @@ it('renders only rows with occurrence_count >= 2 within 90 days, sorted by count
 
     $recent = CarbonImmutable::now()->subDays(3)->toDateTimeString();
 
-    // Below threshold (count=1) — should NOT render.
     $singleshotId = dspSeedDiscovered($user, $inboxId, 'rare@example.com', 1, $recent);
-    // Threshold (count=2) — should render second in the list.
     $twoId = dspSeedDiscovered($user, $inboxId, 'orders@bol.com', 2, $recent, name: 'Bol.com');
-    // Highest count (count=5) — should render first.
     $fiveId = dspSeedDiscovered($user, $inboxId, 'noreply@coolblue.nl', 5, $recent, name: 'Coolblue');
 
     $test = Livewire::test(InboxesPage::class);
 
-    // The two above-threshold rows render.
     $test->assertSee('orders@bol.com', false);
     $test->assertSee('noreply@coolblue.nl', false);
     $test->assertSee('Seen 5 times', false);
@@ -109,11 +92,9 @@ it('renders only rows with occurrence_count >= 2 within 90 days, sorted by count
     $test->assertSee('Discovered senders', false);
     $test->assertSee("Senders that look like they send receipts but aren't on your known-receipts list yet", false);
 
-    // The single-shot row does NOT render.
     $test->assertDontSee('rare@example.com', false);
 
-    // Order verification: the Coolblue row appears before the Bol row
-    // in the rendered HTML (count=5 > count=2 → DESC sort).
+    // count=5 sorts ahead of count=2, so Coolblue precedes Bol in the HTML.
     $html = (string) $test->html();
     $coolbluePos = strpos($html, 'noreply@coolblue.nl');
     $bolPos = strpos($html, 'orders@bol.com');
@@ -136,7 +117,6 @@ it('excludes rows older than 90 days even when occurrence_count >= 2', function 
 
     $test = Livewire::test(InboxesPage::class);
     $test->assertDontSee('stale-recurring@example.com', false);
-    // The panel section itself does not render when count = 0.
     $test->assertDontSee('Discovered senders', false);
 });
 
@@ -167,7 +147,6 @@ it('promoteSender inserts a user-sourced known_senders row and flips state to ad
     expect($known->source)->toBe('user');
     expect($known->label)->toBe('Coolblue');
 
-    // Refresh — the promoted row no longer appears in the panel feed.
     $refreshed = Livewire::test(InboxesPage::class);
     $refreshed->assertDontSee('orders@coolblue.nl', false);
 });
@@ -216,7 +195,6 @@ it('dismissSender transitions state to dismissed and writes no known_senders row
         ->first();
     expect($known)->toBeNull();
 
-    // Refresh — dismissed row no longer appears.
     Livewire::test(InboxesPage::class)->assertDontSee('spam@example.com', false);
 });
 
@@ -233,7 +211,6 @@ it('promoteSender on a foreign user row raises cross-user 404', function (): voi
         ->call('promoteSender', $bobsRowId)
         ->assertStatus(404);
 
-    // Bob's row was untouched.
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $bobsRow = $db->connection()->table('discovered_senders')->where('id', $bobsRowId)->first();
@@ -274,14 +251,12 @@ it('re-promoting an already-promoted row is a silent no-op (idempotent)', functi
     $knownCountBefore = $db->connection()->table('known_senders')
         ->where('user_id', $user->id)->count();
 
-    // Should NOT throw — re-promote on state='added' is a no-op.
     Livewire::test(InboxesPage::class)->call('promoteSender', $id);
 
     $knownCountAfter = $db->connection()->table('known_senders')
         ->where('user_id', $user->id)->count();
     expect($knownCountAfter)->toBe($knownCountBefore);
 
-    // State stays 'added'.
     $row = $db->connection()->table('discovered_senders')->where('id', $id)->first();
     expect($row)->not->toBeNull();
     expect($row->state)->toBe('added');
@@ -305,11 +280,8 @@ it('re-dismissing an already-dismissed row is a silent no-op', function (): void
 });
 
 it('candidatesForUser drops rows whose inbox belongs to a different user (defence-in-depth JOIN guard)', function (): void {
-    // Two users, two inboxes. Seed a discovered_senders row whose
-    // denormalised user_id is User A but whose inbox_id points at
-    // User B's inbox. The defensive JOIN to inboxes (on inbox_id AND
-    // user_id) must drop the row from User A's panel rather than
-    // surface it.
+    // The seeded row's denormalised user_id says Alice while its inbox_id
+    // points at Bob's inbox. The JOIN on both columns is what drops it.
     $alice = dspUser('alice-join@example.com');
     $bob = dspUser('bob-join@example.com');
     $bobInboxId = dspSeedInbox($bob);
@@ -339,22 +311,17 @@ it('candidatesForUser drops rows whose inbox belongs to a different user (defenc
 });
 
 it('top-nav badge counts only above-threshold candidates', function (): void {
-    // Reaches into InboxesBadgeCount directly to confirm the Plan 09
-    // threshold tightening. The badge must mirror the panel — a count
-    // > 0 means at least one row appears on the panel.
+    // The badge has to mirror the panel: a count above zero means at least
+    // one row is actually on it.
     $user = dspUser('badge-threshold@example.com');
     $inboxId = dspSeedInbox($user);
 
     $recent = CarbonImmutable::now()->subDays(1)->toDateTimeString();
     $tooOld = CarbonImmutable::now()->subDays(95)->toDateTimeString();
 
-    // 1 above-threshold candidate.
     dspSeedDiscovered($user, $inboxId, 'recent-recurring@example.com', 3, $recent);
-    // 1 single-shot below threshold — must NOT count.
     dspSeedDiscovered($user, $inboxId, 'single-shot@example.com', 1, $recent);
-    // 1 old (outside 90d window) — must NOT count even with count >= 2.
     dspSeedDiscovered($user, $inboxId, 'old-recurring@example.com', 5, $tooOld);
-    // 1 dismissed — must NOT count.
     dspSeedDiscovered($user, $inboxId, 'dismissed@example.com', 9, $recent, state: 'dismissed');
 
     $badgeCount = app(InboxesBadgeCount::class)

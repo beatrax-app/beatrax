@@ -32,18 +32,16 @@ final class LoopbackTlsCertificate
         $this->prepareDirectory();
         [$certPem, $keyPem] = $this->generate();
 
-        // Suppressed so the `=== false` checks decide. Unsuppressed, a failed
-        // write raises E_WARNING, which Laravel's handler turns into an
-        // ErrorException before either comparison runs — the guard on TLS key
-        // material never fired.
+        // Suppressed so the `=== false` checks decide: unsuppressed, Laravel's
+        // handler turns the E_WARNING into an ErrorException before either
+        // comparison runs, and this guard on key material never fires.
         if (@file_put_contents($certPath, $certPem) === false || @file_put_contents($keyPath, $keyPem) === false) {
             throw LoopbackTlsException::couldNotWriteCertificate($this->directory);
         }
 
-        // Both halves are owner-only. The certificate is public material and
-        // 0644 would be harmless inside a 0700 directory, but nothing outside
-        // this process ever reads it: the serve command hands the path straight
-        // to its own stream context, and the user verifies by fingerprint.
+        // Both halves owner-only. The certificate is public material, but only
+        // this process reads it: the serve command passes the path to its own
+        // stream context and the user verifies by fingerprint.
         @chmod($keyPath, 0600);
         @chmod($certPath, 0600);
 
@@ -132,9 +130,8 @@ final class LoopbackTlsCertificate
         $extensions = $parsed['extensions'] ?? null;
         $san = is_array($extensions) ? ($extensions['subjectAltName'] ?? '') : '';
 
-        // Treat a cert inside its final day as expired so a long-lived UAT
-        // session never trips over the boundary mid-flow, and require the
-        // 127.0.0.1 SAN the loopback listener is presented under.
+        // A cert inside its final day counts as expired, so a long UAT session
+        // cannot cross the boundary mid-flow. The 127.0.0.1 SAN is required.
         return is_int($notAfter) && $notAfter > time() + Duration::Day->seconds()
             && is_string($san) && str_contains($san, '127.0.0.1');
     }
@@ -155,9 +152,8 @@ final class LoopbackTlsCertificate
 
     private function writeOpensslConfig(): string
     {
-        // Beside the certificate this configures rather than in /tmp. The
-        // content is not secret, but one exempt call site is how the rule
-        // erodes, so there are none.
+        // Beside the certificate rather than /tmp: the content is not secret,
+        // but one exempt call site is how the no-/tmp rule erodes.
         $dir = rtrim(UserDataPathService::appPath('tmp-tls'), '/');
         @mkdir($dir, 0700, true);
         @chmod($dir, 0700);

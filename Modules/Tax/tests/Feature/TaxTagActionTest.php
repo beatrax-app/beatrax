@@ -11,21 +11,6 @@ use Modules\Tax\Public\Actions\UntagTransaction;
 use Modules\Tax\Public\Events\TransactionTagged;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/*
- * Feature tests for TAX-01: tag/untag actions with ownership enforcement.
- *
- * Tests the behaviour of TagTransaction and UntagTransaction:
- *   - Idempotent tag/re-tag (unique constraint — updateOrInsert)
- *   - Cross-user transaction → NotFoundHttpException (T-07-01)
- *   - Cross-user category → NotFoundHttpException (T-07-02)
- *   - tax_year_override range validation → InvalidArgumentException (T-07-03)
- *   - TransactionTagged event dispatched on successful tag
- *   - UntagTransaction: silent no-op for missing/cross-user tag
- */
-
-/**
- * Inserts a minimal user row and returns its id.
- */
 function taxTestUser(DatabaseManager $db, string $username): int
 {
     return $db->connection()->table('users')->insertGetId([
@@ -37,10 +22,6 @@ function taxTestUser(DatabaseManager $db, string $username): int
     ]);
 }
 
-/**
- * Inserts an account + import run + transaction for the given user and
- * returns the transaction id.
- */
 function taxTestTransaction(DatabaseManager $db, int $userId): int
 {
     $suffix = bin2hex(random_bytes(4));
@@ -92,9 +73,6 @@ function taxTestTransaction(DatabaseManager $db, int $userId): int
     ]);
 }
 
-/**
- * Inserts a deduction category for the user and returns its id.
- */
 function taxTestCategory(DatabaseManager $db, int $userId, string $name = 'Test Category'): int
 {
     return $db->connection()->table('tax_deduction_categories')->insertGetId([
@@ -107,8 +85,6 @@ function taxTestCategory(DatabaseManager $db, int $userId, string $name = 'Test 
         'updated_at' => now(),
     ]);
 }
-
-// -----------------------------------------------------------------------
 
 it('tags a transaction for the owner and inserts one row', function (): void {
     /** @var DatabaseManager $db */
@@ -175,7 +151,6 @@ it('re-tagging never rewrites created_at — the "first tagged" audit signal sur
         ->where('transaction_id', $txId)
         ->update(['created_at' => $original]);
 
-    // Edit the tag (picker save path).
     app(TagTransaction::class)->execute($userId, $txId, $catId, 'edited', null);
 
     $tag = $db->connection()->table('tax_transaction_tags')
@@ -196,11 +171,9 @@ it('a bare re-tag (all-null payload) preserves the existing category, note, and 
     $catId = taxTestCategory($db, $userId, 'Curated Category');
     $overrideYear = now()->year - 1;
 
-    // Curated tag: category + note + year override.
     app(TagTransaction::class)->execute($userId, $txId, $catId, 'Curated note', $overrideYear);
 
-    // One-tap re-tag (e.g. a stale ghost Tag button) sends an all-null payload —
-    // it must NOT wipe the curated values.
+    // A one-tap re-tag from a stale ghost button sends an all-null payload.
     app(TagTransaction::class)->execute($userId, $txId, null, null, null);
 
     $tag = $db->connection()
@@ -283,7 +256,7 @@ it('the ±10-year override window follows the injected Clock, not the wall clock
     $userId = taxTestUser($db, 'year-clock-fake');
     $txId = taxTestTransaction($db, $userId);
 
-    // Freeze the Clock at 2030 — valid window becomes 2020..2040.
+    // Frozen at 2030, so the valid window is 2020..2040.
     $clock = Mockery::mock(Clock::class);
     $clock->allows('now')->andReturn(CarbonImmutable::create(2030, 6, 15));
     app()->instance(Clock::class, $clock);
@@ -291,7 +264,7 @@ it('the ±10-year override window follows the injected Clock, not the wall clock
     /** @var TagTransaction $action */
     $action = app(TagTransaction::class);
 
-    // 2039 would be invalid against the real 2026 wall clock but is valid at 2030.
+    // Invalid against the real wall clock, valid against the frozen one.
     $action->execute($userId, $txId, null, null, 2039);
 
     $stored = $db->connection()->table('tax_transaction_tags')
@@ -300,7 +273,6 @@ it('the ±10-year override window follows the injected Clock, not the wall clock
         ->value('tax_year_override');
     expect((int) $stored)->toBe(2039);
 
-    // 2019 is outside 2030−10.
     expect(fn () => $action->execute($userId, $txId, null, null, 2019))
         ->toThrow(InvalidArgumentException::class);
 });
@@ -312,7 +284,6 @@ it('accepts null for tax_year_override', function (): void {
     $userId = taxTestUser($db, 'year-null');
     $txId = taxTestTransaction($db, $userId);
 
-    // Should not throw
     app(TagTransaction::class)->execute($userId, $txId, null, null, null);
 
     $tag = $db->connection()
@@ -371,10 +342,9 @@ it('untagging a non-existent tag is a silent no-op', function (): void {
     $userId = taxTestUser($db, 'untag-noop');
     $txId = taxTestTransaction($db, $userId);
 
-    // No tag exists — should not throw
     app(UntagTransaction::class)->execute($userId, $txId);
 
-    expect(true)->toBeTrue(); // reached here = no exception
+    expect(true)->toBeTrue();
 });
 
 it('untagging a cross-user tag is a silent no-op', function (): void {
@@ -386,13 +356,10 @@ it('untagging a cross-user tag is a silent no-op', function (): void {
     $txId = taxTestTransaction($db, $owner);
     $catId = taxTestCategory($db, $owner, 'XUser Cat');
 
-    // Tag as owner
     app(TagTransaction::class)->execute($owner, $txId, $catId, null, null);
 
-    // Untag as partner — should be silent no-op
     app(UntagTransaction::class)->execute($partner, $txId);
 
-    // Owner's tag still exists
     $count = $db->connection()
         ->table('tax_transaction_tags')
         ->where('user_id', $owner)

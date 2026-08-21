@@ -118,12 +118,10 @@ it('unset policy + receipt conflict: holds in pending_enrichment_conflicts + dis
 
     expect($count)->toBe(1);
 
-    // The source_ref still enriches; the per-field write is SKIPPED.
     $row = DB::table('transactions')->where('id', $tx->id)->first();
     expect($row->source_ref)->toBe('RECEIPT-77');
-    expect($row->counterparty_name)->toBe('NLPAYPAL ALBERT HEIJN'); // unchanged
+    expect($row->counterparty_name)->toBe('NLPAYPAL ALBERT HEIJN');
 
-    // Pending conflict landed.
     $pending = DB::table('pending_enrichment_conflicts')
         ->where('user_id', $this->fixtureUser->id)
         ->where('transaction_id', $tx->id)
@@ -132,7 +130,6 @@ it('unset policy + receipt conflict: holds in pending_enrichment_conflicts + dis
     expect($pending)->not->toBeNull();
     expect((string) $pending->incoming_source_format)->toBe('paypal-receipt');
 
-    // Event fired.
     Event::assertDispatched(
         ReceiptConflictDetected::class,
         fn (ReceiptConflictDetected $e): bool => $e->transactionId === $tx->id
@@ -167,7 +164,7 @@ it('prefer_receipt policy: applies incoming values silently; no event; no pendin
 
     $row = DB::table('transactions')->where('id', $tx->id)->first();
     expect($row->source_ref)->toBe('RECEIPT-77');
-    expect($row->counterparty_name)->toBe('Albert Heijn'); // overwritten
+    expect($row->counterparty_name)->toBe('Albert Heijn');
 
     Event::assertNotDispatched(ReceiptConflictDetected::class);
     expect(DB::table('pending_enrichment_conflicts')->count())->toBe(0);
@@ -197,7 +194,7 @@ it('prefer_first_write policy: keeps stored values; no event; no pending row; so
 
     $row = DB::table('transactions')->where('id', $tx->id)->first();
     expect($row->source_ref)->toBe('RECEIPT-77');
-    expect($row->counterparty_name)->toBe('NLPAYPAL ALBERT HEIJN'); // kept
+    expect($row->counterparty_name)->toBe('NLPAYPAL ALBERT HEIJN');
 
     Event::assertNotDispatched(ReceiptConflictDetected::class);
     expect(DB::table('pending_enrichment_conflicts')->count())->toBe(0);
@@ -247,7 +244,6 @@ it('cross-user T-07-09: pending_enrichment_conflicts for another user is NEVER t
         ),
     ], $this->fixtureUser);
 
-    // The foreign user's pending row is still there, untouched.
     $foreignStill = DB::table('pending_enrichment_conflicts')
         ->where('user_id', $other->id)
         ->where('transaction_id', $foreignTx->id)
@@ -255,7 +251,6 @@ it('cross-user T-07-09: pending_enrichment_conflicts for another user is NEVER t
         ->first();
     expect($foreignStill)->not->toBeNull();
     expect(json_decode((string) $foreignStill->stored_value))->toBe('foreign stored');
-    // The current user has their own pending row.
     $own = DB::table('pending_enrichment_conflicts')
         ->where('user_id', $this->fixtureUser->id)
         ->where('transaction_id', $tx->id)
@@ -287,7 +282,7 @@ it('non-receipt sourceFormat with unset policy + conflict: keeps stored value si
 
     $row = DB::table('transactions')->where('id', $tx->id)->first();
     expect($row->source_ref)->toBe('STRONGER-REF');
-    expect($row->counterparty_name)->toBe('NLPAYPAL ALBERT HEIJN'); // kept
+    expect($row->counterparty_name)->toBe('NLPAYPAL ALBERT HEIJN');
 
     Event::assertNotDispatched(ReceiptConflictDetected::class);
     expect(DB::table('pending_enrichment_conflicts')->count())->toBe(0);
@@ -315,7 +310,7 @@ it('W6 no-instance-cache: two consecutive __invoke calls for different users hon
     $txA = seedConflictTransaction($userA, $this->fixtureAccount, 'paypal-csv', 'CSV-A');
     $txB = seedConflictTransaction($userB, $userBAccount, 'paypal-csv', 'CSV-B');
 
-    // Single action instance (singleton-bound). Two consecutive calls.
+    // One singleton-bound action instance, two consecutive calls.
     (resolveApplier())([
         new PendingEnrichment(
             existingTransactionId: $txA->id,
@@ -340,11 +335,9 @@ it('W6 no-instance-cache: two consecutive __invoke calls for different users hon
         ),
     ], $userB);
 
-    // User A (unset policy): per-field write SKIPPED — original stored value kept.
     $rowA = DB::table('transactions')->where('id', $txA->id)->first();
     expect($rowA->counterparty_name)->toBe('NLPAYPAL ALBERT HEIJN');
 
-    // User B (prefer_receipt policy): per-field write APPLIED — incoming "For B" landed.
     $rowB = DB::table('transactions')->where('id', $txB->id)->first();
     expect($rowB->counterparty_name)->toBe('For B');
 });
@@ -352,10 +345,8 @@ it('W6 no-instance-cache: two consecutive __invoke calls for different users hon
 it('no instance-level cache property is declared on ApplyEnrichments (singleton cross-user safety check)', function (): void {
     $reflection = new ReflectionClass(ApplyEnrichments::class);
     foreach ($reflection->getProperties() as $property) {
-        // The class is a final readonly action whose properties are all constructor-injected
-        // collaborators (DatabaseManager, Clock, SourceRefRanker, LoggerInterface, Dispatcher).
-        // A `private ?string $userPolicy` / `private ?string $cached` instance property would
-        // leak across users on the same queue worker process.
+        // A `private ?string $userPolicy` cache would leak across users on
+        // the same queue worker process.
         $name = $property->getName();
         expect($name)->not->toBe('userPolicy');
         expect($name)->not->toBe('cached');

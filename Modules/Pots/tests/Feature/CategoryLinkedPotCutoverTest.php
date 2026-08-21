@@ -12,15 +12,8 @@ use Modules\Pots\Models\Pot;
 
 uses(RefreshDatabase::class);
 
-/*
- * Wave 0 RED stub for Req 10 (13.2-VALIDATION.md): the D-13 hard cutover.
- * EnvelopeActivationService (Plan 06) and users.envelope_activated_at
- * (Plan 02) do not exist yet -- expected to fail on the missing class/column,
- * never a parse error.
- *
- * NO balance migration: category-linked pots are archived, NOT converted;
- * genesis carried_in is always 0 for every envelope (no seed row anywhere).
- */
+// A hard cutover with no balance migration: category-linked pots are archived,
+// never converted, so genesis carried_in is 0 for every envelope.
 
 beforeEach(function (): void {
     $this->user = User::create([
@@ -51,8 +44,7 @@ it('archives every active category-linked pot via the normal release-to-unalloca
         'status' => 'active',
     ]);
 
-    // Fund the pot so it holds real balance -- this money must NOT be seeded
-    // into any envelope after cutover.
+    // Real balance in the pot: this money must not be seeded into any envelope.
     DB::table('pot_movements')->insert([
         'user_id' => $this->user->id,
         'pot_id' => $pot->id,
@@ -139,10 +131,9 @@ it('never archives pots via a single unscoped bulk UPDATE (per-user ownership ch
 
     app(EnvelopeActivationService::class)->activate();
 
-    // Both users' pots are archived (each via their own per-user ownership
-    // check) -- the assertion that matters is that the activation loop
-    // never touches pots via an unscoped bulk UPDATE, i.e. every archived
-    // row got there through PotWriter::archive()'s per-user path.
+    // Both users' pots end archived, but each through PotWriter::archive()'s
+    // per-user path — what matters is that the activation loop never reaches
+    // pots with an unscoped bulk UPDATE.
     $this->assertDatabaseHas('pots', ['id' => $malloryPot->id, 'status' => 'archived']);
     expect(DB::table('users')->where('id', $mallory->id)->value('envelope_activated_at'))->not->toBeNull();
 });

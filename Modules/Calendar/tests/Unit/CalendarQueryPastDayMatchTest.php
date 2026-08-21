@@ -10,21 +10,6 @@ use Modules\Calendar\Internal\Services\OccurrenceMatcher;
 use Modules\Core\Models\User;
 use Modules\Recurring\Models\RecurringSeries;
 
-/*
- * CalendarQuery — past-day paid/missed reconciliation (CAL-01, D-07, D-08).
- *
- * Tests the paid/missed logic in CalendarQuery::forMonth for past days:
- *
- *   1. An occurrence within ±MATCH_WINDOW_DAYS (7) → isPaid=true, isMissed=false.
- *   2. An expected past date with NO occurrence → isPaid=false, isMissed=true.
- *   3. An occurrence 10 days off (outside the 7-day window) → still isMissed.
- *   4. Future days are never marked isPaid or isMissed.
- *   5. The MATCH_WINDOW_DAYS constant equals 7.
- *
- * D-08: Only recurring-series entries are placed; one-off transactions
- * are never listed as entries (they still affect balance via the forecast).
- */
-
 function cqpdUser(string $suffix): User
 {
     return User::query()->create([
@@ -56,8 +41,8 @@ function cqpdOccurrence(DatabaseManager $db, int $userId, int $seriesId, string 
     static $cqpdOccCounter = 0;
     $cqpdOccCounter++;
 
-    // Always create a fresh account (RefreshDatabase rolls back between tests,
-    // so static account IDs from a prior test would point to non-existent rows)
+    // A fresh account and run every call: RefreshDatabase rolls back between
+    // tests, so a cached id from a prior test would point at a deleted row.
     $hex = bin2hex(random_bytes(4));
     $accountId = $db->connection()->table('accounts')->insertGetId([
         'user_id' => $userId,
@@ -72,7 +57,6 @@ function cqpdOccurrence(DatabaseManager $db, int $userId, int $seriesId, string 
         'updated_at' => $observedAt.' 00:00:00',
     ]);
 
-    // Create an import run (required for transaction FK)
     $runId = $db->connection()->table('import_runs')->insertGetId([
         'user_id' => $userId,
         'source_format' => 'asn-csv',
@@ -84,7 +68,6 @@ function cqpdOccurrence(DatabaseManager $db, int $userId, int $seriesId, string 
         'updated_at' => $observedAt.' 00:00:00',
     ]);
 
-    // Create a synthetic transaction to satisfy the FK
     $txId = $db->connection()->table('transactions')->insertGetId([
         'user_id' => $userId,
         'account_id' => $accountId,
@@ -136,7 +119,6 @@ it('marks a past-day entry isPaid when an occurrence is within ±7 days', functi
     $db = app(DatabaseManager::class);
     $user = cqpdUser('paid-match');
 
-    // Series expected on June 5 (past); occurrence observed exactly on June 5
     $series = cqpdSeries($user, 'Paid-OnTime', CarbonImmutable::parse('2026-06-05'));
     cqpdOccurrence($db, $user->id, $series->id, '2026-06-05');
 
@@ -160,7 +142,6 @@ it('marks a past-day entry isPaid when occurrence is within the window (not exac
     $db = app(DatabaseManager::class);
     $user = cqpdUser('paid-near');
 
-    // Series expected on June 5; occurrence observed on June 3 (2 days early — within ±7)
     $series = cqpdSeries($user, 'Paid-Early', CarbonImmutable::parse('2026-06-05'));
     cqpdOccurrence($db, $user->id, $series->id, '2026-06-03');
 
@@ -183,7 +164,6 @@ it('marks a past-day entry isPaid when occurrence is within the window (not exac
 it('marks a past-day entry isMissed when no occurrence exists for an expected date', function (): void {
     $user = cqpdUser('missed');
 
-    // Series expected on June 8 (past); no occurrence seeded
     cqpdSeries($user, 'Missed-Payment', CarbonImmutable::parse('2026-06-08'));
 
     /** @var CalendarQuery $calendarQuery */
@@ -206,9 +186,6 @@ it('marks a past-day entry isMissed when the occurrence is 10 days off (outside 
     $db = app(DatabaseManager::class);
     $user = cqpdUser('missed-far');
 
-    // Series expected on June 5; occurrence observed June 15+ — outside ±7 window
-    // (Note: June 15 is in the future relative to "today" June 12, but we test the distance logic)
-    // Use an occurrence 10 days BEFORE expected: May 26
     $series = cqpdSeries($user, 'Missed-Far', CarbonImmutable::parse('2026-06-05'));
     cqpdOccurrence($db, $user->id, $series->id, '2026-05-26'); // 10 days early — outside ±7
 
@@ -231,7 +208,6 @@ it('marks a past-day entry isMissed when the occurrence is 10 days off (outside 
 it('does not mark a future-day entry as paid or missed', function (): void {
     $user = cqpdUser('future');
 
-    // Series expected on June 20 (future relative to "today" June 12)
     cqpdSeries($user, 'Future-Payment', CarbonImmutable::parse('2026-06-20'));
 
     /** @var CalendarQuery $calendarQuery */
@@ -259,10 +235,9 @@ it('clamps the weekly match window to ±3 days so one payment marks only the nea
     $db = app(DatabaseManager::class);
     $user = cqpdUser('weekly-clamp');
 
-    // Weekly series: nextExpectedAt June 15 places entries on June 1, 8, 15
-    // (June 1–11 are past relative to "today" June 12). One occurrence on
-    // June 8 must mark ONLY June 8 paid; June 1 is 7 days away — outside the
-    // clamped ±3-day weekly window — and stays missed.
+    // A weekly anchor of June 15 places entries on June 1, 8 and 15. The one
+    // occurrence on June 8 must pay only June 8: June 1 is 7 days away,
+    // outside the clamped ±3-day weekly window.
     $series = cqpdSeries($user, 'Weekly-Clamp', CarbonImmutable::parse('2026-06-15'), 'weekly');
     cqpdOccurrence($db, $user->id, $series->id, '2026-06-08');
 

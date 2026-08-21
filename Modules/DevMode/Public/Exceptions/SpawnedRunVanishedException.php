@@ -6,10 +6,8 @@ namespace Modules\DevMode\Public\Exceptions;
 
 use RuntimeException;
 
-// A spawn endpoint asked RunRegistry for the record it had just written
-// and got nothing back — the cache entry vanished between start()
-// persisting it and the controller re-reading it. A genuine invariant
-// break (not a routine TTL miss), so it is raised distinctly.
+// The record start() had just written was gone when the controller re-read it.
+// An invariant break, not a routine TTL miss, hence its own type.
 final class SpawnedRunVanishedException extends RuntimeException
 {
     public static function immediatelyAfterSpawn(string $entryPoint, string $runId): self

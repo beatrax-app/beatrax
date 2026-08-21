@@ -15,20 +15,6 @@ use Modules\Ledger\Models\Account;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for ShortfallDetector.
- *
- * Covers the state-machine traversal of daily points and the
- * pre-write cleanup contract:
- *   - No buffer (NULL) — zero-crossing default.
- *   - Buffer set + dip below — single window emitted.
- *   - Two separate dips — two windows emitted.
- *   - End-of-horizon in-shortfall — final window emitted.
- *   - Pre-write cleanup deletes prior rows before inserting new ones.
- *   - ForecastShortfallDetected event dispatched per new window.
- *   - Cross-user safety — writes use the passed User->id.
- */
-
 function sdUser(string $username): User
 {
     return User::query()->create([
@@ -151,13 +137,13 @@ it('emits a window with buffer_used_minor=effective when balance dips below set 
 it('emits two distinct windows when the balance dips, recovers, and dips again', function (): void {
     $points = sdPoints([
         '2026-05-19' => 100,
-        '2026-05-20' => -10, // shortfall 1 starts
+        '2026-05-20' => -10,
         '2026-05-21' => -5,
-        '2026-05-22' => 50, // recovery
+        '2026-05-22' => 50,
         '2026-05-23' => 80,
-        '2026-05-24' => -20, // shortfall 2 starts
+        '2026-05-24' => -20,
         '2026-05-25' => -30,
-        '2026-05-26' => 10, // recovery
+        '2026-05-26' => 10,
     ]);
 
     $windows = sdDetector()->detect(
@@ -204,7 +190,6 @@ it('deletes prior rows for (user, account, scenario) before inserting new window
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
-    // Seed a stale window manually.
     $db->connection()->table('forecast_shortfall_windows')->insert([
         'user_id' => $this->user->id,
         'account_id' => $this->account->id,
@@ -237,7 +222,6 @@ it('deletes prior rows for (user, account, scenario) before inserting new window
         user: $this->user,
     );
 
-    // The stale row is gone; only the new window survives.
     $rows = $db->connection()->table('forecast_shortfall_windows')
         ->where('user_id', $this->user->id)
         ->get();
@@ -275,7 +259,7 @@ it('writes rows scoped to the passed user — never another user (cross-user saf
     $other = sdUser('other-shortfall');
     $otherAccount = sdAccount($other, 'other-asn');
 
-    // Seed a stale row on user A.
+    // User A's row must survive user B's run: the pre-write cleanup is scoped.
     $db->connection()->table('forecast_shortfall_windows')->insert([
         'user_id' => $this->user->id,
         'account_id' => $this->account->id,
@@ -295,7 +279,6 @@ it('writes rows scoped to the passed user — never another user (cross-user saf
         '2026-05-21' => 50,
     ]);
 
-    // Run for user B — must not delete user A's row.
     sdDetector()->detect(
         dailyPoints: $points,
         accountId: $otherAccount->id,

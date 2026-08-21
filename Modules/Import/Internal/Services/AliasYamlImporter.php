@@ -17,9 +17,6 @@ use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/import/architecture.md#merchant-aliases
- */
 final class AliasYamlImporter
 {
     public function __construct(

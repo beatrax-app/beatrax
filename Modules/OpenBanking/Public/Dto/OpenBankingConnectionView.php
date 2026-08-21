@@ -25,9 +25,8 @@ final readonly class OpenBankingConnectionView
         public string $whatsFetched,
     ) {}
 
-    // Renders only when the last attempt did not succeed — last_attempt_status
-    // is 'ok' on success and 'consent_failed'/'error' on failure (never null
-    // once at least one attempt has run).
+    // last_attempt_status is 'ok' on success and never null once an attempt
+    // has run, so anything else is a failure.
     public function lastAttemptFailed(): bool
     {
         return $this->lastAttemptStatus !== null && $this->lastAttemptStatus !== 'ok';

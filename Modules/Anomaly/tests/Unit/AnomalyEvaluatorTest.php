@@ -10,17 +10,8 @@ use Modules\Anomaly\Tests\Support\AnomalyCorpusSeeder;
 
 uses(RefreshDatabase::class);
 
-/*
- * Large-vs-typical detector coverage driven by the shared anomaly-corpus
- * fixtures. Each fixture seeds the per-counterparty / per-category history
- * plus the charge under test; the detector must fire (or not) exactly as
- * the fixture's `expected.reasons` lists for the `large` reason.
- *
- * The full multi-reason AnomalyEvaluator is exercised in Task 3's tests;
- * here we isolate the statistical large-vs-typical path so a regression in
- * the MAD / percentile / sensitivity math is pinpointed.
- */
-
+// The detector is driven directly, not through AnomalyEvaluator, so a
+// regression in the MAD / percentile / sensitivity maths is pinpointed.
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -66,10 +57,6 @@ it('maps the default 50% sensitivity to k=3.0 (the large-above baseline)', funct
     $detector = $this->app->make(LargeVsTypicalDetector::class);
     $txn = AnomalyCorpusSeeder::transactionRow($this->db, $txnId);
 
-    // At the default sensitivity the €23.49 charge against a stable €9.99
-    // baseline trips; at a far less sensitive setting (k clamps high), the
-    // same charge against a zero-MAD floored baseline still trips because
-    // the deviation dwarfs the floor — assert the default path fires.
     $result = $detector->fires($txn, $user, 50, 1000);
     expect($result)->not->toBeNull();
     expect($result['baseline_amount_minor'])->toBe(-999);

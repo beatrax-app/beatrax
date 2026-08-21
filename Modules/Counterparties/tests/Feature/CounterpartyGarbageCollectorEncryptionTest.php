@@ -17,33 +17,10 @@ use Psr\Log\LoggerInterface;
 
 uses(RefreshDatabase::class, EnablesEncryptionForUser::class);
 
-/*
- * 14.1-15 (CRYPT-01, Cluster 5 gap closure, daemon-only) —
- * CounterpartyGarbageCollectorJob's orphan predicate does a raw SQL
- * whereColumn equality between the encrypted counterparties.merchant_name
- * and the always-plaintext merchant_aliases.friendly_name. Under
- * encryption the two can never byte-match, so the alias-preservation
- * branch always looks like "no matching alias" — an alias-protected
- * counterparty wrongly becomes prunable purely because its merchant_name
- * is now ciphertext.
- *
- * This job's ONLY dispatch origin is the routes/console.php daily
- * Schedule::call fan-out — a real queue worker with no live Session, so
- * in production it NEVER has a KEK for an encrypted user. This suite
- * proves the fix across all three shapes:
- *
- *  1. Encrypted, KEK absent (the only shape this job's real dispatch
- *     origin ever produces): the merchant_name-dependent half of the
- *     predicate is SKIPPED with a logged warning — an alias-protected
- *     counterparty is NEVER wrongly pruned; the merchant_name-IS-NULL
- *     half (always plaintext-safe) keeps pruning normally.
- *  2. Encrypted, KEK present (kept symmetric with plan 08's pattern for
- *     a future request-bound dispatch origin): the fix decrypts each
- *     candidate's merchant_name in PHP and compares against the user's
- *     alias friendly_names in PHP — alias-protected rows survive,
- *     genuinely-orphaned rows still prune.
- *  3. Non-encrypted: completely unchanged (regression lock).
- */
+// The orphan predicate compares counterparties.merchant_name to the
+// always-plaintext merchant_aliases.friendly_name in SQL, and under encryption
+// those can never byte-match — which made an alias-protected row look prunable.
+// The job's only real dispatch origin is the daily schedule, so no KEK.
 
 function cgeUser(string $username): User
 {
@@ -92,29 +69,25 @@ it('skips the merchant_name-dependent prune with a logged warning when the KEK i
     /** @var SensitiveColumnCodec $codec */
     $codec = $this->app->make(SensitiveColumnCodec::class);
 
-    // Alias-protected: merchant_name ciphertext decrypts to "Spotify",
-    // which a merchant_aliases row's friendly_name also names. No recent
-    // transaction. Pre-fix this is WRONGLY pruned under encryption; this
-    // test proves it now survives.
+    // Alias-protected and with no recent transaction: the shape that was
+    // wrongly pruned under encryption.
     $encryptedSpotify = $codec->encryptValue('counterparties', 'merchant_name', 'Spotify', $user->id, $session);
     expect($encryptedSpotify)->not->toBe('Spotify');
     $aliasProtectedId = cgeCounterparty($user->id, 'cge-spotify', 'Spotify', $encryptedSpotify);
     cgeAlias($user->id, 'SPOTIFY AB', 'Spotify');
 
-    // Genuinely orphaned with a NON-NULL (ciphertext) merchant_name and NO
-    // matching alias. Under the "no KEK -> skip the whole
-    // merchant_name-IS-NOT-NULL half" posture this row is conservatively
-    // preserved too (preserve-data-on-uncertainty) rather than risking a
-    // wrongful prune of a row we cannot evaluate.
+    // Genuinely orphaned, but with a ciphertext merchant_name the job cannot
+    // read without a KEK — so it survives too. Preserving a row we cannot
+    // evaluate beats a wrongful prune.
     $encryptedOldShop = $codec->encryptValue('counterparties', 'merchant_name', 'Old Shop', $user->id, $session);
     $noAliasCiphertextId = cgeCounterparty($user->id, 'cge-old-shop', 'Old Shop', $encryptedOldShop);
 
-    // Plaintext-safe orphan: merchant_name IS NULL, no recent transaction,
-    // no alias possible. Always prunable, encrypted or not.
+    // A NULL merchant_name can hold no alias, so this half of the predicate
+    // stays safe with or without a KEK.
     $nullMerchantOrphanId = cgeCounterparty($user->id, 'cge-null-orphan', 'NL00IBAN000000001');
 
-    // Simulate the real daemon dispatch shape: withhold the KEK AFTER the
-    // ciphertext fixtures were written but BEFORE the job runs.
+    // Withheld after the ciphertext fixtures are written but before the job
+    // runs — the daemon's real shape.
     $this->app->make(AppLockKeyService::class)->withhold($session);
 
     /** @var LoggerInterface&MockInterface $logger */

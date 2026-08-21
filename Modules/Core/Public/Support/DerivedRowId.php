@@ -14,8 +14,8 @@ final class DerivedRowId
 
     /**
      * @param  array<string, int|string|null>  $identity  The columns the table's
-     *                                                   idempotency UNIQUE names, in a fixed order — a different
-     *                                                   order is a different id, so callers must not vary it.
+     *                                                    idempotency UNIQUE names, in a fixed order — a different
+     *                                                    order is a different id, so callers must not vary it.
      */
     public static function for(string $table, array $identity): int
     {

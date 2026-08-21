@@ -85,18 +85,16 @@ final class ZipExtractor
         }
 
         $targetDir = UserDataPathService::appPath('migration-extracts/'.uniqid('run-', true));
-        // Suppressed so the is_dir() race check decides. Unsuppressed, a
-        // concurrent creator's EEXIST warning becomes an ErrorException and
-        // the race the second clause exists to absorb becomes a failure.
+        // Suppressed so the is_dir() clause decides: unsuppressed, a concurrent
+        // creator's EEXIST becomes an ErrorException instead of an absorbed race.
         if (! @mkdir($targetDir, 0700, true) && ! is_dir($targetDir)) {
             $zip->close();
 
             throw new ExtractionDirectoryException($targetDir);
         }
 
-        // Tracked BEFORE extractTo() runs — if extraction fails partway,
-        // cleanup() must still be able to find and remove whatever was
-        // partially written, rather than leaking $targetDir permanently.
+        // Tracked before extractTo(), so a partway failure still leaves cleanup()
+        // able to find what was written rather than leaking $targetDir.
         $this->extractedDir = $targetDir;
 
         $extracted = $zip->extractTo($targetDir);
@@ -123,9 +121,6 @@ final class ZipExtractor
 
     private function escapesExtractionScope(string $entryName): bool
     {
-        // An entry "escapes" the scoped directory when it is an absolute
-        // path (Unix-rooted or Windows-drive-rooted) or contains a '..'
-        // traversal segment anywhere in its normalised path.
         $normalised = str_replace('\\', '/', $entryName);
         if (str_starts_with($normalised, '/') || preg_match('#^[A-Za-z]:#', $normalised) === 1) {
             return true;
@@ -138,10 +133,9 @@ final class ZipExtractor
 
     private function isSymlinkEntry(ZipArchive $zip, int $index): bool
     {
-        // Only OPSYS_UNIX-tagged entries carry a meaningful Unix mode in the
-        // upper 16 bits of the external attributes — an archive built on
-        // another OS never sets this bit, so this check is a no-op (never a
-        // false positive) for those archives.
+        // Only OPSYS_UNIX entries carry a Unix mode in the upper 16 bits of the
+        // external attributes, so on any other OS this is a no-op rather than a
+        // false positive.
         $opsys = 0;
         $attr = 0;
         if (! $zip->getExternalAttributesIndex($index, $opsys, $attr)) {

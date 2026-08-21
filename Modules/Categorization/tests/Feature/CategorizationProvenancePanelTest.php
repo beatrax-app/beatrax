@@ -189,12 +189,9 @@ it('removes the rule when removeRule is invoked and flips the panel to none vari
 });
 
 it('removeRule catches NotFoundHttpException when the rule was deleted in another tab and surfaces a calm flash', function (): void {
-    // Cross-tab race: the panel hydrated with $ruleId=$ruleId from
-    // the prior render, then the rule was deleted out-of-band before
-    // the user clicked Remove rule. DeleteCategorizationRule sees no
-    // visible row and throws NotFoundHttpException. The component
-    // must catch it, surface a calm flash, and re-hydrate the panel
-    // — never a 500 / framework error page.
+    // Cross-tab race: the panel hydrated with a ruleId that was deleted
+    // out-of-band before Remove was clicked. The component must catch the
+    // NotFoundHttpException and re-hydrate rather than serve a 500.
     $ruleId = seedProvenanceRule($this->user, $this->streaming->id);
     $txId = seedProvTransaction(
         $this->user->id,
@@ -220,10 +217,8 @@ it('removeRule catches NotFoundHttpException when the rule was deleted in anothe
 });
 
 it('removeRule catches NotFoundHttpException when the panel carries a foreign-user ruleId', function (): void {
-    // Tampered Livewire payload posture: the panel state carries a
-    // ruleId that belongs to another user. DeleteCategorizationRule's
-    // user-scoped lookup rejects it with NotFoundHttpException. The
-    // component must catch it; the foreign row MUST remain untouched.
+    // A tampered payload carrying another user's ruleId: the user-scoped
+    // lookup rejects it, and the foreign row must survive untouched.
     $other = User::create([
         'username' => 'prov-tamper',
         'password' => 'opensesame',
@@ -246,7 +241,6 @@ it('removeRule catches NotFoundHttpException when the panel carries a foreign-us
         ->call('removeRule')
         ->assertSet('flashMessage', 'Rule no longer exists (it may have been deleted in another tab).');
 
-    // The foreign rule MUST remain untouched.
     expect(DB::table('categorization_rules')->where('id', $foreignRuleId)->exists())->toBeTrue();
 });
 
@@ -297,10 +291,8 @@ it('falls back to none variant when the referenced rule has been deleted', funct
 });
 
 it('hydrateFromProvenance renders the none variant when auto_category_provenance is corrupt JSON', function (): void {
-    // Best-effort-audit contract: a corrupt provenance payload must
-    // NOT crash the transaction detail page. JSON_THROW_ON_ERROR +
-    // JsonException catch falls back to the 'none' variant so the
-    // panel renders empty.
+    // Provenance is best-effort audit metadata: a corrupt payload falls back
+    // to the 'none' variant rather than crashing the detail page.
     $txId = seedProvTransaction(
         $this->user->id,
         $this->account->id,
@@ -309,9 +301,8 @@ it('hydrateFromProvenance renders the none variant when auto_category_provenance
         null,
     );
 
-    // Poison the column with a non-JSON string. The raw query builder
-    // bypasses the Eloquent cast so the corrupt bytes actually land on
-    // disk.
+    // The raw query builder bypasses the Eloquent cast, so the corrupt bytes
+    // genuinely land on disk.
     DB::table('transactions')->where('id', $txId)->update([
         'auto_category_provenance' => '{not valid json',
     ]);

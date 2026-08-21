@@ -14,8 +14,8 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-// Every method reads the codes fresh from the session rather than holding them
-// on a public property, so the plaintext never reaches the wire snapshot.
+// Read fresh from the session every time, never held on a public property, so
+// the plaintext never reaches the wire snapshot.
 final class RecoveryCodesDisplay extends Component
 {
     public const SESSION_KEY = 'auth.signup.recovery_codes_plain';
@@ -24,16 +24,16 @@ final class RecoveryCodesDisplay extends Component
     // return to whichever asked.
     public const SESSION_RETURN_KEY = 'auth.recovery_codes.return_to';
 
-    // Matched as a token, never used as a URL: a session value that becomes a
-    // redirect target is an open redirect the moment anything can write it.
+    // A token, never a URL: a session value used as a redirect target is an
+    // open redirect the moment anything can write it.
     public const RETURN_TO_SETTINGS = 'settings';
 
     public bool $confirmed = false;
 
     public function mount(Session $session): void
     {
-        // Called for the 404: arriving outside the ceremony has no codes to
-        // show, and an empty page would be worse than a miss.
+        // Arriving outside the ceremony has no codes to show, and an empty page
+        // would be worse than a 404.
         $this->codesFromSession($session);
     }
 
@@ -64,10 +64,8 @@ final class RecoveryCodesDisplay extends Component
         $codes = $this->codesFromSession($session);
         $username = $currentUser->user()->username;
 
-        // Built in the browser from these, NOT streamed from a Livewire
-        // action: a WebView has no download manager for a StreamedResponse.
-        // View data keeps the plaintext out of the wire snapshot, the same
-        // reason no method here puts codes on a public property.
+        // Built in the browser, not streamed from a Livewire action: a WebView
+        // has no download manager for a StreamedResponse.
         $view = $views->make('auth::livewire.recovery-codes-display', [
             'codes' => $codes,
             'username' => $username,

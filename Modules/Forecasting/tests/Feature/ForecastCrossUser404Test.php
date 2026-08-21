@@ -8,15 +8,6 @@ use Modules\Core\Models\User;
 
 uses(RefreshDatabase::class);
 
-/*
- * Cross-user 404 invariant on /forecast.
- *
- * User A is logged in; visiting /forecast?account={accountId} where
- * accountId belongs to user B MUST return 404. The same path with
- * an account that User A owns returns 200. Mirrors the DriftAlerts
- * cross-user 404 contract.
- */
-
 function fc404User(string $username): User
 {
     return User::query()->create([

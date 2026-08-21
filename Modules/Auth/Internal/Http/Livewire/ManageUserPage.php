@@ -54,9 +54,8 @@ final class ManageUserPage extends Component
 
     public function setPartnerPassword(Hasher $hasher, DatabaseManager $db, CurrentUser $currentUser): void
     {
-        // The route middleware does not re-run on a Livewire update, so without
-        // this a developer downgraded mid-session would keep resetting
-        // passwords from a page still open in their browser.
+        // The route middleware does not re-run on a Livewire update, so a
+        // developer downgraded mid-session kept resetting passwords.
         if ($currentUser->user()->is_developer !== true) {
             throw new NotFoundHttpException;
         }

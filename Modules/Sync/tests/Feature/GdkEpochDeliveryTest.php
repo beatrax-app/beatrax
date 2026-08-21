@@ -42,7 +42,6 @@ uses(RefreshDatabase::class);
 /**
  * @link ../../../../.docs/features/sync/gdk-epoch-wrap-delivery.md
  */
-
 function deliveryUser(string $username): User
 {
     return User::query()->create([

@@ -12,18 +12,6 @@ use Modules\Migration\Tests\Support\MigrationFixturePaths;
 
 uses(RefreshDatabase::class);
 
-/*
- * RED Wave 0 stub (13.5-02 Task 3) pinning the NynabParser contract
- * (Req 1/2/3/4/5/6/7). NynabParser does not exist until Plan 03 — every
- * test below is EXPECTED to fail now (missing-class error), not pass.
- *
- * The scenario mirrors Ynab4ParserTest exactly (same underlying content,
- * packaged as a ZIP with the single combined "Category Group/Category"
- * column) — this file exists to pin that nynab's parser handles the ZIP
- * extraction step and the combined-column shape identically to Ynab4Parser's
- * loose-folder + Master/Sub Category handling.
- */
-
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'nynab-parser-fixture-user',
@@ -71,7 +59,6 @@ it('NynabParser: parses the v1 golden ZIP fixture into a populated MigrationBatc
     $transferLegs = array_values(array_filter($transactions, static fn ($t) => $t->transferCounterpartSourceExternalId !== null));
     expect($transferLegs)->toHaveCount(2);
 
-    // Req 6: Albert Heijn appears on exactly 2 distinct transactions.
     $albertHeijnPayeeId = $batch->payees->first(static fn ($p) => $p->name === 'Albert Heijn')?->sourceExternalId;
     expect($albertHeijnPayeeId)->not->toBeNull();
     $albertHeijnTxCount = count(array_filter($transactions, static fn ($t) => $t->payeeSourceExternalId === $albertHeijnPayeeId));

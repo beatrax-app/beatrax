@@ -12,9 +12,7 @@ use Modules\DevMode\Public\Dto\CommandRunAudit;
 // the runtime binding is SpatieAuditWriter.
 final class NullAuditWriter implements AuditWriter
 {
-    public function recordCommandRun(CommandRunAudit $run): void
-    {
-    }
+    public function recordCommandRun(CommandRunAudit $run): void {}
 
     public function finalizeCommandRun(
         string $runId,
@@ -34,14 +32,12 @@ final class NullAuditWriter implements AuditWriter
         string $action,
         array $context,
         int $callerUserId,
-    ): void {
-    }
+    ): void {}
 
     public function recordSelectQuery(
         string $query,
         int $rowcount,
         int $durationMs,
         int $callerUserId,
-    ): void {
-    }
+    ): void {}
 }

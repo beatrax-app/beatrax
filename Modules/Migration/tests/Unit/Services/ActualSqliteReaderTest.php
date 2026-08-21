@@ -6,13 +6,6 @@ use Modules\Migration\Internal\Services\ActualSqliteReader;
 use Modules\Migration\Tests\Support\ActualFixtureBuilder;
 use Modules\Migration\Tests\Support\MigrationFixturePaths;
 
-/*
- * Unit coverage for `ActualSqliteReader` (13.5-04 Task 1). Not pinned by a
- * Plan 02 RED stub (unlike the parsers themselves) — added per this task's
- * own acceptance criteria, mirroring Plan 03's precedent of authoring
- * dedicated Support-class unit tests where no RED stub already exists.
- */
-
 beforeEach(function (): void {
     $this->zipPath = sys_get_temp_dir().'/actual-reader-test-'.uniqid('', true).'.zip';
     ActualFixtureBuilder::build($this->zipPath);

@@ -9,16 +9,10 @@ use Modules\Mobile\Internal\Http\Livewire\MobileWelcomeScreen;
 
 uses(RefreshDatabase::class);
 
-/*
- * The phone is the companion, not the place a household sets Beatrax up. The
- * statements, the rules and the first month's tidying all happen on a bigger
- * screen; this device is where the result is read. So importing from another
- * device leads, and creating an account here is offered second with the
- * recommendation attached rather than left for the reader to discover.
- *
- * It still has to be possible: someone who wants everything on their phone can
- * have it, which is why the second button is a button and not a footnote.
- */
+// The phone is the companion, not the place a household sets Beatrax up, so
+// importing from another device leads and creating an account is offered second.
+// It still has to be possible, which is why that second option is a button rather
+// than a footnote.
 
 it('offers importing before creating an account', function (): void {
     $html = (string) Livewire::test(MobileWelcomeScreen::class)->html();

@@ -24,22 +24,16 @@ final class CommandArgPromptModal extends Component
 {
     use DispatchesToast;
 
-    // #[Locked] — $command selects which registry entry (and therefore which
-    // tier and arg rules) submit() resolves. Only the open() listener may set
-    // it; letting the client swap it after the modal is populated would
-    // decouple the spawn from the entry the user was shown.
+    // Locked because it selects the registry entry submit() resolves: a
+    // client swap would spawn something other than what the user was shown.
     #[Locked]
     public string $command = '';
 
-    // #[Locked] for the same reason, though nothing authorises on it —
-    // submit() re-derives the tier from the registry rather than trusting
-    // this. It exists to render the destructive-tier warning copy.
+    // Display only — submit() re-derives the tier from the registry, so
+    // nothing authorises on this value.
     #[Locked]
     public string $claimedTier = 'safe';
 
-    // Values arrive as strings (Livewire wire:model binds <input> here);
-    // the spawn-time renderArg() in CommandSpawner handles the typed
-    // conversion downstream.
     /**
      * @var array<string, mixed>
      */
@@ -67,9 +61,6 @@ final class CommandArgPromptModal extends Component
             return;
         }
 
-        // Seed default values so the form renders prefilled inputs.
-        // Boolean defaults to false; text/select default to whatever
-        // the dispatcher supplied for that key, or empty.
         foreach ($spec->argsSchema as $arg) {
             $supplied = $prefill[$arg->name] ?? null;
             $this->values[$arg->name] = match ($arg->type) {
@@ -101,10 +92,9 @@ final class CommandArgPromptModal extends Component
             return;
         }
 
-        // Spawn directly via CommandSpawner rather than dispatching a
-        // `spawn-command` event: ArtisanRunnerPage is not always
-        // mounted (e.g. on /dev/logs, /dev/queue), so an event-only
-        // path silently drops the spawn on those pages.
+        // Spawning directly rather than dispatching `spawn-command`:
+        // ArtisanRunnerPage is not mounted on /dev/logs or /dev/queue, and an
+        // event with no listener drops the spawn silently.
         $command = $this->command;
         $runId = $spawner->start($command, $args, $user->id(), 'safe');
 
@@ -140,10 +130,8 @@ final class CommandArgPromptModal extends Component
         ]);
     }
 
-    // The registry entry this submission may spawn, or null when it may not.
-    // A destructive name reaching here is a hostile dispatch that bypassed the
-    // palette's safe-only filter, so it is rerouted to the triple gate rather
-    // than refused outright — the same posture the runner page takes.
+    // A destructive name reaching here bypassed the palette's safe-only
+    // filter; it reroutes to the triple gate rather than being refused.
     private function spawnableSpec(DevCommandRegistry $registry): ?CommandSpec
     {
         try {
@@ -168,10 +156,8 @@ final class CommandArgPromptModal extends Component
         return null;
     }
 
-    // The args map to hand the spawner, or null when a preflight refused it.
-    // Both gates live here so submit() reads as resolve-then-spawn: required
-    // args are checked against the raw form values, and the declared rules
-    // against the normalised map the spawner will actually receive.
+    // Required-arg checks run against the raw form values; the declared rules
+    // run against the normalised map the spawner will actually receive.
     /**
      * @return array<string, mixed>|null
      */
@@ -194,9 +180,8 @@ final class CommandArgPromptModal extends Component
         return $this->argsSatisfyRules($spec, $args, $validator) ? $args : null;
     }
 
-    // Drops blank optional values: renderArg() already skips null and missing
-    // keys, but an empty string renders as `php artisan cmd ''`, which Laravel
-    // sometimes rejects.
+    // Blank optional values are dropped: the spawner skips null and missing
+    // keys, but an empty string would render as `php artisan cmd ''`.
     /**
      * @return array<string, mixed>
      */
@@ -221,10 +206,9 @@ final class CommandArgPromptModal extends Component
         return $args;
     }
 
-    // Mirrors the ArgSpec::$rules validation both spawn controllers run — the
-    // third guard alongside the registry allow-list and escapeshellarg. The
-    // violation surfaces as $submitError rather than rethrown, because an
-    // uncaught one would blank a form the operator is mid-edit on.
+    // Third guard, after the registry allow-list and escapeshellarg. The
+    // violation surfaces on $submitError rather than being rethrown, which
+    // would blank a form the operator is mid-edit on.
     /**
      * @param  array<string, mixed>  $args
      */

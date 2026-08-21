@@ -43,9 +43,8 @@ it('rejects a sourceFormat that does not belong to the email-file issuer', funct
     $emlBytes = "From: a@b.test\r\nSubject: hi\r\n\r\nBody.\r\n";
     $file = UploadedFile::fake()->createWithContent('msg.eml', $emlBytes);
 
-    // sourceFormat='asn-csv' under issuer='email-file' must fail
-    // because the cross-product is not in the SUPPORTED_FORMATS map
-    // for that issuer (the wizard's submit() validates both).
+    // submit() validates the pair, and this cross-product is absent from the
+    // issuer's SUPPORTED_FORMATS map.
     Livewire::test(UploadWizard::class)
         ->set('issuer', 'email-file')
         ->set('sourceFormat', 'asn-csv')

@@ -51,10 +51,8 @@ final class SharedListSettingsPanel extends Component
 
     public function toggleUpdateOnAppUpdates(): void
     {
-        // The live-update mechanism does not exist yet, so this handler is a
-        // defensive no-op that protects `users.community_settings` from a
-        // forged Livewire call — the disabled checkbox is the user-facing
-        // speed bump, this is the server-side one.
+        // The disabled checkbox is only the user-facing speed bump; this
+        // no-op is what stops a forged Livewire call writing the column.
     }
 
     public function render(ViewFactory $views, CommunityCorpusQuery $corpus): View

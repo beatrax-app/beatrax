@@ -5,24 +5,10 @@ declare(strict_types=1);
 use Modules\Sync\Internal\Transport\Discovery\MdnsAdvertiser;
 use Symfony\Component\Process\Process;
 
-/*
- * The mDNS advertiser must not be able to hang the process that owns it.
- *
- * Symfony's Process::__destruct() calls stop(), which calls close(), which
- * reads the child's pipes via stream_select() with NO timeout. A pipe reaches
- * EOF only once every holder of its write end is gone, and dns-sd is
- * long-lived by design — so a destructor running at worker shutdown could sit
- * in select() forever.
- *
- * That is what capped this suite's parallelism: above four workers `composer
- * test` stopped returning, workers alive and silent with no summary ever
- * printed (see the cap in composer.json's history). A sampled survivor of one
- * of those hangs was parked in exactly this stack —
- * zend_objects_destroy_object → … → stream_select → __select.
- *
- * Nothing reads this process's output, so disabling it removes the pipes and
- * with them the only thing the destructor could block on.
- */
+// Symfony's Process::__destruct() calls stop() → close(), which reads the child's
+// pipes via stream_select() with no timeout, and dns-sd is long-lived by design,
+// so a destructor at worker shutdown could sit in select() forever — which is what
+// capped this suite's parallelism. Disabling output removes the pipes entirely.
 it('creates its advertising process with no pipes to block on', function (): void {
     $advertiser = new MdnsAdvertiser;
 

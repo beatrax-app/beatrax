@@ -15,10 +15,6 @@ use Modules\Ledger\Models\Transaction;
 
 uses(RefreshDatabase::class);
 
-/**
- * Persist one uncategorized-or-categorized Transaction owned by $user on
- * May $day of 2026. Returns the persisted row.
- */
 function makeTriageTx(User $user, Account $account, ImportRun $run, int $day, ?int $categoryId): Transaction
 {
     static $rowIndex = 0;

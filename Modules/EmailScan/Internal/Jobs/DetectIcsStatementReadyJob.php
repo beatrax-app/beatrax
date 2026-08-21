@@ -72,8 +72,6 @@ final class DetectIcsStatementReadyJob implements ShouldBeUniqueUntilProcessing,
         }
     }
 
-    // Maps one inbox_messages row to an IcsStatementReady event, or null
-    // when any guard rejects it so the caller simply skips the row.
     /**
      * @param  list<string>  $domains
      */
@@ -85,10 +83,8 @@ final class DetectIcsStatementReadyJob implements ShouldBeUniqueUntilProcessing,
         $internalDateRaw = is_string($row->internal_date) ? $row->internal_date : '';
         $messageId = is_numeric($row->id) ? (int) $row->id : null;
 
-        // Defence-in-depth: the rowUserId re-check mirrors
-        // ProcessFetchedInboxMessagesJob even though the query above is
-        // already user_id-scoped; every guard collapses into one reject
-        // so a rejected row yields a single null return.
+        // The rowUserId re-check is defence in depth — the query above is
+        // already user_id-scoped.
         $rejected = match (true) {
             $rowUserId !== $this->userId => true,
             ! self::senderMatchesDomain($senderEmail, $domains) => true,
@@ -99,9 +95,7 @@ final class DetectIcsStatementReadyJob implements ShouldBeUniqueUntilProcessing,
             return null;
         }
 
-        // One malformed internal_date must not abort the whole
-        // per-user sweep; skip the row on an unparseable date,
-        // matching the is_numeric/is_string guard style above.
+        // One malformed internal_date must not abort the per-user sweep.
         try {
             $internalDate = CarbonImmutable::parse($internalDateRaw);
         } catch (InvalidFormatException) {

@@ -21,12 +21,6 @@ final class AnomalyAlertStateMachine extends GuardedStateMachine
 {
     use CoercesScalars;
 
-    /**
-     * @param  array<string, scalar|null>  $extraColumns  optional metric-style
-     *                                                    patch applied to the same anomaly_alerts row within the
-     *                                                    transition's transaction (e.g. snooze moves `snoozed_until`,
-     *                                                    dismiss sets `dismissed_as`); `state`/`updated_at` reserved.
-     */
     public function __construct(
         DatabaseManager $db,
         Clock $clock,
@@ -35,6 +29,12 @@ final class AnomalyAlertStateMachine extends GuardedStateMachine
         parent::__construct($db, $clock);
     }
 
+    /**
+     * @param  array<string, scalar|null>  $extraColumns  optional metric-style
+     *                                                    patch applied to the same anomaly_alerts row within the
+     *                                                    transition's transaction (e.g. snooze moves `snoozed_until`,
+     *                                                    dismiss sets `dismissed_as`); `state`/`updated_at` reserved.
+     */
     public function transition(
         AnomalyAlert $alert,
         string $toState,

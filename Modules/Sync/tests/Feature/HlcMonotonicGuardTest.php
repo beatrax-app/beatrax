@@ -9,18 +9,10 @@ use Modules\Sync\Internal\OpLog\OpLogWriter;
 
 uses(RefreshDatabase::class);
 
-/*
- * SYNC-01: HLC monotonic guard — boot-time receive() from hlc_clock_state.
- *
- * Proves that after persisting an op with a high hlc_l value, re-instantiating
- * OpLogWriter (simulating an app restart) and ticking produces an hlc_l that
- * is >= the persisted value — even when the wall clock is set to an EARLIER
- * time. This is the Kulkarni-Demirbas monotonic guard: boot-time receive()
- * restores the high-water mark, so the clock never rewinds.
- *
- * RED: OpLogWriter does not exist yet (Wave 1 creates it). Fails with
- * "Class not found" until Plan 11-02 implements OpLogWriter.
- */
+// A restart re-reads the persisted high-water mark before the first tick, so
+// the logical clock cannot rewind behind a wall clock that has jumped
+// backwards. Without that floor the total order breaks and later ops sort
+// before earlier ones.
 
 afterEach(function (): void {
     CarbonImmutable::setTestNow();
@@ -41,7 +33,6 @@ it('boot-time receive() from hlc_clock_state prevents clock rewind after restart
     $sk = sodium_crypto_sign_secretkey($keypair);
     $pk = sodium_crypto_sign_publickey($keypair);
 
-    // Seed a category and transaction so we have something to write an op for.
     $catId = $db->connection()->table('categories')->insertGetId([
         'user_id' => $userId,
         'name' => 'HlcGuardCat',
@@ -94,17 +85,10 @@ it('boot-time receive() from hlc_clock_state prevents clock rewind after restart
         'updated_at' => '2026-06-15 00:00:00',
     ]);
 
-    // Step 1: seed the hlc_clock_state high-water mark ABOVE the current
-    // wall-clock ms (WR-01). The seeded value MUST exceed microtime-now-in-ms
-    // (~1.75e12) so that a plain tick() — which uses max(wall_ms, last_l) —
-    // can only reach >= seeded if boot-time receive() actually restored the
-    // persisted floor. The old test seeded 9_999_999_999 (~1.0e10), which is
-    // BELOW wall-clock ms, so the assertion passed even when receive() did
-    // nothing. Seeding well above wall-clock is the only configuration that
-    // proves the guard raised the floor.
-    //
-    // Composite-key upsert (CR-01): the singleton id=1 row is gone — seed by
-    // (user_id, device_id).
+    // The seeded mark must sit ABOVE wall-clock milliseconds. tick() takes the
+    // max of the two, so a mark below wall clock makes the assertion pass even
+    // when the boot-time restore does nothing at all — which is exactly how an
+    // earlier version of this test passed against a broken guard.
     $seededHlcL = (int) (microtime(true) * 1000) + 1_000_000_000;
     $seededHlcC = 7;
     $db->connection()->table('hlc_clock_state')->updateOrInsert(
@@ -116,13 +100,11 @@ it('boot-time receive() from hlc_clock_state prevents clock rewind after restart
         ]
     );
 
-    // Step 2: Set wall clock to an EARLIER time to simulate a backwards clock jump.
-    // Now() in ms ≈ 1.75e12 — far BELOW the seeded high-water mark above.
+    // A backwards clock jump, landing far below the seeded mark.
     CarbonImmutable::setTestNow('2026-06-15 10:00:00');
 
-    // Step 3: Construct a new OpLogWriter (simulating restart) — it reads
-    // hlc_clock_state and calls receive($seededHlcL, $seededHlcC) before the
-    // first tick.
+    // A fresh writer stands in for a restart: it restores the persisted mark
+    // before its first tick.
     $writer = app(OpLogWriter::class, [
         'deviceId' => 'device-hlcguard',
         'userId' => $userId,
@@ -130,9 +112,6 @@ it('boot-time receive() from hlc_clock_state prevents clock rewind after restart
         'publicKey' => $pk,
     ]);
 
-    // Step 4: Write a new op — tick() must produce hlc_l >= $seededHlcL.
-    // Because wall_ms < $seededHlcL, l cannot advance, so receive()+tick()
-    // must keep l at the seeded floor and bump the counter.
     $writer->writeSet(
         table: 'transactions',
         pk: $txnId,
@@ -140,11 +119,8 @@ it('boot-time receive() from hlc_clock_state prevents clock rewind after restart
         value: $catId,
     );
 
-    // Step 5: Assert the persisted entry proves the floor was raised:
-    //   - hlc_l >= the seeded (above-wall-clock) high-water mark, AND
-    //   - hlc_c advanced past the seeded counter (since l did not move forward,
-    //     the counter MUST have incremented — this is what distinguishes a
-    //     real receive() from a no-op).
+    // The counter is what distinguishes a real restore from a no-op: wall time
+    // cannot advance the logical part, so the counter has to move instead.
     $row = $db->connection()
         ->table('op_log_entries')
         ->where('user_id', $userId)
@@ -157,14 +133,9 @@ it('boot-time receive() from hlc_clock_state prevents clock rewind after restart
     expect((int) $row->hlc_c)->toBeGreaterThan($seededHlcC); // counter advanced past the seed
 });
 
-/*
- * CR-01 regression: two devices for the SAME user must each persist their own
- * hlc_clock_state row. Under the old `id INTEGER PRIMARY KEY CHECK (id = 1)`
- * singleton schema, the second device's writeEntry() upsert collided on id=1
- * and threw a QueryException inside the op-write transaction — silently
- * failing every op-log write for the second device. The composite PRIMARY KEY
- * (user_id, device_id) makes both rows coexist.
- */
+// Two devices of one user each keep their own clock row. The schema used to
+// pin it to a single row, so the second device's upsert collided inside the
+// op-write transaction and every one of its op-log writes failed silently.
 it('two devices for one user each persist an independent hlc_clock_state row (CR-01)', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -239,8 +210,7 @@ it('two devices for one user each persist an independent hlc_clock_state row (CR
             'publicKey' => sodium_crypto_sign_publickey($keypair),
         ]);
 
-        // The second device's write would have thrown under the old singleton
-        // schema. No exception must escape here.
+        // This is the write that used to throw. Nothing may escape here.
         $writer->writeSet(
             table: 'transactions',
             pk: $txnId,
@@ -249,7 +219,6 @@ it('two devices for one user each persist an independent hlc_clock_state row (CR
         );
     }
 
-    // Both devices persisted their own clock-state row AND their own op.
     $clockRows = $db->connection()->table('hlc_clock_state')
         ->where('user_id', $userId)
         ->pluck('device_id')

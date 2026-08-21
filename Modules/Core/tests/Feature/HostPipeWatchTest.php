@@ -4,27 +4,11 @@ declare(strict_types=1);
 
 use Modules\Core\Public\Services\HostPipeWatch;
 
-/*
- * How a child process learns its host is gone.
- *
- * The desktop shell spawns daemons and queue workers as PERSISTENT child
- * processes, on purpose, so a crash-restart does not drop them. On an orderly
- * quit the supervisor stops them. A force quit kills it outright, that hook
- * never runs, and they keep going — a queue listener was found still alive
- * three hours after the app died, spawning a job process every few seconds
- * against an app that no longer existed.
- *
- * Neither ext-pcntl nor ext-posix ships in the bundled PHP, so there is no
- * signal to trap and no getppid() to poll. The stdin pipe the host holds is
- * what is left.
- *
- * The false-positive direction matters as much as the true one: reading a
- * terminal, or /dev/null, as "the host has gone" would make a hand-run
- * `php artisan queue:work` exit the moment it started.
- */
+// The shell spawns daemons and queue workers as persistent children on purpose,
+// so a force quit skips the supervisor's stop hook and leaves them running — one
+// queue listener was found alive three hours after the app died. Neither
+// ext-pcntl nor ext-posix ships in the bundled PHP, so stdin is the last signal.
 
-// Runs a one-liner in a child whose stdin we control, and reports what the
-// watch concluded there.
 function hostPipeProbe(string $expression, bool $closeStdin): string
 {
     $script = '<?php require '.var_export(base_path('vendor/autoload.php'), true).';'

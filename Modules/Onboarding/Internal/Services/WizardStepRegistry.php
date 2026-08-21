@@ -19,9 +19,8 @@ final class WizardStepRegistry
         'done',
     ];
 
-    // SetupWizard::skip() gates on this list, so a step whose key is missing
-    // renders a skip button that dispatches and goes nowhere — which is
-    // exactly how first-import shipped with a no-op button.
+    // SetupWizard::skip() gates on this list, so a missing key gives a skip button
+    // that dispatches and goes nowhere — how first-import shipped once.
     /** @var list<string> */
     private const SKIPPABLE = [
         'connect-bank',

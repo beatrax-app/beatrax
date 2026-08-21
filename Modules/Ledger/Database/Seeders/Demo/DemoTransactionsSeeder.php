@@ -21,8 +21,7 @@ final class DemoTransactionsSeeder
 {
     private const AH_COUNTERPARTY = 'Albert Heijn';
 
-    // Consecutive calendar months ending with the current one; with the
-    // day-offset series this yields the documented ~166-row set.
+    // With the day-offset series this yields the documented ~166-row set.
     private const MONTH_SPAN = 3;
 
     // A plausible rate, not a real provider's: the point is that the
@@ -461,7 +460,6 @@ final class DemoTransactionsSeeder
     }
 
     // A Saturday grocery run plus a Wednesday top-up (three days back).
-    // rowIndex advances by reference: it is an input to the fingerprint.
     private function seedUser1AhWeekly(
         User $user,
         Account $asn,
@@ -507,8 +505,7 @@ final class DemoTransactionsSeeder
         return $inserted;
     }
 
-    // Tuesday/Thursday commute, one amount per trip until the table runs
-    // out. rowIndex advances by reference: it is an input to the fingerprint.
+    // Tuesday/Thursday commute, one amount per trip until the table runs out.
     private function seedUser1NsTransit(
         User $user,
         Account $asn,
@@ -574,8 +571,6 @@ final class DemoTransactionsSeeder
         return $inserted;
     }
 
-    // The date in each month of the window falling on $dayOfMonth, oldest
-    // month first.
     /**
      * @param  int  $olderMonthStride  pushes each older month this many days
      *                                 later, so one merchant's rows do not all
@@ -596,7 +591,6 @@ final class DemoTransactionsSeeder
         return $dates;
     }
 
-    // Capped at the month's last day: day 31 in February clamps to 28/29.
     private function dayInMonth(CarbonImmutable $windowStart, int $day, int $monthsBack): CarbonImmutable
     {
         // Forward from $windowStart, never backward from a second today():
@@ -608,7 +602,6 @@ final class DemoTransactionsSeeder
         return $anchor->setDay(min($day, $anchor->daysInMonth));
     }
 
-    // Null for an unknown slug; the caller leaves category_id null.
     private function categoryId(string $slug): ?int
     {
         /** @var Category|null $cat */

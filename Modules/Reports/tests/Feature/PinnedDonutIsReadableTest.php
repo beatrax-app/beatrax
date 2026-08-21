@@ -5,15 +5,9 @@ declare(strict_types=1);
 use Modules\Reports\Internal\Http\Livewire\PinnedReportsRow;
 use Modules\Reports\Public\Dto\ReportResultRow;
 
-/*
- * A donut with dataLabels off AND legend off is a ring of colours that says
- * nothing. On the dashboard there is no axis to carry the meaning and no hover
- * on a phone, so the card gave the user no way to tell which slice was which.
- *
- * Asserted against the options the component actually builds. Reading the
- * source for "'show' => true" matched any later occurrence in the file, and the
- * negative case matched one exact spelling that a reformat would defeat.
- */
+// A donut with dataLabels and legend both off is a ring of colours: no axis on
+// the card, no hover on a phone. Asserted against the built options, because
+// grepping for "'show' => true" matched later occurrences and broke on reformat.
 
 it('never draws a donut with neither a legend nor data labels', function (): void {
     $rows = [

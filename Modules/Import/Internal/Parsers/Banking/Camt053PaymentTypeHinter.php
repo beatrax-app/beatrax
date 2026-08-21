@@ -10,9 +10,6 @@ use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
-/**
- * @link ../../../../../.docs/features/import/architecture.md#payment-type-hinters
- */
 final class Camt053PaymentTypeHinter implements PaymentTypeHinter
 {
     private const SOURCE_FORMAT = SourceFormat::Camt053->value;

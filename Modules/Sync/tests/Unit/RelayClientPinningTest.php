@@ -4,15 +4,10 @@ declare(strict_types=1);
 
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
 
-/*
- * The relay speaks TLS with verify=>false paired with CURLOPT_PINNEDPUBLICKEY,
- * and fails closed (RelayRefusedException::pinningUnsupported) when the runtime
- * cannot pin. supportsPinning() gates on the curl SSL backend because the pin
- * option is a SILENT no-op on some backends (notably Schannel) — accepting one
- * would ship verify=>false with an inert pin, i.e. unauthenticated TLS on the
- * LAN. This pins the allow-list so a change that drops the backend check (or
- * admits a non-honoring backend) is caught, rather than only "present in code".
- */
+// The relay speaks TLS with verify=>false paired with CURLOPT_PINNEDPUBLICKEY and
+// fails closed when the runtime cannot pin, because that option is a silent no-op
+// on some curl backends: admitting one would ship verify=>false behind an inert
+// pin, which is unauthenticated TLS on the LAN.
 
 it('only treats pin-honoring TLS backends as pinnable (fail-closed allow-list)', function (string $sslVersion, bool $honors): void {
     expect(RelayClient::backendHonorsPinning($sslVersion))->toBe($honors);

@@ -6,11 +6,6 @@ use Illuminate\Session\ArraySessionHandler;
 use Illuminate\Session\Store;
 use Modules\Auth\Internal\Lock\LockStateManager;
 
-/*
- * Unit tests for LockStateManager — session lock-state read/write + key custody.
- * Uses a real Illuminate Store backed by an in-memory ArraySessionHandler.
- */
-
 function makeSession(): Store
 {
     return new Store('beatrax_test', new ArraySessionHandler(120));

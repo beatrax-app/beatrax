@@ -298,9 +298,7 @@ it('the toast Blade carries an 8-second auto-dismiss timer per UI-SPEC', functio
 });
 
 it('registers the correction-divergence-toast Livewire alias', function (): void {
-    // Verify that the alias maps to the class by mounting via the
-    // alias name — Livewire resolves the component through the same
-    // registry the @livewire('alias') Blade helper uses.
+    // Mounting by alias goes through the same registry @livewire('alias') uses.
     Livewire::test('categorization.correction-divergence-toast')
         ->assertSet('visible', false);
 });
@@ -308,7 +306,7 @@ it('registers the correction-divergence-toast Livewire alias', function (): void
 it('CorrectionDivergenceToast has zero facade usage in the class body', function (): void {
     $path = base_path('Modules/Categorization/Internal/Http/Livewire/CorrectionDivergenceToast.php');
     $contents = (string) file_get_contents($path);
-    // Strip comments before grepping for forbidden tokens — PHPDoc references stay legal.
+    // A PHPDoc reference to these names stays legal, so strip comments first.
     $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
 
     expect($stripped)->not->toMatch('/Auth::/');
@@ -322,11 +320,9 @@ it('CorrectionDivergenceToast has zero facade usage in the class body', function
 });
 
 it('CorrectionDivergenceToast.update() catches NotFoundHttpException for a tampered foreign ruleId and surfaces a calm flash (not a 500)', function (): void {
-    // WR-02: handleDiverged hydrates ruleId from the Livewire-local
-    // event. A tampered payload could carry another user's ruleId —
-    // UpdateCategorizationRule rejects it with NotFoundHttpException;
-    // the SFC must catch it, surface a calm flash, hide the toast,
-    // and leave the foreign rule untouched.
+    // handleDiverged hydrates ruleId from the Livewire-local event, so a
+    // tampered payload can carry another user's ruleId. The SFC must catch the
+    // rejection, flash calmly, and leave the foreign rule untouched.
     $other = User::create([
         'username' => 'tamper-toast-rule',
         'password' => 'opensesame',
@@ -347,12 +343,9 @@ it('CorrectionDivergenceToast.update() catches NotFoundHttpException for a tampe
 });
 
 it('CorrectionDivergenceToast.update() catches InvalidArgumentException for a foreign-category newCategoryId and surfaces a calm flash', function (): void {
-    // WR-02 + WR-01 interaction: a tampered event with the user's own
-    // ruleId but a foreign-user's newCategoryId would have RuleEvaluator
-    // re-categorise the user's transactions into a stranger's category
-    // — except UpdateCategorizationRule now rejects that with
-    // InvalidArgumentException. The SFC must catch it and surface a
-    // calm flash.
+    // A tampered event pairing the user's own ruleId with a foreign
+    // newCategoryId would re-categorise their transactions into a stranger's
+    // category; UpdateCategorizationRule rejects it and the SFC stays calm.
     $other = User::create([
         'username' => 'tamper-toast-cat',
         'password' => 'opensesame',

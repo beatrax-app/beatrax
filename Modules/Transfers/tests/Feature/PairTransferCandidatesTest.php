@@ -11,28 +11,6 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Transfers\Internal\Listeners\PairTransferCandidates;
 
-/*
- * Coverage for the PairTransferCandidates listener.
- *
- * The listener subscribes to TransactionImported (fired sync in-tx by
- * RecordTransactions) and runs the deterministic match:
- *
- *   - same user
- *   - counterparty_iban matches one of the user's own Account.iban rows
- *   - amount equal-and-opposite, same currency
- *   - booked_at within ±3 days
- *   - both legs typed transfer_in / transfer_out
- *   - neither leg already paired
- *
- * When matched, BOTH rows get pair_transaction_id set to point at each
- * other in the same handle() call (inherits the outer RecordTransactions
- * transaction frame — NO new DB::transaction wrapper).
- *
- * Cross-user pairing is impossible: every Account / Transaction query
- * filters on $user->id, and the listener defensively asserts that
- * $event->transaction->user_id === $event->user->id.
- */
-
 beforeEach(function (): void {
     $this->primaryUser = User::query()->create([
         'username' => 'pair-primary',
@@ -73,9 +51,6 @@ beforeEach(function (): void {
 });
 
 /**
- * Persist one Transaction row used in pair-detection assertions. Sane
- * defaults — caller overrides only the keys the test exercises.
- *
  * @param  array<string, mixed>  $overrides
  */
 function pairTx(
@@ -152,11 +127,8 @@ it('leaves a half-pair unpaired when only one leg is in the ledger', function ()
 });
 
 it('pairs partner rows that are exactly 3 calendar days away regardless of time-of-day (symmetric window)', function (): void {
-    // ASN row books at noon on May 15. Partner books at 23:59 on May 18 —
-    // exactly 3 calendar days later but a different time-of-day than the
-    // ASN leg. With a naive subDays/addDays around a 12:00 booked_at the
-    // partner would land outside the window (it sits at 11:59 past the
-    // upper bound). The whole-day boundaries make the window symmetric.
+    // Noon on May 15 against 23:59 on May 18: three calendar days apart, but a
+    // naive subDays/addDays off a 12:00 booked_at puts it 11:59 past the bound.
     $asnLeg = pairTx($this->primaryUser, $this->asnAccount, $this->importRun, [
         'type' => 'transfer_out',
         'amount_minor' => -500,
@@ -184,8 +156,6 @@ it('pairs partner rows that are exactly 3 calendar days away regardless of time-
 });
 
 it('does not pair partners that are 4+ calendar days away', function (): void {
-    // Boundary check on the upper end: a partner that books on day +4
-    // is outside the symmetric ±3 calendar-day window and MUST NOT pair.
     $asnLeg = pairTx($this->primaryUser, $this->asnAccount, $this->importRun, [
         'type' => 'transfer_out',
         'amount_minor' => -500,
@@ -213,7 +183,6 @@ it('does not pair partners that are 4+ calendar days away', function (): void {
 });
 
 it('closes the half-pair when the partner arrives in a later import', function (): void {
-    // First import: ASN side lands without partner.
     $asnLeg = pairTx($this->primaryUser, $this->asnAccount, $this->importRun, [
         'type' => 'transfer_out',
         'amount_minor' => -7777,
@@ -222,7 +191,6 @@ it('closes the half-pair when the partner arrives in a later import', function (
     ]);
     $this->events->dispatch(new TransactionImported($asnLeg, $this->primaryUser));
 
-    // Second import: ICS side arrives later.
     $secondRun = ImportRun::create([
         'user_id' => $this->primaryUser->id,
         'source_format' => 'ics-pdf',
@@ -265,8 +233,6 @@ it('does not re-type or re-pair rows that are already paired (idempotency)', fun
     $this->events->dispatch(new TransactionImported($asnLeg, $this->primaryUser));
     $this->events->dispatch(new TransactionImported($icsLeg, $this->primaryUser));
 
-    // Re-fire the event with the already-paired ASN leg. The handler
-    // should observe the existing pair_transaction_id and bail.
     $asnReloaded = Transaction::query()->findOrFail($asnLeg->id);
     $this->events->dispatch(new TransactionImported($asnReloaded, $this->primaryUser));
 
@@ -281,8 +247,7 @@ it('does not re-type or re-pair rows that are already paired (idempotency)', fun
 });
 
 it('does not self-pair (the id-not-equal filter blocks degenerate matches)', function (): void {
-    // Contrive a transfer_out whose own account's IBAN equals the
-    // counterparty IBAN — pathological but defensive.
+    // A contrived transfer_out whose own account IBAN is also its counterparty.
     $self = pairTx($this->primaryUser, $this->asnAccount, $this->importRun, [
         'type' => 'transfer_out',
         'amount_minor' => -50,
@@ -327,8 +292,8 @@ it('never pairs across users (cross-user safety invariant)', function (): void {
         'uploaded_at' => CarbonImmutable::now(),
         'status' => 'previewed',
     ]);
-    // User-B already has a transfer_in waiting that would deceptively
-    // "pair" with User-A's transfer_out if user_id were not scoped.
+    // User B already has a transfer_in waiting that would pair with user A's
+    // transfer_out if the queries were not user-scoped.
     $bIcsLeg = pairTx($userB, $bIcs, $bRun, [
         'type' => 'transfer_in',
         'amount_minor' => 9999,
@@ -392,8 +357,8 @@ it('refuses to pair when the event payload\'s user does not match the transactio
         'counterparty_iban' => 'ICS-CARD',
     ]);
 
-    // The listener defensively assert event.transaction.user_id ===
-    // event.user.id. Tampering with the payload must throw.
+    // The listener asserts event.transaction.user_id === event.user.id, so a
+    // tampered payload has to throw.
     expect(fn () => $this->events->dispatch(new TransactionImported($asnLeg, $userB)))
         ->toThrow(RuntimeException::class);
 });
@@ -403,7 +368,6 @@ it('registers the listener via TransfersServiceProvider on boot', function (): v
     $events = $this->app->make(Dispatcher::class);
     expect($events->hasListeners(TransactionImported::class))->toBeTrue();
 
-    // Resolve the listener directly to make sure the DI is wired.
     /** @var PairTransferCandidates $listener */
     $listener = $this->app->make(PairTransferCandidates::class);
     expect($listener)->toBeInstanceOf(PairTransferCandidates::class);

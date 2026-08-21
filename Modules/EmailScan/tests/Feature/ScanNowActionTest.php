@@ -10,20 +10,6 @@ use Modules\Core\Models\User;
 use Modules\EmailScan\Internal\Http\Livewire\InboxesPage;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
 
-/*
- * /inboxes Scan-now + Reconnect inline action invariants.
- *
- *  - Happy path: scanNow($id) on an idle inbox dispatches
- *    IncrementalScanJob via the Bus contract and emits a toast.
- *  - No-op guard: scanNow on a backfilling/scanning inbox emits the
- *    "Scan already in progress." toast and does NOT dispatch.
- *  - Cross-user 404: scanNow against another user's inbox raises
- *    Symfony NotFoundHttpException (asserted via Livewire's
- *    assertStatus(404)).
- *  - reconnect($id) on a needs_reauth inbox returns a Redirect to
- *    /oauth/connect/{provider}?inbox_id={id}.
- */
-
 function snatUser(string $username): User
 {
     return User::query()->create([

@@ -8,14 +8,6 @@ use Modules\Reports\Internal\Http\DrilldownUrlBuilder;
 use Modules\Reports\Public\Dto\ReportDefinition;
 use Modules\Reports\Public\Enums\ReportGranularity;
 
-/*
- * Wave-authored (999.6-08 Task 1, Req 12/D-03) — pins the single tested
- * Period→SearchFilters/URL helper every chart partial's drill-down handler
- * relies on. `drilldown_filter_mapping` in the test names below matches
- * 999.6-RESEARCH.md's Validation Architecture entry
- * (`pest --filter=drilldown_filter_mapping`).
- */
-
 /**
  * @param  array{amountMin?: ?string, amountMax?: ?string, amountDirection?: string}  $overrides
  */
@@ -66,9 +58,8 @@ it('drilldown_filter_mapping: category dimension maps groupKey to the singular c
         ->and($params)->not->toHaveKey('account')
         ->and($params)->not->toHaveKey('counterparty')
         ->and($params['after'])->toBe('2026-05-01')
-        // Pitfall 2(b): Period.endExclusive (2026-06-01) is exclusive;
-        // SearchFilters/TransactionsList's `before` is inclusive, so the
-        // drilled-down `before` must be one day earlier.
+        // Period.endExclusive is exclusive and SearchFilters' `before` is
+        // inclusive, so the drilled-down `before` is one day earlier.
         ->and($params['before'])->toBe('2026-05-31');
 });
 

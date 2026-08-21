@@ -11,9 +11,8 @@ use Monolog\Processor\PsrLogMessageProcessor;
 
 return [
 
-    // `daily`, not Laravel's `stack`: the Dev Console log tailer lists
-    // "today / yesterday / earlier" straight off rolling per-day filenames,
-    // without asking Monolog what it wrote where.
+    // `daily`, not `stack`: the Dev Console tailer reads "today / yesterday /
+    // earlier" straight off the rolling filenames.
     'default' => env('LOG_CHANNEL', 'daily'),
 
     'deprecations' => [
@@ -21,10 +20,9 @@ return [
         'trace' => env('LOG_DEPRECATIONS_TRACE', false),
     ],
 
-    // Only the three channels that write to the local log file tap
-    // PushRedactProcessor, which pushes RedactSecretsProcessor onto every
-    // handler at channel boot so the OAuth scrub set, Bearer tokens and JWTs
-    // are redacted before the formatter reaches disk.
+    // Only the channels that write to the local log file tap
+    // PushRedactProcessor, which redacts the OAuth scrub set, Bearer tokens
+    // and JWTs before the formatter reaches disk.
     'channels' => [
 
         'stack' => [

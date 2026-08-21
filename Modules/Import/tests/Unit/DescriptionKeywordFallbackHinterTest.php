@@ -7,18 +7,6 @@ use Modules\Import\Internal\Parsers\DescriptionKeywordFallbackHinter;
 use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
-/*
- * Unit coverage for DescriptionKeywordFallbackHinter — the universal
- * last-resort hinter. Asserts it inspects every row regardless of
- * source format and emits its verdict at the documented confidence
- * level (40) so source-specific hinters always win when both fire.
- */
-
-/**
- * Build a CanonicalTransaction with the supplied description and
- * source format. Used to exercise the fallback's source-agnostic
- * behaviour.
- */
 function fallbackRow(string $description, string $sourceFormat): CanonicalTransaction
 {
     return new CanonicalTransaction(
@@ -49,8 +37,6 @@ function fallbackRow(string $description, string $sourceFormat): CanonicalTransa
 it('emits a hint for every recognised keyword regardless of source format', function (): void {
     $hinter = new DescriptionKeywordFallbackHinter;
 
-    // Same keyword, three completely different source formats — the
-    // fallback must fire on every one.
     $cases = [
         ['Betaalautomaat AH', 'asn-csv'],
         ['Betaalautomaat AH', 'google-play-receipt'],

@@ -10,23 +10,9 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 
-/*
- * Smoke-test that Laravel's `whereJsonContains` works against the dev
- * SQLite build. JSON1 ships with the SQLite the local dev image uses, but this
- * test locks the contract before any later wave commits to the API.
- *
- * The Wave 3 auto-promotion counter walks chain_links by
- * `evidence->signature_hash`; if `whereJsonContains` does not return
- * the matching row, the resolver code switches to the
- * `whereRaw('json_extract(evidence, ?) = ?')` fallback. This test
- * ensures we discover the discrepancy now, not in Wave 3.
- *
- * The smoke test uses the raw DatabaseManager query builder to insert
- * + query the row so it stays decoupled from the Eloquent ChainLink
- * model (which lands alongside the resolver implementations in a
- * later wave). The contract being asserted is the SQLite + Laravel
- * query-builder JSON-extract behaviour, not Eloquent's cast layer.
- */
+// JSON1 is not guaranteed by every SQLite build, and the auto-promotion
+// counter walks chain_links by evidence->signature_hash. Both the
+// whereJsonContains form and the json_extract fallback are pinned here.
 
 beforeEach(function (): void {
     /** @var DatabaseManager $db */

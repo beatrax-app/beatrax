@@ -13,16 +13,12 @@ use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
 final readonly class RangeProjector
 {
-    // A series only escalates to the empirical percentile tier once its
-    // stated tolerance is this wide AND it has at least this many observed
-    // charges to build a distribution from; below either bar the cheaper
-    // envelope tier carries the band.
+    // Both bars must clear before a series escalates to the percentile tier:
+    // a wide enough tolerance, and enough charges to build a distribution.
     private const int HIGH_VARIANCE_THRESHOLD_PERCENT = 40;
 
     private const int MIN_OCCURRENCES_FOR_PERCENTILE = 6;
 
-    // Percentile-tier charge dates are uncertain, so the band is smeared
-    // across a ±this-many-day window around each projected date.
     private const int JITTER_WINDOW_DAYS = 3;
 
     public function __construct(
@@ -43,8 +39,7 @@ final readonly class RangeProjector
     ): array {
         $isHighVariance = $series->varianceTolerancePercent >= self::HIGH_VARIANCE_THRESHOLD_PERCENT;
 
-        // Load observed occurrences only when the variance trigger fires;
-        // envelope-only series do not need the DB read.
+        // Gated so an envelope-only series never pays for the DB read.
         $occurrences = $isHighVariance
             ? $this->seriesQuery->occurrencesForSeries($series->seriesId, $user)
             : [];
@@ -52,17 +47,13 @@ final readonly class RangeProjector
         $usePercentile = $isHighVariance && count($occurrences) >= self::MIN_OCCURRENCES_FOR_PERCENTILE;
 
         if ($usePercentile) {
-            // Percentile-tier series carry both a wide empirical
-            // distribution AND uncertain charge dates, so the jitter
-            // widens the band across a ±3-day window around each date.
             $contributions = $this->percentileTier($series, $accountId, $asOf, $horizonDays, $occurrences);
 
             return $this->jitter->apply($contributions, self::JITTER_WINDOW_DAYS);
         }
 
-        // Envelope-tier series have predictable charge dates, so the
-        // per-occurrence date is already the most honest signal — jitter
-        // would smear the band across uncertainty it does not carry.
+        // No jitter here: an envelope-tier series has predictable charge dates,
+        // so smearing the band would invent uncertainty it does not carry.
         return $this->envelope($series, $accountId, $asOf, $horizonDays, $user);
     }
 
@@ -76,8 +67,7 @@ final readonly class RangeProjector
         int $horizonDays,
         User $user,
     ): array {
-        // The envelope tier is per-series only; user is consumed by the
-        // percentile tier's occurrence lookup in project() above.
+        // Accepted only to match the percentile tier's signature.
         unset($user);
 
         $next = $series->nextExpectedAt;
@@ -101,10 +91,8 @@ final readonly class RangeProjector
         $highMag = (int) round($magnitude * (100 + $tol) / 100);
         $sign = $point < 0 ? -1 : 1;
 
-        // For an expense (negative point) a "wider" outflow is more
-        // negative, so low carries the larger magnitude; for an income
-        // the opposite holds. This guarantees low <= point <= high
-        // when read as raw signed integers.
+        // A wider expense is more negative, so its low carries the larger
+        // magnitude. Flipping keeps low <= point <= high as signed integers.
         if ($sign < 0) {
             $lowMinor = -$highMag;
             $highMinor = -$lowMag;
@@ -168,10 +156,8 @@ final readonly class RangeProjector
         $p50 = $this->percentile->p50($amounts);
         $p90 = $this->percentile->p90($amounts);
 
-        // Sort the percentile triple as signed integers so
-        // low <= point <= high holds whether the series is income
-        // (positive) or expense (negative) — sorting always puts the
-        // lowest signed value into lowMinor and the highest into highMinor.
+        // Sorted as signed integers, so low <= point <= high holds for an
+        // expense (negative) as well as an income.
         $triple = [$p10, $p50, $p90];
         sort($triple, SORT_NUMERIC);
         $lowMinor = $triple[0];

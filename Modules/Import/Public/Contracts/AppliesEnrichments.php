@@ -7,9 +7,6 @@ namespace Modules\Import\Public\Contracts;
 use Modules\Core\Models\User;
 use Modules\Import\Public\Dto\PendingEnrichment;
 
-/**
- * @link ../../../../.docs/features/import/architecture.md#module-boundary
- */
 interface AppliesEnrichments
 {
     // Implementations must be idempotent on a stored source_ref equal to the

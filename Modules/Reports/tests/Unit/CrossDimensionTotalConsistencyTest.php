@@ -17,17 +17,6 @@ use Modules\Reports\Public\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 
-/*
- * 999.6-04 T-999.6-09: proves the four dimension queries built across
- * Tasks 2/3 agree on the SAME grand total for the SAME
- * (metric, period, currency) — the second half of Pitfall 1
- * ("cross_dimension_total_consistency", mirrors Plan 06's
- * ReportAggregatorMetricsTest but exercised directly against the Plan 04
- * query classes rather than through the not-yet-built ReportAggregator).
- * Fixture helpers prefixed xdc_ to avoid cross-file global-function
- * collisions.
- */
-
 function xdcUser(): User
 {
     /** @var User */
@@ -198,10 +187,9 @@ it('WR-01: a genuinely-unsplit $0.00 transaction is captured by CategorySpendQue
     $account = xdcAccount($user, 'ASN');
     $auditCategory = xdcCategory('Audit Adjustment');
 
-    // No transaction_splits rows at all AND settled_amount_minor = 0 —
-    // COALESCE(NULL, 0) <> 0 is FALSE, so the old amount-comparison-only
-    // WHERE clause dropped this row from CategorySpendQuery entirely while
-    // it still surfaced fine on the other three dimensions.
+    // No split rows and settled_amount_minor = 0: COALESCE(NULL, 0) <> 0 is
+    // FALSE, so the old amount-comparison-only WHERE dropped this row from
+    // CategorySpendQuery while the other three dimensions still showed it.
     xdcTransaction($db, $user, $account, [
         'type' => 'expense', 'settled_amount_minor' => 0, 'amount_minor' => 0,
         'category_id' => $auditCategory->id,
@@ -223,9 +211,7 @@ it('WR-01: a genuinely-unsplit $0.00 transaction is captured by CategorySpendQue
     expect($categoryRows[0]->groupLabel)->toBe('Audit Adjustment');
     expect($categoryRows[0]->amountMinor)->toBe(0);
 
-    // Every dimension surfaces exactly one group for this single $0.00 row
-    // — the category dimension is no longer a strict subset of the other
-    // three's coverage.
+    // The category dimension is no longer a strict subset of the other three.
     expect($accountRows)->toHaveCount(1);
     expect($counterpartyRows)->toHaveCount(1);
     expect($timeBucketRows)->toHaveCount(1);

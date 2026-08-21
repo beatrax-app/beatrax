@@ -8,18 +8,14 @@ use DateTimeImmutable;
 use Modules\Core\Public\Contracts\Clock;
 use Throwable;
 
-// Pure parsing/matching helpers the incremental scan folds provider
-// payloads through: Gmail history unpacking, Graph message-meta field
-// extraction, sender-pattern matching and date normalisation. Owns the
-// project Clock so every unparseable-date fallback honours frozen time.
+// Owns the project Clock so every unparseable-date fallback here honours
+// frozen time.
 final class ScanMessageMapper
 {
     public function __construct(private readonly Clock $clock) {}
 
-    // Pulls provider message ids out of a Gmail history.list response;
-    // each entry may carry a messagesAdded array of
-    // {message: {id, threadId}} objects, and the messagesDeleted/
-    // labelAdded shapes are ignored (a deleted message has nothing to fetch).
+    // Only messagesAdded carries a fetchable id; the messagesDeleted and
+    // labelAdded shapes are ignored.
     /**
      * @param  list<array<string, mixed>>  $historyEntries
      * @return list<string>
@@ -50,9 +46,8 @@ final class ScanMessageMapper
         return $ids;
     }
 
-    // Matches a sender address against a pattern list: patterns
-    // starting with '@' match by domain suffix, otherwise a substring
-    // containment match (case-insensitive, both sides lowercased).
+    // Patterns starting with '@' match by domain suffix; anything else is a
+    // case-insensitive substring match.
     /**
      * @param  list<string>  $patterns
      */
@@ -98,9 +93,7 @@ final class ScanMessageMapper
         return is_string($msgMeta['id'] ?? null) ? $msgMeta['id'] : '';
     }
 
-    // Provider-stamped receivedDateTime is the canonical internal date
-    // for Microsoft; a null return lets the scan context fall back to
-    // the project Clock when the stamp is missing.
+    // A null return lets the scan context fall back to the project Clock.
     /**
      * @param  array<string, mixed>  $msgMeta
      */

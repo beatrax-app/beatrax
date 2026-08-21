@@ -6,20 +6,9 @@ use Carbon\CarbonImmutable;
 use Modules\Ingestion\Internal\Adapters\Paypal\PaypalDateParser;
 use Modules\Ingestion\Public\Exceptions\InvalidDateException;
 
-/*
- * Coverage for the PayPal date parser.
- *
- * Every Datum cell in the PayPal Activity Download is rendered as
- * M/D/YYYY (US numeric date), even though the surrounding amount cells
- * use NL-locale comma decimals. Representative values from the
- * redacted fixture at
- * Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv: 4/1/2026,
- * 4/19/2026, 5/8/2026.
- *
- * ISO 8601 (yyyy-mm-dd) is accepted as a forward-compatibility fallback
- * for the case where a future PayPal export shifts to that shape; if it
- * does not, the EXTRA arm is dead-but-correct code.
- */
+// PayPal renders every Datum cell as US M/D/YYYY even though the amount cells
+// beside it use NL comma decimals. The ISO arm is speculative: no observed
+// export uses it, and it is there in case one ever does.
 
 beforeEach(function (): void {
     $this->parser = new PaypalDateParser;

@@ -7,10 +7,8 @@ namespace Modules\Ledger\Internal\Services;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Concerns\CoercesScalars;
 
-// Writes the earliest opening balance per account into
-// accounts.starting_balance_minor + starting_balance_date. Re-running
-// is safe: rows whose pair is already set are left untouched, so a
-// user-confirmed override survives later imports.
+// Re-running is safe: an account whose pair is already set is left alone, so
+// a user-confirmed override survives later imports.
 final class BackfillStartingBalanceFromStatementSummaries
 {
     use CoercesScalars;

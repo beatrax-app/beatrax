@@ -83,10 +83,9 @@ final class NetWorthSeriesQuery
             $money = Money::ofMinor($balanceMinor, $currency);
             $result = $this->fx->convertAtDate($money, $baseCurrency, $asOf->toDateString());
 
-            // Never a silent 1:1 fallback: when no rate is available,
-            // ExchangeRateService returns a passthrough carrying the
-            // original currency. Any mismatch here means "excluded", never
-            // "assume rate 1".
+            // Never a silent 1:1 fallback: with no rate available the service
+            // returns a passthrough in the original currency, so a mismatch
+            // here means excluded, not rate 1.
             if ($result->converted->currency() !== $baseCurrency) {
                 $excludedCount++;
 

@@ -9,17 +9,6 @@ use Modules\Core\Models\User;
 use Modules\FX\Internal\Jobs\FetchFxRatesJob;
 use Modules\Ledger\Models\Currency;
 
-/*
- * Feature tests for the online-fetch toggle and manual refresh action.
- *
- * FX-01 / D-04 / D-06 / T-04-02 / T-04-03:
- *  - `fxOnlineEnabled` defaults false (T-04-03 — opt-in consent).
- *  - `toggleFxOnline()` flips and instantly persists users.fx_online_enabled
- *    without the batch Save button (instant-apply, mirrors toggleAutoImport).
- *  - `refreshFxRates()` dispatches FetchFxRatesJob for the current user (D-06).
- *  - All writes are scoped to CurrentUser (V4 — no user_id from the request).
- */
-
 beforeEach(function (): void {
     Currency::query()->updateOrInsert(['code' => 'EUR'], ['name' => 'Euro', 'minor_unit' => 2]);
 
@@ -66,7 +55,7 @@ it('toggleFxOnline flips fxOnlineEnabled back to false and instantly persists', 
 })->group('phase-1-fx');
 
 it('toggleFxOnline does not require the batch Save button', function (): void {
-    // Flip once without calling save() — the DB must reflect the new value
+    // The toggle is instant-apply: no save() call, yet the row must already differ.
     Livewire::test(SettingsPage::class)
         ->call('toggleFxOnline');
 

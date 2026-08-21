@@ -129,11 +129,10 @@ it('rebuilds a notification, whose id travels as the op pk rather than a field',
         'default_currency_view' => 'eur_only',
     ]);
 
-    // A sha256 string PK, not an autoincrement, which is why the rules name
-    // `id` as required. The backfill never emits `id` as a field — the row's
-    // identity travels as the op's pk — so demanding it discarded every
-    // notification on arrival as incomplete_create_row: 19 of 19, on a real
-    // phone, with nothing surfacing the loss.
+    // A sha256 string pk, which is why the rules name `id` as required. The
+    // backfill never emits it as a field — identity travels as the op's pk —
+    // so demanding it discarded all 19 notifications on arrival as incomplete,
+    // on a real phone, with nothing surfacing the loss.
     $notificationId = hash('sha256', 'notify-'.bin2hex(random_bytes(8)));
 
     $connection->table('notifications')->insert([

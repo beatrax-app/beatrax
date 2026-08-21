@@ -12,21 +12,10 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
 uses(RefreshDatabase::class);
 
-/*
- * CR-02 / IN-05: OR-Set merge results must survive the round trip THROUGH
- * replay() into a real SQLite column.
- *
- * The OrSetStrategy resolves to a `list<array{v,tag}>` (a PHP array). The
- * previous replayer wrote that array straight into the column via the query
- * builder, which threw "Array to string conversion" — and because the
- * ->update() ran OUTSIDE the strategy try/catch, the exception propagated out
- * of replay() and rolled back the WHOLE merge batch. OrSetStrategyTest only
- * ever called resolve() directly, so this was invisible.
- *
- * These tests drive an `or_set` field (merchant_aliases.merged_from) all the
- * way through replay() and assert the persisted column value, plus assert that
- * one bad value does not roll back unrelated edits in the same batch.
- */
+// The strategy resolves to a PHP array, and the replayer wrote it straight
+// into the column: "Array to string conversion", thrown outside the strategy's
+// own catch, so it rolled back the entire merge batch. Calling resolve()
+// directly — which was all the strategy's own test did — never reaches that.
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-06-15 10:00:00');
@@ -61,7 +50,6 @@ it('persists an OR-Set merge result as JSON into the merged_from column via repl
         'default_currency_view' => 'eur_only',
     ]);
 
-    // Seed an existing merchant_aliases row to SET merged_from on.
     $aliasId = $db->connection()->table('merchant_aliases')->insertGetId([
         'user_id' => $userId,
         'pattern' => 'ALBERT HEIJN*',
@@ -77,8 +65,7 @@ it('persists an OR-Set merge result as JSON into the merged_from column via repl
     $pkHex = bin2hex(sodium_crypto_sign_publickey($keypair));
     $signer = new DeviceKeySigner;
 
-    // Two concurrent OR-Set ops: op1 adds element X (tag t1), op2 adds Y (tag t2)
-    // and removes X's tag t1. Convergent result = {Y} only.
+    // One op adds X, the other adds Y and removes X's tag: only Y survives.
     $makeSetOp = function (string $value, int $hlcL) use ($signer, $sk, $userId, $aliasId): OpLogEntry {
         $stub = new OpLogEntry(
             table: 'merchant_aliases',
@@ -120,10 +107,9 @@ it('persists an OR-Set merge result as JSON into the merged_from column via repl
 
     $replayer = new OpLogReplayer($db, ['device-orset' => $pkHex]);
 
-    // RED before CR-02: this threw "Array to string conversion" and rolled back.
+    // This is the call that used to throw and roll the batch back.
     $replayer->replay([$op1, $op2], $userId);
 
-    // The merged set persisted as JSON. Decode and assert the convergent set.
     $stored = $db->connection()->table('merchant_aliases')
         ->where('id', $aliasId)
         ->value('merged_from');
@@ -146,8 +132,8 @@ it('a bad OR-Set value is quarantined without rolling back a sibling LWW edit in
         'default_currency_view' => 'eur_only',
     ]);
 
-    // A merchant_aliases row whose merged_from will get a MALFORMED op, plus a
-    // friendly_name LWW edit on the same row that must still land.
+    // A malformed op on one field, alongside a valid edit on a sibling field of
+    // the same row that must still land.
     $aliasId = $db->connection()->table('merchant_aliases')->insertGetId([
         'user_id' => $userId,
         'pattern' => 'JUMBO*',
@@ -192,21 +178,19 @@ it('a bad OR-Set value is quarantined without rolling back a sibling LWW edit in
         );
     };
 
-    // Malformed OR-Set payload: valid JSON, wrong shape (a bare string).
+    // Valid JSON, wrong shape.
     $badOrSet = $make('merged_from', json_encode('not-an-or-set', JSON_THROW_ON_ERROR), 1000);
-    // A perfectly valid LWW edit on a sibling field.
     $goodLww = $make('friendly_name', json_encode('Jumbo (new)', JSON_THROW_ON_ERROR), 1001);
 
     $replayer = new OpLogReplayer($db, ['device-orset' => $pkHex]);
     $replayer->replay([$badOrSet, $goodLww], $userId);
 
-    // The sibling LWW edit survived — the bad OR-Set op did NOT roll back the batch.
+    // The sibling edit survived: one bad op must not roll back the batch.
     $friendly = $db->connection()->table('merchant_aliases')
         ->where('id', $aliasId)
         ->value('friendly_name');
     expect($friendly)->toBe('Jumbo (new)');
 
-    // The bad OR-Set op was quarantined.
     $quarantined = $db->connection()->table('op_log_quarantine')
         ->where('user_id', $userId)
         ->where('table_name', 'merchant_aliases')

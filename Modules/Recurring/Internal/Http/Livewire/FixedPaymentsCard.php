@@ -12,12 +12,8 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Recurring\Public\Services\FixedPaymentsViewQuery;
 
-// Method-parameter DI on every action and on render() — constructor
-// injection is banned on Livewire Component subclasses.
 final class FixedPaymentsCard extends Component
 {
-    // `all` (default) or `this-month`. Persisted as a query-string
-    // variable so the user's choice survives reloads and is shareable.
     #[Url(as: 'fp-filter')]
     public string $filter = 'all';
 
@@ -34,10 +30,9 @@ final class FixedPaymentsCard extends Component
     ): View {
         $user = $currentUser->user();
 
-        // Push the date filter into the query so the limit clips the
-        // matching set, not the unfiltered population — otherwise a card
-        // with real rows to show could surface the "no series" empty
-        // state whenever the unfiltered set falls outside this month.
+        // The date filter goes into the query so the limit clips the matching set
+        // rather than the unfiltered population — otherwise a card with rows to
+        // show would surface the "no series" empty state.
         $monthStart = null;
         $monthEnd = null;
         if ($this->filter === 'this-month') {

@@ -8,9 +8,8 @@ return [
 
     'default' => env('CACHE_STORE', 'database'),
 
-    // A project key, not a framework one: nothing in Laravel reads it. The
-    // shared lock-store helper passes it to Cache::store() when resolving the
-    // lock repository for ShouldBeUnique* jobs.
+    // A project key, not a framework one: the shared lock-store helper passes
+    // it to Cache::store() for ShouldBeUnique* jobs.
     'locks_store' => env('CACHE_LOCK_STORE', 'database'),
 
     'stores' => [
@@ -41,7 +40,7 @@ return [
                 env('MEMCACHED_PASSWORD'),
             ],
             'options' => [
-                // Memcached::OPT_CONNECT_TIMEOUT => 2000,
+
             ],
             'servers' => [
                 [

@@ -5,15 +5,10 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Modules\Community\Public\Services\CommunityCorpusQuery;
 
-/*
- * The corpus lookups used to run under `LIMIT 1000` (substring) and
- * `LIMIT 500` (regex), ordered by id. Ordered that way the cap does not
- * sample the corpus, it truncates it in bundled-file order: once the corpus
- * grew past those counts every later pattern became unmatchable, and nothing
- * reported it — the lookup simply returned null and the descriptor stayed
- * raw. eu.yaml sat entirely beyond the cut, so the most-used brands in the
- * whole corpus were the ones that stopped resolving.
- */
+// The lookups used to run under LIMIT 1000 (substring) and LIMIT 500 (regex)
+// ordered by id, which truncates the corpus in bundled-file order rather than
+// sampling it: every pattern past the cut silently returned null, and eu.yaml —
+// the most-used brands in the corpus — sat entirely beyond it.
 
 function seedCorpusRow(DatabaseManager $db, int $ordinal, string $pattern, string $generalized, string $name): void
 {
@@ -62,9 +57,8 @@ it('matches a regex row that sits far beyond the old regex cap', function (): vo
 it('still answers with the earliest matching row when several could match', function (): void {
     $db = app(DatabaseManager::class);
 
-    // Insertion order is file-sort order, and first match wins. Removing the
-    // cap must not disturb that: it is what lets a specific pattern placed
-    // earlier win over a broader one later.
+    // Insertion order is file-sort order and first match wins — removing the cap
+    // must not disturb that, or a broader pattern later in the file starts winning.
     seedCorpusRow($db, 0, 'ALBERT HEIJN', 'albert heijn', 'Albert Heijn');
     seedCorpusRow($db, 1, 'ALBERT', 'albert', 'Albert');
 

@@ -30,10 +30,9 @@ final class SupportResourceProvider
             return null;
         }
 
-        // Own country first, then the shared file, then everyone else.
-        // Sanitas is a Swiss health insurer AND a Spanish provider, and the
-        // alphabetically-later file used to win for every user. A caller with
-        // no country still searches everything, as before.
+        // Own country first, then shared, then everyone else: Sanitas is both
+        // a Swiss health insurer and a Spanish provider, and the
+        // alphabetically-later file used to win for every user.
         foreach ($this->searchOrder($country) as $bucket) {
             $best = $this->bestIn($bucket, $needle, $type);
             if ($best !== null) {
@@ -126,8 +125,7 @@ final class SupportResourceProvider
 
         $map = [];
         foreach ($files as $file) {
-            // Country comes from the filename, the same convention the
-            // merchant and government corpora already use.
+            // The country code is the filename, as in the other corpora.
             $code = mb_strtolower(basename($file, '.yaml'));
             foreach ($this->reader->readEntries($file) as $raw) {
                 $this->addResource($map, $code, $raw);
@@ -199,9 +197,8 @@ final class SupportResourceProvider
      */
     private static function url(array $array, string $key): ?string
     {
-        // Unlike str(), only an http(s) value passes — a malformed or
-        // non-http(s) corpus value (e.g. a `javascript:` scheme) can never
-        // reach a consumer as a clickable href.
+        // Only an http(s) value passes, so a `javascript:` corpus value can
+        // never reach a consumer as a clickable href.
         $value = self::str($array, $key);
         if ($value === null) {
             return null;
@@ -215,9 +212,8 @@ final class SupportResourceProvider
      */
     private function words(string $name): array
     {
-        // Brand words (Premium / Plus) are intentionally NOT stripped below —
-        // they distinguish a subscription tier from the base brand (e.g.
-        // "Albert Heijn Premium" vs plain "Albert Heijn").
+        // Tier words (Premium / Plus) are deliberately not stripped: they
+        // distinguish "Albert Heijn Premium" from plain "Albert Heijn".
         $lowered = mb_strtolower(trim($name));
         $stripped = preg_replace('/\b(b\.?v\.?|n\.?v\.?|inc|ltd|gmbh|ab|sa|plc)\b/u', ' ', $lowered) ?? $lowered;
         preg_match_all('/[\p{L}\p{N}]+/u', $stripped, $matches);

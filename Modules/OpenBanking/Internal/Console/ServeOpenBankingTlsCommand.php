@@ -196,10 +196,9 @@ final class ServeOpenBankingTlsCommand extends Command
             return null;
         }
 
-        // Deliberately left blocking: stream_socket_accept() completes the
-        // multi-round-trip TLS handshake and needs a blocking socket to do it.
-        // accept() only runs after stream_select() reports a pending
-        // connection, so it never stalls the loop.
+        // Left blocking: stream_socket_accept() needs it to finish the TLS
+        // handshake, and it only runs once stream_select() reports a pending
+        // connection, so the loop never stalls on it.
 
         return $server;
     }

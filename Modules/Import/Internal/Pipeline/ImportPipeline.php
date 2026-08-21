@@ -159,9 +159,8 @@ final class ImportPipeline
                     $normalized = $this->paymentTypeClassifier->run($normalized, $user, $sourceFormat);
                     $autoOutcome = $this->autoCategory->apply($normalized, $user);
                     $normalized = $autoOutcome->canonical;
-                    // Before the fingerprint stage, so the resolved
-                    // counterparty_id rides the canonical row into
-                    // RecordTransactions.
+                    // Before the fingerprint stage, so counterparty_id rides
+                    // the canonical row into RecordTransactions.
                     $normalized = $this->resolveCounterparty->run($normalized, $user);
                 } catch (Throwable $e) {
                     // The preview row's message is short and loses the call
@@ -236,9 +235,8 @@ final class ImportPipeline
             }
         } catch (Throwable $e) {
             // A fatal adapter error surfaces as one ERROR row so the wizard
-            // still renders; only the user-facing message survives onto it,
-            // so the trace goes to the log. This catch also spans the account
-            // and merchant lookups, hence the narrowed read of the message.
+            // still renders; the trace goes to the log. This catch also spans
+            // the account and merchant lookups, hence the narrowed message.
             $this->logger->warning('ImportPipeline: parse failed.', [
                 'source_format' => $sourceFormat,
                 'import_run_id' => $importRunId,
@@ -295,9 +293,8 @@ final class ImportPipeline
         );
     }
 
-    // The preview's name → iban → description → "—" fallback chain is
-    // null-coalescing, so a whitespace-only description must arrive as null
-    // or it renders as an empty span.
+    // The preview's name → iban → description → "—" chain is null-coalescing,
+    // so a whitespace-only description must arrive as null or it renders blank.
     private static function trimToNull(?string $value): ?string
     {
         if ($value === null) {

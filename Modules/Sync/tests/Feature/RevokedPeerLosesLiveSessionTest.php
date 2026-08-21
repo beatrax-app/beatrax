@@ -6,13 +6,10 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 
-/*
- * Removing a device cleared its row, but SyncWebSocketHandler reads the
- * confirmed-device key map ONCE per connection — so a peer that was removed
- * while connected kept syncing until it happened to reconnect. The live loop
- * now re-asks, which is only useful if the question is answered from the
- * database rather than from that same connect-time snapshot.
- */
+// SyncWebSocketHandler read the confirmed-device key map once per connection, so
+// a peer removed while connected kept syncing until it happened to reconnect.
+// The live loop re-asks now, which only helps while the answer comes from the
+// database rather than from that same connect-time snapshot.
 
 function revokedPeerUser(string $username): User
 {
@@ -100,8 +97,6 @@ it('checks revocation inside the live loop, before the ops it would apply', func
     $check = strpos($source, '$this->peerWasRevoked($session)');
     $apply = strpos($source, '$session->receiveOps($ciphertext, $this->userId, $deviceKeys);');
 
-    // The trust question is only worth asking while the connection is open,
-    // and only useful if it is asked before the ops are applied.
     expect($check)->toBeInt('the live loop must re-check trust')
         ->and($apply)->toBeInt()
         ->and($check)->toBeLessThan($apply, 'a revoked peer must not have its ops applied');

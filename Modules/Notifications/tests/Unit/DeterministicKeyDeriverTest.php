@@ -4,12 +4,8 @@ declare(strict_types=1);
 
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 
-/*
- * Unit coverage for DeterministicKeyDeriver — the single place any
- * notification key is computed (D-38 invariant 3). Byte-identical input
- * MUST produce byte-identical output on two independent devices, because
- * that identity IS the CRDT convergence mechanism (Reqs 1 + 12).
- */
+// Byte-identical input has to give byte-identical output on two independent
+// devices: that identity is the whole convergence mechanism.
 
 it('produces an identical 64-char hex digest from two independently constructed instances given the same tuple', function (): void {
     $first = new DeterministicKeyDeriver;

@@ -7,6 +7,9 @@ namespace Modules\Sync\Internal\Transport\Noise;
 use Modules\Sync\Internal\Exceptions\CryptoOperationFailedException;
 use SodiumException;
 
+/**
+ * @link ../../../../../.docs/features/sync/noise-handshake-state-machine.md
+ */
 final class NoiseHandshakeState
 {
     private const TOKEN_E = 'e';

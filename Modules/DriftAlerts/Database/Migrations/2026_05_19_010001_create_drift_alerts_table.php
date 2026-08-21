@@ -40,8 +40,8 @@ return new class extends ModuleMigration
             $table->index(['user_id', 'recurring_series_id', 'state']);
         });
 
-        // Enforced in SQL as well as in DriftAlertStateMachine: an out-of-band
-        // write would otherwise reach a state the projections cannot read.
+        // Enforced in SQL as well as in DriftAlertStateMachine, so an out-of-band
+        // write cannot store a state outside the enum.
         $connection = $this->db()->connection($this->getConnection());
         $allowedStates = "'open','acknowledged','snoozed','dismissed_cancelled'";
 

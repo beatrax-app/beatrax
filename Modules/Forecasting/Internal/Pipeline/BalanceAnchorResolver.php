@@ -36,29 +36,22 @@ final readonly class BalanceAnchorResolver
         $kind = self::toString($account->getAttribute('kind'));
         $defaultCurrency = self::toString($account->getAttribute('default_currency'));
 
-        // Statement-level anchor first (per kind), then the user-input
-        // opening_balance on the account row; the coalesce honours the
-        // same precedence as the original guard chain without returning
-        // from inside it.
         $anchor = $this->fromStatementAnchor($kind, $accountId, $user->id)
             ?? $this->fromUserInputOpeningBalance($account);
         if ($anchor !== null) {
             return $anchor;
         }
 
-        // ICS cards with no statement AND no user-input opening balance
-        // default to zero rather than summing every historical
-        // transaction — summing would double-count the billing events
-        // the projection is about to re-emit. Every other kind sums.
+        // A card with no anchor at all takes zero rather than a transaction
+        // sum: summing would double-count the billing events the projection
+        // is about to re-emit. Every other kind sums.
         return $kind === AccountKind::IcsCard->value
             ? $this->icsCardZeroAnchor($accountId, $defaultCurrency)
             : $this->fromTransactionsSum($accountId, $user->id, $defaultCurrency);
     }
 
-    // A card anchors from its card statements; any other account anchors from
-    // its imported statement summaries when it has them. A statement-less or
-    // API-connected account has none, so this returns null and the caller
-    // falls through to the opening-balance / transaction-sum anchors.
+    // null means no statement exists at all — an API-connected account, or one
+    // with nothing imported yet — and the caller falls through.
     private function fromStatementAnchor(string $kind, int $accountId, int $userId): ?BalanceAnchorDto
     {
         return $kind === AccountKind::IcsCard->value
@@ -124,9 +117,8 @@ final readonly class BalanceAnchorResolver
         }
 
         /** @var stdClass $row */
-        // `open_balance_minor` is the absolute amount still owed
-        // (positive); the signed running-balance position is negated
-        // since the user OWES that amount to the card vendor.
+        // open_balance_minor is the amount owed, stored positive. A running
+        // balance is a position, so owing it makes it negative.
         $openBalance = self::toInt($row->open_balance_minor);
         $signedAnchor = -$openBalance;
 

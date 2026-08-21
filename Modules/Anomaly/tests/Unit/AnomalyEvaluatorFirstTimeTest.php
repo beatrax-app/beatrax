@@ -10,12 +10,6 @@ use Modules\Anomaly\Tests\Support\AnomalyCorpusSeeder;
 
 uses(RefreshDatabase::class);
 
-/*
- * First-time-merchant detector (D-09): fires ONLY when the charge is to a
- * never-before-seen counterparty AND is large vs the user's overall
- * spending. A new merchant with a small/typical charge must NOT fire.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -41,8 +35,7 @@ it('fires for a large charge to a never-seen merchant (D-09)', function (): void
 
 it('does NOT fire for a small/typical charge to a new merchant', function (): void {
     $user = AnomalyCorpusSeeder::makeUser();
-    // first-time-large with the under-test amount shrunk to a typical
-    // small charge: first-time but NOT large vs overall → no fire.
+    // Shrunk to a typical amount: first-time, but not large vs overall.
     $fixture = AnomalyCorpusSeeder::load('first-time-large');
     $fixture['transaction']['amount_minor'] = -1100;
     $fixture['transaction']['settled_amount_minor'] = -1100;
@@ -57,8 +50,7 @@ it('does NOT fire for a small/typical charge to a new merchant', function (): vo
 
 it('does NOT fire for a merchant the user has charged before', function (): void {
     $user = AnomalyCorpusSeeder::makeUser();
-    // large-above: the under-test merchant (spotify) has prior history, so
-    // even though it is large, it is NOT first-time.
+    // The large-above merchant has prior history: large, but not first-time.
     $fixture = AnomalyCorpusSeeder::load('large-above');
     $txnId = AnomalyCorpusSeeder::seed($this->db, $user, $fixture);
 

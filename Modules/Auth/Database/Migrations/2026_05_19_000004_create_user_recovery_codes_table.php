@@ -5,9 +5,9 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-// Consuming a code stamps `used_at` rather than deleting the row, so issued
-// and spent codes both survive as an audit chain. That stamp is the only
-// post-insert mutation, hence `created_at` alone and no `updated_at`.
+// A consumed code is stamped, not deleted, so issued and spent both survive as
+// an audit chain. That stamp is the only post-insert mutation, hence no
+// `updated_at`.
 return new class extends ModuleMigration
 {
     public function up(): void

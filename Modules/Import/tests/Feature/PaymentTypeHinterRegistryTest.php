@@ -10,18 +10,6 @@ use Modules\Import\Internal\Parsers\Ics\IcsPdfPaymentTypeHinter;
 use Modules\Import\Internal\Parsers\Paypal\PaypalCsvPaymentTypeHinter;
 use Modules\Import\Public\Contracts\PaymentTypeHinter;
 
-/*
- * Container-tag registry inventory test for the
- * `import.payment_type_hinter` tag.
- *
- * Locks the registered hinter count, contract conformance, and the
- * "fallback hinter is the LAST entry" tie-break invariant. Adding a
- * new hinter requires:
- *   1. Append the class FQN to ImportServiceProvider::PAYMENT_TYPE_HINTER_FQNS
- *   2. Update the expected count + ordered class-list in this test
- * — keeping every shipping hinter visible from one inventory location.
- */
-
 it('binds exactly six PaymentTypeHinter implementations under the import.payment_type_hinter container tag', function (): void {
     /** @var iterable<PaymentTypeHinter> $tagged */
     $tagged = $this->app->tagged('import.payment_type_hinter');

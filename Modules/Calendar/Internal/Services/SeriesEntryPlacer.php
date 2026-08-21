@@ -17,28 +17,22 @@ use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use stdClass;
 
-// Owns the entry-placement half of the month query: which approved series
-// land on which grid days, and which counterparty identity each placed
-// entry resolves to.
 final readonly class SeriesEntryPlacer
 {
     use CoercesScalars;
 
-    // Inception-floor slack (in days) subtracted from a series' first observed
-    // occurrence so an entry expected slightly before its first payment is
-    // still placed rather than dropped as pre-existence.
+    // Slack subtracted from a series' first observed occurrence so an entry
+    // expected just before its first payment is placed, not dropped.
     private const int MATCH_WINDOW_DAYS = 7;
 
-    // Calendar-arithmetic step sizes shared across placement math, named so
-    // the cadence match arms read as intent rather than bare integers.
     private const int DAYS_PER_WEEK = 7;
 
     private const int MONTHS_PER_QUARTER = 3;
 
     private const int MONTHS_PER_YEAR = 12;
 
-    // Occurrence stepping is bounded so a pathological anchor can never spin
-    // the placement loop indefinitely; 60 steps covers any single month.
+    // Bounds the placement loop against a pathological anchor; 60 steps
+    // covers any single month.
     private const int MAX_PLACEMENT_ITERATIONS = 60;
 
     public function __construct(
@@ -93,9 +87,6 @@ final readonly class SeriesEntryPlacer
 
             $accountId = $accountIdForSeries[$series->seriesId] ?? null;
 
-            // effectiveVisible === null means "all visible" (no filter
-            // specified, include even unlinked series); [] means "nothing
-            // passed the filter" (explicit filter, all dropped).
             if ($effectiveVisible !== null && ($accountId === null || ! in_array($accountId, $effectiveVisible, true))) {
                 continue;
             }
@@ -148,16 +139,14 @@ final readonly class SeriesEntryPlacer
     {
         $placedSeriesIds = array_map(static fn (array $p): int => $p['series']->seriesId, $placed);
 
-        // Primary path: occurrences -> transactions -> counterparty_id.
-        // Series unresolved here fall back to the cluster-key path below.
         $counterpartyIdBySeries = $this->seriesQuery->counterpartyIdsForSeriesIds($placedSeriesIds, $user);
         $identityByCounterpartyId = $this->counterpartyQuery->identitiesForIds(
             $user,
             array_values(array_unique(array_values($counterpartyIdBySeries))),
         );
 
-        // Fallback path: series with no occurrence-linked counterparty may
-        // still resolve via cluster_counterparty_key == counterparties.slug.
+        // A series with no occurrence-linked counterparty can still resolve:
+        // cluster_counterparty_key holds a counterparties.slug.
         $unresolvedSeriesIds = array_values(array_filter(
             $placedSeriesIds,
             static fn (int $id): bool => ! isset($counterpartyIdBySeries[$id]),
@@ -271,15 +260,13 @@ final readonly class SeriesEntryPlacer
         CarbonImmutable $monthEnd,
         ?CarbonImmutable $seriesStart,
     ): array {
-        // Occurrences are found by stepping by index from the anchor
-        // (anchor->addMonthsNoOverflow(k) for k = …,-1,0,1,…) rather than
-        // chaining no-overflow steps, which permanently loses an end-of-month
-        // anchor after the first short month and is non-invertible.
+        // Every occurrence is anchor + k steps, never a chain of no-overflow
+        // steps: chaining permanently loses an end-of-month anchor after the
+        // first short month, and is not invertible for negative k.
         $anchor = $next->startOfDay();
         $k = $this->firstOccurrenceIndex($anchor, $cadence, $monthStart);
 
-        // Occurrence dates are strictly increasing in k, so collect from the
-        // estimated start until the first date past monthEnd.
+        // Dates increase strictly in k, so the first one past monthEnd ends it.
         $results = [];
         $iterations = 0;
 
@@ -302,9 +289,8 @@ final readonly class SeriesEntryPlacer
         return $results;
     }
 
-    // Estimate the first occurrence index that could land in the month, then
-    // start one step earlier as a safety margin. Irregular never reaches
-    // here — placeSeriesInMonth routes it to placeIrregular first.
+    // Estimates the first index that could land in the month, then backs off one
+    // step as a margin. Irregular never gets here; placeSeriesInMonth diverts it.
     private function firstOccurrenceIndex(CarbonImmutable $anchor, SeriesCadence $cadence, CarbonImmutable $monthStart): int
     {
         $monthsDelta = ($monthStart->year - $anchor->year) * self::MONTHS_PER_YEAR + ($monthStart->month - $anchor->month);
@@ -358,8 +344,6 @@ final readonly class SeriesEntryPlacer
         return $map;
     }
 
-    // Negative k steps backward; every index is computed from the anchor so
-    // short months never permanently shift an end-of-month billing day.
     private function occurrenceAt(CarbonImmutable $anchor, SeriesCadence $cadence, int $k): ?CarbonImmutable
     {
         return match ($cadence) {

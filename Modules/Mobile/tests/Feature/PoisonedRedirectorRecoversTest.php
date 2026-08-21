@@ -9,17 +9,10 @@ use Livewire\Features\SupportRedirects\Redirector as LivewireRedirector;
 use Modules\Mobile\Internal\Http\Middleware\RestoreFrameworkRedirector;
 use Symfony\Component\HttpFoundation\Response;
 
-/*
- * Livewire swaps the container's redirector while a component is booted and
- * swaps it back on dehydrate. A request that dies between the two leaves its
- * own installed, and `Livewire\...\Redirector::to()` returns `$this` rather
- * than a response.
- *
- * Under PHP-FPM that dies with the process. The mobile runtime is persistent,
- * so it survives: measured on an iPhone, every subsequent GET /cash answered
- * 500 "Undefined property: …Redirector::$headers" from the CSRF middleware,
- * and only relaunching the app cleared it.
- */
+// Livewire swaps the container's redirector while a component is booted and swaps
+// it back on dehydrate, so a request that dies between the two leaves its own
+// installed. Under PHP-FPM that dies with the process; the mobile runtime is
+// persistent, so every later GET answered 500 until the app was relaunched.
 
 it('restores the framework redirector when Livewire left its own behind', function (): void {
     app()->instance('redirect', new LivewireRedirector(app('url')));

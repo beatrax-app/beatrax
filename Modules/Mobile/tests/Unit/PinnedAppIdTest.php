@@ -4,19 +4,10 @@ declare(strict_types=1);
 
 use Modules\Mobile\Internal\Boot\PinnedAppId;
 
-/*
- * nativephp/mobile's InstallCommand reads the .env FILE to decide whether the
- * bundle id is already set. If it decides no, it generates com.<user>.<three
- * random words>, writes that back, and the build ships under it — which is how
- * a phone ended up running com.wessel.stormlunarbold while iOS ran
- * com.beatrax.mobile.
- *
- * So this predicate is not a convenience: it has to agree with the vendor's own
- * guard exactly. Anything it accepts that the vendor rejects lets the generator
- * fire on a build we declared safe. The commented-key case is the one that
- * matters most, because commenting the key out is what the env template asks
- * for everywhere else.
- */
+// nativephp/mobile's InstallCommand reads the .env file to decide whether the
+// bundle id is set. If it decides no it generates com.<user>.<three random words>
+// and the build ships under that, so this predicate has to agree with the vendor's
+// own guard exactly: anything it accepts that the vendor rejects lets that fire.
 
 it('accepts a plain assignment', function (): void {
     expect(PinnedAppId::isPinnedIn("APP_ENV=local\nNATIVEPHP_APP_ID=com.beatrax.mobile\n"))->toBeTrue();
@@ -67,12 +58,10 @@ it('returns null rather than guessing when the Android project has no applicatio
     expect(PinnedAppId::inGradle("android {\n    namespace = \"com.nativephp.mobile\"\n}\n"))->toBeNull();
 });
 
-/*
- * native:install lays the project down carrying REPLACE_APP_ID, and only
- * prepareAndroidBuild() — which runs inside native:package — substitutes the
- * real one. So the identity check has to read this back AFTER packaging; before
- * it, every freshly installed project would look like the wrong app.
- */
+// native:install lays the project down carrying REPLACE_APP_ID, and only
+// prepareAndroidBuild(), inside native:package, substitutes the real one. The
+// identity check therefore has to read this back after packaging; before it, every
+// freshly installed project would look like the wrong app.
 it('reads back the placeholder a freshly installed project still carries', function (): void {
     expect(PinnedAppId::inGradle('applicationId = "REPLACE_APP_ID"'))->toBe('REPLACE_APP_ID');
 });

@@ -14,15 +14,9 @@ final class CommunityCorpusQuery
     /** @var list<string> */
     private const CONTACT_COLUMNS = ['website', 'cancel_url', 'support_url', 'support_phone', 'support_email'];
 
-    // The `LIMIT 1000` / `LIMIT 500` these scans once carried read as
-    // defence-in-depth but did the opposite. Ordered by id — bundled-file sort
-    // order — a cap does not sample the corpus, it truncates it: once the
-    // corpus outgrew the cap, every country after it stopped resolving.
-
-    // A bound that changes answers without saying so costs more than the work
-    // it saves. The scan is one substring test per row against one haystack,
-    // linear either way, so the rows are read and folded once per instance
-    // instead — which is what keeps an import off the database.
+    // The `LIMIT 1000` / `LIMIT 500` these scans once carried, ordered by id,
+    // truncated the corpus in bundled-file order rather than sampling it: once
+    // the corpus outgrew the cap, every country past it stopped resolving.
     /**
      * @var list<array{needle: string, name: string}>|null
      */
@@ -71,8 +65,7 @@ final class CommunityCorpusQuery
     }
 
     // Regex rows carry an empty generalized_pattern and are matched only by
-    // lookupRegex(), so they are excluded here rather than skipped once per
-    // call; needles are case-folded at load rather than per transaction.
+    // lookupRegex(), so they are excluded once here rather than per call.
     /**
      * @return list<array{needle: string, name: string}>
      */
@@ -133,9 +126,9 @@ final class CommunityCorpusQuery
 
     public function contactForMerchant(string $name): ?MerchantContactDto
     {
-        // Keyed on the resolved merchant NAME, not the raw descriptor: a brand
-        // reaches the corpus through many descriptor variants that collapse to
-        // one name, and a profile page holds the name, never the matched row.
+        // Keyed on the resolved merchant NAME, not the raw descriptor: many
+        // descriptor variants collapse to one name, and a profile page holds
+        // the name, never the matched row.
 
         // Requiring one populated column stops a brand whose lowest-id row
         // carries no contact data from masking a sibling row that does.

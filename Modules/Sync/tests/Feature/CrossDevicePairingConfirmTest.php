@@ -19,7 +19,6 @@ uses(CrossDevicePairingHarness::class);
 /**
  * @link ../../../../.docs/features/sync/cross-device-pairing-confirm.md
  */
-
 const CDP_USER_ID = 4242;
 
 /**

@@ -9,17 +9,14 @@ use Modules\Core\Models\User;
 use Modules\Tax\Internal\Actions\TaxCategoryWriter;
 use Modules\Tax\Public\Actions\TagTransaction;
 
-// Puts the demo install on the Dutch deduction corpus and tags the
-// transactions a NL filer would actually claim, so the tax cockpit and the
-// per-year export have real grouped rows instead of an empty year. Tags go
-// through the public action so provenance and the search index stay correct.
+// Tags go through the public action rather than raw inserts, so provenance and
+// the search index stay correct.
 final class DemoTaxTagsSeeder
 {
     private const COUNTRY = 'nl';
 
-    // Matched against transactions.description with a LIKE, so one entry
-    // tags every occurrence of a recurring charge (the health premium runs
-    // monthly). corpusKey resolves to the seeded deduction category.
+    // Matched against transactions.description with a LIKE, so one entry tags
+    // every occurrence of a recurring charge.
     /** @var list<array{match: string, corpusKey: string, note: ?string}> */
     private const TAGS = [
         [
@@ -71,9 +68,8 @@ final class DemoTaxTagsSeeder
             ->count();
     }
 
-    // The tax cockpit only offers the picker once a country is chosen, so
-    // the demo user adopts NL here rather than leaving the corpus seeded
-    // against a country the settings screen shows as unselected.
+    // The cockpit only offers the picker once a country is chosen, so the demo
+    // user adopts NL instead of leaving settings showing none.
     private function adoptCountry(User $user): void
     {
         $this->db->connection()

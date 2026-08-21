@@ -8,10 +8,6 @@ use Carbon\CarbonImmutable;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 use stdClass;
 
-// What a cluster of transactions turned out to be, once the variance
-// filter and the cadence inferrer have both had their say. Both detectors
-// compute these eight values together and then hand them on together, so
-// they travel as one thing rather than as eight positional arguments.
 final readonly class DetectedSeries
 {
     /**

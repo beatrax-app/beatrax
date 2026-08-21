@@ -4,13 +4,9 @@ declare(strict_types=1);
 
 use Modules\Core\Models\User;
 
-/*
- * SetLocale already consulted `session('locale')` for unauthenticated
- * requests, but nothing could write it before sign-in — so the welcome,
- * signup and login surfaces rendered in English regardless of the reader's
- * language, with the only switcher sitting behind the login they could not
- * read. These cover the guest-reachable write and its precedence.
- */
+// SetLocale already consulted session('locale') for guests, but nothing could
+// write it before sign-in, so welcome, signup and login rendered in English with
+// the only switcher sitting behind the login the reader could not read.
 
 // Both roots' first-launch gates redirect a 0-user install to their own
 // welcome screen, which would mask what these tests are actually asserting.

@@ -6,17 +6,6 @@ use Carbon\CarbonImmutable;
 use Modules\FX\Public\Dto\ConversionResult;
 use Modules\Ledger\Public\ValueObjects\Money;
 
-/**
- * Tests for the ConversionResult DTO (FX-04 transparency shape).
- *
- * Three behaviours verified:
- * 1. passthrough() yields isPassthrough=true, original===converted,
- *    and all rate/source/asOf null, isStale=false.
- * 2. A fully-constructed result exposes all FX-04 disclosure fields
- *    (rate, source, asOf, isStale) for the Blade affordance to render.
- * 3. $rate is typed ?string (never float) — guards Pitfall 1
- *    (float silently corrupts FX conversion precision).
- */
 it('passthrough() returns isPassthrough=true with original equal to converted', function (): void {
     $money = Money::ofMinor(10000, 'EUR');
 

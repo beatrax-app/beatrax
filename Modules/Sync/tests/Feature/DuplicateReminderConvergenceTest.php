@@ -17,19 +17,10 @@ use Modules\Sync\Public\Events\NotificationMutated;
 
 uses(RefreshDatabase::class);
 
-/*
- * Req 12 (18-04-PLAN.md): two devices independently generating the SAME
- * "payment due" reminder for the same series + due date, then merging, must
- * yield EXACTLY ONE notifications row. Convergence is entirely a property of
- * the D-05 deterministic sha256 PK (`DeterministicKeyDeriver::derive()`,
- * called separately on each side with identical inputs) plus
- * `OpLogReplayer`'s CreateRow `insertOrIgnore` idempotency — no dedup logic
- * is added anywhere; the pk collision alone prevents the duplicate.
- *
- * Negative control: a DIFFERENT due date for the same series produces TWO
- * rows — proving the dedup is keyed on the occurrence, not the series alone
- * (D-06).
- */
+// Nothing here dedups. Two devices generating the same reminder converge
+// because each derives the same sha256 pk from the same inputs and the create
+// path is insertOrIgnore, so the collision alone drops the second row. The
+// negative control proves the key is the occurrence, not the series.
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-07-17 09:00:00');
@@ -102,12 +93,6 @@ function dupReminderMaxOpLogId(DatabaseManager $db): int
 }
 
 /**
- * Simulates one device independently generating + capturing the CreateRow
- * ops for a "payment due" reminder — mirrors what a future TriggerAware
- * generator will do: derive the deterministic pk, insert the row locally,
- * dispatch NotificationMutated('create', ...) so SyncCaptureListener
- * captures the create-required fields.
- *
  * @return list<OpLogEntry>
  */
 function dupReminderGenerateOnDevice(
@@ -147,9 +132,8 @@ function dupReminderGenerateOnDevice(
 
     $ops = dupReminderOpsAfter($db, $userId, $notificationId, $watermark);
 
-    // Wipe the local row — the assertion is entirely about what REPLAY
-    // reconstructs from the captured ops, not what this device's own local
-    // insert left behind.
+    // The local row goes, so the assertions can only be satisfied by what
+    // replay reconstructs from the captured ops.
     $db->connection()->table('notifications')->where('id', $notificationId)->delete();
 
     return [$pk, $ops];
@@ -164,8 +148,8 @@ it('two independent devices generating the same reminder converge to exactly one
     $dueDate = '2026-08-01';
     $trigger = DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER;
 
-    // Both devices independently derive the pk from the IDENTICAL tuple —
-    // this identity IS the convergence mechanism (D-05/D-06).
+    // Both devices derive the pk from an identical tuple, and that shared
+    // identity is the entire convergence mechanism.
     $idA = $deriver->derive((int) $this->user->id, $trigger, $seriesKey, $dueDate);
     $idB = $deriver->derive((int) $this->user->id, $trigger, $seriesKey, $dueDate);
     expect($idA)->toBe($idB);
@@ -176,18 +160,14 @@ it('two independent devices generating the same reminder converge to exactly one
     expect($aOps)->not->toBeEmpty();
     expect($bOps)->not->toBeEmpty();
 
-    // No local row exists on the merge target — a fresh replay reconstructs
-    // purely from the two devices' independently captured CreateRow ops.
     expect($db->connection()->table('notifications')->where('id', $idA)->count())->toBe(0);
 
     $deviceKeys = ['device-a' => $pkA, 'device-b' => $pkB];
     $replayer = new OpLogReplayer($db, $deviceKeys, new MergeRulesRegistry);
     $replayer->replay([...$aOps, ...$bOps], (int) $this->user->id);
 
-    // EXACTLY one row for this pk — insertOrIgnore collapses the duplicate CreateRow.
     expect($db->connection()->table('notifications')->where('id', $idA)->count())->toBe(1);
 
-    // EXACTLY one row for this user's notifications overall (no stray second row).
     expect($db->connection()->table('notifications')->where('user_id', $this->user->id)->count())->toBe(1);
 
     expect($db->connection()->table('op_log_quarantine')->where('user_id', $this->user->id)->count())->toBe(0);
@@ -215,7 +195,6 @@ it('two different due dates for the same series produce two distinct notificatio
     expect($db->connection()->table('notifications')->where('id', $idAugust)->count())->toBe(1);
     expect($db->connection()->table('notifications')->where('id', $idSeptember)->count())->toBe(1);
 
-    // Two distinct occurrences of the same series -> two distinct rows.
     expect($db->connection()->table('notifications')->where('user_id', $this->user->id)->count())->toBe(2);
 
     expect($db->connection()->table('op_log_quarantine')->where('user_id', $this->user->id)->count())->toBe(0);

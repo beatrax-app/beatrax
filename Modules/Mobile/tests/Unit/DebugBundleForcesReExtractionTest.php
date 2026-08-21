@@ -2,24 +2,9 @@
 
 declare(strict_types=1);
 
-/*
- * `native:run` installs a new binary but keeps the PREVIOUSLY extracted PHP
- * code: both shells decide whether to re-extract by comparing
- * version + "b" + versionCode against what is on the device, and dev builds
- * pin both, so they never differ.
- *
- * The failure mode is silent and badly misleading. On 2026-08-19 it presented
- * as a whole-app 404 that survived restarts and matched no middleware — every
- * route dead — because the code running on the phone was hours older than the
- * code being read. Hours went into middleware that was never involved.
- *
- * Both shells already honour one escape hatch: a bundle id of the literal
- * string DEBUG means "re-extract every launch". This wires our config to it.
- */
-
-// The suite runs from BOTH composer roots: the desktop root, where the mobile
-// config sits under mobile-app/, and the mobile-app root, where it is the
-// app's own config. Resolve whichever exists rather than assuming one.
+// The suite runs from both composer roots: the desktop one, where the mobile
+// config sits under mobile-app/, and the mobile-app one, where it is the app's own
+// config. Resolve whichever exists rather than assuming.
 function debugBundleConfigPath(): string
 {
     $nested = base_path('mobile-app/config/nativephp.php');
@@ -55,6 +40,11 @@ function debugBundleConfigVersion(mixed $flag): string
 
     return (string) $config['version'];
 }
+
+// native:run installs a new binary but keeps the previously extracted PHP code,
+// which presented as a whole-app 404 that survived restarts and matched no
+// middleware. Both shells honour one escape hatch: a bundle id of the literal
+// string DEBUG re-extracts every launch, and this wires our config to it.
 
 it('stamps the bundle DEBUG when device development is on', function (): void {
     expect(debugBundleConfigVersion('true'))->toBe('DEBUG');

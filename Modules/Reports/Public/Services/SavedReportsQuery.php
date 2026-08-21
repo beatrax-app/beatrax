@@ -77,9 +77,8 @@ final readonly class SavedReportsQuery
         $metricLabel = Lang::get("reports::index.summary.metric.{$metricKey}");
         $periodLabel = Lang::get("reports::index.summary.period.{$periodKey}");
 
-        // Group-by is hidden entirely for net-worth reports — the summary
-        // line omits the "by {dimension}" segment to match what the
-        // builder actually showed.
+        // The builder hides group-by for net worth, so the summary drops the
+        // "by {dimension}" segment to match.
         if ($metric === 'net_worth') {
             return Lang::get('reports::index.summary.without_dimension', [
                 'metric' => $metricLabel,

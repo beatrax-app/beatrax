@@ -12,13 +12,6 @@ use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 
 uses(RefreshDatabase::class);
 
-/*
- * /notifications page tests — Req 2's stated acceptance criterion (renders
- * at 0/1/50+ notifications; marking read flips state and persists across
- * reload), D-01's route/vocabulary independence from EmailScan's inbox
- * route, D-04's whitelist-validated tab, and D-10's reversible dismiss.
- */
-
 function npUser(string $username): User
 {
     return User::query()->create([
@@ -138,7 +131,7 @@ it('flips read state via markRead and persists it across a fresh component mount
 
     expect($this->db->connection()->table('notifications')->where('id', $id)->value('read_at'))->not->toBeNull();
 
-    // A fresh mount (simulating a page reload) must still see the read state.
+    // A fresh mount stands in for a page reload.
     Livewire::actingAs($user)
         ->test(NotificationsPage::class)
         ->set('tab', 'all')

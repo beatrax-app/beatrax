@@ -42,9 +42,8 @@ final class ReportDefinition extends Data
         public readonly string $amountDirection = 'both',
     ) {}
 
-    // Deterministic kebab-case slug for CSV download filenames, e.g.
-    // "spend-category-this-month" — never localized, no random/time
-    // component, so the same definition always yields the same slug.
+    // Never localized and free of any random or time component, so the same
+    // definition always yields the same CSV filename.
     public function slug(): string
     {
         $parts = [$this->metric, $this->dimension, $this->periodPreset];

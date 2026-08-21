@@ -54,7 +54,6 @@ it('compares current vs previous period spend and ranks the movers', function ()
     $groceries = trendCategory($this->db, $this->user->id, 'Groceries');
     $eating = trendCategory($this->db, $this->user->id, 'Eating out');
 
-    // Groceries: €300 last → €400 this (+€100). Eating out: €50 last → €30 this (−€20).
     trendTx($this->db, $this->user->id, $groceries, -40000, $current->start->addDays(2)->toDateString());
     trendTx($this->db, $this->user->id, $groceries, -30000, $previous->start->addDays(2)->toDateString());
     trendTx($this->db, $this->user->id, $eating, -3000, $current->start->addDays(3)->toDateString());
@@ -88,9 +87,8 @@ it('counts a split transaction\'s legs individually, never the parent (Req 4)', 
     $groceries = trendCategory($this->db, $this->user->id, 'Groceries');
     $household = trendCategory($this->db, $this->user->id, 'Household');
 
-    // €80 expense split €60 Groceries / €20 Household. The parent row keeps
-    // a vestigial category_id (Groceries) — the roll-up must key off leg
-    // presence, not that category_id.
+    // The parent keeps a vestigial category_id, so the roll-up has to key off
+    // leg presence instead.
     $postedAt = $current->start->addDays(2)->toDateString();
     $txId = $this->db->connection()->table('transactions')->insertGetId([
         'user_id' => $this->user->id,

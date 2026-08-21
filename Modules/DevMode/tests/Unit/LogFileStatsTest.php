@@ -5,21 +5,6 @@ declare(strict_types=1);
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\DevMode\Internal\Logging\LogFileStats;
 
-/*
- * LogFileStats — file-walker that produces per-severity counts +
- * totals + sizes for the Log Tailer's chip labels and totals strip.
- *
- * Coverage:
- *   1. forToday() returns zeroed counters when the file is missing.
- *   2. Per-severity counts add up correctly across the 8 Monolog
- *      levels.
- *   3. Continuation lines (stack-trace rows, JSON tails) increment
- *      totalLines but do NOT count toward any severity bucket.
- *   4. allFiles() sums every `laravel-*.log` in the directory.
- *   5. truncateToday() empties the file to zero bytes and returns
- *      the bytes freed.
- */
-
 function statsSandbox(): string
 {
     $sandboxRoot = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-logstats-'.bin2hex(random_bytes(6));
@@ -35,8 +20,8 @@ afterEach(function (): void {
 });
 
 it('returns zeroed counters when today\'s log file is missing', function (): void {
+    // The sandbox helper makes the directory but never the file.
     $path = statsSandbox();
-    // Do NOT create the file — only the directory.
 
     $stats = (new LogFileStats)->forToday();
 
@@ -98,7 +83,7 @@ it('treats continuation lines (stack-trace rows, JSON tails) as totalLines but n
 
     $stats = (new LogFileStats)->forToday();
 
-    // 5 raw lines: 2 parseable entry headers + 3 continuation lines.
+    // 5 raw lines: 2 entry headers, 3 continuations.
     expect($stats['totalLines'])->toBe(5);
     expect($stats['parsedLines'])->toBe(2);
     expect($stats['perSeverity']['ERROR'])->toBe(1);
@@ -113,7 +98,7 @@ it('sums file sizes across every laravel-*.log file in the daily directory', fun
         $dir.'/laravel-2026-05-26.log' => str_repeat('a', 100),
         $dir.'/laravel-2026-05-27.log' => str_repeat('b', 250),
         $dir.'/laravel-2026-05-28.log' => str_repeat('c', 75),
-        // A sibling non-log file MUST be ignored by the glob.
+        // 999 bytes the glob must not add to the total.
         $dir.'/notes.txt' => str_repeat('z', 999),
     ];
     foreach ($files as $file => $contents) {
@@ -136,14 +121,13 @@ it('truncates today\'s file to zero bytes and returns the bytes freed', function
     expect($freed)->toBe(4096);
     clearstatcache(true, $path);
     expect(filesize($path))->toBe(0);
-    // The file must still exist (inode preserved so the tailer
-    // resumes cleanly via its size-shrink rotation detection).
+    // The inode has to survive, or the tailer's size-shrink detection has
+    // nothing to resume against.
     expect(is_file($path))->toBeTrue();
 });
 
 it('truncateToday returns 0 and is a no-op when today\'s file is missing', function (): void {
     $path = statsSandbox();
-    // Do NOT create the file.
 
     $freed = (new LogFileStats)->truncateToday();
 

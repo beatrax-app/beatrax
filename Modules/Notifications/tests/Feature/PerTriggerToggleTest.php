@@ -36,37 +36,10 @@ use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * Req 8's acceptance criterion, verbatim: "Disabling each trigger in turn
- * and running its job produces zero notifications for that trigger while
- * others still fire." 18-03's `SuppressionEvaluatorTest` already proved the
- * decision LOGIC in isolation; THIS test proves the decision is actually
- * honoured by the real delivery path — the REAL `DispatchOsNotification`
- * listener is wired onto `NotificationDeliverable` (normally bundle-gated
- * in `DesktopServiceProvider`, so it is registered manually here) and
- * asserted against real outbound `/notification` HTTP POSTs, exactly the
- * harness `DispatchOsNotificationTest` already established.
- *
- * SPEC-LOCK (18-CONTEXT.md `<spec_lock>`): Req 8's "a disabled trigger
- * emits nothing" means emits no OS notification (D-08) — the row is NEVER
- * dropped, exactly as Req 9's own precedent establishes. A verifier must
- * not read the always-persisted row as drift from Req 8.
- *
- * Position digest is the one proactive trigger whose "disabled" state
- * (`digestCadence = 'off'`) is ALSO a Req 5 JOB-LEVEL gate — an off-cadence
- * digest job never emits a row at all (proven by
- * `PositionDigestCadenceTest`), a materially different mechanism from the
- * plain on/off toggles the other three triggers use, which
- * `SuppressionEvaluator` alone gates. To isolate the D-38/D-08
- * delivery-suppression behaviour under test here — and keep "the disabled
- * trigger's row is still in the inbox" true for ALL four triggers — the
- * position-digest iteration always calls the job with a real cadence
- * ('daily', so a row is always written) while the PREFERENCE
- * `SuppressionEvaluator` reads is set to 'off' independently. Production
- * wiring keeps both values in sync (the scheduler reads the same
- * preference it passes to the job); this test deliberately decouples them
- * so it exercises only the suppression path Req 8 names.
- */
+// SuppressionEvaluatorTest proves the decision; these prove the real delivery
+// path honours it, so the genuine DispatchOsNotification listener — normally
+// bundle-gated in DesktopServiceProvider — is wired by hand. A disabled
+// trigger loses its OS notification, never its row.
 
 function pttUser(string $username): User
 {
@@ -116,7 +89,8 @@ function pttSavePrefs(User $user, array $overrides): void
     app(NotificationPreferenceQuery::class)->saveForCurrentDevice($user, $prefs);
 }
 
-/** Wires the REAL DispatchOsNotification listener + unfocuses the window (D-13 gate open) so a delivered decision actually reaches an outbound HTTP POST. */
+// The window has to be blurred too, or the focus gate swallows the POST before
+// the suppression decision is visible.
 function pttRegisterOsListener(): void
 {
     Event::listen(NotificationDeliverable::class, [app(DispatchOsNotification::class), 'handleNotificationDeliverable']);
@@ -128,7 +102,6 @@ function pttOsFired(): bool
     return Http::recorded(fn ($request) => str_ends_with((string) $request->url(), '/notification'))->isNotEmpty();
 }
 
-/** Seeds a recurring series due inside the lead window + runs EmitPaymentRemindersJob; returns whether an OS notification fired. */
 function pttRunReminder(User $user): bool
 {
     Http::fake();
@@ -156,7 +129,6 @@ function pttRunReminder(User $user): bool
     return pttOsFired();
 }
 
-/** Seeds an envelope spent past its threshold + runs EmitBudgetNudgesJob; returns whether an OS notification fired. */
 function pttRunBudgetNudge(User $user): bool
 {
     Http::fake();
@@ -223,7 +195,9 @@ function pttRunBudgetNudge(User $user): bool
     return pttOsFired();
 }
 
-/** Runs EmitPositionDigestJob with a fixed 'daily' cadence (see file docblock); returns whether an OS notification fired. */
+// 'daily' no matter what the preference says: an off-cadence digest job never
+// writes a row at all, and that job-level gate would mask the delivery
+// suppression under test. Production keeps the two values in step.
 function pttRunDigest(User $user): bool
 {
     Http::fake();
@@ -234,7 +208,6 @@ function pttRunDigest(User $user): bool
     return pttOsFired();
 }
 
-/** Seeds an approved-subscription savings-insight chain + runs EmitSavingsPromptsJob; returns whether an OS notification fired. */
 function pttRunSavingsPrompt(User $user): bool
 {
     Http::fake();
@@ -242,10 +215,8 @@ function pttRunSavingsPrompt(User $user): bool
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
-    // Must match a real bundled support-resource corpus entry
-    // (`SupportResourceProvider` word-prefix matching) for the insight to
-    // resolve a `cheaper_url` — "Spotify" is the same fixture merchant
-    // `SavingsPromptTriggerTest`'s `sptChain()` uses.
+    // The insight only resolves a `cheaper_url` for a merchant the bundled
+    // support-resource corpus actually knows, so the name is not arbitrary.
     $merchant = 'Spotify';
     $monthlyMinor = 999;
 

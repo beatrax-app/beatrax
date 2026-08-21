@@ -21,10 +21,8 @@ final class BiometricKeyBlobCodec
         $secret = random_bytes(SODIUM_CRYPTO_SECRETBOX_KEYBYTES);
         $wrapped = $this->keyWrap->wrap($dataKey, $secret);
 
-        // wrap() base64-encodes nonce||ciphertext internally, so a strict
-        // decode of its own output cannot fail; guard anyway rather than
-        // concatenate a bool. A degenerate secret-only blob (32 bytes) would
-        // fail unwrap()'s length guard closed.
+        // A strict decode of wrap()'s own output cannot fail; guarded rather
+        // than concatenating a bool.
         $wrappedBytes = base64_decode($wrapped, strict: true);
         $blob = $wrappedBytes === false ? $secret : $secret.$wrappedBytes;
         sodium_memzero($secret);
@@ -32,8 +30,7 @@ final class BiometricKeyBlobCodec
         return $blob;
     }
 
-    // Reverses wrap(): returns null when the blob is malformed, tampered,
-    // or not one this codec produced.
+    // Null when the blob is malformed, tampered, or not one this codec made.
     public function unwrap(string $blob): ?string
     {
         if (strlen($blob) <= SODIUM_CRYPTO_SECRETBOX_KEYBYTES) {

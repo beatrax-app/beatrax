@@ -6,19 +6,9 @@ use Modules\Core\Models\User;
 use Modules\Import\Public\Actions\EnsurePaypalAccountAction;
 use Modules\Ledger\Models\Account;
 
-/**
- * Feature coverage for the synthetic PayPal account auto-create action.
- *
- * The action is idempotent: it INSERTs exactly one accounts row per user
- * (keyed on iban='PAYPAL'), returning true on the first call and false on
- * every subsequent call. PreviewWizard and the upcoming connect-paypal
- * wizard step both invoke this action so the synthetic-IBAN + kind + EUR
- * literals live in exactly one place.
- */
 beforeEach(function (): void {
-    // Fresh users per test — do not lean on the canonical fixture user,
-    // which already seeds a PayPal accounts row in tests/TestCase.php and
-    // would defeat the create-on-first-call assertion.
+    // The canonical fixture user already carries a PayPal accounts row, which
+    // would defeat every create-on-first-call assertion below.
     $this->primaryUser = User::query()->create([
         'username' => 'paypal-action-primary',
         'password' => 'fixture-password-12chars',
@@ -65,11 +55,9 @@ it('does nothing and returns false when a PayPal account already exists for the 
     /** @var EnsurePaypalAccountAction $action */
     $action = $this->app->make(EnsurePaypalAccountAction::class);
 
-    // First call lands the row.
     $firstResult = ($action)($this->primaryUser);
     expect($firstResult)->toBeTrue();
 
-    // Second call must be a no-op.
     $secondResult = ($action)($this->primaryUser);
 
     expect($secondResult)->toBeFalse();
@@ -132,7 +120,6 @@ it('scopes the existence check by user_id so two users each get their own PayPal
             ->count()
     )->toBe(1);
 
-    // Total across both users — never coalesced into a single shared row.
     expect(
         Account::query()
             ->where('iban', 'PAYPAL')

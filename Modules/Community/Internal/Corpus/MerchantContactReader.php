@@ -17,8 +17,7 @@ final class MerchantContactReader
 
     // Separators, not structure: `/` splits area code from subscriber number
     // across the German-speaking web (0732/3400-4000), and typographers reach
-    // for an en or em dash where a hyphen was meant (089/12 606 – 0). Both
-    // belong to the notation merchants publish; none can escape a `tel:` href.
+    // for an en or em dash where a hyphen was meant (089/12 606 – 0).
     private const PHONE_SHAPE = '/^[+(]?[0-9][0-9 ()\.\-\/\x{2013}\x{2014}]*$/u';
 
     private const EMAIL_MAX = 255;
@@ -49,10 +48,9 @@ final class MerchantContactReader
      */
     private function url(array $raw, string $key, string $pattern): ?string
     {
-        // HTTPS-only, and short enough to reach the column verbatim. These
-        // values are rendered as links a user clicks to cancel a real
-        // contract, so a downgradeable scheme or a silently truncated URL is
-        // a user-facing hazard rather than a cosmetic defect.
+        // HTTPS-only and short enough to land verbatim: these render as links
+        // a user clicks to cancel a real contract, so a downgradeable scheme
+        // or a silently truncated URL is a user-facing hazard.
         $value = self::trimmed($raw, $key);
         if ($value === null) {
             return null;
@@ -74,15 +72,12 @@ final class MerchantContactReader
      */
     private function phone(array $raw, string $pattern): ?string
     {
-        // Kept in the merchant's own published notation rather than E.164: the
-        // service numbers people actually need (0800…, 0900…, short codes) have
-        // no E.164 form, so normalising would drop the most useful half of the
-        // data. Shape is what stops free text reaching a `tel:` href.
+        // Kept in the merchant's published notation rather than E.164: the
+        // service numbers people need (0800…, 0900…, short codes) have no
+        // E.164 form, so normalising would drop the most useful half.
 
-        // The digit floor sits at 3 for the same reason — a 6-digit floor
-        // rejected the very short codes this exists to preserve, Sýn's 1414
-        // and Elvia's 02024 among them. Shape already excludes free text, so
-        // the floor only has to reject a lone stray digit.
+        // The digit floor is 3 because a 6-digit floor rejected the short
+        // codes this exists to preserve — Sýn's 1414, Elvia's 02024.
         $value = self::trimmed($raw, 'support_phone');
         if ($value === null) {
             return null;
@@ -106,8 +101,7 @@ final class MerchantContactReader
     {
         // `?` and `&` are valid RFC 5322 atext, so FILTER_VALIDATE_EMAIL
         // passes them — but in a `mailto:` href they open a header-injection
-        // seam. This mirrors the guard SupportResource::mailtoHref applies to
-        // the support corpus, moved a layer earlier so the value never lands.
+        // seam. SupportResource::mailtoHref guards the same thing later.
         $value = self::trimmed($raw, 'support_email');
         if ($value === null) {
             return null;

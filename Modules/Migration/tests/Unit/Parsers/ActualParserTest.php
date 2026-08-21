@@ -13,18 +13,6 @@ use Modules\Migration\Tests\Support\MigrationFixturePaths;
 
 uses(RefreshDatabase::class);
 
-/*
- * RED Wave 0 stub (13.5-02 Task 3) pinning the ActualParser contract
- * (Req 1/2/3/4/5/7/8). ActualParser does not exist until Plan 04 — every
- * test below is EXPECTED to fail now (missing-class error), not pass.
- *
- * Req 8's scope decision (DOCUMENTED ASSUMPTION, see Plan 04's own
- * assumption comment): a FLAT categories.goal_def -> exactly one
- * MigrationGoalDto; a NON-FLAT (template) goal_def, a saved-report
- * (`custom_reports`) config row, AND a `schedules` row all become
- * UnmappedItemDto('extra') entries — reported, never silently dropped.
- */
-
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'actual-parser-fixture-user',
@@ -56,32 +44,30 @@ it('ActualParser: parses the golden fixture into a populated MigrationBatch — 
     expect($batch)->toBeInstanceOf(MigrationBatch::class);
     expect($batch->sourceProduct)->toBe('actual');
 
-    // Req 7: budget-file-level currency preserved (the ONLY fixture that
-    // meaningfully exercises non-EUR currency preservation, per RESEARCH's
-    // documented YNAB single-currency-per-file limitation).
+    // The only fixture with a non-EUR budget currency: a YNAB export carries
+    // one currency per file and none per row.
     expect($batch->budgetCurrency)->toBe(ActualFixtureBuilder::BUDGET_FILE_CURRENCY);
     expect($batch->budgetCurrency)->not->toBe('EUR');
 
-    // Req 2/WR-03: 4 real categories (Groceries, Household, Salary, Emergency
-    // Fund) + 2 category-group parents (Frequent, Income) materialized as
-    // real parent Category rows.
+    // 4 real categories plus the 2 group parents (Frequent, Income), which are
+    // materialized as real parent Category rows.
     expect($batch->categories)->toHaveCount(6);
     expect($batch->categories->pluck('name')->all())->toContain('Groceries', 'Household', 'Salary', 'Emergency Fund', 'Frequent', 'Income');
 
     expect($batch->accounts)->toHaveCount(2);
     expect($batch->accounts->pluck('name')->all())->toContain('Checking', 'Savings');
 
-    // Req 6: real payees only, transfer-account payees excluded.
+    // Transfer-account payees are never real payees.
     $payeeNames = $batch->payees->pluck('name')->all();
     expect($payeeNames)->toContain('Albert Heijn', 'Employer', 'Supermarket');
     expect($payeeNames)->not->toContain('Transfer: Savings', 'Transfer: Checking');
 
-    // Req 3: 2 months x 2 budgeted categories = 4 assignment rows.
+    // 2 months x 2 budgeted categories = 4 assignment rows.
     expect($batch->budgetAssignments)->toHaveCount(4);
 
-    // Req 4/5: 5 distinct transactions — plain expense, plain income, ONE
-    // split parent (2 legs, from is_parent+2 is_child rows), and a
-    // transfer PAIR (2 entries) — the tombstoned row is excluded entirely.
+    // 5 distinct transactions: plain expense, plain income, one split parent
+    // (collapsed from is_parent + 2 is_child rows) and a transfer pair. The
+    // tombstoned row is excluded.
     $transactions = iterator_to_array($batch->transactions);
     expect($transactions)->toHaveCount(5);
 

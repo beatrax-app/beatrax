@@ -10,18 +10,8 @@ use Modules\Ledger\Public\Events\TransactionBatchImported;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
-/*
- * Req 10 — closes the deferred per-row notification spam debt (D-22): a
- * batch-altitude `TransactionBatchImported` event now persists exactly ONE
- * inbox row per import, never one per row. Verifies the acceptance
- * criterion verbatim (a 500-row fixture -> exactly 1 row), the receipts-
- * vs-import split surviving the altitude change, singular/plural body
- * copy, the per-batch (not per-day) occurrence key, and cross-user
- * isolation.
- *
- * Event dispatch is wrapped in SuppressionEvaluator::suppressDelivery()
- * (D-43) so no test ever attempts a real OS/mobile notification.
- */
+// Dispatch runs inside suppressDelivery() so no case here ever attempts a real
+// OS or mobile notification.
 
 function icImportUser(string $username): User
 {

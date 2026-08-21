@@ -74,7 +74,6 @@ it('resolves the entry-date year via the SWIFT year-rollover rule when entry mon
 })->group('phase-2');
 
 it('keeps the entry-date year equal to the value-date year when entry month <= value month', function (): void {
-    // Same year case (typical): value 2026-04-02, entry 2026-04-01.
     $parsed = $this->parser->parse('2604020401C100,00NTRFREF-SAME');
 
     expect($parsed->valueDate->toDateString())->toBe('2026-04-02');

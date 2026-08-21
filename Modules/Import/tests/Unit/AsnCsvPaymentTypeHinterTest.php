@@ -7,17 +7,6 @@ use Modules\Import\Internal\Parsers\Asn\AsnCsvPaymentTypeHinter;
 use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
-/*
- * Unit coverage for AsnCsvPaymentTypeHinter — the per-source hinter
- * for ASN bank CSV exports. Pure-function tests; the hinter takes no
- * constructor dependencies and the production behaviour is keyword
- * matching against the canonical row's description.
- */
-
-/**
- * Build a CanonicalTransaction with `sourceFormat=asn-csv` and the
- * supplied description; every other field is a fixture default.
- */
 function asnCsvRow(string $description, string $sourceFormat = 'asn-csv'): CanonicalTransaction
 {
     return new CanonicalTransaction(

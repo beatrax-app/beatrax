@@ -7,18 +7,17 @@ namespace Modules\Auth\Public\Services;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 
-// Sole source of truth for "does this session have a lock at all",
-// read by the authenticated layout (to emit window.beatraxIdleMs) and
-// by LockEngageController (to refuse a lock it could never unlock), so
-// the client and server halves of that gate cannot drift apart.
+// One source of truth for "does this session have a lock at all", read by the
+// layout that emits window.beatraxIdleMs and by LockEngageController, so the
+// client and server halves of that gate cannot drift.
 final class AppLockClientConfig
 {
     public function __construct(
         private readonly DatabaseManager $db,
     ) {}
 
-    // No config row, or lock_enabled off, means no PIN hash and no
-    // enrolled biometric — nothing that could release a locked session.
+    // No row or lock_enabled off means nothing exists that could release a
+    // locked session.
     public function isEnabled(int $userId): bool
     {
         $row = $this->db->connection()
@@ -29,8 +28,7 @@ final class AppLockClientConfig
         return $row !== null && (bool) $row->lock_enabled;
     }
 
-    // When this user last proved presence. Null when no lock row exists,
-    // which callers read as "no recent activity to protect".
+    // Null when no lock row exists, which callers read as nothing to protect.
     public function lastActivityAt(int $userId): ?CarbonImmutable
     {
         $value = $this->db->connection()

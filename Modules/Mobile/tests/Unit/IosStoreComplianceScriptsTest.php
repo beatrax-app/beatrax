@@ -5,20 +5,6 @@ declare(strict_types=1);
 use Modules\Mobile\Internal\Boot\NativeBuildPatches;
 use Symfony\Component\Process\Process;
 
-/*
- * End-to-end guards for the two iOS store-compliance patch scripts.
- *
- * nativephp_ios_privacy_manifest.php answers Apple's required-reason API scan
- * (ITMS-91053), which has been a hard block at App Store Connect since 1 May
- * 2024 and reads the shipped binary's symbols rather than anyone's source.
- *
- * nativephp_ios_export_compliance.php answers the export questionnaire once,
- * in the plist, instead of once per upload in the App Store Connect UI — which
- * an automated pipeline cannot do at all.
- *
- * Both run here against a fixture copy of the real generated project.
- */
-
 function iosComplianceInfoPlist(): string
 {
     return <<<'XML'
@@ -38,11 +24,8 @@ function iosComplianceInfoPlist(): string
         XML;
 }
 
-/**
- * The two lines of project.pbxproj the privacy-manifest script asserts on.
- * Without the synchronized root group a file dropped into NativePHP/ is in no
- * build phase, so it never reaches the app bundle Apple scans.
- */
+// Without the synchronized root group a file dropped into NativePHP/ is in no
+// build phase, so it never reaches the app bundle Apple scans.
 function iosCompliancePbxproj(bool $synchronized = true, bool $excepted = false): string
 {
     $group = $synchronized
@@ -97,6 +80,11 @@ function runIosPatch(string $script, string $root): Process
 
     return $process;
 }
+
+// nativephp_ios_privacy_manifest.php answers Apple's required-reason API scan, a
+// hard block at App Store Connect that reads the shipped binary's symbols rather
+// than anyone's source. nativephp_ios_export_compliance.php answers the export
+// questionnaire in the plist, which an automated pipeline cannot do in the UI.
 
 it('declares exactly the three required-reason categories the binary trips', function (): void {
     $root = iosComplianceScaffold();

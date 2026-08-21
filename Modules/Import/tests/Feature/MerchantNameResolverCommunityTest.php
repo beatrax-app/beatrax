@@ -68,7 +68,6 @@ it('lets a user-exact alias win over a matching community row (D-11 + D-15 prece
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
 
-    // Community row that would otherwise match.
     $db->connection()->table('community_merchant_mappings')->insert([
         'user_id' => null,
         'pattern' => 'AH 1234 T9999',
@@ -81,7 +80,6 @@ it('lets a user-exact alias win over a matching community row (D-11 + D-15 prece
         'updated_at' => CarbonImmutable::now()->toDateTimeString(),
     ]);
 
-    // User-exact alias for the same raw description.
     $db->connection()->table('merchant_aliases')->insert([
         'user_id' => $this->user->id,
         'pattern' => 'AH 1234 T9999',
@@ -117,8 +115,7 @@ it('matches a community regex: pattern with a word boundary, and does not over-m
     /** @var MerchantNameResolver $resolver */
     $resolver = $this->app->make(MerchantNameResolver::class);
 
-    // Matches ICA as a standalone word...
     expect($resolver->resolve('ICA MAXI STOCKHOLM', $this->user->id))->toBe('ICA');
-    // ...but the \b boundary keeps it from matching "ICA" inside MEDICAL.
+    // MEDICAL contains "ICA"; the \b boundary is what keeps it from matching.
     expect($resolver->resolve('MEDICAL CENTRE AMSTERDAM', $this->user->id))->toBeNull();
 });

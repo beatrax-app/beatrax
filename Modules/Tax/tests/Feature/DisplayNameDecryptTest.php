@@ -12,14 +12,6 @@ use Modules\Tax\Public\Services\TaxTagQuery;
 
 uses(EnablesEncryptionForUser::class);
 
-/*
- * 14.1-10 Task 2 (D-06 cosmetic-display cluster) — under an encrypted
- * user, `counterparties.display_name` is ciphertext at rest.
- * TaxTagQuery::untaggedCountForCounterparty's $cpName must decrypt it
- * for the "Also tag N more from [Gym] this year?" prompt rather than
- * leaking ciphertext.
- */
-
 function ttqddUser(DatabaseManager $db): int
 {
     return $db->connection()->table('users')->insertGetId([

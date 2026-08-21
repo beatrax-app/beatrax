@@ -19,10 +19,8 @@ use Symfony\Component\Routing\Exception\RouteNotFoundException;
 
 final readonly class DeepLinkResolver
 {
-    // target_kind values that never carry a deletable per-user entity -
-    // always live, never disabled. inbox/import are the coalesced-import
-    // trigger's equivalent; ics-import is a static settings anchor,
-    // never a per-user deletable row.
+    // Kinds with no deletable per-user row behind them, so they can never
+    // resolve to a dead link.
     private const ALWAYS_LIVE_KINDS = ['dashboard', 'forecast', 'inbox', 'import', 'ics-import'];
 
     public function __construct(
@@ -61,9 +59,6 @@ final readonly class DeepLinkResolver
         );
     }
 
-    // Extracts the (target_kind, target_id) pair from the decoded params.
-    // A missing decode or an off-shape value for either key collapses that
-    // slot to null rather than throwing.
     /**
      * @return array{0: ?string, 1: ?int}
      */
@@ -80,10 +75,6 @@ final readonly class DeepLinkResolver
         return [$targetKind, $targetId];
     }
 
-    // Re-reads, decrypts, and JSON-decodes the notification's own params
-    // column, user-scoped. Every failure mode - a missing row, a
-    // non-string/empty payload, unencryptable or malformed JSON, or a
-    // non-array shape - collapses to null rather than throwing.
     /**
      * @return array<array-key, mixed>|null
      */
@@ -146,17 +137,14 @@ final readonly class DeepLinkResolver
                 'forecast' => $this->urls->route('forecast.index'),
                 'inbox' => $this->urls->route('inboxes.index'),
                 'import' => $this->urls->route('imports.new'),
-                // The guided ICS file-import card's anchor - same target
-                // PersistIcsStatementReady::handle() passes as its
-                // deepLinkRoute OS-push argument.
+                // Must match the deepLinkRoute PersistIcsStatementReady
+                // stamps on the OS push.
                 'ics-import' => $this->urls->route('settings.open-banking').'#ics-import',
                 default => null,
             };
         } catch (RouteNotFoundException) {
-            // An always-live kind whose route is not registered (e.g.
-            // ics-import when the optional OpenBanking module is
-            // disabled) degrades to a disabled link, consistent with
-            // the other resolver arms, rather than 500-ing /notifications.
+            // ics-import with the optional OpenBanking module disabled:
+            // degrade to a disabled link rather than 500 /notifications.
             return null;
         }
     }
@@ -174,10 +162,9 @@ final readonly class DeepLinkResolver
         return [$this->urls->route('recurring.series.show', ['seriesId' => $seriesId]), false];
     }
 
-    // The Budgets module's write-dead category_budgets table is not the
-    // existence source - canBudget() checks whether $categoryId is
-    // still a live, user-visible expense category, which is what "the
-    // budget target still exists" means under the envelope model.
+    // canBudget() is the existence source, not the write-dead
+    // category_budgets table: under the envelope model "the budget target
+    // exists" means the category is still live and user-visible.
     /**
      * @return array{0: ?string, 1: bool}
      */
@@ -203,10 +190,8 @@ final readonly class DeepLinkResolver
         return [$this->urls->route('counterparties.profile', ['slug' => $identity['slug']]), false];
     }
 
-    // No dedicated Ledger Public existence method exists for a bare
-    // transaction id. Reads the transactions table directly via
-    // DatabaseManager, user-scoped - the same cross-module raw-table-read
-    // shape CounterpartyProfileQuery already uses for its own reads.
+    // Ledger exposes no Public existence check for a bare transaction id;
+    // this raw user-scoped read mirrors CounterpartyProfileQuery's own.
     /**
      * @return array{0: ?string, 1: bool}
      */

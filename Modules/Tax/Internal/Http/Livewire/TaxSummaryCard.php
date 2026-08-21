@@ -11,10 +11,6 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Tax\Public\Services\TaxTagQuery;
 
-// Compact dashboard summary card: tagged total + item count for the
-// seasonally-computed default year, entirely an anchor to /tax. Renders
-// inline (@livewire('tax.summary-card')) rather than extending
-// layouts.app, same pattern as GoalsSummaryCard.
 final class TaxSummaryCard extends Component
 {
     public function render(
@@ -31,8 +27,8 @@ final class TaxSummaryCard extends Component
             ]);
         }
 
-        // Same seasonal rule as TaxPage::mount(): January-April resolves
-        // to the previous year, May-December to the current year.
+        // TaxPage::mount() resolves the same seasonal default; the card and the
+        // page it links to have to agree.
         $now = $clock->now();
         $year = $now->month <= 4 ? $now->year - 1 : $now->year;
 

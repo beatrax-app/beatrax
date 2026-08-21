@@ -8,10 +8,8 @@ use RuntimeException;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
-// The Enable Banking API was reached but did not yield usable data: a
-// transport error, a non-2xx status, a body that would not decode, or one
-// missing a field the caller cannot synthesise. Carries the HTTP status,
-// because whether the failure is terminal turns on it — isConsentFailure().
+// The API was reached but yielded nothing usable. Carries the HTTP status,
+// because whether the failure is terminal turns on it.
 final class EnableBankingApiException extends RuntimeException
 {
     private function __construct(
@@ -56,18 +54,15 @@ final class EnableBankingApiException extends RuntimeException
         );
     }
 
-    // 401 and 403 both mean the consent behind this connection is no longer
-    // usable, which no retry can repair — only the user redoing the re-link
-    // dance can. Every other status is worth attempting again.
+    // 401 and 403 mean the consent is no longer usable and no retry repairs
+    // that; every other status is worth attempting again.
     public function isConsentFailure(): bool
     {
         return $this->status === Response::HTTP_UNAUTHORIZED || $this->status === Response::HTTP_FORBIDDEN;
     }
 
-    // The rule lives here so the two places that act on it — the sync job and
-    // the settings page — cannot drift apart. Walks the chain because the
-    // import pipeline between the provider call and either catch site is free
-    // to wrap what it rethrows.
+    // Walks the chain: the import pipeline between the provider call and either
+    // catch site is free to wrap what it rethrows.
     public static function consentFailureWithin(Throwable $e): bool
     {
         for ($current = $e; $current !== null; $current = $current->getPrevious()) {

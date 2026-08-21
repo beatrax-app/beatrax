@@ -15,18 +15,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 uses(RefreshDatabase::class);
 
-/*
- * Feature coverage for AccountBufferEditor Livewire SFC.
- *
- *   - Pre-populates the input from accounts.forecast_min_buffer_minor.
- *   - Saving a new value dispatches buffer-editor:saved + toast events
- *     and persists.
- *   - Negative inputs are rejected with the UI-SPEC-locked message.
- *   - Clear invokes the action with null and dispatches the same events.
- *   - Cross-user mount raises NotFoundHttpException.
- *   - Successful save dispatches three ProjectForecastJobs (one per horizon).
- */
-
 function abeUser(string $username): User
 {
     return User::query()->create([
@@ -166,6 +154,5 @@ it('dispatches three ProjectForecastJobs (one per baseline horizon) on save', fu
     Bus::assertDispatched(ProjectForecastJob::class, function (ProjectForecastJob $job): bool {
         return $job->scenarioId === null && in_array($job->horizonDays, [30, 60, 90], true);
     });
-    // Three dispatches in total — one per horizon.
     Bus::assertDispatchedTimes(ProjectForecastJob::class, 3);
 });

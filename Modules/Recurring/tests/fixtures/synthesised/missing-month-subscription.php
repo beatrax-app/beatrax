@@ -2,15 +2,12 @@
 
 declare(strict_types=1);
 
-// Monthly subscription with two consecutive missing months mid-window
-// (e.g. provider billing hiccup, bank holiday processing skew). The
-// 1.8 × median gap appears for the missed period but stays under the
-// "2 missing in any rolling 6-period window" tolerance. Expectation:
-// ONE expense series, monthly cadence, unfragmented.
+// Two consecutive months missing mid-window. The hole is wide enough to count
+// as missed periods but stays inside the "2 missing per rolling 6" tolerance,
+// so the series must not fragment.
 
 $transactions = [];
 $start = new DateTimeImmutable('2024-12-05');
-// Months observed: 0,1,2,3, [4,5 skipped], 6,7,8,9,10,11 — 10 of 12.
 $monthsObserved = [0, 1, 2, 3, 6, 7, 8, 9, 10, 11];
 foreach ($monthsObserved as $i => $offset) {
     $d = $start->modify('+'.$offset.' months');

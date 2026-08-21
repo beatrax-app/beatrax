@@ -10,10 +10,8 @@ use Modules\Reports\Public\Enums\ReportGranularity;
 
 final class TimeBucketGenerator
 {
-    // ~5 years of monthly points. A monthly request whose uncapped bucket
-    // count would exceed this ceiling auto-widens to quarterly stepping
-    // instead of truncating the user's selected range — the full window
-    // still renders, just at a coarser granularity.
+    // ~5 years of monthly points. Exceeding it widens the stepping rather than
+    // truncating the range, so the full window still renders, just coarser.
     public const MAX_BUCKET_POINTS = 60;
 
     /**
@@ -27,10 +25,8 @@ final class TimeBucketGenerator
         };
     }
 
-    // Mirrors generateMonthly()'s own strategy: widen weekly -> monthly
-    // (rather than truncating the range) whenever the uncapped weekly
-    // point count exceeds the cap; generateMonthly() then applies its own
-    // further monthly -> quarterly widening on top of this.
+    // Widens weekly -> monthly over the cap; generateMonthly() then applies its
+    // own monthly -> quarterly widening on top.
     /**
      * @return list<Period>
      */
@@ -62,9 +58,7 @@ final class TimeBucketGenerator
         );
 
         if ($uncappedPointCount > self::MAX_BUCKET_POINTS) {
-            // Auto-widen monthly -> quarterly rather than truncating the
-            // range — the full requested window still renders, just as
-            // fewer, wider points.
+            // Widen to quarterly rather than truncate the requested window.
             return $this->stepBuckets(
                 $period,
                 static fn (CarbonImmutable $cursor): CarbonImmutable => $cursor->addMonthsNoOverflow(3),

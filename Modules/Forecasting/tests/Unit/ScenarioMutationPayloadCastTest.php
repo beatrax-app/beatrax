@@ -15,19 +15,6 @@ use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayloa
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for ScenarioMutationPayloadCast — the Eloquent custom
- * cast that routes the JSON `payload` column on
- * forecast_scenario_mutations to the typed-per-kind subclass.
- *
- * Covers:
- *   - Round-trip for each of the five mutation kinds.
- *   - Unknown kind throws InvalidArgumentException on get.
- *   - Kind/payload mismatch throws on set.
- *   - The factory state methods produce DB rows whose payload
- *     round-trips through the cast.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -153,11 +140,8 @@ it('round-trips ShiftSeriesDatePayload through the cast', function (): void {
 });
 
 it('throws InvalidArgumentException when the row\'s kind is unknown', function (): void {
-    // Drop the schema-layer kind-enum triggers temporarily so the test
-    // can land an out-of-band 'foo' kind value into the table and
-    // exercise the cast's getter rejection branch in isolation. The
-    // dedicated MigrationsTest case asserts the triggers themselves
-    // reject the invalid value at INSERT time.
+    // The schema triggers would reject 'foo' at INSERT, which is what
+    // MigrationsTest covers; dropping them isolates the cast's own branch.
     $this->db->connection()->statement('DROP TRIGGER IF EXISTS forecast_scenario_mutations_kind_insert_check');
     $this->db->connection()->statement('DROP TRIGGER IF EXISTS forecast_scenario_mutations_kind_update_check');
 
@@ -176,11 +160,8 @@ it('throws InvalidArgumentException when the row\'s kind is unknown', function (
 });
 
 it('throws InvalidArgumentException on kind/payload mismatch at assignment time', function (): void {
-    // The cast.set() runs at attribute assignment, not at save() —
-    // this is the standard Eloquent cast lifecycle. The "set the kind
-    // first, then assign a matching payload" contract is therefore
-    // enforced eagerly: a mismatched assignment fails-fast before any
-    // SQL is issued.
+    // set() runs at assignment, not at save(), so the mismatch is caught
+    // before any SQL is issued.
     $mutation = new ForecastScenarioMutation;
     $mutation->user_id = $this->user->id;
     $mutation->forecast_scenario_id = $this->scenario->id;
@@ -203,8 +184,6 @@ it('throws InvalidArgumentException on kind/payload mismatch at assignment time'
 });
 
 it('throws InvalidArgumentException when the payload is assigned before the kind column', function (): void {
-    // Defensive: assigning the payload before setting kind on a fresh
-    // model triggers the missing-kind branch in the cast.
     $mutation = new ForecastScenarioMutation;
 
     $assign = function () use ($mutation): void {
@@ -222,9 +201,6 @@ it('throws InvalidArgumentException when the payload column does not decode to a
             'forecast_scenario_id' => $this->scenario->id,
         ]);
 
-    // Force the payload column to a JSON-encoded scalar (a string,
-    // not an array). The cast must reject this — there is no way to
-    // hydrate a typed payload subclass from a scalar.
     $this->db->connection()->table('forecast_scenario_mutations')
         ->where('id', $mutation->id)
         ->update(['payload' => json_encode('not-an-object', JSON_THROW_ON_ERROR)]);

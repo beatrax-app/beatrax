@@ -9,12 +9,10 @@ use Modules\Core\Public\Events\UserInstalled;
 
 uses(RefreshDatabase::class);
 
-/*
- * Autoincrement ids start at 1 on every device, so a joining device that
- * seeds its own per-user rules collides id-for-id with the ones the peer is
- * about to send: "insert or ignore" drops the peer's rule while its child
- * conditions still attach to that id, binding them to a different rule.
- */
+// Autoincrement ids start at 1 everywhere, so a joining device seeding its own
+// rules collides id-for-id with the ones the peer is about to send. The create
+// path ignores the duplicate parent while its child conditions still attach to
+// that id, binding them to a rule they were never part of.
 
 function starterDataUser(DatabaseManager $db): int
 {

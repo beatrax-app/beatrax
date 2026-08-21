@@ -86,10 +86,9 @@ final class RateProviderRegistry
             return;
         }
 
-        // Subsequent failure — bump the count WITHOUT resetting the TTL
-        // (increment preserves the existing expiry). Otherwise a provider that
-        // fails more often than once per 6h would slide its window forever and
-        // the circuit would never auto-heal after the outage ends.
+        // increment preserves the existing expiry. Resetting the TTL would let
+        // a provider failing more than once per 6h slide its window forever,
+        // so the circuit would never auto-heal.
         $this->cache->increment($cacheKey);
     }
 

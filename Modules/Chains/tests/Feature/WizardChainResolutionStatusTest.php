@@ -8,21 +8,6 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Import\Internal\Http\Livewire\PreviewWizard;
 
-/*
- * PreviewWizard polling status surface (D-103 / D-105). After
- * ConfirmImport dispatches the chain resolver, the wizard polls the
- * `chain_resolution_runs` audit table via `wire:poll.2s` and
- * surfaces the running / pending / complete / failed state inline.
- *
- * Issue #1 + #8 lock: the query MUST filter by exact `user_id` match.
- * NEVER `payload LIKE '%userId:N%'` — the substring pattern
- * conflates user_id=1 with user_id=11, leaking cross-user failure
- * state.
- *
- * On status === 'complete', the wizard auto-navigates to the import
- * summary route (`imports.results`).
- */
-
 function wcrUser(string $username): User
 {
     return User::query()->create([
@@ -141,10 +126,8 @@ it('cross-user isolation — user A does NOT observe user B\'s chain_resolution_
 });
 
 it('substring-attack guard — user_id matching is exact, not LIKE (issue #8)', function (): void {
-    // Insert a failed run for the OTHER user (id distinct from this->user->id).
-    // A `payload LIKE '%userId:N%'` substring query (the forbidden
-    // pattern) would falsely match other users whose ids share a
-    // digit prefix. The exact-match query MUST return null.
+    // A `payload LIKE '%userId:N%'` query would falsely match users whose ids
+    // share a digit prefix; the exact-match query must return null.
     $now = CarbonImmutable::now()->toDateTimeString();
     $this->db->connection()->table('chain_resolution_runs')->insert([
         'user_id' => $this->otherUser->id,
@@ -154,14 +137,12 @@ it('substring-attack guard — user_id matching is exact, not LIKE (issue #8)', 
         'updated_at' => $now,
     ]);
 
-    // Verify user A sees null.
     Livewire::actingAs($this->user)
         ->test(PreviewWizard::class, ['id' => $this->importRunId])
         ->call('refreshChainResolutionStatus')
         ->assertSet('chainResolutionStatus', null);
 
-    // Sanity: user B DOES see their failed row (also need to seed
-    // their own import_run since the wizard requires one).
+    // User B needs their own import_run: the wizard requires one.
     $otherImportRunId = (int) $this->db->connection()->table('import_runs')->insertGetId([
         'user_id' => $this->otherUser->id,
         'source_format' => 'asn-csv',
@@ -184,10 +165,8 @@ it('PreviewWizard does NOT contain a substring LIKE payload pattern (issue #1 + 
     $contents = (string) file_get_contents($wizardPath);
     // Strip comments so legitimate PHPDoc references stay legal.
     $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
-    // The forbidden substring patterns must NOT appear in code.
     expect($stripped)->not->toMatch('/payload.*?like.*?userId/i');
     expect($stripped)->not->toMatch("/'%userId:/");
-    // The safe audit-table query must appear.
     expect($contents)->toContain('chain_resolution_runs');
 });
 

@@ -12,12 +12,6 @@ use Modules\Ledger\Public\Services\PeriodQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * Wave 0 RED stub for Req 12's dashboard glance surface (13.2-VALIDATION.md).
- * EnvelopeGlanceCard (Plan 08) does not exist yet -- expected to fail on the
- * missing class, never a parse error.
- */
-
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'glance-'.bin2hex(random_bytes(4)),

@@ -66,7 +66,6 @@ final class PaypalTransactionRollup
      */
     private function filterSurviving(array $rawRows, string $language): array
     {
-        // The classification is recorded here so the later passes never re-call classify().
         $surviving = [];
 
         foreach ($rawRows as $row) {
@@ -106,8 +105,6 @@ final class PaypalTransactionRollup
             }
         }
 
-        // A row is a child only when classified 'child-fee'/'child-fx' AND its
-        // Reference Txn ID points at another row in this same file.
         /** @var array<string, list<array<string, string>>> $childrenByParent */
         $childrenByParent = [];
         /** @var list<array<string, string>> $parents */

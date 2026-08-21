@@ -33,8 +33,7 @@ final class ForecastPage extends Component
     use CoercesScalars;
     use DispatchesToast;
 
-    // 'all' is a sentinel value: it selects the All-accounts aggregate
-    // view rather than a specific account id.
+    // 'all' is a sentinel for the aggregate view, not an account id.
     #[Url(as: 'account', except: 'all')]
     public string $account = 'all';
 
@@ -47,8 +46,6 @@ final class ForecastPage extends Component
     #[Url(as: 'viewByFunder', except: false)]
     public bool $viewByFunder = false;
 
-    // Holds the scenarioId currently in "are you sure?" mode for the
-    // inline two-step delete-scenario confirm; null when not confirming.
     public ?int $confirmingDeleteForScenarioId = null;
 
     public bool $creatingScenario = false;
@@ -141,10 +138,8 @@ final class ForecastPage extends Component
 
     public function deleteScenario(int $scenarioId, CurrentUser $currentUser, DeleteScenario $action, ScenarioQuery $scenarioQuery): void
     {
-        // Re-validate ownership: $scenarioId is browser-supplied, so
-        // ScenarioQuery's own-scenarios-only result set is re-checked here
-        // rather than trusting the caller, without leaking whether a
-        // foreign id exists.
+        // $scenarioId is browser-supplied. Re-checking it against the user's
+        // own set 404s a foreign id without confirming it exists.
         $user = $currentUser->user();
         $owns = false;
         foreach ($scenarioQuery->forUser($user) as $s) {
@@ -175,9 +170,7 @@ final class ForecastPage extends Component
 
     public function onBufferSaved(): void
     {
-        // Re-render the chart with the new buffer floor + any newly
-        // detected shortfall band. The browser-side ApexCharts wrapper
-        // listens for the `forecast-updated` event on the partial.
+        // The ApexCharts wrapper on the partial listens for this.
         $this->dispatch('forecast-updated');
     }
 
@@ -189,9 +182,8 @@ final class ForecastPage extends Component
 
     public function refreshProjectionStatus(): void
     {
-        // wire:poll target — when the projection status flips to complete,
-        // the next render unmounts the conditional wire:poll element and
-        // polling halts (RESEARCH Pitfall 3 mitigation).
+        // The poll ends itself: once the projection completes, the next render
+        // drops the conditional wire:poll element that was calling this.
         $this->dispatch('forecast-updated');
     }
 
@@ -211,14 +203,10 @@ final class ForecastPage extends Component
         $isAllAccountsView = $this->account === 'all';
         $isEmpty = $accountList === [];
 
-        // Read the user's saved scenarios so the picker is populated, then
-        // refuse to render when the selected scenarioId belongs to another
-        // user (cross-user 404).
         $scenarios = $scenarioQuery->forUser($user);
         $this->assertScenarioOwnership($scenarios);
 
-        // Clock is kept on the render() signature for a future explicit
-        // "as of" badge; the current surface does not render one yet.
+        // Kept on the signature for a future "as of" badge; the call is inert.
         $clock->now();
 
         $viewData = array_merge(
@@ -278,9 +266,8 @@ final class ForecastPage extends Component
      */
     private function normaliseAndResolveAccount(array $accountList): ?int
     {
-        // A tampered or stale ?account= value (anything that is neither
-        // 'all' nor a numeric account id) falls back to the All-accounts
-        // tab rather than rendering a blank page with no error.
+        // A tampered or stale ?account= falls back to the aggregate tab rather
+        // than rendering a blank page with no error.
         if ($this->account !== 'all' && ! is_numeric($this->account)) {
             $this->account = 'all';
         }
@@ -358,9 +345,7 @@ final class ForecastPage extends Component
         $horizonLowMinor = $lastPoint instanceof ForecastPointDto ? $lastPoint->lowMinor : 0;
         $horizonHighMinor = $lastPoint instanceof ForecastPointDto ? $lastPoint->highMinor : 0;
 
-        // Effective per-account buffer for the popover trigger label + the
-        // chart's annotations.yaxis shortfall band overlay; null when the
-        // account carries no buffer floor.
+        // Feeds the popover label and the chart's annotations.yaxis band.
         $accountRow = $db->connection()->table('accounts')
             ->where('id', $selectedAccountId)
             ->where('user_id', $user->id)
@@ -389,9 +374,6 @@ final class ForecastPage extends Component
             $scenarioPanelColor = $this->panelColorFor($netDiff[30]);
         }
 
-        // Shared y-axis (RESEARCH Pitfall 2): compute the union range
-        // across both panels' points + the buffer floor so the chart's
-        // y-axis is identical and the visual delta is honest.
         [$yMin, $yMax] = $this->computeSharedYAxisRange($baseline, $scenario, $effectiveBufferMinor);
 
         $scenarioApexOptions = null;

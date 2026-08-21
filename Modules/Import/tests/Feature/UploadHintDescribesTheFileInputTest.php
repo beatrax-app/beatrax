@@ -6,12 +6,9 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Import\Internal\Http\Livewire\UploadWizard;
 
-/*
- * The sr-only list of accepted formats sat in the page header with an id
- * nothing pointed at, so a screen reader met it on page entry — worded as a
- * failure, and byte-identical to the real validation error, which made a hint
- * and a rejection indistinguishable.
- */
+// The sr-only format list sat in the page header behind an id nothing pointed
+// at, worded as a failure and byte-identical to the real validation error —
+// so a screen reader met it on entry and could not tell hint from rejection.
 
 beforeEach(function (): void {
     $this->hintUser = User::query()->create([

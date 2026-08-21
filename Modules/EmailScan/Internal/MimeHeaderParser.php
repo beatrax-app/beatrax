@@ -49,10 +49,8 @@ final class MimeHeaderParser
                     $internalDate = $immutable;
                 }
             } catch (Throwable) {
-                // Malformed Date header — fall back to the provider-
-                // supplied date. Production callers always pass a real
-                // internal_date so the fallback never silently lands on
-                // the wall clock.
+                // Production callers always pass a real internal_date, so
+                // this fallback never silently lands on the wall clock.
                 $internalDate = $fallbackDate;
             }
         }

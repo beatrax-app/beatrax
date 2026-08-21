@@ -8,6 +8,9 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Lang;
 
+/**
+ * @link ../../../../.docs/features/sync/pairing-handshake.md
+ */
 final class PairedDeviceAdmitter
 {
     public function __construct(

@@ -15,14 +15,6 @@ use Modules\Migration\Tests\Support\MigrationFixturePaths;
 
 uses(RefreshDatabase::class);
 
-/*
- * Task 3's own acceptance criteria describe testable behavior with no
- * pre-existing RED stub targeting PreviewSummaryBuilder directly — the read
- * side of MigrationWizardTest exercises the future /migrations/{run}/preview
- * ROUTE (Plan 08, not yet built), not this read model in isolation. Mirrors
- * the Rule 3 precedent Plans 03/04 established for dedicated coverage.
- */
-
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'preview-summary-fixture-user',
@@ -42,9 +34,8 @@ it('PreviewSummaryBuilder: returns the 5 mapped counts for a staged ynab4 v1 run
     $summary = app(PreviewSummaryBuilder::class)->forRun($run->id, $this->user);
 
     expect($summary)->toBeInstanceOf(PreviewSummary::class);
-    // 3 real categories (Groceries, Household, Salary) + 2 category-group
-    // parents (Frequent, Income) materialized as real parent categories
-    // (WR-03).
+    // 3 real categories (Groceries, Household, Salary) plus the 2 group parents
+    // (Frequent, Income), which are materialized as real parent categories.
     expect($summary->categoriesCount)->toBe(5);
     expect($summary->accountsCount)->toBe(2);
     expect($summary->counterpartiesCount)->toBe(3);
@@ -89,12 +80,8 @@ it('WR-06: throws MigrationRunNotParsedException for a discarded run (staging de
 });
 
 it('WR-06: a genuinely-empty PARSED run (zero staged rows) does NOT throw — it is a legitimate empty preview', function (): void {
-    // A 'parsed' status is only ever set by StartMigrationRun AFTER
-    // parsing+staging has already succeeded — this simulates a brand-new,
-    // completely empty source budget file (zero categories/accounts/
-    // payees/transactions/budget-months), which is a valid preview outcome,
-    // NOT the same "nothing to preview" condition a discarded run's
-    // truncated staging represents.
+    // 'parsed' is only ever set after staging succeeded, so zero staged rows
+    // here means an empty source file, not a truncated one.
     $run = MigrationRun::create([
         'user_id' => $this->user->id,
         'source_product' => 'ynab4',

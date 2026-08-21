@@ -12,13 +12,6 @@ use Modules\Recurring\Public\Actions\RejectRecurringSeries;
 use Modules\Recurring\Public\Events\RecurringSeriesRejected;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/*
- * RejectRecurringSeries — permanent veto (until UnReject). Reachable
- * from pending, approved, cadence_changed, snoozed. Idempotent when
- * already rejected. Dispatches RecurringSeriesRejected. Does not write
- * the transactions table.
- */
-
 function rjrsUser(string $username): User
 {
     return User::query()->create([

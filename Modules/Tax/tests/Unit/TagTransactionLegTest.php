@@ -10,21 +10,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit tests for Phase 13.1 D-06a: leg-aware TagTransaction/UntagTransaction.
- *
- * Tests cover:
- *  - Tagging leg A (not leg B) produces exactly one tag row keyed to leg A.
- *  - Tagging both legs produces two independent rows.
- *  - A whole-transaction tag (transactionSplitId=null) still works for
- *    unsplit transactions (backward compatibility).
- *  - Untagging leg A leaves leg B's tag and any whole-tx tag intact.
- *  - A cross-user leg id is rejected (T-13.1-09).
- */
-
-/**
- * Inserts a minimal user row and returns its id.
- */
 function tstlUser(DatabaseManager $db, string $username): int
 {
     return $db->connection()->table('users')->insertGetId([
@@ -36,10 +21,6 @@ function tstlUser(DatabaseManager $db, string $username): int
     ]);
 }
 
-/**
- * Inserts an account + import run + transaction for the given user and
- * returns the transaction id.
- */
 function tstlTransaction(DatabaseManager $db, int $userId, int $settledAmountMinor = -8000): int
 {
     $suffix = bin2hex(random_bytes(4));
@@ -91,9 +72,6 @@ function tstlTransaction(DatabaseManager $db, int $userId, int $settledAmountMin
     ]);
 }
 
-/**
- * Inserts a deduction category for the user and returns its id.
- */
 function tstlDeductionCategory(DatabaseManager $db, int $userId, string $name = 'Test Category'): int
 {
     return $db->connection()->table('tax_deduction_categories')->insertGetId([
@@ -107,10 +85,7 @@ function tstlDeductionCategory(DatabaseManager $db, int $userId, string $name = 
     ]);
 }
 
-/**
- * Inserts a spend category (Ledger's categories table — distinct from
- * tax_deduction_categories) and returns its id.
- */
+// Ledger's categories table, distinct from tax_deduction_categories.
 function tstlSpendCategory(DatabaseManager $db, int $userId, string $name): int
 {
     return $db->connection()->table('categories')->insertGetId([
@@ -123,9 +98,6 @@ function tstlSpendCategory(DatabaseManager $db, int $userId, string $name): int
     ]);
 }
 
-/**
- * Inserts a transaction_splits leg row and returns its id.
- */
 function tstlLeg(DatabaseManager $db, int $userId, int $transactionId, int $categoryId, int $settledAmountMinor, int $sortOrder = 0): int
 {
     return $db->connection()->table('transaction_splits')->insertGetId([
@@ -140,8 +112,6 @@ function tstlLeg(DatabaseManager $db, int $userId, int $transactionId, int $cate
         'updated_at' => now(),
     ]);
 }
-
-// -----------------------------------------------------------------------
 
 it('tags one leg without affecting a sibling leg — exactly one row keyed to that leg', function (): void {
     /** @var DatabaseManager $db */
@@ -166,7 +136,6 @@ it('tags one leg without affecting a sibling leg — exactly one row keyed to th
     expect((int) $rows->first()->transaction_split_id)->toBe($legA);
     expect($rows->first()->note)->toBe('Leg A note');
 
-    // Leg B has no tag.
     $legBTagged = $db->connection()->table('tax_transaction_tags')
         ->where('user_id', $userId)
         ->where('transaction_id', $txId)
@@ -291,7 +260,6 @@ it('untagging a leg never deletes a whole-transaction tag on the same transactio
 
     // A whole-tx tag (transaction_split_id IS NULL) predates the split.
     app(TagTransaction::class)->execute($userId, $txId, $catId, null, null);
-    // Now the leg gets its own tag.
     app(TagTransaction::class)->execute($userId, $txId, $catId, null, null, $legA);
 
     app(UntagTransaction::class)->execute($userId, $txId, $legA);
@@ -315,9 +283,8 @@ it('rejects a cross-user leg id — 404, no tag row created (T-13.1-09)', functi
     $groceries = tstlSpendCategory($db, $owner, 'Groceries');
     $legA = tstlLeg($db, $owner, $txId, $groceries, -8000, 0);
 
-    // Intruder owns no transaction with this id, so the transaction
-    // ownership guard fires first — either way, no write occurs and a
-    // NotFoundHttpException surfaces.
+    // The transaction ownership guard fires before the leg guard, so which one
+    // rejects is incidental; neither writes.
     expect(fn () => app(TagTransaction::class)->execute($intruder, $txId, null, null, null, $legA))
         ->toThrow(NotFoundHttpException::class);
 

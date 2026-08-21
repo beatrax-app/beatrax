@@ -6,10 +6,8 @@ namespace Modules\Categorization\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-// `bookedAt` is pre-formatted as `d-m-Y` so the Blade template renders
-// without any further date helper. `counterpartySlug` is NULL when the
-// transaction has no resolved counterparty — the Blade then renders the
-// name as plain text instead of a link.
+// `bookedAt` arrives pre-formatted in the reader's locale (Fmt::shortDate), so
+// the Blade must not reformat it; a null `counterpartySlug` renders plain text.
 final class TriageRow extends Data
 {
     public function __construct(

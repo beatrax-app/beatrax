@@ -13,7 +13,6 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
 
 /**
- *
  * @implements CastsAttributes<array<int|string, mixed>|null, array<int|string, mixed>|string|null>
  */
 final class EncryptedJsonCast implements CastsAttributes

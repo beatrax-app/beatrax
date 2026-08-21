@@ -8,61 +8,13 @@ use PDO;
 use RuntimeException;
 use ZipArchive;
 
-/**
- * Script-builds a minimal, synthetic Actual Budget export (`db.sqlite` +
- * `metadata.json` packaged into a real ZIP via `ZipArchive`) matching the
- * verified schema in 13.5-RESEARCH.md § Format Schemas — Actual Budget.
- *
- * Unlike the hand-authored YNAB4/nYNAB CSV fixtures (committed as static
- * files), Actual's export is a full relational SQLite database — small
- * enough to script-generate deterministically at test time rather than
- * committing a binary blob to git. `build()` creates ONLY the tables/views
- * `ActualParser` (Plan 04) is documented to read: `accounts`, `payees`,
- * `category_groups`, `categories`, `category_mapping`, `payee_mapping`,
- * `transactions`, `zero_budgets`, `preferences`, `schedules`, `rules`, and
- * `custom_reports` (a synthetic "saved report" extra with no Beatrax
- * equivalent — Req 8's unmapped-not-dropped coverage), plus the resolving
- * views `v_transactions` / `v_categories` / `v_payees` (RESEARCH.md's
- * verified Pitfall 1: the raw tables carry stale pre-merge ids, the views
- * are the only correct read path).
- *
- * Seeds exactly the scenario `ActualParserTest`/`MigrationConfirmTest` pin:
- *  - 2 accounts (Checking, Savings), 2 category groups (Frequent, Income).
- *  - 4 categories: Groceries (FLAT goal_def), Household (no goal),
- *    Salary (income), Emergency Fund (NON-FLAT/template goal_def).
- *  - 5 payees incl. the two synthetic transfer payees
- *    (`transfer_acct`-linked, never surfaced as a real payee).
- *  - 7 raw transaction rows: 1 plain expense, 1 plain income, a 3-row
- *    is_parent/is_child split (2 legs), a transfer_id-linked pair, and 1
- *    TOMBSTONED row (must be filtered by `v_transactions`).
- *  - `zero_budgets` for Jan+Feb 2026 across Groceries/Household, with
- *    `preferences.budgetType = 'envelope'` so `zero_budgets` (not
- *    `reflect_budgets`) is the active grid.
- *  - `preferences.currencyCode = 'USD'` — the Req 7 non-EUR budget-file
- *    currency fixture (YNAB4/nYNAB carry no per-row currency at all, so
- *    this is the ONLY fixture exercising currency preservation).
- *  - 1 schedule + 1 rule (Req 8 note-only descope — becomes an
- *    `UnmappedItemDto` with a preserved note, never a real `Modules\
- *    Recurring` series).
- *  - 1 `custom_reports` row (the saved-report unsupported "extra").
- *
- * `$variant === 'v2'` changes exactly:
- *  - `zero_budgets` Jan 2026 Groceries: 200.00 -> 250.00 (the Req 10
- *    3-way-merge CONFLICT target — a local edit collides with this).
- *  - `zero_budgets` Jan 2026 Household: 100.00 -> 120.00 (the Req 10
- *    clean-APPLY target — untouched locally).
- *  - The plain-expense transaction amount: 45.00 -> 50.00 (Req 9
- *    idempotent-reimport / Req 10 transaction-field-change coverage).
- * Every other row is byte-identical between v1 and v2.
- */
+// Actual's export is a whole SQLite database, built here rather than committed
+// as a binary blob. Only what ActualParser reads exists; v2 differs from v1 in
+// two budget amounts and one transaction amount.
 final class ActualFixtureBuilder
 {
     public const BUDGET_FILE_CURRENCY = 'USD';
 
-    /**
-     * Builds the fixture ZIP at `$zipPath` (overwritten if it already
-     * exists). `$variant` is `'v1'` or `'v2'`.
-     */
     public static function build(string $zipPath, string $variant = 'v1'): void
     {
         if (! in_array($variant, ['v1', 'v2'], true)) {
@@ -153,10 +105,8 @@ final class ActualFixtureBuilder
             )
             SQL);
 
-        // Actual's merge-categories/merge-payees indirection tables — the
-        // fixture uses an identity mapping (every id maps to itself) since
-        // no merge ever happened in this synthetic budget, but the tables
-        // must exist and be readable by the exact join the views perform.
+        // Actual's merge indirection: every id maps to itself here, but the
+        // tables must exist for the join the views perform.
         $pdo->exec('CREATE TABLE category_mapping (id TEXT PRIMARY KEY, "transferId" TEXT NOT NULL)');
         $pdo->exec('CREATE TABLE payee_mapping (id TEXT PRIMARY KEY, "targetId" TEXT NOT NULL)');
 
@@ -229,9 +179,8 @@ final class ActualFixtureBuilder
             )
             SQL);
 
-        // Synthetic "saved report" extra — no Beatrax equivalent exists;
-        // ActualParser must surface each row as an UnmappedItemDto('extra'),
-        // never silently drop it (Req 8).
+        // No Beatrax equivalent exists: ActualParser must surface each row as an
+        // UnmappedItemDto('extra') rather than silently drop it.
         $pdo->exec(<<<'SQL'
             CREATE TABLE custom_reports (
                 id TEXT PRIMARY KEY,
@@ -241,9 +190,8 @@ final class ActualFixtureBuilder
             )
             SQL);
 
-        // Resolved read-only views — RESEARCH.md's verified Pitfall 1: the
-        // importer MUST query these, never the raw tables (stale pre-merge
-        // ids + no tombstone filter on the raw tables).
+        // The importer must read these views, never the raw tables: the raw
+        // tables carry stale pre-merge ids and no tombstone filter.
         $pdo->exec(<<<'SQL'
             CREATE VIEW v_categories AS
             SELECT c.id, c.name, c.is_income, c.hidden, c."group", c.goal_def, c.sort_order
@@ -287,8 +235,8 @@ final class ActualFixtureBuilder
 
         // FLAT goal_def: a single target amount, no schedule/template.
         $flatGoalDef = json_encode(['type' => 'simple', 'amount' => 20000], JSON_THROW_ON_ERROR);
-        // NON-FLAT goal_def: a multi-step template — must NOT reduce to a
-        // MigrationGoalDto; becomes an UnmappedItemDto instead (Req 8).
+        // NON-FLAT goal_def: a multi-step template, which must become an
+        // UnmappedItemDto rather than a MigrationGoalDto.
         $nonFlatGoalDef = json_encode([
             'type' => 'template',
             'steps' => [

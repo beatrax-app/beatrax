@@ -20,43 +20,35 @@ return new class extends Migration
             $table->dateTime('booked_at');
             $table->date('value_date');
 
-            // Native currency:
             $table->bigInteger('amount_minor');
             $table->char('currency', 3);
 
-            // Settled currency (cross-currency rows record both native and
-            // settled pairs so FX information is never lost on import).
+            // Cross-currency rows record both native and settled pairs, so FX
+            // information is never lost on import.
             $table->bigInteger('settled_amount_minor');
             $table->char('settled_currency', 3);
             $table->decimal('fx_rate_used', 18, 8)->nullable();
 
-            // Counterparty:
             $table->string('counterparty_name')->nullable();
             $table->string('counterparty_iban', 34)->nullable();
             $table->string('counterparty_normalized', 80);
             $table->unsignedSmallInteger('normalization_version');
 
-            // Description:
             $table->text('description')->nullable();
 
-            // Category:
             $table->foreignId('category_id')->nullable()->constrained('categories')->nullOnDelete();
 
-            // Source provenance:
             $table->string('source_format', 32);
             $table->foreignId('import_run_id')->constrained('import_runs');
             $table->unsignedInteger('source_row_index');
             $table->string('source_ref')->nullable();
 
-            // Fingerprint (idempotency layer):
             $table->char('fingerprint', 64);
             $table->unsignedSmallInteger('fingerprint_version');
 
-            // Lifecycle:
             $table->string('status', 16)->default('cleared');
             $table->timestamps();
 
-            // Period-window query indexes
             $table->index(['user_id', 'posted_at']);
             $table->index(['account_id', 'posted_at']);
             $table->index(['category_id', 'posted_at']);

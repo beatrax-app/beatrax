@@ -6,16 +6,8 @@ use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\AddOneOffPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\AddRecurringPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayload;
 
-/*
- * Constructor-level enum validation on the three Public mutation
- * payloads that previously accepted arbitrary string values for their
- * `direction`, `cadence`, and `scope` fields. The downstream
- * ScenarioApplier branches on those strings; a typo silently flipped
- * the income/expense sign or shrank the shift scope. Tightened at the
- * constructor so the typed JSON cast (which invokes the constructor
- * on read) surfaces a corrupt DB row loudly rather than silently
- * mis-rendering.
- */
+// Validation sits in the constructor so the typed JSON cast, which calls it on
+// read, catches a corrupt row rather than mis-rendering it.
 
 it('AddOneOffPayload accepts a valid direction', function (string $direction): void {
     $payload = new AddOneOffPayload(
@@ -62,7 +54,7 @@ it('AddRecurringPayload rejects an unknown cadence', function (): void {
         amountMinor: -1000,
         currency: 'EUR',
         direction: 'expense',
-        cadence: 'biweekly', // not in the allowed set
+        cadence: 'biweekly',
     ))->toThrow(InvalidArgumentException::class, "must be one of: 'weekly' | 'monthly' | 'quarterly' | 'yearly'");
 });
 
@@ -71,7 +63,7 @@ it('AddRecurringPayload rejects an unknown direction even with a valid cadence',
         startDate: '2026-06-01',
         amountMinor: -1000,
         currency: 'EUR',
-        direction: 'credit', // not in the allowed set
+        direction: 'credit',
         cadence: 'monthly',
     ))->toThrow(InvalidArgumentException::class, "must be one of: 'expense' | 'income'");
 });

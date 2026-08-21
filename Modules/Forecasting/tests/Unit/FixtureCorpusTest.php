@@ -2,26 +2,7 @@
 
 declare(strict_types=1);
 
-/*
- * FixtureCorpusTest — contract guard for the synthesised forecast
- * fixture corpus.
- *
- * Each fixture under
- * `Modules/Forecasting/tests/fixtures/forecast-corpus/` returns an
- * associative array with three top-level keys:
- *
- *   - `accounts`  (list of synthetic account rows the projector reads)
- *   - `series`    (list of synthetic approved recurring-series rows
- *                  the projector folds into a daily timeline)
- *   - `expected`  (associative array with at least `projection` and
- *                  `shortfalls` keys; the scenario-reference fixture
- *                  also declares `scenarios`)
- *
- * The corpus is the authoritative input for the subsequent projection
- * + shortfall + scenario-isolation contract suites. If a fixture
- * violates the shape contract the downstream tests become noisy and
- * unreliable, so this guard fires first.
- */
+/** @link ../../../../.docs/features/forecasting/forecast-corpus.md#shape */
 
 use function PHPUnit\Framework\assertArrayHasKey;
 use function PHPUnit\Framework\assertContains;
@@ -31,9 +12,6 @@ use function PHPUnit\Framework\assertIsList;
 use function PHPUnit\Framework\assertLessThanOrEqual;
 
 /**
- * Yields every fixture file under the forecast-corpus directory as a
- * Pest dataset entry. Each entry is `[$name, $absolutePath]`.
- *
  * @return iterable<int, array{0: string, 1: string}>
  */
 function forecastCorpusFixtures(): iterable

@@ -7,9 +7,6 @@ namespace Modules\Import\Public\Contracts;
 use Modules\Core\Models\User;
 use Modules\Import\Public\Dto\StartingBalanceCandidate;
 
-/**
- * @link ../../../../.docs/features/import/architecture.md#starting-balance-detection
- */
 interface DetectsStartingBalance
 {
     // Introspection only: the aggregator walks every tagged detector anyway.

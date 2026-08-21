@@ -10,16 +10,12 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Enums\AccountKind;
 use stdClass;
 
-// Resolves which accounts drive the two calendar lanes: the visible-entries
-// filter and the balance-projection set, plus the account name lookup. Every
-// caller-supplied id list is intersected against the user's owned accounts.
 final readonly class AccountResolver
 {
     use CoercesScalars;
 
-    // ON kinds (checking/savings/cash/PayPal) are included in the spendable
-    // balance default; OFF kinds (ICS credit-card family) are excluded since
-    // their liability already shows up via the bulk-iDEAL settlement leg.
+    // Credit-card kinds are absent on purpose: their liability already reaches
+    // the balance through the settlement leg, so including them double-counts.
     private const array SPENDABLE_KINDS = [
         AccountKind::Bank->value,
         AccountKind::Cash->value,

@@ -9,15 +9,6 @@ use Modules\Core\Models\User;
 
 uses(RefreshDatabase::class);
 
-/*
- * /forecast feature tests — the page heading + subhead + helper
- * link, the horizon segmented control with the default selection,
- * the per-account tab bar, the rangeArea chart container, the
- * data-options Apex JSON attribute, the Updating... caption when
- * the latest run is pending, and the empty-state hero when the
- * user has no accounts.
- */
-
 function fpgUser(string $username = 'fpg'): User
 {
     return User::query()->create([
@@ -78,7 +69,6 @@ it('renders the horizon segmented control with 30 days selected by default', fun
     expect($content)->toContain('30 days');
     expect($content)->toContain('60 days');
     expect($content)->toContain('90 days');
-    // 30 days option carries aria-checked="true"
     expect($content)->toMatch('/aria-checked="true"[^>]*>\s*30 days/');
 });
 
@@ -104,8 +94,8 @@ it('renders the per-account tab bar in alphabetical order', function (): void {
 it('renders the baseline panel heading and the rangeArea chart container on a per-account tab', function (): void {
     $accountId = fpgAccount($this->db, $this->user->id, 'ASN Test');
 
-    // Wave 5 makes "All accounts" the default landing; per-account
-    // panel renders only when an account id is in the URL.
+    // "All accounts" is the default landing, so the per-account panel only
+    // renders with an account id in the URL.
     $response = $this->actingAs($this->user)->get('/forecast?account='.$accountId);
 
     $content = (string) $response->getContent();
@@ -119,10 +109,8 @@ it('loads the Apex options JSON into data-options on the per-account chart conta
     $response = $this->actingAs($this->user)->get('/forecast?account='.$accountId);
 
     $content = (string) $response->getContent();
-    // Find the data-options attribute on the chart wrapper. The
-    // JSON is HTML-encoded by Blade so we cannot json_decode it
-    // directly without un-escaping first; the simpler check is
-    // that the rangeArea chart type marker survives the encoding.
+    // Blade HTML-encodes the JSON, so it cannot be json_decode'd as it stands;
+    // matching the chart-type marker avoids un-escaping it first.
     expect($content)->toContain('data-options=');
     expect($content)->toMatch('/data-options="[^"]*rangeArea/');
 });
@@ -139,16 +127,13 @@ it('redirects unauthenticated visits to /login', function (): void {
 });
 
 it('falls back to the All-accounts tab when ?account= is a non-numeric tampered value', function (): void {
-    // Seed at least one account so the empty-state hero is not shown
-    // (we want to verify the All-accounts aggregate view is rendered,
-    // not the empty fallback).
+    // Without an account the empty-state hero would render instead, and the
+    // fallback under test would never be reached.
     fpgAccount($this->db, $this->user->id, 'ASN Fallback');
 
     $response = $this->actingAs($this->user)->get('/forecast?account=garbage');
 
     $response->assertOk();
     $content = (string) $response->getContent();
-    // The all-accounts aggregate chart container ID is the testid the
-    // aggregate-line-chart partial uses.
     expect($content)->toContain('data-testid="all-accounts-aggregate-chart"');
 });

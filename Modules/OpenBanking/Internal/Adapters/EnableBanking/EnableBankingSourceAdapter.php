@@ -49,9 +49,6 @@ final class EnableBankingSourceAdapter implements RemoteSourceAdapter
 
                 $dto = $this->buildDto($row, $ownIban, $rowIndex);
                 if ($dto === null) {
-                    // A single malformed-money booked row is skipped here
-                    // (logged in buildDto) rather than aborting the whole
-                    // generator-driven fetch mid-import.
                     continue;
                 }
 
@@ -143,15 +140,13 @@ final class EnableBankingSourceAdapter implements RemoteSourceAdapter
         $counterpartyName = $isDebit ? $row->creditorName : $row->debtorName;
         $counterpartyIban = $isDebit ? $row->creditorIban : $row->debtorIban;
 
-        // booking_date drives BOTH bookedAt and postedAt, zeroed to midnight
-        // — the single most important field substitution for dedup parity
-        // with the CAMT adapter. value_date is carried on valueDate only,
-        // which is outside the fingerprint hash tuple.
+        // booking_date drives both bookedAt and postedAt, zeroed to midnight, to
+        // match the CAMT adapter. value_date reaches valueDate only, which sits
+        // outside the fingerprint tuple.
         $bookedAt = $this->parseRequiredDate($row->bookingDate, 'booking_date');
 
-        // A row missing value_date reuses the booking date rather than
-        // falling through to CarbonImmutable::parse(''), which silently
-        // resolves to the wall clock rather than a response-derived date.
+        // A missing value_date reuses the booking date: CarbonImmutable::parse('')
+        // silently resolves to the wall clock instead of failing.
         $valueDateRaw = $row->valueDate !== '' ? $row->valueDate : $row->bookingDate;
 
         return new SourceTransactionDto(

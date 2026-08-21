@@ -14,26 +14,6 @@ use Modules\Reports\Public\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 
-/*
- * Wave 0 RED stub (999.6-03 Task 2, Req 9).
- *
- * Pins Modules\Reports\Internal\Http\Livewire\ReportsIndex (analog:
- * CounterpartyIndex — constructor-free, method-parameter DI) as the
- * `/reports` index surface: list the current user's saved reports, and
- * delete via the two-step inline-confirm pattern RulesPage established
- * (`confirmDelete()`/`cancelDelete()`/`deleteReport()`, renamed from
- * `deleteRule()`). Create/edit go through the write actions directly
- * (SaveReport/UpdateReport) — this stub locks the full
- * create -> list -> edit -> delete round trip across the actions + the
- * index component's read/delete surface.
- *
- * RED as intended: ReportsIndex/SaveReport/UpdateReport/DeleteReport do
- * not exist yet — every test below fails on a missing class (either
- * `Livewire::test(ReportsIndex::class)` or `app(SaveReport::class)`), not
- * on the (already-existing) ReportDefinition DTO or `saved_reports` table
- * (Plan 01) they're built from.
- */
-
 function ricrudUser(): User
 {
     /** @var User */
@@ -78,16 +58,11 @@ it('never lists another user\'s saved report (cross-user isolation)', function (
 });
 
 it('create -> list -> edit -> delete round trip', function (): void {
-    // Create.
     $saved = app(SaveReport::class)->save($this->user, ricrudDefinition(), 'Original name');
 
-    // List.
     Livewire::test(ReportsIndex::class)
         ->assertSee('Original name');
 
-    // Edit — Modules\Reports\Public\Actions\UpdateReport::update(User,
-    // int $reportId, ReportDefinition, string $name): SavedReport, mirrors
-    // SaveReport's signature (pinned here as the update contract).
     app(UpdateReport::class)->update(
         $this->user,
         $saved->id,
@@ -99,8 +74,6 @@ it('create -> list -> edit -> delete round trip', function (): void {
         ->assertSee('Renamed report')
         ->assertDontSee('Original name');
 
-    // Delete — inline two-step confirm, mirrors RulesPage's
-    // confirmDelete()/deleteRule() pattern renamed to deleteReport().
     Livewire::test(ReportsIndex::class)
         ->assertSet('confirmingDeleteId', null)
         ->call('confirmDelete', $saved->id)

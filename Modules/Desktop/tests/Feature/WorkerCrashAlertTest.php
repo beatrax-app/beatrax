@@ -10,31 +10,6 @@ use Modules\Desktop\Internal\Listeners\SurfaceWorkerCrashAlert;
 use Modules\Desktop\Internal\Native\WindowFocusState;
 use Native\Desktop\Events\ChildProcess\ProcessExited;
 
-/*
- * Feature tests for the D-07 worker crash-loop alert listener: NativePHP
- * fires ProcessExited every time the supervisor restarts a worker. A
- * SINGLE exit is NOT the failure signal — NativePHP auto-restarts; a
- * sustained crash-loop is. The listener accumulates exits in a rolling
- * window and only writes a system_alerts row once the threshold is
- * crossed.
- *
- * The system_alerts write uses kind='worker.crashed', severity='critical',
- * user_id=null (system-wide — a crashed worker is not user-scoped).
- *
- * The Notification facade has no v2 fake (NATIVEPHP-FAKES.md), so the
- * OS-notification half is asserted via Http::fake() — a fired notification
- * surfaces as an outbound POST to /api/notification on the NativePHP HTTP
- * client. The focus-gate (D-13) decides whether to fire: unfocused fires,
- * focused stays quiet (the in-app SystemAlertsBanner shows the same row).
- */
-
-/**
- * Builds a Clock whose `time` property the test mutates between exits.
- * The returned anonymous class implements Clock and exposes the mutable
- * `$time` public property; PHP cannot express that as a return type
- * without naming the anonymous class, so we return `Clock` and rely on
- * dynamic property access at the call sites.
- */
 function freezableClockAt(string $iso): Clock
 {
     return new class(CarbonImmutable::parse($iso)) implements Clock
@@ -48,6 +23,9 @@ function freezableClockAt(string $iso): Clock
     };
 }
 
+// NativePHP fires ProcessExited on every supervisor restart and auto-restarts
+// the worker, so a single exit is the steady state, not a failure. Only a
+// sustained crash-loop inside the rolling window is worth an alert.
 it('does NOT write a system_alerts row for a single ProcessExited (auto-restart is the steady state)', function (): void {
     Http::fake();
 
@@ -70,9 +48,6 @@ it('writes ONE critical system_alerts row when the worker crash-loops within the
     /** @var SurfaceWorkerCrashAlert $listener */
     $listener = app(SurfaceWorkerCrashAlert::class);
 
-    // Fire THRESHOLD exits within the window. Each handle() call goes
-    // through the production code path (recordExit + isCrashLoop +
-    // de-dup + write).
     for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD; $i++) {
         $clock->time = $clock->time->addSeconds(10);
         $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));
@@ -119,15 +94,12 @@ it('does NOT insert a duplicate row when an un-acknowledged worker.crashed alert
     /** @var SurfaceWorkerCrashAlert $listener */
     $listener = app(SurfaceWorkerCrashAlert::class);
 
-    // First crash-loop produces one row.
     for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD; $i++) {
         $clock->time = $clock->time->addSeconds(10);
         $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));
     }
     expect(SystemAlert::query()->where('kind', 'worker.crashed')->count())->toBe(1);
 
-    // A new crash-loop while the prior alert remains un-acknowledged
-    // does NOT insert a second row.
     for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD; $i++) {
         $clock->time = $clock->time->addSeconds(10);
         $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));
@@ -142,7 +114,6 @@ it('fires the OS notification when the window is UNFOCUSED at crash-loop time (D
     $clock = freezableClockAt('2026-05-23T12:00:00Z');
     $this->app->instance(Clock::class, $clock);
 
-    // Unfocused — the focus-gate lets the notification through.
     app(WindowFocusState::class)->markBlurred();
 
     /** @var SurfaceWorkerCrashAlert $listener */
@@ -152,9 +123,8 @@ it('fires the OS notification when the window is UNFOCUSED at crash-loop time (D
         $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));
     }
 
-    // The Notification facade has no v2 fake — a fired notification
-    // surfaces as an outbound POST to /api/notification on the
-    // NativePHP HTTP client.
+    // The Notification facade has no v2 fake, so a fired notification surfaces
+    // as an outbound POST on the NativePHP HTTP client.
     Http::assertSent(fn ($request) => str_ends_with((string) $request->url(), '/notification'));
 });
 
@@ -164,9 +134,8 @@ it('suppresses the OS notification when the window is FOCUSED at crash-loop time
     $clock = freezableClockAt('2026-05-23T12:00:00Z');
     $this->app->instance(Clock::class, $clock);
 
-    // Focused — the focus-gate suppresses the OS notification. The
-    // system_alerts row still writes; the in-app SystemAlertsBanner
-    // surfaces the same row to the focused user.
+    // The row still writes when focused; the in-app SystemAlertsBanner surfaces
+    // it, which is why the OS toast can be suppressed without losing the signal.
     app(WindowFocusState::class)->markFocused();
 
     /** @var SurfaceWorkerCrashAlert $listener */
@@ -178,21 +147,14 @@ it('suppresses the OS notification when the window is FOCUSED at crash-loop time
 
     expect(SystemAlert::query()->where('kind', 'worker.crashed')->count())->toBe(1);
 
-    // No outbound POST — the Notification facade was not invoked.
     Http::assertNothingSent();
 });
 
 it('suppresses the OS notification on a SECOND unfocused crash-loop while the prior alert is still un-acknowledged (WR-06)', function (): void {
-    // The original bug: the de-dup guard skipped the system_alerts
-    // insert correctly, but the OS-notification path fired
-    // unconditionally on every crash-loop escalation. A repeat
-    // crash-loop while the prior alert was still un-acknowledged
-    // would spam duplicate OS toasts to a partner who already saw
-    // the first one. Now the OS-notification is gated on
-    // `! $alreadyAlerted` AS WELL AS the focus state, so the second
-    // crash-loop stays quiet until either (a) the row is acknowledged
-    // or (b) the user re-focuses + re-blurs, at which point a fresh
-    // crash will fire a fresh notification.
+    // The de-dup guard used to skip only the system_alerts insert, leaving the
+    // OS-notification path to fire on every escalation and spam duplicate toasts
+    // at a partner who had already seen the first. It is now gated on
+    // `! $alreadyAlerted` as well as the focus state.
     Http::fake();
 
     $clock = freezableClockAt('2026-05-23T12:00:00Z');
@@ -202,17 +164,12 @@ it('suppresses the OS notification on a SECOND unfocused crash-loop while the pr
     /** @var SurfaceWorkerCrashAlert $listener */
     $listener = app(SurfaceWorkerCrashAlert::class);
 
-    // First crash-loop — one OS notification fires (the unfocused
-    // happy path).
     for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD; $i++) {
         $clock->time = $clock->time->addSeconds(10);
         $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));
     }
     Http::assertSent(fn ($request) => str_ends_with((string) $request->url(), '/notification'));
 
-    // Second crash-loop while the prior alert is still un-acknowledged.
-    // The de-dup branch skips the system_alerts insert AND the OS
-    // notification — the partner is already aware.
     $sentBefore = count(Http::recorded());
     for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD; $i++) {
         $clock->time = $clock->time->addSeconds(10);
@@ -224,10 +181,8 @@ it('suppresses the OS notification on a SECOND unfocused crash-loop while the pr
 });
 
 it('re-fires the OS notification on a fresh crash-loop after the prior alert is acknowledged (regression of WR-06 over-correction)', function (): void {
-    // The flip-side check: once the user acknowledges the prior row,
-    // a NEW crash-loop must re-insert AND re-notify. Without this
-    // assertion the WR-06 fix could over-correct and silence
-    // legitimate post-acknowledgement crash-loops.
+    // The de-dup fix could over-correct and silence legitimate crash-loops after
+    // the user acknowledged the previous one, so this pins the re-fire.
     Http::fake();
 
     $clock = freezableClockAt('2026-05-23T12:00:00Z');
@@ -243,16 +198,13 @@ it('re-fires the OS notification on a fresh crash-loop after the prior alert is 
     }
     expect(SystemAlert::query()->where('kind', 'worker.crashed')->count())->toBe(1);
 
-    // Acknowledge the row — simulate the user clicking "dismiss" on
-    // the SystemAlertsBanner.
+    // Stand in for the user dismissing the row on the SystemAlertsBanner.
     SystemAlert::query()
         ->where('kind', 'worker.crashed')
         ->update(['acknowledged_at' => $clock->now()->toDateTimeString()]);
 
     $sentBefore = count(Http::recorded());
 
-    // A fresh crash-loop now must produce a new row AND a new
-    // notification.
     for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD; $i++) {
         $clock->time = $clock->time->addSeconds(10);
         $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));

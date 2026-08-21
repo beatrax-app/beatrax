@@ -4,13 +4,6 @@ declare(strict_types=1);
 
 use Modules\Auth\Internal\Recovery\RecoveryCodeNormalizer;
 
-/*
- * Unit coverage for the recovery-code normaliser: a typed recovery code
- * is folded to uppercase and stripped of every character outside the
- * phone-readable [A-NP-Z2-9] alphabet, so a code typed lowercase or with
- * stray hyphens / spaces still compares equal against the stored hash.
- */
-
 it('uppercases the input and strips hyphens and whitespace', function (): void {
     $normalizer = new RecoveryCodeNormalizer;
 
@@ -21,8 +14,8 @@ it('uppercases the input and strips hyphens and whitespace', function (): void {
 it('drops characters outside the [A-NP-Z2-9] alphabet', function (): void {
     $normalizer = new RecoveryCodeNormalizer;
 
-    // O, I, L, 0 and 1 are ambiguous and never part of a real code; a
-    // user who mistypes them must not poison the comparison.
+    // O, I, L, 0 and 1 are ambiguous and never part of a real code, so a user
+    // who types one must not poison the comparison.
     expect($normalizer->normalize('A2BJ-XK9M-PQ7N-RX4F-V8HD!@#'))
         ->toBe('A2BJXK9MPQ7NRX4FV8HD');
 

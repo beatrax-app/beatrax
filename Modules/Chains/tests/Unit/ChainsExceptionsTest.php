@@ -6,15 +6,8 @@ use Modules\Chains\Public\Exceptions\CardStatementNotFoundException;
 use Modules\Chains\Public\Exceptions\ChainLinkNotDismissableException;
 use Modules\Chains\Public\Exceptions\EvidenceEncodingFailedException;
 
-/*
- * The three failure types that replaced bare RuntimeException throws.
- *
- * Each carries the identifiers a caller needs to act on the failure
- * without parsing the message, which is the reason the types exist.
- * EvidenceEncodingFailedException is covered here rather than through
- * its call sites because reaching it needs a payload json_encode
- * cannot represent, which the insert paths cannot construct.
- */
+// EvidenceEncodingFailedException is covered here rather than at its call
+// sites: reaching it needs a payload the insert paths cannot construct.
 
 it('names the chain link a dismissal was refused for', function (): void {
     $e = new ChainLinkNotDismissableException(4711);

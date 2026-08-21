@@ -9,9 +9,6 @@ use Modules\Import\Public\Contracts\DetectsStartingBalance;
 use Modules\Import\Public\Dto\StartingBalanceCandidate;
 use Modules\Ingestion\Public\Enums\SourceFormat;
 
-/**
- * @link ../../../../.docs/features/import/architecture.md#starting-balance-detection
- */
 final readonly class DetectStartingBalancesQuery
 {
     // CAMT.053 carries an explicit <OpngBal>, so it wins a date tie against

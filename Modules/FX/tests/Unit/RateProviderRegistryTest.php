@@ -119,13 +119,11 @@ describe('RateProviderRegistry', function (): void {
     });
 
     it('skips a provider whose circuit-breaker failure count >= 3', function (): void {
-        $ecb = makeFakeProvider('ecb', 200, throws: true); // would throw if reached
+        $ecb = makeFakeProvider('ecb', 200, throws: true);
         $bundled = makeFakeProvider('bundled', 0, ['date' => '2026-06-01', 'rates' => ['USD' => '1.1000']]);
 
         $cache = Mockery::mock(CacheRepository::class);
-        // ECB circuit is open (>=3 failures) → skip
         $cache->shouldReceive('get')->with('fx.circuit.ecb.failures', 0)->andReturn(3);
-        // bundled circuit is healthy
         $cache->shouldReceive('get')->with('fx.circuit.bundled.failures', 0)->andReturn(0);
         $cache->shouldReceive('forget')->with('fx.circuit.bundled.failures');
 

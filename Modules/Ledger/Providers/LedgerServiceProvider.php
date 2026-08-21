@@ -32,33 +32,28 @@ use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
 use Modules\Ledger\Public\Services\TopCategoriesByPeriodQuery;
 use Modules\Ledger\Public\Services\TransactionListQuery;
 
-// PeriodQuery is bound transient (not singleton) because it depends on
-// the per-request CurrentUser contract; singleton scope would freeze
-// the first-request user under a long-lived worker. The rederive-
-// fingerprints command is registered behind a runningInConsole() guard.
 final class LedgerServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
 
     public function register(): void
     {
-        // Overridden by Sync when it is loaded; this default keeps every
-        // transaction writer resolvable on a build without sync.
+        // Sync overrides this when loaded; the null capture keeps the
+        // transaction writers resolvable on a build without it.
         $this->app->bindIf(CapturesTransactionsForSync::class, NullTransactionSyncCapture::class);
 
         $this->app->bind(RecordsTransactions::class, RecordTransactions::class);
         $this->app->bind(UpdatesTransactionCategory::class, UpdateTransactionCategory::class);
         $this->app->bind(RecordsStatementSummary::class, StatementSummaryWriter::class);
         $this->app->bind(SavesTransactionSplit::class, SaveTransactionSplit::class);
-        // Counterparty-reassign and set/append-note are guarded Public
-        // actions so every caller writes these fields through one seam,
-        // never raw SQL.
+        // Contract-bound so these fields are only ever written through one seam.
         $this->app->bind(ReassignsCounterparty::class, ReassignCounterparty::class);
         $this->app->bind(SetsTransactionNote::class, SetTransactionNote::class);
         $this->app->singleton(FingerprintComposer::class);
+        // Transient, not singleton: it resolves the per-request CurrentUser, and
+        // a singleton would freeze the first request's user in a long-lived worker.
         $this->app->bind(PeriodQuery::class);
-        // Transient, not singleton — depends on the per-request
-        // PeriodQuery binding above.
+        // Transient too — it depends on PeriodQuery.
         $this->app->bind(CategorySpendTrendQuery::class);
         $this->app->singleton(ThisPeriodAtAGlanceQuery::class);
         $this->app->singleton(TopCategoriesByPeriodQuery::class);

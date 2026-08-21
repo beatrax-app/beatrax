@@ -6,16 +6,6 @@ use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\ArgSpec;
 use Modules\DevMode\Public\Dto\CommandSpec;
 
-/*
- * CommandRegistry roster + ArgSpec structural invariants.
- *
- * Locks the SAFE (9) + DESTRUCTIVE (6) roster shape and asserts
- * the NEVER-EXPOSED commands (migrate, migrate:rollback, db:seed)
- * are absent from the lookup surface entirely — find() throws for
- * them, so the spawner whitelists against the throw and never
- * reaches the shell with those names.
- */
-
 it('binds the concrete CommandRegistry returning 9 SAFE specs', function (): void {
     /** @var DevCommandRegistry $registry */
     $registry = app(DevCommandRegistry::class);
@@ -112,9 +102,6 @@ it('exposes ArgSpec entries with non-empty name + Laravel-compatible rules array
             expect($arg->label)->not->toBe('');
             expect($arg->type)->toBeIn($allowedTypes);
             expect($arg->rules)->toBeArray();
-            // Each rule MUST be a string (Laravel validate() accepts
-            // arrays of strings; rule-objects are out of scope for
-            // this plan).
             foreach ($arg->rules as $rule) {
                 expect($rule)->toBeString();
             }

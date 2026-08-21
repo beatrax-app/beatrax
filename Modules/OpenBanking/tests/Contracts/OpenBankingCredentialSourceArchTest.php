@@ -6,10 +6,9 @@ use Illuminate\Support\Facades\Schema;
 use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 
-// Complements OpenBankingSecretsFileGuardTest's source-text grep with two
-// signals a grep cannot see: the LIVE SQLite schema, and the declared return
-// type of every method in the module. Candidates come from scanning source and
-// calling class_exists() — get_declared_classes() silently under-reports.
+// Adds two signals a source grep cannot see: the live SQLite schema, and every
+// method's declared return type. Candidates come from scanning source and
+// calling class_exists(), because get_declared_classes() under-reports.
 
 const OB_CREDENTIAL_SOURCE_FORBIDDEN_COLUMN_PATTERN = '/private_key|application_id|session_id|refresh_token|access_token/i';
 

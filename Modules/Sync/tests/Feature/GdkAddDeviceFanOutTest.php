@@ -15,14 +15,9 @@ use Modules\Sync\Public\Services\PairingGateway;
 
 uses(RefreshDatabase::class);
 
-/*
- * GdkAddDeviceFanOutTest — Task 3 service half (Phase 15 import-join, B1):
- * fanOutAllEpochsToDevice() wraps EVERY epoch in the keyring (not just a
- * rotated one) sealed to a single newly-confirmed device — the ADD-device
- * analog of GdkRotationServiceTest's removal-fan-out coverage.
- *
- * 6a per 15-import-join-PLAN.md's test-plan.
- */
+// Adding a device wraps every epoch the keyring holds, not just the current
+// one: a device given only the newest key can read nothing written before it
+// joined, and the op log has no path to resend what it could not decrypt.
 
 function fanOutUser(string $username): User
 {
@@ -73,12 +68,10 @@ it('wraps ALL keyring epochs (not just the latest) to a single newly-confirmed d
     /** @var GdkKeyringService $keyring */
     $keyring = app(GdkKeyringService::class);
 
-    // Enable encryption then rotate twice — keyring now holds epochs 1,2,3.
     $keyring->generateAndPersist((int) $user->id, $session); // epoch 1
 
-    // The acting/self device needs a REAL on-disk identity: rotateAndRevoke()
-    // and fanOutAllEpochsToDevice() both now load it to SIGN each wrap. Its
-    // is_self=1 registry row is what excludes it from every fan-out.
+    // The acting device needs a real on-disk identity to sign each wrap, and
+    // its is_self row is what excludes it from every fan-out.
     /** @var DeviceIdentityService $identityService */
     $identityService = app(DeviceIdentityService::class);
     $identityService->generateAndPersist((int) $user->id, $session);
@@ -96,11 +89,10 @@ it('wraps ALL keyring epochs (not just the latest) to a single newly-confirmed d
     $beforeCurrentEpoch = $keyring->currentEpoch((int) $user->id, $session);
     expect($keyring->loadKeyring((int) $user->id, $session)->epochs())->toHaveCount(3);
 
-    // Drain the rotation fan-out noise so this test's own assertions are
-    // scoped to what fanOutAllEpochsToDevice() itself enqueues.
+    // Drains the rotation's own fan-out, so the assertions below see only what
+    // the add-device path enqueued.
     $db->connection()->table('relay_mailbox')->delete();
 
-    // A real confirmed recipient with a genuine X25519 identity.
     $recipientKeypair = sodium_crypto_box_keypair();
     $recipientSecret = sodium_crypto_box_secretkey($recipientKeypair);
     $recipientPublic = sodium_crypto_box_publickey($recipientKeypair);
@@ -127,9 +119,8 @@ it('wraps ALL keyring epochs (not just the latest) to a single newly-confirmed d
         $epochId = (int) $wrap['epoch_id'];
         $seenEpochIds[] = $epochId;
 
-        // Each wrap opens with device-b's real secret key to the CORRECT
-        // raw key for that epoch (reuses GdkEpochDeliveryTest's open-and-
-        // decrypt assertion shape).
+        // Each wrap must open with the recipient's real secret key onto the
+        // right raw key for that epoch.
         $sealed = base64_decode((string) $wrap['wrapped_key_b64'], true);
         expect($sealed)->not->toBeFalse();
         $recipientKp = sodium_crypto_box_keypair_from_secretkey_and_publickey($recipientSecret, $recipientPublic);
@@ -152,11 +143,9 @@ it('wraps ALL keyring epochs (not just the latest) to a single newly-confirmed d
     sort($heldEpochIds);
     expect($seenEpochIds)->toBe($heldEpochIds);
 
-    // current_epoch UNCHANGED — no rotation, no revoke, no new epoch minted.
     $afterCurrentEpoch = $keyring->currentEpoch((int) $user->id, $session);
     expect($afterCurrentEpoch->epochId)->toBe($beforeCurrentEpoch->epochId);
 
-    // No confirmed_at cleared / no revoke side effect anywhere.
     $recipientRow = $db->connection()->table('device_registry')->where('id', $recipientId)->first();
     expect($recipientRow->confirmed_at)->not->toBeNull();
 });
@@ -226,11 +215,9 @@ it('enqueues zero wraps for the acting self device (no wrap-to-self)', function 
 it('enqueues zero wraps for an empty keyring (encryption never enabled)', function (): void {
     $user = fanOutUser('fanout-empty-keyring');
 
-    // A prior, unrelated test in this same process may have left a keyring
-    // file on disk for this same reused numeric user id (SQLite rowids are
-    // reused across RefreshDatabase transaction rollbacks —
-    // GdkEpochDeliveryTest's own documented cross-test filesystem-isolation
-    // gap). Start from a genuinely empty on-disk state.
+    // SQLite rowids are reused across the per-test rollback, so an earlier
+    // test in this process can have left a keyring on disk under the same
+    // numeric user id. This starts from a genuinely empty on-disk state.
     @unlink(UserDataPathService::appPath('sync/gdk/'.$user->id.'.enc'));
 
     /** @var Session $session */
@@ -239,9 +226,8 @@ it('enqueues zero wraps for an empty keyring (encryption never enabled)', functi
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
-    // The acting device has an identity (sync enabled) but an EMPTY keyring
-    // (encryption never enabled): fanOutAllEpochsToDevice() loads the identity
-    // to sign wraps, then finds zero epochs and enqueues nothing.
+    // An identity but an empty keyring: sync on, encryption never enabled. The
+    // fan-out loads the identity, finds no epochs, and enqueues nothing.
     /** @var DeviceIdentityService $identityService */
     $identityService = app(DeviceIdentityService::class);
     $identityService->generateAndPersist((int) $user->id, $session);

@@ -15,10 +15,9 @@ use Modules\Ledger\Public\Contracts\UpdatesTransactionCategory;
 use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Sync\Public\Events\TransactionMutated;
 
-// Routes the write through Ledger's UpdatesTransactionCategory action so
-// Ledger remains the only mutator of `transactions`. Memory-provenance
-// overrides do NOT dispatch CategorizationDiverged — memory grows
-// automatically via MerchantMemoryWriter, so no confirmation is needed.
+// Overriding a memory-provenance category does not dispatch
+// CategorizationDiverged: merchant memory relearns on its own, so there is
+// nothing to ask the user to confirm.
 final class AssignCategory implements AssignsCategory
 {
     public function __construct(
@@ -50,10 +49,8 @@ final class AssignCategory implements AssignsCategory
                 dirtyFields: ['category_id' => $categoryId],
             ));
 
-            // This is the sole manual entry point for user-driven category
-            // assignment, so every successful write here is a 'manual'
-            // stamp — the rule engine writes categories through
-            // UpdatesTransactionCategory directly, never through here.
+            // The sole entry point for a user-driven assignment: the rule
+            // engine writes through UpdatesTransactionCategory directly.
             $this->provenance->stamp($user->id, $transactionId, ['category_id' => 'manual']);
 
             if ($categoryId !== null) {
@@ -72,9 +69,8 @@ final class AssignCategory implements AssignsCategory
         return $affected;
     }
 
-    // Static + DatabaseManager argument so the same helper is available
-    // to TransactionDetail (Ledger) without crossing the
-    // Ledger-Categorization boundary or duplicating the read shape.
+    // Static, with the connection passed in, so Ledger's TransactionDetail can
+    // reuse it without crossing the module boundary.
     /**
      * @return array<string, mixed>|null
      */
@@ -90,10 +86,8 @@ final class AssignCategory implements AssignsCategory
             return null;
         }
 
-        // auto_category_provenance is best-effort audit metadata — a
-        // corrupt JSON payload must NOT crash a reclassify request, so a
-        // JsonException falls through to the no-prior-provenance path the
-        // is_array guard below already owns.
+        // Best-effort audit metadata: a corrupt payload must not crash a
+        // reclassify, so it falls through to the no-provenance path.
         try {
             /** @var mixed $decoded */
             $decoded = json_decode($raw, associative: true, flags: JSON_THROW_ON_ERROR);

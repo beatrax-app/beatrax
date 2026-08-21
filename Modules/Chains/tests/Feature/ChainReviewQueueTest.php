@@ -12,17 +12,6 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 
-/*
- * Wave 4 — /chains/review page (CHN-03 / D-86 / D-87) Livewire SFC
- * tests. The page batches `state='candidate'` chain_links across all
- * the user's transactions, sorted by confidence DESC then id DESC.
- * Each row carries Confirm + Reject buttons that delegate to the same
- * Public action classes the chain drawer uses (D-86 dual-surface).
- *
- * Auto-promotion hint copy renders only when `confirmsRemaining === 1`
- * (D-87). Cross-user 404 verified at HTTP layer.
- */
-
 function crqUser(string $username): User
 {
     return User::query()->create([
@@ -203,7 +192,6 @@ it('renders the auto-promotion hint when confirmsRemaining === 1', function (): 
         crqSeedLink($this->db, $this->user, (int) $f->id, (int) $t->id, 'paypal_funding', 'confirmed', '1.000', 'auto', ['signature_hash' => $signature]);
     }
 
-    // One new candidate with the same signature.
     $f3 = crqTx($this->user, $this->paypal, $this->run, -3000, 'expense', 'Hint A3', '2026-05-03', 'hint3a', 30);
     $t3 = crqTx($this->user, $this->asn, $this->run, 3000, 'transfer_in', 'Hint B3', '2026-05-03', 'hint3b', 31);
     crqSeedLink($this->db, $this->user, (int) $f3->id, (int) $t3->id, 'paypal_funding', 'candidate', '0.700', 'auto', ['signature_hash' => $signature]);
@@ -214,15 +202,14 @@ it('renders the auto-promotion hint when confirmsRemaining === 1', function (): 
 });
 
 it('does NOT render the auto-promotion hint when confirmsRemaining > 1', function (): void {
-    // Baseline beforeEach candidate has 0 prior same-signature confirms,
-    // confirmsRemaining = 3. The hint must not render.
+    // The baseline candidate has no prior same-signature confirms, so
+    // confirmsRemaining is 3.
     $this->actingAs($this->user)
         ->get(route('chains.review'))
         ->assertDontSeeText('One more confirm and similar links auto-confirm.');
 });
 
 it('sorts candidates by confidence DESC (highest confidence first)', function (): void {
-    // Seed a higher-confidence candidate after the baseline one.
     $f = crqTx($this->user, $this->paypal, $this->run, -5000, 'expense', 'HighConf', '2026-05-12', 'hc1', 50);
     $t = crqTx($this->user, $this->asn, $this->run, 5000, 'transfer_in', 'HighConfFunder', '2026-05-12', 'hc2', 51);
     crqSeedLink($this->db, $this->user, (int) $f->id, (int) $t->id, 'paypal_funding', 'candidate', '0.950', 'auto', ['signature_hash' => 'sig-hi']);
@@ -255,12 +242,9 @@ it('ChainsServiceProvider uses View Factory contract (issue #12 fix) — never t
     $providerPath = base_path('Modules/Chains/Providers/ChainsServiceProvider.php');
     expect(file_exists($providerPath))->toBeTrue();
     $contents = (string) file_get_contents($providerPath);
-    // The provider MUST explicitly resolve the View Factory contract.
     expect($contents)->toContain('Illuminate\Contracts\View\Factory');
     // Strip comments so legitimate PHPDoc references stay legal.
     $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
-    // The forbidden `view()` global helper must NOT appear in production
-    // code paths.
     expect($stripped)->not->toMatch('/\bview\(\)/');
 });
 
@@ -292,7 +276,6 @@ it('no view() global helper anywhere in Modules/Chains/ production code', functi
 });
 
 it('loadMore advances the cursor for cursor-paginated review queue', function (): void {
-    // Seed enough candidates for the cursor to have meaning.
     for ($i = 2; $i <= 6; $i++) {
         $f = crqTx($this->user, $this->paypal, $this->run, -1000 * $i, 'expense', 'Page'.$i, '2026-05-0'.$i, 'page'.$i.'a', $i * 20);
         $t = crqTx($this->user, $this->asn, $this->run, 1000 * $i, 'transfer_in', 'PageFn'.$i, '2026-05-0'.$i, 'page'.$i.'b', $i * 20 + 1);

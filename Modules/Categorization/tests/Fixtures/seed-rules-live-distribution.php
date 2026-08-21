@@ -17,7 +17,7 @@ $multiply = static function (int $count, string $counterparty, string $descripti
     }
 };
 
-// ─── Universal merchants (categorisable by seed rules) ──────────────
+// Universal merchants — categorisable by seed rules.
 
 $multiply(16, 'Google Payment Ireland Ltd.', 'PayPal payment for Google Play');
 
@@ -80,7 +80,7 @@ $multiply(2, 'International Card Services BV', 'Monthly card settlement');
 // One row exercises the description-field rule for transfers-internal.
 $multiply(1, 'ASN Bank', 'IDEAL BETALING, DANK U');
 
-// ─── Personal identifiers (anonymised — MUST stay uncategorised) ────
+// Anonymised personal identifiers — every row below must stay uncategorised.
 
 $multiply(2, 'EMPLOYER_01', 'Salaris mei 2026');
 $multiply(1, 'EMPLOYER_PENSION_02', 'Pensioenuitkering');

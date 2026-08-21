@@ -84,10 +84,9 @@ final class TransactionsList extends Component
 
     public ?string $nextCursorPostedAt = null;
 
-    // The sentinel value 0 represents "first page" (no cursor set).
-    // Must be public so Livewire dehydrates it into the encrypted
-    // snapshot — a protected property re-initialises to [] on every
-    // request, making the duplicate-append guard ineffective.
+    // Public so Livewire dehydrates it into the encrypted snapshot — a
+    // protected property re-initialises to [] on every request, making the
+    // duplicate-append guard ineffective.
     /** @var array<int, true> */
     public array $appendedCursorIds = [];
 
@@ -291,9 +290,8 @@ final class TransactionsList extends Component
         );
     }
 
-    // Load-more appends; a first page replaces. appendedCursorIds is what
-    // stops a re-render at the same cursor appending the same rows twice,
-    // which Livewire will do whenever any other property changes.
+    // appendedCursorIds stops a re-render at the same cursor appending the
+    // same rows twice, which Livewire does whenever any property changes.
     /**
      * @param  list<array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged?: bool, taxCategoryShortName?: ?string, splitLegs?: list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>, status?: string}>  $rows
      */

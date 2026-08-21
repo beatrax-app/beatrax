@@ -8,10 +8,6 @@ use League\Csv\Reader;
 use Modules\Migration\Public\Exceptions\UnrecognizedMigrationFileException;
 use Throwable;
 
-// Locating the Register.csv/Budget.csv pair and reading each into a
-// normalised row array is the "get bytes off disk" half of the YNAB
-// parsers, kept apart from the "turn rows into DTOs" half so the parser
-// class stays focused on mapping, not file handling.
 trait ReadsYnabCsvFiles
 {
     /**
@@ -19,9 +15,8 @@ trait ReadsYnabCsvFiles
      */
     private function locateFiles(string $extractedPath): array
     {
-        // Locates the Register.csv/Budget.csv pair by filename suffix (the
-        // budget-name prefix is user-chosen, not fixed) BEFORE any CSV
-        // parsing is attempted, so an unrelated directory fails fast.
+        // Matched on suffix because the budget-name prefix is user-chosen, and
+        // before any CSV parsing so an unrelated directory fails fast.
         $globbedRegister = glob($extractedPath.'/*Register.csv');
         $registerCandidates = $globbedRegister === false ? [] : $globbedRegister;
         $globbedBudget = glob($extractedPath.'/*Budget.csv');

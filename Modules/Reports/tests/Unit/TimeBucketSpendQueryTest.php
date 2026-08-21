@@ -13,13 +13,6 @@ use Modules\Reports\Public\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 
-/*
- * Covers 999.6-04 Task 3 / Req 2/3/6/7: TimeBucketSpendQuery loops
- * TimeBucketGenerator's output and produces exactly one ReportResultRow per
- * generated sub-Period, including zero-activity buckets. Fixture helpers
- * prefixed tbq_ to avoid cross-file global-function collisions.
- */
-
 function tbqUser(): User
 {
     /** @var User */

@@ -5,11 +5,9 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Modules\Sync\Public\Services\SyncStatusService;
 
-/*
- * The sync panel's "synced N ago" came from a hand-rolled ladder returning
- * English literals, so a Dutch phone read "gesynchroniseerd 1h ago". Carbon
- * already knows all 26 languages and SetLocale already tells it which one.
- */
+// The sync panel's "synced N ago" came from a hand-rolled ladder returning
+// English literals, so a Dutch phone read "gesynchroniseerd 1h ago". Carbon
+// already knows all 26 languages and SetLocale already tells it which one.
 
 it('renders the sync gap in the active language', function (): void {
     $now = CarbonImmutable::parse('2026-08-17 12:00:00');

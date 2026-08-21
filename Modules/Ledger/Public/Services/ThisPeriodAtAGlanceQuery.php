@@ -22,16 +22,17 @@ use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
+/**
+ * @link ../../../../.docs/features/ledger/architecture.md#thisperiodataglancequery--the-dashboard-composer
+ */
 final class ThisPeriodAtAGlanceQuery
 {
     use CoercesScalars;
 
     public const DEFAULT_DISPLAY_CURRENCY = 'EUR';
 
-    // A successfully-scanned inbox untouched for over 24h surfaces an
-    // amber dot on the dashboard tile. Extra inboxes beyond
-    // TILE_LINE_LIMIT collapse into a "+N more" footer line, and
-    // EMAIL_LOCAL_PART_MAX keeps per-line copy compact for that layout.
+    // 86400 = 24h: a scanned inbox untouched longer than that shows an amber
+    // dot. Inboxes past TILE_LINE_LIMIT collapse into a "+N more" line.
     private const STALE_THRESHOLD_SECONDS = 86400;
 
     private const TILE_LINE_LIMIT = 3;
@@ -67,10 +68,8 @@ final class ThisPeriodAtAGlanceQuery
             );
         }
 
-        // Inflow/outflow rollups filter by transactions.type, never by
-        // amount sign (the subtractive income rule — see the linked
-        // architecture page). The income half delegates to
-        // incomeForPeriod(), the one canonical definition of this rule.
+        // Inflow/outflow rollups filter by transactions.type, never by amount
+        // sign — the subtractive income rule, see the linked architecture page.
         $inflowMinor = $this->incomeForPeriod($user, $period, $displayCurrency);
 
         $row = $connection
@@ -167,10 +166,9 @@ final class ThisPeriodAtAGlanceQuery
         })->all());
     }
 
-    // Returns null when no open/partially_settled statement exists,
-    // which the Blade reads as "hide the tile entirely". The WHERE
-    // filters on card_statements.user_id before any account join, so a
-    // forged user_id cannot leak another user's statement.
+    // Null when no open/partially_settled statement exists, which the Blade
+    // reads as "hide the tile". The WHERE filters card_statements.user_id
+    // before any account join, so a forged user_id leaks nothing.
     public function nextIcsSettlement(User $user): ?CardStatementForecastTile
     {
         $row = $this->db->connection()
@@ -264,9 +262,8 @@ final class ThisPeriodAtAGlanceQuery
         );
     }
 
-    // Parses the stored last-scan timestamp, returning null for a missing
-    // value or an unparseable one — a null reads downstream as "never
-    // scanned", which the stale check treats the same as long-ago.
+    // Null reads downstream as "never scanned", which the stale check treats
+    // the same as long-ago.
     private static function parseLastScanAt(string $raw): ?DateTimeImmutable
     {
         if ($raw === '') {
@@ -280,9 +277,8 @@ final class ThisPeriodAtAGlanceQuery
         }
     }
 
-    // Per-inbox tile state: needs_reauth wins outright; otherwise a never-
-    // scanned or too-long-ago inbox is stale, because the figure cannot be
-    // trusted either way; everything else is healthy.
+    // A never-scanned inbox counts as stale alongside a too-long-ago one:
+    // the figure cannot be trusted either way.
     private static function lineStatusFor(string $status, ?DateTimeImmutable $lastScanAt, int $nowEpoch): string
     {
         if ($status === 'needs_reauth') {
@@ -296,7 +292,6 @@ final class ThisPeriodAtAGlanceQuery
         return 'healthy';
     }
 
-    // The tile's overall dot shows the most severe line state seen so far:
     // reauth outranks stale outranks healthy, and a later healthy row never
     // downgrades a severity already reached.
     private static function escalateOverall(string $current, string $lineStatus): string

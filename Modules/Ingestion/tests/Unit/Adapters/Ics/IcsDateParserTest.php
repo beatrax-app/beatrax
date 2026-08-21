@@ -6,15 +6,8 @@ use Carbon\CarbonImmutable;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsDateParser;
 use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 
-/*
- * Coverage for the nl_NL date parser used by the ICS PDF adapter.
- * Empirical formats sourced from
- * Modules/Ingestion/tests/fixtures/ics/ics-sample-1.md "Dutch date
- * formats" section: `dd MMM.` (abbreviated month with trailing period,
- * e.g. `23 jan.`, `01 feb.`) on transaction lines and `dd MMMM YYYY`
- * (full month + year, e.g. `15 februari 2026`) on the statement
- * header.
- */
+// ICS prints `dd MMM.` on transaction lines and `dd MMMM YYYY` on the
+// statement header; the catalogue lives in tests/fixtures/ics/ics-sample-1.md.
 
 it('parses the dd-mm-yyyy Dutch numeric format', function (): void {
     $parser = new IcsDateParser;
@@ -30,7 +23,6 @@ it('parses the j M Y abbreviated-month format with Dutch abbreviations (mei, mrt
         ->toBeTrue();
     expect($parser->parse('15 mrt 2026')->equalTo(CarbonImmutable::create(2026, 3, 15)->startOfDay()))
         ->toBeTrue();
-    // Trailing-period abbreviation variant (the shape ICS prints on transaction lines).
     expect($parser->parse('23 jan. 2026')->equalTo(CarbonImmutable::create(2026, 1, 23)->startOfDay()))
         ->toBeTrue();
 })->group('phase-3');

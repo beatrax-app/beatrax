@@ -9,8 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 // `payload` is a type-specific JSON shape: category {category_id},
 // counterparty {counterparty_id}, note {text, mode: set|append}, tax_tag
-// {deduction_category_id, year?}. `position` orders multi-action
-// application; `type` is DB-trigger-enforced against an allow-list.
+// {deduction_category_id, year?}.
 /**
  * @property int $id
  * @property int $rule_id

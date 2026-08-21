@@ -14,14 +14,6 @@ use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Modules\EmailScan\Public\Services\SecretsWriteFailed;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
-/*
- * OAuth callback (Gmail) happy-path + state mismatch + canceled-at-
- * consent scenarios. The mock GoogleOAuthProvider records the
- * redirectUri argument so the test can prove the loopback URI was
- * computed server-side from app.url rather than smuggled from the
- * query string.
- */
-
 beforeEach(function (): void {
     $this->path = storage_path('app/secrets/email-oauth.json');
     if (is_file($this->path)) {
@@ -61,9 +53,8 @@ it('OAuth callback (gmail) happy path inserts inbox + scan_state + saves refresh
     $secrets = $this->app->make(OAuthSecretsRepository::class);
     ocgSeedProviderClient($secrets);
 
-    // Mock the GoogleOAuthProvider. Capture the redirectUri argument
-    // so we can assert it was the loopback IP scheme computed
-    // server-side, not a value smuggled from a query parameter.
+    // The mock records the redirectUri so the test can prove it was computed
+    // server-side rather than smuggled in through a query parameter.
     $fakeToken = new AccessTokenWithEmail(
         accessToken: 'fake-access-token',
         refreshToken: 'fake-refresh-token-12345',
@@ -144,7 +135,8 @@ it('OAuth callback (gmail) happy path inserts inbox + scan_state + saves refresh
     expect($loaded)->not->toBeNull();
     expect($loaded->refreshToken)->toBe('fake-refresh-token-12345');
 
-    // Assert the loopback redirect URI was computed server-side.
+    // The port is derived from app.url, which is what makes the redirect URI
+    // server-side rather than caller-supplied.
     $expectedPort = parse_url((string) config('app.url'), PHP_URL_PORT);
     if (! is_int($expectedPort) || $expectedPort <= 0) {
         $expectedPort = 8000;
@@ -191,9 +183,6 @@ it('OAuth callback for unknown provider returns 404', function (): void {
     $user = ocgUser('unknown@example.com');
     $this->actingAs($user);
 
-    // Suppress the default exception-handler render so the
-    // NotFoundHttpException surfaces in the test as a thrown
-    // exception we can match.
     $this->withoutExceptionHandling();
 
     expect(function (): void {
@@ -315,8 +304,7 @@ it('compensating rollback: secret-write failure deletes the just-inserted inbox 
     {
         public function __construct(private readonly OAuthSecretsRepository $real)
         {
-            // Skip parent constructor — we delegate to the real one for
-            // every method except the throw point.
+            // Skip parent constructor — every method delegates to the real one.
         }
 
         public function hasProviderClient(string $provider): bool

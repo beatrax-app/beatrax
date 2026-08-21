@@ -20,25 +20,10 @@ use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * Req 9's acceptance criterion, verbatim: "A notification generated inside
- * the quiet window fires no OS notification AND is present in the inbox
- * afterward — nothing is silently dropped." Exercises the real delivery
- * path end to end: the REAL `DispatchOsNotification` listener is wired
- * onto `NotificationDeliverable` (normally bundle-gated in
- * `DesktopServiceProvider`, so it is registered manually here, mirroring
- * `PerTriggerToggleTest`) and asserted against real outbound
- * `/notification` HTTP POSTs — proving `SuppressionEvaluator`'s
- * quiet-hours decision (18-03's `SuppressionEvaluatorTest` proved the
- * decision logic in isolation) actually reaches the OS.
- *
- * Uses the drift-alert reactive trigger as the vehicle: quiet hours apply
- * uniformly to EVERY trigger type (unlike the D-08 per-trigger toggles,
- * which the always-deliverable reactive types bypass), so any trigger
- * proves the window. Each dispatch uses a distinct `driftAlertId` so the
- * D-05 deterministic id does not collapse three separate notifications
- * into one row.
- */
+// The real DispatchOsNotification listener is bundle-gated in
+// DesktopServiceProvider, so it is wired by hand here. The vehicle is the
+// drift-alert trigger because quiet hours apply to every type alike; each
+// dispatch needs a distinct driftAlertId or the ids collapse into one row.
 
 function qhdUser(string $username): User
 {
@@ -85,7 +70,8 @@ function qhdSavePrefs(User $user, bool $quietHoursEnabled): void
     app(NotificationPreferenceQuery::class)->saveForCurrentDevice($user, $prefs);
 }
 
-/** Wires the REAL DispatchOsNotification listener + unfocuses the window (D-13 gate open) so a delivered decision actually reaches an outbound HTTP POST. */
+// The window has to be blurred too, or the focus gate swallows the POST before
+// the quiet-hours decision is visible.
 function qhdRegisterOsListener(): void
 {
     Event::listen(NotificationDeliverable::class, [app(DispatchOsNotification::class), 'handleNotificationDeliverable']);
@@ -97,7 +83,6 @@ function qhdOsFired(): bool
     return Http::recorded(fn ($request) => str_ends_with((string) $request->url(), '/notification'))->isNotEmpty();
 }
 
-/** Dispatches a drift-alert notification for $user with a distinct id; returns whether an OS notification fired. */
 function qhdDispatchDrift(User $user, int $driftAlertId): bool
 {
     Http::fake();
@@ -168,9 +153,8 @@ it('the deferred row is still present and unread the next morning (defer, never 
 
     expect(qhdInboxRowCount((int) $user->id))->toBe(1);
 
-    // Advance past the quiet window into the next morning — the row must
-    // remain, and remain unread (deferral, not deletion; nothing reads it
-    // automatically).
+    // Past the quiet window: the row must still be there and still unread.
+    // Quiet hours defer delivery, they do not drop or auto-read anything.
     CarbonImmutable::setTestNow('2026-07-21 09:00:00');
 
     expect(qhdInboxRowCount((int) $user->id))->toBe(1);

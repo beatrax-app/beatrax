@@ -8,9 +8,6 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Community\Public\Services\CommunityCorpusQuery;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/import/architecture.md#merchant-aliases
- */
 final class MerchantNameResolver
 {
     // Keeps the PHP-side scan bounded whatever the dataset does.

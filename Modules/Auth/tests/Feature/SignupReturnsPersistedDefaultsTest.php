@@ -7,18 +7,9 @@ use Livewire\Livewire;
 use Modules\Auth\Public\Actions\SignupAction;
 use Modules\Core\Internal\Http\Livewire\SettingsPage;
 
-/*
- * Eloquent's create() does not read the row back, so a column filled by a
- * DATABASE default is null on the model it returns while the row itself is
- * correct. SignupAction hands that instance to the guard, and the mobile
- * runtime is persistent — so the stale copy outlived the request that made it
- * and SettingsPage::mount() fatally assigned null to a string-typed property:
- *
- *   Cannot assign null to property SettingsPage::$defaultCurrencyView of type string
- *
- * Reached from the tax page's "set your tax country" call to action, which
- * links straight to /settings.
- */
+// create() does not read the row back, so a database-defaulted column is null
+// on the returned model. SignupAction hands that instance to the guard, and on
+// the persistent mobile runtime the stale copy outlived the request.
 
 it('returns a user whose defaulted columns match the row that was written', function (): void {
     $result = app(SignupAction::class)('defaultsuser', 'opensesame-long-enough', false);
@@ -33,8 +24,8 @@ it('returns a user whose defaulted columns match the row that was written', func
 it('opens the settings page for an account straight out of signup', function (): void {
     $result = app(SignupAction::class)('settingsuser', 'opensesame-long-enough', false);
 
-    // The signup instance itself, exactly as the guard holds it — not a copy
-    // re-read from the database, which is what made this pass by accident.
+    // The signup instance itself, as the guard holds it: a copy re-read from
+    // the database is what made this pass by accident.
     Livewire::actingAs($result['user'])
         ->test(SettingsPage::class)
         ->assertOk()

@@ -7,19 +7,6 @@ use Livewire\Livewire;
 use Modules\Core\Internal\Http\Livewire\SettingsPage;
 use Modules\Core\Models\User;
 
-/*
- * Feature tests for the dark-theme preference (Phase 15 D-15 / D-16):
- *
- *   - users.theme — the per-user appearance preference, one of
- *     light / dark / system, defaulting to system.
- *   - The Settings Appearance section persists the value instant-apply
- *     (no submit button) via the setTheme handler, mirroring the
- *     existing toggleAutoImport pattern.
- *   - SettingsPage rejects a theme value outside the enum via #[Validate].
- *   - The dark-companion arch guard is wired and green for the views
- *     Task 1 themed (the layout + the Settings page).
- */
-
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'theme-user',
@@ -33,8 +20,6 @@ beforeEach(function (): void {
 it('gives the users table a theme column defaulting to system', function (): void {
     expect(DB::getSchemaBuilder()->hasColumn('users', 'theme'))->toBeTrue();
 
-    // A freshly-created user with no explicit theme falls to the
-    // schema default.
     $fresh = User::create([
         'username' => 'theme-default-user',
         'password' => 'opensesame',
@@ -87,15 +72,12 @@ it('rejects a theme value outside {light, dark, system}', function (): void {
         ->call('setTheme', 'garbage')
         ->assertHasErrors(['theme']);
 
-    // Nothing was persisted — the row stays at the beforeEach default.
     expect($this->user->fresh()->theme)->toBe('system');
 })->group('phase-15');
 
 it('wires the dark-companion arch guard and keeps it green for Task 1 themed views', function (): void {
-    // The dark-companion arch guard lives in BoundaryArchTest under an
-    // it() whose description contains the word "dark"; this assertion
-    // confirms the guard file exists and is part of the suite. The
-    // guard itself is exercised by `php artisan test --filter=dark`.
+    // The guard itself runs inside BoundaryArchTest; all this can check is that
+    // it is still there to be run.
     $archTest = base_path('tests/Contracts/BoundaryArchTest.php');
     expect(is_file($archTest))->toBeTrue();
 
