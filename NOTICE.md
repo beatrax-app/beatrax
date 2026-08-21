@@ -1,6 +1,6 @@
 # NOTICE
 
-beatrax is licensed under the [Hippocratic License 3.0](LICENSE), an
+Beatrax is licensed under the [Hippocratic License 3.0](LICENSE), an
 ethical source-available license stewarded by the Organization for Ethical
 Source. The full license text lives at the repo root in `LICENSE` and is
 the canonical legal document; this file exists only to explain the choice
@@ -27,7 +27,7 @@ distinction matters and deserves to be stated explicitly:
 
 If you need an OSI-approved license for some reason (corporate
 procurement, downstream relicensing under permissive terms,
-redistribution as part of a permissive-license bundle), beatrax is not
+redistribution as part of a permissive-license bundle), Beatrax is not
 the right project for you.
 
 ## Why we chose the Hippocratic License 3.0

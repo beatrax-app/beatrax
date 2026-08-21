@@ -32,7 +32,7 @@ class BiometricVault
      *
      * @return array{value: ?string, authenticated: bool, async: bool, canceled: bool, failed: bool, missing: bool}
      */
-    public function get(string $key, string $reason = 'Unlock beatrax'): array
+    public function get(string $key, string $reason = 'Unlock Beatrax'): array
     {
         $decoded = $this->call('BiometricVault.Get', ['key' => $key, 'reason' => $reason]);
 

@@ -14,6 +14,7 @@ return [
         'heading' => 'Taupyklių dar nėra',
         'body' => 'Sukurk virtualius dalinius likučius bet kurioje sąskaitoje ir tvarkyk pinigus be tikro banko pavedimo.',
         'cta' => 'Pridėk pirmą taupyklę',
+        'no_accounts_cta' => 'Importuoti sąskaitos išrašą',
     ],
 
     'common' => [

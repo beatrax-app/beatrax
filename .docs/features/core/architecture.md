@@ -73,7 +73,12 @@ What the module explicitly does NOT do:
     `noSecretsInLivewireSnapshot` arch invariant treats as secret.
   - `NavCountsService` — per-user item counts for the sidebar nav badges
     (Transactions, Recurring, Counterparties, Drift alerts, Budgets,
-    Subscriptions, Imports). The sidebar renders on every authenticated
+    Subscriptions, Imports, Tax). Recurring counts ACTIVE series
+    (`approved` + `cadence_changed`); Drift counts open alerts plus
+    snoozed ones whose deadline has passed, matching the list `/drift`
+    itself renders. The badges a module owns end-to-end — Anomaly,
+    Notifications, Chains, Forecast, Inboxes — come from that module's
+    own sidebar composer instead. The sidebar renders on every authenticated
     page, so the whole set is computed once and CACHED per user (short
     TTL) rather than running a COUNT per item per render; writes that
     materially change a count call `forget()` to drop the cache. Counts

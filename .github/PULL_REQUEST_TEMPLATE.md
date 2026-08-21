@@ -1,5 +1,5 @@
 <!--
-Thanks for opening a pull request against beatrax. Fill out the sections
+Thanks for opening a pull request against Beatrax. Fill out the sections
 below to help the maintainer review quickly. Keep the description
 focused on what changed and why; the diff itself shows how.
 -->
@@ -49,15 +49,15 @@ no issue):
 
 ## Hippocratic License 3.0 — contribution acknowledgement
 
-beatrax is released under the [Hippocratic License 3.0](../LICENSE). By
+Beatrax is released under the [Hippocratic License 3.0](../LICENSE). By
 opening this pull request you confirm that:
 
 - [ ] Your contribution is yours to give (no copy-pasted code from
   incompatibly licensed sources, no employer-owned work without
   permission).
 - [ ] You agree your contribution is licensed under Hippocratic-3.0 as
-  part of beatrax.
-- [ ] You will not use beatrax — or this contribution — in ways
+  part of Beatrax.
+- [ ] You will not use Beatrax — or this contribution — in ways
   prohibited by Hippocratic-3.0 (the "do no harm" clauses around human
   rights, climate, surveillance, and military use; see `LICENSE` for the
   full list).

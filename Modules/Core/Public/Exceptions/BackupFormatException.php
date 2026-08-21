@@ -6,7 +6,7 @@ namespace Modules\Core\Public\Exceptions;
 
 use RuntimeException;
 
-// The file is not a beatrax encrypted backup, or its header does not
+// The file is not a Beatrax encrypted backup, or its header does not
 // describe one this build can open. Distinct from a decryption failure:
 // the passphrase was never reached, so offering to retype it would send
 // the user down the wrong path.

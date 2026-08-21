@@ -56,6 +56,7 @@ return [
         'fetch_aria' => 'Tõmba ajakohased vahetuskursid veebist',
         'refreshing' => 'Värskendan…',
         'next_refresh' => 'Järgmine automaatne värskendus: iga päev kell 09.00',
+        'refresh_gave_up' => 'Kursse ei õnnestunud värskendada. Kasutusel on endiselt seadmes olevad kursid.',
         'refresh_now' => 'Värskenda kohe',
     ],
 

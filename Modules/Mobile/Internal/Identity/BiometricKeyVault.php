@@ -44,7 +44,7 @@ class BiometricKeyVault
 
     // Presents the biometric prompt (iOS) or dispatches it (Android).
     // Never prompts when nothing is enrolled.
-    public function recover(string $reason = 'Unlock beatrax'): BiometricRecoverResult
+    public function recover(string $reason = 'Unlock Beatrax'): BiometricRecoverResult
     {
         if (! $this->runtimeAvailable()) {
             return BiometricRecoverResult::unavailable();

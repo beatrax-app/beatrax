@@ -56,6 +56,7 @@ return [
         'fetch_aria' => 'Obtener los tipos de cambio actuales en línea',
         'refreshing' => 'Actualizando…',
         'next_refresh' => 'Próxima actualización automática: cada día a las 09:00',
+        'refresh_gave_up' => 'No se han podido actualizar los tipos. Se siguen usando los que ya hay en este dispositivo.',
         'refresh_now' => 'Actualizar ahora',
     ],
 

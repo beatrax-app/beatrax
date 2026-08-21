@@ -30,6 +30,7 @@ return [
 
     'errors' => [
         'amount_positive' => 'Indtast et beløb større end nul.',
+        'amount_too_large' => 'Beløbet er for stort. Tjek cifrene.',
         'invalid_date' => 'Indtast en gyldig dato.',
     ],
 

@@ -6,7 +6,7 @@ nYNAB ("New YNAB"/"Plan"), or Actual Budget. The user uploads a ZIP export from
 the wizard at `/migrations`, the export is parsed into a common intermediate
 representation, staged for review, and — on confirm — promoted into the same
 domain tables (`categories`, `accounts`, `transactions`, `envelope_assignments`,
-`goals`) every other ingestion path in beatrax writes to. A later "Check for
+`goals`) every other ingestion path in Beatrax writes to. A later "Check for
 updates" pass can re-import a newer export of the same source and reconcile it
 against what was already promoted, via a 3-way merge.
 
@@ -99,7 +99,7 @@ identically to data imported any other way.
 
 Every promotion step first asks `SourceMapWriter::resolve()` whether a source
 entity was already promoted by an earlier confirm of the same export; a hit
-reuses the existing beatrax id and performs no further writes. This is what
+reuses the existing Beatrax id and performs no further writes. This is what
 makes a byte-identical re-run a true no-op, not merely "safe to call again."
 Budget-grid assignments are the one deliberate exception:
 `EnvelopeWriter::setAssigned()` is already idempotent by value, so no separate
@@ -169,7 +169,7 @@ the `"Transfer : <Account>"` convention, cleared codes, amount format) is
 identical. `Ynab4Parser`/`NynabParser` supply only the format identifier.
 Neither format's CSV export carries goal or scheduled-transaction data, or a
 per-row currency — the parser always stamps the batch with a fixed `'EUR'`
-budget currency (beatrax's own base currency, the documented fallback when a
+budget currency (Beatrax's own base currency, the documented fallback when a
 source carries no currency signal at all).
 
 `ActualParser` is the one format whose extracted directory is a SQLite
@@ -206,7 +206,7 @@ shape (multi-step templates, percentage-of-income schedules) becomes an
 reachable only from Actual — neither YNAB CSV export carries goal/target
 columns at all. The promote step calls `GoalWriter::save()` with `accountId:
 null`, since Actual's goal template is category-scoped, not account-scoped. A
-goal with no target date (beatrax requires one) is likewise surfaced as
+goal with no target date (Beatrax requires one) is likewise surfaced as
 unmapped rather than inventing one. `Modules\Recurring` has no public write path to create a series from
 external data, so a scheduled/recurring transaction (Actual's `schedules` +
 `rules` tables only — neither YNAB export carries one) is deliberately
@@ -255,7 +255,7 @@ mid-extraction failure (disk full, permission error) still leaves
 
 A budget-assignment row's `budgeted` amount is the assigned amount ONLY —
 never a carried-forward balance (YNAB4's `Category Balance` / Actual's
-derived running total); beatrax's own `CarryoverQuery` derives balances, so
+derived running total); Beatrax's own `CarryoverQuery` derives balances, so
 the promote step feeds `budgeted` straight into `EnvelopeWriter::setAssigned()`
 and nothing else.
 
@@ -303,12 +303,12 @@ resolution) is linked for that row.
 already-confirmed source. For every already-mapped entity in the new export,
 `ThreeWayMergeResolver` reads three values — the newly-parsed source value
 (`S_new`), the baseline stored at the entity's last import
-(`migration_import_baseline`, `B`), and the current live beatrax value (`C`)
+(`migration_import_baseline`, `B`), and the current live Beatrax value (`C`)
 — and applies:
 
 ```
 S_new == B                 -> skip (source unchanged, neither side touched)
-S_new != B AND C == B      -> apply (source changed, beatrax untouched since)
+S_new != B AND C == B      -> apply (source changed, Beatrax untouched since)
 S_new != B AND C != B      -> conflict (BOTH sides diverged from baseline)
 ```
 
@@ -360,7 +360,7 @@ run; every other entity kind's own per-row resolve-gate already never
 revisits an already-mapped row, so no separate skip-list is needed for them.
 
 `EntityChangeApplier::apply()` handles every non-`budget_assignment` field
-change by resolving the beatrax entity id via `SourceMapWriter`, writing the
+change by resolving the Beatrax entity id via `SourceMapWriter`, writing the
 field, then advancing that entity's baseline snapshot to the newly-applied
 value; `budget_assignment` is deliberately never routed through it, since
 `PromoteStagingToDomain::promoteBudgetAssignments()`'s own unconditional path

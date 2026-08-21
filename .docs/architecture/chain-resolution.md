@@ -1,6 +1,6 @@
 # Chain resolution
 
-Chain resolution is the load-bearing capability that makes beatrax different
+Chain resolution is the load-bearing capability that makes Beatrax different
 from a per-account ledger viewer. Money in this system fans out through
 multiple providers — a single Netflix subscription touches PayPal, an ICS
 credit card, an ASN bulk-iDEAL settlement, and the ASN current account —

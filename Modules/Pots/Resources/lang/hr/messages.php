@@ -14,6 +14,7 @@ return [
         'heading' => 'Još nema kasica',
         'body' => 'Napravi virtualna podstanja unutar bilo kojeg računa i sredi novac bez stvarnog bankovnog prijenosa.',
         'cta' => 'Dodaj svoju prvu kasicu',
+        'no_accounts_cta' => 'Uvezi izvod',
     ],
 
     'common' => [

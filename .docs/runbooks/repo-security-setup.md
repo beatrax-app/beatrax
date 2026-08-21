@@ -118,7 +118,7 @@ ls -1 .github/ISSUE_TEMPLATE/ .github/PULL_REQUEST_TEMPLATE.md
 
 | File | Purpose |
 |---|---|
-| `.github/ISSUE_TEMPLATE/bug_report.md` | Structured bug intake — reproduction steps, expected vs. actual, environment (OS + beatrax version from `/_dev/health`), redirects security issues to `SECURITY.md` |
+| `.github/ISSUE_TEMPLATE/bug_report.md` | Structured bug intake — reproduction steps, expected vs. actual, environment (OS + Beatrax version from `/_dev/health`), redirects security issues to `SECURITY.md` |
 | `.github/ISSUE_TEMPLATE/feature_request.md` | Structured feature intake — use case, proposed UX, why existing features don't cover it |
 | `.github/PULL_REQUEST_TEMPLATE.md` | Pre-fills every PR body with Summary / Why / Test plan / Checklist (Pint, Larastan, Pest, docs, ADR-if-architectural) + Hippocratic-3.0 contribution acknowledgement |
 

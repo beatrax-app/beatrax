@@ -445,7 +445,7 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
 
     private function mapClearedStatus(string $flag): string
     {
-        // Neither export can express beatrax's third status, 'reconciled'.
+        // Neither export can express Beatrax's third status, 'reconciled'.
         return mb_strtoupper($flag) === 'C' ? 'cleared' : 'uncleared';
     }
 }

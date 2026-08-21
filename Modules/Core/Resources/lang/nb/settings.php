@@ -56,6 +56,7 @@ return [
         'fetch_aria' => 'Hent oppdaterte valutakurser på nett',
         'refreshing' => 'Oppdaterer…',
         'next_refresh' => 'Neste automatiske oppdatering: daglig kl. 09:00',
+        'refresh_gave_up' => 'Kunne ikke oppdatere kursene. Kursene som allerede ligger på enheten, brukes fortsatt.',
         'refresh_now' => 'Oppdater nå',
     ],
 

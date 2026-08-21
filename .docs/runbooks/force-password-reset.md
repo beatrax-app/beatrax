@@ -24,7 +24,7 @@ It is **not** the right tool for:
 
 ## Prerequisites
 
-- Shell access to the machine running beatrax (the developer's local dev machine, or
+- Shell access to the machine running Beatrax (the developer's local dev machine, or
   the host where the desktop bundle's data directory lives).
 - The username (not the email) of the account to reset.
 - A new password to set. The command prompts for one if you do not supply it.
@@ -65,7 +65,7 @@ Internally it:
 4. Logs an audit row that the password was reset via CLI, including the username and
    timestamp (no password material logged).
 
-It does **not** issue an email notification — beatrax does not run an SMTP relay, and
+It does **not** issue an email notification — Beatrax does not run an SMTP relay, and
 the local-only privacy posture rules out a third-party transactional-email service.
 Coordinate the reset with the user out of band.
 

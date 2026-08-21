@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\DevMode\Internal\Http\Livewire\LogTailerPage')
 {{-- UI-SPEC §19: overflow-x-auto wrapper ensures the dense log pane
      scrolls horizontally at phone width without breaking the page layout. --}}
 <div class="p-8 space-y-4 overflow-x-auto" data-testid="log-tailer-page">
@@ -55,7 +56,7 @@
             },
         })"
         x-init="start()"
-        x-on:logs-truncated.window="handleTruncated()"
+        x-on:{{ LogTailerPage::TRUNCATED_EVENT }}.window="handleTruncated()"
         class="space-y-3"
     >
         {{-- Filter row --}}

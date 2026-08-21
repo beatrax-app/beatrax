@@ -72,11 +72,20 @@ function tnbcSeedDiscoveredCandidates(User $owner, int $inboxId, int $count): vo
     }
 }
 
+// The rendered badge element, asserted whole. A bare ">1</span>" would also
+// match any other count on the page, and "inbox items need attention" alone
+// would match the label without proving the number reached the badge.
+function tnbcBadge(int $count): string
+{
+    return '<span role="img" class="side-badge" aria-label="'
+        .$count.' inbox items need attention">'.$count.'</span>';
+}
+
 it('renders the Inboxes link without a badge when count is zero', function (): void {
     $user = tnbcUser('zero@example.com');
     $this->actingAs($user);
 
-    // /inboxes mounts the top-nav and its empty-state hero needs nothing else.
+    // /inboxes mounts the sidebar and its empty-state hero needs nothing else.
     $response = $this->get(route('inboxes.index'));
 
     $response->assertStatus(200);
@@ -84,7 +93,7 @@ it('renders the Inboxes link without a badge when count is zero', function (): v
     // absolute or a relative URL.
     $response->assertSee('/inboxes"', false);
     $response->assertSee('Inboxes', false);
-    $response->assertDontSee('items need attention', false);
+    $response->assertDontSee('inbox items need attention', false);
 });
 
 it('renders the badge with count=1 when one inbox is in needs_reauth state', function (): void {
@@ -95,9 +104,8 @@ it('renders the badge with count=1 when one inbox is in needs_reauth state', fun
     $response = $this->get(route('inboxes.index'));
 
     $response->assertStatus(200);
-    $response->assertSee('items need attention', false);
-    $response->assertSee('>1</span>', false);
-})->todo('16-01 replaced the top-nav with the app sidebar. The Inboxes badge slot exists on .side-item but is not yet wired to the View Factory composer; a follow-up plan re-points registerTopNavBadgeComposer at core::livewire.app-sidebar and re-enables this assertion.');
+    $response->assertSee(tnbcBadge(1), false);
+});
 
 it('renders the badge with the combined count when discovered candidates and reauth coexist', function (): void {
     $user = tnbcUser('combined@example.com');
@@ -109,22 +117,23 @@ it('renders the badge with the combined count when discovered candidates and rea
 
     $response->assertStatus(200);
     // 1 needs_reauth + 1 discovered candidate = 2.
-    $response->assertSee('>2</span>', false);
-})->todo('16-01 replaced the top-nav with the app sidebar. The Inboxes badge slot exists on .side-item but is not yet wired to the View Factory composer; a follow-up plan re-points registerTopNavBadgeComposer at core::livewire.app-sidebar and re-enables this assertion.');
+    $response->assertSee(tnbcBadge(2), false);
+});
 
-it('caps the badge label at "99+" when count exceeds 99', function (): void {
+it('writes the count out in full above 99 — the sidebar compacts at four digits, it does not cap', function (): void {
     $user = tnbcUser('cap@example.com');
     $this->actingAs($user);
     $inboxId = tnbcSeedNeedsReauthInbox($user, 'cap@example.com');
-    // 1 needs_reauth + 100 discovered candidates = 101 — must render as "99+".
+    // 1 needs_reauth + 100 discovered candidates = 101. The deleted top-nav
+    // rendered "99+" here; the sidebar rail is wide enough for three digits.
     tnbcSeedDiscoveredCandidates($user, $inboxId, count: 100);
 
     $response = $this->get(route('inboxes.index'));
 
     $response->assertStatus(200);
-    $response->assertSee('>99+</span>', false);
-    $response->assertDontSee('>101</span>', false);
-})->todo('16-01 replaced the top-nav with the app sidebar. The Inboxes badge slot exists on .side-item but is not yet wired to the View Factory composer; a follow-up plan re-points registerTopNavBadgeComposer at core::livewire.app-sidebar and re-enables this assertion.');
+    $response->assertSee(tnbcBadge(101), false);
+    $response->assertDontSee('>99+</span>', false);
+});
 
 it('does not use the view() global helper inside EmailScanServiceProvider', function (): void {
     $providerSource = file_get_contents(
@@ -142,13 +151,17 @@ it('does not use the view() global helper inside EmailScanServiceProvider', func
     expect($matched)->toBe(0);
 });
 
-it('registers the top-nav badge composer from EmailScanServiceProvider::boot', function (): void {
+it('registers the nav badge composer from EmailScanServiceProvider::boot, against the sidebar view', function (): void {
     $providerSource = file_get_contents(
         base_path('Modules/EmailScan/Providers/EmailScanServiceProvider.php')
     );
     expect($providerSource)->toBeString();
 
     // Composer must be defined AND invoked from boot().
-    $defCount = substr_count((string) $providerSource, 'registerTopNavBadgeComposer');
+    $defCount = substr_count((string) $providerSource, 'registerNavBadgeComposer');
     expect($defCount)->toBeGreaterThanOrEqual(2);
+
+    // Naming a view nothing renders is how this composer sat inert: bound to
+    // the deleted top-nav, it never fired and never complained.
+    expect((string) $providerSource)->toContain("composer('shell::livewire.app-sidebar'");
 });

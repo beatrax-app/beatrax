@@ -14,6 +14,7 @@ return [
         'heading' => 'Noch keine Rücklagen',
         'body' => 'Lege innerhalb eines Kontos virtuelle Teilsalden an, um dein Geld zu ordnen — ganz ohne echte Überweisung.',
         'cta' => 'Erste Rücklage anlegen',
+        'no_accounts_cta' => 'Kontoauszug importieren',
     ],
 
     'common' => [

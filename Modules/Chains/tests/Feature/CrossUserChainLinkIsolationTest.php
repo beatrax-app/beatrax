@@ -180,33 +180,46 @@ it('GET /chains/review for userA renders only userA candidates — never any of 
         ->assertDontSeeText('BUserOnly');
 });
 
-it('top-nav "Review chains" badge for userA shows userA\'s open-candidate count (3) — not userB\'s', function (): void {
+// The whole badge element. ">3<" would match any three on the page, and the
+// leak this guards against — a count query that drops its user_id predicate —
+// shows up as the wrong number inside this exact span, not as a missing one.
+function cucBadge(int $count): string
+{
+    return '<span role="img" class="side-badge" aria-label="'
+        .$count.' chain links awaiting review">'.$count.'</span>';
+}
+
+it('sidebar Chains badge for userA shows userA\'s open-candidate count (3) — not userB\'s', function (): void {
     $this->actingAs($this->userA)
         ->get('/')
         ->assertOk()
-        ->assertSeeText('Review chains')
-        ->assertSee('>3<', false);
-})->todo('16-01 replaced the top-nav with the app sidebar. The Chains "Review chains" badge slot exists on the .side-item but is not yet wired to the View Factory composer; a follow-up plan re-points registerTopNavBadgeComposer at core::livewire.app-sidebar and re-enables this assertion against the new .side-badge chrome.');
+        ->assertSeeText('Chains')
+        ->assertSee(cucBadge(3), false)
+        // 4 is what a count blind to user_id would render for userA.
+        ->assertDontSee(cucBadge(4), false);
+});
 
-it('top-nav "Review chains" badge hides entirely when openCandidateCount === 0', function (): void {
+it('sidebar Chains badge hides entirely when openCandidateCount === 0', function (): void {
     ChainLink::query()->where('user_id', $this->userA->id)->delete();
 
     $this->actingAs($this->userA)
         ->get('/')
         ->assertOk()
-        ->assertSeeText('Review chains')
-        // The pill carries no unique marker, so absence is asserted on the
-        // rendered counts.
-        ->assertDontSee('rounded-full bg-slate-900', false);
-})->todo('16-01 replaced the top-nav with the app sidebar. The Chains "Review chains" badge chrome (bg-slate-900 rounded-full) no longer ships in the new sidebar markup; a follow-up plan re-wires the composer onto core::livewire.app-sidebar and re-introduces the badge slot, at which point this assertion is updated to match the new chrome.');
+        ->assertSeeText('Chains')
+        // Specific to the badge: the aria-label ships nowhere else, whereas
+        // .side-badge is shared with every other count in the rail.
+        ->assertDontSee('chain links awaiting review', false);
+});
 
-it('top-nav "Review chains" badge for userB shows userB\'s open-candidate count (1)', function (): void {
+it('sidebar Chains badge for userB shows userB\'s open-candidate count (1)', function (): void {
     $this->actingAs($this->userB)
         ->get('/')
         ->assertOk()
-        ->assertSeeText('Review chains')
-        ->assertSee('>1<', false);
-})->todo('16-01 replaced the top-nav with the app sidebar. The Chains "Review chains" badge slot exists on the .side-item but is not yet wired to the View Factory composer; a follow-up plan re-points registerTopNavBadgeComposer at core::livewire.app-sidebar and re-enables this assertion against the new .side-badge chrome.');
+        ->assertSeeText('Chains')
+        ->assertSee(cucBadge(1), false)
+        ->assertDontSee(cucBadge(3), false)
+        ->assertDontSee(cucBadge(4), false);
+});
 
 it('substring-attack guard — user_id="1" vs user_id="11" in chain_links lookup uses exact match', function (): void {
     // The lookup must use where(user_id, id) exactly, never a LIKE substring:

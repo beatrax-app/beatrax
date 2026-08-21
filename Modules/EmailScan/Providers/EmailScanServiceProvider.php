@@ -96,24 +96,42 @@ final class EmailScanServiceProvider extends ServiceProvider
         $livewire->component('email-scan.oauth-client-wizard-modal', OAuthClientWizardModal::class);
         $livewire->component('email-scan.backfill-window-modal', BackfillWindowModal::class);
 
-        $this->registerTopNavBadgeComposer();
+        $this->registerNavBadgeComposer();
     }
 
-    // Also runs EmitOAuthReauthRequiredAlert on the same per-request hook.
-    private function registerTopNavBadgeComposer(): void
+    // Also runs EmitOAuthReauthRequiredAlert on the same per-render hook. The
+    // by-reference $cache collapses repeated sidebar renders in one boot cycle
+    // down to a single count; the reauth check is a stat call and stays live.
+    private function registerNavBadgeComposer(): void
     {
         $app = $this->app;
         $factory = $app->make(ViewFactoryContract::class);
 
-        $factory->composer('core::livewire.top-nav', static function (View $compose) use ($app): void {
+        /** @var array<int, int> $cache */
+        $cache = [];
+
+        $factory->composer('shell::livewire.app-sidebar', static function (View $compose) use ($app, &$cache): void {
             $currentUser = $app->make(CurrentUser::class);
+
+            /** @var array<string, int> $navCounts */
+            $navCounts = (array) ($compose->getData()['navCounts'] ?? []);
+
             if (! $currentUser->isAuthenticated()) {
-                $compose->with('inboxesBadgeCount', 0);
+                $navCounts['inboxes'] = 0;
+                $compose->with('navCounts', $navCounts);
 
                 return;
             }
-            $query = $app->make(InboxesBadgeCount::class);
-            $compose->with('inboxesBadgeCount', $query->forCurrentUser($currentUser->user()));
+
+            $user = $currentUser->user();
+            $userId = $user->id;
+            if (! array_key_exists($userId, $cache)) {
+                $query = $app->make(InboxesBadgeCount::class);
+                $cache[$userId] = $query->forCurrentUser($user);
+            }
+
+            $navCounts['inboxes'] = $cache[$userId];
+            $compose->with('navCounts', $navCounts);
 
             $app->make(EmitOAuthReauthRequiredAlert::class)->handle();
         });

@@ -14,6 +14,7 @@ return [
         'heading' => 'Még nincs persely',
         'body' => 'Hozz létre virtuális részegyenlegeket bármelyik számládon belül, hogy valódi banki átutalás nélkül rendszerezd a pénzed.',
         'cta' => 'Add hozzá az első perselyed',
+        'no_accounts_cta' => 'Kivonat importálása',
     ],
 
     'common' => [

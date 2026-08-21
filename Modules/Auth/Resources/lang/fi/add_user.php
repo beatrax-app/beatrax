@@ -18,5 +18,6 @@ return [
     'error_generic' => 'Käyttäjää ei voitu luoda.',
 
     'error_min_length' => 'Käytä vähintään 12 merkkiä.',
+    'error_username_invalid' => 'Käytä enintään 32 kirjainta, numeroa, pistettä, väliviivaa tai alaviivaa.',
     'error_duplicate' => 'Käyttäjätunnus on jo käytössä tällä laitteella. Kokeile toista.',
 ];

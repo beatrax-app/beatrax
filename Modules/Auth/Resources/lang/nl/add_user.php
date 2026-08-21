@@ -17,5 +17,6 @@ return [
     'error_generic' => 'De gebruiker kon niet worden aangemaakt.',
 
     'error_min_length' => 'Gebruik minimaal 12 tekens.',
+    'error_username_invalid' => 'Gebruik maximaal 32 letters, cijfers, punten, streepjes of underscores.',
     'error_duplicate' => 'Die gebruikersnaam is al in gebruik op dit apparaat. Probeer een andere.',
 ];

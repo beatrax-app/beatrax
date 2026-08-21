@@ -24,5 +24,6 @@ return [
     'error_generic' => 'Kayıt tamamlanamadı.',
 
     'error_min_length' => 'En az 12 karakter kullan.',
+    'error_username_invalid' => 'En fazla 32 harf, rakam, nokta, tire veya alt çizgi kullan.',
     'error_closed' => 'Bu cihazda kayıt kapalı.',
 ];

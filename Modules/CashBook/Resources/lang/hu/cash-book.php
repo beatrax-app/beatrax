@@ -30,6 +30,7 @@ return [
 
     'errors' => [
         'amount_positive' => 'Adj meg nullánál nagyobb összeget.',
+        'amount_too_large' => 'Ez az összeg túl nagy. Ellenőrizd a számjegyeket.',
         'invalid_date' => 'Adj meg érvényes dátumot.',
     ],
 

@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest an improvement or a new capability for beatrax.
+about: Suggest an improvement or a new capability for Beatrax.
 title: "[feature] "
 labels: ["enhancement", "triage"]
 assignees: []
@@ -29,7 +29,7 @@ keyboard shortcuts is enough.
 
 ## Why existing features don't cover this
 
-beatrax already has ⌘K, the chain resolver, Dev Mode, recurring rules,
+Beatrax already has ⌘K, the chain resolver, Dev Mode, recurring rules,
 counterparty profiles, etc. Briefly explain what you tried and where it
 fell short.
 
@@ -43,6 +43,6 @@ of adding the feature vs. documenting the workaround.
 
 - **Who benefits:** (solo users / shared-household users / power users / ...)
 - **Frequency:** (every import / monthly / one-off setup / ...)
-- **Privacy implications:** beatrax is local-first by design. If the
+- **Privacy implications:** Beatrax is local-first by design. If the
   feature requires any network calls, call that out explicitly so
   reviewers can weigh it against the Hippocratic-3.0 + privacy posture.

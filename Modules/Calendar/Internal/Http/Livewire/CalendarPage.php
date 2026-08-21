@@ -188,12 +188,23 @@ final class CalendarPage extends Component
         // With zero accounts there is nothing to filter on, and [] would read
         // as deselect-all — null is the only value that still shows unlinked
         // series.
+        $balanceFilter = $accountRoster === [] ? null : $this->balanceAccountIds;
+
         $days = $calendarQuery->forMonth(
             $user,
             $year,
             $month,
             $accountRoster === [] ? null : $this->visibleAccountIds,
-            $accountRoster === [] ? null : $this->balanceAccountIds,
+            $balanceFilter,
+        );
+
+        // Days with no balance source read as "computing" so the corner shows
+        // "—" instead of a fabricated €0. Only a real source makes that a
+        // pending projection rather than a permanently absent one.
+        $balanceSources = $calendarQuery->effectiveBalanceAccountIds(
+            $balanceFilter,
+            array_column($accountRoster, 'id'),
+            $user,
         );
 
         $ceiling = $clock->now()->addMonths(self::HORIZON_MONTHS);
@@ -206,7 +217,7 @@ final class CalendarPage extends Component
             'selectedDayDto' => $this->findSelectedDay($days),
             'displayYear' => $year,
             'displayMonth' => $month,
-            'isComputingAny' => self::daysAreComputing($days),
+            'isComputingAny' => $balanceSources !== [] && self::daysAreComputing($days),
             'accountRoster' => $accountRoster,
             'atCeiling' => $atCeiling,
         ]);

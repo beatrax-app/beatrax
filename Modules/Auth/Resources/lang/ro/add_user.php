@@ -18,5 +18,6 @@ return [
     'error_generic' => 'Utilizatorul nu a putut fi creat.',
 
     'error_min_length' => 'Folosește cel puțin 12 caractere.',
+    'error_username_invalid' => 'Folosește cel mult 32 de litere, cifre, puncte, cratime sau linii de subliniere.',
     'error_duplicate' => 'Numele de utilizator este deja folosit pe acest dispozitiv. Încearcă altul.',
 ];

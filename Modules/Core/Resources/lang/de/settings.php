@@ -56,6 +56,7 @@ return [
         'fetch_aria' => 'Aktuelle Wechselkurse online abrufen',
         'refreshing' => 'Wird aktualisiert…',
         'next_refresh' => 'Nächste automatische Aktualisierung: täglich um 09:00',
+        'refresh_gave_up' => 'Die Kurse konnten nicht aktualisiert werden. Es gelten weiterhin die Kurse auf diesem Gerät.',
         'refresh_now' => 'Jetzt aktualisieren',
     ],
 

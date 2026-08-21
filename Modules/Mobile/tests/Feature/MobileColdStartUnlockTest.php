@@ -63,7 +63,7 @@ function bindVaultRecover(BiometricRecoverResult $result): void
             parent::__construct($codec, $currentUser);
         }
 
-        public function recover(string $reason = 'Unlock beatrax'): BiometricRecoverResult
+        public function recover(string $reason = 'Unlock Beatrax'): BiometricRecoverResult
         {
             return $this->result;
         }

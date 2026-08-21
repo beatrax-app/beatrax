@@ -179,7 +179,7 @@
                         <li class="text-sm flex items-start justify-between gap-2">
                             <span>{{ $alert->message }}</span>
                             @if ($alert->kind === 'oauth_reauth_required')
-                                <a href="/settings/integrations" class="text-blue-600 hover:underline text-xs">
+                                <a href="{{ route('inboxes.index') }}" class="text-blue-600 hover:underline text-xs">
                                     {{ Lang::get('dev::overview.reauth') }}
                                 </a>
                             @endif

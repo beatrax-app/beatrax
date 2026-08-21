@@ -638,7 +638,7 @@ display currency), `topCategories` (delegated to
 `TopCategoriesByPeriodQuery`), `recentTransactions` (delegated to
 `TransactionListQuery::recent`, filtered to the same display currency
 so every dashboard panel agrees on the currency in view),
-`uncategorizedCount` (lifetime count driving the top-nav badge), and
+`uncategorizedCount` (lifetime count driving the nav badge), and
 `isFirstRun` (true when the user has zero transactions across all
 time — the route handler redirects to `/imports/new` until then).
 

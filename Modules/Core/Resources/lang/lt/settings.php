@@ -56,6 +56,7 @@ return [
         'fetch_aria' => 'Gauti dabartinius valiutų kursus internetu',
         'refreshing' => 'Atnaujinama…',
         'next_refresh' => 'Kitas automatinis atnaujinimas: kasdien 09:00',
+        'refresh_gave_up' => 'Nepavyko atnaujinti kursų. Toliau naudojami šiame įrenginyje jau esantys kursai.',
         'refresh_now' => 'Atnaujinti dabar',
     ],
 

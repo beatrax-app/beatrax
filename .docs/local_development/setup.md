@@ -1,6 +1,6 @@
 # Setup
 
-How to get a working development copy of beatrax. The expected end state is the
+How to get a working development copy of Beatrax. The expected end state is the
 dashboard rendering locally, with the test suite green and the desktop bundle
 buildable on demand.
 

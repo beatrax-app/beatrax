@@ -14,6 +14,7 @@ return [
         'heading' => 'Ei vielä säästöpotteja',
         'body' => 'Luo virtuaalisia osasaldoja mille tahansa tilille ja järjestä rahasi ilman oikeaa tilisiirtoa.',
         'cta' => 'Lisää ensimmäinen potti',
+        'no_accounts_cta' => 'Tuo tiliote',
     ],
 
     'common' => [

@@ -30,6 +30,7 @@ return [
 
     'errors' => [
         'amount_positive' => 'Unesi iznos veći od nule.',
+        'amount_too_large' => 'Ovaj iznos je prevelik. Provjeri znamenke.',
         'invalid_date' => 'Unesi ispravan datum.',
     ],
 

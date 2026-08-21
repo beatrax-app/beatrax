@@ -56,6 +56,7 @@ return [
         'fetch_aria' => 'Récupérer les taux de change actuels en ligne',
         'refreshing' => 'Actualisation…',
         'next_refresh' => 'Prochaine actualisation automatique : tous les jours à 09:00',
+        'refresh_gave_up' => 'Impossible d’actualiser les taux. Les taux déjà présents sur cet appareil restent utilisés.',
         'refresh_now' => 'Actualiser maintenant',
     ],
 

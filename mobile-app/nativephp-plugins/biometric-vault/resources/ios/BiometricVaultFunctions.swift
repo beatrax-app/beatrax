@@ -44,7 +44,7 @@ enum BiometricVaultFunctions {
             guard let key = parameters["key"] as? String else {
                 throw BridgeError.invalidParameters("key is required")
             }
-            let reason = (parameters["reason"] as? String) ?? "Unlock beatrax"
+            let reason = (parameters["reason"] as? String) ?? "Unlock Beatrax"
             do {
                 // Returns nil for "no entry"; throws for user-cancel / auth-fail
                 // (which must NOT be treated as "no key" by the caller).

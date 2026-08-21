@@ -14,6 +14,7 @@ return [
         'heading' => 'No pots yet',
         'body' => 'Create virtual sub-balances within any account to organise your money without a real bank transfer.',
         'cta' => 'Add your first pot',
+        'no_accounts_cta' => 'Import a statement',
     ],
 
     'common' => [

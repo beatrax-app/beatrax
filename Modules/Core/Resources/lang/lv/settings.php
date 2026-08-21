@@ -56,6 +56,7 @@ return [
         'fetch_aria' => 'Iegūt aktuālos valūtas kursus tiešsaistē',
         'refreshing' => 'Atsvaidzina…',
         'next_refresh' => 'Nākamā automātiskā atsvaidzināšana: katru dienu plkst. 09:00',
+        'refresh_gave_up' => 'Neizdevās atsvaidzināt kursus. Joprojām tiek izmantoti ierīcē esošie kursi.',
         'refresh_now' => 'Atsvaidzināt tagad',
     ],
 

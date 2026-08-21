@@ -1,6 +1,6 @@
 # Verifying a release
 
-How to confirm, by hand, that a downloaded beatrax installer matches the bytes the
+How to confirm, by hand, that a downloaded Beatrax installer matches the bytes the
 release pipeline published. Two checks: a SHA-256 checksum that ensures the file is
 intact, and an Ed25519 signature that ensures the manifest itself was produced by the
 release pipeline rather than a man-in-the-middle.

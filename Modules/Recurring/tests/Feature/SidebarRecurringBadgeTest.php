@@ -40,45 +40,56 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-it('renders the top-nav with recurringPendingCount equal to the pending-state count for the user', function (): void {
-    rcnbcSeries($this->user, 'pending', 'tnbc::pending-1', 'a');
-    rcnbcSeries($this->user, 'pending', 'tnbc::pending-2', 'b');
-    rcnbcSeries($this->user, 'pending', 'tnbc::pending-3', 'c');
-    rcnbcSeries($this->user, 'approved', 'tnbc::approved-1', 'd');
+function rcnbcBadge(int $count): string
+{
+    return '<span role="img" class="side-badge muted" aria-label="'
+        .$count.' recurring series">'.$count.'</span>';
+}
+
+it('renders the sidebar badge as the count of active series, leaving pending and rejected out', function (): void {
+    rcnbcSeries($this->user, 'approved', 'tnbc::approved-1', 'a');
+    rcnbcSeries($this->user, 'approved', 'tnbc::approved-2', 'b');
+    rcnbcSeries($this->user, 'cadence_changed', 'tnbc::cadence-1', 'c');
+    rcnbcSeries($this->user, 'pending', 'tnbc::pending-1', 'd');
     rcnbcSeries($this->user, 'rejected', 'tnbc::rejected-1', 'e');
 
     $response = $this->actingAs($this->user)->get(route('recurring.index'));
 
     $content = $response->getContent() ?: '';
     expect($content)->toContain('Recurring');
-    expect($content)->toContain('>3<');
-})->group('badge-equals-pending-count')
-    ->todo('16-01 replaced the top-nav with the app sidebar. The Recurring pending-count badge slot exists on the .side-item but is not yet wired to the View Factory composer; a follow-up plan re-points registerTopNavBadgeComposer at core::livewire.app-sidebar and re-enables this assertion against the new .side-badge chrome.');
+    // 2 approved + 1 cadence_changed. A count over every row would read 5.
+    expect($content)->toContain(rcnbcBadge(3));
+    expect($content)->not->toContain(rcnbcBadge(5));
+})->group('badge-equals-active-count');
 
-it('binds recurringPendingCount to 0 when no user is authenticated (badge-is-zero-when-unauthenticated)', function (): void {
+it('renders for an unauthenticated caller without blowing up (badge-is-zero-when-unauthenticated)', function (): void {
     $response = $this->get(route('recurring.index'));
 
-    // Unauthenticated callers redirect; this only confirms the composer does not
-    // blow up. The authenticated rendering is covered above.
+    // Unauthenticated callers redirect; this only confirms the sidebar's count
+    // path does not blow up. The authenticated rendering is covered above.
     expect($response->status())->toBeIn([302, 200]);
 })->group('badge-is-zero-when-unauthenticated');
 
-it('binds recurringPendingCount to 0 when the authenticated user has no pending series (badge-is-zero-when-no-pending)', function (): void {
-    rcnbcSeries($this->user, 'approved', 'tnbc::approved-only', 'only-approved');
+it('hides the badge when the user has no active series (badge-is-zero-when-none-active)', function (): void {
+    rcnbcSeries($this->user, 'pending', 'tnbc::pending-only', 'only-pending');
+    rcnbcSeries($this->user, 'rejected', 'tnbc::rejected-only', 'only-rejected');
 
     $response = $this->actingAs($this->user)->get(route('recurring.index'));
     $content = $response->getContent() ?: '';
     expect($content)->toContain('Recurring');
     // With count = 0 the @if guard suppresses the badge span; the anchor still
-    // renders.
-    expect($content)->not->toContain('aria-label="Recurring; ');
-})->group('badge-is-zero-when-no-pending');
+    // renders. The aria-label is the badge's own marker.
+    expect($content)->not->toContain('recurring series"');
+})->group('badge-is-zero-when-none-active');
 
-it('uses the View Factory contract — the forbidden `view()->composer` shape is not present (no-view-helper-used)', function (): void {
+it('registers no view composer — the Recurring count has one source, and it is NavCountsService', function (): void {
     $providerPath = base_path('Modules/Recurring/Providers/RecurringServiceProvider.php');
     expect(file_exists($providerPath))->toBeTrue();
 
+    // A second writer for one badge is how the two definitions drifted apart:
+    // the composer counted pending series, the service counts active ones, and
+    // only one of them could win the slot.
     $contents = (string) file_get_contents($providerPath);
+    expect(str_contains($contents, 'composer('))->toBeFalse();
     expect(str_contains($contents, 'view()->composer'))->toBeFalse();
-    expect(str_contains($contents, 'ViewFactoryContract'))->toBeTrue();
-})->group('no-view-helper-used');
+})->group('single-source-for-the-badge');

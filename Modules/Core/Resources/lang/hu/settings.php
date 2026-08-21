@@ -56,6 +56,7 @@ return [
         'fetch_aria' => 'Aktuális árfolyamok letöltése online',
         'refreshing' => 'Frissítés…',
         'next_refresh' => 'Következő automatikus frissítés: naponta 09:00-kor',
+        'refresh_gave_up' => 'Az árfolyamokat nem sikerült frissíteni. Továbbra is az eszközön lévő árfolyamok érvényesek.',
         'refresh_now' => 'Frissítés most',
     ],
 

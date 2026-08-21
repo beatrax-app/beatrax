@@ -18,7 +18,15 @@
 @use('Modules\Core\Public\Support\Lang')
 <div>
 <flux:modal wire:model="open" class="md:max-w-md" @close="$wire.cancelPairing()">
-<div class="space-y-4 p-6" wire:key="pairing-step-{{ $step }}">
+{{-- Flux forwards only class/style/autofocus to the <dialog>; anything else
+     lands on the <ui-modal> wrapper, where a name does nothing. So the step's
+     own heading is bound to the dialog from inside it. --}}
+<div
+    class="space-y-4 p-6"
+    wire:key="pairing-step-{{ $step }}"
+    x-data
+    x-init="$el.closest('dialog')?.setAttribute('aria-labelledby', 'pairing-modal-title')"
+>
 
     {{-- ===== Step 1: choose direction ===== --}}
     @if ($step === 'choose_direction')
@@ -63,7 +71,7 @@
     {{-- ===== Step 2a: show my code (QR + word-code + countdown) ===== --}}
     @if ($step === 'show_code')
         <div wire:poll.3s="checkPairingState">
-            <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('sync::pairing.show_this_code') }}</h3>
+            <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100" id="pairing-modal-title">{{ Lang::get('sync::pairing.show_this_code') }}</h3>
             <p class="mb-4 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('sync::pairing.step_2_of_3') }}</p>
 
             @if ($expiresInSeconds > 0)
@@ -138,7 +146,7 @@
 
     {{-- ===== Step 2b: enter a code ===== --}}
     @if ($step === 'enter_code')
-        <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('sync::pairing.enter_the_code') }}</h3>
+        <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100" id="pairing-modal-title">{{ Lang::get('sync::pairing.enter_the_code') }}</h3>
         <p class="mb-2 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('sync::pairing.step_2_of_3') }}</p>
 
         <div
@@ -190,7 +198,7 @@
     {{-- ===== Step 3: confirm safety numbers (the trust gate) ===== --}}
     @if ($step === 'confirm')
         <div wire:poll.3s="checkPairingState">
-            <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('sync::pairing.compare_words') }}</h3>
+            <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100" id="pairing-modal-title">{{ Lang::get('sync::pairing.compare_words') }}</h3>
             <p class="mb-4 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('sync::pairing.step_3_of_3') }}</p>
 
             {{-- The words prove the CHANNEL is untampered; the names say
@@ -259,7 +267,7 @@
             <svg class="mx-auto h-6 w-6 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('sync::pairing.device_paired') }}</h3>
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100" id="pairing-modal-title">{{ Lang::get('sync::pairing.device_paired') }}</h3>
             <p class="mx-auto max-w-xs text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('sync::pairing.device_paired_help') }}
             </p>

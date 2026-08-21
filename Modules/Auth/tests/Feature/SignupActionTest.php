@@ -211,3 +211,25 @@ it('dispatches UserInstalled exactly once with the new users id', function (): v
 
     expect($captured)->toBe([$result['user']->id]);
 });
+
+// 96 characters of emoji were accepted, and the username lands in the
+// recovery-codes filename, where that is not a name but a broken write.
+it('refuses a username no filesystem should have to carry', function (string $bad): void {
+    expect(fn () => app(SignupAction::class)($bad, 'a-genuinely-long-password'))
+        ->toThrow(ValidationException::class);
+
+    expect(User::query()->count())->toBe(0);
+})->with([
+    'emoji' => 'wessel🎉',
+    'too long' => 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    'path separator' => 'wes/sel',
+    'whitespace' => 'wes sel',
+    'quote' => 'wes"sel',
+    'leading dot' => '.wessel',
+]);
+
+it('accepts the handles a person actually types', function (string $good): void {
+    app(SignupAction::class)($good, 'a-genuinely-long-password');
+
+    expect(User::query()->where('username', $good)->exists())->toBeTrue();
+})->with(['wessel', 'wes-sel', 'wes_sel', 'wes.sel', 'user42', 'josé']);

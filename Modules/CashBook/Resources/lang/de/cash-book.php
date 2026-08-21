@@ -30,6 +30,7 @@ return [
 
     'errors' => [
         'amount_positive' => 'Gib einen Betrag größer als null ein.',
+        'amount_too_large' => 'Dieser Betrag ist zu groß. Prüfe die Ziffern.',
         'invalid_date' => 'Gib ein gültiges Datum ein.',
     ],
 

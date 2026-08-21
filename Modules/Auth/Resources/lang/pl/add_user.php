@@ -18,5 +18,6 @@ return [
     'error_generic' => 'Nie udało się utworzyć użytkownika.',
 
     'error_min_length' => 'Użyj co najmniej 12 znaków.',
+    'error_username_invalid' => 'Użyj maksymalnie 32 liter, cyfr, kropek, myślników lub podkreśleń.',
     'error_duplicate' => 'Ta nazwa użytkownika jest już zajęta na tym urządzeniu. Wybierz inną.',
 ];

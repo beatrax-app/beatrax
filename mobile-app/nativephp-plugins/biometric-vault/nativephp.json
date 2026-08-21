@@ -34,7 +34,7 @@
     "ios": {
         "min_version": "18.2",
         "info_plist": {
-            "NSFaceIDUsageDescription": "Unlock beatrax with Face ID"
+            "NSFaceIDUsageDescription": "Unlock Beatrax with Face ID"
         },
         "dependencies": {
             "swift_packages": [],

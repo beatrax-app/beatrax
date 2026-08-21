@@ -156,10 +156,20 @@
                 </div>
 
                 @if ($fxOnlineEnabled)
-                    <div wire:transition class="flex items-center justify-between gap-3">
-                        <p class="text-xs" style="color: var(--color-text-faint);">
+                    <div
+                        wire:transition
+                        class="flex items-center justify-between gap-3"
+                        @if ($fxRefreshing) wire:poll.2s="pollFxRefresh" @endif
+                    >
+                        {{-- The fetch is a queued job that can fail on every
+                             provider, so "Refreshing…" needs an end: either the
+                             rate table takes a write, or the wait runs out and
+                             the line says so. --}}
+                        <p class="text-xs" @if ($fxRefreshGaveUp) role="alert" @endif style="color: var(--color-text-faint);">
                             @if ($fxRefreshing)
                                 {{ Lang::get('core::settings.exchange_rates.refreshing') }}
+                            @elseif ($fxRefreshGaveUp)
+                                {{ Lang::get('core::settings.exchange_rates.refresh_gave_up') }}
                             @else
                                 {{ Lang::get('core::settings.exchange_rates.next_refresh') }}
                             @endif

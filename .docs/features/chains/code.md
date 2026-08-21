@@ -101,7 +101,7 @@ Modules/Chains/
     Livewire renders a friendly message instead of an SQLSTATE 23000.
 - **Services/**
   - `ChainLinkQuery::reviewQueue($user)`,
-    `ChainLinkQuery::openCandidateCount($user)` (top-nav badge),
+    `ChainLinkQuery::openCandidateCount($user)` (sidebar badge),
     `ChainLinkQuery::chainTreeFor($transaction, $user)`.
   - `CardStatementQuery::nextSettlement($user)`,
     `CardStatementQuery::forecastTiles($user)`.
@@ -215,7 +215,8 @@ Migrations:
   the DI-only posture stays satisfied.
 - Subscribes `CreateChainLinkFromHint` to
   `Receipts::ChainHintDetected`.
-- Registers a `View::composer` for the `core::livewire.top-nav` view
-  that injects `chainOpenCandidateCount` for the badge. Resolved
-  through the `ViewFactory` contract — not the global `view()` helper —
-  to honour the DI-only invariant.
+- Registers a view composer for the `shell::livewire.app-sidebar` view
+  that merges the open-candidate count into `navCounts` under the
+  `chains` key. Resolved through the `ViewFactory` contract — not the
+  global `view()` helper — to honour the DI-only invariant, and
+  memoised per boot so repeated renders cost one COUNT.

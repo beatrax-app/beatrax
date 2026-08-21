@@ -17,11 +17,11 @@ it('/site.webmanifest returns 200', function (): void {
     $response->assertOk();
 });
 
-it('/site.webmanifest response body contains the app name beatrax', function (): void {
+it('/site.webmanifest response body contains the app name Beatrax', function (): void {
     $response = $this->get('/site.webmanifest');
     $response->assertOk();
     $html = (string) $response->getContent();
-    expect($html)->toContain('beatrax');
+    expect($html)->toContain('Beatrax');
 });
 
 it('/icons/icon-192.png returns 200', function (): void {

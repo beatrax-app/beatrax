@@ -1090,7 +1090,7 @@ it('does not allow the literal `diederik` / `Diederik` anywhere in Modules / tes
 
     expect($hits)->toBe(
         [],
-        "Every diederik / Diederik literal must be flipped to beatrax. Offenders:\n  ".implode("\n  ", $hits),
+        "Every diederik / Diederik literal must be flipped to Beatrax. Offenders:\n  ".implode("\n  ", $hits),
     );
 });
 

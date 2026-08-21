@@ -24,5 +24,6 @@ return [
     'error_generic' => 'Impossible de terminer l\'inscription.',
 
     'error_min_length' => 'Utilise au moins 12 caractères.',
+    'error_username_invalid' => 'Utilise au maximum 32 lettres, chiffres, points, tirets ou traits de soulignement.',
     'error_closed' => 'Les inscriptions sont fermées sur cet appareil.',
 ];

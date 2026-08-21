@@ -39,7 +39,7 @@ it('rejects POST /dev/artisan/destructive-spawn with 403 when Dev Mode env is of
         ->postJson('/dev/artisan/destructive-spawn', [
             'command' => 'db:restore',
             'args' => ['from' => '/tmp/x.sqlite'],
-            'confirmed_typed' => 'beatrax',
+            'confirmed_typed' => 'Beatrax',
         ]);
 
     $response->assertStatus(403);
@@ -53,7 +53,7 @@ it('rejects POST /dev/artisan/destructive-spawn with 403 when session.advanced i
         ->postJson('/dev/artisan/destructive-spawn', [
             'command' => 'db:restore',
             'args' => ['from' => '/tmp/x.sqlite'],
-            'confirmed_typed' => 'beatrax',
+            'confirmed_typed' => 'Beatrax',
         ]);
 
     $response->assertStatus(403);
@@ -68,7 +68,7 @@ it('rejects POST /dev/artisan/destructive-spawn with 403 when confirmed_typed is
         ->postJson('/dev/artisan/destructive-spawn', [
             'command' => 'db:restore',
             'args' => ['from' => '/tmp/x.sqlite'],
-            'confirmed_typed' => 'Beatrax',
+            'confirmed_typed' => 'beatrax',
         ]);
 
     $response->assertStatus(403);
@@ -83,7 +83,7 @@ it('rejects a SAFE-tier command name with 422 not_destructive even when all thre
         ->postJson('/dev/artisan/destructive-spawn', [
             'command' => 'cache:clear', // SAFE tier
             'args' => [],
-            'confirmed_typed' => 'beatrax',
+            'confirmed_typed' => 'Beatrax',
         ]);
 
     $response->assertStatus(422);
@@ -99,7 +99,7 @@ it('spawns a destructive command + returns 202 + run_id + pid when all three gat
         ->postJson('/dev/artisan/destructive-spawn', [
             'command' => 'migrate:fresh', // DESTRUCTIVE tier
             'args' => [],
-            'confirmed_typed' => 'beatrax',
+            'confirmed_typed' => 'Beatrax',
         ]);
 
     $response->assertStatus(202);

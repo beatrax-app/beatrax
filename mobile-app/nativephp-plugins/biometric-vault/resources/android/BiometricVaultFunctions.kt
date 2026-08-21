@@ -164,7 +164,7 @@ object BiometricVaultFunctions {
             override fun onAuthenticationFailed() = onFailure("failed")
         })
         val info = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Unlock beatrax")
+            .setTitle("Unlock Beatrax")
             .setSubtitle(reason)
             .setNegativeButtonText("Use PIN")
             .setAllowedAuthenticators(androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG)

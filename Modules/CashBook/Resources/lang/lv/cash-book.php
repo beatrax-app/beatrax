@@ -30,6 +30,7 @@ return [
 
     'errors' => [
         'amount_positive' => 'Ievadiet summu, kas lielāka par nulli.',
+        'amount_too_large' => 'Šī summa ir pārāk liela. Pārbaudiet ciparus.',
         'invalid_date' => 'Ievadiet derīgu datumu.',
     ],
 

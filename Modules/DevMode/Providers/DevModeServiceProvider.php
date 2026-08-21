@@ -62,6 +62,8 @@ use Modules\DevMode\Public\Dto\ArgSpec;
 use Modules\DevMode\Public\Dto\CommandSpec;
 use Modules\DevMode\Public\Dto\NavigationEntry;
 use Modules\EmailScan\Models\OAuthSecret;
+use Modules\Shell\Public\Navigation\AppNavigation;
+use Modules\Shell\Public\Navigation\ResolvedDestination;
 use Spatie\Activitylog\Support\ActivityLogger;
 
 final class DevModeServiceProvider extends ServiceProvider
@@ -316,18 +318,41 @@ final class DevModeServiceProvider extends ServiceProvider
         $this->app->singleton(DevSidebarItems::class, static fn (): DevSidebarItems => new DevSidebarItems);
     }
 
-    // Route names resolve inside the singleton closure, not at register()
-    // time, so every module has registered its routes before the lookup.
+    // Route names resolve inside the closure, not at register() time, so every
+    // module has registered its routes before the lookup. Bound rather than
+    // shared: the labels are translated, so a resolution cached for the process
+    // would serve the first request's locale to every later one.
     private function registerNavigationRegistry(): void
     {
-        $this->app->singleton(NavigationRegistry::class, static function (Application $app): NavigationRegistryImpl {
+        $this->app->bind(NavigationRegistry::class, static function (Application $app): NavigationRegistryImpl {
             $router = $app->make(Router::class);
 
             return new NavigationRegistryImpl(array_merge(
-                self::navEntries($router, self::mainNavRows()),
+                self::appNavEntries(),
                 self::navEntries($router, self::devNavRows()),
             ));
         });
+    }
+
+    // The user's own destinations are the Shell module's roster, the same one
+    // the sidebar renders, so the palette cannot be missing a screen the rail
+    // offers.
+    /**
+     * @return list<NavigationEntry>
+     */
+    private static function appNavEntries(): array
+    {
+        return array_map(
+            static fn (ResolvedDestination $destination): NavigationEntry => new NavigationEntry(
+                id: $destination->id->value,
+                label: $destination->label,
+                hint: $destination->hint,
+                icon: $destination->icon,
+                url: $destination->path,
+                keywords: $destination->keywords,
+            ),
+            AppNavigation::destinations(),
+        );
     }
 
     /**
@@ -353,29 +378,6 @@ final class DevModeServiceProvider extends ServiceProvider
         }
 
         return $entries;
-    }
-
-    // Each `id` mirrors its route name so the palette's Recent cache
-    // dedupes on one canonical identifier.
-    /**
-     * @return list<array{id: string, label: string, hint: string, icon: string, route: string, keywords: list<string>}>
-     */
-    private static function mainNavRows(): array
-    {
-        return [
-            ['id' => 'dashboard', 'label' => 'Dashboard', 'hint' => 'Recent activity overview', 'icon' => '◆', 'route' => 'dashboard', 'keywords' => ['home', 'main', 'this month']],
-            ['id' => 'transactions.index', 'label' => 'Transactions', 'hint' => 'Browse transactions', 'icon' => '≡', 'route' => 'transactions.index', 'keywords' => ['txn', 'ledger']],
-            ['id' => 'forecast.index', 'label' => 'Forecasts', 'hint' => 'What-if scenarios', 'icon' => '↗', 'route' => 'forecast.index', 'keywords' => ['scenario', 'predict']],
-            ['id' => 'calendar.index', 'label' => 'Calendar', 'hint' => 'Upcoming fixed payments and projected daily balance', 'icon' => '▦', 'route' => 'calendar.index', 'keywords' => ['bills', 'payments', 'balance', 'cash flow']],
-            ['id' => 'recurring.index', 'label' => 'Recurring', 'hint' => 'Subscriptions and fixed payments', 'icon' => '↻', 'route' => 'recurring.index', 'keywords' => ['subscriptions', 'fixed']],
-            ['id' => 'chains.review', 'label' => 'Chains', 'hint' => 'Cross-account funding chains', 'icon' => '⇉', 'route' => 'chains.review', 'keywords' => ['routing', 'funding']],
-            ['id' => 'drift.index', 'label' => 'Drift Alerts', 'hint' => 'Subscription-price drift watch', 'icon' => '⚠', 'route' => 'drift.index', 'keywords' => ['alerts', 'price']],
-            ['id' => 'imports.new', 'label' => 'Imports', 'hint' => 'Upload statements', 'icon' => '⊕', 'route' => 'imports.new', 'keywords' => ['upload', 'csv', 'mt940', 'camt']],
-            ['id' => 'inboxes.index', 'label' => 'Email', 'hint' => 'Connected inboxes', 'icon' => '✉', 'route' => 'inboxes.index', 'keywords' => ['inbox', 'gmail', 'imap']],
-            ['id' => 'uncategorized', 'label' => 'Categorization', 'hint' => 'Review uncategorized transactions', 'icon' => '⌕', 'route' => 'uncategorized', 'keywords' => ['rules', 'tag']],
-            ['id' => 'settings', 'label' => 'Settings', 'hint' => 'App preferences', 'icon' => '⚙', 'route' => 'settings', 'keywords' => ['prefs', 'config', 'profile']],
-            ['id' => 'tax.index', 'label' => 'Tax', 'hint' => 'Deductible records and per-year export', 'icon' => '⊞', 'route' => 'tax.index', 'keywords' => ['deduction', 'aangifte', 'export', 'records']],
-        ];
     }
 
     // CommandPaletteModal::buildRegistry() filters these out for

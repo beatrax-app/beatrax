@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-    LaunchAgent: beatrax Noise/WebSocket sync listener (self-host fallback, D-03).
+    LaunchAgent: Beatrax Noise/WebSocket sync listener (self-host fallback, D-03).
 
     Runs `php artisan sync:serve` as a long-running amphp event-loop daemon that
     accepts Noise-authenticated WebSocket connections from paired devices on the
@@ -9,14 +9,14 @@
 
     This launchd template is the FALLBACK host for the sync daemon — the PRIMARY
     host is the NativePHP ChildProcess (started automatically by the packaged
-    desktop app). Use this plist when running beatrax outside the packaged app
+    desktop app). Use this plist when running Beatrax outside the packaged app
     (self-hosters, headless server installs, development).
 
     Placeholders — same substitution shape as the scheduler + horizon plists.
     The InstallCommand --launchd path (or a manual `sed` step) swaps both
     placeholders at install time:
         {{ABS_PHP_BINARY}}    → absolute path to the PHP 8.5 binary (e.g. /opt/homebrew/bin/php)
-        {{ABS_PROJECT_ROOT}}  → absolute path to the beatrax project root
+        {{ABS_PROJECT_ROOT}}  → absolute path to the Beatrax project root
 
     relay:serve (the ZK relay endpoint) is intentionally NOT included here.
     The relay is opt-in (D-01): self-hosters who want to run a relay start it

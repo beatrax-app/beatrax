@@ -42,3 +42,15 @@ it('leaves $qrSvg empty on a freshly opened modal so nothing stale is raw-echoed
         ->assertSet('qrSvg', '')
         ->assertSet('step', 'choose_direction');
 });
+
+// A <dialog> with no accessible name is announced as "dialog". Flux forwards
+// only class/style/autofocus to the dialog element, so the name is bound from
+// inside the modal to the heading the current step shows.
+it('names the pairing dialog after the step the reader is on', function (): void {
+    $user = lockedQrUser('pairing-dialog-name');
+
+    $html = (string) Livewire::actingAs($user)->test(PairingFlowModal::class)->html();
+
+    expect($html)->toContain('id="pairing-modal-title"')
+        ->and($html)->toContain("setAttribute('aria-labelledby', 'pairing-modal-title')");
+});

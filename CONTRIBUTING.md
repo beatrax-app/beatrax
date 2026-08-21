@@ -1,8 +1,8 @@
-# Contributing to beatrax
+# Contributing to Beatrax
 
 ## Welcome
 
-beatrax is a small, local-only personal-finance dashboard built in
+Beatrax is a small, local-only personal-finance dashboard built in
 Laravel and Livewire. Contributions are welcome — bug fixes,
 performance work, additional ingestion adapters, additional
 categorization rules, additional email-receipt parsers, and (when
@@ -180,7 +180,7 @@ Not in scope:
 - Switching the database away from SQLite, switching the frontend stack
   away from Livewire, or other foundational rework. These would be
   whole-architecture conversations, not pull requests.
-- Anything that requires the app to phone home — beatrax is local-only
+- Anything that requires the app to phone home — Beatrax is local-only
   by design, and that constraint won't move.
 
 If you have an idea that sits in the grey zone, open a Discussion

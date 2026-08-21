@@ -77,7 +77,7 @@ it('round-trips the data key through the keychain and the prompt', function (): 
     $dataKey = random_bytes(32);
 
     expect($vault->enroll(COLD_START_USER_ID, $dataKey))->toBeTrue()
-        ->and($vault->recover(COLD_START_USER_ID, 'Unlock beatrax'))->toBe($dataKey);
+        ->and($vault->recover(COLD_START_USER_ID, 'Unlock Beatrax'))->toBe($dataKey);
 });
 
 it('scopes the stored key per user so two accounts never collide', function (): void {
@@ -88,8 +88,8 @@ it('scopes the stored key per user so two accounts never collide', function (): 
     $vault->enroll(1, $first);
     $vault->enroll(2, $second);
 
-    expect($vault->recover(1, 'Unlock beatrax'))->toBe($first)
-        ->and($vault->recover(2, 'Unlock beatrax'))->toBe($second);
+    expect($vault->recover(1, 'Unlock Beatrax'))->toBe($first)
+        ->and($vault->recover(2, 'Unlock Beatrax'))->toBe($second);
 });
 
 it('writes the wrapped key 0600 and never in the clear', function (): void {
@@ -132,13 +132,13 @@ it('refuses to enroll when safeStorage returns nothing', function (?string $refu
 })->with([[null], ['']]);
 
 it('recovers nothing when the user was never enrolled', function (): void {
-    expect(coldStartVault()->recover(COLD_START_USER_ID, 'Unlock beatrax'))->toBeNull();
+    expect(coldStartVault()->recover(COLD_START_USER_ID, 'Unlock Beatrax'))->toBeNull();
 });
 
 it('recovers nothing when the authentication is refused', function (): void {
     coldStartVault()->enroll(COLD_START_USER_ID, random_bytes(32));
 
-    expect(coldStartVault(prompted: false)->recover(COLD_START_USER_ID, 'Unlock beatrax'))->toBeNull();
+    expect(coldStartVault(prompted: false)->recover(COLD_START_USER_ID, 'Unlock Beatrax'))->toBeNull();
 });
 
 it('recovers nothing when the stored file is empty', function (): void {
@@ -146,7 +146,7 @@ it('recovers nothing when the stored file is empty', function (): void {
     $vault->enroll(COLD_START_USER_ID, random_bytes(32));
     file_put_contents(coldStartKeyFile(), '');
 
-    expect($vault->recover(COLD_START_USER_ID, 'Unlock beatrax'))->toBeNull();
+    expect($vault->recover(COLD_START_USER_ID, 'Unlock Beatrax'))->toBeNull();
 });
 
 // The keychain refusing to decrypt is the ordinary shape of "this file was
@@ -156,7 +156,7 @@ it('recovers nothing when the keychain will not decrypt', function (): void {
     $vault->enroll(COLD_START_USER_ID, random_bytes(32));
     file_put_contents(coldStartKeyFile(), 'written-by-another-machine');
 
-    expect($vault->recover(COLD_START_USER_ID, 'Unlock beatrax'))->toBeNull();
+    expect($vault->recover(COLD_START_USER_ID, 'Unlock Beatrax'))->toBeNull();
 });
 
 it('recovers nothing when the decrypted payload is not the blob it wrote', function (): void {
@@ -164,7 +164,7 @@ it('recovers nothing when the decrypted payload is not the blob it wrote', funct
     $vault->enroll(COLD_START_USER_ID, random_bytes(32));
     file_put_contents(coldStartKeyFile(), 'enc:'.base64_encode('too-short'));
 
-    expect($vault->recover(COLD_START_USER_ID, 'Unlock beatrax'))->toBeNull();
+    expect($vault->recover(COLD_START_USER_ID, 'Unlock Beatrax'))->toBeNull();
 });
 
 it('forgets an enrollment and stays silent when there is nothing to forget', function (): void {

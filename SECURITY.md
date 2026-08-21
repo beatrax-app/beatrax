@@ -1,6 +1,6 @@
 # Security Policy
 
-beatrax handles a person's complete banking history on their own
+Beatrax handles a person's complete banking history on their own
 machine. That class of data carries real consequences if something goes
 wrong, so we take security reports seriously and want them routed
 through a private channel that lets us patch before the issue is
@@ -29,10 +29,10 @@ flow.
 
 **In scope:**
 
-- The beatrax application code in this repository.
+- The Beatrax application code in this repository.
 - The bundled PHP dependencies declared in `composer.json` (Laravel,
   Livewire, Flux, genkgo/camt, brick/money, etc.) when the vulnerability
-  is reachable through beatrax's specific usage.
+  is reachable through Beatrax's specific usage.
 - The bundled Electron/NativePHP shell layer in the released
   installers.
 - The auto-update path (Ed25519 manifest signing + SHA-512 binary
@@ -42,15 +42,15 @@ flow.
 
 **Out of scope:**
 
-- Vulnerabilities in third-party services beatrax integrates with
+- Vulnerabilities in third-party services Beatrax integrates with
   (Gmail API, Microsoft Graph, your OS) unless they are triggered
-  exclusively by a flaw in beatrax's own handling.
-- Operating-system-level security on the user's machine. beatrax assumes
+  exclusively by a flaw in Beatrax's own handling.
+- Operating-system-level security on the user's machine. Beatrax assumes
   the host OS is uncompromised; OS-level compromise is outside what a
   user-space application can defend against.
 - Social engineering of the maintainer, GitHub itself, or any
   GitHub-managed infrastructure.
-- Issues that require a user to actively grant beatrax destructive
+- Issues that require a user to actively grant Beatrax destructive
   permissions on their own machine.
 - Theoretical risks that have no demonstrable reproduction.
 
@@ -77,7 +77,7 @@ timeline together.
 | Patch ships or detailed status update | within 60 days |
 | Public disclosure (coordinated with reporter) | 90 days from acknowledgment, unless extended |
 
-These are targets, not guarantees — beatrax is maintained by a small
+These are targets, not guarantees — Beatrax is maintained by a small
 team in their spare time. If something slips, we'll tell you why.
 
 ## Credit

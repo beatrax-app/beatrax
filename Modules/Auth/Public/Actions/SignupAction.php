@@ -13,6 +13,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use Modules\Auth\Internal\Recovery\RecoveryCodeGenerator;
+use Modules\Auth\Internal\Support\Username;
 use Modules\Auth\Models\UserRecoveryCode;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
@@ -43,10 +44,16 @@ final class SignupAction
      */
     public function __invoke(string $usernameInput, string $password, bool $seedsStarterData = true): array
     {
-        $username = strtolower(trim($usernameInput));
+        $username = Username::normalize($usernameInput);
 
         if ($username === '') {
             throw new InvalidArgumentException('SignupAction: username must not be empty.');
+        }
+
+        if (! Username::isValid($username)) {
+            throw ValidationException::withMessages([
+                'username' => Lang::get('auth::signup.error_username_invalid'),
+            ]);
         }
 
         if (strlen($password) < self::MINIMUM_PASSWORD_LENGTH) {

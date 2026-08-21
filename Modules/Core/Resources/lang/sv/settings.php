@@ -56,6 +56,7 @@ return [
         'fetch_aria' => 'Hämta aktuella växelkurser online',
         'refreshing' => 'Uppdaterar…',
         'next_refresh' => 'Nästa automatiska uppdatering: dagligen kl. 09:00',
+        'refresh_gave_up' => 'Kunde inte uppdatera kurserna. Kurserna som redan finns på enheten används fortfarande.',
         'refresh_now' => 'Uppdatera nu',
     ],
 

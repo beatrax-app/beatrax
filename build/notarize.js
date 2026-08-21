@@ -29,8 +29,9 @@ export default async (context) => {
     const { appOutDir } = context;
     const appName = context.packager.appInfo.productFilename;
 
-    // NATIVEPHP_APP_ID belongs to the mobile root and is unset here, so the
-    // published hook passed undefined as the bundle id it was notarising.
+    // Read from electron-builder rather than the environment: the published
+    // hook took NATIVEPHP_APP_ID, which nothing sets for the desktop root, and
+    // notarised under an undefined bundle id.
     const appBundleId = context.packager.appInfo.macBundleIdentifier;
 
     await notarize({

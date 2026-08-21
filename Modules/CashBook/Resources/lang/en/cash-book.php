@@ -30,6 +30,7 @@ return [
 
     'errors' => [
         'amount_positive' => 'Enter an amount greater than zero.',
+        'amount_too_large' => 'That amount is too large. Check the digits.',
         'invalid_date' => 'Enter a valid date.',
     ],
 

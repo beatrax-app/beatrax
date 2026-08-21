@@ -18,5 +18,6 @@ return [
     'error_generic' => 'No se ha podido crear el usuario.',
 
     'error_min_length' => 'Usa al menos 12 caracteres.',
+    'error_username_invalid' => 'Usa hasta 32 letras, cifras, puntos, guiones o guiones bajos.',
     'error_duplicate' => 'Ese nombre de usuario ya se usa en este dispositivo. Prueba con otro.',
 ];

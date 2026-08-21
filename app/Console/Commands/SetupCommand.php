@@ -27,7 +27,7 @@ final class SetupCommand extends Command
 
     public function handle(Repository $config, DatabaseProbe $probe): int
     {
-        intro('beatrax server setup');
+        intro('Beatrax server setup');
 
         $this->ensureEnvFileExists();
         $this->ensureAppKey($config);

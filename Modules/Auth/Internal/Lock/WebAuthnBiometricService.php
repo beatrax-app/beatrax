@@ -79,7 +79,7 @@ final class WebAuthnBiometricService
         }
 
         $options = PublicKeyCredentialCreationOptions::create(
-            rp: PublicKeyCredentialRpEntity::create('beatrax', $rpId),
+            rp: PublicKeyCredentialRpEntity::create('Beatrax', $rpId),
             user: PublicKeyCredentialUserEntity::create(
                 $username,
                 (string) $userId,
@@ -140,7 +140,7 @@ final class WebAuthnBiometricService
         }
 
         $creationOptions = PublicKeyCredentialCreationOptions::create(
-            rp: PublicKeyCredentialRpEntity::create('beatrax', $this->rpId()),
+            rp: PublicKeyCredentialRpEntity::create('Beatrax', $this->rpId()),
             user: PublicKeyCredentialUserEntity::create(
                 $username,
                 (string) $userId,

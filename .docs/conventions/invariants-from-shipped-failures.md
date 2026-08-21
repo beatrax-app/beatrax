@@ -538,6 +538,29 @@ A daemon's stdout is a log too: `relay:serve` and `sync:serve` run under a
 supervisor that captures it to the same kind of file, so a `$this->error()`
 carrying the message in a console command is the same disclosure.
 
+## A view name nothing answers to
+
+`tests/Contracts/ViewReferencesResolveArchTest.php`
+
+`$factory->composer('core::livewire.top-nav', …)` against a view that no longer
+exists does not throw. A composer is stored under its view name and consulted
+when that name is rendered; a name nothing renders is simply never consulted.
+The provider boots, the callback is registered, and it never runs.
+
+The redesign that replaced the top navigation with the sidebar deleted the view
+and left five providers bound to its name. They sat inert for a whole phase.
+Two were harmless duplicates of counts the sidebar already had, but three held
+badges the product then did not have at all — Inboxes, Chains and Forecast
+shipped with no count on them, and nothing anywhere said so. Thirteen tests were
+parked as `->todo()` rather than failing, so the suite stayed green over the
+gap.
+
+Rendering channels fail loudly by comparison — `@include`, `@extends`, `view()`
+and `Route::view()` all throw `InvalidArgumentException` on the page — but they
+are named as strings in exactly the same way, so the rule reads all of them and
+asks the view finder whether anything answers. `x-<ns>::` component tags resolve
+through the Blade component resolver rather than the finder and stay outside it.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

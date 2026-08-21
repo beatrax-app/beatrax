@@ -36,6 +36,7 @@
                     codes: @js($codes),
                     payload: @js($downloadPayload),
                     filename: @js($downloadFilename),
+                    exportUrl: @js($exportUrl),
                     async copy() {
                         // The webview withholds navigator.clipboard outside a
                         // secure context, and this screen is the one that can
@@ -51,7 +52,26 @@
 
                         this.failed = true;
                     },
-                    save() {
+                    async save() {
+                        // A phone: hand the file to the OS share sheet and
+                        // report what the endpoint says. The blob path below
+                        // writes nothing in a WebView, with no error and no
+                        // console entry, so claiming success there is a lie.
+                        if (this.exportUrl) {
+                            try {
+                                const response = await fetch(this.exportUrl, { headers: { 'Accept': 'application/json' } });
+                                const result = await response.json();
+
+                                this.saved = result.saved === true;
+                                this.failed = result.saved !== true;
+                            } catch (e) {
+                                this.saved = false;
+                                this.failed = true;
+                            }
+
+                            return;
+                        }
+
                         const url = URL.createObjectURL(new Blob([this.payload], { type: 'text/plain' }));
                         const link = document.createElement('a');
                         link.href = url;
@@ -87,7 +107,7 @@
 
             </div>
 
-            <p x-show="saved" x-cloak aria-live="polite" class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::recovery_codes.saved_as', ['username' => $username]) }}</p>
+            <p x-show="saved" x-cloak aria-live="polite" class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::recovery_codes.saved_as', ['username' => $downloadSlug]) }}</p>
             <p x-show="failed" x-cloak role="alert" aria-live="assertive" class="text-sm text-rose-600 dark:text-rose-400">{{ Lang::get('auth::recovery_codes.copy_failed') }}</p>
         </div>
 

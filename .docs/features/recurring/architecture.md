@@ -82,7 +82,7 @@ What the module explicitly does NOT do:
   - `RecurringSeriesQuery::lastTwoOccurrences($seriesId,
     $user)` — the read consumed by `DriftAlerts::DriftEvaluator`.
   - `RecurringSeriesQuery::pendingCountForUser($user)` —
-    the top-nav badge.
+    the pending-review count.
   - `FixedPaymentsViewQuery::for($user)` — the dashboard
     fixed-payments card data.
 
@@ -500,5 +500,5 @@ The user-facing actions:
 /recurring → main list page
 /recurring/{seriesId} → series detail
 dashboard → FixedPaymentsCard
-top-nav badge → RecurringSeriesQuery::pendingCountForUser
+sidebar badge → NavCountsService active-series count
 ```

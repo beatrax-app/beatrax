@@ -4,7 +4,7 @@ The `DriftAlerts` module watches every approved recurring series and
 raises a `drift_alerts` row when the latest occurrence's amount
 deviates from the prior occurrence by more than the effective
 threshold. It hosts the `/drift` page, the dashboard drift-count
-badge, the top-nav drift badge, the per-series threshold override
+badge, the sidebar drift badge, the per-series threshold override
 editor, and the queued evaluation that fans out from the
 `Recurring::RecurringSeriesMetricsRefreshed` event.
 
@@ -149,7 +149,7 @@ drifted up (an open drift alert exists) and the corpus has a
 cancellation page; (3) `review`: an ongoing charge at or above the EUR
 review floor with a cancellation page. One suggestion per subscription,
 dismissible via a stable persisted key, ranked by monthly cost — purely
-informational, beatrax surfaces the official link and never acts on the
+informational, Beatrax surfaces the official link and never acts on the
 user's behalf. `forUser()` is cached per user so the dashboard card
 doesn't re-run the resolution fan-out on every render; the cache is
 invalidated on `dismiss()` and also expires within the TTL so new
@@ -332,9 +332,9 @@ letting Carbon raise a bare `InvalidFormatException` out of an unscoped
 - `RecurringSeriesMetricsRefreshed` (raised by `Recurring`) — the
   external trigger. The listener subscribes via the provider's
   `registerListener()` private method.
-- The top-nav badge composer (`registerTopNavBadgeComposer()`)
-  injects `driftOpenCount` into `core::livewire.top-nav` via the
-  ViewFactory contract (no `view()` helper).
+- The sidebar's drift badge is not wired here: `NavCountsService`
+  computes it alongside the rail's other counts, applying the same
+  revival-aware open-state predicate this module's query uses.
 
 ## Data flow
 

@@ -24,5 +24,6 @@ return [
     'error_generic' => 'Registraci se nepodařilo dokončit.',
 
     'error_min_length' => 'Použij alespoň 12 znaků.',
+    'error_username_invalid' => 'Použij nejvýše 32 písmen, číslic, teček, pomlček nebo podtržítek.',
     'error_closed' => 'Registrace je na tomto zařízení uzavřená.',
 ];

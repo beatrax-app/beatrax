@@ -175,3 +175,14 @@ it('localizes the browser tab title on the branch a signed-in reader takes', fun
         ->toContain('<title>Potjes · Beatrax</title>')
         ->not->toContain('<title>Pots · Beatrax</title>');
 });
+
+// A pot needs an account, and the page hid every action when there was none —
+// leaving the empty state with no way forward at all.
+it('offers the import wizard when there is no account to hold a pot', function (): void {
+    $this->account->delete();
+
+    Livewire::test(PotsPage::class)
+        ->assertOk()
+        ->assertSee('Import a statement')
+        ->assertSee(route('imports.new'), escape: false);
+});

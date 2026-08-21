@@ -47,7 +47,11 @@
              BarcodeDetector — no JS decode library — and the scanner plugin's
              full-screen activity is the fallback where neither is offered.
              Both funnel into the same submitCode(). --}}
-        <div x-data="beatraxInlineScanner($wire)" x-init="probe()" x-on:beatrax-step-left.window="stop()">
+        {{-- No beatrax-step-left listener: nothing ever dispatched that event.
+             Leaving the scan step renders this branch away, and Alpine's
+             destroy() hook stops the stream — which is what actually closes
+             the camera. --}}
+        <div x-data="beatraxInlineScanner($wire)" x-init="probe()">
             {{-- The filled panel is the IDLE state's affordance — it shows
                  there is a frame to fill. Once the camera is live it is pure
                  chrome behind an opaque video, and dropping it lets the

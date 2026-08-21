@@ -45,7 +45,7 @@ final readonly class DestructiveSpawnController
 
         $payload = $request->all();
         $confirmed = $payload['confirmed_typed'] ?? '';
-        if (! is_string($confirmed) || ! hash_equals('beatrax', $confirmed)) {
+        if (! is_string($confirmed) || ! hash_equals('Beatrax', $confirmed)) {
             throw new AccessDeniedHttpException('app_name_mismatch');
         }
 

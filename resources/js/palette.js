@@ -1,4 +1,4 @@
-import Fuse from 'fuse.js';
+import { createPaletteMatcher } from './palette-match.js';
 
 /**
  * Alpine factory for the command palette modal.
@@ -9,13 +9,8 @@ import Fuse from 'fuse.js';
  * `is_developer` at the controller layer) and the seeded Recent
  * list.
  *
- * Fuse.js config is LOCKED per UI-SPEC § Component inventory:
- *
- *   - keys[0] label    weight: 0.65
- *   - keys[1] hint     weight: 0.20
- *   - keys[2] keywords weight: 0.15
- *   - threshold: 0.35
- *   - ignoreLocation: true
+ * Filtering the registry — the tiers, the plural and accent folding, and the
+ * locked Fuse.js weights — lives in ./palette-match.js.
  *
  * Server-backed search:
  *   - When query.length >= 2, a debounced (200ms) server fetch fires via
@@ -67,7 +62,7 @@ export const palette = (registry, recent) => ({
     activeIndex: 0,
     recent: Array.isArray(recent) ? recent : [],
     registry: Array.isArray(registry) ? registry : [],
-    fuse: null,
+    match: null,
 
     // Server-backed search state (08-05)
     serverTransactionHits: [],
@@ -90,15 +85,7 @@ export const palette = (registry, recent) => ({
     tokenActiveIndex: 0,
 
     init() {
-        this.fuse = new Fuse(this.registry, {
-            keys: [
-                { name: 'label', weight: 0.65 },
-                { name: 'hint', weight: 0.20 },
-                { name: 'keywords', weight: 0.15 },
-            ],
-            threshold: 0.35,
-            ignoreLocation: true,
-        });
+        this.match = createPaletteMatcher(this.registry);
 
         // Resolve the search.palette-search-endpoint Livewire component
         // so we can call $wire.search() on it. Use a lazy resolver so
@@ -261,13 +248,10 @@ export const palette = (registry, recent) => ({
     },
 
     get results() {
-        if (!this.query) {
-            return this.registry.map((item) => ({ item }));
-        }
-        if (!this.fuse) {
+        if (!this.match) {
             return [];
         }
-        return this.fuse.search(this.query);
+        return this.match(this.query);
     },
 
     /**

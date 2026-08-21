@@ -121,7 +121,7 @@
             :body="Lang::get('counterparties::index.empty_body')"
         >
             <a
-                href="/imports"
+                href="{{ route('imports.new') }}"
                 class="pill-btn-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                 style="display: inline-block;"
             >{{ Lang::get('counterparties::index.empty_cta') }}</a>

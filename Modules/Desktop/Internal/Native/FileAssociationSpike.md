@@ -16,7 +16,7 @@ an open-file path.
 
 What we need to settle for `.csv` / `.eml`:
 
-1. Register `.csv` / `.eml` so the OS offers "Open With beatrax".
+1. Register `.csv` / `.eml` so the OS offers "Open With Beatrax".
 2. Acquire a single-instance lock on Windows + Linux (NativePHP only acquires
    it when a deep-link scheme is configured).
 3. Handle THREE equivalent inputs:
@@ -46,7 +46,7 @@ modified by this spike:
 
 Adds the `fileAssociations` block. Each entry registers both the macOS
 `CFBundleDocumentTypes` and the Windows registry / Linux `.desktop` MIME
-binding so the OS surfaces "Open With beatrax" on a `.csv` or `.eml`. The
+binding so the OS surfaces "Open With Beatrax" on a `.csv` or `.eml`. The
 entries are placed BEFORE the spread of the optional `updaterConfig` so
 both keys can be merged cleanly into the same exported object.
 
@@ -56,7 +56,7 @@ fileAssociations: [
         ext: 'csv',
         name: 'Comma-Separated Values',
         description: 'Bank or PayPal CSV export',
-        role: 'Editor', // macOS — beatrax reads + writes derived data
+        role: 'Editor', // macOS — Beatrax reads + writes derived data
         mimeType: 'text/csv', // Linux — populates .desktop MimeType=
     },
     {

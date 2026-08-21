@@ -1,6 +1,6 @@
 {
-  "name": "beatrax",
-  "short_name": "beatrax",
+  "name": "Beatrax",
+  "short_name": "Beatrax",
   "display": "standalone",
   "start_url": "/",
   "background_color": "#f8fafc",

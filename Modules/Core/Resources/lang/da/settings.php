@@ -56,6 +56,7 @@ return [
         'fetch_aria' => 'Hent aktuelle valutakurser online',
         'refreshing' => 'Opdaterer…',
         'next_refresh' => 'Næste automatiske opdatering: dagligt kl. 09:00',
+        'refresh_gave_up' => 'Kunne ikke opdatere kurserne. Kurserne på denne enhed bruges fortsat.',
         'refresh_now' => 'Opdatér nu',
     ],
 

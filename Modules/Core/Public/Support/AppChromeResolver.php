@@ -72,6 +72,7 @@ final class AppChromeResolver
             isDark: $theme->isDark($osTheme),
             needsPrePaintScript: $theme->needsPrePaintScript($osTheme),
             locale: $this->translator->getLocale(),
+            theme: $theme->value,
         );
     }
 }

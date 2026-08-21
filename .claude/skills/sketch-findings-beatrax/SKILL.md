@@ -1,10 +1,10 @@
 ---
 name: sketch-findings-beatrax
-description: Validated design decisions, CSS patterns, and visual direction from sketch experiments. Auto-loaded during UI implementation on beatrax.
+description: Validated design decisions, CSS patterns, and visual direction from sketch experiments. Auto-loaded during UI implementation on Beatrax.
 ---
 
 <context>
-## Project: beatrax
+## Project: Beatrax
 
 **Design direction:** Calm slate Linear/Notion aesthetic, same room as the
 existing app, denser inside `/dev/*`. The Dev Console reuses the app-wide
@@ -58,7 +58,7 @@ section labels for Dev Console items, with a "← Back to app" foot row.
 not a convenience. The artisan runner page is a timeline reader; the
 form lives inside the palette flow. Destructive actions always pass
 through a triple-gate modal (Dev Mode ON + Advanced session toggle ON +
-type `beatrax` to confirm).
+type `Beatrax` to confirm).
 
 **Theming** — full light/dark token coverage in
 `sources/themes/default.css`. One localized exception: the `/dev`

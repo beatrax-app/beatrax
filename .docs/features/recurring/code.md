@@ -87,7 +87,7 @@ Modules/Recurring/
     list<RecurringOccurrenceDto>` — the read consumed by
     `DriftAlerts::DriftEvaluator`.
   - `RecurringSeriesQuery::pendingCountForUser($user): int`
-    — top-nav badge query.
+    — pending-review count.
   - `FixedPaymentsViewQuery::for(User $user)` — dashboard
     card data.
 
@@ -175,5 +175,6 @@ Migrations (8 total):
   guarded).
 - Registers four Livewire components under the `recurring.*`
   namespace.
-- Registers the top-nav badge composer via the ViewFactory
-  contract (no `view()` helper).
+- Registers no view composer. The sidebar's Recurring badge is one of
+  the counts `Core`'s `NavCountsService` computes, so the number has a
+  single source.

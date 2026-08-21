@@ -24,5 +24,6 @@ return [
     'error_generic' => 'Registracije ni bilo mogoče dokončati.',
 
     'error_min_length' => 'Uporabi vsaj 12 znakov.',
+    'error_username_invalid' => 'Uporabi največ 32 črk, števk, pik, pomišljajev ali podčrtajev.',
     'error_closed' => 'Registracija v tej napravi je zaprta.',
 ];

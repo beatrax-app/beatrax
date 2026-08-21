@@ -692,3 +692,24 @@ describe('CashBookPage tax badge', function (): void {
         $component->assertDontSee('data-testid="tax-badge-tagged-'.$ownerTxId.'"', false);
     });
 });
+
+// Tag and Delete sit in the same row on a phone. Delete is an x-core::emoji-action
+// and Tag was a hand-rolled 18px pill, so one row carried two shapes for one idea.
+it('draws the touch Tag action as the emoji action every sole icon action is', function (): void {
+    $html = $this->blade(
+        '<x-tax::tax-badge :transaction="$transaction" :showAlways="true" />',
+        ['transaction' => ['id' => 7, 'taxTagged' => false, 'taxCategoryShortName' => null]],
+    );
+
+    $html->assertSee('emoji-action', false)
+        ->assertDontSee('tax-badge--untagged', false);
+});
+
+it('keeps the word on the hover-reveal surface, where there is room for it', function (): void {
+    $html = $this->blade(
+        '<x-tax::tax-badge :transaction="$transaction" :showAlways="false" />',
+        ['transaction' => ['id' => 7, 'taxTagged' => false, 'taxCategoryShortName' => null]],
+    );
+
+    $html->assertSee('tax-badge--untagged', false);
+});

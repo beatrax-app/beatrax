@@ -22,7 +22,7 @@ final class NativeBiometricUnlock
         return System::canPromptTouchID();
     }
 
-    public function prompt(string $reason = 'Unlock beatrax'): bool
+    public function prompt(string $reason = 'Unlock Beatrax'): bool
     {
         if (! $this->isAvailable()) {
             return false;

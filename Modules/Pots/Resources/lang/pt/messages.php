@@ -14,6 +14,7 @@ return [
         'heading' => 'Ainda não há reservas',
         'body' => 'Cria subsaldos virtuais dentro de qualquer conta para organizares o teu dinheiro sem uma transferência bancária real.',
         'cta' => 'Adiciona a tua primeira reserva',
+        'no_accounts_cta' => 'Importar um extrato',
     ],
 
     'common' => [

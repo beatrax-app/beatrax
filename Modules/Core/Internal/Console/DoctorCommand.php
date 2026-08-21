@@ -91,7 +91,7 @@ final class DoctorCommand extends Command
             self::ROW_FORMAT,
             'ext-imap',
             'info',
-            ($loaded ? 'loaded' : 'not loaded').' (beatrax uses webklex/php-imap regardless)',
+            ($loaded ? 'loaded' : 'not loaded').' (Beatrax uses webklex/php-imap regardless)',
         ));
 
         $this->line('');

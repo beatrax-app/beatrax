@@ -107,6 +107,17 @@ it('renders the truncate button, totals strip, and stats URL on /dev/logs', func
     expect($html)->toContain('/dev/logs/stats');
 });
 
+// The tailer bound `logs-truncated` while truncate() dispatched
+// `logs:truncated`, so handleTruncated() never ran: the operator emptied the
+// file and watched the old buffer sit there until the next poll round-trip.
+it('binds the tail reset to the exact name truncate() dispatches', function (): void {
+    $user = logTailerUser('log-tailer-reset-binding');
+
+    $html = (string) $this->actingAs($user)->get('/dev/logs')->getContent();
+
+    expect($html)->toContain('x-on:'.LogTailerPage::TRUNCATED_EVENT.'.window="handleTruncated()"');
+});
+
 it('truncate() empties today\'s log file and dispatches the logs:truncated reset event', function (): void {
     // Sandbox the log path: truncate() would otherwise empty the developer's
     // own local log.

@@ -34,6 +34,10 @@ final class CategorizationProvenancePanel extends Component
 
     public bool $confirmingRemove = false;
 
+    public bool $overriding = false;
+
+    public ?int $overrideCategoryId = null;
+
     public function mount(
         int $transactionId,
         DatabaseManager $db,
@@ -89,9 +93,20 @@ final class CategorizationProvenancePanel extends Component
         $this->hydrateFromProvenance($db, $currentUser, $rules);
     }
 
-    public function overrideMemory(): void
+    // Reveals the picker in place rather than announcing it. This used to
+    // dispatch `inline-category-picker:open`; the picker mounts per row on
+    // the transactions list and declares no listener, so the only action the
+    // memory card offers reached nothing and did nothing.
+    public function overrideMemory(DatabaseManager $db, CurrentUser $currentUser): void
     {
-        $this->dispatch('inline-category-picker:open', transactionId: $this->transactionId);
+        $persisted = $db->connection()
+            ->table('transactions')
+            ->where('id', $this->transactionId)
+            ->where('user_id', $currentUser->user()->id)
+            ->value('category_id');
+
+        $this->overrideCategoryId = is_numeric($persisted) ? (int) $persisted : null;
+        $this->overriding = true;
     }
 
     public function render(ViewFactory $views): View
@@ -103,6 +118,8 @@ final class CategorizationProvenancePanel extends Component
             'conditionSummary' => $this->conditionSummary,
             'categoryPath' => $this->categoryPath,
             'confirmingRemove' => $this->confirmingRemove,
+            'overriding' => $this->overriding,
+            'overrideCategoryId' => $this->overrideCategoryId,
             'flashMessage' => $this->flashMessage,
         ]);
     }

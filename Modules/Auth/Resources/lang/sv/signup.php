@@ -24,5 +24,6 @@ return [
     'error_generic' => 'Registreringen kunde inte slutföras.',
 
     'error_min_length' => 'Använd minst 12 tecken.',
+    'error_username_invalid' => 'Använd högst 32 bokstäver, siffror, punkter, bindestreck eller understreck.',
     'error_closed' => 'Registrering är stängd på den här enheten.',
 ];

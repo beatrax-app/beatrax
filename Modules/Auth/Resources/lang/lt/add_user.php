@@ -18,5 +18,6 @@ return [
     'error_generic' => 'Naudotojo sukurti nepavyko.',
 
     'error_min_length' => 'Naudok bent 12 simbolių.',
+    'error_username_invalid' => 'Naudok iki 32 raidžių, skaitmenų, taškų, brūkšnelių arba pabraukimų.',
     'error_duplicate' => 'Toks naudotojo vardas šiame įrenginyje jau naudojamas. Pasirink kitą.',
 ];

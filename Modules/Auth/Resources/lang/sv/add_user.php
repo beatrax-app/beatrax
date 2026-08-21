@@ -18,5 +18,6 @@ return [
     'error_generic' => 'Användaren kunde inte skapas.',
 
     'error_min_length' => 'Använd minst 12 tecken.',
+    'error_username_invalid' => 'Använd högst 32 bokstäver, siffror, punkter, bindestreck eller understreck.',
     'error_duplicate' => 'Det användarnamnet används redan på den här enheten. Prova ett annat.',
 ];

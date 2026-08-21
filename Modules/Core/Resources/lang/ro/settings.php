@@ -56,6 +56,7 @@ return [
         'fetch_aria' => 'Preia online cursurile valutare actuale',
         'refreshing' => 'Se reîmprospătează…',
         'next_refresh' => 'Următoarea reîmprospătare automată: zilnic la 09:00',
+        'refresh_gave_up' => 'Cursurile nu au putut fi reîmprospătate. Se folosesc în continuare cele de pe acest dispozitiv.',
         'refresh_now' => 'Reîmprospătează acum',
     ],
 

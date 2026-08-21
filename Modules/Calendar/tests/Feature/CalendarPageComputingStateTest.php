@@ -88,6 +88,60 @@ it('renders "—" in the balance corner when ForecastDto.isComputing is true for
         ->assertSee('—');
 });
 
+it('announces "Projection updating…" while a run is in flight for a balance account', function (): void {
+    $db = app(DatabaseManager::class);
+    $user = cpcsUser('cpcs-strip-inflight');
+    $accountId = cpcsAccount($db, $user->id, 'Strip Account');
+
+    $db->connection()->table('forecast_runs')->insert([
+        'user_id' => $user->id,
+        'scenario_id' => null,
+        'horizon_days' => 365,
+        'status' => 'running',
+        'result_json' => null,
+        'created_at' => '2026-06-12 00:00:00',
+        'updated_at' => '2026-06-12 00:00:00',
+    ]);
+
+    Livewire::actingAs($user)
+        ->test(CalendarPage::class, [
+            'month' => 6,
+            'year' => 2026,
+            'balanceAccountIds' => [$accountId],
+        ])
+        ->assertSee('Projection updating…');
+});
+
+it('does not claim to be updating when no account feeds the balance line', function (): void {
+    $user = cpcsUser('cpcs-no-accounts');
+
+    Livewire::actingAs($user)
+        ->test(CalendarPage::class, ['month' => 6, 'year' => 2026])
+        ->assertDontSee('Projection updating…');
+});
+
+it('does not claim to be updating when the only account is not a balance source', function (): void {
+    $db = app(DatabaseManager::class);
+    $user = cpcsUser('cpcs-card-only');
+    $hex = bin2hex(random_bytes(4));
+    $db->connection()->table('accounts')->insert([
+        'user_id' => $user->id,
+        'name' => 'Card Only',
+        'slug' => 'cpcs-card-'.$hex,
+        'kind' => 'ics_card',
+        'iban' => 'NL00CPCS'.strtoupper($hex),
+        'default_currency' => 'EUR',
+        'opening_balance_minor' => 0,
+        'opening_balance_as_of_date' => '2026-06-01',
+        'created_at' => '2026-06-01 00:00:00',
+        'updated_at' => '2026-06-01 00:00:00',
+    ]);
+
+    Livewire::actingAs($user)
+        ->test(CalendarPage::class, ['month' => 6, 'year' => 2026])
+        ->assertDontSee('Projection updating…');
+});
+
 it('still renders series entries when the forecast is in computing state', function (): void {
     $db = app(DatabaseManager::class);
     $user = cpcsUser('cpcs-entries-while-computing');

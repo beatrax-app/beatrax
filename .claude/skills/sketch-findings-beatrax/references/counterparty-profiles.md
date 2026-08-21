@@ -1,6 +1,6 @@
 # Counterparty Profile Pages
 
-The `/counterparties/{slug}` profile page surfaces everything beatrax knows
+The `/counterparties/{slug}` profile page surfaces everything Beatrax knows
 about one entity that touches the user's money. **"Counterparty"** spans
 five typed kinds — `merchant`, `personal`, `bank`, `government`,
 `self_account` — plus an `unknown` fallback. One shape (a tabbed surface)

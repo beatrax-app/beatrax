@@ -24,5 +24,6 @@ return [
     'error_generic' => 'Não foi possível concluir o registo.',
 
     'error_min_length' => 'Usa pelo menos 12 caracteres.',
+    'error_username_invalid' => 'Usa no máximo 32 letras, dígitos, pontos, hífenes ou sublinhados.',
     'error_closed' => 'O registo está fechado neste dispositivo.',
 ];

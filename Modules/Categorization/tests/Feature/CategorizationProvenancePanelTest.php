@@ -259,7 +259,12 @@ it('dispatches rule-form:open with the ruleId when updateRule is clicked', funct
         ->assertDispatched('rule-form:open');
 });
 
-it('dispatches inline-category-picker:open from the memory variant overrideMemory action', function (): void {
+// The old version of this asserted `inline-category-picker:open` was
+// dispatched. It always passed, and the button it covered did nothing: the
+// picker mounts per row on the transactions list and declares no listener,
+// so on the detail page nothing was on the other end. Assert the picker is
+// on screen instead — that is the thing the user is owed.
+it('puts the category picker on screen when the memory card Override is used', function (): void {
     $txId = seedProvTransaction(
         $this->user->id,
         $this->account->id,
@@ -269,8 +274,10 @@ it('dispatches inline-category-picker:open from the memory variant overrideMemor
     );
 
     Livewire::test(CategorizationProvenancePanel::class, ['transactionId' => $txId])
+        ->assertDontSeeLivewire('categorization.inline-category-picker')
         ->call('overrideMemory')
-        ->assertDispatched('inline-category-picker:open');
+        ->assertSet('overrideCategoryId', $this->streaming->id)
+        ->assertSeeLivewire('categorization.inline-category-picker');
 });
 
 it('falls back to none variant when the referenced rule has been deleted', function (): void {

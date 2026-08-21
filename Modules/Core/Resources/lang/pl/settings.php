@@ -56,6 +56,7 @@ return [
         'fetch_aria' => 'Pobierz aktualne kursy walut online',
         'refreshing' => 'Odświeżanie…',
         'next_refresh' => 'Następne automatyczne odświeżenie: codziennie o 09:00',
+        'refresh_gave_up' => 'Nie udało się odświeżyć kursów. Nadal używane są kursy zapisane na tym urządzeniu.',
         'refresh_now' => 'Odśwież teraz',
     ],
 

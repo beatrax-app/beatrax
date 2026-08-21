@@ -30,6 +30,7 @@ return [
 
     'errors' => [
         'amount_positive' => 'Saisis un montant supérieur à zéro.',
+        'amount_too_large' => 'Ce montant est trop élevé. Vérifie les chiffres.',
         'invalid_date' => 'Saisis une date valide.',
     ],
 

@@ -281,21 +281,24 @@ it('Blade view has NO auto-dismiss (UI-SPEC: persists until user acts)', functio
     expect($blade)->not->toContain('x-init=');
 });
 
-it('SFC ignores a receipt-conflict-detected event whose userId does NOT match the current user', function (): void {
+// The removed twin of this drove a `receipt-conflict-detected` listener that
+// nothing dispatched. What actually guards a foreign user's conflict is the
+// mount read, so that is what is asserted here.
+it('shows no conflict on mount when the only pending row belongs to another user', function (): void {
     $foreign = User::create([
         'username' => 'foreign-rcr',
         'password' => 'opensesame',
         'period_start_day' => 1,
     ]);
+    seedTxAndPendingConflict(
+        $foreign,
+        $this->fixtureAccount,
+        field: 'counterparty_name',
+        stored: 'should not render',
+        incoming: 'should not render either',
+    );
 
     Livewire::test(ReceiptConflictToast::class)
-        ->dispatch('receipt-conflict-detected',
-            transactionId: 999_999,
-            userId: $foreign->id,
-            field: 'counterparty_name',
-            receiptValue: 'should not render',
-            csvValue: 'should not render either',
-        )
         ->assertSet('visible', false);
 });
 

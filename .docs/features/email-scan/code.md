@@ -109,7 +109,7 @@ Modules/EmailScan/
   - `KnownSenderQuery::all($user)` — the allow-list.
   - `DiscoveredSenderQuery::for($user)` — the panel data.
   - `InboxesBadgeCount::forCurrentUser($user)` — single COUNT for
-    the top-nav badge.
+    the sidebar badge.
 - **Actions/**
   - `PromoteDiscoveredSender::__invoke($senderId, $user)`,
     `DismissDiscoveredSender::__invoke($senderId, $user)`.
@@ -152,7 +152,7 @@ Modules/EmailScan/
 - `Internal/Listeners/RaiseReconsentAlertOnTokenFailure::handle($event)`
   — writes a single de-duped `system_alerts` row per inbox.
 - `Internal/Listeners/EmitOAuthReauthRequiredAlert::handle()` —
-  per-request belt-and-braces; runs from the top-nav composer.
+  per-request belt-and-braces; runs from the sidebar composer.
 - `Internal/LoopbackRedirectUri::compose($port = null)` —
   composes the OAuth redirect URI. The loopback port is configurable
   via the `OAUTH_LOOPBACK_PORT` env var.
@@ -207,7 +207,7 @@ historically.
 - Loads migrations, routes, views (file-/dir-existence guarded).
 - Registers three Livewire components under the `email-scan.*`
   namespace.
-- Registers the top-nav badge composer via the ViewFactory
+- Registers the sidebar badge composer via the ViewFactory
   contract (no `view()` helper). The composer also invokes
   `EmitOAuthReauthRequiredAlert::handle()` per render as a
   belt-and-braces seam for the per-request re-consent prompt.

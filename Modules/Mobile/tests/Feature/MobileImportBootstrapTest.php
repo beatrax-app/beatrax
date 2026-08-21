@@ -176,3 +176,29 @@ it('rejects mismatched passwords and a too-short PIN without provisioning anythi
 
     expect(User::query()->count())->toBe(0, 'a rejected PIN must never reach SignupAction');
 });
+
+// The first step creates nothing, so leaving it is free — and a guest screen
+// carries no top bar, while the WebView's back gesture stays off.
+it('offers a way back to the welcome screen before anything is provisioned', function (): void {
+    $this->withoutMiddleware(EnsureDatabaseReady::class);
+
+    $html = (string) Livewire::test(MobileImportBootstrap::class)->html();
+
+    expect($html)->toContain(route('mobile.welcome'));
+});
+
+it('drops the way back once the device holds an identity', function (): void {
+    $this->withoutMiddleware(EnsureDatabaseReady::class);
+
+    $html = (string) Livewire::test(MobileImportBootstrap::class)
+        ->set('username', 'phone-owner')
+        ->set('password', 'a-genuinely-long-password')
+        ->set('passwordConfirmation', 'a-genuinely-long-password')
+        ->set('pin', '426900')
+        ->set('confirmPin', '426900')
+        ->call('submit')
+        ->assertSet('step', 'recovery_codes')
+        ->html();
+
+    expect($html)->not->toContain(route('mobile.welcome'));
+});

@@ -56,6 +56,7 @@ return [
         'fetch_aria' => 'Fetch current exchange rates online',
         'refreshing' => 'Refreshing…',
         'next_refresh' => 'Next auto-refresh: daily at 09:00',
+        'refresh_gave_up' => 'Could not refresh the rates. The rates already on this device are still in use.',
         'refresh_now' => 'Refresh now',
     ],
 

@@ -34,6 +34,16 @@ inputs:
             nativephp/electron/dist/*.dmg or nativephp/electron/dist/*.exe.
             Matching nothing is a failure.
         required: true
+    expected-identifier:
+        description: >-
+            The bundle identifier the macOS artifact must declare, as
+            config('nativephp.app_id') resolves it at build time. codesign
+            prints an Identifier for whatever it was handed, so a signature
+            can be perfectly valid and still name the wrong application —
+            which is how com.nativephp.app rode every release. Required for
+            macos; ignored for windows.
+        required: false
+        default: ''
 
 runs:
     using: composite
@@ -52,6 +62,7 @@ runs:
           shell: bash
           env:
               ARTIFACT_PATH: ${{ inputs.artifact-path }}
+              EXPECTED_IDENTIFIER: ${{ inputs.expected-identifier }}
           run: |
               set -euo pipefail
 
@@ -118,6 +129,23 @@ runs:
                   if ! printf '%s\n' "$details" | grep -q '^Authority='; then
                       fail "${app}: the signature carries no certificate chain (no Authority= line), so it is ad-hoc or unsigned."
                   fi
+
+                  # Signing proves who built it; the identifier claims what it
+                  # is. A notarised bundle carrying the framework's scaffold id
+                  # is a correctly signed lie, and it is the identity macOS
+                  # keys the keychain, the sandbox container and the update
+                  # path to.
+                  if [ -z "${EXPECTED_IDENTIFIER}" ]; then
+                      fail "${app}: no expected-identifier was supplied, so the bundle identifier cannot be checked. An unverifiable identity is treated exactly like a wrong one."
+                  fi
+
+                  actual_identifier=$(printf '%s\n' "$details" | sed -n 's/^Identifier=//p' | head -n 1)
+
+                  if [ "${actual_identifier}" != "${EXPECTED_IDENTIFIER}" ]; then
+                      fail "${app}: signed as '${actual_identifier}', expected '${EXPECTED_IDENTIFIER}'. Set NATIVEPHP_APP_ID, or correct the default in config/nativephp.php."
+                  fi
+
+                  echo "Identifier=${actual_identifier} :: matches the configured app id"
 
                   echo "spctl --assess --type exec :: ${app}"
                   if ! spctl --assess --type exec --verbose=2 "$app"; then

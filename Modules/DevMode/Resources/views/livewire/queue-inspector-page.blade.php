@@ -64,7 +64,7 @@
                     size="sm"
                     class="pill-btn"
                     x-data
-                    x-on:click="$dispatch('open-modal', 'bulk-retry-confirm')"
+                    x-on:click="$dispatch('modal-show', { name: 'bulk-retry-confirm' })"
                     data-testid="bulk-retry-button"
                 >{{ Lang::get('dev::queue.bulk_retry', ['count' => count($selected)]) }}</x-core::secondary-button>
             @endif
@@ -233,8 +233,10 @@
     </div>
 
     {{-- Bulk-retry single-confirm modal. Non-destructive — no
-         triple-gate. Flux's open-modal dispatch triggers the modal;
-         confirming wires through to bulkRetryConfirm(). --}}
+         triple-gate. Flux answers to `modal-show`/`modal-close` carrying a
+         `name`, so the Breeze-style `open-modal` this used to dispatch
+         reached nothing and the modal never opened. Confirming wires
+         through to bulkRetryConfirm(). --}}
     <flux:modal name="bulk-retry-confirm" :dismissible="true">
         <div class="space-y-4">
             <flux:heading size="lg">{{ Lang::get('dev::queue.retry_modal_heading', ['count' => count($selected)]) }}</flux:heading>
@@ -245,14 +247,14 @@
                 <button
                     type="button"
                     x-data
-                    x-on:click="$dispatch('close-modal', 'bulk-retry-confirm')"
+                    x-on:click="$dispatch('modal-close', { name: 'bulk-retry-confirm' })"
                     class="inline-flex items-center rounded-md px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
                 >{{ Lang::get('dev::queue.cancel') }}</button>
                 <x-core::neutral-button
                     class="pill-btn primary"
                     wire:click="bulkRetryConfirm"
                     x-data
-                    x-on:click="$dispatch('close-modal', 'bulk-retry-confirm')"
+                    x-on:click="$dispatch('modal-close', { name: 'bulk-retry-confirm' })"
                 >{{ Lang::get('dev::queue.bulk_retry', ['count' => count($selected)]) }}</x-core::neutral-button>
             </div>
         </div>

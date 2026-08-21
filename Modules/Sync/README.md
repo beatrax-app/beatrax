@@ -7,7 +7,7 @@ for production sync work.
 ## Purpose
 
 Validates that the append-only op-log / Hybrid Logical Clock / LWW-per-field model works against
-beatrax's live SQLite schema (real triggers, UNIQUE indexes, pair-link FKs). The authoritative
+Beatrax's live SQLite schema (real triggers, UNIQUE indexes, pair-link FKs). The authoritative
 output is the findings document, not the code.
 
 **Authoritative output:** `.planning/phases/beatrax-10-spike-op-log-crdt-merge-layer-prototype/10-FINDINGS.md`

@@ -56,6 +56,7 @@ return [
         'fetch_aria' => 'Stáhnout aktuální směnné kurzy online',
         'refreshing' => 'Aktualizace…',
         'next_refresh' => 'Příští automatická aktualizace: denně v 09:00',
+        'refresh_gave_up' => 'Kurzy se nepodařilo aktualizovat. Nadále se používají kurzy uložené v tomto zařízení.',
         'refresh_now' => 'Aktualizovat',
     ],
 

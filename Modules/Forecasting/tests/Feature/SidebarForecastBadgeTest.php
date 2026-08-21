@@ -71,20 +71,33 @@ function tnfsSeedShortfall(User $user, Account $account, int $count = 1): void
 {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
-    for ($i = 0; $i < $count; $i++) {
-        $db->connection()->table('forecast_shortfall_windows')->insert([
-            'user_id' => $user->id,
-            'account_id' => $account->id,
-            'scenario_id' => null,
-            'starts_at' => CarbonImmutable::now()->toDateString(),
-            'ends_at' => CarbonImmutable::now()->addDays(7)->toDateString(),
-            'lowest_balance_minor' => -10000,
-            'currency' => 'EUR',
-            'buffer_used_minor' => 0,
-            'created_at' => '2026-05-19 00:00:00',
-            'updated_at' => '2026-05-19 00:00:00',
-        ]);
+    $row = [
+        'user_id' => $user->id,
+        'account_id' => $account->id,
+        'scenario_id' => null,
+        'starts_at' => CarbonImmutable::now()->toDateString(),
+        'ends_at' => CarbonImmutable::now()->addDays(7)->toDateString(),
+        'lowest_balance_minor' => -10000,
+        'currency' => 'EUR',
+        'buffer_used_minor' => 0,
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ];
+
+    // Chunked: SQLite caps the bindings one statement may carry, and the
+    // four-digit case seeds a thousand windows.
+    foreach (array_chunk(array_fill(0, $count, $row), 50) as $chunk) {
+        $db->connection()->table('forecast_shortfall_windows')->insert($chunk);
     }
+}
+
+// The rendered badge, asserted whole: the dashboard's forecast tile carries
+// the same sentence inside its own aria-label, so the phrase alone would not
+// prove the count reached the sidebar.
+function tnfsBadge(int $count, string $label): string
+{
+    return '<span role="img" class="side-badge alert" aria-label="'
+        .$count.' active shortfall windows in the next 30 days">'.$label.'</span>';
 }
 
 beforeEach(function (): void {
@@ -92,35 +105,41 @@ beforeEach(function (): void {
     tnfsSeedDashboardPath($this->user);
 });
 
-it('renders the Forecast slot without a badge when forecastShortfallCount=0', function (): void {
+it('renders the Forecasts slot without a badge when the shortfall count is zero', function (): void {
     $this->actingAs($this->user)
         ->get('/')
         ->assertOk()
         ->assertSeeText('Forecast')
-        ->assertDontSee('bg-rose-50');
-})->todo('16-01 replaced the top-nav with the app sidebar, so the rose-50 pill this asserts the absence of no longer ships at all — the same reason the two assertions below are deferred. It also asserts too broadly to be revived as-is: "bg-rose-50" matches inside the "hover:bg-rose-50" carried by unrelated components on the dashboard, so the negative held only while none of them rendered. The follow-up plan that re-introduces the .side-badge.alert pill gives this a marker specific to the badge.');
+        // Not "bg-rose-50", which the predecessor asserted: that also matches
+        // inside the hover:bg-rose-50 of unrelated dashboard components, so
+        // the negative held only while none of them rendered. This sentence
+        // ships from the badge and the forecast tile, and both hide at zero.
+        ->assertDontSee('active shortfall windows', false);
+});
 
-it('renders the rose-50 pill with the ↘ glyph when shortfallCount >= 1', function (): void {
+it('renders the rose alert badge on the Forecasts row when the shortfall count is 1', function (): void {
     $account = tnfsAsnAccount($this->user, 'sf-'.bin2hex(random_bytes(3)));
     tnfsSeedShortfall($this->user, $account, 1);
 
     $this->actingAs($this->user)
         ->get('/')
         ->assertOk()
-        ->assertSee('bg-rose-50')
-        ->assertSee('text-rose-700')
-        ->assertSee('↘', escape: false);
-})->todo('16-01 replaced the top-nav with the app sidebar. The Forecast rose-50 pill + ↘ glyph chrome no longer ships in the new sidebar markup; a follow-up plan re-wires the forecast composer onto core::livewire.app-sidebar and re-introduces the .side-badge.alert pill, at which point this assertion is updated to match the new chrome.');
+        ->assertSee(tnfsBadge(1, '1'), false);
+});
 
-it('caps the badge label at 99+ for very large shortfall counts', function (): void {
+it('compacts the badge label to 1k once the shortfall count reaches four digits', function (): void {
     $account = tnfsAsnAccount($this->user, 'sf-many-'.bin2hex(random_bytes(3)));
-    tnfsSeedShortfall($this->user, $account, 100);
+    tnfsSeedShortfall($this->user, $account, 1000);
 
     $this->actingAs($this->user)
         ->get('/')
         ->assertOk()
-        ->assertSee('99+');
-})->todo('16-01 replaced the top-nav with the app sidebar. The Forecast 99+ badge label no longer ships in the new sidebar markup; a follow-up plan re-wires the forecast composer onto core::livewire.app-sidebar and re-introduces the badge slot, at which point this assertion is updated to match the new chrome.');
+        // The label compacts; the aria-label keeps the exact number, which is
+        // the half a screen reader reads out. The deleted top-nav capped both
+        // at "99+" and lost the number entirely.
+        ->assertSee(tnfsBadge(1000, '1k'), false)
+        ->assertDontSee('>99+<', false);
+});
 
 it('activates the Forecast link when on /forecast', function (): void {
     $this->actingAs($this->user)

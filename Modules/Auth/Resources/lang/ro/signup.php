@@ -24,5 +24,6 @@ return [
     'error_generic' => 'Înregistrarea nu a putut fi finalizată.',
 
     'error_min_length' => 'Folosește cel puțin 12 caractere.',
+    'error_username_invalid' => 'Folosește cel mult 32 de litere, cifre, puncte, cratime sau linii de subliniere.',
     'error_closed' => 'Înregistrarea este închisă pe acest dispozitiv.',
 ];

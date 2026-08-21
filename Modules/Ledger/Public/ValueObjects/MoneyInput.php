@@ -8,9 +8,33 @@ namespace Modules\Ledger\Public\ValueObjects;
 // "12.50", "1.234,56" and "12,50"; the rightmost of '.' or ',' is the decimal.
 final class MoneyInput
 {
+    // A hand-typed amount is a household figure, and nine whole digits is
+    // already past every one of them — a tenth is a slipped finger far more
+    // often than a payment.
+    public const int MAX_MINOR = 99_999_999_999;
+
     // Null — never a guess — for anything that is not a well-formed amount of
-    // at most two decimals. A leading '-' is honoured.
+    // at most two decimals, or whose magnitude is past MAX_MINOR. A leading
+    // '-' is honoured.
     public static function tryToMinor(string $value): ?int
+    {
+        $minor = self::parseAnyMagnitude($value);
+
+        return $minor !== null && abs($minor) <= self::MAX_MINOR ? $minor : null;
+    }
+
+    // True when the input is a well-formed amount and only its size is the
+    // problem, so a caller can say that rather than blame the digits.
+    public static function exceedsMax(string $value): bool
+    {
+        $minor = self::parseAnyMagnitude($value);
+
+        return $minor !== null && abs($minor) > self::MAX_MINOR;
+    }
+
+    // Shape only. The 15-digit ceiling keeps the minor-unit multiplication
+    // inside a 64-bit int; past that there is nothing to weigh up.
+    private static function parseAnyMagnitude(string $value): ?int
     {
         $trimmed = str_replace([' ', "\u{00A0}"], '', trim($value));
         if ($trimmed === '') {
@@ -30,7 +54,7 @@ final class MoneyInput
             $unsigned = str_replace(',', '.', $unsigned);
         }
 
-        if (preg_match('/^\d{1,12}(\.\d{1,2})?$/', $unsigned) !== 1) {
+        if (preg_match('/^\d{1,15}(\.\d{1,2})?$/', $unsigned) !== 1) {
             return null;
         }
 

@@ -56,6 +56,7 @@ return [
         'fetch_aria' => 'Dohvati aktualne tečajeve s interneta',
         'refreshing' => 'Osvježavanje…',
         'next_refresh' => 'Sljedeće automatsko osvježavanje: svaki dan u 09:00',
+        'refresh_gave_up' => 'Tečajeve nije bilo moguće osvježiti. I dalje se koriste tečajevi na ovom uređaju.',
         'refresh_now' => 'Osvježi sada',
     ],
 

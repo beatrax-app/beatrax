@@ -157,7 +157,7 @@ final class QueueInspectorPage extends Component
         return match (true) {
             ! $devMode->isOn() => Lang::get('dev::queue.refusal.dev_mode_off'),
             $session->get('dev_mode.advanced') !== true => Lang::get('dev::queue.refusal.advanced_off'),
-            ! hash_equals('beatrax', $confirmedTyped) => Lang::get('dev::queue.refusal.token_mismatch'),
+            ! hash_equals('Beatrax', $confirmedTyped) => Lang::get('dev::queue.refusal.token_mismatch'),
             default => null,
         };
     }

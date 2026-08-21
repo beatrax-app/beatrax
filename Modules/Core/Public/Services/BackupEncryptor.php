@@ -65,7 +65,7 @@ final class BackupEncryptor implements FileEncryptor
 
         try {
             if ($this->readExactly($in, strlen(self::MAGIC)) !== self::MAGIC) {
-                throw new BackupFormatException('Not a beatrax encrypted backup (bad file header).');
+                throw new BackupFormatException('Not a Beatrax encrypted backup (bad file header).');
             }
 
             $this->readExactly($in, SODIUM_CRYPTO_PWHASH_SALTBYTES);
@@ -147,7 +147,7 @@ final class BackupEncryptor implements FileEncryptor
 
         try {
             if ($this->readExactly($in, strlen(self::MAGIC)) !== self::MAGIC) {
-                throw new BackupFormatException('Not a beatrax encrypted backup (bad file header).');
+                throw new BackupFormatException('Not a Beatrax encrypted backup (bad file header).');
             }
             $salt = $this->readExactly($in, SODIUM_CRYPTO_PWHASH_SALTBYTES);
             $opslimit = $this->unpackUint('V', $this->readExactly($in, 4));

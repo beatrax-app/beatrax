@@ -56,6 +56,7 @@ return [
         'fetch_aria' => 'Scarica online i tassi di cambio correnti',
         'refreshing' => 'Aggiornamento…',
         'next_refresh' => 'Prossimo aggiornamento automatico: ogni giorno alle 09:00',
+        'refresh_gave_up' => 'Impossibile aggiornare i tassi. Restano in uso quelli già presenti su questo dispositivo.',
         'refresh_now' => 'Aggiorna ora',
     ],
 

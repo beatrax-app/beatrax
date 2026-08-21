@@ -56,6 +56,7 @@ return [
         'fetch_aria' => 'Pridobi aktualne menjalne tečaje iz spleta',
         'refreshing' => 'Osveževanje…',
         'next_refresh' => 'Naslednje samodejno osveževanje: vsak dan ob 09:00',
+        'refresh_gave_up' => 'Tečajev ni bilo mogoče osvežiti. Še naprej se uporabljajo tečaji v tej napravi.',
         'refresh_now' => 'Osveži zdaj',
     ],
 

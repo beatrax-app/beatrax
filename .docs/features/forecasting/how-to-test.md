@@ -31,7 +31,7 @@ isolation.
   - The six Livewire SFCs (`ForecastPage`, `AccountBufferEditor`,
     `ForecastHighlightsTile`, `ScenarioEditorSidebar`,
     `ModelWhatIfDropdown`, `OpeningBalanceEditor`).
-  - The top-nav badge composer's count query + memoisation.
+  - The sidebar badge composer's count query + memoisation.
 - **Setup:** every test uses `RefreshDatabase`. Tests that drive
   the queued projection use `Queue::fake()` or the in-memory
   worker for the listener-fan-out contracts.
@@ -95,7 +95,7 @@ composer test
   orphan row without any matching `forecast_scenario_mutations`;
   if present, the transaction failed partway — surface as a
   Rule 1 bug and add a covering feature test.
-- **The top-nav forecast badge stays at zero after a shortfall
+- **The sidebar forecast badge stays at zero after a shortfall
   was detected** — the composer's memo cache (`&$cache` per
   user id) is request-scoped; a Livewire roundtrip in the same
   response uses the cached value. If the badge is stale across
@@ -214,9 +214,9 @@ The behavioural contract for the `Forecasting` module.
     `ForecastShortfallDetected` for OS notifications.
   - The dashboard layout — renders
     `ForecastHighlightsTile`.
-  - The shared layout — reads
+  - The app sidebar — reads
     `ForecastHighlightsQuery::activeShortfallCountForUser` via
-    the top-nav badge composer.
+    the nav badge composer.
 
 ## Configuration + feature flags
 

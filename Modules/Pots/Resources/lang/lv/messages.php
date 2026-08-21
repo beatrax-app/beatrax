@@ -14,6 +14,7 @@ return [
         'heading' => 'Vēl nav krājkasu',
         'body' => 'Izveidojiet virtuālus apakšatlikumus jebkurā kontā, lai sakārtotu naudu bez reāla bankas pārskaitījuma.',
         'cta' => 'Pievienojiet savu pirmo krājkasi',
+        'no_accounts_cta' => 'Importēt konta izrakstu',
     ],
 
     'common' => [

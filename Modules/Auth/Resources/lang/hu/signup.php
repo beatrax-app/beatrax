@@ -24,5 +24,6 @@ return [
     'error_generic' => 'A regisztrációt nem sikerült befejezni.',
 
     'error_min_length' => 'Használj legalább 12 karaktert.',
+    'error_username_invalid' => 'Legfeljebb 32 betűt, számjegyet, pontot, kötőjelet vagy aláhúzást használj.',
     'error_closed' => 'A regisztráció le van zárva ezen az eszközön.',
 ];

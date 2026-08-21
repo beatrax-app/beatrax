@@ -53,7 +53,7 @@ Practical recipes for exercising the `EmailScan` module in isolation.
     (`BackfillWindowModalTest`, `BackfillProgressPollTest`).
   - The Scan-Now action (`ScanNowActionTest`).
   - The invalid-grant toast (`InvalidGrantToastTest`).
-  - The top-nav badge composer (`TopNavBadgeViaComposerTest`).
+  - The sidebar badge composer (`SidebarInboxesBadgeTest`).
 
 ## Integration tests
 
@@ -266,7 +266,7 @@ The behavioural contract for the `EmailScan` module.
     transactions.
   - [`Core`](../core/how-to-test.md) `SystemAlertsBanner` — renders the
     `oauth_reconsent_required` system alert.
-  - The top-nav layout — reads `InboxesBadgeCount` via the badge
+  - The app sidebar — reads `InboxesBadgeCount` via the badge
     composer.
 
 ## Configuration + feature flags

@@ -18,5 +18,6 @@ return [
     'error_generic' => 'Kasutajat ei õnnestunud luua.',
 
     'error_min_length' => 'Kasuta vähemalt 12 märki.',
+    'error_username_invalid' => 'Kasuta kuni 32 tähte, numbrit, punkti, sidekriipsu või alakriipsu.',
     'error_duplicate' => 'See kasutajanimi on selles seadmes juba kasutusel. Proovi mõnda teist.',
 ];

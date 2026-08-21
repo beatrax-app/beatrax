@@ -151,3 +151,23 @@ it('refuses a cleared date instead of silently booking the entry today', functio
     expect(DB::table('transactions')->where('user_id', $this->user->id)->where('counterparty_name', 'Nowhere')->exists())
         ->toBeFalse('a cleared date must not write a transaction dated today');
 });
+
+// A twelve-figure cash entry is a slipped finger, and it booked without a
+// murmur. The bound lives in MoneyInput with every other money field's.
+it('refuses an amount no cash entry could be and says why', function (): void {
+    Livewire::actingAs($this->user)
+        ->test(CashBookPage::class)
+        ->set('amount', '999999999999')
+        ->call('add')
+        ->assertSet('error', 'That amount is too large. Check the digits.');
+
+    expect(DB::table('transactions')->where('user_id', $this->user->id)->where('source_format', 'manual')->count())->toBe(0);
+});
+
+it('keeps blaming the digits when the amount is not one', function (): void {
+    Livewire::actingAs($this->user)
+        ->test(CashBookPage::class)
+        ->set('amount', '🎉')
+        ->call('add')
+        ->assertSet('error', 'Enter an amount greater than zero.');
+});

@@ -31,18 +31,22 @@
         aria-label="{{ Lang::get('tax::badge.edit_aria', ['label' => $label]) }}"
         data-testid="tax-badge-tagged-{{ $txId }}"
     >{{ $label }}</button>
+@elseif ($showAlways)
+    {{-- Touch surfaces show this beside Delete, which is an emoji-action — and
+         a sole icon action IS one, so the two stopped being different shapes
+         on the same row. The desktop branch below keeps the word. --}}
+    <x-core::emoji-action
+        :label="Lang::get('tax::badge.tag_aria')"
+        wire:click="$dispatch('tax-tag', { id: {{ $txId }} })"
+        data-testid="tax-badge-untagged-{{ $txId }}"
+    >🏷️</x-core::emoji-action>
 @else
-    {{-- Untagged: ghost "Tag" button.
-         On desktop: only visible on group-hover / focus-within (.row-cta pattern).
-         On touch ($showAlways=true): always visible at ≥44px tap target. --}}
+    {{-- Untagged: ghost "Tag" button, only visible on group-hover /
+         focus-within (.row-cta pattern). --}}
     <button
         type="button"
         wire:click="$dispatch('tax-tag', { id: {{ $txId }} })"
-        @class([
-            'tax-badge--untagged inline-flex items-center',
-            'opacity-0 group-hover:opacity-100 focus:opacity-100' => ! $showAlways,
-            'always-show-touch' => $showAlways,
-        ])
+        class="tax-badge--untagged inline-flex items-center opacity-0 group-hover:opacity-100 focus:opacity-100"
         aria-label="{{ Lang::get('tax::badge.tag_aria') }}"
         title="{{ Lang::get('tax::badge.tag') }}"
         data-testid="tax-badge-untagged-{{ $txId }}"

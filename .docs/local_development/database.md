@@ -1,6 +1,6 @@
 # Database
 
-beatrax uses SQLite as its only database. The choice is load-bearing: a single file on
+Beatrax uses SQLite as its only database. The choice is load-bearing: a single file on
 disk per machine, no separate service to run, no network port to bind, no client/server
 protocol. The trade-off is single-writer concurrency, which WAL mode mitigates to the
 point that the local dashboard, the queue worker, and the IMAP-idle worker can all run
@@ -34,7 +34,7 @@ re-install or auto-update never touches user data.
 
 Both contexts run SQLite in WAL (Write-Ahead Log) mode with `synchronous=NORMAL`. WAL
 allows readers to proceed in parallel with a single writer, which is exactly the
-beatrax shape: the web request and the schedule/queue workers all read constantly and
+Beatrax shape: the web request and the schedule/queue workers all read constantly and
 write occasionally.
 
 The `beatrax:install` artisan command sets the PRAGMAs once at install time. The

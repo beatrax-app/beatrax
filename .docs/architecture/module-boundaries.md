@@ -1,6 +1,6 @@
 # Module boundaries
 
-beatrax is structured as thirty-five bounded modules under `Modules/`. Each module
+Beatrax is structured as thirty-five bounded modules under `Modules/`. Each module
 owns a slice of the domain, exposes a narrow public surface, and is forbidden
 from reaching into another module's internals. This document names the
 modules, describes the shape of the boundary, and lists the arch invariants
@@ -36,7 +36,7 @@ two decisions produced.
 | `Import` | The ImportPipeline orchestrator + per-format adapters (ASN CSV/CAMT/MT940, ICS PDF, PayPal CSV), the preview wizard |
 | `Ingestion` | The canonical-transaction DTO + source-adapter registry + statement-summary writer + account-resolver contract |
 | `Ledger` | Transactions, accounts, categories, merchants, import runs, currencies, statement summaries — the canonical store |
-| `Migration` | One-time migration wizard importing a full budget file (YNAB4, nYNAB, or Actual Budget) into beatrax's envelope model |
+| `Migration` | One-time migration wizard importing a full budget file (YNAB4, nYNAB, or Actual Budget) into Beatrax's envelope model |
 | `Mobile` | Mobile client peer (NativePHP-for-Mobile): on-device encrypted SQLite, client-only sync transport (LAN-direct + relay), biometric app-lock, resumable initial sync |
 | `Notifications` | Persistent, deduplicated notification store (deterministic sha256 PK from trigger+subject+occurrence), the `/notifications` inbox, per-device preferences, quiet-hours-defer, proactive + reactive triggers |
 | `Onboarding` | First-run wizard progress tracking + the multi-step onboarding flow |

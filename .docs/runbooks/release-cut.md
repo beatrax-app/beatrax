@@ -1,6 +1,6 @@
 # Cutting a release
 
-The operational procedure for shipping a new beatrax release. Everything happens by
+The operational procedure for shipping a new Beatrax release. Everything happens by
 pushing a git tag — the release pipeline is the only path that produces a published
 build.
 

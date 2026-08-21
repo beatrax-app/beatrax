@@ -8,6 +8,7 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Routing\Router;
 use Livewire\Component;
 use Modules\Auth\Public\Recovery\RecoveryCodeFormatter;
 use Modules\Core\Public\Contracts\CurrentUser;
@@ -60,17 +61,27 @@ final class RecoveryCodesDisplay extends Component
         CurrentUser $currentUser,
         Session $session,
         RecoveryCodeFormatter $formatter,
+        Router $router,
+        UrlGenerator $urls,
     ): View {
         $codes = $this->codesFromSession($session);
         $username = $currentUser->user()->username;
 
         // Built in the browser, not streamed from a Livewire action: a WebView
         // has no download manager for a StreamedResponse.
+
+        // On a phone the blob download the browser path uses writes nothing,
+        // reports nothing, and left this screen claiming it had saved a file
+        // that was never there. The share sheet is the only route that works,
+        // and the endpoint behind it answers whether it did.
+        $exportRoute = 'mobile.recovery-codes.export';
+
         $view = $views->make('auth::livewire.recovery-codes-display', [
             'codes' => $codes,
-            'username' => $username,
             'downloadFilename' => $formatter->filenameFor($username),
+            'downloadSlug' => $formatter->usernameSlug($username),
             'downloadPayload' => $formatter->format($codes),
+            'exportUrl' => $router->has($exportRoute) ? $urls->route($exportRoute) : null,
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
