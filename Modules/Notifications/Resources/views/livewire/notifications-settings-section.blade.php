@@ -40,8 +40,8 @@
             @if ($remindersEnabled)
                 {{-- wire:transition belonged to the wrapper this field used
                      to hand-roll, so it stays on a wrapper: putting it on the
-                     component would forward it to the <input> and animate the
-                     control instead of the row appearing. --}}
+                     component would forward it to the input element and animate
+                     the control instead of the row appearing. --}}
                 <div wire:transition>
                     <x-core::form-field
                         name="reminderLeadDays"
