@@ -6,11 +6,12 @@ namespace Modules\Notifications\Internal\Listeners;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Budgets\Public\Events\BudgetThresholdCrossed;
-use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Notifications\Internal\Support\CopyLine;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Internal\Support\NotificationCopyRenderer;
+use Modules\Notifications\Internal\Support\NotificationCopySpec;
 use Modules\Notifications\Internal\Support\NotificationDraft;
 use Modules\Notifications\Internal\Support\NotificationWriter;
 use Psr\Log\LoggerInterface;
@@ -33,19 +34,23 @@ final class PersistBudgetNudge
             $budgetText = Money::ofMinor($event->budgetMinor, $event->currency)
                 ->format();
 
-            $draft = $this->copyRenderer->forUser($event->userId, fn (): NotificationDraft => new NotificationDraft(
+            $copy = NotificationCopySpec::of(
+                CopyLine::of('notifications::copy.title.budget_nudge'),
+                CopyLine::of('notifications::copy.body.budget_nudge', [
+                    'category' => $event->categoryName,
+                    'spent' => $spentText,
+                    'budget' => $budgetText,
+                ]),
+            );
+
+            $draft = $this->copyRenderer->forUser($event->userId, fn (): NotificationDraft => NotificationDraft::fromCopy(
                 userId: $event->userId,
                 triggerType: DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE,
                 subjectKey: (string) $event->categoryId,
                 // Occurrence = the budget period, which is what makes a
                 // second same-period crossing a silent no-op.
                 occurrence: $event->period,
-                title: Lang::get('notifications::copy.title.budget_nudge'),
-                body: Lang::get('notifications::copy.body.budget_nudge', [
-                    'category' => $event->categoryName,
-                    'spent' => $spentText,
-                    'budget' => $budgetText,
-                ]),
+                copy: $copy,
                 params: ['target_kind' => 'budget', 'target_id' => $event->categoryId],
                 deepLinkRoute: $this->urls->route('budgets.index'),
             ));

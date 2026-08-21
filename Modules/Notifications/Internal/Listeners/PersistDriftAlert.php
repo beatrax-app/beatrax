@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Modules\Notifications\Internal\Listeners;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
-use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
+use Modules\Notifications\Internal\Support\CopyLine;
+use Modules\Notifications\Internal\Support\CopyParam;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Internal\Support\NotificationCopyRenderer;
+use Modules\Notifications\Internal\Support\NotificationCopySpec;
 use Modules\Notifications\Internal\Support\NotificationDraft;
 use Modules\Notifications\Internal\Support\NotificationWriter;
 use Psr\Log\LoggerInterface;
@@ -32,17 +34,21 @@ final class PersistDriftAlert
             $currency = $event->currency;
             $delta = MoneyInput::formatAbsMinor($event->deltaMinor);
 
-            $draft = $this->copyRenderer->forUser($event->userId, fn (): NotificationDraft => new NotificationDraft(
+            $copy = NotificationCopySpec::of(
+                CopyLine::of('notifications::copy.title.drift'),
+                CopyLine::of('notifications::copy.body.drift', [
+                    'direction' => CopyParam::line('notifications::copy.drift_direction.'.$direction),
+                    'delta' => $delta,
+                    'currency' => $currency,
+                ]),
+            );
+
+            $draft = $this->copyRenderer->forUser($event->userId, fn (): NotificationDraft => NotificationDraft::fromCopy(
                 userId: $event->userId,
                 triggerType: DeterministicKeyDeriver::TRIGGER_DRIFT_CHANGED,
                 subjectKey: (string) $event->recurringSeriesId,
                 occurrence: (string) $event->driftAlertId,
-                title: Lang::get('notifications::copy.title.drift'),
-                body: Lang::get('notifications::copy.body.drift', [
-                    'direction' => Lang::get('notifications::copy.drift_direction.'.$direction),
-                    'delta' => $delta,
-                    'currency' => $currency,
-                ]),
+                copy: $copy,
                 params: ['target_kind' => 'series', 'target_id' => $event->recurringSeriesId],
                 deepLinkRoute: $this->urls->route('drift.index'),
             ));
