@@ -70,7 +70,7 @@ final class GdkEpochControlHandler
     // (deviceKeys() filters on confirmed_at). An unconfirmed, unknown, or revoked
     // sender has no key here and is refused before any seal_open.
     /**
-     * @param  array{epochId: int, wrappedBin: string, recipientDeviceId: string, senderDeviceId: string, sigHex: string}  $wrap
+     * @param  array{epochId: int, wrappedBin: string, recipientDeviceId: string, senderDeviceId: string, sigHex: string, role: string}  $wrap
      */
     private function senderIsAuthentic(array $wrap, int $userId): bool
     {
@@ -85,6 +85,7 @@ final class GdkEpochControlHandler
             $wrap['wrappedBin'],
             $wrap['recipientDeviceId'],
             $wrap['senderDeviceId'],
+            $wrap['role'],
         );
 
         if (! $this->signer->verify($message, $wrap['sigHex'], $senderPublicKeyBin)) {
@@ -128,7 +129,7 @@ final class GdkEpochControlHandler
     // Reads the control envelope, filters to GDK_EPOCH_WRAP, and validates its
     // fields — every rejection returns null so handle() stays a linear pipeline.
     /**
-     * @return array{epochId: int, wrappedBin: string, recipientDeviceId: string, senderDeviceId: string, sigHex: string}|null
+     * @return array{epochId: int, wrappedBin: string, recipientDeviceId: string, senderDeviceId: string, sigHex: string, role: string}|null
      */
     private function parseWrap(string $json): ?array
     {
@@ -162,7 +163,7 @@ final class GdkEpochControlHandler
 
     /**
      * @param  array<string, mixed>  $msg
-     * @return array{epochId: int, wrappedBin: string, recipientDeviceId: string, senderDeviceId: string, sigHex: string}|null
+     * @return array{epochId: int, wrappedBin: string, recipientDeviceId: string, senderDeviceId: string, sigHex: string, role: string}|null
      */
     private function extractWrapFields(array $msg): ?array
     {
@@ -171,6 +172,13 @@ final class GdkEpochControlHandler
         $recipientDeviceId = $msg['recipient_device_id'] ?? null;
         $senderDeviceId = $msg['sender_device_id'] ?? null;
         $sigHex = $msg['sig_hex'] ?? null;
+        $role = $msg['key_role'] ?? GdkEpochWrapSignature::ROLE_EPOCH;
+
+        if (! is_string($role) || ! in_array($role, [GdkEpochWrapSignature::ROLE_EPOCH, GdkEpochWrapSignature::ROLE_BLIND_INDEX], true)) {
+            $this->logger->warning('GdkEpochControlHandler: GDK_EPOCH_WRAP names an unknown key role — rejected.');
+
+            return null;
+        }
 
         if (! is_int($epochIdRaw)
             || ! is_string($wrappedB64) || $wrappedB64 === ''
@@ -196,6 +204,7 @@ final class GdkEpochControlHandler
             'recipientDeviceId' => $recipientDeviceId,
             'senderDeviceId' => $senderDeviceId,
             'sigHex' => $sigHex,
+            'role' => $role,
         ];
     }
 
@@ -224,7 +233,7 @@ final class GdkEpochControlHandler
     // any, travels into the open — the collision is settled by comparing
     // keys, which needs the wrap decrypted.
     /**
-     * @param  array{epochId: int, wrappedBin: string, recipientDeviceId: string, senderDeviceId: string, sigHex: string}  $wrap
+     * @param  array{epochId: int, wrappedBin: string, recipientDeviceId: string, senderDeviceId: string, sigHex: string, role: string}  $wrap
      */
     private function openAndAppendEpoch(array $wrap, DeviceIdentityDto $identity, int $userId, Session $session): void
     {
@@ -245,7 +254,7 @@ final class GdkEpochControlHandler
     // epoch under the device's OWN KEK — the wire never supplies a key here.
     // Every branch zeroes the key material in the finally.
     /**
-     * @param  array{epochId: int, wrappedBin: string, recipientDeviceId: string, senderDeviceId: string, sigHex: string}  $wrap
+     * @param  array{epochId: int, wrappedBin: string, recipientDeviceId: string, senderDeviceId: string, sigHex: string, role: string}  $wrap
      * @param  string|null  $localKeyHex  The key already held for this epoch id, if any.
      */
     private function decryptAndStore(
@@ -267,6 +276,12 @@ final class GdkEpochControlHandler
             // accept a legitimate all-zero-byte key as if it were `false`.
             if ($rawKey === false) {
                 $this->logger->warning('GdkEpochControlHandler: sodium_crypto_box_seal_open failed (tampered ciphertext or foreign recipient) — rejected, no append.');
+
+                return;
+            }
+
+            if ($wrap['role'] === GdkEpochWrapSignature::ROLE_BLIND_INDEX) {
+                $this->storeBlindIndexKey(sodium_bin2hex($rawKey), $userId, $session);
 
                 return;
             }
@@ -295,6 +310,41 @@ final class GdkEpochControlHandler
             sodium_memzero($localSecret);
             sodium_memzero($localPublic);
             sodium_memzero($localKeypair);
+        }
+    }
+
+    // The blind-index key is not an epoch: it is never rotated, and one device
+    // holding a different one means the group's stored counterparty digests
+    // stop matching. Adoption is therefore only safe before this device has
+    // derived any of its own.
+    /**
+     * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md
+     */
+    private function storeBlindIndexKey(string $incomingKeyHex, int $userId, Session $session): void
+    {
+        try {
+            $localKeyHex = $this->keyringService->blindIndexKeyHex($userId, $session);
+
+            if ($localKeyHex !== null && hash_equals($localKeyHex, $incomingKeyHex)) {
+                return;
+            }
+
+            if ($localKeyHex !== null && $this->usageProbe->hasDerivedCounterpartyKeys($userId)) {
+                // Keeping the local key keeps THIS device's dedup correct.
+                // Adopting would make every stored digest unmatchable by the
+                // value a re-import computes, and double the ledger.
+                $this->logger->error('GdkEpochControlHandler: a peer\'s blind-index key differs from the one this device already derived its counterparty keys under — keeping the local key; merchant identity will not match across the two devices.', [
+                    'user_id' => $userId,
+                ]);
+
+                return;
+            }
+
+            $this->keyringService->setBlindIndexKey($userId, $incomingKeyHex, $session);
+        } catch (\LogicException $e) {
+            $this->logger->warning('GdkEpochControlHandler: app-lock not unlocked — cannot store the recovered blind-index key.', [
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 

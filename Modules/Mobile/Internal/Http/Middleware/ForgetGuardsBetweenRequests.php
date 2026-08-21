@@ -6,6 +6,7 @@ namespace Modules\Mobile\Internal\Http\Middleware;
 
 use Closure;
 use Illuminate\Auth\AuthManager;
+use Illuminate\Auth\SessionGuard;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -19,10 +20,15 @@ final readonly class ForgetGuardsBetweenRequests
 
     public function handle(Request $request, Closure $next): Response
     {
-        // Global middleware, so this runs before the session is even started;
-        // the guard it drops is the one left behind by the PREVIOUS request,
-        // and the next read rebuilds it from this request's session.
-        $this->auth->forgetGuards();
+        // The USER is dropped, not the guard. forgetGuards() rebuilds the
+        // session driver, and rebuilding registers a rebound callback that is
+        // never pruned — on a runtime that never restarts, that grows without
+        // bound and every later request walks the whole list.
+        $guard = $this->auth->guard();
+
+        if ($guard instanceof SessionGuard) {
+            $guard->forgetUser();
+        }
 
         /** @var Response $response */
         $response = $next($request);

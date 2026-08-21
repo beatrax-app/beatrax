@@ -11,6 +11,7 @@ return [
     'show_my_code' => 'Visa min kod',
     'show_my_code_help' => 'Visa den här enhetens QR-kod och ordkod för den andra enheten.',
     'enter_a_code' => 'Ange en kod',
+    'safety_number_changed' => 'Den andra enheten ändrades medan du jämförde. Kontrollera orden nedan igen innan du bekräftar.',
     'enter_a_code_help' => 'Skriv in koden som visas på den andra enheten.',
 
     'show_this_code' => 'Visa den här koden',

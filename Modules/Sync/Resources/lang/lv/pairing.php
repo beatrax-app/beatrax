@@ -11,6 +11,7 @@ return [
     'show_my_code' => 'Rādīt manu kodu',
     'show_my_code_help' => 'Parāda šīs ierīces QR kodu un vārdu kodu otrai ierīcei.',
     'enter_a_code' => 'Ievadīt kodu',
+    'safety_number_changed' => 'Otra ierīce mainījās salīdzināšanas laikā. Pirms apstiprināšanas vēlreiz pārbaudiet zemāk esošos vārdus.',
     'enter_a_code_help' => 'Ierakstiet kodu, kas redzams otrā ierīcē.',
 
     'show_this_code' => 'Rādīt šo kodu',

@@ -18,6 +18,8 @@ final class EncryptionMigrationSupport
 
     private ?string $cachedEpochKeyHex = null;
 
+    private ?string $cachedBlindIndexKeyHex = null;
+
     // The pending stage from stageFirstEpoch(), passed back to
     // finalizeStagedEpoch()/discardStagedEpoch() by the caller.
     private ?GdkKeyringStage $pendingStage = null;
@@ -48,8 +50,33 @@ final class EncryptionMigrationSupport
         $this->pendingStage = $stage;
         $this->cachedEpochId = $stage->epoch->epochId;
         $this->cachedEpochKeyHex = $stage->epoch->keyHex;
+        $this->cachedBlindIndexKeyHex = $stage->blindIndexKeyHex;
 
         return $stage->epoch->epochId;
+    }
+
+    // The blind-index key minted alongside the staged epoch. Available before
+    // the keyring file is renamed into place, which is when the counterparty
+    // sweep has to run — inside the same transaction as the epoch write.
+    /**
+     * @throws LogicException when stageFirstEpoch() was never called.
+     */
+    public function stagedBlindIndexKeyHex(): string
+    {
+        if ($this->cachedBlindIndexKeyHex === null) {
+            throw new LogicException('EncryptionMigrationSupport::stagedBlindIndexKeyHex — call stageFirstEpoch() first.');
+        }
+
+        return $this->cachedBlindIndexKeyHex;
+    }
+
+    // The user's blind-index key, minting one when the keyring predates it.
+    /**
+     * @throws LogicException when the app-lock KEK is unavailable.
+     */
+    public function ensureBlindIndexKey(int $userId, Session $session): string
+    {
+        return $this->keyringService->ensureBlindIndexKey($userId, $session);
     }
 
     // Finalize the epoch-1 keyring file staged by stageFirstEpoch() — call

@@ -11,6 +11,7 @@ return [
     'show_my_code' => 'Näita minu koodi',
     'show_my_code_help' => 'Kuva selle seadme QR- ja sõnakood teise seadme jaoks.',
     'enter_a_code' => 'Sisesta kood',
+    'safety_number_changed' => 'Teine seade muutus võrdlemise ajal. Kontrolli allolevaid sõnu uuesti, enne kui kinnitad.',
     'enter_a_code_help' => 'Sisesta teises seadmes kuvatav kood.',
 
     'show_this_code' => 'Näita seda koodi',

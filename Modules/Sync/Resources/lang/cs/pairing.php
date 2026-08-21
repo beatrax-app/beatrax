@@ -11,6 +11,7 @@ return [
     'show_my_code' => 'Zobrazit můj kód',
     'show_my_code_help' => 'Zobrazí QR kód a slovní kód tohoto zařízení pro to druhé.',
     'enter_a_code' => 'Zadat kód',
+    'safety_number_changed' => 'Druhé zařízení se během porovnávání změnilo. Než potvrdíš, zkontroluj slova níže znovu.',
     'enter_a_code_help' => 'Napiš kód zobrazený na druhém zařízení.',
 
     'show_this_code' => 'Zobrazit tento kód',

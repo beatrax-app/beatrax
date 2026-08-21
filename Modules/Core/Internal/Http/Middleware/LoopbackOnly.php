@@ -28,7 +28,7 @@ final class LoopbackOnly
             if (! self::isLoopback($serverAddr)) {
                 throw new NotFoundHttpException;
             }
-        } elseif (! $this->app->runningInConsole() && ! $this->servesInProcess()) {
+        } elseif (! $this->app->runningInConsole() && ! $this->servesLocally($request)) {
             // A real HTTP SAPI (php-fpm, mod_php) with no SERVER_ADDR never
             // advertised its bind address; fail closed rather than assume it
             // was loopback.
@@ -41,12 +41,24 @@ final class LoopbackOnly
         return $response;
     }
 
-    // A SAPI PhpSapi does not name is one that serves over a socket, and a
-    // socket-serving SAPI that never published its bind address is the case
-    // the branch above exists to refuse.
-    private function servesInProcess(): bool
+    // A SAPI that publishes no bind address is not automatically local. The
+    // built-in server publishes none yet `--host=0.0.0.0` binds every
+    // interface, so it has to answer for the peer it is actually talking to.
+    private function servesLocally(Request $request): bool
     {
-        return PhpSapi::tryFrom($this->sapi)?->servesInProcess() === true;
+        $sapi = PhpSapi::tryFrom($this->sapi);
+
+        if ($sapi === null) {
+            return false;
+        }
+
+        if ($sapi->cannotBeReachedOffDevice()) {
+            return true;
+        }
+
+        $remote = $request->server('REMOTE_ADDR');
+
+        return is_string($remote) && self::isLoopback($remote);
     }
 
     // Anything inet_pton cannot read is not an address, and anything that is

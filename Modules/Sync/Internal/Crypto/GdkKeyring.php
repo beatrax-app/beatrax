@@ -17,6 +17,7 @@ final readonly class GdkKeyring
      */
     private function __construct(
         private array $epochs,
+        private ?string $blindIndexKeyHex = null,
     ) {}
 
     public static function empty(): self
@@ -27,9 +28,9 @@ final readonly class GdkKeyring
     /**
      * @param  list<GdkEpoch>  $epochs
      */
-    public static function fromEpochs(array $epochs): self
+    public static function fromEpochs(array $epochs, ?string $blindIndexKeyHex = null): self
     {
-        return new self($epochs);
+        return new self($epochs, $blindIndexKeyHex);
     }
 
     /**
@@ -40,11 +41,27 @@ final readonly class GdkKeyring
         return $this->epochs;
     }
 
+    // The blind-index key is NOT an epoch and is never rotated: it keys a
+    // one-way digest that a UNIQUE index compares, so a second value for the
+    // same merchant would read as a second merchant.
+    /**
+     * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md
+     */
+    public function blindIndexKeyHex(): ?string
+    {
+        return $this->blindIndexKeyHex;
+    }
+
+    public function withBlindIndexKey(string $keyHex): self
+    {
+        return new self($this->epochs, $keyHex);
+    }
+
     // Returns a NEW keyring with $epoch appended — never mutates $this or
     // discards any existing epoch.
     public function withEpoch(GdkEpoch $epoch): self
     {
-        return new self([...$this->epochs, $epoch]);
+        return new self([...$this->epochs, $epoch], $this->blindIndexKeyHex);
     }
 
     // Returns a NEW keyring with the entry for $epoch->epochId swapped for
@@ -58,7 +75,7 @@ final readonly class GdkKeyring
                 ? $epoch
                 : $existing,
             $this->epochs,
-        ));
+        ), $this->blindIndexKeyHex);
     }
 
     public function keyFor(int $epochId): ?string
@@ -72,17 +89,25 @@ final readonly class GdkKeyring
         return null;
     }
 
+    // The key is omitted rather than written null when absent, so a keyring
+    // file this build writes still parses under a build that predates it.
     /**
-     * @return array{epochs: list<array{epoch_id: int, key_hex: string}>}
+     * @return array{epochs: list<array{epoch_id: int, key_hex: string}>, blind_index_key_hex?: string}
      */
     public function toArray(): array
     {
-        return [
+        $payload = [
             'epochs' => array_map(
                 static fn (GdkEpoch $epoch): array => $epoch->toArray(),
                 $this->epochs,
             ),
         ];
+
+        if ($this->blindIndexKeyHex !== null) {
+            $payload['blind_index_key_hex'] = $this->blindIndexKeyHex;
+        }
+
+        return $payload;
     }
 
     /**
@@ -105,6 +130,12 @@ final readonly class GdkKeyring
             $epochs[] = GdkEpoch::fromArray($row);
         }
 
-        return new self($epochs);
+        /** @var mixed $blindIndexKeyHex */
+        $blindIndexKeyHex = $payload['blind_index_key_hex'] ?? null;
+        if ($blindIndexKeyHex !== null && (! is_string($blindIndexKeyHex) || $blindIndexKeyHex === '')) {
+            throw new InvalidArgumentException('GdkKeyring::fromArray — blind_index_key_hex must be a non-empty string when present.');
+        }
+
+        return new self($epochs, $blindIndexKeyHex);
     }
 }

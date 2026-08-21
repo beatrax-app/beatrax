@@ -11,6 +11,7 @@ return [
     'show_my_code' => 'Arată codul meu',
     'show_my_code_help' => 'Afișează codul QR și codul din cuvinte ale acestui dispozitiv pentru celălalt dispozitiv.',
     'enter_a_code' => 'Introdu un cod',
+    'safety_number_changed' => 'Celălalt dispozitiv s-a schimbat în timp ce comparai. Verifică din nou cuvintele de mai jos înainte de a confirma.',
     'enter_a_code_help' => 'Tastează codul afișat pe celălalt dispozitiv.',
 
     'show_this_code' => 'Arată acest cod',
