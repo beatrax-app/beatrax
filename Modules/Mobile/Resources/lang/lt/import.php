@@ -12,6 +12,13 @@ return [
     'password' => 'Slaptažodis',
     'password_help' => 'Bent 12 simbolių — slaptažodžio atstatyti negalima, yra tik atkūrimo kodai.',
     'confirm_password' => 'Pakartok slaptažodį',
+
+    'requirements_aria' => 'Slaptažodžio reikalavimai',
+    'req_length' => 'Bent 12 simbolių',
+    'req_match' => 'Abu slaptažodžiai sutampa',
+    'req_met' => '(atitinka)',
+    'req_unmet' => '(dar neatitinka)',
+
     'pin' => 'Programėlės užrakto PIN kodas',
     'pin_help' => '6–10 skaitmenų — atrakina šį įrenginį.',
     'confirm_pin' => 'Pakartok PIN kodą',
@@ -37,6 +44,7 @@ return [
     'continue_to_pairing' => 'Tęsti į susiejimą',
 
     'errors' => [
+        'username_required' => 'Naudotojo vardas privalomas.',
         'passwords_mismatch' => 'Slaptažodžiai nesutampa.',
         'password_length' => 'Naudok bent 12 simbolių.',
         'pin_length' => 'PIN kodą turi sudaryti bent 6 skaitmenys.',

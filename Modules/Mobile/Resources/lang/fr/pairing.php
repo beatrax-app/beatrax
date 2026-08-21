@@ -36,7 +36,10 @@ return [
     'errors' => [
         'relay_unreachable' => 'Impossible de joindre l\'autre appareil. Vérifie que les deux sont sur le même réseau et que la synchronisation est activée sur l\'ordinateur.',
         'invalid_code' => 'Ce code est invalide ou a expiré. Demande à l\'autre appareil d\'en générer un nouveau.',
+        'code_not_accepted' => 'Aucun appareil de ce réseau n’a accepté ce code. Vérifie le code et que l’autre appareil l’affiche toujours.',
+        'rate_limited' => 'Trop de tentatives. Attends une minute et réessaie.',
         'identity_locked' => 'L\'identité de ton appareil est verrouillée. Déverrouille l\'application et réessaie.',
         'identity_needs_lock' => 'Configurez d\'abord le verrouillage de l\'application — il protège l\'identité de votre appareil.',
+        'safety_number_changed' => 'L\'autre appareil a changé pendant la comparaison. Vérifie à nouveau les mots ci-dessous avant de confirmer.',
     ],
 ];

@@ -236,7 +236,6 @@ final class SyncServiceProvider extends ServiceProvider
             'LanPairingFrameCourier',
             'LanPairingFramePuller',
             'PairingPeerOutbox',
-            // Decides who may collect what the LAN return leg holds.
             'PairingPullAuthorizer',
             // Relay courier for the cross-device both-confirm handshake
             // (PairingFrame is static-only, no binding needed).

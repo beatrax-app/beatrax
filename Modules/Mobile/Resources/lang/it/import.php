@@ -12,6 +12,13 @@ return [
     'password' => 'Password',
     'password_help' => 'Almeno 12 caratteri — non esiste il ripristino della password, solo i codici di recupero.',
     'confirm_password' => 'Conferma password',
+
+    'requirements_aria' => 'Requisiti della password',
+    'req_length' => 'Almeno 12 caratteri',
+    'req_match' => 'Le due password coincidono',
+    'req_met' => '(soddisfatto)',
+    'req_unmet' => '(non ancora soddisfatto)',
+
     'pin' => "PIN di blocco dell'app",
     'pin_help' => '6-10 cifre — sblocca questo dispositivo.',
     'confirm_pin' => 'Conferma PIN',
@@ -37,6 +44,7 @@ return [
     'continue_to_pairing' => "Continua con l'abbinamento",
 
     'errors' => [
+        'username_required' => 'Il nome utente è obbligatorio.',
         'passwords_mismatch' => 'Le password non coincidono.',
         'password_length' => 'Usa almeno 12 caratteri.',
         'pin_length' => 'Il PIN deve avere almeno 6 cifre.',

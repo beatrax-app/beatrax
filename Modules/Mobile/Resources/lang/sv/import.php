@@ -12,6 +12,13 @@ return [
     'password' => 'Lösenord',
     'password_help' => 'Minst 12 tecken — det finns ingen återställning av lösenord, bara återställningskoder.',
     'confirm_password' => 'Bekräfta lösenord',
+
+    'requirements_aria' => 'Lösenordskrav',
+    'req_length' => 'Minst 12 tecken',
+    'req_match' => 'Båda lösenorden stämmer överens',
+    'req_met' => '(uppfyllt)',
+    'req_unmet' => '(inte uppfyllt än)',
+
     'pin' => 'PIN-kod för applås',
     'pin_help' => '6-10 siffror — låser upp den här enheten.',
     'confirm_pin' => 'Bekräfta PIN-kod',
@@ -37,6 +44,7 @@ return [
     'continue_to_pairing' => 'Fortsätt till parkopplingen',
 
     'errors' => [
+        'username_required' => 'Användarnamn är obligatoriskt.',
         'passwords_mismatch' => 'Lösenorden stämmer inte överens.',
         'password_length' => 'Använd minst 12 tecken.',
         'pin_length' => 'PIN-koden måste ha minst 6 siffror.',

@@ -67,7 +67,18 @@ final class SafetyNumberDeriver
     // different one. Order-independent for the same reason derive() is.
     public function digestFor(string $pubKeyAHex, string $pubKeyBHex): string
     {
-        return hash('sha256', implode('|', $this->deriveWords($pubKeyAHex, $pubKeyBHex)));
+        return $this->digestOfWords($this->deriveWords($pubKeyAHex, $pubKeyBHex));
+    }
+
+    // The same fingerprint taken from words already on a screen. A caller that
+    // re-implemented the separator and hash would keep computing the old value
+    // if this formula ever changed, and every confirmation would be refused.
+    /**
+     * @param  list<string>  $words
+     */
+    public function digestOfWords(array $words): string
+    {
+        return $words === [] ? '' : hash('sha256', implode('|', $words));
     }
 
     // Validates a public key is exactly 64 lowercase hex chars and decodes

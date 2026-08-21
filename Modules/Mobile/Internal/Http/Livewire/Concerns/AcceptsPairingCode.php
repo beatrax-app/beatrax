@@ -56,12 +56,13 @@ trait AcceptsPairingCode
         $discovered = $gateway->discoverInitiatorOnLan($this->wordCode);
 
         if ($discovered instanceof PairingOfferLookup) {
-            // Both endings used to say "cannot reach the other device", which
-            // is advice that can only ever work for one of them: a reader whose
-            // code had expired was sent to debug a network that was fine.
+            // A typed code names no device, so a peer that answered and refused
+            // may simply be the wrong desktop. "Invalid or expired" was the
+            // confident version of that guess; this one is true either way.
             $this->flashMessage = Lang::get(match ($discovered) {
-                PairingOfferLookup::CodeNotAccepted => 'mobile::pairing.errors.invalid_code',
+                PairingOfferLookup::CodeNotAccepted => 'mobile::pairing.errors.code_not_accepted',
                 PairingOfferLookup::NoPeerReached => 'mobile::pairing.errors.relay_unreachable',
+                PairingOfferLookup::RateLimited => 'mobile::pairing.errors.rate_limited',
             });
 
             return false;
@@ -75,7 +76,8 @@ trait AcceptsPairingCode
      */
     private function adoptInitiator(PairingGateway $gateway, array $identity, int $userId): void
     {
-        // Before accepting, so the send that follows has somewhere to deliver.
+        // Before accepting, so the responder-accept that follows already has
+        // somewhere to deliver rather than failing on an unconfigured relay.
         $gateway->configureRelayFromQr($identity['relayEndpoint'], $identity['relayAuthToken'], $identity['relayPin']);
 
         // Every phone holds a separate database from the desktop, so the
@@ -87,7 +89,8 @@ trait AcceptsPairingCode
             $identity['ed25519PubHex'],
             $identity['x25519PubHex'],
             $userId,
-            // Without it the desktop is admitted as "Paired device".
+            // The scanned name, so the desktop is not admitted under the
+            // "Paired device" placeholder the registry falls back to.
             $identity['deviceName'],
         );
     }
@@ -147,7 +150,8 @@ trait AcceptsPairingCode
     ): void {
         $tokenHash = hash('sha256', $identity['token']);
 
-        // Stashed so the poll can re-emit if this delivery is lost.
+        // Stashed because the addressing dies with the component state and the
+        // ceremony does not: without it the poll has nothing to re-emit to.
         $this->importResponderTokenHash = $tokenHash;
         $this->importDesktopDeviceId = $identity['deviceId'];
 

@@ -1895,6 +1895,11 @@ it('pins every cross-module raw-table write to the allow-list (crossModuleRawTab
         'Modules/Forecasting/Public/Actions/SetAccountOpeningBalance.php accounts 1',
         'Modules/Import/Public/Actions/ApplyEnrichments.php pending_enrichment_conflicts 1',
         'Modules/Import/Public/Actions/ApplyEnrichments.php transactions 1',
+        // The counterparty blind-index sweep re-keys the matching columns of
+        // three tables in one transaction, because they are compared against
+        // each other; splitting it across module seams would let a device sit
+        // with two of the three converted. See sensitive-columns-at-rest.md.
+        'Modules/Ledger/Public/Services/CounterpartyKeyBackfill.php recurring_series 1',
         'Modules/Migration/Internal/Pipeline/EntityChangeApplier.php transactions 1',
         'Modules/Migration/Internal/Pipeline/PromoteStagingToDomain.php import_runs 1',
         'Modules/Migration/Internal/Pipeline/PromoteStagingToDomain.php transactions 1',
@@ -2060,6 +2065,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Import/tests/Feature/PreviewWizardTest.php -> Modules\\Recurring\\Internal\\Jobs\\DetectRecurringSeriesJob',
         'Modules/Ingestion/tests/Feature/PaypalFundingLegTypingTest.php -> Modules\\Import\\Internal\\Pipeline\\Stages\\ClassifyTransactionType',
         'Modules/Ledger/tests/Feature/AmountsRemainAggregatableTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
+        'Modules/Ledger/tests/Feature/CounterpartyBlindIndexTest.php -> Modules\\Import\\Internal\\Pipeline\\Stages\\FingerprintStage',
         'Modules/Ledger/tests/Feature/DirectWriteDecryptSurvivesRotationTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkEpoch',
         'Modules/Ledger/tests/Feature/DirectWriteDecryptSurvivesRotationTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Ledger/tests/Feature/RecordTransactionsEncryptionTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
@@ -2125,6 +2131,9 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Mobile/tests/Feature/MobileResumableInitialSyncTest.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityService',
         'Modules/Mobile/tests/Feature/MobileResumableInitialSyncTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayConfig',
         'Modules/Mobile/tests/Feature/PairingManualCodeArmTest.php -> Modules\\Sync\\Internal\\Pairing\\WordCodeEncoder',
+        'Modules/Mobile/tests/Feature/PairingManualCodeArmTest.php -> Modules\\Sync\\Internal\\Transport\\Discovery\\DiscoveredPeer',
+        'Modules/Mobile/tests/Feature/PairingManualCodeArmTest.php -> Modules\\Sync\\Internal\\Transport\\Discovery\\DiscoveryMode',
+        'Modules/Mobile/tests/Feature/PairingManualCodeArmTest.php -> Modules\\Sync\\Internal\\Transport\\Discovery\\PeerDiscovery',
         'Modules/Mobile/tests/Unit/DispatchMobileNotificationTest.php -> Modules\\Notifications\\Internal\\Support\\DeterministicKeyDeriver',
         'Modules/Mobile/tests/Unit/Identity/BiometricKeyVaultTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockKeyWrap',
         'Modules/Mobile/tests/Unit/PeerLanAddressTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayConfig',

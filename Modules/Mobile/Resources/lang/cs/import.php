@@ -12,6 +12,13 @@ return [
     'password' => 'Heslo',
     'password_help' => 'Aspoň 12 znaků — heslo se nedá resetovat, existují jen obnovovací kódy.',
     'confirm_password' => 'Potvrď heslo',
+
+    'requirements_aria' => 'Požadavky na heslo',
+    'req_length' => 'Alespoň 12 znaků',
+    'req_match' => 'Obě hesla se shodují',
+    'req_met' => '(splněno)',
+    'req_unmet' => '(zatím nesplněno)',
+
     'pin' => 'PIN pro zámek aplikace',
     'pin_help' => '6-10 číslic — odemyká toto zařízení.',
     'confirm_pin' => 'Potvrď PIN',
@@ -37,6 +44,7 @@ return [
     'continue_to_pairing' => 'Pokračovat k párování',
 
     'errors' => [
+        'username_required' => 'Uživatelské jméno je povinné.',
         'passwords_mismatch' => 'Hesla se neshodují.',
         'password_length' => 'Použij aspoň 12 znaků.',
         'pin_length' => 'PIN musí mít aspoň 6 číslice.',

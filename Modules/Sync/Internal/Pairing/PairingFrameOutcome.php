@@ -10,7 +10,10 @@ namespace Modules\Sync\Internal\Pairing;
 // to know what status to answer with.
 enum PairingFrameOutcome
 {
-    // Bound, confirmed, or an idempotent redelivery of something already done.
+    // A redelivery of work already done lands here rather than in Refused.
+    // Both roads retry, and a sender told its frame was refused for something
+    // that had in fact succeeded would hold the ceremony open with nothing
+    // left to do.
     case Applied;
 
     // A validly-signed confirm that cannot finish yet, because the human on

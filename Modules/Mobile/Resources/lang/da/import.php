@@ -12,6 +12,13 @@ return [
     'password' => 'Adgangskode',
     'password_help' => 'Mindst 12 tegn — der findes ingen nulstilling af adgangskoden, kun gendannelseskoder.',
     'confirm_password' => 'Bekræft adgangskode',
+
+    'requirements_aria' => 'Krav til adgangskoden',
+    'req_length' => 'Mindst 12 tegn',
+    'req_match' => 'Begge adgangskoder er ens',
+    'req_met' => '(opfyldt)',
+    'req_unmet' => '(ikke opfyldt endnu)',
+
     'pin' => 'PIN-kode til app-lås',
     'pin_help' => '6-10 cifre — låser denne enhed op.',
     'confirm_pin' => 'Bekræft PIN-kode',
@@ -37,6 +44,7 @@ return [
     'continue_to_pairing' => 'Fortsæt til parringen',
 
     'errors' => [
+        'username_required' => 'Brugernavn er påkrævet.',
         'passwords_mismatch' => 'Adgangskoderne er ikke ens.',
         'password_length' => 'Brug mindst 12 tegn.',
         'pin_length' => 'PIN-koden skal have mindst 6 cifre.',

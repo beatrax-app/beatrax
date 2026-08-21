@@ -47,7 +47,7 @@ it('stores the token as a SHA-256 hash, never plaintext', function (): void {
     expect($row->token_hash)->toBe(hash('sha256', $token));
 });
 
-it('it_rejects_already_used_token', function (): void {
+it('refuses a token that has already been used', function (): void {
     $user = tokenUser('token-used');
 
     /** @var PairingTokenService $service */
@@ -149,7 +149,7 @@ it('prunes expired and terminal token rows on the next issue', function (): void
     expect($rows->first()->state)->toBe('pending');
 });
 
-it('it_rejects_expired_token', function (): void {
+it('refuses a token whose window has already closed', function (): void {
     $user = tokenUser('token-expired');
 
     /** @var PairingTokenService $service */
@@ -333,4 +333,106 @@ it('refuses a confirmation carrying no record of what was shown', function (): v
     $row = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->first();
 
     expect($service->confirm((int) $row->id, (int) $user->id, 'device-init', ''))->toBeNull();
+});
+
+function selfDevice(User $user, string $deviceId): void
+{
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $now = CarbonImmutable::now()->toIso8601String();
+
+    $db->connection()->table('device_registry')->insert([
+        'user_id' => (int) $user->id,
+        'device_id' => $deviceId,
+        'name' => 'This device',
+        'ed25519_public_key_hex' => str_repeat('1', 64),
+        'x25519_public_key_hex' => str_repeat('2', 64),
+        'safety_number_words' => 'one two three four five six',
+        'is_self' => 1,
+        'paired_at' => $now,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+}
+
+// The phone is the responder on its own row. A hostile peer answering the
+// phone's own pull hands back a PAIR_RESPONDER_ACCEPT naming itself, and the
+// rebind rule would take the slot — leaving the phone owning neither side and
+// unable to confirm its own pairing ever again.
+it('refuses a responder accept that would take over this device own side', function (): void {
+    $user = tokenUser('own-side-user');
+    $phone = '11111111-2222-4333-8444-555555555555';
+    selfDevice($user, $phone);
+
+    /** @var PairingTokenService $service */
+    $service = $this->app->make(PairingTokenService::class);
+
+    // The phone binds its OWN side through accept(), never through a frame.
+    $token = $service->issue((int) $user->id, 'the-desktop', str_repeat('a', 64), str_repeat('b', 64));
+    expect($service->accept($token, (int) $user->id, $phone, str_repeat('c', 64), str_repeat('d', 64)))
+        ->not->toBeFalse();
+
+    expect($service->applyResponderAccept(
+        (int) $user->id,
+        hash('sha256', $token),
+        '99999999-8888-4777-8666-555555555555',
+        str_repeat('e', 64),
+        str_repeat('f', 64),
+        'Hostile peer',
+    ))->toBeFalse();
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $row = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->first();
+
+    expect($row->responder_device_id)->toBe($phone);
+    expect($row->responder_ed25519_pub_hex)->not->toBe(str_repeat('e', 64));
+});
+
+// A device binds its own side through accept(), never through an inbound frame,
+// so one naming this device as the responder came from somewhere it should not
+// have and is refused rather than written.
+it('refuses a responder accept that names this device as the responder', function (): void {
+    $user = tokenUser('own-name-user');
+    $desktop = '77777777-6666-4555-8444-333333333333';
+    selfDevice($user, $desktop);
+
+    /** @var PairingTokenService $service */
+    $service = $this->app->make(PairingTokenService::class);
+    $token = $service->issue((int) $user->id, $desktop, str_repeat('a', 64), str_repeat('b', 64));
+
+    expect($service->applyResponderAccept(
+        (int) $user->id,
+        hash('sha256', $token),
+        $desktop,
+        str_repeat('e', 64),
+        str_repeat('f', 64),
+    ))->toBeFalse();
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $row = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->first();
+
+    expect($row->responder_device_id)->toBeNull();
+    expect($row->state)->toBe('pending');
+});
+
+// The honest case the guard must not break: the desktop is the initiator, and
+// the phone's accept binds the far side of its row.
+it('still binds a responder that is not this device', function (): void {
+    $user = tokenUser('other-side-user');
+    $desktop = '77777777-6666-4555-8444-333333333333';
+    selfDevice($user, $desktop);
+
+    /** @var PairingTokenService $service */
+    $service = $this->app->make(PairingTokenService::class);
+    $token = $service->issue((int) $user->id, $desktop, str_repeat('a', 64), str_repeat('b', 64));
+
+    expect($service->applyResponderAccept(
+        (int) $user->id,
+        hash('sha256', $token),
+        '11111111-2222-4333-8444-555555555555',
+        str_repeat('e', 64),
+        str_repeat('f', 64),
+    ))->not->toBeFalse();
 });

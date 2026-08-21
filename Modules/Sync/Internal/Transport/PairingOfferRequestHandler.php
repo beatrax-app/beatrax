@@ -47,7 +47,6 @@ final readonly class PairingOfferRequestHandler implements RequestHandler
         return $this->offerResponse($request);
     }
 
-    // The one route this handler answers itself.
     private function offerResponse(Request $request): Response
     {
         // Throttle before the lookup, so a flood is refused on the cheapest

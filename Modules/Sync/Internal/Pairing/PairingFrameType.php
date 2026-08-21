@@ -14,5 +14,7 @@ enum PairingFrameType: string
     case ResponderAccept = 'PAIR_RESPONDER_ACCEPT';
 
     // Either side -> the other, Ed25519-signed over confirmSigningMessage().
+    // The type is symmetric, so it never says which side sent it; the receiver
+    // verifies against the key its own row already bound for that side.
     case Confirm = 'PAIR_CONFIRM';
 }

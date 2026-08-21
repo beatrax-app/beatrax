@@ -123,7 +123,7 @@ it('checkPairingState() drains the phone\'s frames and confirmMatch() sends this
     expect(app(DeviceRegistryService::class)->deviceKeys((int) $user->id))->toHaveKey($phoneIdentity->deviceId);
 
     $this->asDevice('phone', function (): void {
-        app(PairingGateway::class)->drainPairingFrames(PFM_PHONE_USER_ID);
+        app(PairingGateway::class)->drainPairingFrames(PFM_PHONE_USER_ID, null);
     });
     $this->asDevice('phone', function () use ($desktopIdentity): void {
         expect(app(DeviceRegistryService::class)->deviceKeys(PFM_PHONE_USER_ID))->toHaveKey($desktopIdentity->deviceId);
@@ -152,6 +152,11 @@ it('confirmMatch() never dead-ends when no relay is configured — the ordinary 
         str_repeat('d', 64),
     );
     expect($token)->not->toBeFalse();
+
+    // Through the poll, because the poll is what derives the words the
+    // confirmation is bound to. A tap that skips it confirms an empty
+    // comparison, which confirm() refuses.
+    $component->call('checkPairingState')->assertSet('step', 'confirm');
 
     // With no relay the confirm send is a silent no-op, never an exception.
     $component->call('confirmMatch')->assertSet('awaitingPeer', true);

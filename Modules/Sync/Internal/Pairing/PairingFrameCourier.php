@@ -11,7 +11,6 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Psr\Log\LoggerInterface;
-use RuntimeException;
 use Throwable;
 
 /**
@@ -35,12 +34,11 @@ final class PairingFrameCourier
     ) {}
 
     // Delivers a PAIR_RESPONDER_ACCEPT frame (phone -> desktop) so the
-    // desktop's LOCAL row can bind it. A relay failure throws
-    // RuntimeException — the CALLER is responsible for catching it and
-    // surfacing a non-blocking retry; this never silently swallows a failure.
+    // desktop's LOCAL row can bind it. The CALLER is responsible for catching
+    // the throw and surfacing a non-blocking retry; this never silently
+    // swallows a failure.
     /**
-     * @throws RuntimeException when the relay is unconfigured or the
-     *                          delivery request fails.
+     * @throws Throwable see {@see self::deliver()}.
      */
     public function sendResponderAccept(
         string $senderDid,
@@ -65,8 +63,7 @@ final class PairingFrameCourier
     // cannot forge this. Same best-effort-at-the-caller posture as
     // sendResponderAccept() — failures propagate.
     /**
-     * @throws RuntimeException when the relay is unconfigured or the
-     *                          delivery request fails.
+     * @throws Throwable see {@see self::deliver()}.
      */
     public function sendConfirm(DeviceIdentityDto $self, string $peerDid, string $tokenHash): void
     {
@@ -93,8 +90,9 @@ final class PairingFrameCourier
     /**
      * @param  array<string, mixed>  $frame
      *
-     * @throws RuntimeException when the LAN peer could not be reached AND the
-     *                          relay is unconfigured or its delivery failed.
+     * @throws Throwable when no road home is open at all — the LAN peer was
+     *                   unreachable, the relay refused or could not be dialled,
+     *                   and the peer's holding space is full.
      */
     private function deliver(string $senderDid, string $recipientDid, array $frame): void
     {
@@ -106,11 +104,11 @@ final class PairingFrameCourier
             $this->relayClient->deliver($senderDid, $recipientDid, json_encode($frame, JSON_THROW_ON_ERROR));
 
             return;
-        } catch (RuntimeException $e) {
+        } catch (Throwable $e) {
             // Neither road is open: the peer runs no listener to push to — a
-            // phone never does — and there is no relay. Hold the frame for the
-            // peer to collect, which is the case that used to end the handshake
-            // with a RelayRefusedException and a screen that waited forever.
+            // phone never does — and the relay is unconfigured, refusing, or
+            // simply not answering. A transport failure used to escape this
+            // catch, which is the one case the holding space exists for.
             if (! $this->outbox->queueFor($senderDid, $recipientDid, $frame)) {
                 throw $e;
             }
@@ -240,9 +238,6 @@ final class PairingFrameCourier
         }
     }
 
-    /**
-     * @param  array<string, mixed>  $row
-     */
     /**
      * @param  array<string, mixed>  $row
      */

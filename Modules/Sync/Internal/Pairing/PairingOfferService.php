@@ -6,6 +6,7 @@ namespace Modules\Sync\Internal\Pairing;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Sync\Internal\Clock\ZuluTimestamp;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 
 // The half of the QR a typed word-code cannot carry: the initiator's public
@@ -57,7 +58,7 @@ final readonly class PairingOfferService
             ->where('token_hash', $tokenHash)
             ->where('user_id', $userId)
             ->whereIn('state', self::OFFERABLE_STATES)
-            ->where('expires_at', '>', PairingExpiry::stamp($this->clock->now()))
+            ->where('expires_at', '>', ZuluTimestamp::stamp($this->clock->now()))
             ->first();
 
         if ($row === null || ! PairingRowGuards::tokenHashMatches($row, $tokenHash)) {

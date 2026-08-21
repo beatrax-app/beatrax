@@ -8,7 +8,7 @@ namespace Modules\Sync\Internal\Transport\Discovery;
 // to dns-sd or avahi, which a phone has neither of. Without this a fresh device
 // could only learn where the desktop is from a scanned QR, which is why the
 // typed-code arm of the import flow could never succeed.
-final class MulticastMdnsQuery
+final class MulticastMdnsQuery implements PeerDiscovery
 {
     public const string MULTICAST_ADDRESS = '224.0.0.251';
 
@@ -26,7 +26,8 @@ final class MulticastMdnsQuery
     // rather than letting a long response arrive truncated.
     private const int MAX_DATAGRAM_BYTES = 9000;
 
-    // One length byte per label, so 63 is the protocol's own ceiling.
+    // One length byte per label, so 63 is the protocol's own ceiling and a
+    // longer label cannot be encoded at all.
     private const int MAX_LABEL_BYTES = 63;
 
     private const int MICROSECONDS_PER_SECOND = 1_000_000;

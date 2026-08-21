@@ -15,6 +15,17 @@ use Modules\Sync\Tests\Support\PairingSafetyDigest;
 
 uses(RefreshDatabase::class);
 
+function trustGateIsEpochWrap(string $blob): bool
+{
+    /** @var mixed $decoded */
+    $decoded = json_decode($blob, true);
+
+    return is_array($decoded)
+        && ($decoded['type'] ?? null) === 'GDK_EPOCH_WRAP'
+        && is_int($decoded['epoch_id'] ?? null)
+        && $decoded['epoch_id'] > 0;
+}
+
 // Epoch delivery is reachable only from the confirmed branch, so it cannot run
 // before both sides have matched the safety number. Any earlier state must
 // enqueue nothing: a wrap sent to a half-confirmed peer hands group keys to a
@@ -116,6 +127,11 @@ it('delivers wraps to the newly-confirmed device ONLY after both-confirm (CONFIR
 
     expect($db->connection()->table('relay_mailbox')->where('recipient_did', 'device-resp-confirmed')->count())->toBe(0);
 
+    // Through the poll, because the poll is what derives the words the
+    // confirmation is bound to — a tap that skips it confirms an empty
+    // comparison, which confirm() refuses.
+    $pairing->call('checkPairingState')->assertSet('step', 'confirm');
+
     // The second and deciding confirmation.
     $pairing->call('confirmMatch')
         ->assertSet('step', 'success')
@@ -123,10 +139,16 @@ it('delivers wraps to the newly-confirmed device ONLY after both-confirm (CONFIR
 
     // The migration runs first and mints this desktop's first epoch, so exactly
     // one wrap is enqueued for the newly-confirmed peer.
+    // Narrowed rather than counted whole, for two reasons: this device's own
+    // outbound PAIR_CONFIRM is held in the same mailbox whenever no road home
+    // is open, and the blind-index key rides the same frame type under the
+    // reserved epoch id 0. Only real epochs are the subject here.
     $wraps = $db->connection()->table('relay_mailbox')
         ->where('recipient_did', 'device-resp-confirmed')
         ->whereNull('delivered_at')
-        ->get();
+        ->get()
+        ->filter(static fn (object $row): bool => trustGateIsEpochWrap((string) $row->blob))
+        ->values();
 
     expect($wraps)->toHaveCount(1);
     /** @var array<string, mixed> $wrap */

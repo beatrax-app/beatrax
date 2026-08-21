@@ -21,10 +21,18 @@ returns `false` on a real device and every gate above silently reports
 the Keychain custodian is never bound, and the boot hook that recreates
 `storage/framework` and re-points the session/cache/view config never runs. The
 symptom is not an error — it is a device that quietly behaves like a desktop.
-`platform()` therefore reads `$_SERVER` and `$_ENV` as well, and
-`isMobileRuntime()` keeps the structural fallback (the sibling `persisted_data`
-directory, which only NativePHP mobile provisions) for the config-load window
-where even those are not yet populated.
+`UserDataPathService`'s private `platformSignal()` therefore reads `$_SERVER`
+and `$_ENV` as well, and `isMobileRuntime()` keeps the structural fallback (the
+sibling `persisted_data` directory, which only NativePHP mobile provisions) for
+the config-load window where even those are not yet populated.
+
+Gates that branch on *which* shell — currently only
+`Internal\Http\Middleware\ClientSideRedirect` — ask
+`UserDataPathService::platform()` instead, which returns a
+`Modules\Core\Public\Enums\MobilePlatform` case and answers the decision
+through `needsClientSideRedirect()` rather than comparing to `'android'`. A
+platform NativePHP names but that enum does not model reads as `null` there,
+so a rename of the value cannot silently flip a shell gate the other way.
 
 **The scan preview is in-page, not a separate activity.** The scanner
 plugin's own surface is a full-screen `ScannerActivity`, which over the
@@ -231,9 +239,15 @@ except English**, as `IntlException` when intl error-exceptions are on and as
 seams, both of which now catch it and render from marks the repo carries itself
 (`Locale::groupMark()` / `Locale::decimalMark()`):
 
-- `Money::format()` — every rendered amount. Currency-anchored, so EUR asks for
-  `nl_NL` and threw on device while `en_US` (USD, GBP, …) worked, which is why
-  the dashboard showed `EUR 3850.00` beside a hand-rolled Dutch `€ 1.237,89`.
+- `Money::format()` — every rendered amount. It asks ICU for the **reader's**
+  locale ([money formatting](../ledger/money-formatting.md)); the currency
+  chooses only the symbol. So on device it throws for all twenty-five
+  non-English UI languages and works in English, whatever the amount is
+  denominated in. The dashboard reading `EUR 3850.00` beside a hand-rolled
+  Dutch `€ 1.237,89` was the older currency-anchored rule failing for EUR
+  alone; under the reader's locale two amounts on one page can no longer
+  disagree about notation, and a Dutch reader takes this fallback for every
+  one of them.
 - `Fmt::number()` — counts and percentages. Threw for all twenty-five non-English
   UI languages; only `/rules`, `/inboxes` and `/drift/watch` call it, so it had
   not been noticed.
@@ -310,7 +324,7 @@ than stranding a set-up user on the first-run screen.
 welcome screen's "Import from another device" CTA leads into. Its step
 machine is `collect_pin` (username/password/PIN form) -> `provisioning_failed`
 (idempotent-safe retry, only reached if a later step throws after signup
-already committed) -> `recovery_codes` -> redirect into
+already committed) -> `recovery_codes` -> a plain link into
 `mobile.pair?mode=import`. On submit, in strict order: `SignupAction`
 runs the same first-user ceremony `/signup` uses (guarded to
 `User::count() === 0`); `MobileLockGateway::enableAppLock()` mints the
@@ -323,9 +337,12 @@ control handler's idempotency guard.
 The originally-submitted PIN/password are stashed server-side in the
 session (never rendered to the client) for the lifetime of the
 `provisioning_failed` retry window, and forgotten the instant
-provisioning actually succeeds — this exists because a public Livewire
-property survives re-renders inside the serialized wire-snapshot payload
-sent to the browser, which would otherwise leak plaintext credentials.
+provisioning actually succeeds. The public properties holding them are
+emptied at the same moment, because a public Livewire property rides the
+serialized wire-snapshot payload to the browser on every later render.
+While the form is still being filled those properties necessarily hold
+what the reader typed, exactly as every other password screen in the app
+does — a rejected submit deliberately leaves them alone (below).
 The retry path never re-runs `SignupAction` (the account already exists)
 and reads only the session stash, never the emptied public properties —
 reading those was a real bug that either permanently stranded the device
@@ -333,6 +350,35 @@ in `provisioning_failed` or minted the app-lock key from an empty
 passphrase. `MobileImportIntentGate` durably marks the user as an import
 device before either provisioning step, backing up the pairing screen's
 own defense-in-depth echo of the same signal.
+
+**The one-time recovery-codes display, and the way back onto it.** The
+control that leaves the `recovery_codes` step is an ordinary link, not a
+`wire:click`: a Livewire round trip from this screen has 419'd on device
+and taken the only copy of the codes with it, and a GET carries no CSRF
+token to expire. Nothing therefore reports the exit server-side, so the
+render that shows the codes writes `mobile.import.recovery_codes_shown`
+into the session itself. `mount()` enters `recovery_codes` only while the
+plaintext codes are in the session *and* that marker is absent; a later
+mount holding both — cancelling out of pairing walks back onto this
+route — forgets the plaintext and falls through to the
+`alreadyProvisioned` screen. Before the marker existed, cancelling
+reprinted all ten codes under the line promising they are shown once,
+with the confirmation checkbox reset. The codes themselves are bcrypt
+digests in `user_recovery_codes` and the session payload is an encrypted
+Laravel envelope, so the fault was a false promise, never plaintext at
+rest. `RecoveryCodesExportController` reads the same session key, which
+is why the display marks rather than consumes: a share-sheet export
+fired from the screen must still find the codes.
+
+**Form validation.** Every broken rule is reported at once and scoped to
+its own field, so the message renders under the box it describes and that
+control carries `aria-invalid`. The form-level line is left for a
+rejection that belongs to no box — `SignupAction` refusing under `signup`
+because the device gained an owner mid-submit. A rejected submit empties
+nothing: clearing the password pair while keeping the PIN meant a
+mistyped PIN cost a 12-character passphrase retyped on a phone keyboard.
+The password pair also carries the same live requirement checklist as
+`SignupPage`, reading the same bindings the server validates.
 
 ## Biometric-primary unlock
 
@@ -381,6 +427,40 @@ Swift/Kotlin sources never compile in), and `native:plugin:register`. It
 carries an explicit `version` in its own `composer.json` because a path
 package otherwise takes the *current branch name* as its version, which pins
 the lockfile to whatever branch it was last resolved on.
+
+### The vault bridge's own contract
+
+`Beatrax\BiometricVault\BiometricVault` mirrors
+`nativephp/mobile-secure-storage`'s PHP shape — a thin wrapper over
+`nativephp_call` — with one difference the shape does not show: the entry is
+enclave-bound, so `get()` yields the value only after a fresh Face ID or
+Touch ID.
+
+**The two platforms resolve `get()` differently, and a caller has to handle
+both.** iOS resolves it synchronously, because the keychain blocks on the
+biometric sheet, so the value comes back inline. Android is asynchronous
+(`BiometricPrompt`), so `get()` returns `['async' => true]` and the value
+arrives later on the `BiometricVault.Recovered` event. Code written against one
+platform's timing does nothing at all on the other, silently.
+
+An empty result from the bridge means it threw — an auth error other than
+cancel, a locked device, something transient — and is reported as `failed`,
+never as `missing`. The distinction is security-relevant: `missing` means
+nothing is enrolled, `failed` means something is enrolled and authentication
+did not succeed. Collapsing the two would let a failed unlock read as a device
+that never enrolled.
+
+**`pollRecovered()` depends on a native contract, not just a PHP one.** It
+reads and consumes the transient blob the Android `BiometricPrompt` callback
+stashed after a successful decrypt, and answers null when nothing is pending.
+No biometric prompt happens there — the key never crosses the JS bridge in the
+prompt result, so PHP collects it after the fact. The native `PollRecovered`
+must therefore be single-shot, deleting the transient slot on read, *and* must
+clear it when the app backgrounds or re-locks. Without both, a stashed blob can
+be replayed by a later spoofed `cold-start-recovered` dispatch and admit a
+session with no fresh biometric behind it. The PHP-side gates
+(`isColdStartEnrolled` plus the PIN floor) defend in depth, but enclave
+freshness rests entirely on consume-on-read.
 
 Enrollment is PIN-rooted:
 `ColdStartEnrollmentService::enroll()` re-verifies the PIN to obtain the
@@ -451,7 +531,11 @@ confirm step already rendered. `checkPairingState()`'s poll re-emits that
 responder-accept idempotently while still on the confirm step and not
 yet confirmed, so a single lost relay delivery self-heals rather than
 stranding the ceremony. `confirmMatch()` sends this device's own signed
-`PAIR_CONFIRM` to the bound initiator peer unconditionally.
+`PAIR_CONFIRM` to the bound initiator peer, and the poll re-emits it while the
+row says this side confirmed — read from the row, not from the screen's
+`awaitingPeer` flag, which a refused tap also sets. A refused confirmation is
+rendered here as it is on the desktop: the words are re-derived from what the
+row now binds and `pairing.errors.safety_number_changed` says why.
 
 **Typed codes while importing.** The typed word-code arm is offered on the
 import path too. A word-code carries the token alone, so before seeding,
@@ -462,9 +546,12 @@ the QR flow, unchanged — seed, accept, compare safety numbers on both
 screens. The discovered address proves nothing (an mDNS answer can be spoofed
 by anyone on the network, and the offer therefore hands out public keys
 only), so the human safety-number comparison remains the sole trust gate.
-When discovery finds nothing, or nothing found holds the token, the screen
-says so with the existing "cannot reach the other device" copy rather than
-spinning.
+When discovery finds nothing at all, the screen says "cannot reach the other
+device". When something answered and refused, it says
+`pairing.errors.code_not_accepted` — "no device on this network accepted that
+code" — rather than calling the code invalid: a typed code names no device, so
+every desktop on the wifi is asked, and a housemate's laptop refusing a code it
+has never seen says nothing about whether the code is good.
 
 **Self-mint deferral.** The import branch never self-mints a GDK epoch —
 it defers epoch acquisition entirely to the desktop's delivered epochs,
@@ -609,6 +696,91 @@ check (`SuppressionEvaluator::shouldDeliver()`) the desktop OS-notification
 adapter calls — two independently-written suppression checks would drift
 — and has no window-focus gate, since a phone has no focus concept: every
 non-suppressed deliverable fires.
+
+## The mobile root's own bootstrap
+
+`mobile-app/bootstrap/app.php` is a real file, never a symlink, and so are
+`artisan` and `mobile-app/phpunit.xml`. PHP canonicalises `__FILE__` through
+symlinks, so a symlinked bootstrap would resolve `dirname(__DIR__)` to the
+desktop parent and hand `base_path()` — and every `UserDataPathService`
+accessor derived from it — the wrong root, booting the desktop app from the
+phone's shell. The failure would be silent: a working app, pointed at the
+wrong data.
+
+Two hooks run before any request, and each exists because the next one is
+too late.
+
+`->booting()` creates the on-device database directory and touches the file
+itself. Laravel's SQLite connector throws `Database file … does not exist`
+rather than creating one, and `SqliteOptimizationsProvider` applies
+`PRAGMA journal_mode = WAL` on `ConnectionEstablished` during provider boot —
+earlier than `->booted()` — so the first cold boot fails without both. Off
+device the directory already exists and both calls are no-ops.
+
+`->booted()` is the attach point proven on a real device, guarded on
+`UserDataPathService::isMobileRuntime()`. It does three things, in order:
+
+1. **Repoints the live SQLite connection** at the one canonical
+   `UserDataPathService::databaseFile()` path. The connection otherwise targets
+   `…/Library/Application Support/…` while the accessor resolves
+   `…/Documents/app/…` — two divergent, both-unmigrated files, which surfaces
+   as `no such table: sessions`.
+2. **Recreates the `storage/framework` tree** the native app-copy strips
+   (views, cache, sessions), then drives session and cache through the
+   reconciled database rather than the filesystem: the build caches config with
+   file paths that do not exist at runtime, so a file-backed session or cache
+   500s every request. `view.compiled` is the exception — Blade genuinely needs
+   a directory, and an empty value raises "Please provide a valid cache path."
+   on every render.
+3. **Boots `NativeMobileAppServiceProvider`** and runs
+   `MobileFirstLaunchBootstrap`.
+
+A migrate failure inside that hook is logged and swallowed. A boot-time hook
+that throws takes the whole shell down, and the app has to open before anything
+can be repaired.
+
+### Middleware order at this root
+
+`prepend()` reverses: the last call is the first to run. `TrustedHostGuard` is
+prepended last so it gates the `Host` the client asked for before `LoopbackOnly`
+gates the interface the connection arrived on — the webview is loopback-served,
+so it needs both. `ForgetGuardsBetweenRequests` is prepended first so it runs
+after `RestoreFrameworkRedirector` has repaired the container binding it depends
+on, and before anything reads the authenticated user: this runtime keeps one
+container for the life of the process, so the guard otherwise still holds the
+`User` model resolved at sign-in and every preference on it is stale.
+
+`MobileEnsureDatabaseReady` is prepended to the `web` group rather than appended,
+and that is not a style choice. List order is not run order: `SortedMiddleware`
+re-sorts the group against the framework priority list, and `Authenticate`
+implements `AuthenticatesRequests`, so it is hoisted ahead of anything unlisted
+that sits behind it — which left this gate running *after* the very middleware it
+exists to pre-empt. Prepending is stable because non-priority middleware are never
+moved by that sort, and the gate reads only the matched route name and the
+database, so it needs nothing `StartSession` sets up.
+
+`MobileEnsureImportCompleted` is appended for the opposite reason: it needs an
+authenticated user, so it has to run after `Authenticate`, not before it. Without
+it, a device that created its account through the import bootstrap and then quit
+had no route back into pairing — `isFreshInstall()` is false forever once a user
+exists, so it simply landed on an empty dashboard. `SetLocale` is appended
+alongside it because this root has its own bootstrap: omitting it left the
+translator on `config('app.locale')`, with the language switcher writing
+`session('locale')` and nothing reading it.
+
+### What the provider manifest diverges by
+
+`mobile-app/bootstrap/providers.php` is the desktop manifest with exactly one
+removal and one addition, and anything else diverging is drift rather than
+design. `Modules\Desktop\Providers\DesktopServiceProvider` is not registered:
+the Desktop module ships no `module.json`, so it is not nwidart-discovered and
+this hardcoded manifest is the only lever that keeps it — and its hard dependency
+on the `nativephp/desktop` package, absent from this root's `vendor/` — out of
+the mobile shell. `App\Providers\NativeServiceProvider` *is* registered here and
+not on the desktop root, because it carries the NativePHP **mobile** plugin list.
+The Mobile module itself is absent from both manifests: it ships a `module.json`
+and loads from `modules_statuses.json`, as do Sync, Reports, Search, Tax,
+Migration and Counterparties.
 
 ## Route registration before the component exists
 

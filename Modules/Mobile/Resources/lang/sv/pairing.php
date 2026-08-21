@@ -36,7 +36,10 @@ return [
     'errors' => [
         'relay_unreachable' => 'Det går inte att nå den andra enheten. Kontrollera att båda är på samma nätverk och att synkronisering är aktiverad på datorn.',
         'invalid_code' => 'Koden är ogiltig eller har gått ut. Låt den andra enheten skapa en ny.',
+        'code_not_accepted' => 'Ingen enhet i det här nätverket accepterade koden. Kontrollera koden och att den andra enheten fortfarande visar den.',
+        'rate_limited' => 'För många försök. Vänta en minut och försök igen.',
         'identity_locked' => 'Enhetens identitet är låst. Lås upp appen och försök igen.',
         'identity_needs_lock' => 'Ställ in applåset först — det skyddar enhetens identitet.',
+        'safety_number_changed' => 'Den andra enheten ändrades medan du jämförde. Kontrollera orden nedan igen innan du bekräftar.',
     ],
 ];

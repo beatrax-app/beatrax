@@ -12,6 +12,13 @@ return [
     'password' => 'Palavra-passe',
     'password_help' => 'Pelo menos 12 caracteres — não há reposição de palavra-passe, apenas códigos de recuperação.',
     'confirm_password' => 'Confirmar palavra-passe',
+
+    'requirements_aria' => 'Requisitos da palavra-passe',
+    'req_length' => 'Pelo menos 12 caracteres',
+    'req_match' => 'As duas palavras-passe coincidem',
+    'req_met' => '(cumprido)',
+    'req_unmet' => '(ainda não cumprido)',
+
     'pin' => 'PIN de bloqueio da aplicação',
     'pin_help' => '6-10 dígitos — desbloqueia este dispositivo.',
     'confirm_pin' => 'Confirmar PIN',
@@ -37,6 +44,7 @@ return [
     'continue_to_pairing' => 'Continuar para o emparelhamento',
 
     'errors' => [
+        'username_required' => 'O nome de utilizador é obrigatório.',
         'passwords_mismatch' => 'As palavras-passe não coincidem.',
         'password_length' => 'Usa pelo menos 12 caracteres.',
         'pin_length' => 'O PIN tem de ter pelo menos 6 dígitos.',

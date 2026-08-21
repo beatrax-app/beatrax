@@ -12,6 +12,13 @@ return [
     'password' => 'Passord',
     'password_help' => 'Minst 12 tegn — det finnes ingen tilbakestilling av passord, bare gjenopprettingskoder.',
     'confirm_password' => 'Bekreft passord',
+
+    'requirements_aria' => 'Passordkrav',
+    'req_length' => 'Minst 12 tegn',
+    'req_match' => 'Begge passordene er like',
+    'req_met' => '(oppfylt)',
+    'req_unmet' => '(ikke oppfylt ennå)',
+
     'pin' => 'PIN-kode for applås',
     'pin_help' => '6-10 sifre — låser opp denne enheten.',
     'confirm_pin' => 'Bekreft PIN-kode',
@@ -37,6 +44,7 @@ return [
     'continue_to_pairing' => 'Fortsett til paringen',
 
     'errors' => [
+        'username_required' => 'Brukernavn er påkrevd.',
         'passwords_mismatch' => 'Passordene er ikke like.',
         'password_length' => 'Bruk minst 12 tegn.',
         'pin_length' => 'PIN-koden må ha minst 6 sifre.',

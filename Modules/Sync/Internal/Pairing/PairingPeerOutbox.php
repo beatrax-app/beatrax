@@ -37,9 +37,11 @@ final readonly class PairingPeerOutbox
         return $this->mailbox->deliverIfUnderQuota($senderDid, $recipientDid, $blob, self::MAX_PENDING_PER_PEER);
     }
 
-    // Anything that is not a pairing frame is left where it is.
+    // Anything that is not a pairing frame is left where it is. Nothing is
+    // marked delivered here: the caller confirms once it has actually handed
+    // the frames over, so a failed answer leaves them waiting.
     /**
-     * @return list<array<string, mixed>>
+     * @return list<array{id: int, frame: array<string, mixed>}>
      */
     public function takeFor(string $recipientDid, int $limit): array
     {
@@ -47,19 +49,26 @@ final readonly class PairingPeerOutbox
 
         foreach ($this->mailbox->drain($recipientDid, $limit) as $row) {
             $frame = self::pairingFrameFrom($row->blob ?? null);
+            $id = $row->id ?? null;
 
-            if ($frame === null) {
+            if ($frame === null || ! is_int($id)) {
                 continue;
             }
 
-            $taken[] = $frame;
-
-            if (is_int($row->id ?? null)) {
-                $this->mailbox->confirm($row->id);
-            }
+            $taken[] = ['id' => $id, 'frame' => $frame];
         }
 
         return $taken;
+    }
+
+    /**
+     * @param  list<int>  $ids
+     */
+    public function confirmDelivered(array $ids): void
+    {
+        foreach ($ids as $id) {
+            $this->mailbox->confirm($id);
+        }
     }
 
     /**

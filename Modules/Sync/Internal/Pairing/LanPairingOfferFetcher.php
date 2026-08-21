@@ -8,8 +8,9 @@ use Illuminate\Http\Client\Factory as HttpFactory;
 use InvalidArgumentException;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
 use Modules\Sync\Internal\Transport\Discovery\MdnsAdvertiser;
-use Modules\Sync\Internal\Transport\Discovery\MulticastMdnsQuery;
+use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
 use Modules\Sync\Internal\Transport\PairingOfferRequestHandler;
+use Amp\Http\HttpStatus;
 use Modules\Sync\Public\Enums\PairingOfferLookup;
 use Throwable;
 
@@ -42,7 +43,7 @@ final readonly class LanPairingOfferFetcher
 
     public function __construct(
         private HttpFactory $http,
-        private MulticastMdnsQuery $discovery,
+        private PeerDiscovery $discovery,
         private WordCodeEncoder $wordEncoder,
     ) {}
 
@@ -65,6 +66,7 @@ final readonly class LanPairingOfferFetcher
 
         $tried = 0;
         $anyPeerAnswered = false;
+        $anyPeerLimited = false;
 
         foreach ($this->discovery->browse(MdnsAdvertiser::SERVICE_TYPE, self::BROWSE_TIMEOUT_SECONDS) as $peer) {
             if ($tried >= self::MAX_PEERS_TRIED) {
@@ -82,7 +84,15 @@ final readonly class LanPairingOfferFetcher
                 return $attempt;
             }
 
-            $anyPeerAnswered = $anyPeerAnswered || $attempt === PairingOfferLookup::CodeNotAccepted;
+            $anyPeerLimited = $anyPeerLimited || $attempt === PairingOfferLookup::RateLimited;
+            $anyPeerAnswered = $anyPeerAnswered || $attempt !== PairingOfferLookup::NoPeerReached;
+        }
+
+        // A limit outranks a refusal: "wait a minute" is true whichever peer
+        // holds the code, while "ask for a new one" is false for the limited
+        // one and puts the next attempt in the same bucket.
+        if ($anyPeerLimited) {
+            return PairingOfferLookup::RateLimited;
         }
 
         // A peer that answered and refused is the difference that matters: the
@@ -90,19 +100,6 @@ final readonly class LanPairingOfferFetcher
         // answered at all is "are both devices on the same network?" the
         // question worth asking.
         return $anyPeerAnswered ? PairingOfferLookup::CodeNotAccepted : PairingOfferLookup::NoPeerReached;
-    }
-
-    // Ask one discovered peer whether it holds this token. Null covers every
-    // way that ends in "not this one" — refused, timed out, not holding it,
-    // or answering with something that is not a well-formed identity.
-    /**
-     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null}|null
-     */
-    public function offerFrom(DiscoveredPeer $peer, string $tokenHex): ?array
-    {
-        $attempt = $this->attempt($peer, $tokenHex);
-
-        return is_array($attempt) ? $attempt : null;
     }
 
     // Keeps WHICH ending happened: a peer that answered at all, even to refuse,
@@ -125,6 +122,12 @@ final readonly class LanPairingOfferFetcher
             // the request and the identity in the reply, and neither belongs in
             // a log file.
             return PairingOfferLookup::NoPeerReached;
+        }
+
+        // The one refusal that is neither the code nor the network. Read off the
+        // same constant the handler answers with, so the two cannot drift.
+        if ($response->status() === HttpStatus::TOO_MANY_REQUESTS) {
+            return PairingOfferLookup::RateLimited;
         }
 
         // It answered. Whatever it said, the network is not the story: a 404 is

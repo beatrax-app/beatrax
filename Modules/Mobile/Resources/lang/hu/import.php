@@ -12,6 +12,13 @@ return [
     'password' => 'Jelszó',
     'password_help' => 'Legalább 12 karakter — nincs jelszó-visszaállítás, csak helyreállítási kódok.',
     'confirm_password' => 'Jelszó megerősítése',
+
+    'requirements_aria' => 'Jelszókövetelmények',
+    'req_length' => 'Legalább 12 karakter',
+    'req_match' => 'A két jelszó egyezik',
+    'req_met' => '(teljesül)',
+    'req_unmet' => '(még nem teljesül)',
+
     'pin' => 'Alkalmazászár PIN-kódja',
     'pin_help' => '6-10 számjegy — ezzel oldható fel ez az eszköz.',
     'confirm_pin' => 'PIN-kód megerősítése',
@@ -37,6 +44,7 @@ return [
     'continue_to_pairing' => 'Tovább a párosításhoz',
 
     'errors' => [
+        'username_required' => 'A felhasználónév megadása kötelező.',
         'passwords_mismatch' => 'A jelszavak nem egyeznek.',
         'password_length' => 'Használj legalább 12 karaktert.',
         'pin_length' => 'A PIN-kódnak legalább 6 számjegyből kell állnia.',

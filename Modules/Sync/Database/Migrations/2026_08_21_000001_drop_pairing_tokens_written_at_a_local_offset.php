@@ -14,9 +14,14 @@ return new class extends ModuleMigration
     // survive the restart this migration runs during anyway.
     public function up(): void
     {
+        // A NULL expires_at makes `not like` evaluate to NULL rather than true,
+        // so such a row would survive the sweep it is most obviously part of.
+        // The column is NOT NULL today; the guard is what keeps that true if it
+        // ever stops being.
         $this->db()->connection($this->getConnection())
             ->table('pairing_tokens')
             ->where('expires_at', 'not like', '%Z')
+            ->orWhereNull('expires_at')
             ->delete();
     }
 

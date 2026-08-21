@@ -79,7 +79,7 @@ it('sendResponderAccept() + drainPairingFrames() propagates the responder identi
     $this->asDevice('desktop', function (): void {
         /** @var Session $session */
         $session = app(Session::class);
-        app(PairingGateway::class)->drainPairingFrames(PRC_DESKTOP_USER_ID);
+        app(PairingGateway::class)->drainPairingFrames(PRC_DESKTOP_USER_ID, null);
     });
 
     $this->asDevice('desktop', function () use ($tokenHash, $phoneIdentity): void {
@@ -116,7 +116,7 @@ it('the full both-confirm handshake propagates over the relay and admits the pee
     $this->asDevice('desktop', function (): void {
         /** @var Session $session */
         $session = app(Session::class);
-        app(PairingGateway::class)->drainPairingFrames(PRC_DESKTOP_USER_ID);
+        app(PairingGateway::class)->drainPairingFrames(PRC_DESKTOP_USER_ID, null);
     });
 
     $this->asDevice('phone', function () use ($tokenHash, $phoneIdentity, $desktopIdentity): void {
@@ -133,7 +133,7 @@ it('the full both-confirm handshake propagates over the relay and admits the pee
     $this->asDevice('desktop', function (): void {
         /** @var Session $session */
         $session = app(Session::class);
-        app(PairingGateway::class)->drainPairingFrames(PRC_DESKTOP_USER_ID);
+        app(PairingGateway::class)->drainPairingFrames(PRC_DESKTOP_USER_ID, null);
     });
     $this->asDevice('desktop', function () use ($tokenHash): void {
         $row = prcTokenRow($tokenHash);
@@ -153,7 +153,7 @@ it('the full both-confirm handshake propagates over the relay and admits the pee
     $this->asDevice('desktop', function (): void {
         /** @var Session $session */
         $session = app(Session::class);
-        app(PairingGateway::class)->drainPairingFrames(PRC_DESKTOP_USER_ID);
+        app(PairingGateway::class)->drainPairingFrames(PRC_DESKTOP_USER_ID, null);
     });
 
     $this->asDevice('desktop', function () use ($tokenHash): void {
@@ -164,7 +164,7 @@ it('the full both-confirm handshake propagates over the relay and admits the pee
     $this->asDevice('phone', function (): void {
         /** @var Session $session */
         $session = app(Session::class);
-        app(PairingGateway::class)->drainPairingFrames(PRC_PHONE_USER_ID);
+        app(PairingGateway::class)->drainPairingFrames(PRC_PHONE_USER_ID, null);
     });
 
     $this->asDevice('phone', function () use ($tokenHash): void {
@@ -208,7 +208,7 @@ it('an applied frame is DELETED from the relay mailbox — redraining returns no
     $this->asDevice('desktop', function (): void {
         /** @var Session $session */
         $session = app(Session::class);
-        app(PairingGateway::class)->drainPairingFrames(PRC_DESKTOP_USER_ID);
+        app(PairingGateway::class)->drainPairingFrames(PRC_DESKTOP_USER_ID, null);
     });
     $this->asDevice('desktop', function () use ($tokenHash): void {
         expect(prcTokenRow($tokenHash)->state)->toBe(PairingState::AwaitingConfirm->value);
@@ -250,7 +250,7 @@ it('a valid-but-deferred PAIR_CONFIRM stays in the relay mailbox across MULTIPLE
     $this->asDevice('desktop', function (): void {
         /** @var Session $session */
         $session = app(Session::class);
-        app(PairingGateway::class)->drainPairingFrames(PRC_DESKTOP_USER_ID);
+        app(PairingGateway::class)->drainPairingFrames(PRC_DESKTOP_USER_ID, null);
     });
 
     $this->asDevice('phone', function () use ($tokenHash, $phoneIdentity, $desktopIdentity): void {
@@ -267,7 +267,7 @@ it('a valid-but-deferred PAIR_CONFIRM stays in the relay mailbox across MULTIPLE
         $this->asDevice('desktop', function (): void {
             /** @var Session $session */
             $session = app(Session::class);
-            app(PairingGateway::class)->drainPairingFrames(PRC_DESKTOP_USER_ID);
+            app(PairingGateway::class)->drainPairingFrames(PRC_DESKTOP_USER_ID, null);
         });
     }
 
@@ -285,7 +285,7 @@ it('a valid-but-deferred PAIR_CONFIRM stays in the relay mailbox across MULTIPLE
     $this->asDevice('desktop', function (): void {
         /** @var Session $session */
         $session = app(Session::class);
-        app(PairingGateway::class)->drainPairingFrames(PRC_DESKTOP_USER_ID);
+        app(PairingGateway::class)->drainPairingFrames(PRC_DESKTOP_USER_ID, null);
     });
 
     $this->asDevice('desktop', function () use ($tokenHash): void {
@@ -307,7 +307,7 @@ it('a malformed relay blob is drained and deleted (terminal-invalid) — never r
         /** @var Session $session */
         $session = app(Session::class);
         // A garbage payload must not throw out of the drain.
-        app(PairingGateway::class)->drainPairingFrames(PRC_DESKTOP_USER_ID);
+        app(PairingGateway::class)->drainPairingFrames(PRC_DESKTOP_USER_ID, null);
     });
 
     $this->asDevice('desktop', function (): void {
@@ -329,7 +329,7 @@ it('drainPairingFrames() never throws when no local self-identity exists yet', f
     $this->asDevice('desktop', function (): void {
         /** @var Session $session */
         $session = app(Session::class);
-        app(PairingGateway::class)->drainPairingFrames(999999);
+        app(PairingGateway::class)->drainPairingFrames(999999, null);
     });
 
     expect(true)->toBeTrue('reaching this line without an exception is the assertion');

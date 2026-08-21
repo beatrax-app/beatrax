@@ -12,6 +12,13 @@ return [
     'password' => 'Password',
     'password_help' => 'At least 12 characters — there is no password reset, only recovery codes.',
     'confirm_password' => 'Confirm password',
+
+    'requirements_aria' => 'Password requirements',
+    'req_length' => 'At least 12 characters',
+    'req_match' => 'Both passwords match',
+    'req_met' => '(met)',
+    'req_unmet' => '(not met yet)',
+
     'pin' => 'App-lock PIN',
     'pin_help' => '6-10 digits — unlocks this device.',
     'confirm_pin' => 'Confirm PIN',
@@ -37,6 +44,7 @@ return [
     'continue_to_pairing' => 'Continue to pairing',
 
     'errors' => [
+        'username_required' => 'Username is required.',
         'passwords_mismatch' => 'Passwords do not match.',
         'password_length' => 'Use at least 12 characters.',
         'pin_length' => 'PIN must be at least 6 digits.',

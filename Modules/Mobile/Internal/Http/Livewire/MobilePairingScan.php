@@ -50,6 +50,7 @@ final class MobilePairingScan extends Component
     public string $entryStep = 'scan';
 
     // Locked so the client cannot retarget which token the trust gate confirms.
+    // Only submitCode() and the resume in mount() may set it.
     #[Locked]
     public string $pairingTokenId = '';
 
@@ -79,7 +80,11 @@ final class MobilePairingScan extends Component
 
     public bool $awaitingPeer = false;
 
+    // #[Locked] — this is what the confirmation digest is taken from, so an
+    // unlocked property would let the client decide what its own tap is bound
+    // to. Every writer below is server-side.
     /** @var list<string> the 6 derived safety-number words shown on the confirm step */
+    #[Locked]
     public array $safetyWords = [];
 
     // Shown beside the words so the user confirms WHICH two devices are
@@ -146,6 +151,8 @@ final class MobilePairingScan extends Component
             $this->safetyWords = $inFlight['safety_words'];
             $this->side = $side;
             $this->step = $inFlight['state'] === PairingGateway::STATE_CONFIRMED ? 'success' : 'confirm';
+            $this->awaitingPeer = $inFlight['responder_confirmed']
+                && $inFlight['state'] !== PairingGateway::STATE_CONFIRMED;
 
             // Rearms the poll's responder-accept re-emit: the addressing died
             // with the old component state, not with the ceremony, so without
@@ -351,7 +358,7 @@ final class MobilePairingScan extends Component
         // Before tokenState() below: draining drives the local row to
         // CONFIRMED, which is what shouldDeferSelfMint() then reads.
         try {
-            $gateway->drainPairingFrames($userId);
+            $gateway->drainPairingFrames($userId, $session);
         } catch (Throwable $e) {
             $logger->warning('MobilePairingScan: cross-device relay drain failed during poll.', [
                 'user_id' => $userId,
@@ -373,8 +380,8 @@ final class MobilePairingScan extends Component
                 $gateway->sendResponderAccept($userId, $this->importResponderTokenHash, $this->importDesktopDeviceId, $session);
                 $this->flashMessage = '';
             } catch (Throwable $e) {
-                // The courier throws when no relay is configured. Swallowing
-                // that left the user watching a spinner forever.
+                // The courier throws only when no road home is open at all.
+                // Swallowing that left the user watching a spinner forever.
                 $this->flashMessage = Lang::get('mobile::pairing.errors.relay_unreachable');
 
                 $logger->warning('MobilePairingScan: cross-device PAIR_RESPONDER_ACCEPT relay re-emit failed during poll.', [
@@ -386,10 +393,11 @@ final class MobilePairingScan extends Component
 
         // Re-emitted for the same reason the accept above is: a confirm the peer
         // deferred, or lost in flight, is otherwise never sent again and the
-        // ceremony completes on one device only. Gated on having actually
-        // tapped — sending it sooner would assert a confirmation never given.
-        if ($this->awaitingPeer && $state !== PairingGateway::STATE_CONFIRMED) {
-            $this->sendConfirmOverRelay($gateway, $userId, $db, $session, $logger);
+        // ceremony completes on one device only. Gated on the row's own stamp,
+        // not on a flag a refused tap also sets.
+        if ($state !== PairingGateway::STATE_CONFIRMED
+            && $gateway->hasConfirmedLocally((int) $this->pairingTokenId, $userId, $session)) {
+            $this->sendConfirmToPeer($gateway, $userId, $db, $session, $logger);
         }
 
         // Expired, refused or cancelled on the other device: without this the
@@ -409,7 +417,9 @@ final class MobilePairingScan extends Component
                 try {
                     $migrationService->migrate($currentUser->user(), $session);
                 } catch (Throwable) {
-                    // A migration failure never undoes the finished pairing.
+                    // Best-effort: the pairing is already recorded, and the
+                    // encryption row keeps rendering its own state until a
+                    // later pass succeeds.
                 }
             }
         }
@@ -454,17 +464,29 @@ final class MobilePairingScan extends Component
             return;
         }
 
-        // Bound to the words on screen, not to whatever the row says now.
+        // Bound to the words on screen rather than to whatever the row says
+        // now, so a responder that rebinds cannot inherit this tap.
         $state = $gateway->confirm(
             (int) $this->pairingTokenId,
             $userId,
             $deviceId,
-            $this->safetyWords === [] ? '' : hash('sha256', implode('|', $this->safetyWords)),
+            $gateway->safetyDigestOf($this->safetyWords),
         );
+
+        // Refused: the keys behind those words are not the ones the row binds
+        // any more. Silence here reads as "waiting for the other device", which
+        // is how a responder that rebinds stalls a ceremony unseen.
+        if ($state === null) {
+            $this->awaitingPeer = false;
+            $this->safetyWords = $gateway->safetyWordsFor((int) $this->pairingTokenId, $userId);
+            $this->flashMessage = Lang::get('mobile::pairing.errors.safety_number_changed');
+
+            return;
+        }
 
         // Safe regardless of $state: the frame is only consumable once the
         // peer's own local side independently confirms too.
-        $this->sendConfirmOverRelay($gateway, $userId, $db, $session, $logger);
+        $this->sendConfirmToPeer($gateway, $userId, $db, $session, $logger);
 
         if ($state === PairingGateway::STATE_CONFIRMED) {
             $this->awaitingPeer = false;
@@ -474,7 +496,9 @@ final class MobilePairingScan extends Component
                 try {
                     $migrationService->migrate($currentUser->user(), $session);
                 } catch (Throwable) {
-                    // A migration failure never undoes the finished pairing.
+                    // Best-effort: the pairing is already recorded, and the
+                    // encryption row keeps rendering its own state until a
+                    // later pass succeeds.
                 }
             }
 
@@ -484,7 +508,7 @@ final class MobilePairingScan extends Component
         $this->awaitingPeer = true;
     }
 
-    private function sendConfirmOverRelay(
+    private function sendConfirmToPeer(
         PairingGateway $gateway,
         int $userId,
         DatabaseManager $db,

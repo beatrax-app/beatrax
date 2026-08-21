@@ -36,7 +36,10 @@ return [
     'errors' => [
         'relay_unreachable' => 'Toiseen laitteeseen ei saada yhteyttä. Varmista, että molemmat ovat samassa verkossa ja synkronointi on päällä työpöytäsovelluksessa.',
         'invalid_code' => 'Tämä koodi on virheellinen tai vanhentunut. Pyydä toista laitetta luomaan uusi.',
+        'code_not_accepted' => 'Mikään tämän verkon laite ei hyväksynyt koodia. Tarkista koodi ja se, näyttääkö toinen laite sitä yhä.',
+        'rate_limited' => 'Liian monta yritystä. Odota minuutti ja yritä uudelleen.',
         'identity_locked' => 'Laitteesi identiteetti on lukittu. Avaa sovelluksen lukitus ja yritä uudelleen.',
         'identity_needs_lock' => 'Määritä ensin sovelluslukitus — se suojaa laitteesi identiteettiä.',
+        'safety_number_changed' => 'Toinen laite muuttui vertailun aikana. Tarkista alla olevat sanat uudelleen ennen vahvistamista.',
     ],
 ];

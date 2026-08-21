@@ -124,7 +124,7 @@ it('rejects the both-confirm when a malicious relay keeps the responder Ed25519 
 
     // The desktop reconstructs the signed message with the key it bound while
     // the phone signed over its own, so the two diverge and it is rejected.
-    $on('desktop', fn () => app(PairingGateway::class)->drainPairingFrames(PSKB_DESKTOP_USER_ID));
+    $on('desktop', fn () => app(PairingGateway::class)->drainPairingFrames(PSKB_DESKTOP_USER_ID, null));
 
     // The trust decision never completes, so no group key is ever sealed to the
     // attacker's key.
@@ -165,7 +165,7 @@ it('control: the identical handshake with the responder X25519 UNCHANGED complet
         app(PairingGateway::class)->sendConfirm(PSKB_PHONE_USER_ID, $phoneTokenId, $desktop->deviceId, $session);
     });
 
-    $on('desktop', fn () => app(PairingGateway::class)->drainPairingFrames(PSKB_DESKTOP_USER_ID));
+    $on('desktop', fn () => app(PairingGateway::class)->drainPairingFrames(PSKB_DESKTOP_USER_ID, null));
 
     $on('desktop', function () use ($phone): void {
         /** @var DatabaseManager $db */

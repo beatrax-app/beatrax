@@ -12,6 +12,13 @@ return [
     'password' => 'Parola',
     'password_help' => 'En az 12 karakter — parola sıfırlama yoktur, yalnızca kurtarma kodları vardır.',
     'confirm_password' => 'Parolayı doğrula',
+
+    'requirements_aria' => 'Parola gereksinimleri',
+    'req_length' => 'En az 12 karakter',
+    'req_match' => 'İki parola da eşleşiyor',
+    'req_met' => '(sağlandı)',
+    'req_unmet' => '(henüz sağlanmadı)',
+
     'pin' => 'Uygulama kilidi PIN kodu',
     'pin_help' => '6-10 hane — bu cihazın kilidini açar.',
     'confirm_pin' => 'PIN kodunu doğrula',
@@ -37,6 +44,7 @@ return [
     'continue_to_pairing' => 'Eşleştirmeye devam et',
 
     'errors' => [
+        'username_required' => 'Kullanıcı adı zorunludur.',
         'passwords_mismatch' => 'Parolalar eşleşmiyor.',
         'password_length' => 'En az 12 karakter kullan.',
         'pin_length' => 'PIN en az 6 haneli olmalıdır.',
