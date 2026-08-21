@@ -20,7 +20,9 @@ return [
 
     'issues' => [
         'row' => 'Satır :row: :reason',
-        'file' => 'Dosya tamamen okunamadı: :reason',
+        'file_stopped' => 'Dosya :row. satırdan ötesi okunamadı. O satırdan sonrası içe aktarılmadı.',
+        'file_none' => 'Dosya hiç okunamadı.',
+        'detail' => 'Okuyucunun bildirdiği: :reason',
         'duplicate' => 'Satır :row zaten defterindeydi.',
         'more' => '+ :count listelenmedi',
         'unknown_reason' => 'Herhangi bir neden kaydedilmedi.',

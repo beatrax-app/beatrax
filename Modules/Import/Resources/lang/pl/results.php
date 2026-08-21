@@ -20,7 +20,9 @@ return [
 
     'issues' => [
         'row' => 'Wiersz :row: :reason',
-        'file' => 'Nie udało się odczytać całego pliku: :reason',
+        'file_stopped' => 'Pliku nie udało się odczytać dalej niż do wiersza :row. Nic po tym wierszu nie zostało zaimportowane.',
+        'file_none' => 'Pliku nie udało się odczytać w ogóle.',
+        'detail' => 'Czytnik zgłosił: :reason',
         'duplicate' => 'Wiersz :row był już w Twojej księdze.',
         'more' => '+ :count niewymienionych',
         'unknown_reason' => 'Nie zapisano powodu.',

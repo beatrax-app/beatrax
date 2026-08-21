@@ -57,12 +57,9 @@ final class ImportRowIssue
         return $issues;
     }
 
-    // The sentence the reader gets: the parser's own words when they were safe
-    // to keep, the translated reason when they were not, and nothing rather
-    // than a guess when neither is on record.
-    public function describe(): ?string
+    public function reasonLabel(): ?string
     {
-        return $this->detail ?? $this->reason?->label();
+        return $this->reason?->label();
     }
 
     private static function fromStoredEntry(mixed $entry): ?self

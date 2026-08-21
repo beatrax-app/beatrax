@@ -20,7 +20,9 @@ return [
 
     'issues' => [
         'row' => 'Rândul :row: :reason',
-        'file' => 'Fișierul nu a putut fi citit în întregime: :reason',
+        'file_stopped' => 'Fișierul nu a putut fi citit dincolo de rândul :row. Nimic după acel rând nu a fost importat.',
+        'file_none' => 'Fișierul nu a putut fi citit deloc.',
+        'detail' => 'Cititorul a raportat: :reason',
         'duplicate' => 'Rândul :row era deja în registrul tău.',
         'more' => '+ :count nelistate',
         'unknown_reason' => 'Nu a fost înregistrat niciun motiv.',

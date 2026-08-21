@@ -249,12 +249,26 @@ flips the run to `confirmed`.
 
 - `kind` is an `ImportIssueKind` — `file_error`, `row_error` or
   `duplicate`.
-- `row` is the source row index, rendered one-based.
+- `row` is a source row index, rendered one-based. On a `row_error` or
+  a `duplicate` it is the row itself. On a `file_error` it is the row
+  the read stopped at — the first one the reader never got — and null
+  when it stopped before producing any. It is counted from the rows
+  the pipeline produced, not read out of the exception message, so it
+  survives a message that cannot be shown.
 - `reason` is an `ImportFailureReason` backing value, translated at
   render time so the list reads in the reader's language whatever
   language the import ran in.
-- `detail` is the parser's own wording, present only for `file_error`
-  and only when the exception declared it names no user data.
+- `detail` is what the failure said for itself past the reason,
+  carried only from an exception implementing
+  `Core\Public\Support\MessageNamesNoUserData`. Four exceptions
+  declare it today, all of them adapter-level, so most row failures
+  carry a reason and no detail — their messages quote a cell.
+
+The detail is rendered **beside** the reason, never instead of it. The
+first version substituted, and a `file_error` whose exception was not
+declared safe explained itself with itself: "The file could not be read
+in full: This file could not be read." The row index is what makes the
+line specific when there is no detail to carry.
 
 What is deliberately **not** in the column: counterparty names,
 descriptions, and any caught exception message that has not declared

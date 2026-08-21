@@ -20,7 +20,9 @@ return [
 
     'issues' => [
         'row' => 'Række :row: :reason',
-        'file' => 'Filen kunne ikke læses helt: :reason',
+        'file_stopped' => 'Filen kunne ikke læses længere end til række :row. Intet efter den række blev importeret.',
+        'file_none' => 'Filen kunne slet ikke læses.',
+        'detail' => 'Indlæseren meldte: :reason',
         'duplicate' => 'Række :row var allerede i din hovedbog.',
         'more' => '+ :count ikke vist',
         'unknown_reason' => 'Der blev ikke registreret nogen årsag.',

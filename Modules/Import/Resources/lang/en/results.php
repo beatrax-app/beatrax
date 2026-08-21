@@ -20,7 +20,9 @@ return [
 
     'issues' => [
         'row' => 'Row :row: :reason',
-        'file' => 'The file could not be read in full: :reason',
+        'file_stopped' => 'The file could not be read past row :row. Nothing after that row was imported.',
+        'file_none' => 'The file could not be read at all.',
+        'detail' => 'The reader reported: :reason',
         'duplicate' => 'Row :row was already in your ledger.',
         'more' => '+ :count not listed',
         'unknown_reason' => 'No reason was recorded.',

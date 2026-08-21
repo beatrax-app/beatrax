@@ -58,8 +58,6 @@ final class PreviewWizard extends Component
 
     public int $chainResolutionLinkedCount = 0;
 
-    public ?string $chainResolutionError = null;
-
     public function mount(int $id, CurrentUser $currentUser): void
     {
         $this->importRunId = $id;
@@ -105,12 +103,11 @@ final class PreviewWizard extends Component
             ->where('user_id', $user->id)
             ->orderByDesc('id')
             ->limit(1)
-            ->first(['status', 'linked_count', 'last_error']);
+            ->first(['status', 'linked_count']);
 
         if ($row === null) {
             $this->chainResolutionStatus = null;
             $this->chainResolutionLinkedCount = 0;
-            $this->chainResolutionError = null;
 
             return;
         }
@@ -118,8 +115,6 @@ final class PreviewWizard extends Component
         $status = is_scalar($row->status) ? (string) $row->status : '';
         $this->chainResolutionStatus = $status === '' ? null : $status;
         $this->chainResolutionLinkedCount = is_numeric($row->linked_count) ? (int) $row->linked_count : 0;
-        $lastError = is_string($row->last_error) ? $row->last_error : null;
-        $this->chainResolutionError = $lastError === null ? null : substr($lastError, 0, 200);
 
         if ($this->chainResolutionStatus === 'complete' && $this->importRunId > 0) {
             $this->redirect(

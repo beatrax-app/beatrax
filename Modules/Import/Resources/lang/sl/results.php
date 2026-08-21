@@ -20,7 +20,9 @@ return [
 
     'issues' => [
         'row' => 'Vrstica :row: :reason',
-        'file' => 'Datoteke ni bilo mogoče prebrati v celoti: :reason',
+        'file_stopped' => 'Datoteke ni bilo mogoče prebrati dlje kot do vrstice :row. Nič za to vrstico ni bilo uvoženo.',
+        'file_none' => 'Datoteke sploh ni bilo mogoče prebrati.',
+        'detail' => 'Bralnik je sporočil: :reason',
         'duplicate' => 'Vrstica :row je bila že v tvoji knjigi.',
         'more' => '+ :count ni navedenih',
         'unknown_reason' => 'Razlog ni bil zabeležen.',

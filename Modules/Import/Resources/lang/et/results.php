@@ -20,7 +20,9 @@ return [
 
     'issues' => [
         'row' => 'Rida :row: :reason',
-        'file' => 'Faili ei õnnestunud tervikuna lugeda: :reason',
+        'file_stopped' => 'Faili ei õnnestunud lugeda kaugemale kui rida :row. Midagi pärast seda rida ei imporditud.',
+        'file_none' => 'Faili ei õnnestunud üldse lugeda.',
+        'detail' => 'Lugeja teatas: :reason',
         'duplicate' => 'Rida :row oli juba sinu pearaamatus.',
         'more' => '+ :count pole loetletud',
         'unknown_reason' => 'Põhjust ei salvestatud.',

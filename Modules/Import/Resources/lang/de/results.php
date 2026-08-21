@@ -20,7 +20,9 @@ return [
 
     'issues' => [
         'row' => 'Zeile :row: :reason',
-        'file' => 'Die Datei konnte nicht vollständig gelesen werden: :reason',
+        'file_stopped' => 'Die Datei konnte nicht über Zeile :row hinaus gelesen werden. Alles danach wurde nicht importiert.',
+        'file_none' => 'Die Datei konnte überhaupt nicht gelesen werden.',
+        'detail' => 'Der Leser meldete: :reason',
         'duplicate' => 'Zeile :row war bereits in deinem Hauptbuch.',
         'more' => '+ :count nicht aufgeführt',
         'unknown_reason' => 'Es wurde kein Grund erfasst.',

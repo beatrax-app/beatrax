@@ -20,7 +20,9 @@ return [
 
     'issues' => [
         'row' => 'Redak :row: :reason',
-        'file' => 'Datoteku nije bilo moguće pročitati u cijelosti: :reason',
+        'file_stopped' => 'Datoteku nije bilo moguće pročitati dalje od retka :row. Ništa nakon tog retka nije uvezeno.',
+        'file_none' => 'Datoteku uopće nije bilo moguće pročitati.',
+        'detail' => 'Čitač je prijavio: :reason',
         'duplicate' => 'Redak :row već je bio u tvojoj knjizi.',
         'more' => '+ :count nije navedeno',
         'unknown_reason' => 'Razlog nije zabilježen.',

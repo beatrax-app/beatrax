@@ -20,7 +20,9 @@ return [
 
     'issues' => [
         'row' => 'Ligne :row : :reason',
-        'file' => 'Le fichier n\'a pas pu être lu en entier : :reason',
+        'file_stopped' => 'Le fichier n\'a pas pu être lu au-delà de la ligne :row. Rien après cette ligne n\'a été importé.',
+        'file_none' => 'Le fichier n\'a pas pu être lu du tout.',
+        'detail' => 'Le lecteur a signalé : :reason',
         'duplicate' => 'La ligne :row était déjà dans ton registre.',
         'more' => '+ :count non listées',
         'unknown_reason' => 'Aucune raison n\'a été enregistrée.',

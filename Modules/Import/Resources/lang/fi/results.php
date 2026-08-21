@@ -20,7 +20,9 @@ return [
 
     'issues' => [
         'row' => 'Rivi :row: :reason',
-        'file' => 'Tiedostoa ei voitu lukea kokonaan: :reason',
+        'file_stopped' => 'Tiedostoa ei voitu lukea riviä :row pidemmälle. Mitään sen jälkeen ei tuotu.',
+        'file_none' => 'Tiedostoa ei voitu lukea lainkaan.',
+        'detail' => 'Lukija ilmoitti: :reason',
         'duplicate' => 'Rivi :row oli jo kirjanpidossasi.',
         'more' => '+ :count ei lueteltu',
         'unknown_reason' => 'Syytä ei kirjattu.',

@@ -20,7 +20,9 @@ return [
 
     'issues' => [
         'row' => 'Linha :row: :reason',
-        'file' => 'O ficheiro não pôde ser lido por completo: :reason',
+        'file_stopped' => 'O ficheiro não pôde ser lido para além da linha :row. Nada depois dessa linha foi importado.',
+        'file_none' => 'O ficheiro não pôde ser lido de todo.',
+        'detail' => 'O leitor reportou: :reason',
         'duplicate' => 'A linha :row já estava no teu livro-razão.',
         'more' => '+ :count não listadas',
         'unknown_reason' => 'Não foi registado nenhum motivo.',

@@ -170,6 +170,7 @@ final class PreviewCache
             paymentType: $existing->paymentType,
             aliasFriendlyName: $friendlyName,
             errorReason: $existing->errorReason,
+            errorDetail: $existing->errorDetail,
         );
 
         $newRows = $preview->rows;
@@ -182,6 +183,7 @@ final class PreviewCache
             enrichedCount: $preview->enrichedCount,
             fileFailureReason: $preview->fileFailureReason,
             fileFailureDetail: $preview->fileFailureDetail,
+            fileFailureRowIndex: $preview->fileFailureRowIndex,
         );
 
         $ttl = $this->clock->now()->addMinutes(self::TTL_MINUTES);

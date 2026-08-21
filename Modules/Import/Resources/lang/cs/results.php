@@ -20,7 +20,9 @@ return [
 
     'issues' => [
         'row' => 'Řádek :row: :reason',
-        'file' => 'Soubor se nepodařilo načíst celý: :reason',
+        'file_stopped' => 'Soubor se nepodařilo načíst dále než po řádek :row. Nic za tímto řádkem nebylo importováno.',
+        'file_none' => 'Soubor se nepodařilo načíst vůbec.',
+        'detail' => 'Čtečka ohlásila: :reason',
         'duplicate' => 'Řádek :row už byl v tvé knize.',
         'more' => '+ :count neuvedeno',
         'unknown_reason' => 'Důvod nebyl zaznamenán.',

@@ -182,7 +182,7 @@ final class ConfirmImport implements ConfirmsImports
         if ($preview->fileFailureReason !== null) {
             $issues[] = new ImportRowIssue(
                 kind: ImportIssueKind::FileError,
-                rowIndex: null,
+                rowIndex: $preview->fileFailureRowIndex,
                 reason: ImportFailureReason::tryFrom($preview->fileFailureReason),
                 detail: $preview->fileFailureDetail,
             );
@@ -196,7 +196,7 @@ final class ConfirmImport implements ConfirmsImports
                     kind: ImportIssueKind::RowError,
                     rowIndex: $row->rowIndex,
                     reason: $row->errorReason === null ? null : ImportFailureReason::tryFrom($row->errorReason),
-                    detail: null,
+                    detail: $row->errorDetail,
                 );
                 $errorsKept++;
             }

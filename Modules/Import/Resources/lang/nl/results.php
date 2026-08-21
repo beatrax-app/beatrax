@@ -20,7 +20,9 @@ return [
 
     'issues' => [
         'row' => 'Regel :row: :reason',
-        'file' => 'Het bestand kon niet volledig worden gelezen: :reason',
+        'file_stopped' => 'Het bestand kon niet verder worden gelezen dan regel :row. Alles na die regel is niet geïmporteerd.',
+        'file_none' => 'Het bestand kon helemaal niet worden gelezen.',
+        'detail' => 'De lezer meldde: :reason',
         'duplicate' => 'Regel :row stond al in je grootboek.',
         'more' => '+ :count niet vermeld',
         'unknown_reason' => 'Er is geen reden vastgelegd.',
