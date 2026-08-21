@@ -231,6 +231,7 @@ The country is captured at signup beside the language, not inside Tax:
 the same `UserCountry::store()` the other two routes use, so a fresh
 install starts correctly classified. Skipping it is a real answer and
 leaves it unset.
+
 - `UserDataPathService` — every read of `database_path()`,
   `storage_path()`, `base_path()` outside this class is forbidden by
   the arch invariant `noRawPathHelpersOutsidePathService`. The

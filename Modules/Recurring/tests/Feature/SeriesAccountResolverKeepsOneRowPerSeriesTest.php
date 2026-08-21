@@ -12,7 +12,7 @@ use Modules\Recurring\Internal\Queries\SeriesAccountResolver;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Models\RecurringSeriesOccurrence;
 
-function sarUser(string $username): User
+function seriesAccountUser(string $username): User
 {
     return User::query()->create([
         'username' => $username,
@@ -64,7 +64,7 @@ function sarSeries(User $user, string $name): RecurringSeries
     ]);
 }
 
-function sarTransaction(User $user, Account $account, ImportRun $run, string $ref): Transaction
+function seriesAccountTransaction(User $user, Account $account, ImportRun $run, string $ref): Transaction
 {
     return Transaction::query()->create([
         'user_id' => $user->id,
@@ -142,8 +142,8 @@ function sarLegacyLatestOccurrence(DatabaseManager $db, array $seriesIds, User $
  */
 function sarFixture(DatabaseManager $db): array
 {
-    $user = sarUser('sar-owner');
-    $other = sarUser('sar-other');
+    $user = seriesAccountUser('sar-owner');
+    $other = seriesAccountUser('sar-other');
 
     $current = sarAccount($user, 'sar-current', 'Current');
     $savings = sarAccount($user, 'sar-savings', 'Savings');
@@ -164,31 +164,31 @@ function sarFixture(DatabaseManager $db): array
     // last one written — the row a naive `first()` on insertion order misses.
     for ($i = 1; $i <= 40; $i++) {
         $account = $i === 40 ? $savings : $current;
-        $tx = sarTransaction($user, $account, $run, 'long-'.$i);
+        $tx = seriesAccountTransaction($user, $account, $run, 'long-'.$i);
         sarOccurrence($user, $long, $tx, CarbonImmutable::parse('2023-01-01')->addMonths($i)->toDateString());
     }
 
     // Two occurrences share an observed_at. The ordering's secondary key is
     // rso.id DESC, so the later-written row (Joint) is the answer.
-    $olderTx = sarTransaction($user, $current, $run, 'tied-old');
+    $olderTx = seriesAccountTransaction($user, $current, $run, 'tied-old');
     sarOccurrence($user, $tied, $olderTx, '2026-03-15');
-    $tieLoserTx = sarTransaction($user, $savings, $run, 'tie-loser');
+    $tieLoserTx = seriesAccountTransaction($user, $savings, $run, 'tie-loser');
     sarOccurrence($user, $tied, $tieLoserTx, '2026-04-15');
-    $tieWinnerTx = sarTransaction($user, $joint, $run, 'tie-winner');
+    $tieWinnerTx = seriesAccountTransaction($user, $joint, $run, 'tie-winner');
     sarOccurrence($user, $tied, $tieWinnerTx, '2026-04-15');
 
     // The newest leg points at a transaction another user owns, so the join's
     // ownership filter must drop it and fall back to the older owned leg.
-    $ownedTx = sarTransaction($user, $current, $run, 'cross-owned');
+    $ownedTx = seriesAccountTransaction($user, $current, $run, 'cross-owned');
     sarOccurrence($user, $crossUser, $ownedTx, '2026-02-01');
-    $foreignTx = sarTransaction($other, $foreign, $otherRun, 'cross-foreign');
+    $foreignTx = seriesAccountTransaction($other, $foreign, $otherRun, 'cross-foreign');
     sarOccurrence($user, $crossUser, $foreignTx, '2026-05-01');
 
     // Occurrences for a series nobody asked about, and occurrences owned by
     // the other user — neither may reach the map.
-    $strayTx = sarTransaction($user, $joint, $run, 'stray');
+    $strayTx = seriesAccountTransaction($user, $joint, $run, 'stray');
     sarOccurrence($user, $outsideWindow, $strayTx, '2026-05-20');
-    $otherTx = sarTransaction($other, $foreign, $otherRun, 'other-user');
+    $otherTx = seriesAccountTransaction($other, $foreign, $otherRun, 'other-user');
     sarOccurrence($other, $otherUsers, $otherTx, '2026-05-21');
 
     return [

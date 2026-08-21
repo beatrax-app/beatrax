@@ -9,7 +9,7 @@ use Modules\Ledger\Public\Services\AccountSlugResolver;
 
 uses(RefreshDatabase::class);
 
-function asrUser(string $username): User
+function accountSlugUser(string $username): User
 {
     return User::query()->create([
         'username' => $username,
@@ -34,7 +34,7 @@ function asrSeed(int $userId, string $slug, string $iban): void
 
 beforeEach(function (): void {
     $this->resolver = $this->app->make(AccountSlugResolver::class);
-    $this->owner = asrUser('asr-owner');
+    $this->owner = accountSlugUser('asr-owner');
 });
 
 it('kebab-cases the account name and adds nothing else', function (): void {
@@ -57,7 +57,7 @@ it('keeps walking past every taken suffix', function (): void {
 });
 
 it('scopes the walk to one user, so a neighbour holding the slug does not push it along', function (): void {
-    $other = asrUser('asr-other');
+    $other = accountSlugUser('asr-other');
     asrSeed($other->id, 'asn-bank', 'NL57ASNB0123456789');
 
     expect($this->resolver->resolveUnique($this->owner->id, 'ASN bank'))->toBe('asn-bank');

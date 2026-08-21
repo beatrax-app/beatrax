@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Import\Public\Contracts\RunsImports;
+use Modules\Import\Public\Enums\PreviewRowStatus;
 
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
@@ -20,7 +21,7 @@ it('parses the tiny ICS PDF fixture through the import pipeline and produces at 
     );
 
     expect(count($result->rows))->toBeGreaterThanOrEqual(1);
-    expect(array_filter($result->rows, fn ($r) => $r->status === 'new'))->not->toBe([]);
+    expect(array_filter($result->rows, fn ($r) => $r->status === PreviewRowStatus::NewRow))->not->toBe([]);
 })->group('phase-16.1.1');
 
 it('does not emit any ERROR-status rows for the tiny ICS PDF fixture', function (): void {
@@ -33,5 +34,5 @@ it('does not emit any ERROR-status rows for the tiny ICS PDF fixture', function 
         'ics-sample-tiny.pdf',
     );
 
-    expect(array_filter($result->rows, fn ($r) => $r->status === 'error'))->toBe([]);
+    expect(array_filter($result->rows, fn ($r) => $r->status === PreviewRowStatus::Error))->toBe([]);
 })->group('phase-16.1.1');

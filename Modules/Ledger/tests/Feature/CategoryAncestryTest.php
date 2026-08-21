@@ -19,9 +19,9 @@ beforeEach(function (): void {
 });
 
 it('loads a category and its whole parent chain in one map', function (): void {
-    $root = Category::create(['user_id' => $this->user->id, 'name' => 'Home', 'slug' => 'anc-home', 'kind' => 'expense', 'display_order' => 1]);
-    $mid = Category::create(['user_id' => $this->user->id, 'parent_id' => $root->id, 'name' => 'Utilities', 'slug' => 'anc-utilities', 'kind' => 'expense', 'display_order' => 2]);
-    $leaf = Category::create(['user_id' => $this->user->id, 'parent_id' => $mid->id, 'name' => 'Water', 'slug' => 'anc-water', 'kind' => 'expense', 'display_order' => 3]);
+    $root = Category::create(['user_id' => $this->user->id, 'name' => 'Home', 'slug' => 'ancestry-home', 'kind' => 'expense', 'display_order' => 1]);
+    $mid = Category::create(['user_id' => $this->user->id, 'parent_id' => $root->id, 'name' => 'Utilities', 'slug' => 'ancestry-utilities', 'kind' => 'expense', 'display_order' => 2]);
+    $leaf = Category::create(['user_id' => $this->user->id, 'parent_id' => $mid->id, 'name' => 'Water', 'slug' => 'ancestry-water', 'kind' => 'expense', 'display_order' => 3]);
 
     $byId = $this->ancestry->load([$leaf->id], $this->user->id);
 
@@ -32,9 +32,9 @@ it('loads a category and its whole parent chain in one map', function (): void {
 // A parent_id pointing at another tenant's row ends the breadcrumb at the
 // filtered-out parent rather than printing a foreign category's name.
 it('stops the chain at a parent the reader may not see', function (): void {
-    $stranger = User::create(['username' => 'anc-stranger', 'password' => 'fixture-password-12chars', 'period_start_day' => 1]);
-    $foreign = Category::create(['user_id' => $stranger->id, 'name' => 'Secret', 'slug' => 'anc-secret', 'kind' => 'expense', 'display_order' => 1]);
-    $mine = Category::create(['user_id' => $this->user->id, 'parent_id' => $foreign->id, 'name' => 'Mine', 'slug' => 'anc-mine', 'kind' => 'expense', 'display_order' => 2]);
+    $stranger = User::create(['username' => 'ancestry-stranger', 'password' => 'fixture-password-12chars', 'period_start_day' => 1]);
+    $foreign = Category::create(['user_id' => $stranger->id, 'name' => 'Secret', 'slug' => 'ancestry-secret', 'kind' => 'expense', 'display_order' => 1]);
+    $mine = Category::create(['user_id' => $this->user->id, 'parent_id' => $foreign->id, 'name' => 'Mine', 'slug' => 'ancestry-mine', 'kind' => 'expense', 'display_order' => 2]);
 
     $byId = $this->ancestry->load([$mine->id], $this->user->id);
 
@@ -43,7 +43,7 @@ it('stops the chain at a parent the reader may not see', function (): void {
 });
 
 it('reads a global category with no owner alongside the reader own rows', function (): void {
-    $global = Category::create(['user_id' => null, 'name' => 'Groceries', 'slug' => 'anc-groceries', 'kind' => 'expense', 'display_order' => 1]);
+    $global = Category::create(['user_id' => null, 'name' => 'Groceries', 'slug' => 'ancestry-groceries', 'kind' => 'expense', 'display_order' => 1]);
 
     $byId = $this->ancestry->load([$global->id], $this->user->id);
 
@@ -67,8 +67,8 @@ it('asks the database nothing for an empty id list', function (): void {
 // Eloquent does not enforce acyclicity, so a corrupt parent_id pair has to
 // terminate rather than spin: the visited set is what stops it.
 it('terminates on a parent cycle instead of walking forever', function (): void {
-    $a = Category::create(['user_id' => $this->user->id, 'name' => 'A', 'slug' => 'anc-a', 'kind' => 'expense', 'display_order' => 1]);
-    $b = Category::create(['user_id' => $this->user->id, 'parent_id' => $a->id, 'name' => 'B', 'slug' => 'anc-b', 'kind' => 'expense', 'display_order' => 2]);
+    $a = Category::create(['user_id' => $this->user->id, 'name' => 'A', 'slug' => 'ancestry-a', 'kind' => 'expense', 'display_order' => 1]);
+    $b = Category::create(['user_id' => $this->user->id, 'parent_id' => $a->id, 'name' => 'B', 'slug' => 'ancestry-b', 'kind' => 'expense', 'display_order' => 2]);
     Category::query()->whereKey($a->id)->update(['parent_id' => $b->id]);
 
     $byId = $this->ancestry->load([$b->id], $this->user->id);
@@ -87,7 +87,7 @@ it('stops the breadcrumb at the depth cap on a chain longer than it', function (
             'user_id' => $this->user->id,
             'parent_id' => $parentId,
             'name' => 'L'.$level,
-            'slug' => 'anc-l'.$level,
+            'slug' => 'ancestry-l'.$level,
             'kind' => 'expense',
             'display_order' => $level,
         ]);

@@ -168,11 +168,11 @@ understood.
 
 ## Related
 
-- [Category display names](../ledger/category-display-names.md) — why
++ [Category display names](../ledger/category-display-names.md) — why
   `categories.name` cannot be matched on its own, and the seam that
   answers what the reader actually sees.
-- [`Ledger` architecture](../ledger/architecture.md) — the
++ [`Ledger` architecture](../ledger/architecture.md) — the
   `transactions` table this index is derived from.
-- [Sensitive columns at rest](../sync/sensitive-columns-at-rest.md) —
++ [Sensitive columns at rest](../sync/sensitive-columns-at-rest.md) —
   what the index writer and `search:reindex` have to decrypt, and what
   it means when a value comes back blank.

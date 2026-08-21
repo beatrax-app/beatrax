@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
+use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Ledger\Models\Transaction;
 
 beforeEach(function (): void {
@@ -115,10 +116,10 @@ it('preview-only flow surfaces every cross-statement collision as duplicate', fu
         'february.camt053.xml',
     );
 
-    $enrichedRows = array_filter($preview->rows, fn ($r) => $r->status === 'enriched');
+    $enrichedRows = array_filter($preview->rows, fn ($r) => $r->status === PreviewRowStatus::Enriched);
     expect($enrichedRows)->toBeEmpty();
 
-    $duplicateRows = array_filter($preview->rows, fn ($r) => $r->status === 'duplicate');
+    $duplicateRows = array_filter($preview->rows, fn ($r) => $r->status === PreviewRowStatus::Duplicate);
     expect(count($duplicateRows))->toBe($this->expectedTransactionCount);
 
     foreach ($duplicateRows as $row) {
@@ -139,13 +140,13 @@ it('cross_format_pair_fingerprints_match: every CSV row has a CAMT counterpart w
         'february.camt053.xml',
     );
 
-    $newRows = array_filter($preview->rows, fn ($r) => $r->status === 'new');
-    $errorRows = array_filter($preview->rows, fn ($r) => $r->status === 'error');
+    $newRows = array_filter($preview->rows, fn ($r) => $r->status === PreviewRowStatus::NewRow);
+    $errorRows = array_filter($preview->rows, fn ($r) => $r->status === PreviewRowStatus::Error);
 
     expect($newRows)->toBeEmpty();
     expect($errorRows)->toBeEmpty();
 
     foreach ($preview->rows as $row) {
-        expect($row->status)->toBe('duplicate');
+        expect($row->status)->toBe(PreviewRowStatus::Duplicate);
     }
 })->group('phase-2');

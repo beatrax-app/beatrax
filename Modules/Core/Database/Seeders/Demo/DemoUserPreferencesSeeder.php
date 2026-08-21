@@ -6,6 +6,7 @@ namespace Modules\Core\Database\Seeders\Demo;
 
 use Modules\Core\Models\User;
 use Modules\Core\Models\UserPreference;
+use Modules\Core\Public\Services\UserCountry;
 
 // Materialises one `user_preferences` row per demo user so downstream module
 // preference reads never have to branch on "row may not yet exist". The
@@ -13,6 +14,14 @@ use Modules\Core\Models\UserPreference;
 // existing row rather than duplicating it.
 final class DemoUserPreferencesSeeder
 {
+    // The demo household files in the Netherlands. It is set here, with the
+    // other preferences, because the government and bank-fee tiers of
+    // counterparty resolution stay silent until a country is named — and
+    // resolution runs long before the tax corpus is adopted.
+    private const COUNTRY = 'nl';
+
+    public function __construct(private readonly UserCountry $countries) {}
+
     /**
      * @param  array<string, User>  $users
      */
@@ -23,6 +32,8 @@ final class DemoUserPreferencesSeeder
                 ['user_id' => $user->id],
                 [],
             );
+
+            $this->countries->store($user->id, self::COUNTRY);
         }
 
         return UserPreference::query()
