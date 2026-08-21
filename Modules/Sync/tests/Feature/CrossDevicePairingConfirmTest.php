@@ -12,6 +12,7 @@ use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Tests\Support\CrossDevicePairingHarness;
+use Modules\Sync\Tests\Support\PairingSafetyDigest;
 
 uses(RefreshDatabase::class);
 uses(CrossDevicePairingHarness::class);
@@ -146,7 +147,7 @@ it('reaches CONFIRMED on both separate databases only once BOTH sides confirm, a
     // PHONE's human confirms first — awaits the peer.
     $this->asDevice('phone', function () use ($tokenHash, $phone): void {
         $row = cdpTokenRow($tokenHash);
-        $state = app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $phone['deviceId']);
+        $state = app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $phone['deviceId'], PairingSafetyDigest::forToken((int) $row->id, CDP_USER_ID));
         expect($state)->toBe(PairingState::AwaitingConfirm->value);
     });
 
@@ -160,7 +161,7 @@ it('reaches CONFIRMED on both separate databases only once BOTH sides confirm, a
     // DESKTOP's human now confirms too.
     $this->asDevice('desktop', function () use ($tokenHash, $desktop): void {
         $row = cdpTokenRow($tokenHash);
-        $state = app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $desktop['deviceId']);
+        $state = app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $desktop['deviceId'], PairingSafetyDigest::forToken((int) $row->id, CDP_USER_ID));
         expect($state)->toBe(PairingState::AwaitingConfirm->value, 'the peer column is still unset on this row — only the local side confirmed so far');
     });
 
@@ -229,7 +230,7 @@ it('a relay-substituted responder identity yields mismatched safety words; the R
     // invariant: the attacker can never complete the real phone's row too.
     $this->asDevice('desktop', function () use ($tokenHash, $desktop): void {
         $row = cdpTokenRow($tokenHash);
-        app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $desktop['deviceId']);
+        app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $desktop['deviceId'], PairingSafetyDigest::forToken((int) $row->id, CDP_USER_ID));
     });
 
     $sigFromAttacker = cdpSign($attacker, PairingFrame::confirmSigningMessage($tokenHash, $attacker['deviceId'], $desktop['deviceId'], $attacker['kxPub'], $desktop['kxPub']));
@@ -240,7 +241,7 @@ it('a relay-substituted responder identity yields mismatched safety words; the R
     // The REAL phone's human also confirms (a real user tapping confirm).
     $this->asDevice('phone', function () use ($tokenHash, $phone): void {
         $row = cdpTokenRow($tokenHash);
-        app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $phone['deviceId']);
+        app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $phone['deviceId'], PairingSafetyDigest::forToken((int) $row->id, CDP_USER_ID));
     });
 
     // The attacker does not hold the desktop's Ed25519 secret, so a confirm
@@ -278,7 +279,7 @@ it('rejects a PAIR_CONFIRM with correct device ids but a signature from a random
 
     $this->asDevice('desktop', function () use ($tokenHash, $desktop): void {
         $row = cdpTokenRow($tokenHash);
-        app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $desktop['deviceId']);
+        app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $desktop['deviceId'], PairingSafetyDigest::forToken((int) $row->id, CDP_USER_ID));
     });
 
     // Correct token hash and device ids, signed by an unrelated key: what a
@@ -339,7 +340,7 @@ it('defers a valid, correctly-signed PAIR_CONFIRM delivered before the local sid
     // by the courier's poll) completes the gate.
     $this->asDevice('desktop', function () use ($tokenHash, $desktop): void {
         $row = cdpTokenRow($tokenHash);
-        app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $desktop['deviceId']);
+        app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $desktop['deviceId'], PairingSafetyDigest::forToken((int) $row->id, CDP_USER_ID));
     });
 
     $applied = $this->asDevice('desktop', fn () => app(PairingTokenService::class)
@@ -377,11 +378,11 @@ it('re-delivering an already-applied PAIR_RESPONDER_ACCEPT and an already-applie
 
     $this->asDevice('phone', function () use ($tokenHash, $phone): void {
         $row = cdpTokenRow($tokenHash);
-        app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $phone['deviceId']);
+        app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $phone['deviceId'], PairingSafetyDigest::forToken((int) $row->id, CDP_USER_ID));
     });
     $this->asDevice('desktop', function () use ($tokenHash, $desktop): void {
         $row = cdpTokenRow($tokenHash);
-        app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $desktop['deviceId']);
+        app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $desktop['deviceId'], PairingSafetyDigest::forToken((int) $row->id, CDP_USER_ID));
     });
 
     $sigFromPhone = cdpSign($phone, PairingFrame::confirmSigningMessage($tokenHash, $phone['deviceId'], $desktop['deviceId'], $phone['kxPub'], $desktop['kxPub']));
@@ -433,7 +434,7 @@ it('an expired local row rejects a PAIR_CONFIRM — no admission, propagates not
 
     $this->asDevice('desktop', function () use ($tokenHash, $desktop): void {
         $row = cdpTokenRow($tokenHash);
-        app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $desktop['deviceId']);
+        app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $desktop['deviceId'], PairingSafetyDigest::forToken((int) $row->id, CDP_USER_ID));
     });
 
     // Cancel the handshake before the peer confirm arrives.
@@ -478,7 +479,7 @@ it('a TTL-lapsed local row (natural expiry) rejects a PAIR_CONFIRM the same way'
 
     $this->asDevice('desktop', function () use ($tokenHash, $desktop): void {
         $row = cdpTokenRow($tokenHash);
-        app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $desktop['deviceId']);
+        app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $desktop['deviceId'], PairingSafetyDigest::forToken((int) $row->id, CDP_USER_ID));
     });
 
     // Let the TTL genuinely lapse (grace window is 5 minutes; jump 30).

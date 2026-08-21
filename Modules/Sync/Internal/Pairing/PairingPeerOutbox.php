@@ -7,22 +7,12 @@ namespace Modules\Sync\Internal\Pairing;
 use JsonException;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
 
-// A local holding place for frames this device cannot push, because the peer it
-// is addressed to runs no listener. A phone never advertises and never accepts a
-// connection, so the desktop's PAIR_CONFIRM has no road home; it waits here and
-// the phone collects it on the poll it already runs.
-//
-// It reuses `relay_mailbox` rather than adding a table of its own: the shape is
-// already exactly right — routed by device id, one pending index, its own
-// garbage collection — and a second table with the same columns is how two
-// expiry policies drift apart.
-//
-// Only pairing frames are ever served out of it. Epoch wraps wait in the same
-// mailbox for the authenticated sync session to carry them, and handing one to
-// whoever asked would mark it delivered and strand the peer without that
-// epoch's key — the exact failure the relay drain already guards against.
+// Holds frames addressed to a peer that runs no listener. Reuses `relay_mailbox`
+// rather than a second table with the same columns, and serves only pairing
+// frames out of it — an epoch wrap handed over here would be marked delivered and
+// strand the peer without that key (see @link).
 /**
- * @link ../../../../.docs/features/sync/pairing-handshake.md
+ * @link ../../../../.docs/features/sync/pairing-handshake.md#the-two-roads-and-why-the-lan-one-had-to-be-built
  */
 final readonly class PairingPeerOutbox
 {
@@ -47,10 +37,8 @@ final readonly class PairingPeerOutbox
         return $this->mailbox->deliverIfUnderQuota($senderDid, $recipientDid, $blob, self::MAX_PENDING_PER_PEER);
     }
 
+    // Anything that is not a pairing frame is left where it is.
     /**
-     * Hands over the pairing frames waiting for $recipientDid and marks them
-     * delivered. Anything that is not a pairing frame is left where it is.
-     *
      * @return list<array<string, mixed>>
      */
     public function takeFor(string $recipientDid, int $limit): array

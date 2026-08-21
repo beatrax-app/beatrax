@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
+use Modules\Sync\Tests\Support\PairingSafetyDigest;
 
 uses(RefreshDatabase::class);
 
@@ -50,8 +51,8 @@ it('completes issue -> accept -> both-confirm: state becomes confirmed and a con
 
     // Which side is confirming is derived from the caller's own device id, so
     // each call passes the real one.
-    $service->confirm((int) $row->id, (int) $user->id, 'device-init');
-    $service->confirm((int) $row->id, (int) $user->id, 'device-resp');
+    $service->confirm((int) $row->id, (int) $user->id, 'device-init', PairingSafetyDigest::forToken((int) $row->id, (int) $user->id));
+    $service->confirm((int) $row->id, (int) $user->id, 'device-resp', PairingSafetyDigest::forToken((int) $row->id, (int) $user->id));
 
     $confirmed = $db->connection()->table('pairing_tokens')->where('id', $row->id)->first();
     expect($confirmed->state)->toBe('confirmed');
@@ -95,8 +96,8 @@ it('refuses to admit a responder whose device_id collides with the local self-ro
     $service->accept($token, (int) $user->id, 'self-device', str_repeat('c', 64), str_repeat('d', 64));
 
     $row = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->first();
-    $service->confirm((int) $row->id, (int) $user->id, 'device-init');
-    $service->confirm((int) $row->id, (int) $user->id, 'self-device');
+    $service->confirm((int) $row->id, (int) $user->id, 'device-init', PairingSafetyDigest::forToken((int) $row->id, (int) $user->id));
+    $service->confirm((int) $row->id, (int) $user->id, 'self-device', PairingSafetyDigest::forToken((int) $row->id, (int) $user->id));
 
     $self = $db->connection()->table('device_registry')
         ->where('user_id', $user->id)

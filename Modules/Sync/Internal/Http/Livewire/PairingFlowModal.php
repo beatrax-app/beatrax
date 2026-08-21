@@ -306,6 +306,7 @@ final class PairingFlowModal extends Component
     public function checkPairingState(
         CurrentUser $currentUser,
         DatabaseManager $db,
+        DeviceIdentityLoader $identityLoader,
         SafetyNumberDeriver $safetyDeriver,
         Session $session,
         EncryptionMigrationService $migrationService,
@@ -341,6 +342,18 @@ final class PairingFlowModal extends Component
 
         if ($row === null) {
             return;
+        }
+
+        // A confirm the peer deferred, or lost in flight, is otherwise never
+        // sent again and the ceremony finishes on one device only. Gated on
+        // having actually confirmed — sending it sooner would assert a
+        // confirmation never given.
+        if ($this->awaitingPeer && $row->state !== PairingState::Confirmed->value) {
+            $identity = $identityLoader->load($userId, $session);
+
+            if ($identity !== null) {
+                $this->sendConfirmOverRelay($db, $relayCourier, $identity, $logger, $userId);
+            }
         }
 
         if ($row->state === PairingState::AwaitingConfirm->value && $this->step === 'show_code') {
@@ -426,13 +439,17 @@ final class PairingFlowModal extends Component
         // The service is the single source of truth for the trust decision:
         // it returns the resulting state, so we never re-read the row and
         // re-derive bothConfirmed() here.
-        $state = $tokenService->confirm((int) $this->pairingTokenId, $userId, $identity->deviceId);
+        // Bound to the words on screen, not to whatever the row says now.
+        $state = $tokenService->confirm(
+            (int) $this->pairingTokenId,
+            $userId,
+            $identity->deviceId,
+            self::safetyDigestOf($this->safetyWords),
+        );
 
-        // Sends this device's own signed PAIR_CONFIRM to the peer over the
-        // relay — safe regardless of $state, since the frame is only ever
-        // consumable once the peer's own local side has confirmed too.
-        // No-op when no relay is configured — never dead-ends that path.
-        $this->sendConfirmOverRelay($db, $relayCourier, $relayConfig, $identity, $logger, $userId);
+        // Safe regardless of $state: the frame is only consumable once the
+        // peer's own local side has confirmed too.
+        $this->sendConfirmOverRelay($db, $relayCourier, $identity, $logger, $userId);
 
         if ($state === PairingState::Confirmed->value) {
             $this->awaitingPeer = false;
@@ -585,6 +602,17 @@ final class PairingFlowModal extends Component
         $this->dispatch('pairing-closed');
     }
 
+    // The fingerprint of what was actually shown. SafetyNumberDeriver::digestFor()
+    // produces the same value from the keys, which is what makes the comparison
+    // meaningful rather than circular.
+    /**
+     * @param  array<int, string>  $words
+     */
+    private static function safetyDigestOf(array $words): string
+    {
+        return $words === [] ? '' : hash('sha256', implode('|', $words));
+    }
+
     public function render(ViewFactory $views): View
     {
         return $views->make('sync::livewire.pairing-flow-modal');
@@ -594,17 +622,16 @@ final class PairingFlowModal extends Component
     // side of the in-flight token. Best-effort: a RuntimeException from the
     // courier (no relay configured) is caught and logged (ids/counts only),
     // not surfaced as a flash error.
+    // No relay check: the courier tries the LAN, then the relay, then holds the
+    // frame for collection. Returning early on an unconfigured relay is what
+    // left a LAN-only pairing confirmed on one device and not the other.
     private function sendConfirmOverRelay(
         DatabaseManager $db,
         PairingFrameCourier $relayCourier,
-        RelayConfig $relayConfig,
         DeviceIdentityDto $identity,
         LoggerInterface $logger,
         int $userId,
     ): void {
-        if (! $relayConfig->isConfigured()) {
-            return;
-        }
 
         // Scoped even though $pairingTokenId is #[Locked] and every writer is
         // user-scoped, so no reachable state makes this cross-user. A read of

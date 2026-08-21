@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
+use Modules\Sync\Tests\Support\PairingSafetyDigest;
 
 uses(RefreshDatabase::class);
 
@@ -262,4 +263,74 @@ it('stays idempotent for a redelivery of the same responder', function (): void 
     $db = $this->app->make(DatabaseManager::class);
 
     expect($db->connection()->table('pairing_tokens')->where('user_id', $user->id)->count())->toBe(1);
+});
+
+// Allowing an unconfirmed binding to be replaced fixes a denial, but on its own
+// it opens a capture: the words are derived once, and a responder that rebinds
+// between the reading and the tap would inherit a confirmation nobody gave it.
+it('refuses a confirmation once the keys behind the shown words have changed', function (): void {
+    $user = tokenUser('capture-guard-user');
+
+    /** @var PairingTokenService $service */
+    $service = $this->app->make(PairingTokenService::class);
+    $hash = acceptedToken($service, $user, '11111111-2222-4333-8444-555555555555');
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $row = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->first();
+
+    // What the human compared, taken while the honest responder was bound.
+    $shown = PairingSafetyDigest::forToken((int) $row->id, (int) $user->id);
+
+    $service->applyResponderAccept(
+        (int) $user->id,
+        $hash,
+        '99999999-8888-4777-8666-555555555555',
+        str_repeat('e', 64),
+        str_repeat('f', 64),
+        'Squatter',
+    );
+
+    expect($service->confirm((int) $row->id, (int) $user->id, 'device-init', $shown))->toBeNull();
+
+    $after = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->first();
+    expect($after->initiator_confirmed_at)->toBeNull();
+});
+
+it('accepts a confirmation whose keys are still the ones that were shown', function (): void {
+    $user = tokenUser('capture-guard-ok-user');
+
+    /** @var PairingTokenService $service */
+    $service = $this->app->make(PairingTokenService::class);
+    acceptedToken($service, $user, '11111111-2222-4333-8444-555555555555');
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $row = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->first();
+
+    $service->confirm(
+        (int) $row->id,
+        (int) $user->id,
+        'device-init',
+        PairingSafetyDigest::forToken((int) $row->id, (int) $user->id),
+    );
+
+    $after = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->first();
+    expect($after->initiator_confirmed_at)->not->toBeNull();
+});
+
+// An empty digest is a caller that never showed anything, which cannot have had
+// a comparison made against it.
+it('refuses a confirmation carrying no record of what was shown', function (): void {
+    $user = tokenUser('capture-guard-empty-user');
+
+    /** @var PairingTokenService $service */
+    $service = $this->app->make(PairingTokenService::class);
+    acceptedToken($service, $user, '11111111-2222-4333-8444-555555555555');
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $row = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->first();
+
+    expect($service->confirm((int) $row->id, (int) $user->id, 'device-init', ''))->toBeNull();
 });

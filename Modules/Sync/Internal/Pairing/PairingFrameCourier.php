@@ -88,14 +88,8 @@ final class PairingFrameCourier
         $this->deliver($self->deviceId, $peerDid, $frame);
     }
 
-    // The LAN first, the relay second. Two devices on one network finishing a
-    // handshake have no reason to route it through the internet, and until this
-    // existed they had no choice: with no relay configured the frame had
-    // nowhere to go at all, so pairing on a home wifi could not complete.
-    //
-    // The relay stays the road for devices that cannot see each other, and the
-    // fallback is silent by design — which road a frame took is not something
-    // the reader chose or can act on.
+    // LAN first, relay second, then held for collection. Silent by design: which
+    // road a frame took is not something the reader chose or can act on.
     /**
      * @param  array<string, mixed>  $frame
      *

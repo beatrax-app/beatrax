@@ -67,7 +67,6 @@ it('leaves a frame belonging to another transport where it is', function (): voi
 
     expect(outbox()->takeFor('phone-did', 8))->toBe([]);
 
-    // Still pending, not consumed and not marked delivered.
     expect($db->connection()->table('relay_mailbox')
         ->where('recipient_did', 'phone-did')
         ->whereNull('delivered_at')

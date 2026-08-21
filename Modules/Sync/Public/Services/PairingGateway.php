@@ -261,9 +261,15 @@ final class PairingGateway
 
     // The sole gate admitting a device to device_registry. Null when the caller
     // owns neither side of the token.
-    public function confirm(int $tokenId, int $userId, string $confirmingDeviceId): ?string
+    /**
+     * @param  string  $expectedSafetyDigest  Fingerprint of the six words the
+     *                                        human compared, so a responder
+     *                                        that rebinds between the reading
+     *                                        and the tap cannot inherit it.
+     */
+    public function confirm(int $tokenId, int $userId, string $confirmingDeviceId, string $expectedSafetyDigest): ?string
     {
-        return $this->tokenService->confirm($tokenId, $userId, $confirmingDeviceId);
+        return $this->tokenService->confirm($tokenId, $userId, $confirmingDeviceId, $expectedSafetyDigest);
     }
 
     public function expire(int $tokenId, int $userId): void

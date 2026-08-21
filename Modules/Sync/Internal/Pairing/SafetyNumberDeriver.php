@@ -62,6 +62,14 @@ final class SafetyNumberDeriver
         );
     }
 
+    // Fingerprints the six words a key pair produces, so a caller can record
+    // WHICH comparison a human made and refuse a confirmation landing on a
+    // different one. Order-independent for the same reason derive() is.
+    public function digestFor(string $pubKeyAHex, string $pubKeyBHex): string
+    {
+        return hash('sha256', implode('|', $this->deriveWords($pubKeyAHex, $pubKeyBHex)));
+    }
+
     // Validates a public key is exactly 64 lowercase hex chars and decodes
     // it to its raw 32 bytes, throwing a typed domain exception (NOT a raw
     // SodiumException) so the Livewire layer can surface the generic

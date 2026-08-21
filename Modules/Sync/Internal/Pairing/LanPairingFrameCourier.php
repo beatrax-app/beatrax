@@ -11,18 +11,11 @@ use Modules\Sync\Internal\Transport\Discovery\MulticastMdnsQuery;
 use Modules\Sync\Internal\Transport\PairingFrameRequestHandler;
 use Throwable;
 
-// Delivers a pairing frame to a peer on this network, so two devices that can
-// see each other finish the handshake without an internet relay standing
-// between them. The relay remains the road for devices that cannot.
-//
-// Addressed by device id, not by "whoever answers": the frame names the peer it
-// is for, and mDNS publishes `did=` per advertisement, so this asks the peer
-// that claims that id and no one else. A hostile responder claiming the id
-// gains nothing — PAIR_CONFIRM is signed with a key it does not hold, and a
-// PAIR_RESPONDER_ACCEPT it swallowed would simply never reach the real
-// initiator, which is a failure to pair rather than a false pairing.
+// Delivers a pairing frame to a peer on this network. Addressed by device id
+// rather than to whoever answers: a responder spoofing the id cannot forge a
+// signature, so it delays a pairing rather than capturing one (see @link).
 /**
- * @link ../../../../.docs/features/sync/pairing-handshake.md
+ * @link ../../../../.docs/features/sync/pairing-handshake.md#the-two-roads-and-why-the-lan-one-had-to-be-built
  */
 final readonly class LanPairingFrameCourier
 {
@@ -41,12 +34,9 @@ final readonly class LanPairingFrameCourier
         private MulticastMdnsQuery $discovery,
     ) {}
 
+    // False means the caller should fall back to the relay.
     /**
-     * Attempts LAN delivery to $peerDeviceId.
-     *
      * @param  array<string, mixed>  $frame
-     * @return bool true only when the peer accepted the frame; false means the
-     *              caller should fall back to the relay.
      */
     public function deliver(string $peerDeviceId, array $frame): bool
     {

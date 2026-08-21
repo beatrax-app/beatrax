@@ -251,6 +251,62 @@ Device ids arriving in a drained frame are accepted only if they are a UUIDv4 �
 shape `DeviceIdentityService` mints. That bounds length and character set, and structurally
 excludes the `|` delimiter used in the signing message.
 
+## The two roads, and why the LAN one had to be built
+
+The frames above travelled one road: the relay. That is correct only for devices
+that cannot see each other, which is what this page said and what the
+implementation did not do — with no relay configured, two devices on one wifi
+could not pair at all. The phone re-emitted its accept 86 times over four minutes
+against a `RelayRefusedException` and then stopped without saying so.
+
+The WebSocket cannot carry these frames. Its Noise session authenticates against
+the confirmed-device registry, and a device mid-pairing is by definition not in it
+yet. So the frames take the shape `/pair/offer` already took — routes in front of
+the upgrade, answered by the listener itself.
+
+| Route | Direction | Who answers |
+|---|---|---|
+| `POST /pair/frame` | responder → initiator | the listening device applies it |
+| `GET /pair/frames?device=` | initiator → responder | the listening device hands over what is waiting |
+
+Two routes rather than one because only ONE side of a pairing listens. The desktop
+runs the daemon; a phone runs no server and advertises nothing, so it can never be
+dialled. Rather than the desktop pushing, the phone collects on the three-second
+poll it already runs.
+
+`PairingFrameCourier::deliver()` tries the LAN, then the relay, then holds the frame
+in `PairingPeerOutbox` for collection. The fallback is silent by design: which road
+a frame took is not something the reader chose or can act on.
+
+The outbox reuses `relay_mailbox` rather than adding a table. The shape is already
+right — routed by device id, one pending index, its own garbage collection — and a
+second table with the same columns is how two expiry policies drift apart. Only
+pairing frames are ever served out of it, for the reason the drain table above
+gives: an epoch wrap handed to whoever asked would be marked delivered and strand
+the peer without that key.
+
+This is not a new trust boundary. These frames already crossed a channel that
+authenticates nothing, the relay being deliberately zero-knowledge, so every
+guarantee lives inside the frame. Carrying them over the LAN removes a third party
+rather than adding one.
+
+## What a confirmation is bound to
+
+`confirm()` takes the fingerprint of the six words the human actually compared and
+refuses if the row's keys no longer produce them.
+
+Without that, the tap means "confirm whatever this row says now", and a responder
+that rebinds between the reading and the tap inherits a confirmation nobody gave
+it. That matters because a binding no one has confirmed CAN be replaced: first
+binding wins absolutely handed anyone on the same network a permanent denial —
+answer an mDNS browse, harvest the token hash the responder sends in the clear,
+race an accept in first, and the real phone could never bind. Allowing the
+replacement fixes the denial; binding the confirmation to the compared keys is what
+stops the replacement becoming a capture.
+
+The digest is over the derived words, not the keys, so it is exactly the thing the
+two humans compared and is order-independent for the same reason `derive()` is.
+
 ## See also
 
 - [Pairing two devices that share no database](cross-device-pairing-confirm.md) — the same

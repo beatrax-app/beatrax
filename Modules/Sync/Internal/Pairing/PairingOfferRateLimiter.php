@@ -6,15 +6,10 @@ namespace Modules\Sync\Internal\Pairing;
 
 use Modules\Core\Public\Contracts\Clock;
 
-// Per-source-IP fixed-window throttle for the two pairing routes. The token is
-// 128 bits, so guessing one is already infeasible; this bounds the guessing
-// anyway, and stops either endpoint being usable as a cheap probe for whether a
-// pairing is currently in flight. In-process — the daemon is long-lived.
-//
-// Each route holds its OWN instance, so neither can spend the other's budget:
-// the offer route is driven by a human typing a code, the frame route by a
-// phone polling on a timer, and one bucket for both let the timer starve the
-// human within half a minute.
+// Per-source-IP fixed-window throttle, so a pairing route cannot be used as a
+// cheap probe for whether a pairing is in flight. Each route holds its OWN
+// instance: one bucket for a human typing and a phone polling let the timer
+// starve the human within half a minute.
 final class PairingOfferRateLimiter
 {
     // A human types one code, gets it wrong once or twice, and is done.

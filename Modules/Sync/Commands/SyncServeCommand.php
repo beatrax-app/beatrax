@@ -85,13 +85,9 @@ final class SyncServeCommand extends Command
             $acceptor = new Rfc6455Acceptor;
             $wsServer = new Websocket($httpServer, $this->logger, $acceptor, $handler);
 
-            // Two extra routes in front of the upgrade, and the WebSocket
-            // cannot serve either: its Noise session authenticates against the
-            // confirmed-device registry, and both of these exist precisely for
-            // a device that is not in it yet.
-            //
-            // The frame route is innermost so the offer route is matched first;
-            // anything that is neither reaches the WebSocket untouched.
+            // The WebSocket cannot serve these: its Noise session authenticates
+            // against the confirmed-device registry, and both exist for a device
+            // not in it yet. Innermost first; anything else reaches the upgrade.
             $frameHandler = new PairingFrameRequestHandler(
                 $wsServer,
                 $this->frameApplier,

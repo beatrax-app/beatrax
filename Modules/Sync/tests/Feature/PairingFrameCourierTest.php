@@ -14,6 +14,7 @@ use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\PairingGateway;
 use Modules\Sync\Tests\Support\CrossDevicePairingHarness;
+use Modules\Sync\Tests\Support\PairingSafetyDigest;
 
 uses(RefreshDatabase::class);
 uses(CrossDevicePairingHarness::class);
@@ -120,7 +121,7 @@ it('the full both-confirm handshake propagates over the relay and admits the pee
 
     $this->asDevice('phone', function () use ($tokenHash, $phoneIdentity, $desktopIdentity): void {
         $row = prcTokenRow($tokenHash);
-        $state = app(PairingTokenService::class)->confirm((int) $row->id, PRC_PHONE_USER_ID, $phoneIdentity->deviceId);
+        $state = app(PairingTokenService::class)->confirm((int) $row->id, PRC_PHONE_USER_ID, $phoneIdentity->deviceId, PairingSafetyDigest::forToken((int) $row->id, PRC_PHONE_USER_ID));
         expect($state)->toBe(PairingState::AwaitingConfirm->value);
 
         /** @var Session $session */
@@ -141,7 +142,7 @@ it('the full both-confirm handshake propagates over the relay and admits the pee
 
     $this->asDevice('desktop', function () use ($tokenHash, $desktopIdentity, $phoneIdentity): void {
         $row = prcTokenRow($tokenHash);
-        app(PairingTokenService::class)->confirm((int) $row->id, PRC_DESKTOP_USER_ID, $desktopIdentity->deviceId);
+        app(PairingTokenService::class)->confirm((int) $row->id, PRC_DESKTOP_USER_ID, $desktopIdentity->deviceId, PairingSafetyDigest::forToken((int) $row->id, PRC_DESKTOP_USER_ID));
 
         /** @var Session $session */
         $session = app(Session::class);
@@ -254,7 +255,7 @@ it('a valid-but-deferred PAIR_CONFIRM stays in the relay mailbox across MULTIPLE
 
     $this->asDevice('phone', function () use ($tokenHash, $phoneIdentity, $desktopIdentity): void {
         $row = prcTokenRow($tokenHash);
-        app(PairingTokenService::class)->confirm((int) $row->id, PRC_PHONE_USER_ID, $phoneIdentity->deviceId);
+        app(PairingTokenService::class)->confirm((int) $row->id, PRC_PHONE_USER_ID, $phoneIdentity->deviceId, PairingSafetyDigest::forToken((int) $row->id, PRC_PHONE_USER_ID));
 
         /** @var Session $session */
         $session = app(Session::class);
@@ -278,7 +279,7 @@ it('a valid-but-deferred PAIR_CONFIRM stays in the relay mailbox across MULTIPLE
 
     $this->asDevice('desktop', function () use ($tokenHash, $desktopIdentity): void {
         $row = prcTokenRow($tokenHash);
-        app(PairingTokenService::class)->confirm((int) $row->id, PRC_DESKTOP_USER_ID, $desktopIdentity->deviceId);
+        app(PairingTokenService::class)->confirm((int) $row->id, PRC_DESKTOP_USER_ID, $desktopIdentity->deviceId, PairingSafetyDigest::forToken((int) $row->id, PRC_DESKTOP_USER_ID));
     });
 
     $this->asDevice('desktop', function (): void {

@@ -6,7 +6,7 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Modules\Core\Internal\Http\Middleware\LoopbackOnly;
-use Modules\Core\Public\Enums\PhpSapi;
+use Modules\Core\Internal\Http\Middleware\PhpSapi;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 // The mobile shell runs PHP in-process under the `embed` SAPI, which listens on

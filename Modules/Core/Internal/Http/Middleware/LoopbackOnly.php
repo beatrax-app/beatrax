@@ -7,7 +7,6 @@ namespace Modules\Core\Internal\Http\Middleware;
 use Closure;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\Request;
-use Modules\Core\Public\Enums\PhpSapi;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 

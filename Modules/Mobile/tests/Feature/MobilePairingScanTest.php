@@ -16,10 +16,12 @@ use Modules\Mobile\Internal\Pairing\QrScanBridge;
 use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
+use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\QrPayloadBuilder;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Public\Services\PairingGateway;
+use Modules\Sync\Tests\Support\PairingSafetyDigest;
 
 uses(RefreshDatabase::class);
 
@@ -247,7 +249,7 @@ it('BOTH the QR path and the word-code path resolve to the identical PairingGate
     /** @var PairingTokenService $tokenService */
     $tokenService = app(PairingTokenService::class);
     $pairingTokenId = (int) $qrComponent->get('pairingTokenId');
-    $tokenService->confirm($pairingTokenId, (int) $qrUser->id, $qrIssued['initiatorDeviceId']);
+    $tokenService->confirm($pairingTokenId, (int) $qrUser->id, $qrIssued['initiatorDeviceId'], PairingSafetyDigest::forToken($pairingTokenId, (int) $qrUser->id));
 
     $qrComponent->call('checkPairingState')
         ->assertSet('step', 'success');
@@ -274,7 +276,7 @@ it('BOTH the QR path and the word-code path resolve to the identical PairingGate
     /** @var PairingTokenService $tokenService2 */
     $tokenService2 = app(PairingTokenService::class);
     $wcPairingTokenId = (int) $wcComponent->get('pairingTokenId');
-    $tokenService2->confirm($wcPairingTokenId, (int) $wcUser->id, $wcIssued['initiatorDeviceId']);
+    $tokenService2->confirm($wcPairingTokenId, (int) $wcUser->id, $wcIssued['initiatorDeviceId'], PairingSafetyDigest::forToken($wcPairingTokenId, (int) $wcUser->id));
 
     $wcComponent->call('checkPairingState')->assertSet('step', 'success');
 
@@ -370,7 +372,7 @@ it('import mode defers self-mint on both-confirm — sync_encryption_state stays
     /** @var PairingTokenService $tokenService */
     $tokenService = app(PairingTokenService::class);
     $pairingTokenId = (int) $component->get('pairingTokenId');
-    $tokenService->confirm($pairingTokenId, (int) $user->id, $initiatorDeviceId);
+    $tokenService->confirm($pairingTokenId, (int) $user->id, $initiatorDeviceId, PairingSafetyDigest::forToken($pairingTokenId, (int) $user->id));
 
     // The both-confirm transition that would auto-run migrate() off the
     // import path.
@@ -444,7 +446,7 @@ it('a re-entry to /mobile/pair WITHOUT ?mode=import still defers self-mint once 
     /** @var PairingTokenService $tokenService */
     $tokenService = app(PairingTokenService::class);
     $pairingTokenId = (int) $component->get('pairingTokenId');
-    $tokenService->confirm($pairingTokenId, (int) $user->id, $initiatorDeviceId);
+    $tokenService->confirm($pairingTokenId, (int) $user->id, $initiatorDeviceId, PairingSafetyDigest::forToken($pairingTokenId, (int) $user->id));
 
     $component->call('checkPairingState')->assertSet('step', 'success');
 
@@ -477,7 +479,7 @@ it('non-import mode (CREATE-ACCOUNT path) is UNCHANGED — both-confirm still se
     /** @var PairingTokenService $tokenService */
     $tokenService = app(PairingTokenService::class);
     $pairingTokenId = (int) $component->get('pairingTokenId');
-    $tokenService->confirm($pairingTokenId, (int) $user->id, $issued['initiatorDeviceId']);
+    $tokenService->confirm($pairingTokenId, (int) $user->id, $issued['initiatorDeviceId'], PairingSafetyDigest::forToken($pairingTokenId, (int) $user->id));
 
     $component->call('checkPairingState')->assertSet('step', 'success');
 
@@ -535,7 +537,7 @@ it('returns a word-code reader to the keypad after a reset, not to the camera', 
         ->tap(function () use ($user): void {
             app(DatabaseManager::class)->connection()->table('pairing_tokens')
                 ->where('user_id', $user->id)
-                ->update(['expires_at' => CarbonImmutable::now()->subDay()->toIso8601String()]);
+                ->update(['state' => PairingState::Expired->value]);
         })
         ->call('checkPairingState')
         ->assertSet('step', 'enter_code');

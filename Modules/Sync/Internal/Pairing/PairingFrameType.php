@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Pairing;
 
-// The two frames the pre-confirmation handshake carries between devices. The
-// backing values ARE the wire format — the relay has forwarded them under these
-// names since it existed, and a device on an older build still sends them — so
-// they are fixed, and a frame naming anything else is one this build does not
-// know how to apply.
+// The backing values ARE the wire format: the relay has forwarded them under
+// these names since it existed and older builds still send them, so they are
+// fixed.
 enum PairingFrameType: string
 {
     // Responder -> initiator. Carries the responder's identity so the

@@ -12,19 +12,10 @@ use Amp\Socket\InternetAddress;
 use Modules\Sync\Internal\Pairing\PairingOfferRateLimiter;
 use Modules\Sync\Internal\Pairing\PairingPeerOutbox;
 
-// The return leg. `/pair/frame` carries a responder's frames TO the device that
-// listens; this hands a device the frames waiting FOR it.
-//
-// It exists because only one side of a pairing listens at all: the desktop runs
-// this daemon, a phone runs no server and advertises nothing. So the desktop
-// cannot dial the phone, and its PAIR_CONFIRM had no road home — which left
-// LAN-only pairing finishing half-done, the responder bound and the ceremony
-// never completing.
-//
-// Rather than the desktop pushing, the phone pulls on the poll it already runs
-// every three seconds. Nothing new listens on the phone.
+// The return leg: only one side of a pairing listens, so a device that runs no
+// server is never dialled and has to collect instead (see @link).
 /**
- * @link ../../../../.docs/features/sync/pairing-handshake.md
+ * @link ../../../../.docs/features/sync/pairing-handshake.md#the-two-roads-and-why-the-lan-one-had-to-be-built
  */
 final readonly class PairingFramePullHandler implements RequestHandler
 {

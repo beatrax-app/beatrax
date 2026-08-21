@@ -13,6 +13,7 @@ use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Public\Http\Livewire\DevicesAndSyncSettingsSection;
+use Modules\Sync\Tests\Support\PairingSafetyDigest;
 
 uses(RefreshDatabase::class);
 
@@ -111,7 +112,7 @@ it('auto-runs the encryption migration when a pairing both-confirm admits a peer
     $plaintextToken = $wordEncoder->decode($pairing->get('wordCode'));
 
     $tokenService->accept($plaintextToken, (int) $user->id, 'device-resp', str_repeat('c', 64), str_repeat('d', 64));
-    $tokenService->confirm($tokenId, (int) $user->id, 'device-resp');
+    $tokenService->confirm($tokenId, (int) $user->id, 'device-resp', PairingSafetyDigest::forToken($tokenId, (int) $user->id));
 
     $pairing->call('confirmMatch')->assertSet('step', 'success');
 
