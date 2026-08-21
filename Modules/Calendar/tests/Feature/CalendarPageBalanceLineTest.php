@@ -140,7 +140,8 @@ it('FX-converts a USD account\'s forecast points to the base currency instead of
     cpblForecastRun($db, $user->id, $eurAccount, '2026-06-20', 123400, 'EUR');
     cpblForecastRun($db, $user->id, $usdAccount, '2026-06-20', 200000, 'USD');
 
-    // Converted: 123400 + (200000 / 2) = 223400 minor → "€2.234" in the cell.
+    // Converted: 123400 + (200000 / 2) = 223400 minor. The group mark is the
+    // reader's, and this suite reads in English, so the cell says "€2,234".
     // A raw cross-currency sum would be 323400 minor → "€3.234".
     Livewire::actingAs($user)
         ->test(CalendarPage::class, [
@@ -148,7 +149,7 @@ it('FX-converts a USD account\'s forecast points to the base currency instead of
             'year' => 2026,
             'balanceAccountIds' => [$eurAccount, $usdAccount],
         ])
-        ->assertSee('2.234')
+        ->assertSee('2,234')
         ->assertDontSee('3.234');
 });
 

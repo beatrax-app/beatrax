@@ -54,7 +54,6 @@ final class DemoTaxTagsSeeder
     {
         $primary = $users['demo-1@beatrax.local'] ?? null;
         if ($primary !== null) {
-            $this->adoptCountry($primary);
             $this->categories->seedFromCorpus($primary, self::COUNTRY);
 
             foreach (self::TAGS as $row) {
@@ -66,16 +65,6 @@ final class DemoTaxTagsSeeder
             ->table('tax_transaction_tags')
             ->whereIn('user_id', array_map(static fn (User $u): int => $u->id, $users))
             ->count();
-    }
-
-    // The cockpit only offers the picker once a country is chosen, so the demo
-    // user adopts NL instead of leaving settings showing none.
-    private function adoptCountry(User $user): void
-    {
-        $this->db->connection()
-            ->table('users')
-            ->where('id', $user->id)
-            ->update(['country_code' => self::COUNTRY]);
     }
 
     /**

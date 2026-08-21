@@ -16,7 +16,7 @@ uses(RefreshDatabase::class, EnablesEncryptionForUser::class);
 // transaction_search_docs was AEAD base64 — the FTS5 corpus, not a display
 // surface, which is why nobody saw it and search simply stopped matching.
 
-function rceUser(string $username): User
+function reindexEncryptionUser(string $username): User
 {
     return User::query()->create([
         'username' => $username.'-'.bin2hex(random_bytes(4)),
@@ -57,7 +57,7 @@ function rceBody(int $txId): string
 }
 
 it('indexes the decrypted columns, never the stored ciphertext', function (): void {
-    $user = rceUser('rce-unlocked');
+    $user = reindexEncryptionUser('rce-unlocked');
     $session = $this->enablesEncryptionForUser($user);
 
     /** @var SensitiveColumnCodec $codec */
@@ -76,7 +76,7 @@ it('indexes the decrypted columns, never the stored ciphertext', function (): vo
 })->group('ReindexCommandEncryption');
 
 it('refuses a user whose key material this process does not hold, and leaves their index untouched', function (): void {
-    $user = rceUser('rce-locked');
+    $user = reindexEncryptionUser('rce-locked');
     $session = $this->enablesEncryptionForUser($user);
 
     /** @var SensitiveColumnCodec $codec */
@@ -98,14 +98,14 @@ it('refuses a user whose key material this process does not hold, and leaves the
 })->group('ReindexCommandEncryption');
 
 it('still rebuilds a plaintext user when another user is refused', function (): void {
-    $encrypted = rceUser('rce-mixed-enc');
+    $encrypted = reindexEncryptionUser('rce-mixed-enc');
     $session = $this->enablesEncryptionForUser($encrypted);
 
     /** @var SensitiveColumnCodec $codec */
     $codec = app(SensitiveColumnCodec::class);
     $encryptedTx = rceEncryptedTransaction($encrypted, $codec, $session, 'Albert Heijn', 'Weekly groceries');
 
-    $plain = rceUser('rce-mixed-plain');
+    $plain = reindexEncryptionUser('rce-mixed-plain');
     $plainTxId = $this->searchTestTransaction($plain->id, ['counterparty_name' => 'Jumbo'], seedFts: false);
 
     AppLockTestHarness::lock($session);
@@ -120,7 +120,7 @@ it('still rebuilds a plaintext user when another user is refused', function (): 
 // empty string over it removed the row from the index and still printed "FTS
 // index rebuilt", so a search that silently stopped finding it looked healthy.
 it('leaves a row it cannot decrypt out of the index and reports the rebuild incomplete', function (): void {
-    $user = rceUser('rce-foreign-epoch');
+    $user = reindexEncryptionUser('rce-foreign-epoch');
     $session = $this->enablesEncryptionForUser($user);
 
     /** @var SensitiveColumnCodec $codec */

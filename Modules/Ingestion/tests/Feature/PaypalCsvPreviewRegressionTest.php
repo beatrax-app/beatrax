@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Modules\Import\Public\Contracts\RunsImports;
+use Modules\Import\Public\Enums\ImportFailureReason;
+use Modules\Import\Public\Enums\PreviewRowStatus;
 
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
@@ -20,10 +22,10 @@ it('parses the redacted PayPal Rapport Transactiegegevens fixture and produces a
     );
 
     expect(count($result->rows))->toBeGreaterThanOrEqual(1);
-    expect(array_filter($result->rows, fn ($r) => $r->status === 'error'))->toBe([]);
+    expect(array_filter($result->rows, fn ($r) => $r->status === PreviewRowStatus::Error))->toBe([]);
 })->group('phase-16.1.1');
 
-it('surfaces an actionable single-row preview error when the user uploads a PayPal Saldorapport by mistake', function (): void {
+it('names the report the reader actually needs when they upload a PayPal Saldorapport by mistake', function (): void {
     $tmp = tempnam(sys_get_temp_dir(), 'paypal-brr-regression-').'.csv';
     file_put_contents(
         $tmp,
@@ -42,9 +44,13 @@ it('surfaces an actionable single-row preview error when the user uploads a PayP
             'paypal-balance-reconciliation.csv',
         );
 
-        expect(count($result->rows))->toBe(1);
-        expect($result->rows[0]->status)->toBe('error');
-        expect($result->rows[0]->error)->toContain('Rapport Transactiegegevens');
+        // A file nothing could be read from is a failure OF the file, not a
+        // row inside it. It used to be reported as a single error row, which
+        // put the one sentence the reader needs behind a rows table that had
+        // no rows to show it in.
+        expect($result->rows)->toBe([]);
+        expect($result->fileFailureReason)->toBe(ImportFailureReason::FileUnreadable);
+        expect($result->fileFailureDetail)->toContain('Rapport Transactiegegevens');
     } finally {
         @unlink($tmp);
     }

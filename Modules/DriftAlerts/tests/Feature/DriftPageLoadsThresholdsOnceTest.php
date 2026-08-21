@@ -12,7 +12,7 @@ use Modules\DriftAlerts\Public\Http\Livewire\DriftThresholdEditor;
 
 uses(RefreshDatabase::class);
 
-function thqUser(string $username): User
+function thresholdsOnceUser(string $username): User
 {
     return User::query()->create([
         'username' => $username,
@@ -22,13 +22,13 @@ function thqUser(string $username): User
     ]);
 }
 
-function thqTransaction(DatabaseManager $db, int $userId): int
+function thresholdsOnceTransaction(DatabaseManager $db, int $userId): int
 {
     $suffix = bin2hex(random_bytes(4));
     $accountId = $db->connection()->table('accounts')->insertGetId([
         'user_id' => $userId,
         'name' => 'ASN test',
-        'slug' => 'thq-asn-'.$suffix,
+        'slug' => 'thresholds-asn-'.$suffix,
         'kind' => 'bank',
         'iban' => 'NL00ASNB'.strtoupper($suffix),
         'default_currency' => 'EUR',
@@ -39,8 +39,8 @@ function thqTransaction(DatabaseManager $db, int $userId): int
     $runId = $db->connection()->table('import_runs')->insertGetId([
         'user_id' => $userId,
         'source_format' => 'asn-csv',
-        'raw_file_path' => '/tmp/thq-'.$suffix.'.csv',
-        'sha256' => hash('sha256', 'thq-run-'.$suffix),
+        'raw_file_path' => '/tmp/thresholds-'.$suffix.'.csv',
+        'sha256' => hash('sha256', 'thresholds-run-'.$suffix),
         'uploaded_at' => '2026-05-19 00:00:00',
         'status' => 'previewed',
         'created_at' => '2026-05-19 00:00:00',
@@ -51,7 +51,7 @@ function thqTransaction(DatabaseManager $db, int $userId): int
         'user_id' => $userId,
         'account_id' => $accountId,
         'import_run_id' => $runId,
-        'fingerprint' => hash('sha256', 'thq-'.bin2hex(random_bytes(8))),
+        'fingerprint' => hash('sha256', 'thresholds-'.bin2hex(random_bytes(8))),
         'posted_at' => '2026-05-15',
         'booked_at' => '2026-05-15 00:00:00',
         'value_date' => '2026-05-15',
@@ -62,7 +62,7 @@ function thqTransaction(DatabaseManager $db, int $userId): int
         'counterparty_normalized' => 'spotify',
         'counterparty_name' => 'SPOTIFY',
         'normalization_version' => 1,
-        'description' => 'thq fixture',
+        'description' => 'thresholds fixture',
         'type' => 'expense',
         'source_format' => 'asn-csv',
         'source_row_index' => 1,
@@ -72,7 +72,7 @@ function thqTransaction(DatabaseManager $db, int $userId): int
     ]);
 }
 
-function thqSeries(User $user, string $detectedName, ?int $threshold): int
+function thresholdsOnceSeries(User $user, string $detectedName, ?int $threshold): int
 {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -87,13 +87,13 @@ function thqSeries(User $user, string $detectedName, ?int $threshold): int
         'latest_currency' => 'EUR',
         'variance_tolerance_percent' => 25,
         'drift_threshold_percent' => $threshold,
-        'cluster_key' => 'thq::'.bin2hex(random_bytes(4)),
+        'cluster_key' => 'thresholds::'.bin2hex(random_bytes(4)),
         'created_at' => '2026-05-19 00:00:00',
         'updated_at' => '2026-05-19 00:00:00',
     ]);
 }
 
-function thqAlert(User $user, int $seriesId): void
+function thresholdsOnceAlert(User $user, int $seriesId): void
 {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -101,7 +101,7 @@ function thqAlert(User $user, int $seriesId): void
     $occurrenceId = $db->connection()->table('recurring_series_occurrences')->insertGetId([
         'user_id' => $user->id,
         'recurring_series_id' => $seriesId,
-        'transaction_id' => thqTransaction($db, $user->id),
+        'transaction_id' => thresholdsOnceTransaction($db, $user->id),
         'observed_at' => '2026-05-15',
         'observed_amount_minor' => -1149,
         'observed_currency' => 'EUR',
@@ -127,7 +127,7 @@ function thqAlert(User $user, int $seriesId): void
 }
 
 /** @return list<string> */
-function thqThresholdQueries(callable $render): array
+function thresholdsOnceThresholdQueries(callable $render): array
 {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -152,17 +152,17 @@ beforeEach(function (): void {
 // query per series: bounded only by how many subscriptions have drifted at once,
 // and paid again on every re-render of the tab.
 it('reads every series threshold in one query however many editors the page mounts', function (): void {
-    $user = thqUser('thq-count');
+    $user = thresholdsOnceUser('thresholds-count');
 
     foreach (['Netflix' => 10, 'Spotify' => null, 'Vodafone' => 25, 'Ziggo' => null] as $name => $threshold) {
-        thqAlert($user, thqSeries($user, $name, $threshold));
+        thresholdsOnceAlert($user, thresholdsOnceSeries($user, $name, $threshold));
     }
 
-    $grouped = thqSeries($user, 'Disney Plus', 50);
-    thqAlert($user, $grouped);
-    thqAlert($user, $grouped);
+    $grouped = thresholdsOnceSeries($user, 'Disney Plus', 50);
+    thresholdsOnceAlert($user, $grouped);
+    thresholdsOnceAlert($user, $grouped);
 
-    $queries = thqThresholdQueries(function () use ($user): void {
+    $queries = thresholdsOnceThresholdQueries(function () use ($user): void {
         $this->actingAs($user)->get('/drift')->assertOk();
     });
 
@@ -170,14 +170,14 @@ it('reads every series threshold in one query however many editors the page moun
 });
 
 it('shows each series the same threshold the editor would have read for itself', function (): void {
-    $user = thqUser('thq-values');
+    $user = thresholdsOnceUser('thresholds-values');
 
-    thqAlert($user, thqSeries($user, 'Netflix', 10));
-    thqAlert($user, thqSeries($user, 'Spotify', null));
+    thresholdsOnceAlert($user, thresholdsOnceSeries($user, 'Netflix', 10));
+    thresholdsOnceAlert($user, thresholdsOnceSeries($user, 'Spotify', null));
 
-    $grouped = thqSeries($user, 'Disney Plus', 50);
-    thqAlert($user, $grouped);
-    thqAlert($user, $grouped);
+    $grouped = thresholdsOnceSeries($user, 'Disney Plus', 50);
+    thresholdsOnceAlert($user, $grouped);
+    thresholdsOnceAlert($user, $grouped);
 
     $content = (string) $this->actingAs($user)->get('/drift')->assertOk()->getContent();
 
@@ -189,8 +189,8 @@ it('shows each series the same threshold the editor would have read for itself',
 // The /recurring/series/{id} drill-in mounts the same editor with no parent to
 // load the column for it, so the row read has to survive as the fallback.
 it('still reads its own row when nothing hands it a threshold', function (): void {
-    $user = thqUser('thq-standalone');
-    $seriesId = thqSeries($user, 'Netflix', 25);
+    $user = thresholdsOnceUser('thresholds-standalone');
+    $seriesId = thresholdsOnceSeries($user, 'Netflix', 25);
 
     $component = Livewire\Livewire::actingAs($user)
         ->test(DriftThresholdEditor::class, ['recurringSeriesId' => $seriesId]);

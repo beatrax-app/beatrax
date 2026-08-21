@@ -10,6 +10,7 @@ use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Public\Support\Lang;
 use Modules\Import\Internal\Pipeline\ImportPipeline;
+use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Import\Public\Services\EloquentAccountResolver;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ledger\Models\Account;
@@ -83,7 +84,7 @@ it('tells the user to unlock rather than printing the crypto exception', functio
     )['rows'];
 
     expect($rows)->toHaveCount(1);
-    expect($rows[0]->status)->toBe('error');
+    expect($rows[0]->status)->toBe(PreviewRowStatus::Error);
     expect($rows[0]->error)->toBe(Lang::get('import::preview.errors.app_locked'));
     expect($rows[0]->error)->not->toContain('BlindIndexCodec');
     expect($rows[0]->error)->not->toContain((string) $user->id);

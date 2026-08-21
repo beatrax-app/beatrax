@@ -248,7 +248,6 @@ back only when a reader expands a section past the stored sample
 cached without a summary beside it. Three runs of 2,000 rows cost 794 ms
 a render through the rows and 0.9 ms through the summaries.
 
-
 ## What the results screen can still say
 
 `/imports/{id}/results` renders after `ConfirmImport` has dropped the

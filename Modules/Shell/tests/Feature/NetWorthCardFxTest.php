@@ -125,11 +125,11 @@ it('renders the REAL converted base equivalent in the breakdown, not the native 
     nwCardAccount($this->db, $this->user->id, 'USD wallet', 'paypal', 10_000, 'USD');
     nwCardFxRate($this->db, 'USD', '1.08', '2026-06-05', 'ecb');
 
-    // $100 at EUR/USD 1.08 is €92,59 — never the native 100,00 relabelled as
-    // euros, which is the bug this guards.
+    // $100 at EUR/USD 1.08 is €92.59 in this suite's language — never the
+    // native 100.00 relabelled as euros, which is the bug this guards.
     Livewire::test(NetWorthCard::class)
         ->call('toggle')
-        ->assertSee('92,59');
+        ->assertSee('92.59');
 })->group('phase-1');
 
 it('renders the per-pair rate and a human-readable source label in the breakdown popover (UI-SPEC §5.4/§7.2)', function (): void {
