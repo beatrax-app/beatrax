@@ -34,7 +34,32 @@ final class CorpusPatternMatcher
             return $this->matchesRegex(substr($pattern, strlen(self::REGEX_PREFIX)), $haystack, $pattern);
         }
 
-        return mb_stripos($haystack, $pattern) !== false;
+        return self::containsToken($haystack, $pattern);
+    }
+
+    /**
+     * Whether $needle appears in $haystack as a whole token rather than inside
+     * a longer word.
+     *
+     * A bare substring search made a phone bill's "Europese incasso internet en
+     * mobiel" match the corpus token OBI — inside "m-OBI-el" — and typed an
+     * employer as government by finding RDW inside "n-ORDW-ind". Merchant
+     * tokens are short by nature, so unanchored matching is not an edge case
+     * here; it is the common one.
+     *
+     * The edges are tested rather than \b, because a pattern may legitimately
+     * begin or end with punctuation, and \b next to a non-word character means
+     * the opposite of what is wanted.
+     */
+    public static function containsToken(string $haystack, string $needle): bool
+    {
+        if ($needle === '' || $haystack === '') {
+            return false;
+        }
+
+        $delimited = '#(?<![\p{L}\p{N}])'.preg_quote($needle, '#').'(?![\p{L}\p{N}])#iu';
+
+        return preg_match($delimited, $haystack) === 1;
     }
 
     public function isRegex(string $pattern): bool
