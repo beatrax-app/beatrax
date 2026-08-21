@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Facade;
 
 /**
  * @method static bool set(string $key, ?string $value)
- * @method static array get(string $key, string $reason = 'Unlock beatrax')
+ * @method static array get(string $key, string $reason = 'Unlock Beatrax')
  * @method static bool delete(string $key)
  * @method static ?string pollRecovered()
  *

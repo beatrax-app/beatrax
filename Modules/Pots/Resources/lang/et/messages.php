@@ -14,6 +14,7 @@ return [
         'heading' => 'Kogumispotte veel pole',
         'body' => 'Loo mis tahes konto sees virtuaalseid alamjääke, et oma raha korrastada ilma päris pangaülekandeta.',
         'cta' => 'Lisa oma esimene pott',
+        'no_accounts_cta' => 'Impordi kontoväljavõte',
     ],
 
     'common' => [

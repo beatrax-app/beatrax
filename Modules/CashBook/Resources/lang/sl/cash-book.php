@@ -30,6 +30,7 @@ return [
 
     'errors' => [
         'amount_positive' => 'Vnesi znesek, večji od nič.',
+        'amount_too_large' => 'Ta znesek je prevelik. Preveri števke.',
         'invalid_date' => 'Vnesi veljaven datum.',
     ],
 

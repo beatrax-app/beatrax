@@ -18,5 +18,6 @@ return [
     'error_generic' => 'Korisnika nije bilo moguće napraviti.',
 
     'error_min_length' => 'Koristi najmanje 12 znakova.',
+    'error_username_invalid' => 'Koristi najviše 32 slova, cifre, tačke, crtice ili donje crte.',
     'error_duplicate' => 'To korisničko ime se već koristi na ovom uređaju. Probaj neko drugo.',
 ];

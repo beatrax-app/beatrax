@@ -18,5 +18,6 @@ return [
     'error_generic' => 'A felhasználót nem sikerült létrehozni.',
 
     'error_min_length' => 'Használj legalább 12 karaktert.',
+    'error_username_invalid' => 'Legfeljebb 32 betűt, számjegyet, pontot, kötőjelet vagy aláhúzást használj.',
     'error_duplicate' => 'Ez a felhasználónév már használatban van ezen az eszközön. Próbálj egy másikat.',
 ];

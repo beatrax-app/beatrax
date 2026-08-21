@@ -14,6 +14,7 @@ return [
         'heading' => 'Nessun salvadanaio',
         'body' => 'Crea sotto-saldi virtuali in qualsiasi conto per organizzare il tuo denaro senza un bonifico reale.',
         'cta' => 'Aggiungi il tuo primo salvadanaio',
+        'no_accounts_cta' => 'Importa un estratto conto',
     ],
 
     'common' => [

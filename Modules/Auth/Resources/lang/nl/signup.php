@@ -24,5 +24,6 @@ return [
     'error_generic' => 'Aanmelden kon niet worden voltooid.',
 
     'error_min_length' => 'Gebruik minimaal 12 tekens.',
+    'error_username_invalid' => 'Gebruik maximaal 32 letters, cijfers, punten, streepjes of underscores.',
     'error_closed' => 'Aanmelden is gesloten op dit apparaat.',
 ];

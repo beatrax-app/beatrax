@@ -18,5 +18,6 @@ return [
     'error_generic' => 'Uživatele se nepodařilo vytvořit.',
 
     'error_min_length' => 'Použij alespoň 12 znaků.',
+    'error_username_invalid' => 'Použij nejvýše 32 písmen, číslic, teček, pomlček nebo podtržítek.',
     'error_duplicate' => 'Toto uživatelské jméno se na tomto zařízení už používá. Zvol jiné.',
 ];

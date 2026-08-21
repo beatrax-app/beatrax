@@ -5,11 +5,8 @@ declare(strict_types=1);
 namespace Modules\DriftAlerts\Providers;
 
 use Illuminate\Contracts\Events\Dispatcher;
-use Illuminate\Contracts\View\Factory as ViewFactoryContract;
-use Illuminate\Contracts\View\View;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
-use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\DriftAlerts\Internal\DriftEvaluator;
 use Modules\DriftAlerts\Internal\Http\Livewire\DriftPage;
@@ -56,7 +53,6 @@ final class DriftAlertsServiceProvider extends ServiceProvider
         $livewire->component('drift-alerts.drift-threshold-editor', DriftThresholdEditor::class);
 
         $this->registerListener($events);
-        $this->registerTopNavBadgeComposer();
     }
 
     private function registerListener(Dispatcher $events): void
@@ -65,32 +61,5 @@ final class DriftAlertsServiceProvider extends ServiceProvider
             RecurringSeriesMetricsRefreshed::class,
             EvaluateDriftOnMetricsRefreshed::class,
         );
-    }
-
-    // The by-reference $cache collapses repeated top-nav renders within one boot
-    // cycle to a single COUNT per user.
-    private function registerTopNavBadgeComposer(): void
-    {
-        $app = $this->app;
-        $factory = $app->make(ViewFactoryContract::class);
-
-        /** @var array<int, int> $cache */
-        $cache = [];
-
-        $factory->composer('core::livewire.top-nav', static function (View $compose) use ($app, &$cache): void {
-            $currentUser = $app->make(CurrentUser::class);
-            if (! $currentUser->isAuthenticated()) {
-                $compose->with('driftOpenCount', 0);
-
-                return;
-            }
-            $user = $currentUser->user();
-            $userId = $user->id;
-            if (! array_key_exists($userId, $cache)) {
-                $query = $app->make(DriftAlertQuery::class);
-                $cache[$userId] = $query->openCountForUser($user);
-            }
-            $compose->with('driftOpenCount', $cache[$userId]);
-        });
     }
 }

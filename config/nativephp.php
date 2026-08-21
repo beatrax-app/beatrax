@@ -5,17 +5,17 @@ use Modules\Desktop\Internal\NativeAppServiceProvider;
 return [
     'version' => env('NATIVEPHP_APP_VERSION', '0.0.0-dev'),
 
-    'app_id' => env('NATIVEPHP_APP_ID', 'com.nativephp.app'),
+    'app_id' => env('NATIVEPHP_APP_ID', 'com.beatrax.desktop'),
 
     'deeplink_scheme' => env('NATIVEPHP_DEEPLINK_SCHEME'),
 
-    'author' => env('NATIVEPHP_APP_AUTHOR'),
+    'author' => env('NATIVEPHP_APP_AUTHOR', 'NightWorks <info@nightworks.io>'),
 
-    'copyright' => env('NATIVEPHP_APP_COPYRIGHT'),
+    'copyright' => env('NATIVEPHP_APP_COPYRIGHT', '© 2026 NightWorks'),
 
-    'description' => env('NATIVEPHP_APP_DESCRIPTION', 'An awesome app built with NativePHP'),
+    'description' => env('NATIVEPHP_APP_DESCRIPTION', 'Local-only personal finance dashboard.'),
 
-    'website' => env('NATIVEPHP_APP_WEBSITE', 'https://nativephp.com'),
+    'website' => env('NATIVEPHP_APP_WEBSITE', 'https://beatrax.app'),
 
     'provider' => NativeAppServiceProvider::class,
 

@@ -56,6 +56,7 @@ return [
         'fetch_aria' => 'Obter online as taxas de câmbio atuais',
         'refreshing' => 'A atualizar…',
         'next_refresh' => 'Próxima atualização automática: diariamente às 09:00',
+        'refresh_gave_up' => 'Não foi possível atualizar as taxas. Continuam a ser usadas as que já estão neste dispositivo.',
         'refresh_now' => 'Atualizar agora',
     ],
 

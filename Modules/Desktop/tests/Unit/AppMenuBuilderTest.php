@@ -24,7 +24,7 @@ it('builds the standard set of top-level menus', function (): void {
     );
 });
 
-it('includes the beatrax-specific File menu entries', function (): void {
+it('includes the Beatrax-specific File menu entries', function (): void {
     $items = app(AppMenuBuilder::class)->build();
 
     $rendered = json_encode(
@@ -36,7 +36,7 @@ it('includes the beatrax-specific File menu entries', function (): void {
     expect($rendered)->toContain('Scan email now');
 });
 
-it('includes the beatrax-specific Help menu entries', function (): void {
+it('includes the Beatrax-specific Help menu entries', function (): void {
     $items = app(AppMenuBuilder::class)->build();
 
     $rendered = json_encode(

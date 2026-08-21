@@ -1,4 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Shell\Public\Navigation\AppNavigation')
+@use('Modules\Shell\Public\Navigation\Destination')
 @php
     /**
      * @var string $currentPath
@@ -14,6 +16,12 @@
      * (pre-rewrite analog) so route-driven highlighting reads from
      * the controller-provided `$currentPath` rather than a global
      * helper.
+     *
+     * Every row's href, label and active path come from AppNavigation,
+     * the roster the command palette is also built from. A new
+     * destination is a new Destination case there first; a row added
+     * here with a bare route() reaches the rail and nothing else, and
+     * an arch test fails for saying so.
      */
     $isActive = static fn (string $path): string => $currentPath === $path ? 'active' : '';
     $unknownCounterpartyCount = $unknownCount;
@@ -82,13 +90,13 @@
         };
     @endphp
 
-    <a href="{{ route('dashboard') }}" class="side-item {{ $isActive('/') }}">
+    <a href="{{ AppNavigation::url(Destination::Dashboard) }}" class="side-item {{ $isActive(AppNavigation::path(Destination::Dashboard)) }}">
         <span class="ic" aria-hidden="true">◆</span>
-        {{ Lang::get('core::sidebar.nav.dashboard') }}
+        {{ AppNavigation::label(Destination::Dashboard) }}
     </a>
-    <a href="{{ route('transactions.index') }}" class="side-item {{ $isActive('/transactions') }}">
+    <a href="{{ AppNavigation::url(Destination::Transactions) }}" class="side-item {{ $isActive(AppNavigation::path(Destination::Transactions)) }}">
         <span class="ic" aria-hidden="true">≡</span>
-        {{ Lang::get('core::sidebar.nav.transactions') }}
+        {{ AppNavigation::label(Destination::Transactions) }}
         @if (($navCounts['transactions'] ?? 0) > 0)
             {{-- role="img" on every count badge in this sidebar: a bare <span>
                  is a generic role, which takes no accessible name, so the
@@ -96,13 +104,21 @@
             <span role="img" class="side-badge muted" aria-label="{{ Lang::get('core::sidebar.badge.transactions', ['count' => $navCounts['transactions']]) }}">{{ $navCount('transactions') }}</span>
         @endif
     </a>
-    <a href="{{ route('forecast.index') }}" class="side-item {{ $isActive('/forecast') }}">
+    {{-- Forecasts — .side-badge.alert, not the default fill: a projected
+         shortfall window is a problem state the user cannot clear by working
+         through a queue, which is the same reason Drift Alerts and Unusual
+         charges carry the rose variant. Count merged into navCounts by the
+         Forecasting nav-badge composer; hidden at zero. --}}
+    <a href="{{ AppNavigation::url(Destination::Forecasts) }}" class="side-item {{ $isActive(AppNavigation::path(Destination::Forecasts)) }}">
         <span class="ic" aria-hidden="true">↗</span>
-        {{ Lang::get('core::sidebar.nav.forecasts') }}
+        {{ AppNavigation::label(Destination::Forecasts) }}
+        @if (($navCounts['forecast'] ?? 0) > 0)
+            <span role="img" class="side-badge alert" aria-label="{{ Lang::get('core::sidebar.badge.forecast', ['count' => $navCounts['forecast']]) }}">{{ $navCount('forecast') }}</span>
+        @endif
     </a>
-    <a href="{{ route('calendar.index') }}" class="side-item {{ $isActive('/calendar') }}">
+    <a href="{{ AppNavigation::url(Destination::Calendar) }}" class="side-item {{ $isActive(AppNavigation::path(Destination::Calendar)) }}">
         <span class="ic" aria-hidden="true">▦</span>
-        {{ Lang::get('core::sidebar.nav.calendar') }}
+        {{ AppNavigation::label(Destination::Calendar) }}
     </a>
     {{-- Notifications — the unified inbox. It sits in
          Overview rather than beside the alert surfaces: an inbox is a thing
@@ -110,9 +126,9 @@
          .side-badge (NOT .side-badge.alert) — an unread count is an
          actionable-count-to-clear, not a problem state, per
          component-library.md's badge-intensity taxonomy. --}}
-    <a href="{{ route('notifications.index') }}" class="side-item {{ $isActive('/notifications') }}">
+    <a href="{{ AppNavigation::url(Destination::Notifications) }}" class="side-item {{ $isActive(AppNavigation::path(Destination::Notifications)) }}">
         <span class="ic" aria-hidden="true">◈</span>
-        {{ Lang::get('core::sidebar.nav.notifications') }}
+        {{ AppNavigation::label(Destination::Notifications) }}
         @if (($navCounts['notifications'] ?? 0) > 0)
             <span role="img" class="side-badge" aria-label="{{ Lang::get('core::sidebar.badge.notifications', ['count' => $navCounts['notifications']]) }}">{{ $navCount('notifications') }}</span>
         @endif
@@ -126,16 +142,16 @@
          Named for the obligations rather than for their frequency, so the
          heading does not simply repeat the name of the first item under it. --}}
     <div class="side-section-label">{{ Lang::get('core::sidebar.section_recurring') }}</div>
-    <a href="{{ route('recurring.index') }}" class="side-item {{ $isActive('/recurring') }}">
+    <a href="{{ AppNavigation::url(Destination::Recurring) }}" class="side-item {{ $isActive(AppNavigation::path(Destination::Recurring)) }}">
         <span class="ic" aria-hidden="true">↻</span>
-        {{ Lang::get('core::sidebar.nav.recurring') }}
+        {{ AppNavigation::label(Destination::Recurring) }}
         @if (($navCounts['recurring'] ?? 0) > 0)
             <span role="img" class="side-badge muted" aria-label="{{ Lang::get('core::sidebar.badge.recurring', ['count' => $navCounts['recurring']]) }}">{{ $navCount('recurring') }}</span>
         @endif
     </a>
-    <a href="{{ route('drift.watch') }}" class="side-item {{ $isActive('/drift/watch') }}">
+    <a href="{{ AppNavigation::url(Destination::Subscriptions) }}" class="side-item {{ $isActive(AppNavigation::path(Destination::Subscriptions)) }}">
         <span class="ic" aria-hidden="true">↗</span>
-        {{ Lang::get('core::sidebar.nav.subscriptions') }}
+        {{ AppNavigation::label(Destination::Subscriptions) }}
         @if (($navCounts['subscriptions'] ?? 0) > 0)
             <span role="img" class="side-badge muted" aria-label="{{ Lang::get('core::sidebar.badge.subscriptions', ['count' => $navCounts['subscriptions']]) }}">{{ $navCount('subscriptions') }}</span>
         @endif
@@ -145,24 +161,32 @@
          primary discovery surface is "what chains do I have?" rather
          than "what's awaiting triage?". The overview header links to
          the review queue and the hints surface in turn. --}}
-    <a href="{{ route('chains.index') }}" class="side-item {{ $isActive('/chains') }}">
+    {{-- The badge counts the review queue, not the chains the overview lists:
+         the number worth interrupting for is the one the user can clear.
+         Default .side-badge (NOT .muted, NOT .alert) — an awaiting-review
+         count is exactly the actionable-count-to-clear the badge-intensity
+         taxonomy reserves the inverted fill for. --}}
+    <a href="{{ AppNavigation::url(Destination::Chains) }}" class="side-item {{ $isActive(AppNavigation::path(Destination::Chains)) }}">
         <span class="ic" aria-hidden="true">⇉</span>
-        {{ Lang::get('core::sidebar.nav.chains') }}
+        {{ AppNavigation::label(Destination::Chains) }}
+        @if (($navCounts['chains'] ?? 0) > 0)
+            <span role="img" class="side-badge" aria-label="{{ Lang::get('core::sidebar.badge.chains', ['count' => $navCounts['chains']]) }}">{{ $navCount('chains') }}</span>
+        @endif
     </a>
     {{-- Unusual charges — the anomaly section of the /drift alerts home.
          Links to ?type=anomaly; amber .side-badge.alert
          shows the open anomaly count (revival-aware, merged into
          navCounts by the Anomaly nav-badge composer) and hides at zero. --}}
-    <a href="{{ route('drift.index', ['type' => 'anomaly']) }}" class="side-item">
+    <a href="{{ AppNavigation::url(Destination::UnusualCharges) }}" class="side-item">
         <span class="ic" aria-hidden="true">◬</span>
-        {{ Lang::get('core::sidebar.nav.unusual_charges') }}
+        {{ AppNavigation::label(Destination::UnusualCharges) }}
         @if (($navCounts['anomaly'] ?? 0) > 0)
             <span role="img" class="side-badge alert" aria-label="{{ Lang::get('core::sidebar.badge.anomaly', ['count' => $navCounts['anomaly']]) }}">{{ $navCount('anomaly') }}</span>
         @endif
     </a>
-    <a href="{{ route('drift.index') }}" class="side-item {{ $isActive('/drift') }}">
+    <a href="{{ AppNavigation::url(Destination::DriftAlerts) }}" class="side-item {{ $isActive(AppNavigation::path(Destination::DriftAlerts)) }}">
         <span class="ic" aria-hidden="true">⚠</span>
-        {{ Lang::get('core::sidebar.nav.drift_alerts') }}
+        {{ AppNavigation::label(Destination::DriftAlerts) }}
         @if (($navCounts['drift'] ?? 0) > 0)
             <span role="img" class="side-badge alert" aria-label="{{ Lang::get('core::sidebar.badge.drift', ['count' => $navCounts['drift']]) }}">{{ $navCount('drift') }}</span>
         @endif
@@ -171,29 +195,29 @@
     {{-- Planning: money you are steering on purpose, as opposed to money
          that is leaving on its own above. --}}
     <div class="side-section-label">{{ Lang::get('core::sidebar.section_planning') }}</div>
-    <a href="{{ route('budgets.index') }}" class="side-item {{ $isActive('/budgets') }}">
+    <a href="{{ AppNavigation::url(Destination::Budgets) }}" class="side-item {{ $isActive(AppNavigation::path(Destination::Budgets)) }}">
         <span class="ic" aria-hidden="true">⊙</span>
-        {{ Lang::get('core::sidebar.nav.budgets') }}
+        {{ AppNavigation::label(Destination::Budgets) }}
         @if (($navCounts['budgets'] ?? 0) > 0)
             <span role="img" class="side-badge muted" aria-label="{{ Lang::get('core::sidebar.badge.budgets', ['count' => $navCounts['budgets']]) }}">{{ $navCount('budgets') }}</span>
         @endif
     </a>
     {{-- Tax tagging + per-year export. The muted side-badge shows the
          lifetime tagged item count when > 0; hidden when zero for calm posture. --}}
-    <a href="{{ route('tax.index') }}" class="side-item {{ $isActive('/tax') }}">
+    <a href="{{ AppNavigation::url(Destination::Tax) }}" class="side-item {{ $isActive(AppNavigation::path(Destination::Tax)) }}">
         <span class="ic" aria-hidden="true">⊞</span>
-        {{ Lang::get('core::sidebar.nav.tax') }}
+        {{ AppNavigation::label(Destination::Tax) }}
         @if (($navCounts['tax_tagged'] ?? 0) > 0)
             <span role="img" class="side-badge muted" aria-label="{{ Lang::get('core::sidebar.badge.tax', ['count' => $navCounts['tax_tagged']]) }}">{{ $navCount('tax_tagged') }}</span>
         @endif
     </a>
-    <a href="{{ route('goals.index') }}" class="side-item {{ $isActive('/goals') }}">
+    <a href="{{ AppNavigation::url(Destination::Goals) }}" class="side-item {{ $isActive(AppNavigation::path(Destination::Goals)) }}">
         <span class="ic" aria-hidden="true">◎</span>
-        {{ Lang::get('core::sidebar.nav.goals') }}
+        {{ AppNavigation::label(Destination::Goals) }}
     </a>
-    <a href="{{ route('pots.index') }}" class="side-item {{ $isActive('/pots') }}">
+    <a href="{{ AppNavigation::url(Destination::Pots) }}" class="side-item {{ $isActive(AppNavigation::path(Destination::Pots)) }}">
         <span class="ic" aria-hidden="true">◫</span>
-        {{ Lang::get('core::sidebar.nav.pots') }}
+        {{ AppNavigation::label(Destination::Pots) }}
     </a>
 
     {{-- Insights: surfaces you go to in order to look, not to change
@@ -204,21 +228,21 @@
          library. $isActive matches both /reports (the
          builder) and /reports/library (the saved-report index) since
          both share the "Reports" nav identity. --}}
-    <a href="{{ route('reports.index') }}" class="side-item {{ str_starts_with($currentPath, '/reports') ? 'active' : '' }}">
+    <a href="{{ AppNavigation::url(Destination::Reports) }}" class="side-item {{ str_starts_with($currentPath, AppNavigation::path(Destination::Reports)) ? 'active' : '' }}">
         <span class="ic" aria-hidden="true">▤</span>
-        {{ Lang::get('core::sidebar.nav.reports') }}
+        {{ AppNavigation::label(Destination::Reports) }}
     </a>
     {{-- Reconcile — the standalone statement-balance confirmation surface;
          no account-detail page exists in the app. --}}
-    <a href="{{ route('reconcile.index') }}" class="side-item {{ $isActive('/reconcile') }}">
+    <a href="{{ AppNavigation::url(Destination::Reconcile) }}" class="side-item {{ $isActive(AppNavigation::path(Destination::Reconcile)) }}">
         <span class="ic" aria-hidden="true">✓</span>
-        {{ Lang::get('core::sidebar.nav.reconcile') }}
+        {{ AppNavigation::label(Destination::Reconcile) }}
     </a>
 
     <div class="side-section-label">{{ Lang::get('core::sidebar.section_ingestion') }}</div>
-    <a href="{{ route('imports.new') }}" class="side-item {{ $isActive('/imports/new') }}">
+    <a href="{{ AppNavigation::url(Destination::Imports) }}" class="side-item {{ $isActive(AppNavigation::path(Destination::Imports)) }}">
         <span class="ic" aria-hidden="true">⊕</span>
-        {{ Lang::get('core::sidebar.nav.imports') }}
+        {{ AppNavigation::label(Destination::Imports) }}
         @if (($navCounts['imports'] ?? 0) > 0)
             <span role="img" class="side-badge muted" aria-label="{{ Lang::get('core::sidebar.badge.imports', ['count' => $navCounts['imports']]) }}">{{ $navCount('imports') }}</span>
         @endif
@@ -236,13 +260,20 @@
          `<a href="#">` and swallowed every tap — highlighting on press and
          going nowhere, which reads as a broken app rather than an absent
          feature. It comes back when there is a page to point at. --}}
-    <a href="{{ route('cashbook.index') }}" class="side-item {{ $isActive('/cash') }}">
+    <a href="{{ AppNavigation::url(Destination::CashBook) }}" class="side-item {{ $isActive(AppNavigation::path(Destination::CashBook)) }}">
         <span class="ic" aria-hidden="true">€</span>
-        {{ Lang::get('core::sidebar.nav.cashbook') }}
+        {{ AppNavigation::label(Destination::CashBook) }}
     </a>
-    <a href="{{ route('inboxes.index') }}" class="side-item {{ $isActive('/inboxes') }}">
+    {{-- Senders waiting to be promoted or dismissed, plus inboxes whose token
+         expired and need reconnecting — both are errands with a done state, so
+         this takes the default inverted .side-badge rather than the rose alert
+         variant. Nothing here is wrong with the user's money. --}}
+    <a href="{{ AppNavigation::url(Destination::Email) }}" class="side-item {{ $isActive(AppNavigation::path(Destination::Email)) }}">
         <span class="ic" aria-hidden="true">✉</span>
-        {{ Lang::get('core::sidebar.nav.email') }}
+        {{ AppNavigation::label(Destination::Email) }}
+        @if (($navCounts['inboxes'] ?? 0) > 0)
+            <span role="img" class="side-badge" aria-label="{{ Lang::get('core::sidebar.badge.inboxes', ['count' => $navCounts['inboxes']]) }}">{{ $navCount('inboxes') }}</span>
+        @endif
     </a>
 
     {{-- Organise: telling Beatrax what a transaction actually is — who the
@@ -255,9 +286,9 @@
         with?" surface. Resolves to the named route
         `counterparties.index` shipped with 17-06b.
     --}}
-    <a href="{{ route('counterparties.index') }}" class="side-item {{ $isActive('/counterparties') }}">
+    <a href="{{ AppNavigation::url(Destination::Counterparties) }}" class="side-item {{ $isActive(AppNavigation::path(Destination::Counterparties)) }}">
         <span class="ic" aria-hidden="true">◉</span>
-        {{ Lang::get('core::sidebar.nav.counterparties') }}
+        {{ AppNavigation::label(Destination::Counterparties) }}
         @if (($navCounts['counterparties'] ?? 0) > 0)
             <span role="img" class="side-badge muted" aria-label="{{ Lang::get('core::sidebar.badge.counterparties', ['count' => $navCounts['counterparties']]) }}">{{ $navCount('counterparties') }}</span>
         @endif
@@ -269,9 +300,9 @@
         sidebar stays calm. Count populated from the injected
         CounterpartyTriageQueue read query.
     --}}
-    <a href="{{ route('counterparties.triage') }}" class="side-item {{ $isActive('/counterparties/triage') }}">
+    <a href="{{ AppNavigation::url(Destination::Triage) }}" class="side-item {{ $isActive(AppNavigation::path(Destination::Triage)) }}">
         <span class="ic" aria-hidden="true">❋</span>
-        {{ Lang::get('core::sidebar.nav.triage') }}
+        {{ AppNavigation::label(Destination::Triage) }}
         @if ($unknownCounterpartyCount > 0)
             <span
                 role="img"
@@ -281,13 +312,13 @@
             >{{ $unknownCounterpartyCount }}</span>
         @endif
     </a>
-    <a href="{{ route('uncategorized') }}" class="side-item {{ $isActive('/uncategorized') }}">
+    <a href="{{ AppNavigation::url(Destination::Categorization) }}" class="side-item {{ $isActive(AppNavigation::path(Destination::Categorization)) }}">
         <span class="ic" aria-hidden="true">⌕</span>
-        {{ Lang::get('core::sidebar.nav.categorization') }}
+        {{ AppNavigation::label(Destination::Categorization) }}
     </a>
-    <a href="{{ route('community.index') }}" class="side-item {{ $isActive('/community') }}">
+    <a href="{{ AppNavigation::url(Destination::Community) }}" class="side-item {{ $isActive(AppNavigation::path(Destination::Community)) }}">
         <span class="ic" aria-hidden="true">◇</span>
-        {{ Lang::get('core::sidebar.nav.community') }}
+        {{ AppNavigation::label(Destination::Community) }}
     </a>
 
     <div class="side-section-label">{{ Lang::get('core::sidebar.section_settings') }}</div>
@@ -297,17 +328,17 @@
          e.g. Modules/Sync/Resources/views/livewire/pairing-flow-modal.blade.php)
          — deliberately NOT Flux's device-phone-mobile icon, which is
          reserved for device-type indicators (UI-SPEC §3). --}}
-    <a href="{{ route('data-devices.index') }}" class="side-item {{ $isActive('/data-devices') }}">
+    <a href="{{ AppNavigation::url(Destination::DataDevices) }}" class="side-item {{ $isActive(AppNavigation::path(Destination::DataDevices)) }}">
         <span class="ic" aria-hidden="true">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-4 w-4" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
             </svg>
         </span>
-        {{ Lang::get('core::sidebar.nav.data_devices') }}
+        {{ AppNavigation::label(Destination::DataDevices) }}
     </a>
-    <a href="{{ route('settings') }}" class="side-item {{ $isActive('/settings') }}">
+    <a href="{{ AppNavigation::url(Destination::Settings) }}" class="side-item {{ $isActive(AppNavigation::path(Destination::Settings)) }}">
         <span class="ic" aria-hidden="true">⚙</span>
-        {{ Lang::get('core::sidebar.nav.settings') }}
+        {{ AppNavigation::label(Destination::Settings) }}
     </a>
 
     <div class="side-foot">

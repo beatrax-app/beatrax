@@ -73,7 +73,7 @@ Modules/Forecasting/
   - `ScenarioQuery::list($user): list<ScenarioDto>`,
     `forId($id, $user): ?ScenarioDto`.
   - `ForecastHighlightsQuery::activeShortfallCountForUser($user)`
-    — the top-nav badge query (single COUNT).
+    — the sidebar badge query (single COUNT).
   - `ForecastHighlightsQuery::tileFor($user):
     ForecastHighlightsDto`.
 - **Actions/**
@@ -187,5 +187,6 @@ Migrations:
   `DriftAlertDismissedCancelled` → `ProjectForecastOnDriftDismissed`;
   the three scenario events →
   `ProjectForecastOnScenarioChange`.
-- Registers the top-nav badge composer via the ViewFactory
-  contract (no `view()` helper) with a boot-scoped memo.
+- Registers the sidebar badge composer via the ViewFactory
+  contract (no `view()` helper) with a boot-scoped memo, merging the
+  count into `navCounts` under the `forecast` key.

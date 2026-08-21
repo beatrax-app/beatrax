@@ -41,7 +41,7 @@
         <p class="text-sm">
             <a
                 href="/reset-password"
-                class="text-slate-500 underline underline-offset-2 hover:text-slate-900 dark:hover:text-slate-100 dark:text-slate-400"
+                class="tap-link text-slate-500 underline underline-offset-2 hover:text-slate-900 dark:hover:text-slate-100 dark:text-slate-400"
             >
                 {{ Lang::get('auth::login.lost_password') }}
             </a>

@@ -69,11 +69,22 @@
                 {{ Lang::get('categorization::detail.auto_categorized') }}
             </h3>
             <div class="mt-2">
-                <button
-                    type="button"
-                    wire:click="overrideMemory"
-                    class="inline-flex items-center rounded-md px-2 py-1 text-sm font-medium text-slate-900 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100 dark:hover:bg-slate-800"
-                >{{ Lang::get('categorization::detail.override') }}</button>
+                @if ($overriding)
+                    {{-- The same picker the transactions list uses per row, so
+                         the override writes through AssignsCategory exactly
+                         like every other category change. --}}
+                    @livewire(
+                        'categorization.inline-category-picker',
+                        ['transactionId' => $transactionId, 'categoryId' => $overrideCategoryId],
+                        key('provenance-override-' . $transactionId),
+                    )
+                @else
+                    <button
+                        type="button"
+                        wire:click="overrideMemory"
+                        class="inline-flex items-center rounded-md px-2 py-1 text-sm font-medium text-slate-900 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100 dark:hover:bg-slate-800"
+                    >{{ Lang::get('categorization::detail.override') }}</button>
+                @endif
             </div>
         </section>
     @endif

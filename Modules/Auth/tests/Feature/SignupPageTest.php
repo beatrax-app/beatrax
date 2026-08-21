@@ -6,6 +6,7 @@ use Livewire\Livewire;
 use Modules\Auth\Internal\Http\Livewire\SignupPage;
 use Modules\Auth\Models\UserRecoveryCode;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 
 it('renders the signup page on a fresh database', function (): void {
     $this->get('/signup')
@@ -101,4 +102,14 @@ it('lowercases the username before storage', function (): void {
         ->call('submit');
 
     expect(User::query()->where('username', 'alice')->exists())->toBeTrue();
+});
+
+// Onboarding renders for a guest, so it has none of the chrome that carries a
+// back affordance — and the iOS WebView's back gesture is off, which is not
+// something this repo can turn on from PHP.
+it('offers a way back to the screen that led here', function (): void {
+    $html = (string) Livewire::test(SignupPage::class)->html();
+
+    expect($html)->toContain(route('desktop.welcome'))
+        ->and($html)->toContain(Lang::get('core::components.topbar.back'));
 });

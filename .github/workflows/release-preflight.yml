@@ -124,7 +124,7 @@ jobs:
             echo '3. Sign and push the tag — it is what triggers the build:'
             echo
             echo '   ```sh'
-            echo "   git tag -s v${VERSION} -m 'beatrax v${VERSION}'"
+            echo "   git tag -s v${VERSION} -m 'Beatrax v${VERSION}'"
             echo "   git push origin v${VERSION}"
             echo '   ```'
             echo

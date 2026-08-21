@@ -18,5 +18,6 @@ return [
     'error_generic' => 'Lietotāju neizdevās izveidot.',
 
     'error_min_length' => 'Izmantojiet vismaz 12 rakstzīmes.',
+    'error_username_invalid' => 'Izmantojiet ne vairāk kā 32 burtus, ciparus, punktus, defises vai apakšsvītras.',
     'error_duplicate' => 'Šis lietotājvārds šajā ierīcē jau tiek izmantots. Izmēģiniet citu.',
 ];

@@ -107,7 +107,7 @@ final class ActualParser implements ParsesMigrationSource
                 itemType: 'extra',
                 sourceExternalId: $row['id'],
                 displayLabel: $name,
-                reason: 'Scheduled/recurring transactions have no beatrax create-from-external-source path yet — preserved as a note only, not a live Recurring series',
+                reason: 'Scheduled/recurring transactions have no Beatrax create-from-external-source path yet — preserved as a note only, not a live Recurring series',
             ));
         }
 
@@ -116,7 +116,7 @@ final class ActualParser implements ParsesMigrationSource
                 itemType: 'extra',
                 sourceExternalId: $row['id'],
                 displayLabel: $row['name'],
-                reason: 'Saved reports/analysis configs have no beatrax equivalent',
+                reason: 'Saved reports/analysis configs have no Beatrax equivalent',
             ));
         }
 

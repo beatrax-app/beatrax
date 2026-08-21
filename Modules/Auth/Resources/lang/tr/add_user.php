@@ -18,5 +18,6 @@ return [
     'error_generic' => 'Kullanıcı oluşturulamadı.',
 
     'error_min_length' => 'En az 12 karakter kullan.',
+    'error_username_invalid' => 'En fazla 32 harf, rakam, nokta, tire veya alt çizgi kullan.',
     'error_duplicate' => 'Bu kullanıcı adı bu cihazda zaten kullanılıyor. Başka bir tane dene.',
 ];

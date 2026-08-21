@@ -14,6 +14,7 @@ return [
         'heading' => 'Zatím žádné spořicí obálky',
         'body' => 'Vytvářej v libovolném účtu virtuální dílčí zůstatky a rozděl si peníze bez skutečného bankovního převodu.',
         'cta' => 'Přidat první obálku',
+        'no_accounts_cta' => 'Importovat výpis z účtu',
     ],
 
     'common' => [

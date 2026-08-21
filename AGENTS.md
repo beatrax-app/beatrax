@@ -1,9 +1,9 @@
-# AGENTS.md — beatrax
+# AGENTS.md — Beatrax
 
 Guidance for any AI agent (Claude Code, Cursor, Codex, Aider, …) working in this
 repository.
 
-> **Common rules for every beatrax repository are canonical in the spec:**
+> **Common rules for every Beatrax repository are canonical in the spec:**
 > [50-governance/ai-contributors.md](https://github.com/beatrax-app/spec/blob/main/50-governance/ai-contributors.md).
 > Read them. This file is the `beatrax`-specific header only.
 

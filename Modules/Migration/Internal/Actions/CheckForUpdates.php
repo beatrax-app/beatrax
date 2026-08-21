@@ -83,7 +83,7 @@ final class CheckForUpdates
             'resolution' => null,
             'display_label' => ucfirst($conflict->entityType).' '.$conflict->fieldName,
             'reason' => sprintf(
-                "Both the source file and beatrax changed this since the last import.\nLocal: %s\nSource: %s\nLast imported: %s",
+                "Both the source file and Beatrax changed this since the last import.\nLocal: %s\nSource: %s\nLast imported: %s",
                 self::scalarToDisplay($conflict->localValue),
                 self::scalarToDisplay($conflict->sourceValue),
                 self::scalarToDisplay($conflict->baselineValue),

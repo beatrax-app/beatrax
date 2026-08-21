@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="resources/brand/logo.svg" width="200" alt="beatrax">
+  <img src="resources/brand/logo.svg" width="200" alt="Beatrax">
 </p>
 
 <p align="center">
@@ -25,9 +25,9 @@
   <a href="https://discord.gg/FYuV9CbTHR">Discord</a>
 </p>
 
-## What is beatrax?
+## What is Beatrax?
 
-beatrax is a local-first personal finance dashboard that pulls together
+Beatrax is a local-first personal finance dashboard that pulls together
 transactions from your bank, credit cards, PayPal, and app-store
 subscriptions into a single calm "this month at a glance" view. It reads
 the statement formats European banks already export — CAMT.053 (ISO
@@ -49,7 +49,7 @@ the longer explanation.
 
 ## Who is this for?
 
-beatrax is built for a single person — or a two-person household —
+Beatrax is built for a single person — or a two-person household —
 managing their own finances across multiple bank, card, and
 payment-processor accounts who wants to see their monthly position in
 one place instead of cobbling together statements every cycle. It
@@ -59,7 +59,7 @@ inbox if you want email-receipt scanning, and read a CSV or PDF when
 you need to.
 
 If you bank exclusively with one institution that already gives you a
-great app, you probably don't need beatrax. If you split your spending
+great app, you probably don't need Beatrax. If you split your spending
 across several banks, cards, PayPal, and recurring app-store
 subscriptions and have given up on reconciling them by hand, this is for
 you.
@@ -71,19 +71,19 @@ from — who was the inspiration for making this.
 
 ## Install
 
-beatrax ships installers for macOS, Windows, and Linux. Pick the one
+Beatrax ships installers for macOS, Windows, and Linux. Pick the one
 for your platform.
 
 ### Installing on macOS
 
-beatrax is an independent app. macOS will warn you the first time you
+Beatrax is an independent app. macOS will warn you the first time you
 open it — that's expected.
 
-1. Open the downloaded **beatrax.dmg** and drag beatrax into your
+1. Open the downloaded **beatrax.dmg** and drag Beatrax into your
    Applications folder.
-2. Right-click **beatrax** in Applications and choose **Open**.
+2. Right-click **Beatrax** in Applications and choose **Open**.
 3. When macOS asks "are you sure?", click **Open**.
-4. From now on, double-clicking beatrax launches it normally.
+4. From now on, double-clicking Beatrax launches it normally.
 
 **Alternative (Terminal one-liner):**
 
@@ -91,7 +91,7 @@ open it — that's expected.
 xattr -d com.apple.quarantine /Applications/beatrax.app
 ```
 
-> Like most independent macOS apps, beatrax isn't signed with an Apple
+> Like most independent macOS apps, Beatrax isn't signed with an Apple
 > Developer ID — we don't pay Apple $99/year just to avoid the
 > first-launch dialog. [Why we made this choice →](https://github.com/beatrax-app/spec/blob/main/90-appendix/license-rationale.md#no-paid-signing)
 
@@ -119,21 +119,21 @@ Full local-dev prerequisites (Docker, Node 22+, PHP 8.5) are in
 
 ### Installing on Windows
 
-beatrax is an independent app. Windows SmartScreen will warn you the
+Beatrax is an independent app. Windows SmartScreen will warn you the
 first time you open it — that's expected.
 
 1. Run the downloaded **beatrax-setup.exe**.
 2. When you see "Windows protected your PC", click **More info**.
 3. Click **Run anyway**.
-4. From now on, beatrax launches normally from the Start menu.
+4. From now on, Beatrax launches normally from the Start menu.
 
 > SmartScreen reputation builds up over time as more people open
-> beatrax. After a few weeks, the warning will stop appearing for new
+> Beatrax. After a few weeks, the warning will stop appearing for new
 > users automatically. [Why we made this choice →](https://github.com/beatrax-app/spec/blob/main/90-appendix/license-rationale.md#no-paid-signing)
 
 ### Installing on Linux
 
-beatrax ships as both an AppImage (portable) and a .deb (Debian /
+Beatrax ships as both an AppImage (portable) and a .deb (Debian /
 Ubuntu native).
 
 **AppImage:**
@@ -211,7 +211,7 @@ the two disagree, the spec wins.
 
 ## License + ethics
 
-beatrax is licensed under the [Hippocratic License 3.0](LICENSE). It's
+Beatrax is licensed under the [Hippocratic License 3.0](LICENSE). It's
 source-available, not OSI-approved — see [NOTICE.md](NOTICE.md) for the
 rationale and the
 [longer rationale](https://github.com/beatrax-app/spec/blob/main/90-appendix/license-rationale.md)

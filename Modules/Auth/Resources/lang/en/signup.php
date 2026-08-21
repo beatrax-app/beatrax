@@ -24,5 +24,6 @@ return [
     'error_generic' => 'Signup could not be completed.',
 
     'error_min_length' => 'Use at least 12 characters.',
+    'error_username_invalid' => 'Use up to 32 letters, digits, dots, dashes or underscores.',
     'error_closed' => 'Signup is closed on this device.',
 ];

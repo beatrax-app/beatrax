@@ -14,6 +14,7 @@ return [
         'heading' => 'Aucune cagnotte pour l\'instant',
         'body' => 'Crée des sous-soldes virtuels dans n\'importe quel compte pour organiser ton argent sans virement bancaire réel.',
         'cta' => 'Ajoute ta première cagnotte',
+        'no_accounts_cta' => 'Importer un relevé',
     ],
 
     'common' => [

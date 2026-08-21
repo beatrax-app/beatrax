@@ -1,6 +1,6 @@
 # Ingestion pipeline
 
-Every transaction beatrax ever shows the user enters the system through the
+Every transaction Beatrax ever shows the user enters the system through the
 same pipeline. The pipeline is orchestrated by
 `Modules\Import\Internal\Pipeline\ImportPipeline` and the per-stage classes
 that hang off it. Source formats — ASN CSV, ASN CAMT.053, ASN MT940, ICS PDF,

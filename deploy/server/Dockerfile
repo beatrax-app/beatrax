@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 #
-# Production image for a self-hosted SERVER deployment of beatrax (the desktop
+# Production image for a self-hosted SERVER deployment of Beatrax (the desktop
 # build ships via NativePHP and does not use this). Uses FrankenPHP — a single
 # binary that serves the app over HTTP/HTTPS with no separate nginx/php-fpm to
 # wire together — so the application code is baked into the image and there is

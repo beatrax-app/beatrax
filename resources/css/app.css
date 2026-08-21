@@ -252,6 +252,16 @@ td.date,
 }
 
 /*
+ * Flux dims the page behind a modal by 10%, while this app's own drawer and
+ * bottom sheet use 40%: a modal read as a page still in reach, and on a phone
+ * the pairing dialog barely looked modal at all. [open] out-specifies Flux's
+ * own backdrop rule, so this does not turn on which stylesheet loads last.
+ */
+[data-flux-modal] > dialog[open]::backdrop {
+    background-color: rgba(15, 23, 42, 0.4);
+}
+
+/*
  * Sidebar primitives (sketch-validated). The bespoke classes below
  * honour the token block above — no hard-coded colors, sizes flip
  * with `.dark` automatically.
@@ -3264,6 +3274,18 @@ td.date,
         background: var(--color-surface-2);
     }
 
+    /*
+     * Both are spans, and inline siblings share a line: an 88-character
+     * counterparty filled the row and pushed the date onto the next one, which
+     * read as a row with a date and no name at all. The <li> variant of this
+     * same row uses <p> and stacks correctly, so the two renderings of one row
+     * disagreed only here.
+     */
+    .card-list-item .primary,
+    .card-list-item .secondary {
+        display: block;
+    }
+
     .card-list-item .primary {
         font-size: var(--text-base);
         font-weight: 500;
@@ -3952,7 +3974,6 @@ td.date,
     .triage-row:focus-within .tax-badge--untagged,
     .group:hover .tax-badge--untagged,
     .group:focus-within .tax-badge--untagged,
-    .tax-badge--untagged.always-show-touch,
     .tax-badge--untagged:focus-visible {
         opacity: 1;
     }
@@ -5144,6 +5165,28 @@ mark {
 }
 
 /*
+ * Dynamic Type.
+ *
+ * Every --text-* token is a rem, so the whole scale already follows the root —
+ * but nothing ever moved the root, and a reader who had set Larger Text got the
+ * same 16px as everyone else. WebKit exposes that choice through one shorthand
+ * and nothing else, so the root takes it and puts back the family and the line
+ * height the shorthand also carries.
+ *
+ * Coarse pointers only: -apple-system-body is 13px on macOS, so an unscoped
+ * rule would shrink the whole app in desktop Safari to fix a phone.
+ */
+@media (pointer: coarse) {
+    @supports (font: -apple-system-body) {
+        :root {
+            font: -apple-system-body;
+            font-family: var(--font-sans);
+            line-height: 1.5;
+        }
+    }
+}
+
+/*
  * A 44px floor under every button a finger can reach — Apple's minimum, and
  * what Android's own guidance rounds to 48dp for the same reason.
  *
@@ -5235,6 +5278,59 @@ mark {
      */
     .srch-chip-close::after {
         width: 24px;
+    }
+
+    /*
+     * A full-width band rather than the centred square, for a link that is
+     * already wider than 44px and only ever short of height. It is what the
+     * phone-width rule above gives .tap-link; coarse pointers wider than a
+     * phone were the ones left out.
+     */
+    .tap-link {
+        position: relative;
+    }
+
+    .tap-link::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 50%;
+        height: 44px;
+        transform: translateY(-50%);
+    }
+
+    /*
+     * The halo cannot help a flush-stacked list: 26 nav rows at a 31px pitch
+     * leave no slack, so each row's halo would only take from its neighbour's.
+     * Real height on touch is the only honest 44px here, and the desktop
+     * density the design specifies is a fine pointer away.
+     */
+    .side-item,
+    .side-search {
+        min-height: 44px;
+    }
+
+    /*
+     * A select is tapped like a button but is matched by neither the floor nor
+     * the halo, and px-3 py-2 on 13px text left the language picker at 29px.
+     */
+    select {
+        min-height: 44px;
+    }
+
+    /* height, not min-height: the search field sets a hard 36px. */
+    .srch-input {
+        height: 44px;
+    }
+
+    /*
+     * To a finger the label IS the checkbox — it wraps the input — so the
+     * floor lands there and leaves the 16px box the size the design drew.
+     */
+    label:has(> input[type='checkbox']),
+    label:has(> input[type='radio']) {
+        min-height: 44px;
     }
 }
 

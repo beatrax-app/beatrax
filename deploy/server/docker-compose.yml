@@ -1,4 +1,4 @@
-# Production-style self-host stack for beatrax (single user / household).
+# Production-style self-host stack for Beatrax (single user / household).
 #
 # Setup:
 #   cp deploy/server/.env.example deploy/server/.env     # then edit it

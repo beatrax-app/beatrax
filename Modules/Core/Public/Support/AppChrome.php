@@ -14,5 +14,9 @@ final readonly class AppChrome
         public bool $isDark,
         public bool $needsPrePaintScript,
         public string $locale,
+        // The reader's stored choice, not the paint it resolved to. Flux keeps
+        // its own copy in localStorage and treats an absent key as "follow the
+        // system", so seeding it needs the choice rather than the outcome.
+        public string $theme = 'system',
     ) {}
 }

@@ -113,7 +113,7 @@ final class ForecastingServiceProvider extends ServiceProvider
         $livewire->component('forecasting.opening-balance-editor', OpeningBalanceEditor::class);
 
         $this->registerListeners($events);
-        $this->registerTopNavBadgeComposer();
+        $this->registerNavBadgeComposer();
     }
 
     private function registerListeners(Dispatcher $events): void
@@ -132,7 +132,7 @@ final class ForecastingServiceProvider extends ServiceProvider
 
     // The global view() helper is forbidden in module code, so the factory is
     // resolved explicitly. $cache memoises the per-user count for this scope.
-    private function registerTopNavBadgeComposer(): void
+    private function registerNavBadgeComposer(): void
     {
         $app = $this->app;
         $factory = $app->make(ViewFactoryContract::class);
@@ -140,20 +140,28 @@ final class ForecastingServiceProvider extends ServiceProvider
         /** @var array<int, int> $cache */
         $cache = [];
 
-        $factory->composer('core::livewire.top-nav', static function (View $compose) use ($app, &$cache): void {
+        $factory->composer('shell::livewire.app-sidebar', static function (View $compose) use ($app, &$cache): void {
             $currentUser = $app->make(CurrentUser::class);
+
+            /** @var array<string, int> $navCounts */
+            $navCounts = (array) ($compose->getData()['navCounts'] ?? []);
+
             if (! $currentUser->isAuthenticated()) {
-                $compose->with('forecastShortfallCount', 0);
+                $navCounts['forecast'] = 0;
+                $compose->with('navCounts', $navCounts);
 
                 return;
             }
+
             $user = $currentUser->user();
             $userId = $user->id;
             if (! array_key_exists($userId, $cache)) {
                 $query = $app->make(ForecastHighlightsQuery::class);
                 $cache[$userId] = $query->activeShortfallCountForUser($user);
             }
-            $compose->with('forecastShortfallCount', $cache[$userId]);
+
+            $navCounts['forecast'] = $cache[$userId];
+            $compose->with('navCounts', $navCounts);
         });
     }
 }

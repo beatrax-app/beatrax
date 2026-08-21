@@ -23,7 +23,8 @@ isolation.
   - The `RecurringPage`, `RecurringReviewPage`,
     `RecurringSeriesDetailPage` Livewire SFCs.
   - The `FixedPaymentsCard` dashboard tile.
-  - The top-nav badge memoisation.
+  - The sidebar badge, which counts active series (`approved` +
+    `cadence_changed`) and leaves pending and rejected out.
   - The cross-user 404 posture on every action + mount.
   - The cadence-flip path (an `approved` series whose
     inferred cadence shifted).
@@ -165,8 +166,9 @@ The behavioural contract for the `Recurring` module.
   `DriftAlerts::DriftEvaluator` and any other consumer never
   query the `recurring_series_occurrences` table directly.
 - **`pending_count_for_user` query is a single COUNT
-  against `(user_id, state='pending')`.** The top-nav badge
-  read is hot; no JOIN, no aggregation.
+  against `(user_id, state='pending')`.** No JOIN, no aggregation.
+  It no longer feeds a badge: the sidebar's Recurring count is the
+  active-series count `NavCountsService` computes.
 - **An irregular-cadence series is detected but not
   eligible for drift.** The `CadenceInferrer` returns
   `irregular`; `DriftAlerts` filters those out.
@@ -218,9 +220,8 @@ The behavioural contract for the `Recurring` module.
   - [`DriftAlerts`](../drift-alerts/how-to-test.md) — subscribes
     to `MetricsRefreshed`; reads
     `RecurringSeriesQuery::lastTwoOccurrences`.
-  - The shared layout — reads
-    `RecurringSeriesQuery::pendingCountForUser` via the
-    top-nav badge composer.
+  - The app sidebar — reads the active-series count from `Core`'s
+    `NavCountsService`, not from this module.
   - The dashboard layout — renders `FixedPaymentsCard`.
 
 ## Configuration + feature flags

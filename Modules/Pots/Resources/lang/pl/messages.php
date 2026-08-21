@@ -14,6 +14,7 @@ return [
         'heading' => 'Brak skarbonek',
         'body' => 'Twórz wirtualne salda cząstkowe w dowolnym koncie, aby porządkować pieniądze bez rzeczywistego przelewu bankowego.',
         'cta' => 'Dodaj pierwszą skarbonkę',
+        'no_accounts_cta' => 'Zaimportuj wyciąg',
     ],
 
     'common' => [

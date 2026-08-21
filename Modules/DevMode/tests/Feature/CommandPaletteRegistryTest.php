@@ -38,7 +38,7 @@ it('exposes the full main-app + Dev Console nav roster from NavigationRegistry::
         ->and($ids)->toContain('transactions.index')
         ->and($ids)->toContain('forecast.index')
         ->and($ids)->toContain('recurring.index')
-        ->and($ids)->toContain('chains.review')
+        ->and($ids)->toContain('chains.index')
         ->and($ids)->toContain('drift.index')
         ->and($ids)->toContain('imports.new')
         ->and($ids)->toContain('inboxes.index')
@@ -151,7 +151,7 @@ it('persists Recent picks to dev_mode.palette_recent.{userId} with dedupe + cap-
     $pick('transactions.index');
     $pick('forecast.index');
     $pick('recurring.index');
-    $pick('chains.review');
+    $pick('chains.index');
     $pick('imports.new');
 
     $stored = $cache->get($key);

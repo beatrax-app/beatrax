@@ -18,5 +18,6 @@ return [
     'error_generic' => 'Brukeren kunne ikke opprettes.',
 
     'error_min_length' => 'Bruk minst 12 tegn.',
+    'error_username_invalid' => 'Bruk opptil 32 bokstaver, sifre, punktum, bindestreker eller understreker.',
     'error_duplicate' => 'Det brukernavnet er allerede i bruk på denne enheten. Prøv et annet.',
 ];

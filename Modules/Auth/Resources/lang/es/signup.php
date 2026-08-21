@@ -24,5 +24,6 @@ return [
     'error_generic' => 'No se ha podido completar el registro.',
 
     'error_min_length' => 'Usa al menos 12 caracteres.',
+    'error_username_invalid' => 'Usa hasta 32 letras, cifras, puntos, guiones o guiones bajos.',
     'error_closed' => 'El registro está cerrado en este dispositivo.',
 ];

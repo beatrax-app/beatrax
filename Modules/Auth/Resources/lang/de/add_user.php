@@ -18,5 +18,6 @@ return [
     'error_generic' => 'Der Benutzer konnte nicht angelegt werden.',
 
     'error_min_length' => 'Verwende mindestens 12 Zeichen.',
+    'error_username_invalid' => 'Nutze bis zu 32 Buchstaben, Ziffern, Punkte, Bindestriche oder Unterstriche.',
     'error_duplicate' => 'Dieser Benutzername wird auf diesem Gerät bereits verwendet. Probiere einen anderen.',
 ];

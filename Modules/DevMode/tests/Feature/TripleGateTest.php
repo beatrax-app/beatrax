@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Auth\Events\Login;
 use Illuminate\Contracts\Config\Repository;
+use Illuminate\Support\Facades\Lang;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\DevMode\Internal\Http\Livewire\TripleGateModal;
@@ -33,7 +34,7 @@ it('rejects with dev_mode_off when DevModeFlag->isOn() returns false', function 
 
     Livewire::test(TripleGateModal::class)
         ->dispatch('triple-gate:open', command: 'db:restore', args: ['from' => '/tmp/x'])
-        ->set('typed', 'beatrax')
+        ->set('typed', 'Beatrax')
         ->call('confirm')
         ->assertHasErrors(['_gate'])
         ->assertNotDispatched('triple-gate:confirmed');
@@ -46,13 +47,13 @@ it('rejects with advanced_off when session.dev_mode.advanced is not true', funct
 
     Livewire::test(TripleGateModal::class)
         ->dispatch('triple-gate:open', command: 'db:restore', args: [])
-        ->set('typed', 'beatrax')
+        ->set('typed', 'Beatrax')
         ->call('confirm')
         ->assertHasErrors(['_gate'])
         ->assertNotDispatched('triple-gate:confirmed');
 });
 
-it('rejects with app_name_mismatch when typed is "Beatrax" (capital B — case-sensitive)', function (): void {
+it('rejects with app_name_mismatch when typed is "beatrax" (lowercase b — case-sensitive)', function (): void {
     $user = tripleGateUser('tg-case');
     setDevModeFlag(true);
     $this->actingAs($user);
@@ -60,7 +61,7 @@ it('rejects with app_name_mismatch when typed is "Beatrax" (capital B — case-s
 
     Livewire::test(TripleGateModal::class)
         ->dispatch('triple-gate:open', command: 'db:restore', args: [])
-        ->set('typed', 'Beatrax')
+        ->set('typed', 'beatrax')
         ->call('confirm')
         ->assertHasErrors(['typed'])
         ->assertNotDispatched('triple-gate:confirmed');
@@ -74,7 +75,7 @@ it('dispatches triple-gate:confirmed when all three gates pass', function (): vo
 
     Livewire::test(TripleGateModal::class)
         ->dispatch('triple-gate:open', command: 'db:restore', args: ['from' => '/tmp/backup.sqlite'])
-        ->set('typed', 'beatrax')
+        ->set('typed', 'Beatrax')
         ->call('confirm')
         ->assertDispatched('triple-gate:confirmed')
         ->assertDispatched('modal-close');
@@ -88,7 +89,7 @@ it('clears typed state after a successful confirm', function (): void {
 
     $component = Livewire::test(TripleGateModal::class)
         ->dispatch('triple-gate:open', command: 'cache:clear', args: [])
-        ->set('typed', 'beatrax')
+        ->set('typed', 'Beatrax')
         ->call('confirm');
 
     expect($component->get('typed'))->toBe('');
@@ -103,4 +104,34 @@ it('Login event clears session.dev_mode.advanced via ResetAdvancedToggleOnLogin 
     event(new Login('web', $user, false));
 
     expect(session()->has('dev_mode.advanced'))->toBeFalse();
+});
+
+it('enforces the token every locale tells the operator to type', function (): void {
+    $user = tripleGateUser('tg-token-agreement');
+    setDevModeFlag(true);
+    $this->actingAs($user);
+    session()->put('dev_mode.advanced', true);
+
+    $locales = array_map(
+        static fn (string $path): string => basename($path),
+        (array) glob(base_path('Modules/DevMode/Resources/lang/*'), GLOB_ONLYDIR),
+    );
+    expect($locales)->not->toBeEmpty();
+
+    $tokens = [];
+    foreach ($locales as $locale) {
+        app()->setLocale($locale);
+        preg_match('#<code>(.*?)</code>#', (string) Lang::get('dev::triple_gate.type_to_confirm_html'), $matches);
+        $tokens[$locale] = $matches[1] ?? '';
+    }
+
+    $distinct = array_values(array_unique(array_values($tokens)));
+    expect($distinct)->toHaveCount(1, 'Every locale must name the same confirm token.');
+
+    Livewire::test(TripleGateModal::class)
+        ->dispatch('triple-gate:open', command: 'db:restore', args: [])
+        ->set('typed', $distinct[0])
+        ->call('confirm')
+        ->assertHasNoErrors()
+        ->assertDispatched('triple-gate:confirmed');
 });

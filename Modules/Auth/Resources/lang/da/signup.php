@@ -24,5 +24,6 @@ return [
     'error_generic' => 'Oprettelsen kunne ikke fuldføres.',
 
     'error_min_length' => 'Brug mindst 12 tegn.',
+    'error_username_invalid' => 'Brug op til 32 bogstaver, tal, punktummer, bindestreger eller understreger.',
     'error_closed' => 'Oprettelse er lukket på denne enhed.',
 ];

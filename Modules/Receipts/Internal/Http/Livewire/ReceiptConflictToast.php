@@ -6,17 +6,16 @@ namespace Modules\Receipts\Internal\Http\Livewire;
 
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
-use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Receipts\Public\Actions\ApplyReceiptConflictResolution;
 use Modules\Receipts\Public\Enums\ReceiptConflictChoice;
 use Modules\Receipts\Public\Services\ReceiptConflictQuery;
 
-// Listens for the local receipt-conflict-detected Livewire event AND
-// falls back to the latest pending conflict on mount, so a conflict
-// held during a background job still surfaces on the next render.
-// Every action is scoped by ApplyReceiptConflictResolution's user_id.
+// Surfaces the latest pending conflict on mount, which is the whole delivery
+// path: the `receipt-conflict-detected` listener this used to carry could
+// never fire, because conflicts are recorded by queued jobs and a worker
+// reaches no browser. Actions stay scoped by ApplyReceiptConflictResolution.
 final class ReceiptConflictToast extends Component
 {
     public bool $visible = false;
@@ -44,26 +43,6 @@ final class ReceiptConflictToast extends Component
         $this->field = $latest['field'];
         $this->receiptValue = $latest['incomingValue'];
         $this->csvValue = $latest['storedValue'];
-    }
-
-    #[On('receipt-conflict-detected')]
-    public function handleConflictDetected(
-        CurrentUser $currentUser,
-        int $transactionId,
-        int $userId,
-        string $field,
-        ?string $receiptValue,
-        ?string $csvValue,
-    ): void {
-        if (! $currentUser->isAuthenticated() || $currentUser->id() !== $userId) {
-            return;
-        }
-
-        $this->visible = true;
-        $this->transactionId = $transactionId;
-        $this->field = $field;
-        $this->receiptValue = $receiptValue;
-        $this->csvValue = $csvValue;
     }
 
     public function useReceipt(CurrentUser $currentUser, ApplyReceiptConflictResolution $resolve): void

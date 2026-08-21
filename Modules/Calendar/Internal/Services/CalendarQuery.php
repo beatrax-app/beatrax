@@ -116,6 +116,18 @@ final readonly class CalendarQuery
         return $this->accountResolver->ownedAccountIds($user);
     }
 
+    // Accounts that actually feed the balance line. Empty means the balance is
+    // unknown for want of a source, which is not the same as being computed.
+    /**
+     * @param  list<int>|null  $balanceAccountIds
+     * @param  list<int>  $ownedIds
+     * @return list<int>
+     */
+    public function effectiveBalanceAccountIds(?array $balanceAccountIds, array $ownedIds, User $user): array
+    {
+        return $this->accountResolver->resolveBalanceAccountIds($balanceAccountIds, $ownedIds, $user);
+    }
+
     /**
      * @return list<int>
      */

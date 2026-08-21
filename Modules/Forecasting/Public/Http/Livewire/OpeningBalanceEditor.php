@@ -117,7 +117,6 @@ final class OpeningBalanceEditor extends Component
         $this->currentOpeningMinor = $minor;
         $this->currentAsOfDate = $asOf;
         $this->saved = true;
-        $this->dispatch('forecast-settings:saved', accountId: $this->accountId);
         $this->toast(Lang::get('forecasting::opening_balance.toast.updated'));
     }
 
@@ -148,7 +147,6 @@ final class OpeningBalanceEditor extends Component
         $this->divergenceDiffMinor = null;
         $this->beatraxsNumberMinor = null;
         $this->saved = true;
-        $this->dispatch('forecast-settings:saved', accountId: $this->accountId);
         $this->toast(Lang::get('forecasting::opening_balance.toast.updated'));
     }
 

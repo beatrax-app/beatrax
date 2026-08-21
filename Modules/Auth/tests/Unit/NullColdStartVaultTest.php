@@ -25,7 +25,7 @@ it('refuses to enroll and recovers nothing', function (): void {
 
     expect($vault->enroll(1, random_bytes(32)))->toBeFalse()
         ->and($vault->isEnrolled(1))->toBeFalse()
-        ->and($vault->recover(1, 'Unlock beatrax'))->toBeNull();
+        ->and($vault->recover(1, 'Unlock Beatrax'))->toBeNull();
 });
 
 it('forgets without complaint, since there is never anything stored', function (): void {

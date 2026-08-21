@@ -256,9 +256,9 @@ The behavioural contract for the `Chains` module.
     feeds the next-settlement / forecast tile reads.
   - [`Recurring`](../recurring/how-to-test.md) — `SeriesFunderLink` DTO
     feeds the recurring-series funder display.
-  - The top-nav layout in `Core`'s `livewire.top-nav` view — the
-    badge composer in this module's provider injects the open-candidate
-    count.
+  - The app sidebar in `Shell`'s `livewire.app-sidebar` view — the
+    badge composer in this module's provider merges the open-candidate
+    count into `navCounts`.
 
 ## Configuration + feature flags
 

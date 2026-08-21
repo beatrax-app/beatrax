@@ -30,6 +30,7 @@ return [
 
     'errors' => [
         'amount_positive' => 'Sıfırdan büyük bir tutar gir.',
+        'amount_too_large' => 'Bu tutar çok büyük. Rakamları kontrol et.',
         'invalid_date' => 'Geçerli bir tarih gir.',
     ],
 

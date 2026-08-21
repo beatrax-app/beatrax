@@ -30,6 +30,7 @@ return [
 
     'errors' => [
         'amount_positive' => 'Sisesta nullist suurem summa.',
+        'amount_too_large' => 'See summa on liiga suur. Kontrolli numbreid.',
         'invalid_date' => 'Sisesta kehtiv kuupäev.',
     ],
 

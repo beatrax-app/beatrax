@@ -55,18 +55,24 @@ and are addressed as `shell::`.
 
 ## The trap that namespace change sets
 
-A Blade view is named as a string in more places than it is rendered. Two
-providers bind a view *composer* to the sidebar by name —
-`AnomalyServiceProvider` and `NotificationsServiceProvider` both call
-`$factory->composer('shell::livewire.app-sidebar', …)` to inject their nav
-badge counts.
+A Blade view is named as a string in more places than it is rendered. Five
+providers bind a view *composer* to the sidebar by name — `Anomaly`,
+`Notifications`, `Chains`, `EmailScan` and `Forecasting` each call
+`$factory->composer('shell::livewire.app-sidebar', …)` to merge their nav
+badge count into `navCounts`.
 
 Renaming the view silently unbinds a composer. Nothing throws, the page still
 renders, and the badge simply disappears; only `TopNavAnomalyBadgeTest` caught
 it. The sidebar snapshot lock did **not** — it renders the component directly,
-so composer-injected data is outside what it pins.
+so composer-injected data is outside what it pins. That is how five composers
+came to name the deleted `core::livewire.top-nav` for a whole phase, three of
+them holding counts the product then simply did not have.
 
-If a view under `Modules/Shell/Resources/views/` is ever renamed again, grep for
-the old name in *binding* position (`->composer(`, `->creator(`) as well as in
-rendering position (`view(`, `->make(`, `@include`, `@extends`, `x-<ns>::`).
-There is no static guard on this channel today.
+`tests/Contracts/ViewReferencesResolveArchTest.php` is the static guard now: it
+reads every view name out of binding position (`->composer(`, `->creator(`) and
+rendering position (`view(`, `Route::view(`, `response()->view(`, `@include`,
+`@extends`) and asks the view finder whether anything answers to it, failing
+with the file and line that names a view nothing renders. Two channels stay
+outside it — `x-<ns>::` component tags, which resolve through the Blade
+component resolver rather than the finder, and `$this->view()` on a NativePHP
+screen, which resolves against the mobile root.

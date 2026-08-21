@@ -1,6 +1,6 @@
-# Deploying beatrax on a server
+# Deploying Beatrax on a server
 
-beatrax ships primarily as a **local-only desktop app** (NativePHP). This guide
+Beatrax ships primarily as a **local-only desktop app** (NativePHP). This guide
 covers running it as a **self-hosted single-user/household web app** instead —
 on your own machine or a private server you control. It is still meant to stay
 private: host it on a LAN or behind a VPN/auth proxy, not on the public
@@ -120,7 +120,7 @@ php artisan beatrax:setup
 
 ### Background workers
 
-beatrax uses a database queue + the Laravel scheduler. Run both as long-lived
+Beatrax uses a database queue + the Laravel scheduler. Run both as long-lived
 processes (systemd units, supervisor, or `launchd` on macOS):
 
 ```bash
@@ -155,7 +155,7 @@ WantedBy=multi-user.target
   metal the default `daily` channel writes rotating files under
   `storage/logs/`; set `LOG_CHANNEL=stderr` instead if a process manager
   captures stdout. Set `LOG_LEVEL=info` (or `warning`) in production.
-- **Queue.** beatrax uses the **database** queue driver — no Redis. The Docker
+- **Queue.** Beatrax uses the **database** queue driver — no Redis. The Docker
   stack runs a dedicated `queue` service (`php artisan queue:work`); on bare
   metal run that as a systemd/supervisor process (see above). The scheduler
   (`schedule:work`) likewise runs as its own process/service.

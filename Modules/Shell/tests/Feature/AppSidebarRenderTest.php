@@ -63,12 +63,12 @@ it('renders the plain "local" account caption for a non-developer', function ():
     expect($html)->not->toContain('developer · local');
 });
 
-it('renders the brand row literal "beatrax"', function (): void {
+it('renders the brand row literal "Beatrax"', function (): void {
     $user = asbUser(true, 'asb-brand');
 
     $component = Livewire::actingAs($user)->test(AppSidebar::class);
 
-    $component->assertSee('beatrax');
+    $component->assertSee('Beatrax');
 
     // Post-rename guard: no `diederik` literal may leak anywhere in the
     // rendered sidebar HTML, route URLs included.

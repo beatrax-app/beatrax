@@ -15,6 +15,12 @@ use Modules\DevMode\Internal\Logging\LogFileStats;
 #[Layout('dev::layouts.dev-shell')]
 final class LogTailerPage extends Component
 {
+    // The blade binds its window listener to this same constant. Spelled out
+    // on both sides, the two names drifted: the tailer listened for
+    // `logs-truncated` while this dispatched `logs:truncated`, so the local
+    // cursor never reset and the operator saw the old buffer sit there.
+    public const string TRUNCATED_EVENT = 'logs:truncated';
+
     private const int BYTES_PER_UNIT = 1024;
 
     #[Url(as: 'severities')]
@@ -38,7 +44,7 @@ final class LogTailerPage extends Component
                 ? Lang::get('dev::logs.toast.truncated', ['size' => self::humanBytes($freed)])
                 : Lang::get('dev::logs.toast.nothing'),
         );
-        $this->dispatch('logs:truncated');
+        $this->dispatch(self::TRUNCATED_EVENT);
     }
 
     public function render(ViewFactory $views, LogFileStats $stats): View

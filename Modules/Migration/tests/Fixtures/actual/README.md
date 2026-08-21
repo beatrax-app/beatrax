@@ -23,7 +23,7 @@ produces:
 - `preferences.currencyCode = 'USD'` — the one fixture exercising Req 7's
   non-EUR budget-file currency (YNAB4/nYNAB carry no per-row currency).
 - 1 schedule + 1 rule (Req 8 note-only descope).
-- 1 `custom_reports` row (the saved-report "extra" with no beatrax
+- 1 `custom_reports` row (the saved-report "extra" with no Beatrax
   equivalent — Req 8 unmapped-not-dropped coverage).
 
 `$variant === 'v2'` changes exactly the Jan 2026 Groceries/Household budgeted

@@ -56,6 +56,7 @@ return [
         'fetch_aria' => 'Hae ajantasaiset valuuttakurssit verkosta',
         'refreshing' => 'Päivitetään…',
         'next_refresh' => 'Seuraava automaattinen päivitys: päivittäin klo 09:00',
+        'refresh_gave_up' => 'Kursseja ei voitu päivittää. Laitteella jo olevat kurssit ovat yhä käytössä.',
         'refresh_now' => 'Päivitä nyt',
     ],
 

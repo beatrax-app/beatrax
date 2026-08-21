@@ -14,6 +14,7 @@ return [
         'heading' => 'Inga sparpotter än',
         'body' => 'Skapa virtuella delsaldon inom vilket konto som helst för att organisera dina pengar utan en verklig banköverföring.',
         'cta' => 'Lägg till din första sparpott',
+        'no_accounts_cta' => 'Importera ett kontoutdrag',
     ],
 
     'common' => [

@@ -14,6 +14,7 @@ return [
         'heading' => 'Aún no hay huchas',
         'body' => 'Crea subsaldos virtuales dentro de cualquier cuenta para organizar tu dinero sin hacer una transferencia real.',
         'cta' => 'Añade tu primera hucha',
+        'no_accounts_cta' => 'Importar un extracto',
     ],
 
     'common' => [

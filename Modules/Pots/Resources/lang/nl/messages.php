@@ -13,6 +13,7 @@ return [
         'heading' => 'Nog geen potjes',
         'body' => 'Maak virtuele deelsaldo\'s binnen een rekening om je geld te organiseren zonder een echte bankoverboeking.',
         'cta' => 'Maak je eerste potje',
+        'no_accounts_cta' => 'Een afschrift importeren',
     ],
 
     'common' => [

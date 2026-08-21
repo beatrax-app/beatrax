@@ -40,10 +40,11 @@
         <span class="ic" aria-hidden="true">≡</span>
         Transactions
         <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
+    
     <a href="https://beatrax.test/forecast" class="side-item ">
         <span class="ic" aria-hidden="true">↗</span>
         Forecasts
-    </a>
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
     <a href="https://beatrax.test/calendar" class="side-item ">
         <span class="ic" aria-hidden="true">▦</span>
         Calendar
@@ -65,10 +66,11 @@
         Subscriptions
         <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
     
+    
     <a href="https://beatrax.test/chains" class="side-item ">
         <span class="ic" aria-hidden="true">⇉</span>
         Chains
-    </a>
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
     
     <a href="https://beatrax.test/drift?type=anomaly" class="side-item">
         <span class="ic" aria-hidden="true">◬</span>
@@ -122,10 +124,11 @@
         <span class="ic" aria-hidden="true">€</span>
         Cash book
     </a>
+    
     <a href="https://beatrax.test/inboxes" class="side-item ">
         <span class="ic" aria-hidden="true">✉</span>
         Email
-    </a>
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
 
     
     <div class="side-section-label">ORGANISE</div>

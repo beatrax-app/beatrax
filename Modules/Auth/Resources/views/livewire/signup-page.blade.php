@@ -9,6 +9,19 @@
             get matchOk() { return this.pwc.length > 0 && this.pw === this.pwc; },
         }"
     >
+        @if ($backUrl !== null)
+            <p class="text-sm">
+                <a
+                    href="{{ $backUrl }}"
+                    class="tap-link inline-flex items-center gap-1 text-slate-500 underline-offset-2 hover:underline dark:text-slate-400"
+                    wire:navigate
+                >
+                    <span aria-hidden="true">←</span>
+                    {{ Lang::get('core::components.topbar.back') }}
+                </a>
+            </p>
+        @endif
+
         <x-core::page-header
             :title="Lang::get('auth::signup.title')"
             :subtitle="Lang::get('auth::signup.subtitle')"

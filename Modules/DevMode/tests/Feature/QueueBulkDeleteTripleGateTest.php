@@ -99,7 +99,7 @@ it('the triple-gate:confirmed event with the queue.bulk.delete discriminator tri
             'triple-gate:confirmed',
             command: 'queue.bulk.delete',
             args: ['tab' => 'failed', 'count' => 2],
-            confirmed_typed: 'beatrax',
+            confirmed_typed: 'Beatrax',
         );
 
     expect(DB::table('failed_jobs')->whereIn('uuid', ['uuid-confirmed-1', 'uuid-confirmed-2'])->count())->toBe(0);
@@ -128,7 +128,7 @@ it('a triple-gate:confirmed event with a DIFFERENT command (NOT queue.bulk.delet
             // be mounted with rows selected.
             command: 'db:restore',
             args: ['from' => '/tmp/backup.sqlite'],
-            confirmed_typed: 'beatrax',
+            confirmed_typed: 'Beatrax',
         );
 
     expect(DB::table('failed_jobs')->whereIn('uuid', ['uuid-not-deleted-1', 'uuid-not-deleted-2'])->count())->toBe(2);
@@ -162,7 +162,7 @@ it('bulk delete on the pending tab deletes from the jobs table (kind switching b
             'triple-gate:confirmed',
             command: 'queue.bulk.delete',
             args: ['tab' => 'pending', 'count' => 2],
-            confirmed_typed: 'beatrax',
+            confirmed_typed: 'Beatrax',
         );
 
     expect(DB::table('jobs')->whereIn('id', [$id1, $id2])->count())->toBe(0);
@@ -187,7 +187,7 @@ it('executeBulkDelete refuses when the dev_mode flag flipped off between gate co
             'triple-gate:confirmed',
             command: 'queue.bulk.delete',
             args: ['tab' => 'failed', 'count' => 2],
-            confirmed_typed: 'beatrax',
+            confirmed_typed: 'Beatrax',
         );
 
     expect(DB::table('failed_jobs')->whereIn('uuid', ['uuid-dim-1', 'uuid-dim-2'])->count())->toBe(2);
@@ -223,7 +223,7 @@ it('the triple-gate is enforced through the global TripleGateModal — its three
 
     Livewire::test(TripleGateModal::class)
         ->dispatch('triple-gate:open', command: 'queue.bulk.delete', args: ['tab' => 'failed'])
-        ->set('typed', 'beatrax')
+        ->set('typed', 'Beatrax')
         ->call('confirm')
         ->assertHasErrors(['_gate'])
         ->assertNotDispatched('triple-gate:confirmed');

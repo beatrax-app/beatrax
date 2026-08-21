@@ -49,7 +49,7 @@ return [
 
     'copyright' => env('NATIVEPHP_APP_COPYRIGHT'),
 
-    'description' => env('NATIVEPHP_APP_DESCRIPTION', 'beatrax mobile peer'),
+    'description' => env('NATIVEPHP_APP_DESCRIPTION', 'Beatrax mobile peer'),
 
     'website' => env('NATIVEPHP_APP_WEBSITE', 'https://beatrax.test'),
 

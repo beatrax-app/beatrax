@@ -18,5 +18,6 @@ return [
     'error_generic' => 'Používateľa sa nepodarilo vytvoriť.',
 
     'error_min_length' => 'Použi aspoň 12 znakov.',
+    'error_username_invalid' => 'Použi najviac 32 písmen, číslic, bodiek, pomlčiek alebo podčiarkovníkov.',
     'error_duplicate' => 'Toto používateľské meno sa na tomto zariadení už používa. Skús iné.',
 ];
