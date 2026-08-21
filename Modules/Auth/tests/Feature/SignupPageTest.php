@@ -84,6 +84,33 @@ it('rejects passwords shorter than twelve characters', function (): void {
     expect(User::query()->count())->toBe(0);
 });
 
+// Submitting the blank form is the first thing a reader can do on a fresh
+// install, and it used to reach an InvalidArgumentException the page does not
+// catch — a 500 with a stack trace instead of a message.
+it('rejects an empty username with a message rather than an unhandled exception', function (): void {
+    Livewire::test(SignupPage::class)
+        ->set('username', '')
+        ->set('password', '')
+        ->set('passwordConfirmation', '')
+        ->call('submit')
+        ->assertNoRedirect()
+        ->assertSet('flashMessage', 'Use up to 32 letters, digits, dots, dashes or underscores.');
+
+    expect(User::query()->count())->toBe(0);
+});
+
+it('rejects a whitespace-only username, which normalises to empty', function (): void {
+    Livewire::test(SignupPage::class)
+        ->set('username', '   ')
+        ->set('password', 'a-long-password-12chars')
+        ->set('passwordConfirmation', 'a-long-password-12chars')
+        ->call('submit')
+        ->assertNoRedirect()
+        ->assertSet('flashMessage', 'Use up to 32 letters, digits, dots, dashes or underscores.');
+
+    expect(User::query()->count())->toBe(0);
+});
+
 it('makes the first signed-up user a developer', function (): void {
     Livewire::test(SignupPage::class)
         ->set('username', 'alice')
