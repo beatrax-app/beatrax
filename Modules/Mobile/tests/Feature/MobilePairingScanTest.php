@@ -532,7 +532,7 @@ it('returns a word-code reader to the keypad after a reset, not to the camera', 
         ->assertSet('step', 'confirm')
         // The ceremony ends out of sight — the token expires — and the next
         // poll resets the attempt.
-        ->tap(function () use ($user, $issued): void {
+        ->tap(function () use ($user): void {
             app(DatabaseManager::class)->connection()->table('pairing_tokens')
                 ->where('user_id', $user->id)
                 ->update(['expires_at' => CarbonImmutable::now()->subDay()->toIso8601String()]);

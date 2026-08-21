@@ -27,7 +27,6 @@ final class PairingFrameCourier
         private readonly RelayClient $relayClient,
         private readonly RelayConfig $relayConfig,
         private readonly DeviceKeySigner $signer,
-        private readonly PairingTokenService $tokenService,
         private readonly PairingFrameApplier $applier,
         private readonly LanPairingFrameCourier $lanCourier,
         private readonly PairingPeerOutbox $outbox,
