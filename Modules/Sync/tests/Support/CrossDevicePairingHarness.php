@@ -237,12 +237,44 @@ trait CrossDevicePairingHarness
 
         // The fan-out asks whether this device already holds rows keyed under
         // its blind-index key, because the answer decides which side gives way
-        // when two devices hold different ones. Only the column that question
-        // reads is mirrored; nothing here exercises the ledger itself.
+        // when two devices hold different ones. Only the columns that question
+        // reads are mirrored; nothing here exercises the ledger itself.
         $schema->create('transactions', function (Blueprint $table): void {
             $table->id();
             $table->unsignedInteger('user_id');
             $table->string('counterparty_normalized', 80);
+            $table->text('counterparty_name')->nullable();
+            $table->text('counterparty_iban')->nullable();
+        });
+
+        $schema->create('merchants', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedInteger('user_id');
+            $table->string('normalized_name');
+        });
+
+        $schema->create('recurring_series', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedInteger('user_id');
+            $table->string('cluster_counterparty_key')->nullable();
+        });
+
+        // The other half of that question: an op-log entry this device signed
+        // is authorship with nothing inferred, which is what tells a digest
+        // this device produced from one a peer replayed into it.
+        $schema->create('op_log_entries', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedInteger('user_id');
+            $table->string('device_id');
+            $table->string('table_name');
+            $table->string('pk');
+            $table->string('field');
+            $table->string('op_type', 32);
+            $table->text('value')->nullable();
+            $table->unsignedBigInteger('hlc_l');
+            $table->unsignedInteger('hlc_c');
+            $table->text('signature');
+            $table->text('recorded_at');
         });
     }
 

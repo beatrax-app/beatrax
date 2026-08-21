@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Siirry sovelluslukkoon',
 
     'encrypted_at_rest' => 'Tiedot salattu levylle',
-    'encrypted_at_rest_scope' => 'Muistiinpanot, tapahtumakuvaukset sekä maksunsaajien nimet ja IBAN-tilinumerot salataan sovelluslukituksen tunnuslauseella. Summia, päivämääriä eikä oman tilisi nimeä ja IBANia ei salata, ja jotkin kauppiaiden nimet näkyvät yhä selkokielisenä muualla tietokantatiedostossa.',
+    'encrypted_at_rest_scope' => 'Muistiinpanot, tapahtumakuvaukset sekä maksunsaajien nimet ja IBAN-tilinumerot salataan kirjanpidossa sovelluslukituksen tunnuslauseella. Summia, päivämääriä eikä oman tilisi nimeä ja IBANia ei salata. Hakemisto säilyttää oman luettavan kopionsa siitä, kenelle maksat, tapahtumakuvauksistasi ja veromuistiinpanoistasi, ja jotkin kauppiaiden nimet näkyvät selkokielisenä muualla tietokantatiedostossa.',
     'on' => 'Päällä',
     'securing' => 'Suojataan tietojasi…',
     'do_not_close' => 'Älä sulje tätä ikkunaa.',
@@ -53,7 +53,7 @@ return [
     'search_plaintext' => 'Hakemisto säilyttää kauppias- ja kuvaustekstistä selkokielisen kopion, jotta kokotekstihaku toimii edelleen.',
     'keep_unencrypted' => 'Pidä tiedot salaamattomina',
     'encryption_enabled' => 'Salaus otettu käyttöön',
-    'encryption_enabled_body' => 'Tietosi on nyt salattu levylle.',
+    'encryption_enabled_scope' => 'Muistiinpanot, kuvaukset ja se, kenelle maksat, on nyt salattu sovelluslukituksen tunnuslauseella. Summat, päivämäärät ja hakemisto pysyvät luettavina.',
     'done_encryption_enabled' => 'Valmis — salaus otettu käyttöön',
     'encryption_failed' => 'Salauksen käyttöönotto epäonnistui',
     'encryption_failed_body' => 'Tietojasi ei muutettu. Varmuuskopiosi säilyi.',

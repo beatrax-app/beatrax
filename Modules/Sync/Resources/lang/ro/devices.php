@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Mergi la blocarea aplicației',
 
     'encrypted_at_rest' => 'Date criptate în repaus',
-    'encrypted_at_rest_scope' => 'Notele, descrierile tranzacțiilor și numele și IBAN-urile celor cărora le plătești sunt criptate cu parola de blocare a aplicației. Sumele, datele și numele și IBAN-ul propriului tău cont nu sunt, iar unele nume de comercianți rămân în text clar în alte locuri din fișierul bazei de date.',
+    'encrypted_at_rest_scope' => 'Notele, descrierile tranzacțiilor și numele și IBAN-urile celor cărora le plătești sunt criptate în registru cu parola de blocare a aplicației. Sumele, datele și numele și IBAN-ul propriului tău cont nu sunt. Indexul de căutare păstrează propria copie lizibilă a celor cărora le plătești, a descrierilor tranzacțiilor tale și a notelor tale fiscale, iar unele nume de comercianți rămân în text clar în alte locuri din fișierul bazei de date.',
     'on' => 'Activat',
     'securing' => 'Se securizează datele tale…',
     'do_not_close' => 'Nu închide această fereastră.',
@@ -51,7 +51,7 @@ return [
     'search_plaintext' => 'Indexul de căutare păstrează o copie în text simplu a textului comerciantului și al descrierii, ca să funcționeze în continuare căutarea în tot textul.',
     'keep_unencrypted' => 'Păstrează datele necriptate',
     'encryption_enabled' => 'Criptare activată',
-    'encryption_enabled_body' => 'Datele tale sunt acum criptate în repaus.',
+    'encryption_enabled_scope' => 'Notele, descrierile și cei cărora le plătești sunt acum criptate cu parola de blocare a aplicației. Sumele, datele și indexul de căutare rămân lizibile.',
     'done_encryption_enabled' => 'Gata — criptare activată',
     'encryption_failed' => 'Configurarea criptării a eșuat',
     'encryption_failed_body' => 'Datele tale nu au fost modificate. Copia ta de rezervă a fost păstrată.',

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'error_enroll_unsupported' => 'Biometrisches Entsperren ist auf diesem Gerät nicht verfügbar.',
+    'error_enroll_unprotected' => 'Biometrisches Entsperren braucht einen Schlüsselspeicher des Betriebssystems, und diese Installation hat keinen. Eine Registrierung würde den Entsperrschlüssel lesbar neben deinen Daten liegen lassen, deshalb wird sie hier nicht angeboten.',
     'error_enroll_locked' => 'Entsperre die App, bevor du dieses Gerät registrierst.',
     'error_enroll_failed' => 'Dein Gerät hat das Speichern des Schlüssels abgelehnt. Biometrisches Entsperren ist nicht verfügbar.',
     'heading' => 'App-Sperre',

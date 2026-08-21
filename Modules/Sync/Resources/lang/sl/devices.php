@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Pojdi na Zaklepanje aplikacije',
 
     'encrypted_at_rest' => 'Podatki šifrirani v mirovanju',
-    'encrypted_at_rest_scope' => 'Zapiski, opisi transakcij ter imena in IBAN tistih, ki jim plačuješ, so šifrirani z geslom za zaklep aplikacije. Zneski, datumi ter ime in IBAN tvojega računa niso, nekatera imena trgovcev pa ostajajo berljiva drugje v datoteki baze podatkov.',
+    'encrypted_at_rest_scope' => 'Zapiski, opisi transakcij ter imena in IBAN tistih, ki jim plačuješ, so v knjigi šifrirani z geslom za zaklep aplikacije. Zneski, datumi ter ime in IBAN tvojega računa niso. Iskalni indeks hrani svojo berljivo kopijo tega, komu plačuješ, opisov tvojih transakcij in tvojih davčnih zapiskov, nekatera imena trgovcev pa ostajajo berljiva drugje v datoteki baze podatkov.',
     'on' => 'Vklopljeno',
     'securing' => 'Zavarovanje tvojih podatkov…',
     'do_not_close' => 'Ne zapiraj tega okna.',
@@ -53,7 +53,7 @@ return [
     'search_plaintext' => 'Iskalni indeks hrani nešifrirano kopijo imena trgovca in opisa, da iskanje po celotnem besedilu še naprej deluje.',
     'keep_unencrypted' => 'Obdrži podatke nešifrirane',
     'encryption_enabled' => 'Šifriranje je vklopljeno',
-    'encryption_enabled_body' => 'Tvoji podatki so zdaj šifrirani v mirovanju.',
+    'encryption_enabled_scope' => 'Zapiski, opisi in to, komu plačuješ, so zdaj šifrirani z geslom za zaklep aplikacije. Zneski, datumi in iskalni indeks ostanejo berljivi.',
     'done_encryption_enabled' => 'Končano — šifriranje je vklopljeno',
     'encryption_failed' => 'Nastavitev šifriranja ni uspela',
     'encryption_failed_body' => 'Tvoji podatki niso bili spremenjeni. Tvoja varnostna kopija je ohranjena.',

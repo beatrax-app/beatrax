@@ -101,16 +101,49 @@ function deliverySender(DatabaseManager $db, int $userId, string $deviceId = 'gd
     return [$deviceId, sodium_bin2hex(sodium_crypto_sign_secretkey($sigKp))];
 }
 
-function deliveryFakeClient(): WebsocketClient
+// The peer's half of the epoch phase: it acknowledges what it accounted for,
+// then announces its own push. Both legs run every connect, so a fake client
+// that served neither would stall the handler on a read.
+/**
+ * @return list<WebsocketMessage>
+ */
+function deliveryPeerReplies(NoiseSession $peer, int $acknowledged, int $rounds = 1): array
 {
-    return new class implements IteratorAggregate, WebsocketClient
+    $frames = [];
+
+    for ($i = 0; $i < $rounds; $i++) {
+        $frames[] = WebsocketMessage::fromBinary($peer->encrypt(json_encode([
+            'type' => SyncWebSocketHandler::MSG_GDK_EPOCH_ACK,
+            'count' => $i === 0 ? $acknowledged : 0,
+        ], JSON_THROW_ON_ERROR)));
+
+        $frames[] = WebsocketMessage::fromBinary($peer->encrypt(json_encode([
+            'type' => SyncWebSocketHandler::MSG_GDK_EPOCH_PUSH,
+            'count' => 0,
+        ], JSON_THROW_ON_ERROR)));
+    }
+
+    return $frames;
+}
+
+/**
+ * @param  list<WebsocketMessage>  $inbound
+ */
+function deliveryFakeClient(array $inbound = []): WebsocketClient
+{
+    return new class($inbound) implements IteratorAggregate, WebsocketClient
     {
         /** @var list<string> */
         public array $sentBinary = [];
 
+        private int $cursor = 0;
+
+        /** @param list<WebsocketMessage> $inbound */
+        public function __construct(private array $inbound) {}
+
         public function receive(?Cancellation $cancellation = null): ?WebsocketMessage
         {
-            throw new LogicException('not used in this test');
+            return $this->inbound[$this->cursor++] ?? null;
         }
 
         public function getId(): int
@@ -687,10 +720,10 @@ it('rotate-on-A delivers the enqueued wrap to a live-connecting peer over Noise 
         sodium_bin2hex($publicA),
     );
 
-    $fakeClient = deliveryFakeClient();
+    $fakeClient = deliveryFakeClient(deliveryPeerReplies($bNoiseSession, acknowledged: 1, rounds: 2));
     $handlerOnA->deliverGdkEpochWraps($fakeClient, $aSyncSession);
 
-    expect($fakeClient->sentBinary)->toHaveCount(2, 'the phase header plus the pending wrap must be pushed');
+    expect($fakeClient->sentBinary)->toHaveCount(3, 'the phase header, the pending wrap, and this side\'s own acknowledgement');
     expect(
         $db->connection()->table('relay_mailbox')
             ->where('recipient_did', $deviceB->deviceId)
@@ -708,9 +741,10 @@ it('rotate-on-A delivers the enqueued wrap to a live-connecting peer over Noise 
     expect($deliveredWrap['epoch_id'])->toBe($aEpoch->epochId);
     expect($deliveredWrap['recipient_device_id'])->toBe($deviceB->deviceId);
 
-    // The second pass adds only its phase header: a cleared wrap is not resent.
+    // The second pass adds only its phase header and acknowledgement: a cleared
+    // wrap is not resent.
     $handlerOnA->deliverGdkEpochWraps($fakeClient, $aSyncSession);
-    expect($fakeClient->sentBinary)->toHaveCount(3, 'a cleared wrap must never be redelivered');
+    expect($fakeClient->sentBinary)->toHaveCount(5, 'a cleared wrap must never be redelivered');
 
     // Direction 2: device-b drains its own inbound mailbox. This needs no peer
     // session, so it is exercised on its own.
@@ -832,12 +866,13 @@ it('pushes only epoch wraps to the peer and leaves a pairing frame for the couri
         sodium_bin2hex($publicA),
     );
 
-    $fakeClient = deliveryFakeClient();
+    $bNoiseSession = new NoiseSession($initSend, $initRecv, $peerStaticRevealedToInit);
+
+    $fakeClient = deliveryFakeClient(deliveryPeerReplies($bNoiseSession, acknowledged: 1));
     $handlerOnA->deliverGdkEpochWraps($fakeClient, $aSyncSession);
 
-    expect($fakeClient->sentBinary)->toHaveCount(2, 'only the phase header and the epoch wrap belong on this channel');
+    expect($fakeClient->sentBinary)->toHaveCount(3, 'the phase header, the epoch wrap, and this side\'s acknowledgement — the pairing frame stays behind');
 
-    $bNoiseSession = new NoiseSession($initSend, $initRecv, $peerStaticRevealedToInit);
     /** @var array<string, mixed> $delivered */
     $header = json_decode($bNoiseSession->decrypt($fakeClient->sentBinary[0]), true, 8, JSON_THROW_ON_ERROR);
     expect($header)->toBe(['type' => 'GDK_EPOCH_PUSH', 'count' => 1]);

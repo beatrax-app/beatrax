@@ -13,7 +13,6 @@ use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
-use Modules\Sync\Public\Services\BlindIndexCodec;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use SodiumException;
 
@@ -22,10 +21,6 @@ use SodiumException;
  */
 final class GdkRotationService
 {
-    // The blind-index key is not an epoch and has no id. Zero is outside
-    // GdkEpochId::mint()'s range, so it can never name a real one.
-    private const BLIND_INDEX_WRAP_EPOCH_ID = 0;
-
     public function __construct(
         private readonly GdkKeyringService $keyringService,
         private readonly DeviceRegistryService $deviceRegistry,
@@ -35,7 +30,7 @@ final class GdkRotationService
         private readonly SodiumPrimitives $sodium,
         private readonly DeviceIdentityLoader $identityLoader,
         private readonly DeviceKeySigner $signer,
-        private readonly BlindIndexCodec $blindIndex,
+        private readonly LocallyKeyedRowsProbe $keyedRows,
     ) {}
 
     // $session is per-method, never constructor-held: this class is a
@@ -163,7 +158,7 @@ final class GdkRotationService
         }
 
         $wrap = [
-            'type' => 'GDK_EPOCH_WRAP',
+            'type' => GdkEpochControlHandler::MSG_GDK_EPOCH_WRAP,
             'epoch_id' => $epochId,
             'wrapped_key_b64' => base64_encode($sealed),
             'recipient_device_id' => $recipientDeviceId,
@@ -219,7 +214,7 @@ final class GdkRotationService
             // arrival order agree with this device's own answer.
             $currentEpochId = $this->currentEpochIdOrNull($userId, $session);
 
-            $this->db->connection()->transaction(function () use ($keyring, $recipientPub, $recipientDeviceId, $selfDeviceId, $identity, $userId, $currentEpochId): void {
+            $this->db->connection()->transaction(function () use ($keyring, $recipientPub, $recipientDeviceId, $selfDeviceId, $identity, $userId, $currentEpochId, $session): void {
                 foreach ($keyring->epochs() as $epoch) {
                     if ($epoch->epochId !== $currentEpochId) {
                         $this->deliverWrap($epoch->epochId, $epoch->keyHex, $recipientPub, $recipientDeviceId, $selfDeviceId, $identity);
@@ -239,14 +234,14 @@ final class GdkRotationService
                 $blindIndexKeyHex = $keyring->blindIndexKeyHex();
                 if ($blindIndexKeyHex !== null) {
                     $this->deliverWrap(
-                        self::BLIND_INDEX_WRAP_EPOCH_ID,
+                        GdkEpochWrapSignature::BLIND_INDEX_EPOCH_ID,
                         $blindIndexKeyHex,
                         $recipientPub,
                         $recipientDeviceId,
                         $selfDeviceId,
                         $identity,
                         GdkEpochWrapSignature::ROLE_BLIND_INDEX,
-                        $this->blindIndex->holdsDerivedRows($userId),
+                        $this->keyedRows->holdsRowsKeyedUnder($userId, $identity->deviceId, $blindIndexKeyHex, $session),
                     );
                 }
             });

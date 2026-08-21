@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'error_enroll_unsupported' => 'Lo sblocco biometrico non è disponibile su questo dispositivo.',
+    'error_enroll_unprotected' => 'Lo sblocco biometrico richiede un archivio chiavi del sistema operativo, e questa installazione non ne ha uno. La registrazione lascerebbe la chiave di sblocco leggibile accanto ai tuoi dati, quindi qui non viene offerta.',
     'error_enroll_locked' => "Sblocca l'app prima di registrare il dispositivo.",
     'error_enroll_failed' => 'Il tuo dispositivo ha rifiutato di salvare la chiave. Lo sblocco biometrico non è disponibile.',
     'heading' => 'Blocco app',

@@ -23,6 +23,7 @@ use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Services\EncryptionMigrationService;
@@ -313,6 +314,7 @@ final class AppLockSettingsSection extends Component
         AppLockKeyService $keyService,
         Session $session,
         ConfigRepository $config,
+        SecretShield $shield,
     ): void {
         if (! $this->lockEnabled) {
             $this->flashMessage = Lang::get('auth::app_lock.error_enable_first');
@@ -333,6 +335,16 @@ final class AppLockSettingsSection extends Component
         // rather than dispatching into nothing.
         if ($config->get('nativephp-internal.running') === true) {
             $this->flashMessage = Lang::get('auth::app_lock.error_enroll_unsupported');
+
+            return;
+        }
+
+        // The browser path persists the unwrapping key beside the key it
+        // unwraps, in the same file as the ledger. Only a shield that really
+        // makes those bytes unreadable earns that; a self-hosted web install
+        // binds the pass-through, and the enrolment routes refuse there too.
+        if (! $shield->protectsAtRest()) {
+            $this->flashMessage = Lang::get('auth::app_lock.error_enroll_unprotected');
 
             return;
         }

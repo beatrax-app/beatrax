@@ -26,14 +26,6 @@ final readonly class GdkKeyring
     }
 
     /**
-     * @param  list<GdkEpoch>  $epochs
-     */
-    public static function fromEpochs(array $epochs, ?string $blindIndexKeyHex = null): self
-    {
-        return new self($epochs, $blindIndexKeyHex);
-    }
-
-    /**
      * @return list<GdkEpoch>
      */
     public function epochs(): array

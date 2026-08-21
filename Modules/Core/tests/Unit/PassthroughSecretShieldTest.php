@@ -22,3 +22,7 @@ it('reveal() is identity for an unshielded value', function (): void {
 
     expect($shield->reveal('legacy-plaintext'))->toBe('legacy-plaintext');
 });
+
+it('never claims to protect anything at rest', function (): void {
+    expect((new PassthroughSecretShield)->protectsAtRest())->toBeFalse();
+});

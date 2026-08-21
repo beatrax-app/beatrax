@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Transport\Relay;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Internal\Clock\ZuluTimestamp;
 
@@ -70,20 +71,33 @@ final readonly class RelayMailbox
         });
     }
 
-    // Bounded (resource-exhaustion guard): an unbounded drain would let the
-    // draining device request the server's entire pending backlog in one
-    // response. Callers needing the full backlog must loop: drain a page,
-    // confirm() each row, drain again, until fewer than $limit rows return.
+    // Bounded (resource-exhaustion guard): an unbounded drain would hand the
+    // caller the whole pending backlog at once. The cursor is what lets that
+    // caller page PAST a row it cannot retire — a deferred wrap and another
+    // protocol's blob both stay pending, and would otherwise hold the window.
     /**
+     * @param  string|null  $afterCreatedAt  Cursor half: exclusive lower bound on created_at.
+     * @param  int|null  $afterId  Cursor half: exclusive lower bound on id within one created_at.
      * @return list<\stdClass> Pending mailbox rows (id, sender_did, recipient_did, blob, created_at, expires_at)
      */
-    public function drain(string $recipientDid, int $limit): array
+    public function drain(string $recipientDid, int $limit, ?string $afterCreatedAt = null, ?int $afterId = null): array
     {
-        /** @var list<\stdClass> $rows */
-        $rows = $this->db->connection()
+        $query = $this->db->connection()
             ->table('relay_mailbox')
             ->where('recipient_did', $recipientDid)
-            ->whereNull('delivered_at')
+            ->whereNull('delivered_at');
+
+        if ($afterCreatedAt !== null && $afterId !== null) {
+            $query->where(static function (Builder $cursor) use ($afterCreatedAt, $afterId): void {
+                $cursor->where('created_at', '>', $afterCreatedAt)
+                    ->orWhere(static function (Builder $tie) use ($afterCreatedAt, $afterId): void {
+                        $tie->where('created_at', $afterCreatedAt)->where('id', '>', $afterId);
+                    });
+            });
+        }
+
+        /** @var list<\stdClass> $rows */
+        $rows = $query
             // Insert order, not just second order. Epoch wraps are enqueued as
             // a batch inside one transaction, so they share a timestamp, and a
             // tie the database broke its own way decided which epoch the

@@ -172,7 +172,7 @@ it('an empty-keyring phone quarantines a sensitive entry, then installs the deli
 
     /** @var GdkEpochDeliveryGateway $delivery */
     $delivery = app(GdkEpochDeliveryGateway::class);
-    $delivery->receiveEpochWrap(json_encode($wrap, JSON_THROW_ON_ERROR), $userId, $session);
+    $delivery->receiveEpochWrap(json_encode($wrap, JSON_THROW_ON_ERROR), $userId, 'desktop-peer', $phone->deviceId, $session);
 
     $loaded = $keyring->loadKeyring($userId, $session);
     expect($loaded->keyFor(1))->toBe(sodium_bin2hex($rawDesktopEpochKey), 'the delivered epoch must now be present in the phone keyring');

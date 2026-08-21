@@ -28,6 +28,11 @@ final class OpenBankingReversingShield implements SecretShield
     {
         return strrev($shielded);
     }
+
+    public function protectsAtRest(): bool
+    {
+        return true;
+    }
 }
 
 function openBankingSecretsFixturePath(): string

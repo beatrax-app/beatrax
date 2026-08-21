@@ -63,10 +63,19 @@ final class CounterpartyKey
     // storing it verbatim put back the identifier the AEAD column protects.
     public function forIban(string $iban, int $userId): string
     {
-        $trimmed = trim($iban);
+        $normalized = self::normalizeIban($iban);
 
-        return $trimmed === ''
+        return $normalized === ''
             ? self::NONE
-            : $this->blindIndex->derive(self::DOMAIN_IBAN, mb_strtoupper($trimmed), $userId, ($this->session)());
+            : $this->blindIndex->derive(self::DOMAIN_IBAN, $normalized, $userId, ($this->session)());
+    }
+
+    // The one spelling of an IBAN this domain hashes. The enable-time sweep
+    // re-derives stored IBANs without a session and has to reach the same bytes
+    // this does, so the convention lives here rather than in each caller.
+    // Interior spacing is part of the value: two spellings key apart.
+    public static function normalizeIban(string $iban): string
+    {
+        return mb_strtoupper(trim($iban));
     }
 }

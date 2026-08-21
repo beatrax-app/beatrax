@@ -9,6 +9,7 @@ use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Auth\Public\Http\Livewire\AppLockSettingsSection;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\SecretShield;
 
 // navigator.credentials.create() resolves to nothing behind the desktop shell,
 // which read as a dead button. Where a cold-start vault reports itself
@@ -37,6 +38,30 @@ function bindColdStartVault(bool $available, bool $enrolls = true, bool $isEnrol
     app()->instance(ColdStartVault::class, $vault);
 
     return $vault;
+}
+
+// Stands in for the desktop keychain shield. Defined here rather than shared:
+// Pest only loads the file it is asked to run, so a helper borrowed from a
+// sibling test file makes this suite fail when run on its own.
+function bindColdStartProtectingShield(): void
+{
+    app()->instance(SecretShield::class, new class implements SecretShield
+    {
+        public function protect(string $plaintext): string
+        {
+            return strrev($plaintext);
+        }
+
+        public function reveal(string $shielded): string
+        {
+            return strrev($shielded);
+        }
+
+        public function protectsAtRest(): bool
+        {
+            return true;
+        }
+    });
 }
 
 it('offers biometric unlock when the OS gate is available, without a browser check', function (): void {
@@ -122,6 +147,9 @@ it('still asks the browser when there is no shell and no OS gate', function (): 
     $this->actingAs($user);
     app(AppLockProvisioner::class)->enable($user->id, '123456', 'settings-pass');
     bindColdStartVault(available: false);
+    // The browser path writes the wrap blob into the app's own SQLite file, so
+    // it is only offered where the bound shield really protects those bytes.
+    bindColdStartProtectingShield();
 
     Livewire::test(AppLockSettingsSection::class)
         ->set('lockEnabled', true)

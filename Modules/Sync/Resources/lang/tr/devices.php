@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Uygulama kilidine git',
 
     'encrypted_at_rest' => 'Veriler durağan halde şifreli',
-    'encrypted_at_rest_scope' => 'Notlar, işlem açıklamaları ve ödeme yaptığın kişilerin adları ile IBAN\'ları uygulama kilidi parolanla şifrelenir. Tutarlar, tarihler ve kendi hesabının adı ile IBAN\'ı şifrelenmez ve bazı satıcı adları veritabanı dosyasının başka yerlerinde hâlâ açık metin olarak bulunur.',
+    'encrypted_at_rest_scope' => 'Notlar, işlem açıklamaları ve ödeme yaptığın kişilerin adları ile IBAN\'ları defterde uygulama kilidi parolanla şifrelenir. Tutarlar, tarihler ve kendi hesabının adı ile IBAN\'ı şifrelenmez. Arama dizini kime ödeme yaptığının, işlem açıklamalarının ve vergi notlarının kendi okunabilir kopyasını saklar ve bazı satıcı adları veritabanı dosyasının başka yerlerinde açık metin olarak bulunur.',
     'on' => 'Açık',
     'securing' => 'Verilerin güvenceye alınıyor…',
     'do_not_close' => 'Bu pencereyi kapatma.',
@@ -51,7 +51,7 @@ return [
     'search_plaintext' => 'Tam metin araması çalışmaya devam etsin diye arama dizini, işyeri ve açıklama metninin düz bir kopyasını saklar.',
     'keep_unencrypted' => 'Verileri şifresiz bırak',
     'encryption_enabled' => 'Şifreleme etkinleştirildi',
-    'encryption_enabled_body' => 'Verilerin artık durağan halde şifreli.',
+    'encryption_enabled_scope' => 'Notlar, açıklamalar ve kime ödeme yaptığın artık uygulama kilidi parolanla şifreleniyor. Tutarlar, tarihler ve arama dizini okunabilir kalır.',
     'done_encryption_enabled' => 'Bitti — şifreleme etkinleştirildi',
     'encryption_failed' => 'Şifreleme kurulumu başarısız oldu',
     'encryption_failed_body' => 'Verilerin değiştirilmedi. Yedeğin korundu.',

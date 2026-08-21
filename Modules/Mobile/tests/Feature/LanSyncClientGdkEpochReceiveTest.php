@@ -46,6 +46,9 @@ function lanReceiveFakeConnection(array $messages): WebsocketConnection
 {
     return new class($messages) implements IteratorAggregate, WebsocketConnection
     {
+        /** @var list<string> */
+        public array $sentBinary = [];
+
         private int $cursor = 0;
 
         public function __construct(private array $messages) {}
@@ -99,9 +102,12 @@ function lanReceiveFakeConnection(array $messages): WebsocketConnection
             throw new LogicException('not used in this test');
         }
 
+        // The receive step now acknowledges what it accounted for, so a
+        // connection that refused to send would stall the phase it is here
+        // to exercise. Recorded rather than discarded.
         public function sendBinary(string $data): void
         {
-            throw new LogicException('not used in this test');
+            $this->sentBinary[] = $data;
         }
 
         public function streamText(ReadableStream $stream): void
@@ -271,7 +277,7 @@ it('routes a pushed GDK_EPOCH_WRAP frame through the authenticated session and c
 
     /** @var LanSyncClient $client */
     $client = app(LanSyncClient::class);
-    $client->receiveGdkEpochWraps($connection, $phoneSyncSession, $userId, $session);
+    $client->receiveGdkEpochWraps($connection, $phoneSyncSession, $phone, 'desktop-peer', $session);
 
     $loaded = $keyring->loadKeyring($userId, $session);
     expect($loaded->keyFor(1))->toBe(sodium_bin2hex($rawEpochKey), 'the phone keyring must converge after the receive step');
@@ -332,7 +338,7 @@ it('skips a malformed pushed frame without throwing and without appending anythi
     /** @var LanSyncClient $client */
     $client = app(LanSyncClient::class);
 
-    $client->receiveGdkEpochWraps($connection, $phoneSyncSession, $userId, $session);
+    $client->receiveGdkEpochWraps($connection, $phoneSyncSession, $phone, 'desktop-peer', $session);
 
     /** @var GdkKeyringService $keyring */
     $keyring = app(GdkKeyringService::class);
@@ -483,10 +489,14 @@ it('treats a timed-out GDK phase header as a retryable stall and appends nothing
     $phoneSyncSession = lanReceiveBareSyncSession();
     $connection = lanScriptedFakeConnection(['__TIMEOUT__']);
 
+    /** @var DeviceIdentityService $identityService */
+    $identityService = app(DeviceIdentityService::class);
+    $phone = $identityService->generateAndPersist($userId, $session);
+
     /** @var LanSyncClient $client */
     $client = app(LanSyncClient::class);
 
-    expect(fn () => $client->receiveGdkEpochWraps($connection, $phoneSyncSession, $userId, $session))
+    expect(fn () => $client->receiveGdkEpochWraps($connection, $phoneSyncSession, $phone, 'desktop-peer', $session))
         ->toThrow(TimeoutException::class);
 
     /** @var GdkKeyringService $keyring */
@@ -551,7 +561,7 @@ it('ends the GDK receive loop on a well-formed but non-wrap control frame', func
 
     /** @var LanSyncClient $client */
     $client = app(LanSyncClient::class);
-    $client->receiveGdkEpochWraps($connection, $phoneSyncSession, $userId, $session);
+    $client->receiveGdkEpochWraps($connection, $phoneSyncSession, $phone, 'desktop-peer', $session);
 
     /** @var GdkKeyringService $keyring */
     $keyring = app(GdkKeyringService::class);

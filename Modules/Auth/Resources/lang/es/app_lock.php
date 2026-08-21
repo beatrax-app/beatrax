@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'error_enroll_unsupported' => 'El desbloqueo biométrico no está disponible en este dispositivo.',
+    'error_enroll_unprotected' => 'El desbloqueo biométrico necesita un almacén de claves del sistema operativo, y esta instalación no tiene ninguno. Registrarlo dejaría la clave de desbloqueo legible junto a tus datos, así que no se ofrece aquí.',
     'error_enroll_locked' => 'Desbloquea la app antes de registrar este dispositivo.',
     'error_enroll_failed' => 'Tu dispositivo rechazó guardar la clave. El desbloqueo biométrico no está disponible.',
     'heading' => 'Bloqueo de la app',

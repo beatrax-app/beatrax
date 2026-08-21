@@ -33,10 +33,12 @@ final class BlindIndexCodec
     // public surface, because three modules compare a stored value against it.
     public const string SENTINEL = '_no_counterparty';
 
-    // A digest-length value that is not hex is a merchant name of exactly that
-    // length, which is improbable but not impossible. Reading a handful means
-    // one such name cannot answer for a table that really is keyed.
-    private const int DERIVED_PROBE_ROWS = 25;
+    // Re-exported from the registry rather than respelled: the ledger derives
+    // under these names and this class validates against them, so one literal
+    // in two places would hash the same plaintext two different ways.
+    public const string DOMAIN_COUNTERPARTY_NORMALIZED = SensitiveFieldRegistry::DOMAIN_COUNTERPARTY_NORMALIZED;
+
+    public const string DOMAIN_COUNTERPARTY_IBAN = SensitiveFieldRegistry::DOMAIN_COUNTERPARTY_IBAN;
 
     public function __construct(
         private readonly GdkKeyringService $keyringService,
@@ -66,6 +68,8 @@ final class BlindIndexCodec
     // middle of adopting.
     public function deriveWithKey(string $domain, string $plaintext, int $userId, string $keyHex): string
     {
+        self::requireKnownDomain($domain);
+
         try {
             $rawKey = sodium_hex2bin($keyHex);
         } catch (SodiumException $e) {
@@ -133,39 +137,25 @@ final class BlindIndexCodec
             ->update(['counterparty_key_backfilled_at' => $this->clock->now()]);
     }
 
-    // Whether this device holds rows keyed under the blind-index key it has.
-    // Asked of the DATA, never of the sweep marker: a device that enrolled with
-    // an empty ledger and imported afterwards swept nothing, yet every row it
-    // then wrote is keyed, and adopting a peer's key would orphan all of them.
+    // The message is separator-joined, and the trailing plaintext is the only
+    // variable-length field, so injectivity holds exactly while no domain
+    // carries a separator of its own. A closed set is what enforces that;
+    // without it `derive('a|1|x', ...)` and `derive('a', ...)` can collide.
     /**
-     * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md
+     * @throws LogicException when $domain is not one the registry declares.
      */
-    public function holdsDerivedRows(int $userId): bool
+    public static function requireKnownDomain(string $domain): void
     {
-        // transactions alone is sufficient and necessary: merchants and
-        // recurring_series keys are only ever derived from a transaction, so
-        // neither can hold one this table does not.
-        $candidates = $this->db->connection()
-            ->table('transactions')
-            ->where('user_id', $userId)
-            ->whereRaw('length(counterparty_normalized) = ?', [self::DIGEST_LENGTH])
-            ->limit(self::DERIVED_PROBE_ROWS)
-            ->pluck('counterparty_normalized');
-
-        foreach ($candidates as $value) {
-            if (is_string($value) && self::looksDerived($value)) {
-                return true;
-            }
+        if (! in_array($domain, SensitiveFieldRegistry::blindIndexDomains(), true)) {
+            throw new LogicException("BlindIndexCodec: '{$domain}' is not a declared blind-index domain.");
         }
-
-        return false;
     }
 
     // The blind-index columns, on the public surface for the guards outside
     // Sync that have to know which columns these are. SensitiveFieldRegistry
     // owns the list; this is the door, not a second copy.
     /**
-     * @return array<string, string> {table}.{column} => the domain it derives under
+     * @return array<string, list<string>> {table}.{column} => every domain its rows may derive under
      */
     public static function indexedColumns(): array
     {

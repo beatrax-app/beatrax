@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Ir a Bloqueo de la app',
 
     'encrypted_at_rest' => 'Datos cifrados en reposo',
-    'encrypted_at_rest_scope' => 'Las notas, las descripciones de las transacciones y los nombres e IBAN de a quién pagas están cifrados con la contraseña de bloqueo de la app. Los importes, las fechas y el nombre e IBAN de tu propia cuenta no lo están, y algunos nombres de comercios siguen apareciendo en texto claro en otras partes del archivo de base de datos.',
+    'encrypted_at_rest_scope' => 'Las notas, las descripciones de las transacciones y los nombres e IBAN de a quién pagas están cifrados en el libro de cuentas con la contraseña de bloqueo de la app. Los importes, las fechas y el nombre e IBAN de tu propia cuenta no lo están. El índice de búsqueda guarda su propia copia legible de a quién pagas, de las descripciones de tus transacciones y de tus notas fiscales, y algunos nombres de comercios aparecen en texto claro en otras partes del archivo de base de datos.',
     'on' => 'Activado',
     'securing' => 'Protegiendo tus datos…',
     'do_not_close' => 'No cierres esta ventana.',
@@ -51,7 +51,7 @@ return [
     'search_plaintext' => 'El índice de búsqueda guarda una copia en texto plano del nombre del comercio y de la descripción para que la búsqueda de texto completo siga funcionando.',
     'keep_unencrypted' => 'Mantener los datos sin cifrar',
     'encryption_enabled' => 'Cifrado activado',
-    'encryption_enabled_body' => 'Tus datos ya están cifrados en reposo.',
+    'encryption_enabled_scope' => 'Las notas, las descripciones y a quién pagas ya están cifrados con la contraseña de bloqueo de la app. Los importes, las fechas y el índice de búsqueda siguen siendo legibles.',
     'done_encryption_enabled' => 'Hecho — cifrado activado',
     'encryption_failed' => 'No se ha podido configurar el cifrado',
     'encryption_failed_body' => 'Tus datos no se han modificado. Tu copia de seguridad se ha conservado.',

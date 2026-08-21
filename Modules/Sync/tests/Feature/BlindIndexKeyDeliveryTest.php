@@ -12,12 +12,16 @@ use Modules\Import\Public\Pipeline\NormalizeStage;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
+use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Sync\Internal\Crypto\GdkEpoch;
 use Modules\Sync\Internal\Crypto\GdkEpochControlHandler;
 use Modules\Sync\Internal\Crypto\GdkEpochWrapSignature;
+use Modules\Sync\Internal\Crypto\GdkWrapOutcome;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
+use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
+use Modules\Sync\Internal\Crypto\LocallyKeyedRowsProbe;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
@@ -130,6 +134,22 @@ function bikDeliver(User $user, Session $session, DeviceIdentityDto $self, strin
     app(GdkEpochControlHandler::class)->handle(json_encode($wrap, JSON_THROW_ON_ERROR), (int) $user->id, $session);
 }
 
+function bikDeliverOutcome(User $user, Session $session, DeviceIdentityDto $self, string $senderId, string $senderSecretHex, string $keyHex, bool $senderKeyed = false): GdkWrapOutcome
+{
+    $wrap = app(GdkRotationService::class)->buildGdkEpochWrap(
+        GdkEpochWrapSignature::BLIND_INDEX_EPOCH_ID,
+        sodium_hex2bin($keyHex),
+        sodium_hex2bin($self->x25519PublicKeyHex),
+        $self->deviceId,
+        $senderId,
+        $senderSecretHex,
+        GdkEpochWrapSignature::ROLE_BLIND_INDEX,
+        $senderKeyed,
+    );
+
+    return app(GdkEpochControlHandler::class)->handle(json_encode($wrap, JSON_THROW_ON_ERROR), (int) $user->id, $session);
+}
+
 // The path B1 walks: enable sync with nothing imported, so the sweep converts
 // nothing, then import. Every row written after that is keyed at write time and
 // so is never convertible — which is why the sweep marker cannot answer whether
@@ -175,6 +195,140 @@ function bikEnrolThenImport(User $user, Session $session): string
     app(RecordsTransactions::class)([$canonical], $user, captureForSync: false);
 
     return (string) app(GdkKeyringService::class)->blindIndexKeyHex((int) $user->id, $session);
+}
+
+// The question adoptsBlindIndexKey() actually asks. Given a device id so it
+// can tell rows this device authored from rows it merely received.
+function bikHoldsKeyedRows(User $user, Session $session, string $deviceId = ''): bool
+{
+    $keyHex = (string) app(GdkKeyringService::class)->blindIndexKeyHex((int) $user->id, $session);
+
+    return app(LocallyKeyedRowsProbe::class)->holdsRowsKeyedUnder((int) $user->id, $deviceId, $keyHex, $session);
+}
+
+// What catch-up writes into a LOCKED device: counterparty_normalized is a
+// non-sensitive _create_required column, so a digest under the PEER's key is
+// applied verbatim while the sealed columns quarantine. The name is readable
+// because the epoch keys travel with the rows.
+function bikSeedPeerKeyedRows(User $user, string $foreignKeyHex): void
+{
+    $account = Account::query()->create([
+        'user_id' => $user->id,
+        'name' => 'peer account',
+        'slug' => 'bik-peer-'.bin2hex(random_bytes(4)),
+        'kind' => 'bank',
+        'iban' => 'NL00BIKP'.str_pad((string) $user->id, 10, '0', STR_PAD_LEFT),
+        'default_currency' => 'EUR',
+    ]);
+
+    $foreign = app(BlindIndexCodec::class)->deriveWithKey(
+        BlindIndexCodec::DOMAIN_COUNTERPARTY_NORMALIZED,
+        'zilveren kruis',
+        (int) $user->id,
+        $foreignKeyHex,
+    );
+
+    app(DatabaseManager::class)->connection()->table('transactions')->insert([
+        'user_id' => $user->id,
+        'account_id' => $account->id,
+        'import_run_id' => bikImportRun($user),
+        'posted_at' => '2026-08-01',
+        'booked_at' => '2026-08-01 12:00:00',
+        'value_date' => '2026-08-01',
+        'amount_minor' => -12300,
+        'currency' => 'EUR',
+        'settled_amount_minor' => -12300,
+        'settled_currency' => 'EUR',
+        'type' => 'expense',
+        'description' => 'health insurance',
+        'counterparty_name' => 'Zilveren Kruis',
+        'counterparty_normalized' => $foreign,
+        'normalization_version' => 1,
+        'source_format' => 'asn-csv',
+        'source_row_index' => 0,
+        'fingerprint' => hash('sha256', 'bik-peer-'.bin2hex(random_bytes(8))),
+        'fingerprint_version' => 1,
+        'created_at' => '2026-08-01T12:00:00Z',
+        'updated_at' => '2026-08-01T12:00:00Z',
+    ]);
+}
+
+// A minimal import run for the raw fixture inserts below, which bypass the
+// pipeline on purpose: they are standing in for what op-log replay writes.
+function bikImportRun(User $user): int
+{
+    return (int) ImportRun::query()->create([
+        'user_id' => $user->id,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/bik-fixture.csv',
+        'sha256' => hash('sha256', 'bik-fixture-'.bin2hex(random_bytes(8))),
+        'uploaded_at' => CarbonImmutable::parse('2026-08-01 09:00:00'),
+        'status' => 'previewed',
+    ])->id;
+}
+
+// A ledger of nothing but named-payer-less SEPA credits: every transaction's
+// counterparty_normalized is the sentinel, and the one value keyed under this
+// device's own key is the payer IBAN on the income series.
+function bikSeedIncomeOnlyLedger(User $user, string $localKeyHex): void
+{
+    $iban = 'NL10BANK0000000101';
+
+    $account = Account::query()->create([
+        'user_id' => $user->id,
+        'name' => 'salary account',
+        'slug' => 'bik-income-'.bin2hex(random_bytes(4)),
+        'kind' => 'bank',
+        'iban' => 'NL00BIKI'.str_pad((string) $user->id, 10, '0', STR_PAD_LEFT),
+        'default_currency' => 'EUR',
+    ]);
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $db->connection()->table('transactions')->insert([
+        'user_id' => $user->id,
+        'account_id' => $account->id,
+        'import_run_id' => bikImportRun($user),
+        'posted_at' => '2026-08-01',
+        'booked_at' => '2026-08-01 12:00:00',
+        'value_date' => '2026-08-01',
+        'amount_minor' => 250000,
+        'currency' => 'EUR',
+        'settled_amount_minor' => 250000,
+        'settled_currency' => 'EUR',
+        'type' => 'income',
+        'description' => 'salaris',
+        'counterparty_name' => null,
+        'counterparty_iban' => $iban,
+        'counterparty_normalized' => CounterpartyKey::NONE,
+        'normalization_version' => 1,
+        'source_format' => 'asn-csv',
+        'source_row_index' => 0,
+        'fingerprint' => hash('sha256', 'bik-income-'.bin2hex(random_bytes(8))),
+        'fingerprint_version' => 1,
+        'created_at' => '2026-08-01T12:00:00Z',
+        'updated_at' => '2026-08-01T12:00:00Z',
+    ]);
+
+    $db->connection()->table('recurring_series')->insert([
+        'user_id' => $user->id,
+        'direction' => 'income',
+        'detected_name' => 'salaris',
+        'state' => 'approved',
+        'cadence' => 'monthly',
+        'latest_amount_minor' => 250000,
+        'latest_currency' => 'EUR',
+        'cluster_counterparty_key' => app(BlindIndexCodec::class)->deriveWithKey(
+            BlindIndexCodec::DOMAIN_COUNTERPARTY_IBAN,
+            CounterpartyKey::normalizeIban($iban),
+            (int) $user->id,
+            $localKeyHex,
+        ),
+        'cluster_key' => 'income::bik-income::eur::monthly',
+        'created_at' => '2026-08-01T12:00:00Z',
+        'updated_at' => '2026-08-01T12:00:00Z',
+    ]);
 }
 
 it('mints a blind-index key alongside the first epoch', function (): void {
@@ -240,7 +394,7 @@ it('refuses a peer key on a device that enrolled empty and imported afterwards',
     /** @var BlindIndexCodec $codec */
     $codec = app(BlindIndexCodec::class);
     expect($codec->hasSweptCounterpartyKeys((int) $user->id))->toBeTrue();
-    expect($codec->holdsDerivedRows((int) $user->id))->toBeTrue();
+    expect(bikHoldsKeyedRows($user, $session))->toBeTrue();
 
     [$self, $senderId, $senderSecretHex, $peerKeyHex] = bikInboundWrapParts($user, $session);
     bikDeliver($user, $session, $self, $senderId, $senderSecretHex, $peerKeyHex, senderKeyed: false);
@@ -282,7 +436,7 @@ it('adopts a peer key when the peer holds rows and this device does not', functi
 
 // Two fresh devices both fan out before either has adopted, so arrival order
 // must not decide it. Lowest hex wins on both sides, whichever lands first.
-it('breaks a tie between two unkeyed devices the same way on both sides', function (): void {
+it('breaks a tie between two unkeyed devices on an order neither arrival order nor which key is lower can change', function (): void {
     foreach ([true, false] as $peerKeyIsLower) {
         $user = bikUser('bik-tie-'.($peerKeyIsLower ? 'lower' : 'higher'));
         /** @var Session $session */
@@ -350,7 +504,7 @@ it('still adopts a peer key after a sweep that had no rows to convert', function
     $codec = app(BlindIndexCodec::class);
     expect($codec->isEnrolled((int) $user->id))->toBeTrue();
     expect($codec->hasSweptCounterpartyKeys((int) $user->id))->toBeTrue();
-    expect($codec->holdsDerivedRows((int) $user->id))->toBeFalse();
+    expect(bikHoldsKeyedRows($user, $session))->toBeFalse();
 
     [$self, $senderId, $senderSecretHex, $peerKeyHex] = bikInboundWrapParts($user, $session);
     bikDeliver($user, $session, $self, $senderId, $senderSecretHex, $peerKeyHex);
@@ -443,4 +597,196 @@ it('fans out the current epoch last, so a joining device settles on it', functio
     expect($epochOrder)->toHaveCount(2);
     expect($epochOrder[0])->toBe($first->epochId);
     expect($epochOrder[1])->toBe(777);
+});
+
+// The inverse of the reported case. A locked device applies a peer's rows
+// during catch-up — counterparty_normalized is a non-sensitive
+// _create_required column — and a probe that only measured shape then read
+// those digests as its own work and refused the key its ledger is written
+// under. The wrap is deleted next, so nothing re-sends it.
+it('adopts a peer key on a device whose only digests arrived from that peer', function (): void {
+    $user = bikUser('bik-peer-rows-only');
+    /** @var Session $session */
+    $session = app(Session::class);
+
+    app(EncryptionMigrationService::class)->migrate($user, $session);
+
+    // Not this device's key: the peer's. Deterministically above any minted
+    // key so lowest-hex-wins cannot be what carries the assertion.
+    bikSeedPeerKeyedRows($user, str_repeat('f', 64));
+
+    expect(bikHoldsKeyedRows($user, $session))->toBeFalse();
+
+    [$self, $senderId, $senderSecretHex, $peerKeyHex] = bikInboundWrapParts($user, $session);
+    $outcome = bikDeliverOutcome($user, $session, $self, $senderId, $senderSecretHex, $peerKeyHex, senderKeyed: true);
+
+    expect($outcome)->toBe(GdkWrapOutcome::Applied);
+    expect(app(GdkKeyringService::class)->blindIndexKeyHex((int) $user->id, $session))->toBe($peerKeyHex);
+});
+
+// An income-only ledger keys nothing in transactions: the payer has no
+// free-form name, so counterparty_normalized is the sentinel and the only
+// keyed value the device owns is the payer IBAN on the series.
+it('holds its ground for an income-only ledger whose one keyed value is the payer IBAN', function (): void {
+    $user = bikUser('bik-income-only');
+    /** @var Session $session */
+    $session = app(Session::class);
+
+    app(EncryptionMigrationService::class)->migrate($user, $session);
+    $localKeyHex = (string) app(GdkKeyringService::class)->blindIndexKeyHex((int) $user->id, $session);
+
+    bikSeedIncomeOnlyLedger($user, $localKeyHex);
+
+    expect(bikHoldsKeyedRows($user, $session))->toBeTrue();
+
+    [$self, $senderId, $senderSecretHex, $peerKeyHex] = bikInboundWrapParts($user, $session);
+    bikDeliver($user, $session, $self, $senderId, $senderSecretHex, $peerKeyHex, senderKeyed: false);
+
+    expect(app(GdkKeyringService::class)->blindIndexKeyHex((int) $user->id, $session))->toBe($localKeyHex);
+});
+
+// Both sides hold keyed rows, so neither adopts — but the wrap is the only
+// copy of the peer's index key, and a re-derive is what would resolve this.
+it('keeps the peer wrap when both devices hold keyed rows, rather than retiring the key a recovery needs', function (): void {
+    $user = bikUser('bik-retained');
+    /** @var Session $session */
+    $session = app(Session::class);
+
+    $localKeyHex = bikEnrolThenImport($user, $session);
+
+    [$self, $senderId, $senderSecretHex, $peerKeyHex] = bikInboundWrapParts($user, $session);
+    $outcome = bikDeliverOutcome($user, $session, $self, $senderId, $senderSecretHex, $peerKeyHex, senderKeyed: true);
+
+    expect($outcome)->toBe(GdkWrapOutcome::Retained);
+    expect($outcome->consumesCarrier())->toBeFalse();
+    expect(app(GdkKeyringService::class)->blindIndexKeyHex((int) $user->id, $session))->toBe($localKeyHex);
+});
+
+// An epoch wrap does not sign this field and must never read it: a party that
+// can append one JSON key to a stored blob could otherwise retire an epoch
+// key, and every op-log row sealed under it becomes unreadable forever.
+it('ignores a field on an epoch wrap that no signature covers, instead of retiring the key over it', function (): void {
+    $user = bikUser('bik-unsigned-field');
+    /** @var Session $session */
+    $session = app(Session::class);
+
+    /** @var GdkKeyringService $keyring */
+    $keyring = app(GdkKeyringService::class);
+    $keyring->generateAndPersist((int) $user->id, $session);
+
+    [$self, $senderId, $senderSecretHex] = bikInboundWrapParts($user, $session);
+
+    $wrap = app(GdkRotationService::class)->buildGdkEpochWrap(
+        4242,
+        random_bytes(32),
+        sodium_hex2bin($self->x25519PublicKeyHex),
+        $self->deviceId,
+        $senderId,
+        $senderSecretHex,
+    );
+    $wrap['sender_holds_keyed_rows'] = 'x';
+
+    $outcome = app(GdkEpochControlHandler::class)->handle(json_encode($wrap, JSON_THROW_ON_ERROR), (int) $user->id, $session);
+
+    expect($outcome)->toBe(GdkWrapOutcome::Applied);
+    expect($keyring->loadKeyring((int) $user->id, $session)->keyFor(4242))->toBeString();
+});
+
+// Whether the recipient has recorded the sender as confirmed when the wrap
+// lands is an ordering question during pairing, not a permanent fact.
+it('holds a wrap from a sender it has not confirmed yet, rather than retiring it', function (): void {
+    $user = bikUser('bik-unconfirmed-sender');
+    /** @var Session $session */
+    $session = app(Session::class);
+
+    /** @var GdkKeyringService $keyring */
+    $keyring = app(GdkKeyringService::class);
+    $keyring->generateAndPersist((int) $user->id, $session);
+
+    [$self, $senderId, $senderSecretHex, $peerKeyHex] = bikInboundWrapParts($user, $session);
+
+    app(DatabaseManager::class)->connection()->table('device_registry')
+        ->where('user_id', $user->id)
+        ->where('device_id', $senderId)
+        ->update(['confirmed_at' => null]);
+
+    $outcome = bikDeliverOutcome($user, $session, $self, $senderId, $senderSecretHex, $peerKeyHex);
+
+    expect($outcome)->toBe(GdkWrapOutcome::Deferred);
+    expect($outcome->consumesCarrier())->toBeFalse();
+});
+
+// The reserved id is signed like every other field, so a blind-index wrap
+// carrying a real epoch id was built that way rather than mutated into it.
+it('refuses a blind-index wrap carrying an epoch id other than the reserved one', function (): void {
+    $user = bikUser('bik-epoch-id');
+    /** @var Session $session */
+    $session = app(Session::class);
+
+    /** @var GdkKeyringService $keyring */
+    $keyring = app(GdkKeyringService::class);
+    $keyring->generateAndPersist((int) $user->id, $session);
+    $localKeyHex = $keyring->blindIndexKeyHex((int) $user->id, $session);
+
+    [$self, $senderId, $senderSecretHex, $peerKeyHex] = bikInboundWrapParts($user, $session);
+
+    $wrap = app(GdkRotationService::class)->buildGdkEpochWrap(
+        91827,
+        sodium_hex2bin($peerKeyHex),
+        sodium_hex2bin($self->x25519PublicKeyHex),
+        $self->deviceId,
+        $senderId,
+        $senderSecretHex,
+        GdkEpochWrapSignature::ROLE_BLIND_INDEX,
+    );
+
+    $outcome = app(GdkEpochControlHandler::class)->handle(json_encode($wrap, JSON_THROW_ON_ERROR), (int) $user->id, $session);
+
+    expect($outcome)->toBe(GdkWrapOutcome::Refused);
+    expect($keyring->blindIndexKeyHex((int) $user->id, $session))->toBe($localKeyHex);
+    expect($keyring->loadKeyring((int) $user->id, $session)->keyFor(91827))->toBeNull();
+});
+
+// The message is separator-joined and only the trailing plaintext varies, so
+// a domain carrying the separator would make two different inputs hash alike.
+it('refuses to derive under a domain the registry does not declare', function (): void {
+    $user = bikUser('bik-domain');
+    /** @var Session $session */
+    $session = app(Session::class);
+
+    /** @var GdkKeyringService $keyring */
+    $keyring = app(GdkKeyringService::class);
+    $keyring->generateAndPersist((int) $user->id, $session);
+    $keyHex = (string) $keyring->blindIndexKeyHex((int) $user->id, $session);
+
+    /** @var BlindIndexCodec $codec */
+    $codec = app(BlindIndexCodec::class);
+
+    expect(fn () => $codec->deriveWithKey('a|1|x', 'Q', (int) $user->id, $keyHex))
+        ->toThrow(LogicException::class);
+});
+
+// Every domain the ledger derives under must be one the registry declares, or
+// the guard above turns a live write into a runtime failure.
+it('declares every domain the ledger derives under', function (): void {
+    expect(SensitiveFieldRegistry::blindIndexDomains())
+        ->toContain(CounterpartyKey::DOMAIN)
+        ->toContain(CounterpartyKey::DOMAIN_IBAN);
+});
+
+// The method's own comment says every variable-length field is length-prefixed
+// so a separator in one cannot shift another. The role was the exception, safe
+// only because a second class allowlisted it before the message was built —
+// and that allowlist now runs after the signature, where it cannot help.
+it('length-prefixes the role term the way its own comment says every variable-length field is', function (): void {
+    $message = GdkEpochWrapSignature::signingMessage(
+        GdkEpochWrapSignature::BLIND_INDEX_EPOCH_ID,
+        'sealed',
+        'recipient',
+        'sender',
+        GdkEpochWrapSignature::ROLE_BLIND_INDEX,
+        false,
+    );
+
+    expect($message)->toContain('role:'.strlen(GdkEpochWrapSignature::ROLE_BLIND_INDEX).':'.GdkEpochWrapSignature::ROLE_BLIND_INDEX);
 });

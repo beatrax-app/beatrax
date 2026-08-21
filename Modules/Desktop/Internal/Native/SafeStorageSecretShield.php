@@ -25,4 +25,16 @@ final class SafeStorageSecretShield implements SecretShield
         // before shielding, or a changed keychain — so the stored bytes are it.
         return $this->custodian->read($shielded) ?? $shielded;
     }
+
+    // Probed rather than declared: the custodian hands back the raw bytes
+    // whenever Electron's safeStorage is unreachable, so a hardcoded true
+    // would claim keychain protection on a desktop that has none.
+    public function protectsAtRest(): bool
+    {
+        $probe = random_bytes(32);
+        $protects = ! hash_equals($probe, $this->custodian->store($probe));
+        sodium_memzero($probe);
+
+        return $protects;
+    }
 }

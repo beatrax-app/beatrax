@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Ga naar App-vergrendeling',
 
     'encrypted_at_rest' => 'Gegevens versleuteld opgeslagen',
-    'encrypted_at_rest_scope' => 'Notities, omschrijvingen van transacties en de namen en IBANs van wie je betaalt zijn versleuteld met je app-vergrendelingswachtwoord. Bedragen, datums en je eigen rekeningnaam en IBAN niet, en sommige namen van winkels staan nog steeds leesbaar elders in het databasebestand.',
+    'encrypted_at_rest_scope' => 'Notities, omschrijvingen van transacties en de namen en IBANs van wie je betaalt zijn in het grootboek versleuteld met je app-vergrendelingswachtwoord. Bedragen, datums en je eigen rekeningnaam en IBAN niet. De zoekindex bewaart een eigen leesbare kopie van wie je betaalt, van je omschrijvingen van transacties en van je belastingnotities, en sommige namen van winkels staan leesbaar elders in het databasebestand.',
     'on' => 'Aan',
     'securing' => 'Je gegevens worden beveiligd…',
     'do_not_close' => 'Sluit dit venster niet.',
@@ -53,7 +53,7 @@ return [
     'search_plaintext' => 'De zoekindex bewaart een leesbare kopie van winkelier- en omschrijvingstekst zodat zoeken op volledige tekst blijft werken.',
     'keep_unencrypted' => 'Gegevens onversleuteld houden',
     'encryption_enabled' => 'Versleuteling ingeschakeld',
-    'encryption_enabled_body' => 'Je gegevens zijn nu versleuteld opgeslagen.',
+    'encryption_enabled_scope' => 'Notities, omschrijvingen en wie je betaalt zijn nu versleuteld met je app-vergrendelingswachtwoord. Bedragen, datums en de zoekindex blijven leesbaar.',
     'done_encryption_enabled' => 'Klaar — versleuteling ingeschakeld',
     'encryption_failed' => 'Instellen van versleuteling mislukt',
     'encryption_failed_body' => 'Je gegevens zijn niet gewijzigd. Je back-up is behouden.',

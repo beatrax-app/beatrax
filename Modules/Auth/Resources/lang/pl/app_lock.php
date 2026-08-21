@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'error_enroll_unsupported' => 'Odblokowanie biometryczne nie jest dostępne na tym urządzeniu.',
+    'error_enroll_unprotected' => 'Odblokowanie biometryczne wymaga magazynu kluczy systemu operacyjnego, a ta instalacja go nie ma. Rejestracja pozostawiłaby klucz odblokowujący czytelny obok Twoich danych, więc nie jest tu oferowana.',
     'error_enroll_locked' => 'Odblokuj aplikację przed rejestracją.',
     'error_enroll_failed' => 'Urządzenie odmówiło zapisania klucza. Odblokowanie biometryczne jest niedostępne.',
     'heading' => 'Blokada aplikacji',

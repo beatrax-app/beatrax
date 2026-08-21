@@ -48,14 +48,9 @@ bearing:
 
 ## The knowingly-accepted exceptions
 
-Three columns hold decrypted values on purpose. Each is a reviewed decision, not an
+Two columns hold decrypted values on purpose. Each is a reviewed decision, not an
 oversight:
 
-- **`recurring_series.cluster_counterparty_key`** stores a decrypted IBAN or description
-  clustering key verbatim. Random-nonce ciphertext cannot be a stable `WHERE` key — the same
-  input encrypts to different bytes each time, so grouping on it would put every occurrence
-  in its own cluster. The **expense** path now carries the keyed counterparty blind index
-  instead; the income path still holds a decrypted IBAN, and that half remains open.
 - **`migration_import_baseline.baseline_value`** snapshots a plaintext value so the
   three-way merge resolver can compare against it.
 - **`pending_enrichment_conflicts.stored_value` / `.incoming_value`** hold decrypted values
@@ -67,10 +62,17 @@ Deferred rather than decided: `counterparties.metadata` and `saved_reports.defin
 ## How the encryption is bound to its epoch
 
 `OpLogFieldCrypto` is XChaCha20-Poly1305 IETF AEAD, framed as
-`base64(nonce || ciphertext)`. The associated-data argument is the epoch-binding channel:
-callers pass `"{table}:{pk}:{field}:{epochId}"`, so relabelling the stored epoch tag
-invalidates the authentication tag. That is defence in depth alongside the Ed25519 signature
-that already covers the whole op-log entry.
+`base64(nonce || ciphertext)`. The associated-data argument is the epoch-binding channel, and
+it has **two shapes**, one per storage location. An op-log entry has a primary key to bind and
+passes `"{table}:{pk}:{field}:{epochId}"` — `OpLogWriter` writes it, `OpLogEntryVerifier` checks
+it. A projection column is the row, so there is no separate pk term to bind and it passes
+`"{table}:{field}:{epochId}"`; `SensitiveColumnCodec::associatedData()` is the only place that
+builds that one, and it is `public static` so a raw SQL pass can reproduce it without the codec.
+
+Either way, relabelling the stored epoch tag invalidates the authentication tag. That is defence
+in depth alongside the Ed25519 signature that already covers the whole op-log entry. The two
+shapes are not interchangeable: hand the projection path a `{pk}` term and every decrypt returns
+`false`.
 
 Decryption returns `false` — never a throw, never garbage — on invalid base-64, a blob too
 short to contain a ciphertext, or an authentication failure. Callers must use a strict
@@ -180,9 +182,11 @@ form it shows it. That half doubles as the check that the fixture still reaches 
 since an empty state passes an absence assertion perfectly.
 
 The blind index rides along in the same census. All **three** of its columns do —
-`transactions.counterparty_normalized`, `merchants.normalized_name`, and the expense half of
+`transactions.counterparty_normalized`, `merchants.normalized_name`, and
 `recurring_series.cluster_counterparty_key`, which
-`CounterpartyKeyBackfill::convertExpenseSeries()` converts and which is the one
+`CounterpartyKeyBackfill::convertSeriesClusterKeys()` converts — **both** halves of it, an
+expense row's counterparty matching key under `DOMAIN` and an income row's payer IBAN under
+`DOMAIN_IBAN`, the domain chosen per row from the series' direction — and which is the one
 `CounterpartyKeyHasOneProducerTest` omits from its write markers. They are keyed digests rather
 than AEAD and are deliberately absent from `SensitiveFieldRegistry`, so a guard reading that
 list alone has no opinion about a digest on a screen — which is the same defect wearing a
@@ -215,9 +219,12 @@ the failure this whole design exists to avoid. So the two lists must not merge.
 
 They should still be reachable together, because the readers that want both are guards, audits and
 the question "could a human read this value". The shape that satisfies both is a **third accessor**
-beside `columns()` and `knowinglyPlaintext()`, and it now exists: `blindIndexColumns()` returns the
-three columns with the domain each derives under, and `blindIndexSentinel()` names the one value
-they hold in the clear. `columns()` is unchanged and is still the only thing the codec consults. A
+beside `columns()` and `knowinglyPlaintext()`, and it now exists: `blindIndexColumns()` returns
+`array<string, list<string>>` — the three columns, each mapped to **every** domain its rows may
+derive under — and `blindIndexSentinel()` names the one value they hold in the clear. The value
+is a list rather than a single domain because `recurring_series.cluster_counterparty_key`
+genuinely holds two, and a guard that compared a column against one string would be wrong for
+every income row. `columns()` is unchanged and is still the only thing the codec consults. A
 guard composes the two explicitly rather than one list quietly acquiring a second meaning.
 
 The render guard reads both accessors and pins that they stay disjoint, which fails loudly if a
@@ -291,8 +298,16 @@ it never collides, and a route parameter built from it resolves to nothing.
 
 ### The decision is recorded, not merely absent
 
-`SensitiveFieldRegistry::knowinglyPlaintext()` lists these four columns with a one-line reason
-each, so "not on the encrypted list" stops reading the same as "nobody looked". Three tests in
+`SensitiveFieldRegistry::knowinglyPlaintext()` lists these columns with a one-line reason
+each, so "not on the encrypted list" stops reading the same as "nobody looked". The four
+`accounts`/`counterparties` identity columns are joined there by the five readable columns argued
+at length further down this page — `merchants.name`, `recurring_series.detected_name`,
+`transaction_search_docs.search_body`, `known_counterparty_ibans.real_iban` — because the registry
+is where an engineer looks first, and a column argued only in prose read from there as one nobody
+had looked at. `known_counterparty_ibans.real_iban` is the newest of them and the least obvious:
+it is a **counterparty's** IBAN in cleartext, `string(34)`, carrying `unique(user_id, real_iban)`,
+predicated on by every IBAN-matching resolver arm, and now read by the enable-time sweep to
+recover the IBAN half of a chain-link signature. Three tests in
 `SensitiveColumnPredicateGuardTest` hold the two lists honest against each other: they must be
 disjoint, every column an allowlist reason leans on must appear in `knowinglyPlaintext()`, and
 no allowlist reason may cite a column the registry has since started encrypting.
@@ -432,19 +447,55 @@ verification rather than changing which key the recipient keeps.
 | local keyed | sender keyed | outcome |
 | --- | --- | --- |
 | — (no local key at all) | either | adopt |
-| yes | yes | **refuse, log an error** — neither can give way without orphaning its own digests |
-| yes | no | keep local; the peer is running this same branch inverted and adopts |
+| yes | yes | **keep local, log an error, and hold the wrap** — neither can give way without orphaning its own digests |
+| yes | no | keep local; the peer runs this same branch inverted over the wrap this device sent it, and adopts |
 | no | yes | adopt; the side with rows is the side with something to lose |
 | no | no | lowest key hex wins — an order both sides compute identically |
 
-Every row converges after one exchange, whichever wrap lands first. The last row is why a
-tie-break is needed at all: two devices that both enrol before either has imported would
-otherwise **swap** keys and stay diverged, because each builds its wrap from its own keyring
-before the other's arrives.
+**Six of the eight orderings converge after one exchange, and two do not.** The two that do not
+are the `yes | yes` row, taken from either side; that is a deliberate refusal rather than a gap,
+and it is the residual described at the end of this section. Every other row reaches the same
+answer whichever wrap lands first, because adoption changes only the stored key — it does not
+change either side's keyed-rows answer, so both decision functions are evaluated over identical
+inputs regardless of interleaving. Re-delivery is stable for the same reason: once B has adopted
+`K_A`, a redelivered A-wrap compares `K_A` against `K_A` and short-circuits on `hash_equals`.
 
-The keyed question is asked of the **data**, not of a marker.
-`BlindIndexCodec::holdsDerivedRows()` probes `transactions` for a value of digest length and
-confirms the shape in PHP. A marker cannot answer it: a device that enables sync on an empty
+The last row is why a tie-break is needed at all: two devices that both enrol before either has
+imported would otherwise **swap** keys and stay diverged, because each builds its wrap from its
+own keyring before the other's arrives.
+
+##### Both sides send, and until recently only one did
+
+The table above is only true of a **symmetric** exchange, and for a while the product shipped an
+asymmetric one. `fanOutAllEpochsToDevice()` had exactly one production caller — `PairingFlowModal`,
+rendered only from the desktop and web settings section — so a phone received a wrap and never
+sent one. Three of the four rows of a desktop-and-phone household therefore diverged, one of them
+with nothing logged on either device, and the `no | no` row was decided by which side happened to
+be the receiver rather than by the tie-break.
+
+That is closed on both legs. `MobilePairingScan` fans out to every confirmed peer at the same
+both-confirm transition the desktop does, and `LanSyncClient` pushes what that fan-out queued over
+the same authenticated session it reads the desktop's wraps on — announced with its own
+`GDK_EPOCH_PUSH` header, acknowledged with `GDK_EPOCH_ACK`, symmetric in both directions.
+`BlindIndexExchangeIsBidirectionalTest` pins the send path and the fan-out caller, because the
+premise is a property of the *topology* and a symmetric test harness would assume it away.
+
+A phone can hold the keyed ledger — phones import statements — so "the desktop's key wins" was
+never an available shortcut. It would orphan the ledger of a phone-first household exactly as
+surely as the bug it replaced.
+
+The keyed question is asked of the **data**, not of a marker, and it is asked as a question about
+**authorship** rather than about shape. `LocallyKeyedRowsProbe::holdsRowsKeyedUnder()` unions two
+proofs, either of which is sufficient: an op-log entry this device itself signed carrying a
+digest, and a stored digest this device's current key still reproduces from the plaintext beside
+it (`BlindIndexProvenance::reproducesAStoredDigest()`, implemented in the ledger because only the
+ledger knows how each column normalises its plaintext before hashing).
+
+Measuring shape alone is not enough, which is why `BlindIndexCodec::looksDerived()` is not the
+answer here: a digest-shaped value proves only that *somebody* keyed the row, and a peer's
+replayed rows look exactly like a device's own. Authorship cannot be replayed.
+
+A marker cannot answer it either: a device that enables sync on an empty
 ledger and imports afterwards sweeps **zero** rows — every row it then writes is keyed at write
 time and so was never convertible — yet its whole ledger is under its own key. Reading a
 "sweep ran" marker as "device holds keyed keys" left that device silently handing its key away
@@ -460,6 +511,12 @@ only then paired. Both keep their own key and both log an error. Nothing re-deri
 automatically; the recovery is to re-derive from the decrypted `counterparty_name`, which
 `MerchantDisplayName::fromTransactions()` shows is readable.
 
+That refusal returns `GdkWrapOutcome::Retained` rather than `Applied`, and the difference is the
+whole point: `Retained` leaves the mailbox row alone. The wrap is the only copy of the peer's
+index key, and it is exactly what a re-derivation would need, so retiring it would delete the
+material that resolves the conflict. It expires on the mailbox's own TTL like anything else that
+is never consumed.
+
 #### What else the sweep had to move, and what it deliberately does not
 
 Three columns beyond the obvious one, each because something compares against it:
@@ -472,15 +529,34 @@ Three columns beyond the obvious one, each because something compares against it
   back in the clear one table over from the ciphertext protecting them. It now derives under a
   second domain, `counterparty-iban`, kept separate so a merchant whose normalised name
   happened to equal an IBAN string could not match that payer. The sweep tells the two apart by
-  shape, which is safe because `FingerprintComposer::normalize()` lower-cases: a matching key
-  never carries an IBAN's upper-case country-and-check-digit head.
+  the row's **`direction`** first — an expense series' cluster key is always a matching key, so
+  only an income row is shape-tested at all — and the shape test normalises whitespace and case
+  before it matches. Case cannot carry that argument any more, and it never could: nothing on the
+  import path normalises an IBAN, so a statement printing `NL22 INGB 0006 5432 10` stored it
+  spaced, and a case-sensitive bare-uppercase regex classified it as a *name*, keyed it under the
+  wrong domain, and silently duplicated the salary series. The value hashed is
+  `CounterpartyKey::normalizeIban()`, the one spelling convention the live detector uses too.
 - **`chain_links.evidence->signature_hash`**, which is `sha256(matching key|funding IBAN)` and
   is what `ConfirmChainLink` counts confirmed links on. Left alone, every link confirmed before
   encryption stopped matching what the resolver computes after it, and the three-link
   auto-promotion counter silently reset. The IBAN half is not on every arm's evidence, so it is
-  recovered by trying the user's own account IBANs against the stored digest; a hash none of
-  them reproduces was not built this way and is left alone. This pass runs **first**, while the
-  transactions it reads still hold plaintext.
+  recovered from three sources in order: the blob's own `matched_iban`, then `accounts.iban`,
+  then `known_counterparty_ibans.real_iban`. The third is there because the alias arm hashes a
+  **counterparty's** IBAN, which `accounts` never holds — trying the user's own account IBANs
+  alone left every `Confirmed` link that arm had ever written orphaned, and a test pinned that
+  gap as intended. A hash none of the three reproduces was not built by any arm and is left
+  alone. This pass runs **first**, while the transactions it reads still hold plaintext.
+
+- **`recurring_series.cluster_key`**, recomposed in the **same statement** as
+  `cluster_counterparty_key`, for the same reason `transactions.fingerprint` moves with
+  `counterparty_normalized`: the cluster key is composed *over* the counterparty key, so the two
+  move together or the series splits. Left behind, a swept income row read
+  `cluster_counterparty_key = <64 hex>` beside `cluster_key = income::nl91rde0987654321::eur::monthly`
+  — the payer IBAN in cleartext, in the indexed half of `rec_series_uniq`, and in
+  `MergeRulesRegistry`'s `_create_required`, so it synced in the clear as well. Healing through
+  `SeriesRefresher` is not enough on its own: both detectors return early for `Rejected` and
+  `Snoozed` series, and a series whose transactions fall outside
+  `recurring_detection_window_months` is never revisited.
 
 `recurring_series.detected_name` is deliberately **not** swept. It is a display column, and the
 name it already holds is readable and correct.
@@ -538,40 +614,76 @@ double-gated: it enrols against `ColdStartVault` when the mobile vault plugin is
 refuses outright when `nativephp-internal.running` is true. Neither gate ever reaches
 `dispatch('beatrax:webauthn-create')` on a correctly built device.
 
-Both gates are **behavioural, not structural**. The three `/lock/biometric/*` routes are
-registered unconditionally, the JS listener ships in the mobile bundle, and the Auth settings
-component renders on the phone's sync screen. A build without the vault plugin and without
-`NATIVEPHP_RUNNING` would fall straight through. That gap is already carried in the spec as
+Both of those gates are **behavioural, not structural**, and they were the only ones. The three
+`/lock/biometric/*` routes are registered unconditionally, the JS listener ships in the mobile
+bundle, and the Auth settings component renders on the phone's sync screen. A build without the
+vault plugin and without `NATIVEPHP_RUNNING` fell straight through — and so, by construction, did
+the **self-hosted web deployment** this project supports: there `nativephp-internal.running` is
+never true and `ColdStartVault` is the null implementation, so enrolment was not a gap to close
+but the default path, writing `secret || wrapped_key` into the SQLite file with the identity
+function as its shield.
+
+There is now a third gate, and it is structural: `WebAuthnBiometricController` refuses both the
+creation challenge and the enrolment POST unless the bound `SecretShield` reports
+`protectsAtRest()`. That is a capability on the contract rather than a platform test, so it covers
+every route into enrolment however it is reached, and it fails closed on a shield that only *looks*
+like one — `SafeStorageSecretShield` answers it by round-tripping random bytes through the
+custodian rather than by returning `true`, because Electron's `safeStorage` is unavailable on a
+desktop with no keyring and the custodian silently returns the plaintext there. What a self-hosted
+reader sees is a localised sentence explaining why, not a button that does nothing.
+
 `F3-R33` (operating-system key custody registered but not wired) and `E4-R23` (unwired OS key
-custody must be documented as outstanding rather than implied to work) — this paragraph is that
-documentation. The symmetric fix is a mobile `SecretShield` over
-`Native\Mobile\Facades\SecureStorage`, the seam `SecureStorageKeyCustodian` already uses for
-the session data key.
+custody must be documented as outstanding rather than implied to work) are still open, and this
+paragraph is still that documentation — but the failure mode has inverted. The absent mobile
+custody now means a phone *cannot enrol*, rather than enrolling into cleartext. The symmetric fix
+remains a mobile `SecretShield` over `Native\Mobile\Facades\SecureStorage`, the seam
+`SecureStorageKeyCustodian` already uses for the session data key.
+
+One residual has no gate at all, because it predates one: nothing re-shields a
+`biometric_wrap_secret` written before `SafeStorageSecretShield` existed, and
+`SafeStorageSecretShield::reveal()` reads such a row back transparently. No tagged release
+contains enrolment without the shield — both landed inside `2.0.0-probe.4` and neither is on any
+`v1.x` tag — so the exposure is confined to desktop builds made from the branch between them.
+Closing it needs a way to tell an unshielded blob from a shielded one whose keychain rotated,
+which the custodian's null return cannot do; a `shielded_at` column, or a version prefix on the
+blob, plus de-enrolment of anything unclassifiable.
 
 #### What this does not fix
 
 - **The full-text search index still holds the merchant name in the clear.**
-  `transaction_search_docs.search_body` is `counterparty_name` + description + note, decrypted
-  at write time so FTS5 can tokenise it, one row per transaction in the same file.
+  `transaction_search_docs.search_body` is `transactions.counterparty_name` +
+  `transactions.description` + `tax_transaction_tags.note` — three AEAD-sealed columns, decrypted
+  at write time so FTS5 can tokenise them, one row per transaction in the same file. The note is
+  the *tax* note specifically; `transactions.note` and `transaction_splits.note` are sealed and
+  never enter the index.
   `SELECT search_body FROM transaction_search_docs` recovers exactly what the blind index was
   meant to hide. [ADR-0018](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0018-amounts-plaintext-at-rest.md) records that shadow as knowingly accepted and
   names an encrypted-search design as the revisit; until that exists, this change removes one
-  of two plaintext copies, not the leak. **The UI copy must not claim otherwise.**
+  of two plaintext copies, not the leak. **The UI copy must not claim otherwise** — and that is
+  now a test rather than an instruction: `DevicesAndSyncEncryptionUiTest` derives the cleartext
+  column set from `SearchIndexWriter` itself and fails if the permanent status row stops naming
+  any of them. It had to, because the row said "notes and transaction descriptions are encrypted"
+  while carving out merchant names only, and an assertion that checks only what *is* present
+  cannot catch an under-disclosure.
 - **`merchants.name` is a readable merchant name, and the join hands it to every transaction.**
   `SELECT t.id, m.name FROM transactions t JOIN merchants m ON m.normalized_name =
   t.counterparty_normalized AND m.user_id = t.user_id` recovers the merchant for every row the
   user has ever categorised, with no key — which is most of what the AEAD on
   `counterparty_name` was protecting. `MerchantDisplayName::fromMerchants()` performs exactly
-  that join by design, so it is not hypothetical. It is **not** registered, and the reason is
-  the same one that keeps `normalized_name` out of the registry: the two columns are one row,
+  that join by design, so it is not hypothetical. It is **not encrypted**, and the reason is
+  the same one that keeps `normalized_name` out of `columns()`: the two columns are one row,
   and the name is what the recurring review screen and the triage list render. Encrypting it is
   possible — it has no equality predicate — at the cost of every display site decrypting, and
-  it is the single highest-value remaining column. Recorded here as accepted, not overlooked.
+  it is the single highest-value remaining column. It is recorded in `knowinglyPlaintext()` with
+  that reason, so the registry says "argued and accepted" rather than nothing at all.
   `recurring_series.detected_name` is the same shape and the same decision.
 - `counterparties.slug` stays readable because it is a URL segment.
 - `ClusterKeyComposer` truncates each part to 60 characters, so `cluster_key` carries 240 bits
   of the digest rather than 256. Collision-free in practice, but a `cluster_key` can no longer
-  be read back to the digest that produced it.
+  be read back to the digest that produced it. The sweep composes the same 60 characters — the
+  composition is mirrored in `CounterpartyKeyBackfill` rather than shared, because Ledger cannot
+  import `Recurring\Internal`, and `ClusterKeySurvivesTheSweepTest` pins a swept row against what
+  `ClusterKeyComposer` would have produced byte for byte.
 - `SeriesEntryPlacer`'s cluster-key-to-slug fallback only ever fired for single-token merchants
   where the normalised key happened to equal the slug. It can no longer fire for an encrypted
   user; those calendar entries lose their counterparty deep link and resolve through the
@@ -645,3 +757,9 @@ asserts the row names what is *not* covered and asserts the unqualified sentence
   epoch keys come from and why they are never discarded.
 - [Sync architecture](architecture.md) — the class-by-class map of the codec, casts and
   enable-time migration.
+- [Getting a group data key epoch onto every device](gdk-epoch-wrap-delivery.md) — the channel
+  the blind-index key is delivered on, and what each delivery outcome does to the carrier.
+- [Search architecture](../search/architecture.md) — the plaintext shadow named above, from the
+  side that writes it.
+- [Recurring detection under encryption](../recurring/detection-encryption-posture.md) — what the
+  detectors read, and what they may write beside a keyed column.

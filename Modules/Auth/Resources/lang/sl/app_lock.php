@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'error_enroll_unsupported' => 'Biometrično odklepanje na tej napravi ni na voljo.',
+    'error_enroll_unprotected' => 'Biometrično odklepanje potrebuje shrambo ključev operacijskega sistema, ta namestitev pa je nima. Vpis bi pustil odklepni ključ berljiv ob tvojih podatkih, zato tu ni na voljo.',
     'error_enroll_locked' => 'Pred vpisom odkleni aplikacijo.',
     'error_enroll_failed' => 'Tvoja naprava je zavrnila shranjevanje ključa. Biometrično odklepanje ni na voljo.',
     'heading' => 'Zaklepanje aplikacije',

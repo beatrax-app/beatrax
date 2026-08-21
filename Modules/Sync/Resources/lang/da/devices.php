@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Gå til App-lås',
 
     'encrypted_at_rest' => 'Data krypteret i hvile',
-    'encrypted_at_rest_scope' => 'Noter, transaktionsbeskrivelser og navne og IBAN på dem, du betaler, er krypteret med din app-låseadgangskode. Beløb, datoer og din egen kontos navn og IBAN er ikke, og nogle forhandlernavne står stadig i klartekst andre steder i databasefilen.',
+    'encrypted_at_rest_scope' => 'Noter, transaktionsbeskrivelser og navne og IBAN på dem, du betaler, er krypteret i regnskabet med din app-låseadgangskode. Beløb, datoer og din egen kontos navn og IBAN er ikke. Søgeindekset gemmer sin egen læsbare kopi af, hvem du betaler, dine transaktionsbeskrivelser og dine skattenoter, og nogle forhandlernavne står i klartekst andre steder i databasefilen.',
     'on' => 'Til',
     'securing' => 'Beskytter dine data…',
     'do_not_close' => 'Luk ikke dette vindue.',
@@ -53,7 +53,7 @@ return [
     'search_plaintext' => 'Søgeindekset gemmer en kopi i klartekst af forhandler- og beskrivelsestekst, så fritekstsøgning bliver ved med at virke.',
     'keep_unencrypted' => 'Behold data ukrypteret',
     'encryption_enabled' => 'Kryptering aktiveret',
-    'encryption_enabled_body' => 'Dine data er nu krypteret i hvile.',
+    'encryption_enabled_scope' => 'Noter, beskrivelser og hvem du betaler, er nu krypteret med din app-låseadgangskode. Beløb, datoer og søgeindekset forbliver læsbare.',
     'done_encryption_enabled' => 'Færdig — kryptering aktiveret',
     'encryption_failed' => 'Opsætning af kryptering mislykkedes',
     'encryption_failed_body' => 'Dine data blev ikke ændret. Din sikkerhedskopi blev bevaret.',

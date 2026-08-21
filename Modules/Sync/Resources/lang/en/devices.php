@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Go to App lock',
 
     'encrypted_at_rest' => 'Data encrypted at rest',
-    'encrypted_at_rest_scope' => 'Notes, transaction descriptions and the names and IBANs of who you pay are encrypted with your app-lock passphrase. Amounts, dates and your own account name and IBAN are not, and some merchant names still appear in plain text elsewhere in the database file.',
+    'encrypted_at_rest_scope' => 'Notes, transaction descriptions and the names and IBANs of who you pay are encrypted in the ledger with your app-lock passphrase. Amounts, dates and your own account name and IBAN are not. The search index keeps its own readable copy of who you pay, your transaction descriptions and your tax notes, and some merchant names still appear in plain text elsewhere in the database file.',
     'on' => 'On',
     'securing' => 'Securing your data…',
     'do_not_close' => 'Do not close this window.',
@@ -53,7 +53,7 @@ return [
     'search_plaintext' => 'The search index keeps a plaintext copy of merchant and description text so full-text search keeps working.',
     'keep_unencrypted' => 'Keep data unencrypted',
     'encryption_enabled' => 'Encryption enabled',
-    'encryption_enabled_body' => 'Your data is now encrypted at rest.',
+    'encryption_enabled_scope' => 'Notes, descriptions and who you pay are now encrypted with your app-lock passphrase. Amounts, dates and the search index stay readable.',
     'done_encryption_enabled' => 'Done — encryption enabled',
     'encryption_failed' => 'Encryption setup failed',
     'encryption_failed_body' => 'Your data was not changed. Your backup was preserved.',

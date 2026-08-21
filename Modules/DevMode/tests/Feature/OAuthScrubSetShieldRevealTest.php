@@ -32,6 +32,11 @@ function markerShield(): SecretShield
 
             return $decoded === false ? $shielded : $decoded;
         }
+
+        public function protectsAtRest(): bool
+        {
+            return true;
+        }
     };
 }
 

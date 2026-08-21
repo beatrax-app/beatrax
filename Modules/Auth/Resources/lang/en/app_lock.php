@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'error_enroll_unsupported' => 'Biometric unlock is not available on this device.',
+    'error_enroll_unprotected' => 'Biometric unlock needs an operating-system key store, and this installation has none. Enrolling would leave the unlock key readable beside your data, so it is not offered here.',
     'error_enroll_locked' => 'Unlock the app before enrolling.',
     'error_enroll_failed' => 'Your device declined to store the key. Biometric unlock is unavailable.',
     'heading' => 'App lock',

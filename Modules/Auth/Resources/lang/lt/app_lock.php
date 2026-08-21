@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'error_enroll_unsupported' => 'Biometrinis atrakinimas šiame įrenginyje negalimas.',
+    'error_enroll_unprotected' => 'Biometriniam atrakinimui reikia operacinės sistemos raktų saugyklos, o šis įdiegimas jos neturi. Registracija paliktų atrakinimo raktą įskaitomą šalia tavo duomenų, todėl čia ji nesiūloma.',
     'error_enroll_locked' => 'Prieš registruodamas atrakink programėlę.',
     'error_enroll_failed' => 'Tavo įrenginys atsisakė išsaugoti raktą. Biometrinis atrakinimas negalimas.',
     'heading' => 'Programėlės užraktas',

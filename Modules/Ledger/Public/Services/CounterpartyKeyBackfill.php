@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Ledger\Public\Enums\Direction;
 use Modules\Sync\Public\Services\BlindIndexCodec;
 use stdClass;
 
@@ -27,6 +28,16 @@ final class CounterpartyKeyBackfill
     use CoercesScalars;
 
     private const CHUNK_SIZE = 500;
+
+    // ClusterKeyComposer::MAX_PART_LENGTH, which caps a composed part and so
+    // truncates a 64-character digest to 240 of its 256 bits.
+    private const CLUSTER_PART_MAX_LENGTH = 60;
+
+    /** @var array<string, string> table => the plaintext IBAN column on it */
+    private const IBAN_SOURCES = [
+        'accounts' => 'iban',
+        'known_counterparty_ibans' => 'real_iban',
+    ];
 
     public function __construct(
         private readonly DatabaseManager $db,
@@ -51,7 +62,7 @@ final class CounterpartyKeyBackfill
 
         // Unconditional: this records that the sweep ran, not that it found
         // anything. Whether the device holds keyed rows is a question about the
-        // rows, and BlindIndexCodec::holdsDerivedRows() asks them directly.
+        // rows, and LocallyKeyedRowsProbe::holdsRowsKeyedUnder() asks them directly.
         $this->blindIndex->markCounterpartyKeysSwept($userId);
     }
 
@@ -109,7 +120,7 @@ final class CounterpartyKeyBackfill
      */
     private function convertChainLinkSignatures(ConnectionInterface $connection, int $userId, string $keyHex): void
     {
-        $ibans = $this->userIbans($connection, $userId);
+        $ibans = $this->signatureIbans($connection, $userId);
 
         $connection->table('chain_links')
             ->where('user_id', $userId)
@@ -127,9 +138,10 @@ final class CounterpartyKeyBackfill
             }, 'id');
     }
 
-    // The IBAN half of the hash is not stored on every arm's evidence, so it is
-    // recovered by trying the user's own account IBANs against the stored
-    // digest. A hash no IBAN reproduces was not built this way and is left be.
+    // The IBAN half is on one arm's evidence and on neither of the others, so
+    // it is recovered by trying every IBAN a resolver could have reached: the
+    // blob's own first, then the user's accounts and the registered aliases. A
+    // hash none of them reproduces belongs to an arm that hashes no IBAN.
     /**
      * @param  list<string>  $ibans
      */
@@ -156,6 +168,11 @@ final class CounterpartyKeyBackfill
 
         $derivedKey = $this->blindIndex->deriveWithKey(CounterpartyKey::DOMAIN, $plainKey, $userId, $keyHex);
 
+        $matched = $evidence['matched_iban'] ?? null;
+        if (is_string($matched) && $matched !== '') {
+            array_unshift($ibans, $matched);
+        }
+
         foreach ($ibans as $iban) {
             if (! hash_equals($storedHash, self::signatureHash($plainKey, $iban))) {
                 continue;
@@ -177,16 +194,21 @@ final class CounterpartyKeyBackfill
         return hash('sha256', $matchingKey.'|'.$fundingIban);
     }
 
+    // Two arms hash one of the user's own accounts. The alias arm hashes the
+    // matched partner's IBAN, which `accounts` never holds and which it can
+    // only have drawn from the registered alias set it matched against.
     /**
      * @return list<string>
      */
-    private function userIbans(ConnectionInterface $connection, int $userId): array
+    private function signatureIbans(ConnectionInterface $connection, int $userId): array
     {
         $ibans = [''];
 
-        foreach ($connection->table('accounts')->where('user_id', $userId)->pluck('iban') as $iban) {
-            if (is_string($iban) && $iban !== '') {
-                $ibans[] = $iban;
+        foreach (self::IBAN_SOURCES as $table => $column) {
+            foreach ($connection->table($table)->where('user_id', $userId)->pluck($column) as $iban) {
+                if (is_string($iban) && $iban !== '') {
+                    $ibans[] = $iban;
+                }
             }
         }
 
@@ -231,24 +253,75 @@ final class CounterpartyKeyBackfill
                         continue;
                     }
 
-                    $domain = self::looksLikeIban($stored) ? CounterpartyKey::DOMAIN_IBAN : CounterpartyKey::DOMAIN;
-                    $plain = $domain === CounterpartyKey::DOMAIN_IBAN ? mb_strtoupper($stored) : $stored;
-
                     $connection->table('recurring_series')
                         ->where('id', $row->id)
-                        ->update([
-                            'cluster_counterparty_key' => $this->blindIndex->deriveWithKey($domain, $plain, $userId, $keyHex),
-                        ]);
+                        ->update($this->convertedSeries($row, $userId, $keyHex, $stored));
                 }
             }, 'id');
     }
 
-    // The two things this column can hold are told apart by shape, and they
-    // cannot collide: FingerprintComposer::normalize() lower-cases and strips
-    // everything but letters, digits, `&` and spaces, so a matching key never
-    // carries the upper-case country-and-check-digit head of an IBAN.
-    private static function looksLikeIban(string $value): bool
+    // `cluster_key` is composed OVER this column, so a row rekeyed without it
+    // keeps a slug of the merchant name or the payer IBAN in the indexed half
+    // of the row's UNIQUE — and the next detection pass composes the keyed one,
+    // misses this row, and inserts the series a second time.
+    /**
+     * @return array{cluster_counterparty_key: string, cluster_key: string}
+     */
+    private function convertedSeries(stdClass $row, int $userId, string $keyHex, string $stored): array
     {
-        return preg_match('/^[A-Z]{2}[0-9]{2}[A-Z0-9]{8,30}$/', $value) === 1;
+        $direction = self::toString($row->direction ?? null);
+        $normalizedIban = CounterpartyKey::normalizeIban($stored);
+        $isIban = $direction === Direction::Income->value && self::looksLikeIban($normalizedIban);
+
+        $derived = $this->blindIndex->deriveWithKey(
+            $isIban ? CounterpartyKey::DOMAIN_IBAN : CounterpartyKey::DOMAIN,
+            $isIban ? $normalizedIban : $stored,
+            $userId,
+            $keyHex,
+        );
+
+        return [
+            'cluster_counterparty_key' => $derived,
+            'cluster_key' => self::clusterKey(
+                $direction,
+                $derived,
+                self::toString($row->latest_currency ?? null),
+                self::toString($row->cadence ?? null),
+            ),
+        ];
+    }
+
+    // Only an income series can hold an IBAN here, so an expense row's matching
+    // key is never shape-tested and the two cannot be confused. A statement may
+    // print the IBAN in groups; the hashed value keeps that spacing, which is
+    // why the probe strips it and CounterpartyKey::normalizeIban() does not.
+    private static function looksLikeIban(string $normalizedIban): bool
+    {
+        $compact = (string) preg_replace('/\s+/u', '', $normalizedIban);
+
+        return preg_match('/^[A-Z]{2}[0-9]{2}[A-Z0-9]{8,30}$/', $compact) === 1;
+    }
+
+    // Mirrors ClusterKeyComposer::compose(). Duplicated rather than shared
+    // because a sweep in Ledger reaching into a Recurring detector would be the
+    // wrong direction; ClusterKeySurvivesTheSweepTest pins the two together.
+    private static function clusterKey(string $direction, string $counterpartyKey, string $currency, string $cadence): string
+    {
+        return implode('::', [
+            self::clusterPart($direction),
+            self::clusterPart($counterpartyKey),
+            self::clusterPart($currency),
+            self::clusterPart($cadence),
+        ]);
+    }
+
+    private static function clusterPart(string $value): string
+    {
+        $hyphenated = (string) preg_replace('/[^a-z0-9]+/', '-', strtolower($value));
+        $trimmed = trim($hyphenated, '-');
+
+        return strlen($trimmed) > self::CLUSTER_PART_MAX_LENGTH
+            ? rtrim(substr($trimmed, 0, self::CLUSTER_PART_MAX_LENGTH), '-')
+            : $trimmed;
     }
 }

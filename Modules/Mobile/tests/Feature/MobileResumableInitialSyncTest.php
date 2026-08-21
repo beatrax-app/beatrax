@@ -311,7 +311,7 @@ it('re-delivering an already-installed (stale) epoch wrap through the receive ga
 
     /** @var GdkEpochDeliveryGateway $delivery */
     $delivery = app(GdkEpochDeliveryGateway::class);
-    $delivery->receiveEpochWrap($wrapJson, $userId, $session);
+    $delivery->receiveEpochWrap($wrapJson, $userId, 'desktop-sender', $phone->deviceId, $session);
 
     $afterFirst = $keyring->currentEpoch($userId, $session);
     expect($afterFirst->epochId)->toBe(1);
@@ -323,7 +323,7 @@ it('re-delivering an already-installed (stale) epoch wrap through the receive ga
         $session,
     );
 
-    $delivery->receiveEpochWrap($wrapJson, $userId, $session);
+    $delivery->receiveEpochWrap($wrapJson, $userId, 'desktop-sender', $phone->deviceId, $session);
 
     $final = $keyring->currentEpoch($userId, $session);
     expect($final->epochId)->toBe(2, 'a redelivered stale wrap must never downgrade current_epoch');

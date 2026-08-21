@@ -44,7 +44,7 @@ it('(b) single-device (sync off), app-lock set, encryption off: shows the blue o
         ->set('syncEnabled', false)
         ->set('encryptionOn', false)
         ->assertSee('encryption-offer-notice', escape: false)
-        ->assertSee('Your data is not encrypted at rest. Set up encryption to protect it if this device is lost or stolen.')
+        ->assertSee('Your data is not encrypted at rest. Encryption hides who you pay if this device is lost or stolen')
         ->assertSee('enable-encryption-cta', escape: false)
         ->assertDontSee('encryption-securing-notice', escape: false);
 
@@ -253,3 +253,95 @@ function deviceViewRow(int $id, string $name, bool $isSelf): array
         'removed' => false,
     ];
 }
+
+// The status row is the surface a reader returns to; the enable modal is read
+// once, on the way in. SearchIndexWriter decrypts sealed columns straight into
+// transaction_search_docs.search_body, so the field list below is derived from
+// that file rather than restated here: a column added to search_body with no
+// matching disclosure fails this test instead of shipping as a quiet
+// under-disclosure.
+it('the encryption-on status row names the search index and every column SearchIndexWriter leaves in the clear', function (): void {
+    $writerPath = dirname(__DIR__, 3).'/Search/Internal/Services/SearchIndexWriter.php';
+    expect(is_file($writerPath))->toBeTrue();
+
+    $source = file_get_contents($writerPath);
+    expect($source)->toBeString();
+
+    $matches = [];
+    preg_match_all("/decryptValue\('([a-z_]+)', '([a-z_]+)'/", is_string($source) ? $source : '', $matches, PREG_SET_ORDER);
+
+    $indexedInTheClear = [];
+    foreach ($matches as $match) {
+        $indexedInTheClear[] = $match[1].'.'.$match[2];
+    }
+    $indexedInTheClear = array_values(array_unique($indexedInTheClear));
+    sort($indexedInTheClear);
+
+    // Each column the writer decrypts, paired with the words the permanent
+    // status row has to spend on it. A new column breaks the first
+    // expectation; a softened sentence breaks the second.
+    $disclosures = [
+        'tax_transaction_tags.note' => 'tax notes',
+        'transactions.counterparty_name' => 'who you pay',
+        'transactions.description' => 'transaction descriptions',
+    ];
+
+    expect($indexedInTheClear)->toBe(array_keys($disclosures));
+
+    $user = encryptionUiUser('encryption-ui-search-index');
+    $this->actingAs($user);
+
+    $component = Livewire::test(DevicesAndSyncSettingsSection::class)
+        ->set('appLockConfigured', true)
+        ->set('syncEnabled', true)
+        ->set('encryptionOn', true)
+        ->assertSee('search index');
+
+    foreach ($disclosures as $phrase) {
+        $component->assertSee($phrase);
+    }
+});
+
+// Shown one screen after the modal that just disclosed two carve-outs, and it
+// is the last sentence the reader takes away. Retired as a KEY rather than
+// reworded, exactly as encrypted_at_rest_help was, so no locale can be left
+// rendering the unqualified promise while its translation lands.
+it('the enable-encryption done step repeats the carve-out instead of restating an unqualified promise', function (): void {
+    $user = encryptionUiUser('encryption-ui-done-scope');
+    $this->actingAs($user);
+
+    Livewire::test(DevicesAndSyncSettingsSection::class)
+        ->set('appLockConfigured', true)
+        ->set('syncEnabled', false)
+        ->set('encryptionOn', false)
+        ->set('showEncryptionModal', true)
+        ->set('encryptionStep', 'done')
+        ->assertSee('Encryption enabled')
+        ->assertSee('Amounts, dates and the search index stay readable')
+        ->assertDontSee('Your data is now encrypted at rest.');
+});
+
+it('retires the unqualified done-step promise in every locale and replaces it with the scoped one', function (): void {
+    $root = dirname(__DIR__, 2).'/Resources/lang';
+    $locales = array_values(array_filter(scandir($root) ?: [], static fn (string $entry): bool => ! str_starts_with($entry, '.')));
+
+    expect($locales)->toHaveCount(26);
+
+    $missing = [];
+    $stale = [];
+    foreach ($locales as $locale) {
+        /** @var array<string, mixed> $devices */
+        $devices = require $root.'/'.$locale.'/devices.php';
+
+        $scope = $devices['encryption_enabled_scope'] ?? null;
+        if (! is_string($scope) || $scope === '') {
+            $missing[] = $locale;
+        }
+        if (array_key_exists('encryption_enabled_body', $devices)) {
+            $stale[] = $locale;
+        }
+    }
+
+    expect($missing)->toBe([]);
+    expect($stale)->toBe([]);
+});

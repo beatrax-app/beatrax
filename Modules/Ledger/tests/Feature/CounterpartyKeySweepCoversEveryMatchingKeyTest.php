@@ -26,6 +26,13 @@ const CKS_IBAN = 'NL57ASNB0123456789';
 
 const CKS_PAYER_IBAN = 'NL22INGB0006543210';
 
+// The PayPal alias the ASN-direct arm matches a partner transaction against.
+// It is a counterparty's IBAN: `accounts` never holds it, `known_counterparty_ibans` does.
+const CKS_ALIAS_IBAN = 'LU89751000135104200E';
+
+// Neither an account IBAN, nor a registered alias, nor on any evidence blob.
+const CKS_UNRELATED_IBAN = 'BE68539007547034';
+
 function cksUser(string $suffix): User
 {
     return User::query()->create([
@@ -136,44 +143,114 @@ it('rewrites a chain link signature so it still matches what the resolver comput
     expect($evidence['matched_iban'])->toBe(CKS_IBAN);
 });
 
-it('leaves a chain link signature alone when no account IBAN reproduces it', function (): void {
-    $user = cksUser('chain-foreign');
-    $account = cksAccount($user);
-    $txId = cksTransaction($user, $account, 'spotify ab');
-
-    /** @var DatabaseManager $db */
-    $db = app(DatabaseManager::class);
-    $foreign = str_repeat('9', 64);
-    $db->connection()->table('chain_links')->insert([
+/**
+ * @param  array<string, mixed>  $evidence
+ */
+function cksChainLink(User $user, int $fromTxId, int $toTxId, array $evidence): void
+{
+    app(DatabaseManager::class)->connection()->table('chain_links')->insert([
         'user_id' => $user->id,
-        'from_transaction_id' => $txId,
-        'to_transaction_id' => cksTransaction($user, $account, 'paypal'),
+        'from_transaction_id' => $fromTxId,
+        'to_transaction_id' => $toTxId,
         'kind' => 'paypal_funding',
         'state' => 'confirmed',
         'confidence' => '1.000',
         'resolver' => 'auto',
-        'evidence' => json_encode(['signature_hash' => $foreign], JSON_THROW_ON_ERROR),
+        'evidence' => json_encode($evidence, JSON_THROW_ON_ERROR),
         'created_at' => '2026-07-01 12:00:00',
         'updated_at' => '2026-07-01 12:00:00',
+    ]);
+}
+
+function cksAlias(User $user, string $realIban): void
+{
+    app(DatabaseManager::class)->connection()->table('known_counterparty_ibans')->insert([
+        'user_id' => $user->id,
+        'real_iban' => $realIban,
+        'target_account_kind' => 'paypal',
+        'created_at' => '2026-07-01 12:00:00',
+        'updated_at' => '2026-07-01 12:00:00',
+    ]);
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function cksEvidence(User $user): array
+{
+    $evidence = json_decode(
+        (string) app(DatabaseManager::class)->connection()->table('chain_links')->where('user_id', $user->id)->value('evidence'),
+        true,
+    );
+
+    expect($evidence)->toBeArray();
+
+    return $evidence;
+}
+
+// A hash the sweep cannot reproduce belongs to another arm — IcsSettlementResolver
+// composes one over an account id and a period end — and re-keying that would
+// break the arm it belongs to. Genuinely unrelated, not merely unrecognised.
+it('leaves a chain link signature alone when no IBAN any arm could have hashed reproduces it', function (): void {
+    $user = cksUser('chain-foreign');
+    $account = cksAccount($user);
+    $txId = cksTransaction($user, $account, 'spotify ab');
+    $foreign = cksSignature('spotify ab', CKS_UNRELATED_IBAN);
+
+    cksChainLink($user, $txId, cksTransaction($user, $account, 'paypal'), ['signature_hash' => $foreign]);
+
+    cksEnable($user);
+
+    expect(cksEvidence($user)['signature_hash'])->toBe($foreign);
+});
+
+// PaypalFundingResolver::asnDirectLink() hashes the matched partner's IBAN — a
+// counterparty's, which `accounts` never holds — and it can only have come from
+// the alias set the arm matched against. Miss it and the link orphans from its
+// own resolver, and ConfirmChainLink's three-link counter resets.
+it('rewrites an ASN-direct chain link signature built from a registered counterparty alias IBAN', function (): void {
+    $user = cksUser('chain-alias');
+    $account = cksAccount($user);
+    $txId = cksTransaction($user, $account, 'google cloud emea limited');
+    cksAlias($user, CKS_ALIAS_IBAN);
+
+    cksChainLink($user, $txId, cksTransaction($user, $account, 'paypal'), [
+        'matched_via' => 'asn_alias_amount_date',
+        'signature_hash' => cksSignature('google cloud emea limited', CKS_ALIAS_IBAN),
     ]);
 
     cksEnable($user);
 
-    $evidence = json_decode((string) $db->connection()->table('chain_links')->where('user_id', $user->id)->value('evidence'), true);
-    expect($evidence['signature_hash'])->toBe($foreign);
+    $derived = app(CounterpartyKey::class)->forNormalized('google cloud emea limited', (int) $user->id);
+
+    expect(cksEvidence($user)['signature_hash'])->toBe(cksSignature($derived, CKS_ALIAS_IBAN));
 });
 
-// A decrypted IBAN written verbatim into a plaintext column puts back exactly
-// the identifier the AEAD column one table over is protecting.
-it('keys an income cluster IBAN under its own domain', function (): void {
-    $user = cksUser('income');
-    cksAccount($user);
+// Links minted before the resolver stopped writing the plaintext IBAN still
+// carry it, and it is the cheapest reproduction there is: the value is right
+// there in the blob the sweep is already parsing.
+it('rewrites a chain link signature from the IBAN on its own evidence when no account holds it', function (): void {
+    $user = cksUser('chain-evidence');
+    $account = cksAccount($user);
+    $txId = cksTransaction($user, $account, 'google cloud emea limited');
 
-    /** @var DatabaseManager $db */
-    $db = app(DatabaseManager::class);
-    $db->connection()->table('recurring_series')->insert([
+    cksChainLink($user, $txId, cksTransaction($user, $account, 'paypal'), [
+        'matched_iban' => CKS_ALIAS_IBAN,
+        'signature_hash' => cksSignature('google cloud emea limited', CKS_ALIAS_IBAN),
+    ]);
+
+    cksEnable($user);
+
+    $derived = app(CounterpartyKey::class)->forNormalized('google cloud emea limited', (int) $user->id);
+
+    expect(cksEvidence($user)['signature_hash'])->toBe(cksSignature($derived, CKS_ALIAS_IBAN));
+});
+
+function cksSeries(User $user, string $direction, string $counterpartyKey, string $clusterKey): void
+{
+    app(DatabaseManager::class)->connection()->table('recurring_series')->insert([
         'user_id' => $user->id,
-        'direction' => 'income',
+        'direction' => $direction,
         'detected_name' => 'Employer BV',
         'state' => 'approved',
         'cadence' => 'monthly',
@@ -181,48 +258,92 @@ it('keys an income cluster IBAN under its own domain', function (): void {
         'latest_currency' => 'EUR',
         'monthly_equivalent_minor' => 250000,
         'variance_tolerance_percent' => 25,
-        'cluster_key' => 'income::'.CKS_PAYER_IBAN.'::eur::monthly',
-        'cluster_counterparty_key' => CKS_PAYER_IBAN,
+        'cluster_key' => $clusterKey,
+        'cluster_counterparty_key' => $counterpartyKey,
         'created_at' => '2026-07-01 12:00:00',
         'updated_at' => '2026-07-01 12:00:00',
     ]);
+}
 
-    $session = cksEnable($user);
+function cksSeriesColumn(User $user, string $column): string
+{
+    return (string) app(DatabaseManager::class)->connection()
+        ->table('recurring_series')
+        ->where('user_id', $user->id)
+        ->value($column);
+}
 
-    $stored = (string) $db->connection()->table('recurring_series')->where('user_id', $user->id)->value('cluster_counterparty_key');
+// A decrypted IBAN written verbatim into a plaintext column puts back exactly
+// the identifier the AEAD column one table over is protecting.
+it('keys an income cluster IBAN under its own domain', function (): void {
+    $user = cksUser('income');
+    cksAccount($user);
+    cksSeries($user, 'income', CKS_PAYER_IBAN, 'income::'.CKS_PAYER_IBAN.'::eur::monthly');
+
+    cksEnable($user);
+
+    $stored = cksSeriesColumn($user, 'cluster_counterparty_key');
 
     expect(BlindIndexCodec::looksDerived($stored))->toBeTrue();
     expect($stored)->toBe(app(CounterpartyKey::class)->forIban(CKS_PAYER_IBAN, (int) $user->id));
     expect($stored)->not->toBe(app(CounterpartyKey::class)->forNormalized(CKS_PAYER_IBAN, (int) $user->id));
 });
 
-it('keys an expense cluster name under the counterparty domain, not the IBAN one', function (): void {
-    $user = cksUser('expense');
+// cluster_key is composed OVER the counterparty key. Rekeying one column and not
+// the other leaves the payer's IBAN slugged into an indexed column beside the
+// sealed copy, and it is the column the op-log and the sync merge rules carry.
+it('leaves no readable payer IBAN in cluster_key after the sweep', function (): void {
+    $user = cksUser('income-cluster');
     cksAccount($user);
-
-    /** @var DatabaseManager $db */
-    $db = app(DatabaseManager::class);
-    $db->connection()->table('recurring_series')->insert([
-        'user_id' => $user->id,
-        'direction' => 'expense',
-        'detected_name' => 'Spotify',
-        'state' => 'approved',
-        'cadence' => 'monthly',
-        'latest_amount_minor' => -1099,
-        'latest_currency' => 'EUR',
-        'monthly_equivalent_minor' => -1099,
-        'variance_tolerance_percent' => 25,
-        'cluster_key' => 'expense::spotify ab::eur::monthly',
-        'cluster_counterparty_key' => 'spotify ab',
-        'created_at' => '2026-07-01 12:00:00',
-        'updated_at' => '2026-07-01 12:00:00',
-    ]);
+    cksSeries($user, 'income', CKS_PAYER_IBAN, 'income::'.strtolower(CKS_PAYER_IBAN).'::eur::monthly');
 
     cksEnable($user);
 
-    $stored = (string) $db->connection()->table('recurring_series')->where('user_id', $user->id)->value('cluster_counterparty_key');
+    expect(cksSeriesColumn($user, 'cluster_key'))->not->toContain(strtolower(CKS_PAYER_IBAN));
+});
 
-    expect($stored)->toBe(app(CounterpartyKey::class)->forNormalized('spotify ab', (int) $user->id));
+// Nothing on the import path compacts or upper-cases an IBAN before it reaches
+// transactions.counterparty_iban, and the detector that wrote this column stored
+// what it decrypted. A bank that prints the IBAN in groups of four therefore
+// leaves a series keyed under a value the live detector never computes again.
+it('keys an income cluster IBAN the statement printed with spaces under the IBAN domain', function (string $stored): void {
+    $user = cksUser('income-spaced');
+    cksAccount($user);
+    cksSeries($user, 'income', $stored, 'income::'.strtolower(str_replace(' ', '', $stored)).'::eur::monthly');
+
+    cksEnable($user);
+
+    expect(cksSeriesColumn($user, 'cluster_counterparty_key'))
+        ->toBe(app(CounterpartyKey::class)->forIban($stored, (int) $user->id));
+})->with([
+    'grouped in fours' => 'NL22 INGB 0006 5432 10',
+    'lower case' => 'nl22ingb0006543210',
+    'padded' => '  NL22INGB0006543210  ',
+]);
+
+it('keys an expense cluster name under the counterparty domain, not the IBAN one', function (): void {
+    $user = cksUser('expense');
+    cksAccount($user);
+    cksSeries($user, 'expense', 'spotify ab', 'expense::spotify ab::eur::monthly');
+
+    cksEnable($user);
+
+    expect(cksSeriesColumn($user, 'cluster_counterparty_key'))
+        ->toBe(app(CounterpartyKey::class)->forNormalized('spotify ab', (int) $user->id));
+});
+
+// An expense series never holds an IBAN, so its matching key is never shape-tested.
+// A merchant whose normalised name reads like one keys under the counterparty
+// domain because of the row it is on, not because of how it happens to spell.
+it('keys an expense cluster name that reads like an IBAN under the counterparty domain', function (): void {
+    $user = cksUser('expense-ibanish');
+    cksAccount($user);
+    cksSeries($user, 'expense', 'nl22 ingb 0006543210', 'expense::nl22-ingb-0006543210::eur::monthly');
+
+    cksEnable($user);
+
+    expect(cksSeriesColumn($user, 'cluster_counterparty_key'))
+        ->toBe(app(CounterpartyKey::class)->forNormalized('nl22 ingb 0006543210', (int) $user->id));
 });
 
 // Chunked passes page by id. A pagination bug leaves the tail unconverted, and

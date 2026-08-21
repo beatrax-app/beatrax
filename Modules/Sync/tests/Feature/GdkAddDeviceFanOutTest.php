@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Internal\Crypto\GdkEpoch;
+use Modules\Sync\Internal\Crypto\GdkEpochWrapSignature;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
@@ -106,6 +107,15 @@ it('wraps ALL keyring epochs (not just the latest) to a single newly-confirmed d
         ->where('recipient_did', 'device-b-phone')
         ->whereNull('delivered_at')
         ->get();
+
+    // The blind-index key rides the same channel tagged as its own role, so
+    // the epoch count is taken from the role rather than from the row count.
+    $wraps = $wraps->filter(static function (object $row): bool {
+        /** @var array<string, mixed> $decoded */
+        $decoded = json_decode((string) $row->blob, true, 8, JSON_THROW_ON_ERROR);
+
+        return GdkEpochWrapSignature::carriesEpoch($decoded);
+    })->values();
 
     expect($wraps)->toHaveCount(3, 'every keyring epoch (1, 2, 3) must be wrapped for the new device');
 
