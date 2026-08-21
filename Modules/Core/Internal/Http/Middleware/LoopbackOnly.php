@@ -7,12 +7,19 @@ namespace Modules\Core\Internal\Http\Middleware;
 use Closure;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\Request;
+use Modules\Core\Public\Enums\PhpSapi;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class LoopbackOnly
 {
-    public function __construct(private readonly Application $app) {}
+    // The SAPI is a parameter so the mobile path can be exercised: PHP_SAPI is
+    // a compile-time constant, and a gate that cannot be tested off its own
+    // SAPI is how this one shipped able to 404 an entire platform.
+    public function __construct(
+        private readonly Application $app,
+        private readonly string $sapi = \PHP_SAPI,
+    ) {}
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -22,11 +29,10 @@ final class LoopbackOnly
             if (! self::isLoopback($serverAddr)) {
                 throw new NotFoundHttpException;
             }
-        } elseif (! $this->app->runningInConsole() && \PHP_SAPI !== 'cli-server') {
+        } elseif (! $this->app->runningInConsole() && ! $this->servesInProcess()) {
             // A real HTTP SAPI (php-fpm, mod_php) with no SERVER_ADDR never
             // advertised its bind address; fail closed rather than assume it
-            // was loopback. The console and PHP's own built-in server serve on
-            // loopback yet omit it, so a request without one is legitimate there.
+            // was loopback.
             throw new NotFoundHttpException;
         }
 
@@ -34,6 +40,14 @@ final class LoopbackOnly
         $response = $next($request);
 
         return $response;
+    }
+
+    // A SAPI PhpSapi does not name is one that serves over a socket, and a
+    // socket-serving SAPI that never published its bind address is the case
+    // the branch above exists to refuse.
+    private function servesInProcess(): bool
+    {
+        return PhpSapi::tryFrom($this->sapi)?->servesInProcess() === true;
     }
 
     // Anything inet_pton cannot read is not an address, and anything that is
