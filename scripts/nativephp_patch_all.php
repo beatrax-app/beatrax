@@ -37,6 +37,7 @@ $patches = [
     'nativephp_extend_bundle_copy_timeout',
     'nativephp_ios_request_body_stream',
     'nativephp_ios_download_delegate',
+    'nativephp_ios_local_network_discovery',
     'nativephp_ios_privacy_manifest',
     'nativephp_ios_export_compliance',
 ];
