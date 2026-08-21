@@ -96,7 +96,6 @@ KOTLIN;
 
 $override = <<<'KOTLIN'
 return object : WebChromeClient() {
-            // Added by scripts/nativephp_android_file_chooser.php — see that
             /*
              * Android providers do not agree on what a bank statement is.
              * MediaStore reports a .csv as `text/comma-separated-values` — the
@@ -106,14 +105,19 @@ return object : WebChromeClient() {
              * at all. A .sta shows up as a BIN file and an .mbox as nothing in
              * particular, so the disagreement is not limited to one format.
              *
-             * The intent therefore asks for anything and names the types it
-             * prefers, rather than filtering on one spelling. Selecting the
-             * wrong file is recoverable — the parser reports precisely what it
-             * could not read — whereas a picker that cannot select the right
-             * file is not recoverable from inside the app at all.
+             * EXTRA_MIME_TYPES overrides setType() rather than softening it:
+             * with it set the picker shows ONLY these types, so this list is a
+             * filter and every spelling a provider might use has to be in it.
+             * The wildcard type set below is only what the picker falls back
+             * to when the extra is absent, not a widening of it.
+             *
+             * Selecting the wrong file is recoverable — the parser reports
+             * precisely what it could not read — whereas a picker that cannot
+             * select the right file is not recoverable from inside the app at
+             * all, which is why the list errs long.
              */
             private fun widenAcceptedMimeTypes(intent: Intent) {
-                val preferred = arrayOf(
+                val selectable = arrayOf(
                     "text/csv",
                     "text/comma-separated-values",
                     "text/plain",
@@ -124,15 +128,21 @@ return object : WebChromeClient() {
                     "application/mbox",
                     "application/pdf",
                     "application/zip",
+                    "text/tab-separated-values",
+                    "text/x-qif",
+                    "application/qif",
+                    "application/x-ofx",
+                    "application/x-qw",
                     // What a provider falls back to when it cannot name the
                     // type — which is what a .sta and an .mt940 usually get.
                     "application/octet-stream"
                 )
 
                 intent.type = "*/*"
-                intent.putExtra(Intent.EXTRA_MIME_TYPES, preferred)
+                intent.putExtra(Intent.EXTRA_MIME_TYPES, selectable)
             }
 
+            // Added by scripts/nativephp_android_file_chooser.php — see that
             // file for why the generated shell needs it.
             override fun onShowFileChooser(
                 webView: WebView?,

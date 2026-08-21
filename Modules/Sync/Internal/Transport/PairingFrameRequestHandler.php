@@ -74,6 +74,13 @@ final readonly class PairingFrameRequestHandler implements RequestHandler
             return $this->json(HttpStatus::NOT_FOUND, self::NOT_FOUND_BODY);
         }
 
+        // A deferred frame is held, not done: the local human has not compared
+        // the words yet. Answering 204 told the sender it was applied, which is
+        // the one thing Deferred exists to deny.
+        if ($outcome === PairingFrameOutcome::Deferred) {
+            return new Response(HttpStatus::ACCEPTED);
+        }
+
         // Nothing to say beyond "applied". The initiator learns the outcome by
         // reading its own row, never from a body this could put words in.
         return new Response(HttpStatus::NO_CONTENT);

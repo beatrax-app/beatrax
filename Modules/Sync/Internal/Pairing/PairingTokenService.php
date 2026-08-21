@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Sync\Internal\Clock\ZuluTimestamp;
 
 /**
  * @link ../../../../.docs/features/sync/pairing-handshake.md
@@ -57,7 +58,7 @@ final class PairingTokenService
             'initiator_ed25519_pub_hex' => $ed25519PubHex,
             'initiator_x25519_pub_hex' => $x25519PubHex,
             'state' => PairingState::Pending->value,
-            'expires_at' => PairingExpiry::stamp($now->addMinutes(self::TTL_MINUTES)),
+            'expires_at' => ZuluTimestamp::stamp($now->addMinutes(self::TTL_MINUTES)),
             'created_at' => $now->toIso8601String(),
         ]);
 
@@ -111,7 +112,7 @@ final class PairingTokenService
             'initiator_ed25519_pub_hex' => $initiatorEd25519PubHex,
             'initiator_x25519_pub_hex' => $initiatorX25519PubHex,
             'state' => PairingState::Pending->value,
-            'expires_at' => PairingExpiry::stamp($now->addMinutes(self::TTL_MINUTES)),
+            'expires_at' => ZuluTimestamp::stamp($now->addMinutes(self::TTL_MINUTES)),
             'initiator_seeded_at' => $now->toIso8601String(),
             'initiator_name' => $initiatorName,
             'created_at' => $now->toIso8601String(),
@@ -151,7 +152,7 @@ final class PairingTokenService
             ->where('token_hash', $tokenHash)
             ->where('user_id', $userId)
             ->where('state', PairingState::Pending->value)
-            ->where('expires_at', '>', PairingExpiry::stamp($now))
+            ->where('expires_at', '>', ZuluTimestamp::stamp($now))
             ->first();
 
         if ($row === null || ! PairingRowGuards::tokenHashMatches($row, $tokenHash)) {
@@ -178,7 +179,7 @@ final class PairingTokenService
                 'responder_x25519_pub_hex' => $responderX25519PubHex,
                 'state' => PairingState::AwaitingConfirm->value,
                 'accepted_at' => $acceptedAt,
-                'expires_at' => PairingExpiry::stamp($newExpiry),
+                'expires_at' => ZuluTimestamp::stamp($newExpiry),
             ]);
 
         $accepted = $this->db->connection()->table('pairing_tokens')
@@ -209,38 +210,47 @@ final class PairingTokenService
         // The tap confirms the keys behind the words on screen, not whatever the
         // row says now: without this a responder rebinding between the reading
         // and the tap inherits a confirmation nobody gave it (see @link).
-        if (! $this->safetyDigestStillMatches($tokenId, $userId, $expectedSafetyDigest)) {
+        $comparedKeys = $this->keysBehindDigest($tokenId, $userId, $expectedSafetyDigest);
+        if ($comparedKeys === null) {
             return null;
         }
 
         $column = $side.'_confirmed_at';
 
-        $now = $this->clock->now()->toIso8601String();
-
+        // Those keys ride in the WHERE rather than being checked and then
+        // trusted: a rebind landing in between matches no row, so nothing is
+        // stamped and the re-read below sees an unconfirmed side.
         $this->db->connection()->table('pairing_tokens')
             ->where('id', $tokenId)
             ->where('user_id', $userId)
-            ->update([$column => $now]);
+            ->where('initiator_ed25519_pub_hex', $comparedKeys['initiator'])
+            ->where('responder_ed25519_pub_hex', $comparedKeys['responder'])
+            ->update([$column => $this->clock->now()->toIso8601String()]);
 
         $row = $this->db->connection()->table('pairing_tokens')
             ->where('id', $tokenId)
             ->where('user_id', $userId)
             ->first();
 
-        if ($row === null) {
+        // Read back rather than trusting an affected-row count, which a driver
+        // may report as zero for a second tap writing the value already there.
+        if ($row === null || ! is_string($row->{$column})) {
             return null;
         }
 
         return $this->finalizeIfBothConfirmed($row, $userId);
     }
 
-    // Re-derives the safety number from the keys the row holds RIGHT NOW and
-    // compares it with the one the caller was shown. Any drift means the pair
-    // being confirmed is not the pair that was read aloud.
-    private function safetyDigestStillMatches(int $tokenId, int $userId, string $expectedSafetyDigest): bool
+    // The two Ed25519 keys the compared words were derived from, or null when
+    // the row's current pair no longer produces that digest — which means the
+    // pair being confirmed is not the pair that was read aloud.
+    /**
+     * @return array{initiator: string, responder: string}|null
+     */
+    private function keysBehindDigest(int $tokenId, int $userId, string $expectedSafetyDigest): ?array
     {
         if ($expectedSafetyDigest === '') {
-            return false;
+            return null;
         }
 
         $row = $this->db->connection()->table('pairing_tokens')
@@ -251,7 +261,7 @@ final class PairingTokenService
         if ($row === null
             || ! is_string($row->initiator_ed25519_pub_hex)
             || ! is_string($row->responder_ed25519_pub_hex)) {
-            return false;
+            return null;
         }
 
         try {
@@ -260,10 +270,12 @@ final class PairingTokenService
                 $row->responder_ed25519_pub_hex,
             );
         } catch (InvalidPublicKeyException) {
-            return false;
+            return null;
         }
 
-        return hash_equals($current, $expectedSafetyDigest);
+        return hash_equals($current, $expectedSafetyDigest)
+            ? ['initiator' => $row->initiator_ed25519_pub_hex, 'responder' => $row->responder_ed25519_pub_hex]
+            : null;
     }
 
     // Applies a relayed PAIR_RESPONDER_ACCEPT frame, binding the phone's
@@ -297,10 +309,17 @@ final class PairingTokenService
         $row = $this->db->connection()->table('pairing_tokens')
             ->where('user_id', $userId)
             ->where('token_hash', $tokenHash)
-            ->where('expires_at', '>', PairingExpiry::stamp($now))
+            ->where('expires_at', '>', ZuluTimestamp::stamp($now))
             ->first();
 
         if ($row === null || ! PairingRowGuards::tokenHashMatches($row, $tokenHash)) {
+            return false;
+        }
+
+        // A device is never its own responder, and a frame that would take the
+        // side this device already occupies locks it out of its own pairing —
+        // one hostile answer to the phone's own pull, and it can never confirm.
+        if ($this->touchesOwnSide($row, $userId, $responderDeviceId)) {
             return false;
         }
 
@@ -332,6 +351,26 @@ final class PairingTokenService
             // closed rather than re-opening a handshake that has moved on.
             default => false,
         };
+    }
+
+    // True when applying the frame would name this device as the responder, or
+    // would overwrite a responder slot this device itself occupies. Neither can
+    // arrive from an honest peer: a device binds its own side through accept().
+    private function touchesOwnSide(\stdClass $row, int $userId, string $responderDeviceId): bool
+    {
+        $selfDeviceId = $this->db->connection()->table('device_registry')
+            ->where('user_id', $userId)
+            ->where('is_self', 1)
+            ->value('device_id');
+
+        if (! is_string($selfDeviceId) || $selfDeviceId === '') {
+            return false;
+        }
+
+        $existingResponder = is_string($row->responder_device_id) ? $row->responder_device_id : null;
+
+        return hash_equals($selfDeviceId, $responderDeviceId)
+            || ($existingResponder !== null && hash_equals($existingResponder, $selfDeviceId));
     }
 
     // Both responder keys must decode before the row is touched, so a
@@ -419,7 +458,7 @@ final class PairingTokenService
                 'responder_name' => $responderName !== '' ? $responderName : null,
                 'state' => PairingState::AwaitingConfirm->value,
                 'accepted_at' => $now->toIso8601String(),
-                'expires_at' => PairingExpiry::stamp($newExpiry),
+                'expires_at' => ZuluTimestamp::stamp($newExpiry),
             ]);
 
         $accepted = $this->db->connection()->table('pairing_tokens')
@@ -551,7 +590,7 @@ final class PairingTokenService
         $this->db->connection()->table('pairing_tokens')
             ->where('user_id', $userId)
             ->where(function (QueryBuilder $query) use ($now): void {
-                $query->where('expires_at', '<', PairingExpiry::stamp($now))
+                $query->where('expires_at', '<', ZuluTimestamp::stamp($now))
                     ->orWhereIn('state', [
                         PairingState::Confirmed->value,
                         PairingState::Expired->value,

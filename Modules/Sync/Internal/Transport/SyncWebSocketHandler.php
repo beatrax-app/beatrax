@@ -19,6 +19,7 @@ use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Crypto\GdkEpochControlHandler;
+use Modules\Sync\Internal\Crypto\GdkWrapOutcome;
 use Modules\Sync\Internal\Exceptions\PeerDisconnectedException;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
@@ -507,16 +508,22 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
                 continue;
             }
 
-            try {
-                $handler->handle($blob, $this->userId, $laravelSession);
-            } catch (Throwable $e) {
-                // The daemon has no unlocked session, so unwrapping can fail
-                // outright. Left unconfirmed for a request-scoped drain to
-                // retry, and never rethrown: letting it escape aborted the
-                // whole exchange after catch-up had already succeeded.
-                $this->logger->info('SyncWebSocketHandler: inbound epoch wrap deferred.', [
-                    'reason' => $e::class,
-                ]);
+            // The same two protocols share this mailbox in both directions.
+            // Handing a pairing frame to the wrap handler got it refused and
+            // then confirmed away, which is the bug pendingWrapsForPeer()
+            // already guards against on the way out.
+            if (! self::isEpochWrap($blob)) {
+                continue;
+            }
+
+            // An outcome, not an exception: handle() never throws, so the
+            // catch that used to gate this could not fire and every wrap the
+            // keyless daemon could not open was confirmed away — destroying
+            // the only copy of a key nothing re-sends.
+            $outcome = $handler->handle($blob, $this->userId, $laravelSession);
+
+            if ($outcome === GdkWrapOutcome::Deferred) {
+                $this->logger->info('SyncWebSocketHandler: inbound epoch wrap deferred; leaving it in the mailbox.');
 
                 continue;
             }

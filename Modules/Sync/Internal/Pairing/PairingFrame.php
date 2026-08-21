@@ -12,6 +12,11 @@ final class PairingFrame
     // if the same Ed25519 key is reused elsewhere.
     public const string SIG_CONTEXT = 'beatrax-pair-confirm:v1';
 
+    // Domain-separation context for the proof a device presents when it comes
+    // to collect what is waiting for it. Separate from the confirm context so a
+    // collection proof can never be replayed as a confirmation.
+    public const string PULL_SIG_CONTEXT = 'beatrax-pair-frames-pull:v1';
+
     /**
      * @return array{type: string, token_hash: string, responder_device_id: string, responder_ed25519_pub_hex: string, responder_x25519_pub_hex: string}
      */
@@ -33,6 +38,17 @@ final class PairingFrame
             // is a wrong caption and never a trust decision.
             'responder_name' => $responderName,
         ];
+    }
+
+    // What a collecting device signs with its own Ed25519 secret key. The
+    // listener holds that device's public half on the pairing row it bound, so
+    // the signature is the one thing a stranger on the same wifi cannot mint.
+    public static function pullProofMessage(string $collectingDeviceId): string
+    {
+        return implode('|', [
+            self::PULL_SIG_CONTEXT,
+            strlen($collectingDeviceId).':'.$collectingDeviceId,
+        ]);
     }
 
     // The deterministic message a PAIR_CONFIRM signature covers: token_hash +

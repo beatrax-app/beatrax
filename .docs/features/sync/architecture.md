@@ -602,7 +602,8 @@ brute force was never the concern; the limit is defence in depth and stops
 the endpoint being a cheap probe for whether a pairing is in flight.
 
 `LanPairingOfferFetcher` is the responder half: it decodes the typed
-word-code, browses `_beatrax-sync._tcp` via `MulticastMdnsQuery`, and asks
+word-code, browses `_beatrax-sync._tcp` via the container's `PeerDiscovery`
+(`CachedPeerDiscovery` in front of `MulticastMdnsQuery`), and asks
 each discovered peer for its offer until one holds the token. Discovery
 authenticates nothing and neither does the fetch — an mDNS answer can be
 spoofed by anyone on the network, so what comes back is a candidate
@@ -868,9 +869,11 @@ opaque Noise ciphertext blobs addressed by recipient `device_id`. Hard ZK
 invariant — MUST NEVER call `sodium_*`/`json_decode()` on the blob, read/write
 any `user_id` column, or inspect blob content. GC policy: delivered blobs
 expire 7 days after delivery, undelivered blobs 30 days after creation, both
-compared as lexical UTC Zulu ISO8601 strings (`assertZulu()` guards every
-write site so a future refactor that drops the Zulu format fails loudly
-instead of silently corrupting GC ordering).
+compared as lexical UTC Zulu ISO8601 strings. `ZuluTimestamp::stamp()` is the
+sole producer for this column and for `pairing_tokens.expires_at`: it converts
+to UTC *and* asserts the shape in one call, so a write that would corrupt the
+GC ordering throws instead of landing. Inlining `->toIso8601String()` is the
+tempting simplification and the wrong one — it emits the local offset.
 
 `RelayClient` is the HTTP client moving opaque Noise ciphertext between this
 device and the configured relay endpoint (`POST /relay/deliver`,
@@ -1004,8 +1007,11 @@ user is always read from `CurrentUser` — never a request-supplied id.
 
 A step-based flow inside the Devices & Sync section's Flux modal:
 `choose_direction -> show_code -> confirm -> success` (this device shows) or
-`choose_direction -> enter_code -> confirm -> success` (this device
-scans/types). Per-method DI throughout.
+`choose_direction -> enter_code -> confirm -> success` (this device types).
+The second arm is desktop-only: on a mobile runtime `enterACode()` redirects
+out of the modal to `route('mobile.pair')`, so `enter_code` is never reached
+there. That screen has a camera and this modal has never had one, which made
+the modal's own offer to scan true only over there. Per-method DI throughout.
 
 Trust gate: the safety-number is derived independently on BOTH peers from
 BOTH stored public keys; `device_registry.confirmed_at` is set ONLY after

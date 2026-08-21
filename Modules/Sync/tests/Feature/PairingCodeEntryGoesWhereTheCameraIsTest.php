@@ -5,11 +5,16 @@ declare(strict_types=1);
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
 use Modules\Sync\Internal\Http\Livewire\PairingFlowModal;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
+use Modules\Sync\Internal\Pairing\PairingTokenService;
+use Modules\Sync\Internal\Pairing\WordCodeEncoder;
+use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
+use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
 
 uses(RefreshDatabase::class);
 
@@ -77,14 +82,42 @@ it('says so when the keys changed under the words being compared', function (): 
 
     app(DeviceIdentityService::class)->generateAndPersist((int) $user->id, app(Session::class));
 
+    // Nothing on the wire, so the ceremony is driven entirely from the rows.
+    app()->instance(PeerDiscovery::class, new class implements PeerDiscovery
+    {
+        /**
+         * @return list<DiscoveredPeer>
+         */
+        public function browse(string $serviceType, float $timeoutSeconds = 2.0): array
+        {
+            return [];
+        }
+    });
+    Http::fake(['*' => Http::response('', 503)]);
+
     $component = Livewire::test(PairingFlowModal::class)->call('showMyCode');
 
-    // Words that were never derived from this row: the same observable a
-    // rebind produces, without needing a second device to produce it.
-    $component
-        ->set('safetyWords', ['alpha', 'bravo', 'charlie', 'delta', 'echo', 'foxtrot'])
-        ->set('awaitingPeer', true)
-        ->call('confirmMatch');
+    /** @var PairingTokenService $tokenService */
+    $tokenService = app(PairingTokenService::class);
+    $token = app(WordCodeEncoder::class)->decode($component->get('wordCode'));
+    $tokenService->accept($token, (int) $user->id, 'the-honest-phone', str_repeat('c', 64), str_repeat('d', 64));
+
+    // The poll derives the words from the keys bound at that moment. They are
+    // never set from the client: what the tap is bound to is the server's
+    // decision, which is why the property is locked.
+    $component->call('checkPairingState')->assertSet('step', 'confirm');
+
+    // A second responder takes the slot nobody has confirmed, so the keys
+    // behind the words on screen are no longer the keys the row holds.
+    $tokenService->applyResponderAccept(
+        (int) $user->id,
+        hash('sha256', $token),
+        '99999999-8888-4777-8666-555555555555',
+        str_repeat('e', 64),
+        str_repeat('f', 64),
+    );
+
+    $component->call('confirmMatch');
 
     expect($component->get('flashMessage'))->toBe(Lang::get('sync::pairing.safety_number_changed'));
     expect($component->get('awaitingPeer'))->toBeFalse();

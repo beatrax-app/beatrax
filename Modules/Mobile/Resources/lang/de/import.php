@@ -12,6 +12,13 @@ return [
     'password' => 'Passwort',
     'password_help' => 'Mindestens 12 Zeichen — es gibt kein Zurücksetzen des Passworts, nur Wiederherstellungscodes.',
     'confirm_password' => 'Passwort bestätigen',
+
+    'requirements_aria' => 'Passwortanforderungen',
+    'req_length' => 'Mindestens 12 Zeichen',
+    'req_match' => 'Beide Passwörter stimmen überein',
+    'req_met' => '(erfüllt)',
+    'req_unmet' => '(noch nicht erfüllt)',
+
     'pin' => 'PIN der App-Sperre',
     'pin_help' => '6-10 Ziffern — entsperrt dieses Gerät.',
     'confirm_pin' => 'PIN bestätigen',
@@ -37,6 +44,7 @@ return [
     'continue_to_pairing' => 'Weiter zum Koppeln',
 
     'errors' => [
+        'username_required' => 'Benutzername ist erforderlich.',
         'passwords_mismatch' => 'Die Passwörter stimmen nicht überein.',
         'password_length' => 'Verwende mindestens 12 Zeichen.',
         'pin_length' => 'Die PIN muss mindestens 6 Ziffern haben.',

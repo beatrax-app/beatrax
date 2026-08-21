@@ -10,8 +10,36 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Http\Livewire\MobilePairingScan;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
+use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
+use Modules\Sync\Internal\Transport\Discovery\DiscoveryMode;
+use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
 
 uses(RefreshDatabase::class);
+
+// Http::fake() never reached the multicast socket underneath this arm, so the
+// answer came from whatever was advertising on the developer's own wifi: a
+// colleague's desktop turned a green suite red, and CI could not see it.
+/**
+ * @param  list<DiscoveredPeer>  $peers
+ */
+function manualArmDiscovers(array $peers): void
+{
+    app()->instance(PeerDiscovery::class, new class($peers) implements PeerDiscovery
+    {
+        /**
+         * @param  list<DiscoveredPeer>  $peers
+         */
+        public function __construct(private readonly array $peers) {}
+
+        /**
+         * @return list<DiscoveredPeer>
+         */
+        public function browse(string $serviceType, float $timeoutSeconds = 2.0): array
+        {
+            return $this->peers;
+        }
+    });
+}
 
 function manualArmUser(string $prefix): User
 {
@@ -89,9 +117,9 @@ it('answers a typed code in import mode by looking for the other device on the n
     $user = manualArmUser('armlan');
     test()->actingAs($user);
 
-    // Whatever the multicast question turns up on the machine running this, no peer
-    // holds this token, so the arm has to end in the "cannot reach the other
+    // Nothing advertising: the arm has to end in the "cannot reach the other
     // device" message rather than a spinner or a 500.
+    manualArmDiscovers([]);
     Http::fake(['*' => Http::response(['error' => 'not_found'], 404)]);
 
     app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
@@ -105,6 +133,75 @@ it('answers a typed code in import mode by looking for the other device on the n
         ->assertSet('step', 'enter_code')
         ->assertSet('pairingTokenId', '')
         ->assertSet('flashMessage', Lang::get('mobile::pairing.errors.relay_unreachable'));
+});
+
+// A typed code names no device, so every desktop on the wifi gets asked and a
+// housemate's laptop refuses a code it has never seen. Telling that reader
+// their code is invalid is the same confident misdiagnosis, pointed the other
+// way: the message has to be true whichever of the two happened.
+it('does not call a good code invalid because some other desktop refused it', function (): void {
+    $user = manualArmUser('armstranger');
+    test()->actingAs($user);
+
+    manualArmDiscovers([new DiscoveredPeer('a-housemates-mac', '192.0.2.9', 51337, DiscoveryMode::Mdns)]);
+    Http::fake(['*' => Http::response(['error' => 'not_found'], 404)]);
+
+    app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
+
+    $wordCode = (new WordCodeEncoder)->encode(bin2hex(random_bytes(16)));
+
+    Livewire::test(MobilePairingScan::class)
+        ->set('wordCode', $wordCode)
+        ->call('submitCode', null)
+        ->assertSet('step', 'enter_code')
+        ->assertSet('flashMessage', Lang::get('mobile::pairing.errors.code_not_accepted'))
+        ->assertSet('flashMessage', fn (string $m): bool => $m !== Lang::get('mobile::pairing.errors.invalid_code'));
+});
+
+// desktop-03. The hub answers 429 distinctly and always did; the client folded
+// it into CodeNotAccepted, so a rate-limited phone was told "This code is
+// invalid or has expired. Ask the other device to generate a new one." Following
+// that advice burns a fresh code into the same bucket and makes the limit worse
+// — and android-07's evidence shows this phone re-emitting every 3 seconds.
+it('tells a rate-limited phone to wait, not to burn a fresh code', function (): void {
+    $user = manualArmUser('armlimited');
+    test()->actingAs($user);
+
+    manualArmDiscovers([new DiscoveredPeer('desktop-lan', '192.0.2.44', 51337, DiscoveryMode::Mdns)]);
+    Http::fake(['*' => Http::response(['error' => 'rate_limited'], 429)]);
+
+    app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
+
+    $wordCode = (new WordCodeEncoder)->encode(bin2hex(random_bytes(16)));
+
+    Livewire::test(MobilePairingScan::class)
+        ->set('wordCode', $wordCode)
+        ->call('submitCode', null)
+        ->assertSet('step', 'enter_code')
+        ->assertSet('flashMessage', Lang::get('mobile::pairing.errors.rate_limited'))
+        ->assertSet('flashMessage', fn (string $m): bool => $m !== Lang::get('mobile::pairing.errors.invalid_code'))
+        ->assertSet('flashMessage', fn (string $m): bool => $m !== Lang::get('mobile::pairing.errors.code_not_accepted'));
+});
+
+it('offers the rate-limit copy in every locale', function (): void {
+    $root = base_path('Modules/Mobile/Resources/lang');
+    $locales = array_values(array_filter(scandir($root) ?: [], static fn (string $e): bool => ! str_starts_with($e, '.')));
+
+    expect($locales)->toHaveCount(26);
+
+    $missing = [];
+    foreach ($locales as $locale) {
+        /** @var array<string, mixed> $pairing */
+        $pairing = require $root.'/'.$locale.'/pairing.php';
+        $errors = $pairing['errors'] ?? [];
+        $copy = is_array($errors) ? ($errors['rate_limited'] ?? null) : null;
+
+        if (! is_string($copy) || $copy === '') {
+            $missing[] = $locale;
+        }
+    }
+
+    expect($missing)->toBe([]);
 });
 
 it('leaves no reference to the removed dead-end copy', function (): void {

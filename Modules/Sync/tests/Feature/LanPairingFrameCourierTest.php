@@ -10,7 +10,7 @@ use Modules\Sync\Internal\Pairing\LanPairingFrameCourier;
 use Modules\Sync\Internal\Pairing\PairingFrame;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveryMode;
-use Modules\Sync\Internal\Transport\Discovery\MulticastMdnsQuery;
+use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
 
 uses(RefreshDatabase::class);
 
@@ -18,9 +18,28 @@ uses(RefreshDatabase::class);
 // only the relay, so with none configured pairing on a home wifi failed outright
 // with RelayRefusedException. This is the road that was missing.
 
-function lanFrameCourier(): LanPairingFrameCourier
+/**
+ * @param  list<DiscoveredPeer>  $peers
+ */
+function lanFrameCourier(array $peers = []): LanPairingFrameCourier
 {
-    return new LanPairingFrameCourier(app(HttpFactory::class), new MulticastMdnsQuery);
+    $discovery = new class($peers) implements PeerDiscovery
+    {
+        /**
+         * @param  list<DiscoveredPeer>  $peers
+         */
+        public function __construct(private readonly array $peers) {}
+
+        /**
+         * @return list<DiscoveredPeer>
+         */
+        public function browse(string $serviceType, float $timeoutSeconds = 2.0): array
+        {
+            return $this->peers;
+        }
+    };
+
+    return new LanPairingFrameCourier(app(HttpFactory::class), $discovery);
 }
 
 function lanFramePeer(): DiscoveredPeer
@@ -44,6 +63,15 @@ function acceptFrame(): array
 
 it('reports success only when the peer applied the frame', function (): void {
     Http::fake(['*' => Http::response('', 204)]);
+
+    expect(lanFrameCourier()->deliverTo(lanFramePeer(), acceptFrame()))->toBeTrue();
+});
+
+// A deferred confirm is valid but held until the peer's own human compares the
+// words, so the peer very much does change its mind about it. Answering 204 said
+// "applied" and the LAN road disagreed with the relay road about the same enum.
+it('treats a frame the peer is holding as received, not as a road that failed', function (): void {
+    Http::fake(['*' => Http::response('', 202)]);
 
     expect(lanFrameCourier()->deliverTo(lanFramePeer(), acceptFrame()))->toBeTrue();
 });

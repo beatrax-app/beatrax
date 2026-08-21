@@ -85,7 +85,7 @@ it('submitCode() import branch sends PAIR_RESPONDER_ACCEPT to the desktop\'s own
 
     // The desktop drains its own mailbox and applies the phone's responder-accept.
     $this->asDevice('desktop', function (): void {
-        app(PairingGateway::class)->drainPairingFrames(MPS_DESKTOP_USER_ID);
+        app(PairingGateway::class)->drainPairingFrames(MPS_DESKTOP_USER_ID, null);
     });
 
     $this->asDevice('desktop', function () use ($issuedToken): void {
@@ -146,7 +146,7 @@ it('the full happy path reaches CONFIRMED on both databases AND epoch delivery â
     // The desktop drains, its human confirms, and it sends its own signed
     // PAIR_CONFIRM back to the phone.
     $this->asDevice('desktop', function (): void {
-        app(PairingGateway::class)->drainPairingFrames(MPS_DESKTOP_USER_ID);
+        app(PairingGateway::class)->drainPairingFrames(MPS_DESKTOP_USER_ID, null);
     });
     $this->asDevice('desktop', function () use ($issuedToken, $desktopIdentity, $phoneIdentity, $session): void {
         $row = app(DatabaseManager::class)->connection()->table('pairing_tokens')
@@ -174,7 +174,7 @@ it('the full happy path reaches CONFIRMED on both databases AND epoch delivery â
     // The desktop drains the phone's PAIR_CONFIRM too, admitting it on its own
     // database.
     $this->asDevice('desktop', function (): void {
-        app(PairingGateway::class)->drainPairingFrames(MPS_DESKTOP_USER_ID);
+        app(PairingGateway::class)->drainPairingFrames(MPS_DESKTOP_USER_ID, null);
     });
     $this->asDevice('desktop', function () use ($phoneIdentity): void {
         expect(app(DeviceRegistryService::class)->deviceKeys(MPS_DESKTOP_USER_ID))->toHaveKey($phoneIdentity->deviceId);
@@ -194,7 +194,19 @@ it('the full happy path reaches CONFIRMED on both databases AND epoch delivery â
 
         return $db->connection()->table('relay_mailbox')
             ->where('recipient_did', $phoneIdentity->deviceId)
-            ->get();
+            ->get()
+            ->filter(static function (object $row): bool {
+                /** @var mixed $decoded */
+                $decoded = json_decode((string) $row->blob, true);
+
+                // The blind-index key rides the same frame type under the
+                // reserved epoch id 0, and is not an epoch being fanned out.
+                return is_array($decoded)
+                    && ($decoded['type'] ?? null) === 'GDK_EPOCH_WRAP'
+                    && is_int($decoded['epoch_id'] ?? null)
+                    && $decoded['epoch_id'] > 0;
+            })
+            ->values();
     });
 
     expect($wraps)->toHaveCount(1, 'exactly one epoch (epoch 1) must be fanned out');

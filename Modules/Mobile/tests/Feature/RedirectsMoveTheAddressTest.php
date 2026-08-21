@@ -5,12 +5,13 @@ declare(strict_types=1);
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Enums\MobilePlatform;
 use Modules\Mobile\Internal\Http\Middleware\ClientSideRedirect;
 use Symfony\Component\HttpFoundation\Response;
 
 beforeEach(function (): void {
-    putenv('NATIVEPHP_PLATFORM=android');
-    $_SERVER['NATIVEPHP_PLATFORM'] = 'android';
+    putenv('NATIVEPHP_PLATFORM='.MobilePlatform::Android->value);
+    $_SERVER['NATIVEPHP_PLATFORM'] = MobilePlatform::Android->value;
 
     $this->redirectUser = User::query()->create([
         'username' => 'redir-'.bin2hex(random_bytes(4)),
@@ -132,13 +133,13 @@ it('leaves iOS redirects alone, because its shell already follows them', functio
     // iOS serves the app from a php:// custom scheme whose handler reads Location,
     // rewrites a rooted path to php://127.0.0.1<path> and performs a real
     // navigation. Rewriting there would trade it for a weaker JavaScript one.
-    putenv('NATIVEPHP_PLATFORM=ios');
-    $_SERVER['NATIVEPHP_PLATFORM'] = 'ios';
+    putenv('NATIVEPHP_PLATFORM='.MobilePlatform::Ios->value);
+    $_SERVER['NATIVEPHP_PLATFORM'] = MobilePlatform::Ios->value;
 
     $response = $this->get('/login', ['Accept' => 'text/html']);
 
     $response->assertRedirect();
 
-    putenv('NATIVEPHP_PLATFORM=android');
-    $_SERVER['NATIVEPHP_PLATFORM'] = 'android';
+    putenv('NATIVEPHP_PLATFORM='.MobilePlatform::Android->value);
+    $_SERVER['NATIVEPHP_PLATFORM'] = MobilePlatform::Android->value;
 });

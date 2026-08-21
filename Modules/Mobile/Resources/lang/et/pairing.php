@@ -36,7 +36,10 @@ return [
     'errors' => [
         'relay_unreachable' => 'Teise seadmeni ei saa. Veendu, et mõlemad on samas võrgus ja et töölauas on sünkroonimine sisse lülitatud.',
         'invalid_code' => 'See kood on vigane või aegunud. Palu teisel seadmel uus luua.',
+        'code_not_accepted' => 'Ükski selle võrgu seade ei võtnud koodi vastu. Kontrolli koodi ja seda, kas teine seade näitab seda veel.',
+        'rate_limited' => 'Liiga palju katseid. Oota minut ja proovi uuesti.',
         'identity_locked' => 'Sinu seadme identiteet on lukus. Ava rakendus ja proovi uuesti.',
         'identity_needs_lock' => 'Seadista esmalt rakenduse lukustus — see kaitseb seadme identiteeti.',
+        'safety_number_changed' => 'Teine seade muutus võrdlemise ajal. Kontrolli allolevaid sõnu uuesti, enne kui kinnitad.',
     ],
 ];

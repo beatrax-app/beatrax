@@ -12,6 +12,13 @@ return [
     'password' => 'Mot de passe',
     'password_help' => 'Au moins 12 caractères — il n\'y a pas de réinitialisation du mot de passe, seulement des codes de récupération.',
     'confirm_password' => 'Confirme le mot de passe',
+
+    'requirements_aria' => 'Exigences du mot de passe',
+    'req_length' => 'Au moins 12 caractères',
+    'req_match' => 'Les deux mots de passe correspondent',
+    'req_met' => '(rempli)',
+    'req_unmet' => '(pas encore rempli)',
+
     'pin' => 'PIN de verrouillage de l\'app',
     'pin_help' => '6-10 chiffres — déverrouille cet appareil.',
     'confirm_pin' => 'Confirme le PIN',
@@ -37,6 +44,7 @@ return [
     'continue_to_pairing' => 'Passer à l\'appairage',
 
     'errors' => [
+        'username_required' => "Le nom d'utilisateur est obligatoire.",
         'passwords_mismatch' => 'Les mots de passe ne correspondent pas.',
         'password_length' => 'Utilise au moins 12 caractères.',
         'pin_length' => 'Le PIN doit comporter au moins 6 chiffres.',

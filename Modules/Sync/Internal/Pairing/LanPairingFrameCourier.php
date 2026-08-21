@@ -7,7 +7,7 @@ namespace Modules\Sync\Internal\Pairing;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
 use Modules\Sync\Internal\Transport\Discovery\MdnsAdvertiser;
-use Modules\Sync\Internal\Transport\Discovery\MulticastMdnsQuery;
+use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
 use Modules\Sync\Internal\Transport\PairingFrameRequestHandler;
 use Throwable;
 
@@ -29,12 +29,16 @@ final readonly class LanPairingFrameCourier
     // noisy or hostile network cannot turn one delivery into unbounded requests.
     private const int MAX_PEERS_TRIED = 4;
 
+    /** @var list<int> */
+    private const array RECEIVED_STATUSES = [202, 204];
+
     public function __construct(
         private HttpFactory $http,
-        private MulticastMdnsQuery $discovery,
+        private PeerDiscovery $discovery,
     ) {}
 
-    // False means the caller should fall back to the relay.
+    // False means no peer on this network took it, so the caller still has the
+    // relay and the holding space to try.
     /**
      * @param  array<string, mixed>  $frame
      */
@@ -91,10 +95,10 @@ final readonly class LanPairingFrameCourier
             return false;
         }
 
-        // The peer answers 204 when it applied the frame and 404 for every
-        // refusal it will never change its mind about. Anything else — a 429,
-        // a stray proxy, something that is not our listener — is not an
-        // acceptance, so the relay still gets its turn.
-        return $response->status() === 204;
+        // 204 applied, 202 held until the peer's own human confirms, 404 a
+        // refusal it will never change its mind about. Anything else — a 429, a
+        // stray proxy, something that is not our listener — did not receive it,
+        // so the relay still gets its turn (see @link).
+        return in_array($response->status(), self::RECEIVED_STATUSES, true);
     }
 }

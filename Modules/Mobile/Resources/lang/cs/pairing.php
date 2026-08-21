@@ -36,7 +36,10 @@ return [
     'errors' => [
         'relay_unreachable' => 'Druhé zařízení není dostupné. Zkontroluj, že jsou obě ve stejné síti a že je na počítači zapnutá synchronizace.',
         'invalid_code' => 'Tento kód je neplatný nebo vypršel. Nech na druhém zařízení vygenerovat nový.',
+        'code_not_accepted' => 'Žádné zařízení v této síti tento kód nepřijalo. Zkontroluj kód a jestli ho druhé zařízení stále zobrazuje.',
+        'rate_limited' => 'Příliš mnoho pokusů. Počkej minutu a zkus to znovu.',
         'identity_locked' => 'Identita tvého zařízení je zamčená. Odemkni aplikaci a zkus to znovu.',
         'identity_needs_lock' => 'Nejprve nastavte zámek aplikace — chrání identitu vašeho zařízení.',
+        'safety_number_changed' => 'Druhé zařízení se během porovnávání změnilo. Než potvrdíš, zkontroluj slova níže znovu.',
     ],
 ];

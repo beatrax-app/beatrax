@@ -12,6 +12,13 @@ return [
     'password' => 'Hasło',
     'password_help' => 'Co najmniej 12 znaków — nie ma resetu hasła, są tylko kody odzyskiwania.',
     'confirm_password' => 'Potwierdź hasło',
+
+    'requirements_aria' => 'Wymagania dotyczące hasła',
+    'req_length' => 'Co najmniej 12 znaków',
+    'req_match' => 'Oba hasła są zgodne',
+    'req_met' => '(spełnione)',
+    'req_unmet' => '(jeszcze niespełnione)',
+
     'pin' => 'PIN blokady aplikacji',
     'pin_help' => '6-10 cyfr — odblokowuje to urządzenie.',
     'confirm_pin' => 'Potwierdź PIN',
@@ -37,6 +44,7 @@ return [
     'continue_to_pairing' => 'Przejdź do parowania',
 
     'errors' => [
+        'username_required' => 'Nazwa użytkownika jest wymagana.',
         'passwords_mismatch' => 'Hasła nie są zgodne.',
         'password_length' => 'Użyj co najmniej 12 znaków.',
         'pin_length' => 'PIN musi mieć co najmniej 6 cyfry.',

@@ -89,6 +89,21 @@ function sensitiveColumnGuardProductionFiles(): array
     return $files;
 }
 
+/**
+ * The allowlist exempts a file by asserting that its bare-column hit belongs to
+ * a DIFFERENT, plaintext column than the registry-listed one that triggered the
+ * scan — `accounts.iban` where the registry lists `counterparties.iban`. That
+ * claim is only checkable if the reason names the column, so pull it back out.
+ *
+ * @return list<string> the {table}.{column} pairs an allowlist reason cites
+ */
+function sensitiveColumnGuardReasonColumns(string $reason): array
+{
+    preg_match_all('/\b[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*\b/', $reason, $matches);
+
+    return array_values(array_unique($matches[0]));
+}
+
 /** @return array<string, string> repo-relative path => allowlist reason */
 function sensitiveColumnGuardAllowlist(): array
 {
@@ -206,4 +221,66 @@ it('does not allowlist any site whose reason claims it is broken (allowlist hone
     }
 
     expect($offenders)->toBe([]);
+});
+
+// The landmine this pair of lists exists to disarm. The guard skips an
+// allowlisted file BEFORE scanning it, so the six `accounts.iban` exemptions
+// would silently cover the six most dangerous predicates in the codebase the
+// moment `accounts.iban` joined the registry — and the honesty check above
+// cannot see it, because it only greps reasons for broken/TODO/FIXME.
+
+it('never allowlists a file whose stated reason cites a column the registry has since started encrypting', function (): void {
+    $encrypted = SensitiveFieldRegistry::columns();
+
+    $offenders = [];
+    foreach (sensitiveColumnGuardAllowlist() as $path => $reason) {
+        foreach (sensitiveColumnGuardReasonColumns($reason) as $cited) {
+            if (in_array($cited, $encrypted, true)) {
+                $offenders[] = "{$path} rests on {$cited} being plaintext, and SensitiveFieldRegistry now encrypts it";
+            }
+        }
+    }
+
+    expect($offenders)->toBe([]);
+});
+
+it('only lets an allowlist reason rest on a column whose plaintext status is a recorded decision', function (): void {
+    $decided = array_keys(SensitiveFieldRegistry::knowinglyPlaintext());
+
+    $offenders = [];
+    foreach (sensitiveColumnGuardAllowlist() as $path => $reason) {
+        foreach (sensitiveColumnGuardReasonColumns($reason) as $cited) {
+            if (! in_array($cited, $decided, true)) {
+                $offenders[] = "{$path} rests on {$cited}, which SensitiveFieldRegistry::knowinglyPlaintext() does not record";
+            }
+        }
+    }
+
+    expect($offenders)->toBe([]);
+});
+
+it('keeps the encrypted list and the knowingly-plaintext list disjoint', function (): void {
+    $overlap = array_intersect(
+        SensitiveFieldRegistry::columns(),
+        array_keys(SensitiveFieldRegistry::knowinglyPlaintext()),
+    );
+
+    expect(array_values($overlap))->toBe([]);
+});
+
+it('goes RED when a knowingly-plaintext column joins the registry while its exemptions stand (negative probe, in-memory)', function (): void {
+    // The exact regression: `accounts.iban` promoted to the encrypted list
+    // without the six allowlist entries that rest on it being deleted.
+    $encrypted = [...SensitiveFieldRegistry::columns(), 'accounts.iban'];
+
+    $offenders = [];
+    foreach (sensitiveColumnGuardAllowlist() as $path => $reason) {
+        foreach (sensitiveColumnGuardReasonColumns($reason) as $cited) {
+            if (in_array($cited, $encrypted, true)) {
+                $offenders[] = $path;
+            }
+        }
+    }
+
+    expect($offenders)->toHaveCount(6);
 });

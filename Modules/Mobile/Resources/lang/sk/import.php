@@ -12,6 +12,13 @@ return [
     'password' => 'Heslo',
     'password_help' => 'Aspoň 12 znakov — heslo sa nedá obnoviť, existujú len obnovovacie kódy.',
     'confirm_password' => 'Potvrď heslo',
+
+    'requirements_aria' => 'Požiadavky na heslo',
+    'req_length' => 'Aspoň 12 znakov',
+    'req_match' => 'Obe heslá sa zhodujú',
+    'req_met' => '(splnené)',
+    'req_unmet' => '(zatiaľ nesplnené)',
+
     'pin' => 'PIN zámku aplikácie',
     'pin_help' => '6-10 číslic — odomyká toto zariadenie.',
     'confirm_pin' => 'Potvrď PIN',
@@ -37,6 +44,7 @@ return [
     'continue_to_pairing' => 'Pokračovať na párovanie',
 
     'errors' => [
+        'username_required' => 'Používateľské meno je povinné.',
         'passwords_mismatch' => 'Heslá sa nezhodujú.',
         'password_length' => 'Použi aspoň 12 znakov.',
         'pin_length' => 'PIN musí mať aspoň 6 číslice.',

@@ -37,7 +37,7 @@ it('hands a queued frame to the device it was addressed to', function (): void {
     $taken = outbox()->takeFor('phone-did', 8);
 
     expect($taken)->toHaveCount(1);
-    expect($taken[0]['type'])->toBe('PAIR_CONFIRM');
+    expect($taken[0]['frame']['type'])->toBe('PAIR_CONFIRM');
 });
 
 it('hands nothing to a device nothing was addressed to', function (): void {
@@ -46,14 +46,26 @@ it('hands nothing to a device nothing was addressed to', function (): void {
     expect(outbox()->takeFor('someone-else', 8))->toBe([]);
 });
 
-// Taken means delivered. A second collection must not replay the same frame, or
-// a redelivery would look like a fresh one every three seconds forever.
-it('does not hand the same frame over twice', function (): void {
+// Confirmed means delivered. A second collection must not replay the same frame,
+// or a redelivery would look like a fresh one every three seconds forever.
+it('does not hand the same frame over twice once the collection is confirmed', function (): void {
+    outbox()->queueFor('desktop-did', 'phone-did', confirmFrame());
+
+    $taken = outbox()->takeFor('phone-did', 8);
+    outbox()->confirmDelivered(array_column($taken, 'id'));
+
+    expect(outbox()->takeFor('phone-did', 8))->toBe([]);
+});
+
+// takeFor() used to mark the row delivered inside its own loop, before the
+// answer had been serialised, let alone sent. A response that never reached the
+// phone therefore destroyed the only copy of the desktop's confirm.
+it('leaves a frame waiting when the collection was never confirmed', function (): void {
     outbox()->queueFor('desktop-did', 'phone-did', confirmFrame());
 
     outbox()->takeFor('phone-did', 8);
 
-    expect(outbox()->takeFor('phone-did', 8))->toBe([]);
+    expect(outbox()->takeFor('phone-did', 8))->toHaveCount(1);
 });
 
 // Epoch wraps wait in this same mailbox for the authenticated sync session to

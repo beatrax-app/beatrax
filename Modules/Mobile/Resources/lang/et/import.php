@@ -12,6 +12,13 @@ return [
     'password' => 'Parool',
     'password_help' => 'Vähemalt 12 märki — parooli lähtestamist ei ole, on ainult taastekoodid.',
     'confirm_password' => 'Kinnita parool',
+
+    'requirements_aria' => 'Parooli nõuded',
+    'req_length' => 'Vähemalt 12 märki',
+    'req_match' => 'Mõlemad paroolid kattuvad',
+    'req_met' => '(täidetud)',
+    'req_unmet' => '(veel täitmata)',
+
     'pin' => 'Rakenduse luku PIN-kood',
     'pin_help' => '6–10 numbrit — avab selle seadme.',
     'confirm_pin' => 'Kinnita PIN-kood',
@@ -37,6 +44,7 @@ return [
     'continue_to_pairing' => 'Jätka sidumisega',
 
     'errors' => [
+        'username_required' => 'Kasutajanimi on kohustuslik.',
         'passwords_mismatch' => 'Paroolid ei kattu.',
         'password_length' => 'Kasuta vähemalt 12 märki.',
         'pin_length' => 'PIN-kood peab olema vähemalt 6 numbrit.',

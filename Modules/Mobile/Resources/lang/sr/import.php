@@ -12,6 +12,13 @@ return [
     'password' => 'Lozinka',
     'password_help' => 'Najmanje 12 znakova — lozinka ne može da se resetuje, postoje samo kodovi za oporavak.',
     'confirm_password' => 'Potvrdi lozinku',
+
+    'requirements_aria' => 'Zahtevi za lozinku',
+    'req_length' => 'Najmanje 12 znakova',
+    'req_match' => 'Obe lozinke se podudaraju',
+    'req_met' => '(ispunjeno)',
+    'req_unmet' => '(još nije ispunjeno)',
+
     'pin' => 'PIN za zaključavanje aplikacije',
     'pin_help' => '6-10 cifara — otključava ovaj uređaj.',
     'confirm_pin' => 'Potvrdi PIN',
@@ -37,6 +44,7 @@ return [
     'continue_to_pairing' => 'Nastavi na uparivanje',
 
     'errors' => [
+        'username_required' => 'Korisničko ime je obavezno.',
         'passwords_mismatch' => 'Lozinke se ne podudaraju.',
         'password_length' => 'Koristi najmanje 12 znakova.',
         'pin_length' => 'PIN mora da ima najmanje 6 cifre.',

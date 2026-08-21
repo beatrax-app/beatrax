@@ -36,7 +36,10 @@ return [
     'errors' => [
         'relay_unreachable' => 'Não é possível alcançar o outro dispositivo. Verifica se ambos estão na mesma rede e se a sincronização está ativada no computador.',
         'invalid_code' => 'Este código é inválido ou expirou. Pede ao outro dispositivo que gere um novo.',
+        'code_not_accepted' => 'Nenhum dispositivo nesta rede aceitou esse código. Verifica o código e se o outro dispositivo ainda o está a mostrar.',
+        'rate_limited' => 'Demasiadas tentativas. Espera um minuto e tenta novamente.',
         'identity_locked' => 'A identidade do teu dispositivo está bloqueada. Desbloqueia a app e tenta novamente.',
         'identity_needs_lock' => 'Configure primeiro o bloqueio da aplicação — é ele que protege a identidade do seu dispositivo.',
+        'safety_number_changed' => 'O outro dispositivo mudou enquanto comparavas. Verifica novamente as palavras abaixo antes de confirmar.',
     ],
 ];

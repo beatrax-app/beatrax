@@ -36,7 +36,10 @@ return [
     'errors' => [
         'relay_unreachable' => 'Druge naprave ni mogoče doseči. Preveri, ali sta obe v istem omrežju in ali je sinhronizacija na namizju vklopljena.',
         'invalid_code' => 'Ta koda ni veljavna ali je potekla. Prosi drugo napravo, naj ustvari novo.',
+        'code_not_accepted' => 'Nobena naprava v tem omrežju ni sprejela te kode. Preveri kodo in ali jo druga naprava še vedno prikazuje.',
+        'rate_limited' => 'Preveč poskusov. Počakaj minuto in poskusi znova.',
         'identity_locked' => 'Identiteta tvoje naprave je zaklenjena. Odkleni aplikacijo in poskusi znova.',
         'identity_needs_lock' => 'Najprej nastavite zaklepanje aplikacije — ščiti identiteto vaše naprave.',
+        'safety_number_changed' => 'Druga naprava se je med primerjanjem spremenila. Pred potrditvijo znova preveri spodnje besede.',
     ],
 ];

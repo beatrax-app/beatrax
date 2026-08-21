@@ -82,9 +82,13 @@ final class PairingFlowModal extends Component
     #[Locked]
     public string $side = '';
 
+    // #[Locked] — this is what the confirmation digest is taken from, so an
+    // unlocked property would let the client decide what its own tap is bound
+    // to. Every writer below is server-side.
     /**
      * @var list<string>
      */
+    #[Locked]
     public array $safetyWords = [];
 
     // Shown beside the words so the user confirms WHICH two devices are
@@ -110,7 +114,7 @@ final class PairingFlowModal extends Component
         CurrentUser $currentUser,
         Dispatcher $events,
         PairingGateway $gateway,
-        PairingFrameCourier $relayCourier,
+        PairingFrameCourier $frameCourier,
         LoggerInterface $logger,
         Session $session,
         DeviceRegistryService $registry,
@@ -136,7 +140,7 @@ final class PairingFlowModal extends Component
         $this->safetyWords = [];
         $this->open = true;
 
-        $this->resumeInFlight($userId, $gateway, $relayCourier, $logger, $session, $registry);
+        $this->resumeInFlight($userId, $gateway, $frameCourier, $logger, $session, $registry);
     }
 
     // Picks up a handshake that is still live. This modal's poll is the only
@@ -145,13 +149,13 @@ final class PairingFlowModal extends Component
     private function resumeInFlight(
         int $userId,
         PairingGateway $gateway,
-        PairingFrameCourier $relayCourier,
+        PairingFrameCourier $frameCourier,
         LoggerInterface $logger,
         Session $session,
         DeviceRegistryService $registry,
     ): void {
         try {
-            $relayCourier->drainAndApply($userId);
+            $frameCourier->drainAndApply($userId);
         } catch (Throwable $e) {
             $logger->warning('PairingFlowModal: relay drain failed while resuming.', [
                 'user_id' => $userId,
@@ -182,6 +186,8 @@ final class PairingFlowModal extends Component
         $this->pairingTokenId = (string) $inFlight['id'];
         $this->safetyWords = $inFlight['safety_words'];
         $this->side = $side;
+        $this->awaitingPeer = $inFlight['state'] !== PairingState::Confirmed->value
+            && ($side === 'initiator' ? $inFlight['initiator_confirmed'] : $inFlight['responder_confirmed']);
 
         // A confirmed handshake is finished, and re-presenting the trust gate
         // asked for a safety-number confirmation that confirm() then refuses
@@ -330,7 +336,7 @@ final class PairingFlowModal extends Component
         EncryptionMigrationService $migrationService,
         PairingGateway $gateway,
         LoggerInterface $logger,
-        PairingFrameCourier $relayCourier,
+        PairingFrameCourier $frameCourier,
         PreSyncHistoryCapture $historyCapture,
         DeviceRegistryService $registry,
     ): void {
@@ -345,7 +351,7 @@ final class PairingFlowModal extends Component
         // PAIR_CONFIRM. drainAndApply() is designed to never throw; the
         // try/catch here is defense-in-depth regardless.
         try {
-            $relayCourier->drainAndApply($userId);
+            $frameCourier->drainAndApply($userId);
         } catch (Throwable $e) {
             $logger->warning('PairingFlowModal: cross-device relay drain failed during poll.', [
                 'user_id' => $userId,
@@ -363,14 +369,15 @@ final class PairingFlowModal extends Component
         }
 
         // A confirm the peer deferred, or lost in flight, is otherwise never
-        // sent again and the ceremony finishes on one device only. Gated on
-        // having actually confirmed — sending it sooner would assert a
-        // confirmation never given.
-        if ($this->awaitingPeer && $row->state !== PairingState::Confirmed->value) {
+        // sent again and the ceremony finishes on one device only. Gated on the
+        // row's own stamp, not on a flag a refusal also sets: re-emitting after
+        // a refused tap asserts a confirmation confirm() declined to record.
+        if ($row->state !== PairingState::Confirmed->value
+            && $gateway->hasConfirmedLocally((int) $this->pairingTokenId, $userId, $session)) {
             $identity = $identityLoader->load($userId, $session);
 
             if ($identity !== null) {
-                $this->sendConfirmOverRelay($db, $relayCourier, $identity, $logger, $userId);
+                $this->sendConfirmToPeer($db, $frameCourier, $identity, $logger, $userId);
             }
         }
 
@@ -435,7 +442,7 @@ final class PairingFlowModal extends Component
         DatabaseManager $db,
         PairingGateway $gateway,
         LoggerInterface $logger,
-        PairingFrameCourier $relayCourier,
+        PairingFrameCourier $frameCourier,
         RelayConfig $relayConfig,
         PreSyncHistoryCapture $historyCapture,
         SafetyNumberDeriver $safetyDeriver,
@@ -462,7 +469,7 @@ final class PairingFlowModal extends Component
             (int) $this->pairingTokenId,
             $userId,
             $identity->deviceId,
-            self::safetyDigestOf($this->safetyWords),
+            $gateway->safetyDigestOf($this->safetyWords),
         );
 
         // Refused: the keys behind those words are not the keys on the row any
@@ -479,7 +486,7 @@ final class PairingFlowModal extends Component
 
         // Safe regardless of $state: the frame is only consumable once the
         // peer's own local side has confirmed too.
-        $this->sendConfirmOverRelay($db, $relayCourier, $identity, $logger, $userId);
+        $this->sendConfirmToPeer($db, $frameCourier, $identity, $logger, $userId);
 
         if ($state === PairingState::Confirmed->value) {
             $this->awaitingPeer = false;
@@ -632,17 +639,6 @@ final class PairingFlowModal extends Component
         $this->dispatch('pairing-closed');
     }
 
-    // The fingerprint of what was actually shown. SafetyNumberDeriver::digestFor()
-    // produces the same value from the keys, which is what makes the comparison
-    // meaningful rather than circular.
-    /**
-     * @param  array<int, string>  $words
-     */
-    private static function safetyDigestOf(array $words): string
-    {
-        return $words === [] ? '' : hash('sha256', implode('|', $words));
-    }
-
     public function render(ViewFactory $views): View
     {
         return $views->make('sync::livewire.pairing-flow-modal');
@@ -652,9 +648,9 @@ final class PairingFlowModal extends Component
     // frame for collection, so returning early on an unconfigured relay left a
     // LAN-only pairing confirmed on one device and not the other. Best-effort —
     // a courier failure is logged, never flashed.
-    private function sendConfirmOverRelay(
+    private function sendConfirmToPeer(
         DatabaseManager $db,
-        PairingFrameCourier $relayCourier,
+        PairingFrameCourier $frameCourier,
         DeviceIdentityDto $identity,
         LoggerInterface $logger,
         int $userId,
@@ -681,7 +677,7 @@ final class PairingFlowModal extends Component
         }
 
         try {
-            $relayCourier->sendConfirm($identity, $peerDeviceId, $tokenHash);
+            $frameCourier->sendConfirm($identity, $peerDeviceId, $tokenHash);
         } catch (Throwable $e) {
             $logger->warning('PairingFlowModal: cross-device PAIR_CONFIRM relay delivery failed.', [
                 'pairing_token_id' => $this->pairingTokenId,

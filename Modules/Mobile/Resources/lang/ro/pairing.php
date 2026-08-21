@@ -36,7 +36,10 @@ return [
     'errors' => [
         'relay_unreachable' => 'Celălalt dispozitiv nu poate fi contactat. Asigură-te că ambele sunt în aceeași rețea și că sincronizarea este activată pe desktop.',
         'invalid_code' => 'Acest cod este invalid sau a expirat. Cere celuilalt dispozitiv să genereze unul nou.',
+        'code_not_accepted' => 'Niciun dispozitiv din această rețea nu a acceptat codul. Verifică codul și dacă celălalt dispozitiv încă îl afișează.',
+        'rate_limited' => 'Prea multe încercări. Așteaptă un minut și încearcă din nou.',
         'identity_locked' => 'Identitatea dispozitivului tău este blocată. Deblochează aplicația și încearcă din nou.',
         'identity_needs_lock' => 'Configurați mai întâi blocarea aplicației — ea protejează identitatea dispozitivului.',
+        'safety_number_changed' => 'Celălalt dispozitiv s-a schimbat în timp ce comparai. Verifică din nou cuvintele de mai jos înainte de a confirma.',
     ],
 ];

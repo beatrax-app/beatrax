@@ -12,6 +12,13 @@ return [
     'password' => 'Salasana',
     'password_help' => 'Vähintään 12 merkkiä — salasanaa ei voi nollata, vain palautuskoodit auttavat.',
     'confirm_password' => 'Vahvista salasana',
+
+    'requirements_aria' => 'Salasanan vaatimukset',
+    'req_length' => 'Vähintään 12 merkkiä',
+    'req_match' => 'Salasanat täsmäävät',
+    'req_met' => '(täyttyy)',
+    'req_unmet' => '(ei vielä täyty)',
+
     'pin' => 'Sovelluslukon PIN-koodi',
     'pin_help' => '6-10 numeroa — avaa tämän laitteen.',
     'confirm_pin' => 'Vahvista PIN-koodi',
@@ -37,6 +44,7 @@ return [
     'continue_to_pairing' => 'Jatka laiteparin muodostukseen',
 
     'errors' => [
+        'username_required' => 'Käyttäjätunnus on pakollinen.',
         'passwords_mismatch' => 'Salasanat eivät täsmää.',
         'password_length' => 'Käytä vähintään 12 merkkiä.',
         'pin_length' => 'PIN-koodissa on oltava vähintään 6 numeroa.',

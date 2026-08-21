@@ -36,7 +36,10 @@ return [
     'errors' => [
         'relay_unreachable' => 'Cannot reach the other device. Make sure both are on the same network and sync is enabled on the desktop.',
         'invalid_code' => 'This code is invalid or has expired. Ask the other device to generate a new one.',
+        'code_not_accepted' => 'No device on this network accepted that code. Check the code, and that the other device is still showing it.',
+        'rate_limited' => 'Too many attempts. Wait a minute and try again.',
         'identity_locked' => 'Your device identity is locked. Unlock the app and try again.',
         'identity_needs_lock' => 'Set up the app lock first — your device identity is protected by it.',
+        'safety_number_changed' => 'The other device changed while you were comparing. Check the words below against it again before confirming.',
     ],
 ];

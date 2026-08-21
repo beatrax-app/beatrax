@@ -12,6 +12,13 @@ return [
     'password' => 'Geslo',
     'password_help' => 'Vsaj 12 znakov — ponastavitev gesla ni mogoča, na voljo so le kode za obnovitev.',
     'confirm_password' => 'Potrdi geslo',
+
+    'requirements_aria' => 'Zahteve za geslo',
+    'req_length' => 'Vsaj 12 znakov',
+    'req_match' => 'Gesli se ujemata',
+    'req_met' => '(izpolnjeno)',
+    'req_unmet' => '(še ni izpolnjeno)',
+
     'pin' => 'PIN za zaklep aplikacije',
     'pin_help' => '6-10 števk — odklene to napravo.',
     'confirm_pin' => 'Potrdi PIN',
@@ -37,6 +44,7 @@ return [
     'continue_to_pairing' => 'Nadaljuj na seznanjanje',
 
     'errors' => [
+        'username_required' => 'Uporabniško ime je obvezno.',
         'passwords_mismatch' => 'Gesli se ne ujemata.',
         'password_length' => 'Uporabi vsaj 12 znakov.',
         'pin_length' => 'PIN mora imeti vsaj 6 števke.',

@@ -12,6 +12,13 @@ return [
     'password' => 'Parolă',
     'password_help' => 'Cel puțin 12 caractere — nu există resetare a parolei, doar coduri de recuperare.',
     'confirm_password' => 'Confirmă parola',
+
+    'requirements_aria' => 'Cerințe pentru parolă',
+    'req_length' => 'Cel puțin 12 caractere',
+    'req_match' => 'Ambele parole coincid',
+    'req_met' => '(îndeplinit)',
+    'req_unmet' => '(încă neîndeplinit)',
+
     'pin' => 'Cod PIN pentru blocarea aplicației',
     'pin_help' => '6-10 cifre — deblochează acest dispozitiv.',
     'confirm_pin' => 'Confirmă codul PIN',
@@ -37,6 +44,7 @@ return [
     'continue_to_pairing' => 'Continuă spre împerechere',
 
     'errors' => [
+        'username_required' => 'Numele de utilizator este obligatoriu.',
         'passwords_mismatch' => 'Parolele nu se potrivesc.',
         'password_length' => 'Folosește cel puțin 12 caractere.',
         'pin_length' => 'Codul PIN trebuie să aibă cel puțin 6 cifre.',

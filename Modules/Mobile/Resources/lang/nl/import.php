@@ -12,6 +12,13 @@ return [
     'password' => 'Wachtwoord',
     'password_help' => 'Minimaal 12 tekens — er is geen wachtwoordherstel, alleen herstelcodes.',
     'confirm_password' => 'Bevestig wachtwoord',
+
+    'requirements_aria' => 'Wachtwoordvereisten',
+    'req_length' => 'Minimaal 12 tekens',
+    'req_match' => 'Beide wachtwoorden komen overeen',
+    'req_met' => '(voldaan)',
+    'req_unmet' => '(nog niet voldaan)',
+
     'pin' => 'App-vergrendeling pincode',
     'pin_help' => '6-10 cijfers — ontgrendelt dit apparaat.',
     'confirm_pin' => 'Bevestig pincode',
@@ -37,6 +44,7 @@ return [
     'continue_to_pairing' => 'Doorgaan naar koppelen',
 
     'errors' => [
+        'username_required' => 'Gebruikersnaam is verplicht.',
         'passwords_mismatch' => 'Wachtwoorden komen niet overeen.',
         'password_length' => 'Gebruik minimaal 12 tekens.',
         'pin_length' => 'De pincode moet minimaal 6 cijfers hebben.',

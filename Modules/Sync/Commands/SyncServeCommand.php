@@ -15,6 +15,7 @@ use Modules\Sync\Internal\Pairing\PairingFrameApplier;
 use Modules\Sync\Internal\Pairing\PairingOfferRateLimiter;
 use Modules\Sync\Internal\Pairing\PairingOfferService;
 use Modules\Sync\Internal\Pairing\PairingPeerOutbox;
+use Modules\Sync\Internal\Pairing\PairingPullAuthorizer;
 use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
 use Modules\Sync\Internal\Transport\Discovery\MdnsAdvertiser;
 use Modules\Sync\Internal\Transport\PairingFramePullHandler;
@@ -46,6 +47,7 @@ final class SyncServeCommand extends Command
         private readonly PairingOfferRateLimiter $offerRateLimiter,
         private readonly PairingFrameApplier $frameApplier,
         private readonly PairingPeerOutbox $peerOutbox,
+        private readonly PairingPullAuthorizer $pullAuthorizer,
     ) {
         parent::__construct();
     }
@@ -98,11 +100,14 @@ final class SyncServeCommand extends Command
             );
 
             // The return leg. Only this side listens — a phone runs no server —
-            // so frames addressed to a phone wait here until it collects them.
+            // so frames addressed to a phone wait here until it proves who it
+            // is and collects them.
             $pullHandler = new PairingFramePullHandler(
                 $frameHandler,
                 $this->peerOutbox,
-                $this->offerRateLimiter->withLimit(PairingFrameRequestHandler::MAX_PER_WINDOW),
+                $this->offerRateLimiter->withLimit(PairingFramePullHandler::MAX_PER_WINDOW),
+                $this->pullAuthorizer,
+                $handler->localUserId(),
             );
 
             // A device holding only a typed word-code has no way to learn this

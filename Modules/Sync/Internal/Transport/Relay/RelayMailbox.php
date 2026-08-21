@@ -6,6 +6,7 @@ namespace Modules\Sync\Internal\Transport\Relay;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Sync\Internal\Clock\ZuluTimestamp;
 
 final readonly class RelayMailbox
 {
@@ -30,10 +31,8 @@ final readonly class RelayMailbox
      */
     public function deliver(string $senderDid, string $recipientDid, string $blob): void
     {
-        $now = $this->assertZulu($this->clock->now()->toIso8601ZuluString());
-        $expiresAt = $this->assertZulu(
-            $this->clock->now()->addDays(self::UNDELIVERED_TTL_DAYS)->toIso8601ZuluString()
-        );
+        $now = ZuluTimestamp::stamp($this->clock->now());
+        $expiresAt = ZuluTimestamp::stamp($this->clock->now()->addDays(self::UNDELIVERED_TTL_DAYS));
 
         $this->db->connection()->table('relay_mailbox')->insert([
             'sender_did' => $senderDid,
@@ -85,7 +84,12 @@ final readonly class RelayMailbox
             ->table('relay_mailbox')
             ->where('recipient_did', $recipientDid)
             ->whereNull('delivered_at')
+            // Insert order, not just second order. Epoch wraps are enqueued as
+            // a batch inside one transaction, so they share a timestamp, and a
+            // tie the database broke its own way decided which epoch the
+            // recipient ended up treating as current.
             ->orderBy('created_at')
+            ->orderBy('id')
             ->limit($limit)
             ->get()
             ->all();
@@ -114,10 +118,8 @@ final readonly class RelayMailbox
      */
     public function confirm(int $id): void
     {
-        $now = $this->assertZulu($this->clock->now()->toIso8601ZuluString());
-        $newExpiresAt = $this->assertZulu(
-            $this->clock->now()->addDays(self::DELIVERED_TTL_DAYS)->toIso8601ZuluString()
-        );
+        $now = ZuluTimestamp::stamp($this->clock->now());
+        $newExpiresAt = ZuluTimestamp::stamp($this->clock->now()->addDays(self::DELIVERED_TTL_DAYS));
 
         $this->db->connection()
             ->table('relay_mailbox')
@@ -132,30 +134,11 @@ final readonly class RelayMailbox
     // zero-padded and lexicographic order matches chronological order.
     public function garbageCollect(): int
     {
-        $now = $this->assertZulu($this->clock->now()->toIso8601ZuluString());
+        $now = ZuluTimestamp::stamp($this->clock->now());
 
         return $this->db->connection()
             ->table('relay_mailbox')
             ->where('expires_at', '<', $now)
             ->delete();
-    }
-
-    // The GC compares expires_at as a lexical string, which is only correct
-    // when every timestamp shares the same zero-padded Zulu format — an
-    // offset form (e.g. +02:00) would sort incorrectly and either GC live
-    // blobs early or never. This guard makes that invariant explicit.
-    /**
-     * @throws \LogicException when $ts is not in Zulu ISO8601 form.
-     */
-    private function assertZulu(string $ts): string
-    {
-        if (preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/', $ts) !== 1) {
-            throw new \LogicException(
-                "RelayMailbox: timestamp '{$ts}' is not zero-padded UTC Zulu ISO8601. "
-                .'Lexical expires_at GC comparison requires the Zulu form.'
-            );
-        }
-
-        return $ts;
     }
 }

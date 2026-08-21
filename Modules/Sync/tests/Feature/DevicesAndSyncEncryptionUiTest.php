@@ -81,11 +81,55 @@ it('(c) encryption on: shows "Data encrypted at rest" + the On badge, and hides 
         ->set('syncEnabled', true)
         ->set('encryptionOn', true)
         ->assertSee('Data encrypted at rest')
-        ->assertSee('Your data is secured with your app-lock passphrase.')
+        ->assertSee('Notes, transaction descriptions and the names and IBANs of who you pay are encrypted')
         ->assertSee('On')
         ->assertDontSee('enable-encryption-cta', escape: false)
         ->assertDontSee('encryption-securing-notice', escape: false)
         ->assertDontSee('encryption-offer-notice', escape: false);
+});
+
+// The status row is the surface an at-rest audit caught lying: it read "Your
+// data is secured with your app-lock passphrase" beside a database file whose
+// accounts.iban, accounts.name and both slug columns are readable with no key,
+// and whose search index keeps merchant names in the clear. A reader deciding
+// whether their merchant history is safe reads THIS row, not the enable modal
+// they passed through once, so the same disclosure has to hold here.
+it('the encryption-on status row names what at-rest encryption does not cover, and never restates the unqualified promise', function (): void {
+    $user = encryptionUiUser('encryption-ui-honest-status');
+    $this->actingAs($user);
+
+    Livewire::test(DevicesAndSyncSettingsSection::class)
+        ->set('appLockConfigured', true)
+        ->set('syncEnabled', true)
+        ->set('encryptionOn', true)
+        ->assertSee('Amounts, dates and your own account name and IBAN are not')
+        ->assertSee('some merchant names still appear in plain text elsewhere in the database file')
+        ->assertDontSee('Your data is secured with your app-lock passphrase.');
+});
+
+it('offers the honest scope line in every locale, with the unqualified promise retired everywhere', function (): void {
+    $root = dirname(__DIR__, 2).'/Resources/lang';
+    $locales = array_values(array_filter(scandir($root) ?: [], static fn (string $entry): bool => ! str_starts_with($entry, '.')));
+
+    expect($locales)->toHaveCount(26);
+
+    $missing = [];
+    $stale = [];
+    foreach ($locales as $locale) {
+        /** @var array<string, mixed> $devices */
+        $devices = require $root.'/'.$locale.'/devices.php';
+
+        $scope = $devices['encrypted_at_rest_scope'] ?? null;
+        if (! is_string($scope) || $scope === '') {
+            $missing[] = $locale;
+        }
+        if (array_key_exists('encrypted_at_rest_help', $devices)) {
+            $stale[] = $locale;
+        }
+    }
+
+    expect($missing)->toBe([]);
+    expect($stale)->toBe([]);
 });
 
 it('the enable-encryption confirm step discloses amounts + search-index plaintext honestly, with no forbidden overstating phrases', function (): void {

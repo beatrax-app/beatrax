@@ -35,7 +35,7 @@ accumulate.
 
 `expires_at` is a TEXT column compared **lexically** in SQL, by several writers and more
 readers. That is correct only while every value shares one zero-padded **Zulu** format, so
-`PairingExpiry::stamp()` is the single way any of them produces one: it converts to UTC *and*
+`ZuluTimestamp::stamp()` is the single way any of them produces one: it converts to UTC *and*
 asserts the shape, and throws rather than writing a value the comparison cannot order.
 
 The invariant used to be asserted in a comment instead, and the comment was wrong —
@@ -48,8 +48,9 @@ and need not have inherited the same `TZ`. An offset form sorts against a Zulu `
 local hour digits, so the failure is quiet in both directions — a good code refused, or a TTL
 that silently stretches by the size of the offset.
 
-The same invariant is enforced the same way, and for the same reason, on `relay_mailbox`
-(`RelayMailbox::assertZulu()`).
+`relay_mailbox.expires_at` is compared the same way for the same reason, and goes through the
+same call — one implementation with one error message, rather than a second copy of the rule in
+`RelayMailbox` that could drift from this one.
 
 Rows written before the guard existed are **deleted**, not rewritten
 (`2026_08_21_000001_drop_pairing_tokens_written_at_a_local_offset`). A mixed-format column
@@ -143,21 +144,51 @@ Accepting extends the window by five minutes — but only ever **grows** it. The
 `max(existing expiry, now + grace)`, so an accept that arrives early cannot shorten a
 handshake that still has longer to run.
 
+### Nothing writes `expired`; the lapse is derived at read time
+
+The `expired` edge in the diagram above is never a write. `expire()` runs only from an explicit
+user cancel, and `prune()` **deletes** rather than marks and runs only when a *new* token is
+minted — which the device that is merely waiting on a safety number never does. There is no
+sweeper, and on a phone there could not usefully be one.
+
+So the TTL lapse is derived wherever the row is read: `hasLiveHandshake()` and `inFlight()` do it
+with `expires_at > ZuluTimestamp::stamp(now)` in SQL, and `PairingTokenRowReader::state()` — the
+one the responder's 3-second poll goes through — does it in PHP, returning `expired` for a row
+whose column still says `pending` or `awaiting_confirm`. Without it the phone's poll had the
+right branch and could never reach it: the screen said "waiting for the other device" for as
+long as it was left open, minutes after the token had died and the retry loop had given up.
+
+Only `pending` and `awaiting_confirm` lapse (`PairingState::lapsesOnTtl()`). A `confirmed` row
+past its expiry confirmed while it was still live — `confirm()` and `PeerConfirmVerifier` both
+refuse past the TTL — and its trust already sits in `device_registry`, so reporting it as expired
+would retract a pairing that really happened, which is what a phone backgrounded across the
+boundary would have seen.
+
 `confirm()` derives which side is confirming from the **caller's own device id**, never from
 a client-supplied string. A device can only ever confirm the side it actually owns; an
 unknown token and a device that owns neither side collapse to the same refusal.
 
-## The relayed frames
+## The two frames
 
-When the two devices are not on the same LAN, two frames travel via the relay.
+Two frames carry the halves neither device can compute for itself. They take whichever road is
+open — see [The two roads](#the-two-roads-and-why-the-lan-one-had-to-be-built).
 
 **`PAIR_RESPONDER_ACCEPT`** (phone → desktop) carries the responder's device id and public
 keys so the desktop's local row can bind them. It makes no trust decision. Applying it is
-idempotent for a redelivery of the *same* responder and refuses a *different* one — first
-binding wins. Unlike `accept()`, the lookup deliberately has no state filter: a redelivered
-frame has to be recognisable as idempotent even after the row has already advanced past
-`pending`. Anything terminal, expired into another state, or unrecognised fails closed
-rather than re-opening a handshake that has moved on.
+idempotent for a redelivery of the *same* responder, and a *different* one may still take the
+slot while nobody has confirmed anything — see
+[What a confirmation is bound to](#what-a-confirmation-is-bound-to) for why replacement had to
+be allowed and what stops it becoming a capture. Unlike `accept()`, the lookup deliberately has
+no state filter: a redelivered frame has to be recognisable as idempotent even after the row
+has already advanced past `pending`. Anything terminal, expired into another state, or
+unrecognised fails closed rather than re-opening a handshake that has moved on.
+
+Two frames are refused outright, whichever road they arrived by: one naming **this** device as
+the responder, and one that would replace a responder slot **this** device already occupies. A
+device binds its own side through `accept()` and never through an inbound frame, so neither can
+come from an honest peer — and a phone that applied one would find itself owning neither side of
+its own row, unable to confirm the pairing it started. That is a permanent denial from a single
+hostile answer to the phone's own collection request, which is the road such a frame arrives by.
 
 **`PAIR_CONFIRM`** is Ed25519-signed by the confirming device's own secret key, which the
 relay never holds and therefore cannot forge. `PairingFrame::confirmSigningMessage()` covers,
@@ -246,7 +277,7 @@ never a trust decision.
 
 ## Draining the mailbox
 
-`PairingRelayCourier::drainAndApply()` polls this device's own relay mailbox. It never throws
+`PairingFrameCourier::drainAndApply()` polls this device's own relay mailbox. It never throws
 out of the poll — a missing self device, an unconfigured relay, a drain secret that cannot be
 minted and a transient relay outage all collapse to "nothing to poll".
 
@@ -288,16 +319,56 @@ the upgrade, answered by the listener itself.
 | Route | Direction | Who answers |
 |---|---|---|
 | `POST /pair/frame` | responder → initiator | the listening device applies it |
-| `GET /pair/frames?device=` | initiator → responder | the listening device hands over what is waiting |
+| `GET /pair/frames?device=&proof=` | initiator → responder | the listening device hands over what is waiting, once the caller has proved it is that device |
 
 Two routes rather than one because only ONE side of a pairing listens. The desktop
 runs the daemon; a phone runs no server and advertises nothing, so it can never be
 dialled. Rather than the desktop pushing, the phone collects on the three-second
 poll it already runs.
 
+`POST /pair/frame` answers **204** when it applied the frame, **202** when it is
+holding one it cannot finish yet, and **404** for a refusal it will never change
+its mind about. The 202 exists because `Deferred` is not `Applied`: a valid
+`PAIR_CONFIRM` waits until the local human has compared the words, and answering
+204 told the sender the opposite of what the enum means. Both 204 and 202 mean the
+peer received it, so the relay does not get a second turn either way.
+
+### Proving you are the device the frames are for
+
+`sync:serve` binds `0.0.0.0`, so this route is reachable by anything on the wifi —
+and it serves the same `relay_mailbox` rows that `GET /relay/drain` protects with a
+per-device bearer token. Naming a device id cannot be the qualification: device ids
+are advertised over mDNS, and the blobs handed back carry the `token_hash` an
+attacker needs to rebind a live pairing.
+
+So the caller signs. `PairingFrame::pullProofMessage()` is a domain-separated
+message over the collecting device's own id, signed with its Ed25519 secret key,
+and `PairingPullAuthorizer` verifies it against the public half **the listener's own
+pairing row already bound for that device**. Ordering makes that possible: nothing
+is ever waiting for a device the row has not bound, because the desktop's confirm
+only exists after the phone's accept landed.
+
+The proof carries no timestamp and does not expire within the handshake, which is
+deliberate. An attacker who can observe a pull request can already read the plain
+`http` response it produces, so replay grants nothing the transport did not. What
+the signature does remove is the attacker who can *send* but not *see* — every
+other host on the subnet. A clock-skew window would have bought nothing and cost a
+phone whose clock is wrong its entire return leg.
+
+An unproven caller gets the same `{"frames":[]}` a device with nothing waiting
+gets. Which pairings are in flight is exactly what a prober would like to learn.
+
 `PairingFrameCourier::deliver()` tries the LAN, then the relay, then holds the frame
 in `PairingPeerOutbox` for collection. The fallback is silent by design: which road
-a frame took is not something the reader chose or can act on.
+a frame took is not something the reader chose or can act on. *Any* relay failure
+falls through to the holding space, not only a refusal — a relay that is configured
+but unreachable is the case the holding space most exists for, and a transport-level
+exception used to escape the catch and lose the frame.
+
+`takeFor()` hands out row ids alongside the frames and marks nothing delivered.
+The route confirms them only once the answer has been serialised, so a response
+that never got built leaves the frames waiting rather than destroying the only copy
+of the desktop's confirm.
 
 The outbox reuses `relay_mailbox` rather than adding a table. The shape is already
 right — routed by device id, one pending index, its own garbage collection — and a
@@ -310,6 +381,22 @@ This is not a new trust boundary. These frames already crossed a channel that
 authenticates nothing, the relay being deliberately zero-knowledge, so every
 guarantee lives inside the frame. Carrying them over the LAN removes a third party
 rather than adding one.
+
+### One browse per poll
+
+`MulticastMdnsQuery::browse()` always burns its full two-second timeout — it collects
+answers until the deadline and never returns early. A pairing poll asks three times:
+the frame puller, the responder-accept delivery, and the confirm re-emit. Six seconds
+of blocking work inside a three-second poll, before any of the requests that follow.
+
+`CachedPeerDiscovery` sits in front of it as the container's `PeerDiscovery`, holding
+one answer per service type for 2.5 seconds — shorter than the poll, so each poll
+still gets a fresh browse, and the calls inside one poll share it. Peers do not move
+mid-ceremony.
+
+The interface is also the seam a test binds: `Http::fake()` never reached the
+multicast socket underneath, so tests of this path answered from whatever happened to
+be advertising on the machine running them.
 
 ## Opening the pairing screen must not restart the listener
 
@@ -354,7 +441,28 @@ replacement fixes the denial; binding the confirmation to the compared keys is w
 stops the replacement becoming a capture.
 
 The digest is over the derived words, not the keys, so it is exactly the thing the
-two humans compared and is order-independent for the same reason `derive()` is.
+two humans compared and is order-independent for the same reason `derive()` is. It is
+computed in one place — `SafetyNumberDeriver::digestOfWords()`, reached from a screen
+through `PairingGateway::safetyDigestOf()`. A caller with its own copy of the formula
+would keep computing the old value if the formula ever changed, and every confirmation
+would be silently refused.
+
+The keys the digest matched ride in the `WHERE` of the `UPDATE` that stamps the
+confirmation, rather than being checked and then trusted: a rebind landing between the
+two matches no row, so nothing is stamped.
+
+A refusal is a *rendered* refusal on both screens. `confirm()` returns `null` for two
+different things — this device owns neither side, and the keys behind the shown words
+have moved — and both need the confirm step to say so, re-derive the words from what the
+row now binds, and leave the button pressable. Reported as silence it is a spinner that
+never resolves, which is the denial the replacement rule was introduced to remove.
+
+The re-emit that follows is gated on the row's own `*_confirmed_at` column for this
+side, never on the screen's `awaitingPeer` flag. The flag is set by the refusal path
+too, so gating on it shipped a signed `PAIR_CONFIRM` every three seconds asserting a
+confirmation `confirm()` had explicitly declined to record. Reading the row also
+survives the screen: a modal closed and reopened has forgotten that it tapped, and used
+to stop re-emitting for a peer still waiting.
 
 ## See also
 
