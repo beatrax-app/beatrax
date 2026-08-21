@@ -11,7 +11,7 @@ return [
     'show_my_code' => 'Näytä koodini',
     'show_my_code_help' => 'Näytä tämän laitteen QR- ja sanakoodi toiselle laitteelle.',
     'enter_a_code' => 'Syötä koodi',
-    'enter_a_code_help' => 'Kirjoita tai skannaa toisella laitteella näkyvä koodi.',
+    'enter_a_code_help' => 'Kirjoita toisella laitteella näkyvä koodi.',
 
     'show_this_code' => 'Näytä tämä koodi',
     'enter_on_other' => 'Syötä tämä koodi toiselle laitteelle tai anna sen skannata QR-koodi.',

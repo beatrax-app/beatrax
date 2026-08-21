@@ -11,7 +11,7 @@ return [
     'show_my_code' => 'Zobraziť môj kód',
     'show_my_code_help' => 'Zobrazí QR a slovný kód tohto zariadenia pre druhé zariadenie.',
     'enter_a_code' => 'Zadať kód',
-    'enter_a_code_help' => 'Napíš alebo naskenuj kód zobrazený na druhom zariadení.',
+    'enter_a_code_help' => 'Napíš kód zobrazený na druhom zariadení.',
 
     'show_this_code' => 'Zobraziť tento kód',
     'enter_on_other' => 'Zadaj tento kód na druhom zariadení alebo ho nechaj naskenovať QR.',

@@ -11,7 +11,7 @@ return [
     'show_my_code' => 'Arată codul meu',
     'show_my_code_help' => 'Afișează codul QR și codul din cuvinte ale acestui dispozitiv pentru celălalt dispozitiv.',
     'enter_a_code' => 'Introdu un cod',
-    'enter_a_code_help' => 'Tastează sau scanează codul afișat pe celălalt dispozitiv.',
+    'enter_a_code_help' => 'Tastează codul afișat pe celălalt dispozitiv.',
 
     'show_this_code' => 'Arată acest cod',
     'enter_on_other' => 'Introdu acest cod pe celălalt dispozitiv sau lasă-l să scaneze codul QR.',

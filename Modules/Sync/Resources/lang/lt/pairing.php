@@ -11,7 +11,7 @@ return [
     'show_my_code' => 'Rodyti mano kodą',
     'show_my_code_help' => 'Parodo šio įrenginio QR ir žodinį kodą kitam įrenginiui.',
     'enter_a_code' => 'Įvesti kodą',
-    'enter_a_code_help' => 'Įvesk arba nuskaityk kitame įrenginyje rodomą kodą.',
+    'enter_a_code_help' => 'Įvesk kitame įrenginyje rodomą kodą.',
 
     'show_this_code' => 'Rodyti šį kodą',
     'enter_on_other' => 'Įvesk šį kodą kitame įrenginyje arba leisk jam nuskaityti QR.',

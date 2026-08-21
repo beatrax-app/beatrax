@@ -11,7 +11,7 @@ return [
     'show_my_code' => 'Kodumu göster',
     'show_my_code_help' => 'Bu cihazın QR kodunu ve kelime kodunu diğer cihaz için göster.',
     'enter_a_code' => 'Kod gir',
-    'enter_a_code_help' => 'Diğer cihazda görünen kodu yaz veya tara.',
+    'enter_a_code_help' => 'Diğer cihazda görünen kodu yaz.',
 
     'show_this_code' => 'Bu kodu göster',
     'enter_on_other' => 'Bu kodu diğer cihaza gir veya QR kodunu ona tarat.',

@@ -11,7 +11,7 @@ return [
     'show_my_code' => 'Afficher mon code',
     'show_my_code_help' => 'Affiche le QR et le code en mots de cet appareil pour l\'autre appareil.',
     'enter_a_code' => 'Saisir un code',
-    'enter_a_code_help' => 'Tape ou scanne le code affiché sur l\'autre appareil.',
+    'enter_a_code_help' => 'Tape le code affiché sur l\'autre appareil.',
 
     'show_this_code' => 'Afficher ce code',
     'enter_on_other' => 'Saisis ce code sur l\'autre appareil, ou laisse-le scanner le QR.',
