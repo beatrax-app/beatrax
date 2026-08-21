@@ -7,6 +7,7 @@ use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyExceptio
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Http\Livewire\PairingFlowModal;
+use Modules\Sync\Public\Enums\PairingWizardStep;
 
 uses(RefreshDatabase::class);
 
@@ -53,4 +54,21 @@ it('names the pairing dialog after the step the reader is on', function (): void
 
     expect($html)->toContain('id="pairing-modal-title"')
         ->and($html)->toContain("setAttribute('aria-labelledby', 'pairing-modal-title')");
+});
+
+// $step carries no #[Locked], so the client decides what arrives in it. Typing
+// it as a backed enum would make a crafted value a 500 rather than a harmless
+// fallback, which is why the property stays a string and is read back with
+// tryFrom().
+it('renders the first step when a step outside the wizard arrives from the wire', function (): void {
+    $user = lockedQrUser('pairing-bogus-step');
+
+    $html = (string) Livewire::actingAs($user)
+        ->test(PairingFlowModal::class)
+        ->set('step', 'not-a-step')
+        ->assertSet('step', 'not-a-step')
+        ->html();
+
+    expect($html)->toContain('pairing-step-'.PairingWizardStep::ChooseDirection->value)
+        ->and($html)->toContain('id="pairing-modal-title"');
 });

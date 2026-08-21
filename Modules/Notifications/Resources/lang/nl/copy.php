@@ -38,7 +38,7 @@ return [
         'nothing_notable' => 'Er vraagt niets om je aandacht.',
         'flow' => 'In :in, uit :out, netto :net.',
         'over_budget' => ':amount over budget tot nu toe.',
-        'payments_due' => '1 betaling deze periode.|:count betalingen deze periode.',
+        'payments_due' => ':count betaling deze periode.|:count betalingen deze periode.',
         'shortfall' => 'Er komt een kastekort aan.',
     ],
 ];

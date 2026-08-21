@@ -1,5 +1,8 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Reports\Internal\Enums\ReportCurrencyMode')
 @use('Modules\Reports\Internal\Enums\ReportGranularity')
+@use('Modules\Reports\Internal\Enums\ReportPeriodPreset')
+@use('Modules\Reports\Internal\Enums\ReportViz')
 {{--
     The `/reports` live single-page builder — control
     rail (left) + result panel (right, chart above an always-on table).
@@ -44,19 +47,19 @@
         'account' => Lang::get('reports::builder.dimension.account'),
     ];
     $periodLabels = [
-        'this_month' => Lang::get('reports::builder.period.this_month'),
-        'last_3_months' => Lang::get('reports::builder.period.last_3_months'),
-        'last_6_months' => Lang::get('reports::builder.period.last_6_months'),
-        'last_12_months' => Lang::get('reports::builder.period.last_12_months'),
-        'ytd' => Lang::get('reports::builder.period.ytd'),
-        'this_year' => Lang::get('reports::builder.period.this_year'),
-        'custom' => Lang::get('reports::builder.period.custom'),
+        ReportPeriodPreset::ThisMonth->value => Lang::get('reports::builder.period.this_month'),
+        ReportPeriodPreset::Last3Months->value => Lang::get('reports::builder.period.last_3_months'),
+        ReportPeriodPreset::Last6Months->value => Lang::get('reports::builder.period.last_6_months'),
+        ReportPeriodPreset::Last12Months->value => Lang::get('reports::builder.period.last_12_months'),
+        ReportPeriodPreset::Ytd->value => Lang::get('reports::builder.period.ytd'),
+        ReportPeriodPreset::ThisYear->value => Lang::get('reports::builder.period.this_year'),
+        ReportPeriodPreset::Custom->value => Lang::get('reports::builder.period.custom'),
     ];
     $vizLabels = [
-        'table' => Lang::get('reports::builder.viz.table'),
-        'bar' => Lang::get('reports::builder.viz.bar'),
-        'line' => Lang::get('reports::builder.viz.line'),
-        'donut' => Lang::get('reports::builder.viz.donut'),
+        ReportViz::Table->value => Lang::get('reports::builder.viz.table'),
+        ReportViz::Bar->value => Lang::get('reports::builder.viz.bar'),
+        ReportViz::Line->value => Lang::get('reports::builder.viz.line'),
+        ReportViz::Donut->value => Lang::get('reports::builder.viz.donut'),
     ];
 
     $groupHeader = match ($definition->dimension) {
@@ -70,25 +73,6 @@
     $metricLabel = $metricLabels[$definition->metric] ?? Lang::get('reports::builder.metric.fallback');
 
     $hasResults = $displayRows !== [];
-
-    $exportParams = array_filter([
-        'metric' => $metric,
-        'dim' => $dimension,
-        'period' => $periodPreset,
-        'from' => $customFrom !== '' ? $customFrom : null,
-        'to' => $customTo !== '' ? $customTo : null,
-        'gran' => $granularity,
-        'ccy' => $currencyMode,
-        'viz' => $viz,
-        'cmp' => $compare ? '1' : '0',
-        'account' => $filterAccounts,
-        'category' => $filterCategories,
-        'counterparty' => $filterCounterparties,
-        'amount_min' => $filterAmountMin !== '' ? $filterAmountMin : null,
-        'amount_max' => $filterAmountMax !== '' ? $filterAmountMax : null,
-        'amount_dir' => $filterAmountDir,
-    ], static fn (mixed $v): bool => $v !== null && $v !== '');
-    $exportUrl = route('reports.export', $exportParams);
 
     // Headline delta — current total minus the previous-period
     // total, derived from $displayRows' previousAmountMinor (only
@@ -175,7 +159,7 @@
                         >{{ $label }}</button>
                     @endforeach
                 </div>
-                @if ($periodPreset === 'custom')
+                @if ($periodPreset === ReportPeriodPreset::Custom->value)
                     <div class="srch-date-range mt-2">
                         <label for="report-custom-from" class="srch-filter-label">{{ Lang::get('reports::builder.period.from') }}</label>
                         <x-core::date-input field-id="report-custom-from" wire:model.live="customFrom" />
@@ -189,8 +173,8 @@
             <div>
                 <p class="srch-filter-label" style="margin-bottom: var(--space-2);">{{ Lang::get('reports::builder.currency.heading') }}</p>
                 <div class="view-toggle" role="group" aria-label="{{ Lang::get('reports::builder.currency.aria') }}">
-                    <button type="button" wire:click="$set('currencyMode', 'base')" class="{{ $currencyMode === 'base' ? 'active' : '' }} focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" aria-pressed="{{ $currencyMode === 'base' ? 'true' : 'false' }}">{{ Lang::get('reports::builder.currency.base') }}</button>
-                    <button type="button" wire:click="$set('currencyMode', 'original')" class="{{ $currencyMode === 'original' ? 'active' : '' }} focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" aria-pressed="{{ $currencyMode === 'original' ? 'true' : 'false' }}">{{ Lang::get('reports::builder.currency.original') }}</button>
+                    <button type="button" wire:click="$set('currencyMode', '{{ ReportCurrencyMode::Base->value }}')" class="{{ $currencyMode === ReportCurrencyMode::Base->value ? 'active' : '' }} focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" aria-pressed="{{ $currencyMode === ReportCurrencyMode::Base->value ? 'true' : 'false' }}">{{ Lang::get('reports::builder.currency.base') }}</button>
+                    <button type="button" wire:click="$set('currencyMode', '{{ ReportCurrencyMode::Original->value }}')" class="{{ $currencyMode === ReportCurrencyMode::Original->value ? 'active' : '' }} focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" aria-pressed="{{ $currencyMode === ReportCurrencyMode::Original->value ? 'true' : 'false' }}">{{ Lang::get('reports::builder.currency.original') }}</button>
                 </div>
             </div>
 
@@ -308,11 +292,11 @@
                     $chartElementId = 'report-chart-'.$definition->viz;
                 @endphp
 
-                @if ($viz === 'bar')
+                @if ($viz === ReportViz::Bar->value)
                     @include('reports::livewire.partials.report-bar-chart', ['chartElementId' => $chartElementId, 'rows' => $displayRows, 'drilldownUrls' => $drilldownUrls, 'metricLabel' => $metricLabel])
-                @elseif ($viz === 'line')
+                @elseif ($viz === ReportViz::Line->value)
                     @include('reports::livewire.partials.report-line-chart', ['chartElementId' => $chartElementId, 'rows' => $displayRows, 'drilldownUrls' => $drilldownUrls, 'metricLabel' => $metricLabel])
-                @elseif ($viz === 'donut')
+                @elseif ($viz === ReportViz::Donut->value)
                     @include('reports::livewire.partials.report-donut-chart', ['chartElementId' => $chartElementId, 'rows' => $displayRows, 'drilldownUrls' => $drilldownUrls, 'metricLabel' => $metricLabel])
                 @endif
 

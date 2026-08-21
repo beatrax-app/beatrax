@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\DevMode\Internal\Enums\ArgType;
+use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\ArgSpec;
 use Modules\DevMode\Public\Dto\CommandSpec;
@@ -27,7 +29,7 @@ it('binds the concrete CommandRegistry returning 9 SAFE specs', function (): voi
     ]);
 
     foreach ($safe as $spec) {
-        expect($spec->tier)->toBe('safe');
+        expect($spec->tier)->toBe(CommandTier::Safe);
     }
 });
 
@@ -49,7 +51,7 @@ it('binds the concrete CommandRegistry returning 6 DESTRUCTIVE specs', function 
     ]);
 
     foreach ($destructive as $spec) {
-        expect($spec->tier)->toBe('destructive');
+        expect($spec->tier)->toBe(CommandTier::Destructive);
     }
 });
 
@@ -74,7 +76,7 @@ it('returns the matching CommandSpec for a known SAFE-tier name', function (): v
     $spec = $registry->find('cache:clear');
     expect($spec)->toBeInstanceOf(CommandSpec::class);
     expect($spec->name)->toBe('cache:clear');
-    expect($spec->tier)->toBe('safe');
+    expect($spec->tier)->toBe(CommandTier::Safe);
 });
 
 it('returns the matching CommandSpec for a known DESTRUCTIVE-tier name', function (): void {
@@ -84,14 +86,13 @@ it('returns the matching CommandSpec for a known DESTRUCTIVE-tier name', functio
     $spec = $registry->find('db:restore');
     expect($spec)->toBeInstanceOf(CommandSpec::class);
     expect($spec->name)->toBe('db:restore');
-    expect($spec->tier)->toBe('destructive');
+    expect($spec->tier)->toBe(CommandTier::Destructive);
 });
 
 it('exposes ArgSpec entries with non-empty name + Laravel-compatible rules array', function (): void {
     /** @var DevCommandRegistry $registry */
     $registry = app(DevCommandRegistry::class);
 
-    $allowedTypes = ['text', 'select', 'file-path', 'boolean'];
     $allSpecs = array_merge($registry->safe(), $registry->destructive());
     expect($allSpecs)->toHaveCount(15);
 
@@ -100,12 +101,11 @@ it('exposes ArgSpec entries with non-empty name + Laravel-compatible rules array
             expect($arg)->toBeInstanceOf(ArgSpec::class);
             expect($arg->name)->not->toBe('');
             expect($arg->label)->not->toBe('');
-            expect($arg->type)->toBeIn($allowedTypes);
             expect($arg->rules)->toBeArray();
             foreach ($arg->rules as $rule) {
                 expect($rule)->toBeString();
             }
-            if ($arg->type === 'select') {
+            if ($arg->type === ArgType::Select) {
                 expect($arg->options)->toBeArray();
                 expect($arg->options)->not->toBe([]);
             }

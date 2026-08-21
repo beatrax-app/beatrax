@@ -40,7 +40,9 @@ refusal. `MoneyInput::tryToMinor()` accepts the plain (`12.50`),
 Dutch-grouped (`1.234,56`) and comma-decimal (`12,50`) forms, treats
 whichever of `.` or `,` appears rightmost as the decimal separator,
 and returns `null` — never a guess — for anything that is not a
-well-formed amount of at most two decimals. It hands the system an
+well-formed amount of at most two decimals or wider than
+`MoneyInput::MAX_WHOLE_DIGITS` whole digits, the ceiling that keeps the
+minor-unit multiplication inside a 64-bit int. It hands the system an
 `int`, and from there on the invariant holds.
 
 `MoneyInput` also writes the figure back out, for a box the reader is
@@ -62,13 +64,24 @@ remaining hand-rolled formatter (`ManagesSplitEditor`, via a private
 helper on `TransactionDetail`) wrote Dutch into the split-leg boxes
 and now calls `formatAbsMinor()` like everything else.
 
+The machine-readable counterpart is `MoneyInput::toDecimalString()` —
+`"1234.56"`, no symbol and no group mark — and it is likewise the only
+one. `ReportCsvExporter` and `PromoteStagingToDomain` each carried a
+private re-implementation of it with `100` spelled out; both are gone,
+and `TaxCsvExporter`'s `toDecimalString(abs($minor))` is the shape a
+CSV cell that wants an unsigned figure should copy.
+
 ## `MINOR_UNITS_PER_MAJOR` is 100, and that is a real limitation
 
 `Money::MINOR_UNITS_PER_MAJOR = 100` is the scale factor every parse
-and format boundary in the repo multiplies or divides by: the four
-`Ingestion` amount parsers, `MoneyInput`, `CashBookPage`, and the
-amount rendering in the `Calendar`, `Tax`, `Forecasting`, `Reports`
-and `Onboarding` views.
+and format boundary in the repo multiplies or divides by: three of the
+four `Ingestion` amount parsers — `IcsAmountParser` now delegates its
+arithmetic to `MoneyInput` and does none of its own — plus `MoneyInput`,
+`CashBookPage`, and the amount rendering in the `Calendar`, `Tax`,
+`Forecasting`, `Reports` and `Onboarding` views. That includes the
+Livewire chart builders (`BuildsForecastCharts`, `PinnedReportsRow`,
+`RecurringSeriesDetailPage`), which used to divide by a literal `100`
+directly beside blades that used the constant.
 
 A constant only works while every currency in play has two decimal
 places. `Currency` already declares `Jpy = 'JPY'`, and JPY has **zero**
@@ -144,21 +157,24 @@ the repo carries itself — `Locale::groupMark()`, `decimalMark()`,
 - **Most others.** Symbol last, after a non-breaking space:
   `1.234,56 €`.
 
-Grouping is assembled by walking the digits rather than reversing the
-string: a non-breaking group mark is two bytes, and `strrev()` split it
-in half, which produced mojibake in every language whose mark is not a
+Grouping is chunked from the right by reversing the digit string,
+splitting it into threes and reversing each chunk back; the mark goes in
+afterwards, between the restored chunks, so nothing but ASCII digits is
+ever reversed. That order is the whole of it: a non-breaking group mark
+is two bytes, and `strrev()` over an already-marked string split it in
+half, which produced mojibake in every language whose mark is not a
 plain space. That was invisible while only Dutch and English drove the
 formatter and became reachable the moment the locale did.
 
-Any locale that is neither Dutch nor English resolves to one of those
-two by currency, so the fallback never has to invent a convention it
-does not know. A currency with no entry in the class's `SYMBOLS` map
-renders as its code followed by a non-breaking space
-(`CHF 3,850.00`) — which is what ICU itself does for a currency the
-locale has no symbol for. The two-decimal scale is always kept: a
-whole amount renders `€ 12,00`, never `€ 12`, because a money column
-that sometimes shows decimals is harder to scan than one that always
-does.
+Every shipped language answers for itself: all twenty-six carry their
+own marks, symbol position and sign order on `Locale`, so the fallback
+never has to invent a convention it does not know. A currency with no
+entry in the class's `SYMBOLS` map renders as its code followed by a
+non-breaking space (`CHF 3,850.00`) — which is what ICU itself does for
+a currency the locale has no symbol for. The two-decimal scale is
+always kept: a whole amount renders `€ 12,00`, never `€ 12`, because a
+money column that sometimes shows decimals is harder to scan than one
+that always does.
 
 ### The invariants the tests hold
 

@@ -6,6 +6,7 @@ namespace Modules\Ledger\Internal\Services;
 
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
@@ -60,7 +61,7 @@ final class CounterpartyKeyProvenance implements BlindIndexProvenance
         $rows = $this->db->connection()
             ->table('transactions')
             ->where('user_id', $userId)
-            ->where(static function (\Illuminate\Database\Query\Builder $query): void {
+            ->where(static function (Builder $query): void {
                 $query->whereRaw('length(counterparty_normalized) = ?', [BlindIndexCodec::DIGEST_LENGTH])
                     ->orWhereNotNull('counterparty_iban');
             })

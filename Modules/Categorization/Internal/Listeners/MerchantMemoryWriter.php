@@ -11,7 +11,7 @@ use Modules\Categorization\Public\Events\TransactionCategorized;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\QueryFailure;
-use Modules\Import\Public\Pipeline\NormalizeStage;
+use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Sync\Public\Events\EntityMutated;
 
 final class MerchantMemoryWriter
@@ -124,7 +124,7 @@ final class MerchantMemoryWriter
             ->where('id', $event->transactionId)
             ->value('counterparty_normalized'));
 
-        if ($normalized === '' || $normalized === NormalizeStage::NO_COUNTERPARTY) {
+        if ($normalized === '' || $normalized === CounterpartyKey::NONE) {
             return null;
         }
 

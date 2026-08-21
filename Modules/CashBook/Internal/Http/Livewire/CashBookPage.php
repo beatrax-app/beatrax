@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\CashBook\Internal\Http\Livewire;
 
-use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Contracts\View\Factory as ViewFactory;
@@ -18,7 +17,9 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\LocaleCollator;
 use Modules\Core\Public\Support\SafeDate;
+use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -39,7 +40,7 @@ final class CashBookPage extends Component
     // the input.
     private const int AMOUNT_EXAMPLE_MINOR = 125_000;
 
-    public string $direction = 'expense';
+    public string $direction = Direction::Expense->value;
 
     public string $amount = '';
 
@@ -77,15 +78,15 @@ final class CashBookPage extends Component
             return;
         }
 
-        $date = self::parseDate($this->date);
+        $date = SafeDate::parseDayOrNull($this->date);
         if ($date === null) {
             $this->error = Lang::get('cashbook::cash-book.errors.invalid_date');
 
             return;
         }
 
-        if (! in_array($this->direction, ['expense', 'income'], true)) {
-            $this->direction = 'expense';
+        if (Direction::tryFrom($this->direction) === null) {
+            $this->direction = Direction::Expense->value;
         }
 
         $user = $currentUser->user();
@@ -176,14 +177,14 @@ final class CashBookPage extends Component
             ->where(static function (Builder $query) use ($user): void {
                 $query->whereNull('user_id')->orWhere('user_id', $user->id);
             })
-            ->get(['id', 'name', 'slug', 'name_is_default'])
+            ->get(['id', ...CategoryDisplayName::bareColumns()])
             ->map(static function (stdClass $row): stdClass {
                 $row->name = CategoryDisplayName::fromRow($row) ?? '';
 
                 return $row;
             })
             ->sort(static function (stdClass $a, stdClass $b): int {
-                $byName = strnatcasecmp(is_string($a->name) ? $a->name : '', is_string($b->name) ? $b->name : '');
+                $byName = LocaleCollator::compare(is_string($a->name) ? $a->name : '', is_string($b->name) ? $b->name : '');
 
                 return $byName !== 0
                     ? $byName
@@ -254,10 +255,5 @@ final class CashBookPage extends Component
             ->exists();
 
         return $owned ? $this->categoryId : null;
-    }
-
-    private static function parseDate(string $raw): ?CarbonImmutable
-    {
-        return SafeDate::parseOrNull(trim($raw))?->startOfDay();
     }
 }

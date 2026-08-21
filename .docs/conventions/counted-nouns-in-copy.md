@@ -30,8 +30,10 @@ each — never a literal `1`:
 ```
 
 A literal `1` in the first segment is wrong in Croatian, Serbian, Ukrainian and
-Lithuanian, whose first form also covers 21; `TranslationParityArchTest` fails
-on it in a translated file.
+Lithuanian, whose first form also covers 21. `TranslationParityArchTest` fails
+on it in a translated file **and in the English one**: the source is measured
+against every locale's rule table, because the shape of the `en` line is what a
+translator copies.
 
 Every locale then needs **as many segments as its own rule table selects
 between**, which is not a constant:
@@ -51,6 +53,30 @@ what the parity test does.
 Segments may legitimately repeat. Hungarian and Turkish leave a noun unmarked
 after a numeral, so both Hungarian segments are the same words; that is the
 correct translation, not padding.
+
+## Where the numeral lives
+
+Inside the line. The number and the noun it governs are one translatable unit:
+
+```php
+'saved_report' => ':count saved report|:count saved reports',
+```
+
+```blade
+{{ Lang::choice('reports::index.saved_report', $rows->count()) }}
+```
+
+Not `{{ $n }} {{ Lang::choice('…saved_report', $n) }}` over a bare `saved
+report|saved reports`. That spelling pins numeral-then-space-then-noun in the
+template, where no translator can reorder it or put a case ending on the
+numeral, and it splits one phrase across a key and a template. `choice()` fills
+`:count` itself, so the call site does not grow — it shrinks. Styling that was
+aimed at the numeral alone, `font-variant-numeric: tabular-nums`, moves to the
+element wrapping the whole phrase, where it still only reaches the digits.
+
+The exception is a control whose visible content **is** the number: a sidebar
+badge renders `{{ $navCounts['chains'] }}` and carries the counted phrase in its
+`aria-label`. That is a label, not a sentence being assembled from parts.
 
 ## A sentence carrying two counts
 

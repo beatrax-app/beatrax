@@ -22,7 +22,6 @@ return [
     'condition_value_from_aria' => 'Sąlygos :number reikšmė (nuo)',
     'condition_value_to_aria' => 'Sąlygos :number reikšmė (iki)',
     'to' => 'iki',
-    'amount_placeholder' => '0,00',
     'text_placeholder' => 'pvz. SPOTIFY',
     'remove_condition' => 'Pašalinti sąlygą',
     'add_condition' => '+ Pridėti sąlygą',

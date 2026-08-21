@@ -41,12 +41,14 @@ return [
         'next_month' => 'Volgende maand',
         'today' => 'Vandaag',
         'clear' => 'Wissen',
+        'empty' => 'geen datum gekozen',
     ],
 
     'time' => [
         'open' => 'Kies een tijd',
         'hour' => 'Uur',
         'minute' => 'Minuut',
+        'empty' => 'geen tijd gekozen',
     ],
 
     'veil_locked' => 'App vergrendeld',

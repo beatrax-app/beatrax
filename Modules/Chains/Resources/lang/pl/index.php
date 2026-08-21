@@ -15,7 +15,7 @@ return [
     'no_counterparty' => '(brak kontrahenta)',
     'open_from_row' => 'Otwórz wiersz źródłowy',
     'open_to_row' => 'Otwórz wiersz docelowy',
-    'leg_count' => '1 płatność|:count płatności|:count płatności',
+    'leg_count' => ':count płatność|:count płatności|:count płatności',
     'state_aria' => 'Stan: :state',
 
     'kind' => [

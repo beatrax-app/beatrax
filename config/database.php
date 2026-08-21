@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\SqliteDatabase;
 
 // Fallback host for every server connection whose DB_* / REDIS_* var is
 // unset; a self-hosted server overrides them explicitly.
@@ -18,7 +19,7 @@ return [
     // A local, not config(): this runs during config load.
     'connections' => (static function () use ($loopbackHost): array {
         $sqlite = [
-            'driver' => 'sqlite',
+            'driver' => SqliteDatabase::DRIVER,
             'url' => env('DB_URL'),
             'database' => env('DB_DATABASE', UserDataPathService::databaseFile()),
             'prefix' => '',
@@ -35,7 +36,7 @@ return [
             'sqlite' => $sqlite,
 
             'sqlite_testing' => [
-                'driver' => 'sqlite',
+                'driver' => SqliteDatabase::DRIVER,
                 'database' => ':memory:',
                 'prefix' => '',
                 'foreign_key_constraints' => true,

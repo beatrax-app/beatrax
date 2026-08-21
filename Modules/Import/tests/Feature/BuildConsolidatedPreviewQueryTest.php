@@ -12,6 +12,9 @@ use Modules\Import\Public\Dto\ConsolidatedPreviewBatch;
 use Modules\Import\Public\Dto\ConsolidatedPreviewSection;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Dto\PreviewRowDto;
+use Modules\Import\Public\Enums\ImportFailureReason;
+use Modules\Import\Public\Enums\PreviewRowStatus;
+use Modules\Import\Public\Enums\PreviewSectionStatus;
 use Modules\Import\Public\Services\BuildConsolidatedPreviewQuery;
 use Modules\Ledger\Models\ImportRun;
 
@@ -91,7 +94,7 @@ function seedConsolidatedRun(
 }
 
 /**
- * @param  list<string>  $rowStatuses  One status string per fixture row (e.g. ['new', 'new', 'duplicate']).
+ * @param  list<PreviewRowStatus>  $rowStatuses  One status per fixture row.
  */
 function seedConsolidatedPreview(int $importRunId, array $rowStatuses): void
 {
@@ -128,13 +131,13 @@ function seedConsolidatedPreview(int $importRunId, array $rowStatuses): void
 
 it('builds a consolidated batch with one section per source format', function (): void {
     $camtRun = seedConsolidatedRun($this->userA->id, 'camt053');
-    seedConsolidatedPreview($camtRun, ['new', 'new', 'duplicate']);
+    seedConsolidatedPreview($camtRun, [PreviewRowStatus::NewRow, PreviewRowStatus::NewRow, PreviewRowStatus::Duplicate]);
 
     $pdfRunA = seedConsolidatedRun($this->userA->id, 'ics-pdf');
-    seedConsolidatedPreview($pdfRunA, ['new']);
+    seedConsolidatedPreview($pdfRunA, [PreviewRowStatus::NewRow]);
 
     $pdfRunB = seedConsolidatedRun($this->userA->id, 'ics-pdf');
-    seedConsolidatedPreview($pdfRunB, ['new', 'new']);
+    seedConsolidatedPreview($pdfRunB, [PreviewRowStatus::NewRow, PreviewRowStatus::NewRow]);
 
     /** @var BuildConsolidatedPreviewQuery $query */
     $query = $this->app->make(BuildConsolidatedPreviewQuery::class);
@@ -153,11 +156,11 @@ it('builds a consolidated batch with one section per source format', function ()
     expect($bySource)->toHaveKeys(['camt053', 'ics-pdf']);
     expect($bySource['camt053']->importRunIds)->toBe([$camtRun]);
     expect($bySource['camt053']->totalRows)->toBe(2); // 2 NEW rows out of 3
-    expect($bySource['camt053']->status)->toBe('ready');
+    expect($bySource['camt053']->status)->toBe(PreviewSectionStatus::Ready);
 
     expect($bySource['ics-pdf']->importRunIds)->toEqualCanonicalizing([$pdfRunA, $pdfRunB]);
     expect($bySource['ics-pdf']->totalRows)->toBe(3); // 1 + 2 NEW rows
-    expect($bySource['ics-pdf']->status)->toBe('ready');
+    expect($bySource['ics-pdf']->status)->toBe(PreviewSectionStatus::Ready);
 
     expect($batch->dedupedTotalCount)->toBe(5); // 2 + 1 + 2 NEW
     expect($batch->alreadyImportedCount)->toBe(1); // one DUPLICATE in the CAMT run
@@ -165,7 +168,7 @@ it('builds a consolidated batch with one section per source format', function ()
 
 it('filters stale ImportRuns older than 14 days', function (): void {
     $freshRun = seedConsolidatedRun($this->userA->id, 'camt053');
-    seedConsolidatedPreview($freshRun, ['new']);
+    seedConsolidatedPreview($freshRun, [PreviewRowStatus::NewRow]);
 
     $staleRun = seedConsolidatedRun(
         $this->userA->id,
@@ -173,7 +176,7 @@ it('filters stale ImportRuns older than 14 days', function (): void {
         status: 'previewed',
         createdAt: $this->frozenNow->subDays(15),
     );
-    seedConsolidatedPreview($staleRun, ['new', 'new', 'new']);
+    seedConsolidatedPreview($staleRun, [PreviewRowStatus::NewRow, PreviewRowStatus::NewRow, PreviewRowStatus::NewRow]);
 
     /** @var BuildConsolidatedPreviewQuery $query */
     $query = $this->app->make(BuildConsolidatedPreviewQuery::class);
@@ -189,14 +192,14 @@ it('filters stale ImportRuns older than 14 days', function (): void {
 
 it('filters ImportRuns whose status is confirmed', function (): void {
     $previewedRun = seedConsolidatedRun($this->userA->id, 'camt053');
-    seedConsolidatedPreview($previewedRun, ['new', 'new']);
+    seedConsolidatedPreview($previewedRun, [PreviewRowStatus::NewRow, PreviewRowStatus::NewRow]);
 
     $confirmedRun = seedConsolidatedRun(
         $this->userA->id,
         'paypal-csv',
         status: 'confirmed',
     );
-    seedConsolidatedPreview($confirmedRun, ['new', 'new', 'new']);
+    seedConsolidatedPreview($confirmedRun, [PreviewRowStatus::NewRow, PreviewRowStatus::NewRow, PreviewRowStatus::NewRow]);
 
     /** @var BuildConsolidatedPreviewQuery $query */
     $query = $this->app->make(BuildConsolidatedPreviewQuery::class);
@@ -211,10 +214,10 @@ it('filters ImportRuns whose status is confirmed', function (): void {
 
 it('respects the user_id boundary — runs owned by another user are never returned', function (): void {
     $aliceRun = seedConsolidatedRun($this->userA->id, 'camt053');
-    seedConsolidatedPreview($aliceRun, ['new']);
+    seedConsolidatedPreview($aliceRun, [PreviewRowStatus::NewRow]);
 
     $bobRun = seedConsolidatedRun($this->userB->id, 'camt053');
-    seedConsolidatedPreview($bobRun, ['new', 'new', 'new']);
+    seedConsolidatedPreview($bobRun, [PreviewRowStatus::NewRow, PreviewRowStatus::NewRow, PreviewRowStatus::NewRow]);
 
     /** @var BuildConsolidatedPreviewQuery $query */
     $query = $this->app->make(BuildConsolidatedPreviewQuery::class);
@@ -228,7 +231,7 @@ it('respects the user_id boundary — runs owned by another user are never retur
 
 function seedConsolidatedPreviewRows(int $importRunId, int $rowCount): void
 {
-    $statuses = array_fill(0, $rowCount, 'new');
+    $statuses = array_fill(0, $rowCount, PreviewRowStatus::NewRow);
     seedConsolidatedPreview($importRunId, $statuses);
 }
 
@@ -325,7 +328,7 @@ function seedFailedParse(int $importRunId, string $reason): void
             importRunId: $importRunId,
             rows: [],
             accountsToName: [],
-            fileFailureReason: 'file_unreadable',
+            fileFailureReason: ImportFailureReason::FileUnreadable,
             fileFailureDetail: $reason,
         ),
         canonical: [],
@@ -340,7 +343,7 @@ it('reports a failed parse as an error, not as a ready section with no rows', fu
     $batch = $this->app->make(BuildConsolidatedPreviewQuery::class)->build([$runId], $this->userA);
     $section = $batch->sections[0];
 
-    expect($section->status)->toBe('error')
+    expect($section->status)->toBe(PreviewSectionStatus::Error)
         ->and($section->totalRows)->toBe(0);
 });
 
@@ -358,14 +361,14 @@ it('carries the parser reason so the screen can say more than "something went wr
 // there reads as one more transaction that is about to be imported.
 it('keeps failed rows out of the sample, which stands for what committing writes', function (): void {
     $runId = seedConsolidatedRun($this->userA->id, 'asn-csv');
-    seedConsolidatedPreview($runId, ['new', 'error', 'new']);
+    seedConsolidatedPreview($runId, [PreviewRowStatus::NewRow, PreviewRowStatus::Error, PreviewRowStatus::NewRow]);
 
     $section = $this->app->make(BuildConsolidatedPreviewQuery::class)->build([$runId], $this->userA)->sections[0];
 
     expect($section->sampleRows)->toHaveCount(2)
         ->and($section->totalRows)->toBe(2);
     foreach ($section->sampleRows as $row) {
-        expect($row->status)->not->toBe('error');
+        expect($row->status)->not->toBe(PreviewRowStatus::Error);
     }
 });
 
@@ -377,7 +380,7 @@ it('marks a part-read file ready and still carries why the rest is missing', fun
 
     $section = $this->app->make(BuildConsolidatedPreviewQuery::class)->build([$runId], $this->userA)->sections[0];
 
-    expect($section->status)->toBe('ready')
+    expect($section->status)->toBe(PreviewSectionStatus::Ready)
         ->and($section->totalRows)->toBe(2)
         ->and($section->error)->toBe('Row 3: A two digit day could not be found.');
 });
@@ -388,7 +391,7 @@ function seedPartiallyReadFile(int $importRunId, string $reason): void
     foreach ([0, 1] as $index) {
         $rows[] = new PreviewRowDto(
             rowIndex: $index,
-            status: 'new',
+            status: PreviewRowStatus::NewRow,
             accountId: 1,
             bookedAt: '2026-05-10',
             counterpartyName: 'Fixture '.$index,
@@ -409,7 +412,7 @@ function seedPartiallyReadFile(int $importRunId, string $reason): void
             importRunId: $importRunId,
             rows: $rows,
             accountsToName: [],
-            fileFailureReason: 'file_unreadable',
+            fileFailureReason: ImportFailureReason::FileUnreadable,
             fileFailureDetail: $reason,
         ),
         canonical: [],
@@ -423,6 +426,6 @@ it('still reads a genuinely empty statement as empty, not as a failure', functio
 
     $section = $this->app->make(BuildConsolidatedPreviewQuery::class)->build([$runId], $this->userA)->sections[0];
 
-    expect($section->status)->toBe('empty')
+    expect($section->status)->toBe(PreviewSectionStatus::Empty)
         ->and($section->error)->toBeNull();
 });

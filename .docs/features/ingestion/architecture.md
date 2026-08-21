@@ -218,7 +218,13 @@ instead of a hung worker on a pathological input (e.g. a crafted file
 whose every byte is a newline, or one absurdly long line).
 
 `Mt940Tag61Parser`'s status code maps to amount sign: `C`/`RD` →
-positive, `D`/`RC` → negative. The two-digit year resolves to a
+positive, `D`/`RC` → negative. The magnitude itself goes through
+`BankAmountParser::parseMt940Minor()`, which absorbs the three shapes
+SWIFT writes that the strict `parseMinor()` refuses — a comma decimal,
+no decimal at all, and a single fractional digit. The `:60:`/`:62:`
+balance cells in `Mt940Adapter` reach the same method; the six
+normalisation lines used to be written out in both places, and each
+caller now keeps only its own exception message. The two-digit year resolves to a
 four-digit calendar year via the SWIFT sliding-window rule (closest
 year within ±50 of "now"), and the optional entry date (MMDD, no year)
 inherits the value-date year *except* when the entry month is later

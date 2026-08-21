@@ -22,7 +22,6 @@ return [
     'condition_value_from_aria' => 'Værdi for betingelse :number (fra)',
     'condition_value_to_aria' => 'Værdi for betingelse :number (til)',
     'to' => 'til',
-    'amount_placeholder' => '0,00',
     'text_placeholder' => 'f.eks. SPOTIFY',
     'remove_condition' => 'Fjern betingelse',
     'add_condition' => '+ Tilføj betingelse',

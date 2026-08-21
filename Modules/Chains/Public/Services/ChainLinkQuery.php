@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Chains\Public\Services;
 
 use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Chains\Internal\ChainTreeWalker;

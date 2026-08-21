@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Migration\Internal\Pipeline;
 
+use Modules\Migration\Internal\Enums\ConflictResolution;
+
 final class ConflictRow
 {
     public function __construct(
@@ -12,6 +14,6 @@ final class ConflictRow
         public readonly string $fieldName,
         public readonly ?string $localValue,
         public readonly ?string $sourceValue,
-        public readonly string $resolution,
+        public readonly ConflictResolution $resolution,
     ) {}
 }

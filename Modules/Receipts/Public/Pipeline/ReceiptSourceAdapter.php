@@ -8,6 +8,7 @@ use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Receipts\Public\Dto\ChainHintPayload\FundedByCardPayload;
 use Modules\Receipts\Public\Dto\ChainHintPayload\RefundOfPayload;
 use Modules\Receipts\Public\Dto\ParsedReceiptDto;
+use Modules\Receipts\Public\Enums\ChainHintType;
 
 // Bridges matcher output (ParsedReceiptDto) into the import pipeline's
 // SourceTransactionDto. Receipts have no booked-vs-posted-vs-value-date
@@ -63,14 +64,14 @@ final class ReceiptSourceAdapter
 
         if ($payload instanceof FundedByCardPayload) {
             return [
-                'hint_type' => 'funded_by_card',
+                'hint_type' => ChainHintType::FundedByCard->value,
                 'card_last4' => $payload->cardLast4,
                 'evidence' => $evidence,
             ];
         }
         if ($payload instanceof RefundOfPayload) {
             return [
-                'hint_type' => 'refund_of',
+                'hint_type' => ChainHintType::RefundOf->value,
                 'original_reference_id' => $payload->originalReferenceId,
                 'evidence' => $evidence,
             ];
@@ -80,7 +81,7 @@ final class ReceiptSourceAdapter
         // hint_type=unknown so the downstream listener can drop it
         // safely.
         return [
-            'hint_type' => 'unknown',
+            'hint_type' => ChainHintType::Unknown->value,
             'evidence' => $evidence,
         ];
     }

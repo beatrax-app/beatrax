@@ -93,7 +93,7 @@ final class CategorySpendTrendQuery
             ->where(static function (Builder $query) use ($userId): void {
                 $query->whereNull('user_id')->orWhere('user_id', $userId);
             })
-            ->get(['id', 'name', 'slug', 'name_is_default']);
+            ->get(['id', ...CategoryDisplayName::bareColumns()]);
 
         $names = [];
         foreach ($rows as $row) {

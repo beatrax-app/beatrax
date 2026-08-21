@@ -22,8 +22,7 @@ return [
 
     'card' => [
         'likely' => 'Tikėtina: neįvardytas prekybininkas.',
-        'seen' => 'Matyta',
-        'time' => 'kartą|kartus|kartų',
+        'seen_times' => 'Matyta :count kartą|Matyta :count kartus|Matyta :count kartų',
         'last_seen' => 'Paskutinį kartą matyta :date',
         'suggest' => 'Siūlyti pavadinimą →',
     ],

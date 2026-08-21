@@ -17,8 +17,7 @@ return [
     'net' => 'Net',
 
     'status_tiles_aria' => 'Status tiles',
-    'email_scan_health' => 'Email scan health — :count connected',
-    'inbox' => 'inbox|inboxes',
+    'email_scan_health' => 'Email scan health — :count connected inbox|Email scan health — :count connected inboxes',
 
     'top_spending' => 'Top spending',
     'no_expenses' => 'No categorized expenses yet.',

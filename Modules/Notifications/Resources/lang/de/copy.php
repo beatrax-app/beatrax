@@ -38,7 +38,7 @@ return [
         'nothing_notable' => 'Nichts braucht deine Aufmerksamkeit.',
         'flow' => 'Eingang :in, Ausgang :out, netto :net.',
         'over_budget' => 'Bisher :amount über Budget.',
-        'payments_due' => '1 Zahlung in diesem Zeitraum fällig.|:count Zahlungen in diesem Zeitraum fällig.',
+        'payments_due' => ':count Zahlung in diesem Zeitraum fällig.|:count Zahlungen in diesem Zeitraum fällig.',
         'shortfall' => 'Ein Liquiditätsengpass steht bevor.',
     ],
 ];

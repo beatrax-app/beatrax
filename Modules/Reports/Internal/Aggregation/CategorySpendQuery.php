@@ -10,7 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Dto\Period;
-use Modules\Ledger\Public\Support\CategoryDisplayName;
+use Modules\Ledger\Public\Services\CategoryAncestry;
 use Modules\Reports\Internal\Dto\ReportResultRow;
 use stdClass;
 
@@ -22,7 +22,10 @@ final class CategorySpendQuery
     // (positive) autoincrement category id.
     private const UNCATEGORIZED_SENTINEL = -1;
 
-    public function __construct(private readonly DatabaseManager $db) {}
+    public function __construct(
+        private readonly DatabaseManager $db,
+        private readonly CategoryAncestry $ancestry,
+    ) {}
 
     /**
      * @param  string  $metric  'spend' | 'income' | 'net'
@@ -103,7 +106,7 @@ final class CategorySpendQuery
         }
 
         $resultCategoryIds = array_values(array_filter(array_keys($map), static fn (int $id): bool => $id !== self::UNCATEGORIZED_SENTINEL));
-        $categoriesById = $this->loadCategories($resultCategoryIds, $user->id);
+        $categoriesById = $this->ancestry->load($resultCategoryIds, $user->id);
 
         $result = [];
         foreach ($map as $key => $amountMinor) {
@@ -119,83 +122,11 @@ final class CategorySpendQuery
             }
 
             $label = isset($categoriesById[$key])
-                ? $this->fullPath($key, $categoriesById)
+                ? $this->ancestry->fullPath($key, $categoriesById)
                 : Lang::get('reports::builder.uncategorized');
             $result[] = new ReportResultRow(groupKey: $key, groupLabel: $label, amountMinor: $amountMinor, currency: $currency);
         }
 
         return $result;
-    }
-
-    /**
-     * @param  list<int>  $startingIds
-     * @return array<int, stdClass>
-     */
-    private function loadCategories(array $startingIds, int $userId): array
-    {
-        if ($startingIds === []) {
-            return [];
-        }
-
-        $connection = $this->db->connection();
-        /** @var array<int, stdClass> $known */
-        $known = [];
-        /** @var array<int, true> $attempted */
-        $attempted = [];
-
-        $toFetch = array_values(array_unique($startingIds));
-        while ($toFetch !== []) {
-            foreach ($toFetch as $id) {
-                $attempted[$id] = true;
-            }
-
-            $batch = $connection
-                ->table('categories')
-                ->whereIn('id', $toFetch)
-                ->where(static function (QueryBuilder $q) use ($userId): void {
-                    $q->whereNull('user_id')->orWhere('user_id', $userId);
-                })
-                ->get(['id', 'parent_id', 'name', 'slug', 'name_is_default']);
-
-            $nextFetch = [];
-            foreach ($batch as $row) {
-                /** @var stdClass $row */
-                $id = self::toInt($row->id);
-                $known[$id] = $row;
-                $parentId = $row->parent_id === null ? null : self::toInt($row->parent_id);
-                if ($parentId !== null && ! isset($known[$parentId]) && ! isset($attempted[$parentId])) {
-                    $nextFetch[] = $parentId;
-                }
-            }
-            $toFetch = array_values(array_unique($nextFetch));
-        }
-
-        return $known;
-    }
-
-    /**
-     * @param  array<int, stdClass>  $byId
-     */
-    private function fullPath(int $categoryId, array $byId): string
-    {
-        $maxDepth = 16;
-        $parts = [];
-        $visited = [];
-        $current = $categoryId;
-        $depth = 0;
-
-        while (isset($byId[$current]) && ! isset($visited[$current]) && $depth < $maxDepth) {
-            $visited[$current] = true;
-            $row = $byId[$current];
-            array_unshift($parts, CategoryDisplayName::fromRow($row) ?? '');
-            $parentId = $row->parent_id === null ? null : self::toInt($row->parent_id);
-            if ($parentId === null) {
-                break;
-            }
-            $current = $parentId;
-            $depth++;
-        }
-
-        return implode(' / ', $parts);
     }
 }

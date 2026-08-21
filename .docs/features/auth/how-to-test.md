@@ -143,10 +143,14 @@ The behavioural contract for the `Auth` module.
   it requires shell access to the SQLite file's host. See
   [ADR 0010](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0010-recovery-codes-no-smtp.md).
   (`tests/Feature/ResetPasswordCommandTest.php`)
-- **Passwords are at least twelve characters.** Every write path
-  (`SignupAction`, `AddUserAction`, `ResetPasswordAction`,
-  `ChangePasswordPage`, `ManageUserPage::setPartnerPassword`) rejects
-  shorter passwords with a `ValidationException` or inline message.
+- **Passwords are at least `PasswordPolicy::MINIMUM_LENGTH` characters.**
+  Every write path (`SignupAction`, `AddUserAction`, `ResetPasswordAction`,
+  `ResetPasswordCommand`, `ChangePasswordPage`,
+  `ManageUserPage::setPartnerPassword`, and Mobile's
+  `MobileImportBootstrap`) measures against that one constant and rejects
+  shorter passwords with a `ValidationException` or inline message. The
+  live checklist renders the same constant, so the browser cannot tick a
+  rule the server refuses. (`SignupPageTest`, `MobileImportBootstrapTest`)
 - **Recovery codes are distinct within a user's batch.** Both
   `SignupAction` and `AddUserAction` loop the generator until ten
   distinct values exist before inserting, so the unique `code_hash`

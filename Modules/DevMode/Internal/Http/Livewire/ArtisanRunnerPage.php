@@ -19,10 +19,12 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\DevMode\Internal\Audit\FinalizeRunAudit;
+use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
 use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Internal\Process\ProcessLiveness;
 use Modules\DevMode\Internal\Process\RunRegistry;
+use Modules\DevMode\Internal\Support\DevModeSession;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\ArgSpec;
 
@@ -43,9 +45,9 @@ final class ArtisanRunnerPage extends Component
     ): void {
         // Session resume never refires Login, so a stale Advanced=true would
         // survive the listener that is supposed to clear it.
-        if (! $session->has('dev_mode.advanced_session_seen')) {
-            $session->forget('dev_mode.advanced');
-            $session->put('dev_mode.advanced_session_seen', true);
+        if (! $session->has(DevModeSession::ADVANCED_SEEN_KEY)) {
+            $session->forget(DevModeSession::ADVANCED_KEY);
+            $session->put(DevModeSession::ADVANCED_SEEN_KEY, true);
         }
 
         // A palette pick made off-page arrives here as ?spawn=, and must
@@ -83,7 +85,7 @@ final class ArtisanRunnerPage extends Component
             return;
         }
 
-        if ($spec->tier !== 'safe') {
+        if (! $spec->tier->reachesThePalette()) {
             $this->dispatch('triple-gate:open', command: $command, args: $args);
 
             return;
@@ -105,7 +107,7 @@ final class ArtisanRunnerPage extends Component
             return;
         }
 
-        $runId = $spawner->start($command, $args, $user->id(), 'safe');
+        $runId = $spawner->start($command, $args, $user->id(), CommandTier::Safe);
         $this->toast(Lang::get('dev::runner.toast.started', ['command' => $command, 'runId' => $runId]));
     }
 
@@ -164,7 +166,7 @@ final class ArtisanRunnerPage extends Component
             return;
         }
 
-        if ($record->tier === 'destructive') {
+        if ($record->tier === CommandTier::Destructive) {
             $this->dispatch(
                 'triple-gate:open',
                 command: $record->command,
@@ -174,7 +176,7 @@ final class ArtisanRunnerPage extends Component
             return;
         }
 
-        $newRunId = $spawner->start($record->command, $record->args, $user->id(), 'safe');
+        $newRunId = $spawner->start($record->command, $record->args, $user->id(), CommandTier::Safe);
         $this->toast(Lang::get('dev::runner.toast.reran', ['command' => $record->command, 'runId' => $newRunId]));
     }
 
@@ -209,7 +211,7 @@ final class ArtisanRunnerPage extends Component
         $filtered = match ($this->filter) {
             'running' => $runs->where('status', 'running')->values(),
             'failed' => $runs->filter(fn (array $r): bool => is_int($r['exitCode'] ?? null) && $r['exitCode'] !== 0)->values(),
-            'destructive' => $runs->where('tier', 'destructive')->values(),
+            'destructive' => $runs->where('tier', CommandTier::Destructive)->values(),
             default => $runs,
         };
 
@@ -240,7 +242,7 @@ final class ArtisanRunnerPage extends Component
             'runId' => $this->resolveRunId($properties, $vars),
             'command' => is_string($properties['command'] ?? null) ? $properties['command'] : '',
             'args' => $args,
-            'tier' => is_string($properties['tier'] ?? null) ? $properties['tier'] : 'safe',
+            'tier' => CommandTier::fromStored($properties['tier'] ?? null),
             'status' => $this->runStatus($cancelled, $exitCode, $finishedAt),
             'startedAt' => $this->resolveStartedAt($properties, $vars),
             'exitCode' => $exitCode,

@@ -23,7 +23,7 @@
         <h3 style="font-size: var(--text-sm); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); font-weight: 600; margin: 0 0 var(--space-3);">
             {{ Lang::get('counterparties::profile.personal.contact') }}
         </h3>
-        <x-counterparties::iban-row :iban="$ibanLiteral" :revealed="$ibanRevealed" />
+        <x-counterparties::iban-row :iban="$ibanLiteral" />
         <div style="margin-top: var(--space-3);">
             <button
                 type="button"

@@ -243,9 +243,9 @@ The behavioural contract for the `Chains` module.
   - [`Import`](../import/how-to-test.md) —
     `ResolvesKnownCounterpartyIban` contract (alias bridge between
     institution IBANs and the user's account ids).
-  - [`Transfers`](../transfers/how-to-test.md) — `PairsTransferLegs` +
-    `PairLookup` (self-transfer pair detection feeds the ASN-direct
-    arm).
+  - [`Transfers`](../transfers/how-to-test.md) — `PairsTransferLegs`
+    (self-transfer pair detection). The ASN-direct arm finds its own
+    partner row rather than reading `PairLookup`.
   - [`Receipts`](../receipts/how-to-test.md) — `ChainHintDetected` event
     raised by `RecordReceipt`.
 - **Depended on by**

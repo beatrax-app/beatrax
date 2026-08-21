@@ -22,7 +22,6 @@ return [
     'condition_value_from_aria' => 'Hodnota podmienky :number (od)',
     'condition_value_to_aria' => 'Hodnota podmienky :number (do)',
     'to' => 'do',
-    'amount_placeholder' => '0,00',
     'text_placeholder' => 'napr. SPOTIFY',
     'remove_condition' => 'Odstrániť podmienku',
     'add_condition' => '+ Pridať podmienku',

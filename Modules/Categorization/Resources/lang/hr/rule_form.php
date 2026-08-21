@@ -22,7 +22,6 @@ return [
     'condition_value_from_aria' => 'Vrijednost uvjeta :number (od)',
     'condition_value_to_aria' => 'Vrijednost uvjeta :number (do)',
     'to' => 'do',
-    'amount_placeholder' => '0,00',
     'text_placeholder' => 'npr. SPOTIFY',
     'remove_condition' => 'Ukloni uvjet',
     'add_condition' => '+ Dodaj uvjet',

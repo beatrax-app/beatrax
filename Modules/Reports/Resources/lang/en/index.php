@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'title' => 'Reports',
     'page_title' => 'Reports · Beatrax',
-    'saved_report' => 'saved report|saved reports',
+    'saved_report' => ':count saved report|:count saved reports',
     'pinned_count' => 'pinned',
     'dismiss' => 'Dismiss',
 

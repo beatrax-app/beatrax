@@ -16,8 +16,8 @@
         <h1 style="font-size: var(--text-xl); font-weight: 600; color: var(--color-text); margin: 0;">
             {{ Lang::get('reports::index.title') }}
         </h1>
-        <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0;">
-            <span style="font-variant-numeric: tabular-nums;">{{ $rows->count() }}</span> {{ Lang::choice('reports::index.saved_report', $rows->count()) }} · <span style="font-variant-numeric: tabular-nums;">{{ $pinnedCount }}/3</span> {{ Lang::get('reports::index.pinned_count') }}
+        <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0; font-variant-numeric: tabular-nums;">
+            {{ Lang::choice('reports::index.saved_report', $rows->count()) }} · {{ $pinnedCount }}/3 {{ Lang::get('reports::index.pinned_count') }}
         </p>
     </header>
 

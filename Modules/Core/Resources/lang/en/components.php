@@ -42,12 +42,14 @@ return [
         'next_month' => 'Next month',
         'today' => 'Today',
         'clear' => 'Clear',
+        'empty' => 'no date chosen',
     ],
 
     'time' => [
         'open' => 'Choose a time',
         'hour' => 'Hour',
         'minute' => 'Minute',
+        'empty' => 'no time chosen',
     ],
 
     'veil_locked' => 'App locked',

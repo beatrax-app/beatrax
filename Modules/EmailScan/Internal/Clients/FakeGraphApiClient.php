@@ -21,9 +21,6 @@ final class FakeGraphApiClient implements GraphApiClientContract
     /** @var array<int, int> */
     private array $deltaRateLimitedInboxes = [];
 
-    /** @var list<array{messages: list<array<string, mixed>>, deltaLink: ?string, nextLink: ?string}> */
-    private array $queuedDeltaResponses = [];
-
     /** @var list<array{messages: list<array<string, mixed>>, nextLink: ?string}> */
     private array $queuedDiscoveryResponses = [];
 
@@ -115,10 +112,6 @@ final class FakeGraphApiClient implements GraphApiClientContract
             throw CursorExpiredException::graph($message);
         }
 
-        if ($this->queuedDeltaResponses !== []) {
-            return array_shift($this->queuedDeltaResponses);
-        }
-
         $payload = $this->readJson('delta-baseline.json');
         /** @var list<array<string, mixed>> $messages */
         $messages = is_array($payload['value'] ?? null) ? $payload['value'] : [];
@@ -194,18 +187,6 @@ final class FakeGraphApiClient implements GraphApiClientContract
     public function simulateDeltaRateLimit(int $inboxId, int $retryAfterSeconds = 60): void
     {
         $this->deltaRateLimitedInboxes[$inboxId] = $retryAfterSeconds;
-    }
-
-    /**
-     * @param  list<array<string, mixed>>  $messages
-     */
-    public function queueDeltaResponse(array $messages, ?string $newDeltaLink, ?string $nextLink = null): void
-    {
-        $this->queuedDeltaResponses[] = [
-            'messages' => $messages,
-            'deltaLink' => $newDeltaLink,
-            'nextLink' => $nextLink,
-        ];
     }
 
     /**

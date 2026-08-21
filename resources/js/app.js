@@ -524,6 +524,65 @@ window.beatraxCopy = async function beatraxCopy(text) {
 };
 
 /**
+ * The live requirement checklist under a new-password pair.
+ *
+ * It reads the SAME `$wire` bindings the server validates rather than a
+ * private mirror of them: a mirror fed only by input events went on showing
+ * two green ticks after a re-render had emptied both boxes, under an error
+ * saying the password was too short.
+ *
+ * The minimum and the two property names are arguments because the desktop
+ * signup form and the mobile import form are separate Livewire components,
+ * and the checklist must not hold either one's names.
+ */
+function passwordStrength(minLength, passwordProperty, confirmationProperty) {
+    return {
+        get typedPassword() {
+            return this.$wire[passwordProperty] ?? '';
+        },
+        get typedConfirmation() {
+            return this.$wire[confirmationProperty] ?? '';
+        },
+        get lengthOk() {
+            return this.typedPassword.length >= minLength;
+        },
+        get matchOk() {
+            return this.typedConfirmation.length > 0 && this.typedPassword === this.typedConfirmation;
+        },
+    };
+}
+
+/**
+ * Copy-button state for a screen whose text is shown exactly once.
+ *
+ * Guarding on navigator.clipboard and returning left the button dead on the
+ * very device it exists for: the webview withholds the async API outside a
+ * secure context. beatraxCopy() falls back and, crucially, reports failure
+ * rather than swallowing it, which is what `failed` renders.
+ *
+ * Spread into a larger x-data where a screen also saves the same text, so
+ * `failed` stays one flag across both affordances.
+ */
+function copyToClipboard(text) {
+    return {
+        copied: false,
+        failed: false,
+
+        async copy() {
+            if (await window.beatraxCopy(text)) {
+                this.failed = false;
+                this.copied = true;
+                setTimeout(() => { this.copied = false; }, 2500);
+
+                return;
+            }
+
+            this.failed = true;
+        },
+    };
+}
+
+/**
  * Apply a theme change to the root element straight away.
  *
  * The `dark` / `light` class is rendered by the layout, which a Livewire
@@ -550,6 +609,8 @@ document.addEventListener('alpine:init', () => {
         window.Alpine.data('beatraxDatePicker', datePicker);
         window.Alpine.data('beatraxTimePicker', timePicker);
         window.Alpine.data('tabStrip', tabStrip);
+        window.Alpine.data('passwordStrength', passwordStrength);
+        window.Alpine.data('copyToClipboard', copyToClipboard);
 
         // Mobile navigation drawer state
         window.Alpine.store('mobileNav', {

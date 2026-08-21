@@ -12,6 +12,7 @@ return [
     'ok' => 'OK',
     'ok_aria' => 'OK — PIN-kód megerősítése',
     'sign_out' => 'Kijelentkezés',
+    'forgot_pin' => 'Elfelejtetted a PIN-kódot? Jelentkezz ki — a fiókjelszavaddal újra bejelentkezhetsz, és beállíthatsz egy új PIN-kódot. Nem vész el adat.',
 
     'errors' => [
         'pin_length' => 'A PIN-kódnak legalább 6 számjegyből kell állnia.',

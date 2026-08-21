@@ -13,13 +13,8 @@ use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 beforeEach(function (): void {
     $this->resolver = new class implements AccountResolver
     {
-        /** @var array<int, string> */
-        public array $askedFor = [];
-
         public function resolve(string $iban): AccountResolution
         {
-            $this->askedFor[] = $iban;
-
             return AccountResolution::unknown($iban);
         }
     };
@@ -117,15 +112,6 @@ it('rejects a file that fails the sniffer before reading any data', function ():
     } finally {
         @unlink($tmp);
     }
-})->group('phase-2');
-
-it('captures the own IBAN from the Statement Account block and resolves it via the AccountResolver', function (): void {
-    iterator_to_array(
-        $this->adapter->parse(base_path('tests/fixtures/asn-camt053-sample-1.xml'), $this->resolver),
-        preserve_keys: false,
-    );
-
-    expect($this->resolver->askedFor)->toContain('NL57ASNB0123456789');
 })->group('phase-2');
 
 it('populates sourceRef from EndToEndId when present and never from a weaker ref', function (): void {

@@ -8,6 +8,7 @@
 --}}
 
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Goals\Internal\Enums\GoalProgressState')
 
 <div class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-950">
     {{-- Card header --}}
@@ -46,14 +47,14 @@
                          order the call site wrote them. --}}
                     <x-core::progress-bar
                         :value="$barWidth"
-                        :tone="$row->progressState === 'overdue' ? 'warning' : 'positive'"
+                        :tone="$row->progressState === GoalProgressState::Overdue->value ? 'warning' : 'positive'"
                         :label="Lang::get('goals::messages.progress.aria', ['name' => $row->name, 'pct' => $pct])"
                         width="w-20"
                         class="shrink-0"
                     />
                     <span class="shrink-0 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $pct }}%</span>
                     <span class="shrink-0 text-xs text-slate-500 dark:text-slate-400">
-                        @if ($row->progressState === 'overdue')
+                        @if ($row->progressState === GoalProgressState::Overdue->value)
                             <span class="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">{{ Lang::get('goals::messages.status.overdue') }}</span>
                         @elseif ($row->projectedFinishDate !== null)
                             · {{ \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->translatedFormat('d M \'y') }}

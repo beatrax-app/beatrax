@@ -35,6 +35,9 @@
     // needs no translation on the client.
     $firstDow = (int) $weekStart->dayOfWeek;
 
+    $fieldLabel = $ariaLabel ?? Lang::get('core::components.date.open');
+    $emptyLabel = Lang::get('core::components.date.empty');
+
     // The Livewire binding goes on the ROOT, where `x-modelable` can hand it
     // straight to the component's own `value`. Everything else — aria-invalid,
     // aria-describedby, data-* — belongs on the button, which is the element a
@@ -76,17 +79,25 @@
     x-on:click.outside="open = false"
     {{ $attributes->only('class')->class(['relative']) }}
 >
+    {{-- The chosen date is part of the field's NAME, not only its pixels. An
+         aria-label outranks both the button's own text and a <label for="…">
+         pointing at it, so the static one this used to carry announced
+         "Choose a date" over a field reading 31-12-2026. The two sr-only spans
+         below are the name instead; `aria-labelledby` is what beats the label,
+         and where there is no field id there is no label to beat, so the same
+         two spans become the name by the ordinary name-from-content rule. --}}
     <button
         type="button"
-        @if ($fieldId !== null) id="{{ $fieldId }}" @endif
+        @if ($fieldId !== null) id="{{ $fieldId }}" aria-labelledby="{{ $fieldId }}-name {{ $fieldId }}-value" @endif
         x-on:click="toggle()"
         x-bind:aria-expanded="open ? 'true' : 'false'"
         aria-haspopup="dialog"
-        aria-label="{{ $ariaLabel ?? Lang::get('core::components.date.open') }}"
         {{ $passthrough }}
         class="flex w-full items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
     >
-        <span x-text="display || '—'"></span>
+        <span @if ($fieldId !== null) id="{{ $fieldId }}-name" @endif class="sr-only">{{ $fieldLabel }}</span>
+        <span @if ($fieldId !== null) id="{{ $fieldId }}-value" @endif class="sr-only" x-text="display || @js($emptyLabel)">{{ $emptyLabel }}</span>
+        <span aria-hidden="true" x-text="display || '—'">—</span>
         <span aria-hidden="true" class="text-slate-400">▦</span>
     </button>
 

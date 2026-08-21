@@ -18,6 +18,7 @@ use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\SafeTrace;
 use Modules\Core\Public\Support\UploadLimits;
 use Modules\Import\Public\Contracts\RunsImports;
+use Modules\Import\Public\Services\UploadFilename;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Enums\AccountKind;
@@ -124,7 +125,7 @@ final class ConnectCardStep extends Component
         $ids = [];
         $firstError = null;
         foreach ($this->statements as $statement) {
-            $originalFilename = $this->sanitiseFilename($statement->getClientOriginalName());
+            $originalFilename = UploadFilename::sanitise($statement->getClientOriginalName(), '.pdf');
             try {
                 $ids[] = $importer->runFromUpload($statement->getRealPath(), $this->selectedFormat, $user, $originalFilename)->importRunId;
             } catch (Throwable $e) {
@@ -236,14 +237,5 @@ final class ConnectCardStep extends Component
     public function render(ViewFactory $views): View
     {
         return $views->make('onboarding::livewire.steps.connect-card-step');
-    }
-
-    private function sanitiseFilename(string $original): string
-    {
-        $stem = pathinfo($original, PATHINFO_FILENAME);
-        $safe = preg_replace('/[^A-Za-z0-9_-]+/', '_', $stem);
-        $stemPart = ($safe === null || $safe === '') ? 'upload' : $safe;
-
-        return $stemPart.'.pdf';
     }
 }

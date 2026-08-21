@@ -22,8 +22,7 @@ return [
 
     'card' => [
         'likely' => 'Valószínűleg: névtelen kereskedő.',
-        'seen' => 'Előfordult',
-        'time' => 'alkalommal|alkalommal',
+        'seen_times' => 'Előfordult :count alkalommal|Előfordult :count alkalommal',
         'last_seen' => 'Legutóbb: :date',
         'suggest' => 'Javasolj nevet →',
     ],

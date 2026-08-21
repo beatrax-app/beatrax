@@ -18,13 +18,6 @@
 @use('Modules\Ledger\Public\ValueObjects\Money')
 @use('Modules\Ledger\Public\Services\BaseCurrency')
 
-@php
-    // Through Money, which writes the figure the way the reader's language
-    // does. The hand-rolled version this replaces was pinned to nl_NL, so an
-    // English reader met "€ 1.237,89" on a screen of "€1,237.89".
-    $fmtEur = static fn (int $minor): string => Money::ofMinor($minor, BaseCurrency::value())->format();
-@endphp
-
 <div class="py-12">
     <div class="mx-auto max-w-4xl px-4 sm:px-6">
 
@@ -140,7 +133,7 @@
                 <div class="flex flex-col">
                     <span style="font-size: var(--text-xs); color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;">{{ Lang::get('tax::page.total_deductions') }}</span>
                     <span class="kpi-number" style="font-size: var(--text-xl); font-weight: 600; color: var(--color-text);">
-                        {{ $fmtEur($data->deductionsTotalMinor) }}
+                        {{ Money::ofMinor($data->deductionsTotalMinor, BaseCurrency::value())->format() }}
                     </span>
                 </div>
 
@@ -148,7 +141,7 @@
                     <div class="flex flex-col">
                         <span style="font-size: var(--text-xs); color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;">{{ Lang::get('tax::page.income') }}</span>
                         <span class="kpi-number" style="font-size: var(--text-xl); font-weight: 600; color: var(--color-emerald);">
-                            {{ $fmtEur($data->incomeTotalMinor) }}
+                            {{ Money::ofMinor($data->incomeTotalMinor, BaseCurrency::value())->format() }}
                         </span>
                     </div>
                 @endif
@@ -232,7 +225,7 @@
                                     >{{ $count }}</span>
                                 </div>
                                 <span class="kpi-number" style="font-size: var(--text-base); font-weight: 600; color: var(--color-text); margin-right: var(--space-3);">
-                                    {{ $fmtEur($subtotal) }}
+                                    {{ Money::ofMinor($subtotal, BaseCurrency::value())->format() }}
                                 </span>
                                 {{-- Chevron (CSS rotates when open) --}}
                                 <span aria-hidden="true" style="color: var(--color-text-faint); font-size: var(--text-xs);">▾</span>
@@ -299,7 +292,7 @@
                                                 </td>
                                                 {{-- Settled EUR --}}
                                                 <td class="money px-3 py-2 text-right" style="color: var(--color-text);">
-                                                    {{ $fmtEur(abs($settledMinor)) }}
+                                                    {{ Money::ofMinor(abs($settledMinor), BaseCurrency::value())->format() }}
                                                 </td>
                                                 {{-- Original (if non-EUR) --}}
                                                 <td class="px-3 py-2 text-right" style="font-size: var(--text-xs); color: var(--color-text-faint);">
@@ -354,7 +347,7 @@
                                                 </div>
                                                 <div class="flex shrink-0 flex-col items-end gap-1">
                                                     <span class="kpi-number" style="font-size: var(--text-base); font-weight: 600; color: var(--color-text);">
-                                                        {{ $fmtEur(abs($settledMinor)) }}
+                                                        {{ Money::ofMinor(abs($settledMinor), BaseCurrency::value())->format() }}
                                                     </span>
                                                     @if ($hasOverride)
                                                         <span class="tax-badge--amber">→ {{ $row['taxYearOverride'] }}</span>

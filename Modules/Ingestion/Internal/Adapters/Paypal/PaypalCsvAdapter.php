@@ -81,8 +81,6 @@ final class PaypalCsvAdapter implements SourceAdapter
             $rawRows[] = $assoc;
         }
 
-        $accounts->resolve(self::PAYPAL_OWN_IBAN);
-
         $rolledUp = $this->rollup->rollup($rawRows, $language);
 
         /** @var list<CarbonImmutable> $bookedDates */

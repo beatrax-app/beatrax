@@ -15,6 +15,7 @@ use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Exceptions\BackupNotSupportedException;
 use Modules\Core\Public\Exceptions\RestoreFailedException;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\SqliteDatabase;
 use PDO;
 use Throwable;
 
@@ -182,14 +183,14 @@ final class RestoreDatabaseCommand extends Command
      */
     private function resolveLivePath(): string
     {
-        $driver = $this->config->get('database.connections.sqlite.driver');
-        if ($driver !== 'sqlite') {
+        $driver = $this->config->get(SqliteDatabase::DRIVER_CONFIG_KEY);
+        if ($driver !== SqliteDatabase::DRIVER) {
             throw new BackupNotSupportedException('db:restore is only supported on the sqlite driver.');
         }
 
-        $path = $this->config->get('database.connections.sqlite.database');
+        $path = $this->config->get(SqliteDatabase::LIVE_PATH_CONFIG_KEY);
         if (! is_string($path) || $path === '') {
-            throw new BackupNotSupportedException('database.connections.sqlite.database is not configured.');
+            throw new BackupNotSupportedException(SqliteDatabase::LIVE_PATH_CONFIG_KEY.' is not configured.');
         }
 
         return $path;

@@ -17,8 +17,7 @@ return [
     'net' => 'Netto',
 
     'status_tiles_aria' => 'Stavové dlaždice',
-    'email_scan_health' => 'Stav skenování e-mailů — připojeno: :count',
-    'inbox' => 'schránka|schránky|schránek',
+    'email_scan_health' => 'Stav skenování e-mailů — připojeno: :count schránka|Stav skenování e-mailů — připojeno: :count schránky|Stav skenování e-mailů — připojeno: :count schránek',
 
     'top_spending' => 'Největší výdaje',
     'no_expenses' => 'Zatím žádné zařazené výdaje.',

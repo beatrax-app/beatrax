@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Vaata ahelad üle',
     'heading' => 'Vaata ahelad üle',
-    'hint' => 'vihje|vihjet',
+    'hint' => ':count vihje|:count vihjet',
     'subtitle' => 'Kinnita või lükka tagasi kandidaatlülid, mida ahelate lahendaja ei suutnud automaatselt kinnitada.',
 
     'empty_heading' => 'Midagi pole üle vaadata',

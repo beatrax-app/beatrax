@@ -17,6 +17,11 @@ final class MoneyInput
     // often than a payment.
     public const int MAX_MINOR = 99_999_999_999;
 
+    // The 15-digit ceiling keeps the minor-unit multiplication inside a 64-bit
+    // int; past that there is nothing left to weigh up, so the shape check
+    // refuses the figure rather than the cast quietly losing it.
+    public const int MAX_WHOLE_DIGITS = 15;
+
     // Every group mark a shipped locale uses, so a figure this class wrote
     // parses back through tryToMinor(): a plain space, the non-breaking one
     // twelve locales group with, and French's narrow no-break space.
@@ -41,8 +46,8 @@ final class MoneyInput
         return $minor !== null && abs($minor) > self::MAX_MINOR;
     }
 
-    // Shape only. The 15-digit ceiling keeps the minor-unit multiplication
-    // inside a 64-bit int; past that there is nothing to weigh up.
+    // Shape only, with no MAX_MINOR ceiling applied, so exceedsMax() can tell
+    // a figure that is merely too large from one that is not an amount at all.
     private static function parseAnyMagnitude(string $value): ?int
     {
         $trimmed = str_replace(self::GROUP_MARKS, '', trim($value));
@@ -63,7 +68,7 @@ final class MoneyInput
             $unsigned = str_replace(',', '.', $unsigned);
         }
 
-        if (preg_match('/^\d{1,15}(\.\d{1,2})?$/', $unsigned) !== 1) {
+        if (preg_match('/^\d{1,'.self::MAX_WHOLE_DIGITS.'}(\.\d{1,2})?$/', $unsigned) !== 1) {
             return null;
         }
 

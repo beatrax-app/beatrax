@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Route;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
+use Modules\Shell\Public\Navigation\Destination;
 
 // The route names and URLs are the ones Core registered before the shell moved
 // out of it: `dashboard` at / and `settings` at /settings. Both are linked from
@@ -27,7 +28,7 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
         // dashboard from rendering empty tiles on a fresh install.
         $summary = $glance->for($currentUser->user(), $periods->current());
         if ($summary->isFirstRun) {
-            return new RedirectResponse($urls->route('imports.new'));
+            return new RedirectResponse($urls->route(Destination::Imports->value));
         }
 
         return new Response($views->make('shell::dashboard')->render());

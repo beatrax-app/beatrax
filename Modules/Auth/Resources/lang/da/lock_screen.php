@@ -7,6 +7,7 @@ return [
     'native_unlock_failed' => 'Kunne ikke låse op. Indtast din PIN-kode i stedet.',
     'page_title' => 'Lås op · Beatrax',
     'sign_out' => 'Log ud',
+    'forgot_pin' => 'Har du glemt din PIN-kode? Log ud — du kan logge ind igen med din kontoadgangskode og vælge en ny PIN-kode. Ingen data går tabt.',
 
     'digits_suffix' => 'cifre indtastet',
     'pad_label' => 'PIN-tastatur',

@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Import\Public\Contracts\RunsImports;
+use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Ledger\Models\Transaction;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingSourceAdapter;
@@ -94,14 +95,14 @@ it('an EB fetch overlapping a prior CAMT.053 import commits ZERO net-new rows fo
     // before the pipeline ever saw it.
     expect($preview->rows)->toHaveCount(3);
 
-    /** @var array<string, string> $statusesByCounterparty */
+    /** @var array<string, PreviewRowStatus> $statusesByCounterparty */
     $statusesByCounterparty = [];
     foreach ($preview->rows as $row) {
         $statusesByCounterparty[(string) $row->counterpartyName] = $row->status;
     }
-    expect($statusesByCounterparty['Albert Heijn'] ?? null)->toBe('duplicate');
-    expect($statusesByCounterparty['Coolblue 2'] ?? null)->toBe('duplicate');
-    expect($statusesByCounterparty['Netflix'] ?? null)->toBe('new');
+    expect($statusesByCounterparty['Albert Heijn'] ?? null)->toBe(PreviewRowStatus::Duplicate);
+    expect($statusesByCounterparty['Coolblue 2'] ?? null)->toBe(PreviewRowStatus::Duplicate);
+    expect($statusesByCounterparty['Netflix'] ?? null)->toBe(PreviewRowStatus::NewRow);
 
     $ebResult = ($confirmer)($preview->importRunId, $user);
 

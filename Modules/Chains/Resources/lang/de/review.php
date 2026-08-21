@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Ketten prüfen',
     'heading' => 'Ketten prüfen',
-    'hint' => 'Hinweis|Hinweise',
+    'hint' => ':count Hinweis|:count Hinweise',
     'subtitle' => 'Bestätige oder verwirf Kandidatenverknüpfungen, die der Ketten-Resolver nicht automatisch bestätigen konnte.',
 
     'empty_heading' => 'Nichts zu prüfen',

@@ -15,6 +15,8 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
+use Modules\DevMode\Internal\Enums\ArgType;
+use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\ArgSpec;
@@ -32,7 +34,7 @@ final class CommandArgPromptModal extends Component
     // Display only — submit() re-derives the tier from the registry, so
     // nothing authorises on this value.
     #[Locked]
-    public string $claimedTier = 'safe';
+    public CommandTier $claimedTier = CommandTier::Safe;
 
     /**
      * @var array<string, mixed>
@@ -45,10 +47,10 @@ final class CommandArgPromptModal extends Component
      * @param  array<string, mixed>  $prefill
      */
     #[On('command-args:prompt')]
-    public function open(string $name, DevCommandRegistry $registry, string $tier = 'safe', array $prefill = []): void
+    public function open(string $name, DevCommandRegistry $registry, string $tier = CommandTier::Safe->value, array $prefill = []): void
     {
         $this->command = $name;
-        $this->claimedTier = $tier !== '' ? $tier : 'safe';
+        $this->claimedTier = CommandTier::fromStored($tier);
         $this->values = [];
         $this->submitError = '';
 
@@ -64,7 +66,7 @@ final class CommandArgPromptModal extends Component
         foreach ($spec->argsSchema as $arg) {
             $supplied = $prefill[$arg->name] ?? null;
             $this->values[$arg->name] = match ($arg->type) {
-                'boolean' => $supplied === true || $supplied === 'true' || $supplied === 1 || $supplied === '1',
+                ArgType::Boolean => $supplied === true || $supplied === 'true' || $supplied === 1 || $supplied === '1',
                 default => is_scalar($supplied) ? (string) $supplied : '',
             };
         }
@@ -96,7 +98,7 @@ final class CommandArgPromptModal extends Component
         // ArtisanRunnerPage is not mounted on /dev/logs or /dev/queue, and an
         // event with no listener drops the spawn silently.
         $command = $this->command;
-        $runId = $spawner->start($command, $args, $user->id(), 'safe');
+        $runId = $spawner->start($command, $args, $user->id(), CommandTier::Safe);
 
         $this->toast(Lang::get('dev::runner.toast.started', ['command' => $command, 'runId' => $runId]));
         $this->dispatch('modal-close', name: 'command-args');
@@ -142,7 +144,7 @@ final class CommandArgPromptModal extends Component
             return null;
         }
 
-        if ($spec->tier === 'safe') {
+        if ($spec->tier->reachesThePalette()) {
             return $spec;
         }
 
@@ -188,7 +190,7 @@ final class CommandArgPromptModal extends Component
         $args = [];
         foreach ($spec->argsSchema as $arg) {
             $value = $this->values[$arg->name] ?? null;
-            if ($arg->type === 'boolean') {
+            if ($arg->type === ArgType::Boolean) {
                 if ($value === true) {
                     $args[$arg->name] = true;
                 }

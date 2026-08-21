@@ -42,12 +42,14 @@ return [
         'next_month' => 'Sonraki ay',
         'today' => 'Bugün',
         'clear' => 'Temizle',
+        'empty' => 'tarih seçilmedi',
     ],
 
     'time' => [
         'open' => 'Bir saat seç',
         'hour' => 'Saat',
         'minute' => 'Dakika',
+        'empty' => 'saat seçilmedi',
     ],
 
     'veil_locked' => 'Uygulama kilitli',

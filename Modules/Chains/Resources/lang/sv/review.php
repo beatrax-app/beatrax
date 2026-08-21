@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Granska kedjor',
     'heading' => 'Granska kedjor',
-    'hint' => 'ledtråd|ledtrådar',
+    'hint' => ':count ledtråd|:count ledtrådar',
     'subtitle' => 'Bekräfta eller avvisa kandidatlänkar som kedjelösaren inte kunde bekräfta automatiskt.',
 
     'empty_heading' => 'Inget att granska',

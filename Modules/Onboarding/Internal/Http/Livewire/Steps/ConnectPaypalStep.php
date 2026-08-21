@@ -18,6 +18,8 @@ use Modules\Core\Public\Support\UploadLimits;
 use Modules\Import\Public\Actions\EnsurePaypalAccountAction;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Dto\ImportPreviewResult;
+use Modules\Import\Public\Enums\PreviewRowStatus;
+use Modules\Import\Public\Services\UploadFilename;
 use Modules\Onboarding\Models\WizardProgress;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -76,7 +78,7 @@ final class ConnectPaypalStep extends Component
         ($ensurePaypalAccount)($user);
 
         $tmp = $this->activityCsv->getRealPath();
-        $originalFilename = $this->sanitiseFilename($this->activityCsv->getClientOriginalName());
+        $originalFilename = UploadFilename::sanitise($this->activityCsv->getClientOriginalName(), '.csv');
 
         try {
             $result = $importer->runFromUpload($tmp, $this->selectedFormat, $user, $originalFilename);
@@ -131,13 +133,20 @@ final class ConnectPaypalStep extends Component
 
     private function fatalParseMessage(ImportPreviewResult $result): ?string
     {
+        // A file the parser cannot read at all comes back as a file-level
+        // failure carrying no rows, so the all-error-rows walk below never
+        // sees it. Its detail is the sentence naming the export to fetch.
+        if ($result->fileFailureReason !== null) {
+            return $result->fileFailureDetail ?? $result->fileFailureReason->label();
+        }
+
         if ($result->rows === [] || $result->accountsToName !== []) {
             return null;
         }
 
         $firstErrorMessage = null;
         foreach ($result->rows as $row) {
-            if ($row->status !== 'error') {
+            if ($row->status !== PreviewRowStatus::Error) {
                 return null;
             }
             if ($firstErrorMessage === null && $row->error !== null && $row->error !== '') {
@@ -146,14 +155,5 @@ final class ConnectPaypalStep extends Component
         }
 
         return $firstErrorMessage ?? Lang::get('onboarding::connect_paypal.errors.unreadable');
-    }
-
-    private function sanitiseFilename(string $original): string
-    {
-        $stem = pathinfo($original, PATHINFO_FILENAME);
-        $safe = preg_replace('/[^A-Za-z0-9_-]+/', '_', $stem);
-        $stemPart = ($safe === null || $safe === '') ? 'upload' : $safe;
-
-        return $stemPart.'.csv';
     }
 }

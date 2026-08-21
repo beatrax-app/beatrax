@@ -22,8 +22,7 @@ return [
 
     'card' => [
         'likely' => 'Prawdopodobnie: nienazwany sprzedawca.',
-        'seen' => 'Widziano',
-        'time' => 'raz|razy|razy',
+        'seen_times' => 'Widziano :count raz|Widziano :count razy|Widziano :count razy',
         'last_seen' => 'Ostatnio widziano :date',
         'suggest' => 'Zaproponuj nazwę →',
     ],

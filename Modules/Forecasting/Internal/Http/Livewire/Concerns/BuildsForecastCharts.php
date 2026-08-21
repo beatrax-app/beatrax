@@ -9,6 +9,7 @@ use Modules\Core\Models\User;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 use Modules\Forecasting\Public\Dto\ForecastDto;
 use Modules\Forecasting\Public\Services\ForecastQuery;
+use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
 trait BuildsForecastCharts
@@ -84,8 +85,8 @@ trait BuildsForecastCharts
             $highs[] = $effectiveBufferMinor;
         }
 
-        $yMin = ($lows === [] ? 0 : min($lows)) / 100 - 1;
-        $yMax = ($highs === [] ? 0 : max($highs)) / 100 + 1;
+        $yMin = ($lows === [] ? 0 : min($lows)) / Money::MINOR_UNITS_PER_MAJOR - 1;
+        $yMax = ($highs === [] ? 0 : max($highs)) / Money::MINOR_UNITS_PER_MAJOR + 1;
 
         return [$yMin, $yMax];
     }
@@ -156,20 +157,23 @@ trait BuildsForecastCharts
         $highs = [];
 
         foreach ($forecast->points as $point) {
-            $rangeData[] = ['x' => $point->date, 'y' => [$point->lowMinor / 100, $point->highMinor / 100]];
-            $lineData[] = ['x' => $point->date, 'y' => $point->pointMinor / 100];
+            $rangeData[] = [
+                'x' => $point->date,
+                'y' => [$point->lowMinor / Money::MINOR_UNITS_PER_MAJOR, $point->highMinor / Money::MINOR_UNITS_PER_MAJOR],
+            ];
+            $lineData[] = ['x' => $point->date, 'y' => $point->pointMinor / Money::MINOR_UNITS_PER_MAJOR];
             $lows[] = $point->lowMinor;
             $highs[] = $point->highMinor;
         }
 
-        $yMin = $yMinOverride ?? (($lows === [] ? 0 : min($lows)) / 100 - 1);
-        $yMax = $yMaxOverride ?? (($highs === [] ? 0 : max($highs)) / 100 + 1);
+        $yMin = $yMinOverride ?? (($lows === [] ? 0 : min($lows)) / Money::MINOR_UNITS_PER_MAJOR - 1);
+        $yMax = $yMaxOverride ?? (($highs === [] ? 0 : max($highs)) / Money::MINOR_UNITS_PER_MAJOR + 1);
 
         // ApexCharts v5 needs the full annotations object: a bare [] serializes
         // to a JSON array and crashes drawImageAnnos.
         $annotations = ['yaxis' => [], 'xaxis' => [], 'points' => [], 'images' => []];
         if ($effectiveBufferMinor !== null) {
-            $bufferValue = $effectiveBufferMinor / 100;
+            $bufferValue = $effectiveBufferMinor / Money::MINOR_UNITS_PER_MAJOR;
             $annotations['yaxis'] = [
                 [
                     'y' => $yMin - 10,

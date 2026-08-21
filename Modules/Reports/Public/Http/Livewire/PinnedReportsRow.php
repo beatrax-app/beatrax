@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Reports\Internal\Aggregation\ReportAggregator;
 use Modules\Reports\Internal\Dto\ReportDefinition;
 use Modules\Reports\Internal\Dto\ReportResultRow;
@@ -87,7 +88,7 @@ final class PinnedReportsRow extends Component
         $rows = self::withoutLeadingEmptyBuckets($rows);
 
         $categories = array_map(static fn (ReportResultRow $row): string => $row->groupLabel, $rows);
-        $data = array_map(static fn (ReportResultRow $row): float => $row->amountMinor / 100, $rows);
+        $data = array_map(static fn (ReportResultRow $row): float => $row->amountMinor / Money::MINOR_UNITS_PER_MAJOR, $rows);
 
         return [
             'chart' => [
@@ -153,7 +154,7 @@ final class PinnedReportsRow extends Component
         $labels = array_map(static fn (ReportResultRow $row): string => $row->groupLabel, $rows);
         // ApexCharts donut series wants non-negative magnitudes, but a report
         // total is signed, so slice size is the absolute value.
-        $series = array_map(static fn (ReportResultRow $row): float => abs($row->amountMinor) / 100, $rows);
+        $series = array_map(static fn (ReportResultRow $row): float => abs($row->amountMinor) / Money::MINOR_UNITS_PER_MAJOR, $rows);
 
         $colors = [];
         foreach (array_keys($labels) as $i) {

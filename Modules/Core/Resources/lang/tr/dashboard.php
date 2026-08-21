@@ -17,8 +17,7 @@ return [
     'net' => 'Net',
 
     'status_tiles_aria' => 'Durum kartları',
-    'email_scan_health' => 'E-posta tarama durumu — :count bağlı',
-    'inbox' => 'gelen kutusu',
+    'email_scan_health' => 'E-posta tarama durumu — :count bağlı gelen kutusu',
 
     'top_spending' => 'En çok harcama',
     'no_expenses' => 'Henüz kategorilendirilmiş gider yok.',

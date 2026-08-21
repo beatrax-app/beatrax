@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Dto\PreviewRowDto;
+use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Ledger\Models\ImportRun;
 
 final class PreviewSeedHelper
@@ -34,7 +35,7 @@ final class PreviewSeedHelper
         for ($i = 0; $i < $newRowCount; $i++) {
             $rows[] = new PreviewRowDto(
                 rowIndex: $i,
-                status: 'new',
+                status: PreviewRowStatus::NewRow,
                 accountId: $rowAccountId,
                 bookedAt: '2026-05-10',
                 counterpartyName: 'Fixture '.$i,

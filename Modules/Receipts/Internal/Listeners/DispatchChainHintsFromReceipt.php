@@ -8,6 +8,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Modules\Import\Public\Events\TransactionImported;
 use Modules\Receipts\Public\Dto\ChainHintPayload\FundedByCardPayload;
 use Modules\Receipts\Public\Dto\ChainHintPayload\RefundOfPayload;
+use Modules\Receipts\Public\Enums\ChainHintType;
 use Modules\Receipts\Public\Events\ChainHintDetected;
 use Psr\Log\LoggerInterface;
 
@@ -75,7 +76,7 @@ final class DispatchChainHintsFromReceipt
 
     /**
      * @param  array<int|string, mixed>  $hint
-     * @return array{string, object, string}|null
+     * @return array{ChainHintType, object, string}|null
      */
     private function rehydrate(array $hint): ?array
     {
@@ -86,16 +87,16 @@ final class DispatchChainHintsFromReceipt
         $rawEvidence = $hint['evidence'] ?? '';
         $evidence = is_string($rawEvidence) ? $rawEvidence : '';
 
-        return match ($type) {
-            'funded_by_card' => $this->rehydrateFundedByCard($hint, $evidence),
-            'refund_of' => $this->rehydrateRefundOf($hint, $evidence),
+        return match (ChainHintType::tryFrom($type)) {
+            ChainHintType::FundedByCard => $this->rehydrateFundedByCard($hint, $evidence),
+            ChainHintType::RefundOf => $this->rehydrateRefundOf($hint, $evidence),
             default => null,
         };
     }
 
     /**
      * @param  array<int|string, mixed>  $hint
-     * @return array{string, object, string}|null
+     * @return array{ChainHintType, object, string}|null
      */
     private function rehydrateFundedByCard(array $hint, string $evidence): ?array
     {
@@ -104,12 +105,12 @@ final class DispatchChainHintsFromReceipt
             return null;
         }
 
-        return ['funded_by_card', new FundedByCardPayload(cardLast4: $cardLast4), $evidence];
+        return [ChainHintType::FundedByCard, new FundedByCardPayload(cardLast4: $cardLast4), $evidence];
     }
 
     /**
      * @param  array<int|string, mixed>  $hint
-     * @return array{string, object, string}|null
+     * @return array{ChainHintType, object, string}|null
      */
     private function rehydrateRefundOf(array $hint, string $evidence): ?array
     {
@@ -118,6 +119,6 @@ final class DispatchChainHintsFromReceipt
             return null;
         }
 
-        return ['refund_of', new RefundOfPayload(originalReferenceId: $original), $evidence];
+        return [ChainHintType::RefundOf, new RefundOfPayload(originalReferenceId: $original), $evidence];
     }
 }

@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\DevMode\Internal\Enums\CommandTier')
 {{-- UI-SPEC §19: overflow-x-auto wrapper ensures the dense audit log
      table scrolls horizontally at phone width without breaking the page layout. --}}
 <div class="p-8 space-y-6 overflow-x-auto" data-testid="audit-log-page">
@@ -41,8 +42,8 @@
                 class="rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-900 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
             >
                 <option value="">{{ Lang::get('dev::audit.filter_all') }}</option>
-                <option value="safe">{{ Lang::get('dev::common.tier.safe') }}</option>
-                <option value="destructive">{{ Lang::get('dev::common.tier.destructive') }}</option>
+                <option value="{{ CommandTier::Safe->value }}">{{ Lang::get('dev::common.tier.safe') }}</option>
+                <option value="{{ CommandTier::Destructive->value }}">{{ Lang::get('dev::common.tier.destructive') }}</option>
             </select>
         </div>
         <div class="flex items-center gap-2">
@@ -107,7 +108,7 @@
                              */
                             $copyParts = [
                                 'command: '.$row['command'],
-                                'tier: '.$row['tier'],
+                                'tier: '.$row['tier']->value,
                                 'exit_code: '.($row['exitCode'] ?? '—'),
                                 'caller: '.($row['username'] !== '' ? $row['username'] : '—'),
                                 'started_at: '.($row['createdAt'] ?? '—'),

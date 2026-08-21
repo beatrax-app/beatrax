@@ -15,7 +15,7 @@ return [
     'no_counterparty' => '(ingen motpart)',
     'open_from_row' => 'Åpne fra-raden',
     'open_to_row' => 'Åpne til-raden',
-    'leg_count' => '1 betaling|:count betalinger',
+    'leg_count' => ':count betaling|:count betalinger',
     'state_aria' => 'Status: :state',
 
     'kind' => [

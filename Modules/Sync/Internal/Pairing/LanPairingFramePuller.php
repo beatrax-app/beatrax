@@ -6,8 +6,8 @@ namespace Modules\Sync\Internal\Pairing;
 
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
+use Modules\Sync\Internal\Pairing\Concerns\BrowsesLanPeers;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
-use Modules\Sync\Internal\Transport\Discovery\MdnsAdvertiser;
 use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
 use Modules\Sync\Internal\Transport\PairingFramePullHandler;
 use SodiumException;
@@ -21,13 +21,7 @@ use Throwable;
  */
 final readonly class LanPairingFramePuller
 {
-    private const float BROWSE_TIMEOUT_SECONDS = 2.0;
-
-    private const int CONNECT_TIMEOUT_SECONDS = 1;
-
-    private const int REQUEST_TIMEOUT_SECONDS = 2;
-
-    private const int MAX_PEERS_TRIED = 4;
+    use BrowsesLanPeers;
 
     // One answer cannot hand this device an unbounded amount of work: whoever
     // answers the browse chooses how many frames the reply carries.
@@ -52,19 +46,8 @@ final readonly class LanPairingFramePuller
         }
 
         $applied = 0;
-        $tried = 0;
 
-        foreach ($this->discovery->browse(MdnsAdvertiser::SERVICE_TYPE, self::BROWSE_TIMEOUT_SECONDS) as $peer) {
-            if ($tried >= self::MAX_PEERS_TRIED) {
-                break;
-            }
-
-            if (! $peer->isConnectable()) {
-                continue;
-            }
-
-            $tried++;
-
+        foreach ($this->eachConnectablePeer() as $peer) {
             foreach ($this->framesFrom($peer->host, $peer->port, $ownDeviceId, $proof) as $frame) {
                 if ($applied >= self::MAX_FRAMES_APPLIED) {
                     break 2;
@@ -102,9 +85,7 @@ final readonly class LanPairingFramePuller
         $url = "http://{$host}:{$port}".PairingFramePullHandler::PULL_PATH;
 
         try {
-            $response = $this->http->createPendingRequest()
-                ->connectTimeout(self::CONNECT_TIMEOUT_SECONDS)
-                ->timeout(self::REQUEST_TIMEOUT_SECONDS)
+            $response = $this->peerRequest()
                 ->get($url, ['device' => $ownDeviceId, 'proof' => $proof]);
 
             if (! $response->successful()) {

@@ -7,6 +7,7 @@ return [
     'native_unlock_failed' => 'Entsperren fehlgeschlagen. Gib stattdessen deine PIN ein.',
     'page_title' => 'Entsperren · Beatrax',
     'sign_out' => 'Abmelden',
+    'forgot_pin' => 'PIN vergessen? Melde dich ab — mit deinem Kontopasswort meldest du dich wieder an und legst eine neue PIN fest. Es gehen keine Daten verloren.',
 
     'digits_suffix' => 'Ziffern eingegeben',
     'pad_label' => 'PIN-Tastenfeld',

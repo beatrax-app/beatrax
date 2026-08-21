@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Import\Public\Dto;
 
+use Modules\Import\Public\Enums\PreviewSectionStatus;
 use Spatie\LaravelData\Data;
 
 final class ConsolidatedPreviewSection extends Data
@@ -17,7 +18,7 @@ final class ConsolidatedPreviewSection extends Data
         public readonly array $importRunIds,
         public readonly int $totalRows,
         public readonly array $sampleRows,
-        public readonly string $status,
+        public readonly PreviewSectionStatus $status,
         // The parser's own words on a failed parse — which format it
         // expected, what to re-download — as opposed to a lost cache, which
         // is also `error` but has nothing to say.

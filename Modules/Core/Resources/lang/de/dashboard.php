@@ -17,8 +17,7 @@ return [
     'net' => 'Netto',
 
     'status_tiles_aria' => 'Status-Kacheln',
-    'email_scan_health' => 'Status des E-Mail-Scans — :count verbunden',
-    'inbox' => 'Postfach|Postfächer',
+    'email_scan_health' => 'Status des E-Mail-Scans — :count verbunden Postfach|Status des E-Mail-Scans — :count verbunden Postfächer',
 
     'top_spending' => 'Größte Ausgaben',
     'no_expenses' => 'Noch keine kategorisierten Ausgaben.',

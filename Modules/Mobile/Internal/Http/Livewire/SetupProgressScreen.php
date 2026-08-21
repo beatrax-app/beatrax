@@ -16,6 +16,7 @@ use Modules\Mobile\Internal\Sync\InitialSyncPuller;
 use Modules\Mobile\Internal\Sync\PeerLanAddress;
 use Modules\Mobile\Internal\Sync\SetupStep;
 use Modules\Mobile\Internal\Sync\SyncBlockedReason;
+use Modules\Mobile\Internal\Sync\SyncPhase;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -30,7 +31,7 @@ final class SetupProgressScreen extends Component
 
     public int $percent = 0;
 
-    public string $phase = 'pending';
+    public SyncPhase $phase = SyncPhase::Pending;
 
     // Null while the pull is simply working. Rendered as copy, so a stall
     // reads as a state rather than a frozen screen.
@@ -48,7 +49,7 @@ final class SetupProgressScreen extends Component
 
         $this->applyProgress($progress);
 
-        $this->isResuming = $this->recordsApplied > 0 || $this->phase !== 'pending';
+        $this->isResuming = $this->recordsApplied > 0 || $this->phase !== SyncPhase::Pending;
     }
 
     public function poll(
@@ -59,7 +60,7 @@ final class SetupProgressScreen extends Component
         PeerLanAddress $peerAddress,
         LoggerInterface $logger,
     ): void {
-        if ($this->phase === 'complete') {
+        if ($this->phase === SyncPhase::Complete) {
             $this->redirect($urls->route('mobile.setup.done'), navigate: false);
 
             return;
@@ -91,7 +92,7 @@ final class SetupProgressScreen extends Component
         // The confirmation, not the dashboard: dropping straight into a
         // populated app answered neither question the wait raises — did it
         // work, and what happens from now on.
-        if ($this->phase === 'complete') {
+        if ($this->phase === SyncPhase::Complete) {
             $this->redirect($urls->route('mobile.setup.done'), navigate: false);
         }
     }
@@ -107,7 +108,7 @@ final class SetupProgressScreen extends Component
     }
 
     /**
-     * @param  array{records_applied: int, records_expected: ?int, percent: int, phase: string, blocked: ?SyncBlockedReason}  $progress
+     * @param  array{records_applied: int, records_expected: ?int, percent: int, phase: SyncPhase, blocked: ?SyncBlockedReason}  $progress
      */
     private function applyProgress(array $progress): void
     {
@@ -115,7 +116,7 @@ final class SetupProgressScreen extends Component
         $this->recordsExpected = $progress['records_expected'];
         $this->phase = $progress['phase'];
         $this->blocked = $progress['blocked'];
-        $this->step = $this->phase === 'complete' ? SetupStep::Rebuild : SetupStep::forBlocked($this->blocked);
+        $this->step = $this->phase === SyncPhase::Complete ? SetupStep::Rebuild : SetupStep::forBlocked($this->blocked);
         $this->percent = $this->stepPercent($progress['percent']);
     }
 
@@ -129,7 +130,7 @@ final class SetupProgressScreen extends Component
         $hasRealTotal = $this->recordsExpected !== null && $this->recordsExpected > $this->recordsApplied;
 
         return match (true) {
-            $this->phase === 'complete' => 100,
+            $this->phase === SyncPhase::Complete => 100,
             $this->step === SetupStep::Transfer && $hasRealTotal => $transferPercent,
             default => 0,
         };

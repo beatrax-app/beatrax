@@ -8,6 +8,7 @@ use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 use Modules\Ingestion\Internal\Exceptions\InvalidDateException;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Paypal\PaypalCsvEventTypeMap;
+use Modules\Ledger\Public\Enums\Currency;
 
 final class PaypalTransactionRollup
 {
@@ -155,14 +156,14 @@ final class PaypalTransactionRollup
     private function buildDto(array $parentRow, array $children, string $language, int $canonicalIndex): SourceTransactionDto
     {
         $parentGross = $this->columns->value('gross', $language, $parentRow) ?? '0,00';
-        $parentCurrency = $this->columns->value('currency', $language, $parentRow) ?? 'EUR';
+        $parentCurrency = $this->columns->value('currency', $language, $parentRow) ?? Currency::Eur->value;
 
         $nativeAmountMinor = $this->amounts->parseMinor($parentGross);
         $nativeCurrency = $parentCurrency;
         $settledAmountMinor = null;
         $settledCurrency = null;
 
-        // The foreign leg is identified by Currency != 'EUR', never by row order: both
+        // The foreign leg is identified by its currency, never by row order: both
         // legs of a conversion pair share an event type and a Reference Txn ID.
         foreach ($children as $childRow) {
             $childEventType = $this->columns->value('type', $language, $childRow) ?? '';
@@ -172,7 +173,7 @@ final class PaypalTransactionRollup
                 continue;
             }
 
-            $childCurrency = $this->columns->value('currency', $language, $childRow) ?? 'EUR';
+            $childCurrency = $this->columns->value('currency', $language, $childRow) ?? Currency::Eur->value;
             $childGross = $this->columns->value('gross', $language, $childRow) ?? '0,00';
             try {
                 $childAmountMinor = $this->amounts->parseMinor($childGross);
@@ -184,10 +185,10 @@ final class PaypalTransactionRollup
                 continue;
             }
 
-            if ($childCurrency === 'EUR' && $nativeCurrency !== 'EUR') {
+            if ($childCurrency === Currency::Eur->value && $nativeCurrency !== Currency::Eur->value) {
                 $settledAmountMinor = $childAmountMinor;
                 $settledCurrency = $childCurrency;
-            } elseif ($childCurrency !== 'EUR' && $nativeCurrency === 'EUR') {
+            } elseif ($childCurrency !== Currency::Eur->value && $nativeCurrency === Currency::Eur->value) {
                 $settledAmountMinor = $nativeAmountMinor;
                 $settledCurrency = $nativeCurrency;
                 $nativeAmountMinor = $childAmountMinor;

@@ -111,3 +111,19 @@ it('accepts the largest amount below the ceiling', function (): void {
 it('does not call a malformed amount too large', function (string $bad): void {
     expect(MoneyInput::exceedsMax($bad))->toBeFalse();
 })->with(['abc', '', '12.345', '1.2.3']);
+
+// One owner for the ceiling: GenericCsvAmountParser reads the same constant to
+// decide when a cell is out of range, so the two cannot drift apart.
+it('parses a whole part exactly MAX_WHOLE_DIGITS long, before MAX_MINOR bites', function (): void {
+    $digits = str_repeat('9', MoneyInput::MAX_WHOLE_DIGITS);
+
+    expect(MoneyInput::tryToMinor($digits))->toBeNull()
+        ->and(MoneyInput::exceedsMax($digits))->toBeTrue();
+});
+
+it('refuses a whole part one digit past MAX_WHOLE_DIGITS as malformed, not merely large', function (): void {
+    $digits = str_repeat('9', MoneyInput::MAX_WHOLE_DIGITS + 1);
+
+    expect(MoneyInput::tryToMinor($digits))->toBeNull()
+        ->and(MoneyInput::exceedsMax($digits))->toBeFalse();
+});

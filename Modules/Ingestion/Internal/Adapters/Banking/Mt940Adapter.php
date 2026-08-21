@@ -100,7 +100,6 @@ final class Mt940Adapter implements SourceAdapter
         }
 
         $state->ownIban = trim($content);
-        $accounts->resolve($state->ownIban);
     }
 
     private function applyStatementNumber(Mt940StatementAccumulator $state, string $content): void
@@ -250,15 +249,8 @@ final class Mt940Adapter implements SourceAdapter
 
     private function parseBalanceAmount(string $raw): int
     {
-        $normalised = str_replace(',', '.', $raw);
-        if (! str_contains($normalised, '.')) {
-            $normalised .= '.00';
-        } elseif (preg_match('/\.\d$/', $normalised) === 1) {
-            $normalised .= '0';
-        }
-
         try {
-            return $this->amounts->parseMinor($normalised);
+            return $this->amounts->parseMt940Minor($raw);
         } catch (Throwable $e) {
             throw new InvalidAmountException(sprintf('Bad MT940 balance amount %s: %s', $raw, $e->getMessage()), 0, $e);
         }

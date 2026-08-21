@@ -6,8 +6,8 @@ namespace Modules\Categorization\Internal\Services;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
-use Modules\Import\Public\Pipeline\NormalizeStage;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Ledger\Public\Services\CounterpartyKey;
 use stdClass;
 
 final class RuleEvaluator
@@ -19,7 +19,7 @@ final class RuleEvaluator
     public function lookupMemory(CanonicalTransaction $tx, int $userId): ?stdClass
     {
         $normalized = $tx->counterpartyNormalized;
-        if ($normalized === '' || $normalized === NormalizeStage::NO_COUNTERPARTY) {
+        if ($normalized === '' || $normalized === CounterpartyKey::NONE) {
             return null;
         }
 

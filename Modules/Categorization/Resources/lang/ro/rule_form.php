@@ -22,7 +22,6 @@ return [
     'condition_value_from_aria' => 'Valoarea condiției :number (de la)',
     'condition_value_to_aria' => 'Valoarea condiției :number (până la)',
     'to' => 'până la',
-    'amount_placeholder' => '0,00',
     'text_placeholder' => 'de ex. SPOTIFY',
     'remove_condition' => 'Elimină condiția',
     'add_condition' => '+ Adaugă condiție',

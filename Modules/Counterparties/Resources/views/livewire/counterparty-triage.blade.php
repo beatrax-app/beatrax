@@ -21,6 +21,7 @@
       $recentTransactions  list<\stdClass>
       $queueEmpty          bool
 --}}
+@use('Modules\Counterparties\Public\Enums\CounterpartyType')
 @use('Modules\Ledger\Public\Enums\Currency')
 @use('Modules\Ledger\Public\ValueObjects\Money')
 @php
@@ -197,7 +198,7 @@
                      element in place, Alpine keeps its state, and the name
                      typed for one counterparty was still in the box for the
                      next one. --}}
-                <div wire:key="triage-manual-{{ $current?->id ?? 'none' }}" x-data="{ manualName: '', manualType: 'merchant' }" style="display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center;">
+                <div wire:key="triage-manual-{{ $current?->id ?? 'none' }}" x-data="{ manualName: '', manualType: '{{ CounterpartyType::Merchant->value }}' }" style="display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center;">
                     <label for="triage-manual-name" class="sr-only">{{ Lang::get('counterparties::triage.display_name_label') }}</label>
                     <input
                         id="triage-manual-name"
@@ -212,10 +213,10 @@
                         x-model="manualType"
                         style="padding: 6px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 16px;"
                     >
-                        <option value="merchant">{{ Lang::get('counterparties::triage.type_merchant') }}</option>
-                        <option value="personal">{{ Lang::get('counterparties::triage.type_personal') }}</option>
-                        <option value="bank">{{ Lang::get('counterparties::triage.type_bank') }}</option>
-                        <option value="government">{{ Lang::get('counterparties::triage.type_government') }}</option>
+                        <option value="{{ CounterpartyType::Merchant->value }}">{{ Lang::get('counterparties::triage.type_merchant') }}</option>
+                        <option value="{{ CounterpartyType::Personal->value }}">{{ Lang::get('counterparties::triage.type_personal') }}</option>
+                        <option value="{{ CounterpartyType::Bank->value }}">{{ Lang::get('counterparties::triage.type_bank') }}</option>
+                        <option value="{{ CounterpartyType::Government->value }}">{{ Lang::get('counterparties::triage.type_government') }}</option>
                     </select>
                     <button
                         type="button"

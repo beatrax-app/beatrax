@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Modules\Notifications\Internal\Support\CopyLine;
 use Modules\Notifications\Internal\Support\CopyParam;
+use Modules\Notifications\Internal\Support\CopyParamKind;
 use Modules\Notifications\Internal\Support\NotificationCopySpec;
 
 function copyLineRoundTrip(NotificationCopySpec $spec): NotificationCopySpec
@@ -103,3 +104,25 @@ it('reads a malformed or absent spec as no spec at all', function (mixed $raw): 
     'body line without a key' => [['title' => ['key' => 'a', 'replace' => [], 'count' => null], 'body' => [['replace' => []]]]],
     'unknown param kind' => [['title' => ['key' => 'a', 'replace' => ['x' => ['kind' => 'sql', 'value' => 'drop']], 'count' => null], 'body' => [['key' => 'b']]]],
 ]);
+
+it('accepts back every kind it can write, so a sixth kind cannot land half-wired', function (): void {
+    $written = [
+        CopyParam::dayName(CarbonImmutable::parse('2026-03-02')),
+        CopyParam::shortDate(CarbonImmutable::parse('2026-03-02')),
+        CopyParam::line('notifications::copy.digest.shortfall'),
+        CopyParam::money(-1250, 'EUR'),
+        CopyParam::category('Groceries', 'groceries', true),
+    ];
+
+    $kinds = [];
+    foreach ($written as $param) {
+        $stored = $param->toArray();
+        $kinds[] = $stored['kind'];
+        expect(CopyParam::fromArray($stored))->not->toBeNull($stored['kind'].' did not survive the round trip');
+    }
+
+    expect($kinds)->toBe(array_map(
+        static fn (CopyParamKind $kind): string => $kind->value,
+        CopyParamKind::cases(),
+    ));
+});

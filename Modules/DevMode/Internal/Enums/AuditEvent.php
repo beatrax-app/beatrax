@@ -10,8 +10,6 @@ enum AuditEvent: string
 {
     case CommandExecuted = 'command_executed';
 
-    case CommandCancelled = 'command_cancelled';
-
     case QueueAction = 'queue_action';
 
     case SqlSelect = 'sql.select';

@@ -6,6 +6,7 @@ namespace Modules\Calendar\Internal\Services;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Modules\Calendar\Internal\Support\MatchWindow;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Recurring\Public\Enums\SeriesCadence;
@@ -14,8 +15,6 @@ use stdClass;
 final readonly class OccurrenceMatcher
 {
     use CoercesScalars;
-
-    private const int MATCH_WINDOW_DAYS = 7;
 
     private const int DAYS_PER_WEEK = 7;
 
@@ -31,8 +30,8 @@ final readonly class OccurrenceMatcher
     ): array {
         // Overshoots the month so an entry near a boundary can still match an
         // occurrence that landed just outside it.
-        $windowStart = $monthStart->subDays(self::MATCH_WINDOW_DAYS)->toDateString();
-        $windowEnd = $monthEnd->addDays(self::MATCH_WINDOW_DAYS)->toDateString();
+        $windowStart = $monthStart->subDays(MatchWindow::DAYS)->toDateString();
+        $windowEnd = $monthEnd->addDays(MatchWindow::DAYS)->toDateString();
 
         $rows = $this->db->connection()->table('recurring_series_occurrences')
             ->where('user_id', $user->id)
@@ -65,10 +64,10 @@ final readonly class OccurrenceMatcher
         };
 
         if ($cadenceDays === null) {
-            return self::MATCH_WINDOW_DAYS;
+            return MatchWindow::DAYS;
         }
 
-        return min(self::MATCH_WINDOW_DAYS, intdiv($cadenceDays, 2));
+        return min(MatchWindow::DAYS, intdiv($cadenceDays, 2));
     }
 
     /**

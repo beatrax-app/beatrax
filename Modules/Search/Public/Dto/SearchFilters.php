@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Search\Public\Dto;
 
+use Modules\Ledger\Public\Enums\AmountDirection;
+
 // Mirrors TransactionsList's #[Url] filter property set so the same
 // filter state (from URL params) can pass through the public API
 // without leaking Livewire internals. Every property defaults to its
@@ -18,7 +20,6 @@ final readonly class SearchFilters
      * @param  ?string  $before  ISO date string (Y-m-d) — include transactions on or before this date.
      * @param  ?string  $amountMin  Minimum absolute amount as decimal string (e.g. "10.00").
      * @param  ?string  $amountMax  Maximum absolute amount as decimal string (e.g. "500.00").
-     * @param  string  $amountDirection  'in' | 'out' | 'both'.
      */
     public function __construct(
         public array $accounts = [],
@@ -28,7 +29,7 @@ final readonly class SearchFilters
         public ?string $before = null,
         public ?string $amountMin = null,
         public ?string $amountMax = null,
-        public string $amountDirection = 'both',
+        public string $amountDirection = AmountDirection::Both->value,
     ) {}
 
     public static function empty(): self
@@ -45,6 +46,6 @@ final readonly class SearchFilters
             || $this->before !== null
             || $this->amountMin !== null
             || $this->amountMax !== null
-            || $this->amountDirection !== 'both';
+            || $this->amountDirection !== AmountDirection::Both->value;
     }
 }

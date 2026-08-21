@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Przegląd łańcuchów',
     'heading' => 'Przegląd łańcuchów',
-    'hint' => 'wskazówka|wskazówki|wskazówek',
+    'hint' => ':count wskazówka|:count wskazówki|:count wskazówek',
     'subtitle' => 'Potwierdź lub odrzuć kandydujące powiązania, których mechanizm łańcuchów nie potwierdził automatycznie.',
 
     'empty_heading' => 'Nie ma nic do przejrzenia',

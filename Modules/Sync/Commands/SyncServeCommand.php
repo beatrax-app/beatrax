@@ -105,7 +105,10 @@ final class SyncServeCommand extends Command
             $pullHandler = new PairingFramePullHandler(
                 $frameHandler,
                 $this->peerOutbox,
-                $this->offerRateLimiter->withLimit(PairingFramePullHandler::MAX_PER_WINDOW),
+                // Its own bucket, on the same allowance: withLimit() hands each
+                // route a separate window, and the number is one number because
+                // the same three-second phone poll pays for both.
+                $this->offerRateLimiter->withLimit(PairingFrameRequestHandler::MAX_PER_WINDOW),
                 $this->pullAuthorizer,
                 $handler->localUserId(),
             );

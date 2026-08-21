@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Import\Internal\Pipeline\Stages\FingerprintStage;
 use Modules\Import\Public\Dto\EnrichedDisposition;
+use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
@@ -106,7 +107,7 @@ it('returns newRow when no existing fingerprint matches', function (): void {
 
     $disposition = $this->stage->classify($tx, $this->fixtureUser);
 
-    expect($disposition->status())->toBe('new');
+    expect($disposition->status())->toBe(PreviewRowStatus::NewRow);
     expect($disposition->isNew())->toBeTrue();
 })->group('phase-2');
 
@@ -116,7 +117,7 @@ it('returns duplicate when fingerprint matches and incoming source_ref is NULL',
 
     $disposition = $this->stage->classify($tx, $this->fixtureUser);
 
-    expect($disposition->status())->toBe('duplicate');
+    expect($disposition->status())->toBe(PreviewRowStatus::Duplicate);
 })->group('phase-2');
 
 it('returns duplicate when fingerprint matches across statement formats (CSV → CAMT) — receipt-format gate not satisfied', function (): void {
@@ -128,7 +129,7 @@ it('returns duplicate when fingerprint matches across statement formats (CSV →
 
     $disposition = $this->stage->classify($tx, $this->fixtureUser);
 
-    expect($disposition->status())->toBe('duplicate');
+    expect($disposition->status())->toBe(PreviewRowStatus::Duplicate);
 })->group('phase-2');
 
 it('returns duplicate when fingerprint matches across statement formats (MT940 → CAMT)', function (): void {
@@ -137,7 +138,7 @@ it('returns duplicate when fingerprint matches across statement formats (MT940 �
 
     $disposition = $this->stage->classify($tx, $this->fixtureUser);
 
-    expect($disposition->status())->toBe('duplicate');
+    expect($disposition->status())->toBe(PreviewRowStatus::Duplicate);
 })->group('phase-2');
 
 it('returns duplicate when fingerprint matches across statement formats (CSV → MT940)', function (): void {
@@ -146,7 +147,7 @@ it('returns duplicate when fingerprint matches across statement formats (CSV →
 
     $disposition = $this->stage->classify($tx, $this->fixtureUser);
 
-    expect($disposition->status())->toBe('duplicate');
+    expect($disposition->status())->toBe(PreviewRowStatus::Duplicate);
 })->group('phase-2');
 
 it('returns enriched when fingerprint matches and the incoming side is a receipt format (paypal-receipt > paypal-csv)', function (): void {
@@ -157,7 +158,7 @@ it('returns enriched when fingerprint matches and the incoming side is a receipt
 
     $disposition = $this->stage->classify($tx, $this->fixtureUser);
 
-    expect($disposition->status())->toBe('enriched');
+    expect($disposition->status())->toBe(PreviewRowStatus::Enriched);
     expect($disposition->isEnriched())->toBeTrue();
     /** @var EnrichedDisposition $disposition */
     expect($disposition->existingTransactionId)->toBe($existing->id);
@@ -170,7 +171,7 @@ it('returns enriched when fingerprint matches and the existing side is a receipt
 
     $disposition = $this->stage->classify($tx, $this->fixtureUser);
 
-    expect($disposition->status())->toBe('enriched');
+    expect($disposition->status())->toBe(PreviewRowStatus::Enriched);
     /** @var EnrichedDisposition $disposition */
     expect($disposition->fromSourceRef)->toBe('PDF-ROW-12');
     expect($disposition->toSourceRef)->toBe('RECEIPT-REF');
@@ -182,7 +183,7 @@ it('returns duplicate when incoming rank is lower than existing (CSV after CAMT)
 
     $disposition = $this->stage->classify($tx, $this->fixtureUser);
 
-    expect($disposition->status())->toBe('duplicate');
+    expect($disposition->status())->toBe(PreviewRowStatus::Duplicate);
 })->group('phase-2');
 
 it('returns duplicate when incoming rank equals existing (same format re-import, same ref)', function (): void {
@@ -191,7 +192,7 @@ it('returns duplicate when incoming rank equals existing (same format re-import,
 
     $disposition = $this->stage->classify($tx, $this->fixtureUser);
 
-    expect($disposition->status())->toBe('duplicate');
+    expect($disposition->status())->toBe(PreviewRowStatus::Duplicate);
 })->group('phase-2');
 
 it('returns duplicate when incoming rank equals existing AND ref values differ', function (): void {
@@ -200,7 +201,7 @@ it('returns duplicate when incoming rank equals existing AND ref values differ',
 
     $disposition = $this->stage->classify($tx, $this->fixtureUser);
 
-    expect($disposition->status())->toBe('duplicate');
+    expect($disposition->status())->toBe(PreviewRowStatus::Duplicate);
 })->group('phase-2');
 
 it('scopes the existing-row lookup by user_id', function (): void {
@@ -225,5 +226,5 @@ it('scopes the existing-row lookup by user_id', function (): void {
 
     $disposition = $this->stage->classify($tx, $this->fixtureUser);
 
-    expect($disposition->status())->toBe('new');
+    expect($disposition->status())->toBe(PreviewRowStatus::NewRow);
 })->group('phase-2');

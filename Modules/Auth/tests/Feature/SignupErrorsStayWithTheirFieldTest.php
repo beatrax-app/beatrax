@@ -64,7 +64,8 @@ it('reads the requirement checklist off the same binding the server validates', 
 
     // A private Alpine mirror fed only by input events cannot see a value the
     // server changed, which is how two green ticks survived two emptied boxes.
-    expect($html)->toContain('$wire.password')
-        ->and($html)->toContain('$wire.passwordConfirmation')
+    // The shared checklist is handed the two wire properties by name, and
+    // reads them off $wire itself.
+    expect($html)->toContain("passwordStrength(12, 'password', 'passwordConfirmation')")
         ->and($html)->not->toContain('$event.target.value');
 });

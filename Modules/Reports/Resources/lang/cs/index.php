@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'title' => 'Sestavy',
     'page_title' => 'Sestavy · Beatrax',
-    'saved_report' => 'uložená sestava|uložené sestavy|uložených sestav',
+    'saved_report' => ':count uložená sestava|:count uložené sestavy|:count uložených sestav',
     'pinned_count' => 'připnuto',
     'dismiss' => 'Zamítnout',
 

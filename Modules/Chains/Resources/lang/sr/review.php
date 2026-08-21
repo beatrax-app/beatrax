@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Pregled lanaca',
     'heading' => 'Pregled lanaca',
-    'hint' => 'savet|saveta|saveta',
+    'hint' => ':count savet|:count saveta|:count saveta',
     'subtitle' => 'Potvrdi ili odbij predložene veze koje razrešavač lanaca nije mogao automatski da potvrdi.',
 
     'empty_heading' => 'Nema ničega za pregled',

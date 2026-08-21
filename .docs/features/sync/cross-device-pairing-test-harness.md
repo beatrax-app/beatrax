@@ -64,9 +64,13 @@ Two details make that work:
 
 The `RelayClient` built this way is bound into the container as a
 **singleton instance**, so anything that resolves `RelayClient` out of the
-container later — Livewire components, `PairingRelayCourier` — gets the
-fake-transport client rather than opening a real connection. Because the
-harness never binds a socket it also needs no TLS material of its own.
+container later — Livewire components, `PairingFrameCourier` — gets the
+fake-transport client rather than opening a real connection. That courier
+tries the LAN first and only falls to the relay when the peer is
+unreachable, holding the frame in `PairingPeerOutbox` when neither road is
+open, so the fake client stands in for the middle leg of three rather than
+for the whole delivery. Because the harness never binds a socket it also
+needs no TLS material of its own.
 
 ## `relay_mailbox` means two different things
 

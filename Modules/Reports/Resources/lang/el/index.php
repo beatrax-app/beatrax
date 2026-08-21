@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'title' => 'Αναφορές',
     'page_title' => 'Αναφορές · Beatrax',
-    'saved_report' => 'αποθηκευμένη αναφορά|αποθηκευμένες αναφορές',
+    'saved_report' => ':count αποθηκευμένη αναφορά|:count αποθηκευμένες αναφορές',
     'pinned_count' => 'καρφιτσωμένες',
     'dismiss' => 'Απόρριψη',
 

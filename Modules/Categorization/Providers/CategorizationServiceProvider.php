@@ -43,7 +43,7 @@ final class CategorizationServiceProvider extends ServiceProvider
         $this->app->bind(AssignsCategory::class, AssignCategory::class);
         $this->app->bind(AppliesAutoCategory::class, ApplyAutoCategoryStage::class);
         $this->app->singleton(UncategorizedTriageQuery::class);
-        $this->app->singleton(CategoryOptionsQuery::class);
+        $this->app->scoped(CategoryOptionsQuery::class);
         $this->app->singleton(RuleEvaluator::class);
         $this->app->singleton(ApplyAutoCategoryStage::class);
         $this->app->singleton(CategorizationRuleQuery::class);

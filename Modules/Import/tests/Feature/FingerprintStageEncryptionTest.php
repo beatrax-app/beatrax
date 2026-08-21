@@ -9,6 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Import\Internal\Pipeline\Stages\FingerprintStage;
 use Modules\Import\Public\Dto\EnrichedDisposition;
+use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
@@ -160,7 +161,7 @@ it('registers zero conflicts when the decrypted stored value logically equals th
     $stage = app(FingerprintStage::class);
     $disposition = $stage->classify($tx, $user);
 
-    expect($disposition->status())->toBe('enriched');
+    expect($disposition->status())->toBe(PreviewRowStatus::Enriched);
     /** @var EnrichedDisposition $disposition */
     expect($disposition->conflictingFields)->toBe([]);
 })->group('FingerprintStageEncryption');
@@ -189,7 +190,7 @@ it('registers a conflict with the DECRYPTED plaintext stored value when the valu
     $stage = app(FingerprintStage::class);
     $disposition = $stage->classify($tx, $user);
 
-    expect($disposition->status())->toBe('enriched');
+    expect($disposition->status())->toBe(PreviewRowStatus::Enriched);
     /** @var EnrichedDisposition $disposition */
     $conflicts = $disposition->conflictingFields;
 
@@ -227,7 +228,7 @@ it('produces the same conflict-detection outcome for a non-encrypted user (pass-
     $stage = app(FingerprintStage::class);
     $disposition = $stage->classify($tx, $user);
 
-    expect($disposition->status())->toBe('enriched');
+    expect($disposition->status())->toBe(PreviewRowStatus::Enriched);
     /** @var EnrichedDisposition $disposition */
     expect($disposition->conflictingFields)->toBe([]);
 })->group('FingerprintStageEncryption');

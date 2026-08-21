@@ -17,8 +17,7 @@ return [
     'net' => 'Netto',
 
     'status_tiles_aria' => 'Statustegels',
-    'email_scan_health' => 'Status e-mailscan — :count gekoppeld',
-    'inbox' => 'postvak|postvakken',
+    'email_scan_health' => 'Status e-mailscan — :count gekoppeld postvak|Status e-mailscan — :count gekoppeld postvakken',
 
     'top_spending' => 'Grootste uitgaven',
     'no_expenses' => 'Nog geen gecategoriseerde uitgaven.',

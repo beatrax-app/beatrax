@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\DevMode\Internal;
 
 use InvalidArgumentException;
+use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\CommandSpec;
 
@@ -31,7 +32,7 @@ final readonly class CommandRegistry implements DevCommandRegistry
     {
         $safe = [];
         foreach ($this->specs as $spec) {
-            if ($spec->tier === 'safe') {
+            if ($spec->tier->reachesThePalette()) {
                 $safe[] = $spec;
             }
         }
@@ -46,7 +47,7 @@ final readonly class CommandRegistry implements DevCommandRegistry
     {
         $destructive = [];
         foreach ($this->specs as $spec) {
-            if ($spec->tier === 'destructive') {
+            if ($spec->tier === CommandTier::Destructive) {
                 $destructive[] = $spec;
             }
         }

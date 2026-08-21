@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Gennemgå kæder',
     'heading' => 'Gennemgå kæder',
-    'hint' => 'hint|hints',
+    'hint' => ':count hint|:count hints',
     'subtitle' => 'Bekræft eller afvis kandidatforbindelser, som kædeløseren ikke kunne bekræfte automatisk.',
 
     'empty_heading' => 'Intet at gennemgå',

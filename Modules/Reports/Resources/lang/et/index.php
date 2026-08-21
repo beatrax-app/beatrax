@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'title' => 'Aruanded',
     'page_title' => 'Aruanded · Beatrax',
-    'saved_report' => 'salvestatud aruanne|salvestatud aruannet',
+    'saved_report' => ':count salvestatud aruanne|:count salvestatud aruannet',
     'pinned_count' => 'kinnitatud',
     'dismiss' => 'Peida',
 

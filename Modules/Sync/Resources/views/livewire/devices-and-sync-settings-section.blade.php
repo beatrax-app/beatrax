@@ -38,6 +38,7 @@
 --}}
 
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Sync\Internal\Crypto\EncryptionSetupStep')
 <div class="space-y-6">
     <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('sync::devices.heading') }}</h2>
 
@@ -340,11 +341,11 @@
 
     {{-- ===== Surface B: enable-encryption modal (single-device
          optional-offer path only). Confirm / progress / done /
-         error inner states share one flux:modal keyed on $encryptionStep. ===== --}}
+         error inner states share one flux:modal keyed on the step. ===== --}}
     @if ($showEncryptionModal)
         <flux:modal wire:model="showEncryptionModal" class="md:max-w-sm" data-testid="enable-encryption-modal">
             <div class="space-y-4 p-6">
-                @if ($encryptionStep === 'confirm')
+                @if ($encryptionModalStep === EncryptionSetupStep::Confirm)
                     <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">
                         {{ Lang::get('sync::devices.enable_at_rest') }}
                     </h3>
@@ -389,7 +390,7 @@
                             {{ Lang::get('sync::devices.keep_unencrypted') }}
                         </x-core::secondary-button>
                     </div>
-                @elseif ($encryptionStep === 'progress')
+                @elseif ($encryptionModalStep === EncryptionSetupStep::Progress)
                     <div wire:poll.750ms="pollEncryptionProgress">
                         <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100" aria-live="polite">
                             {{ Lang::get('sync::devices.securing') }}
@@ -401,7 +402,7 @@
                         />
                         <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('sync::devices.do_not_close') }}</p>
                     </div>
-                @elseif ($encryptionStep === 'done')
+                @elseif ($encryptionModalStep === EncryptionSetupStep::Done)
                     <div class="space-y-3 text-center">
                         <svg class="mx-auto h-6 w-6 text-emerald-600 dark:text-emerald-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" />

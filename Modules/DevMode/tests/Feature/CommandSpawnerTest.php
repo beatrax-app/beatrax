@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\DevMode\Internal\Enums\ArgType;
+use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Internal\Process\FileTailer;
 use Modules\DevMode\Internal\Process\RunRegistry;
@@ -40,7 +42,7 @@ it('spawns cache:clear and writes stdout into a per-run tmp file', function (): 
     /** @var RunRegistry $registry */
     $registry = app(RunRegistry::class);
 
-    $runId = $spawner->start('cache:clear', [], 99, 'safe');
+    $runId = $spawner->start('cache:clear', [], 99, CommandTier::Safe);
 
     expect($runId)->toBeString();
     expect(preg_match('/^[0-9a-f-]{36}$/', $runId))->toBe(1);
@@ -48,7 +50,7 @@ it('spawns cache:clear and writes stdout into a per-run tmp file', function (): 
     $record = $registry->find($runId);
     expect($record)->not->toBeNull();
     expect($record->command)->toBe('cache:clear');
-    expect($record->tier)->toBe('safe');
+    expect($record->tier)->toBe(CommandTier::Safe);
     expect($record->callerUserId)->toBe(99);
     expect($record->pid)->toBeGreaterThan(0);
     expect($record->outPath)->toContain('/dev_mode/runs/'.$runId.'.out');
@@ -80,7 +82,7 @@ it('rejects an injection-attempt path via escapeshellarg discipline', function (
 
     // db:restore failing on a nonexistent backup is the correct outcome: the
     // arg must arrive as inert path data, not as something the shell ran.
-    $runId = $spawner->start('db:restore', ['from' => $maliciousArg], 99, 'destructive');
+    $runId = $spawner->start('db:restore', ['from' => $maliciousArg], 99, CommandTier::Destructive);
 
     $record = $registry->find($runId);
     expect($record)->not->toBeNull();
@@ -127,7 +129,7 @@ it('spawns beatrax:failed-jobs with the positional action arg and the artisan co
     /** @var RunRegistry $registry */
     $registry = app(RunRegistry::class);
 
-    $runId = $spawner->start('beatrax:failed-jobs', ['action' => 'prune'], 99, 'safe');
+    $runId = $spawner->start('beatrax:failed-jobs', ['action' => 'prune'], 99, CommandTier::Safe);
 
     $record = $registry->find($runId);
     expect($record)->not->toBeNull();
@@ -154,7 +156,7 @@ it('renders an --option=value arg as a single shell-safe argv token (no doubled 
     $argSpec = new ArgSpec(
         name: '--queue',
         label: 'Queue name',
-        type: 'text',
+        type: ArgType::Text,
         rules: ['string'],
     );
 
@@ -190,7 +192,7 @@ it('forwards an --option=value pair to a spawned artisan command intact', functi
 
     // queue:retry is the only --option-bearing SAFE-tier entry, so it is the
     // only end-to-end proof available for the doubled-`=` bug.
-    $runId = $spawner->start('queue:retry', ['id' => 'all', '--queue' => 'high'], 99, 'safe');
+    $runId = $spawner->start('queue:retry', ['id' => 'all', '--queue' => 'high'], 99, CommandTier::Safe);
 
     $record = $registry->find($runId);
     expect($record)->not->toBeNull();

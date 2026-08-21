@@ -15,7 +15,7 @@ return [
     'no_counterparty' => '(geen tegenpartij)',
     'open_from_row' => 'Van-rij openen',
     'open_to_row' => 'Naar-rij openen',
-    'leg_count' => '1 betaling|:count betalingen',
+    'leg_count' => ':count betaling|:count betalingen',
     'state_aria' => 'Status: :state',
 
     'kind' => [

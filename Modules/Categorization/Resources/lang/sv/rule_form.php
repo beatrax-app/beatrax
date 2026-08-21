@@ -22,7 +22,6 @@ return [
     'condition_value_from_aria' => 'Värde för villkor :number (från)',
     'condition_value_to_aria' => 'Värde för villkor :number (till)',
     'to' => 'till',
-    'amount_placeholder' => '0,00',
     'text_placeholder' => 't.ex. SPOTIFY',
     'remove_condition' => 'Ta bort villkor',
     'add_condition' => '+ Lägg till villkor',

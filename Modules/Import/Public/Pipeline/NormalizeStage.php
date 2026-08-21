@@ -17,11 +17,6 @@ use Modules\Ledger\Public\ValueObjects\Rate;
  */
 final class NormalizeStage
 {
-    // Aliased rather than redeclared: the sentinel is compared against a
-    // stored value in two other modules, and CounterpartyKey is what decides
-    // it stays readable while every real merchant does not.
-    public const NO_COUNTERPARTY = CounterpartyKey::NONE;
-
     public function __construct(
         private readonly FingerprintComposer $fingerprints,
         private readonly CounterpartyKey $counterpartyKey,

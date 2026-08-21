@@ -25,7 +25,9 @@ final class Money implements Stringable
     // unit, so a JPY amount built through this constant is 100x too large.
     public const int MINOR_UNITS_PER_MAJOR = 100;
 
-    private const array SYMBOLS = [
+    // Public because an import adapter has to strip these glyphs off a figure
+    // before parsing it, and a second list would drift from what format() writes.
+    public const array SYMBOLS = [
         'EUR' => '€',
         'USD' => '$',
         'GBP' => '£',

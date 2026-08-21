@@ -17,6 +17,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
 use Modules\Import\Public\Dto\PreviewRowDto;
+use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\OpenBanking\Internal\Events\OpenBankingConsentFailed;
 use Modules\OpenBanking\Internal\Exceptions\EnableBankingApiException;
 use Modules\OpenBanking\Internal\Http\Livewire\Concerns\FormatsConnectionTimestamps;
@@ -344,7 +345,7 @@ final class OpenBankingSettingsPage extends Component
 
         $newCount = count(array_filter(
             $preview->rows,
-            static fn (PreviewRowDto $row): bool => $row->status === 'new',
+            static fn (PreviewRowDto $row): bool => $row->status === PreviewRowStatus::NewRow,
         ));
 
         if ($newCount > 0) {

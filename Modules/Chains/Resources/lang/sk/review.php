@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Kontrola reťazcov',
     'heading' => 'Kontrola reťazcov',
-    'hint' => 'indícia|indície|indícií',
+    'hint' => ':count indícia|:count indície|:count indícií',
     'subtitle' => 'Potvrď alebo zamietni kandidátske prepojenia, ktoré sa nepodarilo potvrdiť automaticky.',
 
     'empty_heading' => 'Nie je čo kontrolovať',

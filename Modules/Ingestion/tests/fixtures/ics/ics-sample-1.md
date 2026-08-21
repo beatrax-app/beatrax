@@ -293,10 +293,15 @@ Single format observed:
 
 `IcsAmountParser` must:
 
-1. Strip the `€` prefix if present.
+1. Strip the `€` prefix if present (the glyph set comes from
+   `Money::SYMBOLS`, so it is not a second list of currency signs).
 2. Remove thousands `.` separators.
-3. Replace the decimal `,` with `.`.
-4. Multiply by 100 and cast to integer for `amount_minor`.
+3. Require a `,` decimal with exactly two digits after it — the one
+   convention observed above. A looser grammar would read a `6,06` that
+   lost its comma as six hundred euros.
+4. Hand the remaining `<digits>,<2 digits>` to
+   `MoneyInput::tryToMinor()` for `amount_minor`, rather than doing the
+   ×100 arithmetic here.
 
 No `setLocale()` mutation in the parser.
 

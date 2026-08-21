@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\DevMode\Public\Dto;
 
 use Carbon\CarbonInterface;
+use Modules\DevMode\Internal\Enums\CommandTier;
 use Spatie\LaravelData\Data;
 
 // The eager spawn-time write leaves finishedAt, exitCode and the excerpts
@@ -17,7 +18,7 @@ final class CommandRunAudit extends Data
     public function __construct(
         public readonly string $command,
         public readonly array $args,
-        public readonly string $tier,
+        public readonly CommandTier $tier,
         public readonly int $callerUserId,
         public readonly CarbonInterface $startedAt,
         public readonly ?CarbonInterface $finishedAt,

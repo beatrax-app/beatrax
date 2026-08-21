@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Pregled verig',
     'heading' => 'Pregled verig',
-    'hint' => 'namig|namiga|namigi|namigov',
+    'hint' => ':count namig|:count namiga|:count namigi|:count namigov',
     'subtitle' => 'Potrdi ali zavrni predlagane povezave, ki jih razreševalnik verig ni mogel samodejno potrditi.',
 
     'empty_heading' => 'Ni ničesar za pregled',

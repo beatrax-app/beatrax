@@ -6,7 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Calendar\Internal\Services\CalendarQuery;
-use Modules\Calendar\Internal\Services\OccurrenceMatcher;
+use Modules\Calendar\Internal\Support\MatchWindow;
 use Modules\Core\Models\User;
 use Modules\Recurring\Models\RecurringSeries;
 
@@ -259,9 +259,6 @@ it('clamps the weekly match window to ±3 days so one payment marks only the nea
     expect($stateByDate['2026-06-01']['missed'] ?? null)->toBeTrue('The unpaid June 1 weekly entry must read missed');
 });
 
-it('verifies MATCH_WINDOW_DAYS constant equals 7', function (): void {
-    $window = (new ReflectionClass(OccurrenceMatcher::class))
-        ->getConstant('MATCH_WINDOW_DAYS');
-
-    expect($window)->toBe(7);
+it('verifies the shared match window equals 7 days', function (): void {
+    expect(MatchWindow::DAYS)->toBe(7);
 });

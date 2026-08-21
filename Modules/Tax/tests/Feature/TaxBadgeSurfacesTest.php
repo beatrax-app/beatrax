@@ -9,6 +9,7 @@ use Livewire\Livewire;
 use Modules\CashBook\Internal\Http\Livewire\CashBookPage;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\Lang;
 use Modules\Counterparties\Internal\Http\Livewire\CounterpartyProfile;
 use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
 use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
@@ -712,4 +713,32 @@ it('keeps the word on the hover-reveal surface, where there is room for it', fun
     );
 
     $html->assertSee('tax-badge--untagged', false);
+});
+
+// The phone picker re-declared .bottom-sheet inline and had drifted three ways
+// from it: a layer below the sheet layer, a shorter panel, and a different dark
+// surface. The class in app.css is the definition — an inline copy of it is the
+// defect, so this asserts the picker consumes the definition.
+it('opens the tax picker on the shared bottom sheet rather than an inline copy of it', function (): void {
+    $user = badgeUser('sheet-user');
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    badgeManualTx($db, (int) $user->id);
+
+    $html = (string) Livewire::actingAs($user)->test(CashBookPage::class)->html();
+
+    // The desktop popover and the phone panel are both dialogs carrying this
+    // label; the phone panel is the second, so anchor on the LAST one.
+    $labelAt = strrpos($html, 'aria-label="'.Lang::get('tax::picker.dialog_aria').'"');
+    expect($labelAt)->not->toBeFalse('the picker dialog must render');
+
+    // Walk back to the opening tag the label sits on.
+    $tagAt = strrpos(substr($html, 0, (int) $labelAt), '<div');
+    $panelTag = substr($html, (int) $tagAt, (int) $labelAt - (int) $tagAt);
+
+    expect($panelTag)->toContain('class="bottom-sheet"')
+        ->and($html)->toContain('class="bottom-sheet-scrim"')
+        ->and($html)->not->toContain('max-height: 70vh')
+        ->and($html)->not->toContain('rgba(0,0,0,0.4)')
+        ->and($html)->not->toContain('border-radius: 12px 12px 0 0');
 });

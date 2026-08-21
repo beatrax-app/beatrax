@@ -38,7 +38,7 @@ return [
         'nothing_notable' => 'Não há nada que precise da tua atenção.',
         'flow' => 'Entradas :in, saídas :out, líquido :net.',
         'over_budget' => ':amount acima do orçamento até agora.',
-        'payments_due' => '1 pagamento vence neste período.|:count pagamentos vencem neste período.',
+        'payments_due' => ':count pagamento vence neste período.|:count pagamentos vencem neste período.',
         'shortfall' => 'Aproxima-se um défice de tesouraria.',
     ],
 ];

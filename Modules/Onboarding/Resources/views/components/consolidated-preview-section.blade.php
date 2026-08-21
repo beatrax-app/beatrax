@@ -1,3 +1,4 @@
+@use('Modules\Import\Public\Enums\PreviewSectionStatus')
 {{--
     Per-source consolidated preview section — one section per
     ConsolidatedPreviewSection DTO in the FirstImportStep batch.
@@ -20,10 +21,6 @@
       - error    — at least one contributing run's cache was missing
                    / expired; section body shows a rose-tinted "Try a
                    different file" prompt.
-      - filtered — the wizard removed the section (stale window or
-                   already-confirmed-elsewhere). Reserved for future
-                   per-section opt-outs; renders the muted "we left
-                   it out" note.
 
     Props:
       :section — the ConsolidatedPreviewSection DTO instance.
@@ -45,23 +42,15 @@
 
     $rowCount = $section->totalRows;
     $statusBadge = match ($section->status) {
-        'ready' => Lang::get('onboarding::first_import.section.badge_ready'),
-        'empty' => Lang::get('onboarding::first_import.section.badge_empty'),
-        'error' => Lang::get('onboarding::first_import.section.badge_error'),
-        'filtered' => Lang::get('onboarding::first_import.section.badge_filtered'),
-        default => '',
-    };
-
-    $eyebrowClass = match ($section->status) {
-        'filtered' => 'preview-section-eyebrow filtered',
-        default => 'preview-section-eyebrow',
+        PreviewSectionStatus::Ready => Lang::get('onboarding::first_import.section.badge_ready'),
+        PreviewSectionStatus::Empty => Lang::get('onboarding::first_import.section.badge_empty'),
+        PreviewSectionStatus::Error => Lang::get('onboarding::first_import.section.badge_error'),
     };
 
     $badgeClass = match ($section->status) {
-        'ready' => 'ready',
-        'filtered' => 'filtered',
-        'error' => 'rose',
-        default => '',
+        PreviewSectionStatus::Ready => 'ready',
+        PreviewSectionStatus::Error => 'rose',
+        PreviewSectionStatus::Empty => '',
     };
 @endphp
 <section
@@ -70,28 +59,22 @@
 >
     <p
         id="preview-section-{{ $section->sourceFormat }}-eyebrow"
-        class="{{ $eyebrowClass }}"
+        class="preview-section-eyebrow"
     >
         <span class="preview-section-label">{{ $eyebrowLabel }}</span>
         <span class="preview-section-count">· {{ $rowCount }} {{ Lang::choice('onboarding::first_import.section.row', $rowCount) }}</span>
-        @if ($statusBadge !== '')
-            <span class="{{ $badgeClass }}">· {{ $statusBadge }}</span>
-        @endif
+        <span class="{{ $badgeClass }}">· {{ $statusBadge }}</span>
     </p>
 
-    @if ($section->status === 'error')
+    @if ($section->status === PreviewSectionStatus::Error)
         {{-- The parser's own words where it has them: it names the format it
              expected and what to re-download, which the generic line cannot.
              It was already being written to the log and thrown away here. --}}
         <p class="preview-section-error" role="alert">
             {{ $section->error ?? Lang::get('onboarding::first_import.section.error_body') }}
         </p>
-    @elseif ($section->status === 'empty')
+    @elseif ($section->status === PreviewSectionStatus::Empty)
         <p class="preview-section-empty">{{ Lang::get('onboarding::first_import.section.empty_body') }}</p>
-    @elseif ($section->status === 'filtered')
-        <p class="preview-section-filtered">
-            {{ Lang::get('onboarding::first_import.section.filtered_body') }}
-        </p>
     @else
         {{-- A section reads READY when any row survived, and a file that stopped
              being readable part-way through still yields rows before the stop.

@@ -41,9 +41,7 @@ class NativeServiceProvider extends ServiceProvider
             ScannerServiceProvider::class,
             BackgroundTasksServiceProvider::class,
             NetworkServiceProvider::class,
-            // Backs Mobile\Internal\Identity\SecureStorageKeyCustodian.
             SecureStorageServiceProvider::class,
-            // Backs Mobile\Internal\Listeners\DispatchMobileNotification.
             LocalNotificationsServiceProvider::class,
             // Backs Mobile\Internal\Identity\BiometricKeyVault, whose guards
             // run through the facade's class_exists(), so omitting this

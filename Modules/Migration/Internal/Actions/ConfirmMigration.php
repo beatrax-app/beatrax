@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Migration\Internal\Dto\MigrationConfirmResult;
+use Modules\Migration\Internal\Enums\ConflictResolution;
 use Modules\Migration\Internal\Enums\MigrationEntityType;
 use Modules\Migration\Internal\Enums\MigrationRunStatus;
 use Modules\Migration\Internal\Exceptions\MigrationAlreadyDiscardedException;
@@ -63,7 +64,7 @@ final class ConfirmMigration
 
         $skipBudgetAssignmentKeys = [];
         foreach ($conflicts as $conflict) {
-            if ($conflict->entityType === MigrationEntityType::BudgetAssignment->value && $conflict->resolution !== 'take_source' && $conflict->sourceExternalId !== null) {
+            if ($conflict->entityType === MigrationEntityType::BudgetAssignment->value && $conflict->resolution !== ConflictResolution::TakeSource && $conflict->sourceExternalId !== null) {
                 $skipBudgetAssignmentKeys[] = $conflict->sourceExternalId;
             }
         }
@@ -105,7 +106,9 @@ final class ConfirmMigration
                 fieldName: $row->field_name,
                 localValue: is_string($row->local_value) ? $row->local_value : null,
                 sourceValue: is_string($row->source_value) ? $row->source_value : null,
-                resolution: is_string($row->resolution) ? $row->resolution : 'keep_local',
+                resolution: is_string($row->resolution)
+                    ? ConflictResolution::tryFrom($row->resolution) ?? ConflictResolution::KeepLocal
+                    : ConflictResolution::KeepLocal,
             );
         }
 
@@ -120,7 +123,7 @@ final class ConfirmMigration
         foreach ($conflicts as $conflict) {
             // budget_assignment is deliberately excluded: its take-source
             // application already happened inside promote() above.
-            if ($conflict->entityType === MigrationEntityType::BudgetAssignment->value || $conflict->resolution !== 'take_source') {
+            if ($conflict->entityType === MigrationEntityType::BudgetAssignment->value || $conflict->resolution !== ConflictResolution::TakeSource) {
                 continue;
             }
             if ($conflict->sourceExternalId === null) {
@@ -140,7 +143,7 @@ final class ConfirmMigration
         foreach ($conflicts as $conflict) {
             // A take-source budget_assignment had its baseline advanced by
             // promoteBudgetAssignments() already.
-            if ($conflict->resolution === 'take_source') {
+            if ($conflict->resolution === ConflictResolution::TakeSource) {
                 continue;
             }
 

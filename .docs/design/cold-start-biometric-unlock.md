@@ -1,7 +1,9 @@
 # Design pass — Cold-start biometric unlock (mobile)
 
-**Status:** Design pass / proposal. Not scheduled. No code written for this
-feature yet. Supersedes nothing; extends the Phase 14/15 LOCK-04 model.
+**Status:** App-side built and green in the repo toolchain; the native
+enclave binding and its on-device verification are what remain — see
+"Implementation status" below. Supersedes nothing; extends the Phase 14/15
+LOCK-04 model.
 
 **Decided going in (owner):** biometric is allowed to be a **full
 cryptographic root** on mobile (see Decision 1). This document resolves the
@@ -228,9 +230,9 @@ Remaining (native / on-device / product):
 1. **Android async recover** — the `BiometricVault.Recovered` event handler in
    `MobileLockScreen` (the vault returns `pendingAsync` on Android); plus
    completing the Kotlin `BiometricPrompt` wiring from the spike.
-2. **On-device verification** — run the spike acceptance steps
-   (`.docs/design/cold-start-biometric-spike-findings.md`) on a physical device;
-   wire the plugin (path repo + `native:plugin:register`).
+2. **On-device verification** — run the Tier A round-trip on a physical
+   device and prove the enclave gates the read; wire the plugin (path repo +
+   `native:plugin:register`).
 3. **Enrollment UX + PIN floor** — a settings toggle that calls
    `BiometricKeyVault::enroll($dataKey)` while unlocked after a fresh PIN entry;
    the "PIN mandatory after biometry change / every N days" cadence.

@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Verifică lanțurile',
     'heading' => 'Verifică lanțurile',
-    'hint' => 'sugestie|sugestii|de sugestii',
+    'hint' => ':count sugestie|:count sugestii|:count de sugestii',
     'subtitle' => 'Confirmă sau respinge legăturile candidate pe care rezolvatorul de lanțuri nu le-a putut confirma automat.',
 
     'empty_heading' => 'Nimic de verificat',

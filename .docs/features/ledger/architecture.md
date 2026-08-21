@@ -394,13 +394,23 @@ encrypted under the current GDK epoch before the row touches disk
 (pass-through no-op when encryption isn't enabled); amount columns are
 never touched so SQL `SUM()`/`GROUP BY` keeps working.
 
+A chunk reads its own writes back in **one** statement, not one per row:
+the loop collects the fingerprint of every row `insertOrIgnore` reported
+as written, and a single `whereIn('fingerprint', …)` per owner — the
+fingerprint is unique per user, never globally — rehydrates them, still
+inside the chunk transaction, where uncommitted rows are visible to this
+connection alone. The models come back in the order the chunk wrote them,
+because the listeners downstream run in that order, and a fingerprint the
+read cannot find still raises `ModelNotFoundException` rather than
+shortening the batch in silence.
+
 For every row `insertOrIgnore` actually persists, a
-`TransactionImported` event dispatches synchronously inside that row's
-own chunk transaction, so cross-module listeners (e.g. transfer-pair
-detection) observe just-inserted partner rows within the same atomic
-frame — duplicates never produce an event. A batch-altitude
-`TransactionBatchImported` event dispatches exactly once per call,
-after every chunk has committed, only when at least one row landed.
+`TransactionImported` event dispatches synchronously once that row's
+chunk has committed, so cross-module listeners (e.g. transfer-pair
+detection) never act on rows a rollback took away — duplicates never
+produce an event. A batch-altitude `TransactionBatchImported` event
+dispatches exactly once per call, after every chunk has committed, only
+when at least one row landed.
 
 ## `SaveTransactionSplit` — the sole split mutator
 
@@ -481,7 +491,7 @@ transaction row takes as it flows through Ingestion/Import; only
 **`TransactionBatchImported`** is dispatched exactly once per
 `RecordTransactions::__invoke()` call, after every chunk has committed
 — the opposite altitude to `TransactionImported`, which fires per
-inserted row inside a chunk's own transaction. Not dispatched at all
+inserted row once that row's own chunk has committed. Not dispatched at all
 when `insertedCount === 0` (a full-duplicate re-import has nothing to
 announce). Dispatched outside any open DB transaction, satisfying the
 emit-after-commit contract for free. `sourceFormats` is the distinct,
@@ -718,20 +728,29 @@ the limit in PHP. `percentageOfTotal` is each row's share of the
 panel's own total (not the user's overall outflow), so it sums to
 ~1.0 for non-empty results.
 
-`loadCategories()` loads the requested categories plus their entire
-parent chain into one id-keyed map so `fullPath()` can resolve the
-breadcrumb without per-row queries. The visibility predicate
+The breadcrumb itself is not this class's: it injects
+`Public/Services/CategoryAncestry`, which `Reports`'
+`CategorySpendQuery` renders the same breadcrumb from. `Public`
+because Reports is a second module; a service rather than a `Support`
+helper because it holds a `DatabaseManager`.
+
+`CategoryAncestry::load()` loads the requested categories plus their
+entire parent chain into one id-keyed map so `fullPath()` can resolve
+the breadcrumb without per-row queries. The visibility predicate
 (`user_id IS NULL OR user_id = $userId`) applies at every level of the
 walk — a `parent_id` pointing cross-tenant terminates the chain at the
 filtered-out parent rather than leaking a foreign user's category name
 into the breadcrumb. The `$attempted` set tracks every id already
 queried (regardless of whether it came back) so the grandparent of a
 filtered-out parent is never re-enqueued, avoiding an extra empty
-SELECT per visibility miss.
+SELECT per visibility miss. An empty id list short-circuits before the
+connection is resolved.
 
 `fullPath()` guards against accidental parent cycles (Eloquent does
 not enforce acyclicity) with both a `visited` set and a hard depth cap
 (`MAX_PARENT_DEPTH`), so corrupt data can never spin the walk forever.
+Both properties are pinned by
+[`CategoryAncestryTest`](../../../Modules/Ledger/tests/Feature/CategoryAncestryTest.php).
 
 ## `TransactionStatusQuery` — cross-module reconciled-lock check
 
@@ -776,6 +795,14 @@ out of chronological order can share a `posted_at` value, which a
 single-column cursor would silently drop. A legacy single-id cursor
 (no `cursorPostedAt` supplied) falls back to a plain `id <` filter for
 backwards compatibility.
+
+The sort is the other half of that contract, so it lives with it:
+`TransactionCursor::orderNewestFirst($query)` is the single owner of
+`ORDER BY posted_at DESC, id DESC`, and the four queries that page on
+this cursor — `TransactionListQuery`, `SearchQuery`,
+`UncategorizedTriageQuery` and `FtsCandidateResolver` — all call it
+rather than spelling the pair out. A query that breaks the tie the
+other way pages past rows the comparison then skips.
 
 **Counterparty slug.** An empty (not null) slug is treated as "no
 slug" so the Blade falls back to plain text instead of generating a

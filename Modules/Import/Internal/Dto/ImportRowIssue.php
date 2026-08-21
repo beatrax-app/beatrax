@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Import\Internal\Dto;
 
-use Modules\Import\Internal\Enums\ImportFailureReason;
 use Modules\Import\Internal\Enums\ImportIssueKind;
+use Modules\Import\Public\Enums\ImportFailureReason;
 
 /**
  * @link ../../../../.docs/features/import/architecture.md#what-the-results-screen-can-still-say

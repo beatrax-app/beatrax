@@ -172,8 +172,11 @@ listener that watches the boot probes during the install ceremony.
   a real answer meaning "every region", not a missing one — and
   `store()` gates the code through the `Country` enum before writing,
   so an injected value is dropped rather than persisted. `options()`
-  returns the label map both pickers render, sorted through
-  `sortByLabel()`'s ICU collator rather than by ISO code.
+  returns the label map all three pickers render — signup, Settings and
+  the onboarding step — sorted through `LocaleCollator` rather than by
+  ISO code. They render it through one `x-core::country-options`, so the
+  empty option is named once; only whether it stays choosable differs,
+  and that follows whether the surface accepts an empty submission.
 - `Country` — the allow-list, and the one place a country code is
   modelled. Every seam that accepts one narrows through
   `Country::tryFrom` before use, including the corpus file path.
@@ -182,11 +185,44 @@ listener that watches the boot probes during the install ceremony.
   and seeds that country's deduction categories; nothing else in Core
   knows Tax is there. This is what lets signup, Settings and the
   onboarding `CountryStep` all set a country through one seam.
-- `LocaleNegotiator` — resolves the active UI locale in precedence
-  order: the user's stored override, a guest's `session('locale')`,
-  the browser's Accept-Language best match, then English. Its `SYSTEM`
-  constant is the value both switchers use to *name* the absence of an
-  override — Settings stores NULL for it, the guest switcher clears the
+- `LocaleCollator::compare()` — the ordering seam for every list the
+  reader scans by name. An ICU `Collator` for the active locale,
+  memoised per locale because a sort asks for one n·log n times, and an
+  accent-folded byte compare on the mobile build, whose ext-intl
+  carries English-only ICU data. Byte comparison files every accented
+  name after Z and knows no alphabet but ASCII's, so the country
+  picker, both category pickers, the budget list and the cash-book
+  picker all route through this rather than `strcasecmp`.
+- `SafeDate::parseOrNull()` / `parseDayOrNull()` — the only sanctioned
+  parse of a reader-typed date. `CarbonImmutable::parse('')` answers
+  NOW rather than throwing, so a blank field books itself today;
+  `parseDayOrNull()` adds the trim and `startOfDay()` a date-only form
+  field wants, which two Livewire pages each held privately.
+- `LocaleNegotiator` — the one seam that owns what language the reader
+  gets, in three methods:
+  - `resolve()` — the precedence order: the user's stored override, a
+    guest's `session('locale')`, the browser's Accept-Language best
+    match, then English. Every candidate is filtered through
+    `Locale::isSupported()`, so a code this release no longer ships
+    reads as "no answer" rather than as a language.
+  - `apply()` — retargets the **application**, never the translator
+    alone. `Application::setLocale()` is what Livewire replays from its
+    snapshot on hydrate (after the middleware has already run), and it
+    is the only call Carbon hears: `Carbon\Laravel\ServiceProvider`
+    listens for `LocaleUpdated` and moves `Carbon`, `CarbonImmutable`,
+    `CarbonPeriod` and `CarbonInterval` with it. Retarget the
+    translator by hand and every `translatedFormat` / `isoFormat` /
+    `diffForHumans` date stays in the language before the switch —
+    which is why `NotificationCopyRenderer`, the one place that
+    deliberately swaps the translator alone, moves Carbon by hand too.
+    `Modules/Core/tests/Feature/DatesFollowTheLanguageSwitchTest.php`
+    pins it at all three switchers.
+  - `rememberChoice()` — writes a guest's choice to `session('locale')`,
+    where `SetLocale` looks for it. The POST route and the signup
+    page's Livewire control both go through it.
+
+  `SYSTEM` is the value both switchers use to *name* the absence of an
+  override — Settings stores NULL for it, `rememberChoice()` clears the
   session key — because the translator only ever reports a concrete
   locale and cannot distinguish "English chosen" from "nothing chosen".
 
@@ -541,6 +577,16 @@ written BEFORE encryption was ever turned on.
   `migration_in_progress`), automatically and atomically. Rows still
   process in bounded `CHUNK_SIZE` batches (via `chunkById`) so memory
   stays bounded even though the SQL transaction spans the whole pass.
+  Each chunk's writes leave as ONE statement per batch, not one per row:
+  `PreMigrationSnapshot::writeRowsById()` folds the chunk into a
+  `CASE id WHEN … ELSE <column> END` update, so a column a row does not
+  carry falls through untouched. `upsert()` is not usable here — SQLite
+  and Postgres both check `NOT NULL` on the proposed row before the
+  conflict resolves, so every non-defaulted column would have to be
+  rewritten to update one. Progress is likewise reported once per chunk
+  rather than once per row: the cache store is a file or a DB table on
+  every driver this ships with, and the percentage is only ever read by
+  a poll.
 - **The file-vs-DB atomicity window**: the DB rollback covers every
   ROW, but the epoch-1 GDK keyring is also a FILESYSTEM write — a side
   effect a SQL transaction cannot roll back. Epoch generation therefore
@@ -586,7 +632,15 @@ written BEFORE encryption was ever turned on.
   0600 before it is ever encrypted, atomic encrypt-to-real-path) — a
   targeted sensitive-column snapshot, not a whole-file SQLite copy,
   since swapping the live database file out from under the app's own
-  open PDO connection mid-request would be unsafe.
+  open PDO connection mid-request would be unsafe. The staged payload is
+  NDJSON — one `[table, row]` line appended as each `chunkById` page is
+  read — so the writer never holds the whole ledger and a JSON copy of it
+  at the same time, which is the shape that exhausts a phone.
+  `restoreFromSnapshot()` reads it back a line at a time in lockstep,
+  buffering a bounded run per table before each batched write, and keeps
+  only the columns `PROJECTION_COLUMNS` (or, for the op log, `value` and
+  `gdk_epoch`) names for that table — a payload that decrypts to
+  something else cannot reach an unrelated column.
 
 Chrome & navigation (`AppSidebar`, `Dashboard`):
 
@@ -773,8 +827,9 @@ Every property maps to a `users` column and validates via a Livewire
 - `theme` — one of `light`/`dark`/`system` governing the `<html>`
   dark-mode class; instant-apply via `setTheme()`.
 - `locale` — the display language, or NULL for `LocaleNegotiator::SYSTEM`;
-  instant-apply via `setLocale()`, which retargets the application locale
-  in the same request so the page re-renders in the new language.
+  instant-apply via `setLocale()`, which hands the choice to
+  `LocaleNegotiator::apply()` so the words, the numbers and the dates all
+  move in the same request before the page is re-requested.
 - `country` — the reader's country, written through `UserCountry`;
   instant-apply via `setCountry()`. The placeholder option is `disabled`,
   because nothing in the app can put the preference back to unset.

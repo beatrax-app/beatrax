@@ -166,7 +166,7 @@ final readonly class PairingTokenRowReader
             return null;
         }
 
-        $stamp = $row->{$side.'_confirmed_at'};
+        $stamp = $row->{$side->confirmedAtColumn()};
 
         return is_string($stamp) ? $stamp : null;
     }
@@ -188,6 +188,10 @@ final readonly class PairingTokenRowReader
             return [];
         }
 
+        // The stored hex is validated at the accept/issue trust boundary, but
+        // guard the decode anyway: a malformed key leaves both screens showing
+        // no words at all — a comparison the human cannot make and confirm()
+        // will refuse — rather than a 500 from an uncaught SodiumException.
         try {
             return $this->safetyDeriver->deriveWords($initiatorEd, $responderEd);
         } catch (InvalidPublicKeyException) {

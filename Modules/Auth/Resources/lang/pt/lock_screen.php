@@ -7,6 +7,7 @@ return [
     'native_unlock_failed' => 'Não foi possível desbloquear. Introduz antes o teu PIN.',
     'page_title' => 'Desbloquear · Beatrax',
     'sign_out' => 'Terminar sessão',
+    'forgot_pin' => 'Esqueceste-te do PIN? Termina sessão — podes iniciar sessão de novo com a palavra-passe da conta e definir um novo PIN. Não se perdem dados.',
 
     'digits_suffix' => 'dígitos introduzidos',
     'pad_label' => 'Teclado do PIN',

@@ -12,6 +12,7 @@ use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\DevMode\Internal\Services\DevModeFlag;
+use Modules\DevMode\Internal\Support\DevModeSession;
 
 final class TripleGateModal extends Component
 {
@@ -54,7 +55,7 @@ final class TripleGateModal extends Component
             throw ValidationException::withMessages(['_gate' => 'dev_mode_off']);
         }
 
-        if ($session->get('dev_mode.advanced') !== true) {
+        if ($session->get(DevModeSession::ADVANCED_KEY) !== true) {
             $this->gateError = 'advanced_off';
             throw ValidationException::withMessages(['_gate' => 'advanced_off']);
         }

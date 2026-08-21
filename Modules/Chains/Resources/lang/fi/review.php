@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Tarkista ketjut',
     'heading' => 'Tarkista ketjut',
-    'hint' => 'vihje|vihjettä',
+    'hint' => ':count vihje|:count vihjettä',
     'subtitle' => 'Vahvista tai hylkää ehdokaslinkit, joita ketjunratkaisija ei voinut vahvistaa automaattisesti.',
 
     'empty_heading' => 'Ei tarkistettavaa',

@@ -69,7 +69,7 @@ return [
     'highlights_shortfall_aria' => ':count active shortfall window in the next :days days|:count active shortfall windows in the next :days days',
     'dips_to' => ':name dips to :amount',
     'on_date_suffix' => ' on :date',
-    'shortfall_window' => '1 active shortfall window|:count active shortfall windows',
+    'shortfall_window' => ':count active shortfall window|:count active shortfall windows',
     'lowest_in_30' => 'Lowest in 30 days: :amount',
     'next_ics' => 'Next ICS settlement: :amount on :date',
 ];

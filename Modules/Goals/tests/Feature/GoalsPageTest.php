@@ -548,3 +548,157 @@ it('tells the phone list a completed goal is completed, as the desktop list alre
 
     expect($branches['phone'])->toContain(Lang::get('goals::messages.status.completed'));
 });
+
+// The desktop card qualified a beyond-horizon date with "(projection)"; the
+// phone list carried its own copy of the same six-branch chain and that copy had
+// dropped the qualifier, so an estimate read as a hard date at 375pt. Both
+// surfaces render one partial now, and this is what says the phone gets it.
+it('qualifies a beyond-horizon estimate as a projection on the phone list, as the desktop card already did', function (): void {
+    $goal = Goal::factory()->create([
+        'user_id' => $this->user->id,
+        'name' => 'Noodfonds',
+        'target_minor' => 1000000,
+        'start_date' => CarbonImmutable::now()->subDays(30)->toDateString(),
+        'target_date' => CarbonImmutable::now()->addYears(3)->toDateString(),
+        'status' => 'active',
+    ]);
+
+    $run = ImportRun::create([
+        'user_id' => $this->user->id,
+        'source_format' => 'camt053',
+        'raw_file_path' => '/tmp/goals-horizon.xml',
+        'sha256' => str_repeat('d', 64),
+        'uploaded_at' => CarbonImmutable::now(),
+        'status' => 'previewed',
+    ]);
+
+    // 1 000 minor over 30 days is ~33 minor a day against a 1 000 000 target, so
+    // the finish date lands far past the 90-day horizon.
+    $transaction = Transaction::create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'type' => 'transfer_in',
+        'posted_at' => CarbonImmutable::now()->subDays(15)->toDateString(),
+        'booked_at' => CarbonImmutable::now()->subDays(15)->toDateString().' 12:00:00',
+        'value_date' => CarbonImmutable::now()->subDays(15)->toDateString(),
+        'amount_minor' => 1000,
+        'currency' => 'EUR',
+        'settled_amount_minor' => 1000,
+        'settled_currency' => 'EUR',
+        'counterparty_name' => 'Noodfonds',
+        'counterparty_normalized' => 'noodfonds',
+        'normalization_version' => 1,
+        'source_format' => 'camt053',
+        'import_run_id' => $run->id,
+        'source_row_index' => 1,
+        'fingerprint' => str_pad('goalhorizon', 64, '0', STR_PAD_LEFT),
+        'fingerprint_version' => 1,
+    ]);
+
+    app(GoalContributionWriter::class)->attribute($this->user, $goal->id, $transaction->id);
+
+    expect(app(GoalProgressQuery::class)->forUser($this->user)[0]->projectionBeyondHorizon)->toBeTrue();
+
+    $branches = goalsListBranches((string) Livewire::test(GoalsPage::class)->html());
+
+    expect($branches['phone'])->toContain(Lang::get('goals::messages.projection.projection_note'))
+        ->and($branches['desktop'])->toContain(Lang::get('goals::messages.projection.projection_note'));
+});
+
+// Both lists applied the 2%-minimum sliver themselves, under two names. The rule
+// belongs to the row, and a bar the reader cannot see is the failure it prevents.
+it('draws the same minimum sliver in both lists for a goal with a tiny but real share', function (): void {
+    $goal = Goal::factory()->create([
+        'user_id' => $this->user->id,
+        'name' => 'Noodfonds',
+        'target_minor' => 100000,
+        'start_date' => CarbonImmutable::now()->subDays(30)->toDateString(),
+        'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
+        'status' => 'active',
+    ]);
+
+    $run = ImportRun::create([
+        'user_id' => $this->user->id,
+        'source_format' => 'camt053',
+        'raw_file_path' => '/tmp/goals-sliver.xml',
+        'sha256' => str_repeat('e', 64),
+        'uploaded_at' => CarbonImmutable::now(),
+        'status' => 'previewed',
+    ]);
+
+    $transaction = Transaction::create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'type' => 'transfer_in',
+        'posted_at' => CarbonImmutable::now()->subDays(15)->toDateString(),
+        'booked_at' => CarbonImmutable::now()->subDays(15)->toDateString().' 12:00:00',
+        'value_date' => CarbonImmutable::now()->subDays(15)->toDateString(),
+        'amount_minor' => 1000,
+        'currency' => 'EUR',
+        'settled_amount_minor' => 1000,
+        'settled_currency' => 'EUR',
+        'counterparty_name' => 'Noodfonds',
+        'counterparty_normalized' => 'noodfonds',
+        'normalization_version' => 1,
+        'source_format' => 'camt053',
+        'import_run_id' => $run->id,
+        'source_row_index' => 1,
+        'fingerprint' => str_pad('goalsliver', 64, '0', STR_PAD_LEFT),
+        'fingerprint_version' => 1,
+    ]);
+
+    app(GoalContributionWriter::class)->attribute($this->user, $goal->id, $transaction->id);
+
+    $row = app(GoalProgressQuery::class)->forUser($this->user)[0];
+
+    expect($row->percentComplete())->toBe(1)
+        ->and($row->barWidth())->toBe(2);
+
+    $branches = goalsListBranches((string) Livewire::test(GoalsPage::class)->html());
+
+    expect($branches['phone'])->toContain('aria-valuenow="2"')
+        ->and($branches['desktop'])->toContain('aria-valuenow="2"');
+});
+
+/** @return array<string, string> the element's attributes, keyed by name */
+function goalsElementAttributes(string $html, string $id): array
+{
+    $dom = new DOMDocument;
+    $previous = libxml_use_internal_errors(true);
+    $dom->loadHTML('<?xml encoding="UTF-8"?><div>'.$html.'</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+    libxml_clear_errors();
+    libxml_use_internal_errors($previous);
+
+    $element = (new DOMXPath($dom))->query('//*[@id="'.$id.'"]')->item(0);
+    if (! $element instanceof DOMElement) {
+        return [];
+    }
+
+    $attributes = ['#text' => trim($element->textContent)];
+    foreach ($element->attributes as $attribute) {
+        $attributes[$attribute->nodeName] = $attribute->nodeValue ?? '';
+    }
+
+    return $attributes;
+}
+
+it('points every phone-sheet field at its own error line', function (): void {
+    // One render carrying all three errors: the form validates in sequence and
+    // stops at the first, so driving them through createGoal would need three.
+    $html = (string) Livewire::test(GoalsPage::class)
+        ->set('errorName', 'Enter a name for your goal.')
+        ->set('errorAmount', 'Enter a target amount.')
+        ->set('errorDate', 'Choose a target date.')
+        ->html();
+
+    foreach (['goal-name-sheet' => 'Enter a name for your goal.',
+        'goal-amount-sheet' => 'Enter a target amount.',
+        'goal-date-sheet' => 'Choose a target date.'] as $fieldId => $message) {
+        $field = goalsElementAttributes($html, $fieldId);
+        $error = goalsElementAttributes($html, $fieldId.'-error');
+
+        expect($field['aria-invalid'] ?? null)->toBe('true', $fieldId.' is not marked invalid')
+            ->and($field['aria-describedby'] ?? null)->toBe($fieldId.'-error', $fieldId.' points at no error line')
+            ->and($error['#text'] ?? null)->toBe($message, $fieldId.'-error is not the error paragraph');
+    }
+});

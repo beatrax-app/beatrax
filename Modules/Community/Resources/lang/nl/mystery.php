@@ -22,8 +22,7 @@ return [
 
     'card' => [
         'likely' => 'Waarschijnlijk: een naamloze winkelier.',
-        'seen' => 'Gezien',
-        'time' => 'keer|keer',
+        'seen_times' => 'Gezien :count keer|Gezien :count keer',
         'last_seen' => 'Laatst gezien :date',
         'suggest' => 'Stel een naam voor →',
     ],

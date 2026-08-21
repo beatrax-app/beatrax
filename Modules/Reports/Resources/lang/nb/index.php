@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'title' => 'Rapporter',
     'page_title' => 'Rapporter · Beatrax',
-    'saved_report' => 'lagret rapport|lagrede rapporter',
+    'saved_report' => ':count lagret rapport|:count lagrede rapporter',
     'pinned_count' => 'festet',
     'dismiss' => 'Lukk',
 

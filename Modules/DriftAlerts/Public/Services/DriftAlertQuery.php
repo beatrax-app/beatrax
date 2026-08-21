@@ -85,6 +85,36 @@ final readonly class DriftAlertQuery
         return $this->recurringQuery->statesForSeriesIds($seriesIds, $user);
     }
 
+    // One row per series with an open alert mounts a threshold editor, and each
+    // editor read its own series back on mount. The grouping query already knows
+    // every id it will render, so the whole column arrives with it.
+    /**
+     * @param  list<int>  $seriesIds
+     * @return array<int, int|null> recurring_series.drift_threshold_percent per id, scoped
+     *                              to the user; null where the series follows the global default
+     */
+    public function seriesThresholdsForUser(User $user, array $seriesIds): array
+    {
+        $unique = array_values(array_unique($seriesIds));
+        if ($unique === []) {
+            return [];
+        }
+
+        $rows = $this->db->connection()->table('recurring_series')
+            ->where('user_id', $user->id)
+            ->whereIn('id', $unique)
+            ->get(['id', 'drift_threshold_percent']);
+
+        $thresholds = [];
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            $value = $row->drift_threshold_percent ?? null;
+            $thresholds[self::toInt($row->id)] = is_numeric($value) ? (int) $value : null;
+        }
+
+        return $thresholds;
+    }
+
     /**
      * @return array<int, list<DriftAlertDto>> open alerts grouped by recurring_series_id;
      *                                         series order follows each group's newest alert, and within a group id DESC

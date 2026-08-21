@@ -13,6 +13,7 @@ use Modules\Migration\Internal\Actions\CheckForUpdates;
 use Modules\Migration\Internal\Actions\ConfirmMigration;
 use Modules\Migration\Internal\Actions\StartMigrationRun;
 use Modules\Migration\Internal\Http\Livewire\PreviewMigration;
+use Modules\Migration\Internal\Pipeline\PreviewSummaryBuilder;
 use Modules\Migration\Models\MigrationRun;
 use Modules\Migration\Tests\Support\MigrationFixturePaths;
 
@@ -550,4 +551,59 @@ it('ThreeWayMerge: the conflict row renders formatted currency and a human label
     $response->assertSee('€', false);
     $response->assertSee('Groceries', false);
     $response->assertDontSee('Budget_assignment budgeted_minor', false);
+});
+
+it('ThreeWayMerge: an unrecognised stored resolution reads as keep_local in the preview, and resolveConflict refuses to write one', function (): void {
+    $firstRun = app(StartMigrationRun::class)->__invoke(
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v1'),
+        'Beatrax Test Budget.zip',
+    );
+    app(ConfirmMigration::class)->__invoke($firstRun->id, $this->user);
+
+    $groceries = Category::query()->where('user_id', $this->user->id)->where('name', 'Groceries')->firstOrFail();
+    $jan = CarbonImmutable::parse('2026-01-01');
+    app(EnvelopeWriter::class)->setAssigned($this->user, $groceries->id, $jan, 30000);
+
+    $reconciliationRun = app(CheckForUpdates::class)->__invoke(
+        $firstRun->id,
+        $this->user,
+        'ynab4',
+        MigrationFixturePaths::ynab4Dir('v2'),
+    );
+
+    $conflictId = (int) $this->db->connection()->table('migration_staging_unmapped_items')
+        ->where('migration_run_id', $reconciliationRun->id)
+        ->where('item_type', 'conflict')
+        ->where('entity_type', 'budget_assignment')
+        ->value('id');
+    expect($conflictId)->toBeGreaterThan(0);
+
+    Livewire::actingAs($this->user)
+        ->test(PreviewMigration::class, ['id' => $reconciliationRun->id])
+        ->call('resolveConflict', $conflictId, 'take_everything')
+        ->assertOk();
+
+    expect($this->db->connection()->table('migration_staging_unmapped_items')->where('id', $conflictId)->value('resolution'))->toBeNull();
+
+    $this->db->connection()->table('migration_staging_unmapped_items')
+        ->where('id', $conflictId)
+        ->update(['resolution' => 'take_everything']);
+
+    $summary = app(PreviewSummaryBuilder::class)->forRun($reconciliationRun->id, $this->user);
+    $row = collect($summary->unmapped['conflict']['items'])->firstWhere('id', $conflictId);
+
+    expect($row)->not->toBeNull()
+        ->and($row['resolution'])->toBe('keep_local');
+
+    app(ConfirmMigration::class)->__invoke($reconciliationRun->id, $this->user);
+
+    // The preview said keep-local, so Confirm must leave the local 300,00 alone.
+    $assigned = $this->db->connection()->table('envelope_assignments')
+        ->where('user_id', $this->user->id)
+        ->where('category_id', $groceries->id)
+        ->where('period_start', '2026-01-01')
+        ->value('assigned_minor');
+    expect((int) $assigned)->toBe(30000);
 });

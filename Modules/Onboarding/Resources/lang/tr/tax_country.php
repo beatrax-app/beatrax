@@ -8,7 +8,6 @@ return [
     'lede' => 'İşlemleri vergiden indirilebilir olarak etiketlediğinde hangi vergi indirimi kategorilerinin kullanılabileceğini belirler. Beyanname verdiğin ülkeyi seç — veya atlayıp istediğin zaman Ayarlar içinden belirle.',
 
     'select_label' => 'Ülken',
-    'select_placeholder' => 'Bir ülke seç…',
     'additive_note' => 'Değiştirmek yeni kategoriler ekler — mevcut etiketler asla değişmez.',
 
     'skip' => 'Şimdilik atla',

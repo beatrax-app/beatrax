@@ -7,6 +7,7 @@ namespace Modules\Recurring\Public\Services;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Categorization\Public\Services\MerchantMemoryQuery;
+use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Enums\Direction;
@@ -198,7 +199,7 @@ final readonly class FixedPaymentsViewQuery
             $chainLinkState = $row->chain_link_state ?? null;
             $hasResolvedChain = $chainLinkId !== null
                 && is_string($chainLinkState)
-                && in_array($chainLinkState, ['confirmed', 'candidate'], true);
+                && in_array($chainLinkState, [ChainLinkState::Confirmed->value, ChainLinkState::Candidate->value], true);
             if (! $hasResolvedChain) {
                 $needsFallback[] = self::toInt($row->id);
             }
@@ -213,7 +214,7 @@ final readonly class FixedPaymentsViewQuery
             ->join('chain_links as cl', 'cl.from_transaction_id', '=', 'rso.transaction_id')
             ->where('rso.user_id', $user->id)
             ->where('cl.user_id', $user->id)
-            ->whereIn('cl.state', ['confirmed', 'candidate'])
+            ->whereIn('cl.state', [ChainLinkState::Confirmed->value, ChainLinkState::Candidate->value])
             ->whereIn('rso.recurring_series_id', $needsFallback)
             ->orderByDesc('rso.observed_at')
             ->orderByDesc('rso.id')
@@ -246,7 +247,7 @@ final readonly class FixedPaymentsViewQuery
         if (
             $primaryChainLinkId !== null
             && is_string($primaryChainState)
-            && in_array($primaryChainState, ['confirmed', 'candidate'], true)
+            && in_array($primaryChainState, [ChainLinkState::Confirmed->value, ChainLinkState::Candidate->value], true)
         ) {
             $chainLinkId = self::toInt($primaryChainLinkId);
         } else {

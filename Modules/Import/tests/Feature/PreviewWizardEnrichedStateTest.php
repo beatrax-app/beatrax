@@ -9,6 +9,7 @@ use Modules\Import\Internal\Http\Livewire\PreviewWizard;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Dto\PreviewRowDto;
+use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Ledger\Models\ImportRun;
 
 uses(RefreshDatabase::class);
@@ -40,7 +41,7 @@ function seedPreviewWithEnrichedRow(array $sourceRefDiff, int $userId): int
 
     $row = new PreviewRowDto(
         rowIndex: 0,
-        status: 'enriched',
+        status: PreviewRowStatus::Enriched,
         accountId: null,
         bookedAt: '15-05-2026',
         counterpartyName: 'Albert Heijn',

@@ -17,6 +17,7 @@ use Modules\Chains\Public\Dto\ChainTree;
 use Modules\Chains\Public\Dto\ChainTreeNode;
 use Modules\Chains\Public\Enums\ChainLinkKind;
 use Modules\Chains\Public\Enums\ChainLinkState;
+use Modules\Chains\Public\Enums\ConfidenceTier;
 use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
@@ -272,7 +273,7 @@ final class ChainDrawer extends Component
             bookedAt: $bookedAt,
             accountName: $accountName,
             kind: 'ics_bulk_settle_child',
-            confidenceTier: 'Confirmed',
+            confidenceTier: ConfidenceTier::Confirmed,
             children: [],
         );
     }

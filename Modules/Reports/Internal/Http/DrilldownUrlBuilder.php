@@ -6,6 +6,7 @@ namespace Modules\Reports\Internal\Http;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Ledger\Public\Dto\Period;
+use Modules\Ledger\Public\Enums\AmountDirection;
 use Modules\Reports\Internal\Dto\ReportDefinition;
 
 final class DrilldownUrlBuilder
@@ -32,7 +33,7 @@ final class DrilldownUrlBuilder
         $params['before'] = $period->endExclusive->subDay()->toDateString();
         $params['amount_min'] = $definition->amountMin;
         $params['amount_max'] = $definition->amountMax;
-        $params['amount_dir'] = $definition->amountDirection !== 'both' ? $definition->amountDirection : null;
+        $params['amount_dir'] = $definition->amountDirection !== AmountDirection::Both->value ? $definition->amountDirection : null;
 
         $params = array_filter(
             $params,

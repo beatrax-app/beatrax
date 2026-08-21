@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'title' => 'Atskaites',
     'page_title' => 'Atskaites · Beatrax',
-    'saved_report' => 'saglabātu atskaišu|saglabāta atskaite|saglabātas atskaites',
+    'saved_report' => ':count saglabātu atskaišu|:count saglabāta atskaite|:count saglabātas atskaites',
     'pinned_count' => 'piespraustas',
     'dismiss' => 'Aizvērt',
 

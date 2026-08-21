@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Enums\JobRunStatus;
 use Modules\Import\Internal\Http\Livewire\PreviewWizard;
 
 function wcrUser(string $username): User
@@ -52,7 +53,7 @@ it('reads chain_resolution_runs by exact user_id match — running status surfac
     Livewire::actingAs($this->user)
         ->test(PreviewWizard::class, ['id' => $this->importRunId])
         ->call('refreshChainResolutionStatus')
-        ->assertSet('chainResolutionStatus', 'running');
+        ->assertSet('chainResolutionStatus', JobRunStatus::Running);
 });
 
 it('surfaces pending status when chain_resolution_runs.status=pending', function (): void {
@@ -68,7 +69,7 @@ it('surfaces pending status when chain_resolution_runs.status=pending', function
     Livewire::actingAs($this->user)
         ->test(PreviewWizard::class, ['id' => $this->importRunId])
         ->call('refreshChainResolutionStatus')
-        ->assertSet('chainResolutionStatus', 'pending');
+        ->assertSet('chainResolutionStatus', JobRunStatus::Pending);
 });
 
 it('auto-navigates to imports.results on chain_resolution_runs.status=complete', function (): void {
@@ -84,7 +85,7 @@ it('auto-navigates to imports.results on chain_resolution_runs.status=complete',
     Livewire::actingAs($this->user)
         ->test(PreviewWizard::class, ['id' => $this->importRunId])
         ->call('refreshChainResolutionStatus')
-        ->assertSet('chainResolutionStatus', 'complete')
+        ->assertSet('chainResolutionStatus', JobRunStatus::Complete)
         ->assertSet('chainResolutionLinkedCount', 7)
         ->assertRedirect(route('imports.results', ['id' => $this->importRunId]));
 });
@@ -109,7 +110,7 @@ it('surfaces failed status without carrying the job error to the browser', funct
     $html = Livewire::actingAs($this->user)
         ->test(PreviewWizard::class, ['id' => $this->importRunId])
         ->call('refreshChainResolutionStatus')
-        ->assertSet('chainResolutionStatus', 'failed')
+        ->assertSet('chainResolutionStatus', JobRunStatus::Failed)
         ->assertSee('Chain resolution failed')
         ->assertSee('the details are in the job log')
         ->html();
@@ -165,7 +166,7 @@ it('substring-attack guard — user_id matching is exact, not LIKE', function ()
     Livewire::actingAs($this->otherUser)
         ->test(PreviewWizard::class, ['id' => $otherImportRunId])
         ->call('refreshChainResolutionStatus')
-        ->assertSet('chainResolutionStatus', 'failed');
+        ->assertSet('chainResolutionStatus', JobRunStatus::Failed);
 });
 
 it('PreviewWizard does NOT contain a substring LIKE payload pattern', function (): void {

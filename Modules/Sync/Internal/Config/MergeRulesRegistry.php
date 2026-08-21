@@ -591,14 +591,6 @@ final class MergeRulesRegistry
         return array_key_exists($table, $this->rules());
     }
 
-    /**
-     * @return list<string>
-     */
-    public function registeredTables(): array
-    {
-        return array_keys($this->rules());
-    }
-
     public function strategyFor(string $table, string $field): string
     {
         $tableRules = $this->rules()[$table] ?? null;

@@ -22,8 +22,7 @@ return [
 
     'card' => [
         'likely' => 'Provavelmente: um comerciante sem nome.',
-        'seen' => 'Visto',
-        'time' => 'vez|vezes',
+        'seen_times' => 'Visto :count vez|Visto :count vezes',
         'last_seen' => 'Visto pela última vez a :date',
         'suggest' => 'Sugerir um nome →',
     ],

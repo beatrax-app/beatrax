@@ -8,11 +8,10 @@ use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
-use Modules\Auth\Internal\Recovery\RecoveryCodeGenerator;
+use Modules\Auth\Internal\Recovery\RecoveryCodeMinter;
 use Modules\Auth\Internal\Support\Username;
-use Modules\Auth\Models\UserRecoveryCode;
+use Modules\Auth\Public\Contracts\PasswordPolicy;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\QueryFailure;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -21,15 +20,10 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 // caller check here (404, never 403) is a defensive second layer.
 final class AddUserAction
 {
-    private const MINIMUM_PASSWORD_LENGTH = 12;
-
-    private const RECOVERY_CODE_COUNT = 10;
-
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Hasher $hasher,
-        private readonly Clock $clock,
-        private readonly RecoveryCodeGenerator $codeGenerator,
+        private readonly RecoveryCodeMinter $recoveryCodes,
     ) {}
 
     public function __invoke(User $caller, string $usernameInput, string $password): User
@@ -46,7 +40,7 @@ final class AddUserAction
             ]);
         }
 
-        if (strlen($password) < self::MINIMUM_PASSWORD_LENGTH) {
+        if (strlen($password) < PasswordPolicy::MINIMUM_LENGTH) {
             throw ValidationException::withMessages([
                 'password' => Lang::get('auth::add_user.error_min_length'),
             ]);
@@ -55,7 +49,7 @@ final class AddUserAction
         /** @var User $partner */
         $partner = $this->db->connection()->transaction(function () use ($username, $password): User {
             $partner = $this->createPartner($username, $password);
-            $this->issueRecoveryCodes($partner);
+            $this->recoveryCodes->issueFor($partner->id);
 
             return $partner;
         });
@@ -79,29 +73,6 @@ final class AddUserAction
                 ]);
             }
             throw $e;
-        }
-    }
-
-    private function issueRecoveryCodes(User $partner): void
-    {
-        $now = $this->clock->now();
-
-        $codesPlain = [];
-        while (count($codesPlain) < self::RECOVERY_CODE_COUNT) {
-            $code = $this->codeGenerator->generate();
-            if (in_array($code, $codesPlain, true)) {
-                continue;
-            }
-            $codesPlain[] = $code;
-        }
-
-        foreach ($codesPlain as $plainCode) {
-            UserRecoveryCode::query()->create([
-                'user_id' => $partner->id,
-                'code_hash' => $this->hasher->make($plainCode),
-                'used_at' => null,
-                'created_at' => $now,
-            ]);
         }
     }
 }

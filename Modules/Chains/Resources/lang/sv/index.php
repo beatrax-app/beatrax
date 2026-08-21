@@ -15,7 +15,7 @@ return [
     'no_counterparty' => '(ingen motpart)',
     'open_from_row' => 'Öppna från-raden',
     'open_to_row' => 'Öppna till-raden',
-    'leg_count' => '1 betalning|:count betalningar',
+    'leg_count' => ':count betalning|:count betalningar',
     'state_aria' => 'Status: :state',
 
     'kind' => [

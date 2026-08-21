@@ -110,7 +110,12 @@ What the module explicitly does NOT do:
   `CountryStep` records the user's country preference through
   `Modules\Core\Public\Services\UserCountry`, which raises
   `UserCountryChanged`; Tax listens for that event and seeds the
-  deduction corpus, so the wizard never has to know Tax exists. The
+  deduction corpus, so the wizard never has to know Tax exists. Its
+  options come from `x-core::country-options`, the same list signup and
+  Settings draw — the step used to write its own, under its own lang key,
+  and had already drifted in German. That component is also what makes the
+  stored country the *selected* option on a re-run; `mount()` had loaded it
+  into `countryCode` while the select still drew the placeholder. The
   step key persisted in `wizard_progress` is still `tax-country`,
   because renaming it would need a data migration for no gain. Both follow the same shape as the connector steps: a
   `continue` action that persists and bubbles `wizard.step.completed`,

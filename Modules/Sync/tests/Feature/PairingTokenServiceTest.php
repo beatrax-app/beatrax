@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Sync\Internal\Clock\ZuluTimestamp;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Tests\Support\PairingSafetyDigest;
 
@@ -111,6 +112,73 @@ it('extends the token TTL when the responder accepts near the original expiry', 
     $newExpiry = CarbonImmutable::parse($accepted->expires_at);
 
     expect($newExpiry->greaterThan($originalExpiry))->toBeTrue();
+});
+
+// The grace rule is reached by two transports: the typed code goes through
+// accept(), the relayed/LAN frame through applyResponderAccept(). The pair
+// below is the same pair above, driven through the second entry point.
+it('does not shorten the token TTL when a relayed responder-accept arrives early', function (): void {
+    $user = tokenUser('token-relayed-early-accept');
+
+    /** @var PairingTokenService $service */
+    $service = $this->app->make(PairingTokenService::class);
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+
+    // Issued at 10:00:00 → TTL +10m → original expiry 10:10:00.
+    $token = $service->issue((int) $user->id, 'device-init', str_repeat('a', 64), str_repeat('b', 64));
+
+    $issued = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->first();
+
+    // The frame lands 30s later. Its grace floor (10:05:30) is EARLIER than
+    // the original expiry, so the window must be left exactly as it was.
+    CarbonImmutable::setTestNow('2026-06-15 10:00:30');
+    $bound = $service->applyResponderAccept(
+        (int) $user->id,
+        hash('sha256', $token),
+        'device-resp',
+        str_repeat('c', 64),
+        str_repeat('d', 64),
+    );
+
+    expect($bound)->not->toBeFalse();
+
+    $accepted = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->first();
+
+    expect($accepted->state)->toBe('awaiting_confirm');
+    expect($accepted->expires_at)->toBe($issued->expires_at);
+});
+
+it('extends the token TTL when a relayed responder-accept arrives near the original expiry', function (): void {
+    $user = tokenUser('token-relayed-late-accept');
+
+    /** @var PairingTokenService $service */
+    $service = $this->app->make(PairingTokenService::class);
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+
+    $token = $service->issue((int) $user->id, 'device-init', str_repeat('a', 64), str_repeat('b', 64));
+
+    $issued = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->first();
+
+    // The frame lands at 10:09:00 → grace floor 10:14:00 > original → grows.
+    CarbonImmutable::setTestNow('2026-06-15 10:09:00');
+    $bound = $service->applyResponderAccept(
+        (int) $user->id,
+        hash('sha256', $token),
+        'device-resp',
+        str_repeat('c', 64),
+        str_repeat('d', 64),
+    );
+
+    expect($bound)->not->toBeFalse();
+
+    $accepted = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->first();
+
+    expect($accepted->expires_at)->not->toBe($issued->expires_at);
+    expect($accepted->expires_at)->toBe(ZuluTimestamp::stamp(CarbonImmutable::now()->addMinutes(5)));
 });
 
 it('rejects an accept whose responder public key is not valid 64-char hex', function (): void {

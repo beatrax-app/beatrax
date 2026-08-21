@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Filesystem\Filesystem;
 use InvalidArgumentException;
+use Modules\Core\Public\Support\SecretFileMode;
 use Modules\Receipts\Internal\Exceptions\FileDropBlobWriteException;
 use RuntimeException;
 use Throwable;
@@ -19,10 +20,6 @@ use Throwable;
 final class FileDropEmlBlobStore
 {
     private const MESSAGE_ID_PATTERN = '/^[A-Za-z0-9._\-]{1,200}$/';
-
-    private const DIR_MODE = 0700;
-
-    private const FILE_MODE = 0600;
 
     public function __construct(
         private readonly Filesystem $files,
@@ -54,8 +51,8 @@ final class FileDropEmlBlobStore
     {
         $dir = dirname($absolutePath);
         $dirExisted = $this->files->isDirectory($dir);
-        $this->files->ensureDirectoryExists($dir, self::DIR_MODE, recursive: true);
-        if (! $dirExisted && ! @chmod($dir, self::DIR_MODE)) {
+        $this->files->ensureDirectoryExists($dir, SecretFileMode::DIRECTORY, recursive: true);
+        if (! $dirExisted && ! @chmod($dir, SecretFileMode::DIRECTORY)) {
             throw FileDropBlobWriteException::chmodDirectoryFailed($dir);
         }
 
@@ -86,7 +83,7 @@ final class FileDropEmlBlobStore
             @fclose($fp);
             $fp = null;
 
-            if (! @chmod($tmp, self::FILE_MODE)) {
+            if (! @chmod($tmp, SecretFileMode::FILE)) {
                 throw FileDropBlobWriteException::chmodTempFileFailed($tmp);
             }
 

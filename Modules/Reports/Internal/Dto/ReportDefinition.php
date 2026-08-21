@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Reports\Internal\Dto;
 
+use Modules\Ledger\Public\Enums\AmountDirection;
 use Modules\Reports\Internal\Enums\ReportGranularity;
 use Spatie\LaravelData\Data;
 
@@ -22,7 +23,6 @@ final class ReportDefinition extends Data
      * @param  list<int>  $counterparties  Counterparty IDs to restrict results to (empty = all)
      * @param  ?string  $amountMin  Minimum absolute amount as decimal string (e.g. "10.00")
      * @param  ?string  $amountMax  Maximum absolute amount as decimal string (e.g. "500.00")
-     * @param  string  $amountDirection  'in' | 'out' | 'both'
      */
     public function __construct(
         public readonly string $metric,
@@ -39,7 +39,7 @@ final class ReportDefinition extends Data
         public readonly array $counterparties = [],
         public readonly ?string $amountMin = null,
         public readonly ?string $amountMax = null,
-        public readonly string $amountDirection = 'both',
+        public readonly string $amountDirection = AmountDirection::Both->value,
     ) {}
 
     // Never localized and free of any random or time component, so the same

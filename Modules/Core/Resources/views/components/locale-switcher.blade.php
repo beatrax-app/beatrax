@@ -1,8 +1,8 @@
 @use('Modules\Core\Public\Enums\Locale')
 @use('Modules\Core\Public\Services\LocaleNegotiator')
 @use('Modules\Core\Public\Support\Lang')
-@inject('translator', 'translator')
 @inject('sessionStore', 'session.store')
+@inject('translator', 'translator')
 @props(['labelled' => false, 'model' => null])
 @php
     $wrapperClass = $labelled ? 'space-y-1' : '';
@@ -10,9 +10,12 @@
     $selectClass = $labelled ? 'locale-switcher-select w-full' : 'locale-switcher-select';
 
     // The translator always reports a concrete locale, so it cannot tell "en
-    // chosen" from "nothing chosen, English by default". The session key can.
+    // chosen" from "nothing chosen, English by default". The session key can,
+    // and on these screens it is the only override there is: nobody is signed
+    // in yet, so nothing outranks it.
     $sessionLocale = $sessionStore->get('locale');
     $followsSystem = ! is_string($sessionLocale) || ! Locale::isSupported($sessionLocale);
+    $selectedLocale = $followsSystem ? LocaleNegotiator::SYSTEM : $translator->getLocale();
 @endphp
 {{--
     Pre-auth language switch for the welcome / signup / login surfaces.
@@ -29,10 +32,11 @@
     The submit handler exists because a native form POST does not survive the
     mobile shell: NativePHP intercepts WebView requests, replays them into the
     embedded runtime, and loses the POST method, so Laravel answered 405 and
-    the app sat in a redirect loop. `code` now lives on the select element
-    below, so it is part of FormData and no longer depends on the submitter
-    surviving. (Named rather than written as a tag: the HTML analyser does not
-    parse Blade comments, and read a mention here as a real, unlabelled input.)
+    the app sat in a redirect loop. `code` now names the select element itself
+    — see x-core::locale-select — so it is part of FormData and no longer
+    depends on the submitter surviving. (Named rather than written as a tag:
+    the HTML analyser does not parse Blade comments, and read a mention here as
+    a real, unlabelled input.)
 
     fetch() IS intercepted reliably — it is the path every Livewire round-trip
     already takes — so submitting through it sidesteps both defects without
@@ -43,12 +47,13 @@
     two are a sentence apart and read alike, so the language one has to say in
     visible copy what it changes — and, as pointedly, what it does not.
 
-    The System option is the same one Settings carries, and the one the shared
-    help line under this control describes. Without it the copy named a choice
-    that existed only for a signed-in reader, and a guest who switched by
-    accident had no way back to their browser's language. It posts the
-    LocaleNegotiator sentinel, which CLEARS the session key rather than storing
-    a locale under it.
+    The System option is literally the one Settings carries — the same
+    x-core::locale-select draws all three pickers — and the one the shared help
+    line under this control describes. Without it the copy named a choice that
+    existed only for a signed-in reader, and a guest who switched by accident
+    had no way back to their browser's language. It posts the LocaleNegotiator
+    sentinel, which CLEARS the session key rather than storing a locale under
+    it.
 
     `model` names a Livewire property instead, for a screen the reader is part
     way through FILLING IN. The POST above is a whole navigation, and it took
@@ -60,6 +65,18 @@
     forbids that shape outright: a checklist fed by input events could not see
     the passwords the server had just emptied, and left two green ticks over
     two blank boxes.
+
+    Which of the two shells wraps the control is the whole of the difference:
+    the 26 languages and the System sentinel are written once, in
+    x-core::locale-select, so a change to the list cannot reach one shell and
+    miss the other — or reach both and miss Settings, which draws the same
+    control a third way.
+
+    Which option opens selected is decided HERE and passed down, because these
+    screens know only the session key. Settings passes its own answer, the
+    stored preference that outranks the session; deriving it inside the shared
+    control would have shown a signed-in reader System while the app spoke the
+    language they had stored.
 --}}
 <div class="{{ $wrapperClass }}">
 @if ($labelled)
@@ -67,27 +84,13 @@
 @endif
 @if ($model !== null)
     <div class="{{ $formClass }}">
-        @unless ($labelled)
-            <label class="sr-only" for="locale-switcher-select">{{ Lang::get('core::settings.language.label') }}</label>
-        @endunless
-        <select
-            id="locale-switcher-select"
+        <x-core::locale-select
+            :labelled="$labelled"
+            :selectClass="$selectClass"
+            :selected="$selectedLocale"
             name="code"
-            class="{{ $selectClass }}"
             wire:model.live="{{ $model }}"
-        >
-            @foreach (Locale::cases() as $locale)
-                <option
-                    value="{{ $locale->value }}"
-                    lang="{{ $locale->value }}"
-                    @selected(! $followsSystem && $translator->getLocale() === $locale->value)
-                >{{ $locale->label() }}</option>
-            @endforeach
-            <option
-                value="{{ LocaleNegotiator::SYSTEM }}"
-                @selected($followsSystem)
-            >{{ Lang::get('core::settings.language.system') }}</option>
-        </select>
+        />
     </div>
 @else
 <form
@@ -98,27 +101,13 @@
     x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)"
 >
     @csrf
-    @unless ($labelled)
-        <label class="sr-only" for="locale-switcher-select">{{ Lang::get('core::settings.language.label') }}</label>
-    @endunless
-    <select
-        id="locale-switcher-select"
+    <x-core::locale-select
+        :labelled="$labelled"
+        :selectClass="$selectClass"
+        :selected="$selectedLocale"
         name="code"
-        class="{{ $selectClass }}"
         x-on:change="$el.form.requestSubmit()"
-    >
-        @foreach (Locale::cases() as $locale)
-            <option
-                value="{{ $locale->value }}"
-                lang="{{ $locale->value }}"
-                @selected(! $followsSystem && $translator->getLocale() === $locale->value)
-            >{{ $locale->label() }}</option>
-        @endforeach
-        <option
-            value="{{ LocaleNegotiator::SYSTEM }}"
-            @selected($followsSystem)
-        >{{ Lang::get('core::settings.language.system') }}</option>
-    </select>
+    />
 
     {{-- Submitting on change needs JS, so this stays in the markup for a
          first paint that has not booted yet — but once Alpine is alive the

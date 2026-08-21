@@ -10,6 +10,7 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Receipts\Internal\Listeners\DispatchChainHintsFromReceipt;
 use Modules\Receipts\Public\Dto\ChainHintPayload\RefundOfPayload;
+use Modules\Receipts\Public\Enums\ChainHintType;
 use Modules\Receipts\Public\Events\ChainHintDetected;
 
 // The end-to-end fixtures only ever carry a funded_by_card hint, so these cover
@@ -75,7 +76,7 @@ it('rehydrates a refund_of hint into a RefundOfPayload and dispatches ChainHintD
 
     Event::assertDispatched(ChainHintDetected::class, function (ChainHintDetected $event) use ($tx): bool {
         return $event->sourceTransactionId === $tx->id
-            && $event->hintType === 'refund_of'
+            && $event->hintType === ChainHintType::RefundOf
             && $event->hintPayload instanceof RefundOfPayload
             && $event->hintPayload->originalReferenceId === 'ORIG-REF-123'
             && $event->evidence === 'refund of ORIG-REF-123'

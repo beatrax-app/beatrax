@@ -63,13 +63,8 @@ function paypalFundingLegResolver(): AccountResolver
 {
     return new class implements AccountResolver
     {
-        /** @var list<string> */
-        public array $askedFor = [];
-
         public function resolve(string $iban): AccountResolution
         {
-            $this->askedFor[] = $iban;
-
             return AccountResolution::unknown($iban);
         }
     };

@@ -1,13 +1,11 @@
 {{--
     Biometric-primary mobile app-lock unlock screen (15-UI-SPEC.md §4).
     Structurally identical to
-    Modules/Auth/Resources/views/livewire/lock-screen.blade.php — the naked
-    full-screen safe-area chrome (lines 1-5) and the 48x48 /icon.png app-mark
-    block are reused verbatim, and the PIN-pad markup below is duplicated
-    from Modules/Auth/Resources/views/livewire/partials/pin-pad.blade.php the
-    same way Modules/Mobile/Resources/views/livewire/setup-progress-screen
-    .blade.php already duplicated the safe-area chrome (a cross-module Blade
-    @include was deliberately avoided).
+    Modules/Auth/Resources/views/livewire/lock-screen.blade.php — both take
+    their full-screen seam from .safe-screen and their app mark from
+    x-core::app-mark. The PIN-pad markup below is still duplicated from
+    Modules/Auth/Resources/views/livewire/partials/pin-pad.blade.php (a
+    cross-module Blade @include was deliberately avoided).
 
     UI-SPEC §4: "the existing lock-screen layout (PIN pad first, biometric
     button below) is kept" — no layout change vs the Auth lock screen beyond
@@ -24,9 +22,7 @@
 --}}
 @use('Modules\Core\Public\Support\Lang')
 <div
-    class="beatrax-shell min-h-screen flex items-center justify-center
-            pl-[var(--safe-left)] pr-[var(--safe-right)]
-            pt-[var(--safe-top)] pb-[var(--safe-bottom)]
+    class="safe-screen beatrax-shell min-h-screen flex items-center justify-center
             motion-reduce:transition-none"
     {{--
         Same discipline as the Auth lock screen: PIN digits accumulate
@@ -66,14 +62,7 @@
 
         {{-- App mark --}}
         <div class="flex justify-center">
-            <img
-                src="{{ Vite::asset('resources/brand/logo.svg') }}"
-                width="48"
-                height="48"
-                alt="Beatrax"
-                class="rounded-xl"
-                aria-hidden="true"
-            />
+            <x-core::app-mark />
         </div>
 
         {{-- PIN pad — dot display --}}
@@ -196,20 +185,39 @@
             </button>
         @endif
 
-        {{-- Sign out. Forgot-PIN recovery mirrors the Auth lock
-             screen exactly — sign out leads back to password login. --}}
-        <form method="POST" action="{{ route('logout') }}" x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
-            @csrf
-            <button
-                type="submit"
-                class="w-full text-center text-sm text-rose-600 dark:text-rose-400
-                       hover:text-rose-700 dark:hover:text-rose-300
-                       focus:outline-none focus-visible:underline
-                       py-2"
-            >
-                {{ Lang::get('mobile::lock.sign_out') }}
-            </button>
-        </form>
+        {{-- Forgot-PIN recovery mirrors the Auth lock screen: a sign-out that
+             names itself, because on a phone there is no second window and no
+             console — this screen is the whole of the escape route. Neutral,
+             not rose: it is the way back in, not the exit. Grouped with the
+             plain sign-out so three lines of copy cost one gap on a screen
+             the keypad has already nearly filled. --}}
+        <div class="space-y-1">
+            <form method="POST" action="{{ route('logout') }}" x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
+                @csrf
+                <button
+                    type="submit"
+                    class="w-full text-center text-sm text-slate-600 dark:text-slate-400
+                           hover:text-slate-900 dark:hover:text-slate-100
+                           focus:outline-none focus-visible:underline
+                           py-2"
+                >
+                    {{ Lang::get('mobile::lock.forgot_pin') }}
+                </button>
+            </form>
+
+            <form method="POST" action="{{ route('logout') }}" x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
+                @csrf
+                <button
+                    type="submit"
+                    class="w-full text-center text-sm text-rose-600 dark:text-rose-400
+                           hover:text-rose-700 dark:hover:text-rose-300
+                           focus:outline-none focus-visible:underline
+                           py-2"
+                >
+                    {{ Lang::get('mobile::lock.sign_out') }}
+                </button>
+            </form>
+        </div>
 
     </div>
 </div>

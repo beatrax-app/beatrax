@@ -12,11 +12,12 @@
        failed    — status-pill[variant=fail] + Re-run button + show-output toggle
 --}}
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\DevMode\Internal\Enums\CommandTier')
 @props(['run'])
 @php
     $runId = $run['runId'] ?? '';
     $command = (string) ($run['command'] ?? '');
-    $tier = $run['tier'] ?? 'safe';
+    $tier = $run['tier'] ?? CommandTier::Safe;
     $status = $run['status'] ?? 'done';
     $args = $run['args'] ?? [];
     $exitCode = $run['exitCode'] ?? null;
@@ -41,7 +42,7 @@
 <article
     class="card p-3 space-y-2"
     data-run-id="{{ $runId }}"
-    data-run-tier="{{ $tier }}"
+    data-run-tier="{{ $tier->value }}"
     data-run-status="{{ $status }}"
 >
     <header class="flex items-center justify-between gap-3">
@@ -67,7 +68,7 @@
                     wire:click="cancel('{{ $runId }}')"
                 >{{ Lang::get('dev::runner.cancel') }}</x-core::secondary-button>
             @else
-                @if ($tier === 'destructive')
+                @if ($tier === CommandTier::Destructive)
                     <button
                         type="button"
                         x-data

@@ -43,6 +43,10 @@ final class IcsSettlementResolver
 
     public const SETTLED_TOLERANCE_MINOR = 1;
 
+    private const TRANSFER_CHUNK = 100;
+
+    private const CREDIT_CHUNK = 100;
+
     private const EXCEEDED_CONFIDENCE_FLOOR = 0.6;
 
     private const EXCEEDED_CONFIDENCE_CEILING = 0.99;
@@ -59,9 +63,49 @@ final class IcsSettlementResolver
 
     public function resolveForUser(User $user): void
     {
-        $connection = $this->db->connection();
+        // Only the ids are carried for the whole candidate set; the seven
+        // columns each row needs come back a chunk at a time, and every read
+        // is closed before the pass writes its first chain_link.
+        $candidateIds = $this->candidateTransferIds($user);
+        $ibans = $this->accountIbans($user);
 
-        $candidateTransfers = $connection
+        /** @var array<string, Account|null> $aliasAccounts */
+        $aliasAccounts = [];
+
+        foreach (array_chunk($candidateIds, self::TRANSFER_CHUNK) as $chunk) {
+            foreach ($this->transfersById($chunk, $user) as $transfer) {
+                $storedCounterpartyIban = self::toString($transfer->counterparty_iban ?? null);
+                $counterpartyIban = $storedCounterpartyIban === ''
+                    ? ''
+                    : $this->codec->decryptValue('transactions', 'counterparty_iban', $storedCounterpartyIban, $user->id, ($this->session)())['value'];
+
+                // A user has a handful of distinct counterparty IBANs and one
+                // alias row each, so the three-query resolve runs once per
+                // IBAN rather than once per transfer.
+                if (! array_key_exists($counterpartyIban, $aliasAccounts)) {
+                    $aliasAccounts[$counterpartyIban] = $this->aliasResolver->resolveAccount($counterpartyIban, $user->id);
+                }
+                $aliasAccount = $aliasAccounts[$counterpartyIban];
+
+                if ($aliasAccount === null || $aliasAccount->kind !== AccountKind::IcsCard->value) {
+                    continue;
+                }
+                $this->resolveOne($transfer, $aliasAccount, $user, $ibans);
+            }
+        }
+
+        // Must follow the main pass: it only walks refunds inside statements
+        // the main pass has already moved to settled/overpaid.
+        $this->resolveRefundsAfterClose($user, $ibans);
+    }
+
+    /**
+     * @return list<int> in posted_at order, id breaking a tie, which is the
+     *                   order each transfer claims the period's expenses in
+     */
+    private function candidateTransferIds(User $user): array
+    {
+        $rows = $this->db->connection()
             ->table('transactions')
             ->join('accounts', 'accounts.id', '=', 'transactions.account_id')
             ->leftJoin('chain_links', function ($join): void {
@@ -76,32 +120,77 @@ final class IcsSettlementResolver
             ->whereNotNull('transactions.counterparty_iban')
             ->whereNull('chain_links.id')
             ->orderBy('transactions.posted_at')
-            ->get([
-                'transactions.id as tx_id',
-                'transactions.account_id as bank_account_id',
-                'transactions.counterparty_iban as counterparty_iban',
-                'transactions.settled_amount_minor as settled_amount_minor',
-                'transactions.amount_minor as amount_minor',
-                'transactions.posted_at as posted_at',
-                'transactions.booked_at as booked_at',
-            ]);
+            ->orderBy('transactions.id')
+            ->get(['transactions.id as tx_id']);
 
-        foreach ($candidateTransfers as $transfer) {
-            /** @var stdClass $transfer */
-            $storedCounterpartyIban = self::toString($transfer->counterparty_iban ?? null);
-            $counterpartyIban = $storedCounterpartyIban === ''
-                ? ''
-                : $this->codec->decryptValue('transactions', 'counterparty_iban', $storedCounterpartyIban, $user->id, ($this->session)())['value'];
-            $aliasAccount = $this->aliasResolver->resolveAccount($counterpartyIban, $user->id);
-            if ($aliasAccount === null || $aliasAccount->kind !== AccountKind::IcsCard->value) {
-                continue;
+        $ids = [];
+        foreach ($rows as $row) {
+            $id = self::toInt($row->tx_id ?? null);
+            if ($id > 0) {
+                $ids[] = $id;
             }
-            $this->resolveOne($transfer, $aliasAccount, $user);
         }
 
-        // Must follow the main pass: it only walks refunds inside statements
-        // the main pass has already moved to settled/overpaid.
-        $this->resolveRefundsAfterClose($user);
+        return $ids;
+    }
+
+    /**
+     * @param  list<int>  $ids
+     * @return list<stdClass>
+     */
+    private function transfersById(array $ids, User $user): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        $rows = $this->db->connection()
+            ->table('transactions')
+            ->where('user_id', $user->id)
+            ->whereIn('id', $ids)
+            ->get([
+                'id as tx_id',
+                'account_id as bank_account_id',
+                'counterparty_iban as counterparty_iban',
+                'settled_amount_minor as settled_amount_minor',
+                'amount_minor as amount_minor',
+                'posted_at as posted_at',
+                'booked_at as booked_at',
+            ]);
+
+        $byId = [];
+        foreach ($rows as $row) {
+            $byId[self::toInt($row->tx_id ?? null)] = $row;
+        }
+
+        $ordered = [];
+        foreach ($ids as $id) {
+            if (isset($byId[$id])) {
+                $ordered[] = $byId[$id];
+            }
+        }
+
+        return $ordered;
+    }
+
+    // The signature hash names the account by its IBAN, and the refund pass
+    // names it again; one read covers every account the user owns.
+    /**
+     * @return array<int, string>
+     */
+    private function accountIbans(User $user): array
+    {
+        $rows = $this->db->connection()
+            ->table('accounts')
+            ->where('user_id', $user->id)
+            ->get(['id', 'iban']);
+
+        $ibans = [];
+        foreach ($rows as $row) {
+            $ibans[self::toInt($row->id ?? null)] = self::toString($row->iban ?? null);
+        }
+
+        return $ibans;
     }
 
     /**
@@ -114,8 +203,9 @@ final class IcsSettlementResolver
      *                               statement lookup runs against this
      *                               account, not the ASN account the
      *                               transfer_out sits on.
+     * @param  array<int, string>  $ibans  account id to IBAN, read once per pass
      */
-    private function resolveOne(stdClass $transfer, Account $icsAccount, User $user): void
+    private function resolveOne(stdClass $transfer, Account $icsAccount, User $user, array $ibans): void
     {
         $connection = $this->db->connection();
         $transferId = self::toInt($transfer->tx_id ?? null);
@@ -132,6 +222,7 @@ final class IcsSettlementResolver
         $statementTotal = self::toInt($statement->total_amount_minor ?? null);
         $periodStart = self::toString($statement->period_start ?? null);
         $periodEnd = self::toString($statement->period_end ?? null);
+        $statementCurrency = self::currencyOrDefault($statement->currency ?? null);
 
         $expenses = $this->pullExpenses($accountId, $periodStart, $periodEnd, $user);
         $priorCredits = $this->priorCreditsMinor($statementId, $user);
@@ -150,7 +241,7 @@ final class IcsSettlementResolver
         $percentTolerance = (int) floor($absStatementTotal * (self::AMOUNT_TOLERANCE_PERCENT / 100));
         $tolerance = max(self::AMOUNT_TOLERANCE_MINOR, $percentTolerance);
 
-        $signatureHash = $this->signatureHash($accountId, $periodEnd, $user);
+        $signatureHash = self::signatureHash($ibans, $accountId, $periodEnd, $user);
 
         if (abs($delta) <= $tolerance) {
             $toleranceUsed = abs($delta) <= self::AMOUNT_TOLERANCE_MINOR
@@ -167,9 +258,12 @@ final class IcsSettlementResolver
                 'signature_hash' => $signatureHash,
             ];
 
+            // Flushed here rather than at the end of the pass: pullExpenses()
+            // skips an expense that already carries a confirmed link, so the
+            // next transfer must see what this one just claimed.
+            $links = [];
             foreach ($expenses as $expense) {
-                /** @var stdClass $expense */
-                $this->inserter->insertIfNotExists([
+                $links[] = [
                     'from_transaction_id' => $transferId,
                     'to_transaction_id' => self::toInt($expense->id ?? null),
                     'kind' => ChainLinkKind::IcsBulkSettle->value,
@@ -177,8 +271,9 @@ final class IcsSettlementResolver
                     'confidence' => '1.000',
                     'resolver' => 'auto',
                     'evidence' => $evidenceBase,
-                ], $user);
+                ];
             }
+            $this->inserter->insertMissing($links, $user);
 
             // CardStatementStateMachine is the only sanctioned mutator of
             // card_statements.state.
@@ -192,7 +287,7 @@ final class IcsSettlementResolver
                     'from_statement_id' => $statementId,
                     'to_statement_id' => null,
                     'amount_minor' => $surplus,
-                    'currency' => $this->statementCurrency($statementId, $user),
+                    'currency' => $statementCurrency,
                     'reason' => CardStatementCreditReason::Overpayment->value,
                     'created_at' => $now,
                     'updated_at' => $now,
@@ -223,7 +318,10 @@ final class IcsSettlementResolver
         ], $user);
     }
 
-    private function resolveRefundsAfterClose(User $user): void
+    /**
+     * @param  array<int, string>  $ibans
+     */
+    private function resolveRefundsAfterClose(User $user, array $ibans): void
     {
         $connection = $this->db->connection();
 
@@ -255,15 +353,33 @@ final class IcsSettlementResolver
                 'card_statements.id as statement_id',
                 'card_statements.period_start as period_start',
                 'card_statements.period_end as period_end',
+                'card_statements.currency as statement_currency',
             ]);
 
+        // Every matched refund contributes one link and one credit, so the
+        // pass costs two writes rather than two per refund.
+        $links = [];
+        $credits = [];
         foreach ($refunds as $refund) {
-            /** @var stdClass $refund */
-            $this->resolveOneRefund($refund, $user);
+            $resolved = $this->resolveOneRefund($refund, $user, $ibans);
+            if ($resolved === null) {
+                continue;
+            }
+            $links[] = $resolved['link'];
+            $credits[] = $resolved['credit'];
+        }
+
+        $this->inserter->insertMissing($links, $user);
+        foreach (array_chunk($credits, self::CREDIT_CHUNK) as $chunk) {
+            $connection->table('card_statement_credits')->insert($chunk);
         }
     }
 
-    private function resolveOneRefund(stdClass $refund, User $user): void
+    /**
+     * @param  array<int, string>  $ibans
+     * @return array{link: array<string, mixed>, credit: array<string, mixed>}|null
+     */
+    private function resolveOneRefund(stdClass $refund, User $user, array $ibans): ?array
     {
         $connection = $this->db->connection();
         $refundId = self::toInt($refund->refund_id ?? null);
@@ -288,7 +404,7 @@ final class IcsSettlementResolver
         if ($original === null) {
             // No candidate row: a NULL to_transaction_id is reserved for the
             // exceeded-tolerance case, so an unmatched refund stays unlinked.
-            return;
+            return null;
         }
 
         $originalId = self::toInt($original->id ?? null);
@@ -306,37 +422,38 @@ final class IcsSettlementResolver
             ? self::toInt($nextStatement->id ?? null)
             : null;
 
-        $signatureHash = $this->signatureHash($accountId, $periodEnd, $user);
-
-        $this->inserter->insertIfNotExists([
-            'from_transaction_id' => $refundId,
-            'to_transaction_id' => $originalId,
-            'kind' => ChainLinkKind::IcsBulkSettle->value,
-            'state' => ChainLinkState::Confirmed->value,
-            'confidence' => '1.000',
-            'resolver' => 'auto',
-            'evidence' => [
-                'statement_id' => $closedStatementId,
-                'unaccounted_delta_minor' => 0,
-                'tolerance_used' => CardStatementCreditReason::RefundAfterClose->value,
-                'covered_count' => 1,
-                'credits_applied_minor' => 0,
-                'signature_hash' => $signatureHash,
-                'reason' => CardStatementCreditReason::RefundAfterClose->value,
-            ],
-        ], $user);
-
+        $signatureHash = self::signatureHash($ibans, $accountId, $periodEnd, $user);
         $now = $this->clock->now()->toDateTimeString();
-        $connection->table('card_statement_credits')->insert([
-            'user_id' => $user->id,
-            'from_statement_id' => $closedStatementId,
-            'to_statement_id' => $nextStatementId,
-            'amount_minor' => abs($refundAmount),
-            'currency' => $this->statementCurrency($closedStatementId, $user),
-            'reason' => CardStatementCreditReason::RefundAfterClose->value,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
+
+        return [
+            'link' => [
+                'from_transaction_id' => $refundId,
+                'to_transaction_id' => $originalId,
+                'kind' => ChainLinkKind::IcsBulkSettle->value,
+                'state' => ChainLinkState::Confirmed->value,
+                'confidence' => '1.000',
+                'resolver' => 'auto',
+                'evidence' => [
+                    'statement_id' => $closedStatementId,
+                    'unaccounted_delta_minor' => 0,
+                    'tolerance_used' => CardStatementCreditReason::RefundAfterClose->value,
+                    'covered_count' => 1,
+                    'credits_applied_minor' => 0,
+                    'signature_hash' => $signatureHash,
+                    'reason' => CardStatementCreditReason::RefundAfterClose->value,
+                ],
+            ],
+            'credit' => [
+                'user_id' => $user->id,
+                'from_statement_id' => $closedStatementId,
+                'to_statement_id' => $nextStatementId,
+                'amount_minor' => abs($refundAmount),
+                'currency' => self::currencyOrDefault($refund->statement_currency ?? null),
+                'reason' => CardStatementCreditReason::RefundAfterClose->value,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+        ];
     }
 
     // Binds on period alone, deliberately without an amount check, so an
@@ -364,6 +481,7 @@ final class IcsSettlementResolver
                 'open_balance_minor',
                 'period_start',
                 'period_end',
+                'currency',
             ]);
 
         // Compares seconds-precision distance rather than integer days —
@@ -413,14 +531,8 @@ final class IcsSettlementResolver
 
     // A credit is denominated in the statement it came off, never in
     // whatever the reading side would otherwise have assumed.
-    private function statementCurrency(int $statementId, User $user): string
+    private static function currencyOrDefault(mixed $currency): string
     {
-        $currency = $this->db->connection()
-            ->table('card_statements')
-            ->where('user_id', $user->id)
-            ->where('id', $statementId)
-            ->value('currency');
-
         return is_string($currency) && $currency !== '' ? $currency : Currency::Eur->value;
     }
 
@@ -435,17 +547,14 @@ final class IcsSettlementResolver
         return self::toInt($sum);
     }
 
-    private function signatureHash(int $accountId, string $periodEnd, User $user): string
+    /**
+     * @param  array<int, string>  $ibans
+     */
+    private static function signatureHash(array $ibans, int $accountId, string $periodEnd, User $user): string
     {
-        $iban = $this->db->connection()
-            ->table('accounts')
-            ->where('id', $accountId)
-            ->where('user_id', $user->id)
-            ->value('iban');
-
         return hash(
             'sha256',
-            self::toString($iban).'|'.$periodEnd.'|user='.$user->id,
+            ($ibans[$accountId] ?? '').'|'.$periodEnd.'|user='.$user->id,
         );
     }
 

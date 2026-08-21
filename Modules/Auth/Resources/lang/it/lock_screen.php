@@ -7,6 +7,7 @@ return [
     'native_unlock_failed' => 'Sblocco non riuscito. Inserisci invece il tuo PIN.',
     'page_title' => 'Sblocca · Beatrax',
     'sign_out' => 'Esci',
+    'forgot_pin' => 'Hai dimenticato il PIN? Esci: puoi rientrare con la password del tuo account e impostare un nuovo PIN. Non si perde nessun dato.',
 
     'digits_suffix' => 'cifre inserite',
     'pad_label' => 'Tastierino del PIN',

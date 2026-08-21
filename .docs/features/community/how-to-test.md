@@ -7,7 +7,13 @@ Practical recipes for exercising the `Community` module in isolation.
 - **Location:** `Modules/Community/tests/Unit/`
 - **What they test:** the URL gates in `OpenExternalUrlAction`
   (`OpenExternalUrlActionTest`) — every rejected scheme + every
-  rejected host, plus a happy-path `github.com/...` URL.
+  rejected host, plus a happy-path `github.com/...` URL. Also the
+  matcher: `CompiledNeedleDecidesTheSameTest` answers a fixture of
+  awkward needles (accented and non-Latin, regex metacharacters, edges,
+  punctuation-only, invalid UTF-8) needle-by-needle *and* through the
+  precompiled path and fails on any disagreement, and
+  `RegexPatternIsJudgedOnceTest` counts the warnings a bad corpus regex
+  earns across a scan.
 - **Common stubs:** the action is constructed with a fake `Shell`
   (typically `Mockery::spy(Shell::class)`) and a `LoggerInterface`
   spy. No HTTP layer is involved.
@@ -30,6 +36,11 @@ Practical recipes for exercising the `Community` module in isolation.
     (`SuggestMappingModalSubmitTest`).
   - The `/triage` "Help others" CTA visibility gate
     (`TriageHelpOthersCtaTest`).
+  - That a corpus scan resolves every description exactly as a
+    row-by-row `containsToken()` walk over the same rows would
+    (`CorpusScanAnswersTheSameTest`) — the guard on the precompiled
+    scan, since a matcher that is faster but decides differently
+    re-attributes bank lines silently.
 - **Setup:** every test uses `RefreshDatabase`. Tests that exercise
   the `Shell` binding either bind a `Mockery::spy(Shell::class)` to
   the container or rely on the `NoOpShell` fallback registered by

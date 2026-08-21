@@ -10,6 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\FX\Public\Services\ExchangeRateService;
+use Modules\Goals\Internal\Enums\GoalProgressState;
 use Modules\Goals\Models\Goal;
 use Modules\Goals\Public\Dto\GoalProgressRow;
 use Modules\Ledger\Public\ValueObjects\Money;
@@ -99,9 +100,9 @@ final class GoalProgressQuery
         $fractionComplete = $targetMinor > 0 ? $contributedMinor / $targetMinor : 0.0;
 
         $progressState = match (true) {
-            $contributedMinor >= $targetMinor => 'reached',
-            CarbonImmutable::today()->gt($goal->target_date) => 'overdue',
-            default => 'in_progress',
+            $contributedMinor >= $targetMinor => GoalProgressState::Reached->value,
+            CarbonImmutable::today()->gt($goal->target_date) => GoalProgressState::Overdue->value,
+            default => GoalProgressState::InProgress->value,
         };
 
         ['date' => $projectedDate, 'beyondHorizon' => $beyondHorizon, 'stalled' => $stalled] =

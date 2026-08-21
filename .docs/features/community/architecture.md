@@ -230,12 +230,24 @@ row with no `website`, because sending one country's customer to the other's
 site is precisely the harm the contact fields exist to avoid.
 
 `CorpusPatternMatcher` distinguishes two pattern kinds by an optional
-`regex:` prefix: a literal pattern is a case-insensitive substring test
-(`mb_stripos`); a `regex:` pattern strips the prefix, wraps the remaining PCRE
-body in `#...#i`, and tests it against the whole haystack. A malformed regex
-never throws — `@preg_match` failure is logged once at `warning` and treated
-as a non-match, so one bad corpus row can never abort an import or a resolver
-pass.
+`regex:` prefix. A literal pattern is a case-insensitive **whole-token** test,
+not a bare substring one: `compileToken()` quotes the needle and fences it with
+a `(?<![\p{L}\p{N}])` / `(?![\p{L}\p{N}])` lookaround on each edge whose own
+character is alphanumeric, so `OBI` no longer matches inside `mobiel` while
+`AMAZON.` still matches `AMAZON.NL`. A `regex:` pattern strips the prefix,
+wraps the remaining PCRE body in `#...#i`, and tests it against the whole
+haystack. A malformed regex never throws — `@preg_match` failure is logged once
+at `warning` and treated as a non-match, so one bad corpus row can never abort
+an import or a resolver pass.
+
+Both kinds split the work that depends on the pattern alone from the work that
+depends on the description. `compileToken()` returns the finished pattern (or
+`null` for a needle that can never match anything, which is what lets a caller
+drop the row), and `matchesCompiled()` is the only half a scan repeats;
+`containsToken()` is the two called back to back, for a caller holding one
+needle and one haystack. The `regex:` side memoises its length-cap and
+compile-probe verdict per pattern on the instance, so a bad corpus row is judged
+— and warned about — once rather than once per line scanned.
 
 `SupportResourceProvider` loads `resources/corpus/support/*.yaml` and matches
 counterparty names against the "where do I get help / cancel / save money"
@@ -257,9 +269,9 @@ pre-filled cancellation email.
 fallback steps, the mystery-merchants stats strip, and the suggest-mapping
 dedup check) exposes three lookup methods against the global corpus tier
 (`user_id IS NULL`): `lookupExact()` (verbatim pattern match), `lookupGeneralized()`
-(substring match against `generalized_pattern`, walked in PHP via `mb_strpos`
-— never SQL `LIKE` — so a malicious YAML entry carries no SQL-wildcard
-injection surface), `contactForMerchant()` (the contact/cancellation card for
+(whole-token match against `generalized_pattern`, walked in PHP through
+`CorpusPatternMatcher` — never SQL `LIKE` — so a malicious YAML entry carries
+no SQL-wildcard injection surface), `contactForMerchant()` (the contact/cancellation card for
 a resolved merchant, keyed on the corpus NAME rather than the descriptor: a
 brand reaches the corpus through many descriptor variants that all collapse to
 one name, and a profile page holds the name, never the row that matched), and
@@ -275,10 +287,21 @@ corpus, it truncates it. Once the corpus outgrew the cap every pattern past
 `ee.yaml` became unmatchable, taking the whole of `eu.yaml` with it, so
 Netflix, Spotify, Vodafone and Lidl silently stopped resolving and the raw
 descriptor stayed on screen. A bound that changes answers without saying so
-costs more than the work it saves — the scan is one substring test per row
-against one haystack, linear either way — so the rows are now read and
-case-folded once per instance and matched in PHP, which is what keeps the
-repeated lookups off the database during an import.
+costs more than the work it saves — the scan is one match per row against one
+haystack, linear either way — so the rows are read, case-folded and **compiled**
+once per region key and matched in PHP, which is what keeps the repeated lookups
+off the database during an import.
+
+Compiling at load is what makes the uncapped scan affordable. The needle-only
+half of a token match — the UTF-8 check, the "has a word character at all"
+check, the two edge probes and `preg_quote` — is four regular-expression
+operations that depend on the corpus row and not on the description, so running
+them inside the per-description loop multiplied the whole corpus by five.
+`nl.yaml`'s 294 generalized needles cost 1,176 regex operations per description
+scanned that way and 294 compiled; a reader who has named no country pays that
+against the whole 11k-row corpus. The compiled pattern *replaces* the needle in
+the memo rather than joining it, and a needle that compiles to `null` is dropped
+there, so the memo does not grow to buy the speed.
 
 ## Settings, triage, and the suggest flow
 

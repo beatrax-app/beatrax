@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\DevMode\Internal\Enums\CommandTier')
 {{-- UI-SPEC §19: overflow-x-auto at the page root ensures no surface
      overflows the viewport at phone width. The dark console pane preserves
      its fixed dark styling (localized dark exception per SKILL). --}}
@@ -154,8 +155,8 @@
                             >
                                 <span class="text-sm font-mono truncate">{{ $run['command'] }}</span>
                                 <span
-                                    class="tier text-[10px] uppercase px-1.5 py-0.5 rounded {{ $run['tier'] === 'destructive' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700' }}"
-                                >{{ $run['tier'] }}</span>
+                                    class="tier text-[10px] uppercase px-1.5 py-0.5 rounded {{ $run['tier'] === CommandTier::Destructive ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700' }}"
+                                >{{ $run['tier']->value }}</span>
                                 <span class="text-[11px] text-[var(--color-text-muted)] flex-shrink-0">
                                     @if ($run['createdAt'])
                                         {{ $run['createdAt'] }}

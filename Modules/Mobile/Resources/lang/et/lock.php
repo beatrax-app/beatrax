@@ -12,6 +12,7 @@ return [
     'ok' => 'OK',
     'ok_aria' => 'OK — kinnita PIN-kood',
     'sign_out' => 'Logi välja',
+    'forgot_pin' => 'Unustasid PIN-koodi? Logi välja — saad konto parooliga uuesti sisse logida ja uue PIN-koodi määrata. Andmeid ei lähe kaotsi.',
 
     'errors' => [
         'pin_length' => 'PIN-kood peab olema vähemalt 6 numbrit.',

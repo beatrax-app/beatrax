@@ -15,13 +15,8 @@ function genericCsvResolver(): AccountResolver
 {
     return new class implements AccountResolver
     {
-        /** @var array<int, string> */
-        public array $askedFor = [];
-
         public function resolve(string $iban): AccountResolution
         {
-            $this->askedFor[] = $iban;
-
             return AccountResolution::unknown($iban);
         }
     };

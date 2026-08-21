@@ -15,7 +15,7 @@ return [
     'no_counterparty' => '(без контрагент)',
     'open_from_row' => 'Отвори реда източник',
     'open_to_row' => 'Отвори реда получател',
-    'leg_count' => '1 плащане|:count плащания',
+    'leg_count' => ':count плащане|:count плащания',
     'state_aria' => 'Състояние: :state',
 
     'kind' => [

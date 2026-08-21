@@ -22,7 +22,6 @@ return [
     'condition_value_from_aria' => 'Значення умови :number (від)',
     'condition_value_to_aria' => 'Значення умови :number (до)',
     'to' => 'до',
-    'amount_placeholder' => '0,00',
     'text_placeholder' => 'напр. SPOTIFY',
     'remove_condition' => 'Видалити умову',
     'add_condition' => '+ Додати умову',

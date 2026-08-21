@@ -26,6 +26,8 @@ use Modules\DevMode\Internal\Audit\RedactionExcerptCap;
 use Modules\DevMode\Internal\Audit\SpatieAuditWriter;
 use Modules\DevMode\Internal\CommandRegistry;
 use Modules\DevMode\Internal\Console\PruneDevAuditCommand;
+use Modules\DevMode\Internal\Enums\ArgType;
+use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Http\Livewire\ArtisanRunnerPage;
 use Modules\DevMode\Internal\Http\Livewire\AuditLogPage;
 use Modules\DevMode\Internal\Http\Livewire\CommandArgPromptModal;
@@ -107,12 +109,12 @@ final class DevModeServiceProvider extends ServiceProvider
             new CommandSpec(
                 name: 'db:backup',
                 label: 'Back up database',
-                tier: 'safe',
+                tier: CommandTier::Safe,
                 argsSchema: [
                     new ArgSpec(
                         name: 'destination',
                         label: 'Destination file',
-                        type: 'file-path',
+                        type: ArgType::FilePath,
                         rules: ['nullable', 'string', 'max:1024'],
                         placeholder: '/path/to/backup.sqlite (optional)',
                         helpText: 'Leave blank to use the default backups directory.',
@@ -123,19 +125,19 @@ final class DevModeServiceProvider extends ServiceProvider
             new CommandSpec(
                 name: 'beatrax:doctor',
                 label: 'Run doctor',
-                tier: 'safe',
+                tier: CommandTier::Safe,
                 argsSchema: [],
                 description: 'Report installed PHP / Composer / SQLite versions and verify minimums.',
             ),
             new CommandSpec(
                 name: 'beatrax:failed-jobs',
                 label: 'Prune failed jobs',
-                tier: 'safe',
+                tier: CommandTier::Safe,
                 argsSchema: [
                     new ArgSpec(
                         name: 'action',
                         label: 'Action',
-                        type: 'select',
+                        type: ArgType::Select,
                         rules: ['required', 'in:prune'],
                         options: ['prune'],
                     ),
@@ -145,28 +147,28 @@ final class DevModeServiceProvider extends ServiceProvider
             new CommandSpec(
                 name: 'cache:clear',
                 label: 'Clear cache',
-                tier: 'safe',
+                tier: CommandTier::Safe,
                 argsSchema: [],
                 description: 'Flush the application cache store.',
             ),
             new CommandSpec(
                 name: 'route:list',
                 label: 'List routes',
-                tier: 'safe',
+                tier: CommandTier::Safe,
                 argsSchema: [],
                 description: 'Print every registered HTTP route to stdout.',
             ),
             new CommandSpec(
                 name: 'config:show',
                 label: 'Show config',
-                tier: 'safe',
+                tier: CommandTier::Safe,
                 argsSchema: [
                     // config:show's positional argument is required upstream;
                     // a no-arg invocation aborts Symfony Console.
                     new ArgSpec(
                         name: 'config',
                         label: 'Config key',
-                        type: 'text',
+                        type: ArgType::Text,
                         rules: ['required', 'string', 'max:255'],
                         placeholder: 'app.name',
                         helpText: 'The config file or dotted key to print, e.g. `app` or `database.connections.sqlite`.',
@@ -177,19 +179,19 @@ final class DevModeServiceProvider extends ServiceProvider
             new CommandSpec(
                 name: 'view:clear',
                 label: 'Clear view cache',
-                tier: 'safe',
+                tier: CommandTier::Safe,
                 argsSchema: [],
                 description: 'Flush the compiled Blade-view cache.',
             ),
             new CommandSpec(
                 name: 'queue:retry',
                 label: 'Retry failed jobs',
-                tier: 'safe',
+                tier: CommandTier::Safe,
                 argsSchema: [
                     new ArgSpec(
                         name: 'id',
                         label: 'Job id',
-                        type: 'text',
+                        type: ArgType::Text,
                         rules: ['nullable', 'string', 'max:64'],
                         placeholder: 'all (or a specific id)',
                         helpText: 'Leave blank to retry every failed job; pass an id to retry a single entry.',
@@ -197,7 +199,7 @@ final class DevModeServiceProvider extends ServiceProvider
                     new ArgSpec(
                         name: '--queue',
                         label: 'Queue name',
-                        type: 'text',
+                        type: ArgType::Text,
                         rules: ['nullable', 'string', 'max:255'],
                         placeholder: 'default',
                         helpText: 'Optional queue filter; defaults to all queues.',
@@ -208,7 +210,7 @@ final class DevModeServiceProvider extends ServiceProvider
             new CommandSpec(
                 name: 'beatrax:rederive-fingerprints',
                 label: 'Rederive fingerprints',
-                tier: 'safe',
+                tier: CommandTier::Safe,
                 argsSchema: [],
                 description: 'Re-compute every transaction fingerprint using the current normalization version.',
             ),
@@ -224,12 +226,12 @@ final class DevModeServiceProvider extends ServiceProvider
             new CommandSpec(
                 name: 'db:restore',
                 label: 'Restore database',
-                tier: 'destructive',
+                tier: CommandTier::Destructive,
                 argsSchema: [
                     new ArgSpec(
                         name: 'from',
                         label: 'Backup file path',
-                        type: 'file-path',
+                        type: ArgType::FilePath,
                         rules: ['required', 'string', 'max:1024'],
                         placeholder: '/path/to/backup.sqlite',
                         helpText: 'Replaces the current database with the file at the given path.',
@@ -240,19 +242,19 @@ final class DevModeServiceProvider extends ServiceProvider
             new CommandSpec(
                 name: 'migrate:fresh',
                 label: 'Drop tables and re-migrate',
-                tier: 'destructive',
+                tier: CommandTier::Destructive,
                 argsSchema: [],
                 description: 'Drop every table, then re-run every migration.',
             ),
             new CommandSpec(
                 name: 'beatrax:reset-password',
                 label: 'Reset password',
-                tier: 'destructive',
+                tier: CommandTier::Destructive,
                 argsSchema: [
                     new ArgSpec(
                         name: 'username',
                         label: 'Username',
-                        type: 'text',
+                        type: ArgType::Text,
                         rules: ['required', 'string', 'max:64'],
                         placeholder: 'alice',
                     ),
@@ -262,12 +264,12 @@ final class DevModeServiceProvider extends ServiceProvider
             new CommandSpec(
                 name: 'beatrax:regenerate-recovery-codes',
                 label: 'Regenerate recovery codes',
-                tier: 'destructive',
+                tier: CommandTier::Destructive,
                 argsSchema: [
                     new ArgSpec(
                         name: 'username',
                         label: 'Username',
-                        type: 'text',
+                        type: ArgType::Text,
                         rules: ['required', 'string', 'max:64'],
                         placeholder: 'alice',
                     ),
@@ -277,12 +279,12 @@ final class DevModeServiceProvider extends ServiceProvider
             new CommandSpec(
                 name: 'beatrax:grant-dev',
                 label: 'Grant developer access',
-                tier: 'destructive',
+                tier: CommandTier::Destructive,
                 argsSchema: [
                     new ArgSpec(
                         name: 'username',
                         label: 'Username',
-                        type: 'text',
+                        type: ArgType::Text,
                         rules: ['required', 'string', 'max:64'],
                         placeholder: 'alice',
                     ),
@@ -292,7 +294,7 @@ final class DevModeServiceProvider extends ServiceProvider
             new CommandSpec(
                 name: 'beatrax:install',
                 label: 'Run install',
-                tier: 'destructive',
+                tier: CommandTier::Destructive,
                 argsSchema: [],
                 description: 'Idempotent first-run setup. Re-running on a configured install is destructive.',
             ),

@@ -2217,7 +2217,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'tests/Feature/InstallLaunchdCommandTest.php -> Modules\\Core\\Internal\\Console\\InstallCommand',
         'tests/Feature/TrustedHostGuardTest.php -> Modules\\Core\\Internal\\Http\\Middleware\\TrustedHostGuard',
         'tests/Snapshot/SidebarTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\AppSidebar',
-        ];
+    ];
 
     // BoundaryRule hooks UseItem nodes, so a fully-qualified reference written
     // inline crosses the boundary without an import and neither guard sees it.

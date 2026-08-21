@@ -2,16 +2,8 @@
 {{-- The system bars are drawn over this screen, not beside it: without the
      inset the "Create the first account" button sits under the Android
      navigation bar and the back link under the status bar. --}}
-<div class="min-h-screen flex items-center justify-center bg-white pb-[var(--safe-bottom)] pl-[var(--safe-left)] pr-[var(--safe-right)] pt-[var(--safe-top)] dark:bg-slate-950">
-    <div
-        class="w-full max-w-md mx-auto px-6 space-y-6"
-        x-data="{
-            get typedPassword() { return $wire.password ?? ''; },
-            get typedConfirmation() { return $wire.passwordConfirmation ?? ''; },
-            get lengthOk() { return this.typedPassword.length >= 12; },
-            get matchOk() { return this.typedConfirmation.length > 0 && this.typedPassword === this.typedConfirmation; },
-        }"
-    >
+<div class="safe-screen min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
+    <div class="w-full max-w-md mx-auto px-6 space-y-6">
         @if ($backUrl !== null)
             <p class="text-sm">
                 <a
@@ -58,10 +50,10 @@
                     :hint="Lang::get('core::settings.country.help')"
                     wire:model="country"
                 >
-                    <option value="">{{ Lang::get('core::settings.country.choose') }}</option>
-                    @foreach ($countryOptions as $countryCode => $countryName)
-                        <option value="{{ $countryCode }}">{{ $countryName }}</option>
-                    @endforeach
+                    {{-- The placeholder stays choosable: skipping the country
+                         is a real answer here, and a reader who picked one by
+                         mistake has to be able to put it back. --}}
+                    <x-core::country-options :options="$countryOptions" :selected="$country" />
                 </x-core::form-field>
             </div>
         </div>
@@ -76,8 +68,9 @@
                 autofocus
             />
 
-            {{-- aria-describedby names the live checklist below; the component
-                 appends its own hint id, so the field points at both. --}}
+            {{-- The live checklist below describes this field better than the
+                 hint line does, and a named descriptor replaces the hint id
+                 rather than joining it. The error id is appended either way. --}}
             <x-core::form-field
                 name="password"
                 type="password"
@@ -97,35 +90,13 @@
                 autocomplete="new-password"
             />
 
-            {{-- Live requirement checklist — each row ticks as the field is typed
-                 (client-side, no roundtrip). It reads the SAME binding the server
-                 validates rather than a private mirror of it: a mirror fed only by
-                 input events went on showing two green ticks after a re-render
-                 emptied both boxes, under an error saying the password was too
-                 short. --}}
-            <ul id="password-requirements" class="space-y-1.5" aria-live="polite" aria-label="{{ Lang::get('auth::signup.requirements_aria') }}">
-                <template x-for="req in [
-                    { label: '{{ Lang::get('auth::signup.req_length') }}', ok: lengthOk },
-                    { label: '{{ Lang::get('auth::signup.req_match') }}', ok: matchOk },
-                ]" :key="req.label">
-                    <li class="flex items-center gap-2 text-xs transition-colors"
-                        :class="req.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'">
-                        <span
-                            class="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors"
-                            :class="req.ok
-                                ? 'border-emerald-600 bg-emerald-600 text-white dark:border-emerald-400 dark:bg-emerald-400 dark:text-slate-950'
-                                : 'border-slate-300 text-transparent dark:border-slate-600'"
-                            aria-hidden="true"
-                        >
-                            <svg viewBox="0 0 12 12" class="h-2.5 w-2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M2.5 6.5 4.8 8.8 9.5 3.5" />
-                            </svg>
-                        </span>
-                        <span x-text="req.label"></span>
-                        <span class="sr-only" x-text="req.ok ? '{{ Lang::get('auth::signup.req_met') }}' : '{{ Lang::get('auth::signup.req_unmet') }}'"></span>
-                    </li>
-                </template>
-            </ul>
+            <x-core::password-requirements
+                :aria-label="Lang::get('auth::signup.requirements_aria')"
+                :length-label="Lang::get('auth::signup.req_length')"
+                :match-label="Lang::get('auth::signup.req_match')"
+                :met="Lang::get('auth::signup.req_met')"
+                :unmet="Lang::get('auth::signup.req_unmet')"
+            />
 
             @if ($flashMessage !== '')
                 <p class="text-sm text-rose-600 dark:text-rose-500">{{ $flashMessage }}</p>

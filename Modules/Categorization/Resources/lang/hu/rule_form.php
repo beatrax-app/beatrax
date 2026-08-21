@@ -22,7 +22,6 @@ return [
     'condition_value_from_aria' => ':number. feltétel értéke (ettől)',
     'condition_value_to_aria' => ':number. feltétel értéke (eddig)',
     'to' => 'eddig',
-    'amount_placeholder' => '0,00',
     'text_placeholder' => 'pl. SPOTIFY',
     'remove_condition' => 'Feltétel eltávolítása',
     'add_condition' => '+ Feltétel hozzáadása',

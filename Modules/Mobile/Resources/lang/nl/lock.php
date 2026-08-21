@@ -12,6 +12,7 @@ return [
     'ok' => 'OK',
     'ok_aria' => 'OK — pincode bevestigen',
     'sign_out' => 'Afmelden',
+    'forgot_pin' => 'Pincode vergeten? Meld je af — met je accountwachtwoord log je weer in en stel je een nieuwe pincode in. Er gaan geen gegevens verloren.',
 
     'errors' => [
         'pin_length' => 'De pincode moet minimaal 6 cijfers hebben.',

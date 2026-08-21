@@ -21,8 +21,18 @@ Modules/Core/
 │   │   └── HealthController.php
 │   ├── Dto/
 │   │   └── UpdateManifestDto.php
+│   ├── Enums/                (Country, Duration, InboxMessageStatus,
+│   │                          JobRunStatus, Locale, MobilePlatform,
+│   │                          SnoozeWindow, SystemAlertSeverity, Theme,
+│   │                          TransitionActor, UpdateAlertKind)
 │   ├── Events/
 │   │   └── UserInstalled.php
+│   ├── Http/
+│   │   └── Livewire/
+│   │       └── Concerns/
+│   │           ├── DispatchesToast.php
+│   │           ├── HoldsFlashMessage.php
+│   │           └── ReportsFieldRejections.php
 │   ├── Exceptions/
 │   │   └── NotAuthenticatedException.php
 │   ├── Scopes/
@@ -83,6 +93,9 @@ Modules/Core/
 │   ├── web.php
 │   └── console.php
 ├── Resources/views/
+│   └── components/           (the cross-module presentational components
+│                              — x-core::app-mark, progress-bar, spinner,
+│                              form-field and the rest of the x-core:: set)
 ├── Providers/
 │   └── CoreServiceProvider.php
 └── tests/
@@ -101,6 +114,15 @@ Modules/Core/
     `isAuthenticated()`.
   - `PublisherManifestFetcher::fetch()` — `Desktop` provides the
     concrete impl.
+- **Enums/**
+  - `SnoozeWindow` — `OneWeek = '1w'`, `OneMonth = '1m'`,
+    `ThreeMonths = '3m'`. `targetFrom($now)` returns the ISO8601 target
+    measured from the moment it is handed (never from a clock of its
+    own, so `setTestNow()` stays authoritative); `targetsFrom($now)`
+    builds the whole `value => target` map a review page hands its
+    blade; `labelKey($group)` appends `.snooze_<value>` to a caller's
+    lang group, so each queue keeps its own three labels. Read by
+    `DriftAlerts`, `Recurring` and `Anomaly`.
 - **Scopes/**
   - `UserScope::apply($builder, $model)` — `where('user_id',
     CurrentUser::id())`. Skipped when the auth factory is unbound (CLI
@@ -130,6 +152,14 @@ Modules/Core/
     `key:generate --force`, writes sentinel. Idempotent on re-run.
 - **Controllers/**
   - `HealthController::__invoke()` — `/health` endpoint.
+- **Http/Livewire/Concerns/**
+  - `HoldsFlashMessage` — the `$flashMessage` property every Livewire page
+    renders with `@if ($flashMessage !== '')`.
+  - `ReportsFieldRejections::reportRejection($exception, $fallbackKey)` —
+    places a `ValidationException`'s messages on the using component's own
+    `FIELD_KEYS`, and falls back to the flash line for a rejection that
+    names no box. Used by `Auth`'s `SignupPage` and `Mobile`'s
+    `MobileImportBootstrap`.
 - **Support/**
   - `LockStore::forUniqueJobs()` — wraps the Cache facade.
   - `SafeTrace` — redacts sensitive args from stack traces.
@@ -170,8 +200,61 @@ Modules/Core/
   (theme, currency view, close-behavior, period-start-day, dev-mode
   toggle, community-list toggles).
 - `Public/Http/Livewire/SystemAlertsBanner` — the layout banner
-  consuming `SystemAlertQuery` + `AcknowledgeSystemAlert`.
+  consuming `SystemAlertQuery` + `AcknowledgeSystemAlert`. Its view
+  renders one row shape for every severity:
+  `Resources/views/livewire/partials/system-alert-body.blade.php` holds
+  the message / timestamp / actions layout, and severity only chooses
+  the wrapping `x-core::alert`'s tone plus its live-region semantics —
+  `role="alert"` for critical, `aria-live="polite"` for the other two.
+  The three severities each carried a byte-identical copy of that body
+  before, so a layout fix had to be applied three times.
 - `Internal/Http/Livewire/AppSidebar` — the navigation sidebar.
+- `Resources/views/components/app-mark.blade.php` — `x-core::app-mark`,
+  the only site that names `resources/brand/logo.svg`. Nine screens drew
+  the mark by hand before it existed. `:size` (px, or `false` for a mark
+  sized by class), `alt`, `:decorative` (aria-hidden) and `class` are the
+  four ways the call sites differ; the defaults are the four lock and
+  setup screens that agreed on all of them.
+- `Resources/views/components/password-requirements.blade.php` —
+  `x-core::password-requirements`, the live checklist under a new-password
+  pair. The desktop signup screen and the mobile import screen each carried
+  a byte-identical copy that differed only in lang namespace, so the five
+  strings are props; the id it emits is the `aria-describedby` target the
+  password field names. The reading of the two boxes is
+  `Alpine.data('passwordStrength')` in `resources/js/app.js`, taking the
+  minimum length and the two `$wire` property names as arguments. That
+  minimum is [`Auth`](../auth/code.md)'s `PasswordPolicy::MINIMUM_LENGTH`,
+  the same constant every server-side gate measures against.
+- `Resources/views/components/locale-select.blade.php` —
+  `x-core::locale-select`, the language `<select>` with its 26 options and
+  the `LocaleNegotiator::SYSTEM` sentinel. It draws all three language
+  pickers. `x-core::locale-switcher` wraps it in one of two shells: a plain
+  POST form for the pre-auth screens that must work before the JS bundle
+  boots, or a `wire:model` div for a screen the reader is part way through
+  filling in; the Settings card wraps it a third way, with its own label,
+  width and `wire:change`. Each carried a byte-identical copy of the option
+  list before.
+
+  `selected` — which option opens chosen — is a **prop**, not something the
+  component works out. It has to be, because the surfaces know different
+  things: the pre-auth shells have only `session('locale')`, while Settings
+  holds the stored preference, which `LocaleNegotiator::resolve()` ranks
+  ABOVE the session. A component that read the session for itself would show
+  System to a signed-in reader whose stored language the app was rendering.
+  `fieldId` is a prop for the same reason — the label above names the id, and
+  the Settings control keeps `settings-locale-select`.
+- `Resources/views/components/country-options.blade.php` —
+  `x-core::country-options`, the empty option plus the country list, for
+  signup, Settings and the onboarding step. The options rather than the whole
+  control: signup's `<select>` belongs to `x-core::form-field`, and the three
+  bind three different ways (`wire:model`, `wire:change`, `wire:model.live`),
+  which is exactly the modifier `form-field` refuses to reproduce from a prop.
+  `placeholderDisabled` is a behaviour, not a look: it says whether the
+  surface can go back to "no country". Settings cannot — `setCountry()`
+  refuses the empty value — so its empty option is disabled; signup and the
+  wizard can, so theirs stays choosable. Before this the empty option was
+  written out three times under two lang keys, and the German copy had
+  already drifted apart.
 - `Internal/Http/Livewire/HelpDataLocations` — `/help/data-locations`.
   Renders the export-everything action surfaced by [`DevMode`](../dev-mode/architecture.md).
 - `Internal/Listeners/HealthCheckListener` — runs probes during the

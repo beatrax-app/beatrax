@@ -13,6 +13,8 @@ Modules/Counterparties/
 │   │   └── ResolvesCounterparties.php
 │   ├── Dto/
 │   │   └── CounterpartyResolutionDto.php
+│   ├── Enums/
+│   │   └── CounterpartyType.php
 │   ├── Events/
 │   │   └── CounterpartyResolved.php
 │   └── Queries/
@@ -24,6 +26,8 @@ Modules/Counterparties/
 │       ├── CounterpartyTriageQueue.php
 │       └── TriageSuggestion.php
 ├── Internal/
+│   ├── Enums/
+│   │   └── CounterpartyTypeFilter.php
 │   ├── Resolver/
 │   │   └── CounterpartyResolverService.php
 │   ├── Pipeline/
@@ -69,10 +73,9 @@ Modules/Counterparties/
 ├── Providers/
 │   └── CounterpartiesServiceProvider.php
 └── tests/
-    ├── Arch/
-    │   └── CounterpartiesBoundaryTest.php
     ├── Unit/
     │   ├── CounterpartyResolverTest.php
+    │   ├── CounterpartyTypeFilterTest.php
     │   ├── PrivacyDefaultsTest.php
     │   └── SlugCollisionTest.php
     └── Feature/
@@ -90,18 +93,32 @@ Modules/Counterparties/
 - **DTOs/**
   - `CounterpartyResolutionDto` — `(counterpartyId, slug, type)`.
     `counterpartyId === null` iff `type === 'self_account'`.
+- **Enums/**
+  - `CounterpartyType` — the six values the `type` column stores. The
+    UI-side filter vocabulary is a separate enum; see below.
 - **Events/**
   - `CounterpartyResolved` — `(counterpartyId, userId, type)`.
 - **Queries/**
-  - `CounterpartyIndexQuery::list($user, $filters)`
-    → `iterable<CounterpartyIndexRow>`.
-  - `CounterpartyProfileQuery::forSlug($slug, $user)`
-    → `CounterpartyProfileDto`.
-  - `CounterpartyTriageQueue::next($user)`
-    → `iterable<TriageSuggestion>`.
+  - `CounterpartyIndexQuery::forUser($user, CounterpartyTypeFilter)`
+    → `Collection<int, CounterpartyIndexRow>`. The filter defaults to
+    `All`, which applies no `type` predicate.
+  - `CounterpartyIndexQuery::countsByType($user)`
+    → `array<string, int>` keyed by `CounterpartyTypeFilter` value, so
+    `self` rather than `self_account`, plus the synthetic `all` total.
+  - `CounterpartyIndexRow` — the index row DTO. Alongside the queried
+    fields it exposes `href`, `total12mFormatted` and
+    `avgPerMonthFormatted`, derived once in the constructor so the three
+    per-row loops in the view read them rather than rebuild them.
+  - `CounterpartyProfileQuery::bySlug($user, $slug)`
+    → `CounterpartyProfileDto|null`.
+  - `CounterpartyTriageQueue::forUser($user, $queueFirstId)`
+    → `list<Counterparty>`.
 
 ## Internal services
 
+- `Internal/Enums/CounterpartyTypeFilter` — the chip-row and `?type=`
+  vocabulary, and the one place it maps onto the column's. It stays
+  Internal because no other module filters this index.
 - `Internal/Resolver/CounterpartyResolverService` — the 7-step
   precedence chain. Cross-user posture: every raw query carries an
   explicit `where('user_id', $user->id)`; the `BelongsToUser` global

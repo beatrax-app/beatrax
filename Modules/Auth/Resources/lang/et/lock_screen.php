@@ -7,6 +7,7 @@ return [
     'native_unlock_failed' => 'Avamine ebaõnnestus. Sisesta selle asemel PIN-kood.',
     'page_title' => 'Ava · Beatrax',
     'sign_out' => 'Logi välja',
+    'forgot_pin' => 'Unustasid PIN-koodi? Logi välja — saad konto parooliga uuesti sisse logida ja uue PIN-koodi määrata. Andmeid ei lähe kaotsi.',
 
     'digits_suffix' => 'numbrit sisestatud',
     'pad_label' => 'PIN-klaviatuur',

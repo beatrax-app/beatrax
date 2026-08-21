@@ -22,6 +22,8 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Http\Livewire\Concerns\AcceptsPairingCode;
 use Modules\Mobile\Internal\Pairing\QrScanBridge;
 use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
+use Modules\Sync\Public\Enums\PairingSide;
+use Modules\Sync\Public\Enums\PairingWizardStep;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\PairingGateway;
 use Psr\Log\LoggerInterface;
@@ -42,20 +44,25 @@ final class MobilePairingScan extends Component
 
     private const EVENT_SCANNER_CANCELLED = 'native:Native\Mobile\Events\Scanner\ScannerCancelled';
 
-    public string $step = 'scan';
+    // Stays a string on the wire: a public property is rehydrated straight from
+    // the client payload with no enum coercion, so typing it would turn a
+    // crafted step into a 500. currentStep() is the enum every reader uses.
+    public string $step = PairingWizardStep::Scan->value;
 
     // Which way in the reader chose, remembered separately because `step` has
     // moved on by the time an attempt is reset: from 'confirm' it could only
     // ever read "not enter_code" and sent a word-code typist to the camera.
-    public string $entryStep = 'scan';
+    public string $entryStep = PairingWizardStep::Scan->value;
 
     // Locked so the client cannot retarget which token the trust gate confirms.
     // Only submitCode() and the resume in mount() may set it.
     #[Locked]
     public string $pairingTokenId = '';
 
-    // UI-only: always 'responder' here. The authoritative side is re-derived
-    // server-side from the caller's own device id.
+    // UI-only: always the responder here, and a string because a public
+    // property is rehydrated straight from the client payload with no enum
+    // coercion. The authoritative side is re-derived server-side from the
+    // caller's own device id.
     #[Locked]
     public string $side = '';
 
@@ -144,13 +151,15 @@ final class MobilePairingScan extends Component
                 $session,
             );
 
-        // 'initiator' is refused as firmly as null: this screen holds no
+        // The initiator is refused as firmly as null: this screen holds no
         // code-showing path to resume into.
-        if ($inFlight !== null && $side === 'responder') {
+        if ($inFlight !== null && $side === PairingSide::Responder) {
             $this->pairingTokenId = (string) $inFlight['id'];
             $this->safetyWords = $inFlight['safety_words'];
-            $this->side = $side;
-            $this->step = $inFlight['state'] === PairingGateway::STATE_CONFIRMED ? 'success' : 'confirm';
+            $this->side = $side->value;
+            $this->step = ($inFlight['state'] === PairingGateway::STATE_CONFIRMED
+                ? PairingWizardStep::Success
+                : PairingWizardStep::Confirm)->value;
             $this->awaitingPeer = $inFlight['responder_confirmed']
                 && $inFlight['state'] !== PairingGateway::STATE_CONFIRMED;
 
@@ -166,22 +175,37 @@ final class MobilePairingScan extends Component
         $this->enterACode($qrBridge);
     }
 
+    private function currentStep(): PairingWizardStep
+    {
+        return PairingWizardStep::tryFrom($this->step) ?? PairingWizardStep::Scan;
+    }
+
+    // entryStep is not #[Locked], so a crafted payload can name any step here,
+    // and a reset would then land the reader on a later screen than the arm
+    // they actually chose. Only the two arms this page offers are honoured.
+    private function entryArm(): PairingWizardStep
+    {
+        $entry = PairingWizardStep::tryFrom($this->entryStep);
+
+        return $entry !== null && $entry->isEntryArm() ? $entry : PairingWizardStep::Scan;
+    }
+
     public function enterACode(QrScanBridge $qrBridge): void
     {
         $this->wordCode = '';
         $this->flashMessage = '';
-        $this->side = 'responder';
+        $this->side = PairingSide::Responder->value;
 
         if ($qrBridge->isAvailable()) {
-            $this->step = 'scan';
-            $this->entryStep = 'scan';
+            $this->step = PairingWizardStep::Scan->value;
+            $this->entryStep = PairingWizardStep::Scan->value;
             $this->cameraUnavailableNotice = false;
 
             return;
         }
 
-        $this->step = 'enter_code';
-        $this->entryStep = 'enter_code';
+        $this->step = PairingWizardStep::EnterCode->value;
+        $this->entryStep = PairingWizardStep::EnterCode->value;
         $this->cameraUnavailableNotice = true;
     }
 
@@ -191,8 +215,8 @@ final class MobilePairingScan extends Component
     {
         $this->flashMessage = '';
         $this->cameraUnavailableNotice = false;
-        $this->step = 'enter_code';
-        $this->entryStep = 'enter_code';
+        $this->step = PairingWizardStep::EnterCode->value;
+        $this->entryStep = PairingWizardStep::EnterCode->value;
     }
 
     // Driven from the view rather than mount() so the component is already
@@ -242,8 +266,8 @@ final class MobilePairingScan extends Component
     public function cameraDenied(): void
     {
         $this->cameraUnavailableNotice = true;
-        $this->step = 'enter_code';
-        $this->entryStep = 'enter_code';
+        $this->step = PairingWizardStep::EnterCode->value;
+        $this->entryStep = PairingWizardStep::EnterCode->value;
     }
 
     private function sendToUnlock(UrlGenerator $urls, Session $session, AppLockClientConfig $lock, int $userId): void
@@ -323,12 +347,12 @@ final class MobilePairingScan extends Component
         }
 
         $this->pairingTokenId = $result['pairingTokenId'];
-        $this->side = 'responder';
+        $this->side = PairingSide::Responder->value;
         $this->safetyWords = $result['safetyWords'];
         $this->hydrateDeviceNames($gateway, $devices, $userId);
         $this->flashMessage = '';
         $this->cameraUnavailableNotice = false;
-        $this->step = 'confirm';
+        $this->step = PairingWizardStep::Confirm->value;
 
         // Best-effort: a relay failure never dead-ends the confirm step
         // already rendered above; the desktop's poll simply does not advance.
@@ -372,7 +396,7 @@ final class MobilePairingScan extends Component
         // means the desktop never binds. Re-emitting idempotently on each
         // poll lets a transient relay failure self-heal.
         if ($state !== PairingGateway::STATE_CONFIRMED
-            && $this->step === 'confirm'
+            && $this->currentStep() === PairingWizardStep::Confirm
             && $this->importResponderTokenHash !== ''
             && $this->importDesktopDeviceId !== ''
         ) {
@@ -410,8 +434,8 @@ final class MobilePairingScan extends Component
             return;
         }
 
-        if ($state === PairingGateway::STATE_CONFIRMED && $this->step !== 'success') {
-            $this->step = 'success';
+        if ($state === PairingGateway::STATE_CONFIRMED && $this->currentStep() !== PairingWizardStep::Success) {
+            $this->step = PairingWizardStep::Success->value;
 
             if (! $this->shouldDeferSelfMint($userId, $importIntent, $db)) {
                 try {
@@ -472,7 +496,7 @@ final class MobilePairingScan extends Component
     {
         // Keep the entry method the reader chose: someone typing a word code
         // lands back on the keypad, not thrown to the camera.
-        $this->step = $this->entryStep;
+        $this->step = $this->entryArm()->value;
         $this->pairingTokenId = '';
         $this->safetyWords = [];
         $this->importResponderTokenHash = '';
@@ -533,7 +557,7 @@ final class MobilePairingScan extends Component
 
         if ($state === PairingGateway::STATE_CONFIRMED) {
             $this->awaitingPeer = false;
-            $this->step = 'success';
+            $this->step = PairingWizardStep::Success->value;
 
             if (! $this->shouldDeferSelfMint($userId, $importIntent, $db)) {
                 try {
@@ -649,7 +673,12 @@ final class MobilePairingScan extends Component
 
     public function render(ViewFactory $views): View
     {
-        $view = $views->make('mobile::livewire.mobile-pairing-scan');
+        // Under its own name, not $step: view data cannot shadow a public
+        // property, and the view needs the resolved enum rather than the raw
+        // string the client last put on the wire.
+        $view = $views->make('mobile::livewire.mobile-pairing-scan', [
+            'wizardStep' => $this->currentStep(),
+        ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.lock', ['title' => Lang::get('mobile::pairing.page_title').' · Beatrax']);

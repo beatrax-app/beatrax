@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Zincirleri incele',
     'heading' => 'Zincirleri incele',
-    'hint' => 'ipucu',
+    'hint' => ':count ipucu',
     'subtitle' => 'Zincir çözümleyicinin otomatik onaylayamadığı aday bağlantıları onayla veya reddet.',
 
     'empty_heading' => 'İncelenecek bir şey yok',

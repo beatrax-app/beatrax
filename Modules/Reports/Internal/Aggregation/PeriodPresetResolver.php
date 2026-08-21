@@ -9,6 +9,7 @@ use InvalidArgumentException;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\PeriodQuery;
+use Modules\Reports\Internal\Enums\ReportPeriodPreset;
 
 final class PeriodPresetResolver
 {
@@ -20,12 +21,12 @@ final class PeriodPresetResolver
     public function resolve(string $preset, ?string $customFrom = null, ?string $customTo = null): Period
     {
         return match ($preset) {
-            'this_month' => $this->periodQuery->current(),
-            'last_3_months' => $this->lastNMonths(3),
-            'last_6_months' => $this->lastNMonths(6),
-            'last_12_months' => $this->lastNMonths(12),
-            'ytd', 'this_year' => $this->yearWindow($preset),
-            'custom' => $this->custom($customFrom, $customTo),
+            ReportPeriodPreset::ThisMonth->value => $this->periodQuery->current(),
+            ReportPeriodPreset::Last3Months->value => $this->lastNMonths(3),
+            ReportPeriodPreset::Last6Months->value => $this->lastNMonths(6),
+            ReportPeriodPreset::Last12Months->value => $this->lastNMonths(12),
+            ReportPeriodPreset::Ytd->value, ReportPeriodPreset::ThisYear->value => $this->yearWindow($preset),
+            ReportPeriodPreset::Custom->value => $this->custom($customFrom, $customTo),
             default => throw new InvalidArgumentException("Unknown period preset: {$preset}"),
         };
     }
@@ -56,7 +57,7 @@ final class PeriodPresetResolver
         $now = $this->clock->now();
         $start = $now->startOfYear()->startOfDay();
         $endExclusive = $now->addDay()->startOfDay();
-        $label = $preset === 'ytd' ? 'Year to date' : (string) $now->year;
+        $label = $preset === ReportPeriodPreset::Ytd->value ? 'Year to date' : (string) $now->year;
 
         return new Period(start: $start, endExclusive: $endExclusive, label: $label);
     }

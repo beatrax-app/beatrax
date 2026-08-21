@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Mobile\Internal\Identity\ImportBootstrapStep')
 {{-- Anchored to the top rather than centred: ten recovery codes are taller
      than a phone viewport, and centring pushed the heading up underneath the
      sticky app bar, clipping the one instruction on the screen. --}}
@@ -6,11 +7,15 @@
      that ends each step sat under the Android navigation bar, tappable only
      in its upper half. The insets come from the --safe-* seam in app.css,
      never a bare env() — Android leaves that at zero and pads by nothing. --}}
+{{-- Sides and bottom only, so not .safe-screen: reached again once an
+     identity exists, this page loads inside layouts.app's <main> under a
+     .top-bar that already pads var(--safe-top), and a top inset here would
+     reserve the status bar a second time. The top reserve is the bar. --}}
 <div class="min-h-screen flex items-start justify-center bg-white pl-[var(--safe-left)] pr-[var(--safe-right)] dark:bg-slate-950">
     <div class="w-full max-w-md mx-auto px-6 space-y-6 pb-[calc(2.5rem+var(--safe-bottom))] pt-[calc(var(--top-bar-h)+1.5rem)]">
 
         {{-- ===== Step: collect_pin ===== --}}
-        @if ($step === 'collect_pin' && ! $alreadyProvisioned)
+        @if ($bootstrapStep === ImportBootstrapStep::CollectPin && ! $alreadyProvisioned)
             {{-- Only on this step: nothing has been created yet, so leaving is
                  free. Past it the device holds an identity, and the screens
                  that follow lead forward on purpose. --}}
@@ -32,16 +37,7 @@
                 </p>
             </header>
 
-            <form
-                wire:submit="submit"
-                class="space-y-4"
-                x-data="{
-                    get typedPassword() { return $wire.password ?? ''; },
-                    get typedConfirmation() { return $wire.passwordConfirmation ?? ''; },
-                    get lengthOk() { return this.typedPassword.length >= 12; },
-                    get matchOk() { return this.typedConfirmation.length > 0 && this.typedPassword === this.typedConfirmation; },
-                }"
-            >
+            <form wire:submit="submit" class="space-y-4">
                 <x-core::form-field
                     :label="Lang::get('mobile::import.username')"
                     name="username"
@@ -75,33 +71,16 @@
                     autocomplete="new-password"
                 />
 
-                {{-- Live requirement checklist, ticking client-side off the SAME
-                     binding the server validates. It sits with the password pair
-                     and above the PIN, because the one message this form used to
-                     show was the password rule printed under "6-10 digits". --}}
-                <ul id="password-requirements" class="space-y-1.5" aria-live="polite" aria-label="{{ Lang::get('mobile::import.requirements_aria') }}">
-                    <template x-for="req in [
-                        { label: '{{ Lang::get('mobile::import.req_length') }}', ok: lengthOk },
-                        { label: '{{ Lang::get('mobile::import.req_match') }}', ok: matchOk },
-                    ]" :key="req.label">
-                        <li class="flex items-center gap-2 text-xs transition-colors"
-                            :class="req.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'">
-                            <span
-                                class="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors"
-                                :class="req.ok
-                                    ? 'border-emerald-600 bg-emerald-600 text-white dark:border-emerald-400 dark:bg-emerald-400 dark:text-slate-950'
-                                    : 'border-slate-300 text-transparent dark:border-slate-600'"
-                                aria-hidden="true"
-                            >
-                                <svg viewBox="0 0 12 12" class="h-2.5 w-2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M2.5 6.5 4.8 8.8 9.5 3.5" />
-                                </svg>
-                            </span>
-                            <span x-text="req.label"></span>
-                            <span class="sr-only" x-text="req.ok ? '{{ Lang::get('mobile::import.req_met') }}' : '{{ Lang::get('mobile::import.req_unmet') }}'"></span>
-                        </li>
-                    </template>
-                </ul>
+                {{-- Between the password pair and the PIN, because the one
+                     message this form used to show was the password rule
+                     printed under the PIN's own "6-10 digits" hint. --}}
+                <x-core::password-requirements
+                    :aria-label="Lang::get('mobile::import.requirements_aria')"
+                    :length-label="Lang::get('mobile::import.req_length')"
+                    :match-label="Lang::get('mobile::import.req_match')"
+                    :met="Lang::get('mobile::import.req_met')"
+                    :unmet="Lang::get('mobile::import.req_unmet')"
+                />
 
                 <x-core::form-field
                     :label="Lang::get('mobile::import.pin')"
@@ -137,7 +116,7 @@
         @endif
 
         {{-- ===== Step: provisioning_failed ===== --}}
-        @if ($step === 'provisioning_failed')
+        @if ($bootstrapStep === ImportBootstrapStep::ProvisioningFailed)
             <div class="space-y-3 text-center">
                 <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::import.failed_heading') }}</h1>
                 <p class="mx-auto max-w-xs text-sm text-slate-500 dark:text-slate-400">
@@ -161,7 +140,7 @@
         {{-- Already registered on this device: the signup form below would
          fail on a duplicate account, and a back navigation used to land here
          showing it as though nothing had happened. --}}
-    @if ($alreadyProvisioned && $step === 'collect_pin')
+    @if ($alreadyProvisioned && $bootstrapStep === ImportBootstrapStep::CollectPin)
         <div class="space-y-4" data-testid="import-already-provisioned">
             <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('mobile::import.already_heading') }}</h1>
             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('mobile::import.already_body') }}</p>
@@ -174,32 +153,15 @@
     @endif
 
     {{-- ===== Step: recovery_codes ===== --}}
-        @if ($step === 'recovery_codes')
+        @if ($bootstrapStep === ImportBootstrapStep::RecoveryCodes)
             <div
                 class="space-y-6"
                 x-data="{
+                    ...copyToClipboard(@js($codes).join('\n')),
                     confirmed: false,
-                    copied: false,
                     saved: false,
-                    failed: false,
                     saveFailed: false,
                     codes: @js($codes),
-                    async copy() {
-                        // Guarding on navigator.clipboard and returning left
-                        // this button dead on the very device it exists for:
-                        // the webview withholds the async API outside a secure
-                        // context. beatraxCopy() falls back and, crucially,
-                        // reports failure instead of swallowing it.
-                        if (await window.beatraxCopy(this.codes.join('\n'))) {
-                            this.failed = false;
-                            this.copied = true;
-                            setTimeout(() => { this.copied = false; }, 2500);
-
-                            return;
-                        }
-
-                        this.failed = true;
-                    },
                     async save() {
                         this.saveFailed = false;
 

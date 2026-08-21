@@ -1,7 +1,8 @@
+@use('Modules\Core\Public\Enums\JobRunStatus')
 @use('Modules\Core\Public\Support\Lang')
 @php
-    use Modules\Import\Internal\Enums\ImportFailureReason;
-    use Modules\Import\Internal\Enums\PreviewRowStatus;
+    use Modules\Import\Public\Enums\ImportFailureReason;
+    use Modules\Import\Public\Enums\PreviewRowStatus;
     use Modules\Ledger\Public\ValueObjects\Money;
 
     $fmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)->format();
@@ -241,7 +242,7 @@
                                  text their file actually carries. The fallback chain above shows
                                  whichever identifier came out highest, so on a failed row the raw
                                  description is added rather than hidden behind a resolved name. --}}
-                            @if ($row->status === PreviewRowStatus::Error->value && $row->description !== null)
+                            @if ($row->status === PreviewRowStatus::Error && $row->description !== null)
                                 <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ $row->description }}</div>
                             @endif
                         </td>
@@ -253,11 +254,11 @@
                             @endif
                         </td>
                         <td class="px-4 py-2 text-sm">
-                            @if ($row->status === PreviewRowStatus::NewRow->value)
+                            @if ($row->status === PreviewRowStatus::NewRow)
                                 <span class="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20 dark:text-emerald-400" title="{{ Lang::get('import::preview.status.new_title') }}">{{ Lang::get('import::preview.status.new') }}</span>
-                            @elseif ($row->status === PreviewRowStatus::Duplicate->value)
+                            @elseif ($row->status === PreviewRowStatus::Duplicate)
                                 <span class="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-950" title="{{ Lang::get('import::preview.status.duplicate_title') }}">{{ Lang::get('import::preview.status.duplicate') }}</span>
-                            @elseif ($row->status === PreviewRowStatus::Enriched->value)
+                            @elseif ($row->status === PreviewRowStatus::Enriched)
                                 <span class="inline-flex items-center rounded-md bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 ring-1 ring-inset ring-sky-600/20" title="{{ Lang::get('import::preview.status.enriched_title') }}">{{ Lang::get('import::preview.status.enriched') }}</span>
                                 @if ($row->diff && isset($row->diff['source_ref']))
                                     <div class="mt-1 text-xs text-slate-500 font-mono dark:text-slate-400">
@@ -273,14 +274,9 @@
                                      unreachable on the device this screen is mostly used from — and it
                                      carried the exception's own words, which name internal classes and
                                      the reader's user id. --}}
-                                @php
-                                    $rowReason = $row->errorReason === null
-                                        ? null
-                                        : ImportFailureReason::tryFrom($row->errorReason);
-                                @endphp
                                 <span class="inline-flex items-center rounded-md bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 ring-1 ring-inset ring-rose-600/20 dark:bg-rose-950 dark:text-rose-500">{{ Lang::get('import::preview.status.error') }}</span>
                                 <div class="mt-1 text-xs text-rose-700 dark:text-rose-400">
-                                    {{ ($rowReason ?? ImportFailureReason::RowUnreadable)->label() }}
+                                    {{ ($row->errorReason ?? ImportFailureReason::RowUnreadable)->label() }}
                                 </div>
                                 @if ($row->errorDetail !== null)
                                     <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ $row->errorDetail }}</div>
@@ -306,7 +302,7 @@
          `chain_resolution_runs` by exact user_id — NEVER
          `failed_jobs.payload LIKE '%userId:N%'` (which leaks
          cross-user state via id-prefix substring matches). --}}
-    @if ($chainResolutionStatus !== null && $chainResolutionStatus !== 'complete')
+    @if ($chainResolutionStatus !== null && $chainResolutionStatus !== JobRunStatus::Complete)
         <section
             wire:poll.2s="refreshChainResolutionStatus"
             class="rounded-md border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700"
@@ -314,11 +310,11 @@
         >
             <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('import::preview.chain.heading') }}</h3>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                @if ($chainResolutionStatus === 'pending')
+                @if ($chainResolutionStatus === JobRunStatus::Pending)
                     {{ Lang::get('import::preview.chain.pending') }}
-                @elseif ($chainResolutionStatus === 'running')
+                @elseif ($chainResolutionStatus === JobRunStatus::Running)
                     {{ Lang::get('import::preview.chain.running') }}
-                @elseif ($chainResolutionStatus === 'failed')
+                @elseif ($chainResolutionStatus === JobRunStatus::Failed)
                     {{-- The stored last_error is the failed job's class name and the first
                          line of its message. That is a developer's sentence, and the crypto
                          layer's version of it names an internal class and the reader's own
@@ -328,7 +324,7 @@
                     {{ Lang::get('import::preview.chain.failed_suffix') }}
                 @endif
             </p>
-            @if ($chainResolutionStatus !== 'failed')
+            @if ($chainResolutionStatus !== JobRunStatus::Failed)
                 <span aria-hidden="true" class="mt-3 inline-block h-2 w-2 animate-pulse rounded-full bg-slate-400"></span>
             @endif
         </section>

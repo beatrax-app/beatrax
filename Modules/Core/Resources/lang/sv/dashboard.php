@@ -17,8 +17,7 @@ return [
     'net' => 'Netto',
 
     'status_tiles_aria' => 'Statusrutor',
-    'email_scan_health' => 'Status för e-postskanning — :count anslutna',
-    'inbox' => 'inkorg|inkorgar',
+    'email_scan_health' => 'Status för e-postskanning — :count anslutna inkorg|Status för e-postskanning — :count anslutna inkorgar',
 
     'top_spending' => 'Största utgifter',
     'no_expenses' => 'Inga kategoriserade utgifter än.',

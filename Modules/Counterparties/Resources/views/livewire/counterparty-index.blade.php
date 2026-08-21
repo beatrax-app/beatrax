@@ -4,23 +4,23 @@
     row and the Cards / List view toggle persisted in
     user_preferences.counterparty_index_view.
 
-    Consumes the 17-06a x-components:
-      - <x-counterparties::filter-chips>  — type filter row
-      - <x-counterparties::cp-card>       — grid card
-      - <x-counterparties::type-chip>     — per-row type label
+    Consumes the 17-06a x-component <x-counterparties::type-chip>
+    for the per-row type label; the chip row and the card body are
+    inlined here because both carry wire: bindings.
 
     All copy is verbatim from 17-UI-SPEC.md (Counterparty index table).
 
     Variables exposed by `CounterpartyIndex::render()`:
-      $rows       Illuminate\Support\Collection<CounterpartyIndexRow>
-      $counts     array<string, int>  — per-type chip counts
-      $activeType string                — currently selected filter chip
-      $activeView string                — 'cards' | 'list'
+      $rows         Illuminate\Support\Collection<CounterpartyIndexRow>
+      $counts       array<string, int>    — chip counts keyed by filter value
+      $activeFilter CounterpartyTypeFilter — currently selected filter chip
+      $activeView   string                — 'cards' | 'list'
 --}}
-@use('Modules\Ledger\Public\ValueObjects\Money')
+@use('Modules\Counterparties\Internal\Enums\CounterpartyTypeFilter')
+@use('Modules\Counterparties\Public\Enums\CounterpartyType')
 @php
-    $totalEntities = $counts['all'] ?? 0;
-    $unknownCount = $counts['unknown'] ?? 0;
+    $totalEntities = $counts[CounterpartyTypeFilter::All->value] ?? 0;
+    $unknownCount = $counts[CounterpartyTypeFilter::Unknown->value] ?? 0;
 @endphp
 
 <div class="space-y-8" style="padding: var(--space-6) var(--space-4); max-width: 1200px; margin: 0 auto;">
@@ -89,27 +89,27 @@
     <div role="group" aria-label="{{ Lang::get('counterparties::index.filter_aria') }}" class="filter-chips">
         @php
             $chipDefs = [
-                ['key' => 'all', 'label' => Lang::get('counterparties::index.chips.all'), 'dot' => null],
-                ['key' => 'merchant', 'label' => Lang::get('counterparties::index.chips.merchant'), 'dot' => 'dot-merchant'],
-                ['key' => 'personal', 'label' => Lang::get('counterparties::index.chips.personal'), 'dot' => 'dot-personal'],
-                ['key' => 'bank', 'label' => Lang::get('counterparties::index.chips.bank'), 'dot' => 'dot-bank'],
-                ['key' => 'government', 'label' => Lang::get('counterparties::index.chips.government'), 'dot' => 'dot-gov'],
-                ['key' => 'self', 'label' => Lang::get('counterparties::index.chips.self'), 'dot' => 'dot-self'],
-                ['key' => 'unknown', 'label' => Lang::get('counterparties::index.chips.unknown'), 'dot' => 'dot-unknown'],
+                ['filter' => CounterpartyTypeFilter::All, 'label' => Lang::get('counterparties::index.chips.all'), 'dot' => null],
+                ['filter' => CounterpartyTypeFilter::Merchant, 'label' => Lang::get('counterparties::index.chips.merchant'), 'dot' => 'dot-merchant'],
+                ['filter' => CounterpartyTypeFilter::Personal, 'label' => Lang::get('counterparties::index.chips.personal'), 'dot' => 'dot-personal'],
+                ['filter' => CounterpartyTypeFilter::Bank, 'label' => Lang::get('counterparties::index.chips.bank'), 'dot' => 'dot-bank'],
+                ['filter' => CounterpartyTypeFilter::Government, 'label' => Lang::get('counterparties::index.chips.government'), 'dot' => 'dot-gov'],
+                ['filter' => CounterpartyTypeFilter::SelfAccount, 'label' => Lang::get('counterparties::index.chips.self'), 'dot' => 'dot-self'],
+                ['filter' => CounterpartyTypeFilter::Unknown, 'label' => Lang::get('counterparties::index.chips.unknown'), 'dot' => 'dot-unknown'],
             ];
         @endphp
         @foreach ($chipDefs as $chip)
             <button
                 type="button"
                 class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
-                aria-pressed="{{ $activeType === $chip['key'] ? 'true' : 'false' }}"
-                wire:click="setType('{{ $chip['key'] }}')"
+                aria-pressed="{{ $activeFilter === $chip['filter'] ? 'true' : 'false' }}"
+                wire:click="setType('{{ $chip['filter']->value }}')"
             >
                 @if ($chip['dot'] !== null)
                     <span class="chip-dot {{ $chip['dot'] }}" aria-hidden="true"></span>
                 @endif
                 <span>{{ $chip['label'] }}</span>
-                <span class="chip-count">{{ $counts[$chip['key']] ?? 0 }}</span>
+                <span class="chip-count">{{ $counts[$chip['filter']->value] ?? 0 }}</span>
             </button>
         @endforeach
     </div>
@@ -132,14 +132,12 @@
              class="cp-cards-grid">
             @foreach ($rows as $row)
                 @php
-                    $totalFormatted = Money::ofMinor(abs($row->total12mMinor), 'EUR')->format();
-                    $avgFormatted = Money::ofMinor(abs($row->avgPerMonthMinor), 'EUR')->format();
-                    $isUnknown = $row->type === 'unknown';
-                    $isSelf = $row->type === 'self_account';
+                    $isUnknown = $row->type === CounterpartyType::Unknown->value;
+                    $isSelf = $row->type === CounterpartyType::SelfAccount->value;
                 @endphp
                 @if ($isSelf)
                     <a
-                        href="/accounts/{{ $row->slug }}"
+                        href="{{ $row->href }}"
                         class="cp-card focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                         data-self-row="true"
                     >
@@ -157,7 +155,7 @@
                     </a>
                 @elseif ($isUnknown)
                     <a
-                        href="{{ route('counterparties.triage', ['queue_first' => $row->id]) }}"
+                        href="{{ $row->href }}"
                         class="cp-card unknown focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                     >
                         <header class="cp-head">
@@ -165,7 +163,7 @@
                             <x-counterparties::type-chip :type="$row->type" />
                         </header>
                         <div class="cp-stats">
-                            <span class="value">{{ $totalFormatted }}</span>
+                            <span class="value">{{ $row->total12mFormatted }}</span>
                             <span class="label">{{ Lang::get('counterparties::index.stat_12mo') }}</span>
                         </div>
                         @if ($row->recentLine !== null)
@@ -177,7 +175,7 @@
                     </a>
                 @else
                     <a
-                        href="{{ route('counterparties.profile', ['slug' => $row->slug]) }}"
+                        href="{{ $row->href }}"
                         class="cp-card focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                     >
                         <header class="cp-head">
@@ -185,11 +183,11 @@
                             <x-counterparties::type-chip :type="$row->type" />
                         </header>
                         <div class="cp-stats">
-                            <span class="value">{{ $totalFormatted }}</span>
+                            <span class="value">{{ $row->total12mFormatted }}</span>
                             <span class="label">
-                                @if ($row->type === 'personal'){{ Lang::get('counterparties::index.stat_net_received') }}@else{{ Lang::get('counterparties::index.stat_12mo') }}@endif
+                                @if ($row->type === CounterpartyType::Personal->value){{ Lang::get('counterparties::index.stat_net_received') }}@else{{ Lang::get('counterparties::index.stat_12mo') }}@endif
                             </span>
-                            <span class="value" style="font-size: var(--text-sm);">{{ $avgFormatted }}</span>
+                            <span class="value" style="font-size: var(--text-sm);">{{ $row->avgPerMonthFormatted }}</span>
                             <span class="label">{{ Lang::get('counterparties::index.stat_avg_mo') }}</span>
                         </div>
                         <div role="img" class="cp-spark" aria-label="{{ Lang::get('counterparties::index.sparkline_aria') }}">
@@ -216,18 +214,9 @@
     @else
         {{-- List view: desktop table + phone card-list-item degradation --}}
         @foreach ($rows as $row)
-            @php
-                $totalFormatted = Money::ofMinor(abs($row->total12mMinor), 'EUR')->format();
-                $avgFormatted = Money::ofMinor(abs($row->avgPerMonthMinor), 'EUR')->format();
-                $href = match (true) {
-                    $row->type === 'self_account' => '/accounts/'.$row->slug,
-                    $row->type === 'unknown' => route('counterparties.triage', ['queue_first' => $row->id]),
-                    default => route('counterparties.profile', ['slug' => $row->slug]),
-                };
-            @endphp
             {{-- phone-only: .card-list-item renders each row as a tidy two-line card --}}
             <a
-                href="{{ $href }}"
+                href="{{ $row->href }}"
                 class="card-list-item phone-only focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                 style="text-decoration: none; display: flex;"
             >
@@ -238,7 +227,7 @@
                     </span>
                 </div>
                 <div style="flex: 0 0 auto; text-align: right;">
-                    <span class="amount" style="{{ $row->total12mMinor > 0 ? 'color: var(--color-emerald)' : '' }}">{{ $totalFormatted }}</span>
+                    <span class="amount" style="{{ $row->total12mMinor > 0 ? 'color: var(--color-emerald)' : '' }}">{{ $row->total12mFormatted }}</span>
                 </div>
             </a>
         @endforeach
@@ -256,18 +245,9 @@
                 </thead>
                 <tbody>
                     @foreach ($rows as $row)
-                        @php
-                            $totalFormatted = Money::ofMinor(abs($row->total12mMinor), 'EUR')->format();
-                            $avgFormatted = Money::ofMinor(abs($row->avgPerMonthMinor), 'EUR')->format();
-                            $href = match (true) {
-                                $row->type === 'self_account' => '/accounts/'.$row->slug,
-                                $row->type === 'unknown' => route('counterparties.triage', ['queue_first' => $row->id]),
-                                default => route('counterparties.profile', ['slug' => $row->slug]),
-                            };
-                        @endphp
                         <tr style="border-top: 1px solid var(--color-border);">
                             <td style="padding: var(--space-2) var(--space-3);">
-                                <a href="{{ $href }}" style="color: var(--color-text); text-decoration: none;">
+                                <a href="{{ $row->href }}" style="color: var(--color-text); text-decoration: none;">
                                     {{ $row->displayName }}
                                 </a>
                             </td>
@@ -275,10 +255,10 @@
                                 <x-counterparties::type-chip :type="$row->type" />
                             </td>
                             <td style="padding: var(--space-2) var(--space-3); text-align: right; font-variant-numeric: tabular-nums;">
-                                {{ $totalFormatted }}
+                                {{ $row->total12mFormatted }}
                             </td>
                             <td style="padding: var(--space-2) var(--space-3); text-align: right; font-variant-numeric: tabular-nums;">
-                                {{ $avgFormatted }}
+                                {{ $row->avgPerMonthFormatted }}
                             </td>
                         </tr>
                     @endforeach

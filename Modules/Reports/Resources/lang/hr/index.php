@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'title' => 'Izvješća',
     'page_title' => 'Izvješća · Beatrax',
-    'saved_report' => 'spremljeno izvješće|spremljena izvješća|spremljenih izvješća',
+    'saved_report' => ':count spremljeno izvješće|:count spremljena izvješća|:count spremljenih izvješća',
     'pinned_count' => 'prikvačeno',
     'dismiss' => 'Odbaci',
 

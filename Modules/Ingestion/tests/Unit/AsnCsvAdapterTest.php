@@ -16,13 +16,8 @@ use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 beforeEach(function (): void {
     $this->resolver = new class implements AccountResolver
     {
-        /** @var array<int, string> */
-        public array $askedFor = [];
-
         public function resolve(string $iban): AccountResolution
         {
-            $this->askedFor[] = $iban;
-
             return AccountResolution::unknown($iban);
         }
     };
@@ -139,17 +134,6 @@ it('leaves counterpartyName null when the source row has no name', function (): 
         }
     }
     expect($foundNullName)->toBeTrue();
-});
-
-it('asks the AccountResolver for the own IBAN of every parsed row', function (): void {
-    $dtos = iterator_to_array(
-        $this->adapter->parse(base_path('tests/fixtures/asn-sample-1.csv'), $this->resolver),
-        preserve_keys: false,
-    );
-
-    expect($this->resolver->askedFor)->toHaveCount(count($dtos));
-    // Fixture pins the own IBAN to a single placeholder.
-    expect(array_unique($this->resolver->askedFor))->toBe(['NL57ASNB0123456789']);
 });
 
 it('throws InvalidAmountException with the row index for malformed amount cells', function (): void {

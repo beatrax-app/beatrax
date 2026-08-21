@@ -38,7 +38,7 @@ return [
         'nothing_notable' => 'Nothing needs your attention.',
         'flow' => 'In :in, out :out, net :net.',
         'over_budget' => ':amount over budget so far.',
-        'payments_due' => '1 payment due this period.|:count payments due this period.',
+        'payments_due' => ':count payment due this period.|:count payments due this period.',
         'shortfall' => 'A cash-flow shortfall is ahead.',
     ],
 ];

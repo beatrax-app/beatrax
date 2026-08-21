@@ -12,6 +12,7 @@ return [
     'ok' => 'Tamam',
     'ok_aria' => 'Tamam — PIN kodunu onayla',
     'sign_out' => 'Çıkış yap',
+    'forgot_pin' => 'PIN kodunu mu unuttun? Çıkış yap — hesap parolanla tekrar giriş yapıp yeni bir PIN belirleyebilirsin. Hiçbir veri kaybolmaz.',
 
     'errors' => [
         'pin_length' => 'PIN en az 6 haneli olmalıdır.',

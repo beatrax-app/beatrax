@@ -11,11 +11,10 @@ use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Validation\ValidationException;
-use Modules\Auth\Internal\Recovery\RecoveryCodeGenerator;
+use Modules\Auth\Internal\Recovery\RecoveryCodeMinter;
 use Modules\Auth\Internal\Support\Username;
-use Modules\Auth\Models\UserRecoveryCode;
+use Modules\Auth\Public\Contracts\PasswordPolicy;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Events\UserInstalled;
 use Modules\Core\Public\Services\SessionFactory;
@@ -27,16 +26,11 @@ use Throwable;
 
 final class SignupAction
 {
-    private const MINIMUM_PASSWORD_LENGTH = 12;
-
-    private const RECOVERY_CODE_COUNT = 10;
-
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Hasher $hasher,
         private readonly AuthManager $auth,
-        private readonly RecoveryCodeGenerator $codeGenerator,
-        private readonly Clock $clock,
+        private readonly RecoveryCodeMinter $recoveryCodes,
         private readonly SessionFactory $session,
         private readonly Dispatcher $events,
         private readonly Translator $translator,
@@ -61,7 +55,7 @@ final class SignupAction
             ]);
         }
 
-        if (strlen($password) < self::MINIMUM_PASSWORD_LENGTH) {
+        if (strlen($password) < PasswordPolicy::MINIMUM_LENGTH) {
             throw ValidationException::withMessages([
                 'password' => Lang::get('auth::signup.error_min_length'),
             ]);
@@ -96,29 +90,7 @@ final class SignupAction
             // the persistent mobile runtime that null outlived the request.
             $user->refresh();
 
-            $now = $this->clock->now();
-
-            // A collision is astronomically rare, but the unique code_hash
-            // index would reject the insert outright.
-            $codesPlain = [];
-            while (count($codesPlain) < self::RECOVERY_CODE_COUNT) {
-                $code = $this->codeGenerator->generate();
-                if (in_array($code, $codesPlain, true)) {
-                    continue;
-                }
-                $codesPlain[] = $code;
-            }
-
-            foreach ($codesPlain as $plainCode) {
-                UserRecoveryCode::query()->create([
-                    'user_id' => $user->id,
-                    'code_hash' => $this->hasher->make($plainCode),
-                    'used_at' => null,
-                    'created_at' => $now,
-                ]);
-            }
-
-            return ['user' => $user, 'codesPlain' => $codesPlain];
+            return ['user' => $user, 'codesPlain' => $this->recoveryCodes->issueFor($user->id)];
         });
 
         // After commit and before auto-login, so the listener chain runs in

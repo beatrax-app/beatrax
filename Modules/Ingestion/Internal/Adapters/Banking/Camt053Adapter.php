@@ -68,7 +68,6 @@ final class Camt053Adapter implements SourceAdapter
             }
 
             $ownIban = $this->extractOwnIban($record);
-            $accounts->resolve($ownIban);
 
             foreach ($record->getEntries() as $entry) {
                 $txDtlsList = $entry->getTransactionDetails();

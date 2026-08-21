@@ -21,6 +21,7 @@ use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Dto\UnknownIban;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
+use Modules\Import\Public\Services\UploadFilename;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Enums\AccountKind;
@@ -86,11 +87,6 @@ final class ConnectBankStep extends Component
         }
     }
 
-    public function isDropZoneGated(): bool
-    {
-        return $this->isCsvFormat($this->selectedFormat) && $this->selectedBankFormatHint === null;
-    }
-
     public function submit(
         RunsImports $importer,
         CurrentUser $currentUser,
@@ -115,7 +111,7 @@ final class ConnectBankStep extends Component
         }
 
         $user = $currentUser->user();
-        $originalFilename = $this->sanitiseFilename($this->file->getClientOriginalName());
+        $originalFilename = UploadFilename::sanitise($this->file->getClientOriginalName(), UploadFilename::extensionFor($this->selectedFormat));
 
         $formatHint = $this->selectedBankFormatHint === null
             ? null
@@ -259,24 +255,6 @@ final class ConnectBankStep extends Component
     public function render(ViewFactory $views): View
     {
         return $views->make('onboarding::livewire.steps.connect-bank-step');
-    }
-
-    // Path-traversal characters go before the name reaches a filesystem path; the
-    // extension follows the declared format so the stored copy still sniffs
-    // correctly when repreview() re-reads it.
-    private function sanitiseFilename(string $original): string
-    {
-        $stem = pathinfo($original, PATHINFO_FILENAME);
-        $safe = preg_replace('/[^A-Za-z0-9_-]+/', '_', $stem);
-        $stemPart = ($safe === null || $safe === '') ? 'upload' : $safe;
-
-        $extension = match ($this->selectedFormat) {
-            'camt053' => '.xml',
-            'mt940' => '.sta',
-            default => '.csv',
-        };
-
-        return $stemPart.$extension;
     }
 
     private function isCsvFormat(string $format): bool

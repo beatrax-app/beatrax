@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Rever cadeias',
     'heading' => 'Rever cadeias',
-    'hint' => 'pista|pistas',
+    'hint' => ':count pista|:count pistas',
     'subtitle' => 'Confirma ou rejeita as ligações candidatas que o resolvedor de cadeias não conseguiu confirmar automaticamente.',
 
     'empty_heading' => 'Nada para rever',

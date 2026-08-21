@@ -64,9 +64,6 @@ final class AsnCsvAdapter implements SourceAdapter
             }
 
             $ownIban = $row[AsnCsvColumnMap::OWN_IBAN];
-            // Result discarded: the call is here so the wizard's UnknownAccount
-            // branch still fires; NormalizeStage owns IBAN → account_id.
-            $accounts->resolve($ownIban);
 
             $currency = $row[AsnCsvColumnMap::MUTATION_CURRENCY];
             if ($currency === '') {

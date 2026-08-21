@@ -325,7 +325,10 @@ welcome screen's "Import from another device" CTA leads into. Its step
 machine is `collect_pin` (username/password/PIN form) -> `provisioning_failed`
 (idempotent-safe retry, only reached if a later step throws after signup
 already committed) -> `recovery_codes` -> a plain link into
-`mobile.pair?mode=import`. On submit, in strict order: `SignupAction`
+`mobile.pair?mode=import`. Those three names are spelled once, in
+`Internal\Identity\ImportBootstrapStep` — a vocabulary of its own, sharing
+nothing with the pairing ceremony this wizard hands off to. On submit, in
+strict order: `SignupAction`
 runs the same first-user ceremony `/signup` uses (guarded to
 `User::count() === 0`); `MobileLockGateway::enableAppLock()` mints the
 app-lock key and leaves the session unlocked; `PairingGateway::
@@ -374,11 +377,15 @@ fired from the screen must still find the codes.
 its own field, so the message renders under the box it describes and that
 control carries `aria-invalid`. The form-level line is left for a
 rejection that belongs to no box — `SignupAction` refusing under `signup`
-because the device gained an owner mid-submit. A rejected submit empties
-nothing: clearing the password pair while keeping the PIN meant a
-mistyped PIN cost a 12-character passphrase retyped on a phone keyboard.
-The password pair also carries the same live requirement checklist as
-`SignupPage`, reading the same bindings the server validates.
+because the device gained an owner mid-submit. Placing a `SignupAction`
+rejection on its box is `Core`'s `ReportsFieldRejections` trait, shared
+with `SignupPage`: the component supplies `FIELD_KEYS` and the lang key
+the form-level line falls back to. A rejected submit empties nothing:
+clearing the password pair while keeping the PIN meant a mistyped PIN
+cost a 12-character passphrase retyped on a phone keyboard. The password
+pair carries the live requirement checklist through the shared
+`x-core::password-requirements` component, the same one `SignupPage`
+renders, reading the same bindings the server validates.
 
 ## Biometric-primary unlock
 
@@ -516,6 +523,15 @@ introduced. `QrScanBridge` is the only place that calls
 envelope to recover the same raw token a word-code decodes to, and hands
 it unmodified to the same `PairingGateway::acceptToken()` validation the
 word-code path uses.
+
+Those step names are spelled once, in the Sync module's public
+`PairingWizardStep` enum this page shares with the desktop modal. `$step` and
+`$entryStep` stay `string` properties for the reason the modal's own section in
+the [Sync architecture](../sync/architecture.md) sets out, and are read back
+through `tryFrom()`. `$entryStep` is narrowed further: it
+carries no `#[Locked]`, and a reset honouring a value past the two entry arms
+would walk a cancelled attempt onto a screen it never reached, so only `scan`
+and `enter_code` are accepted there.
 
 **Import-mode cross-device handshake.** When this pairing attempt was
 reached via the fresh-device import bootstrap (`?mode=import`), the

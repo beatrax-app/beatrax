@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'title' => 'Rapoarte',
     'page_title' => 'Rapoarte · Beatrax',
-    'saved_report' => 'raport salvat|rapoarte salvate|de rapoarte salvate',
+    'saved_report' => ':count raport salvat|:count rapoarte salvate|:count de rapoarte salvate',
     'pinned_count' => 'fixate',
     'dismiss' => 'Închide',
 

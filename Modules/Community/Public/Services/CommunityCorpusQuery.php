@@ -22,7 +22,7 @@ final class CommunityCorpusQuery
     // truncated the corpus in bundled-file order rather than sampling it: once
     // the corpus outgrew the cap, every country past it stopped resolving.
     /**
-     * @var array<string, list<array{needle: string, name: string}>>
+     * @var array<string, list<array{compiled: string, name: string}>>
      */
     private array $generalizedRows = [];
 
@@ -58,8 +58,8 @@ final class CommunityCorpusQuery
         foreach ($this->generalizedRows($region) as $row) {
             // Whole token, not any substring: a bare search matched the corpus
             // token OBI inside "mobiel". The match is case-insensitive, so the
-            // haystack is no longer lowered first.
-            if (CorpusPatternMatcher::containsToken($rawDescription, $row['needle'])) {
+            // haystack is not lowered first.
+            if (CorpusPatternMatcher::matchesCompiled($row['compiled'], $rawDescription)) {
                 return $row['name'];
             }
         }
@@ -81,7 +81,7 @@ final class CommunityCorpusQuery
     // Regex rows carry an empty generalized_pattern and are matched only by
     // lookupRegex(), so they are excluded once here rather than per call.
     /**
-     * @return list<array{needle: string, name: string}>
+     * @return list<array{compiled: string, name: string}>
      */
     private function generalizedRows(?string $region): array
     {
@@ -109,7 +109,29 @@ final class CommunityCorpusQuery
             $loaded[] = ['needle' => mb_strtolower($needle), 'name' => $name];
         }
 
-        return $this->generalizedRows[$key] = self::specificFirst($loaded);
+        return $this->generalizedRows[$key] = self::compiled(self::specificFirst($loaded));
+    }
+
+    // The needle-only half of a token match — the encoding check, the
+    // alphanumeric check, the two edge probes and the quoting — is a function of
+    // the needle alone, so it is paid once per corpus load here rather than once
+    // per description scanned. A needle that compiles to null never matches.
+    /**
+     * @param  list<array{needle: string, name: string}>  $rows
+     * @return list<array{compiled: string, name: string}>
+     */
+    private static function compiled(array $rows): array
+    {
+        $compiled = [];
+        foreach ($rows as $row) {
+            $pattern = CorpusPatternMatcher::compileToken($row['needle']);
+            if ($pattern === null) {
+                continue;
+            }
+            $compiled[] = ['compiled' => $pattern, 'name' => $row['name']];
+        }
+
+        return $compiled;
     }
 
     /**

@@ -16,6 +16,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\SystemAlertQuery;
 use Modules\Core\Public\Support\Lang;
+use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
 use Modules\DevMode\Internal\Logging\RecentLogEntriesReader;
 
@@ -127,7 +128,7 @@ final class DevOverviewPage extends Component
     }
 
     /**
-     * @return list<array{command: string, tier: string, exitCode: ?int, createdAt: ?string, href: string}>
+     * @return list<array{command: string, tier: CommandTier, exitCode: ?int, createdAt: ?string, href: string}>
      */
     private function resolveRecentRuns(DatabaseManager $db, User $user): array
     {
@@ -142,7 +143,7 @@ final class DevOverviewPage extends Component
         foreach ($rows as $row) {
             $properties = $this->extractProperties($row);
             $command = is_string($properties['command'] ?? null) ? $properties['command'] : '';
-            $tier = is_string($properties['tier'] ?? null) ? $properties['tier'] : 'safe';
+            $tier = CommandTier::fromStored($properties['tier'] ?? null);
             $exitCode = is_int($properties['exit_code'] ?? null) ? $properties['exit_code'] : null;
             $vars = get_object_vars($row);
             $createdAtRaw = $vars['created_at'] ?? null;

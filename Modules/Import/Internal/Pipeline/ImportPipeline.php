@@ -14,8 +14,6 @@ use Modules\Core\Public\Support\MessageNamesNoUserData;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\SafeTrace;
 use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
-use Modules\Import\Internal\Enums\ImportFailureReason;
-use Modules\Import\Internal\Enums\PreviewRowStatus;
 use Modules\Import\Internal\Pipeline\Stages\ClassifyTransactionType;
 use Modules\Import\Internal\Pipeline\Stages\FingerprintStage;
 use Modules\Import\Internal\Pipeline\Stages\ParseStage;
@@ -25,6 +23,8 @@ use Modules\Import\Public\Dto\PendingEnrichment;
 use Modules\Import\Public\Dto\PreviewRowDto;
 use Modules\Import\Public\Dto\UnknownIban;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
+use Modules\Import\Public\Enums\ImportFailureReason;
+use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Import\Public\Pipeline\NormalizeStage;
 use Modules\Import\Public\Services\MerchantNameResolver;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
@@ -60,7 +60,7 @@ final class ImportPipeline
     ) {}
 
     /**
-     * @return array{rows: list<PreviewRowDto>, canonical: list<CanonicalTransaction>, enrichments: list<PendingEnrichment>, unknownIbans: list<UnknownIban>, fileFailureReason: ?string, fileFailureDetail: ?string, fileFailureRowIndex: ?int}
+     * @return array{rows: list<PreviewRowDto>, canonical: list<CanonicalTransaction>, enrichments: list<PendingEnrichment>, unknownIbans: list<UnknownIban>, fileFailureReason: ?ImportFailureReason, fileFailureDetail: ?string, fileFailureRowIndex: ?int}
      */
     public function preview(string $localPath, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId, ?BankCsvFormatHint $formatHint = null): array
     {
@@ -95,7 +95,7 @@ final class ImportPipeline
      * @link ../../../../.docs/features/import/architecture.md#runimport-preview-idempotency--race-recovery
      *
      * @param  Generator<int, SourceTransactionDto>  $sourceRows
-     * @return array{rows: list<PreviewRowDto>, canonical: list<CanonicalTransaction>, enrichments: list<PendingEnrichment>, unknownIbans: list<UnknownIban>, fileFailureReason: ?string, fileFailureDetail: ?string, fileFailureRowIndex: ?int}
+     * @return array{rows: list<PreviewRowDto>, canonical: list<CanonicalTransaction>, enrichments: list<PendingEnrichment>, unknownIbans: list<UnknownIban>, fileFailureReason: ?ImportFailureReason, fileFailureDetail: ?string, fileFailureRowIndex: ?int}
      */
     public function previewFromGenerator(Generator $sourceRows, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId): array
     {
@@ -114,7 +114,7 @@ final class ImportPipeline
 
     /**
      * @param  iterable<int, SourceTransactionDto>  $sourceRows
-     * @return array{rows: list<PreviewRowDto>, canonical: list<CanonicalTransaction>, enrichments: list<PendingEnrichment>, unknownIbans: list<UnknownIban>, fileFailureReason: ?string, fileFailureDetail: ?string, fileFailureRowIndex: ?int, lastResolvedAccountId: ?int}
+     * @return array{rows: list<PreviewRowDto>, canonical: list<CanonicalTransaction>, enrichments: list<PendingEnrichment>, unknownIbans: list<UnknownIban>, fileFailureReason: ?ImportFailureReason, fileFailureDetail: ?string, fileFailureRowIndex: ?int, lastResolvedAccountId: ?int}
      */
     private function buildPreviewRows(iterable $sourceRows, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId): array
     {
@@ -143,7 +143,7 @@ final class ImportPipeline
                     );
                     $preview[] = new PreviewRowDto(
                         rowIndex: $source->sourceRowIndex,
-                        status: PreviewRowStatus::Error->value,
+                        status: PreviewRowStatus::Error,
                         accountId: null,
                         bookedAt: Fmt::shortDate($source->bookedAt),
                         counterpartyName: $source->counterpartyName,
@@ -153,7 +153,7 @@ final class ImportPipeline
                         amountMinor: $source->amountMinor,
                         currency: $source->currency,
                         error: ImportFailureReason::UnknownAccount->label(),
-                        errorReason: ImportFailureReason::UnknownAccount->value,
+                        errorReason: ImportFailureReason::UnknownAccount,
                     );
 
                     continue;
@@ -183,7 +183,7 @@ final class ImportPipeline
                     ]);
                     $preview[] = new PreviewRowDto(
                         rowIndex: $source->sourceRowIndex,
-                        status: PreviewRowStatus::Error->value,
+                        status: PreviewRowStatus::Error,
                         accountId: $accountId,
                         bookedAt: Fmt::shortDate($source->bookedAt),
                         counterpartyName: $source->counterpartyName,
@@ -193,7 +193,7 @@ final class ImportPipeline
                         amountMinor: $source->amountMinor,
                         currency: $source->currency,
                         error: ImportFailureReason::AppLocked->label(),
-                        errorReason: ImportFailureReason::AppLocked->value,
+                        errorReason: ImportFailureReason::AppLocked,
                     );
 
                     continue;
@@ -210,7 +210,7 @@ final class ImportPipeline
                     $rowReason = self::reasonFor($e, ImportFailureReason::RowUnreadable);
                     $preview[] = new PreviewRowDto(
                         rowIndex: $source->sourceRowIndex,
-                        status: PreviewRowStatus::Error->value,
+                        status: PreviewRowStatus::Error,
                         accountId: $accountId,
                         bookedAt: Fmt::shortDate($source->bookedAt),
                         counterpartyName: $source->counterpartyName,
@@ -220,7 +220,7 @@ final class ImportPipeline
                         amountMinor: $source->amountMinor,
                         currency: $source->currency,
                         error: $rowReason->label(),
-                        errorReason: $rowReason->value,
+                        errorReason: $rowReason,
                         errorDetail: self::safeDetail($e),
                     );
 
@@ -283,7 +283,7 @@ final class ImportPipeline
                 'exception_message' => $e instanceof MessageNamesNoUserData ? $e->getMessage() : null,
                 'exception_trace' => $e->getTraceAsString(),
             ]);
-            $fileFailureReason = self::reasonFor($e, ImportFailureReason::FileUnreadable)->value;
+            $fileFailureReason = self::reasonFor($e, ImportFailureReason::FileUnreadable);
             $fileFailureDetail = self::safeDetail($e);
             // One preview row per source row, so the count is the index of the
             // one being read when it stopped. Counted rather than read out of

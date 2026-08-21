@@ -17,16 +17,38 @@ final class CategoryDisplayName
 
     private const array PARTS = ['name', 'slug', 'name_is_default'];
 
+    // An empty $alias is rejected rather than emitted: it would select `_name`,
+    // which fromRow($row, '') — the bare read — cannot see. A query with
+    // nothing to disambiguate wants bareColumns() instead.
     /**
      * @return list<string>
+     *
+     * @throws InvalidArgumentException when $alias is empty.
      */
     public static function columns(string $table, string $alias = 'category'): array
     {
-        return [
-            $table.'.name as '.$alias.'_name',
-            $table.'.slug as '.$alias.'_slug',
-            $table.'.name_is_default as '.$alias.'_name_is_default',
-        ];
+        if ($alias === '') {
+            throw new InvalidArgumentException('CategoryDisplayName: columns() needs a non-empty alias. Use bareColumns() for an unaliased select.');
+        }
+
+        return array_map(
+            static fn (string $part): string => $table.'.'.$part.' as '.$alias.'_'.$part,
+            self::PARTS,
+        );
+    }
+
+    // The same parts unaliased, for a query selecting straight off `categories`
+    // and for the GROUP BY beside such a select. Every column list reads PARTS,
+    // so a fourth part reaches every read site rather than becoming fromRow()'s
+    // InvalidArgumentException on whichever screens were missed.
+    /**
+     * @return list<string>
+     */
+    public static function bareColumns(string $table = ''): array
+    {
+        $prefix = $table === '' ? '' : $table.'.';
+
+        return array_map(static fn (string $part): string => $prefix.$part, self::PARTS);
     }
 
     // An empty $alias reads the bare column names, for a query that selects

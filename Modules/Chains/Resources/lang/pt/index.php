@@ -15,7 +15,7 @@ return [
     'no_counterparty' => '(sem contraparte)',
     'open_from_row' => 'Abrir a linha de origem',
     'open_to_row' => 'Abrir a linha de destino',
-    'leg_count' => '1 pagamento|:count pagamentos',
+    'leg_count' => ':count pagamento|:count pagamentos',
     'state_aria' => 'Estado: :state',
 
     'kind' => [

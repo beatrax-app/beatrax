@@ -38,6 +38,7 @@ use Modules\Auth\Internal\Lock\PlatformDetector;
 use Modules\Auth\Internal\Lock\WebAuthnBiometricService;
 use Modules\Auth\Internal\Recovery\RecoveryCodeAuthenticator;
 use Modules\Auth\Internal\Recovery\RecoveryCodeGenerator;
+use Modules\Auth\Internal\Recovery\RecoveryCodeMinter;
 use Modules\Auth\Internal\Recovery\RecoveryCodeNormalizer;
 use Modules\Auth\Public\Actions\AddUserAction;
 use Modules\Auth\Public\Actions\LoginAction;
@@ -76,6 +77,7 @@ final class AuthServiceProvider extends ServiceProvider
         $this->app->singleton(ResetPasswordAction::class);
         $this->app->singleton(RegenerateRecoveryCodesAction::class);
         $this->app->singleton(RecoveryCodeGenerator::class);
+        $this->app->singleton(RecoveryCodeMinter::class);
         $this->app->singleton(RecoveryCodeFormatter::class);
         $this->app->singleton(RecoveryCodeNormalizer::class);
         $this->app->singleton(RecoveryCodeAuthenticator::class);

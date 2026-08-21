@@ -14,6 +14,8 @@ use Modules\Core\Public\Contracts\Clock;
  */
 final class ChainLinkInsertHelper
 {
+    private const INSERT_CHUNK = 100;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
@@ -50,14 +52,7 @@ final class ChainLinkInsertHelper
         }
 
         $now = $this->clock->now()->toDateTimeString();
-        $evidence = $row['evidence'] ?? [];
-        $encoded = json_encode(
-            $evidence,
-            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
-        );
-        if ($encoded === false) {
-            throw new EvidenceEncodingFailedException('insert helper');
-        }
+        $encoded = self::encodeEvidence($row['evidence'] ?? []);
 
         $connection->table('chain_links')->insert([
             'user_id' => $user->id,
@@ -73,5 +68,107 @@ final class ChainLinkInsertHelper
         ]);
 
         return true;
+    }
+
+    // Same (from, to, kind, user) uniqueness test as insertIfNotExists(), asked
+    // once for the whole batch instead of once per row — a settled card
+    // statement covers 50 to 300 expenses, and each one cost a SELECT.
+    /**
+     * @param  list<array<string, mixed>>  $rows  same keys insertIfNotExists() requires
+     * @return int the number of rows inserted
+     */
+    public function insertMissing(array $rows, User $user): int
+    {
+        if ($rows === []) {
+            return 0;
+        }
+
+        $seen = $this->existingPairKeys($rows, $user);
+        $now = $this->clock->now()->toDateTimeString();
+
+        $pending = [];
+        foreach ($rows as $row) {
+            $toTxId = $row['to_transaction_id'] ?? null;
+            $key = self::pairKey($row['from_transaction_id'] ?? null, $toTxId, $row['kind'] ?? null);
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+
+            $pending[] = [
+                'user_id' => $user->id,
+                'from_transaction_id' => $row['from_transaction_id'],
+                'to_transaction_id' => $toTxId,
+                'kind' => $row['kind'],
+                'state' => $row['state'],
+                'confidence' => $row['confidence'],
+                'resolver' => $row['resolver'],
+                'evidence' => self::encodeEvidence($row['evidence'] ?? []),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        if ($pending === []) {
+            return 0;
+        }
+
+        $connection = $this->db->connection();
+        foreach (array_chunk($pending, self::INSERT_CHUNK) as $chunk) {
+            $connection->table('chain_links')->insert($chunk);
+        }
+
+        return count($pending);
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $rows
+     * @return array<string, true>
+     */
+    private function existingPairKeys(array $rows, User $user): array
+    {
+        $fromIds = [];
+        $kinds = [];
+        foreach ($rows as $row) {
+            $fromIds[] = $row['from_transaction_id'] ?? null;
+            $kinds[] = $row['kind'] ?? null;
+        }
+
+        $found = $this->db->connection()
+            ->table('chain_links')
+            ->where('user_id', $user->id)
+            ->whereIn('from_transaction_id', array_values(array_unique($fromIds, SORT_REGULAR)))
+            ->whereIn('kind', array_values(array_unique($kinds, SORT_REGULAR)))
+            ->get(['from_transaction_id', 'to_transaction_id', 'kind']);
+
+        $keys = [];
+        foreach ($found as $row) {
+            $keys[self::pairKey($row->from_transaction_id, $row->to_transaction_id, $row->kind)] = true;
+        }
+
+        return $keys;
+    }
+
+    private static function pairKey(mixed $fromId, mixed $toId, mixed $kind): string
+    {
+        return self::idPart($fromId).'|'.self::idPart($toId).'|'.(is_string($kind) ? $kind : '');
+    }
+
+    private static function idPart(mixed $value): string
+    {
+        return is_numeric($value) ? (string) (int) $value : '';
+    }
+
+    private static function encodeEvidence(mixed $evidence): string
+    {
+        $encoded = json_encode(
+            $evidence,
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
+        );
+        if ($encoded === false) {
+            throw new EvidenceEncodingFailedException('insert helper');
+        }
+
+        return $encoded;
     }
 }

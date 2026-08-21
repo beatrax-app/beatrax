@@ -13,13 +13,8 @@ use Modules\Ledger\Public\Dto\StatementSummaryData;
 beforeEach(function (): void {
     $this->resolver = new class implements AccountResolver
     {
-        /** @var list<string> */
-        public array $askedFor = [];
-
         public function resolve(string $iban): AccountResolution
         {
-            $this->askedFor[] = $iban;
-
             return AccountResolution::unknown($iban);
         }
     };
@@ -73,12 +68,6 @@ it('yields the dual-amount pair for the Cloudflare USD chain (FX-direction safet
     expect($cloudflareUsd->settledCurrency)->toBe('EUR');
     expect($cloudflareUsd->settledAmountMinor)->toBe(-927);
     expect($cloudflareUsd->fxRateUsed)->toBeNull();
-})->group('phase-4');
-
-it('resolves the synthetic PAYPAL own-IBAN through the AccountResolver', function (): void {
-    iterator_to_array($this->adapter->parse($this->fixture, $this->resolver), false);
-
-    expect($this->resolver->askedFor)->toContain('PAYPAL');
 })->group('phase-4');
 
 it('exposes a populated StatementSummaryData via statementMetadata() after parse() completes', function (): void {

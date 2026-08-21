@@ -22,7 +22,6 @@ return [
     'condition_value_from_aria' => 'Waarde van voorwaarde :number (van)',
     'condition_value_to_aria' => 'Waarde van voorwaarde :number (tot)',
     'to' => 'tot',
-    'amount_placeholder' => '0,00',
     'text_placeholder' => 'bijv. SPOTIFY',
     'remove_condition' => 'Voorwaarde verwijderen',
     'add_condition' => '+ Voorwaarde toevoegen',

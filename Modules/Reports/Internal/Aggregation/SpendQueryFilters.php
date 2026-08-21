@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Reports\Internal\Aggregation;
 
+use Modules\Ledger\Public\Enums\AmountDirection;
+
 final class SpendQueryFilters
 {
     /**
@@ -12,7 +14,6 @@ final class SpendQueryFilters
      * @param  list<int>  $counterpartyIds  restrict to these counterparty ids (empty = no restriction)
      * @param  ?int  $amountMinMinor  restrict to rows whose ABS(settled_amount_minor) >= this (null = no restriction)
      * @param  ?int  $amountMaxMinor  restrict to rows whose ABS(settled_amount_minor) <= this (null = no restriction)
-     * @param  string  $amountDirection  'in' | 'out' | 'both' — restricts to settled_amount_minor > 0 / < 0 / no restriction
      */
     public function __construct(
         public readonly array $accountIds = [],
@@ -20,6 +21,6 @@ final class SpendQueryFilters
         public readonly array $counterpartyIds = [],
         public readonly ?int $amountMinMinor = null,
         public readonly ?int $amountMaxMinor = null,
-        public readonly string $amountDirection = 'both',
+        public readonly string $amountDirection = AmountDirection::Both->value,
     ) {}
 }

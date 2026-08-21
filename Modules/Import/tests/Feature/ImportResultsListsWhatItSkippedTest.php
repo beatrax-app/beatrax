@@ -11,6 +11,8 @@ use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Dto\PreviewRowDto;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
+use Modules\Import\Public\Enums\ImportFailureReason;
+use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Ledger\Models\ImportRun;
 
 beforeEach(function (): void {
@@ -35,7 +37,7 @@ it('lists the rows it skipped instead of defining the word for them', function (
     $rows = [
         new PreviewRowDto(
             rowIndex: 0,
-            status: 'duplicate',
+            status: PreviewRowStatus::Duplicate,
             accountId: 1,
             bookedAt: '01-08-2026',
             counterpartyName: 'Albert Heijn',
@@ -48,7 +50,7 @@ it('lists the rows it skipped instead of defining the word for them', function (
         ),
         new PreviewRowDto(
             rowIndex: 4,
-            status: 'error',
+            status: PreviewRowStatus::Error,
             accountId: 1,
             bookedAt: null,
             counterpartyName: null,
@@ -58,7 +60,7 @@ it('lists the rows it skipped instead of defining the word for them', function (
             amountMinor: null,
             currency: 'EUR',
             error: 'This row could not be read.',
-            errorReason: 'row_unreadable',
+            errorReason: ImportFailureReason::RowUnreadable,
             errorDetail: 'The date in row 5 was written 31-13-2026.',
         ),
     ];
@@ -69,7 +71,7 @@ it('lists the rows it skipped instead of defining the word for them', function (
             importRunId: $run->id,
             rows: $rows,
             accountsToName: [],
-            fileFailureReason: 'file_unreadable',
+            fileFailureReason: ImportFailureReason::FileUnreadable,
             fileFailureDetail: 'Expected 19 or 20 columns, got 5.',
             fileFailureRowIndex: null,
         ),

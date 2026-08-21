@@ -17,8 +17,7 @@ return [
     'net' => 'Netto',
 
     'status_tiles_aria' => 'Kafelki statusu',
-    'email_scan_health' => 'Stan skanowania poczty — połączone: :count',
-    'inbox' => 'skrzynka|skrzynki|skrzynek',
+    'email_scan_health' => 'Stan skanowania poczty — połączone: :count skrzynka|Stan skanowania poczty — połączone: :count skrzynki|Stan skanowania poczty — połączone: :count skrzynek',
 
     'top_spending' => 'Największe wydatki',
     'no_expenses' => 'Brak skategoryzowanych wydatków.',

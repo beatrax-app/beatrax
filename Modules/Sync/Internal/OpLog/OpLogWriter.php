@@ -14,6 +14,7 @@ use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use RuntimeException;
 
 final class OpLogWriter
@@ -135,7 +136,7 @@ final class OpLogWriter
             $ciphertext = $this->fieldCrypto->encrypt(
                 $jsonValue,
                 $rawKey,
-                "{$table}:{$pk}:{$field}:{$epoch->epochId}",
+                SensitiveColumnCodec::opLogAssociatedData($table, $pk, $field, $epoch->epochId),
             );
         } finally {
             sodium_memzero($rawKey);

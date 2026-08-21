@@ -9,7 +9,6 @@ use Illuminate\Contracts\Filesystem\Factory as StorageFactory;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Import\Internal\Enums\PreviewRowStatus;
 use Modules\Import\Internal\Exceptions\RacedImportRunVanishedException;
 use Modules\Import\Internal\Exceptions\UploadStagingException;
 use Modules\Import\Internal\Pipeline\ImportPipeline;
@@ -18,6 +17,7 @@ use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Dto\ImportConfirmResult;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
+use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Import\Public\Services\EloquentAccountResolver;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Enums\SourceFormat;
@@ -100,7 +100,7 @@ final class RunImport implements RunsImports
 
         $enrichedCount = 0;
         foreach ($result['rows'] as $row) {
-            if ($row->status === PreviewRowStatus::Enriched->value) {
+            if ($row->status === PreviewRowStatus::Enriched) {
                 $enrichedCount++;
             }
         }
@@ -232,7 +232,7 @@ final class RunImport implements RunsImports
 
         $enrichedCount = 0;
         foreach ($result['rows'] as $row) {
-            if ($row->status === PreviewRowStatus::Enriched->value) {
+            if ($row->status === PreviewRowStatus::Enriched) {
                 $enrichedCount++;
             }
         }

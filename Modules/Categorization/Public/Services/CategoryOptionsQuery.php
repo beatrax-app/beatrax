@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Categorization\Public\Services;
 
+use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Database\Query\JoinClause;
@@ -20,14 +21,28 @@ final class CategoryOptionsQuery
 {
     use CoercesScalars;
 
-    public function __construct(private readonly DatabaseManager $db) {}
+    /** @var array<string, list<CategoryOption>> */
+    private array $cache = [];
 
+    public function __construct(
+        private readonly DatabaseManager $db,
+        private readonly Translator $translator,
+    ) {}
+
+    // The ledger screen mounts one picker per row, so an uncached read here is
+    // a full categories self-join per transaction on screen. Keyed by reader
+    // AND locale because the names resolve through the reader's language.
     /**
      * @return list<CategoryOption>
      */
     public function for(User $user): array
     {
         $userId = $user->id;
+        $cacheKey = $userId.':'.$this->translator->getLocale();
+
+        if (array_key_exists($cacheKey, $this->cache)) {
+            return $this->cache[$cacheKey];
+        }
 
         $rows = $this->db->connection()
             ->table('categories as c')
@@ -53,6 +68,8 @@ final class CategoryOptionsQuery
         foreach ($rows as $row) {
             $options[] = $this->mapOption($row);
         }
+
+        $this->cache[$cacheKey] = $options;
 
         return $options;
     }

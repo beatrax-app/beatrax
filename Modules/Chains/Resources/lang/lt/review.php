@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Peržiūrėti grandines',
     'heading' => 'Peržiūrėti grandines',
-    'hint' => 'užuomina|užuominos|užuominų',
+    'hint' => ':count užuomina|:count užuominos|:count užuominų',
     'subtitle' => 'Patvirtink arba atmesk kandidatines sąsajas, kurių grandinių sprendiklis negalėjo patvirtinti automatiškai.',
 
     'empty_heading' => 'Nėra ką peržiūrėti',

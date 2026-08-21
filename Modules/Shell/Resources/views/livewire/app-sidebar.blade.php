@@ -30,7 +30,7 @@
 
 <aside class="side" aria-label="{{ Lang::get('core::sidebar.primary_nav') }}" style="--side-w: 248px;">
     <div class="side-brand">
-        <img src="{{ Vite::asset('resources/brand/logo.svg') }}" alt="Beatrax" width="24" height="24" class="logo logo-svg" />
+        <x-core::app-mark :size="24" class="logo logo-svg" :decorative="false" />
         <span>Beatrax</span>
         {{--
             Version chip reads from `config/nativephp.php#version`, which

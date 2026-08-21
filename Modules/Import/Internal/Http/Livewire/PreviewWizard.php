@@ -12,8 +12,8 @@ use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Enums\JobRunStatus;
 use Modules\Core\Public\Support\Lang;
-use Modules\Import\Internal\Enums\PreviewRowStatus;
 use Modules\Import\Internal\Exceptions\InvalidAccountNameException;
 use Modules\Import\Internal\Exceptions\PreviewExpiredException;
 use Modules\Import\Internal\Pipeline\PreviewCache;
@@ -24,6 +24,7 @@ use Modules\Import\Public\Contracts\NamesAccounts;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
+use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Import\Public\Services\AccountNamer;
 use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ledger\Models\Account;
@@ -54,7 +55,7 @@ final class PreviewWizard extends Component
 
     public bool $previewExpired = false;
 
-    public ?string $chainResolutionStatus = null;
+    public ?JobRunStatus $chainResolutionStatus = null;
 
     public int $chainResolutionLinkedCount = 0;
 
@@ -112,11 +113,12 @@ final class PreviewWizard extends Component
             return;
         }
 
-        $status = is_scalar($row->status) ? (string) $row->status : '';
-        $this->chainResolutionStatus = $status === '' ? null : $status;
+        $this->chainResolutionStatus = is_scalar($row->status)
+            ? JobRunStatus::tryFrom((string) $row->status)
+            : null;
         $this->chainResolutionLinkedCount = is_numeric($row->linked_count) ? (int) $row->linked_count : 0;
 
-        if ($this->chainResolutionStatus === 'complete' && $this->importRunId > 0) {
+        if ($this->chainResolutionStatus === JobRunStatus::Complete && $this->importRunId > 0) {
             $this->redirect(
                 $urls->route('imports.results', ['id' => $this->importRunId]),
                 navigate: false,
@@ -417,7 +419,7 @@ final class PreviewWizard extends Component
 
         $failed = 0;
         foreach ($preview->rows as $row) {
-            if ($row->status === PreviewRowStatus::Error->value) {
+            if ($row->status === PreviewRowStatus::Error) {
                 $failed++;
             }
         }

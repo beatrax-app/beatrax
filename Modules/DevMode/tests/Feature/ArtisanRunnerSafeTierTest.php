@@ -7,6 +7,7 @@ use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Http\Livewire\ArtisanRunnerPage;
 use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
 use Modules\DevMode\Internal\Process\CommandSpawner;
@@ -115,14 +116,14 @@ it('shows prior runs on /dev/audit with the tier chip + non-zero exit-code highl
     /** @var AuditWriter $writer */
     $writer = app(AuditWriter::class);
     $writer->recordCommandRun(new CommandRunAudit(
-        command: 'db:restore', args: ['from' => '/tmp/x'], tier: 'destructive',
+        command: 'db:restore', args: ['from' => '/tmp/x'], tier: CommandTier::Destructive,
         callerUserId: $user->id,
         startedAt: CarbonImmutable::now(),
         finishedAt: CarbonImmutable::now(),
         exitCode: 2, stdoutExcerpt: 'failed', errorExcerpt: '',
     ));
     $writer->recordCommandRun(new CommandRunAudit(
-        command: 'cache:clear', args: [], tier: 'safe',
+        command: 'cache:clear', args: [], tier: CommandTier::Safe,
         callerUserId: $user->id,
         startedAt: CarbonImmutable::now(),
         finishedAt: CarbonImmutable::now(),
@@ -146,14 +147,14 @@ it('filters /dev/audit?tier=destructive to only destructive rows', function (): 
     /** @var AuditWriter $writer */
     $writer = app(AuditWriter::class);
     $writer->recordCommandRun(new CommandRunAudit(
-        command: 'cache:clear', args: [], tier: 'safe',
+        command: 'cache:clear', args: [], tier: CommandTier::Safe,
         callerUserId: $user->id,
         startedAt: CarbonImmutable::now(),
         finishedAt: CarbonImmutable::now(),
         exitCode: 0, stdoutExcerpt: '', errorExcerpt: '',
     ));
     $writer->recordCommandRun(new CommandRunAudit(
-        command: 'migrate:fresh', args: [], tier: 'destructive',
+        command: 'migrate:fresh', args: [], tier: CommandTier::Destructive,
         callerUserId: $user->id,
         startedAt: CarbonImmutable::now(),
         finishedAt: CarbonImmutable::now(),
@@ -278,7 +279,7 @@ it('rerun() for a SAFE-tier prior run spawns a fresh run with the same command',
 
     /** @var CommandSpawner $spawner */
     $spawner = app(CommandSpawner::class);
-    $originalRunId = $spawner->start('cache:clear', [], $user->id, 'safe');
+    $originalRunId = $spawner->start('cache:clear', [], $user->id, CommandTier::Safe);
 
     Livewire::actingAs($user)
         ->test(ArtisanRunnerPage::class)
@@ -295,7 +296,7 @@ it('rerun() for a DESTRUCTIVE prior run opens the triple-gate carrying the origi
 
     /** @var CommandSpawner $spawner */
     $spawner = app(CommandSpawner::class);
-    $originalRunId = $spawner->start('db:restore', ['from' => '/tmp/x.sqlite'], $user->id, 'destructive');
+    $originalRunId = $spawner->start('db:restore', ['from' => '/tmp/x.sqlite'], $user->id, CommandTier::Destructive);
 
     Livewire::actingAs($user)
         ->test(ArtisanRunnerPage::class)

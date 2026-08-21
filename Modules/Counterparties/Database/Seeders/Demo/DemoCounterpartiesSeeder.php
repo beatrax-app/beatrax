@@ -64,7 +64,7 @@ final class DemoCounterpartiesSeeder
      */
     private const EXTRA_COUNTERPARTIES = [
         [
-            'type' => 'bank',
+            'type' => CounterpartyType::Bank->value,
             'slug' => 'asn-bank',
             'displayName' => 'ASN Bank',
             'displayNameKey' => null,
@@ -72,7 +72,7 @@ final class DemoCounterpartiesSeeder
             'merchantName' => null,
         ],
         [
-            'type' => 'bank',
+            'type' => CounterpartyType::Bank->value,
             'slug' => 'international-card-services',
             'displayName' => 'International Card Services',
             'displayNameKey' => null,

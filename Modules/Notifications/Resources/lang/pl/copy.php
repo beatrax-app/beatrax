@@ -38,7 +38,7 @@ return [
         'nothing_notable' => 'Nic nie wymaga Twojej uwagi.',
         'flow' => 'Przych. :in, wych. :out, netto :net.',
         'over_budget' => 'Dotychczas ponad budżet: :amount.',
-        'payments_due' => '1 płatność w tym okresie.|:count płatności w tym okresie.|:count płatności w tym okresie.',
+        'payments_due' => ':count płatność w tym okresie.|:count płatności w tym okresie.|:count płatności w tym okresie.',
         'shortfall' => 'Zbliża się niedobór środków.',
     ],
 ];

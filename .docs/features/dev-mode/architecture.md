@@ -47,15 +47,22 @@ What the module explicitly does NOT do:
 layout to render the ⌘K palette and the sidebar nav-list:
 
 - **Contracts/**
-  - `DevCommandRegistry::find($name)`, `all()`, `tier($name)` —
-    catalogue of every spawn-allowed command.
+  - `DevCommandRegistry::safe()`, `destructive()`, `find($name)` —
+    catalogue of every spawn-allowed command, partitioned by
+    `CommandTier`. `find()` throws `InvalidArgumentException` rather
+    than returning null, so an unregistered name never reaches a
+    caller as a value.
   - `NavigationRegistry::entries()` — the canonical nav list both
     the sidebar and the palette consume.
   - `AppActionRegistry::actions()` — the named palette actions
     (`Run import`, `Scan email now`, `Toggle theme`, `Open profile`).
-  - `AuditWriter::write($action, $context)` — the single sanctioned
-    write path for `dev_mode_audit` rows.
+  - `AuditWriter::recordCommandRun()`, `finalizeCommandRun()`,
+    `recordDestructiveQueueAction()`, `recordSelectQuery()` — the
+    single sanctioned write path for `dev_mode_audit` rows.
 - **DTOs/** — `CommandSpec`, `ArgSpec`, `NavigationEntry`, `AppAction`.
+  `CommandSpec::$tier` is a `CommandTier` and `ArgSpec::$type` an
+  `ArgType`, both from `Internal/Enums/` — the tier is a security
+  gate, so it is a closed set rather than a string a typo can widen.
 - **Models/** — `Job` (a typed read-only model over the framework's
   `jobs` table).
 
@@ -157,6 +164,15 @@ layout to render the ⌘K palette and the sidebar nav-list:
   (no LFI surface). `GET /dev/logs/context` is the paired endpoint
   returning the ±radius lines around a given absolute line offset for
   click-to-expand, with the same redaction re-applied per line.
+- **Internal/Enums/** — `CommandTier` (`Safe` / `Destructive`, with
+  `reachesThePalette()` and a `fromStored()` that resolves an absent
+  or unreadable persisted tier to `Safe`), `ArgType` (`Text`,
+  `Select`, `FilePath`, `Boolean`), `AuditEvent` (the audit-row
+  description taxonomy).
+- **Internal/Support/DevModeSession** — the session keys the
+  Advanced toggle is held in. The read sites fail closed on a typo
+  but `ResetAdvancedToggleOnLogin`'s `forget()` fails open, so the
+  key is a constant rather than a literal at each site.
 - **Internal/Logging/RedactSecretsProcessor** — Monolog tap that
   scrubs every log line before it lands on disk.
 - **Internal/Services/OAuthScrubSet** — singleton holding the
@@ -189,10 +205,12 @@ and `noUnsanctionedAuditWriter` are anchored here.
 
 ## Key services + events
 
-- `CommandSpawner::spawn($name, $args)` — the single
-  Symfony-`Process` constructor. Whitelists the command name against
-  `DevCommandRegistry`, validates args against the `ArgSpec`, writes
-  the opening audit row, spawns the process, returns the run id.
+- `CommandSpawner::start($command, $args, $callerUserId, $tier)` —
+  the single Symfony-`Process` constructor. Whitelists the command
+  name against `DevCommandRegistry`, renders each arg per its
+  `ArgType`, writes the opening audit row, spawns the process,
+  returns the run id. `$tier` is a `CommandTier`, so the two spawn
+  controllers cannot hand it a value the registry does not know.
 - `RunRegistry::record($run)` / `find($id)` — per-run state cache
   in the cache store (`Run` rows live in cache, not the DB; the
   closing audit row in `dev_mode_audit` is the durable trace).
@@ -206,9 +224,10 @@ and `noUnsanctionedAuditWriter` are anchored here.
   with `[REDACTED]`. Reads the literals from `OAuthScrubSet` lazily;
   the scrub set is invalidated by the Eloquent observer on every
   `OAuthSecret` change.
-- `SpatieAuditWriter::write($action, $context)` — opens an activity
-  log row scoped to the dev_mode_audit log name. The current user
-  - timestamp + redacted context are part of the canonical row.
+- `SpatieAuditWriter::recordCommandRun($run)` — opens an activity
+  log row scoped to the dev_mode_audit log name, described by an
+  `AuditEvent` case. The current user + timestamp + redacted
+  context are part of the canonical row.
 
 The module raises no Public events; the Internal listeners observe
 framework events (`JobProcessed`, `JobFailed`, `Login`) and the
@@ -241,18 +260,18 @@ The artisan-runner flow:
   → if tier=destructive:
        → TripleGateModal (Advanced toggle + explicit confirm +
                           typed phrase)
-  → CommandSpawner::spawn($name, $args)
+  → CommandSpawner::start($name, $args, $callerUserId, $tier)
        → whitelist against CommandRegistry → InvalidArgumentException
                                               if not found
-       → AuditWriter::write('command.start', context)
+       → AuditWriter::recordCommandRun(outcome-less row + run_id)
        → Symfony Process::start
        → RunRegistry::record($run)
   → ArtisanRunnerPage subscribes to the run via wire:poll
        → display stdout/stderr tail
   → on completion:
-       → FinalizeRunAudit::handle($run)
-           → AuditWriter::write('command.complete'|'command.failed',
-                                context + exit_code + duration)
+       → FinalizeRunAudit::__invoke($runId, $exitCode, $cancelled)
+           → AuditWriter::finalizeCommandRun(same row, by run_id,
+                                             + exit_code + excerpts)
 ```
 
 The queue-inspector flow:
@@ -344,8 +363,8 @@ Per-page detail that doesn't fit the flow diagrams above:
   inspector's bulk-delete affordance). Server-side enforcement of all
   three locks before any DESTRUCTIVE command spawns: Gate 1
   `config('app.dev_mode') === true` (env-pinned); Gate 2
-  `session('dev_mode.advanced') === true` (resets on Login via
-  `ResetAdvancedToggleOnLogin`); Gate 3 the operator typed the exact
+  `session(DevModeSession::ADVANCED_KEY) === true` (resets on Login
+  via `ResetAdvancedToggleOnLogin`); Gate 3 the operator typed the exact
   app name `Beatrax` (timing-safe `hash_equals`, so
   client-side enable/disable of the button is purely cosmetic). On
   all-three-pass it dispatches `triple-gate:confirmed` with the command

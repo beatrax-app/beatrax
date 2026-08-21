@@ -12,6 +12,7 @@ return [
     'ok' => 'Gerai',
     'ok_aria' => 'Gerai — patvirtinti PIN kodą',
     'sign_out' => 'Atsijungti',
+    'forgot_pin' => 'Pamiršai PIN kodą? Atsijunk — gali vėl prisijungti su paskyros slaptažodžiu ir nustatyti naują PIN kodą. Duomenys neprarandami.',
 
     'errors' => [
         'pin_length' => 'PIN kodą turi sudaryti bent 6 skaitmenys.',

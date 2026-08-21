@@ -28,8 +28,6 @@ final class CounterpartyProfile extends Component
 
     public string $tab = 'overview';
 
-    public bool $ibanRevealed = false;
-
     public function mount(string $slug, CurrentUser $currentUser, CounterpartyProfileQuery $query): void
     {
         $this->slug = $slug;
@@ -46,11 +44,6 @@ final class CounterpartyProfile extends Component
         if (in_array($tab, $allowed, true)) {
             $this->tab = $tab;
         }
-    }
-
-    public function toggleIban(): void
-    {
-        $this->ibanRevealed = ! $this->ibanRevealed;
     }
 
     public function render(
@@ -76,12 +69,12 @@ final class CounterpartyProfile extends Component
             ->where('id', $profile->id)
             ->firstOrFail();
 
-        $partial = match ($profile->type) {
-            'merchant' => 'counterparties::livewire.profile-tabs.merchant',
-            'personal' => 'counterparties::livewire.profile-tabs.personal',
-            'bank' => 'counterparties::livewire.profile-tabs.bank',
-            'government' => 'counterparties::livewire.profile-tabs.government',
-            'self_account' => 'counterparties::livewire.profile-tabs.self',
+        $partial = match (CounterpartyType::tryFrom($profile->type)) {
+            CounterpartyType::Merchant => 'counterparties::livewire.profile-tabs.merchant',
+            CounterpartyType::Personal => 'counterparties::livewire.profile-tabs.personal',
+            CounterpartyType::Bank => 'counterparties::livewire.profile-tabs.bank',
+            CounterpartyType::Government => 'counterparties::livewire.profile-tabs.government',
+            CounterpartyType::SelfAccount => 'counterparties::livewire.profile-tabs.self',
             default => 'counterparties::livewire.profile-tabs.unknown',
         };
 
@@ -114,7 +107,6 @@ final class CounterpartyProfile extends Component
             'fundingChain' => $query->fundingChainSummary($cpModel),
             'taxYears' => $query->taxYearBreakdown($cpModel),
             'activeTab' => $this->tab,
-            'ibanRevealed' => $this->ibanRevealed,
             'taxState' => $taxState,
         ]);
     }

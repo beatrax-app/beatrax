@@ -28,4 +28,19 @@ final class BankAmountParser
 
         return $sign * ($whole * Money::MINOR_UNITS_PER_MAJOR + $fractional);
     }
+
+    // MT940 writes the decimal as a comma, and a whole amount may carry no
+    // decimal at all or only a single digit — three shapes parseMinor() refuses.
+    // Both the :60:/:62: balance and the :61: line reach it through here.
+    public function parseMt940Minor(string $raw): int
+    {
+        $normalised = str_replace(',', '.', $raw);
+        if (! str_contains($normalised, '.')) {
+            $normalised .= '.00';
+        } elseif (preg_match('/\.\d$/', $normalised) === 1) {
+            $normalised .= '0';
+        }
+
+        return $this->parseMinor($normalised);
+    }
 }

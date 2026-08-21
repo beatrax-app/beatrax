@@ -7,6 +7,7 @@
      ends of the call site and avoids the silent inheritance footgun
      where a child partial picks up a Livewire-component-scope
      property by accident. --}}
+@use('Modules\Chains\Public\Enums\ConfidenceTier')
 @use('Modules\Core\Public\Support\Lang')
 @props(['node', 'fanoutPage'])
 
@@ -18,21 +19,19 @@
     // No hue encoding: confidence is signalled by surface and text weight
     // only, never by a semantic colour.
     $tierClasses = match ($node->confidenceTier) {
-        'Deterministic' => 'bg-white text-slate-900 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-100 dark:ring-slate-700',
-        'Confirmed'     => 'bg-slate-50 text-slate-900 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-100 dark:ring-slate-700',
-        'Candidate'     => 'bg-slate-50 text-slate-500 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:ring-slate-700',
-        default         => 'bg-slate-50 text-slate-500 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:ring-slate-700',
+        ConfidenceTier::Deterministic => 'bg-white text-slate-900 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-100 dark:ring-slate-700',
+        ConfidenceTier::Confirmed     => 'bg-slate-50 text-slate-900 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-100 dark:ring-slate-700',
+        ConfidenceTier::Candidate     => 'bg-slate-50 text-slate-500 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:ring-slate-700',
     };
 
     $tierAria = match ($node->confidenceTier) {
-        'Deterministic' => Lang::get('chains::drawer.confidence_aria.deterministic'),
-        'Confirmed'     => Lang::get('chains::drawer.confidence_aria.confirmed'),
-        'Candidate'     => Lang::get('chains::drawer.confidence_aria.candidate'),
-        default         => Lang::get('chains::drawer.confidence_aria.candidate'),
+        ConfidenceTier::Deterministic => Lang::get('chains::drawer.confidence_aria.deterministic'),
+        ConfidenceTier::Confirmed     => Lang::get('chains::drawer.confidence_aria.confirmed'),
+        ConfidenceTier::Candidate     => Lang::get('chains::drawer.confidence_aria.candidate'),
     };
 
     $cardClasses = 'rounded-lg border border-slate-200 bg-white p-4 space-y-1 dark:bg-slate-950 dark:border-slate-700';
-    if ($node->confidenceTier === 'Candidate') {
+    if ($node->confidenceTier === ConfidenceTier::Candidate) {
         $cardClasses .= ' opacity-60';
     }
 
@@ -70,14 +69,14 @@
                 role="img"
                 aria-label="{{ $tierAria }}"
                 class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $tierClasses }}"
-            >{{ $node->confidenceTier }}</span>
+            >{{ $node->confidenceTier->value }}</span>
         </div>
     </div>
     <p class="text-xs text-slate-500 dark:text-slate-400">
         {{ $node->bookedAt->translatedFormat('d M Y') }} · {{ $node->accountName !== '' ? $node->accountName : '—' }}
     </p>
 
-    @if ($node->confidenceTier === 'Candidate' && $node->chainLinkId !== null)
+    @if ($node->confidenceTier === ConfidenceTier::Candidate && $node->chainLinkId !== null)
         <div class="mt-sm flex items-center gap-sm">
             <button
                 type="button"

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\EmailScan\Internal\OAuth;
 
 use DateTimeImmutable;
-use Illuminate\Contracts\Session\Session;
 use InvalidArgumentException;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;

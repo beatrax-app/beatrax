@@ -22,7 +22,6 @@ return [
     'condition_value_from_aria' => 'Wartość warunku :number (od)',
     'condition_value_to_aria' => 'Wartość warunku :number (do)',
     'to' => 'do',
-    'amount_placeholder' => '0,00',
     'text_placeholder' => 'np. SPOTIFY',
     'remove_condition' => 'Usuń warunek',
     'add_condition' => '+ Dodaj warunek',

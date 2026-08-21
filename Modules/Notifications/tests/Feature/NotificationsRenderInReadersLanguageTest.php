@@ -216,4 +216,3 @@ it('re-renders a nudge s money when the reader switches language', function (): 
     expect($english)->toContain('1,234.56')
         ->and($dutch)->toContain('1.234,56');
 });
-

@@ -140,7 +140,11 @@ Two more properties:
 - Every refusal returns the same `404` body. An unknown token, an expired one,
   one belonging to another user, and one whose ceremony has already finished
   are indistinguishable on purpose — probing this endpoint must teach an
-  attacker nothing beyond "no".
+  attacker nothing beyond "no". That body is a single constant in
+  `Transport\Concerns\AnswersInJson`, shared with the frame route, the pull
+  route and the relay daemon, along with the `rate_limited` body and the
+  per-host bucket key: three routes each writing out their own "no" is how one
+  of them eventually says something the other two do not.
 - The rate limiter runs before the lookup, so a flood is refused on the
   cheapest path and never reaches the database. As on the relay, the bucket key
   drops the ephemeral port so one host is one bucket.

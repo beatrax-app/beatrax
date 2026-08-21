@@ -22,7 +22,6 @@ return [
     'condition_value_from_aria' => 'Vrednost uslova :number (od)',
     'condition_value_to_aria' => 'Vrednost uslova :number (do)',
     'to' => 'do',
-    'amount_placeholder' => '0,00',
     'text_placeholder' => 'npr. SPOTIFY',
     'remove_condition' => 'Ukloni uslov',
     'add_condition' => '+ Dodaj uslov',

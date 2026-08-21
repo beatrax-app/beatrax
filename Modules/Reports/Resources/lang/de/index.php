@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'title' => 'Berichte',
     'page_title' => 'Berichte · Beatrax',
-    'saved_report' => 'gespeicherter Bericht|gespeicherte Berichte',
+    'saved_report' => ':count gespeicherter Bericht|:count gespeicherte Berichte',
     'pinned_count' => 'angeheftet',
     'dismiss' => 'Ausblenden',
 

@@ -69,7 +69,7 @@ return [
     'highlights_shortfall_aria' => ':count aktywne okno niedoboru w ciągu najbliższych :days dni|:count aktywne okna niedoboru w ciągu najbliższych :days dni|:count aktywnych okien niedoboru w ciągu najbliższych :days dni',
     'dips_to' => ':name spada do :amount',
     'on_date_suffix' => ' dnia :date',
-    'shortfall_window' => '1 aktywne okno niedoboru|:count aktywne okna niedoboru|:count aktywnych okien niedoboru',
+    'shortfall_window' => ':count aktywne okno niedoboru|:count aktywne okna niedoboru|:count aktywnych okien niedoboru',
     'lowest_in_30' => 'Najniższe saldo w ciągu 30 dni: :amount',
     'next_ics' => 'Następne rozliczenie ICS: :amount dnia :date',
 ];

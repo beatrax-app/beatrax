@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Public\Actions;
 
-use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
-use Modules\Auth\Internal\Recovery\RecoveryCodeGenerator;
+use Modules\Auth\Internal\Recovery\RecoveryCodeMinter;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -19,13 +18,10 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final class RegenerateRecoveryCodesAction
 {
-    private const RECOVERY_CODE_COUNT = 10;
-
     public function __construct(
         private readonly DatabaseManager $db,
-        private readonly Hasher $hasher,
         private readonly Clock $clock,
-        private readonly RecoveryCodeGenerator $generator,
+        private readonly RecoveryCodeMinter $recoveryCodes,
     ) {}
 
     /**
@@ -61,25 +57,7 @@ final class RegenerateRecoveryCodesAction
                 ->whereNull('used_at')
                 ->update(['used_at' => $now]);
 
-            $codesPlain = [];
-            while (count($codesPlain) < self::RECOVERY_CODE_COUNT) {
-                $code = $this->generator->generate();
-                if (in_array($code, $codesPlain, true)) {
-                    continue;
-                }
-                $codesPlain[] = $code;
-            }
-
-            foreach ($codesPlain as $plainCode) {
-                $this->db->connection()->table('user_recovery_codes')->insert([
-                    'user_id' => $targetUser->id,
-                    'code_hash' => $this->hasher->make($plainCode),
-                    'used_at' => null,
-                    'created_at' => $now,
-                ]);
-            }
-
-            return $codesPlain;
+            return $this->recoveryCodes->issueFor($targetUser->id);
         });
 
         return $codesPlain;

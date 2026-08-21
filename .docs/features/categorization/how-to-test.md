@@ -182,7 +182,7 @@ The behavioural contract for the `Categorization` module.
   `RuleEvaluationOutcome::none()`; the stage degrades to
   `manual($tx)`; the import succeeds.
 - **Memory candidate but counterparty is the empty sentinel** —
-  `NormalizeStage::NO_COUNTERPARTY` short-circuits the memory JOIN; only
+  `CounterpartyKey::NONE` short-circuits the memory JOIN; only
   rule candidates participate in scoring.
 - **Rule with an unknown `field` or `match` value** (e.g. a row that
   somehow bypassed the DB trigger) — silently skipped by the evaluator;

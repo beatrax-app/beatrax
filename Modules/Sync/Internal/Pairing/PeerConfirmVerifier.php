@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Internal\Clock\ZuluTimestamp;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
+use Modules\Sync\Public\Enums\PairingSide;
 
 final class PeerConfirmVerifier
 {
@@ -58,7 +59,7 @@ final class PeerConfirmVerifier
     // actually addressed to it. $peerDeviceId is populated by the SENDER from
     // ITS OWN view of who the recipient is, so on receipt it must equal THIS
     // device's self identity or the frame was never meant for this device.
-    private function localSideForAddressedFrame(\stdClass $row, int $userId, string $peerDeviceId): ?string
+    private function localSideForAddressedFrame(\stdClass $row, int $userId, string $peerDeviceId): ?PairingSide
     {
         $selfDeviceId = $this->db->connection()->table('device_registry')
             ->where('user_id', $userId)
@@ -78,7 +79,7 @@ final class PeerConfirmVerifier
     // own assertions about who it is.
     private function peerSignatureAuthentic(
         \stdClass $row,
-        string $localSide,
+        PairingSide $localSide,
         string $tokenHash,
         string $confirmingDeviceId,
         string $peerDeviceId,
@@ -127,32 +128,30 @@ final class PeerConfirmVerifier
 
     // Reads one of the peer side's columns — whichever side the local device
     // is NOT. Both sides store the same column suffixes under their own prefix.
-    private function peerSideColumn(\stdClass $row, string $localSide, string $suffix): ?string
+    private function peerSideColumn(\stdClass $row, PairingSide $localSide, string $suffix): ?string
     {
-        $prefix = $localSide === 'initiator' ? 'responder_' : 'initiator_';
-        $value = $row->{$prefix.$suffix} ?? null;
+        $value = $row->{$localSide->peerPrefix().$suffix} ?? null;
 
         return is_string($value) ? $value : null;
     }
 
     // The mirror of peerSideColumn(): reads the LOCAL side's own column, used
     // to bind this device's own X25519 into the confirm-signature reconstruction.
-    private function localSideColumn(\stdClass $row, string $localSide, string $suffix): ?string
+    private function localSideColumn(\stdClass $row, PairingSide $localSide, string $suffix): ?string
     {
-        $value = $row->{$localSide.'_'.$suffix} ?? null;
+        $value = $row->{$localSide->columnPrefix().$suffix} ?? null;
 
         return is_string($value) ? $value : null;
     }
 
-    private function peerConfirmContextFor(\stdClass $row, string $localSide): PeerConfirmContext
+    private function peerConfirmContextFor(\stdClass $row, PairingSide $localSide): PeerConfirmContext
     {
-        $localConfirmedColumn = $localSide === 'initiator' ? 'initiator_confirmed_at' : 'responder_confirmed_at';
-        $peerConfirmedColumn = $localSide === 'initiator' ? 'responder_confirmed_at' : 'initiator_confirmed_at';
+        $localConfirmedColumn = $localSide->confirmedAtColumn();
 
         return new PeerConfirmContext(
             row: $row,
             rowId: is_numeric($row->id) ? (int) $row->id : 0,
-            peerConfirmedColumn: $peerConfirmedColumn,
+            peerConfirmedColumn: $localSide->peerConfirmedAtColumn(),
             localConfirmedAt: is_string($row->{$localConfirmedColumn}) ? $row->{$localConfirmedColumn} : null,
         );
     }

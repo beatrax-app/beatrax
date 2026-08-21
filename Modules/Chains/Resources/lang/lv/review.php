@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Pārskatīt ķēdes',
     'heading' => 'Pārskatīt ķēdes',
-    'hint' => 'norāžu|norāde|norādes',
+    'hint' => ':count norāžu|:count norāde|:count norādes',
     'subtitle' => 'Apstipriniet vai noraidiet kandidātu saites, ko ķēžu atrisinātājs nevarēja apstiprināt automātiski.',
 
     'empty_heading' => 'Nav nekā, ko pārskatīt',

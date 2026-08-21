@@ -1821,10 +1821,6 @@ td.date,
         color: var(--color-emerald);
     }
 
-    .preview-section-eyebrow .filtered {
-        color: var(--color-text-faint);
-    }
-
     .preview-section-eyebrow .rose {
         color: var(--color-rose);
     }
@@ -1943,8 +1939,7 @@ td.date,
         font-variant-numeric: tabular-nums;
     }
 
-    .preview-section-empty,
-    .preview-section-filtered {
+    .preview-section-empty {
         font-size: var(--text-xs);
         color: var(--color-text-muted);
         margin: 0 0 var(--space-4);
@@ -3315,6 +3310,17 @@ td.date,
 
     .card-list-item .amount.positive {
         color: var(--color-emerald);
+    }
+
+    /* .safe-screen — a screen that owns the whole viewport, with no bar above
+     * it and none below, so it pads all four seams itself. A screen rendered
+     * inside layouts.app <main> must NOT wear it: .top-bar below already pads
+     * var(--safe-top) and stands in the flow, so a top inset reserves twice. */
+    .safe-screen {
+        padding-top: var(--safe-top);
+        padding-bottom: var(--safe-bottom);
+        padding-left: var(--safe-left);
+        padding-right: var(--safe-right);
     }
 
     /* .top-bar — mobile top bar.

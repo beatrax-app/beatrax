@@ -12,6 +12,7 @@
       $categoryBreakdown Collection<\stdClass>
       $fundingChain      ChainSummary|null
 --}}
+@use('Modules\Ledger\Public\Services\BaseCurrency')
 @use('Modules\Ledger\Public\ValueObjects\Money')
 
 <div class="space-y-6" style="margin-top: var(--space-5);">
@@ -30,7 +31,7 @@
                     @foreach ($categoryBreakdown as $cat)
                         <li style="display: flex; justify-content: space-between; padding: var(--space-1) 0; font-size: var(--text-sm); font-variant-numeric: tabular-nums;">
                             <span>{{ $cat->category_name ?? Lang::get('counterparties::profile.uncategorized') }}</span>
-                            <span>{{ Money::ofMinor(abs((int) $cat->total_minor), 'EUR')->format() }}</span>
+                            <span>{{ Money::ofMinor(abs((int) $cat->total_minor), BaseCurrency::value())->format() }}</span>
                         </li>
                     @endforeach
                 </ul>

@@ -7,6 +7,7 @@ return [
     'native_unlock_failed' => 'Nie udało się odblokować. Wpisz kod PIN.',
     'page_title' => 'Odblokuj · Beatrax',
     'sign_out' => 'Wyloguj się',
+    'forgot_pin' => 'Nie pamiętasz PIN-u? Wyloguj się — możesz zalogować się ponownie hasłem do konta i ustawić nowy PIN. Żadne dane nie zostaną utracone.',
 
     'digits_suffix' => 'wpisanych cyfr',
     'pad_label' => 'Klawiatura PIN',

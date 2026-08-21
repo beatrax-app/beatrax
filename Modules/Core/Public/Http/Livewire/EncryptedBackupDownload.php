@@ -15,6 +15,7 @@ use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SqliteDatabase;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Throwable;
 
@@ -114,6 +115,6 @@ final class EncryptedBackupDownload extends Component
         $default = $config->get('database.default');
 
         return is_string($default)
-            && $config->get('database.connections.'.$default.'.driver') === 'sqlite';
+            && $config->get('database.connections.'.$default.'.driver') === SqliteDatabase::DRIVER;
     }
 }

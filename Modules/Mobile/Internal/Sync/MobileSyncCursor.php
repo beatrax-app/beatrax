@@ -11,7 +11,7 @@ final readonly class MobileSyncCursor
         public int $recordsExpected,
         public int $lastHlcL,
         public int $lastHlcC,
-        public string $phase,
+        public SyncPhase $phase,
         public ?string $reprojectedAt,
     ) {}
 }

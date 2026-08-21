@@ -102,9 +102,9 @@ final class TransactionListQuery
             ->leftJoin('categories', 'transactions.category_id', '=', 'categories.id')
             ->leftJoin('counterparties', 'transactions.counterparty_id', '=', 'counterparties.id')
             ->where('transactions.user_id', $user->id)
-            ->orderByDesc('transactions.posted_at')
-            ->orderByDesc('transactions.id')
             ->select($select);
+
+        TransactionCursor::orderNewestFirst($query);
 
         if ($currency !== null) {
             $query->where('transactions.settled_currency', $currency);

@@ -88,7 +88,7 @@ final class CounterpartyTriage extends Component
             'merchant_name' => $suggestion->suggestedCounterpartyName,
         ], $currentUser->id(), $session);
 
-        $current->type = 'merchant';
+        $current->type = CounterpartyType::Merchant->value;
         $current->display_name = is_string($encrypted['display_name'] ?? null)
             ? $encrypted['display_name']
             : $suggestion->suggestedCounterpartyName;

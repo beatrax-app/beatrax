@@ -19,6 +19,9 @@ Modules/Receipts/
 │   │   └── ChainHintPayload/
 │   │       ├── FundedByCardPayload.php
 │   │       └── RefundOfPayload.php
+│   ├── Enums/
+│   │   ├── ChainHintType.php
+│   │   └── ReceiptConflictChoice.php
 │   ├── Events/
 │   │   ├── ChainHintDetected.php
 │   │   └── ReceiptConflictDetected.php
@@ -78,8 +81,17 @@ Modules/Receipts/
   - `ParsedReceiptDto` — typed receipt structure.
   - `ChainHintPayload/*` — `FundedByCardPayload(cardLast4,
     cardKind)`, `RefundOfPayload(originalChargeRef)`.
+- **Enums/**
+  - `ChainHintType` — `funded_by_card` / `refund_of` /
+    `unknown`; the vocabulary of
+    `raw_payload['chain_hints'][]['hint_type']`, distinct from
+    Chains' own `ChainLinkKind`.
+  - `ReceiptConflictChoice` — `prefer_receipt` /
+    `prefer_first_write`.
 - **Events/**
-  - `ChainHintDetected` — `(transactionId, payload, userId)`.
+  - `ChainHintDetected` — `(sourceTransactionId, hintType,
+    hintPayload, evidence, userId)`; `hintType` is a
+    `ChainHintType`.
   - `ReceiptConflictDetected` — `(conflictId, userId)`.
 - **Pipeline/** — pre-parse layer: MIME reader, header
   profiles, mbox iterator, drop-in blob store, source

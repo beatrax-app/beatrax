@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Livewire\Livewire;
 use Modules\Auth\Internal\Http\Livewire\SignupPage;
 use Modules\Auth\Models\UserRecoveryCode;
+use Modules\Auth\Public\Contracts\PasswordPolicy;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
 
@@ -139,4 +140,35 @@ it('offers a way back to the screen that led here', function (): void {
 
     expect($html)->toContain(route('desktop.welcome'))
         ->and($html)->toContain(Lang::get('core::components.topbar.back'));
+});
+
+// The checklist the browser ticks and the gate SignupAction enforces are one
+// number, read from one place. When they were two, the client could wave
+// through a passphrase the server then rejected, which is worse than drawing
+// no checklist at all.
+it('draws the checklist against the same minimum the signup gate enforces', function (): void {
+    $minimum = PasswordPolicy::MINIMUM_LENGTH;
+
+    $this->get('/signup')
+        ->assertOk()
+        ->assertSee("passwordStrength({$minimum}, 'password', 'passwordConfirmation')", escape: false);
+
+    Livewire::test(SignupPage::class)
+        ->set('username', 'alice')
+        ->set('password', str_repeat('a', $minimum - 1))
+        ->set('passwordConfirmation', str_repeat('a', $minimum - 1))
+        ->call('submit')
+        ->assertNoRedirect()
+        ->assertHasErrors(['password']);
+
+    expect(User::query()->count())->toBe(0);
+
+    Livewire::test(SignupPage::class)
+        ->set('username', 'alice')
+        ->set('password', str_repeat('a', $minimum))
+        ->set('passwordConfirmation', str_repeat('a', $minimum))
+        ->call('submit')
+        ->assertHasNoErrors();
+
+    expect(User::query()->where('username', 'alice')->exists())->toBeTrue();
 });

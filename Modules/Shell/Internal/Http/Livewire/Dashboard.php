@@ -41,20 +41,6 @@ final class Dashboard extends Component
         $this->periodStartStr = null;
     }
 
-    // wire:poll.5s target. Clearing the row (e.g. retried via /horizon/failed)
-    // hides the toast on the next tick.
-    public function refreshFailedChainResolution(
-        DatabaseManager $db,
-        CurrentUser $currentUser,
-    ): void {
-        $user = $currentUser->user();
-        $this->failedChainResolutionExists = $db->connection()
-            ->table('chain_resolution_runs')
-            ->where('user_id', $user->id)
-            ->where('status', 'failed')
-            ->exists();
-    }
-
     // Session-scoped, so a refresh keeps the toast hidden but a fresh login
     // resets it and the toast re-surfaces while any inbox is needs_reauth.
     public function dismissReauthToast(
@@ -94,8 +80,6 @@ final class Dashboard extends Component
 
         $this->reauthToastDismissed = $session->has('reauth_toast_dismissed_at');
 
-        // Populate on initial mount so the toast surfaces immediately
-        // without waiting for the first wire:poll tick.
         $this->failedChainResolutionExists = $db->connection()
             ->table('chain_resolution_runs')
             ->where('user_id', $user->id)

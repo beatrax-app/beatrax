@@ -12,9 +12,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\JobRunStatus;
 use Modules\Import\Internal\Dto\ImportRowIssue;
-use Modules\Import\Internal\Enums\ImportFailureReason;
 use Modules\Import\Internal\Enums\ImportIssueKind;
-use Modules\Import\Internal\Enums\PreviewRowStatus;
 use Modules\Import\Internal\Exceptions\PreviewExpiredException;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Contracts\AppliesEnrichments;
@@ -22,6 +20,7 @@ use Modules\Import\Public\Contracts\CapturesImportForSync;
 use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Import\Public\Dto\ImportConfirmResult;
 use Modules\Import\Public\Dto\ImportPreviewResult;
+use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Enums\ImportRunStatus;
@@ -85,9 +84,9 @@ final class ConfirmImport implements ConfirmsImports
             // now that the failure is no longer smuggled in as a row.
             $errorCount = $preview->fileFailureReason === null ? 0 : 1;
             foreach ($preview->rows as $row) {
-                if ($row->status === PreviewRowStatus::Error->value) {
+                if ($row->status === PreviewRowStatus::Error) {
                     $errorCount++;
-                } elseif ($row->status === PreviewRowStatus::Duplicate->value) {
+                } elseif ($row->status === PreviewRowStatus::Duplicate) {
                     $previewDuplicateCount++;
                 }
             }
@@ -183,7 +182,7 @@ final class ConfirmImport implements ConfirmsImports
             $issues[] = new ImportRowIssue(
                 kind: ImportIssueKind::FileError,
                 rowIndex: $preview->fileFailureRowIndex,
-                reason: ImportFailureReason::tryFrom($preview->fileFailureReason),
+                reason: $preview->fileFailureReason,
                 detail: $preview->fileFailureDetail,
             );
         }
@@ -191,16 +190,16 @@ final class ConfirmImport implements ConfirmsImports
         $errorsKept = 0;
         $duplicatesKept = 0;
         foreach ($preview->rows as $row) {
-            if ($row->status === PreviewRowStatus::Error->value && $errorsKept < self::MAX_STORED_ISSUES_PER_KIND) {
+            if ($row->status === PreviewRowStatus::Error && $errorsKept < self::MAX_STORED_ISSUES_PER_KIND) {
                 $issues[] = new ImportRowIssue(
                     kind: ImportIssueKind::RowError,
                     rowIndex: $row->rowIndex,
-                    reason: $row->errorReason === null ? null : ImportFailureReason::tryFrom($row->errorReason),
+                    reason: $row->errorReason,
                     detail: $row->errorDetail,
                 );
                 $errorsKept++;
             }
-            if ($row->status === PreviewRowStatus::Duplicate->value && $duplicatesKept < self::MAX_STORED_ISSUES_PER_KIND) {
+            if ($row->status === PreviewRowStatus::Duplicate && $duplicatesKept < self::MAX_STORED_ISSUES_PER_KIND) {
                 $issues[] = new ImportRowIssue(
                     kind: ImportIssueKind::Duplicate,
                     rowIndex: $row->rowIndex,

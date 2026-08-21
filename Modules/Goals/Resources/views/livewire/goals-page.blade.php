@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Goals\Internal\Enums\GoalProgressState')
 {{--
     /goals page — list savings goals with 3-state progress bars and projected-
     date copy; Flux create/edit modal with inline field validation; Edit /
@@ -66,19 +67,17 @@
             @foreach ($rows as $row)
                 @php
                     $pct = $row->percentComplete();
-                    $phoneBarWidth = $pct === 0 ? 0 : max(2, $pct);
-                    $phoneCompleted = $row->status === \Modules\Goals\Public\Enums\GoalStatus::Completed->value;
                 @endphp
                 <li class="card-list-item">
                     <div class="flex-1 min-w-0">
                         <p class="primary truncate">{{ $row->name }}</p>
                         <p class="secondary">
                             {{ $fmt($row->contributedMinor, $row->currency) }} / {{ $fmt($row->targetMinor, $row->currency) }}
-                            @if ($row->progressState === 'overdue')
+                            @if ($row->progressState === GoalProgressState::Overdue->value)
                                 · <span class="text-amber-600 dark:text-amber-400">{{ Lang::get('goals::messages.status.overdue') }}</span>
-                            @elseif ($row->progressState === 'reached')
+                            @elseif ($row->progressState === GoalProgressState::Reached->value)
                                 · <span class="text-emerald-600 dark:text-emerald-400">{{ Lang::get('goals::messages.status.reached') }}</span>
-                            @elseif ($phoneCompleted)
+                            @elseif ($row->isCompleted())
                                 {{-- Completed lived only on the desktop badge, so a
                                      finished goal read as an unfinished one at 375pt. --}}
                                 · <span class="text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.status.completed') }}</span>
@@ -88,37 +87,19 @@
                         {{-- A bar and a date are one line each and fit at 375pt.
                              Dropping them left the phone with a bare percentage
                              and no sign of the target date the form insisted on. --}}
-                        @unless ($phoneCompleted)
+                        @unless ($row->isCompleted())
                             <div class="mt-2">
                                 <x-core::progress-bar
-                                    :value="$phoneBarWidth"
-                                    :tone="$row->progressState === 'overdue' ? 'warning' : 'positive'"
+                                    :value="$row->barWidth()"
+                                    :tone="$row->progressState === GoalProgressState::Overdue->value ? 'warning' : 'positive'"
                                     :label="Lang::get('goals::messages.progress.aria', ['name' => $row->name, 'pct' => $pct])"
                                 />
                             </div>
                         @endunless
 
-                        @if ($row->targetDate !== '')
-                            <p class="secondary mt-1 text-xs">
-                                {{ Lang::get('goals::messages.card.target_date', ['date' => \Carbon\CarbonImmutable::parse($row->targetDate)->isoFormat('D MMM YYYY')]) }}
-                            </p>
-                        @endif
+                        @include('goals::partials.goal-target-date', ['row' => $row, 'class' => 'secondary mt-1 text-xs'])
 
-                        <p class="secondary mt-1 text-xs">
-                            @if ($phoneCompleted || $row->progressState === 'reached')
-                                {{ Lang::get('goals::messages.projection.target_reached') }}
-                            @elseif ($row->projectedFinishDate === null && $row->contributedMinor <= 0)
-                                {{ Lang::get('goals::messages.projection.add_contributions') }}
-                            @elseif ($row->projectedFinishDate === null && $row->projectionStalled)
-                                {{ Lang::get('goals::messages.projection.no_recent_contributions') }}
-                            @elseif ($row->projectedFinishDate === null)
-                                {{ Lang::get('goals::messages.projection.not_enough_history') }}
-                            @elseif ($row->projectionBeyondHorizon)
-                                {{ Lang::get('goals::messages.projection.est', ['date' => \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->isoFormat('D MMM YYYY')]) }}
-                            @else
-                                {{ Lang::get('goals::messages.projection.projected', ['date' => \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->isoFormat('D MMM YYYY')]) }}
-                            @endif
-                        </p>
+                        @include('goals::partials.goal-projection-line', ['row' => $row, 'class' => 'secondary mt-1 text-xs'])
                     </div>
                     <span class="amount">{{ $pct }}%</span>
                     {{-- Row actions — always visible on phone. Drawn
@@ -139,7 +120,7 @@
                     {{-- Complete and archive existed only in the desktop kebab,
                          which the phone list hides — so a goal could be created
                          and edited on a phone but never finished or put away. --}}
-                    @if ($row->status !== \Modules\Goals\Public\Enums\GoalStatus::Completed->value)
+                    @if (! $row->isCompleted())
                         <x-core::emoji-action
                             :label="Lang::get('goals::messages.actions.mark_complete')"
                             wire:click="markComplete({{ $row->id }})"
@@ -175,10 +156,9 @@
             @foreach ($rows as $row)
                 @php
                     $pct = $row->percentComplete();
-                    $barWidth = $pct === 0 ? 0 : max(2, $pct);
-                    $isReached = $row->progressState === 'reached';
-                    $isOverdue = $row->progressState === 'overdue';
-                    $isCompleted = $row->status === \Modules\Goals\Public\Enums\GoalStatus::Completed->value;
+                    $isReached = $row->progressState === GoalProgressState::Reached->value;
+                    $isOverdue = $row->progressState === GoalProgressState::Overdue->value;
+                    $isCompleted = $row->isCompleted();
                 @endphp
                 <li
                     class="rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700 {{ $isReached || $isCompleted ? 'border-l-[3px] border-l-emerald-500' : '' }}"
@@ -200,13 +180,9 @@
                     {{-- Progress bar --}}
                     @if (! $isCompleted)
                         <div class="mt-3">
-                            {{-- $barWidth, not $pct: the 2%-minimum sliver is a
-                                 call-site rule, so a goal with a real but tiny
-                                 share still draws something while a zero draws
-                                 nothing. --}}
                             <x-core::progress-bar
-                                :value="$barWidth"
-                                :tone="$row->progressState === 'overdue' ? 'warning' : 'positive'"
+                                :value="$row->barWidth()"
+                                :tone="$row->progressState === GoalProgressState::Overdue->value ? 'warning' : 'positive'"
                                 :label="Lang::get('goals::messages.progress.aria', ['name' => $row->name, 'pct' => $pct])"
                             />
                         </div>
@@ -219,32 +195,10 @@
                             <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">/</span>
                             {{ $fmt($row->targetMinor, $row->currency) }}
                         </p>
-                        <p class="shrink-0 text-xs text-slate-500 dark:text-slate-400">
-                            @if ($isCompleted || $isReached)
-                                {{ Lang::get('goals::messages.projection.target_reached') }}
-                            @elseif ($row->projectedFinishDate === null && $row->contributedMinor <= 0)
-                                {{ Lang::get('goals::messages.projection.add_contributions') }}
-                            @elseif ($row->projectedFinishDate === null && $row->projectionStalled)
-                                {{ Lang::get('goals::messages.projection.no_recent_contributions') }}
-                            @elseif ($row->projectedFinishDate === null)
-                                {{ Lang::get('goals::messages.projection.not_enough_history') }}
-                            @elseif ($row->projectionBeyondHorizon)
-                                {{ Lang::get('goals::messages.projection.est', ['date' => \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->isoFormat('D MMM YYYY')]) }}
-                                <span class="text-slate-400 dark:text-slate-500">{{ Lang::get('goals::messages.projection.projection_note') }}</span>
-                            @else
-                                {{ Lang::get('goals::messages.projection.projected', ['date' => \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->isoFormat('D MMM YYYY')]) }}
-                            @endif
-                        </p>
+                        @include('goals::partials.goal-projection-line', ['row' => $row, 'class' => 'shrink-0 text-xs text-slate-500 dark:text-slate-400'])
                     </div>
 
-                    {{-- The date the form refuses to save a goal without. It was
-                         rendered on neither card, so the only way back to it was
-                         reopening the edit sheet. --}}
-                    @if ($row->targetDate !== '')
-                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                            {{ Lang::get('goals::messages.card.target_date', ['date' => \Carbon\CarbonImmutable::parse($row->targetDate)->isoFormat('D MMM YYYY')]) }}
-                        </p>
-                    @endif
+                    @include('goals::partials.goal-target-date', ['row' => $row, 'class' => 'mt-1 text-xs text-slate-500 dark:text-slate-400'])
 
                     {{-- Archive micro-confirm or footer actions --}}
                     @if ($archivingGoalId === $row->id)
@@ -365,10 +319,12 @@
                     size="base"
                     wire:model="name"
                     :placeholder="Lang::get('goals::messages.form.name_placeholder')"
+                    :aria-invalid="$errorName !== '' ? 'true' : null"
+                    :aria-describedby="$errorName !== '' ? 'goal-name-sheet-error' : null"
                     style="font-size: 16px;"
                 />
                 @if ($errorName !== '')
-                    <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorName }}</p>
+                    <p id="goal-name-sheet-error" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorName }}</p>
                 @endif
             </div>
 
@@ -392,10 +348,12 @@
                     inputmode="decimal"
                     wire:model="targetAmount"
                     :placeholder="Lang::get('core::components.amount_placeholder')"
+                    :aria-invalid="$errorAmount !== '' ? 'true' : null"
+                    :aria-describedby="$errorAmount !== '' ? 'goal-amount-sheet-error' : null"
                     style="font-size: 16px; font-variant-numeric: tabular-nums;"
                 />
                 @if ($errorAmount !== '')
-                    <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
+                    <p id="goal-amount-sheet-error" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorAmount }}</p>
                 @endif
             </div>
 
@@ -404,9 +362,11 @@
                 <x-core::date-input
                     field-id="goal-date-sheet"
                     wire:model="targetDate"
+                    :aria-invalid="$errorDate !== '' ? 'true' : null"
+                    :aria-describedby="$errorDate !== '' ? 'goal-date-sheet-error' : null"
                 />
                 @if ($errorDate !== '')
-                    <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorDate }}</p>
+                    <p id="goal-date-sheet-error" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorDate }}</p>
                 @endif
             </div>
 

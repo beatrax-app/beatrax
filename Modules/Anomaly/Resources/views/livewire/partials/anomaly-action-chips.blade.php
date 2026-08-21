@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Enums\SnoozeWindow')
 @use('Modules\Core\Public\Support\Lang')
 {{--
     Anomaly action chips (Open tab). Four chips in UI-SPEC order:
@@ -9,7 +10,6 @@
 
     Variables in scope:
       - $alert : AnomalyAlertDto
-      - $snoozeTargets : array<'1w'|'1m'|'3m', string ISO8601>
       - $primaryAcknowledge : bool — emerald primary chip if true
       - $stacked : bool — phone disclosure (full-width ≥44px) vs inline
 --}}
@@ -47,9 +47,9 @@
         aria-label="{{ Lang::get('anomaly::alerts.chips.snooze_options') }}"
         class="absolute right-0 z-10 mt-1 w-48 rounded-md border border-slate-200 bg-white p-2 text-xs shadow-lg dark:bg-slate-950 dark:border-slate-700"
     >
-        <button type="button" role="menuitem" wire:click="snoozeAnomaly('{{ $alert->anomalyAlertId }}', '{{ $snoozeTargets['1w'] }}')" x-on:click="open = false" class="block w-full px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900">{{ Lang::get('anomaly::alerts.chips.snooze_1w') }}</button>
-        <button type="button" role="menuitem" wire:click="snoozeAnomaly('{{ $alert->anomalyAlertId }}', '{{ $snoozeTargets['1m'] }}')" x-on:click="open = false" class="block w-full px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900">{{ Lang::get('anomaly::alerts.chips.snooze_1m') }}</button>
-        <button type="button" role="menuitem" wire:click="snoozeAnomaly('{{ $alert->anomalyAlertId }}', '{{ $snoozeTargets['3m'] }}')" x-on:click="open = false" class="block w-full px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900">{{ Lang::get('anomaly::alerts.chips.snooze_3m') }}</button>
+        @foreach (SnoozeWindow::cases() as $window)
+            <button type="button" role="menuitem" wire:click="snoozeAnomaly('{{ $alert->anomalyAlertId }}', '{{ $snoozeTargets[$window->value] }}')" x-on:click="open = false" class="block w-full px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900">{{ Lang::get($window->labelKey('anomaly::alerts.chips')) }}</button>
+        @endforeach
     </div>
 </div>
 

@@ -18,6 +18,7 @@ use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\LockStore;
+use Modules\Core\Public\Support\RowChunk;
 use Psr\Log\LoggerInterface;
 
 final class PruneNotificationsJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
@@ -32,7 +33,7 @@ final class PruneNotificationsJob implements ShouldBeUniqueUntilProcessing, Shou
     // matches). A constant rather than config so a user cannot widen it.
     private const int RETENTION_DAYS = 365;
 
-    private const int CHUNK_SIZE = 500;
+    private const int CHUNK_SIZE = RowChunk::DEFAULT_SIZE;
 
     public function __construct(
         public readonly int $userId,

@@ -9,6 +9,7 @@
      listener dispatches `modal-show` with that literal name, mirroring
      the chain-drawer fix that removed the Alpine-vs-wire race. --}}
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\DevMode\Internal\Enums\ArgType')
 <div>
     <flux:modal name="command-args" class="md:w-lg">
         <div class="space-y-5">
@@ -71,7 +72,7 @@
                                 @endif
                             </label>
 
-                            @if ($arg->type === 'boolean')
+                            @if ($arg->type === ArgType::Boolean)
                                 {{-- :x-init, not @if inside the tag: a Blade directive
                                      between a component tag's attributes stops Blade
                                      matching the tag at all, and it ships as dead HTML. --}}
@@ -82,7 +83,7 @@
                                     :x-init="$idx === 0 ? '$nextTick(() => $el.focus())' : null"
                                     data-testid="arg-input-{{ $arg->name }}"
                                 />
-                            @elseif ($arg->type === 'select' && is_array($arg->options))
+                            @elseif ($arg->type === ArgType::Select && is_array($arg->options))
                                 <select
                                     id="{{ $fieldId }}"
                                     wire:model.live="values.{{ $arg->name }}"

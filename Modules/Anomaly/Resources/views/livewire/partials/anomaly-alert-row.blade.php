@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\DriftAlerts\Public\Enums\DriftPageTab')
 {{--
     A single anomaly alert row — one alert per transaction, possibly
     multi-reason. Cloned from drift-alert-row but re-shaped for a
@@ -13,7 +14,7 @@
 
     Variables in scope:
       - $alert : AnomalyAlertDto
-      - $tab : 'open' | 'history' | 'dismissed'
+      - $tab : DriftPageTab
       - $fmt($money) : currency-aware Money formatter
       - $tintFor($alert) : direction-aware Tailwind text-color class
       - $snoozeTargets : array<'1w'|'1m'|'3m', string ISO8601>
@@ -29,14 +30,6 @@
     $latestMinor = $alert->latestAmount->toMinor();
     $baselineMinor = $alert->baselineAmount->toMinor();
     $upArrow = abs($latestMinor) >= abs($baselineMinor);
-
-    // Canonical reason labels. Unknown reasons fall through with a
-    // titleized fallback so a future detector still renders.
-    $reasonLabels = [
-        'large' => Lang::get('anomaly::alerts.reasons.large'),
-        'first_time' => Lang::get('anomaly::alerts.reasons.first_time'),
-        'duplicate' => Lang::get('anomaly::alerts.reasons.duplicate'),
-    ];
 @endphp
 
 <x-core::card padding="tight">
@@ -54,7 +47,7 @@
                 @endif
                 <span class="font-medium text-slate-900 dark:text-slate-100">{{ $alert->displayName !== '' ? $alert->displayName : Lang::get('anomaly::alerts.unknown_merchant') }}</span>
                 @foreach ($alert->reasons as $reason)
-                    @php $label = $reasonLabels[$reason] ?? ucwords(str_replace('_', ' ', $reason)); @endphp
+                    @php $label = Lang::get('anomaly::alerts.reasons.'.$reason); @endphp
                     @if ($reason === 'first_time')
                         <span
                             role="img"
@@ -88,7 +81,7 @@
             </p>
         </div>
 
-        @if ($tab === 'open')
+        @if ($tab === DriftPageTab::Open)
             @php $primaryAcknowledge = count($alert->reasons) <= 1; @endphp
             {{-- Desktop: inline action chips. Phone (<640px): collapsed
                  into a per-row <details> disclosure with full-width

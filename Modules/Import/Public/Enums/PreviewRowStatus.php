@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Import\Internal\Enums;
+namespace Modules\Import\Public\Enums;
 
 enum PreviewRowStatus: string
 {

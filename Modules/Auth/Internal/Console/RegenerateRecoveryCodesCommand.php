@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace Modules\Auth\Internal\Console;
 
 use Illuminate\Console\Command;
-use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Database\DatabaseManager;
-use Modules\Auth\Internal\Recovery\RecoveryCodeGenerator;
-use Modules\Auth\Models\UserRecoveryCode;
+use Modules\Auth\Internal\Recovery\RecoveryCodeMinter;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 
@@ -16,8 +14,6 @@ use Modules\Core\Public\Contracts\Clock;
 // old sheet burned and no fresh codes issued.
 class RegenerateRecoveryCodesCommand extends Command
 {
-    private const RECOVERY_CODE_COUNT = 10;
-
     /** @var string */
     protected $signature = 'beatrax:regenerate-recovery-codes {username : Username whose recovery codes to rotate}';
 
@@ -26,8 +22,7 @@ class RegenerateRecoveryCodesCommand extends Command
 
     public function __construct(
         private readonly DatabaseManager $db,
-        private readonly Hasher $hasher,
-        private readonly RecoveryCodeGenerator $codeGenerator,
+        private readonly RecoveryCodeMinter $recoveryCodes,
         private readonly Clock $clock,
     ) {
         parent::__construct();
@@ -63,25 +58,7 @@ class RegenerateRecoveryCodesCommand extends Command
                 ->whereNull('used_at')
                 ->update(['used_at' => $now]);
 
-            $codesPlain = [];
-            while (count($codesPlain) < self::RECOVERY_CODE_COUNT) {
-                $code = $this->codeGenerator->generate();
-                if (in_array($code, $codesPlain, true)) {
-                    continue;
-                }
-                $codesPlain[] = $code;
-            }
-
-            foreach ($codesPlain as $plainCode) {
-                UserRecoveryCode::query()->create([
-                    'user_id' => $user->id,
-                    'code_hash' => $this->hasher->make($plainCode),
-                    'used_at' => null,
-                    'created_at' => $now,
-                ]);
-            }
-
-            return $codesPlain;
+            return $this->recoveryCodes->issueFor($user->id);
         });
 
         $this->info("Regenerated {$user->username} recovery codes. Record them now — they will not be shown again:");

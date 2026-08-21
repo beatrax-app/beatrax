@@ -10,6 +10,7 @@ use Illuminate\Database\Query\Builder;
 use Modules\Chains\Public\Dto\ChainTree;
 use Modules\Chains\Public\Dto\ChainTreeNode;
 use Modules\Chains\Public\Enums\ChainLinkState;
+use Modules\Chains\Public\Enums\ConfidenceTier;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
@@ -40,9 +41,14 @@ final class ChainTreeWalker
             throw new NotFoundHttpException('Transaction not found.');
         }
 
+        // MAX_DEPTH caps how deep the walk goes, nothing caps how wide: an
+        // ics_bulk_settle chain fans out to every card expense in the period.
+        // So the account names come back once, not once per node.
+        $accountNames = $this->accountNames($user);
+
         $rootId = self::toInt($rootRow->id);
         $nodes = [];
-        $nodes[] = $this->makeNode($rootRow, null, 'root', 'Confirmed', $user);
+        $nodes[] = $this->makeNode($rootRow, null, 'root', ConfidenceTier::Confirmed, $user, $accountNames);
 
         $frontier = [$rootId];
         $visited = [$rootId => true];
@@ -51,7 +57,7 @@ final class ChainTreeWalker
         // Both directions: a forward-only walk found nothing whenever the user
         // opened the drawer on a paypal_funding chain's ASN (the `to`) side.
         while ($frontier !== [] && $depth < self::MAX_DEPTH) {
-            $frontier = $this->expandFrontier($frontier, $visited, $nodes, $user);
+            $frontier = $this->expandFrontier($frontier, $visited, $nodes, $user, $accountNames);
             $depth++;
         }
 
@@ -65,9 +71,10 @@ final class ChainTreeWalker
      * @param  list<int>  $frontier
      * @param  array<int, true>  $visited
      * @param  list<ChainTreeNode>  $nodes
+     * @param  array<int, string>  $accountNames
      * @return list<int>
      */
-    private function expandFrontier(array $frontier, array &$visited, array &$nodes, User $user): array
+    private function expandFrontier(array $frontier, array &$visited, array &$nodes, User $user, array $accountNames): array
     {
         $links = $this->db->connection()->table('chain_links')
             ->where('user_id', $user->id)
@@ -79,16 +86,24 @@ final class ChainTreeWalker
             ->orderByDesc('confidence')
             ->get();
 
+        // Claiming every partner first keeps the confidence-ordered link walk
+        // and its visited bookkeeping intact, and leaves one whereIn to fetch
+        // the level's display rows with.
         $nextFrontier = [];
+        $claimed = [];
         foreach ($links as $link) {
-            /** @var stdClass $link */
             $partnerId = $this->linkPartnerId($link, $visited);
             if ($partnerId === null || isset($visited[$partnerId])) {
                 continue;
             }
             $visited[$partnerId] = true;
             $nextFrontier[] = $partnerId;
-            $this->appendPartnerNode($nodes, $link, $partnerId, $user);
+            $claimed[] = ['link' => $link, 'partner_id' => $partnerId];
+        }
+
+        $rows = $this->fetchTransactionDisplayRows($nextFrontier, $user);
+        foreach ($claimed as $claim) {
+            $this->appendPartnerNode($nodes, $claim['link'], $rows[$claim['partner_id']] ?? null, $accountNames, $user);
         }
 
         return $nextFrontier;
@@ -113,10 +128,10 @@ final class ChainTreeWalker
 
     /**
      * @param  list<ChainTreeNode>  $nodes
+     * @param  array<int, string>  $accountNames
      */
-    private function appendPartnerNode(array &$nodes, stdClass $link, int $partnerId, User $user): void
+    private function appendPartnerNode(array &$nodes, stdClass $link, ?stdClass $partnerRow, array $accountNames, User $user): void
     {
-        $partnerRow = $this->fetchTransactionDisplayRow($partnerId, $user);
         if ($partnerRow === null) {
             return;
         }
@@ -133,24 +148,28 @@ final class ChainTreeWalker
             self::toString($link->kind),
             $confidenceTier,
             $user,
+            $accountNames,
         );
     }
 
-    private function confidenceTier(string $state, string $resolver, float $confidence): string
+    private function confidenceTier(string $state, string $resolver, float $confidence): ConfidenceTier
     {
         if ($state === ChainLinkState::Confirmed->value && $resolver === 'auto' && $confidence === 1.0) {
-            return 'Deterministic';
+            return ConfidenceTier::Deterministic;
         }
         if ($state === ChainLinkState::Confirmed->value) {
-            return 'Confirmed';
+            return ConfidenceTier::Confirmed;
         }
 
-        return 'Candidate';
+        return ConfidenceTier::Candidate;
     }
 
-    private function makeNode(stdClass $row, ?int $chainLinkId, string $kind, string $tier, User $user): ChainTreeNode
+    /**
+     * @param  array<int, string>  $accountNames
+     */
+    private function makeNode(stdClass $row, ?int $chainLinkId, string $kind, ConfidenceTier $tier, User $user, array $accountNames): ChainTreeNode
     {
-        $accountName = $this->resolveAccountName(self::toInt($row->account_id ?? null), $user);
+        $accountName = $accountNames[self::toInt($row->account_id ?? null)] ?? '';
         $currency = self::toString($row->settled_currency ?? null);
         if ($currency === '') {
             $currency = self::toString($row->currency ?? null);
@@ -178,9 +197,39 @@ final class ChainTreeWalker
     // path never issues a per-node lookup.
     private function fetchTransactionDisplayRow(int $transactionId, User $user): ?stdClass
     {
-        $row = $this->db->connection()->table('transactions')
-            ->leftJoin('counterparties', 'transactions.counterparty_id', '=', 'counterparties.id')
+        $row = $this->displayRowQuery($user)
             ->where('transactions.id', $transactionId)
+            ->first();
+
+        return $row instanceof stdClass ? $row : null;
+    }
+
+    /**
+     * @param  list<int>  $transactionIds
+     * @return array<int, stdClass>
+     */
+    private function fetchTransactionDisplayRows(array $transactionIds, User $user): array
+    {
+        if ($transactionIds === []) {
+            return [];
+        }
+
+        $rows = $this->displayRowQuery($user)
+            ->whereIn('transactions.id', $transactionIds)
+            ->get();
+
+        $byId = [];
+        foreach ($rows as $row) {
+            $byId[self::toInt($row->id)] = $row;
+        }
+
+        return $byId;
+    }
+
+    private function displayRowQuery(User $user): Builder
+    {
+        return $this->db->connection()->table('transactions')
+            ->leftJoin('counterparties', 'transactions.counterparty_id', '=', 'counterparties.id')
             ->where('transactions.user_id', $user->id)
             ->select([
                 'transactions.id',
@@ -192,27 +241,25 @@ final class ChainTreeWalker
                 'transactions.booked_at',
                 'transactions.account_id',
                 self::COUNTERPARTY_SLUG,
-            ])
-            ->first();
-
-        return $row instanceof stdClass ? $row : null;
+            ]);
     }
 
-    private function resolveAccountName(int $accountId, User $user): string
+    /**
+     * @return array<int, string> keyed by account id; an id absent here is one the
+     *                            user does not own, and its node shows no account name
+     */
+    private function accountNames(User $user): array
     {
-        if ($accountId === 0) {
-            return '';
-        }
-        $row = $this->db->connection()->table('accounts')
-            ->where('id', $accountId)
+        $rows = $this->db->connection()->table('accounts')
             ->where('user_id', $user->id)
-            ->first(['name']);
+            ->get(['id', 'name']);
 
-        if ($row === null) {
-            return '';
+        $names = [];
+        foreach ($rows as $row) {
+            $names[self::toInt($row->id)] = self::toString($row->name);
         }
 
-        return self::toString($row->name);
+        return $names;
     }
 
     private function decryptCounterpartyName(?string $raw, int $userId): string

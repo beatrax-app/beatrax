@@ -3,12 +3,14 @@
 declare(strict_types=1);
 
 use Livewire\Livewire;
+use Modules\Chains\Models\ChainResolutionRun;
 use Modules\Core\Models\User;
 use Modules\Import\Internal\Http\Livewire\PreviewWizard;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
-use Modules\Chains\Models\ChainResolutionRun;
+use Modules\Import\Public\Enums\ImportFailureReason;
+use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 
@@ -53,7 +55,7 @@ it('reports a file it could not read as a failure rather than as one row of dash
     $preview = previewOf($this->fixtureUser, PREVIEW_UNREADABLE_FIXTURE);
 
     expect($preview->rows)->toBe([]);
-    expect($preview->fileFailureReason)->toBe('file_unreadable');
+    expect($preview->fileFailureReason)->toBe(ImportFailureReason::FileUnreadable);
 
     $html = Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])
         ->assertSee('This file could not be read')
@@ -88,9 +90,9 @@ it('says a file was only read part-way instead of presenting the truncated impor
     // Six data rows in the file; the fourth stops the reader, so three arrive
     // and rows five and six are absent rather than present-and-failed.
     expect($preview->rows)->toHaveCount(3);
-    expect($preview->fileFailureReason)->toBe('file_unreadable');
+    expect($preview->fileFailureReason)->toBe(ImportFailureReason::FileUnreadable);
     foreach ($preview->rows as $row) {
-        expect($row->status)->toBe('new');
+        expect($row->status)->toBe(PreviewRowStatus::NewRow);
     }
 
     Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])

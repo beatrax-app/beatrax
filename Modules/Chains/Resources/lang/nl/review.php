@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Ketens beoordelen',
     'heading' => 'Ketens beoordelen',
-    'hint' => 'hint|hints',
+    'hint' => ':count hint|:count hints',
     'subtitle' => 'Bevestig of wijs kandidaatkoppelingen af die de keten-resolver niet automatisch kon bevestigen.',
 
     'empty_heading' => 'Niets te beoordelen',

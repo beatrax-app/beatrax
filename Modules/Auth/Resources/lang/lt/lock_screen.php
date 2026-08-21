@@ -7,6 +7,7 @@ return [
     'native_unlock_failed' => 'Nepavyko atrakinti. Vietoj to įvesk PIN kodą.',
     'page_title' => 'Atrakinti · Beatrax',
     'sign_out' => 'Atsijungti',
+    'forgot_pin' => 'Pamiršai PIN kodą? Atsijunk — gali vėl prisijungti su paskyros slaptažodžiu ir nustatyti naują PIN kodą. Duomenys neprarandami.',
 
     'digits_suffix' => 'įvesta skaitmenų',
     'pad_label' => 'PIN kodo klaviatūra',

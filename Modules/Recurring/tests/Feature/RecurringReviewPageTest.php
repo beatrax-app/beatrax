@@ -5,6 +5,8 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Enums\SnoozeWindow;
+use Modules\Core\Public\Support\Lang;
 use Modules\Recurring\Internal\Http\Livewire\RecurringReviewPage;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Public\Actions\ApproveRecurringSeries;
@@ -203,4 +205,66 @@ it('keeps the review row within phone width instead of pinning it to a scroller'
         // Four actions cannot sit on one 343px line, so the cluster has to wrap
         // rather than refuse to compress.
         ->and($row)->toContain('flex flex-wrap items-center gap-2');
+});
+
+// One @foreach over SnoozeWindow replaced three hand-written buttons; this
+// holds it to what they emitted — bare-integer series id, this module's own
+// label keys, and no menuitem role.
+it('draws a snooze button for every window, wired the way the hand-written three were', function (): void {
+    $series = rrpSeries($this->user, 'pending', 'rrp::render-snooze');
+
+    $content = (string) $this->actingAs($this->user)->get(route('recurring.review'))->getContent();
+
+    foreach (SnoozeWindow::cases() as $window) {
+        expect($content)
+            ->toContain('wire:click="snooze('.$series->id.", '")
+            ->toContain(Lang::get($window->labelKey('recurring::review')));
+    }
+
+    expect(substr_count($content, 'class="block w-full px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900"'))
+        ->toBe(count(SnoozeWindow::cases()));
+    expect($content)->not->toContain('role="menuitem"');
+});
+
+// One $rowActionClass and one $rowPopoverClass replaced three and two copies.
+// These hold the render to the exact class sets the copies emitted, so a later
+// edit to either string has to be a deliberate restyle of all of its sites.
+it('paints every neutral row action from one class string', function (): void {
+    rrpSeries($this->user, 'pending', 'rrp::chrome-pending');
+
+    $content = (string) $this->actingAs($this->user)->get(route('recurring.review'))->getContent();
+
+    $chip = 'inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700';
+
+    // Snooze and Edit name on the pending row; Un-reject is the rejected tab's.
+    expect(substr_count($content, 'class="'.$chip.'"'))->toBe(2);
+
+    $rejected = rrpSeries($this->user, 'rejected', 'rrp::chrome-rejected');
+    $rejectedHtml = Livewire::actingAs($this->user)
+        ->test(RecurringReviewPage::class)
+        ->set('tab', 'rejected')
+        ->html();
+
+    expect($rejectedHtml)
+        ->toContain('wire:click="unReject('.$rejected->id.')"')
+        ->and(substr_count($rejectedHtml, 'class="'.$chip.'"'))->toBe(1);
+});
+
+it('anchors both row popovers to the row with one shape and differs only by width', function (): void {
+    rrpSeries($this->user, 'pending', 'rrp::chrome-popover');
+
+    $content = (string) $this->actingAs($this->user)->get(route('recurring.review'))->getContent();
+
+    $shape = 'absolute inset-x-0 z-10 mt-1 rounded-md border border-slate-200 bg-white p-2 shadow-lg sm:left-auto sm:right-0 dark:bg-slate-950 dark:border-slate-700';
+
+    // The wrapper is static below sm so inset-x-0 resolves against the row, and
+    // sm:relative at sm+ is what sm:left-auto/sm:right-0 re-anchors against.
+    expect(substr_count($content, 'class="sm:relative"'))->toBe(2)
+        ->and(substr_count($content, $shape))->toBe(2)
+        ->and($content)->toContain('class="'.$shape.' text-xs sm:w-48"')
+        ->and($content)->toContain('class="'.$shape.' sm:w-64"');
+
+    // Recurring's panels carry no menu semantics; the anomaly partial's do.
+    // Reconciling them is a decision, not something this extraction may drift.
+    expect($content)->not->toContain('role="menu"');
 });

@@ -307,14 +307,7 @@
                  here rather than in the script so it localises. --}}
             data-locked-label="{{ Lang::get('core::components.veil_locked') }}"
         >
-            <img
-                src="{{ Vite::asset('resources/brand/logo.svg') }}"
-                width="48"
-                height="48"
-                alt=""
-                class="rounded-xl opacity-40"
-                aria-hidden="true"
-            />
+            <x-core::app-mark alt="" class="rounded-xl opacity-40" />
         </div>
     </body>
 </html>

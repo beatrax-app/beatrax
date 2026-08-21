@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Import\Public\Dto;
 
+use Modules\Import\Public\Enums\PreviewRowStatus;
 use Spatie\LaravelData\Data;
 
 /**
@@ -34,7 +35,7 @@ abstract class FingerprintDisposition extends Data
         );
     }
 
-    abstract public function status(): string;
+    abstract public function status(): PreviewRowStatus;
 
     public function isNew(): bool
     {

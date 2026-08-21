@@ -11,16 +11,6 @@ use Native\Desktop\Facades\Menu;
 
 final class AppMenuBuilder
 {
-    public const FILE_IMPORT = 'Import file…';
-
-    public const FILE_SCAN_EMAIL = 'Scan email now';
-
-    public const HELP_GITHUB_REPO = 'GitHub repo';
-
-    public const HELP_REPORT_ISSUE = 'Report an issue';
-
-    public const HELP_ABOUT = 'About Beatrax';
-
     public const DEVELOPER_SUBMENU = 'Developer';
 
     public const DEV_OPEN_CONSOLE = 'Open Dev Console';

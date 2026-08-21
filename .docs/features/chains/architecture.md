@@ -186,12 +186,13 @@ repeated event dispatches.
 
 ## ChainLinkInsertHelper — the shared idempotent write path
 
-`Internal/ChainLinkInsertHelper::insertIfNotExists()` is the single
-`chain_links` INSERT site both `IcsSettlementResolver` and
-`PaypalFundingResolver` call, so the `evidence` column is
-`json_encode`d byte-identically across resolvers (one
-`JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES` policy, not a
-per-resolver choice).
+`Internal/ChainLinkInsertHelper` is the single `chain_links` INSERT
+site both `IcsSettlementResolver` and `PaypalFundingResolver` call, so
+the `evidence` column is `json_encode`d byte-identically across
+resolvers (one `JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES`
+policy, not a per-resolver choice). It has two entry points over one
+guard: `insertIfNotExists()` for a single proposed link, and
+`insertMissing()` for a list of them.
 
 It also folds in the pre-insert pair-uniqueness guard that keeps a
 resolver re-run idempotent: if any `chain_links` row already exists
@@ -206,6 +207,15 @@ When `to_transaction_id` is NULL (the exceeded-tolerance
 allows), the existence query switches to `whereNull()` so the
 pair-uniqueness check binds the NULL-endpoint variant exactly once per
 `(user, from, kind)` tuple.
+
+`insertMissing()` asks that same question once for the whole list —
+one read of the `(user, from, kind)` rows it could collide with, then
+one INSERT per parameter-bounded chunk — and it also de-duplicates
+within the list, so a batch proposing the same pair twice writes it
+once. A settled ICS statement covers 50 to 300 card expenses, and the
+per-row form spent a SELECT and an INSERT on each. Only the pairing of
+statement expenses and the refund-after-close pass go through it; the
+single-link callers stay on `insertIfNotExists()`.
 
 Kept under `Internal/` because no Public caller has a legitimate
 reason to INSERT `chain_links` rows directly — `ConfirmChainLink` and
@@ -303,7 +313,11 @@ user to resolve separately.
 The confidence-tier mapping the tree and the review queue share:
 `state='confirmed' AND resolver='auto' AND confidence=1.0` →
 `Deterministic`; any other `confirmed` → `Confirmed`; `candidate` →
-`Candidate`.
+`Candidate`. Those three are `ConfidenceTier`, and they are derived for
+display rather than stored — `Deterministic` has no `chain_links.state`
+counterpart at all. The capitalised backing value is the badge label
+`chain-node.blade.php` renders verbatim, which is the only reason this
+vocabulary is spelled differently from `ChainLinkState`.
 
 ## ChainDrawer — the chain drill-down side-drawer
 

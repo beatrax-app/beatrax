@@ -75,7 +75,7 @@ final class ReconcilePage extends Component
         $this->error = '';
 
         $target = MoneyInput::tryToMinor($this->statementBalance);
-        $date = self::parseDate($this->statementDate);
+        $date = SafeDate::parseDayOrNull($this->statementDate);
 
         // Both are the same answer to the operator: the form is not yet in a
         // state this can act on, and the message says which part is missing.
@@ -131,7 +131,7 @@ final class ReconcilePage extends Component
 
         // The on-screen difference, the disabled-button gate and
         // confirmReconcile() must all agree on posted_at <= statementDate.
-        $statementDate = self::parseDate($this->statementDate);
+        $statementDate = SafeDate::parseDayOrNull($this->statementDate);
 
         $clearedBalanceMinor = ($ownedAccountId !== null && $statementDate !== null)
             ? $balances->clearedBalanceAsOf($ownedAccountId, $user, $statementDate)
@@ -249,10 +249,5 @@ final class ReconcilePage extends Component
             ->exists();
 
         return $owned ? $this->accountId : null;
-    }
-
-    private static function parseDate(string $raw): ?CarbonImmutable
-    {
-        return SafeDate::parseOrNull(trim($raw))?->startOfDay();
     }
 }

@@ -21,12 +21,11 @@ use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Public\Enums\PairingOfferLookup;
+use Modules\Sync\Public\Enums\PairingSide;
 use stdClass;
 
 final class PairingGateway
 {
-    public const string STATE_AWAITING_CONFIRM = PairingState::AwaitingConfirm->value;
-
     public const string STATE_CONFIRMED = PairingState::Confirmed->value;
 
     // Re-exported so a polling caller can recognise the unhappy end without
@@ -342,7 +341,7 @@ final class PairingGateway
         ?string $responderDeviceId,
         int $userId,
         Session $session,
-    ): ?string {
+    ): ?PairingSide {
         return PairingRowGuards::sideOwnedByIds(
             $initiatorDeviceId,
             $responderDeviceId,

@@ -1,4 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\DriftAlerts\Public\Enums\DriftPageTab')
+@use('Modules\DriftAlerts\Public\Enums\DriftPageType')
 {{--
     Drift alerts list. Three tabs (Open / History / Dismissed) over
     drift_alerts rows. The Open tab groups multiple alerts that share
@@ -21,11 +23,6 @@
 
     $fmt = static fn (Money $money): string => $money->format();
 
-    $tabs = [
-        'open' => Lang::get('drift-alerts::alerts.tabs.open'),
-        'history' => Lang::get('drift-alerts::alerts.tabs.history'),
-        'dismissed' => Lang::get('drift-alerts::alerts.tabs.dismissed'),
-    ];
 
     /**
      * Direction-aware tint for a single drift alert. Expense up and
@@ -57,13 +54,6 @@
         }
         return $primary;
     };
-
-    $cadenceShort = static function (int $thresholdPercent): string {
-        // Display the threshold inline; the per-row meta line echoes
-        // detected_at because the source series's cadence is not joined
-        // into this query.
-        return (string) $thresholdPercent;
-    };
 @endphp
 
 <div class="mx-auto max-w-5xl px-4 py-12">
@@ -75,14 +65,14 @@
         <div class="min-w-0">
             <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('drift-alerts::alerts.heading') }}</h1>
             <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">
-                @if ($type === 'anomaly')
+                @if ($pageType === DriftPageType::Anomaly)
                     {{ Lang::get('drift-alerts::alerts.intro_anomaly') }}
                 @else
                     {{ Lang::get('drift-alerts::alerts.intro_drift') }}
                 @endif
             </p>
         </div>
-        @if ($type === 'drift')
+        @if ($pageType === DriftPageType::Drift)
             <a
                 href="{{ route('settings') }}#drift-threshold"
                 class="shrink-0 whitespace-nowrap text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
@@ -104,21 +94,21 @@
         x-data="tabStrip()"
         x-on:keydown="onKey($event)"
     >
-        @foreach (['drift' => Lang::get('drift-alerts::alerts.type.drift'), 'anomaly' => Lang::get('drift-alerts::alerts.type.anomaly')] as $typeKey => $typeLabel)
+        @foreach (DriftPageType::cases() as $typeOption)
             <button
                 type="button"
-                id="drift-type-tab-{{ $typeKey }}"
+                id="drift-type-tab-{{ $typeOption->value }}"
                 role="tab"
-                aria-selected="{{ $type === $typeKey ? 'true' : 'false' }}"
+                aria-selected="{{ $typeOption === $pageType ? 'true' : 'false' }}"
                 aria-controls="drift-lifecycle-panel"
-                tabindex="{{ $type === $typeKey ? '0' : '-1' }}"
-                wire:click="setType('{{ $typeKey }}')"
+                tabindex="{{ $typeOption === $pageType ? '0' : '-1' }}"
+                wire:click="setType('{{ $typeOption->value }}')"
                 @class([
                     'flex-1 rounded-md px-3 py-1.5 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 sm:flex-none',
-                    'bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100' => $type === $typeKey,
-                    'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100' => $type !== $typeKey,
+                    'bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100' => $typeOption === $pageType,
+                    'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100' => $typeOption !== $pageType,
                 ])
-            >{{ $typeLabel }}</button>
+            >{{ Lang::get($typeOption->labelKey()) }}</button>
         @endforeach
     </div>
 
@@ -130,14 +120,14 @@
         x-data="tabStrip()"
         x-on:keydown="onKey($event)"
     >
-        @foreach ($tabs as $key => $label)
+        @foreach (DriftPageTab::cases() as $tabOption)
             <x-core::tab
-                :active="$tab === $key"
-                id="drift-lifecycle-tab-{{ $key }}"
+                :active="$tabOption === $lifecycleTab"
+                id="drift-lifecycle-tab-{{ $tabOption->value }}"
                 aria-controls="drift-lifecycle-panel"
-                tabindex="{{ $tab === $key ? '0' : '-1' }}"
-                wire:click="setTab('{{ $key }}')"
-            >{{ $label }}</x-core::tab>
+                tabindex="{{ $tabOption === $lifecycleTab ? '0' : '-1' }}"
+                wire:click="setTab('{{ $tabOption->value }}')"
+            >{{ Lang::get($tabOption->labelKey()) }}</x-core::tab>
         @endforeach
     </nav>
 
@@ -148,9 +138,9 @@
     <div
         id="drift-lifecycle-panel"
         role="tabpanel"
-        aria-labelledby="drift-type-tab-{{ $type }} drift-lifecycle-tab-{{ $tab }}"
+        aria-labelledby="drift-type-tab-{{ $pageType->value }} drift-lifecycle-tab-{{ $lifecycleTab->value }}"
     >
-        @if ($type === 'anomaly')
+        @if ($pageType === DriftPageType::Anomaly)
             @php
                 $anomalyFmt = static fn (Money $money): string => $money->format();
 
@@ -171,7 +161,7 @@
             @endphp
 
             @if (count($anomalyRows) === 0)
-                @php [$emptyHeading, $emptyBody] = $anomalyEmpty[$tab] ?? $anomalyEmpty['open']; @endphp
+                @php [$emptyHeading, $emptyBody] = $anomalyEmpty[$lifecycleTab->value]; @endphp
                 <x-core::empty-state :heading="$emptyHeading" :body="$emptyBody" />
             @else
                 <ul class="space-y-3" aria-live="polite">
@@ -179,7 +169,7 @@
                         <li>
                             @include('anomaly::livewire.partials.anomaly-alert-row', [
                                 'alert' => $anomaly,
-                                'tab' => $tab,
+                                'tab' => $lifecycleTab,
                                 'fmt' => $anomalyFmt,
                                 'tintFor' => $anomalyTintFor,
                                 'snoozeTargets' => $snoozeTargets,
@@ -197,7 +187,7 @@
                     </div>
                 @endif
             @endif
-        @elseif ($tab === 'open')
+        @elseif ($lifecycleTab === DriftPageTab::Open)
             @if (count($grouped) === 0)
                 <x-core::empty-state :heading="Lang::get('drift-alerts::alerts.empty_open.heading')">
                     {{-- A slot, not the :body prop: the settings link finishes the
@@ -238,7 +228,11 @@
                                         <flux:badge color="slate" size="sm" class="ml-2" style="font-variant-numeric: tabular-nums;">{{ Lang::choice('drift-alerts::alerts.group_count', $alertCount) }}</flux:badge>
                                     </button>
                                     <div class="shrink-0">
-                                        @livewire('drift-alerts.drift-threshold-editor', ['recurringSeriesId' => $seriesId], key('threshold-group-'.$seriesId))
+                                        @livewire('drift-alerts.drift-threshold-editor', [
+                                            'recurringSeriesId' => $seriesId,
+                                            'currentValue' => $thresholdBySeriesId[$seriesId] ?? null,
+                                            'currentValueLoaded' => true,
+                                        ], key('threshold-group-'.$seriesId))
                                     </div>
                                 </div>
                                 <div
@@ -250,7 +244,7 @@
                                     @foreach ($groupAlerts as $alert)
                                         @include('drift-alerts::livewire.partials.drift-alert-row', [
                                             'alert' => $alert,
-                                            'tab' => 'open',
+                                            'tab' => DriftPageTab::Open,
                                             'tintFor' => $tintFor,
                                             'signedFmt' => $signedFmt,
                                             'annualizedFmt' => $annualizedFmt,
@@ -266,7 +260,7 @@
                         @else
                             @include('drift-alerts::livewire.partials.drift-alert-row', [
                                 'alert' => $firstAlert,
-                                'tab' => 'open',
+                                'tab' => DriftPageTab::Open,
                                 'tintFor' => $tintFor,
                                 'signedFmt' => $signedFmt,
                                 'annualizedFmt' => $annualizedFmt,
@@ -276,6 +270,7 @@
                                 'seriesStates' => $seriesStates,
                                 'cancellationImpact' => $impactBySeriesId[$firstAlert->recurringSeriesId] ?? null,
                                 'showThresholdEditor' => true,
+                                'thresholdBySeriesId' => $thresholdBySeriesId,
                             ])
                         @endif
                     @endforeach
@@ -283,7 +278,7 @@
             @endif
         @else
             @if (count($rows) === 0)
-                @if ($tab === 'history')
+                @if ($lifecycleTab === DriftPageTab::History)
                     <x-core::empty-state
                         :heading="Lang::get('drift-alerts::alerts.empty_history.heading')"
                         :body="Lang::get('drift-alerts::alerts.empty_history.body')"
@@ -300,7 +295,7 @@
                         <li>
                             @include('drift-alerts::livewire.partials.drift-alert-row', [
                                 'alert' => $alert,
-                                'tab' => $tab,
+                                'tab' => $lifecycleTab,
                                 'tintFor' => $tintFor,
                                 'signedFmt' => $signedFmt,
                                 'annualizedFmt' => $annualizedFmt,

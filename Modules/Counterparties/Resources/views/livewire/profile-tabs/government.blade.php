@@ -9,6 +9,7 @@
       $taxYears  Collection<\stdClass{ year: int, total_minor: int }>
       $profile   CounterpartyProfileDto
 --}}
+@use('Modules\Ledger\Public\Services\BaseCurrency')
 @use('Modules\Ledger\Public\ValueObjects\Money')
 @php
     $currentYear = (int) now()->format('Y');
@@ -31,7 +32,7 @@
                         {{ (int) $year->year }}
                     </span>
                     <span style="font-size: var(--text-2xl); font-weight: 600; color: var(--color-text); font-variant-numeric: tabular-nums;">
-                        {{ Money::ofMinor(abs((int) $year->total_minor), 'EUR')->format() }}
+                        {{ Money::ofMinor(abs((int) $year->total_minor), BaseCurrency::value())->format() }}
                     </span>
                 </article>
             @endforeach

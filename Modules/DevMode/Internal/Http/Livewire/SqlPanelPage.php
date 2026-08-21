@@ -15,6 +15,7 @@ use Modules\Core\Public\Support\Lang;
 use Modules\DevMode\Internal\Sql\ReadOnlySqliteConnection;
 use Modules\DevMode\Internal\Sql\SchemaSnapshot;
 use Modules\DevMode\Internal\Sql\SelectOnlyValidator;
+use Modules\DevMode\Internal\Support\DevModeSession;
 use Modules\DevMode\Public\Contracts\AuditWriter;
 use Throwable;
 
@@ -75,7 +76,7 @@ final class SqlPanelPage extends Component
     private function preflightError(Session $session, string $sql): ?string
     {
         return match (true) {
-            $session->get('dev_mode.advanced') !== true => Lang::get('dev::sql.errors.advanced_off'),
+            $session->get(DevModeSession::ADVANCED_KEY) !== true => Lang::get('dev::sql.errors.advanced_off'),
             $sql === '' => Lang::get('dev::sql.errors.only_select', ['reason' => 'empty_statement']),
             default => null,
         };
@@ -184,7 +185,7 @@ final class SqlPanelPage extends Component
         Session $session,
         SchemaSnapshot $schema,
     ): View {
-        $advancedOn = $session->get('dev_mode.advanced') === true;
+        $advancedOn = $session->get(DevModeSession::ADVANCED_KEY) === true;
 
         return $views->make('dev::livewire.sql-panel-page', [
             'tables' => $schema->all(),

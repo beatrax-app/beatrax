@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'title' => 'Отчети',
     'page_title' => 'Отчети · Beatrax',
-    'saved_report' => '{0} запазени отчета|[1,1] запазен отчет|[2,*] запазени отчета',
+    'saved_report' => '{0} :count запазени отчета|[1,1] :count запазен отчет|[2,*] :count запазени отчета',
     'pinned_count' => 'закачени',
     'dismiss' => 'Отхвърли',
 

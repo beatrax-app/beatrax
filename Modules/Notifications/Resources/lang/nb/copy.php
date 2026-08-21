@@ -38,7 +38,7 @@ return [
         'nothing_notable' => 'Ingenting krever oppmerksomheten din.',
         'flow' => 'Inn :in, ut :out, netto :net.',
         'over_budget' => ':amount over budsjett så langt.',
-        'payments_due' => '1 betaling forfaller denne perioden.|:count betalinger forfaller denne perioden.',
+        'payments_due' => ':count betaling forfaller denne perioden.|:count betalinger forfaller denne perioden.',
         'shortfall' => 'Det venter et underskudd i kontantstrømmen.',
     ],
 ];

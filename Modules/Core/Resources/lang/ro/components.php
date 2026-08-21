@@ -42,12 +42,14 @@ return [
         'next_month' => 'Luna următoare',
         'today' => 'Azi',
         'clear' => 'Șterge',
+        'empty' => 'nicio dată selectată',
     ],
 
     'time' => [
         'open' => 'Alege o oră',
         'hour' => 'Oră',
         'minute' => 'Minut',
+        'empty' => 'nicio oră selectată',
     ],
 
     'veil_locked' => 'Aplicație blocată',

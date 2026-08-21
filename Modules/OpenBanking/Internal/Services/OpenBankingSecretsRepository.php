@@ -13,6 +13,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\SafeDate;
+use Modules\Core\Public\Support\SecretFileMode;
 use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Exceptions\OpenBankingCredentialsException;
 use Psr\Log\LoggerInterface;
@@ -27,10 +28,6 @@ class OpenBankingSecretsRepository
     // Relative to the storage/app root that UserDataPathService::appPath()
     // resolves (respecting NATIVEPHP_STORAGE_PATH) — no leading `app/`.
     private const PATH_RELATIVE = 'secrets/open-banking.json';
-
-    private const DIR_MODE = 0700;
-
-    private const FILE_MODE = 0600;
 
     public function __construct(
         private readonly Filesystem $files,
@@ -208,12 +205,12 @@ class OpenBankingSecretsRepository
         if (is_dir($dir)) {
             return;
         }
-        if (! @mkdir($dir, self::DIR_MODE, recursive: true) && ! is_dir($dir)) {
+        if (! @mkdir($dir, SecretFileMode::DIRECTORY, recursive: true) && ! is_dir($dir)) {
             throw new SecretsWriteFailed(
                 "OpenBankingSecretsRepository: could not create parent directory {$dir}."
             );
         }
-        if (! @chmod($dir, self::DIR_MODE)) {
+        if (! @chmod($dir, SecretFileMode::DIRECTORY)) {
             throw new SecretsWriteFailed(
                 "OpenBankingSecretsRepository: failed to chmod 0700 on newly-created secrets directory {$dir}."
             );
@@ -267,7 +264,7 @@ class OpenBankingSecretsRepository
             @fclose($fp);
             $fp = null;
 
-            if (! @chmod($tmp, self::FILE_MODE)) {
+            if (! @chmod($tmp, SecretFileMode::FILE)) {
                 throw new SecretsWriteFailed(
                     "OpenBankingSecretsRepository: failed to chmod temp file at {$tmp}."
                 );

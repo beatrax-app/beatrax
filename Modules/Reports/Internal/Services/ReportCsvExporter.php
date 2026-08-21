@@ -7,9 +7,9 @@ namespace Modules\Reports\Internal\Services;
 use League\Csv\EscapeFormula;
 use League\Csv\Writer;
 use Modules\Core\Models\User;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Reports\Internal\Aggregation\ReportAggregator;
 use Modules\Reports\Internal\Dto\ReportDefinition;
-use Modules\Reports\Internal\Support\MinorAmountFormatter;
 
 final class ReportCsvExporter
 {
@@ -39,7 +39,7 @@ final class ReportCsvExporter
             $writer->insertOne([
                 $row->groupLabel,
                 $definition->metric,
-                MinorAmountFormatter::toUnsignedDecimalString($row->amountMinor),
+                MoneyInput::toDecimalString(abs($row->amountMinor)),
                 $row->currency,
             ]);
         }

@@ -35,6 +35,13 @@ a `reprojected_at` stamp. `InitialSyncPuller` is stateless between calls: a
 freshly constructed instance in a cold-started process reads that row and
 carries on from it.
 
+That `phase` is a `SyncPhase` — `pending`, `pulling`, `rebuilding`,
+`complete` — and its backing values *are* the column values, so they are a
+storage format rather than an internal spelling: renaming one silently
+strands every row already written. A stored value no case can represent
+hydrates as `pending`, so an unreadable cursor resumes the gate from the
+start rather than throwing on the read.
+
 Two consequences worth keeping:
 
 - `SetupProgressScreen::mount()` reads the durable cursor via

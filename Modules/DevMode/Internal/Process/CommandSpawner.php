@@ -7,6 +7,8 @@ namespace Modules\DevMode\Internal\Process;
 use Illuminate\Support\Str;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\DevMode\Internal\Enums\ArgType;
+use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Exceptions\SpawnProcessException;
 use Modules\DevMode\Public\Contracts\AuditWriter;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
@@ -27,7 +29,7 @@ final readonly class CommandSpawner
     /**
      * @param  array<string, mixed>  $args
      */
-    public function start(string $command, array $args, int $callerUserId, string $tier): string
+    public function start(string $command, array $args, int $callerUserId, CommandTier $tier): string
     {
         // Throws on any unregistered name, so a never-exposed command such
         // as `migrate` cannot reach the shell below.
@@ -148,7 +150,7 @@ final readonly class CommandSpawner
     {
         $isOption = str_starts_with($argSpec->name, '--');
 
-        if ($argSpec->type === 'boolean') {
+        if ($argSpec->type === ArgType::Boolean) {
             return $this->renderBooleanArg($argSpec, $value, $isOption);
         }
 

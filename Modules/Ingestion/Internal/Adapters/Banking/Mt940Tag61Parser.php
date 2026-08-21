@@ -74,15 +74,8 @@ final class Mt940Tag61Parser
 
     private function parseAmountToMinor(string $raw): int
     {
-        $normalised = str_replace(',', '.', $raw);
-        if (! str_contains($normalised, '.')) {
-            $normalised .= '.00';
-        } elseif (preg_match('/\.\d$/', $normalised) === 1) {
-            $normalised .= '0';
-        }
-
         try {
-            return $this->amounts->parseMinor($normalised);
+            return $this->amounts->parseMt940Minor($raw);
         } catch (Throwable $e) {
             throw new InvalidAmountException(
                 sprintf('Unparseable :61: amount %s: %s', $raw, $e->getMessage()),

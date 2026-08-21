@@ -32,7 +32,7 @@ final readonly class SpatieAuditWriter implements AuditWriter
         $properties = [
             'command' => $run->command,
             'args' => $run->args,
-            'tier' => $run->tier,
+            'tier' => $run->tier->value,
             'exit_code' => $run->exitCode,
             'stdout_excerpt' => $this->cap->apply($run->stdoutExcerpt),
             'error_excerpt' => $this->cap->apply($run->errorExcerpt),

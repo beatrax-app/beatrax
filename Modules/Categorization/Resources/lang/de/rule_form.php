@@ -22,7 +22,6 @@ return [
     'condition_value_from_aria' => 'Wert von Bedingung :number (von)',
     'condition_value_to_aria' => 'Wert von Bedingung :number (bis)',
     'to' => 'bis',
-    'amount_placeholder' => '0,00',
     'text_placeholder' => 'z. B. SPOTIFY',
     'remove_condition' => 'Bedingung entfernen',
     'add_condition' => '+ Bedingung hinzufügen',

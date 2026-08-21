@@ -10,7 +10,6 @@ use InvalidArgumentException;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
-use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
 use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Ledger\Public\Exceptions\SplitSumMismatchException;
@@ -264,7 +263,7 @@ trait ManagesSplitEditor
         $legsPayload = [];
 
         foreach ($this->legs as $leg) {
-            $abs = self::parseAmount($leg['amount']);
+            $abs = MoneyInput::tryToPositiveMinor($leg['amount']);
             if ($abs === null) {
                 // The zero rides as a parameter rather than sitting in the
                 // sentence: written into the copy it was one locale's zero in
@@ -405,7 +404,7 @@ trait ManagesSplitEditor
         $sumAbs = Money::ofMinor(0, $currency);
 
         foreach ($this->legs as $leg) {
-            $abs = self::parseAmount($leg['amount']) ?? 0;
+            $abs = MoneyInput::tryToPositiveMinor($leg['amount']) ?? 0;
             $sumAbs = $sumAbs->plus(Money::ofMinor($abs, $currency));
         }
 
@@ -427,7 +426,7 @@ trait ManagesSplitEditor
         $bestAbs = -1;
 
         foreach ($this->legs as $index => $leg) {
-            $abs = self::parseAmount($leg['amount']) ?? 0;
+            $abs = MoneyInput::tryToPositiveMinor($leg['amount']) ?? 0;
             if ($abs > $bestAbs) {
                 $bestAbs = $abs;
                 $bestIndex = $index;
@@ -435,5 +434,18 @@ trait ManagesSplitEditor
         }
 
         return $bestIndex;
+    }
+
+    /**
+     * @param  array{id: ?int, categoryId: int|string|null, amount: string, note: string, tax: bool}  $leg
+     */
+    private static function legCategoryId(array $leg): ?int
+    {
+        $raw = $leg['categoryId'];
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+
+        return is_numeric($raw) ? (int) $raw : null;
     }
 }

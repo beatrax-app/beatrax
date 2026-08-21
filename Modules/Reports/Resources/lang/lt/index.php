@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'title' => 'Ataskaitos',
     'page_title' => 'Ataskaitos · Beatrax',
-    'saved_report' => 'išsaugota ataskaita|išsaugotos ataskaitos|išsaugotų ataskaitų',
+    'saved_report' => ':count išsaugota ataskaita|:count išsaugotos ataskaitos|:count išsaugotų ataskaitų',
     'pinned_count' => 'prisegta',
     'dismiss' => 'Slėpti',
 

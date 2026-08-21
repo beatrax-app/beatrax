@@ -123,7 +123,7 @@ final class EntityNameSearch
                 $scope->where('user_id', $user->id)->orWhereNull('user_id');
             })
             ->orderBy('id')
-            ->get(['id', 'name', 'slug', 'name_is_default']);
+            ->get(['id', ...CategoryDisplayName::bareColumns()]);
 
         $needle = mb_strtolower($q);
         $results = [];

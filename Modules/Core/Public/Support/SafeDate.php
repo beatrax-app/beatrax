@@ -24,4 +24,12 @@ final class SafeDate
             return null;
         }
     }
+
+    // A date-only field parsed off a form: the time half is whatever the
+    // parser inferred rather than anything the reader typed, so it is
+    // flattened here instead of leaking into a range comparison.
+    public static function parseDayOrNull(string $raw): ?CarbonImmutable
+    {
+        return self::parseOrNull(trim($raw))?->startOfDay();
+    }
 }

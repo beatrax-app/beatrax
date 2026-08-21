@@ -78,9 +78,6 @@ final class IcsPdfAdapter implements SourceAdapter
         $bookedDates = [];
         $entryCount = 0;
         $ownIban = $this->ownIban();
-        // Result discarded: the call is here so the wizard's UnknownAccount
-        // branch still fires; ParseStage re-resolves per row downstream.
-        $accounts->resolve($ownIban);
 
         foreach ($this->iterateTransactionBlocks($cleaned) as $block) {
             $dto = $this->buildDto($block, $index, $ownIban, $statementYear);
@@ -107,7 +104,9 @@ final class IcsPdfAdapter implements SourceAdapter
 
     private function parseCardLast4(string $text): ?string
     {
-        if (preg_match('/Uw Card met als laatste vier cijfers (\S{4})/', $text, $m) === 1) {
+        $pattern = '/'.preg_quote(IcsPdfExtractionMap::CARD_LAST4_LINE_PREFIX, '/').'(\S{4})/';
+
+        if (preg_match($pattern, $text, $m) === 1) {
             return $m[1];
         }
 

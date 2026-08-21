@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Http\Controllers\ArtisanStreamController;
 use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Internal\Process\RunRecord;
@@ -74,7 +75,7 @@ function spawnTickingChild(int $callerUserId, int $ticks = 6, int $intervalMs = 
         args: ['count' => $ticks],
         startedAt: CarbonImmutable::now(),
         callerUserId: $callerUserId,
-        tier: 'safe',
+        tier: CommandTier::Safe,
         status: 'running',
         outPath: $outPath,
     ));
@@ -182,7 +183,7 @@ it('returns 202 + run_id from POST /dev/artisan/spawn for a SAFE-tier command', 
     $record = $registry->find($runId);
     expect($record)->not->toBeNull();
     expect($record->command)->toBe('cache:clear');
-    expect($record->tier)->toBe('safe');
+    expect($record->tier)->toBe(CommandTier::Safe);
     expect($record->callerUserId)->toBe($user->id);
 });
 
@@ -275,7 +276,7 @@ it('rejects cross-user inspection on /dev/artisan/stream/{run_id} with 403', fun
 
     /** @var CommandSpawner $sp */
     $sp = app(CommandSpawner::class);
-    $runId = $sp->start('cache:clear', [], $spawner->id, 'safe');
+    $runId = $sp->start('cache:clear', [], $spawner->id, CommandTier::Safe);
 
     // The intruder is a developer and clears EnsureDeveloperMode; the
     // per-run owner check is the only thing stopping them.

@@ -8,7 +8,7 @@ use Carbon\CarbonImmutable;
 use Closure;
 use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Database\DatabaseManager;
-use Modules\Core\Public\Enums\Locale;
+use Modules\Core\Public\Services\LocaleNegotiator;
 
 // Renders copy in the RECIPIENT's language, not the request's: digests and
 // reminders fire from jobs that have no request locale at all.
@@ -17,6 +17,7 @@ final class NotificationCopyRenderer
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Translator $translator,
+        private readonly LocaleNegotiator $negotiator,
     ) {}
 
     /**
@@ -29,9 +30,11 @@ final class NotificationCopyRenderer
     {
         $previous = $this->translator->getLocale();
         $locale = $this->localeFor($userId);
+        // The translator alone, so a job never leaves config('app.locale')
+        // pointing at one recipient for whatever runs next. Nothing relays that
+        // narrower swap to Carbon, which carries its own locale, so its dates
+        // are moved and put back by hand alongside.
         $this->translator->setLocale($locale);
-        // Carbon carries its own locale, so it has to be scoped too or a
-        // job-built notification's dates won't match its language.
         CarbonImmutable::setLocale($locale);
 
         try {
@@ -42,6 +45,10 @@ final class NotificationCopyRenderer
         }
     }
 
+    // Through the negotiator, so a stored code this release no longer ships
+    // reads the same here as everywhere else. Handed straight to Carbon it is a
+    // no-op that leaves the previous reader's language on the dates while the
+    // sentence around them falls back to English.
     private function localeFor(int $userId): string
     {
         $stored = $this->db->connection()
@@ -49,6 +56,6 @@ final class NotificationCopyRenderer
             ->where('id', $userId)
             ->value('locale');
 
-        return is_string($stored) && $stored !== '' ? $stored : Locale::DEFAULT;
+        return $this->negotiator->resolve(is_string($stored) ? $stored : null, null, null);
     }
 }

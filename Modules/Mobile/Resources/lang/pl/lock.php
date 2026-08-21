@@ -12,6 +12,7 @@ return [
     'ok' => 'OK',
     'ok_aria' => 'OK — potwierdź PIN',
     'sign_out' => 'Wyloguj się',
+    'forgot_pin' => 'Nie pamiętasz PIN-u? Wyloguj się — możesz zalogować się ponownie hasłem do konta i ustawić nowy PIN. Żadne dane nie zostaną utracone.',
 
     'errors' => [
         'pin_length' => 'PIN musi mieć co najmniej 6 cyfry.',

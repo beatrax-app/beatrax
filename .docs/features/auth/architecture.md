@@ -50,9 +50,10 @@ paths into the auth corpus:
   rewires the upstream Fortify pipeline so the credential field is
   `username` (not `email`) and the only authentication views the framework
   resolves are the module's Livewire pages.
-- **Internal/Recovery/** — the four classes implementing the recovery-code
+- **Internal/Recovery/** — the five classes implementing the recovery-code
   ceremony: `RecoveryCodeGenerator` (cryptographic PRNG over a 31-character
-  phone-readable alphabet), `RecoveryCodeFormatter`, `RecoveryCodeNormalizer`,
+  phone-readable alphabet), `RecoveryCodeMinter` (the single sanctioned
+  issue-a-sheet path), `RecoveryCodeFormatter`, `RecoveryCodeNormalizer`,
   `RecoveryCodeAuthenticator` (the single sanctioned consume-on-success
   path).
 - **Internal/Http/Livewire/** — the Livewire pages (`LoginPage`,
@@ -80,8 +81,8 @@ must keep that posture.
 
 ## Key services + events
 
-- `SignupAction` — creates the first user + ten hashed recovery codes in
-  one transaction. Promotes the connection to a write lock before the
+- `SignupAction` — creates the first user in one transaction, and issues
+  its ten hashed recovery codes through `RecoveryCodeMinter` inside it. Promotes the connection to a write lock before the
   existence check so concurrent first-launch signups serialise rather than
   race. Dispatches `UserInstalled` after commit so first-install listeners
   (e.g. the default-category seeder in
@@ -361,8 +362,16 @@ priming is a no-op when the lock is not enabled for the user.
 
 ### Lock screen (`LockScreen` Livewire page)
 
-The `/lock` route offers exactly three actions — PIN pad, biometric
-prompt, sign out — and nothing else. PIN digits are never rendered in an
+The `/lock` route offers exactly three things to do — PIN pad, biometric
+prompt, sign out — and nothing else. Sign out is reachable through two
+controls with the same POST target: the plain one, and the forgotten-code
+signpost (`lock_screen.forgot_pin`) whose copy states that tapping it
+signs you out, that the account password signs you back in, and that no
+data is lost. The reset itself stays in Settings behind a password
+login — putting it on the lock screen would reduce the app-lock's value
+to the account password's for anyone holding a locked device, and the
+lock exists precisely because it is a separate gate. The mobile screen
+carries the same pair. PIN digits are never rendered in an
 `<input>`; the DOM only shows bullet glyphs, so no autocomplete,
 clipboard, or OS password-manager capture can occur. The digits
 accumulate client-side in transient Alpine state rather than a public

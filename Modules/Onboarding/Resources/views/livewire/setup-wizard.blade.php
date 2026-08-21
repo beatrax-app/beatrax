@@ -33,13 +33,7 @@
 >
     <header class="wiz-top" aria-label="{{ Lang::get('onboarding::wizard.header_aria') }}">
         <div class="wiz-brand">
-            <img
-                src="{{ Vite::asset('resources/brand/logo.svg') }}"
-                alt="Beatrax"
-                width="22"
-                height="22"
-                class="wiz-brand-mark logo-svg"
-            />
+            <x-core::app-mark :size="22" class="wiz-brand-mark logo-svg" :decorative="false" />
             <span class="wiz-brand-name">Beatrax</span>
         </div>
 
