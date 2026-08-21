@@ -44,6 +44,11 @@ final class MobilePairingScan extends Component
 
     public string $step = 'scan';
 
+    // Which way in the reader chose, remembered separately because `step` has
+    // moved on by the time an attempt is reset: from 'confirm' it could only
+    // ever read "not enter_code" and sent a word-code typist to the camera.
+    public string $entryStep = 'scan';
+
     // Locked so the client cannot retarget which token the trust gate confirms.
     #[Locked]
     public string $pairingTokenId = '';
@@ -162,12 +167,14 @@ final class MobilePairingScan extends Component
 
         if ($qrBridge->isAvailable()) {
             $this->step = 'scan';
+            $this->entryStep = 'scan';
             $this->cameraUnavailableNotice = false;
 
             return;
         }
 
         $this->step = 'enter_code';
+        $this->entryStep = 'enter_code';
         $this->cameraUnavailableNotice = true;
     }
 
@@ -178,6 +185,7 @@ final class MobilePairingScan extends Component
         $this->flashMessage = '';
         $this->cameraUnavailableNotice = false;
         $this->step = 'enter_code';
+        $this->entryStep = 'enter_code';
     }
 
     // Driven from the view rather than mount() so the component is already
@@ -228,6 +236,7 @@ final class MobilePairingScan extends Component
     {
         $this->cameraUnavailableNotice = true;
         $this->step = 'enter_code';
+        $this->entryStep = 'enter_code';
     }
 
     private function sendToUnlock(UrlGenerator $urls, Session $session, AppLockClientConfig $lock, int $userId): void
@@ -400,9 +409,9 @@ final class MobilePairingScan extends Component
 
     private function resetPairingAttempt(): void
     {
-        // Keep the entry method the user chose: someone typing a word code
-        // should land back on the keypad, not be thrown to the camera.
-        $this->step = $this->step === 'enter_code' ? 'enter_code' : 'scan';
+        // Keep the entry method the reader chose: someone typing a word code
+        // lands back on the keypad, not thrown to the camera.
+        $this->step = $this->entryStep;
         $this->pairingTokenId = '';
         $this->safetyWords = [];
         $this->importResponderTokenHash = '';

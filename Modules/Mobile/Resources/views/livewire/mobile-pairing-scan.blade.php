@@ -233,7 +233,14 @@
                 {{ Lang::get('mobile::pairing.confirm_body') }}
             </p>
 
-            @if ($awaitingPeer)
+            {{-- The poll sets this on every failed delivery, and this step had
+                 nowhere to show it: one phone set it 86 times while the screen
+                 said only "waiting for the other device". --}}
+            @if ($flashMessage !== '')
+                <p class="mt-4 text-center text-sm text-rose-600 dark:text-rose-400" role="alert">{{ $flashMessage }}</p>
+            @endif
+
+            @if ($awaitingPeer && $flashMessage === '')
                 <p class="mt-4 flex items-center justify-center gap-2 text-sm text-slate-500 dark:text-slate-400" aria-live="polite">
                     <x-core::spinner />
                     {{ Lang::get('mobile::pairing.awaiting_peer') }}
