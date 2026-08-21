@@ -130,6 +130,12 @@ final class SettingsPage extends Component
         // `app()->getLocale()` on dehydrate and re-applies it next action, so
         // retargeting the translator alone reverted the language one action later.
         $app->setLocale($storedLocale ?? Locale::DEFAULT);
+
+        // The sidebar, top bar and command palette live in the layout, which a
+        // component update does not re-render — so they kept the old language
+        // until the reader happened to navigate. Re-requesting the page is what
+        // makes the switch mean the whole screen.
+        $this->redirect(url()->current());
     }
 
     // Empty is the placeholder, and nothing else in the app can put the

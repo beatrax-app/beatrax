@@ -127,3 +127,15 @@ it('renders the settings page in Dutch when the active locale is nl', function (
         ->assertSee('Instellingen opslaan')
         ->assertSee('Weergavetaal');
 });
+
+// The sidebar, top bar and command palette are rendered by the layout, which a
+// Livewire component update leaves alone — so switching the language changed the
+// settings page and left the palette speaking the previous one until the reader
+// happened to navigate. Re-requesting the page is what makes the switch whole.
+it('re-requests the page so the layout changes language too', function (): void {
+    $this->actingAs(makeLocaleUser(null));
+
+    Livewire::test(SettingsPage::class)
+        ->call('setLocale', 'nl')
+        ->assertRedirect();
+});
