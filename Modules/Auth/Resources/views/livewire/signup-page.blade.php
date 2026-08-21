@@ -46,7 +46,7 @@
                 {{-- A Livewire action, not the shared POST: that one navigates,
                      and it took this half-filled form with it — three empty
                      boxes and a country back at its placeholder. --}}
-                <x-core::locale-switcher labelled action="setLocale" />
+                <x-core::locale-switcher labelled model="locale" />
             </div>
 
             <div class="rounded-lg border border-slate-200 p-4 dark:border-slate-800">

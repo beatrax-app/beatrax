@@ -16,6 +16,7 @@ use Livewire\Component;
 use Modules\Auth\Public\Actions\SignupAction;
 use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
+use Modules\Core\Public\Services\LocaleNegotiator;
 use Modules\Core\Public\Services\UserCountry;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
@@ -41,6 +42,8 @@ final class SignupPage extends Component
     // Skipping is a real answer: an unset country widens classification to
     // every region rather than pinning the install to a guessed one.
     public string $country = '';
+
+    public string $locale = '';
 
     // A rejected submit leaves both password boxes as the reader typed them.
     // Emptying them turned a username error into a retyped 12-character
@@ -74,15 +77,32 @@ final class SignupPage extends Component
     // this screen and reset the country to its placeholder. Here the language
     // changes over a Livewire round trip instead, so what the reader has
     // already typed is still typed afterwards.
-    public function setLocale(string $code, Session $session, Application $app): void
+    public function mount(Session $session): void
     {
-        if (! Locale::isSupported($code)) {
+        $stored = $session->get('locale');
+        $this->locale = is_string($stored) && Locale::isSupported($stored)
+            ? $stored
+            : LocaleNegotiator::SYSTEM;
+    }
+
+    // "System" is the absence of an override rather than a locale, so it clears
+    // the key instead of storing a code — the same rule the POST route follows.
+    // Without this arm the reader could leave System but never return to it.
+    public function updatedLocale(Session $session, Application $app): void
+    {
+        if ($this->locale === LocaleNegotiator::SYSTEM) {
+            $session->forget('locale');
+
             return;
         }
 
-        $session->put('locale', $code);
-        $app->setLocale($code);
-        CarbonImmutable::setLocale($code);
+        if (! Locale::isSupported($this->locale)) {
+            return;
+        }
+
+        $session->put('locale', $this->locale);
+        $app->setLocale($this->locale);
+        CarbonImmutable::setLocale($this->locale);
     }
 
     public function render(ViewFactory $views, Router $routes, UrlGenerator $urls, UserCountry $countries): View

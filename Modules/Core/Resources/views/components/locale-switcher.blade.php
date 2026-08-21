@@ -3,7 +3,7 @@
 @use('Modules\Core\Public\Support\Lang')
 @inject('translator', 'translator')
 @inject('sessionStore', 'session.store')
-@props(['labelled' => false, 'action' => null])
+@props(['labelled' => false, 'model' => null])
 @php
     $wrapperClass = $labelled ? 'space-y-1' : '';
     $formClass = $labelled ? 'flex gap-2' : 'locale-switcher';
@@ -50,17 +50,22 @@
     LocaleNegotiator sentinel, which CLEARS the session key rather than storing
     a locale under it.
 
-    `action` names a Livewire method instead, for a screen the reader is part
+    `model` names a Livewire property instead, for a screen the reader is part
     way through FILLING IN. The POST above is a whole navigation, and it took
     a half-typed signup form with it; a Livewire round trip carries the
     component's own state across the language change. Only a screen that is
     already Livewire-only may pass it — it gives up the no-JS guarantee.
+
+    It binds rather than passing `$event.target.value`, because the signup page
+    forbids that shape outright: a checklist fed by input events could not see
+    the passwords the server had just emptied, and left two green ticks over
+    two blank boxes.
 --}}
 <div class="{{ $wrapperClass }}">
 @if ($labelled)
     <label class="block text-sm text-slate-900 dark:text-slate-100" for="locale-switcher-select">{{ Lang::get('core::settings.language.label') }}</label>
 @endif
-@if ($action !== null)
+@if ($model !== null)
     <div class="{{ $formClass }}">
         @unless ($labelled)
             <label class="sr-only" for="locale-switcher-select">{{ Lang::get('core::settings.language.label') }}</label>
@@ -69,7 +74,7 @@
             id="locale-switcher-select"
             name="code"
             class="{{ $selectClass }}"
-            wire:change="{{ $action }}($event.target.value)"
+            wire:model.live="{{ $model }}"
         >
             @foreach (Locale::cases() as $locale)
                 <option

@@ -8,6 +8,7 @@ use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Modules\Auth\Internal\Http\Livewire\SignupPage;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Services\LocaleNegotiator;
 
 uses(RefreshDatabase::class);
 
@@ -26,7 +27,7 @@ function signupPageHalfFilled(): Testable
 
 it('keeps every box the reader has filled in when the language changes', function (): void {
     signupPageHalfFilled()
-        ->call('setLocale', 'nl')
+        ->set('locale', 'nl')
         ->assertSet('username', 'wessel')
         ->assertSet('password', 'opensesame-long-enough')
         ->assertSet('passwordConfirmation', 'opensesame-long-enough')
@@ -36,7 +37,7 @@ it('keeps every box the reader has filled in when the language changes', functio
 // The switch has to actually switch, or keeping the state is worth nothing.
 it('renders the page in the language just chosen', function (): void {
     $html = signupPageHalfFilled()
-        ->call('setLocale', 'nl')
+        ->set('locale', 'nl')
         ->html();
 
     expect($html)
@@ -47,14 +48,14 @@ it('renders the page in the language just chosen', function (): void {
 // A Livewire action reaches the same session key the POST route writes, so
 // SetLocale still decides the language on the next full page load.
 it('leaves the choice where the rest of the app looks for it', function (): void {
-    signupPageHalfFilled()->call('setLocale', 'nl');
+    signupPageHalfFilled()->set('locale', 'nl');
 
     expect(session('locale'))->toBe('nl');
 });
 
 it('ignores a language code that is not one of ours', function (): void {
     signupPageHalfFilled()
-        ->call('setLocale', 'xx')
+        ->set('locale', 'xx')
         ->assertSet('country', 'nl');
 
     expect(session('locale'))->not->toBe('xx');
@@ -62,7 +63,7 @@ it('ignores a language code that is not one of ours', function (): void {
 
 // The switch is not a submit: a half-filled form must not create an account.
 it('creates no account when only the language changed', function (): void {
-    signupPageHalfFilled()->call('setLocale', 'nl');
+    signupPageHalfFilled()->set('locale', 'nl');
 
     expect(User::query()->count())->toBe(0);
 });
@@ -70,7 +71,7 @@ it('creates no account when only the language changed', function (): void {
 // And the state it kept is the state that gets written.
 it('signs up with the country still selected after a language change', function (): void {
     signupPageHalfFilled()
-        ->call('setLocale', 'nl')
+        ->set('locale', 'nl')
         ->call('submit');
 
     $user = User::query()->firstOrFail();
@@ -85,6 +86,29 @@ it('offers no navigating form for the language on this screen', function (): voi
     $html = Livewire::test(SignupPage::class)->html();
 
     expect($html)
-        ->toContain('wire:change="setLocale($event.target.value)"')
+        ->toContain('wire:model.live="locale"')
         ->not->toContain(route('locale.switch'));
+});
+
+// "System" is the absence of an override, not a locale. Storing it as one would
+// pin the install to the literal string `auto`, and the reader who switched
+// away by accident could never get their browser's language back.
+it('clears the preference rather than storing a code when System is chosen', function (): void {
+    session()->put('locale', 'nl');
+
+    signupPageHalfFilled()->set('locale', LocaleNegotiator::SYSTEM);
+
+    expect(session()->has('locale'))->toBeFalse();
+});
+
+it('opens on the language already in force, so the select does not misreport it', function (): void {
+    session()->put('locale', 'nl');
+
+    expect(Livewire::test(SignupPage::class)->get('locale'))->toBe('nl');
+});
+
+it('opens on System when nothing has been chosen', function (): void {
+    session()->forget('locale');
+
+    expect(Livewire::test(SignupPage::class)->get('locale'))->toBe(LocaleNegotiator::SYSTEM);
 });
