@@ -86,13 +86,10 @@ final class SignupPage extends Component
     private function reportRejection(ValidationException $exception): void
     {
         $placed = false;
+        $errors = $exception->validator->errors()->messages();
 
-        foreach ($exception->errors() as $field => $messages) {
-            if (! in_array($field, self::FIELD_KEYS, true)) {
-                continue;
-            }
-
-            foreach ($messages as $message) {
+        foreach (self::FIELD_KEYS as $field) {
+            foreach ($errors[$field] ?? [] as $message) {
                 $this->addError($field, $message);
                 $placed = true;
             }
