@@ -10,6 +10,8 @@ use InvalidArgumentException;
 use Modules\Categorization\Public\Contracts\AppliesAutoCategory;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Fmt;
+use Modules\Core\Public\Support\MessageNamesNoUserData;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\SafeTrace;
 use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
 use Modules\Import\Internal\Pipeline\Stages\ClassifyTransactionType;
@@ -168,8 +170,7 @@ final class ImportPipeline
                         'source_format' => $sourceFormat,
                         'import_run_id' => $importRunId,
                         'row_index' => $source->sourceRowIndex,
-                        'exception_class' => $e::class,
-                        'exception_message' => $e->getMessage(),
+                        ...SafeExceptionContext::describe($e),
                         'exception_trace' => SafeTrace::cap($e, $this->app->basePath()),
                     ]);
                     $preview[] = new PreviewRowDto(
@@ -236,12 +237,13 @@ final class ImportPipeline
         } catch (Throwable $e) {
             // A fatal adapter error surfaces as one ERROR row so the wizard
             // still renders; only the user-facing message survives onto it,
-            // so the trace goes to the log.
+            // so the trace goes to the log. This catch also spans the account
+            // and merchant lookups, hence the narrowed read of the message.
             $this->logger->warning('ImportPipeline: parse failed.', [
                 'source_format' => $sourceFormat,
                 'import_run_id' => $importRunId,
-                'exception_class' => $e::class,
-                'exception_message' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
+                'exception_message' => $e instanceof MessageNamesNoUserData ? $e->getMessage() : null,
                 'exception_trace' => $e->getTraceAsString(),
             ]);
             $preview[] = new PreviewRowDto(

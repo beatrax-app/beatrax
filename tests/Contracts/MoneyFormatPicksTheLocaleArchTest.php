@@ -2,17 +2,8 @@
 
 declare(strict_types=1);
 
-/*
- * Money::format() picks the locale from the currency: EUR reads in the Dutch
- * convention, everything else in US English, which is how a card statement
- * reads. Thirty call sites passed 'nl_NL' anyway, and in the ones that were
- * not pinned to EUR that renders a dollar or sterling amount with Dutch
- * separators — $1.234,56 — for a user in any of the app's 26 locales.
- *
- * Passing the locale you already have is never an improvement over letting
- * the value object choose, so the argument is gone: format() takes none.
- * This guards the signature as well as the call sites, because a parameter
- * that exists is a parameter somebody will pass.
+/**
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-locale-argument-passed-to-moneyformat
  */
 
 /** @return list<string> repo-relative PHP and Blade files under Modules/, app/ and resources/ */
@@ -43,27 +34,64 @@ function moneyFormatRenderingFiles(): array
     return $files;
 }
 
+/**
+ * @return list<array{args: string, line: int}> every ->format(...) call, argument text intact
+ */
+function moneyFormatCalls(string $source): array
+{
+    $calls = [];
+    $offset = 0;
+
+    while (($start = strpos($source, '->format(', $offset)) !== false) {
+        $cursor = $start + strlen('->format(');
+        $depth = 1;
+
+        while ($depth > 0 && $cursor < strlen($source)) {
+            $depth += match ($source[$cursor]) {
+                '(' => 1,
+                ')' => -1,
+                default => 0,
+            };
+            $cursor++;
+        }
+
+        $calls[] = [
+            'args' => substr($source, $start + strlen('->format('), $cursor - $start - strlen('->format(') - 1),
+            'line' => substr_count($source, "\n", 0, $start) + 1,
+        ];
+        $offset = $cursor;
+    }
+
+    return $calls;
+}
+
 it('hands format() no locale to override the one the currency implies', function (): void {
     $offenders = [];
 
     foreach (moneyFormatRenderingFiles() as $file) {
         $source = (string) file_get_contents(base_path($file));
-        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $source) ?? $source;
+        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*|\{\{--.*?--\}\}#s', '', $source) ?? $source;
 
-        if (preg_match_all('/->format\(\s*[\'"]([A-Za-z]{2}[_-][A-Za-z]{2}[^\'"]*)[\'"]/', $stripped, $matches) === false) {
-            continue;
-        }
+        foreach (moneyFormatCalls($stripped) as $call) {
+            // Any locale anywhere in the argument list, not just a bare
+            // literal — a computed one is the shape that survived the rule's
+            // first pass.
+            if (preg_match('/[\'"]([a-z]{2}[_-][A-Z]{2})[\'"]/', $call['args'], $match) !== 1) {
+                continue;
+            }
 
-        foreach ($matches[1] as $locale) {
-            $offenders[] = $file.' — format(\''.$locale.'\')';
+            $offenders[] = $file.':'.$call['line'].' — format(… '.$match[1].' …)';
         }
     }
+
+    sort($offenders);
 
     expect($offenders)->toBe(
         [],
         "A hardcoded locale renders a foreign currency in someone else's\n".
-        "separators. Drop the argument — Money::format() already resolves nl_NL\n".
-        "for EUR and en_US for everything else, on every runtime. Offenders:\n  ".
+        "separators — nl_NL turns \$1,245.67 into US\$ -1.245,67. Drop the\n".
+        "argument: Money::format() already resolves nl_NL for EUR and en_US for\n".
+        "everything else, on every runtime. Offenders:\n  ".
         implode("\n  ", $offenders),
     );
 });

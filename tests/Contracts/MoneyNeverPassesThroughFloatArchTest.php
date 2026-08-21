@@ -2,28 +2,28 @@
 
 declare(strict_types=1);
 
-/*
- * Money is an integer count of minor units, and it stays one on both string
- * boundaries: the one where it becomes something a person reads, and the one
- * where something a person typed becomes an amount.
- *
- * NoFloatMoneyArchTest holds the storage boundary — no REAL column, a string
- * cast on every decimal one. It says nothing about runtime, and runtime is
- * where the conversions actually were. `number_format($minor / 100, …)` was
- * copied to twenty-odd call sites, and `(int) round((float) $typed * 100)` to
- * five, which is how a transaction filter for "1.234,56" came to search for
- * €1.23: PHP reads that string as the float 1.234.
- *
- * MoneyInput is the seam for both directions — tryToMinor() in, formatMinor()
- * out — and Money::format() renders an amount that already knows its currency.
- * Neither ever holds a float.
- *
- * SCOPE. The rule governs money that becomes a STRING. A chart plots money as
- * a coordinate, and there is no integer a charting library will take for a y
- * value; that float becomes a pixel, never digits, so it is outside the rule
- * rather than excused by it. The moment a coordinate is formatted back into an
- * amount, it is inside again.
+/**
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#money-formatted-through-a-float
  */
+
+// SCOPE. Banned: money reaching a float formatter, and a float landing in a
+// minor-unit-named variable. Out of scope: a CHART COORDINATE, which is a
+// pixel position rather than a money value — a y-axis needs a number, and the
+// loss sits orders of magnitude below display resolution.
+//
+// Five sites rely on that boundary, so a reader can re-check it rather than
+// take it on trust:
+//   Modules/Forecasting/Resources/views/livewire/partials/aggregate-line-chart.blade.php:22,27
+//   Modules/Reports/Resources/views/livewire/partials/report-donut-chart.blade.php:22
+//   Modules/Reports/Resources/views/livewire/partials/report-line-chart.blade.php:17
+//   Modules/Reports/Resources/views/livewire/partials/report-bar-chart.blade.php:18
+//
+// The boundary holds only while the float stays a coordinate. It does here:
+// every one of those charts renders its LABELS through the currency formatter
+// window.beatraxLocaliseChart() installs on the y-axis (resources/js/app.js) —
+// which ApexCharts also falls back to for tooltip values — and none of them
+// enables dataLabels, the one path that would print the raw number. A chart
+// that turns dataLabels on, or sets its own formatter, has left this scope.
 
 /** @return list<string> repo-relative PHP and Blade files that ship */
 function floatMoneyShippedFiles(): array
@@ -60,6 +60,30 @@ function floatMoneySource(string $relativePath): string
     $source = (string) file_get_contents(base_path($relativePath));
 
     return preg_replace('#/\*.*?\*/|//[^\n]*|\{\{--.*?--\}\}#s', '', $source) ?? $source;
+}
+
+/**
+ * Statements rather than lines: a ternary wrapped across four lines is one
+ * decision, and where its result lands is on the first of them.
+ *
+ * @return list<array{0: string, 1: int}> statement text and its opening line
+ */
+function floatMoneyStatements(string $source): array
+{
+    $statements = [];
+    $line = 1;
+
+    foreach (explode(';', $source) as $chunk) {
+        // A chunk this long is template markup between two statements, not a
+        // statement; scanning it would pair a name with an unrelated call.
+        if (strlen($chunk) <= 400) {
+            $statements[] = [$chunk, $line];
+        }
+
+        $line += substr_count($chunk, "\n");
+    }
+
+    return $statements;
 }
 
 /** The divisor that turns an exact count of cents into an inexact float. */
@@ -105,7 +129,9 @@ function floatMoneyCallsTo(string $source, string $function): array
  */
 function floatMoneyTaintedNames(string $source): array
 {
-    $pattern = '/(\$\w+)\s*=\s*([^;]*\/\s*'.FLOAT_MONEY_DIVISOR.'[^;]*);/';
+    // No brace between the name and the division, or a closure's own name
+    // is captured instead of the variable assigned three lines inside it.
+    $pattern = '/(\$\w+)\s*=\s*([^;{}]*\/\s*'.FLOAT_MONEY_DIVISOR.'[^;{}]*);/';
 
     if (preg_match_all($pattern, $source, $matches, PREG_SET_ORDER) === false) {
         return [];
@@ -164,26 +190,26 @@ it('renders no money through a float formatter', function (): void {
 it('derives no minor-unit amount from a float', function (): void {
     $offenders = [];
 
-    // Rounding a product of 100 is a money parse, and it is this repo's most
-    // copied one: it accepts scientific notation, rounds a third decimal away
-    // in silence, and reads a Dutch-typed "1.234,56" as 1.234. Scaling that
-    // is not money — a percentage of a total — rounds no float into cents and
-    // stores nothing in a minor-unit name, so neither clause below sees it.
+    // The clauses below look for where the result LANDS — a minor-unit name,
+    // or a return out of a float — so scaling a ratio into a percentage lands
+    // in neither and stays legible.
     $rounds = '/\b(?:round|floor|ceil)\s*\(/';
     $scales = '/\*\s*'.FLOAT_MONEY_DIVISOR.'\b/';
     $intoMinor = '/\$\w*[Mm]inor\w*\s*=[^=]/';
-    $fromFloat = '/\(float\)/';
+    $outOfFloat = '/\breturn\b[^;]*\(float\)/';
 
     foreach (floatMoneyShippedFiles() as $file) {
-        $source = floatMoneySource($file);
+        foreach (floatMoneyStatements(floatMoneySource($file)) as $statement) {
+            [$text, $line] = $statement;
 
-        foreach (explode("\n", $source) as $number => $line) {
-            if (preg_match($rounds, $line) !== 1 || preg_match($scales, $line) !== 1) {
+            if (preg_match($rounds, $text, $match, PREG_OFFSET_CAPTURE) !== 1 || preg_match($scales, $text) !== 1) {
                 continue;
             }
 
-            if (preg_match($intoMinor, $line) === 1 || preg_match($fromFloat, $line) === 1) {
-                $offenders[] = $file.':'.($number + 1).' — '.trim($line);
+            if (preg_match($intoMinor, $text) === 1 || preg_match($outOfFloat, $text) === 1) {
+                $offset = (int) $match[0][1];
+                $offenders[] = $file.':'.($line + substr_count($text, "\n", 0, $offset)).' — '.
+                    trim(preg_replace('/\s+/', ' ', substr($text, (int) strrpos(substr($text, 0, $offset), "\n"))) ?? '');
             }
         }
     }

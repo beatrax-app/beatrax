@@ -2,29 +2,13 @@
 
 declare(strict_types=1);
 
-/*
- * A third-party package is reached through one seam of ours, not from
- * wherever it happens to be convenient.
- *
- * The repo already believes this in places — Money wraps brick/money,
- * EnableBankingHttpClient wraps Guzzle, Camt053Adapter wraps genkgo/camt —
- * but nothing held it, so brick/money leaked into an FX service, an import
- * pipeline, a merge resolver and a Blade view. A dependency reached from
- * nine places cannot be upgraded, substituted or reasoned about; reached
- * from one, it can.
- *
- * The map below is the whole rule: every package the shipped tree touches
- * names the seam that owns it. It is not an exemption list, and four
- * assertions stop it becoming one — a seam must exist, must be used, may
- * never be a view/Livewire component/model, and a package may have at most
- * one seam per module. Padding the map to excuse a violation fails one of
- * them; the only way to go green is to move the code.
+/**
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-dependency-reached-from-nine-places
  */
 
+// The runtime the application is written in, rather than a dependency it
+// chose: you cannot wrap what you extend or what the container hands you.
 /**
- * The runtime the application is written in, rather than a dependency it
- * chose. You cannot wrap what you extend or what the container hands you.
- *
  * @return array<string, string> namespace prefix => why it is the runtime
  */
 function thirdPartyRuntimeLayer(): array
@@ -47,9 +31,7 @@ function thirdPartyRuntimeLayer(): array
 }
 
 /**
- * Every other package, and the one place each is allowed to appear.
- *
- * @return array<string, list<string>> namespace prefix => repo-relative seams
+ * @return array<string, list<string>> namespace prefix => the one place each package may appear
  */
 function thirdPartySeams(): array
 {
@@ -93,11 +75,9 @@ function thirdPartySeams(): array
     ];
 }
 
+// A test that pins a wrapper against the library it wraps has a reason to name
+// the package; one that merely does arithmetic does not.
 /**
- * Where a test may drive the package itself, tighter than the module rule
- * below allows. A test that pins a wrapper against the library it wraps has
- * a reason to name it; one that merely does arithmetic does not.
- *
  * @return array<string, list<string>> namespace prefix => repo-relative test files
  */
 function thirdPartyTestSeams(): array
@@ -109,12 +89,9 @@ function thirdPartyTestSeams(): array
     ];
 }
 
-/**
- * Native\Desktop already has a tighter, reviewed rule of its own in
- * BoundaryArchTest, with a named carve-out for the Community shell. Two
- * rules over one namespace would drift apart, so this one defers — and the
- * assertion at the foot of this file fails if that rule ever disappears.
- */
+// Two rules over one namespace would drift apart, so this one defers to
+// BoundaryArchTest — and the assertion at the foot of this file fails if that
+// rule ever disappears.
 const THIRD_PARTY_DELEGATED = [
     'Native\Desktop' => 'BoundaryArchTest::noNativePhpImportsOutsideDesktopModule',
 ];
@@ -234,11 +211,9 @@ function thirdPartyModuleOf(string $relativePath): string
     return preg_match('#^Modules/([^/]+)/#', $relativePath, $m) === 1 ? $m[1] : 'app';
 }
 
-/**
- * Wiring is not domain code: a module's service provider binds a package
- * into the container and a console command boots a daemon. Both may drive a
- * package their module already contains — never introduce one it does not.
- */
+// Wiring is not domain code: a provider binds a package into the container and
+// a command boots a daemon. Both may drive a package their module already
+// contains — never introduce one it does not.
 function thirdPartyIsModuleEntrypoint(string $relativePath): bool
 {
     return str_contains($relativePath, '/Providers/')

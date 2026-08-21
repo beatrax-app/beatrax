@@ -65,9 +65,8 @@ final class PotWriter
             }
         }
 
-        // Creation + optional initial funding run in one transaction so a
-        // failed funding check rolls back the pot row — no orphan pot in
-        // the list and no duplicate on resubmit.
+        // One transaction so a failed funding check rolls back the pot row:
+        // no orphan pot in the list, no duplicate on resubmit.
         /** @var Pot $pot */
         $pot = $this->db->connection()->transaction(function () use ($user, $name, $accountId, $goalId, $categoryId, $currency, $minor): Pot {
             /** @var Pot $pot */
@@ -90,8 +89,8 @@ final class PotWriter
                 }
 
                 $this->insertMovement([
-                    'user_id' => (int) $user->id,
-                    'pot_id' => (int) $pot->id,
+                    'user_id' => $user->id,
+                    'pot_id' => $pot->id,
                     'counterpart_pot_id' => null,
                     'amount_minor' => $minor,
                     'currency' => $currency,
@@ -177,8 +176,8 @@ final class PotWriter
         $currency = $pot->currency;
 
         $this->db->connection()->transaction(function () use ($user, $potId, $minor, $accountId, $currency, $memo): void {
-            // Re-read inside the transaction to serialise against concurrent
-            // writers rather than checking against a stale value.
+            // Re-read inside the transaction; a concurrent writer makes the
+            // pre-transaction value stale.
             $unallocated = $this->balance->currentUnallocatedForAccount($accountId, $user);
             if ($minor > $unallocated) {
                 throw new InsufficientUnallocatedException(
@@ -187,7 +186,7 @@ final class PotWriter
             }
 
             $this->insertMovement([
-                'user_id' => (int) $user->id,
+                'user_id' => $user->id,
                 'pot_id' => $potId,
                 'counterpart_pot_id' => null,
                 'amount_minor' => $minor,
@@ -226,7 +225,7 @@ final class PotWriter
             }
 
             $this->insertMovement([
-                'user_id' => (int) $user->id,
+                'user_id' => $user->id,
                 'pot_id' => $potId,
                 'counterpart_pot_id' => null,
                 'amount_minor' => -$minor,
@@ -285,7 +284,7 @@ final class PotWriter
             $now = CarbonImmutable::now()->toDateTimeString();
 
             $this->insertMovement([
-                'user_id' => (int) $user->id,
+                'user_id' => $user->id,
                 'pot_id' => $fromPotId,
                 'counterpart_pot_id' => $toPotId,
                 'amount_minor' => -$minor,
@@ -295,7 +294,7 @@ final class PotWriter
             ], $now);
 
             $this->insertMovement([
-                'user_id' => (int) $user->id,
+                'user_id' => $user->id,
                 'pot_id' => $toPotId,
                 'counterpart_pot_id' => $fromPotId,
                 'amount_minor' => $minor,
@@ -318,8 +317,8 @@ final class PotWriter
 
             if ($balance > 0) {
                 $this->insertMovement([
-                    'user_id' => (int) $user->id,
-                    'pot_id' => (int) $pot->id,
+                    'user_id' => $user->id,
+                    'pot_id' => $pot->id,
                     'counterpart_pot_id' => null,
                     'amount_minor' => -$balance,
                     'currency' => $pot->currency,
@@ -348,9 +347,8 @@ final class PotWriter
             return;
         }
 
-        // archive() keeps goal_id, and another pot may have been linked to
-        // the same goal in the meantime — restoring must not produce two
-        // active pots on one goal.
+        // archive() keeps goal_id, so another pot may have claimed the goal
+        // meanwhile; restoring must not leave two active pots on one goal.
         if ($pot->goal_id !== null) {
             $goalTaken = $this->db->connection()
                 ->table('pots')
@@ -371,20 +369,16 @@ final class PotWriter
         $this->capture($pot, 'edit', ['status' => $pot->status]);
     }
 
-    // Parses a user-entered positive amount to integer minor units — the
-    // shared MoneyInput handles the Dutch/plain decimal forms — or null for a
-    // blank, malformed, zero or negative entry.
     public function parseAmount(string $value): ?int
     {
         return MoneyInput::tryToPositiveMinor($value);
     }
 
-    // Movements had merge rules and no capture, so a fund or withdraw made
-    // after pairing never left the device and the peer's pot balances froze
-    // at whatever the backfill had handed it. One insert path, so a new
-    // movement kind cannot ship uncaptured either.
+    // Movements had merge rules but no capture, so a fund or withdraw made after
+    // pairing never left the device and the peer's balances froze at the backfill.
+    // Sole insert path, so a new movement kind cannot ship uncaptured.
     /**
-     * @param  array<string, mixed>  $row  Every column but the timestamps.
+     * @param  array{user_id: int}&array<string, mixed>  $row  Every column but the timestamps.
      */
     private function insertMovement(array $row, ?string $now = null): void
     {
@@ -397,15 +391,14 @@ final class PotWriter
         $this->events->dispatch(new EntityMutated(
             table: 'pot_movements',
             pk: $id,
-            userId: (int) $row['user_id'],
+            userId: $row['user_id'],
             mutationType: 'create',
             dirtyFields: $row,
         ));
     }
 
-    // Pots were absent from the capture wiring, so a pot created or renamed
-    // on one device never reached the other. One place, so a new write path
-    // cannot ship uncaptured.
+    // Pots were absent from the capture wiring, so a pot created or renamed on one
+    // device never reached the other. Sole path, so a new write cannot ship uncaptured.
     /**
      * @param  array<string, mixed>  $fields
      */
@@ -420,12 +413,7 @@ final class PotWriter
         ));
     }
 
-    // -------------------------------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------------------------------
-
     // Bypasses the global scope so ownership is independent of guard state.
-    // Returns null for a cross-user or missing pot.
     private function findOwnedActivePot(User $user, int $potId): ?Pot
     {
         return Pot::query()
@@ -451,8 +439,6 @@ final class PotWriter
         }
     }
 
-    // Requires assertOwnedAccount to have been called first so $accountId is
-    // guaranteed to belong to the user.
     private function accountCurrency(int $accountId, User $user): string
     {
         $row = $this->db->connection()
