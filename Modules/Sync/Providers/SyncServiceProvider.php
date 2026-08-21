@@ -44,10 +44,14 @@ use Modules\Sync\Internal\Pairing\PairingFrameApplier;
 use Modules\Sync\Internal\Pairing\PairingOfferRateLimiter;
 use Modules\Sync\Internal\Pairing\PairingOfferService;
 use Modules\Sync\Internal\Pairing\PairingPeerOutbox;
+use Modules\Sync\Internal\Pairing\PairingPullAuthorizer;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
+use Modules\Sync\Internal\Transport\Discovery\CachedPeerDiscovery;
 use Modules\Sync\Internal\Transport\Discovery\MdnsAdvertiser;
+use Modules\Sync\Internal\Transport\Discovery\MulticastMdnsQuery;
+use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
 use Modules\Sync\Internal\Transport\Frame\TransportFramer;
 use Modules\Sync\Internal\Transport\PeerCatchUpExchanger;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
@@ -232,6 +236,8 @@ final class SyncServiceProvider extends ServiceProvider
             'LanPairingFrameCourier',
             'LanPairingFramePuller',
             'PairingPeerOutbox',
+            // Decides who may collect what the LAN return leg holds.
+            'PairingPullAuthorizer',
             // Relay courier for the cross-device both-confirm handshake
             // (PairingFrame is static-only, no binding needed).
             'PairingFrameCourier',
@@ -424,6 +430,7 @@ final class SyncServiceProvider extends ServiceProvider
                 offerRateLimiter: $this->app->make(PairingOfferRateLimiter::class),
                 frameApplier: $this->app->make(PairingFrameApplier::class),
                 peerOutbox: $this->app->make(PairingPeerOutbox::class),
+                pullAuthorizer: $this->app->make(PairingPullAuthorizer::class),
             ));
         }
 
@@ -435,6 +442,16 @@ final class SyncServiceProvider extends ServiceProvider
 
         if (class_exists(MdnsAdvertiser::class)) {
             $this->app->singleton(MdnsAdvertiser::class);
+        }
+
+        // A singleton because the cache IS the point: one pairing poll asks the
+        // network three times, and three separate instances would each pay the
+        // full browse timeout for the same answer.
+        if (class_exists(CachedPeerDiscovery::class) && class_exists(MulticastMdnsQuery::class)) {
+            $this->app->singleton(
+                PeerDiscovery::class,
+                fn () => new CachedPeerDiscovery(new MulticastMdnsQuery),
+            );
         }
     }
 

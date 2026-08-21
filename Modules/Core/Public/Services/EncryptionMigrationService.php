@@ -140,7 +140,7 @@ class EncryptionMigrationService
                 // Last, and inside the same transaction: it rewrites
                 // `fingerprint` alongside the key it is derived from, and a
                 // half-swept table would re-import as a second ledger.
-                $this->backfillCounterpartyKeys($connection, $userId, $support->stagedBlindIndexKeyHex());
+                $this->backfillCounterpartyKeys($userId, $support->stagedBlindIndexKeyHex());
 
                 $this->finalizeMigration($connection, $userId);
             });
@@ -359,23 +359,19 @@ class EncryptionMigrationService
 
         $keyHex = $support->ensureBlindIndexKey($userId, $session);
 
-        $connection->transaction(function () use ($connection, $userId, $keyHex): void {
-            $this->backfillCounterpartyKeys($connection, $userId, $keyHex);
+        $connection->transaction(function () use ($userId, $keyHex): void {
+            $this->backfillCounterpartyKeys($userId, $keyHex);
         });
     }
 
     /**
      * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md
      */
-    private function backfillCounterpartyKeys(ConnectionInterface $connection, int $userId, string $blindIndexKeyHex): void
+    private function backfillCounterpartyKeys(int $userId, string $blindIndexKeyHex): void
     {
         /** @var CounterpartyKeyBackfill $backfill */
         $backfill = $this->container->make(CounterpartyKeyBackfill::class);
         $backfill->run($userId, $blindIndexKeyHex);
-
-        $connection->table('sync_encryption_state')
-            ->where('user_id', $userId)
-            ->update(['counterparty_key_backfilled_at' => $this->clock->now()]);
     }
 
     private function finalizeMigration(ConnectionInterface $connection, int $userId): void

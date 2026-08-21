@@ -258,9 +258,14 @@ final class ExpenseSeriesDetector implements SeriesDetector
         $now = $this->clock->now()->toDateTimeString();
         $connection = $this->db->connection();
 
-        // The clustering key is normalised; the review screen is not the
-        // place to show it back. See MerchantDisplayName.
-        $displayName = $this->merchantNames->forNormalized($user->id, $counterparty) ?? $counterparty;
+        // The clustering key is normalised, and once at-rest encryption is on
+        // it is a keyed digest; the review screen is not the place to show
+        // either back. A sweep that cannot read a name defers the series to
+        // the next one rather than inserting a digest into a shown column.
+        $displayName = $this->merchantNames->forStoredKey($user->id, $counterparty);
+        if ($displayName === null) {
+            return;
+        }
 
         $newId = $connection->table('recurring_series')->insertGetId([
             'user_id' => $user->id,

@@ -18,11 +18,11 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
-use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Public\Exceptions\BlindIndexKeyUnavailableException;
 use Modules\Sync\Public\Services\BlindIndexCodec;
+use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
 
-uses(RefreshDatabase::class);
+uses(RefreshDatabase::class, EnablesEncryptionForUser::class);
 
 const CBI_MERCHANT = 'Apotheek Zuiderhout';
 
@@ -99,11 +99,12 @@ function cbiImportOnce(User $user, Account $account, ImportRun $run): int
     return $record([$canonical], $user, captureForSync: false)->inserted;
 }
 
+// Rows imported in the clear, then encryption enabled on the same session.
 function cbiUnlock(): Session
 {
     /** @var Session $session */
     $session = app(Session::class);
-    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
+    AppLockTestHarness::unlock($session, str_repeat('*', 32));
 
     return $session;
 }
@@ -142,11 +143,7 @@ it('stores a keyed digest instead of the merchant name once encryption is on', f
     $user = cbiUser('keyed');
     $account = cbiAccount($user);
     $run = cbiImportRun($user);
-    $session = cbiUnlock();
-
-    /** @var GdkKeyringService $keyring */
-    $keyring = app(GdkKeyringService::class);
-    $keyring->generateAndPersist((int) $user->id, $session);
+    $session = $this->enablesEncryptionForUser($user);
 
     expect(cbiImportOnce($user, $account, $run))->toBe(1);
 
@@ -160,11 +157,7 @@ it('re-imports the same statement row to a single transaction with encryption on
     $user = cbiUser('idem-keyed');
     $account = cbiAccount($user);
     $run = cbiImportRun($user);
-    $session = cbiUnlock();
-
-    /** @var GdkKeyringService $keyring */
-    $keyring = app(GdkKeyringService::class);
-    $keyring->generateAndPersist((int) $user->id, $session);
+    $session = $this->enablesEncryptionForUser($user);
 
     expect(cbiImportOnce($user, $account, $run))->toBe(1);
     expect(cbiImportOnce($user, $account, $run))->toBe(0);
@@ -237,11 +230,7 @@ it('rewrites the fingerprint to match the swept key, so it equals what a fresh i
 // merchant inside transactions_fingerprint_uq.
 it('refuses to produce a key at all when encryption is on and the app-lock is locked', function (): void {
     $user = cbiUser('locked');
-    $session = cbiUnlock();
-
-    /** @var GdkKeyringService $keyring */
-    $keyring = app(GdkKeyringService::class);
-    $keyring->generateAndPersist((int) $user->id, $session);
+    $session = $this->enablesEncryptionForUser($user);
 
     /** @var AppLockKeyService $lock */
     $lock = app(AppLockKeyService::class);
@@ -256,11 +245,7 @@ it('refuses to produce a key at all when encryption is on and the app-lock is lo
 
 it('leaves the no-counterparty sentinel readable, because it names no merchant', function (): void {
     $user = cbiUser('sentinel');
-    $session = cbiUnlock();
-
-    /** @var GdkKeyringService $keyring */
-    $keyring = app(GdkKeyringService::class);
-    $keyring->generateAndPersist((int) $user->id, $session);
+    $session = $this->enablesEncryptionForUser($user);
 
     /** @var CounterpartyKey $key */
     $key = app(CounterpartyKey::class);
@@ -273,16 +258,12 @@ it('leaves the no-counterparty sentinel readable, because it names no merchant',
 // the same stored value on both or every edit to the row quarantines.
 it('derives the same digest under the same key and a different one under another', function (): void {
     $user = cbiUser('peer');
-    $session = cbiUnlock();
-
-    /** @var GdkKeyringService $keyring */
-    $keyring = app(GdkKeyringService::class);
-    $keyring->generateAndPersist((int) $user->id, $session);
+    $session = $this->enablesEncryptionForUser($user);
 
     /** @var BlindIndexCodec $codec */
     $codec = app(BlindIndexCodec::class);
 
-    $shared = (string) $keyring->blindIndexKeyHex((int) $user->id, $session);
+    $shared = (string) $codec->keyHexOrNull((int) $user->id, $session);
     $other = bin2hex(random_bytes(32));
 
     $mine = $codec->derive(CounterpartyKey::DOMAIN, CBI_NORMALIZED, (int) $user->id, $session);

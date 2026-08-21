@@ -99,6 +99,7 @@ final class PaypalFundingResolver
             ->get([
                 'transactions.id as tx_id',
                 'transactions.counterparty_normalized as counterparty_normalized',
+                'transactions.counterparty_name as counterparty_name',
                 'transactions.amount_minor as amount_minor',
                 'transactions.settled_amount_minor as settled_amount_minor',
                 'transactions.posted_at as posted_at',
@@ -363,9 +364,12 @@ final class PaypalFundingResolver
             return null;
         }
 
-        $normalisedMerchant = $this->fingerprints->normalize(
-            self::toString($row->counterparty_normalized ?? null),
-        );
+        // Two values on purpose: a keyed digest of two spellings of one
+        // merchant is as far apart as one of two unrelated merchants, so the
+        // similarity needs the readable name — while the signature hash keeps
+        // the stored key, which is what earlier evidence was hashed from.
+        $storedMerchantKey = self::toString($row->counterparty_normalized ?? null);
+        $readableMerchant = $this->readableMerchant($row, $user);
         $postedAt = CarbonImmutable::parse($postedAtRaw);
 
         $amountBand = (int) round($settledMinor * (self::AMOUNT_BAND_PERCENT / 100));
@@ -388,6 +392,7 @@ final class PaypalFundingResolver
             ->get([
                 'id',
                 'counterparty_normalized',
+                'counterparty_name',
                 'posted_at',
                 'settled_amount_minor',
                 'account_id',
@@ -402,10 +407,8 @@ final class PaypalFundingResolver
 
         foreach ($candidates as $candidate) {
             /** @var stdClass $candidate */
-            $candidateMerchant = $this->fingerprints->normalize(
-                self::toString($candidate->counterparty_normalized ?? null),
-            );
-            $merchantSim = $this->levenshteinSimilarity($normalisedMerchant, $candidateMerchant);
+            $candidateMerchant = $this->readableMerchant($candidate, $user);
+            $merchantSim = $this->levenshteinSimilarity($readableMerchant, $candidateMerchant);
 
             $candidateMinor = abs(self::toInt($candidate->settled_amount_minor ?? null));
             $amountDelta = abs($settledMinor - $candidateMinor);
@@ -448,7 +451,7 @@ final class PaypalFundingResolver
                 'merchant_similarity' => round($bestMerchantSim, 3),
                 'amount_delta_minor' => $bestAmountDelta,
                 'date_delta_days' => $bestDateDelta,
-                'signature_hash' => $this->signatureHash($normalisedMerchant, $fundingIban),
+                'signature_hash' => $this->signatureHash($storedMerchantKey, $fundingIban),
             ],
         ];
     }
@@ -539,6 +542,28 @@ final class PaypalFundingResolver
         }
 
         return self::toString($row->iban);
+    }
+
+    // The bank's own spelling, normalised, so the similarity compares names
+    // rather than digests. Empty when the row has no name or this process
+    // holds no key, which scores zero — the honest answer for a comparison
+    // that could not be made.
+    private function readableMerchant(stdClass $row, User $user): string
+    {
+        $stored = self::toString($row->counterparty_name ?? null);
+        if ($stored === '') {
+            return '';
+        }
+
+        $plain = $this->codec->decryptValue(
+            'transactions',
+            'counterparty_name',
+            $stored,
+            $user->id,
+            ($this->session)(),
+        )['value'];
+
+        return $this->fingerprints->normalize($plain);
     }
 
     private function levenshteinSimilarity(string $a, string $b): float

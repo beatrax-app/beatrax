@@ -7,6 +7,7 @@ namespace Modules\Sync\Public\Services;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use LogicException;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Public\Exceptions\BlindIndexKeyUnavailableException;
 use RuntimeException;
@@ -29,6 +30,7 @@ final class BlindIndexCodec
     public function __construct(
         private readonly GdkKeyringService $keyringService,
         private readonly DatabaseManager $db,
+        private readonly Clock $clock,
     ) {}
 
     // Plaintext in, keyed digest out. Returns $plaintext UNCHANGED for a user
@@ -99,10 +101,31 @@ final class BlindIndexCodec
         }
     }
 
+    // Whether this device has already rewritten its stored matching keys under
+    // the key it holds. Once true, adopting a peer's different key would leave
+    // every stored digest unmatchable by the value a re-import computes.
+    public function hasDerived(int $userId): bool
+    {
+        $row = $this->db->connection()
+            ->table('sync_encryption_state')
+            ->where('user_id', $userId)
+            ->first(['counterparty_key_backfilled_at']);
+
+        return $row !== null && ($row->counterparty_key_backfilled_at ?? null) !== null;
+    }
+
+    public function markDerived(int $userId): void
+    {
+        $this->db->connection()
+            ->table('sync_encryption_state')
+            ->where('user_id', $userId)
+            ->update(['counterparty_key_backfilled_at' => $this->clock->now()]);
+    }
+
     // Shape, not proof: a merchant name of exactly this length and alphabet is
-    // improbable but possible, so the enable-time sweep decides from its own
-    // marker instead. This answers only the narrower question — could a human
-    // read this value.
+    // improbable but possible. Whether the sweep runs at all is decided by its
+    // own marker; this only skips a row a re-entered sweep already converted,
+    // and answers the narrower question of whether a human could read a value.
     public static function looksDerived(string $value): bool
     {
         return strlen($value) === self::DIGEST_LENGTH

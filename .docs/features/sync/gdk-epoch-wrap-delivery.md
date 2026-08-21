@@ -18,18 +18,37 @@ both fail:
 
 ## The wrap
 
-`GdkRotationService::buildGdkEpochWrap()` produces a `GDK_EPOCH_WRAP` message carrying four
+`GdkRotationService::buildGdkEpochWrap()` produces a `GDK_EPOCH_WRAP` message carrying five
 things that matter:
 
 | Field | Purpose |
 | --- | --- |
-| `epoch_id` | Which epoch these bytes are the key for. |
+| `epoch_id` | Which epoch these bytes are the key for. `0` when the wrap is not an epoch. |
 | `wrapped_key_b64` | The raw key sealed to the recipient's X25519 public key. |
 | `recipient_device_id` | Who it is addressed to. |
 | `sender_device_id` + `sig_hex` | Ed25519 detached signature over the signed message. |
+| `key_role` | What the sealed bytes are. Absent means `epoch`. |
 
 The signature is what turns an anonymous sealed box into an authenticated one. It is the
 answer to the second failed approach above.
+
+### Why one message type carries two kinds of key
+
+The counterparty blind-index key is not an epoch — it is never rotated, and adopting it as one
+would make it an AEAD key nothing was encrypted under. It still needs exactly this channel:
+sealed to a confirmed recipient, signed by a still-confirmed sender, and delivered to a
+joining device. So it rides `GDK_EPOCH_WRAP` with `key_role: blind_index`, sent by
+`fanOutAllEpochsToDevice()` after the epoch loop.
+
+`GdkEpochWrapSignature::signingMessage()` appends the role term **only when the role is not
+the default**. Two consequences, both deliberate: an epoch wrap signs byte-identically to one
+a build without roles produced, so nothing about existing delivery changes; and a build that
+does not know about roles verifies a role-bearing wrap against a message missing that term,
+fails, and rejects it — rather than storing a blind-index key as an epoch key. Stripping
+`key_role` in transit fails the same way.
+
+What the receiver does with an adopted blind-index key, and when it refuses to adopt one, is
+in [Which columns are encrypted at rest](sensitive-columns-at-rest.md).
 
 The wrap is enqueued on `relay_mailbox` as an opaque blob addressed to the recipient. Nothing
 about the enqueue depends on the recipient being online.
@@ -55,7 +74,8 @@ Delivery is not one flow but two, and they are independent:
 contract:
 
 1. **Well-formedness.** A message missing `epoch_id`, `wrapped_key_b64` or
-   `recipient_device_id` is dropped before any libsodium call is made.
+   `recipient_device_id`, or naming a `key_role` this build does not know, is dropped before
+   any libsodium call is made.
 2. **Recipient identity.** `recipient_device_id` must be this device. A wrap addressed
    elsewhere is rejected here — *before* the sender is ever looked at, so a foreign-recipient
    wrap from a perfectly legitimate sender still goes nowhere.

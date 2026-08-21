@@ -13,6 +13,8 @@ use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Enums\AccountKind;
+use Modules\Ledger\Public\Enums\Direction;
+use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
@@ -45,8 +47,9 @@ final class RecordManualTransaction
         ?string $description = null,
     ): void {
         $magnitude = abs($amountMinor);
-        $signed = $direction === 'income' ? $magnitude : -$magnitude;
-        $type = $direction === 'income' ? 'income' : 'expense';
+        $isIncome = $direction === Direction::Income->value;
+        $signed = $isIncome ? $magnitude : -$magnitude;
+        $type = $isIncome ? TransactionType::Income->value : TransactionType::Expense->value;
 
         $accountId = $this->cashAccountId($user);
         $importRunId = $this->manualRunId($user);

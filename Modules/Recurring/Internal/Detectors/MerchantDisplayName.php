@@ -7,6 +7,7 @@ namespace Modules\Recurring\Internal\Detectors;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Sync\Public\Services\BlindIndexCodec;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 // detected_name was copied straight from the clustering key — lower-cased,
@@ -33,6 +34,23 @@ final readonly class MerchantDisplayName
 
         return $this->fromMerchants($userId, $normalized)
             ?? $this->fromTransactions($userId, $normalized);
+    }
+
+    // What a caller writes into a DISPLAYED column. Null means no readable
+    // name exists here: the key is a keyed digest and neither source knows the
+    // merchant. Callers skip the row, as DetectRecurringSeriesJob already does
+    // for undecryptable IBANs.
+    /**
+     * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md
+     */
+    public function forStoredKey(int $userId, string $storedKey): ?string
+    {
+        $name = $this->forNormalized($userId, $storedKey);
+        if ($name !== null) {
+            return $name;
+        }
+
+        return BlindIndexCodec::looksDerived($storedKey) ? null : $storedKey;
     }
 
     // A series whose stored name is still the clustering key was written before

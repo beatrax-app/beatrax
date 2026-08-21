@@ -252,6 +252,14 @@ that:
 `display_name_override` always wins at the read site and is never
 written by a sweep.
 
+`detected_name` is never the clustering key once at-rest encryption is on,
+because that key is then a one-way digest. `MerchantDisplayName::forStoredKey()`
+resolves it through the user's own `merchants.name` and then the decrypted
+`transactions.counterparty_name`, and answers null when neither knows a name —
+at which point the detector **defers the series to the next sweep** rather than
+writing a digest into a column the review screen renders. See
+[Which columns are encrypted at rest](../sync/sensitive-columns-at-rest.md).
+
 ## Who consumes the result
 
 - [Forecasting](../forecasting/architecture.md) reads every approved (and

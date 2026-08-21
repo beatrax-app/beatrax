@@ -72,10 +72,15 @@ first that matches:
    similarity (0.2). The best score at or above 0.6 surfaces as a
    candidate with confidence in `[0.6, 0.99]` — the ceiling is
    deliberately below 1.0 so the deterministic arm stays the only path
-   to a round-confidence link.
+   to a round-confidence link. The similarity term reads the **decrypted
+   `counterparty_name`**, not `counterparty_normalized`: that column is a
+   keyed one-way digest for an encrypted user, and two digests of one
+   merchant spelled two ways are as far apart as two unrelated ones, which
+   would have taken every candidate below the 0.6 floor.
 
 Every arm computes the same `evidence.signature_hash` —
-`sha256(counterparty_normalized|funding-account IBAN)` — so
+`sha256(counterparty_normalized|funding-account IBAN)`, over the value the
+column stores rather than the readable name the fuzzy arm scores — so
 `ConfirmChainLink`'s auto-promotion learning loop has one key to count
 confirmations over regardless of which arm produced the match.
 Duplicate writes are blocked by `ChainLinkInsertHelper`'s pre-insert

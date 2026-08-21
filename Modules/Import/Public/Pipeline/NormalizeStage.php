@@ -7,6 +7,7 @@ namespace Modules\Import\Public\Pipeline;
 use Modules\Core\Models\User;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Ledger\Public\ValueObjects\Rate;
@@ -16,21 +17,19 @@ use Modules\Ledger\Public\ValueObjects\Rate;
  */
 final class NormalizeStage
 {
-    public const NO_COUNTERPARTY = '_no_counterparty';
+    // Aliased rather than redeclared: the sentinel is compared against a
+    // stored value in two other modules, and CounterpartyKey is what decides
+    // it stays readable while every real merchant does not.
+    public const NO_COUNTERPARTY = CounterpartyKey::NONE;
 
-    public function __construct(private readonly FingerprintComposer $fingerprints) {}
+    public function __construct(
+        private readonly FingerprintComposer $fingerprints,
+        private readonly CounterpartyKey $counterpartyKey,
+    ) {}
 
     public function run(SourceTransactionDto $source, int $accountId, User $user, int $importRunId, string $sourceFormat): CanonicalTransaction
     {
-        $name = $source->counterpartyName;
-        if ($name === null || trim($name) === '') {
-            $normalized = self::NO_COUNTERPARTY;
-        } else {
-            $normalized = $this->fingerprints->normalize($name);
-            if ($normalized === '') {
-                $normalized = self::NO_COUNTERPARTY;
-            }
-        }
+        $normalized = $this->counterpartyKey->forName($source->counterpartyName, $user->id);
 
         $type = match (true) {
             $source->amountMinor > 0 => 'income',
