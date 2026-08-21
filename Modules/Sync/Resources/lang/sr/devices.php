@@ -17,7 +17,7 @@ return [
     'securing' => 'Obezbeđivanje tvojih podataka…',
     'do_not_close' => 'Ne zatvaraj ovaj prozor.',
     'encryption_progress_aria' => 'Napredak šifrovanja',
-    'not_encrypted_offer' => 'Ваши подаци нису шифровани у мировању. Шифровање скрива коме плаћате ако овај уређај изгубите или вам га украду — износи, датуми и индекс претраге остају читљиви.',
+    'not_encrypted_offer' => 'Tvoji podaci nisu šifrovani u mirovanju. Šifrovanje skriva kome plaćaš ako ovaj uređaj izgubiš ili ti ga ukradu — iznosi, datumi i indeks pretrage ostaju čitljivi.',
     'enable_encryption' => 'Uključi šifrovanje',
 
     'your_devices' => 'Tvoji uređaji',
