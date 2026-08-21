@@ -14,6 +14,7 @@ return [
         'heading' => 'Ingen puljer endnu',
         'body' => 'Opret virtuelle delsaldi inden for en hvilken som helst konto for at organisere dine penge uden en reel bankoverførsel.',
         'cta' => 'Tilføj din første pulje',
+        'no_accounts_cta' => 'Importér et kontoudtog',
     ],
 
     'common' => [

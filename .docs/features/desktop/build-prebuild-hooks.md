@@ -1,7 +1,7 @@
 # The desktop prebuild hooks
 
 NativePHP's published Electron scaffold is not quite what a signed, notarised,
-auto-updating beatrax bundle needs. Rather than fork it, the desktop build
+auto-updating Beatrax bundle needs. Rather than fork it, the desktop build
 **patches it on every run**: `config/nativephp.php` lists a `prebuild` array of
 small PHP scripts under `scripts/`, and `php artisan native:build` executes them
 in order before electron-builder starts.
@@ -117,7 +117,7 @@ facade.
 
 The facade wraps the popover-style npm `menubar` library, which couples tray menu
 items to the **focused BrowserWindow**. Once the user closes the main window with
-the X button there is no focused window, and the tray's "Open beatrax" item
+the X button there is no focused window, and the tray's "Open Beatrax" item
 silently does nothing — the app is running with no way back to it. The injected
 menu handlers either show and focus an existing main window, or POST to
 `/api/window/open` to reconstruct one from any state.

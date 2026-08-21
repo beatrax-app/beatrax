@@ -136,7 +136,7 @@ if ($isDirectlyInvoked) {
 function injectPersistentTray(string $source): array
 {
     // Drift-resistant idempotency: the marker text carries the brand name
-    // and was rebranded in 16-02 (diederik→beatrax), so an older patch
+    // and was rebranded in 16-02 (diederik→Beatrax), so an older patch
     // run could have written the previous marker into the on-disk
     // (gitignored) index.js. The injected `installPersistentTray()`
     // function name is hard-coded in `traySetupBlock()` below, so its
@@ -324,7 +324,7 @@ function traySetupBlock(): string
             focusable: true,
             hasShadow: true,
             frame: true,
-            title: 'beatrax',
+            title: 'Beatrax',
             titleBarStyle: 'default',
             windowButtonVisibility: true,
             alwaysOnTop: false,
@@ -387,7 +387,7 @@ function traySetupBlock(): string
             const image = nativeImage.createFromPath(trayIconPath);
             image.setTemplateImage(true);
             tray = new Tray(image);
-            tray.setToolTip('beatrax');
+            tray.setToolTip('Beatrax');
             const contextMenu = Menu.buildFromTemplate([
                 {
                     label: 'Open Beatrax',

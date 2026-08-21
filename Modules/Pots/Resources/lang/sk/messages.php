@@ -14,6 +14,7 @@ return [
         'heading' => 'Zatiaľ žiadne obálky',
         'body' => 'Vytvor v ktoromkoľvek účte virtuálne časti zostatku a usporiadaj si peniaze bez skutočného bankového prevodu.',
         'cta' => 'Pridaj prvú obálku',
+        'no_accounts_cta' => 'Importovať výpis z účtu',
     ],
 
     'common' => [

@@ -1,4 +1,4 @@
-# beatrax — repo-local documentation
+# Beatrax — repo-local documentation
 
 Repo-local technical documentation: the **PHP-specific how**. Product decisions,
 requirements, and architecture contracts live in the specification, which is

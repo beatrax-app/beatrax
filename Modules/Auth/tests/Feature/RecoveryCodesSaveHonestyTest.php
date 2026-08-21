@@ -14,7 +14,7 @@ uses(RefreshDatabase::class);
 // "Saved as beatrax-recovery-codes-<name>.txt" anyway. These codes are shown
 // once and are the only way back into an account, so a save that lies is worse
 // than one that refuses.
-function recoveryCodesUser(string $username): User
+function recoveryCodesSaveUser(string $username): User
 {
     /** @var User $user */
     $user = User::query()->create([
@@ -28,7 +28,7 @@ function recoveryCodesUser(string $username): User
 }
 
 it('offers the share sheet when the mobile export endpoint is reachable', function (): void {
-    $user = recoveryCodesUser('recovery-native');
+    $user = recoveryCodesSaveUser('recovery-native');
 
     $this->actingAs($user)->withSession([
         RecoveryCodesDisplay::SESSION_KEY => ['ABCD-EFGH-JKLM-NPQR-STUV'],
@@ -46,7 +46,7 @@ it('offers the share sheet when the mobile export endpoint is reachable', functi
 );
 
 it('never reports a save it did not make', function (): void {
-    $user = recoveryCodesUser('recovery-honest');
+    $user = recoveryCodesSaveUser('recovery-honest');
 
     $this->actingAs($user)->withSession([
         RecoveryCodesDisplay::SESSION_KEY => ['ABCD-EFGH-JKLM-NPQR-STUV'],

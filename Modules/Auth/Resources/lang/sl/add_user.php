@@ -18,5 +18,6 @@ return [
     'error_generic' => 'Uporabnika ni bilo mogoče ustvariti.',
 
     'error_min_length' => 'Uporabi vsaj 12 znakov.',
+    'error_username_invalid' => 'Uporabi največ 32 črk, števk, pik, pomišljajev ali podčrtajev.',
     'error_duplicate' => 'To uporabniško ime je na tej napravi že v uporabi. Poskusi z drugim.',
 ];

@@ -30,6 +30,7 @@ return [
 
     'errors' => [
         'amount_positive' => 'Introdu o sumă mai mare decât zero.',
+        'amount_too_large' => 'Suma este prea mare. Verifică cifrele.',
         'invalid_date' => 'Introdu o dată validă.',
     ],
 

@@ -24,5 +24,6 @@ return [
     'error_generic' => 'Registreerimist ei õnnestunud lõpule viia.',
 
     'error_min_length' => 'Kasuta vähemalt 12 märki.',
+    'error_username_invalid' => 'Kasuta kuni 32 tähte, numbrit, punkti, sidekriipsu või alakriipsu.',
     'error_closed' => 'Registreerimine on selles seadmes suletud.',
 ];

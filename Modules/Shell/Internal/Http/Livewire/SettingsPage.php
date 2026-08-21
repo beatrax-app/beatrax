@@ -60,6 +60,15 @@ final class SettingsPage extends Component
 
     public bool $fxRefreshing = false;
 
+    public bool $fxRefreshGaveUp = false;
+
+    // What the rate table's newest write looked like when the refresh started.
+    // A weekend feed carries the previous business day, so the rate DATE does
+    // not move on a successful fetch and cannot be the completion signal.
+    public ?string $fxRefreshBaseline = null;
+
+    public int $fxRefreshPolls = 0;
+
     public ?string $fxLastUpdated = null;
 
     public function mount(CurrentUser $currentUser, DatabaseManager $db, BaseCurrency $baseCurrency): void
@@ -76,15 +85,7 @@ final class SettingsPage extends Component
         $this->baseCurrency = $user->base_currency ?? $baseCurrency->code();
         $this->fxOnlineEnabled = $user->fx_online_enabled ?? false;
 
-        $latestRate = $db->connection()
-            ->table('exchange_rates')
-            ->orderByDesc('rate_date')
-            ->first(['rate_date']);
-
-        if ($latestRate !== null) {
-            $rawDate = $latestRate->rate_date ?? null;
-            $this->fxLastUpdated = is_string($rawDate) ? substr($rawDate, 0, 10) : null;
-        }
+        $this->loadFxLastUpdated($db);
     }
 
     public function setTheme(string $theme, CurrentUser $currentUser, WriteUserPreference $writeUserPreference): void
@@ -143,10 +144,60 @@ final class SettingsPage extends Component
         ($writeUserPreference)($currentUser->user()->id, ['fx_online_enabled' => $this->fxOnlineEnabled]);
     }
 
-    public function refreshFxRates(DispatchFxRatesRefresh $dispatch, CurrentUser $currentUser): void
+    // Bounded because the answer may never come: the fetch runs in a queued
+    // job, the providers can all fail, and the button used to say "Refreshing…"
+    // for as long as the page stayed open.
+    private const FX_REFRESH_MAX_POLLS = 15;
+
+    public function refreshFxRates(DispatchFxRatesRefresh $dispatch, CurrentUser $currentUser, DatabaseManager $db): void
     {
         $this->fxRefreshing = true;
+        $this->fxRefreshGaveUp = false;
+        $this->fxRefreshPolls = 0;
+        $this->fxRefreshBaseline = $this->latestRateWrite($db);
+
         $dispatch($currentUser->user()->id);
+    }
+
+    public function pollFxRefresh(DatabaseManager $db): void
+    {
+        if (! $this->fxRefreshing) {
+            return;
+        }
+
+        if ($this->latestRateWrite($db) !== $this->fxRefreshBaseline) {
+            $this->fxRefreshing = false;
+            $this->loadFxLastUpdated($db);
+
+            return;
+        }
+
+        $this->fxRefreshPolls++;
+
+        if ($this->fxRefreshPolls >= self::FX_REFRESH_MAX_POLLS) {
+            $this->fxRefreshing = false;
+            $this->fxRefreshGaveUp = true;
+        }
+    }
+
+    // The newest write, not the newest rate date. An upsert always stamps
+    // updated_at, so this moves even when the feed repeats a date.
+    private function latestRateWrite(DatabaseManager $db): ?string
+    {
+        $value = $db->connection()->table('exchange_rates')->max('updated_at');
+
+        return is_string($value) ? $value : null;
+    }
+
+    private function loadFxLastUpdated(DatabaseManager $db): void
+    {
+        $latestRate = $db->connection()
+            ->table('exchange_rates')
+            ->orderByDesc('rate_date')
+            ->first(['rate_date']);
+
+        $rawDate = $latestRate->rate_date ?? null;
+        $this->fxLastUpdated = is_string($rawDate) ? substr($rawDate, 0, 10) : null;
     }
 
     public function save(CurrentUser $currentUser): void

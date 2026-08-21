@@ -51,3 +51,18 @@ it('builds a lowercase filename from the username', function (): void {
     expect($formatter->filenameFor('Alice'))->toBe('beatrax-recovery-codes-alice.txt');
     expect($formatter->filenameFor('  BOB  '))->toBe('beatrax-recovery-codes-bob.txt');
 });
+
+// The rule that shapes a username binds accounts made after it. This name is
+// handed to a download attribute and to the OS share sheet, so it is stripped
+// of what a filesystem refuses whatever is already in the row.
+it('keeps the recovery-codes filename a filename', function (string $username, string $expected): void {
+    expect((new RecoveryCodeFormatter)->filenameFor($username))->toBe($expected);
+})->with([
+    'path separator' => ['wes/sel', 'beatrax-recovery-codes-wes-sel.txt'],
+    'emoji' => ['wessel🎉', 'beatrax-recovery-codes-wessel.txt'],
+    'newline' => ["wes\nsel", 'beatrax-recovery-codes-wes-sel.txt'],
+    'windows-illegal' => ['wes:sel?', 'beatrax-recovery-codes-wes-sel.txt'],
+    'leading dot' => ['.hidden', 'beatrax-recovery-codes-hidden.txt'],
+    'over-long' => [str_repeat('a', 96), 'beatrax-recovery-codes-'.str_repeat('a', 32).'.txt'],
+    'nothing left' => ['🎉', 'beatrax-recovery-codes-account.txt'],
+]);

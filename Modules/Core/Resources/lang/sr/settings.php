@@ -56,6 +56,7 @@ return [
         'fetch_aria' => 'Preuzmi aktuelne kurseve sa interneta',
         'refreshing' => 'Osvežavanje…',
         'next_refresh' => 'Sledeće automatsko osvežavanje: svaki dan u 09:00',
+        'refresh_gave_up' => 'Kurseve nije bilo moguće osvežiti. I dalje se koriste kursevi na ovom uređaju.',
         'refresh_now' => 'Osveži sada',
     ],
 

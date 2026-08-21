@@ -14,6 +14,7 @@ return [
         'heading' => 'Hranilnikov še ni',
         'body' => 'Ustvari navidezna delna stanja znotraj poljubnega računa in razporedi denar brez dejanskega bančnega prenosa.',
         'cta' => 'Dodaj svoj prvi hranilnik',
+        'no_accounts_cta' => 'Uvozi izpisek',
     ],
 
     'common' => [

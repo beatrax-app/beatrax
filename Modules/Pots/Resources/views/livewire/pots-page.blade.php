@@ -80,6 +80,11 @@
                     x-on:click="$flux.modal('pot-form').show()"
                     wire:click="$set('editPotId', 0)"
                 >{{ Lang::get('pots::messages.empty.cta') }}</x-core::neutral-button>
+            @else
+                {{-- A pot lives on an account, so with none there is nothing
+                     "Add pot" could attach to. The way forward is the wizard
+                     that creates the first account. --}}
+                <x-core::neutral-button :href="route('imports.new')">{{ Lang::get('pots::messages.empty.no_accounts_cta') }}</x-core::neutral-button>
             @endif
         </x-core::empty-state>
     @else

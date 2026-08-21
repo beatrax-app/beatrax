@@ -30,6 +30,7 @@ return [
 
     'errors' => [
         'amount_positive' => 'Введи суму більшу за нуль.',
+        'amount_too_large' => 'Ця сума завелика. Перевір цифри.',
         'invalid_date' => 'Введи коректну дату.',
     ],
 

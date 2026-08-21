@@ -14,6 +14,7 @@ return [
         'heading' => 'Ingen sparepotter ennå',
         'body' => 'Opprett virtuelle delsaldoer innenfor en hvilken som helst konto for å organisere pengene dine uten en faktisk bankoverføring.',
         'cta' => 'Legg til din første sparepott',
+        'no_accounts_cta' => 'Importer en kontoutskrift',
     ],
 
     'common' => [

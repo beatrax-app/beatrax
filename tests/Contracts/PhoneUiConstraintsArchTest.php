@@ -207,3 +207,73 @@ it('keeps the 44px floor from deforming controls the design draws smaller', func
         implode(', ', array_map(static fn (string $c): string => '.'.$c, $unprotected))
     ));
 });
+
+/**
+ * @return list<string> every selector an unlayered coarse-pointer rule holds at
+ *                      44px, one entry per comma-separated part
+ */
+function phoneUiCoarse44pxSelectors(): array
+{
+    $selectors = [];
+    foreach (phoneUiCoarsePointerBlocks() as $block) {
+        $block = (string) preg_replace('#/\*.*?\*/#s', '', $block);
+
+        preg_match_all('/(?<selector>[^{}]+)\{(?<body>[^{}]*)\}/', $block, $rules, PREG_SET_ORDER);
+        foreach ($rules as $rule) {
+            if (preg_match('/(?<![a-z-])(?:min-)?height:\s*44px/', $rule['body']) !== 1) {
+                continue;
+            }
+
+            foreach (explode(',', $rule['selector']) as $selector) {
+                $selectors[] = trim((string) preg_replace('/\s+/', ' ', $selector));
+            }
+        }
+    }
+
+    return $selectors;
+}
+
+it('gives the sidebar rows real height on touch', function (): void {
+    // 26 rows at a 31px pitch sit flush, so the pseudo-element halo the chips
+    // take their reach from would only steal from the row below.
+    expect(phoneUiCoarse44pxSelectors())->toContain('.side-item', '.side-search');
+});
+
+it('gives every touch control the floor and the halo both miss a 44px hit area', function (): void {
+    // A select is tapped like a button and matched like neither; the checkbox
+    // label is the target because it wraps the input.
+    expect(phoneUiCoarse44pxSelectors())->toContain(
+        'select',
+        '.srch-input',
+        "label:has(> input[type='checkbox'])",
+        '.tap-link::after',
+    );
+});
+
+it('gives the login recovery-code link a touch reach', function (): void {
+    // A lone link in its own paragraph: 17px tall, and no floor covers an <a>.
+    $login = (string) file_get_contents(base_path('Modules/Auth/Resources/views/livewire/login-page.blade.php'));
+
+    expect($login)->toMatch('/<a\b[^>]*class="[^"]*\btap-link\b/s');
+});
+
+it('lets the reader\'s text-size choice reach the type scale', function (): void {
+    // Every --text-* token is a rem, so the scale follows the root — and
+    // nothing moved the root, which is why Larger Text did nothing at all.
+    $css = phoneUiUnlayeredCss();
+    $at = strpos($css, '@supports (font: -apple-system-body)');
+
+    expect($at)->toBeInt(
+        'app.css never adopts the Dynamic Type body size, so the root stays at 16px'
+    );
+
+    // -apple-system-body is 13px on macOS, so an unscoped rule would shrink the
+    // whole app in desktop Safari to fix a phone.
+    expect(substr($css, max(0, (int) $at - 200), 200))->toContain('@media (pointer: coarse) {');
+
+    // The shorthand carries a family and a line height too, and neither is the
+    // one this app draws with.
+    $block = substr($css, (int) $at, 300);
+    expect($block)->toContain('font-family: var(--font-sans)')
+        ->and($block)->toContain('line-height: 1.5');
+});

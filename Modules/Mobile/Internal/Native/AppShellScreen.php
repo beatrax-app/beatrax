@@ -81,7 +81,7 @@ final class AppShellScreen extends NativeComponent
     {
         $key = self::DESTINATIONS[$this->active]['label'] ?? null;
 
-        return $key === null ? 'beatrax' : Lang::get($key);
+        return $key === null ? 'Beatrax' : Lang::get($key);
     }
 
     // The longest destination path that prefixes $path, so `/transactions/42`

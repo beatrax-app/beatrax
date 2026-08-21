@@ -731,7 +731,7 @@ final class PromoteStagingToDomain
                     'item_type' => 'extra',
                     'source_external_id' => $categoryExternalId,
                     'display_label' => 'Goal: '.$name,
-                    'reason' => 'This goal has no target date; beatrax requires one to create a savings goal.',
+                    'reason' => 'This goal has no target date; Beatrax requires one to create a savings goal.',
                 ]);
 
                 continue;

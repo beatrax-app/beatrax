@@ -55,6 +55,7 @@ return [
         'fetch_aria' => 'Actuele wisselkoersen online ophalen',
         'refreshing' => 'Bezig met vernieuwen…',
         'next_refresh' => 'Volgende automatische vernieuwing: dagelijks om 09:00',
+        'refresh_gave_up' => 'Kon de koersen niet vernieuwen. De koersen die al op dit apparaat staan, worden nog gebruikt.',
         'refresh_now' => 'Nu vernieuwen',
     ],
 

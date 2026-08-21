@@ -346,7 +346,7 @@ Per-page detail that doesn't fit the flow diagrams above:
   `config('app.dev_mode') === true` (env-pinned); Gate 2
   `session('dev_mode.advanced') === true` (resets on Login via
   `ResetAdvancedToggleOnLogin`); Gate 3 the operator typed the exact
-  lowercase app name `beatrax` (timing-safe `hash_equals`, so
+  app name `Beatrax` (timing-safe `hash_equals`, so
   client-side enable/disable of the button is purely cosmetic). On
   all-three-pass it dispatches `triple-gate:confirmed` with the command
   - args + typed token; downstream listeners

@@ -39,7 +39,7 @@ final class DemoSystemAlertsSeeder
         [
             'kind' => UpdateAlertKind::Available->value,
             'severity' => 'info',
-            'message' => 'A new release of beatrax is available — see Settings → About for release notes.',
+            'message' => 'A new release of Beatrax is available — see Settings → About for release notes.',
             'ageHours' => 12,
             'acknowledgedAgeHours' => null,
             'seedKey' => 'update-available-current',

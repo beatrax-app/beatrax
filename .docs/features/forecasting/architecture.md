@@ -507,7 +507,7 @@ popover-style `AccountBufferEditor`) mounted per account row in the
    the editor catches it, shows a soft-warning banner, and keeps the form
    open with `divergenceDiffMinor` set.
 4. The user clicks "Use my number" to commit with `allowDivergence=true`,
-   or "Use beatrax's number" to replace the input with the computed
+   or "Use Beatrax's number" to replace the input with the computed
    sum-of-transactions and manually re-save.
 
 `SetAccountForecastBuffer` and `SetAccountOpeningBalance` both: raise a

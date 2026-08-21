@@ -7,6 +7,20 @@
 
         {{-- ===== Step: collect_pin ===== --}}
         @if ($step === 'collect_pin' && ! $alreadyProvisioned)
+            {{-- Only on this step: nothing has been created yet, so leaving is
+                 free. Past it the device holds an identity, and the screens
+                 that follow lead forward on purpose. --}}
+            <p class="text-sm">
+                <a
+                    href="{{ route('mobile.welcome') }}"
+                    class="tap-link inline-flex items-center gap-1 text-slate-500 underline-offset-2 hover:underline dark:text-slate-400"
+                    wire:navigate
+                >
+                    <span aria-hidden="true">←</span>
+                    {{ Lang::get('core::components.topbar.back') }}
+                </a>
+            </p>
+
             <header class="space-y-1">
                 <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('mobile::import.heading') }}</h1>
                 <p class="text-sm text-slate-500 dark:text-slate-400">

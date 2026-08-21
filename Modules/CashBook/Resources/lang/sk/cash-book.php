@@ -30,6 +30,7 @@ return [
 
     'errors' => [
         'amount_positive' => 'Zadaj sumu väčšiu ako nula.',
+        'amount_too_large' => 'Táto suma je príliš veľká. Skontroluj číslice.',
         'invalid_date' => 'Zadaj platný dátum.',
     ],
 

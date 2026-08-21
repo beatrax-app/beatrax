@@ -14,6 +14,7 @@ return [
         'heading' => 'Nicio pușculiță deocamdată',
         'body' => 'Creează solduri parțiale virtuale în orice cont, ca să îți organizezi banii fără un transfer bancar real.',
         'cta' => 'Adaugă prima pușculiță',
+        'no_accounts_cta' => 'Importă un extras de cont',
     ],
 
     'common' => [

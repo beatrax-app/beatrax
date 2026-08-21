@@ -30,6 +30,7 @@ return [
 
     'errors' => [
         'amount_positive' => 'Ange ett belopp större än noll.',
+        'amount_too_large' => 'Beloppet är för stort. Kontrollera siffrorna.',
         'invalid_date' => 'Ange ett giltigt datum.',
     ],
 

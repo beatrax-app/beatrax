@@ -28,3 +28,16 @@ it('keeps the scrim a full-screen layer so an open sheet still blocks the page',
     expect($rule)->toContain('position: fixed')
         ->and($rule)->toContain('inset: 0');
 });
+
+it('dims the page behind a modal as much as behind the sheet', function (): void {
+    // Flux's own backdrop is 10% black. Beside a 40% sheet scrim the same page
+    // was covered twice at two different strengths, and on a phone the fainter
+    // one barely read as modal at all.
+    $css = (string) file_get_contents(base_path('resources/css/app.css'));
+
+    $start = strpos($css, '[data-flux-modal] > dialog[open]::backdrop {');
+    expect($start)->toBeInt('nothing in app.css overrides the Flux backdrop');
+
+    $rule = substr($css, (int) $start, (int) strpos($css, '}', (int) $start) - (int) $start);
+    expect($rule)->toContain('rgba(15, 23, 42, 0.4)');
+});

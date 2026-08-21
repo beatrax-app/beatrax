@@ -149,7 +149,7 @@ drifted up (an open drift alert exists) and the corpus has a
 cancellation page; (3) `review`: an ongoing charge at or above the EUR
 review floor with a cancellation page. One suggestion per subscription,
 dismissible via a stable persisted key, ranked by monthly cost — purely
-informational, beatrax surfaces the official link and never acts on the
+informational, Beatrax surfaces the official link and never acts on the
 user's behalf. `forUser()` is cached per user so the dashboard card
 doesn't re-run the resolution fan-out on every render; the cache is
 invalidated on `dismiss()` and also expires within the TTL so new

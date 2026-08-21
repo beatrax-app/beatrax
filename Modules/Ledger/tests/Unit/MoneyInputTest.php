@@ -64,3 +64,17 @@ it('tryToPositiveMinor accepts a positive amount', function (): void {
 it('tryToPositiveMinor rejects zero, negatives and malformed input', function (string $bad): void {
     expect(MoneyInput::tryToPositiveMinor($bad))->toBeNull();
 })->with(['0', '0,00', '-1', '-50,00', '', 'abc']);
+
+it('refuses an amount past the ceiling a hand-typed figure can reach', function (string $tooBig): void {
+    expect(MoneyInput::tryToMinor($tooBig))->toBeNull()
+        ->and(MoneyInput::exceedsMax($tooBig))->toBeTrue();
+})->with(['999999999999', '1000000000,00', '-1000000000,00', '1.000.000.000,00']);
+
+it('accepts the largest amount below the ceiling', function (): void {
+    expect(MoneyInput::tryToMinor('999999999,99'))->toBe(MoneyInput::MAX_MINOR)
+        ->and(MoneyInput::exceedsMax('999999999,99'))->toBeFalse();
+});
+
+it('does not call a malformed amount too large', function (string $bad): void {
+    expect(MoneyInput::exceedsMax($bad))->toBeFalse();
+})->with(['abc', '', '12.345', '1.2.3']);

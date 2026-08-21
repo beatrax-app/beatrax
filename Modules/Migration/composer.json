@@ -1,6 +1,6 @@
 {
     "name": "beatrax/migration",
-    "description": "Migration module — one-time importer for YNAB4, nYNAB, and Actual Budget exports into beatrax's envelope model.",
+    "description": "Migration module — one-time importer for YNAB4, nYNAB, and Actual Budget exports into Beatrax's envelope model.",
     "type": "laravel-module",
     "license": "proprietary",
     "autoload": {

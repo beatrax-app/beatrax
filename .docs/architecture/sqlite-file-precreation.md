@@ -1,6 +1,6 @@
 # Creating the SQLite file before the container boots
 
-Every beatrax root — the desktop root at `bootstrap/app.php` and the mobile
+Every Beatrax root — the desktop root at `bootstrap/app.php` and the mobile
 root at `mobile-app/bootstrap/app.php` — opens with a `->booting()` hook that
 does nothing but make sure an **empty** SQLite file exists on disk. It looks
 like defensive clutter in the middle of an otherwise declarative bootstrap

@@ -24,5 +24,6 @@ return [
     'error_generic' => 'Die Registrierung konnte nicht abgeschlossen werden.',
 
     'error_min_length' => 'Verwende mindestens 12 Zeichen.',
+    'error_username_invalid' => 'Nutze bis zu 32 Buchstaben, Ziffern, Punkte, Bindestriche oder Unterstriche.',
     'error_closed' => 'Die Registrierung ist auf diesem Gerät geschlossen.',
 ];

@@ -24,5 +24,6 @@ return [
     'error_generic' => 'Rekisteröitymistä ei voitu viimeistellä.',
 
     'error_min_length' => 'Käytä vähintään 12 merkkiä.',
+    'error_username_invalid' => 'Käytä enintään 32 kirjainta, numeroa, pistettä, väliviivaa tai alaviivaa.',
     'error_closed' => 'Rekisteröityminen on suljettu tällä laitteella.',
 ];

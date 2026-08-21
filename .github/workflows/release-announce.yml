@@ -25,11 +25,11 @@ jobs:
     uses: beatrax-app/spec/.github/workflows/discord-notify.yml@v1
     with:
       content: ${{ vars.DISCORD_RELEASE_ROLE_ID && format('<@&{0}>', vars.DISCORD_RELEASE_ROLE_ID) || '' }}
-      title: "beatrax ${{ github.event.release.tag_name }}"
+      title: "Beatrax ${{ github.event.release.tag_name }}"
       body: ${{ github.event.release.body }}
       url: ${{ github.event.release.html_url }}
       color: "5793266"
       # #releases is a Forum channel: open a thread per release, named for it.
-      thread: "beatrax ${{ github.event.release.tag_name }}"
+      thread: "Beatrax ${{ github.event.release.tag_name }}"
     secrets:
       webhook: ${{ secrets.DISCORD_ANNOUNCE_WEBHOOK }}

@@ -56,6 +56,7 @@ return [
         'fetch_aria' => 'Stiahnuť aktuálne výmenné kurzy online',
         'refreshing' => 'Obnovuje sa…',
         'next_refresh' => 'Ďalšie automatické obnovenie: denne o 09:00',
+        'refresh_gave_up' => 'Kurzy sa nepodarilo obnoviť. Naďalej sa používajú kurzy uložené v tomto zariadení.',
         'refresh_now' => 'Obnoviť teraz',
     ],
 

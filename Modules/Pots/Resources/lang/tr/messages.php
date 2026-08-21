@@ -14,6 +14,7 @@ return [
         'heading' => 'Henüz kumbara yok',
         'body' => 'Gerçek bir banka transferi yapmadan paranı düzenlemek için herhangi bir hesapta sanal alt bakiyeler oluştur.',
         'cta' => 'İlk kumbaranı ekle',
+        'no_accounts_cta' => 'Hesap ekstresi içe aktar',
     ],
 
     'common' => [

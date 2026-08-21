@@ -70,7 +70,7 @@ it('biometric success releases the app-lock key and redirects to the dashboard',
             return true;
         }
 
-        public function prompt(string $reason = 'Unlock beatrax'): bool
+        public function prompt(string $reason = 'Unlock Beatrax'): bool
         {
             return true;
         }
@@ -97,7 +97,7 @@ it('biometric abort never releases the key — data stays encrypted, PIN pad rem
             return true;
         }
 
-        public function prompt(string $reason = 'Unlock beatrax'): bool
+        public function prompt(string $reason = 'Unlock Beatrax'): bool
         {
             return false;
         }
@@ -126,7 +126,7 @@ it('biometric success against a genuinely locked session (no data key) falls thr
             return true;
         }
 
-        public function prompt(string $reason = 'Unlock beatrax'): bool
+        public function prompt(string $reason = 'Unlock Beatrax'): bool
         {
             return true;
         }

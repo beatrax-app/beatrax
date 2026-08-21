@@ -74,7 +74,7 @@ it('finalizeCommandRun updates the existing row in place (no second row created)
         runId: 'run-finalize-1',
         finishedAt: startedAt()->addSeconds(2),
         exitCode: 0,
-        stdoutExcerpt: 'app.name = beatrax',
+        stdoutExcerpt: 'app.name = Beatrax',
         errorExcerpt: '',
         cancelled: false,
     );
@@ -91,7 +91,7 @@ it('finalizeCommandRun updates the existing row in place (no second row created)
 
     expect($props['exit_code'])->toBe(0);
     expect($props['finished_at'])->toBe(startedAt()->addSeconds(2)->toIso8601String());
-    expect($props['stdout_excerpt'])->toBe('app.name = beatrax');
+    expect($props['stdout_excerpt'])->toBe('app.name = Beatrax');
 });
 
 it('finalizeCommandRun returns false when no row matches the runId', function (): void {

@@ -78,8 +78,8 @@ final class RecoveryCodesDisplay extends Component
 
         $view = $views->make('auth::livewire.recovery-codes-display', [
             'codes' => $codes,
-            'username' => $username,
             'downloadFilename' => $formatter->filenameFor($username),
+            'downloadSlug' => $formatter->usernameSlug($username),
             'downloadPayload' => $formatter->format($codes),
             'exportUrl' => $router->has($exportRoute) ? $urls->route($exportRoute) : null,
         ]);

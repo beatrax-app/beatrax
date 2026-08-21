@@ -91,7 +91,7 @@ when + duration). Clicking header collapses output.
 ### Triple-gate destructive modal
 
 When the user attempts a destructive-tier command (or bulk destructive
-queue action), this modal blocks until they type `beatrax` exactly:
+queue action), this modal blocks until they type `Beatrax` exactly:
 
 ```
 ┌──────────────────────────────────────────────┐
@@ -102,9 +102,9 @@ queue action), this modal blocks until they type `beatrax` exactly:
 │ ┌──────────────────────────────────────────┐ │
 │ │ php artisan db:restore --from=…          │ │   ← mono, slate-50 bg
 │ └──────────────────────────────────────────┘ │
-│ Type beatrax to confirm                      │
+│ Type Beatrax to confirm                      │
 │ ┌──────────────────────────────────────────┐ │
-│ │ beatrax|                                  │ │
+│ │ Beatrax|                                  │ │
 │ └──────────────────────────────────────────┘ │
 │ Case-sensitive · exact match required        │
 ├──────────────────────────────────────────────┤
@@ -113,7 +113,7 @@ queue action), this modal blocks until they type `beatrax` exactly:
 ```
 
 - Primary button (`Run …`) is disabled (50 % opacity) until the input
-  exactly matches `beatrax` (case-sensitive).
+  exactly matches `Beatrax` (case-sensitive).
 - Modal has no close-on-scrim-click — user must press Cancel or
   Escape.
 - The resolved command line shown in the mono row is the actual

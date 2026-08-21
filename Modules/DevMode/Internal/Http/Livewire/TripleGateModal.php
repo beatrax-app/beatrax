@@ -59,7 +59,7 @@ final class TripleGateModal extends Component
             throw ValidationException::withMessages(['_gate' => 'advanced_off']);
         }
 
-        if (! hash_equals('beatrax', $this->typed)) {
+        if (! hash_equals('Beatrax', $this->typed)) {
             $this->gateError = 'app_name_mismatch';
             throw ValidationException::withMessages(['typed' => 'app_name_mismatch']);
         }

@@ -56,6 +56,7 @@ return [
         'fetch_aria' => 'Güncel döviz kurlarını çevrimiçi al',
         'refreshing' => 'Yenileniyor…',
         'next_refresh' => 'Sonraki otomatik yenileme: her gün 09:00',
+        'refresh_gave_up' => 'Kurlar yenilenemedi. Bu cihazdaki mevcut kurlar kullanılmaya devam ediyor.',
         'refresh_now' => 'Şimdi yenile',
     ],
 

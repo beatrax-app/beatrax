@@ -109,5 +109,5 @@ jobs:
                       exit 0
                   fi
                   git add -A
-                  git commit -m "chore(mobile): materialize ${GITHUB_SHA::12} from beatrax monorepo"
+                  git commit -m "chore(mobile): materialize ${GITHUB_SHA::12} from Beatrax monorepo"
                   git push

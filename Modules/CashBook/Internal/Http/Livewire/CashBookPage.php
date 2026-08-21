@@ -17,7 +17,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeDate;
-use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
 use Modules\Tax\Public\Services\TaxTagQuery;
@@ -57,9 +57,11 @@ final class CashBookPage extends Component
     {
         $this->error = '';
 
-        $amountMinor = self::parseAmount($this->amount);
-        if ($amountMinor === null || $amountMinor <= 0) {
-            $this->error = Lang::get('cashbook::cash-book.errors.amount_positive');
+        $amountMinor = MoneyInput::tryToPositiveMinor($this->amount);
+        if ($amountMinor === null) {
+            $this->error = MoneyInput::exceedsMax($this->amount)
+                ? Lang::get('cashbook::cash-book.errors.amount_too_large')
+                : Lang::get('cashbook::cash-book.errors.amount_positive');
 
             return;
         }
@@ -195,34 +197,6 @@ final class CashBookPage extends Component
             ->exists();
 
         return $owned ? $this->categoryId : null;
-    }
-
-    // Plain ("12.50"), Dutch grouped ("1.234,56") and comma-decimal ("12,50"):
-    // the rightmost of '.' or ',' is the separator. Non-numeric characters are
-    // rejected, so no leading sign or exponent coerces to a surprise amount.
-    private static function parseAmount(string $raw): ?int
-    {
-        $trimmed = str_replace(' ', '', trim($raw));
-        if ($trimmed === '' || preg_match('/[^0-9.,]/', $trimmed) === 1) {
-            return null;
-        }
-
-        $lastDot = strrpos($trimmed, '.');
-        $lastComma = strrpos($trimmed, ',');
-        $decimalPos = max($lastDot === false ? -1 : $lastDot, $lastComma === false ? -1 : $lastComma);
-
-        $wholeRaw = $decimalPos === -1 ? $trimmed : substr($trimmed, 0, $decimalPos);
-        $fracRaw = $decimalPos === -1 ? '' : substr($trimmed, $decimalPos + 1);
-
-        $whole = preg_replace('/[.,]/', '', $wholeRaw) ?? '';
-        if (preg_match('/^\d{1,12}$/', $whole) !== 1
-            || ($fracRaw !== '' && preg_match('/^\d+$/', $fracRaw) !== 1)) {
-            return null;
-        }
-
-        $cents = substr(str_pad($fracRaw, 2, '0'), 0, 2);
-
-        return (int) $whole * Money::MINOR_UNITS_PER_MAJOR + (int) $cents;
     }
 
     private static function parseDate(string $raw): ?CarbonImmutable

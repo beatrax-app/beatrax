@@ -44,7 +44,7 @@ function coldStartEnclave(bool $enrolls = true, ?string $recovers = null): Biome
             return $this->enrolls;
         }
 
-        public function recover(string $reason = 'Unlock beatrax'): BiometricRecoverResult
+        public function recover(string $reason = 'Unlock Beatrax'): BiometricRecoverResult
         {
             $this->recoverCalls++;
 
@@ -125,7 +125,7 @@ it('returns the key the enclave yields, prompting exactly once', function (): vo
     $enclave = coldStartEnclave(recovers: $dataKey);
     $vault = new MobileColdStartVault($enclave, app(MobileLockGateway::class));
 
-    expect($vault->recover((int) $user->id, 'Unlock beatrax'))->toBe($dataKey)
+    expect($vault->recover((int) $user->id, 'Unlock Beatrax'))->toBe($dataKey)
         ->and($enclave->recoverCalls)->toBe(1);
 });
 
@@ -133,7 +133,7 @@ it('returns nothing when the enclave recovery is not completed', function (): vo
     $user = coldStartVaultUser('cold-start-canceled');
     $vault = new MobileColdStartVault(coldStartEnclave(), app(MobileLockGateway::class));
 
-    expect($vault->recover((int) $user->id, 'Unlock beatrax'))->toBeNull();
+    expect($vault->recover((int) $user->id, 'Unlock Beatrax'))->toBeNull();
 });
 
 it('clears both the enclave entry and the flag when forgetting', function (): void {

@@ -1,6 +1,6 @@
 # Operator recovery
 
-Operational runbook for self-hosted beatrax deployments — backups, restore,
+Operational runbook for self-hosted Beatrax deployments — backups, restore,
 corrupt-backup remediation, failed-jobs maintenance, and stuck-lock recovery.
 
 This document is the authoritative source for operational procedures. The
