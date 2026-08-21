@@ -74,22 +74,9 @@ final class GdkEpochControlHandler
      */
     private function senderIsAuthentic(array $wrap, int $userId): bool
     {
-        $senderPublicKeyHex = $this->deviceRegistry->deviceKeys($userId)[$wrap['senderDeviceId']] ?? null;
-        if (! is_string($senderPublicKeyHex) || $senderPublicKeyHex === '') {
-            $this->logger->warning('GdkEpochControlHandler: GDK_EPOCH_WRAP from an unconfirmed or unknown sender — rejected, no append.', [
-                'sender_device_id' => $wrap['senderDeviceId'],
-            ]);
+        $senderPublicKeyBin = $this->confirmedSenderKey($wrap['senderDeviceId'], $userId);
 
-            return false;
-        }
-
-        try {
-            $senderPublicKeyBin = sodium_hex2bin($senderPublicKeyHex);
-        } catch (SodiumException $e) {
-            $this->logger->warning('GdkEpochControlHandler: sender device key is not valid hex — rejected.', [
-                'error' => $e->getMessage(),
-            ]);
-
+        if ($senderPublicKeyBin === null) {
             return false;
         }
 
@@ -109,6 +96,33 @@ final class GdkEpochControlHandler
         }
 
         return true;
+    }
+
+    // The sender's public key in binary, or null when it cannot be trusted:
+    // deviceKeys() filters on confirmed_at, so an unconfirmed, unknown or
+    // revoked sender has no entry, and a stored key that is not valid hex is
+    // no more usable than a missing one.
+    private function confirmedSenderKey(string $senderDeviceId, int $userId): ?string
+    {
+        $senderPublicKeyHex = $this->deviceRegistry->deviceKeys($userId)[$senderDeviceId] ?? null;
+
+        if (! is_string($senderPublicKeyHex) || $senderPublicKeyHex === '') {
+            $this->logger->warning('GdkEpochControlHandler: GDK_EPOCH_WRAP from an unconfirmed or unknown sender — rejected, no append.', [
+                'sender_device_id' => $senderDeviceId,
+            ]);
+
+            return null;
+        }
+
+        try {
+            return sodium_hex2bin($senderPublicKeyHex);
+        } catch (SodiumException $e) {
+            $this->logger->warning('GdkEpochControlHandler: sender device key is not valid hex — rejected.', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
     }
 
     // Reads the control envelope, filters to GDK_EPOCH_WRAP, and validates its

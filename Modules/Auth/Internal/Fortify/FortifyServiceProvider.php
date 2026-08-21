@@ -17,7 +17,11 @@ use Modules\Core\Models\User;
 // rather than a per-IP limiter.
 final class FortifyServiceProvider extends ServiceProvider
 {
-    public function register(): void {}
+    public function register(): void
+    {
+        // Nothing to bind: every Fortify callback needs a resolved Hasher, so
+        // all of this provider's wiring waits for boot().
+    }
 
     public function boot(Hasher $hasher): void
     {

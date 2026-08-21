@@ -84,10 +84,13 @@ final class CorpusPatternMatcher
     // one still runs, bounded by matchWithinBudget().
     private function isUsableRegex(string $body, string $delimited, string $original): bool
     {
-        if ($body === '') {
-            return false;
-        }
+        return $body !== ''
+            && $this->isWithinLengthCap($body, $original)
+            && $this->compiles($delimited, $original);
+    }
 
+    private function isWithinLengthCap(string $body, string $original): bool
+    {
         $length = mb_strlen($body);
         if ($length > self::MAX_REGEX_BODY_LENGTH) {
             $this->logger->warning('CorpusPatternMatcher: regex pattern exceeds the length cap, treated as non-match.', [
@@ -98,6 +101,11 @@ final class CorpusPatternMatcher
             return false;
         }
 
+        return true;
+    }
+
+    private function compiles(string $delimited, string $original): bool
+    {
         if (@preg_match($delimited, '') === false) {
             $this->logger->warning('CorpusPatternMatcher: invalid regex pattern, treated as non-match.', [
                 'pattern' => $original,

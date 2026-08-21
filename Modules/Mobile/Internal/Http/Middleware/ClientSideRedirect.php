@@ -29,11 +29,10 @@ final class ClientSideRedirect
         // instanceof, not just isRedirection(): StreamedResponse and
         // BinaryFileResponse throw from setContent(), so a 3xx of either class
         // would 500 where it used to redirect.
-        if (UserDataPathService::platform() !== 'android' || ! $response instanceof RedirectResponse) {
-            return $response;
-        }
-
-        if (! $this->isDocumentNavigation($request)) {
+        if (UserDataPathService::platform() !== 'android'
+            || ! $response instanceof RedirectResponse
+            || ! $this->isDocumentNavigation($request)
+        ) {
             return $response;
         }
 
@@ -80,25 +79,15 @@ final class ClientSideRedirect
     // itself — the redirect equivalent of an open redirect.
     private function samePathTarget(string $location): ?string
     {
-        if ($location === '') {
-            return null;
-        }
-
         $parts = parse_url($location);
-        if ($parts === false) {
+
+        // An empty Location names nowhere to go, and one parse_url refuses
+        // outright names nothing that can be kept either.
+        if ($location === '' || $parts === false) {
             return null;
         }
 
-        $path = $parts['path'] ?? '/';
-
-        // A browser normalises a backslash to a forward slash in the path of
-        // an http(s) URL, so "/\evil.example" reaches location.replace() as
-        // "//evil.example" — protocol-relative, and off this origin. Both
-        // characters are therefore treated as the same separator here.
-        $path = str_replace('\\', '/', $path);
-        if (! str_starts_with($path, '/')) {
-            $path = '/'.$path;
-        }
+        $path = $this->rootedPath($parts['path'] ?? '/');
 
         // One leading slash exactly: two is protocol-relative, whatever the
         // host component parsed as.
@@ -109,6 +98,17 @@ final class ClientSideRedirect
         return $path
             .(isset($parts['query']) ? '?'.$parts['query'] : '')
             .(isset($parts['fragment']) ? '#'.$parts['fragment'] : '');
+    }
+
+    // A browser normalises a backslash to a forward slash in the path of an
+    // http(s) URL, so "/\evil.example" reaches location.replace() as
+    // "//evil.example" — protocol-relative, and off this origin. Both
+    // characters are therefore treated as the same separator here.
+    private function rootedPath(string $path): string
+    {
+        $path = str_replace('\\', '/', $path);
+
+        return str_starts_with($path, '/') ? $path : '/'.$path;
     }
 
     // replace(), not assign(): the URL being left behind redirects straight

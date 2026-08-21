@@ -69,7 +69,20 @@
          over the page on every full load, for ≥50ms. The scrim did not paint
          with it, so it read as a form appearing and vanishing. The inline
          style is what holds before the stylesheet arrives; x-cloak is what
-         holds if a transition leaves the inline value cleared. --}}
+         holds if a transition leaves the inline value cleared.
+
+         The name below points at the heading rather than repeating its text:
+         the same sheet is both "create" and "edit", and a Livewire re-render
+         updated the heading while the duplicated copy kept saying "create".
+         One string, so the two can no longer disagree. A title can also be
+         conditional at the call site and arrive empty — the calendar's is,
+         before a day is picked — and a dialog with no name at all is worse
+         than a generic one, so that branch names it from the locale instead.
+
+         Both notes sit out here rather than between the attributes: a Blade
+         comment inside a start tag is tokenised as attributes by static HTML
+         analysis, and the word aria-label in the prose was read as a real,
+         valueless one on the dialog. --}}
     <div
         class="bottom-sheet"
         x-cloak
@@ -84,16 +97,9 @@
         @keydown.escape="open = false"
         role="dialog"
         aria-modal="true"
-        {{-- Pointed at the heading rather than repeating its text: the same
-             sheet is both "create" and "edit", and a Livewire re-render
-             updated the heading while the duplicated aria-label kept saying
-             "create". One string, so the two can no longer disagree. --}}
         @if ($title)
             aria-labelledby="{{ $titleId }}"
         @else
-            {{-- A title can be conditional at the call site and come through
-                 empty — the calendar's is, before a day is picked. A dialog
-                 with no name at all is worse than a generic one. --}}
             aria-label="{{ Lang::get('core::components.sheet_untitled') }}"
         @endif
     >

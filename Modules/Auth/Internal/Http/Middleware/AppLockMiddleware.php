@@ -117,17 +117,14 @@ final readonly class AppLockMiddleware
             return $this->pass($request, $next);
         }
 
-        // Ahead of the idle check because the marker is spent either way:
-        // this request itself proves the app is back in the foreground.
-        if ($this->backgroundGraceExpired($session)) {
+        // Ahead of the idle check, and evaluated on every pass, because the
+        // marker is spent either way: this request itself proves the app is
+        // back in the foreground.
+        if ($this->backgroundGraceExpired($session) || $this->isIdleExpired($config)) {
             return $this->lockForIdle($request, $next, $session, $routeName);
         }
 
-        if ($this->isIdleExpired($config)) {
-            return $this->lockForIdle($request, $next, $session, $routeName);
-        }
-
-        $this->recordActivity($request, $session, $userId, $routeName);
+        $this->recordActivity($session, $userId, $routeName);
         $this->rememberPage($request, $session, $routeName);
 
         return $this->pass($request, $next);
@@ -266,7 +263,7 @@ final readonly class AppLockMiddleware
 
     // Livewire updates are not activity: wire:poll traffic would hold the idle
     // timer open forever.
-    private function recordActivity(Request $request, Session $session, int $userId, ?string $routeName): void
+    private function recordActivity(Session $session, int $userId, ?string $routeName): void
     {
         if ($this->isExemptRoute($routeName) || $this->isLivewireUpdate()) {
             return;

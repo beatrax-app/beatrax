@@ -19,9 +19,17 @@ use NativePHP\LocalNotifications\LocalNotificationsServiceProvider;
 // nativephp/desktop's own plugin surface.
 class NativeServiceProvider extends ServiceProvider
 {
-    public function register(): void {}
+    public function register(): void
+    {
+        // Nothing to bind: the plugin providers listed in plugins() are
+        // registered by the native builder, not from here.
+    }
 
-    public function boot(): void {}
+    public function boot(): void
+    {
+        // Nothing to boot either: this provider's whole contribution is the
+        // plugins() list the native build reads at compile time.
+    }
 
     /**
      * @return array<int, class-string<ServiceProvider>>

@@ -52,7 +52,15 @@
     <div x-show="open" x-cloak role="dialog" aria-label="{{ Lang::get('core::components.time.open') }}" class="bx-date-pop">
         <div class="flex gap-2">
             {{-- Two scrolling columns rather than a grid: hours and minutes are
-                 independent, and a 24x12 grid is unreadable on a phone. --}}
+                 independent, and a 24x12 grid is unreadable on a phone.
+
+                 Each option below writes aria-selected twice: the literal is
+                 the row's state before Alpine has evaluated anything, and the
+                 x-bind replaces it with the real answer the moment the row is
+                 cloned. Only the literal is visible to a reader of this file —
+                 static analysis included — and an option whose selected state
+                 is announced only after hydration is not announced at all if
+                 hydration never happens. --}}
             <div class="flex-1">
                 <p class="mb-1 text-[11px] uppercase tracking-wide text-slate-400">{{ Lang::get('core::components.time.hour') }}</p>
                 <div class="max-h-40 overflow-y-auto" role="listbox" aria-label="{{ Lang::get('core::components.time.hour') }}">
@@ -61,6 +69,7 @@
                             type="button"
                             x-on:click="chooseHour(h.hour24)"
                             x-text="h.label"
+                            aria-selected="false"
                             x-bind:aria-selected="isHour(h.hour24) ? 'true' : 'false'"
                             role="option"
                             class="block w-full rounded px-2 py-1 text-left text-sm tabular-nums"
@@ -80,6 +89,7 @@
                             type="button"
                             x-on:click="chooseMinute(m)"
                             x-text="m"
+                            aria-selected="false"
                             x-bind:aria-selected="isMinute(m) ? 'true' : 'false'"
                             role="option"
                             class="block w-full rounded px-2 py-1 text-left text-sm tabular-nums"
