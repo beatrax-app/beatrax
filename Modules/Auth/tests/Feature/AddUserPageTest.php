@@ -137,6 +137,17 @@ it('creates the partner and flashes the success copy on submit', function (): vo
     expect($partner->force_password_change_at_next_login)->toBeTrue();
 });
 
+// The same shape as the signup screen's blank submit: an empty username used to
+// raise an InvalidArgumentException past the page's ValidationException catch.
+it('flashes an error for an empty username rather than raising', function (): void {
+    Livewire::actingAs(developerCaller())->test(AddUserPage::class)
+        ->set('username', '   ')
+        ->set('initialPassword', 'partner-initial-pw-12')
+        ->set('initialPasswordConfirmation', 'partner-initial-pw-12')
+        ->call('submit')
+        ->assertSet('flashMessage', 'Use up to 32 letters, digits, dots, dashes or underscores.');
+});
+
 it('flashes a mismatch error when the two passwords differ', function (): void {
     Livewire::actingAs(developerCaller())->test(AddUserPage::class)
         ->set('username', 'partner')

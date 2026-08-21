@@ -11,7 +11,6 @@ use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Validation\ValidationException;
-use InvalidArgumentException;
 use Modules\Auth\Internal\Recovery\RecoveryCodeGenerator;
 use Modules\Auth\Internal\Support\Username;
 use Modules\Auth\Models\UserRecoveryCode;
@@ -45,10 +44,6 @@ final class SignupAction
     public function __invoke(string $usernameInput, string $password, bool $seedsStarterData = true): array
     {
         $username = Username::normalize($usernameInput);
-
-        if ($username === '') {
-            throw new InvalidArgumentException('SignupAction: username must not be empty.');
-        }
 
         if (! Username::isValid($username)) {
             throw ValidationException::withMessages([

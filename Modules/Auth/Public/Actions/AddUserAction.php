@@ -8,7 +8,6 @@ use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
-use InvalidArgumentException;
 use Modules\Auth\Internal\Recovery\RecoveryCodeGenerator;
 use Modules\Auth\Internal\Support\Username;
 use Modules\Auth\Models\UserRecoveryCode;
@@ -40,10 +39,6 @@ final class AddUserAction
         }
 
         $username = Username::normalize($usernameInput);
-
-        if ($username === '') {
-            throw new InvalidArgumentException('AddUserAction: username must not be empty.');
-        }
 
         if (! Username::isValid($username)) {
             throw ValidationException::withMessages([
