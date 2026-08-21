@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Eiti į programėlės užraktą',
 
     'encrypted_at_rest' => 'Duomenys šifruojami saugykloje',
-    'encrypted_at_rest_scope' => 'Užrašai, operacijų aprašymai ir gavėjų vardai bei IBAN yra užšifruoti tavo programėlės užrakto slaptafraze. Sumos, datos ir tavo paties sąskaitos pavadinimas bei IBAN – ne, o kai kurie prekybininkų pavadinimai vis dar matomi atviru tekstu kitose duomenų bazės failo vietose.',
+    'encrypted_at_rest_scope' => 'Užrašai, operacijų aprašymai ir gavėjų vardai bei IBAN yra užšifruoti apskaitos knygoje tavo programėlės užrakto slaptafraze. Sumos, datos ir tavo paties sąskaitos pavadinimas bei IBAN – ne. Paieškos indeksas saugo savo įskaitomą kopiją to, kam moki, tavo operacijų aprašymų ir tavo mokestinių užrašų, o kai kurie prekybininkų pavadinimai matomi atviru tekstu kitose duomenų bazės failo vietose.',
     'on' => 'Įjungta',
     'securing' => 'Apsaugomi tavo duomenys…',
     'do_not_close' => 'Neuždaryk šio lango.',
@@ -53,7 +53,7 @@ return [
     'search_plaintext' => 'Paieškos indeksas saugo neužšifruotą prekybininkų ir aprašymų teksto kopiją, kad veiktų viso teksto paieška.',
     'keep_unencrypted' => 'Palikti duomenis nešifruotus',
     'encryption_enabled' => 'Šifravimas įjungtas',
-    'encryption_enabled_body' => 'Tavo duomenys dabar saugykloje šifruojami.',
+    'encryption_enabled_scope' => 'Užrašai, aprašymai ir tai, kam moki, dabar užšifruoti tavo programėlės užrakto slaptafraze. Sumos, datos ir paieškos indeksas lieka įskaitomi.',
     'done_encryption_enabled' => 'Atlikta — šifravimas įjungtas',
     'encryption_failed' => 'Šifravimo sąranka nepavyko',
     'encryption_failed_body' => 'Tavo duomenys nepakeisti. Atsarginė kopija išsaugota.',

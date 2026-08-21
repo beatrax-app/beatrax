@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => "Vai a Blocco dell'app",
 
     'encrypted_at_rest' => 'Dati crittografati a riposo',
-    'encrypted_at_rest_scope' => 'Le note, le descrizioni delle transazioni e i nomi e gli IBAN di chi paghi sono cifrati con la passphrase del blocco app. Gli importi, le date e il nome e l\'IBAN del tuo conto no, e alcuni nomi di esercenti restano in chiaro altrove nel file di database.',
+    'encrypted_at_rest_scope' => 'Le note, le descrizioni delle transazioni e i nomi e gli IBAN di chi paghi sono cifrati nel registro con la passphrase del blocco app. Gli importi, le date e il nome e l\'IBAN del tuo conto no. L\'indice di ricerca conserva una propria copia leggibile di chi paghi, delle descrizioni delle tue transazioni e delle tue note fiscali, e alcuni nomi di esercenti restano in chiaro altrove nel file di database.',
     'on' => 'Attivo',
     'securing' => 'Protezione dei tuoi dati…',
     'do_not_close' => 'Non chiudere questa finestra.',
@@ -53,7 +53,7 @@ return [
     'search_plaintext' => "L'indice di ricerca conserva una copia in chiaro del testo di esercente e descrizione così la ricerca full-text continua a funzionare.",
     'keep_unencrypted' => 'Mantieni i dati non crittografati',
     'encryption_enabled' => 'Crittografia attivata',
-    'encryption_enabled_body' => 'I tuoi dati ora sono crittografati a riposo.',
+    'encryption_enabled_scope' => 'Le note, le descrizioni e chi paghi ora sono cifrati con la passphrase del blocco app. Gli importi, le date e l\'indice di ricerca restano leggibili.',
     'done_encryption_enabled' => 'Fatto — crittografia attivata',
     'encryption_failed' => 'Configurazione della crittografia non riuscita',
     'encryption_failed_body' => 'I tuoi dati non sono stati modificati. Il tuo backup è stato conservato.',

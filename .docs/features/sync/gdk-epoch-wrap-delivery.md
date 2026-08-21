@@ -28,7 +28,7 @@ things that matter:
 | `recipient_device_id` | Who it is addressed to. |
 | `sender_device_id` + `sig_hex` | Ed25519 detached signature over the signed message. |
 | `key_role` | What the sealed bytes are. Absent means `epoch`. This is the discriminator. |
-| `sender_holds_keyed_rows` | Blind-index wraps only: whether the sender already has rows under this key. |
+| `sender_holds_keyed_rows` | Blind-index wraps only: whether the sender holds rows keyed under **this** key. Read only for that role — an epoch wrap does not sign it, so reading it there would let a value outside the signature decide the message's fate. |
 
 The signature is what turns an anonymous sealed box into an authenticated one. It is the
 answer to the second failed approach above.
@@ -62,61 +62,115 @@ does not know about roles verifies a role-bearing wrap against a message missing
 fails, and rejects it — rather than storing a blind-index key as an epoch key. Stripping
 `key_role` in transit fails the same way.
 
+The role term is **length-prefixed**, like every other variable-length field in that message.
+It was the one exception, and it was safe only because a second class allowlisted the value
+before the message was built — a coupling between two files that nothing stated. The allowlist
+now runs *after* verification (see the gates below), so an arbitrary role string reaches the
+signing message and the prefix is load-bearing rather than decorative. That changes the bytes a
+blind-index wrap signs; an epoch wrap is untouched.
+
 What the receiver does with an adopted blind-index key, and when it refuses to adopt one, is
 in [Which columns are encrypted at rest](sensitive-columns-at-rest.md).
 
 The wrap is enqueued on `relay_mailbox` as an opaque blob addressed to the recipient. Nothing
 about the enqueue depends on the recipient being online.
 
-## Two delivery directions
+## Three delivery legs
 
-Delivery is not one flow but two, and they are independent:
+Delivery is not one flow, and the legs are independent:
 
-1. **Push on connect.** When a peer completes a Noise handshake,
+1. **Push on connect, and read the peer's push back.** When a peer completes a Noise handshake,
    `SyncWebSocketHandler::deliverGdkEpochWraps()` sends a `GDK_EPOCH_PUSH` header frame
-   (`{type, count}`) followed by one frame per pending wrap, then marks each one delivered.
-   Noise cipher states are counter-based, so frames open in exactly the order they were
-   sealed — the header first, the wraps behind it. A delivered wrap is cleared and never
-   resent; a second delivery pass emits only its header, with `count: 0`.
-2. **Drain your own mailbox.** `drainInboundEpochWraps()` reads this device's own inbound
+   (`{type, count}`) followed by one frame per pending wrap. Noise cipher states are
+   counter-based, so frames open in exactly the order they were sealed — the header first, the
+   wraps behind it. The peer then answers `GDK_EPOCH_ACK {count}` and **only that many rows are
+   retired**, in the order they were sent. The same exchange then runs inverted: the peer
+   announces its own push, this side applies it and answers with its own ack. Both directions
+   always run, so neither side blocks on a phase the other skipped.
+2. **Drain your own mailbox.** `InboundGdkWrapDrain::drainFor()` reads this device's own inbound
    `relay_mailbox` rows and routes each blob through `GdkEpochControlHandler`. This needs no
    peer session at all — a wrap that arrived via an external relay or a forwarding peer
-   converges the keyring on its own.
+   converges the keyring on its own. It pages by cursor, so a row it cannot retire costs one
+   slot of a scan budget rather than holding the head of the window, and it expires rows past
+   the mailbox TTL on the way through, which is the only thing that honours `expires_at`.
+3. **Come back for it unlocked.** The drain above is called from the listener, and the listener
+   can never open a wrap (see the outcomes below). So it is *also* called from contexts that do
+   hold the app-lock key: `DevicesAndSyncSettingsSection::mount()` on the desktop, and
+   `MobileSyncTriggerService::syncOnce()` on the phone, whose tick already proved it holds the
+   key by resolving a device identity. Without this leg the retry outcome had no reachable
+   consumer and a deferred wrap was deferred forever.
+
+**Acknowledging before retiring is the point of leg 1.** Confirming a row the moment it was
+handed to the transport marked it delivered even when the connection dropped before the peer saw
+it, and `RelayMailbox` has no re-send: `fanOutAllEpochsToDevice()` fires once, at pairing. The
+receiver's half of that contract is that it never acknowledges a wrap into nothing — a blob it
+cannot open is written into **its own** inbox first, which is what makes an acknowledgement
+truthful and what leg 3 later comes back for.
 
 ## The gates, in order
 
-`GdkEpochControlHandler::handle()` applies four checks, and the *order* is part of the
-contract:
+`GdkEpochControlHandler::handle()` applies five checks, and the *order* is part of the contract:
 
-1. **Well-formedness.** A message missing `epoch_id`, `wrapped_key_b64` or
-   `recipient_device_id`, or naming a `key_role` this build does not know, is dropped before
-   any libsodium call is made.
+1. **Envelope shape.** A message missing `epoch_id`, `wrapped_key_b64`, `recipient_device_id`,
+   `sender_device_id` or `sig_hex` is set aside before any libsodium call is made. So is one
+   whose `key_role` is not a string, or whose `sender_holds_keyed_rows` is not a boolean on a
+   wrap that actually carries that role.
 2. **Recipient identity.** `recipient_device_id` must be this device. A wrap addressed
    elsewhere is rejected here — *before* the sender is ever looked at, so a foreign-recipient
    wrap from a perfectly legitimate sender still goes nowhere.
 3. **Sender authenticity.** `sender_device_id` must resolve to a device in this user's
    registry with a non-null `confirmed_at`, and `sig_hex` must verify under that device's
-   Ed25519 public key. Both halves run *before* any `seal_open`. An unknown sender has no key
-   to verify against and is rejected on the lookup alone.
-4. **Open.** Only now is the sealed box opened with this device's X25519 secret key.
+   Ed25519 public key. Both halves run *before* any `seal_open`.
+4. **What the role names.** Only now is `key_role` compared against the roles this build knows,
+   and a blind-index wrap required to carry the reserved `epoch_id`. Judging either earlier is
+   what let a value the signature does not cover decide a message's fate — see below.
+5. **Open.** Only now is the sealed box opened with this device's X25519 secret key.
 
-`handle()` returns a `GdkWrapOutcome` — `Applied`, `Refused`, or `Deferred` — and the caller
-that owns a mailbox row confirms only the first two. `Deferred` means the sealed box was never
-opened because this process holds no app-lock key, which is the **permanent** state of the
-`sync:serve` daemon: it resolves a `Session` no middleware ever started, so
-`AppLockKeyService::release()` returns null unconditionally. It is an outcome rather than an
-exception because this class is contractually forbidden from throwing — the `catch (Throwable)`
-that used to gate the confirm could never fire, so every wrap the daemon could not open was
-confirmed away. `RelayMailbox` has no re-send and `fanOutAllEpochsToDevice()` fires once, at
-pairing, so that deleted the only copy of the key.
+The consequence worth remembering: a wrap can fail for exactly one reason at a time, and which
+reason depends on where it falls in that list. Tampering with the sealed bytes is caught by the
+signature check at step 3, not by an AEAD failure at step 5.
 
-The same drain now also skips a blob that is not a wrap at all, instead of handing it to the
-handler and confirming the `Refused` away. Two protocols share this mailbox, and
-`pendingWrapsForPeer()` already applied that guard in the outbound direction.
+### Four outcomes, and which of them may retire the carrier
 
-The consequence worth remembering: a wrap can fail for exactly one reason at a time, and
-which reason depends on where it falls in that list. Tampering with the sealed bytes is
-caught by the signature check at step 3, not by an AEAD failure at step 4.
+`handle()` returns a `GdkWrapOutcome`, and the caller that owns a mailbox row asks
+`consumesCarrier()` rather than restating the split:
+
+| outcome | meaning | carrier |
+| --- | --- | --- |
+| `Applied` | the key is in the keyring, or was already | retired |
+| `Deferred` | cannot be decided **yet** | kept |
+| `Retained` | decided, and deliberately not adopted, over a local key with more claim | kept |
+| `Refused` | provably invalid for this device however often it is redelivered | retired |
+
+It is an outcome rather than an exception because this class is contractually forbidden from
+throwing — the `catch (Throwable)` that once gated the confirm could never fire, so every wrap
+the listener could not open was confirmed away. `RelayMailbox` has no re-send and
+`fanOutAllEpochsToDevice()` fires once, at pairing, so that deleted the only copy of the key.
+
+`Deferred` covers "no app-lock key in this process", which is the **permanent** state of the
+`sync:serve` daemon — it resolves a `Session` no middleware ever started, so
+`AppLockKeyService::release()` returns `null` unconditionally, verified by resolving that
+binding in a console process rather than inferred from the wiring. It also covers two conditions
+that are not permanent at all and used to be terminal:
+
+- **A sender this device has not confirmed yet.** During pairing, whether the registry row is
+  written before the wrap arrives is an ordering question, not a fact about the sender. Refusing
+  and retiring meant a wrap that arrived one step early was destroyed.
+- **An envelope this build cannot parse, or a role it does not know.** A stored blob some other
+  party mutated is indistinguishable from one a later build wrote in a shape this build has not
+  learned. Retiring the first destroys a key nothing re-sends; keeping both costs a mailbox row
+  until the TTL reclaims it.
+
+That second point is why step 4 moved. `sender_holds_keyed_rows` was parsed and type-checked
+*before* the signature ran and, for an epoch wrap, is **not in the signing message at all** — so
+appending one JSON key to a stored blob made `extractWrapFields()` return null, retired the row,
+and destroyed a GDK epoch key with no signature ever objecting. The field is now read only for
+the role that signs it, and the role allowlist runs only over a value a verified signature
+covers.
+
+The drain also skips a blob that is not a wrap at all, instead of handing it to the handler and
+retiring the `Refused` away. Two protocols share this mailbox, and `pendingWrapsFor()` applies
+the same guard in the outbound direction.
 
 ## Which epoch the recipient treats as current
 
@@ -155,12 +209,7 @@ The same wrap can arrive twice — pushed on connect and again from a drained ma
 an epoch that is already present must not duplicate it and must never move `current_epoch`
 *backwards*.
 
-Collisions are the harder case, and they are not hypothetical. Epoch ids are minted locally
-and start at 1, so two devices that each self-mint an epoch before hearing from the other both
-call their key "epoch 1" — same id, different bytes. This is exactly what an add-device
-fan-out walks into.
-
-The resolution turns on whether the local epoch has been *used*:
+The resolution when two ids do collide turns on whether the local epoch has been *used*:
 
 - **Nothing is encrypted under it locally** — no `op_log_entries` row carries that
   `gdk_epoch`. The peer's key replaces the local one and a warning is logged. Adopting costs
@@ -169,7 +218,9 @@ The resolution turns on whether the local epoch has been *used*:
   on this device.
 - **A local row already carries that `gdk_epoch`.** The local key is the only way to read that
   row, so adopting the peer's would just trade one unreadable set for another. The local key
-  is kept and the conflict is logged as an error rather than silently resolved.
+  is kept, the conflict is logged as an error rather than silently resolved, and the outcome is
+  `Retained` — the wrap still holds the only copy of the peer's key for that epoch, which is
+  what reading the peer's rows would need.
 
 ## The mailbox carries two protocols
 
@@ -199,6 +250,8 @@ start from a genuinely empty state.
 
 ## See also
 
+- [Which columns are encrypted at rest](sensitive-columns-at-rest.md) — what an adopted
+  blind-index key decides, and the two-sided exchange that decides it.
 - [`architecture.md`](architecture.md) — where the GDK sits in the wider sync design.
 - [`oplog-replay-under-live-triggers.md`](oplog-replay-under-live-triggers.md) — what happens
   to those encrypted rows when the log is replayed.

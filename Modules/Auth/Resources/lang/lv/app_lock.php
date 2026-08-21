@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'error_enroll_unsupported' => 'Biometriskā atbloķēšana šajā ierīcē nav pieejama.',
+    'error_enroll_unprotected' => 'Biometriskajai atbloķēšanai nepieciešama operētājsistēmas atslēgu glabātuve, un šai instalācijai tādas nav. Reģistrēšana atstātu atbloķēšanas atslēgu lasāmu blakus taviem datiem, tāpēc tā šeit netiek piedāvāta.',
     'error_enroll_locked' => 'Pirms reģistrēšanas atbloķējiet lietotni.',
     'error_enroll_failed' => 'Ierīce atteicās saglabāt atslēgu. Biometriskā atbloķēšana nav pieejama.',
     'heading' => 'Lietotnes bloķēšana',

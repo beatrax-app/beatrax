@@ -31,3 +31,11 @@ it('reveals a never-shielded legacy value unchanged', function (): void {
 
     expect($shield->reveal('legacy-oauth-secret'))->toBe('legacy-oauth-secret');
 });
+
+// The shield degrades to the identity function whenever Electron's safeStorage
+// is unreachable — a Linux desktop with no keyring, a broken IPC hop. A
+// hardcoded "yes I protect" would re-open the biometric-blob hole on exactly
+// those machines, so the answer is probed from the bytes.
+it('reports no at-rest protection when safeStorage is unavailable', function (): void {
+    expect(offBundleShield()->protectsAtRest())->toBeFalse();
+});

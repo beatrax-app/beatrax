@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'error_enroll_unsupported' => 'Biomeetriline avamine pole selles seadmes saadaval.',
+    'error_enroll_unprotected' => 'Biomeetriline avamine vajab operatsioonisüsteemi võtmehoidlat ja sellel paigaldusel seda pole. Registreerimine jätaks avamisvõtme sinu andmete kõrvale loetavaks, seega seda siin ei pakuta.',
     'error_enroll_locked' => 'Ava rakendus enne registreerimist.',
     'error_enroll_failed' => 'Seade keeldus võtit salvestamast. Biomeetriline avamine pole saadaval.',
     'heading' => 'Rakenduse lukk',

@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Gå till Applås',
 
     'encrypted_at_rest' => 'Data krypterade i vila',
-    'encrypted_at_rest_scope' => 'Anteckningar, transaktionsbeskrivningar och namn och IBAN för dem du betalar krypteras med din applåslösenfras. Belopp, datum och ditt eget kontonamn och IBAN gör det inte, och vissa handlarnamn står fortfarande i klartext på andra ställen i databasfilen.',
+    'encrypted_at_rest_scope' => 'Anteckningar, transaktionsbeskrivningar och namn och IBAN för dem du betalar krypteras i bokföringen med din applåslösenfras. Belopp, datum och ditt eget kontonamn och IBAN gör det inte. Sökindexet behåller en egen läsbar kopia av vem du betalar, dina transaktionsbeskrivningar och dina skatteanteckningar, och vissa handlarnamn står i klartext på andra ställen i databasfilen.',
     'on' => 'På',
     'securing' => 'Skyddar dina data…',
     'do_not_close' => 'Stäng inte det här fönstret.',
@@ -53,7 +53,7 @@ return [
     'search_plaintext' => 'Sökindexet behåller en kopia i klartext av handlar- och beskrivningstext så att fritextsökning fortsätter att fungera.',
     'keep_unencrypted' => 'Behåll data okrypterade',
     'encryption_enabled' => 'Kryptering aktiverad',
-    'encryption_enabled_body' => 'Dina data är nu krypterade i vila.',
+    'encryption_enabled_scope' => 'Anteckningar, beskrivningar och vem du betalar är nu krypterade med din applåslösenfras. Belopp, datum och sökindexet förblir läsbara.',
     'done_encryption_enabled' => 'Klar — kryptering aktiverad',
     'encryption_failed' => 'Krypteringen kunde inte ställas in',
     'encryption_failed_body' => 'Dina data ändrades inte. Din säkerhetskopia behölls.',

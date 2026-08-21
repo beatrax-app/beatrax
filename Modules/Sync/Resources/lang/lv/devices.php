@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Doties uz lietotnes bloķēšanu',
 
     'encrypted_at_rest' => 'Dati šifrēti glabāšanā',
-    'encrypted_at_rest_scope' => 'Piezīmes, darījumu apraksti un maksājumu saņēmēju vārdi un IBAN ir šifrēti ar tavu lietotnes bloķēšanas paroles frāzi. Summas, datumi un tava paša konta nosaukums un IBAN nav šifrēti, un daži tirgotāju nosaukumi joprojām ir lasāmi citviet datubāzes failā.',
+    'encrypted_at_rest_scope' => 'Piezīmes, darījumu apraksti un maksājumu saņēmēju vārdi un IBAN ir šifrēti virsgrāmatā ar tavu lietotnes bloķēšanas paroles frāzi. Summas, datumi un tava paša konta nosaukums un IBAN nav šifrēti. Meklēšanas indekss glabā savu lasāmu kopiju no tā, kam tu maksā, no taviem darījumu aprakstiem un no tavām nodokļu piezīmēm, un daži tirgotāju nosaukumi ir lasāmi citviet datubāzes failā.',
     'on' => 'Ieslēgts',
     'securing' => 'Aizsargā jūsu datus…',
     'do_not_close' => 'Neaizveriet šo logu.',
@@ -53,7 +53,7 @@ return [
     'search_plaintext' => 'Meklēšanas indekss glabā tirgotāju un aprakstu tekstu atklātā veidā, lai pilnteksta meklēšana turpinātu darboties.',
     'keep_unencrypted' => 'Atstāt datus nešifrētus',
     'encryption_enabled' => 'Šifrēšana ieslēgta',
-    'encryption_enabled_body' => 'Jūsu dati tagad glabāšanā ir šifrēti.',
+    'encryption_enabled_scope' => 'Piezīmes, apraksti un tas, kam tu maksā, tagad ir šifrēti ar tavu lietotnes bloķēšanas paroles frāzi. Summas, datumi un meklēšanas indekss paliek lasāmi.',
     'done_encryption_enabled' => 'Gatavs — šifrēšana ieslēgta',
     'encryption_failed' => 'Šifrēšanas iestatīšana neizdevās',
     'encryption_failed_body' => 'Jūsu dati netika mainīti. Dublējums tika saglabāts.',

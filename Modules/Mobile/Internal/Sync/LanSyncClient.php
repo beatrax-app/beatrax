@@ -39,12 +39,6 @@ final class LanSyncClient
 
     private const float READ_TIMEOUT_SECONDS = 15.0;
 
-    private const int MAX_CATCHUP_FRAMES = 100_000;
-
-    // A larger backlog is picked up on the next connect rather than pinning
-    // this fiber.
-    private const int MAX_GDK_WRAPS_PER_CONNECT = 100;
-
     public function __construct(
         private readonly DeviceRegistryService $registryService,
         private readonly DeviceKeySigner $signer,
@@ -99,7 +93,7 @@ final class LanSyncClient
             // Keys BEFORE the data they decrypt. Drained after catch-up, the
             // first sync applied the desktop's whole encrypted history against
             // an empty keyring and quarantined it, with no replay path.
-            $this->receiveGdkEpochWraps($connection, $syncSession, $identity->userId, $session);
+            $this->exchangeGdkEpochWraps($connection, $syncSession, $identity, $session);
 
             $this->runCatchUp($connection, $syncSession, $identity->userId, $identity->deviceId, $deviceKeys);
 
@@ -236,7 +230,7 @@ final class LanSyncClient
 
         $resp = $this->catchUp->parseControlMessage($syncSession->decrypt($respMsg->buffer()));
         $declaredFrameCount = isset($resp['frame_count']) && is_int($resp['frame_count']) ? $resp['frame_count'] : 0;
-        $frameCount = max(0, min($declaredFrameCount, self::MAX_CATCHUP_FRAMES));
+        $frameCount = max(0, min($declaredFrameCount, GdkEpochDeliveryGateway::MAX_CATCHUP_FRAMES));
 
         for ($i = 0; $i < $frameCount; $i++) {
             $frameMsg = $this->receiveWithTimeout($connection, 'catch-up frame');
@@ -276,40 +270,124 @@ final class LanSyncClient
 
     // A wrap reaches the delivery gateway only from inside this still-open,
     // already-authenticated session. Never wire an unauthenticated source
-    // into this path.
+    // into this path. Both legs run: what the desktop holds for this phone,
+    // and what this phone holds for the desktop.
+    public function exchangeGdkEpochWraps(
+        WebsocketConnection $connection,
+        SyncSession $syncSession,
+        DeviceIdentityDto $identity,
+        Session $session,
+    ): void {
+        $peerDeviceId = $this->resolvePeerDeviceId($identity);
+
+        $this->receiveGdkEpochWraps($connection, $syncSession, $identity, $peerDeviceId, $session);
+        $this->pushGdkEpochWraps($connection, $syncSession, $peerDeviceId);
+    }
+
+    /**
+     * @internal Public so the receive step is directly testable without a live
+     *           amphp WebSocket connection.
+     */
     public function receiveGdkEpochWraps(
         WebsocketConnection $connection,
         SyncSession $syncSession,
-        int $userId,
+        DeviceIdentityDto $identity,
+        string $peerDeviceId,
         Session $session,
     ): void {
         $announced = $this->readEpochPushCount($connection, $syncSession);
+        $accounted = 0;
 
         for ($i = 0; $i < $announced; $i++) {
             $message = $this->receiveWithTimeout($connection, 'gdk epoch wrap');
             if ($message === null) {
-                return;
+                break;
             }
 
             $decrypted = $syncSession->decrypt($message->buffer());
 
-            try {
-                $parsed = $this->catchUp->parseControlMessage($decrypted);
-            } catch (\UnexpectedValueException) {
-                // Ending the loop on the first unrecognised frame discarded
-                // every wrap queued behind it, and the desktop had already
-                // marked them delivered — the keys were simply gone.
-                continue;
+            if ($this->isEpochWrap($decrypted) && $peerDeviceId !== '' && $this->epochDelivery->receiveEpochWrap(
+                $decrypted,
+                $identity->userId,
+                $peerDeviceId,
+                $identity->deviceId,
+                $session,
+            )) {
+                $accounted++;
             }
-
-            // A wire literal because GdkEpochControlHandler, which owns the
-            // matching constant, is off-limits to this module.
-            if (($parsed['type'] ?? null) !== 'GDK_EPOCH_WRAP') {
-                continue;
-            }
-
-            $this->epochDelivery->receiveEpochWrap($decrypted, $userId, $session);
         }
+
+        // Acknowledged only for what is durably accounted for, so the desktop
+        // retires exactly those rows. A wrap this process could not open is
+        // kept in this device's own inbox by the gateway, not dropped.
+        $connection->sendBinary($syncSession->encrypt(json_encode([
+            'type' => GdkEpochDeliveryGateway::MSG_EPOCH_ACK,
+            'count' => $accounted,
+        ], JSON_THROW_ON_ERROR)));
+    }
+
+    // The return leg this exchange lacked. Without it the desktop decided the
+    // blind-index tie over a keyed-rows flag the phone never sent, and a phone
+    // that holds the ledger kept a key no other device ever learned.
+    private function pushGdkEpochWraps(
+        WebsocketConnection $connection,
+        SyncSession $syncSession,
+        string $peerDeviceId,
+    ): void {
+        $wraps = $peerDeviceId === '' ? [] : $this->epochDelivery->pendingWrapsFor($peerDeviceId);
+
+        $connection->sendBinary($syncSession->encrypt(json_encode([
+            'type' => GdkEpochDeliveryGateway::MSG_EPOCH_PUSH,
+            'count' => count($wraps),
+        ], JSON_THROW_ON_ERROR)));
+
+        foreach ($wraps as $wrap) {
+            $connection->sendBinary($syncSession->encrypt($wrap['blob']));
+        }
+
+        $acknowledged = $this->readAcknowledgedCount($connection, $syncSession, count($wraps));
+
+        for ($i = 0; $i < $acknowledged; $i++) {
+            $this->epochDelivery->confirmDelivered($wraps[$i]['id']);
+        }
+    }
+
+    private function readAcknowledgedCount(WebsocketConnection $connection, SyncSession $syncSession, int $sent): int
+    {
+        $parsed = $this->readControlMessage($connection, $syncSession);
+
+        if (($parsed['type'] ?? null) !== GdkEpochDeliveryGateway::MSG_EPOCH_ACK) {
+            return 0;
+        }
+
+        $count = $parsed['count'] ?? null;
+
+        return is_int($count) ? max(0, min($count, $sent)) : 0;
+    }
+
+    // Ending the loop on the first unrecognised frame discarded every wrap
+    // queued behind it, and the desktop had already marked them delivered.
+    private function isEpochWrap(string $decrypted): bool
+    {
+        try {
+            $parsed = $this->catchUp->parseControlMessage($decrypted);
+        } catch (\UnexpectedValueException) {
+            return false;
+        }
+
+        return ($parsed['type'] ?? null) === GdkEpochDeliveryGateway::MSG_EPOCH_WRAP;
+    }
+
+    // The one peer this client dials, addressed by the same registry the
+    // static key came from so the two can never name different devices.
+    private function resolvePeerDeviceId(DeviceIdentityDto $identity): string
+    {
+        $confirmed = $this->registryService->deviceX25519Keys($identity->userId);
+        unset($confirmed[$identity->deviceId]);
+
+        $deviceIds = array_keys($confirmed);
+
+        return $deviceIds === [] ? '' : (string) $deviceIds[0];
     }
 
     // The phase runs before catch-up, so its end cannot be inferred from a
@@ -321,17 +399,17 @@ final class LanSyncClient
 
         // The peer no longer confirms this device, so there is nothing left
         // to sync and the local trust record must stop saying otherwise.
-        if (($parsed['type'] ?? null) === 'PEER_REVOKED') {
+        if (($parsed['type'] ?? null) === GdkEpochDeliveryGateway::MSG_PEER_REVOKED) {
             throw LanSyncException::peerRevokedThisDevice();
         }
 
-        if (($parsed['type'] ?? null) !== 'GDK_EPOCH_PUSH') {
+        if (($parsed['type'] ?? null) !== GdkEpochDeliveryGateway::MSG_EPOCH_PUSH) {
             return 0;
         }
 
         $count = $parsed['count'] ?? null;
 
-        return is_int($count) ? max(0, min($count, self::MAX_GDK_WRAPS_PER_CONNECT)) : 0;
+        return is_int($count) ? max(0, min($count, GdkEpochDeliveryGateway::maxWrapsPerPass())) : 0;
     }
 
     // An unreadable or unparseable header means nothing was pushed, which is

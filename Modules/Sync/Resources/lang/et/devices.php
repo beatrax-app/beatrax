@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Ava rakenduse lukk',
 
     'encrypted_at_rest' => 'Andmed on kettal krüpteeritud',
-    'encrypted_at_rest_scope' => 'Märkmed, tehingute kirjeldused ning saajate nimed ja IBAN-id on krüpteeritud sinu rakenduseluku paroolifraasiga. Summad, kuupäevad ning sinu enda konto nimi ja IBAN ei ole, ja mõned kaupmeeste nimed on endiselt loetavad andmebaasifaili teistes kohtades.',
+    'encrypted_at_rest_scope' => 'Märkmed, tehingute kirjeldused ning saajate nimed ja IBAN-id on pearaamatus krüpteeritud sinu rakenduseluku paroolifraasiga. Summad, kuupäevad ning sinu enda konto nimi ja IBAN ei ole. Otsinguindeks hoiab omaenda loetavat koopiat sellest, kellele sa maksad, sinu tehingute kirjeldustest ja sinu maksumärkmetest, ning mõned kaupmeeste nimed on loetavad andmebaasifaili teistes kohtades.',
     'on' => 'Sees',
     'securing' => 'Kaitsen sinu andmeid…',
     'do_not_close' => 'Ära sulge seda akent.',
@@ -53,7 +53,7 @@ return [
     'search_plaintext' => 'Otsinguindeks hoiab kaupmeeste ja kirjelduste teksti avatud kujul, et täistekstiotsing töötaks edasi.',
     'keep_unencrypted' => 'Jäta andmed krüpteerimata',
     'encryption_enabled' => 'Krüpteerimine on lubatud',
-    'encryption_enabled_body' => 'Sinu andmed on nüüd kettal krüpteeritud.',
+    'encryption_enabled_scope' => 'Märkmed, kirjeldused ja see, kellele sa maksad, on nüüd krüpteeritud sinu rakenduseluku paroolifraasiga. Summad, kuupäevad ja otsinguindeks jäävad loetavaks.',
     'done_encryption_enabled' => 'Valmis — krüpteerimine on lubatud',
     'encryption_failed' => 'Krüpteerimise seadistamine ebaõnnestus',
     'encryption_failed_body' => 'Sinu andmeid ei muudetud. Varukoopia jäi alles.',

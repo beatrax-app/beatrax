@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'error_enroll_unsupported' => 'Le déverrouillage biométrique n\'est pas disponible sur cet appareil.',
+    'error_enroll_unprotected' => 'Le déverrouillage biométrique a besoin d\'un magasin de clés du système d\'exploitation, et cette installation n\'en a pas. L\'enrôlement laisserait la clé de déverrouillage lisible à côté de tes données, il n\'est donc pas proposé ici.',
     'error_enroll_locked' => 'Déverrouille l\'app avant d\'activer la biométrie.',
     'error_enroll_failed' => 'Ton appareil a refusé de stocker la clé. Le déverrouillage biométrique est indisponible.',
     'heading' => 'Verrouillage de l\'app',

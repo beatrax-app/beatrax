@@ -20,6 +20,12 @@ final class GdkEpochWrapSignature
 
     public const string ROLE_BLIND_INDEX = 'blind_index';
 
+    // The blind-index key is not an epoch and has no id. Zero is outside
+    // GdkEpochId::mint()'s range, so it can never name a real one, and it is
+    // signed like every other field so a wrap claiming another id was built
+    // that way rather than mutated into it.
+    public const int BLIND_INDEX_EPOCH_ID = 0;
+
     // What a wrap carries, read from the envelope rather than inferred from
     // `epoch_id`. A blind-index wrap sends `epoch_id: 0` because the field is
     // required by the shape, and a reader that treated that as an epoch id
@@ -67,7 +73,10 @@ final class GdkEpochWrapSignature
         // while flipping either term on a blind-index wrap breaks the signature
         // rather than changing which key the recipient decides to keep.
         if ($role !== self::ROLE_EPOCH) {
-            $parts[] = 'role:'.$role;
+            // Length-prefixed like every other variable-length field. The
+            // allowlist that made this safe lives in another class, and a
+            // coupling nothing states is not a guarantee.
+            $parts[] = 'role:'.strlen($role).':'.$role;
             $parts[] = 'keyed:'.($senderHoldsKeyedRows ? '1' : '0');
         }
 

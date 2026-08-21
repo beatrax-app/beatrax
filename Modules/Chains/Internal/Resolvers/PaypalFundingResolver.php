@@ -337,9 +337,12 @@ final class PaypalFundingResolver
                 ? self::ASN_DIRECT_AMBIGUOUS_CONFIDENCE
                 : self::ASN_DIRECT_UNIQUE_CONFIDENCE,
             'resolver' => 'auto',
+            // The IBAN this arm matched on is a COUNTERPARTY's, decrypted out of
+            // `transactions.counterparty_iban`, and `evidence` is a plaintext
+            // JSON column. It stays out: the sweep that re-keys the signature
+            // recovers it from the alias set this arm drew it from.
             'evidence' => [
                 'matched_via' => 'asn_alias_amount_date',
-                'matched_iban' => $partnerIban,
                 'matched_amount_minor' => $settledMinor,
                 'date_delta_days' => abs((int) $bookedCarbon->diffInDays($center, false)),
                 // Capped at 2 by the scan loop: this is the IBAN-matched count,

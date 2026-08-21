@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'error_enroll_unsupported' => 'Deblocarea biometrică nu este disponibilă pe acest dispozitiv.',
+    'error_enroll_unprotected' => 'Deblocarea biometrică are nevoie de un depozit de chei al sistemului de operare, iar această instalare nu are niciunul. Înregistrarea ar lăsa cheia de deblocare lizibilă lângă datele tale, așa că nu este oferită aici.',
     'error_enroll_locked' => 'Deblochează aplicația înainte de înrolare.',
     'error_enroll_failed' => 'Dispozitivul tău a refuzat să stocheze cheia. Deblocarea biometrică nu este disponibilă.',
     'heading' => 'Blocarea aplicației',

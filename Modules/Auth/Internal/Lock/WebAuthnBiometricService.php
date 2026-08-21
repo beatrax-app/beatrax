@@ -114,7 +114,7 @@ final class WebAuthnBiometricService
      * @param  array<string, mixed>  $credentialResponse  Browser attestation JSON.
      * @param  string  $dataKey  The caller's live data-key bytes (from session).
      * @param  string  $deviceLabel  Human-readable device label.
-     * @param  string  $platform  'webauthn' or 'nativephp_macos'.
+     * @param  string  $platform  One of the BiometricDeviceStore::PLATFORM_* values.
      */
     public function completeEnrollment(
         int $userId,

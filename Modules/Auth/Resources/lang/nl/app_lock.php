@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'error_enroll_unsupported' => 'Biometrisch ontgrendelen is niet beschikbaar op dit apparaat.',
+    'error_enroll_unprotected' => 'Biometrisch ontgrendelen heeft een sleutelopslag van het besturingssysteem nodig, en deze installatie heeft die niet. Registreren zou de ontgrendelsleutel leesbaar naast je gegevens laten staan, dus dat wordt hier niet aangeboden.',
     'error_enroll_locked' => 'Ontgrendel de app voordat je dit instelt.',
     'error_enroll_failed' => 'Je apparaat wilde de sleutel niet opslaan. Biometrisch ontgrendelen is niet beschikbaar.',
     'heading' => 'App-vergrendeling',

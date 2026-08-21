@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Přejít na Zámek aplikace',
 
     'encrypted_at_rest' => 'Data šifrovaná v úložišti',
-    'encrypted_at_rest_scope' => 'Poznámky, popisy transakcí a jména a IBAN příjemců jsou šifrovány přístupovou frází zámku aplikace. Částky, data a název a IBAN tvého vlastního účtu nikoli a některá jména obchodníků zůstávají čitelná jinde v souboru databáze.',
+    'encrypted_at_rest_scope' => 'Poznámky, popisy transakcí a jména a IBAN příjemců jsou v účetní knize šifrovány přístupovou frází zámku aplikace. Částky, data a název a IBAN tvého vlastního účtu nikoli. Index vyhledávání si drží vlastní čitelnou kopii toho, komu platíš, popisů tvých transakcí a tvých daňových poznámek, a některá jména obchodníků zůstávají čitelná jinde v souboru databáze.',
     'on' => 'Zapnuto',
     'securing' => 'Zabezpečují se tvá data…',
     'do_not_close' => 'Nezavírej toto okno.',
@@ -51,7 +51,7 @@ return [
     'search_plaintext' => 'Index vyhledávání si drží nešifrovanou kopii názvů obchodníků a popisů, aby fulltextové vyhledávání dál fungovalo.',
     'keep_unencrypted' => 'Nechat data nešifrovaná',
     'encryption_enabled' => 'Šifrování zapnuto',
-    'encryption_enabled_body' => 'Tvá data jsou teď v úložišti šifrovaná.',
+    'encryption_enabled_scope' => 'Poznámky, popisy a to, komu platíš, jsou teď šifrované přístupovou frází zámku aplikace. Částky, data a index vyhledávání zůstávají čitelné.',
     'done_encryption_enabled' => 'Hotovo — šifrování zapnuto',
     'encryption_failed' => 'Nastavení šifrování selhalo',
     'encryption_failed_body' => 'Tvá data se nezměnila. Záloha zůstala zachovaná.',

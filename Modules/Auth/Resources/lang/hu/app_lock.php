@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'error_enroll_unsupported' => 'A biometrikus feloldás nem érhető el ezen az eszközön.',
+    'error_enroll_unprotected' => 'A biometrikus feloldáshoz az operációs rendszer kulcstárolója kell, ennek a telepítésnek pedig nincs ilyen. A regisztráció olvashatóan hagyná a feloldókulcsot az adataid mellett, ezért itt nem érhető el.',
     'error_enroll_locked' => 'Oldd fel az alkalmazást a regisztrálás előtt.',
     'error_enroll_failed' => 'Az eszközöd elutasította a kulcs tárolását. A biometrikus feloldás nem érhető el.',
     'heading' => 'Alkalmazászár',

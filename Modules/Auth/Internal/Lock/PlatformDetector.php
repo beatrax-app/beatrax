@@ -20,19 +20,6 @@ final class PlatformDetector
         };
     }
 
-    /**
-     * @param  string  $userAgent  The HTTP User-Agent header value.
-     * @param  bool  $isNativeMacos  Pass true when System::canPromptTouchID() returned true.
-     */
-    public function platformKey(string $userAgent, bool $isNativeMacos = false): string
-    {
-        if ($isNativeMacos && $this->isMacOs($userAgent)) {
-            return 'nativephp_macos';
-        }
-
-        return 'webauthn';
-    }
-
     private function isIos(string $userAgent): bool
     {
         return preg_match('/\b(iPhone|iPad|iPod)\b/i', $userAgent) === 1;

@@ -3,8 +3,8 @@
 Income detection groups transactions by counterparty IBAN, and
 `transactions.counterparty_iban` is one of the columns the product
 encrypts at rest. That single fact decides where the detection job is
-allowed to run, how it is dispatched, and why one column in
-`recurring_series` is deliberately left in plaintext.
+allowed to run, how it is dispatched, and what shape the clustering key
+in `recurring_series` has to take.
 
 This page explains the failure that shaped the design, the two dispatch
 origins and what each can do, and what would break if the job were moved
@@ -116,30 +116,48 @@ second pass is redundant work, not a wrong result. This was accepted as
 the price of keeping the KEK in process. The uniqueness lock still does
 its job on the scheduled queue path, where the collision risk is real.
 
-## The plaintext derivative, and why it exists
+## The derivative that used to be plaintext
 
-`recurring_series.cluster_counterparty_key` stores the decrypted IBAN
-verbatim, in an unencrypted column.
+`recurring_series.cluster_counterparty_key` holds a **keyed digest**, not
+the decrypted IBAN. For a user with at-rest encryption enabled it is
+`HMAC-SHA256` under that user's blind-index key, derived under the
+`counterparty-iban` domain for an income row and `counterparty-normalized`
+for an expense one. See [which columns are encrypted at
+rest](../sync/sensitive-columns-at-rest.md#the-keyed-blind-index-in-counterparty_normalized).
 
-That is a deliberate, reviewed exception rather than an oversight. The
-column is a lookup key: it is what the cadence-flip fallback matches on
-when a series' `cluster_key` no longer matches because its cadence band
-moved. Random-nonce ciphertext cannot serve as a `WHERE` value — two
-encryptions of the same IBAN do not compare equal — so an encrypted
-version of this column would not be able to do the one job it exists
-for.
+The column is a lookup key: it is what the cadence-flip fallback matches
+on when a series' `cluster_key` no longer matches because its cadence
+band moved. Random-nonce ciphertext cannot serve as a `WHERE` value — two
+encryptions of the same IBAN do not compare equal — which is why this is
+a blind index rather than AEAD. Equality and uniqueness survive exactly;
+the readable IBAN does not.
 
 A "plaintext derivative" is the general shape: a value derived from
 sensitive plaintext and persisted unencrypted because some mechanism
 needs it to be comparable. The registry tracks these explicitly so they
 are visible rather than discovered.
 
-The known hardening is a keyed HMAC or blind index — deterministic, so
-equality lookups still work, but not reversible back to the IBAN. It is
-deferred rather than done because it needs a stable key source and a
-migration of every existing cluster key; getting that wrong splits live
-series in two, and the user sees their salary series silently
-duplicate.
+`cluster_key` moves with it. It is composed **over** the counterparty
+key, so the two are rewritten in one statement or the series splits — a
+row left with a keyed counterparty column beside
+`income::nl91rde0987654321::eur::monthly` still printed the payer's IBAN,
+in an indexed column that syncs in the clear. Healing lazily through
+`SeriesRefresher` is not enough: both detectors return early for
+`Rejected` and `Snoozed` series, and a series whose transactions fall
+outside `recurring_detection_window_months` is never revisited.
+
+The migration this page once said the hardening was deferred for is real,
+and it is the reason for two decisions worth reading together.
+`CounterpartyKey::normalizeIban()` trims and upper-cases but does **not**
+strip interior whitespace: compacting would change what an already-keyed
+spaced IBAN hashes to, orphaning exactly the rows it was meant to
+protect. The enable-time sweep, by contrast, *does* normalise whitespace
+before deciding whether a stored value is shaped like an IBAN, because a
+statement that printed one spaced would otherwise be classified as a name
+and keyed under the wrong domain. The residual is that the same payer's
+IBAN arriving spaced in one statement and compact in another still
+clusters as two series; closing it needs the normaliser to compact **and**
+a one-shot re-derive of every row written since enable.
 
 ## What breaks if this is changed
 

@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Przejdź do Blokady aplikacji',
 
     'encrypted_at_rest' => 'Dane szyfrowane w spoczynku',
-    'encrypted_at_rest_scope' => 'Notatki, opisy transakcji oraz nazwy i numery IBAN odbiorców są szyfrowane hasłem blokady aplikacji. Kwoty, daty oraz nazwa i IBAN Twojego własnego konta nie są, a niektóre nazwy sprzedawców nadal występują jawnie w innych miejscach pliku bazy danych.',
+    'encrypted_at_rest_scope' => 'Notatki, opisy transakcji oraz nazwy i numery IBAN odbiorców są szyfrowane w księdze hasłem blokady aplikacji. Kwoty, daty oraz nazwa i IBAN Twojego własnego konta nie są. Indeks wyszukiwania przechowuje własną czytelną kopię tego, komu płacisz, opisów Twoich transakcji i Twoich notatek podatkowych, a niektóre nazwy sprzedawców występują jawnie w innych miejscach pliku bazy danych.',
     'on' => 'Wł.',
     'securing' => 'Zabezpieczanie Twoich danych…',
     'do_not_close' => 'Nie zamykaj tego okna.',
@@ -51,7 +51,7 @@ return [
     'search_plaintext' => 'Indeks wyszukiwania przechowuje jawną kopię nazw sprzedawców i opisów, aby wyszukiwanie pełnotekstowe działało dalej.',
     'keep_unencrypted' => 'Zostaw dane niezaszyfrowane',
     'encryption_enabled' => 'Szyfrowanie włączone',
-    'encryption_enabled_body' => 'Twoje dane są teraz szyfrowane w spoczynku.',
+    'encryption_enabled_scope' => 'Notatki, opisy i to, komu płacisz, są teraz szyfrowane hasłem blokady aplikacji. Kwoty, daty i indeks wyszukiwania pozostają czytelne.',
     'done_encryption_enabled' => 'Gotowe — szyfrowanie włączone',
     'encryption_failed' => 'Konfiguracja szyfrowania nie powiodła się',
     'encryption_failed_body' => 'Twoje dane nie zostały zmienione. Kopia zapasowa została zachowana.',

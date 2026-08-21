@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'error_enroll_unsupported' => 'Biometrické odomknutie nie je na tomto zariadení dostupné.',
+    'error_enroll_unprotected' => 'Biometrické odomknutie potrebuje úložisko kľúčov operačného systému a táto inštalácia žiadne nemá. Registrácia by nechala odomykací kľúč čitateľný vedľa tvojich údajov, takže sa tu neponúka.',
     'error_enroll_locked' => 'Pred registráciou odomkni aplikáciu.',
     'error_enroll_failed' => 'Tvoje zariadenie odmietlo uložiť kľúč. Biometrické odomknutie nie je dostupné.',
     'heading' => 'Zámok aplikácie',

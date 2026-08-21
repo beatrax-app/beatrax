@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Ir para Bloqueio da aplicação',
 
     'encrypted_at_rest' => 'Dados encriptados em repouso',
-    'encrypted_at_rest_scope' => 'As notas, as descrições das transações e os nomes e IBAN de quem pagas estão encriptados com a palavra-passe do bloqueio da app. Os valores, as datas e o nome e IBAN da tua própria conta não estão, e alguns nomes de comerciantes continuam legíveis noutras partes do ficheiro da base de dados.',
+    'encrypted_at_rest_scope' => 'As notas, as descrições das transações e os nomes e IBAN de quem pagas estão encriptados no livro de registos com a palavra-passe do bloqueio da app. Os valores, as datas e o nome e IBAN da tua própria conta não estão. O índice de pesquisa guarda a sua própria cópia legível de a quem pagas, das descrições das tuas transações e das tuas notas fiscais, e alguns nomes de comerciantes continuam legíveis noutras partes do ficheiro da base de dados.',
     'on' => 'Ligado',
     'securing' => 'A proteger os teus dados…',
     'do_not_close' => 'Não feches esta janela.',
@@ -51,7 +51,7 @@ return [
     'search_plaintext' => 'O índice de pesquisa guarda uma cópia em texto simples do nome do comerciante e da descrição para que a pesquisa de texto integral continue a funcionar.',
     'keep_unencrypted' => 'Manter os dados sem encriptação',
     'encryption_enabled' => 'Encriptação ativada',
-    'encryption_enabled_body' => 'Os teus dados estão agora encriptados em repouso.',
+    'encryption_enabled_scope' => 'As notas, as descrições e a quem pagas estão agora encriptados com a palavra-passe do bloqueio da app. Os valores, as datas e o índice de pesquisa continuam legíveis.',
     'done_encryption_enabled' => 'Concluído — encriptação ativada',
     'encryption_failed' => 'A configuração da encriptação falhou',
     'encryption_failed_body' => 'Os teus dados não foram alterados. A tua cópia de segurança foi preservada.',

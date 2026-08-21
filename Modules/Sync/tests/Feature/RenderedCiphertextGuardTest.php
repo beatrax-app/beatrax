@@ -13,6 +13,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Dto\PreviewRowDto;
+use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use Modules\Sync\Public\Exceptions\BlindIndexKeyUnavailableException;
@@ -853,9 +854,12 @@ it('never renders a stored sensitive value on /reports', function (): void {
 });
 
 it('never renders a stored sensitive value on a recurring series detail page', function (): void {
+    // Addressed by the name the page renders, not by the clustering key: the
+    // enable-time sweep recomposes cluster_key over the keyed counterparty
+    // digest, so the seeded literal is gone by the time this runs.
     $seriesId = $this->app->make(DatabaseManager::class)->connection()
         ->table('recurring_series')->where('user_id', $this->rcgUser->id)
-        ->where('cluster_key', 'rcg-sentinel-cluster')->value('id');
+        ->where('detected_name', RCG_SERIES_NAME)->value('id');
 
     $response = $this->get("/recurring/series/{$seriesId}");
     $response->assertOk();
@@ -1006,7 +1010,7 @@ it('never prints the crypto layer\'s vocabulary on the import preview', function
         importRunId: $importRunId,
         rows: [new PreviewRowDto(
             rowIndex: 1,
-            status: 'error',
+            status: PreviewRowStatus::Error,
             accountId: null,
             bookedAt: '14-08-2026',
             counterpartyName: RCG_MERCHANT,

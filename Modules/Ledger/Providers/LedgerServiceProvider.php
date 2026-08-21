@@ -10,6 +10,7 @@ use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Ledger\Internal\Console\RederiveFingerprintsCommand;
 use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
 use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
+use Modules\Ledger\Internal\Services\CounterpartyKeyProvenance;
 use Modules\Ledger\Internal\Services\FingerprintRederiveService;
 use Modules\Ledger\Internal\Sync\NullTransactionSyncCapture;
 use Modules\Ledger\Public\Actions\ReassignCounterparty;
@@ -32,6 +33,7 @@ use Modules\Ledger\Public\Services\StatementSummaryWriter;
 use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
 use Modules\Ledger\Public\Services\TopCategoriesByPeriodQuery;
 use Modules\Ledger\Public\Services\TransactionListQuery;
+use Modules\Sync\Public\Contracts\BlindIndexProvenance;
 
 final class LedgerServiceProvider extends ServiceProvider
 {
@@ -51,6 +53,10 @@ final class LedgerServiceProvider extends ServiceProvider
         $this->app->bind(SetsTransactionNote::class, SetTransactionNote::class);
         $this->app->singleton(FingerprintComposer::class);
         $this->app->singleton(CounterpartyKey::class);
+        // Bound outright, with no null fallback: a probe that answered "no
+        // keyed rows" because nothing was wired would hand a peer's key to
+        // the device whose whole ledger is written under its own.
+        $this->app->singleton(BlindIndexProvenance::class, CounterpartyKeyProvenance::class);
         // Transient, not singleton: it resolves the per-request CurrentUser, and
         // a singleton would freeze the first request's user in a long-lived worker.
         $this->app->bind(PeriodQuery::class);

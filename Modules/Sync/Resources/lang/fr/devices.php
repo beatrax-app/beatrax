@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Aller au verrouillage de l\'app',
 
     'encrypted_at_rest' => 'Données chiffrées au repos',
-    'encrypted_at_rest_scope' => 'Tes notes, les libellés de transaction et les noms et IBAN de tes bénéficiaires sont chiffrés avec la phrase secrète de verrouillage de l\'app. Les montants, les dates et le nom et l\'IBAN de ton propre compte ne le sont pas, et certains noms de commerçants restent en clair ailleurs dans le fichier de base de données.',
+    'encrypted_at_rest_scope' => 'Tes notes, les libellés de transaction et les noms et IBAN de tes bénéficiaires sont chiffrés dans le registre avec la phrase secrète de verrouillage de l\'app. Les montants, les dates et le nom et l\'IBAN de ton propre compte ne le sont pas. L\'index de recherche conserve sa propre copie lisible de qui tu paies, de tes libellés de transaction et de tes notes fiscales, et certains noms de commerçants restent en clair ailleurs dans le fichier de base de données.',
     'on' => 'Activé',
     'securing' => 'Sécurisation de tes données…',
     'do_not_close' => 'Ne ferme pas cette fenêtre.',
@@ -51,7 +51,7 @@ return [
     'search_plaintext' => 'L\'index de recherche conserve une copie en clair du nom du commerçant et de la description pour que la recherche en texte intégral continue de fonctionner.',
     'keep_unencrypted' => 'Garder les données non chiffrées',
     'encryption_enabled' => 'Chiffrement activé',
-    'encryption_enabled_body' => 'Tes données sont désormais chiffrées au repos.',
+    'encryption_enabled_scope' => 'Tes notes, tes libellés et tes bénéficiaires sont désormais chiffrés avec la phrase secrète de verrouillage de l\'app. Les montants, les dates et l\'index de recherche restent lisibles.',
     'done_encryption_enabled' => 'Terminé — chiffrement activé',
     'encryption_failed' => 'Échec de la configuration du chiffrement',
     'encryption_failed_body' => 'Tes données n\'ont pas été modifiées. Ta sauvegarde a été conservée.',

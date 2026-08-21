@@ -17,4 +17,9 @@ final class PassthroughSecretShield implements SecretShield
     {
         return $shielded;
     }
+
+    public function protectsAtRest(): bool
+    {
+        return false;
+    }
 }

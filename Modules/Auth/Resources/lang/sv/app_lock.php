@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'error_enroll_unsupported' => 'Biometrisk upplåsning är inte tillgänglig på den här enheten.',
+    'error_enroll_unprotected' => 'Biometrisk upplåsning behöver ett nyckelförvar i operativsystemet, och den här installationen har inget. Registrering skulle lämna upplåsningsnyckeln läsbar bredvid dina data, så den erbjuds inte här.',
     'error_enroll_locked' => 'Lås upp appen innan du registrerar enheten.',
     'error_enroll_failed' => 'Din enhet nekade att lagra nyckeln. Biometrisk upplåsning är inte tillgänglig.',
     'heading' => 'Applås',

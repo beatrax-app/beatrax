@@ -23,6 +23,8 @@ use Modules\Sync\Internal\Http\Livewire\Concerns\ReadsDeviceState;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Public\Services\DeviceRegistryService;
+use Modules\Sync\Public\Services\GdkEpochDeliveryGateway;
+use Modules\Sync\Public\Services\PairingGateway;
 use Modules\Sync\Public\Services\SyncStatusService;
 use Psr\Log\LoggerInterface;
 
@@ -86,6 +88,9 @@ final class DevicesAndSyncSettingsSection extends Component
         AppLockClientConfig $lockConfig,
         DeviceRegistryService $registry,
         RelayConfig $relayConfig,
+        PairingGateway $pairing,
+        GdkEpochDeliveryGateway $epochDelivery,
+        Session $session,
     ): void {
         $userId = $currentUser->user()->id;
 
@@ -101,6 +106,26 @@ final class DevicesAndSyncSettingsSection extends Component
         $this->relayIsInsecure = $relayConfig->isInsecure();
 
         $this->encryptionOn = $this->encryptionEnabled($db, $userId);
+
+        $this->applyHeldKeyWraps($pairing, $epochDelivery, $session, $userId);
+    }
+
+    // The listener that receives these can never open one: it resolves a
+    // session no middleware ever started, so its app-lock key is absent by
+    // construction. This mount is the unlocked pass that comes back for what
+    // it had to leave in the mailbox.
+    private function applyHeldKeyWraps(
+        PairingGateway $pairing,
+        GdkEpochDeliveryGateway $epochDelivery,
+        Session $session,
+        int $userId,
+    ): void {
+        $deviceId = $pairing->currentDeviceId($userId, $session);
+        if ($deviceId === null) {
+            return;
+        }
+
+        $epochDelivery->drainInbox($userId, $deviceId, $session);
     }
 
     // Enable sync: generate + persist the device identity and show the self

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'error_enroll_unsupported' => 'Biometrinen avaus ei ole käytettävissä tällä laitteella.',
+    'error_enroll_unprotected' => 'Biometrinen avaus tarvitsee käyttöjärjestelmän avainsäilön, eikä tässä asennuksessa ole sellaista. Rekisteröinti jättäisi avausavaimen luettavaksi tietojesi viereen, joten sitä ei tarjota täällä.',
     'error_enroll_locked' => 'Avaa sovelluksen lukitus ennen käyttöönottoa.',
     'error_enroll_failed' => 'Laitteesi ei suostunut tallentamaan avainta. Biometrinen avaus ei ole käytettävissä.',
     'heading' => 'Sovelluslukko',

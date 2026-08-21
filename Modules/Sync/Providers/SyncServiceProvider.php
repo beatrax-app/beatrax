@@ -158,6 +158,7 @@ final class SyncServiceProvider extends ServiceProvider
             $this->app->bind($gdkRewrapContract, $gdkRewrapService);
         }
 
+        $this->singletonIfExists($cryptoNamespace.'LocallyKeyedRowsProbe');
         $this->singletonIfExists($cryptoNamespace.'GdkEpochControlHandler');
     }
 

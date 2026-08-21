@@ -13,6 +13,12 @@ final class BiometricDeviceStore
 {
     public const BIOMETRIC_DISABLE_THRESHOLD = 5;
 
+    // The only value the enrolment route writes. The column's other documented
+    // value, 'nativephp_macos', was never reachable: its detector took a flag
+    // no caller passed, and the OS-gated path enrols through ColdStartVault
+    // without touching this table at all.
+    public const PLATFORM_WEBAUTHN = 'webauthn';
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
@@ -21,7 +27,7 @@ final class BiometricDeviceStore
     /**
      * @param  string  $biometricWrapSecret  32-byte random server secret (raw bytes).
      * @param  string|null  $publicKeyCbor  COSE-encoded public key bytes (null for NativePHP path).
-     * @param  string  $platform  'webauthn' or 'nativephp_macos'.
+     * @param  string  $platform  One of the self::PLATFORM_* values.
      */
     public function store(
         int $userId,

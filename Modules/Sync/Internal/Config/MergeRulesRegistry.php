@@ -426,7 +426,7 @@ final class MergeRulesRegistry
             // The detector rewrites the latest_*/next_expected_* metrics on
             // every sweep and the user owns state, name and thresholds — both
             // are per-field last-writer-wins. `cluster_key`/`direction` are the
-            // identity half of the UNIQUE and are never rewritten.
+            // identity half of the UNIQUE and carry no per-field rule of their own.
             'recurring_series' => [
                 'state' => ['strategy' => 'lww', 'nullable' => false],
                 'cadence' => ['strategy' => 'lww', 'nullable' => false],

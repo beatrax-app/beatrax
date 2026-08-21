@@ -207,5 +207,11 @@ it('ASN-direct arm resolves under an encrypted user (counterparty_iban decrypt-t
     expect($link)->not->toBeNull();
     expect($link->state)->toBe('confirmed');
     expect((float) $link->confidence)->toBe(1.0);
-    expect($link->evidence['matched_iban'])->toBe('LU89751000135104200E');
+    expect($link->evidence['matched_via'])->toBe('asn_alias_amount_date');
+
+    // The IBAN this arm matched on is a COUNTERPARTY's, decrypted out of a
+    // column sealed to protect it. `chain_links.evidence` is not encrypted, so
+    // writing it back here hands it to anyone reading the file.
+    $stored = (string) $this->db->connection()->table('chain_links')->where('id', $link->id)->value('evidence');
+    expect($stored)->not->toContain('LU89751000135104200E');
 });

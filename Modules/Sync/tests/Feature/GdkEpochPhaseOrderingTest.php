@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Sync\Internal\Transport\SyncWebSocketHandler;
+use Modules\Sync\Public\Services\GdkEpochDeliveryGateway;
 
 // A two-sided wire contract with no schema to enforce it, and the two sides
 // live in different modules. Getting either wrong fails silently: the peer
@@ -18,13 +19,16 @@ function epochPhaseSource(string $relative): string
     return (string) $source;
 }
 
-it('has the client read the same wire literal the server sends', function (): void {
-    // The client cannot reference the Sync-internal constant across the module
-    // boundary, so it repeats the literal — which is exactly how the two sides
-    // drift apart without anything failing to compile.
+it('has both sides read the wire vocabulary from one declaration', function (): void {
+    // A repeated literal is exactly how two sides in different modules drift
+    // apart without anything failing to compile, so the client names the
+    // public gateway's constant and the server's own constant aliases it.
     $client = epochPhaseSource('Modules/Mobile/Internal/Sync/LanSyncClient.php');
 
-    expect($client)->toContain("'".SyncWebSocketHandler::MSG_GDK_EPOCH_PUSH."'");
+    expect($client)->toContain('GdkEpochDeliveryGateway::MSG_EPOCH_PUSH')
+        ->and($client)->toContain('GdkEpochDeliveryGateway::MSG_EPOCH_ACK')
+        ->and(SyncWebSocketHandler::MSG_GDK_EPOCH_PUSH)->toBe(GdkEpochDeliveryGateway::MSG_EPOCH_PUSH)
+        ->and(SyncWebSocketHandler::MSG_GDK_EPOCH_ACK)->toBe(GdkEpochDeliveryGateway::MSG_EPOCH_ACK);
 });
 
 it('sends the epoch phase before catch-up on the server', function (): void {
@@ -41,7 +45,7 @@ it('sends the epoch phase before catch-up on the server', function (): void {
 it('reads the epoch phase before catch-up on the client', function (): void {
     $client = epochPhaseSource('Modules/Mobile/Internal/Sync/LanSyncClient.php');
 
-    $receive = strpos($client, '$this->receiveGdkEpochWraps($connection, $syncSession,');
+    $receive = strpos($client, '$this->exchangeGdkEpochWraps($connection, $syncSession,');
     $catchUp = strpos($client, '$this->runCatchUp($connection, $syncSession,');
 
     expect($receive)->toBeInt()

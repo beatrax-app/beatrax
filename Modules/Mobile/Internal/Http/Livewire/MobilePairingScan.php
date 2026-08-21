@@ -422,6 +422,49 @@ final class MobilePairingScan extends Component
                     // later pass succeeds.
                 }
             }
+
+            // The phone sends too. A device that only ever received left the
+            // desktop settling the blind-index tie over a keyed-rows flag it
+            // was never sent, and a phone holding the ledger kept a key no
+            // other device could learn.
+            $this->fanOutToConfirmedPeers($gateway, $db, $logger, $userId, $session);
+        }
+    }
+
+    // Every confirmed peer, asked of the permanent device_registry rather than
+    // this transient token: prune() drops that row on the next issue(), so
+    // resolving the recipient from it delivers nothing once the ceremony
+    // outlives its own token.
+    private function fanOutToConfirmedPeers(
+        PairingGateway $gateway,
+        DatabaseManager $db,
+        LoggerInterface $logger,
+        int $userId,
+        Session $session,
+    ): void {
+        $recipients = $db->connection()->table('device_registry')
+            ->where('user_id', $userId)
+            ->where('is_self', 0)
+            ->whereNotNull('confirmed_at')
+            ->pluck('id');
+
+        foreach ($recipients as $deviceRegistryId) {
+            if (! is_numeric($deviceRegistryId)) {
+                continue;
+            }
+
+            try {
+                $gateway->deliverAllEpochsToDevice($userId, (int) $deviceRegistryId, $session);
+            } catch (Throwable $e) {
+                // Best-effort: the pairing is already recorded, and the wraps
+                // are re-enqueued by the next confirmed pairing rather than
+                // undoing a ceremony that succeeded.
+                $logger->warning('MobilePairingScan: GDK epoch fan-out to a confirmed device failed.', [
+                    'user_id' => $userId,
+                    'device_registry_id' => (int) $deviceRegistryId,
+                    'exception' => $e::class,
+                ]);
+            }
         }
     }
 
@@ -501,6 +544,12 @@ final class MobilePairingScan extends Component
                     // later pass succeeds.
                 }
             }
+
+            // The phone sends too. A device that only ever received left the
+            // desktop settling the blind-index tie over a keyed-rows flag it
+            // was never sent, and a phone holding the ledger kept a key no
+            // other device could learn.
+            $this->fanOutToConfirmedPeers($gateway, $db, $logger, $userId, $session);
 
             return;
         }

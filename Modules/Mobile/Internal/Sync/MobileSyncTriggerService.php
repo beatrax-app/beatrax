@@ -9,6 +9,7 @@ use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
+use Modules\Sync\Public\Services\GdkEpochDeliveryGateway;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -20,6 +21,7 @@ final class MobileSyncTriggerService
         private readonly LanSyncClient $lanSyncClient,
         private readonly RelayClient $relayClient,
         private readonly RelayConfig $relayConfig,
+        private readonly GdkEpochDeliveryGateway $epochDelivery,
         private readonly ?LoggerInterface $logger = null,
     ) {}
 
@@ -76,6 +78,11 @@ final class MobileSyncTriggerService
         $lanReached = $lanHost !== null
             && $lanPort !== null
             && $this->dialLanWithBoundedRetry($lanHost, $lanPort, $identity, $session);
+
+        // This tick holds the app-lock key by construction — the identity
+        // above would be null otherwise — so it is the pass that can open a
+        // wrap an earlier, locked one had to leave in the mailbox.
+        $this->epochDelivery->drainInbox($userId, $identity->deviceId, $session);
 
         return $lanReached || $relayReached;
     }

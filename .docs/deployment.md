@@ -169,6 +169,29 @@ WantedBy=multi-user.target
   Telescope/Debugbar dependencies. The `migrate`/`install` paths and the
   community-corpus seeders all run identically on a server.
 
+## What a self-hosted install does not get: biometric unlock
+
+**Biometric / WebAuthn unlock enrolment is refused on a self-hosted web
+deployment, deliberately.** The three `/lock/biometric/*` routes answer `403` and the
+Enrol button in app-lock settings surfaces a localised explanation instead of doing
+nothing. PIN unlock is the supported path here. Unlocking an *existing* credential is
+not gated — in practice a self-hosted install can never have one.
+
+The reason is where the key would have to live. Enrolment stores
+`secret (32 bytes) || wrapped_key_bytes` in
+`user_biometric_credentials.biometric_wrap_secret`: the unwrapping key and the wrapped
+app-lock data key, concatenated, in the same SQLite file as the transactions. On the
+desktop bundle that blob is protected by the operating system's key store through
+Electron's `safeStorage`. A server has no such store, so the app binds the pass-through
+shield — the identity function — and anyone holding the database file would hold the
+app-lock data key, and therefore the group data keys and the counterparty blind-index
+key, with no PIN, password, biometric, or Argon2 in the way.
+
+The gate reads the shield's own `protectsAtRest()` capability rather than testing for a
+platform, so it is a property of what the installation can actually do. See [which
+columns are encrypted at
+rest](features/sync/sensitive-columns-at-rest.md#where-the-key-lives-on-a-phone-and-the-one-condition-that-argument-rests-on).
+
 ## Configuration reference
 
 `beatrax:setup` writes these; you can also set them by hand in `.env`:

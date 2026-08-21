@@ -12,7 +12,7 @@ return [
     'go_to_app_lock' => 'Ugrás az alkalmazászárhoz',
 
     'encrypted_at_rest' => 'Az adatok nyugalmi állapotban titkosítva',
-    'encrypted_at_rest_scope' => 'A jegyzetek, a tranzakciók leírásai, valamint a kedvezményezettek nevei és IBAN-jai az alkalmazászár jelmondatával titkosítva vannak. Az összegek, a dátumok, valamint a saját számlád neve és IBAN-ja nincsenek, és egyes kereskedőnevek továbbra is olvashatóan szerepelnek az adatbázisfájl más részein.',
+    'encrypted_at_rest_scope' => 'A jegyzetek, a tranzakciók leírásai, valamint a kedvezményezettek nevei és IBAN-jai a főkönyvben az alkalmazászár jelmondatával titkosítva vannak. Az összegek, a dátumok, valamint a saját számlád neve és IBAN-ja nincsenek. A keresési index saját olvasható másolatot őriz arról, kinek fizetsz, a tranzakcióid leírásairól és az adójegyzeteidről, és egyes kereskedőnevek olvashatóan szerepelnek az adatbázisfájl más részein.',
     'on' => 'Be',
     'securing' => 'Az adataid védelme…',
     'do_not_close' => 'Ne zárd be ezt az ablakot.',
@@ -51,7 +51,7 @@ return [
     'search_plaintext' => 'A keresési index titkosítatlan másolatot őriz a kereskedő és a leírás szövegéből, hogy a teljes szöveges keresés továbbra is működjön.',
     'keep_unencrypted' => 'Adatok titkosítatlanul hagyása',
     'encryption_enabled' => 'Titkosítás bekapcsolva',
-    'encryption_enabled_body' => 'Az adataid mostantól nyugalmi állapotban titkosítva vannak.',
+    'encryption_enabled_scope' => 'A jegyzetek, a leírások és az, hogy kinek fizetsz, mostantól az alkalmazászár jelmondatával titkosítva vannak. Az összegek, a dátumok és a keresési index olvashatók maradnak.',
     'done_encryption_enabled' => 'Kész — a titkosítás bekapcsolva',
     'encryption_failed' => 'A titkosítás beállítása nem sikerült',
     'encryption_failed_body' => 'Az adataid nem változtak. A biztonsági mentésed megmaradt.',

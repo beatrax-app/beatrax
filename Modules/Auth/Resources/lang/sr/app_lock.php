@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'error_enroll_unsupported' => 'Biometrijsko otključavanje nije dostupno na ovom uređaju.',
+    'error_enroll_unprotected' => 'Biometrijsko otključavanje zahteva skladište ključeva operativnog sistema, a ova instalacija ga nema. Upis bi ostavio ključ za otključavanje čitljiv pored tvojih podataka, pa se ovde ne nudi.',
     'error_enroll_locked' => 'Otključaj aplikaciju pre upisa.',
     'error_enroll_failed' => 'Tvoj uređaj je odbio da sačuva ključ. Biometrijsko otključavanje nije dostupno.',
     'heading' => 'Zaključavanje aplikacije',

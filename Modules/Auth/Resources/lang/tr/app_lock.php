@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'error_enroll_unsupported' => 'Bu cihazda biyometrik kilit açma kullanılamıyor.',
+    'error_enroll_unprotected' => 'Biyometrik kilit açma, işletim sisteminin anahtar deposuna ihtiyaç duyar ve bu kurulumda böyle bir depo yok. Kaydolmak, kilit açma anahtarını verilerinin yanında okunabilir bırakırdı; bu yüzden burada sunulmuyor.',
     'error_enroll_locked' => 'Kaydetmeden önce uygulamanın kilidini aç.',
     'error_enroll_failed' => 'Cihazın anahtarı saklamayı reddetti. Biyometrik kilit açma kullanılamıyor.',
     'heading' => 'Uygulama kilidi',
