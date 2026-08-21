@@ -12,11 +12,11 @@ it('BiometricDeviceStore class exists (RED until 05-05)', function (): void {
     expect(class_exists(BiometricDeviceStore::class))->toBeTrue();
 });
 
-it('exposes incrementFailureCount on the Wave 0 contract (DB behavior covered in BiometricEnrollmentTest)', function (): void {
+it('exposes incrementFailureCount (DB behavior covered in BiometricEnrollmentTest)', function (): void {
     expect(method_exists(BiometricDeviceStore::class, 'incrementFailureCount'))->toBeTrue();
 });
 
-it('exposes resetFailureCount on the Wave 0 contract (DB behavior covered in BiometricEnrollmentTest)', function (): void {
+it('exposes resetFailureCount (DB behavior covered in BiometricEnrollmentTest)', function (): void {
     expect(method_exists(BiometricDeviceStore::class, 'resetFailureCount'))->toBeTrue();
 });
 

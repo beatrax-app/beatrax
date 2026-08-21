@@ -16,7 +16,7 @@
     series/data concern stays in the Livewire component.
 --}}
 @php
-    // D-11: inject phone-tuned responsive breakpoints into the server-rendered
+    // Inject phone-tuned responsive breakpoints into the server-rendered
     // options so the chart fills the container at phone width with fewer x-axis
     // labels and hidden legend. The tooltip stays active on touch.
     $recurringDetailOptions = array_merge($apexOptions, [

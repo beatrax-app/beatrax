@@ -6,10 +6,10 @@ use Illuminate\Container\Container;
 use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Http\Request;
 use Livewire\Livewire;
-use Modules\Core\Internal\Http\Livewire\SettingsPage;
 use Modules\Core\Internal\Http\Middleware\SetLocale;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Enums\Locale;
+use Modules\Shell\Internal\Http\Livewire\SettingsPage;
 use Symfony\Component\HttpFoundation\Response;
 
 // The translator is reset to English first, so every case starts from a known

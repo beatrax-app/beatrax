@@ -183,7 +183,7 @@ function fpctSeedFixture(DatabaseManager $db, User $user, string $fixtureName): 
     return ['accountIdMap' => $accountIdMap, 'fixture' => $fixture];
 }
 
-it('projects the Wave 2 fixture corpus subset end-to-end and matches expected.projection within ±2 minor', function (string $fixtureName): void {
+it('projects the fixture corpus subset end-to-end and matches expected.projection within ±2 minor', function (string $fixtureName): void {
     // The fixture's expected.projection values are calibrated off the accounts'
     // opening_balance_as_of_date, so the clock has to be frozen to that same
     // anchor for the pipeline's asOf to line up.

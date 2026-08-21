@@ -2,32 +2,30 @@
  * beatraxLock Alpine store — privacy veil, grace-window timer, idle tracker,
  * and cross-tab BroadcastChannel coordination.
  *
- * Threat mitigations:
- *   T-05-11: veil drops synchronously in <=80ms on visibilitychange/blur so
- *             financial data is hidden before OS takes a screenshot. The
- *             pointer-events-none → pointer-events-auto flip happens in the
- *             same synchronous stack frame, blocking interaction instantly.
- *             prefers-reduced-motion: duration is 0ms (motion-reduce:duration-0
- *             in the CSS class list), so the veil still appears — just without
- *             a CSS transition. No additional JS branch needed.
- *   T-05-13: idle dispatch only asks the server to lock (Livewire event).
- *             The server last_activity_at is the authoritative source (D-17).
- *             The client timer is a best-effort convenience only.
+ * The veil drops synchronously in <=80ms on visibilitychange/blur so
+ * financial data is hidden before the OS takes a screenshot. The
+ * pointer-events-none → pointer-events-auto flip happens in the same
+ * synchronous stack frame, blocking interaction instantly. Under
+ * prefers-reduced-motion the duration is 0ms (motion-reduce:duration-0 in
+ * the CSS class list), so the veil still appears — just without a CSS
+ * transition. No additional JS branch needed.
  *
- * Design decisions:
- *   D-05: BroadcastChannel('beatrax:lock') syncs veil state across tabs.
- *   D-07: Veil drops on visibilitychange:hidden + window blur.
- *   D-17: The client idle timer POSTs to /lock/engage (_serverLock) so the
- *         server session is locked authoritatively on any app page.
- *   D-18: GRACE_MS = 30 000ms. Return within the grace window lifts the veil
- *         without a server round-trip. After grace elapses the next Livewire
- *         request will hit AppLockMiddleware which redirects to /lock.
+ * BroadcastChannel('beatrax:lock') syncs veil state across tabs.
+ *
+ * The client idle timer only ever asks the server to lock: it POSTs to
+ * /lock/engage (_serverLock) so the server session is locked
+ * authoritatively on any app page. The server's last_activity_at is the
+ * authoritative source and the client timer is a best-effort convenience.
+ *
+ * GRACE_MS is 30 000ms. Returning within the grace window lifts the veil
+ * without a server round-trip. After grace elapses the next Livewire
+ * request hits AppLockMiddleware, which redirects to /lock.
  *
  * Idle-lock no-op: when window.beatraxIdleMs is absent (undefined), the idle
  * tracker is disabled — the lock feature is off for this session.
  */
 
-const GRACE_MS = 30000; // D-18: 30 s grace window
+const GRACE_MS = 30000; // 30 s grace window
 
 const IDLE_EVENTS = ['pointerdown', 'pointermove', 'keydown', 'touchstart', 'scroll', 'wheel'];
 
@@ -42,7 +40,7 @@ function _lockEnabled() {
     return typeof window.beatraxIdleMs === 'number' && window.beatraxIdleMs > 0;
 }
 
-// Minimum interval between activity-heartbeat POSTs (WR-04). The server no
+// Minimum interval between activity-heartbeat POSTs. The server no
 // longer counts Livewire update traffic (wire:poll etc.) as user activity, so
 // genuine interaction on Livewire-heavy pages must be reported explicitly.
 const HEARTBEAT_MS = 60000;
@@ -228,8 +226,8 @@ document.addEventListener('alpine:init', () => {
             this._clearGrace();
             this._graceTimer = window.setTimeout(() => {
                 this._graceTimer = null;
-                // Grace elapsed — lock the server session via the engage endpoint
-                // (D-17/D-18, Gap A fix). fetch with keepalive:true survives tab
+                // Grace elapsed — lock the server session via the engage
+                // endpoint. fetch with keepalive:true survives tab
                 // closure/switch and does not block the page.
                 this._serverLock();
                 // Also broadcast locked state to all tabs (UX convenience).
@@ -304,11 +302,11 @@ document.addEventListener('alpine:init', () => {
         },
 
         // -----------------------------------------------------------------------
-        // BroadcastChannel — D-05 cross-tab coordination
+        // BroadcastChannel — cross-tab coordination
         // -----------------------------------------------------------------------
 
         /**
-         * POST to /lock/engage to lock the server session (D-17, Gap A fix).
+         * POST to /lock/engage to lock the server session.
          *
          * Uses fetch with keepalive:true — like a beacon, a keepalive request
          * survives tab switching/closing, but unlike navigator.sendBeacon it
@@ -341,7 +339,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         // -----------------------------------------------------------------------
-        // Idle tracking — D-17
+        // Idle tracking
         // -----------------------------------------------------------------------
 
         /** Timestamp of the last activity-heartbeat POST (ms since epoch). */
@@ -354,12 +352,12 @@ document.addEventListener('alpine:init', () => {
         },
 
         /**
-         * POST a throttled activity heartbeat to the server (WR-04).
+         * POST a throttled activity heartbeat to the server.
          *
          * AppLockMiddleware refreshes last_activity_at on plain (non-Livewire)
          * requests only — wire:poll machine traffic no longer counts as
          * activity. This heartbeat is how genuine interaction keeps the
-         * server-side idle timer (D-17) honest on Livewire-heavy pages.
+         * server-side idle timer honest on Livewire-heavy pages.
          * Throttled to once per HEARTBEAT_MS; only runs when the idle watcher
          * is armed (activity listeners are registered in _startIdleWatch).
          */
@@ -409,11 +407,11 @@ document.addEventListener('alpine:init', () => {
 
                 const elapsed = Date.now() - this._lastActivity;
                 if (elapsed >= idleMs) {
-                    // Idle threshold elapsed — lock the server session via the
-                    // engage endpoint (Gap A fix, D-17 server-authoritative).
+                    // Idle threshold elapsed — lock the server session via
+                    // the engage endpoint, server-authoritatively.
                     // _serverLock() fires on every app page; there is no
                     // Livewire event path (the old 'idle-timeout-elapsed'
-                    // dispatch was removed — IN-04).
+                    // dispatch was removed).
                     // No veil here. The app is IN VIEW — there is no
                     // app-switcher snapshot to hide, and the veil landed on
                     // top of the credential prompt, covering the very control
@@ -571,10 +569,10 @@ document.addEventListener('alpine:init', () => {
             });
 
             // ---------------------------------------------------------------
-            // WebAuthn unlock — beatrax:webauthn-get (D-15, T-05-23)
+            // WebAuthn unlock — beatrax:webauthn-get
             //
             // Fired by LockScreen.biometricPrompt() on button tap only.
-            // Never auto-fires on render (D-15).
+            // Never auto-fires on render.
             // Guard: no-op when the browser does not support WebAuthn.
             // ---------------------------------------------------------------
             document.addEventListener('beatrax:webauthn-get', async () => {
@@ -644,7 +642,7 @@ document.addEventListener('alpine:init', () => {
             });
 
             // ---------------------------------------------------------------
-            // WebAuthn enrollment — beatrax:webauthn-create (D-13)
+            // WebAuthn enrollment — beatrax:webauthn-create
             //
             // Fired by AppLockSettingsSection.startEnroll() on Enroll button tap.
             // Guard: no-op when the browser does not support WebAuthn.

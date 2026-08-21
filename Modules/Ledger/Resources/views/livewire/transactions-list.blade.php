@@ -15,10 +15,10 @@
     $rowMoney = static fn (array $row): Money => Money::ofMinor($row['amountMinor'], $row['amountCurrency']);
 
     // Tax state map: array<int, array{taxTagged: bool, taxCategoryShortName: ?string}>
-    // Batch-loaded once per render — no N+1 (Pitfall 1).
+    // Batch-loaded once per render — no N+1.
     $taxState ??= [];
 
-    // Cleared status map: array<int, string> (SC-1, D-11). Batch-loaded once
+    // Cleared status map: array<int, string>. Batch-loaded once
     // per render via HandlesClearedStatus::clearedStatusFor() — no N+1.
     $clearedState ??= [];
 
@@ -34,10 +34,9 @@
     $availableAccounts ??= [];
     $availableCategories ??= [];
 
-    // Split legs (Phase 13.1 Plan 06): array<int, list<array{...}>> keyed by
-    // transaction id, batch-loaded once per render (no N+1 — Pitfall 1).
-    // A row is a split parent when it has >= 2 legs (leg-row presence, NEVER
-    // category_id nullity — Pitfall 1 / D-11).
+    // Split legs: array<int, list<array{...}>> keyed by transaction id,
+    // batch-loaded once per render (no N+1). A row is a split parent when it
+    // has >= 2 legs (leg-row presence, NEVER category_id nullity).
     $splitLegs ??= [];
 
     // Format minor-unit amount (settled EUR, nl_NL) for the summary strip

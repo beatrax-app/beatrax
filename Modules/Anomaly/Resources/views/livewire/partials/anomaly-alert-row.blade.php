@@ -30,7 +30,7 @@
     $baselineMinor = $alert->baselineAmount->toMinor();
     $upArrow = abs($latestMinor) >= abs($baselineMinor);
 
-    // Canonical reason labels (D-16). Unknown reasons fall through with a
+    // Canonical reason labels. Unknown reasons fall through with a
     // titleized fallback so a future detector still renders.
     $reasonLabels = [
         'large' => Lang::get('anomaly::alerts.reasons.large'),

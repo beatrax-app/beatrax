@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Bus;
 use Livewire\Livewire;
-use Modules\Core\Internal\Http\Livewire\SettingsPage;
 use Modules\Core\Models\User;
 use Modules\FX\Internal\Jobs\FetchFxRatesJob;
 use Modules\Ledger\Models\Currency;
+use Modules\Shell\Internal\Http\Livewire\SettingsPage;
 
 beforeEach(function (): void {
     Currency::query()->updateOrInsert(['code' => 'EUR'], ['name' => 'Euro', 'minor_unit' => 2]);

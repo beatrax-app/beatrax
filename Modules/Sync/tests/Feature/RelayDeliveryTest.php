@@ -106,7 +106,7 @@ it('addressing is isolated: recipient A cannot drain recipient B mailbox', funct
     expect($wrongRecipientBlobs)->toBe(0, 'device-attacker must not see device-target\'s pending blobs');
 });
 
-it('RelayClient class exists (Wave 4 implementation landed)', function (): void {
+it('RelayClient class exists', function (): void {
     expect(class_exists('Modules\\Sync\\Internal\\Transport\\Relay\\RelayClient'))->toBeTrue(
         'Wave 4: RelayClient must exist — implemented in Plan 13-03.'
     );

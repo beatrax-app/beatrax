@@ -24,7 +24,7 @@
 
     {{-- §6.2 Month summary strip (hidden when no risk days, unless computing) --}}
     @php
-        // IN-05: count only days OF the display month — the Mon–Sun grid
+        // Count only days OF the display month — the Mon–Sun grid
         // carries lead-in/lead-out cells from adjacent months, and a June
         // view must not headline "dips below €0 on Jul 1".
         $riskDays = array_filter($days, fn ($d) => $d->isRisk && $d->date->month === $displayMonth);
@@ -216,7 +216,7 @@
                             if ($day->date->month !== $displayMonth) $cellClasses .= ' cal-cell--other-month';
                             elseif ($day->isPast && !$day->isToday) $cellClasses .= ' cal-cell--past';
 
-                            // IN-06: cells render whole units (half-up) as a deliberate density
+                            // Cells render whole units (half-up) as a deliberate density
                             // trade-off — sub-euro balances can read "€ -0"/"€ 1" while the day
                             // panel shows two decimals. The panel is the precise surface; the
                             // grid corner is a glanceable magnitude, and the rose risk tint
@@ -235,7 +235,7 @@
                                 'entries' => $entriesWord,
                             ]);
                             if (!$day->isComputing) {
-                                // WR-10: announce the sign — a screen reader on a −€450 risk day must not hear "€450"
+                                // Announce the sign — a screen reader on a −€450 risk day must not hear "€450"
                                 $balanceAmount = Money::ofMinor(abs($day->eodBalanceMinor), $day->currency)->formatWholeUnits();
                                 $ariaLabel .= $day->eodBalanceMinor < 0
                                     ? Lang::get('calendar::messages.cell.aria_balance_negative', ['amount' => $balanceAmount])

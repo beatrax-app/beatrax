@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Auth\Public\Actions\SignupAction;
-use Modules\Core\Internal\Http\Livewire\SettingsPage;
+use Modules\Shell\Internal\Http\Livewire\SettingsPage;
 
 // create() does not read the row back, so a database-defaulted column is null
 // on the returned model. SignupAction hands that instance to the guard, and on

@@ -238,7 +238,7 @@ it('isolates by user — userA cannot see userB candidates', function (): void {
         ->assertDontSeeText('OtherUserOnly');
 });
 
-it('ChainsServiceProvider uses View Factory contract (issue #12 fix) — never the view() global helper', function (): void {
+it('ChainsServiceProvider uses View Factory contract — never the view() global helper', function (): void {
     $providerPath = base_path('Modules/Chains/Providers/ChainsServiceProvider.php');
     expect(file_exists($providerPath))->toBeTrue();
     $contents = (string) file_get_contents($providerPath);

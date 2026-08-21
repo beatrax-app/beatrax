@@ -39,7 +39,7 @@ beforeEach(function (): void {
     ]);
 });
 
-it('reads chain_resolution_runs by exact user_id match — running status surfaces (issue #1 + #8 audit-table contract)', function (): void {
+it('reads chain_resolution_runs by exact user_id match — running status surfaces', function (): void {
     $now = CarbonImmutable::now()->toDateTimeString();
     $this->db->connection()->table('chain_resolution_runs')->insert([
         'user_id' => $this->user->id,
@@ -109,7 +109,7 @@ it('surfaces failed status + truncated last_error when chain_resolution_runs.sta
     $component->assertSet('chainResolutionError', substr($longError, 0, 200));
 });
 
-it('cross-user isolation — user A does NOT observe user B\'s chain_resolution_runs row (issue #1 + #8)', function (): void {
+it('cross-user isolation — user A does NOT observe user B\'s chain_resolution_runs row', function (): void {
     $now = CarbonImmutable::now()->toDateTimeString();
     $this->db->connection()->table('chain_resolution_runs')->insert([
         'user_id' => $this->otherUser->id,
@@ -125,7 +125,7 @@ it('cross-user isolation — user A does NOT observe user B\'s chain_resolution_
         ->assertSet('chainResolutionStatus', null);
 });
 
-it('substring-attack guard — user_id matching is exact, not LIKE (issue #8)', function (): void {
+it('substring-attack guard — user_id matching is exact, not LIKE', function (): void {
     // A `payload LIKE '%userId:N%'` query would falsely match users whose ids
     // share a digit prefix; the exact-match query must return null.
     $now = CarbonImmutable::now()->toDateTimeString();
@@ -159,7 +159,7 @@ it('substring-attack guard — user_id matching is exact, not LIKE (issue #8)', 
         ->assertSet('chainResolutionStatus', 'failed');
 });
 
-it('PreviewWizard does NOT contain a substring LIKE payload pattern (issue #1 + #8 lock)', function (): void {
+it('PreviewWizard does NOT contain a substring LIKE payload pattern', function (): void {
     $wizardPath = base_path('Modules/Import/Internal/Http/Livewire/PreviewWizard.php');
     expect(file_exists($wizardPath))->toBeTrue();
     $contents = (string) file_get_contents($wizardPath);

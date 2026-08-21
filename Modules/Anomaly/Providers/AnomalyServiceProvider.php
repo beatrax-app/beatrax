@@ -81,7 +81,7 @@ final class AnomalyServiceProvider extends ServiceProvider
         /** @var array<int, int> $cache */
         $cache = [];
 
-        $factory->composer('core::livewire.app-sidebar', static function (View $compose) use ($app, &$cache): void {
+        $factory->composer('shell::livewire.app-sidebar', static function (View $compose) use ($app, &$cache): void {
             $currentUser = $app->make(CurrentUser::class);
 
             /** @var array<string, int> $navCounts */

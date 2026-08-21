@@ -50,7 +50,7 @@ parameters:
             # `plugins()` return type names the mobile plugin provider classes
             # (`Native\Mobile\Providers\*`, `NativePHP\BackgroundTasks\*`)
             # verbatim per the vendor contract; those packages are installed
-            # ONLY in `mobile-app/vendor` (the Phase 15 sibling-root topology —
+            # ONLY in `mobile-app/vendor` (the sibling-root topology —
             # `nativephp/desktop` conflicts with `nativephp/mobile`), never in
             # this repo-root toolchain, so they are permanently unresolvable
             # here — mirrors why `mobile-app/bootstrap/app.php` (a real, never
@@ -102,13 +102,13 @@ parameters:
         # classes (the NativePHP-booted provider, the AppMenuBuilder,
         # the OsThemeProbe that wraps `System::theme()` behind the
         # `OsThemeSignal` Public contract, and the
-        # `DispatchOsNotification` listener that fires the D-12 OS
+        # `DispatchOsNotification` listener that fires the OS
         # notifications via `Notification::title()->message()
         # ->event()->reference()->show()`). The BoundaryArchTest "no
         # Laravel facade usage in module code" test mirrors this
         # allow-list.
         #
-        # The macOS menu-bar tray (D-09) is intentionally NOT a member
+        # The macOS menu-bar tray is intentionally NOT a member
         # of this carve-out — the persistent tray is created in the
         # Electron main process by `scripts/nativephp_inject_persistent_tray.php`
         # rather than through any PHP-side facade, so no PHP module
@@ -171,15 +171,15 @@ parameters:
                 - Modules/Desktop/Internal/Listeners/NavigateOnNotificationDeepLink.php
                 - Modules/Desktop/Internal/Listeners/ApplyCloseWindowChoice.php
             reportUnmatched: false
-        # Phase 15 native-facade carve-out (mirrors the Native\Desktop\
+        # Mobile native-facade carve-out (mirrors the Native\Desktop\
         # Facades allow-list above): nativephp/mobile's Network/Biometrics/
-        # Scanner API is only reachable through its facades. Registered now
-        # (Plan 01, single-owner forward-registration) so Plans 05-07 never
-        # need to touch this file when they add the first actual facade
-        # call — the crossing is confined to the Mobile module's native-
-        # bridge classes. reportUnmatched: false because no file yet
-        # contains a matching facade call (the nativephp/mobile-* packages
-        # are not installed until Plan 03).
+        # Scanner API is only reachable through its facades. Registered up
+        # front (single-owner forward-registration) so adding the first
+        # actual facade call never needs to touch this file — the crossing
+        # is confined to the Mobile module's native-bridge classes.
+        # reportUnmatched: false because no file yet contains a matching
+        # facade call (the nativephp/mobile-* packages are not installed
+        # in this root).
         -
             message: '#Native\\Mobile\\Facades\\(Network|Biometrics|Scanner|SecureStorage|Device) facade should not be used\.#'
             paths:
@@ -198,9 +198,9 @@ parameters:
             paths:
                 - Modules/Mobile/Internal/Native/*.php
             reportUnmatched: false
-        # 18-15: `Internal/Listeners/` is a genuinely NEW sanctioned crossing
+        # `Internal/Listeners/` is a genuinely NEW sanctioned crossing
         # point in this same carve-out family — the mobile delivery adapter
-        # (`DispatchMobileNotification`, D-31/D-32's mobile mirror) reaches
+        # (`DispatchMobileNotification`, the mobile notification mirror) reaches
         # `nativephp/mobile-local-notifications`'s `LocalNotifications`
         # facade, which lives only in `mobile-app/vendor` (never this
         # toolchain), exactly like the Network/Biometrics/Scanner/
@@ -241,15 +241,15 @@ parameters:
             paths:
                 - Modules/Mobile/Internal/Identity/*.php
             reportUnmatched: false
-        # Phase 15 Plan 05 (MOBILE-01) wire-protocol carve-out: the phone's
+        # Mobile wire-protocol carve-out: the phone's
         # client-only LAN transport (LanSyncClient) and its KEK-gated
         # trigger orchestrator (MobileSyncTriggerService) MUST reuse the
         # desktop's sync transport byte-for-byte — the Noise IK handshake
         # state machine, PeerCatchUpExchanger's catch-up constants,
         # TransportFramer framing, SyncSession's auth-gate + replay, the
         # OpLogReplayer/MergeRulesRegistry merge, the device identity
-        # loader, and the relay client — per 15-05-PLAN.md's SPEC boundary
-        # ("wire protocol consumed as-is, no redesign"). These are
+        # loader, and the relay client — per the documented boundary that the
+        # wire protocol is consumed as-is with no redesign. These are
         # transport/crypto/merge internals, not a general-purpose
         # cross-module API, so no Modules\Sync\Public re-export exists (nor
         # should one). The crossing is confined to the Mobile module's own

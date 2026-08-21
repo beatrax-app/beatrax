@@ -53,7 +53,7 @@ afterEach(function (): void {
     }
 });
 
-it('phase 11 backup banner round-trip — happy → corrupt → banner → acknowledge', function (): void {
+it('backup banner round-trip — happy → corrupt → banner → acknowledge', function (): void {
     /** @var string $backupsDir */
     $backupsDir = $this->backupsDir;
     /** @var string $sourcePath */

@@ -31,7 +31,7 @@
      * Direction-aware tint for a single drift alert. Expense up and
      * income down read as rose; expense down and income up read as
      * emerald. Dark companions step into rose-300 / emerald-300 for
-     * the inline pill text on a slate-950 surface (UI-SPEC D-15).
+     * the inline pill text on a slate-950 surface (UI-SPEC).
      */
     $tintFor = static function (object $row): string {
         $isNegative = $row->delta->isNegative();

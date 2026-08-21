@@ -68,6 +68,7 @@
             <directory>Modules/Calendar/tests/Feature</directory>
             <directory>Modules/Tax/tests/Feature</directory>
             <directory>Modules/Search/tests/Feature</directory>
+            <directory>Modules/Shell/tests/Feature</directory>
             <directory>Modules/Notifications/tests/Feature</directory>
             <directory>Modules/Position/tests/Feature</directory>
         </testsuite>

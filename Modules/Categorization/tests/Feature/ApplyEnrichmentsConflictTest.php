@@ -77,7 +77,7 @@ it('PendingEnrichment default conflictingFields is an empty array', function ():
     expect($pe->conflictingFields)->toBe([]);
 });
 
-it('no conflict: empty conflictingFields path proceeds with pure source_ref enrichment (Wave 1 path stays green)', function (): void {
+it('no conflict: empty conflictingFields path proceeds with pure source_ref enrichment', function (): void {
     $tx = seedConflictTransaction($this->fixtureUser, $this->fixtureAccount, 'paypal-csv', 'OLD-REF');
 
     Event::fake([ReceiptConflictDetected::class]);

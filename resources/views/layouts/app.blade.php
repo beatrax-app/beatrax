@@ -116,9 +116,9 @@
                     The sidebar is mounted exactly ONCE inside the drawer component.
                     At >=1024px: .drawer-container is position:static — desktop static sidebar.
                     At <1024px: slides in as a focus-trapped overlay from the left.
-                    The original @livewire('core.app-sidebar') call is now inside <x-core::drawer>.
+                    The original @livewire('core.app-sidebar') call is now inside <x-shell::drawer>.
                 --}}
-                <x-core::drawer />
+                <x-shell::drawer />
                 {{--
                     Mobile top bar.
                     CSS-hidden at >=1024px — desktop layout is unchanged.

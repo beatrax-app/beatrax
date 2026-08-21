@@ -10,10 +10,10 @@ use Tests\TestCase as RootTestCase;
 
 abstract class TestCase extends RootTestCase
 {
-    // SettingsPage validates baseCurrency against `exists:currencies,code`, so
-    // without EUR every save() in an unseeded test fails validation. The table
-    // only exists once migrations have run, hence the QueryException catch for
-    // Unit tests.
+    // Any form validating a currency against `exists:currencies,code` fails in
+    // an unseeded test, so the three the fixtures use are always present. The
+    // table only exists once migrations have run, hence the QueryException
+    // catch for Unit tests.
     protected function setUp(): void
     {
         parent::setUp();

@@ -89,7 +89,7 @@
     ], static fn (mixed $v): bool => $v !== null && $v !== '');
     $exportUrl = route('reports.export', $exportParams);
 
-    // Headline delta (Req 13) — current total minus the previous-period
+    // Headline delta — current total minus the previous-period
     // total, derived from $displayRows' previousAmountMinor (only
     // populated when compare is on and $displayRows is $result->comparisonRows).
     $previousTotal = 0;
@@ -292,7 +292,7 @@
                 </div>
             @else
                 @php
-                    // CR-03: the DOM id must stay stable for as long as the SAME
+                    // The DOM id must stay stable for as long as the SAME
                     // ApexCharts partial (viz type) is mounted — everything else
                     // (metric/dimension/period/granularity/currency/filters/compare/
                     // row count) is a content-only change that the `report-updated`

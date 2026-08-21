@@ -83,7 +83,7 @@ it('failed-job toast renders when chain_resolution_runs.status=failed for the us
         ->assertSeeText('Open Queue Inspector');
 });
 
-it('failed-job toast hidden when chain_resolution_runs has no failed rows for the user (cross-user — issue #8)', function (): void {
+it('failed-job toast hidden when chain_resolution_runs has no failed rows for the user (cross-user)', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     $now = CarbonImmutable::now()->toDateTimeString();

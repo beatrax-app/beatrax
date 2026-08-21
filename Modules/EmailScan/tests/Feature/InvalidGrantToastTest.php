@@ -5,9 +5,9 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
-use Modules\Core\Internal\Http\Livewire\Dashboard;
 use Modules\Core\Models\User;
 use Modules\EmailScan\Internal\InboxScanStateMachine;
+use Modules\Shell\Internal\Http\Livewire\Dashboard;
 
 function igtUser(string $username): User
 {

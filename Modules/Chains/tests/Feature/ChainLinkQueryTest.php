@@ -260,7 +260,7 @@ it('forTransaction filters rejected chain_links out of the walk', function (): v
     expect($tree->nodes[0]->kind)->toBe('root');
 });
 
-it('forTransaction handles NULL to_transaction_id gracefully (issue #10 — exceeded tolerance)', function (): void {
+it('forTransaction handles NULL to_transaction_id gracefully', function (): void {
     $asnTransfer = clqTx($this->user, $this->asn, $this->run, 2500, 'transfer_in', 'ASN bulk', 'asn-bulk', '2026-05-10', 'e1', 1);
 
     clqSeedLink($this->db, $this->user, (int) $asnTransfer->id, null,

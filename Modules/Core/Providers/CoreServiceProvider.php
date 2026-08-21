@@ -17,12 +17,7 @@ use Modules\Core\Internal\Console\InstallCommand;
 use Modules\Core\Internal\Console\Probes\BootProbeState;
 use Modules\Core\Internal\Console\RestoreDatabaseCommand;
 use Modules\Core\Internal\Encryption\PreMigrationSnapshot;
-use Modules\Core\Internal\Http\Livewire\AppSidebar;
-use Modules\Core\Internal\Http\Livewire\Dashboard;
 use Modules\Core\Internal\Http\Livewire\HelpDataLocations;
-use Modules\Core\Internal\Http\Livewire\NetWorthCard;
-use Modules\Core\Internal\Http\Livewire\SettingsPage;
-use Modules\Core\Internal\Http\Livewire\SpendingTrendCard;
 use Modules\Core\Internal\Listeners\ClearGuardBetweenJobs;
 use Modules\Core\Internal\Providers\HealthCheckServiceProvider;
 use Modules\Core\Internal\Providers\SqliteOptimizationsProvider;
@@ -121,15 +116,10 @@ final class CoreServiceProvider extends ServiceProvider
         $this->loadModuleResources('core');
         $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
 
-        $livewire->component('core.dashboard', Dashboard::class);
-        $livewire->component('core.settings-page', SettingsPage::class);
         $livewire->component('core.auto-import-settings-section', AutoImportSettingsSection::class);
         $livewire->component('core.encrypted-backup-download', EncryptedBackupDownload::class);
         $livewire->component('core.encrypted-backup-restore', EncryptedBackupRestore::class);
-        $livewire->component('core.spending-trend-card', SpendingTrendCard::class);
-        $livewire->component('core.net-worth-card', NetWorthCard::class);
         $livewire->component('core.system-alerts-banner', SystemAlertsBanner::class);
-        $livewire->component('core.app-sidebar', AppSidebar::class);
         $livewire->component('core.help-data-locations', HelpDataLocations::class);
 
         if ($this->app->runningInConsole()) {

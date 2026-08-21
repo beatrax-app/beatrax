@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 use Livewire\Livewire;
-use Modules\Core\Internal\Http\Livewire\SettingsPage;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Currency;
+use Modules\Shell\Internal\Http\Livewire\SettingsPage;
 
 beforeEach(function (): void {
     // Two currencies, so the picker has options and exists:currencies,code can pass.

@@ -18,7 +18,7 @@
         'dismissed' => Lang::get('notifications::inbox.tabs.dismissed'),
     ];
 
-    // D-44 — [heading, body] tuple per tab, verbatim from the Copywriting
+    // [heading, body] tuple per tab, verbatim from the Copywriting
     // Contract.
     $emptyStates = [
         'unread' => [

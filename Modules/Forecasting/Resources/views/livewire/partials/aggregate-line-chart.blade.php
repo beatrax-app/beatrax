@@ -70,7 +70,7 @@
         'grid' => ['borderColor' => '#E2E8F0'],
         'legend' => ['show' => false],
         'tooltip' => ['shared' => true, 'intersect' => false],
-        // D-11: phone-tuned responsive breakpoints baked into server-rendered
+        // Phone-tuned responsive breakpoints baked into server-rendered
         // options — chart fills the container at phone width with fewer x-axis
         // labels and hidden legend; tooltip stays active on touch.
         'responsive' => [

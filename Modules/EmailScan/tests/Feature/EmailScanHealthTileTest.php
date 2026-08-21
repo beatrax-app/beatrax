@@ -5,10 +5,10 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
-use Modules\Core\Internal\Http\Livewire\Dashboard;
 use Modules\Core\Models\User;
 use Modules\EmailScan\Public\Dto\EmailScanHealthTile;
 use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
+use Modules\Shell\Internal\Http\Livewire\Dashboard;
 
 function ehtUser(string $username): User
 {

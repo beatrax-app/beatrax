@@ -298,7 +298,7 @@ jobs:
     # modules correctly wired (Mobile enabled, Desktop excluded) and that
     # Mobile's own shared code passes — it does NOT attempt a full signed
     # native iOS/Android build (Xcode/Gradle + Apple signing stays a LOCAL
-    # `native:run` step for dev/sideload delivery until Phase 19 app-store
+    # `native:run` step for dev/sideload delivery until app-store
     # publishing).
     mobile-quality:
         name: mobile-app quality (PHP ${{ matrix.php }})
@@ -381,11 +381,11 @@ jobs:
               run: php artisan key:generate --ansi
 
             - name: Assert shared-module discovery (Mobile enabled, Desktop excluded)
-              # T-15-34: the mobile shell must never silently pick up a
+              # The mobile shell must never silently pick up a
               # Desktop-coupled provider or route — `Modules\Desktop` has no
               # `module.json` (loaded only via bootstrap/providers.php) and
               # `mobile-app/bootstrap/providers.php` deliberately omits
-              # DesktopServiceProvider (15-TOPOLOGY-SPIKE-FINDINGS.md).
+              # DesktopServiceProvider.
               working-directory: mobile-app
               run: |
                   php artisan config:clear

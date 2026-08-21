@@ -279,7 +279,7 @@ it('TransactionDetail page hides the "View chain" button when the transaction ha
     $response->assertDontSee('chain-drawer:open', false);
 });
 
-it('chain-node.blade.php partial declares explicit @props([\'node\', \'fanoutPage\']) (issue #13 fix)', function (): void {
+it('chain-node.blade.php partial declares explicit @props([\'node\', \'fanoutPage\'])', function (): void {
     $partialPath = base_path('Modules/Chains/Resources/views/livewire/partials/chain-node.blade.php');
     expect(file_exists($partialPath))->toBeTrue();
     $contents = file_get_contents($partialPath);
@@ -287,7 +287,7 @@ it('chain-node.blade.php partial declares explicit @props([\'node\', \'fanoutPag
     expect($contents)->toContain("@props(['node', 'fanoutPage'])");
 });
 
-it('chain-drawer.blade.php passes $fanoutPage explicitly to the chain-node partial (issue #13 fix)', function (): void {
+it('chain-drawer.blade.php passes $fanoutPage explicitly to the chain-node partial', function (): void {
     $drawerPath = base_path('Modules/Chains/Resources/views/livewire/chain-drawer.blade.php');
     expect(file_exists($drawerPath))->toBeTrue();
     $contents = file_get_contents($drawerPath);

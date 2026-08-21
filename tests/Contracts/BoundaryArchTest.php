@@ -1052,7 +1052,7 @@ it('does not allow the literal `diederik` / `Diederik` anywhere in Modules / tes
     $allowList = [
         'tests/Contracts/BoundaryArchTest.php',
         'tests/Feature/BeatraxCommandsResolveTest.php',
-        'Modules/Core/tests/Feature/AppSidebarRenderTest.php',
+        'Modules/Shell/tests/Feature/AppSidebarRenderTest.php',
     ];
 
     $roots = ['Modules', 'tests', 'resources', 'config'];
@@ -2020,9 +2020,9 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Anomaly/tests/Feature/AnomalyAlertsHomeTest.php -> Modules\\DriftAlerts\\Internal\\Http\\Livewire\\DriftPage',
         'Modules/Auth/tests/Feature/AppLockProvisionerGdkRewrapTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Auth/tests/Feature/CrossUserIsolationTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\AliasesSettingsPage',
-        'Modules/Auth/tests/Feature/SignupReturnsPersistedDefaultsTest.php -> Modules\\Core\\Internal\\Http\\Livewire\\SettingsPage',
-        'Modules/Calendar/tests/Feature/CalendarPaletteAndSidebarTest.php -> Modules\\Core\\Internal\\Http\\Livewire\\AppSidebar',
+        'Modules/Auth/tests/Feature/SignupReturnsPersistedDefaultsTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Calendar/tests/Feature/CalendarPaletteAndSidebarTest.php -> Modules\\DevMode\\Internal\\Navigation\\NavigationRegistryImpl',
+        'Modules/Calendar/tests/Feature/CalendarPaletteAndSidebarTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\AppSidebar',
         'Modules/Categorization/tests/Feature/FieldProvenanceStampingTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionDetail',
         'Modules/Categorization/tests/Feature/RuleApplierSyncCaptureTest.php -> Modules\\Sync\\Internal\\OpLog\\OpLogWriter',
         'Modules/Categorization/tests/Feature/RuleSchemaMigrationTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
@@ -2031,6 +2031,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Chains/tests/Unit/FixtureParseSmokeTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\IcsPdfAdapter',
         'Modules/Chains/tests/Unit/FixtureParseSmokeTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Paypal\\PaypalCsvAdapter',
         'Modules/Core/tests/Feature/Bootstrap/AppKeyRegenerationTest.php -> Modules\\Desktop\\Internal\\Native\\FirstLaunchBootstrap',
+        'Modules/Core/tests/Feature/LocaleSelectionTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\Chains\\Internal\\Jobs\\ResolveChainLinksJob',
         'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\DriftAlerts\\Internal\\Jobs\\DetectDriftAlertsJob',
         'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\EmailScan\\Internal\\Jobs\\BackfillInboxJob',
@@ -2048,11 +2049,11 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Desktop/tests/Unit/DesktopColdStartVaultTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockKeyWrap',
         'Modules/Desktop/tests/Unit/DispatchOsNotificationTest.php -> Modules\\Notifications\\Internal\\Support\\DeterministicKeyDeriver',
         'Modules/DevMode/tests/Feature/AppMenuDeveloperSubmenuTest.php -> Modules\\Desktop\\Internal\\Native\\AppMenuBuilder',
-        'Modules/DriftAlerts/tests/Feature/GlobalDriftThresholdSettingTest.php -> Modules\\Core\\Internal\\Http\\Livewire\\SettingsPage',
-        'Modules/EmailScan/tests/Feature/EmailScanHealthTileTest.php -> Modules\\Core\\Internal\\Http\\Livewire\\Dashboard',
-        'Modules/EmailScan/tests/Feature/InvalidGrantToastTest.php -> Modules\\Core\\Internal\\Http\\Livewire\\Dashboard',
-        'Modules/FX/tests/Feature/BaseCurrencySettingTest.php -> Modules\\Core\\Internal\\Http\\Livewire\\SettingsPage',
-        'Modules/FX/tests/Feature/FxOnlineToggleTest.php -> Modules\\Core\\Internal\\Http\\Livewire\\SettingsPage',
+        'Modules/DriftAlerts/tests/Feature/GlobalDriftThresholdSettingTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
+        'Modules/EmailScan/tests/Feature/EmailScanHealthTileTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\Dashboard',
+        'Modules/EmailScan/tests/Feature/InvalidGrantToastTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\Dashboard',
+        'Modules/FX/tests/Feature/BaseCurrencySettingTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
+        'Modules/FX/tests/Feature/FxOnlineToggleTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Import/tests/Feature/IcsPdfImportTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\IcsPdfAdapter',
         'Modules/Import/tests/Feature/IcsPdfImportTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\PdfTextExtractor',
         'Modules/Import/tests/Feature/PreviewWizardTest.php -> Modules\\Chains\\Internal\\Jobs\\ResolveChainLinksJob',
@@ -2191,7 +2192,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'tests/Feature/AnonymisedFixtureSweepTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\PdfTextExtractor',
         'tests/Feature/InstallLaunchdCommandTest.php -> Modules\\Core\\Internal\\Console\\InstallCommand',
         'tests/Feature/TrustedHostGuardTest.php -> Modules\\Core\\Internal\\Http\\Middleware\\TrustedHostGuard',
-        'tests/Snapshot/SidebarTest.php -> Modules\\Core\\Internal\\Http\\Livewire\\AppSidebar',
+        'tests/Snapshot/SidebarTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\AppSidebar',
     ];
 
     // BoundaryRule hooks UseItem nodes, so a fully-qualified reference written
@@ -2304,21 +2305,6 @@ it('does not allow a cross-module Livewire mount outside the pinned set (pinnedC
     // the edge. Ownership comes from whichever provider registers the alias: the
     // prefix is not reliably the module name (dev.* is DevMode).
     $pinnedCrossModuleMounts = [
-        'Modules/Core/Resources/views/livewire/dashboard.blade.php -> Anomaly (anomaly.dashboard-anomaly-badge)',
-        'Modules/Core/Resources/views/livewire/dashboard.blade.php -> Budgets (budgets.envelope-glance-card)',
-        'Modules/Core/Resources/views/livewire/dashboard.blade.php -> DriftAlerts (drift-alerts.dashboard-drift-badge)',
-        'Modules/Core/Resources/views/livewire/dashboard.blade.php -> DriftAlerts (drift-alerts.savings-insights-card)',
-        'Modules/Core/Resources/views/livewire/dashboard.blade.php -> Forecasting (forecasting.forecast-highlights-tile)',
-        'Modules/Core/Resources/views/livewire/dashboard.blade.php -> Goals (goals.summary-card)',
-        'Modules/Core/Resources/views/livewire/dashboard.blade.php -> Recurring (recurring.fixed-payments-card)',
-        'Modules/Core/Resources/views/livewire/dashboard.blade.php -> Reports (reports.pinned-reports-row)',
-        'Modules/Core/Resources/views/livewire/dashboard.blade.php -> Tax (tax.summary-card)',
-        'Modules/Core/Resources/views/livewire/settings-page.blade.php -> Anomaly (anomaly.settings-section)',
-        'Modules/Core/Resources/views/livewire/settings-page.blade.php -> Auth (auth.delete-account-section)',
-        'Modules/Core/Resources/views/livewire/settings-page.blade.php -> Auth (auth.recovery-codes-section)',
-        'Modules/Core/Resources/views/livewire/settings-page.blade.php -> Forecasting (forecasting.opening-balance-editor)',
-        'Modules/Core/Resources/views/livewire/settings-page.blade.php -> Notifications (notifications.settings-section)',
-        'Modules/Core/Resources/views/livewire/settings-page.blade.php -> Tax (tax.settings-section)',
         'Modules/DevMode/Resources/views/layouts/dev-shell.blade.php -> Core (core.system-alerts-banner)',
         'Modules/DevMode/Resources/views/layouts/dev-shell.blade.php -> Search (search.palette-search-endpoint)',
         'Modules/DevMode/Resources/views/livewire/dev-overview-page.blade.php -> Auth (auth.app-lock-key-probe)',
@@ -2335,6 +2321,21 @@ it('does not allow a cross-module Livewire mount outside the pinned set (pinnedC
         'Modules/Onboarding/Resources/views/layouts/app-wizard.blade.php -> EmailScan (email-scan.oauth-client-wizard-modal)',
         'Modules/Recurring/Resources/views/livewire/recurring-series-detail-page.blade.php -> DriftAlerts (drift-alerts.drift-threshold-editor)',
         'Modules/Recurring/Resources/views/livewire/recurring-series-detail-page.blade.php -> Forecasting (forecasting.model-what-if-dropdown)',
+        'Modules/Shell/Resources/views/livewire/dashboard.blade.php -> Anomaly (anomaly.dashboard-anomaly-badge)',
+        'Modules/Shell/Resources/views/livewire/dashboard.blade.php -> Budgets (budgets.envelope-glance-card)',
+        'Modules/Shell/Resources/views/livewire/dashboard.blade.php -> DriftAlerts (drift-alerts.dashboard-drift-badge)',
+        'Modules/Shell/Resources/views/livewire/dashboard.blade.php -> DriftAlerts (drift-alerts.savings-insights-card)',
+        'Modules/Shell/Resources/views/livewire/dashboard.blade.php -> Forecasting (forecasting.forecast-highlights-tile)',
+        'Modules/Shell/Resources/views/livewire/dashboard.blade.php -> Goals (goals.summary-card)',
+        'Modules/Shell/Resources/views/livewire/dashboard.blade.php -> Recurring (recurring.fixed-payments-card)',
+        'Modules/Shell/Resources/views/livewire/dashboard.blade.php -> Reports (reports.pinned-reports-row)',
+        'Modules/Shell/Resources/views/livewire/dashboard.blade.php -> Tax (tax.summary-card)',
+        'Modules/Shell/Resources/views/livewire/settings-page.blade.php -> Anomaly (anomaly.settings-section)',
+        'Modules/Shell/Resources/views/livewire/settings-page.blade.php -> Auth (auth.delete-account-section)',
+        'Modules/Shell/Resources/views/livewire/settings-page.blade.php -> Auth (auth.recovery-codes-section)',
+        'Modules/Shell/Resources/views/livewire/settings-page.blade.php -> Forecasting (forecasting.opening-balance-editor)',
+        'Modules/Shell/Resources/views/livewire/settings-page.blade.php -> Notifications (notifications.settings-section)',
+        'Modules/Shell/Resources/views/livewire/settings-page.blade.php -> Tax (tax.settings-section)',
     ];
 
     $providers = [];

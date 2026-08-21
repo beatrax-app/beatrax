@@ -84,7 +84,7 @@ function makeChainTx(User $user, Account $account, ImportRun $run, int $index): 
     ]);
 }
 
-it('creates the three Wave 1 tables with the documented column lists', function (): void {
+it('creates the three chain-link tables with the documented column lists', function (): void {
     expect(Schema::hasTable('chain_links'))->toBeTrue();
     expect(Schema::hasTable('card_statements'))->toBeTrue();
     expect(Schema::hasTable('card_statement_credits'))->toBeTrue();

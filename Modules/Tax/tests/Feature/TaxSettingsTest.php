@@ -431,7 +431,7 @@ it('renders the country allow-list even when unauthenticated (no throw at mount)
 
 it('settings page blade includes the tax settings section livewire tag', function (): void {
     $content = file_get_contents(
-        dirname(__DIR__, 4).'/Modules/Core/Resources/views/livewire/settings-page.blade.php'
+        dirname(__DIR__, 4).'/Modules/Shell/Resources/views/livewire/settings-page.blade.php'
     );
     assert(is_string($content));
     expect($content)->toContain("@livewire('tax.settings-section')");

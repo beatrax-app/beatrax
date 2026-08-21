@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Mobile-app-rooted PHPUnit/Pest config (15-11-PLAN.md Task 2).
+    Mobile-app-rooted PHPUnit/Pest config.
 
     This file MUST be a real file, never a symlink to the repo-root
     phpunit.xml — `bootstrap="vendor/autoload.php"` is resolved relative to
     THIS file's own realpath, and a symlink would resolve to the repo
     root's vendor/ (the desktop-coupled one), not `mobile-app/vendor/`
     (mirrors the documented artisan/bootstrap/app.php "must be real"
-    constraint from 15-TOPOLOGY-SPIKE-FINDINGS.md).
+    constraint).
 
     Scoped to ONLY the Mobile-owning testsuites — `tests/Pest.php` (symlinked
     from the repo root, see `mobile-app/tests`) still binds every module's

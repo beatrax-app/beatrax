@@ -45,9 +45,9 @@
         'grid' => ['borderColor' => '#E2E8F0'],
         'legend' => ['show' => false],
         'tooltip' => ['shared' => false, 'intersect' => true],
-        // Parallel array of drill-down URLs, one per bar/category index
-        // (Req 12/D-03) — read by the dataPointSelection handler below,
-        // never a hardcoded '/search' navigation (Pitfall 3).
+        // Parallel array of drill-down URLs, one per bar/category index —
+        // read by the dataPointSelection handler below, never a hardcoded
+        // '/search' navigation.
         'beatraxDrilldownUrls' => $drilldownUrls,
         'responsive' => [
             [

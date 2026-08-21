@@ -9,7 +9,7 @@ repository.
 
 ## What this repo is
 
-The product: a Laravel 13 / PHP 8.5 application organised into **34 modules**,
+The product: a Laravel 13 / PHP 8.5 application organised into **35 modules**,
 shipped as a desktop bundle for macOS, Windows, and Linux plus a mobile client,
 and runnable self-hosted. Livewire single-file components over Tailwind v4;
 SQLite in write-ahead journal mode.

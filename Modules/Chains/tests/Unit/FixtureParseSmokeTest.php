@@ -10,7 +10,7 @@ use Modules\Ingestion\Public\Dto\AccountResolution;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 
 // The scenario-1 fixtures are generated from a locked seed by
-// scripts/synthesise_phase5_scenario.php; parsing each one through its
+// scripts/synthesise_scenario_1_fixtures.php; parsing each one through its
 // production adapter here stops a malformed fixture surfacing as a resolver
 // bug much later.
 

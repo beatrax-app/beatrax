@@ -256,7 +256,7 @@ it('persists auto_category_provenance JSON via RecordTransactions when present',
     expect($decoded['category_id'] ?? null)->toBe($this->streamingId);
 });
 
-it('increments the matched rule hits_count on every rule-fire (Wave 4 deferral closed)', function (): void {
+it('increments the matched rule hits_count on every rule-fire', function (): void {
     $ruleId = seedAutoRule($this->user->id, $this->streamingId);
 
     /** @var ApplyAutoCategoryStage $stage */

@@ -3,11 +3,11 @@
 declare(strict_types=1);
 
 use Livewire\Livewire;
-use Modules\Core\Internal\Http\Livewire\AppSidebar;
 use Modules\Core\Models\User;
 use Modules\DevMode\Internal\Navigation\NavigationRegistryImpl;
 use Modules\DevMode\Public\Contracts\NavigationRegistry;
 use Modules\DevMode\Public\Dto\NavigationEntry;
+use Modules\Shell\Internal\Http\Livewire\AppSidebar;
 
 function cpsUser(string $suffix = 'cps'): User
 {

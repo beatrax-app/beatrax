@@ -1,7 +1,7 @@
 @use('Modules\Core\Public\Support\Lang')
 @php
     /**
-     * D-01 / D-02 file-staging page. Shown after the OS hands Beatrax
+     * File-staging page. Shown after the OS hands Beatrax
      * a `.csv` / `.eml` file path; the page reads the pending intent
      * and either:
      *

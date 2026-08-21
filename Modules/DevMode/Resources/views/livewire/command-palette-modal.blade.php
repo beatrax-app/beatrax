@@ -29,13 +29,13 @@
      * tripped over, and match the dark-mode pattern used by every
      * other Dev Console page.
      *
-     * Phase 08-05 additions:
-     *   - Server-backed Transactions + entity sections (D-01, D-19, D-28).
-     *     Gated on $searchAvailable (null-safe: palette works when Search unbound).
-     *   - Token autocomplete overlay (D-26) — srch-token-suggest CSS class.
-     *   - "See all N results →" row navigates to /transactions?q={query} (D-01).
-     *   - Recent transaction-search entries persisted via pickEntry path (D-10, D-13).
-     *   - Footer kbd hint copy from Copywriting Contract (D-26).
+     * Server-backed search additions:
+     *   - Server-backed Transactions + entity sections, gated on
+     *     $searchAvailable (null-safe: palette works when Search unbound).
+     *   - Token autocomplete overlay — srch-token-suggest CSS class.
+     *   - "See all N results →" row navigates to /transactions?q={query}.
+     *   - Recent transaction-search entries persisted via pickEntry path.
+     *   - Footer kbd hint copy from the Copywriting Contract.
      */
     $searchAvailable = $searchAvailable ?? false;
 @endphp

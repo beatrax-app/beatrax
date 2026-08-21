@@ -1,6 +1,6 @@
 # Module boundaries
 
-beatrax is structured as thirty-four bounded modules under `Modules/`. Each module
+beatrax is structured as thirty-five bounded modules under `Modules/`. Each module
 owns a slice of the domain, exposes a narrow public surface, and is forbidden
 from reaching into another module's internals. This document names the
 modules, describes the shape of the boundary, and lists the arch invariants
@@ -24,7 +24,7 @@ two decisions produced.
 | `Categorization` | Rule-based auto-categorization, per-user merchant memory, the categorization-rules CRUD surface, the receipt-vs-statement enrichment conflict resolver |
 | `Chains` | PayPal→funder + ICS bulk-iDEAL settlement chain resolution, the `chain_links` ledger, the per-user `ShouldBeUniqueUntilProcessing` resolver job |
 | `Community` | Optional community-merchant-mapping dataset opt-in toggles + corpus distribution |
-| `Core` | Users + sessions + system alerts + user preferences; the `BelongsToUser` trait; the `diederik:doctor` and `db:backup` console commands |
+| `Core` | Users + sessions + system alerts + user preferences; the `BelongsToUser` trait; the `diederik:doctor` and `db:backup` console commands. The kernel every module depends on — it owns no screen that reads across modules (see `Shell`) |
 | `Counterparties` | Counterparty resolution pipeline + index/profile/triage surfaces (`/counterparties`) |
 | `Desktop` | NativePHP shell glue — the entire `Native\Laravel\*` import surface lives here and nowhere else |
 | `DevMode` | Developer-mode gate + dev-console pages (logs, queue, audit, doctor, palette) |
@@ -47,6 +47,7 @@ two decisions produced.
 | `Recurring` | Recurring-series detection (any cadence), the always-suggest-never-auto-apply state machine, the per-series acknowledgement |
 | `Reports` | User-composable report builder (metric × dimension × period × filters × currency × viz) with saved/pinned reports |
 | `Search` | Full-text transaction search and entity-name navigation via an FTS5 trigram index and the ⌘K palette |
+| `Shell` | The application's own screens — the primary navigation, the dashboard, and the settings page, plus the net-worth and spending-trend cards. It composes every other module rather than owning a domain slice, which is why it is the one module nothing else depends on |
 | `Sync` | The CRDT op-log / HLC merge layer — append-only, per-device-signed ops with HLC ordering, LWW-per-field, tombstones, and import dedup over the migrated SQLite schema |
 | `Tax` | Tax-deductible tagging, per-year categorisation, and CSV/PDF export for Dutch IB/OB tax filing |
 | `Transfers` | Self-transfer detection across accounts, transfer-pair resolution |

@@ -352,7 +352,7 @@ it('applyRateLimited against a missing inbox raises RuntimeException', function 
         ->toThrow(RuntimeException::class);
 });
 
-it('ALLOWED_TRANSITIONS map permits every transition Wave 4/5 BackfillInboxJob currently exercises', function (): void {
+it('ALLOWED_TRANSITIONS map permits every transition BackfillInboxJob currently exercises', function (): void {
     // Each pair is a transition BackfillInboxJob really performs: the
     // no-senders early exit, the unknown-provider arm, branch entry, the
     // rate-limit / invalid-grant / throwable catches, and the success path.

@@ -1,6 +1,6 @@
 @php
     /**
-     * D-08 first-close prompt — Quit vs Keep-in-tray.
+     * First-close prompt — Quit vs Keep-in-tray.
      *
      * flux:modal chosen over a native dialog so it inherits the dark
      * theme (UI-SPEC Component Inventory).

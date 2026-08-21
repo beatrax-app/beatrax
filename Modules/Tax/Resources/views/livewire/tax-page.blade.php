@@ -52,7 +52,7 @@
                         @php
                             // Render ALL available years — history is retained forever
                             // (project constraint); the container flex-wraps past one
-                            // row, so a hard cap would silently hide older years (IN-05).
+                            // row, so a hard cap would silently hide older years.
                             $years = array_unique(array_merge([$year], $availableYears));
                             rsort($years);
                         @endphp

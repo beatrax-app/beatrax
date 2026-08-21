@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use Livewire\Livewire;
-use Modules\Core\Internal\Http\Livewire\AppSidebar;
 use Modules\Core\Models\User;
+use Modules\Shell\Internal\Http\Livewire\AppSidebar;
 
 it('matches the rendered sidebar HTML for a developer (snapshot lock)', function (): void {
     $user = User::query()->create([

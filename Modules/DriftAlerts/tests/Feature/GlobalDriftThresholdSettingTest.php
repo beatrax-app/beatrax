@@ -6,11 +6,11 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
-use Modules\Core\Internal\Http\Livewire\SettingsPage;
 use Modules\Core\Models\User;
 use Modules\DriftAlerts\Internal\DriftEvaluator;
 use Modules\DriftAlerts\Models\DriftAlert;
 use Modules\Ledger\Models\Currency;
+use Modules\Shell\Internal\Http\Livewire\SettingsPage;
 
 uses(RefreshDatabase::class);
 
