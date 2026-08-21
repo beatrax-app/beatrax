@@ -107,7 +107,7 @@ return [
 
     'errors' => [
         'name_empty' => 'Nazwa scenariusza nie może być pusta.',
-        'name_too_long' => 'Nazwa scenariusza może mieć najwyżej :max znaków.',
+        'name_too_long' => 'Nazwa scenariusza może mieć najwyżej :max znak.|Nazwa scenariusza może mieć najwyżej :max znaki.|Nazwa scenariusza może mieć najwyżej :max znaków.',
         'name_taken' => 'Scenariusz o tej nazwie już istnieje.',
         'pick_kind_first' => 'Najpierw wybierz rodzaj zmiany.',
         'amount_positive' => 'Kwota musi być liczbą dodatnią.',

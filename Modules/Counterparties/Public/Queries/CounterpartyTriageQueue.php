@@ -157,11 +157,9 @@ final readonly class CounterpartyTriageQueue
             default => 'low',
         };
 
-        // Translated, not sprintf'd: this sentence renders directly beneath a
-        // localised suggestion banner, and an English format string put two
-        // languages in one card.
-        // Chosen on :total, which is the noun's number — ":hits of :total
-        // transactions" agrees with the pool, not with the matches inside it.
+        // Translated, not sprintf'd: an English format string put two languages
+        // in one card. Chosen on :total rather than :hits — ":hits of :total
+        // recent transactions" agrees with the pool, not with the matches in it.
         $reasoning = Lang::choice('counterparties::triage.reasoning', $total, [
             'hits' => $topHits,
             'total' => $total,

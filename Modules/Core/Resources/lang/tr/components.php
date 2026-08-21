@@ -31,7 +31,7 @@ return [
     'file' => [
         'choose' => 'Dosya seç',
         'none' => 'Dosya seçilmedi',
-        'count' => ':count dosya seçildi',
+        'count' => 'Seçilen dosyalar: :count',
     ],
 
     'amount_placeholder' => '0,00',

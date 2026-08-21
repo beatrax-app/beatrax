@@ -107,7 +107,7 @@ return [
 
     'errors' => [
         'name_empty' => 'Skenaarion nimi ei voi olla tyhjä.',
-        'name_too_long' => 'Skenaarion nimessä saa olla enintään :max merkkiä.',
+        'name_too_long' => 'Skenaarion nimessä saa olla enintään :max merkki.|Skenaarion nimessä saa olla enintään :max merkkiä.',
         'name_taken' => 'Samanniminen skenaario on jo olemassa.',
         'pick_kind_first' => 'Valitse ensin muutoksen tyyppi.',
         'amount_positive' => 'Summan on oltava positiivinen luku.',

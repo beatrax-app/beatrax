@@ -29,7 +29,7 @@ return [
     ],
 
     'errors' => [
-        'passphrase_min' => 'Użyj hasła o długości co najmniej :min znaków.',
+        'passphrase_min' => 'Użyj hasła o długości co najmniej :min znak.|Użyj hasła o długości co najmniej :min znaki.|Użyj hasła o długości co najmniej :min znaków.',
         'passphrase_mismatch' => 'Oba hasła nie są takie same.',
         'download_sqlite_only' => 'Zaszyfrowane pobieranie jest dostępne tylko w wersji SQLite.',
         'create_failed' => 'Nie udało się utworzyć kopii zapasowej: :message',

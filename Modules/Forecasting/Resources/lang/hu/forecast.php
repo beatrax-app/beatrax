@@ -19,7 +19,7 @@ return [
     'all_accounts' => 'Összes számla',
 
     'horizon_label' => 'Előrejelzési időtáv',
-    'n_days' => ':days nap',
+    'n_days' => ':days nap|:days nap',
 
     'view_by_funder' => 'Fedezet szerinti nézet',
     'view_by_funder_hint' => 'A láncból feloldott sorozatokat arra a számlára vonja össze, amelyik ténylegesen fizeti őket.',
@@ -33,7 +33,7 @@ return [
     'create_scenario' => 'Forgatókönyv létrehozása',
     'cancel' => 'Mégse',
 
-    'aggregate_subtitle' => 'Az összes számla együttes egyenlege, a következő :days napra előrejelezve.',
+    'aggregate_subtitle' => 'Az összes számla együttes egyenlege, a következő :days napra előrejelezve.|Az összes számla együttes egyenlege, a következő :days napra előrejelezve.',
 
     'today' => 'ma',
     'on_day' => 'ezen a napon:',
@@ -59,14 +59,14 @@ return [
     'at_day' => 'a(z) :day. napon',
 
     'updating' => 'Frissítés',
-    'chart_noscript' => 'A diagramhoz JavaScript szükséges. A tartomány :days napot ölel fel.',
+    'chart_noscript' => 'A diagramhoz JavaScript szükséges. A tartomány :days napot ölel fel.|A diagramhoz JavaScript szükséges. A tartomány :days napot ölel fel.',
     'total_balance' => 'Teljes egyenleg',
 
     'per_month_suffix' => '/hó',
     'confidence_chip_aria' => ':name, :confidence megbízhatóság — az előrejelzési tartomány a pontbecslés :percent százaléka',
 
     'highlights_title' => 'Előrejelzés kiemelt pontjai',
-    'highlights_shortfall_aria' => ':count aktív hiányidőszak a következő 30 napban',
+    'highlights_shortfall_aria' => ':count aktív hiányidőszak a következő :days napban|:count aktív hiányidőszak a következő :days napban',
     'dips_to' => 'A(z) :name eddig csökken: :amount',
     'on_date_suffix' => ' ekkor: :date',
     'shortfall_window' => '{0} nincs aktív hiányidőszak|[1,1] 1 aktív hiányidőszak|[2,*] :count aktív hiányidőszak',

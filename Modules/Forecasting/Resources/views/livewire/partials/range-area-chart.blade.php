@@ -70,7 +70,7 @@
     <div id="{{ $chartElementId }}"></div>
     <noscript>
         <p class="text-xs text-slate-500 dark:text-slate-400">
-            {{ Lang::get('forecasting::forecast.chart_noscript', ['days' => $forecast->horizonDays]) }}
+            {{ Lang::choice('forecasting::forecast.chart_noscript', $forecast->horizonDays, ['days' => $forecast->horizonDays]) }}
         </p>
     </noscript>
 </div>

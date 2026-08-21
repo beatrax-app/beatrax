@@ -107,7 +107,7 @@ return [
 
     'errors' => [
         'name_empty' => 'El nombre del escenario no puede estar vacío.',
-        'name_too_long' => 'El nombre del escenario no puede superar los :max caracteres.',
+        'name_too_long' => 'El nombre del escenario no puede superar :max carácter.|El nombre del escenario no puede superar los :max caracteres.',
         'name_taken' => 'Ya existe un escenario con ese nombre.',
         'pick_kind_first' => 'Elige primero un tipo de modificación.',
         'amount_positive' => 'El importe debe ser un número positivo.',

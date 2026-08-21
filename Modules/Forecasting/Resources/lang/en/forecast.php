@@ -19,7 +19,7 @@ return [
     'all_accounts' => 'All accounts',
 
     'horizon_label' => 'Forecast horizon',
-    'n_days' => ':days days',
+    'n_days' => ':days day|:days days',
 
     'view_by_funder' => 'View by funder',
     'view_by_funder_hint' => 'Collapse chain-resolved series onto the account that actually pays them.',
@@ -33,7 +33,7 @@ return [
     'create_scenario' => 'Create scenario',
     'cancel' => 'Cancel',
 
-    'aggregate_subtitle' => 'Combined balance across every account, projected over the next :days days.',
+    'aggregate_subtitle' => 'Combined balance across every account, projected over the next :days day.|Combined balance across every account, projected over the next :days days.',
 
     'today' => 'today',
     'on_day' => 'on day',
@@ -59,14 +59,14 @@ return [
     'at_day' => 'at day :day',
 
     'updating' => 'Updating',
-    'chart_noscript' => 'Chart requires JavaScript. Range covers :days days.',
+    'chart_noscript' => 'Chart requires JavaScript. Range covers :days day.|Chart requires JavaScript. Range covers :days days.',
     'total_balance' => 'Total balance',
 
     'per_month_suffix' => '/mo',
     'confidence_chip_aria' => ':name, :confidence confidence — projection range is :percent percent of the point estimate',
 
     'highlights_title' => 'Forecast highlights',
-    'highlights_shortfall_aria' => ':count active shortfall windows in the next 30 days',
+    'highlights_shortfall_aria' => ':count active shortfall window in the next :days days|:count active shortfall windows in the next :days days',
     'dips_to' => ':name dips to :amount',
     'on_date_suffix' => ' on :date',
     'shortfall_window' => '1 active shortfall window|:count active shortfall windows',

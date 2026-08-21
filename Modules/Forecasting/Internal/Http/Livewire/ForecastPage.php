@@ -11,7 +11,6 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
-use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
@@ -33,9 +32,13 @@ final class ForecastPage extends Component
     use CoercesScalars;
     use DispatchesToast;
 
-    // 'all' is a sentinel for the aggregate view, not an account id.
-    #[Url(as: 'account', except: 'all')]
-    public string $account = 'all';
+    // The aggregate tab, addressed where an account id otherwise goes: a
+    // string, so it can share the one $account property and the one ?account=
+    // query parameter with a numeric id.
+    public const string ALL_ACCOUNTS = 'all';
+
+    #[Url(as: 'account', except: self::ALL_ACCOUNTS)]
+    public string $account = self::ALL_ACCOUNTS;
 
     #[Url(as: 'horizon', except: 30)]
     public int $horizon = 30;
@@ -170,7 +173,6 @@ final class ForecastPage extends Component
 
     public function onBufferSaved(): void
     {
-        // The ApexCharts wrapper on the partial listens for this.
         $this->dispatch('forecast-updated');
     }
 
@@ -202,21 +204,17 @@ final class ForecastPage extends Component
         ScenarioQuery $scenarioQuery,
         DatabaseManager $db,
         ViewFactory $views,
-        Clock $clock,
         ForecastDtoMapper $mapper,
     ): View {
         $user = $currentUser->user();
 
         $accountList = $this->resolveAccountList($db, $user);
         $selectedAccountId = $this->normaliseAndResolveAccount($accountList);
-        $isAllAccountsView = $this->account === 'all';
+        $isAllAccountsView = $this->account === self::ALL_ACCOUNTS;
         $isEmpty = $accountList === [];
 
         $scenarios = $scenarioQuery->forUser($user);
         $this->assertScenarioOwnership($scenarios);
-
-        // Kept on the signature for a future "as of" badge; the call is inert.
-        $clock->now();
 
         $viewData = array_merge(
             $this->selectedAccountView($selectedAccountId, $forecastQuery, $db, $user, $mapper),
@@ -277,10 +275,10 @@ final class ForecastPage extends Component
     {
         // A tampered or stale ?account= falls back to the aggregate tab rather
         // than rendering a blank page with no error.
-        if ($this->account !== 'all' && ! is_numeric($this->account)) {
-            $this->account = 'all';
+        if ($this->account !== self::ALL_ACCOUNTS && ! is_numeric($this->account)) {
+            $this->account = self::ALL_ACCOUNTS;
         }
-        if ($this->account === 'all') {
+        if ($this->account === self::ALL_ACCOUNTS) {
             return null;
         }
 
@@ -354,7 +352,6 @@ final class ForecastPage extends Component
         $horizonLowMinor = $lastPoint instanceof ForecastPointDto ? $lastPoint->lowMinor : 0;
         $horizonHighMinor = $lastPoint instanceof ForecastPointDto ? $lastPoint->highMinor : 0;
 
-        // Feeds the popover label and the chart's annotations.yaxis band.
         $accountRow = $db->connection()->table('accounts')
             ->where('id', $selectedAccountId)
             ->where('user_id', $user->id)

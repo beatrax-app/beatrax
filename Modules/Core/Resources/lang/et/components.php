@@ -31,7 +31,7 @@ return [
     'file' => [
         'choose' => 'Vali fail',
         'none' => 'Faili pole valitud',
-        'count' => ':count faili valitud',
+        'count' => 'Valitud faile: :count',
     ],
 
     'amount_placeholder' => '0,00',

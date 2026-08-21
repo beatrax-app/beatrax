@@ -107,7 +107,7 @@ return [
 
     'errors' => [
         'name_empty' => 'Numele scenariului nu poate fi gol.',
-        'name_too_long' => 'Numele scenariului trebuie să aibă cel mult :max caractere.',
+        'name_too_long' => 'Numele scenariului trebuie să aibă cel mult :max caracter.|Numele scenariului trebuie să aibă cel mult :max caractere.|Numele scenariului trebuie să aibă cel mult :max de caractere.',
         'name_taken' => 'Există deja un scenariu cu acest nume.',
         'pick_kind_first' => 'Alege întâi tipul modificării.',
         'amount_positive' => 'Suma trebuie să fie un număr pozitiv.',

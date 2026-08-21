@@ -66,7 +66,7 @@ return [
     'confidence_chip_aria' => ':name, :confidence güven — projeksiyon aralığı, nokta tahmininin yüzde :percent kadarı',
 
     'highlights_title' => 'Tahmin öne çıkanları',
-    'highlights_shortfall_aria' => 'Önümüzdeki 30 günde :count etkin açık dönemi',
+    'highlights_shortfall_aria' => 'Önümüzdeki :days günde :count etkin açık dönemi',
     'dips_to' => ':name :amount seviyesine düşüyor',
     'on_date_suffix' => ' :date tarihinde',
     'shortfall_window' => ':count etkin açık dönemi',

@@ -74,7 +74,6 @@ final readonly class ScenarioApplier
         CarbonImmutable $horizonEnd,
         int $horizonDays,
     ): array {
-        // Accepted so this mirrors apply()'s signature; no kind needs it.
         unset($horizonDays);
 
         // The default arm is unreachable — the typed cast raises on an unknown
@@ -116,7 +115,6 @@ final readonly class ScenarioApplier
         return SafeDate::parseOrNull($raw)?->startOfDay();
     }
 
-    // null means the mutation has nothing to contribute, not that it failed.
     private function dateWithinHorizon(string $raw, CarbonImmutable $asOf, CarbonImmutable $horizonEnd): ?CarbonImmutable
     {
         $date = $this->parsedDate($raw);
@@ -154,7 +152,6 @@ final readonly class ScenarioApplier
     ): array {
         $date = $this->dateWithinHorizon($payload->date, $asOf, $horizonEnd);
 
-        // 0 means there was no account to land on; it has already logged.
         $accountId = $date === null ? 0 : $this->pickAccountIdForOneOff($contributions, $user);
 
         if ($date === null || $accountId === 0) {
@@ -229,7 +226,6 @@ final readonly class ScenarioApplier
         $start = $this->parsedDate($payload->startDate);
         $cadence = $payload->cadence;
 
-        // Gated on $usable so an unusable payload never trips its warning log.
         $usable = $start !== null && in_array($cadence, ['weekly', 'monthly', 'quarterly', 'yearly'], true);
         $accountId = $usable ? $this->pickAccountIdForOneOff($contributions, $user) : 0;
 
@@ -341,7 +337,6 @@ final readonly class ScenarioApplier
         $firstIndex = $this->earliestIndexForSeries($contributions, $payload->seriesId);
         $firstDate = $firstIndex === null ? null : $contributions[$firstIndex]->date;
 
-        // diffInDays returns a float in Carbon 3; addDays() needs whole days.
         $deltaDays = $newDate === null || $firstDate === null
             ? 0
             : (int) round($firstDate->diffInDays($newDate, false));

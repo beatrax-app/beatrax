@@ -39,7 +39,6 @@ final readonly class RangeProjector
     ): array {
         $isHighVariance = $series->varianceTolerancePercent >= self::HIGH_VARIANCE_THRESHOLD_PERCENT;
 
-        // Gated so an envelope-only series never pays for the DB read.
         $occurrences = $isHighVariance
             ? $this->seriesQuery->occurrencesForSeries($series->seriesId, $user)
             : [];
@@ -67,7 +66,6 @@ final readonly class RangeProjector
         int $horizonDays,
         User $user,
     ): array {
-        // Accepted only to match the percentile tier's signature.
         unset($user);
 
         $next = $series->nextExpectedAt;

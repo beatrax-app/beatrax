@@ -29,7 +29,7 @@ return [
     ],
 
     'errors' => [
-        'passphrase_min' => 'Usa uma frase-passe com pelo menos :min caracteres.',
+        'passphrase_min' => 'Usa uma frase-passe com pelo menos :min carácter.|Usa uma frase-passe com pelo menos :min caracteres.',
         'passphrase_mismatch' => 'As duas frases-passe não coincidem.',
         'download_sqlite_only' => 'A transferência encriptada só está disponível na versão SQLite.',
         'create_failed' => 'Não foi possível criar a cópia de segurança: :message',

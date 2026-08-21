@@ -28,7 +28,7 @@ return [
     ],
 
     'errors' => [
-        'passphrase_min' => 'Gebruik een wachtwoordzin van minimaal :min tekens.',
+        'passphrase_min' => 'Gebruik een wachtwoordzin van minimaal :min teken.|Gebruik een wachtwoordzin van minimaal :min tekens.',
         'passphrase_mismatch' => 'De twee wachtwoordzinnen komen niet overeen.',
         'download_sqlite_only' => 'Versleuteld downloaden is alleen beschikbaar in de SQLite-versie.',
         'create_failed' => 'Kon de back-up niet maken: :message',

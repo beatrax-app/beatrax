@@ -31,7 +31,7 @@ return [
     'file' => [
         'choose' => 'Valitse tiedosto',
         'none' => 'Ei tiedostoa valittuna',
-        'count' => ':count tiedostoa valittu',
+        'count' => 'Valittuja tiedostoja: :count',
     ],
 
     'amount_placeholder' => '0,00',

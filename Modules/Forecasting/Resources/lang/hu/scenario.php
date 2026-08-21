@@ -107,7 +107,7 @@ return [
 
     'errors' => [
         'name_empty' => 'A forgatókönyv neve nem lehet üres.',
-        'name_too_long' => 'A forgatókönyv neve legfeljebb :max karakter lehet.',
+        'name_too_long' => 'A forgatókönyv neve legfeljebb :max karakter lehet.|A forgatókönyv neve legfeljebb :max karakter lehet.',
         'name_taken' => 'Ilyen nevű forgatókönyv már létezik.',
         'pick_kind_first' => 'Előbb válassz módosítástípust.',
         'amount_positive' => 'Az összegnek pozitív számnak kell lennie.',

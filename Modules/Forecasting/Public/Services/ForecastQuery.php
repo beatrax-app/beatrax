@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\JobRunStatus;
 use Modules\Forecasting\Internal\Mapping\ForecastDtoMapper;
 use Modules\Forecasting\Public\Dto\ForecastDto;
 use Modules\Forecasting\Public\Dto\ForecastPointDto;
@@ -21,7 +22,7 @@ final readonly class ForecastQuery
 {
     // The two non-terminal run states. 'complete' and 'failed' are answers;
     // these are the only ones the user is still waiting on.
-    private const IN_FLIGHT_STATUSES = ['pending', 'running'];
+    private const IN_FLIGHT_STATUSES = [JobRunStatus::Pending->value, JobRunStatus::Running->value];
 
     use CoercesScalars;
 
@@ -112,7 +113,7 @@ final readonly class ForecastQuery
      */
     private function decodeCompletedRun(mixed $row): ?array
     {
-        if (! $row instanceof stdClass || self::toString($row->status ?? null) !== 'complete') {
+        if (! $row instanceof stdClass || self::toString($row->status ?? null) !== JobRunStatus::Complete->value) {
             return null;
         }
         $rawJson = self::toString($row->result_json ?? null);

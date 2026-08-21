@@ -24,7 +24,6 @@ final readonly class ChainAwareForecastRouter
      */
     public function route(array $contributions, User $user, bool $viewByFunder = false): array
     {
-        // Memoised so a series with N contributions costs one DB read.
         /** @var array<int, int|null> $funderBySeries — null marks "no chain". */
         $funderBySeries = [];
 
@@ -57,7 +56,6 @@ final readonly class ChainAwareForecastRouter
             );
         }
 
-        // The settlement DTO's accountId is the funder, not the card account.
         $routed = $this->appendSettlement($routed, $user, $chainRoutedSeriesIds);
 
         if ($viewByFunder) {
@@ -82,7 +80,6 @@ final readonly class ChainAwareForecastRouter
         $now = $this->clock->now()->startOfDay();
         $dueDate = CarbonImmutable::parse($nextSettlement->dueDate->toIso8601String())->startOfDay();
 
-        // The projection horizon only extends forward.
         if ($dueDate->lessThan($now)) {
             return $routed;
         }

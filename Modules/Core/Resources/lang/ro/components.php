@@ -31,7 +31,7 @@ return [
     'file' => [
         'choose' => 'Alege fișier',
         'none' => 'Niciun fișier ales',
-        'count' => ':count fișiere alese',
+        'count' => 'Fișiere alese: :count',
     ],
 
     'amount_placeholder' => '0,00',

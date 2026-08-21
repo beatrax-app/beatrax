@@ -19,7 +19,7 @@ return [
     'all_accounts' => 'Visos sąskaitos',
 
     'horizon_label' => 'Prognozės horizontas',
-    'n_days' => ':days d.',
+    'n_days' => ':days d.|:days d.|:days d.',
 
     'view_by_funder' => 'Rodyti pagal finansuotoją',
     'view_by_funder_hint' => 'Sujungti grandine susietas serijas į tą sąskaitą, kuri iš tikrųjų už jas moka.',
@@ -33,7 +33,7 @@ return [
     'create_scenario' => 'Sukurti scenarijų',
     'cancel' => 'Atšaukti',
 
-    'aggregate_subtitle' => 'Bendras visų sąskaitų likutis, prognozuojamas artimiausioms :days dienoms.',
+    'aggregate_subtitle' => 'Bendras visų sąskaitų likutis, prognozuojamas artimiausiai :days dienai.|Bendras visų sąskaitų likutis, prognozuojamas artimiausioms :days dienoms.|Bendras visų sąskaitų likutis, prognozuojamas artimiausioms :days dienoms.',
 
     'today' => 'šiandien',
     'on_day' => 'dieną',
@@ -59,14 +59,14 @@ return [
     'at_day' => ':day dieną',
 
     'updating' => 'Atnaujinama',
-    'chart_noscript' => 'Diagramai reikia JavaScript. Intervalas apima :days dienų.',
+    'chart_noscript' => 'Diagramai reikia JavaScript. Intervalas apima :days dieną.|Diagramai reikia JavaScript. Intervalas apima :days dienas.|Diagramai reikia JavaScript. Intervalas apima :days dienų.',
     'total_balance' => 'Bendras likutis',
 
     'per_month_suffix' => '/mėn.',
     'confidence_chip_aria' => ':name, patikimumas :confidence — prognozės intervalas sudaro :percent procentų taškinio įverčio',
 
     'highlights_title' => 'Prognozės akcentai',
-    'highlights_shortfall_aria' => 'Aktyvių trūkumo laikotarpių per artimiausias 30 dienų: :count',
+    'highlights_shortfall_aria' => ':count aktyvus trūkumo laikotarpis per artimiausias :days dienas|:count aktyvūs trūkumo laikotarpiai per artimiausias :days dienas|:count aktyvių trūkumo laikotarpių per artimiausias :days dienas',
     'dips_to' => ':name nukrenta iki :amount',
     'on_date_suffix' => ' :date',
     'shortfall_window' => ':count aktyvus trūkumo laikotarpis|:count aktyvūs trūkumo laikotarpiai|:count aktyvių trūkumo laikotarpių',

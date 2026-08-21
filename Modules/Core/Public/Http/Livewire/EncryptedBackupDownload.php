@@ -99,7 +99,7 @@ final class EncryptedBackupDownload extends Component
     private function downloadValidationError(Repository $config): string
     {
         return match (true) {
-            strlen($this->passphrase) < self::MIN_PASSPHRASE_LENGTH => Lang::get('core::backup.errors.passphrase_min', ['min' => self::MIN_PASSPHRASE_LENGTH]),
+            strlen($this->passphrase) < self::MIN_PASSPHRASE_LENGTH => Lang::choice('core::backup.errors.passphrase_min', self::MIN_PASSPHRASE_LENGTH, ['min' => self::MIN_PASSPHRASE_LENGTH]),
             $this->passphrase !== $this->confirmPassphrase => Lang::get('core::backup.errors.passphrase_mismatch'),
             ! $this->isSqliteBuild($config) => Lang::get('core::backup.errors.download_sqlite_only'),
             default => '',

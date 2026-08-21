@@ -19,7 +19,7 @@ return [
     'all_accounts' => 'Vsi računi',
 
     'horizon_label' => 'Obzorje napovedi',
-    'n_days' => ':days dni',
+    'n_days' => ':days dan|:days dneva|:days dnevi|:days dni',
 
     'view_by_funder' => 'Prikaži po plačniku',
     'view_by_funder_hint' => 'Strni serije, razrešene prek verige, na račun, ki jih dejansko plačuje.',
@@ -33,7 +33,7 @@ return [
     'create_scenario' => 'Ustvari scenarij',
     'cancel' => 'Prekliči',
 
-    'aggregate_subtitle' => 'Skupno stanje vseh računov, predvideno za naslednjih :days dni.',
+    'aggregate_subtitle' => 'Skupno stanje vseh računov, predvideno za naslednji :days dan.|Skupno stanje vseh računov, predvideno za naslednja :days dneva.|Skupno stanje vseh računov, predvideno za naslednje :days dneve.|Skupno stanje vseh računov, predvideno za naslednjih :days dni.',
 
     'today' => 'danes',
     'on_day' => 'na dan',
@@ -59,14 +59,14 @@ return [
     'at_day' => 'na dan :day',
 
     'updating' => 'Posodabljanje',
-    'chart_noscript' => 'Grafikon zahteva JavaScript. Obseg pokriva :days dni.',
+    'chart_noscript' => 'Grafikon zahteva JavaScript. Obseg pokriva :days dan.|Grafikon zahteva JavaScript. Obseg pokriva :days dneva.|Grafikon zahteva JavaScript. Obseg pokriva :days dneve.|Grafikon zahteva JavaScript. Obseg pokriva :days dni.',
     'total_balance' => 'Skupno stanje',
 
     'per_month_suffix' => '/mes.',
     'confidence_chip_aria' => ':name, zanesljivost :confidence — razpon napovedi je :percent odstotkov točkovne ocene',
 
     'highlights_title' => 'Poudarki napovedi',
-    'highlights_shortfall_aria' => ':count aktivnih obdobij primanjkljaja v naslednjih 30 dneh',
+    'highlights_shortfall_aria' => ':count aktivno obdobje primanjkljaja v naslednjih :days dneh|:count aktivni obdobji primanjkljaja v naslednjih :days dneh|:count aktivna obdobja primanjkljaja v naslednjih :days dneh|:count aktivnih obdobij primanjkljaja v naslednjih :days dneh',
     'dips_to' => ':name pade na :amount',
     'on_date_suffix' => ' na dan :date',
     'shortfall_window' => ':count aktivno obdobje primanjkljaja|:count aktivni obdobji primanjkljaja|:count aktivna obdobja primanjkljaja|:count aktivnih obdobij primanjkljaja',

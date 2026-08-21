@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Forecasting\Public\Services\ForecastHighlightsQuery')
 {{--
     Dashboard "Forecast highlights" tile.
 
@@ -47,7 +48,7 @@
         <a
             href="{{ route('forecast.index') }}"
             class="block rounded-lg border border-slate-200 bg-white p-6 transition hover:ring-2 hover:ring-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700"
-            aria-label="{{ Lang::get('forecasting::forecast.highlights_title') }}{{ $dto->activeShortfallCount > 0 ? '; ' . Lang::get('forecasting::forecast.highlights_shortfall_aria', ['count' => $dto->activeShortfallCount]) : '' }}"
+            aria-label="{{ Lang::get('forecasting::forecast.highlights_title') }}{{ $dto->activeShortfallCount > 0 ? '; ' . Lang::choice('forecasting::forecast.highlights_shortfall_aria', $dto->activeShortfallCount, ['count' => $dto->activeShortfallCount, 'days' => ForecastHighlightsQuery::HORIZON_DAYS]) : '' }}"
         >
             <p class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('forecasting::forecast.highlights_title') }}</p>
 

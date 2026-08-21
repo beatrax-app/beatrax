@@ -29,7 +29,7 @@ return [
     ],
 
     'errors' => [
-        'passphrase_min' => 'Naudok bent :min simbolių ilgio slaptafrazę.',
+        'passphrase_min' => 'Naudok bent :min simbolio ilgio slaptafrazę.|Naudok bent :min simbolių ilgio slaptafrazę.|Naudok bent :min simbolių ilgio slaptafrazę.',
         'passphrase_mismatch' => 'Abi slaptafrazės nesutampa.',
         'download_sqlite_only' => 'Šifruotas atsisiuntimas veikia tik SQLite versijoje.',
         'create_failed' => 'Nepavyko sukurti atsarginės kopijos: :message',

@@ -6,6 +6,66 @@ declare(strict_types=1);
  * @link ../../.docs/conventions/00-index.md
  */
 
+// mobile-app/ is a second Composer root over this same checkout: Modules/,
+// app/, resources/, routes/ and tests/ are symlinks pointing back here. They
+// are pruned at the branch rather than resolved and de-duplicated, because
+// scanning through one reports every shared file a second time under a second
+// spelling — two offender lines for one comment. Pruned alongside them is
+// everything under that root nobody writes by hand.
+const COMMENT_POLICY_MOBILE_PRUNED_DIRECTORIES = [
+    'vendor', 'node_modules', 'nativephp', 'ios', 'android',
+    'build', 'build-secrets', 'credentials', 'storage', 'cache', '.phpunit.cache',
+];
+
+// Run from the mobile Composer root instead of this one, base_path('mobile-app')
+// does not exist and this yields nothing — correctly, because that root reaches
+// Modules/ and app/ through its own symlinks and they are already in scope.
+/**
+ * @param  list<string>  $prunedDirectories
+ * @return list<string>
+ */
+function commentPolicyMobilePhpFiles(array $prunedDirectories): array
+{
+    $root = base_path('mobile-app');
+
+    return is_dir($root)
+        ? commentPolicyWalkPhp($root, array_merge(COMMENT_POLICY_MOBILE_PRUNED_DIRECTORIES, $prunedDirectories))
+        : [];
+}
+
+/**
+ * @param  list<string>  $prunedDirectories
+ * @return list<string>
+ */
+function commentPolicyWalkPhp(string $directory, array $prunedDirectories): array
+{
+    $files = [];
+    foreach (scandir($directory) ?: [] as $entry) {
+        if ($entry === '.' || $entry === '..') {
+            continue;
+        }
+
+        $path = $directory.'/'.$entry;
+        if (is_link($path)) {
+            continue;
+        }
+
+        if (is_dir($path)) {
+            if (! in_array($entry, $prunedDirectories, true)) {
+                $files = array_merge($files, commentPolicyWalkPhp($path, $prunedDirectories));
+            }
+
+            continue;
+        }
+
+        if (str_ends_with($path, '.php')) {
+            $files[] = $path;
+        }
+    }
+
+    return $files;
+}
+
 /** @return list<string> absolute paths to in-scope backend PHP files */
 function commentPolicyBackendFiles(): array
 {
@@ -29,6 +89,12 @@ function commentPolicyBackendFiles(): array
             }
             $files[] = $path;
         }
+    }
+    // config/ and scripts/ are style-exempt at the desktop root for the reason
+    // below, so the mobile root's own copies are held to the same line. The
+    // identifier walk picks them back up.
+    foreach (commentPolicyMobilePhpFiles(['config', 'scripts']) as $path) {
+        $files[] = $path;
     }
     sort($files);
 
@@ -60,6 +126,10 @@ function commentPolicyIdentifierFiles(): array
             }
         }
     }
+    foreach (commentPolicyMobilePhpFiles([]) as $path) {
+        $files[] = $path;
+    }
+    $files = array_values(array_unique($files));
     sort($files);
 
     return $files;
@@ -441,11 +511,47 @@ function commentPolicyConfigComments(string $path): array
     return $comments;
 }
 
+// M1 and M2 are a floor and a ceiling on the same measurement, so they read it
+// through one function. Two copies of the grouping would be two chances for the
+// floor and the ceiling to disagree about where a block begins.
+/** @return list<list<int>> the line numbers of each contiguous // comment block */
+function commentPolicyLineCommentBlocks(string $path): array
+{
+    $lines = [];
+    foreach (token_get_all((string) file_get_contents($path)) as $token) {
+        if (is_array($token) && $token[0] === T_COMMENT && str_starts_with(ltrim($token[1]), '//')
+            && ! commentPolicyIsDirective($token[1])) {
+            $lines[] = $token[2];
+        }
+    }
+    sort($lines);
+
+    $blocks = [];
+    $block = [];
+    foreach ($lines as $line) {
+        if ($block !== [] && $line !== end($block) + 1) {
+            $blocks[] = $block;
+            $block = [];
+        }
+        $block[] = $line;
+    }
+    if ($block !== []) {
+        $blocks[] = $block;
+    }
+
+    return $blocks;
+}
+
+// A directive is recognised by its punctuation, not by its first word. Matching
+// the bare tool name exempted five ordinary sentences that merely opened with
+// "PHPStan" — and an exemption here is silent, so those lines were invisible to
+// M1 through M4 rather than reported. Every real directive is `@var`,
+// `@codeCoverageIgnore`, or a tool name followed by `-` or `:`.
 /** @return bool whether the comment text is a machine directive exempt from M1-M4 */
 function commentPolicyIsDirective(string $text): bool
 {
     return preg_match(
-        '#^\s*(?://|/\*\*?)\s*@?(phpstan|psalm|phpcs|codeCoverage|var)\b#i',
+        '#^\s*(?://|/\*\*?)\s*(?:@(?:var\b|codeCoverageIgnore)|@?(?:phpstan|psalm|phpcs)[-:])#i',
         $text,
     ) === 1;
 }
@@ -741,34 +847,45 @@ it('has no informative /* */ block comments (M3)', function (): void {
     expect($hits)->toBe([], "Use /** */ PHPDoc, never informative /* */ blocks. Offenders:\n  ".implode("\n  ", $hits));
 });
 
+it('has no lone single-line // comment (M1)', function (): void {
+    $hits = [];
+    foreach (commentPolicyBackendFiles() as $path) {
+        foreach (commentPolicyLineCommentBlocks($path) as $block) {
+            if (count($block) === 1) {
+                $hits[] = $path.':'.$block[0];
+            }
+        }
+    }
+    expect($hits)->toBe([], implode("\n", [
+        'These are single // lines standing on their own:',
+        ...$hits,
+        '',
+        'A one-line note is the code failing to say something itself. Delete it,',
+        'or let a rename, an extracted method or a named constant carry it — that',
+        'is the fix, and it is the right one for nearly all of these. Rewrite it',
+        'as a 2-to-4 line block ONLY where the why is genuinely non-obvious: a',
+        'constraint, an ordering trap, an edge case being defended against.',
+        '',
+        'Never pad a one-line note to two lines to clear this rule. Padding',
+        'manufactures exactly the noise the policy exists to prevent, and the',
+        'ceiling below caps the same block at four either way.',
+        '',
+        'Machine directives are exempt and are frequently one line — they go',
+        'through commentPolicyIsDirective(), which is the only allow-list.',
+    ]));
+});
+
 it('has no // block over 4 lines (M2)', function (): void {
     $hits = [];
     foreach (commentPolicyBackendFiles() as $path) {
-        $lines = [];
-        foreach (token_get_all((string) file_get_contents($path)) as $token) {
-            if (is_array($token) && $token[0] === T_COMMENT && str_starts_with(ltrim($token[1]), '//')
-                && ! commentPolicyIsDirective($token[1])) {
-                $lines[] = $token[2];
-            }
-        }
-        sort($lines);
-        $block = [];
-        $flush = function () use (&$block, &$hits, $path): void {
+        foreach (commentPolicyLineCommentBlocks($path) as $block) {
             $n = count($block);
             if ($n > 4) {
                 $hits[] = $path.':'.$block[0]." ({$n}-line // block > 4)";
             }
-            $block = [];
-        };
-        foreach ($lines as $line) {
-            if ($block !== [] && $line !== end($block) + 1) {
-                $flush();
-            }
-            $block[] = $line;
         }
-        $flush();
     }
-    expect($hits)->toBe([], "An inline // block is at most 4 lines. A comment worth only one line should BE one line — padding it to reach a floor is how this file used to manufacture the noise it exists to prevent. Offenders:\n  ".implode("\n  ", $hits));
+    expect($hits)->toBe([], "An inline // block is at most 4 lines. Anything needing more prose belongs in .docs, linked from a tag-only docblock. Offenders:\n  ".implode("\n  ", $hits));
 });
 
 it('has @-tag-only docblocks with no descriptive prose (M4)', function (): void {
@@ -801,6 +918,55 @@ it('has @-tag-only docblocks with no descriptive prose (M4)', function (): void 
     expect($hits)->toBe([], "Docblocks must be @-tag only. Offenders:\n  ".implode("\n  ", $hits));
 });
 
+/** @return list<string> absolute paths to every page under .docs */
+function commentPolicyDocsPages(): array
+{
+    $root = base_path('.docs');
+    if (! is_dir($root)) {
+        return [];
+    }
+
+    $files = [];
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS),
+    );
+    /** @var SplFileInfo $file */
+    foreach ($iterator as $file) {
+        if ($file->isFile() && str_ends_with($file->getPathname(), '.md')) {
+            $files[] = $file->getPathname();
+        }
+    }
+    sort($files);
+
+    return $files;
+}
+
+// Fenced blocks and inline code are stripped first: a page teaching a link
+// syntax, or quoting a path that does not exist yet, is illustrating rather
+// than pointing. A bare `#anchor` and anything carrying a scheme are somebody
+// else's to resolve.
+/** @return list<string> the repo-relative link targets a .docs page points at */
+function commentPolicyDocsLinkTargets(string $path): array
+{
+    $source = (string) file_get_contents($path);
+    $source = preg_replace('/^```.*?^```/ms', '', $source) ?? $source;
+    $source = preg_replace('/`[^`\n]*`/', '', $source) ?? $source;
+
+    preg_match_all('/!?\[[^\]]*\]\(([^)\s]+)\)/', $source, $inline);
+    preg_match_all('/^\[[^\]]+\]:\s*(\S+)/m', $source, $reference);
+
+    $targets = [];
+    /** @var string $target */
+    foreach (array_merge($inline[1], $reference[1]) as $target) {
+        if (preg_match('~^(?:[a-z][a-z0-9+.-]*:|//|\#)~i', $target) === 1) {
+            continue;
+        }
+        $targets[] = $target;
+    }
+
+    return $targets;
+}
+
 it('has every @link .md target resolving to a real .docs file (M6)', function (): void {
     $hits = [];
     foreach (commentPolicyBackendFiles() as $path) {
@@ -820,4 +986,37 @@ it('has every @link .md target resolving to a real .docs file (M6)', function ()
         }
     }
     expect($hits)->toBe([], "@link .md targets must exist under .docs. Broken links:\n  ".implode("\n  ", $hits));
+});
+
+// M6's sibling, on the other side of the same seam. The rule above proves a
+// link OUT of the code reaches a page; nothing proved a link between two pages
+// reaches anything, and a .docs page naming a class or a test that was never
+// written reads exactly like one describing shipped code.
+it('has every relative link in a .docs page resolving to a real file (M6)', function (): void {
+    $pages = commentPolicyDocsPages();
+    expect($pages)->not->toBe([]);
+
+    $hits = [];
+    foreach ($pages as $path) {
+        foreach (commentPolicyDocsLinkTargets($path) as $target) {
+            $file = explode('#', $target)[0];
+            if ($file === '') {
+                continue;
+            }
+            $resolved = realpath(dirname($path).'/'.rawurldecode($file));
+            if ($resolved === false) {
+                $hits[] = str_replace(base_path().'/', '', $path).' -> '.$target;
+            }
+        }
+    }
+    expect($hits)->toBe([], implode("\n", [
+        'These .docs links point at nothing:',
+        ...$hits,
+        '',
+        'A page that names a class, a test or a sibling page which does not exist',
+        'is not stale documentation — it is documentation of something that was',
+        'never built, and it reads identically to a description of shipped code.',
+        'Either write what exists, or delete the claim. A directory target is',
+        'fine; only a path resolving to nothing at all fails here.',
+    ]));
 });

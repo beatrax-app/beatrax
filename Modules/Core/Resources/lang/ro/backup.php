@@ -29,7 +29,7 @@ return [
     ],
 
     'errors' => [
-        'passphrase_min' => 'Folosește o frază de acces de cel puțin :min caractere.',
+        'passphrase_min' => 'Folosește o frază de acces de cel puțin :min caracter.|Folosește o frază de acces de cel puțin :min caractere.|Folosește o frază de acces de cel puțin :min de caractere.',
         'passphrase_mismatch' => 'Cele două fraze de acces nu coincid.',
         'download_sqlite_only' => 'Descărcarea criptată este disponibilă doar în versiunea SQLite.',
         'create_failed' => 'Copia de rezervă nu a putut fi creată: :message',

@@ -29,7 +29,7 @@ return [
     ],
 
     'errors' => [
-        'passphrase_min' => 'Käytä salalausetta, jossa on vähintään :min merkkiä.',
+        'passphrase_min' => 'Käytä salalausetta, jossa on vähintään :min merkki.|Käytä salalausetta, jossa on vähintään :min merkkiä.',
         'passphrase_mismatch' => 'Salalauseet eivät täsmää.',
         'download_sqlite_only' => 'Salattu lataus on käytettävissä vain SQLite-versiossa.',
         'create_failed' => 'Varmuuskopiota ei voitu luoda: :message',

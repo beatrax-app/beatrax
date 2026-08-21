@@ -19,7 +19,7 @@ return [
     'all_accounts' => 'Kaikki tilit',
 
     'horizon_label' => 'Ennusteen aikajänne',
-    'n_days' => ':days päivää',
+    'n_days' => ':days päivä|:days päivää',
 
     'view_by_funder' => 'Näytä rahoittajan mukaan',
     'view_by_funder_hint' => 'Kokoa ketjuratkaistut sarjat sille tilille, joka ne todella maksaa.',
@@ -33,7 +33,7 @@ return [
     'create_scenario' => 'Luo skenaario',
     'cancel' => 'Peruuta',
 
-    'aggregate_subtitle' => 'Kaikkien tilien yhteenlaskettu saldo ennustettuna seuraavien :days päivän ajalle.',
+    'aggregate_subtitle' => 'Kaikkien tilien yhteenlaskettu saldo ennustettuna seuraavan :days päivän ajalle.|Kaikkien tilien yhteenlaskettu saldo ennustettuna seuraavien :days päivän ajalle.',
 
     'today' => 'tänään',
     'on_day' => 'päivänä',
@@ -59,14 +59,14 @@ return [
     'at_day' => 'päivänä :day',
 
     'updating' => 'Päivitetään',
-    'chart_noscript' => 'Kaavio vaatii JavaScriptin. Jakso kattaa :days päivää.',
+    'chart_noscript' => 'Kaavio vaatii JavaScriptin. Jakso kattaa :days päivän.|Kaavio vaatii JavaScriptin. Jakso kattaa :days päivää.',
     'total_balance' => 'Kokonaissaldo',
 
     'per_month_suffix' => '/kk',
     'confidence_chip_aria' => ':name, varmuus :confidence — ennusteen vaihteluväli on :percent prosenttia pistearviosta',
 
     'highlights_title' => 'Ennusteen kohokohdat',
-    'highlights_shortfall_aria' => ':count aktiivista vajejaksoa seuraavien 30 päivän aikana',
+    'highlights_shortfall_aria' => ':count aktiivinen vajejakso seuraavien :days päivän aikana|:count aktiivista vajejaksoa seuraavien :days päivän aikana',
     'dips_to' => ':name laskee arvoon :amount',
     'on_date_suffix' => ' päivänä :date',
     'shortfall_window' => '1 aktiivinen vajejakso|:count aktiivista vajejaksoa',

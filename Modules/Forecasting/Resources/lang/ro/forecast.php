@@ -19,7 +19,7 @@ return [
     'all_accounts' => 'Toate conturile',
 
     'horizon_label' => 'Orizontul previziunii',
-    'n_days' => ':days zile',
+    'n_days' => ':days zi|:days zile|:days de zile',
 
     'view_by_funder' => 'Vezi după finanțator',
     'view_by_funder_hint' => 'Grupează seriile rezolvate prin lanț pe contul care le plătește efectiv.',
@@ -33,7 +33,7 @@ return [
     'create_scenario' => 'Creează scenariul',
     'cancel' => 'Anulează',
 
-    'aggregate_subtitle' => 'Soldul combinat al tuturor conturilor, estimat pentru următoarele :days zile.',
+    'aggregate_subtitle' => 'Soldul combinat al tuturor conturilor, estimat pentru următoarea :days zi.|Soldul combinat al tuturor conturilor, estimat pentru următoarele :days zile.|Soldul combinat al tuturor conturilor, estimat pentru următoarele :days de zile.',
 
     'today' => 'azi',
     'on_day' => 'în ziua',
@@ -59,14 +59,14 @@ return [
     'at_day' => 'în ziua :day',
 
     'updating' => 'Se actualizează',
-    'chart_noscript' => 'Graficul necesită JavaScript. Intervalul acoperă :days zile.',
+    'chart_noscript' => 'Graficul necesită JavaScript. Intervalul acoperă :days zi.|Graficul necesită JavaScript. Intervalul acoperă :days zile.|Graficul necesită JavaScript. Intervalul acoperă :days de zile.',
     'total_balance' => 'Sold total',
 
     'per_month_suffix' => '/lună',
     'confidence_chip_aria' => ':name, încredere :confidence — intervalul previziunii reprezintă :percent la sută din estimarea punctuală',
 
     'highlights_title' => 'Repere ale previziunii',
-    'highlights_shortfall_aria' => ':count ferestre de deficit active în următoarele 30 de zile',
+    'highlights_shortfall_aria' => ':count fereastră de deficit activă în următoarele :days de zile|:count ferestre de deficit active în următoarele :days de zile|:count de ferestre de deficit active în următoarele :days de zile',
     'dips_to' => ':name scade la :amount',
     'on_date_suffix' => ' pe :date',
     'shortfall_window' => 'o fereastră de deficit activă|:count ferestre de deficit active|:count de ferestre de deficit active',

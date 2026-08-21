@@ -107,7 +107,7 @@ return [
 
     'errors' => [
         'name_empty' => 'Název scénáře nemůže být prázdný.',
-        'name_too_long' => 'Název scénáře může mít nejvýš :max znaků.',
+        'name_too_long' => 'Název scénáře může mít nejvýš :max znak.|Název scénáře může mít nejvýš :max znaky.|Název scénáře může mít nejvýš :max znaků.',
         'name_taken' => 'Scénář s tímto názvem už existuje.',
         'pick_kind_first' => 'Nejdřív vyber druh změny.',
         'amount_positive' => 'Částka musí být kladné číslo.',

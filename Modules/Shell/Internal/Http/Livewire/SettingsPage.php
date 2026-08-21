@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Shell\Internal\Http\Livewire;
 
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Contracts\Validation\Factory as ValidatorFactory;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
@@ -17,6 +18,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\Country;
 use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Enums\Theme;
+use Modules\Core\Public\Services\LocaleNegotiator;
 use Modules\Core\Public\Services\UserCountry;
 use Modules\Core\Public\Support\DriftThresholdOptions;
 use Modules\Core\Public\Support\Lang;
@@ -41,14 +43,11 @@ final class SettingsPage extends Component
 
     public string $theme = Theme::DEFAULT;
 
-    // A null `users.locale` stores as this sentinel so the radio group has a
-    // concrete value to bind; setLocale() maps it back to null on write.
-    private const string LOCALE_AUTO = 'auto';
-
-    // Built in rules() from Locale::codes(), not a #[Validate] attribute: an
-    // attribute argument must be a constant expression, which would freeze the
-    // shipped locales into a second list that drifts when a language is added.
-    public string $locale = self::LOCALE_AUTO;
+    // Validated from rules() against Locale::codes(), not a #[Validate]
+    // attribute: an attribute argument must be a constant expression, which
+    // would freeze the shipped locales into a second list that drifts the day
+    // a language is added.
+    public string $locale = LocaleNegotiator::SYSTEM;
 
     // Empty is a real state, not a missing one: with no country chosen the
     // classification falls back to every region rather than guessing one.
@@ -90,7 +89,7 @@ final class SettingsPage extends Component
         $this->recurringIncomeMinAmountMinor = $user->recurring_income_min_amount_minor;
         $this->driftAlertThresholdPercent = $user->drift_alert_threshold_percent;
         $this->theme = $user->theme;
-        $this->locale = $user->locale ?? self::LOCALE_AUTO;
+        $this->locale = $user->locale ?? LocaleNegotiator::SYSTEM;
         $this->country = $countries->current($user->id);
         $this->isDeveloper = $user->is_developer === true;
         $this->baseCurrency = $user->base_currency ?? $baseCurrency->code();
@@ -123,7 +122,7 @@ final class SettingsPage extends Component
         $this->locale = $locale;
         $this->validateOnly('locale');
 
-        $storedLocale = $this->locale === self::LOCALE_AUTO ? null : $this->locale;
+        $storedLocale = $this->locale === LocaleNegotiator::SYSTEM ? null : $this->locale;
 
         ($writeUserPreference)($currentUser->user()->id, ['locale' => $storedLocale]);
 
@@ -137,16 +136,26 @@ final class SettingsPage extends Component
     // preference back to unset. The rule is passed here rather than declared in
     // rules(), which save() runs wholesale: an unchosen country is the empty
     // string, and a required rule up there failed every unrelated field's save.
-    public function setCountry(string $country, CurrentUser $currentUser, UserCountry $countries): void
-    {
+    public function setCountry(
+        string $country,
+        CurrentUser $currentUser,
+        UserCountry $countries,
+        ValidatorFactory $validators,
+    ): void {
         if ($country === '') {
             return;
         }
 
+        // Validated before it is assigned. Assigning first left the property
+        // holding a value no option carries and the database untouched, so the
+        // select rendered with nothing selected at all — not even the country
+        // that is still stored.
+        $validators->make(
+            ['country' => $country],
+            ['country' => 'required|in:'.implode(',', array_column(Country::cases(), 'value'))],
+        )->validate();
+
         $this->country = $country;
-        $this->validateOnly('country', [
-            'country' => 'required|in:'.implode(',', array_column(Country::cases(), 'value')),
-        ]);
 
         $countries->store($currentUser->user()->id, $this->country);
     }
@@ -160,7 +169,6 @@ final class SettingsPage extends Component
         $user->fill(['is_developer' => $value])->save();
     }
 
-    // Manual-installer fallback for a first install, or if auto-update fails.
     public function openReleasesPage(OpenExternalUrlAction $opener): void
     {
         $opener('https://github.com/beatrax-app/beatrax/releases/latest');
@@ -348,7 +356,7 @@ final class SettingsPage extends Component
     {
         return [
             'theme' => 'required|in:'.implode(',', Theme::values()),
-            'locale' => 'required|in:'.self::LOCALE_AUTO.','.implode(',', Locale::codes()),
+            'locale' => 'required|in:'.LocaleNegotiator::SYSTEM.','.implode(',', Locale::codes()),
             'driftAlertThresholdPercent' => 'required|integer|in:'.implode(',', DriftThresholdOptions::PERCENTS),
         ];
     }

@@ -31,7 +31,7 @@ return [
     'file' => [
         'choose' => 'Izvēlēties failu',
         'none' => 'Neviens fails nav izvēlēts',
-        'count' => 'Izvēlēti :count faili',
+        'count' => 'Izvēlēti faili: :count',
     ],
 
     'amount_placeholder' => '0,00',

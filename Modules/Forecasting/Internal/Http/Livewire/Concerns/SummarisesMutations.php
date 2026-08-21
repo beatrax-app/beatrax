@@ -14,7 +14,6 @@ use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayloa
 use Modules\Forecasting\Public\Enums\ShiftScope;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
-// Split out of ScenarioEditorSidebar to keep it under the method ceiling.
 trait SummarisesMutations
 {
     private function summaryFor(string $kind, ScenarioMutationPayload $payload): string
@@ -29,7 +28,6 @@ trait SummarisesMutations
         };
     }
 
-    // Reads the catalog render() already populated, so no query here.
     private function resolveSeriesName(int $seriesId): string
     {
         foreach ($this->availableSeries as $entry) {

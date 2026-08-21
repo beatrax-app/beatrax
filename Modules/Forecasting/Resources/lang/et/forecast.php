@@ -19,7 +19,7 @@ return [
     'all_accounts' => 'Kõik kontod',
 
     'horizon_label' => 'Prognoosi horisont',
-    'n_days' => ':days päeva',
+    'n_days' => ':days päev|:days päeva',
 
     'view_by_funder' => 'Vaata rahastaja järgi',
     'view_by_funder_hint' => 'Koonda ahelaga lahendatud seeriad kontole, mis neid tegelikult maksab.',
@@ -33,7 +33,7 @@ return [
     'create_scenario' => 'Loo stsenaarium',
     'cancel' => 'Tühista',
 
-    'aggregate_subtitle' => 'Kõigi kontode ühendatud jääk, prognoositud järgmiseks :days päevaks.',
+    'aggregate_subtitle' => 'Kõigi kontode ühendatud jääk, prognoositud järgmiseks :days päevaks.|Kõigi kontode ühendatud jääk, prognoositud järgmiseks :days päevaks.',
 
     'today' => 'täna',
     'on_day' => 'päeval',
@@ -59,14 +59,14 @@ return [
     'at_day' => 'päeval :day',
 
     'updating' => 'Uuendan',
-    'chart_noscript' => 'Graafik vajab JavaScripti. Vahemik hõlmab :days päeva.',
+    'chart_noscript' => 'Graafik vajab JavaScripti. Vahemik hõlmab :days päeva.|Graafik vajab JavaScripti. Vahemik hõlmab :days päeva.',
     'total_balance' => 'Kogujääk',
 
     'per_month_suffix' => '/kuus',
     'confidence_chip_aria' => ':name, kindlus :confidence — prognoosi vahemik on :percent protsenti punkthinnangust',
 
     'highlights_title' => 'Prognoosi tähelepanekud',
-    'highlights_shortfall_aria' => ':count aktiivset puudujäägi akent järgmise 30 päeva jooksul',
+    'highlights_shortfall_aria' => ':count aktiivne puudujäägi aken järgmise :days päeva jooksul|:count aktiivset puudujäägi akent järgmise :days päeva jooksul',
     'dips_to' => ':name langeb tasemele :amount',
     'on_date_suffix' => ' kuupäeval :date',
     'shortfall_window' => '1 aktiivne puudujäägi aken|:count aktiivset puudujäägi akent',

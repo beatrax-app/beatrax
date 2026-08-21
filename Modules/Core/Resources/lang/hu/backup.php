@@ -29,7 +29,7 @@ return [
     ],
 
     'errors' => [
-        'passphrase_min' => 'Használj legalább :min karakteres jelmondatot.',
+        'passphrase_min' => 'Használj legalább :min karakteres jelmondatot.|Használj legalább :min karakteres jelmondatot.',
         'passphrase_mismatch' => 'A két jelmondat nem egyezik.',
         'download_sqlite_only' => 'A titkosított letöltés csak az SQLite változatban érhető el.',
         'create_failed' => 'A biztonsági mentés nem készült el: :message',

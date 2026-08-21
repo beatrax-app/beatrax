@@ -19,7 +19,7 @@ return [
     'all_accounts' => 'Všechny účty',
 
     'horizon_label' => 'Horizont předpovědi',
-    'n_days' => ':days dní',
+    'n_days' => ':days den|:days dny|:days dní',
 
     'view_by_funder' => 'Zobrazit podle plátce',
     'view_by_funder_hint' => 'Sloučit řady vyřešené řetězcem pod účet, který je doopravdy platí.',
@@ -33,7 +33,7 @@ return [
     'create_scenario' => 'Vytvořit scénář',
     'cancel' => 'Zrušit',
 
-    'aggregate_subtitle' => 'Souhrnný zůstatek na všech účtech, promítnutý na dalších :days dní.',
+    'aggregate_subtitle' => 'Souhrnný zůstatek na všech účtech, promítnutý na další :days den.|Souhrnný zůstatek na všech účtech, promítnutý na další :days dny.|Souhrnný zůstatek na všech účtech, promítnutý na dalších :days dní.',
 
     'today' => 'dnes',
     'on_day' => 'v den',
@@ -59,14 +59,14 @@ return [
     'at_day' => 'v den :day',
 
     'updating' => 'Aktualizuje se',
-    'chart_noscript' => 'Graf vyžaduje JavaScript. Rozsah pokrývá :days dní.',
+    'chart_noscript' => 'Graf vyžaduje JavaScript. Rozsah pokrývá :days den.|Graf vyžaduje JavaScript. Rozsah pokrývá :days dny.|Graf vyžaduje JavaScript. Rozsah pokrývá :days dní.',
     'total_balance' => 'Celkový zůstatek',
 
     'per_month_suffix' => '/měs.',
     'confidence_chip_aria' => ':name, spolehlivost :confidence — rozpětí předpovědi je :percent procent bodového odhadu',
 
     'highlights_title' => 'Hlavní body předpovědi',
-    'highlights_shortfall_aria' => 'Aktivních oken se schodkem v příštích 30 dnech: :count',
+    'highlights_shortfall_aria' => ':count aktivní okno se schodkem v příštích :days dnech|:count aktivní okna se schodkem v příštích :days dnech|:count aktivních oken se schodkem v příštích :days dnech',
     'dips_to' => ':name klesá na :amount',
     'on_date_suffix' => ' dne :date',
     'shortfall_window' => '1 aktivní okno se schodkem|:count aktivní okna se schodkem|:count aktivních oken se schodkem',

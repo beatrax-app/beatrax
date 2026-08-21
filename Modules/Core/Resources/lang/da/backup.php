@@ -29,7 +29,7 @@ return [
     ],
 
     'errors' => [
-        'passphrase_min' => 'Brug en adgangssætning på mindst :min tegn.',
+        'passphrase_min' => 'Brug en adgangssætning på mindst :min tegn.|Brug en adgangssætning på mindst :min tegn.',
         'passphrase_mismatch' => 'De to adgangssætninger er ikke ens.',
         'download_sqlite_only' => 'Krypteret download er kun tilgængelig i SQLite-versionen.',
         'create_failed' => 'Sikkerhedskopien kunne ikke oprettes: :message',

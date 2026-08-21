@@ -15,7 +15,6 @@ final readonly class ForecastShortfallDetected
     public function __construct(
         public int $userId,
         public int $accountId,
-        // null = the baseline projection's shortfall.
         public ?int $scenarioId,
         public Carbon $startsAt,
         public Carbon $endsAt,

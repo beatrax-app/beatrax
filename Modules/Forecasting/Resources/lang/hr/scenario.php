@@ -107,7 +107,7 @@ return [
 
     'errors' => [
         'name_empty' => 'Naziv scenarija ne može biti prazan.',
-        'name_too_long' => 'Naziv scenarija smije imati najviše :max znakova.',
+        'name_too_long' => 'Naziv scenarija smije imati najviše :max znak.|Naziv scenarija smije imati najviše :max znaka.|Naziv scenarija smije imati najviše :max znakova.',
         'name_taken' => 'Scenarij s tim nazivom već postoji.',
         'pick_kind_first' => 'Prvo odaberi vrstu izmjene.',
         'amount_positive' => 'Iznos mora biti pozitivan broj.',

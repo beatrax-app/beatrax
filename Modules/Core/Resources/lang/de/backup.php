@@ -29,7 +29,7 @@ return [
     ],
 
     'errors' => [
-        'passphrase_min' => 'Verwende eine Passphrase mit mindestens :min Zeichen.',
+        'passphrase_min' => 'Verwende eine Passphrase mit mindestens :min Zeichen.|Verwende eine Passphrase mit mindestens :min Zeichen.',
         'passphrase_mismatch' => 'Die beiden Passphrasen stimmen nicht überein.',
         'download_sqlite_only' => 'Der verschlüsselte Download ist nur in der SQLite-Version verfügbar.',
         'create_failed' => 'Backup konnte nicht erstellt werden: :message',

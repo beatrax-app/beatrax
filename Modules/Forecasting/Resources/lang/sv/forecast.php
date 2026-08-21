@@ -19,7 +19,7 @@ return [
     'all_accounts' => 'Alla konton',
 
     'horizon_label' => 'Prognoshorisont',
-    'n_days' => ':days dagar',
+    'n_days' => ':days dag|:days dagar',
 
     'view_by_funder' => 'Visa per betalande konto',
     'view_by_funder_hint' => 'Slå ihop serier som lösts via kedjor på det konto som faktiskt betalar dem.',
@@ -33,7 +33,7 @@ return [
     'create_scenario' => 'Skapa scenario',
     'cancel' => 'Avbryt',
 
-    'aggregate_subtitle' => 'Samlat saldo för alla konton, prognostiserat för de kommande :days dagarna.',
+    'aggregate_subtitle' => 'Samlat saldo för alla konton, prognostiserat för den kommande :days dagen.|Samlat saldo för alla konton, prognostiserat för de kommande :days dagarna.',
 
     'today' => 'idag',
     'on_day' => 'på dag',
@@ -59,14 +59,14 @@ return [
     'at_day' => 'på dag :day',
 
     'updating' => 'Uppdaterar',
-    'chart_noscript' => 'Diagrammet kräver JavaScript. Intervallet omfattar :days dagar.',
+    'chart_noscript' => 'Diagrammet kräver JavaScript. Intervallet omfattar :days dag.|Diagrammet kräver JavaScript. Intervallet omfattar :days dagar.',
     'total_balance' => 'Totalt saldo',
 
     'per_month_suffix' => '/mån',
     'confidence_chip_aria' => ':name, tillförlitlighet :confidence — prognosintervallet är :percent procent av punktskattningen',
 
     'highlights_title' => 'Prognosen i korthet',
-    'highlights_shortfall_aria' => ':count aktiva underskottsperioder under de kommande 30 dagarna',
+    'highlights_shortfall_aria' => ':count aktiv underskottsperiod under de kommande :days dagarna|:count aktiva underskottsperioder under de kommande :days dagarna',
     'dips_to' => ':name sjunker till :amount',
     'on_date_suffix' => ' den :date',
     'shortfall_window' => '1 aktiv underskottsperiod|:count aktiva underskottsperioder',

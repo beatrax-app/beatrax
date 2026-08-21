@@ -29,7 +29,7 @@ return [
     ],
 
     'errors' => [
-        'passphrase_min' => 'Izmantojiet paroles frāzi ar vismaz :min rakstzīmēm.',
+        'passphrase_min' => 'Izmantojiet paroles frāzi ar vismaz :min rakstzīmēm.|Izmantojiet paroles frāzi ar vismaz :min rakstzīmi.|Izmantojiet paroles frāzi ar vismaz :min rakstzīmēm.',
         'passphrase_mismatch' => 'Abas paroles frāzes nesakrīt.',
         'download_sqlite_only' => 'Šifrēta lejupielāde ir pieejama tikai SQLite versijā.',
         'create_failed' => 'Neizdevās izveidot dublējumu: :message',

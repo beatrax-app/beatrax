@@ -107,7 +107,7 @@ return [
 
     'errors' => [
         'name_empty' => 'Scenarionamnet får inte vara tomt.',
-        'name_too_long' => 'Scenarionamnet får vara högst :max tecken.',
+        'name_too_long' => 'Scenarionamnet får vara högst :max tecken.|Scenarionamnet får vara högst :max tecken.',
         'name_taken' => 'Det finns redan ett scenario med det namnet.',
         'pick_kind_first' => 'Välj först en typ av ändring.',
         'amount_positive' => 'Beloppet måste vara ett positivt tal.',

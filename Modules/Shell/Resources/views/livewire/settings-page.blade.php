@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Services\LocaleNegotiator')
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Core\Public\Support\LegalLinks')
 @use('Modules\Core\Public\Enums\Locale')
@@ -83,7 +84,7 @@
                             @selected($locale === $localeOption->value)
                         >{{ $localeOption->label() }}</option>
                     @endforeach
-                    <option value="auto" @selected($locale === 'auto')>{{ Lang::get('core::settings.language.system') }}</option>
+                    <option value="{{ LocaleNegotiator::SYSTEM }}" @selected($locale === LocaleNegotiator::SYSTEM)>{{ Lang::get('core::settings.language.system') }}</option>
                 </select>
                 <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.language.help') }}</p>
                 @error('locale')
@@ -110,14 +111,21 @@
                 >
                     {{-- strlen, not a comparison against '': an empty-string
                          literal inside a Blade directive reads to the HTML
-                         analyser as an opening attribute quote. --}}
-                    <option value="" @selected(strlen($country) === 0)>{{ Lang::get('core::settings.country.choose') }}</option>
+                         analyser as an opening attribute quote. Disabled rather
+                         than merely ignored — setCountry() returns early on the
+                         empty value, so re-choosing the placeholder was a
+                         round-trip that changed nothing and said nothing. --}}
+                    <option value="" disabled @selected(strlen($country) === 0)>{{ Lang::get('core::settings.country.choose') }}</option>
                     @foreach ($countryOptions as $countryCode => $countryName)
                         <option value="{{ $countryCode }}" @selected($country === $countryCode)>{{ $countryName }}</option>
                     @endforeach
                 </select>
                 <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.country.help') }}</p>
                 @if ($country !== '')
+                    {{-- The one thing the country does bring in the country's
+                         own language, said where the help line above would
+                         otherwise be read as ruling it out. --}}
+                    <p class="text-xs text-slate-500 dark:text-slate-400" data-testid="settings-country-wording-note">{{ Lang::get('core::settings.country.wording_note', ['country' => $countryOptions[$country] ?? $country]) }}</p>
                     <p class="text-xs text-[var(--color-amber)]">{{ Lang::get('core::settings.country.switch_note') }}</p>
                 @endif
                 @error('country')
