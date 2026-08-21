@@ -154,9 +154,9 @@
                                 const result = await response.json();
 
                                 // No success line here: the share sheet is
-                                // the OS telling the user, and "Saved to your
-                                // downloads" would be untrue — they have not
-                                // chosen where it goes yet.
+                                // the OS telling the user, and claiming it
+                                // went to downloads would be untrue — they
+                                // have not chosen where it goes yet.
                                 this.saveFailed = result.saved !== true;
                             } catch (e) {
                                 this.saveFailed = true;

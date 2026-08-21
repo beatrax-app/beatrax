@@ -37,14 +37,48 @@ function patchScriptsIn(string $hook): array
     $scripts = [];
 
     foreach ($manifest['scripts'][$hook] ?? [] as $line) {
-        if (preg_match('/(nativephp_[a-z0-9_]+\.php)/', (string) $line, $m) === 1) {
-            $scripts[] = $m[1];
+        if (preg_match('/(nativephp_[a-z0-9_]+\.php)/', (string) $line, $m) !== 1) {
+            continue;
         }
+
+        // Both hooks call one runner rather than listing the patches, because
+        // composer aborts a script list on the first non-zero exit and one
+        // patch legitimately fails on a freshly generated project. The list
+        // moved inside the runner, so following it is the only way to keep
+        // asserting what the hooks actually apply.
+        if ($m[1] === 'nativephp_patch_all.php') {
+            $scripts = array_merge($scripts, patchScriptsInRunner());
+
+            continue;
+        }
+
+        $scripts[] = $m[1];
     }
 
     sort($scripts);
 
     return $scripts;
+}
+
+/** @return list<string> the scripts nativephp_patch_all.php runs, in its own order */
+function patchScriptsInRunner(): array
+{
+    $runner = dirname(mobileComposerManifest()).'/../scripts/nativephp_patch_all.php';
+
+    expect($runner)->toBeReadableFile();
+
+    preg_match_all(
+        "/'(nativephp_[a-z0-9_]+)'/",
+        (string) file_get_contents($runner),
+        $matches,
+    );
+
+    /** @var list<string> $names */
+    $names = $matches[1];
+
+    expect($names)->not->toBeEmpty();
+
+    return array_map(static fn (string $name): string => $name.'.php', $names);
 }
 
 /** @return list<string> the scripts NativeBuildPatches re-applies per build */
