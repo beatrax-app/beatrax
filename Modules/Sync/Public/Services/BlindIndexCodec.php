@@ -109,6 +109,15 @@ final class BlindIndexCodec
             return null;
         }
 
+        return $this->heldKeyHexOrNull($userId, $session);
+    }
+
+    // Split out so a caller that has ALREADY established enrolment does not
+    // pay for the question twice. derive() runs once per registered column per
+    // row, so on an import the duplicate was a second read of
+    // sync_encryption_state on every one of them.
+    private function heldKeyHexOrNull(int $userId, Session $session): ?string
+    {
         try {
             return $this->keyringService->ensureBlindIndexKey($userId, $session);
         } catch (LogicException|RuntimeException) {
@@ -177,7 +186,7 @@ final class BlindIndexCodec
      */
     private function requireKeyHex(string $domain, int $userId, Session $session): string
     {
-        $keyHex = $this->keyHexOrNull($userId, $session);
+        $keyHex = $this->heldKeyHexOrNull($userId, $session);
         if ($keyHex === null) {
             throw BlindIndexKeyUnavailableException::forUser($userId, $domain);
         }
