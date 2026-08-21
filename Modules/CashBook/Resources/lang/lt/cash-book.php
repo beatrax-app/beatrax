@@ -31,6 +31,7 @@ return [
     'errors' => [
         'amount_positive' => 'Įvesk už nulį didesnę sumą.',
         'amount_too_large' => 'Ši suma per didelė. Patikrink skaitmenis.',
+        'amount_unreadable' => 'Nepavyko nuskaityti šios sumos. Įveskite ją be tūkstančių skirtuko ir ne daugiau kaip dviem skaitmenimis po kablelio, pavyzdžiui, :example.',
         'invalid_date' => 'Įvesk tinkamą datą.',
     ],
 

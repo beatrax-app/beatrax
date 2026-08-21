@@ -31,6 +31,7 @@ return [
     'errors' => [
         'amount_positive' => 'Voer een bedrag groter dan nul in.',
         'amount_too_large' => 'Dit bedrag is te groot. Controleer de cijfers.',
+        'amount_unreadable' => 'Dit bedrag kon niet worden gelezen. Voer het in zonder scheidingsteken voor duizendtallen en met maximaal twee decimalen, bijvoorbeeld :example.',
         'invalid_date' => 'Voer een geldige datum in.',
     ],
 

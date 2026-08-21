@@ -31,6 +31,7 @@ return [
     'errors' => [
         'amount_positive' => 'Saisis un montant supérieur à zéro.',
         'amount_too_large' => 'Ce montant est trop élevé. Vérifie les chiffres.',
+        'amount_unreadable' => 'Ce montant n’a pas pu être lu. Saisissez-le sans séparateur de milliers et avec deux décimales au maximum, par exemple :example.',
         'invalid_date' => 'Saisis une date valide.',
     ],
 

@@ -31,6 +31,7 @@ return [
     'errors' => [
         'amount_positive' => 'Introduz um montante superior a zero.',
         'amount_too_large' => 'Esse montante é demasiado elevado. Verifica os dígitos.',
+        'amount_unreadable' => 'Não foi possível ler este montante. Introduza-o sem separador de milhares e com um máximo de duas casas decimais, por exemplo :example.',
         'invalid_date' => 'Introduz uma data válida.',
     ],
 

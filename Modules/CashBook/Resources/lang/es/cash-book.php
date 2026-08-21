@@ -31,6 +31,7 @@ return [
     'errors' => [
         'amount_positive' => 'Introduce un importe mayor que cero.',
         'amount_too_large' => 'Ese importe es demasiado grande. Revisa las cifras.',
+        'amount_unreadable' => 'No se ha podido leer ese importe. Introdúcelo sin separador de miles y con dos decimales como máximo, por ejemplo :example.',
         'invalid_date' => 'Introduce una fecha válida.',
     ],
 

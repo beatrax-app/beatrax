@@ -31,6 +31,7 @@ return [
     'errors' => [
         'amount_positive' => 'Sisesta nullist suurem summa.',
         'amount_too_large' => 'See summa on liiga suur. Kontrolli numbreid.',
+        'amount_unreadable' => 'Seda summat ei õnnestunud lugeda. Sisestage see tuhandeliste eraldajata ja kõige rohkem kahe kümnendkohaga, näiteks :example.',
         'invalid_date' => 'Sisesta kehtiv kuupäev.',
     ],
 

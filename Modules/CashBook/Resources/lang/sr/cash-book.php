@@ -31,6 +31,7 @@ return [
     'errors' => [
         'amount_positive' => 'Unesi iznos veći od nule.',
         'amount_too_large' => 'Ovaj iznos je prevelik. Proveri cifre.',
+        'amount_unreadable' => 'Ovaj iznos nije bilo moguće pročitati. Unesite ga bez razdvajača hiljada i sa najviše dve decimale, na primer :example.',
         'invalid_date' => 'Unesi ispravan datum.',
     ],
 

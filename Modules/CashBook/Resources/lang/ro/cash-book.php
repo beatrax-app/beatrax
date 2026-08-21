@@ -31,6 +31,7 @@ return [
     'errors' => [
         'amount_positive' => 'Introdu o sumă mai mare decât zero.',
         'amount_too_large' => 'Suma este prea mare. Verifică cifrele.',
+        'amount_unreadable' => 'Această sumă nu a putut fi citită. Introduceți-o fără separator de mii și cu cel mult două zecimale, de exemplu :example.',
         'invalid_date' => 'Introdu o dată validă.',
     ],
 

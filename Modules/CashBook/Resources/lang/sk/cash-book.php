@@ -31,6 +31,7 @@ return [
     'errors' => [
         'amount_positive' => 'Zadaj sumu väčšiu ako nula.',
         'amount_too_large' => 'Táto suma je príliš veľká. Skontroluj číslice.',
+        'amount_unreadable' => 'Túto sumu sa nepodarilo prečítať. Zadajte ju bez oddeľovača tisícov a najviac s dvoma desatinnými miestami, napríklad :example.',
         'invalid_date' => 'Zadaj platný dátum.',
     ],
 
