@@ -20,7 +20,7 @@ return [
     'suggestion_low' => 'Mustri vaste: **:name** — madal kindlus. Kontrolli enne sidumist.',
     'suggestion_high' => '✨ Tundub olevat **:name** — kõrge kindlus',
 
-    'reasoning' => ':hits :total hiljutisest tehingust sellel IBANil viitab :name.',
+    'reasoning' => ':hits :total hiljutisest tehingust sellel IBANil viitab :name.|:hits :total hiljutisest tehingust sellel IBANil viitab :name.',
     'yes_link' => 'Jah, seo vastaspoolega :name ↵',
     'no_not' => 'Ei, mitte :name',
 

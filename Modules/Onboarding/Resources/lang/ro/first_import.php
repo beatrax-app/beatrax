@@ -20,7 +20,7 @@ return [
     'to_commit' => 'de finalizat ·',
     'already_imported' => 'deja importate',
     'commit_committing' => 'Se finalizează…',
-    'commit_count' => 'Finalizează tot (:count tranzacții) →',
+    'commit_count' => 'Finalizează tot (:count tranzacție) →|Finalizează tot (:count tranzacții) →|Finalizează tot (:count de tranzacții) →',
     'commit_empty' => 'Finalizează tot (—) →',
     'skip' => 'Omite deocamdată',
 
@@ -47,6 +47,6 @@ return [
         'col_counterparty' => 'Contraparte',
         'col_amount' => 'Sumă',
         'load_more' => 'Încarcă mai multe (au rămas :remaining)',
-        'rows_shown' => ':count rânduri afișate',
+        'rows_shown' => ':count rând afișat|:count rânduri afișate|:count de rânduri afișate',
     ],
 ];

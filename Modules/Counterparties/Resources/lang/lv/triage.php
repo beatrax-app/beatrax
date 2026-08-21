@@ -20,7 +20,7 @@ return [
     'suggestion_low' => 'Šablona sakritība: **:name** — zema ticamība. Pirms saistīšanas pārbaudiet.',
     'suggestion_high' => '✨ Izskatās pēc **:name** — augsta ticamība',
 
-    'reasoning' => ':hits no :total nesenajiem darījumiem šajā IBAN norāda uz :name.',
+    'reasoning' => ':hits no :total nesenajiem darījumiem šajā IBAN norāda uz :name.|:hits no :total nesenajiem darījumiem šajā IBAN norāda uz :name.|:hits no :total nesenajiem darījumiem šajā IBAN norāda uz :name.',
     'yes_link' => 'Jā, saistīt ar :name ↵',
     'no_not' => 'Nē, tas nav :name',
 

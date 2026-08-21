@@ -7,6 +7,7 @@ return [
     'drop_zone_lead' => 'Пусни файла с извлечението тук',
     'drop_zone_sublink' => 'или потърси файл',
     'drop_zone_touch_lead' => 'Докосни, за да избереш файл',
+    'drop_zone_touch_lead_named' => 'Докосни, за да избереш своя :file файл',
 
     'vd_optional' => ' — по избор',
 

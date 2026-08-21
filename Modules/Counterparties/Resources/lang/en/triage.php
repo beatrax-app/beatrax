@@ -20,7 +20,7 @@ return [
     'suggestion_low' => 'Pattern match: **:name** — confidence low. Verify before linking.',
     'suggestion_high' => '✨ Looks like **:name** — confidence high',
 
-    'reasoning' => ':hits of :total recent transactions on this IBAN resolve to :name.',
+    'reasoning' => ':hits of :total recent transaction on this IBAN resolves to :name.|:hits of :total recent transactions on this IBAN resolve to :name.',
     'yes_link' => 'Yes, link to :name ↵',
     'no_not' => 'No, not :name',
 

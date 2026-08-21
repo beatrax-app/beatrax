@@ -20,7 +20,7 @@ return [
     'to_commit' => 'до фіксації ·',
     'already_imported' => 'уже імпортовано',
     'commit_committing' => 'Фіксація…',
-    'commit_count' => 'Зафіксувати все (транзакцій: :count) →',
+    'commit_count' => 'Зафіксувати все (:count транзакція) →|Зафіксувати все (:count транзакції) →|Зафіксувати все (:count транзакцій) →',
     'commit_empty' => 'Зафіксувати все (—) →',
     'skip' => 'Пропустити поки що',
 
@@ -47,6 +47,6 @@ return [
         'col_counterparty' => 'Контрагент',
         'col_amount' => 'Сума',
         'load_more' => 'Показати ще (залишилося: :remaining)',
-        'rows_shown' => 'Показано рядків: :count',
+        'rows_shown' => 'показано :count рядок|показано :count рядки|показано :count рядків',
     ],
 ];

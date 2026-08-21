@@ -28,7 +28,6 @@ final class UncategorizedTriageQuery
 
     public function for(User $user, int $limit = 50, ?int $cursorId = null, ?string $cursorPostedAt = null): TriageBatch
     {
-        // Left-joined so each row carries its slug without an N+1.
         $query = $this->db->connection()
             ->table('transactions')
             ->leftJoin('counterparties', 'transactions.counterparty_id', '=', 'counterparties.id')

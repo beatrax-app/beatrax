@@ -20,7 +20,7 @@ return [
     'to_commit' => 'zum Übernehmen ·',
     'already_imported' => 'bereits importiert',
     'commit_committing' => 'Wird übernommen…',
-    'commit_count' => 'Alles übernehmen (:count Transaktionen) →',
+    'commit_count' => 'Alles übernehmen (:count Transaktion) →|Alles übernehmen (:count Transaktionen) →',
     'commit_empty' => 'Alles übernehmen (—) →',
     'skip' => 'Vorerst überspringen',
 
@@ -47,6 +47,6 @@ return [
         'col_counterparty' => 'Zahlungspartner',
         'col_amount' => 'Betrag',
         'load_more' => 'Mehr laden (:remaining übrig)',
-        'rows_shown' => ':count Zeilen angezeigt',
+        'rows_shown' => ':count Zeile angezeigt|:count Zeilen angezeigt',
     ],
 ];

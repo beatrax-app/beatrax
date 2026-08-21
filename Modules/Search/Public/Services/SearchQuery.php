@@ -10,6 +10,7 @@ use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Services\TransactionCursor;
+use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Search\Internal\Services\DidYouMeanSuggester;
 use Modules\Search\Internal\Services\FtsCandidateResolver;
@@ -27,6 +28,11 @@ final class SearchQuery
     use CoercesScalars;
 
     private const MATCH_NOTHING = '1 = 0';
+
+    // An id no row can hold, standing in for "this token matched nothing".
+    // Dropping an unresolvable filter instead returned the WHOLE history,
+    // which reads to the typist exactly as if the token had worked.
+    private const NO_SUCH_ID = 0;
 
     public function __construct(
         private readonly DatabaseManager $db,
@@ -175,13 +181,15 @@ final class SearchQuery
                 $parsedFilters['accounts'],
                 static fn (mixed $n): bool => is_string($n) && $n !== '',
             ));
-            $resolved = $this->resolveNamesToIds($user, 'accounts', $names);
-            $accounts = array_values(array_unique([...$accounts, ...$resolved]));
+            if ($names !== []) {
+                $resolved = self::orNoMatch($this->resolveAccountNamesToIds($user, $names));
+                $accounts = array_values(array_unique([...$accounts, ...$resolved]));
+            }
         }
 
         $categories = $filters->categories;
         if (isset($parsedFilters['category']) && is_string($parsedFilters['category']) && $parsedFilters['category'] !== '') {
-            $resolved = $this->resolveNamesToIds($user, 'categories', [$parsedFilters['category']], includeGlobal: true);
+            $resolved = self::orNoMatch($this->resolveCategoryNameToIds($user, $parsedFilters['category']));
             $categories = array_values(array_unique([...$categories, ...$resolved]));
         }
 
@@ -216,29 +224,21 @@ final class SearchQuery
         );
     }
 
-    // Case-insensitive prefix match on `name`, scoped to
-    // accounts/categories (both expose a name column, keeping the raw
-    // LIKE predicate a literal string). Categories also include
-    // global (seeded, null-user) rows when $includeGlobal is true.
+    // Case-insensitive prefix match on `accounts.name`; the column stays a
+    // literal in the raw LIKE predicate.
     /**
-     * @param  'accounts'|'categories'  $table
      * @param  list<string>  $names
      * @return list<int>
      */
-    private function resolveNamesToIds(User $user, string $table, array $names, bool $includeGlobal = false): array
+    private function resolveAccountNamesToIds(User $user, array $names): array
     {
         if ($names === []) {
             return [];
         }
 
         $query = $this->db->connection()
-            ->table($table)
-            ->where(function (Builder $scope) use ($user, $includeGlobal): void {
-                $scope->where('user_id', $user->id);
-                if ($includeGlobal) {
-                    $scope->orWhereNull('user_id');
-                }
-            })
+            ->table('accounts')
+            ->where('user_id', $user->id)
             ->where(function (Builder $match) use ($names): void {
                 foreach ($names as $name) {
                     $like = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $name).'%';
@@ -247,6 +247,49 @@ final class SearchQuery
             });
 
         return self::toIntList($query->pluck('id')->all());
+    }
+
+    // Matching the stored name alone inverts what the reader sees, because a
+    // default category stores English and displays a translation. The stored
+    // name is still tried, so the English and a rename both keep working.
+    /**
+     * @link ../../../../.docs/features/ledger/category-display-names.md
+     *
+     * @return list<int>
+     */
+    private function resolveCategoryNameToIds(User $user, string $name): array
+    {
+        $needle = mb_strtolower($name);
+
+        $rows = $this->db->connection()
+            ->table('categories')
+            ->where(function (Builder $scope) use ($user): void {
+                $scope->where('user_id', $user->id)->orWhereNull('user_id');
+            })
+            ->get(['id', 'name', 'slug', 'name_is_default']);
+
+        $ids = [];
+        foreach ($rows as $row) {
+            if (self::startsWith(CategoryDisplayName::fromRow($row) ?? '', $needle) || self::startsWith(self::toString($row->name ?? null), $needle)) {
+                $ids[] = self::toInt($row->id ?? null);
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
+     * @param  list<int>  $resolved
+     * @return list<int>
+     */
+    private static function orNoMatch(array $resolved): array
+    {
+        return $resolved === [] ? [self::NO_SUCH_ID] : $resolved;
+    }
+
+    private static function startsWith(string $haystack, string $needle): bool
+    {
+        return $haystack !== '' && str_starts_with(mb_strtolower($haystack), $needle);
     }
 
     // Parses an amount: token into [min, max] decimal strings: >50
@@ -298,7 +341,7 @@ final class SearchQuery
                 'transactions.currency as display_currency',
                 'transactions.settled_amount_minor as secondary_minor',
                 'transactions.settled_currency as secondary_currency',
-                'categories.name as category_name',
+                ...CategoryDisplayName::columns('categories'),
                 'counterparties.slug as counterparty_slug',
             ]);
     }

@@ -34,18 +34,15 @@
         <x-onboarding::format-chip label="PDF" :badge="Lang::get('onboarding::connect_card.badge_only_format')" />
     </div>
 
-    <label class="drop-zone">
-        <span class="drop-zone-glyph" aria-hidden="true">📥</span>
-        <span class="drop-zone-lead">{{ Lang::get('onboarding::connect_card.drop_lead') }}</span>
-        <span class="drop-zone-sublink">{{ Lang::get('onboarding::connect_card.browse_files') }}</span>
-        <input
-            type="file"
-            class="drop-zone-input"
-            wire:model="statements"
-            multiple
-            accept=".pdf"
-        />
-    </label>
+    <x-onboarding::drop-zone
+        wire-model="statements"
+        :lead="Lang::get('onboarding::connect_card.drop_lead')"
+        :sublink="Lang::get('onboarding::connect_card.browse_files')"
+        glyph="📥"
+        accept=".pdf"
+        file-label="PDF"
+        :multiple="true"
+    />
 
     @if (count($statements) > 0)
         <div role="group" class="per-file-chip-list" aria-label="{{ Lang::get('onboarding::connect_card.queue_aria') }}">

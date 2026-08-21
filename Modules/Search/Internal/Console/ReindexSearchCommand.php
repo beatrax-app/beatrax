@@ -179,6 +179,13 @@ final class ReindexSearchCommand extends Command
             $description = $this->decrypt('transactions', 'description', $row->description, $userId, $session);
             $note = $this->decrypt('tax_transaction_tags', 'note', $notesByTxId[$txId] ?? null, $userId, $session);
 
+            // Indexing a blank body would claim success over a row that can no
+            // longer be found at all. Left out instead, so the count comes up
+            // short and reportOutcome() says the rebuild is incomplete.
+            if ($counterparty === null || $description === null || $note === null) {
+                continue;
+            }
+
             $docs[] = [
                 'transaction_id' => $txId,
                 'user_id' => $userId,
@@ -193,13 +200,21 @@ final class ReindexSearchCommand extends Command
         return count($docs);
     }
 
-    private function decrypt(string $table, string $column, mixed $stored, int $userId, Session $session): string
+    // Null when the codec BLANKED the value rather than handing it back: that
+    // shape, and only that shape, means ciphertext no epoch in this keyring
+    // opens. A plaintext row comes back untouched and indexes normally.
+    /**
+     * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md
+     */
+    private function decrypt(string $table, string $column, mixed $stored, int $userId, Session $session): ?string
     {
         if (! is_string($stored) || $stored === '') {
             return '';
         }
 
-        return $this->codec->decryptValue($table, $column, $stored, $userId, $session)['value'];
+        $result = $this->codec->decryptValue($table, $column, $stored, $userId, $session);
+
+        return ! $result['decrypted'] && $result['value'] === '' ? null : $result['value'];
     }
 
     // Fail loudly on a partial run — a mismatched count means the index

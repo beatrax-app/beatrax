@@ -6,7 +6,7 @@ return [
     'page_title' => 'Nasprotne stranke',
     'heading' => 'Nasprotne stranke',
 
-    'entities' => 'Subjekti: :count',
+    'entities' => ':count subjekt|:count subjekta|:count subjekti|:count subjektov',
     'need_identification' => 'Za identifikacijo: :count',
 
     'search_placeholder' => 'Išči po imenu, aliasu ali IBAN…',

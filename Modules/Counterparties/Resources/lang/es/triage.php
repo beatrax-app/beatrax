@@ -20,7 +20,7 @@ return [
     'suggestion_low' => 'Coincidencia de patrón: **:name** — confianza baja. Compruébalo antes de enlazar.',
     'suggestion_high' => '✨ Parece **:name** — confianza alta',
 
-    'reasoning' => ':hits de :total transacciones recientes en este IBAN apuntan a :name.',
+    'reasoning' => ':hits de :total transacción reciente en este IBAN apunta a :name.|:hits de :total transacciones recientes en este IBAN apuntan a :name.',
     'yes_link' => 'Sí, enlazar con :name ↵',
     'no_not' => 'No, no es :name',
 

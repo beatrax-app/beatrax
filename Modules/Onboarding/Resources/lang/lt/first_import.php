@@ -20,7 +20,7 @@ return [
     'to_commit' => 'bus įrašyta ·',
     'already_imported' => 'jau importuota',
     'commit_committing' => 'Įrašoma…',
-    'commit_count' => 'Įrašyti viską (operacijų: :count) →',
+    'commit_count' => 'Įrašyti viską (:count operacija) →|Įrašyti viską (:count operacijos) →|Įrašyti viską (:count operacijų) →',
     'commit_empty' => 'Įrašyti viską (—) →',
     'skip' => 'Kol kas praleisti',
 
@@ -47,6 +47,6 @@ return [
         'col_counterparty' => 'Kita šalis',
         'col_amount' => 'Suma',
         'load_more' => 'Įkelti daugiau (liko :remaining)',
-        'rows_shown' => 'Rodoma eilučių: :count',
+        'rows_shown' => 'rodoma :count eilutė|rodomos :count eilutės|rodoma :count eilučių',
     ],
 ];

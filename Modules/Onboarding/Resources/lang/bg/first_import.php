@@ -20,7 +20,7 @@ return [
     'to_commit' => 'за потвърждаване ·',
     'already_imported' => 'вече импортирани',
     'commit_committing' => 'Потвърждаване…',
-    'commit_count' => 'Потвърди всичко (:count транзакции) →',
+    'commit_count' => 'Потвърди всичко (:count транзакция) →|Потвърди всичко (:count транзакции) →',
     'commit_empty' => 'Потвърди всичко (—) →',
     'skip' => 'Пропусни засега',
 
@@ -47,6 +47,6 @@ return [
         'col_counterparty' => 'Контрагент',
         'col_amount' => 'Сума',
         'load_more' => 'Зареди още (остават :remaining)',
-        'rows_shown' => 'Показани редове: :count',
+        'rows_shown' => 'Показан е :count ред|Показани са :count реда',
     ],
 ];

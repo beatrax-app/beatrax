@@ -20,7 +20,7 @@ return [
     'suggestion_low' => 'Podudaranje uzorka: **:name** — niska pouzdanost. Provjeri prije povezivanja.',
     'suggestion_high' => '✨ Izgleda kao **:name** — visoka pouzdanost',
 
-    'reasoning' => ':hits od :total nedavnih transakcija na ovom IBAN-u upućuje na :name.',
+    'reasoning' => ':hits od :total nedavne transakcije na ovom IBAN-u upućuje na :name.|:hits od :total nedavne transakcije na ovom IBAN-u upućuje na :name.|:hits od :total nedavnih transakcija na ovom IBAN-u upućuje na :name.',
     'yes_link' => 'Da, poveži s :name ↵',
     'no_not' => 'Ne, nije :name',
 

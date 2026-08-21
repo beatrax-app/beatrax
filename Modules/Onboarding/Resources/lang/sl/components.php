@@ -7,6 +7,7 @@ return [
     'drop_zone_lead' => 'Sem spusti datoteko izpiska',
     'drop_zone_sublink' => 'ali poišči datoteko',
     'drop_zone_touch_lead' => 'Tapni za izbiro datoteke',
+    'drop_zone_touch_lead_named' => 'Tapni za izbiro svoje datoteke :file',
 
     'vd_optional' => ' — neobvezno',
 

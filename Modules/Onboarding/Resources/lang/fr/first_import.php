@@ -20,7 +20,7 @@ return [
     'to_commit' => 'à valider ·',
     'already_imported' => 'déjà importées',
     'commit_committing' => 'Validation…',
-    'commit_count' => 'Tout valider (:count transactions) →',
+    'commit_count' => 'Tout valider (:count transaction) →|Tout valider (:count transactions) →',
     'commit_empty' => 'Tout valider (—) →',
     'skip' => 'Passer pour l\'instant',
 
@@ -47,6 +47,6 @@ return [
         'col_counterparty' => 'Tiers',
         'col_amount' => 'Montant',
         'load_more' => 'Afficher plus (:remaining restantes)',
-        'rows_shown' => ':count lignes affichées',
+        'rows_shown' => ':count ligne affichée|:count lignes affichées',
     ],
 ];

@@ -6,7 +6,7 @@ return [
     'page_title' => 'Druge strane',
     'heading' => 'Druge strane',
 
-    'entities' => 'Subjekti: :count',
+    'entities' => ':count subjekt|:count subjekta|:count subjekata',
     'need_identification' => 'Za identifikaciju: :count',
 
     'search_placeholder' => 'Pretraži po nazivu, alijasu ili IBAN-u…',

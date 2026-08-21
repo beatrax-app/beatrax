@@ -66,7 +66,6 @@ final class GoalProgressQuery
             return [];
         }
 
-        // Batch-loaded up front: a per-goal follow-up is an N+1 across the page.
         $linkedPots = $this->potBalance->linkedPotBalancesForUser($user);
         $attributed = $this->attributedAmountsByGoalId(
             $user,
@@ -197,7 +196,8 @@ final class GoalProgressQuery
         return $goal;
     }
 
-    // The driver returns 'Y-m-d' or 'Y-m-d H:i:s' depending on the column.
+    // The driver hands back 'Y-m-d' or 'Y-m-d H:i:s' depending on which
+    // column it came from, so the shape is parsed rather than assumed.
     private static function toDateStr(mixed $value): string
     {
         return SafeDate::parseOrNull(self::toString($value))?->toDateString() ?? '';

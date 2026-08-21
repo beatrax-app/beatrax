@@ -20,7 +20,7 @@ return [
     'to_commit' => 'å bokføre ·',
     'already_imported' => 'allerede importert',
     'commit_committing' => 'Bokfører…',
-    'commit_count' => 'Bokfør alt (:count transaksjoner) →',
+    'commit_count' => 'Bokfør alt (:count transaksjon) →|Bokfør alt (:count transaksjoner) →',
     'commit_empty' => 'Bokfør alt (—) →',
     'skip' => 'Hopp over for nå',
 
@@ -47,6 +47,6 @@ return [
         'col_counterparty' => 'Motpart',
         'col_amount' => 'Beløp',
         'load_more' => 'Last inn flere (:remaining igjen)',
-        'rows_shown' => ':count rader vises',
+        'rows_shown' => ':count rad vises|:count rader vises',
     ],
 ];

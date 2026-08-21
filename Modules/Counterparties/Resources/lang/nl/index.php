@@ -6,7 +6,7 @@ return [
     'page_title' => 'Tegenpartijen',
     'heading' => 'Tegenpartijen',
 
-    'entities' => ':count entiteiten',
+    'entities' => ':count entiteit|:count entiteiten',
     'need_identification' => ':count te identificeren',
 
     'search_placeholder' => 'Zoek op naam, alias of IBAN…',

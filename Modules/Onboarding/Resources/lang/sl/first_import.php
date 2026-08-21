@@ -20,7 +20,7 @@ return [
     'to_commit' => 'za potrditev ·',
     'already_imported' => 'že uvoženo',
     'commit_committing' => 'Potrjevanje…',
-    'commit_count' => 'Potrdi vse (:count transakcij) →',
+    'commit_count' => 'Potrdi vse (:count transakcija) →|Potrdi vse (:count transakciji) →|Potrdi vse (:count transakcije) →|Potrdi vse (:count transakcij) →',
     'commit_empty' => 'Potrdi vse (—) →',
     'skip' => 'Zaenkrat preskoči',
 
@@ -47,6 +47,6 @@ return [
         'col_counterparty' => 'Nasprotna stranka',
         'col_amount' => 'Znesek',
         'load_more' => 'Naloži več (preostalo :remaining)',
-        'rows_shown' => 'prikazanih vrstic: :count',
+        'rows_shown' => 'prikazana :count vrstica|prikazani :count vrstici|prikazane :count vrstice|prikazanih :count vrstic',
     ],
 ];

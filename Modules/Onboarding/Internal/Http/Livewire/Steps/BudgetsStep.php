@@ -32,7 +32,8 @@ final class BudgetsStep extends Component
                         // BudgetWriter::save() would silently return false.
                         $writer->setAssigned($user, (int) $categoryId, $periodStart, $minor);
                     } catch (InvalidArgumentException) {
-                        // Not owned/global: an IDOR attempt, dropped.
+                        // A category the user does not own can only arrive in a
+                        // tampered payload, so the amount is dropped in silence.
                     }
                 }
             }

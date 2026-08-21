@@ -142,8 +142,9 @@ it('falls back to the stored English when the reader language has no line for th
         ->toBe('categorization::categories.untranslated-pets');
 
     app()->setLocale('nl');
-    $row = DB::table('categories')->where('id', $flaggedId)->first();
+    $row = categoryNameIsDefaultRow('untranslated-pets');
 
-    expect($row)->toBeInstanceOf(stdClass);
+    expect((int) $row->id)->toBe((int) $flaggedId)
+        ->and((int) $row->name_is_default)->toBe(1);
     expect(CategoryDisplayName::fromRow($row))->toBe('Pet supplies');
 });

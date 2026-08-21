@@ -7,6 +7,7 @@ return [
     'drop_zone_lead' => 'Pudota tiliotetiedostosi tähän',
     'drop_zone_sublink' => 'tai selaa tiedosto',
     'drop_zone_touch_lead' => 'Napauta ja valitse tiedosto',
+    'drop_zone_touch_lead_named' => 'Napauta ja valitse :file-tiedostosi',
 
     'vd_optional' => ' — valinnainen',
 

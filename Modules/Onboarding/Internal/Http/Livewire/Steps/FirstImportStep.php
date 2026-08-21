@@ -85,7 +85,6 @@ final class FirstImportStep extends Component
         ];
     }
 
-    // Safe past totalRows: the query clamps the slice server-side.
     public function loadMoreRows(string $sourceFormat): void
     {
         $current = $this->expandedRowCount[$sourceFormat]
@@ -115,7 +114,6 @@ final class FirstImportStep extends Component
                 'balance_confirmations' => count($this->balanceConfirmations),
             ]);
 
-            // Livewire invokes action methods without running render() first.
             $stashedIds = $this->resolveStashedImportRunIds($user->id, $db);
             $runIdsToCommit = $this->readyRunIds($buildPreview->build($stashedIds, $user));
 
@@ -151,7 +149,6 @@ final class FirstImportStep extends Component
         $this->dispatch('wizard.step.skipped');
     }
 
-    // Only ready sections commit, so one broken upload cannot sink the batch.
     /**
      * @return list<int>
      */

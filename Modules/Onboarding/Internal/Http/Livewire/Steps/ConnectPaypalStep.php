@@ -148,7 +148,6 @@ final class ConnectPaypalStep extends Component
         return $firstErrorMessage ?? Lang::get('onboarding::connect_paypal.errors.unreadable');
     }
 
-    // Strips path-traversal characters before the name reaches a filesystem path.
     private function sanitiseFilename(string $original): string
     {
         $stem = pathinfo($original, PATHINFO_FILENAME);

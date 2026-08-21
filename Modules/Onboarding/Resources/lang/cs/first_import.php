@@ -20,7 +20,7 @@ return [
     'to_commit' => 'k zápisu ·',
     'already_imported' => 'už naimportováno',
     'commit_committing' => 'Zapisuje se…',
-    'commit_count' => 'Zapsat vše (transakcí: :count) →',
+    'commit_count' => 'Zapsat vše (:count transakce) →|Zapsat vše (:count transakce) →|Zapsat vše (:count transakcí) →',
     'commit_empty' => 'Zapsat vše (—) →',
     'skip' => 'Zatím přeskočit',
 
@@ -47,6 +47,6 @@ return [
         'col_counterparty' => 'Protistrana',
         'col_amount' => 'Částka',
         'load_more' => 'Načíst další (zbývá :remaining)',
-        'rows_shown' => 'Zobrazené řádky: :count',
+        'rows_shown' => ':count zobrazený řádek|:count zobrazené řádky|:count zobrazených řádků',
     ],
 ];

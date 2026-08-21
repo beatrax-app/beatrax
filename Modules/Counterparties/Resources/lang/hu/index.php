@@ -6,7 +6,7 @@ return [
     'page_title' => 'Partnerek',
     'heading' => 'Partnerek',
 
-    'entities' => ':count entitás',
+    'entities' => ':count entitás|:count entitás',
     'need_identification' => ':count azonosításra vár',
 
     'search_placeholder' => 'Keresés név, álnév vagy IBAN alapján…',

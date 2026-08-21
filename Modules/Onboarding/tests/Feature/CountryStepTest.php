@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Onboarding\Internal\Http\Livewire\SetupWizard;
-use Modules\Onboarding\Internal\Http\Livewire\Steps\TaxCountryStep;
+use Modules\Onboarding\Internal\Http\Livewire\Steps\CountryStep;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 use Modules\Onboarding\Internal\Services\WizardStepRegistry;
 
@@ -15,7 +15,7 @@ use Modules\Onboarding\Internal\Services\WizardStepRegistry;
 
 beforeEach(function (): void {
     $this->user = User::query()->create([
-        'username' => 'tax-country-step',
+        'username' => 'country-step',
         'password' => 'fixture-password-12chars',
         'period_start_day' => 1,
     ]);
@@ -47,11 +47,11 @@ it('renders the tax-country step inside the wizard once every earlier step is co
 
     Livewire::test(SetupWizard::class)
         ->assertSet('currentStepKey', 'tax-country')
-        ->assertSeeLivewire('onboarding.steps.tax-country-step');
+        ->assertSeeLivewire('onboarding.steps.country-step');
 });
 
 it('renders the country choices with the settings-page labels', function (): void {
-    Livewire::test(TaxCountryStep::class)
+    Livewire::test(CountryStep::class)
         ->assertOk()
         ->assertSee('Choose your country')
         ->assertSee('Netherlands')
@@ -59,8 +59,8 @@ it('renders the country choices with the settings-page labels', function (): voi
 });
 
 it('persists country_code and seeds the deduction categories on continue', function (): void {
-    Livewire::test(TaxCountryStep::class)
-        ->set('taxCountryCode', 'nl')
+    Livewire::test(CountryStep::class)
+        ->set('countryCode', 'nl')
         ->call('continue')
         ->assertDispatched('wizard.step.completed');
 
@@ -75,7 +75,7 @@ it('persists country_code and seeds the deduction categories on continue', funct
 });
 
 it('advances on continue without writing anything when no country is chosen', function (): void {
-    Livewire::test(TaxCountryStep::class)
+    Livewire::test(CountryStep::class)
         ->call('continue')
         ->assertDispatched('wizard.step.completed');
 
@@ -84,8 +84,8 @@ it('advances on continue without writing anything when no country is chosen', fu
 });
 
 it('advances without seeding on skip', function (): void {
-    Livewire::test(TaxCountryStep::class)
-        ->set('taxCountryCode', 'nl')
+    Livewire::test(CountryStep::class)
+        ->set('countryCode', 'nl')
         ->call('skip')
         ->assertDispatched('wizard.step.skipped');
 
@@ -94,8 +94,8 @@ it('advances without seeding on skip', function (): void {
 });
 
 it('ignores a code outside the allow-list on continue (no write, still advances)', function (): void {
-    Livewire::test(TaxCountryStep::class)
-        ->set('taxCountryCode', 'xx')
+    Livewire::test(CountryStep::class)
+        ->set('countryCode', 'xx')
         ->call('continue')
         ->assertDispatched('wizard.step.completed');
 
@@ -106,6 +106,6 @@ it('ignores a code outside the allow-list on continue (no write, still advances)
 it('preselects the stored tax country when the wizard is re-run', function (): void {
     DB::table('users')->where('id', $this->user->id)->update(['country_code' => 'de']);
 
-    Livewire::test(TaxCountryStep::class)
-        ->assertSet('taxCountryCode', 'de');
+    Livewire::test(CountryStep::class)
+        ->assertSet('countryCode', 'de');
 });

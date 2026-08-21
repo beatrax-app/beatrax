@@ -31,13 +31,13 @@
         </h1>
         <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0;">
             @if ($unknownCount > 0)
-                {{ Lang::get('counterparties::index.entities', ['count' => $totalEntities]) }} ·
+                {{ Lang::choice('counterparties::index.entities', $totalEntities) }} ·
                 <a
                     href="{{ route('counterparties.triage') }}"
                     style="color: var(--color-amber); text-decoration: underline;"
                 >{{ Lang::get('counterparties::index.need_identification', ['count' => $unknownCount]) }}</a>
             @else
-                {{ Lang::get('counterparties::index.entities', ['count' => $totalEntities]) }}
+                {{ Lang::choice('counterparties::index.entities', $totalEntities) }}
             @endif
         </p>
     </header>

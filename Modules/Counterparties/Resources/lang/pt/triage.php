@@ -20,7 +20,7 @@ return [
     'suggestion_low' => 'Correspondência por padrão: **:name** — confiança baixa. Verifica antes de associar.',
     'suggestion_high' => '✨ Parece ser **:name** — confiança alta',
 
-    'reasoning' => ':hits de :total transações recentes neste IBAN apontam para :name.',
+    'reasoning' => ':hits de :total transação recente neste IBAN aponta para :name.|:hits de :total transações recentes neste IBAN apontam para :name.',
     'yes_link' => 'Sim, associar a :name ↵',
     'no_not' => 'Não, não é :name',
 

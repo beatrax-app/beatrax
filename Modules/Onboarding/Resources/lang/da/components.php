@@ -7,6 +7,7 @@ return [
     'drop_zone_lead' => 'Slip din kontoudtogsfil her',
     'drop_zone_sublink' => 'eller vælg en fil',
     'drop_zone_touch_lead' => 'Tryk for at vælge en fil',
+    'drop_zone_touch_lead_named' => 'Tryk for at vælge din :file-fil',
 
     'vd_optional' => ' — valgfrit',
 

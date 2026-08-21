@@ -91,7 +91,6 @@ final class ConnectBankStep extends Component
         return $this->isCsvFormat($this->selectedFormat) && $this->selectedBankFormatHint === null;
     }
 
-    // Mirrors UploadWizard::submit(); the two must not drift apart.
     public function submit(
         RunsImports $importer,
         CurrentUser $currentUser,

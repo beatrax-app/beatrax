@@ -20,7 +20,7 @@ return [
     'suggestion_low' => 'Shoda vzorce: **:name** — nízká jistota. Před propojením ověř.',
     'suggestion_high' => '✨ Vypadá to na **:name** — vysoká jistota',
 
-    'reasoning' => ':hits z :total nedávných transakcí na tomto IBAN ukazuje na :name.',
+    'reasoning' => ':hits z :total nedávné transakce na tomto IBAN ukazuje na :name.|:hits z :total nedávných transakcí na tomto IBAN ukazuje na :name.|:hits z :total nedávných transakcí na tomto IBAN ukazuje na :name.',
     'yes_link' => 'Ano, propojit s: :name ↵',
     'no_not' => 'Ne, není to :name',
 

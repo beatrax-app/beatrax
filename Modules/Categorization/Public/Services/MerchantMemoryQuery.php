@@ -59,7 +59,6 @@ final readonly class MerchantMemoryQuery
         );
     }
 
-    // A name with no memory row is absent from the map, not a null placeholder.
     /**
      * @param  list<string>  $counterpartyNormalizedList
      * @return array<string, MerchantMemoryDto>

@@ -20,7 +20,7 @@ return [
     'suggestion_low' => 'Šablono atitikimas: **:name** — mažas patikimumas. Prieš susiedamas patikrink.',
     'suggestion_high' => '✨ Panašu, kad tai **:name** — didelis patikimumas',
 
-    'reasoning' => ':hits iš :total naujausių operacijų šiame IBAN nurodo :name.',
+    'reasoning' => ':hits iš :total naujausios operacijos šiame IBAN nurodo :name.|:hits iš :total naujausių operacijų šiame IBAN nurodo :name.|:hits iš :total naujausių operacijų šiame IBAN nurodo :name.',
     'yes_link' => 'Taip, susieti su :name ↵',
     'no_not' => 'Ne, tai ne :name',
 

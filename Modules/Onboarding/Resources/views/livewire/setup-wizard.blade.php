@@ -139,7 +139,7 @@
                         @break
 
                     @case ('tax-country')
-                        <livewire:onboarding.steps.tax-country-step :key="'tax-country'" />
+                        <livewire:onboarding.steps.country-step :key="'tax-country'" />
                         @break
 
                     @default

@@ -12,8 +12,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Core\Public\Concerns\BelongsToUser;
 use Modules\DriftAlerts\Database\Factories\DriftAlertTransitionFactory;
 
-// Append-only: DriftAlertStateMachine is the only writer.
-
 /**
  * @property int $id
  * @property int|null $user_id

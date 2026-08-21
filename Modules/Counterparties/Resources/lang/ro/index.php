@@ -6,7 +6,7 @@ return [
     'page_title' => 'Contrapărți',
     'heading' => 'Contrapărți',
 
-    'entities' => ':count entități',
+    'entities' => ':count entitate|:count entități|:count de entități',
     'need_identification' => ':count necesită identificare',
 
     'search_placeholder' => 'Caută după nume, alias sau IBAN…',

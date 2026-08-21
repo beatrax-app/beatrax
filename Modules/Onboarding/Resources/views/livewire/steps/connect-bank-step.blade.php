@@ -34,6 +34,17 @@
         default => Lang::get('onboarding::connect_bank.drop_lead_default'),
     };
 
+    // Untranslated on purpose: the same literals the format chips and the
+    // mini-steps already show. Null while the CSV bank is still unpicked,
+    // because there is no one format to name yet.
+    $dropZoneFileLabel = match (true) {
+        $selectedFormat === SourceFormat::Camt053->value => 'CAMT.053',
+        $selectedFormat === SourceFormat::Mt940->value => 'MT940',
+        $isCsv && $selectedBankFormatHint === SourceFormat::AsnCsv->value => 'ASN CSV',
+        $isCsv && $selectedBankFormatHint === SourceFormat::IngCsv->value => 'ING CSV',
+        default => null,
+    };
+
     $dropZoneAccept = match ($selectedFormat) {
         SourceFormat::Mt940->value => '.sta,.940,.txt',
         SourceFormat::AsnCsv->value, SourceFormat::IngCsv->value => '.csv',
@@ -119,6 +130,7 @@
             :sublink="Lang::get('onboarding::connect_bank.browse_file')"
             glyph="📥"
             :accept="$dropZoneAccept"
+            :file-label="$dropZoneFileLabel"
             aria-disabled="true"
             tabindex="-1"
         />
@@ -129,6 +141,7 @@
             :sublink="Lang::get('onboarding::connect_bank.browse_file')"
             glyph="📥"
             :accept="$dropZoneAccept"
+            :file-label="$dropZoneFileLabel"
         />
     @endif
 

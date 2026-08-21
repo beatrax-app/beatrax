@@ -10,23 +10,23 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\UserCountry;
 
-final class TaxCountryStep extends Component
+final class CountryStep extends Component
 {
-    public string $taxCountryCode = '';
+    public string $countryCode = '';
 
     public function mount(CurrentUser $currentUser, UserCountry $countries): void
     {
         if ($currentUser->isAuthenticated()) {
-            $this->taxCountryCode = $countries->current($currentUser->id());
+            $this->countryCode = $countries->current($currentUser->id());
         }
     }
 
     public function continue(CurrentUser $currentUser, UserCountry $countries): void
     {
-        if ($this->taxCountryCode !== '' && $currentUser->isAuthenticated()) {
+        if ($this->countryCode !== '' && $currentUser->isAuthenticated()) {
             // Re-checks the code against the allow-list server-side; an
             // injected one is dropped.
-            $countries->store($currentUser->id(), $this->taxCountryCode);
+            $countries->store($currentUser->id(), $this->countryCode);
         }
 
         $this->dispatch('wizard.step.completed');
@@ -39,7 +39,7 @@ final class TaxCountryStep extends Component
 
     public function render(UserCountry $countries, ViewFactory $views): View
     {
-        return $views->make('onboarding::livewire.steps.tax-country-step', [
+        return $views->make('onboarding::livewire.steps.country-step', [
             'countries' => $countries->options(),
         ]);
     }

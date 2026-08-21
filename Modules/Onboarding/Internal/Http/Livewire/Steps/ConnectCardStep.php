@@ -21,6 +21,7 @@ use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Enums\AccountKind;
+use Modules\Ledger\Public\Services\AccountSlugResolver;
 use Modules\Onboarding\Models\WizardProgress;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -32,6 +33,8 @@ final class ConnectCardStep extends Component
     // Mirrors IcsPdfAdapter::ICS_OWN_IBAN; the arch test
     // ics_pdf_adapter_own_iban_matches_connect_card_step holds the two together.
     private const ICS_OWN_IBAN = 'ICS-CARD';
+
+    private const ICS_ACCOUNT_NAME = 'ICS card';
 
     public string $selectedFormat = 'ics-pdf';
 
@@ -83,6 +86,7 @@ final class ConnectCardStep extends Component
         LoggerInterface $logger,
         Application $app,
         DatabaseManager $db,
+        AccountSlugResolver $slugs,
     ): void {
         $this->uploadError = null;
         $this->validate();
@@ -104,7 +108,7 @@ final class ConnectCardStep extends Component
             return;
         }
 
-        $this->ensureIcsAccount($newRunIds, $user, $db, $importer, $logger, $app);
+        $this->ensureIcsAccount($newRunIds, $user, $db, $importer, $logger, $app, $slugs);
         $this->stashRunIds($user, $newRunIds);
 
         $this->dispatch('wizard.step.completed');
@@ -142,7 +146,7 @@ final class ConnectCardStep extends Component
     /**
      * @param  list<int>  $newRunIds
      */
-    private function ensureIcsAccount(array $newRunIds, User $user, DatabaseManager $db, RunsImports $importer, LoggerInterface $logger, Application $app): void
+    private function ensureIcsAccount(array $newRunIds, User $user, DatabaseManager $db, RunsImports $importer, LoggerInterface $logger, Application $app, AccountSlugResolver $slugs): void
     {
         $hasIcsAccount = $db->connection()
             ->table('accounts')
@@ -155,8 +159,8 @@ final class ConnectCardStep extends Component
 
         Account::query()->create([
             'user_id' => $user->id,
-            'name' => 'ICS card',
-            'slug' => 'ics-card-ics-card',
+            'name' => self::ICS_ACCOUNT_NAME,
+            'slug' => $slugs->resolveUnique($user->id, self::ICS_ACCOUNT_NAME),
             'kind' => AccountKind::IcsCard->value,
             'iban' => self::ICS_OWN_IBAN,
             'default_currency' => 'EUR',
@@ -234,7 +238,6 @@ final class ConnectCardStep extends Component
         return $views->make('onboarding::livewire.steps.connect-card-step');
     }
 
-    // Strips path-traversal characters before the name reaches a filesystem path.
     private function sanitiseFilename(string $original): string
     {
         $stem = pathinfo($original, PATHINFO_FILENAME);

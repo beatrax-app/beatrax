@@ -241,7 +241,6 @@ final class DriftPage extends Component
         }
         $seriesStates = $seriesIds === [] ? [] : $query->seriesStatesForUser($user, $seriesIds);
 
-        // Batched: forSeriesIds() collapses what would be one SELECT per row.
         $uniqueSeriesIds = array_values(array_unique($seriesIds));
         /** @var array<int, CancellationImpactDto> $impactBySeriesId */
         $impactBySeriesId = $uniqueSeriesIds === []
