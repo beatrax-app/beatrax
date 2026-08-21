@@ -136,7 +136,6 @@ final class BackupDatabaseCommand extends Command
         // Filesystem::chmod returns mixed (bool on write, string-octal on read),
         // hence the explicit `=== false` sentinel below.
         if ($this->files->chmod($destination, 0o600) === false) {
-            // Group/world readability cannot be ruled out, so the file goes.
             $this->files->delete($destination);
             $this->failCorrupt($destination, null, [
                 'phase' => 'chmod',
@@ -233,7 +232,6 @@ final class BackupDatabaseCommand extends Command
         return is_numeric($value) ? (int) $value : 0;
     }
 
-    // Exactly ['ok'] on success; diagnostic strings on failure.
     /**
      * @return list<string>
      */

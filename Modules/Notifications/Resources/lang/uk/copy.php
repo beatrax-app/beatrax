@@ -21,7 +21,7 @@ return [
         'budget_nudge' => ':category — витрачено :spent із :budget.',
         'receipts_matched' => 'Зіставлено :count чек із твоєї пошти.|Зіставлено :count чеки із твоєї пошти.|Зіставлено :count чеків із твоєї пошти.',
         'import_finished' => 'Імпортовано :count транзакцію.|Імпортовано :count транзакції.|Імпортовано :count транзакцій.',
-        'drift' => 'Регулярне списання пішло :direction на :delta :currency.',
+        'drift' => 'Регулярне списання пішло :direction на :amount.',
         'forecast' => 'Твій прогнозований баланс опуститься нижче нуля протягом наступних 30 днів.',
         'ics_statement_ready' => 'Завантаж її з порталу ICS і додай у Beatrax, щоб витрати за цією карткою залишалися актуальними.',
         'payment_reminder_hedged' => ':name — очікується близько :day, :amount.',

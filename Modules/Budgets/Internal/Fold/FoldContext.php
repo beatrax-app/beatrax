@@ -7,7 +7,7 @@ namespace Modules\Budgets\Internal\Fold;
 final class FoldContext
 {
     /**
-     * @param  array<int, string>  $expenseCategories
+     * @param  array<int, array{name: string, slug: string, isDefault: bool}>  $expenseCategories
      * @param  array<int, string>  $overspendModeByCategory
      * @param  array<int, int>  $notifyThresholdByCategory
      */

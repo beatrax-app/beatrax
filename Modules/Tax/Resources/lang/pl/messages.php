@@ -8,7 +8,7 @@ return [
     'tagged' => 'Oznaczono jako odliczane od podatku.',
     'untagged' => 'Znacznik podatkowy usunięty.',
     'batch_none_reconciled' => 'Nic nie zostało oznaczone — te transakcje są uzgodnione. Cofnij uzgodnienie, aby wprowadzić zmiany.',
-    'batch_tagged' => 'Kolejne oznaczone transakcje: :count.',
+    'batch_tagged' => 'Oznaczono jeszcze :count transakcję.|Oznaczono jeszcze :count transakcje.|Oznaczono jeszcze :count transakcji.',
 
     'errors' => [
         'name_empty' => 'Nazwa kategorii nie może być pusta.',

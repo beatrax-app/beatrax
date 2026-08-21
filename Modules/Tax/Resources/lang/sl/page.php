@@ -18,7 +18,7 @@ return [
     'export_pdf_title' => 'Prenesi beatrax-tax-:year.pdf',
 
     'country_prompt_heading' => 'V kateri državi oddajaš davčno napoved?',
-    'country_prompt_body' => 'To lahko kadar koli spremeniš v Nastavitve → Davki.',
+    'country_prompt_body' => 'To lahko kadar koli spremeniš v Nastavitve → :section.',
     'country_prompt_cta' => 'Nastavi davčne kategorije',
 
     'total_deductions' => 'Skupaj olajšav',
@@ -31,7 +31,7 @@ return [
     'go_to_transactions' => 'Pojdi na Transakcije in začni označevati →',
 
     'no_category' => 'Brez kategorije',
-    'items_count_aria' => 'postavk: :count',
+    'items_count_aria' => ':count postavka|:count postavki|:count postavke|:count postavk',
 
     'col_date' => 'Datum',
     'col_account' => 'Račun',

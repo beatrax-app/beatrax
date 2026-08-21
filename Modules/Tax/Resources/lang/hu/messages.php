@@ -8,7 +8,7 @@ return [
     'tagged' => 'Megjelölve adóból leírhatóként.',
     'untagged' => 'Az adócímke eltávolítva.',
     'batch_none_reconciled' => 'Semmi nem lett megjelölve — azok a tranzakciók egyeztetve vannak. A módosításhoz szüntesd meg az egyeztetésüket.',
-    'batch_tagged' => 'További :count tranzakció megjelölve.',
+    'batch_tagged' => 'További :count tranzakció megjelölve.|További :count tranzakció megjelölve.',
 
     'errors' => [
         'name_empty' => 'A kategória neve nem lehet üres.',

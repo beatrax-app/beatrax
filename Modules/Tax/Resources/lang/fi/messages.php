@@ -8,7 +8,7 @@ return [
     'tagged' => 'Merkitty verovähennyskelpoiseksi.',
     'untagged' => 'Verotunniste poistettu.',
     'batch_none_reconciled' => 'Mitään ei merkitty — nuo tapahtumat on täsmäytetty. Pura täsmäytys, niin voit tehdä muutoksia.',
-    'batch_tagged' => 'Merkittiin :count tapahtumaa lisää.',
+    'batch_tagged' => 'Merkittiin :count tapahtuma lisää.|Merkittiin :count tapahtumaa lisää.',
 
     'errors' => [
         'name_empty' => 'Kategorian nimi ei voi olla tyhjä.',

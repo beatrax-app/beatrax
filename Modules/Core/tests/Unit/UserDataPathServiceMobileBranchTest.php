@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Enums\MobilePlatform;
 use Modules\Core\Public\Services\UserDataPathService;
 
 beforeEach(function (): void {
@@ -14,14 +15,26 @@ afterEach(function (): void {
     putenv('NATIVEPHP_PLATFORM');
 });
 
-it('platform() reads NATIVEPHP_PLATFORM via getenv, returning null when unset', function (): void {
+it('platform() reads NATIVEPHP_PLATFORM via getenv as a MobilePlatform, returning null when unset', function (): void {
     expect(UserDataPathService::platform())->toBeNull();
 
     putenv('NATIVEPHP_PLATFORM=ios');
-    expect(UserDataPathService::platform())->toBe('ios');
+    expect(UserDataPathService::platform())->toBe(MobilePlatform::Ios);
 
     putenv('NATIVEPHP_PLATFORM=android');
-    expect(UserDataPathService::platform())->toBe('android');
+    expect(UserDataPathService::platform())->toBe(MobilePlatform::Android);
+});
+
+it('platform() reads a shell NativePHP names but this app does not model as null, while isMobileRuntime() still routes its user data to the persisted store', function (): void {
+    putenv('NATIVEPHP_PLATFORM=harmonyos');
+
+    expect(UserDataPathService::platform())->toBeNull()
+        ->and(UserDataPathService::isMobileRuntime())->toBeTrue();
+});
+
+it('only the Android shell needs the redirect rewritten on the client', function (): void {
+    expect(MobilePlatform::Android->needsClientSideRedirect())->toBeTrue()
+        ->and(MobilePlatform::Ios->needsClientSideRedirect())->toBeFalse();
 });
 
 it('storageBase() does not branch on NATIVEPHP_PLATFORM alone, but databaseFile() DOES branch to the persisted store the moment the mobile signal is present (NATIVEPHP_STORAGE_PATH absent)', function (): void {

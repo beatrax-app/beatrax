@@ -21,7 +21,7 @@ return [
         'budget_nudge' => ':category — :spent von :budget ausgegeben.',
         'receipts_matched' => ':count Beleg aus deiner E-Mail zugeordnet.|:count Belege aus deiner E-Mail zugeordnet.',
         'import_finished' => ':count Transaktion importiert.|:count Transaktionen importiert.',
-        'drift' => 'Eine wiederkehrende Abbuchung ist um :delta :currency :direction.',
+        'drift' => 'Eine wiederkehrende Abbuchung ist um :amount :direction.',
         'forecast' => 'Dein prognostizierter Saldo fällt in den nächsten 30 Tagen unter null.',
         'ics_statement_ready' => 'Lade ihn aus dem ICS-Portal herunter und lege ihn in Beatrax ab, damit die Ausgaben dieser Karte aktuell bleiben.',
         'payment_reminder_hedged' => ':name — erwartet etwa am :day, :amount.',

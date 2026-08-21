@@ -21,7 +21,7 @@ return [
         'budget_nudge' => ':category — gasto :spent de :budget.',
         'receipts_matched' => ':count recibo associado a partir do teu e-mail.|:count recibos associados a partir do teu e-mail.',
         'import_finished' => ':count transação importada.|:count transações importadas.',
-        'drift' => 'Uma cobrança recorrente variou :direction: :delta :currency.',
+        'drift' => 'Uma cobrança recorrente variou :direction: :amount.',
         'forecast' => 'O teu saldo previsto desce abaixo de zero nos próximos 30 dias.',
         'ics_statement_ready' => 'Transfere-o do portal ICS e larga-o no Beatrax para manteres os gastos deste cartão atualizados.',
         'payment_reminder_hedged' => ':name — previsto por volta de :day, :amount.',

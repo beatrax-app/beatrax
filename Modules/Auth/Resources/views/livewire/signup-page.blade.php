@@ -30,6 +30,42 @@
             :subtitle="Lang::get('auth::signup.subtitle')"
         />
 
+        {{-- Above the account form, not after it. Both controls list places,
+             and "Nederlands" and "Nederland" differ by two letters, so each
+             gets its own card and each help line says what the OTHER one does
+             not do. Below the submit button they came last in the tab order,
+             after the control that leaves the screen, which is not what "asked
+             at signup" means. Autofocus still lands in the username box.
+
+             Outside the <form> on purpose: the country select is a deferred
+             wire:model rather than a form field, so it ships from here just as
+             well, and the language control is a sibling of it rather than of
+             the boxes it must not empty. --}}
+        <div class="space-y-4">
+            <div class="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+                {{-- A Livewire action, not the shared POST: that one navigates,
+                     and it took this half-filled form with it — three empty
+                     boxes and a country back at its placeholder. --}}
+                <x-core::locale-switcher labelled action="setLocale" />
+            </div>
+
+            <div class="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+                <x-core::form-field
+                    field-id="signup-country"
+                    name="country"
+                    type="select"
+                    :label="Lang::get('core::settings.country.label')"
+                    :hint="Lang::get('core::settings.country.help')"
+                    wire:model="country"
+                >
+                    <option value="">{{ Lang::get('core::settings.country.choose') }}</option>
+                    @foreach ($countryOptions as $countryCode => $countryName)
+                        <option value="{{ $countryCode }}">{{ $countryName }}</option>
+                    @endforeach
+                </x-core::form-field>
+            </div>
+        </div>
+
         <form wire:submit="submit" class="space-y-4">
             <x-core::form-field
                 name="username"
@@ -99,27 +135,5 @@
                 {{ Lang::get('auth::signup.submit') }}
             </x-core::primary-button>
         </form>
-
-        {{-- The language and the country are the two easiest controls on this
-             screen to mix up: both list places, and "Nederlands" and
-             "Nederland" differ by two letters. Neither carries a flag, and
-             each help line says what the OTHER one does not do. --}}
-        <div class="space-y-4 rounded-lg border border-slate-200 p-4 dark:border-slate-800">
-            <x-core::locale-switcher labelled />
-
-            <x-core::form-field
-                field-id="signup-country"
-                name="country"
-                type="select"
-                :label="Lang::get('core::settings.country.label')"
-                :hint="Lang::get('core::settings.country.help')"
-                wire:model="country"
-            >
-                <option value="">{{ Lang::get('core::settings.country.choose') }}</option>
-                @foreach ($countryOptions as $countryCode => $countryName)
-                    <option value="{{ $countryCode }}">{{ $countryName }}</option>
-                @endforeach
-            </x-core::form-field>
-        </div>
     </div>
 </div>

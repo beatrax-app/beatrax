@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'card_aria' => 'Riepilogo fiscale — :count elementi etichettati per :year',
+    'card_aria' => 'Riepilogo fiscale — :count elemento etichettato per :year|Riepilogo fiscale — :count elementi etichettati per :year',
     'label' => 'Fisco :year',
     'empty' => 'Nessun elemento ancora etichettato per :period.',
     'this_year' => "quest'anno",

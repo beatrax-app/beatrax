@@ -20,5 +20,10 @@ final class EnvelopeRow extends Data
         public readonly string $currency,
         public readonly int $nonEurSpentMinor = 0,
         public readonly int $notifyThresholdPercent = 90,
+        // $categoryName is already resolved for whoever asked. These two carry
+        // the provenance behind it, so a nudge built in a queue worker can
+        // resolve the name again in the language its recipient reads.
+        public readonly string $categorySlug = '',
+        public readonly bool $categoryNameIsDefault = false,
     ) {}
 }

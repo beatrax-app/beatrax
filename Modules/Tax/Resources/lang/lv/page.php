@@ -18,7 +18,7 @@ return [
     'export_pdf_title' => 'Lejupielādēt beatrax-tax-:year.pdf',
 
     'country_prompt_heading' => 'Kurā valstī iesniedziet nodokļu deklarāciju?',
-    'country_prompt_body' => 'To jebkurā brīdī varat mainīt sadaļā Iestatījumi → Nodokļi.',
+    'country_prompt_body' => 'To jebkurā brīdī varat mainīt sadaļā Iestatījumi → :section.',
     'country_prompt_cta' => 'Iestatīt nodokļu kategorijas',
 
     'total_deductions' => 'Atvieglojumi kopā',
@@ -31,7 +31,7 @@ return [
     'go_to_transactions' => 'Dodieties uz Darījumiem, lai sāktu atzīmēt →',
 
     'no_category' => 'Bez kategorijas',
-    'items_count_aria' => 'Vienumi: :count',
+    'items_count_aria' => ':count vienumu|:count vienums|:count vienumi',
 
     'col_date' => 'Datums',
     'col_account' => 'Konts',

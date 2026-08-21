@@ -19,6 +19,6 @@ return [
 
     'error_backoff' => 'Too many attempts — try again in :wait.',
 
-    'error_incorrect_remaining' => 'Incorrect PIN. :remaining attempts remaining.',
+    'error_incorrect_remaining' => 'Incorrect PIN. :count attempt remaining.|Incorrect PIN. :count attempts remaining.',
     'error_incorrect' => 'Incorrect PIN.',
 ];

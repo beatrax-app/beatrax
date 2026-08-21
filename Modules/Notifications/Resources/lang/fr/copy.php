@@ -21,7 +21,7 @@ return [
         'budget_nudge' => ':category — :spent sur :budget dépensés.',
         'receipts_matched' => ':count reçu associé depuis tes e-mails.|:count reçus associés depuis tes e-mails.',
         'import_finished' => ':count transaction importée.|:count transactions importées.',
-        'drift' => 'Un débit récurrent a bougé :direction de :delta :currency.',
+        'drift' => 'Un débit récurrent a bougé :direction de :amount.',
         'forecast' => 'Ton solde prévisionnel passe sous zéro dans les 30 prochains jours.',
         'ics_statement_ready' => 'Télécharge-le depuis le portail ICS et dépose-le dans Beatrax pour garder les dépenses de cette carte à jour.',
         'payment_reminder_hedged' => ':name — attendu vers :day, :amount.',

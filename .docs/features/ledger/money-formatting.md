@@ -43,6 +43,25 @@ and returns `null` — never a guess — for anything that is not a
 well-formed amount of at most two decimals. It hands the system an
 `int`, and from there on the invariant holds.
 
+`MoneyInput` also writes the figure back out, for a box the reader is
+about to edit — `formatMinor()` and `formatAbsMinor()` — and those take
+their group and decimal marks from the same reader locale
+`Money::format()` does, through `Locale::groupMark()` and
+`Locale::decimalMark()`. They used to be pinned to the Dutch
+convention, which put an editable `50,00` in the same budget row as a
+read-only `€50.00` for an English reader. **What is displayed must
+also parse back**: every mark `formatAbsMinor()` can write —
+including the non-breaking space twelve locales group with and
+French's narrow no-break space — is stripped again by `tryToMinor()`,
+and the round trip is pinned per locale in `MoneyInputTest`. The
+parse side stays deliberately tolerant of both separators, because a
+reader who has seen the field in one language may type the other.
+
+Nothing else in the tree may format minor units by hand. The one
+remaining hand-rolled formatter (`ManagesSplitEditor`, via a private
+helper on `TransactionDetail`) wrote Dutch into the split-leg boxes
+and now calls `formatAbsMinor()` like everything else.
+
 ## `MINOR_UNITS_PER_MAJOR` is 100, and that is a real limitation
 
 `Money::MINOR_UNITS_PER_MAJOR = 100` is the scale factor every parse

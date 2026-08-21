@@ -19,6 +19,11 @@ final readonly class PreMigrationSnapshot
         'counterparties' => ['display_name', 'merchant_name', 'iban'],
         'tax_transaction_tags' => ['note'],
         'transaction_splits' => ['note'],
+        // Every registered notification column. Absent from this list the
+        // enable-time sweep skipped the table entirely, so a user who had
+        // notifications before enabling kept their titles and bodies readable
+        // on disk while the interface said encryption was on.
+        'notifications' => ['title', 'body', 'params', 'trigger_type'],
     ];
 
     public function __construct(
@@ -38,12 +43,14 @@ final readonly class PreMigrationSnapshot
                 ->get(['id', 'value'])
                 ->map(static fn (object $row): array => ['id' => $row->id, 'value' => $row->value])
                 ->all(),
-            'transactions' => $this->captureRows($connection, 'transactions', $userId),
-            'counterparties' => $this->captureRows($connection, 'counterparties', $userId),
-            // Backfill-sweep tables, so a restore after a forced failure covers them.
-            'tax_transaction_tags' => $this->captureRows($connection, 'tax_transaction_tags', $userId),
-            'transaction_splits' => $this->captureRows($connection, 'transaction_splits', $userId),
         ];
+
+        // Driven off PROJECTION_COLUMNS rather than a second literal list:
+        // a table on one list and not the other is how notifications came to
+        // be registered as sensitive and never swept.
+        foreach (array_keys(self::PROJECTION_COLUMNS) as $table) {
+            $payload[$table] = $this->captureRows($connection, $table, $userId);
+        }
 
         $json = json_encode($payload, JSON_THROW_ON_ERROR);
 
@@ -113,7 +120,7 @@ final readonly class PreMigrationSnapshot
             $opLogRows = is_array($payload['op_log_entries'] ?? null) ? $payload['op_log_entries'] : [];
             $this->restoreOpLogRows($connection, $opLogRows);
 
-            foreach (['transactions', 'counterparties', 'tax_transaction_tags', 'transaction_splits'] as $table) {
+            foreach (array_keys(self::PROJECTION_COLUMNS) as $table) {
                 /** @var list<array<string, mixed>> $rows */
                 $rows = is_array($payload[$table] ?? null) ? $payload[$table] : [];
                 $this->restoreProjectionRows($connection, $table, $rows);

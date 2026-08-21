@@ -6,8 +6,8 @@ namespace Modules\Notifications\Internal\Listeners;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Core\Public\Support\SafeExceptionContext;
-use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Notifications\Internal\Support\CopyLine;
+use Modules\Notifications\Internal\Support\CopyParam;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Internal\Support\NotificationCopyRenderer;
 use Modules\Notifications\Internal\Support\NotificationCopySpec;
@@ -59,9 +59,9 @@ final class PersistPositionDigest
     }
 
     // One-line body summarising $position, as the sentences it is built from
-    // rather than the built sentence. Every amount is formatted through the
-    // Money value object, never a hand-formatted minor-unit value. When
-    // nothing is notable, the body says so plainly rather than emitting filler.
+    // rather than the built sentence. Amounts ride as value plus currency for
+    // the same reason: a string formatted here freezes in whatever locale this
+    // process happens to hold, and a scheduled job holds the app default.
     /**
      * @return list<CopyLine>
      */
@@ -79,9 +79,9 @@ final class PersistPositionDigest
         }
 
         $parts = [CopyLine::of('notifications::copy.digest.flow', [
-            'in' => $summary->inflow->format(),
-            'out' => $summary->outflow->format(),
-            'net' => $summary->net->format(),
+            'in' => CopyParam::money($summary->inflow->toMinor(), $summary->inflow->currency()),
+            'out' => CopyParam::money($summary->outflow->toMinor(), $summary->outflow->currency()),
+            'net' => CopyParam::money($summary->net->toMinor(), $summary->net->currency()),
         ])];
 
         if ($position->budgets !== []) {
@@ -94,7 +94,7 @@ final class PersistPositionDigest
                 }
             }
             if ($overBudgetMinor > 0) {
-                $parts[] = CopyLine::of('notifications::copy.digest.over_budget', ['amount' => Money::ofMinor($overBudgetMinor, $currency)->format()]);
+                $parts[] = CopyLine::of('notifications::copy.digest.over_budget', ['amount' => CopyParam::money($overBudgetMinor, $currency)]);
             }
         }
 

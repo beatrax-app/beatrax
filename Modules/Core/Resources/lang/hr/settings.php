@@ -40,6 +40,8 @@ return [
         'choose' => 'Odaberi državu…',
         'switch_note' => 'Promjena dodaje nove kategorije — postojeće oznake nikad se ne mijenjaju.',
 
+        'wording_note' => 'Nazivi poreznih kategorija dolaze iz porezne prijave koja se koristi u :country, pa ostaju na riječima te zemlje na svim jezicima aplikacije.',
+
         'countries' => [
             'at' => 'Austrija',
             'be' => 'Belgija',

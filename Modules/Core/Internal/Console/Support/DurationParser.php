@@ -34,7 +34,7 @@ final class DurationParser
         $unit = strtolower($matches[2]);
 
         // The regex already guarantees d|h|w; the default arm exists only so
-        // PHPStan's exhaustiveness check needs no cross-statement narrowing.
+        // the match stays exhaustive without cross-statement narrowing.
         return match ($unit) {
             'd' => $now->subDays($amount),
             'h' => $now->subHours($amount),

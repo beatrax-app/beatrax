@@ -11,21 +11,20 @@
     Style: existing .card primitive — surface/border/radius-lg/shadow-xs.
     Hover: surface-2 background.
 --}}
+@use('Modules\Ledger\Public\Services\BaseCurrency')
 @use('Modules\Ledger\Public\ValueObjects\Money')
 
 @php
-    $fmtEur = static function (int $minor): string {
-        $euros = intdiv(abs($minor), Money::MINOR_UNITS_PER_MAJOR);
-        $cents = abs($minor) % Money::MINOR_UNITS_PER_MAJOR;
-        return '€ ' . number_format($euros, 0, ',', '.') . ',' . str_pad((string) $cents, 2, '0', STR_PAD_LEFT);
-    };
+    // The same seam every other card formats through, so the dashboard reads
+    // in one number system rather than this card's own.
+    $fmtEur = static fn (int $minor): string => Money::ofMinor(abs($minor), BaseCurrency::value())->format();
 @endphp
 
 <a
     href="{{ route('tax.index') }}"
     class="card block transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:hover:bg-slate-800"
     style="padding: var(--space-4) var(--space-6); text-decoration: none;"
-    aria-label="{{ Lang::get('tax::summary.card_aria', ['count' => $count, 'year' => $year]) }}"
+    aria-label="{{ Lang::choice('tax::summary.card_aria', $count, ['year' => $year]) }}"
 >
     <div class="flex items-center justify-between">
         <p style="font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-faint);">

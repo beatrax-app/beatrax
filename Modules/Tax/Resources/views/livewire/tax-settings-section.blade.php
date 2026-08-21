@@ -30,6 +30,12 @@
     <div class="meta-side">
         <span class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ Lang::get('tax::settings.categories_label') }}</span>
         <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('tax::settings.categories_desc') }}</p>
+        {{-- The corpus is the filing country's own wording, so this list is
+             the one place in the app that does not follow the reader's
+             language. Said here, beside the words themselves. --}}
+        @if ($countryLabel !== '')
+            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" data-testid="tax-categories-wording-note">{{ Lang::get('core::settings.country.wording_note', ['country' => $countryLabel]) }}</p>
+        @endif
     </div>
     <div class="body-side">
         @php

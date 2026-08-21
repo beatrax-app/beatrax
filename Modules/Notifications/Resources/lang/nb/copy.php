@@ -21,7 +21,7 @@ return [
         'budget_nudge' => ':category — :spent av :budget brukt.',
         'receipts_matched' => ':count kvittering matchet fra e-posten din.|:count kvitteringer matchet fra e-posten din.',
         'import_finished' => ':count transaksjon importert.|:count transaksjoner importert.',
-        'drift' => 'En gjentakende belastning gikk :direction med :delta :currency.',
+        'drift' => 'En gjentakende belastning gikk :direction med :amount.',
         'forecast' => 'Den forventede saldoen din faller under null i løpet av de neste 30 dagene.',
         'ics_statement_ready' => 'Last det ned fra ICS-portalen og legg det inn i Beatrax for å holde forbruket på dette kortet oppdatert.',
         'payment_reminder_hedged' => ':name — ventet rundt :day, :amount.',

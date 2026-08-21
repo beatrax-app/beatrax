@@ -21,7 +21,7 @@ return [
         'budget_nudge' => ':category — :spent van :budget besteed.',
         'receipts_matched' => ':count bon gekoppeld uit je e-mail.|:count bonnen gekoppeld uit je e-mail.',
         'import_finished' => ':count transactie geïmporteerd.|:count transacties geïmporteerd.',
-        'drift' => 'Een terugkerende afschrijving ging :direction met :delta :currency.',
+        'drift' => 'Een terugkerende afschrijving ging :direction met :amount.',
         'forecast' => 'Je verwachte saldo zakt binnen 30 dagen onder nul.',
         'ics_statement_ready' => 'Download het uit het ICS-portaal en zet het in Beatrax om de uitgaven van deze kaart bij te houden.',
         'payment_reminder_hedged' => ':name — verwacht rond :day, :amount.',

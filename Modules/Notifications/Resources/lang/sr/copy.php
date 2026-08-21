@@ -21,7 +21,7 @@ return [
         'budget_nudge' => ':category — potrošeno :spent od :budget.',
         'receipts_matched' => 'Uparena je :count potvrda iz tvoje e-pošte.|Uparene su :count potvrde iz tvoje e-pošte.|Upareno je :count potvrda iz tvoje e-pošte.',
         'import_finished' => 'Uvezena je :count transakcija.|Uvezene su :count transakcije.|Uvezeno je :count transakcija.',
-        'drift' => 'Ponavljajuće zaduženje pomerilo se :direction za :delta :currency.',
+        'drift' => 'Ponavljajuće zaduženje pomerilo se :direction za :amount.',
         'forecast' => 'Tvoje predviđeno stanje pada ispod nule u narednih 30 dana.',
         'ics_statement_ready' => 'Preuzmi ga sa ICS portala i ubaci u Beatrax kako bi potrošnja ove kartice ostala ažurna.',
         'payment_reminder_hedged' => ':name — očekuje se oko :day, :amount.',

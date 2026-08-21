@@ -8,7 +8,7 @@ return [
     'tagged' => 'Etiquetada como dedutível.',
     'untagged' => 'Etiqueta fiscal removida.',
     'batch_none_reconciled' => 'Nada foi etiquetado — essas transações estão reconciliadas. Anula a reconciliação para fazeres alterações.',
-    'batch_tagged' => 'Foram etiquetadas mais :count transações.',
+    'batch_tagged' => 'Foi etiquetada mais :count transação.|Foram etiquetadas mais :count transações.',
 
     'errors' => [
         'name_empty' => 'O nome da categoria não pode estar vazio.',

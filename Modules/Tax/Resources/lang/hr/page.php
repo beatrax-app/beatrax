@@ -18,7 +18,7 @@ return [
     'export_pdf_title' => 'Preuzmi beatrax-tax-:year.pdf',
 
     'country_prompt_heading' => 'U kojoj državi podnosiš poreznu prijavu?',
-    'country_prompt_body' => 'Ovo možeš promijeniti bilo kada u Postavke → Porez.',
+    'country_prompt_body' => 'Ovo možeš promijeniti bilo kada u Postavke → :section.',
     'country_prompt_cta' => 'Postavi porezne kategorije',
 
     'total_deductions' => 'Ukupno odbitaka',
@@ -31,7 +31,7 @@ return [
     'go_to_transactions' => 'Idi na Transakcije i počni označavati →',
 
     'no_category' => 'Bez kategorije',
-    'items_count_aria' => 'stavki: :count',
+    'items_count_aria' => ':count stavka|:count stavke|:count stavki',
 
     'col_date' => 'Datum',
     'col_account' => 'Račun',

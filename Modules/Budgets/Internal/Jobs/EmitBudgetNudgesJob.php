@@ -93,6 +93,8 @@ final class EmitBudgetNudgesJob implements ShouldBeUniqueUntilProcessing, Should
                 spentMinor: $row->spentMinor,
                 budgetMinor: $budgetMinor,
                 currency: $row->currency,
+                categorySlug: $row->categorySlug,
+                categoryNameIsDefault: $row->categoryNameIsDefault,
             ));
         }
     }

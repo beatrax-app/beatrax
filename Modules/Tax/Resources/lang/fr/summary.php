@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'card_aria' => 'Résumé fiscal — :count éléments marqués pour :year',
+    'card_aria' => 'Résumé fiscal — :count élément marqué pour :year|Résumé fiscal — :count éléments marqués pour :year',
     'label' => 'Impôts :year',
     'empty' => 'Aucun élément marqué pour :period.',
     'this_year' => 'cette année',

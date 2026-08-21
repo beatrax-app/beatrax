@@ -18,7 +18,7 @@ return [
     'export_pdf_title' => 'Pobierz beatrax-tax-:year.pdf',
 
     'country_prompt_heading' => 'W jakim kraju rozliczasz podatki?',
-    'country_prompt_body' => 'Możesz to zmienić w dowolnym momencie w Ustawienia → Podatki.',
+    'country_prompt_body' => 'Możesz to zmienić w dowolnym momencie w Ustawienia → :section.',
     'country_prompt_cta' => 'Skonfiguruj kategorie podatkowe',
 
     'total_deductions' => 'Suma odliczeń',
@@ -31,7 +31,7 @@ return [
     'go_to_transactions' => 'Przejdź do Transakcji, aby zacząć oznaczać →',
 
     'no_category' => 'Bez kategorii',
-    'items_count_aria' => 'Pozycje: :count',
+    'items_count_aria' => ':count pozycja|:count pozycje|:count pozycji',
 
     'col_date' => 'Data',
     'col_account' => 'Konto',

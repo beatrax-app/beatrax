@@ -8,7 +8,7 @@ return [
     'tagged' => 'Označeno kao porezno priznati odbitak.',
     'untagged' => 'Porezna oznaka je uklonjena.',
     'batch_none_reconciled' => 'Ništa nije označeno — te su transakcije usklađene. Poništi usklađivanje da bi ih mijenjao.',
-    'batch_tagged' => 'Označeno je još :count transakcija.',
+    'batch_tagged' => 'Označena je još :count transakcija.|Označene su još :count transakcije.|Označeno je još :count transakcija.',
 
     'errors' => [
         'name_empty' => 'Naziv kategorije ne može biti prazan.',

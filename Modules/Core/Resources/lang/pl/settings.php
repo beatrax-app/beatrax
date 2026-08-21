@@ -40,6 +40,8 @@ return [
         'choose' => 'Wybierz kraj…',
         'switch_note' => 'Zmiana dodaje nowe kategorie — istniejące znaczniki nigdy się nie zmieniają.',
 
+        'wording_note' => 'Nazwy kategorii podatkowych pochodzą z zeznania podatkowego używanego w :country, więc pozostają w słowach tego kraju w każdym języku aplikacji.',
+
         'countries' => [
             'at' => 'Austria',
             'be' => 'Belgia',

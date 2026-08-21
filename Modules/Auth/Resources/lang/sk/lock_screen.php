@@ -19,6 +19,6 @@ return [
 
     'error_backoff' => 'Príliš veľa pokusov — skús to znova o :wait.',
 
-    'error_incorrect_remaining' => 'Nesprávny PIN. Zostávajúce pokusy: :remaining.',
+    'error_incorrect_remaining' => 'Nesprávny PIN. Zostáva :count pokus.|Nesprávny PIN. Zostávajú :count pokusy.|Nesprávny PIN. Zostáva :count pokusov.',
     'error_incorrect' => 'Nesprávny PIN.',
 ];

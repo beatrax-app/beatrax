@@ -15,5 +15,10 @@ final readonly class BudgetThresholdCrossed
         public int $spentMinor,
         public int $budgetMinor,
         public string $currency,
+        // $categoryName is resolved in whatever language the emitter was in,
+        // and the emitter is an hourly job with no reader. These two let the
+        // notification resolve it again in the one the recipient reads.
+        public string $categorySlug = '',
+        public bool $categoryNameIsDefault = false,
     ) {}
 }

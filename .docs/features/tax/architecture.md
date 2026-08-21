@@ -104,17 +104,58 @@ nullable `SearchIndexWriterContract` injection (a no-op when the
 Search module is absent) so the tax note stays searchable/removed;
 the writer itself re-verifies ownership from the passed actor id.
 
-## Cross-module country selection
+## The country is not owned here
 
-`TaxCountrySetup` exposes "which countries can be chosen" and "select
-a country for a user" to other modules (the Onboarding setup wizard's
-tax-country step) without letting them reach into
-`Modules\Tax\Internal` — the module-boundary arch test forbids
-cross-module `Internal` imports. `selectCountry()` mirrors
-`TaxSettingsSection::setTaxCountry()`'s behavior exactly: codes
-outside the allow-list are silently ignored, the corpus seed is
-additive, and `users.tax_country_code` is persisted last so a corpus
-failure never leaves a country set without its categories.
+The reader's country is a user preference, stored on
+`users.country_code` beside `users.locale` and `users.theme` and read
+and written only through `Modules\Core\Public\Services\UserCountry`.
+Tax is a consumer: classification of government bodies and bank fees
+scopes to the same value, so it cannot live inside one module's
+settings screen.
+
+`UserCountry::store()` raises
+`Modules\Core\Public\Events\UserCountryChanged`, and
+`Modules\Tax\Internal\Listeners\SeedDeductionCategoriesForCountry`
+answers it by running `seedFromCorpus()`. That listener is why the
+country can be chosen at signup, in Settings and in the setup wizard
+without any of the three knowing a tax corpus exists. Codes outside
+`Modules\Core\Public\Enums\Country` are silently ignored, and an
+unset country is a real state — the classification falls back to
+loading every region.
+
+The event is raised **before** the column is written, and both sit in
+one transaction. A corpus that throws half way therefore leaves no
+country behind it: a country set with nothing seeded reads to
+`TaxPage`'s `hasTaxCountry` — and to every other empty-state check —
+as an install that has been set up and needs no prompt, which is the
+one state with no way back to the picker. `SignupAction` additionally
+catches a failure here rather than letting it escape, because the user
+row is committed by then and the recovery-codes screen is still ahead:
+a preference that can be set again from Settings is never worth the
+only screen that shows those codes.
+
+## The corpus is the filing country's wording, not the reader's
+
+`seedFromCorpus()` writes `name`, `short_name` and `hint` verbatim from
+`resources/corpus/tax/<country>.yaml`, and those files are written in
+the country's own language — `nl.yaml` says `Zorgkosten`, not
+`Healthcare costs`. That is deliberate: the names are the labels on
+that country's return, and a reader filling in an *aangifte* needs the
+word that is printed on the form, whatever language they read the app
+in. So this is the one list in the app that does not follow the reader.
+
+Because it is the one exception, the app says so where the exception
+shows: `core::settings.country.wording_note` names the country whose
+wording the list keeps, and renders under the country picker in
+Settings and above the deduction-category list. The note itself is
+translated and takes the country name as a parameter, so it reads in
+the reader's language even though the list below it does not.
+
+The alternative — giving `tax_deduction_categories` the `slug` /
+`name_is_default` treatment that [`categories`](../ledger/category-display-names.md)
+got — was weighed and rejected: 33 corpora × 398 entries × 3 fields ×
+26 locales is 31,044 strings, and translating the two label fields
+would break the match against the form they exist to mirror.
 
 ## Category writes
 
@@ -152,23 +193,28 @@ previous year and May-December to the current year (matching the
 Dutch `aangifte` filing season) when no `?year=` query param is
 present; the `#[Url]` attribute makes the resolved year deep-linkable
 and back-button-safe. The "first visit" guided empty state is driven
-by whether `users.tax_country_code` is set (read via the raw query
-builder, not the Eloquent model, since the column isn't typed on
-`User` — `TaxSettingsSection` writes it via `DatabaseManager::update()`
-directly). Both `exportCsv()`/`exportPdf()` pass only the acting
+by whether the reader has a country, read through `UserCountry`
+(the column isn't typed on `User`, and the seam is the only reader of
+it). Both `exportCsv()`/`exportPdf()` pass only the acting
 `CurrentUser` to the user-scoped exporter/renderer, and every action
 re-checks authentication as a defense-in-depth fallback behind the
 route group's `auth` middleware.
 
-## Settings country selection
+## Settings — what the Tax section still owns
 
-`TaxSettingsSection` (the Settings page's Tax section) restricts
-country selection to the `TaxCountry` enum — 33 lowercase ISO 3166
-alpha-2 codes, one per corpus file under `resources/corpus/tax/`; any
-other code is silently ignored. Switching country is
-additive — it seeds the new country's corpus categories via
-`seedFromCorpus()` (INSERT-only, never deletes) and never removes
-existing categories or tags from a previously-selected country.
+`TaxSettingsSection` (the Settings page's Tax section) owns the
+deduction categories and nothing else. Where the country picker used
+to sit there is now a signpost: the current country as a value, and a
+link to `#country` in the Display group where the preference actually
+lives. A setting that vanishes from where someone learned to find it
+is its own defect, so the pointer is not optional.
+
+The allow-list is `Modules\Core\Public\Enums\Country` — 33 lowercase
+ISO 3166 alpha-2 codes, one per corpus file under
+`resources/corpus/tax/`. Switching country is additive: it seeds the
+new country's corpus categories via `seedFromCorpus()` (INSERT-only,
+never deletes) and never removes existing categories or tags from a
+previously-selected country.
 
 ## HandlesTaxTagging trait
 

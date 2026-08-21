@@ -24,13 +24,13 @@ function loopbackOnly(PhpSapi|string $sapi): LoopbackOnly
     return new LoopbackOnly($app, $sapi instanceof PhpSapi ? $sapi->value : $sapi);
 }
 
-function passThrough(): Closure
+function loopbackPassThrough(): Closure
 {
     return fn (): Response => new Response('ok');
 }
 
 it('serves an in-process mobile request that carries no SERVER_ADDR', function (): void {
-    $response = loopbackOnly(PhpSapi::Embed)->handle(new Request, passThrough());
+    $response = loopbackOnly(PhpSapi::Embed)->handle(new Request, loopbackPassThrough());
 
     expect($response->getStatusCode())->toBe(200);
 });
@@ -38,7 +38,7 @@ it('serves an in-process mobile request that carries no SERVER_ADDR', function (
 it('serves the built-in server when the peer it is talking to is loopback', function (): void {
     $request = new Request(server: ['REMOTE_ADDR' => '127.0.0.1']);
 
-    expect(loopbackOnly(PhpSapi::CliServer)->handle($request, passThrough())->getStatusCode())->toBe(200);
+    expect(loopbackOnly(PhpSapi::CliServer)->handle($request, loopbackPassThrough())->getStatusCode())->toBe(200);
 });
 
 // `php artisan serve --host=0.0.0.0` publishes no SERVER_ADDR and binds every
@@ -47,21 +47,21 @@ it('serves the built-in server when the peer it is talking to is loopback', func
 it('refuses the built-in server when the peer is not loopback', function (): void {
     $request = new Request(server: ['REMOTE_ADDR' => '192.168.178.66']);
 
-    expect(fn () => loopbackOnly(PhpSapi::CliServer)->handle($request, passThrough()))
+    expect(fn () => loopbackOnly(PhpSapi::CliServer)->handle($request, loopbackPassThrough()))
         ->toThrow(NotFoundHttpException::class);
 });
 
 // Nothing to prove it with, so it is not assumed — unlike the in-process SAPI,
 // which has no socket for anyone to arrive on in the first place.
 it('refuses the built-in server when it cannot see who it is talking to', function (): void {
-    expect(fn () => loopbackOnly(PhpSapi::CliServer)->handle(new Request, passThrough()))
+    expect(fn () => loopbackOnly(PhpSapi::CliServer)->handle(new Request, loopbackPassThrough()))
         ->toThrow(NotFoundHttpException::class);
 });
 
 // The reason the branch exists: a socket-serving SAPI that never said which
 // interface it bound is not something to assume was loopback.
 it('still refuses a socket-serving SAPI that omits SERVER_ADDR', function (): void {
-    expect(fn () => loopbackOnly('fpm-fcgi')->handle(new Request, passThrough()))
+    expect(fn () => loopbackOnly('fpm-fcgi')->handle(new Request, loopbackPassThrough()))
         ->toThrow(NotFoundHttpException::class);
 });
 
@@ -70,12 +70,12 @@ it('still refuses a socket-serving SAPI that omits SERVER_ADDR', function (): vo
 it('refuses a non-loopback SERVER_ADDR even under the in-process SAPI', function (): void {
     $request = new Request(server: ['SERVER_ADDR' => '192.168.178.66']);
 
-    expect(fn () => loopbackOnly(PhpSapi::Embed)->handle($request, passThrough()))
+    expect(fn () => loopbackOnly(PhpSapi::Embed)->handle($request, loopbackPassThrough()))
         ->toThrow(NotFoundHttpException::class);
 });
 
 it('serves a loopback SERVER_ADDR under the in-process SAPI', function (): void {
     $request = new Request(server: ['SERVER_ADDR' => '127.0.0.1']);
 
-    expect(loopbackOnly(PhpSapi::Embed)->handle($request, passThrough())->getStatusCode())->toBe(200);
+    expect(loopbackOnly(PhpSapi::Embed)->handle($request, loopbackPassThrough())->getStatusCode())->toBe(200);
 });

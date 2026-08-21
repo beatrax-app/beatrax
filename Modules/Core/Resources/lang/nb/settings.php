@@ -40,6 +40,8 @@ return [
         'choose' => 'Velg et land…',
         'switch_note' => 'Et bytte legger til nye kategorier — eksisterende merkinger endres aldri.',
 
+        'wording_note' => 'Navnene på skattekategoriene kommer fra selvangivelsen som brukes i :country, så de beholder ordene fra det landet på alle appspråk.',
+
         'countries' => [
             'at' => 'Østerrike',
             'be' => 'Belgia',

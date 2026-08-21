@@ -95,6 +95,64 @@ alias and corpus matching. A hit becomes `type = 'merchant'` with
 joins against — see the retention rules in
 [garbage collection](garbage-collection.md).
 
+Five tiers, in order: the reader's own exact alias, the reader's own
+generalized alias, then the corpus exact, generalized and regex
+lookups. The order matters — the alias tiers run *first*, so an
+unanchored match there wins before the corpus is even asked.
+
+**Within a generalized tier, the most specific pattern wins.** Both
+generalized tiers sort their candidates longest-needle-first before
+scanning, so the first hit is the narrowest one and the scan still
+short-circuits. `usort` has been stable since PHP 8.0, so equal-length
+needles keep the order they loaded in and the result stays
+deterministic.
+
+This is not a tie-breaker detail. A clean install with **no country set**
+— what anyone who skips the signup selector has — loads every region at
+once, and `Albert Heijn 1042` matched the Czech `ALBERT`
+(`merchants/cz.yaml:11`) as well as the Dutch `ALBERT HEIJN`
+(`merchants/nl.yaml:31`). `CorpusLoader` sorts filenames, so `cz.yaml`
+seeds first, takes the lower id, and won the first-match scan. The
+import preview — the first thing a new reader ever sees of their own
+data — showed a Dutch supermarket as a Czech chain. Longest-needle-first
+fixes that case on its own merits, without depending on the reader
+having answered the country question at all.
+
+**Every pattern is matched as a whole token**, alias tiers included, via
+`CorpusPatternMatcher::containsToken()`: a bare `mb_stripos` found the
+corpus token `OBI` inside "m*obi*el" and turned a phone bill into a DIY
+chain. The boundary is asserted only where the needle's own edge is
+alphanumeric, so `AMAZON.` still matches `AMAZON.NL`.
+
+**The corpus tiers are scoped to the reader's country**, the alias tiers
+are not. `MerchantNameResolver::regionFor()` reads `UserCountry::current()`
+(memoised — this runs once per transaction across a whole import) and
+passes it to all three `CommunityCorpusQuery` lookups, which filter
+`community_merchant_mappings.region`. Without it a Dutch
+`Betaalautomaat Albert Heijn 1042 Amsterdam` resolved to the Czech chain
+`ALBERT`: `CorpusLoader` sorts its files, so `cz.yaml` seeds before
+`nl.yaml`, takes the lower id, and wins the first-match scan. The word
+boundary cannot help there — `albert` genuinely is a whole token in that
+description.
+
+Two deliberate widenings, both matching what `ClassificationRuleProvider`
+does for the government and bank-fee rules:
+
+- **A reader who has named no country gets every region**, not nothing.
+  `UserCountry::current()` returns `''` for that state and the filter is
+  skipped. It is why `ZORGPREMIE` — the ordinary Dutch word for a
+  health-insurance premium, and a Belgian government pattern — can still
+  misfire for a reader who skipped the country question.
+- **A mapping whose own `region` is null or empty matches every reader.**
+  The column is nullable and `CorpusLoader` leaves it empty for a file it
+  could not read a code from, so excluding those would drop mappings
+  nobody meant to scope.
+
+The reader's own aliases are never region-scoped: they are theirs
+wherever they live, and region is a property of the shared corpus, which
+holds every country's merchants at once and whose short tokens collide
+across them.
+
 ### 4. Personal-IBAN heuristic
 
 The one step with a real predicate rather than a lookup. All four

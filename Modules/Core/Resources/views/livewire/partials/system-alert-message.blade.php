@@ -14,8 +14,9 @@
     Blade change.
 --}}
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Enums\UpdateAlertKind')
 @switch ($alert->kind)
-    @case ('update.available')
+    @case (UpdateAlertKind::Available->value)
         @php
             $metadata = is_array($alert->metadata) ? $alert->metadata : [];
             $latestVersion = isset($metadata['latestVersion']) && is_string($metadata['latestVersion'])
@@ -28,7 +29,7 @@
             {{ $alert->message }}
         @endif
         @break
-    @case ('update.stale')
+    @case (UpdateAlertKind::Stale->value)
         @php
             $metadata = is_array($alert->metadata) ? $alert->metadata : [];
             $currentVersion = isset($metadata['currentVersion']) && is_string($metadata['currentVersion'])
@@ -47,7 +48,7 @@
             {{ $alert->message }}
         @endif
         @break
-    @case ('update.critical')
+    @case (UpdateAlertKind::Critical->value)
         @php
             $metadata = is_array($alert->metadata) ? $alert->metadata : [];
             $newVersion = isset($metadata['newVersion']) && is_string($metadata['newVersion'])

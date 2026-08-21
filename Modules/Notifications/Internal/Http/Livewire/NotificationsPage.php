@@ -51,7 +51,6 @@ final class NotificationsPage extends Component
     {
         $action($notificationId, $currentUser->user());
 
-        // Reversible, so no confirmation gate — the project-wide convention.
         $this->dispatch('toast', message: Lang::get('notifications::inbox.toast.dismissed'), undo: 'undoDismiss', undoArg: $notificationId);
     }
 

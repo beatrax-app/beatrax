@@ -19,6 +19,6 @@ return [
 
     'error_backoff' => 'Pārāk daudz mēģinājumu — mēģiniet vēlreiz pēc :wait.',
 
-    'error_incorrect_remaining' => 'Nepareizs PIN kods. Atlikuši mēģinājumi: :remaining.',
+    'error_incorrect_remaining' => 'Nepareizs PIN kods. Atlikuši :count mēģinājumu.|Nepareizs PIN kods. Atlicis :count mēģinājums.|Nepareizs PIN kods. Atlikuši :count mēģinājumi.',
     'error_incorrect' => 'Nepareizs PIN kods.',
 ];

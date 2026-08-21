@@ -21,7 +21,7 @@ return [
         'budget_nudge' => ':category — :spent of :budget spent.',
         'receipts_matched' => ':count receipt matched from your email.|:count receipts matched from your email.',
         'import_finished' => ':count transaction imported.|:count transactions imported.',
-        'drift' => 'A recurring charge moved :direction by :delta :currency.',
+        'drift' => 'A recurring charge moved :direction by :amount.',
         'forecast' => 'Your projected balance dips below zero within the next 30 days.',
         'ics_statement_ready' => "Download it from the ICS portal and drop it into Beatrax to keep this card's spending up to date.",
         'payment_reminder_hedged' => ':name — expected around :day, :amount.',

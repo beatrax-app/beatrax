@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Internal\Http\Livewire;
 
+use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Routing\UrlGenerator;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Routing\Router;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Modules\Auth\Public\Actions\SignupAction;
+use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Services\UserCountry;
 use Modules\Core\Public\Services\UserDataPathService;
@@ -64,6 +68,21 @@ final class SignupPage extends Component
         // Not straight to setup: that skipped the only screen that ever shows
         // the recovery codes. RecoveryCodesDisplay hands off to setup after.
         $this->redirect($urls->route('auth.recovery-codes-display'), navigate: false);
+    }
+
+    // The shared switcher POSTs and navigates, which emptied every box on
+    // this screen and reset the country to its placeholder. Here the language
+    // changes over a Livewire round trip instead, so what the reader has
+    // already typed is still typed afterwards.
+    public function setLocale(string $code, Session $session, Application $app): void
+    {
+        if (! Locale::isSupported($code)) {
+            return;
+        }
+
+        $session->put('locale', $code);
+        $app->setLocale($code);
+        CarbonImmutable::setLocale($code);
     }
 
     public function render(ViewFactory $views, Router $routes, UrlGenerator $urls, UserCountry $countries): View

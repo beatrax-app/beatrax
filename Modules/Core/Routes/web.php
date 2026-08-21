@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Modules\Core\Public\Controllers\HealthController;
 use Modules\Core\Public\Enums\Locale;
+use Modules\Core\Public\Services\LocaleNegotiator;
 
 // Auth-free liveness probe, registered outside the `web` middleware group so
 // the `EnsureDatabaseReady` first-launch gate does not redirect pre-migration
@@ -30,7 +31,13 @@ Route::post('/locale', static function (
 ): RedirectResponse {
     $code = $request->string('code')->toString();
 
-    if (Locale::isSupported($code)) {
+    // "System" is the absence of an override, not a locale: it clears the key
+    // so SetLocale falls through to Accept-Language the way it does on a fresh
+    // install. Without it the pre-auth switcher offered no way back, while the
+    // help line under it promised one.
+    if ($code === LocaleNegotiator::SYSTEM) {
+        $request->session()->forget('locale');
+    } elseif (Locale::isSupported($code)) {
         $request->session()->put('locale', $code);
     }
 

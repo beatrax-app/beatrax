@@ -154,7 +154,6 @@ final class TaxCategoryWriter
         $connection = $this->db->connection();
         $now = Carbon::now()->toDateTimeString();
 
-        // The unique index catches this too, but only as a QueryException.
         $exists = $connection->table('tax_deduction_categories')
             ->where('user_id', $userId)
             ->where('name', $name)
@@ -190,7 +189,6 @@ final class TaxCategoryWriter
             ->value('id');
 
         if (! is_int($id)) {
-            // The row was just inserted, so a missing id means a lost write.
             throw new CategoryPersistenceException('Failed to retrieve new category id.');
         }
 
@@ -220,7 +218,6 @@ final class TaxCategoryWriter
             throw new NotFoundHttpException;
         }
 
-        // Same guard as add(): unique(user_id, name) would otherwise surface raw.
         $nameTaken = $connection->table('tax_deduction_categories')
             ->where('user_id', $userId)
             ->where('name', $name)

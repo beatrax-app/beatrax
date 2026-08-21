@@ -66,18 +66,17 @@ it('resolves a nested translation key rather than freezing its rendering', funct
         CopyLine::of('notifications::copy.title.drift'),
         CopyLine::of('notifications::copy.body.drift', [
             'direction' => CopyParam::line('notifications::copy.drift_direction.up'),
-            'delta' => '12,50',
-            'currency' => 'EUR',
+            'amount' => CopyParam::money(1250, 'EUR'),
         ]),
     );
 
     $rebuilt = copyLineRoundTrip($spec);
 
     app()->setLocale('en');
-    expect($rebuilt->body())->toBe('A recurring charge moved up by 12,50 EUR.');
+    expect($rebuilt->body())->toContain('moved up by')->toContain('12.50');
 
     app()->setLocale('nl');
-    expect($rebuilt->body())->toBe('Een terugkerende afschrijving ging omhoog met 12,50 EUR.');
+    expect($rebuilt->body())->toContain('ging omhoog met')->toContain('12,50');
 });
 
 it('joins a multi-line body in order', function (): void {

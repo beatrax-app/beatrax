@@ -21,7 +21,7 @@ return [
         'budget_nudge' => ':category — :spent din :budget cheltuiți.',
         'receipts_matched' => ':count bon potrivit din e-mailul tău.|:count bonuri potrivite din e-mailul tău.|:count de bonuri potrivite din e-mailul tău.',
         'import_finished' => ':count tranzacție importată.|:count tranzacții importate.|:count de tranzacții importate.',
-        'drift' => 'O plată recurentă a mers :direction cu :delta :currency.',
+        'drift' => 'O plată recurentă a mers :direction cu :amount.',
         'forecast' => 'Soldul tău estimat scade sub zero în următoarele 30 de zile.',
         'ics_statement_ready' => 'Descarcă-l din portalul ICS și trage-l în Beatrax ca să ții la zi cheltuielile acestui card.',
         'payment_reminder_hedged' => ':name — așteptată în jurul :day, :amount.',

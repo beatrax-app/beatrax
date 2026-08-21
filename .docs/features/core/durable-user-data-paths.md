@@ -62,11 +62,17 @@ into the mobile structural check.
 
 ## Detecting the mobile runtime
 
-`platform()` reads `$_SERVER['NATIVEPHP_PLATFORM']`, then
+The private `platformSignal()` reads `$_SERVER['NATIVEPHP_PLATFORM']`, then
 `$_ENV['NATIVEPHP_PLATFORM']`, then `getenv('NATIVEPHP_PLATFORM')`. All three
 are read because NativePHP injects the value as a server/env constant rather
 than through `putenv()` — a bare `getenv()` returns `false` on a real device,
 which would silently disable every gate that depends on it.
+
+The public `platform()` maps that signal through
+`Modules\Core\Public\Enums\MobilePlatform::tryFrom()` and returns
+`?MobilePlatform`, so a shell this app models no behaviour for reads as `null`
+at every call site instead of arriving as a raw string one of them might
+happen to match.
 
 Even all three together are not sufficient. In NativePHP's persistent
 runtime the value is present when the `->booted()` hook fires but reads back
@@ -77,11 +83,16 @@ path on-device — re-shipping the populated development `database.sqlite`
 (a data leak) and defeating the fresh-install onboarding gate at the same
 time.
 
-`isMobileRuntime()` therefore keeps `platform()` as the fast signal and adds
-a structural fallback: the sibling `persisted_data` directory, provisioned
-by the native layer before the PHP runtime serves its first request. Its
-existence is stable across every request-load, and it never matches on
-desktop or host.
+`isMobileRuntime()` therefore keeps the raw `platformSignal()` as the fast
+signal and adds a structural fallback: the sibling `persisted_data` directory,
+provisioned by the native layer before the PHP runtime serves its first
+request. Its existence is stable across every request-load, and it never
+matches on desktop or host.
+
+It asks `platformSignal()` rather than `platform()` deliberately: a shell
+NativePHP names but `MobilePlatform` does not model is still a mobile runtime,
+and answering `false` would send that device's durable user data back into the
+wiped-and-reshipped bundle.
 
 ## The concrete failures each rule prevents
 

@@ -60,11 +60,13 @@ it('shows the previous periods own assignment after navigating back, distinct fr
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $current->start, 40000);
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $previous->start, 15000);
 
+    // English marks, because the suite reads English: the assign box is
+    // written the way the figures beside it are.
     Livewire::test(BudgetsPage::class)
         ->assertViewHas('toBudgetMinor')
         ->call('prevPeriod')
-        ->assertSee('150,00')
-        ->assertDontSee('400,00');
+        ->assertSee('150.00')
+        ->assertDontSee('400.00');
 });
 
 it('shows income zero for a future period unless a real income transaction exists there', function (): void {

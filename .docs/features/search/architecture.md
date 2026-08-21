@@ -58,9 +58,14 @@ What the module explicitly does NOT do:
 + **Internal/Services/QueryParser** — extracts `account:`/`after:`/
   `before:`/`amount:`/`category:` typed tokens; the remainder becomes
   the FTS text query.
-+ **Internal/Services/EntityNameSearch** — name-only `LIKE`/decrypt-
-  then-substring search across counterparties, categories, goals,
-  pots, and recurring series for the palette's entity section.
++ **Internal/Services/EntityNameSearch** — name-only search across
+  counterparties, categories, goals, pots, and recurring series for
+  the palette's entity section. Goals, pots and series are `LIKE`-
+  matched in SQL; counterparties are decrypt-then-substring matched in
+  PHP because `display_name` is ciphertext once encryption is enabled;
+  categories are resolve-then-substring matched in PHP because a
+  default category's stored name is English while the reader sees a
+  translation (see [category display names](../ledger/category-display-names.md)).
 + **Internal/Services/DidYouMeanSuggester** — a single levenshtein-
   based spelling suggestion when a query returns zero FTS results.
 + **Internal/Services/SearchResultsProviderImpl** — composes
@@ -80,8 +85,9 @@ What the module explicitly does NOT do:
 + `SearchIndexWriter::upsertForTransaction($id, $actorUserId)` — reads
   `counterparty_name`/`description` (decrypting via
   `Sync::SensitiveColumnCodec` when encryption is enabled — the FTS
-  body must always be plaintext, never ciphertext, per the disclosed
-  plaintext-shadow design) plus any tax note, concatenates them
+  body must always be plaintext, never ciphertext, per the [disclosed
+  plaintext-shadow design](../sync/sensitive-columns-at-rest.md#what-this-does-not-fix))
+  plus any tax note, concatenates them
   separated by `chr(12)` (a form-feed — not trigram-indexable, so it
   can never produce a false cross-field match), and upserts both
   `transaction_search_docs` and the FTS5 virtual table inside one DB
@@ -103,12 +109,21 @@ What the module explicitly does NOT do:
   (`\x02`/`\x03`) so the surrounding text is HTML-escaped before the
   sentinels become real `<mark>` tags — the raw FTS output is never
   rendered unescaped.
-+ `ReindexSearchCommand` (`search:reindex`) — truncates
-  `transaction_search_docs` + issues an FTS `'delete-all'`, then
-  chunks through every transaction (500 rows at a time) rebuilding the
-  denormalized body, then issues an FTS `'rebuild'`. Exits non-zero
-  with a warning when the indexed count doesn't match the transaction
-  count, so a partial run is never silently treated as complete.
++ `ReindexSearchCommand` (`search:reindex`) — partitions users into
+  rebuildable and blocked (a user whose columns are encrypted and whose
+  key material this process does not hold is refused outright, before
+  anything is deleted), deletes `transaction_search_docs` **for the
+  rebuildable users only**, chunks through their transactions (500 rows
+  at a time) rebuilding the denormalized body, then issues a single FTS
+  `'rebuild'` — the table is external-content, so that regenerates every
+  posting from the docs table and a skipped user's untouched rows come
+  back exactly as they were. There is no `'delete-all'`.
+  A single row whose column the codec **blanks** — ciphertext under an
+  epoch this device lacks, on a user whose current epoch does open —
+  is left out rather than indexed as an empty body. Exits non-zero with
+  a warning when the indexed count doesn't match the transaction count,
+  so neither a partial run nor a skipped row is silently treated as
+  complete.
 
 ## Data flow
 
@@ -132,6 +147,9 @@ The read path (⌘K palette or `/transactions` search mode):
 ```
 User types a query
   → QueryParser::parse extracts account:/after:/before:/amount:/category: tokens
+  → account: → resolveAccountNamesToIds (prefix LIKE on accounts.name)
+  → category: → resolveCategoryNameToIds (prefix match in PHP, on the
+       resolved display name AND the stored name)
   → SearchQuery::resolveCandidateIds
        → textQuery >= 3 chars → FTS5 MATCH (escaped, ANDed per word)
        → textQuery <  3 chars → bounded decrypt-then-substring scan
@@ -140,3 +158,21 @@ User types a query
   → loadHighlights (FTS highlight()/snippet(), sentinel-marked)
   → zero results + query >= 4 chars → DidYouMeanSuggester::suggest
 ```
+
+A typed `account:` or `category:` token that resolves to no id narrows
+to **nothing**, via a sentinel id no row can hold. It used to drop the
+filter instead, so an unresolvable term returned the reader's whole
+history — which looks exactly like a filter that worked, and is worse
+than an empty result because nothing about it says the term was not
+understood.
+
+## Related
+
+- [Category display names](../ledger/category-display-names.md) — why
+  `categories.name` cannot be matched on its own, and the seam that
+  answers what the reader actually sees.
+- [`Ledger` architecture](../ledger/architecture.md) — the
+  `transactions` table this index is derived from.
+- [Sensitive columns at rest](../sync/sensitive-columns-at-rest.md) —
+  what the index writer and `search:reindex` have to decrypt, and what
+  it means when a value comes back blank.

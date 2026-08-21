@@ -18,7 +18,7 @@ return [
     'export_pdf_title' => 'Atsisiųsti beatrax-tax-:year.pdf',
 
     'country_prompt_heading' => 'Kurioje šalyje deklaruoji mokesčius?',
-    'country_prompt_body' => 'Tai gali bet kada pakeisti: Nustatymai → Mokesčiai.',
+    'country_prompt_body' => 'Tai gali bet kada pakeisti: Nustatymai → :section.',
     'country_prompt_cta' => 'Nustatyti mokesčių kategorijas',
 
     'total_deductions' => 'Iš viso lengvatų',
@@ -31,7 +31,7 @@ return [
     'go_to_transactions' => 'Eiti į Operacijas ir pradėti žymėti →',
 
     'no_category' => 'Be kategorijos',
-    'items_count_aria' => 'Įrašų: :count',
+    'items_count_aria' => ':count įrašas|:count įrašai|:count įrašų',
 
     'col_date' => 'Data',
     'col_account' => 'Sąskaita',

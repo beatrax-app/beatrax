@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'card_aria' => 'Poreski pregled — :count označenih stavki za :year',
+    'card_aria' => 'Poreski pregled — :count označena stavka za :year|Poreski pregled — :count označene stavke za :year|Poreski pregled — :count označenih stavki za :year',
     'label' => 'Porez :year',
     'empty' => 'Još nema označenih stavki za :period.',
     'this_year' => 'ovu godinu',

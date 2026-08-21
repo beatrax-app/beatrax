@@ -6,9 +6,9 @@ namespace Modules\Notifications\Internal\Support;
 
 use Modules\Core\Public\Support\Lang;
 
-// One translated sentence, kept as its key plus the values it needs rather
-// than as the sentence itself, so the row can be re-rendered in whatever
-// language the reader is using now.
+/**
+ * @link ../../../../.docs/features/notifications/reader-language-copy.md
+ */
 final readonly class CopyLine
 {
     /**
@@ -38,8 +38,15 @@ final readonly class CopyLine
         return new self($key, $replace + ['count' => $count], $count);
     }
 
-    public function render(): string
+    // Null once the key no longer has a line: Lang answers a miss with the key
+    // itself, and a raw key is not a sentence to hand a reader. The caller
+    // decides what to show instead, and the two callers want different things.
+    public function render(): ?string
     {
+        if (Lang::get($this->key) === $this->key) {
+            return null;
+        }
+
         $replace = [];
         foreach ($this->replace as $name => $value) {
             $replace[$name] = $value instanceof CopyParam ? $value->render() : $value;

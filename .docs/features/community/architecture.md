@@ -377,3 +377,11 @@ stats strip's `contributorCount` KPI is currently a hardcoded zero — there is
 no contribution-tracking listener on `MysteryMerchantSubmitted` yet — so the
 slot renders consistently with its eventual real value rather than being
 omitted.
+
+The auto-named KPI is a percentage of the rows this device could **read**,
+not of the rows it scanned. A description that decrypts to nothing is counted
+as unreadable and drops out of both halves of the fraction; when that leaves
+no readable rows at all the KPI is `null` and the strip renders an em dash.
+Counting a blanked row as resolved is what made a device with no keyring show
+zero mysteries and "100 % auto-named" — a perfect score over a page that had
+in fact read nothing.

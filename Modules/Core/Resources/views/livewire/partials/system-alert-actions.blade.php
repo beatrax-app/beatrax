@@ -21,6 +21,7 @@
     interpolation — so Tailwind's content scanner picks them up.
 --}}
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Enums\UpdateAlertKind')
 @php
     $metadata = is_array($alert->metadata) ? $alert->metadata : [];
     $latestVersion = isset($metadata['latestVersion']) && is_string($metadata['latestVersion'])
@@ -35,7 +36,7 @@
         : null;
 @endphp
 @switch ($alert->kind)
-    @case ('update.available')
+    @case (UpdateAlertKind::Available->value)
         <div class="flex flex-wrap items-center justify-end gap-2">
             <x-core::neutral-button
                 size="sm"
@@ -62,7 +63,7 @@
             @endif
         </div>
         @break
-    @case ('update.stale')
+    @case (UpdateAlertKind::Stale->value)
         <div class="flex flex-wrap items-center justify-end gap-2">
             <button
                 type="button"
@@ -82,7 +83,7 @@
             >{{ Lang::get('core::alerts.actions.remind_later') }}</button>
         </div>
         @break
-    @case ('update.critical')
+    @case (UpdateAlertKind::Critical->value)
         <div class="flex items-center justify-end">
             <button
                 type="button"

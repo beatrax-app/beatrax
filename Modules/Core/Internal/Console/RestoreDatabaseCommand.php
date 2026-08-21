@@ -41,7 +41,6 @@ final class RestoreDatabaseCommand extends Command
 
     public function handle(): int
     {
-        // Larastan narrows argument('path') to string, so no is_string() guard.
         $sourcePath = $this->argument('path');
 
         if ($sourcePath === '' || ! $this->files->exists($sourcePath)) {
@@ -65,7 +64,6 @@ final class RestoreDatabaseCommand extends Command
         }
 
         $broughtDown = false;
-        // Past the guard, `! $alreadyDown` implies --force-maintenance.
         if (! $alreadyDown) {
             $this->artisan->call('down');
             $broughtDown = true;

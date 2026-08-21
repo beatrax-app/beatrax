@@ -21,7 +21,7 @@ return [
         'budget_nudge' => ':category — kulutatud :spent / :budget.',
         'receipts_matched' => 'Sinu e-postist sobitati :count kviitung.|Sinu e-postist sobitati :count kviitungit.',
         'import_finished' => 'Imporditud :count tehing.|Imporditud :count tehingut.',
-        'drift' => 'Korduvmakse liikus :direction :delta :currency võrra.',
+        'drift' => 'Korduvmakse liikus :direction :amount võrra.',
         'forecast' => 'Sinu prognoositav jääk langeb järgmise 30 päeva jooksul alla nulli.',
         'ics_statement_ready' => 'Laadi see ICS portaalist alla ja lisa Beatraxi, et selle kaardi kulud oleksid ajakohased.',
         'payment_reminder_hedged' => ':name — oodatud umbes :day, :amount.',

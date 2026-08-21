@@ -19,6 +19,6 @@ return [
 
     'error_backoff' => 'Zbyt wiele prób — spróbuj ponownie za :wait.',
 
-    'error_incorrect_remaining' => 'Nieprawidłowy PIN. Pozostało prób: :remaining.',
+    'error_incorrect_remaining' => 'Nieprawidłowy PIN. Pozostała :count próba.|Nieprawidłowy PIN. Pozostały :count próby.|Nieprawidłowy PIN. Pozostało :count prób.',
     'error_incorrect' => 'Nieprawidłowy PIN.',
 ];

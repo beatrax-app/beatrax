@@ -9,6 +9,7 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Dto\TaxYearData;
 
@@ -120,7 +121,7 @@ final class TaxYearQuery
 
         foreach ($rawRows as $row) {
             $minor = self::toInt($row->settled_amount_minor);
-            $isIncome = self::toString($row->transaction_type) === 'income';
+            $isIncome = self::toString($row->transaction_type) === TransactionType::Income->value;
 
             // Stored amounts are signed; the cockpit totals are "you spent X".
             if ($isIncome) {

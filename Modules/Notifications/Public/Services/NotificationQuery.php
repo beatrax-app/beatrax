@@ -21,7 +21,8 @@ final readonly class NotificationQuery
 {
     use CoercesScalars;
 
-    // 25 rows + 1 lookahead, matching the DriftAlertQuery precedent.
+    // 25 rows plus one lookahead: the extra row is what tells the page there
+    // is another, without paying for a second COUNT.
     private const PAGE_LIMIT = 26;
 
     public function __construct(
@@ -78,7 +79,6 @@ final readonly class NotificationQuery
             ->count();
     }
 
-    // Opaque cursor over the (created_at, id) pair of the page's last row.
     public static function encodeCursor(string $createdAt, string $id): string
     {
         return base64_encode(json_encode(['created_at' => $createdAt, 'id' => $id], JSON_THROW_ON_ERROR));
@@ -157,9 +157,10 @@ final readonly class NotificationQuery
         $triggerType = self::toString($decrypted['trigger_type'] ?? null);
         $copy = self::copySpec($decrypted['params'] ?? null);
 
-        // Rows written before the copy spec existed kept only their rendered
-        // sentence, and the values it was rendered from are gone. They stay in
-        // the language they were written in until the 365-day sweep takes them.
+        // The stored sentence catches two rows: one written before the copy
+        // spec existed, and one whose key a later release removed. Both are
+        // stuck in the language they were written in, which still reads as a
+        // sentence where a raw translation key does not.
         $title = $copy?->title() ?? self::toString($decrypted['title'] ?? null);
         $body = $copy?->body() ?? self::toString($decrypted['body'] ?? null);
 

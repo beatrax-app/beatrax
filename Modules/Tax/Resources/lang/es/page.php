@@ -18,7 +18,7 @@ return [
     'export_pdf_title' => 'Descargar beatrax-tax-:year.pdf',
 
     'country_prompt_heading' => '¿En qué país declaras impuestos?',
-    'country_prompt_body' => 'Puedes cambiarlo en cualquier momento en Ajustes → Impuestos.',
+    'country_prompt_body' => 'Puedes cambiarlo en cualquier momento en Ajustes → :section.',
     'country_prompt_cta' => 'Configurar categorías fiscales',
 
     'total_deductions' => 'Total de deducciones',
@@ -31,7 +31,7 @@ return [
     'go_to_transactions' => 'Ir a Transacciones para empezar a etiquetar →',
 
     'no_category' => 'Sin categoría',
-    'items_count_aria' => ':count elementos',
+    'items_count_aria' => ':count elemento|:count elementos',
 
     'col_date' => 'Fecha',
     'col_account' => 'Cuenta',

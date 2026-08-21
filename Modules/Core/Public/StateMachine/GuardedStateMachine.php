@@ -55,7 +55,6 @@ abstract class GuardedStateMachine
 
     abstract protected function notFound(int $id): Throwable;
 
-    // Short machine name for the "unknown actor" rejection message.
     abstract protected function label(): string;
 
     // The row is re-read under lockForUpdate INSIDE the transaction, so a

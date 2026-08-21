@@ -18,7 +18,7 @@ return [
     'export_pdf_title' => 'beatrax-tax-:year.pdf dosyasını indir',
 
     'country_prompt_heading' => 'Vergi beyannameni hangi ülkede veriyorsun?',
-    'country_prompt_body' => 'Bunu istediğin zaman Ayarlar → Vergi bölümünden değiştirebilirsin.',
+    'country_prompt_body' => 'Bunu istediğin zaman Ayarlar → :section bölümünden değiştirebilirsin.',
     'country_prompt_cta' => 'Vergi kategorilerini ayarla',
 
     'total_deductions' => 'Toplam vergi indirimi',

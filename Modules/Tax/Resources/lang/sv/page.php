@@ -18,7 +18,7 @@ return [
     'export_pdf_title' => 'Ladda ner beatrax-tax-:year.pdf',
 
     'country_prompt_heading' => 'I vilket land deklarerar du?',
-    'country_prompt_body' => 'Du kan ändra det när som helst under Inställningar → Skatt.',
+    'country_prompt_body' => 'Du kan ändra det när som helst under Inställningar → :section.',
     'country_prompt_cta' => 'Ställ in skattekategorier',
 
     'total_deductions' => 'Totala avdrag',
@@ -31,7 +31,7 @@ return [
     'go_to_transactions' => 'Gå till Transaktioner för att börja märka →',
 
     'no_category' => 'Ingen kategori',
-    'items_count_aria' => ':count poster',
+    'items_count_aria' => ':count post|:count poster',
 
     'col_date' => 'Datum',
     'col_account' => 'Konto',

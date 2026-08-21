@@ -21,7 +21,7 @@ return [
         'budget_nudge' => ':category — wydano :spent z :budget.',
         'receipts_matched' => 'Dopasowano :count paragon z Twojej poczty.|Dopasowano :count paragony z Twojej poczty.|Dopasowano :count paragonów z Twojej poczty.',
         'import_finished' => 'Zaimportowano :count transakcję.|Zaimportowano :count transakcje.|Zaimportowano :count transakcji.',
-        'drift' => 'Opłata cykliczna poszła :direction o :delta :currency.',
+        'drift' => 'Opłata cykliczna poszła :direction o :amount.',
         'forecast' => 'Twoje prognozowane saldo spadnie poniżej zera w ciągu najbliższych 30 dni.',
         'ics_statement_ready' => 'Pobierz go z portalu ICS i wgraj do Beatrax, aby wydatki z tej karty były aktualne.',
         'payment_reminder_hedged' => ':name — spodziewane około :day, :amount.',

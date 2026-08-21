@@ -129,6 +129,50 @@ attempt, success or failure, writes a `system_alerts` audit row; a
 failure against an unknown username still writes one, with a null
 `user_id`, so the audit trail cannot itself reveal which usernames exist.
 
+### Handing the codes over
+
+The one-time display offers Copy codes and Download as .txt, and where the
+download goes is decided by what the runtime can do with a file rather than by
+whether it is a phone.
+
+In a browser the blob `<a download>` reaches the download manager, and "Saved
+as beatrax-recovery-codes-<name>.txt" is true.
+
+On iOS the same click is answered by the shell's `WKDownloadDelegate`, which
+`scripts/nativephp_ios_download_delegate.php` installs: the navigation is taken
+as `.download`, the bytes are written to a temporary directory, and a
+`UIActivityViewController` opens — so "Save to Files" puts the codes in iCloud
+Drive, or wherever else the reader picks, outside the container that deleting
+the app destroys. `RecoveryCodesDisplay` therefore does *not* route iOS to
+`mobile.recovery-codes.export`; `MobilePlatform::savesWebViewDownloads()` is
+the gate, and a platform the enum does not model keeps the endpoint. The import
+wizard's `recovery_codes` step (`MobileImportBootstrap`) shows the same ten
+codes and makes the same choice through the same gate.
+
+The Android shell registers no `DownloadListener`, so the same click is dropped
+without a word. There the screen calls `mobile.recovery-codes.export`, which
+keeps a copy under `UserDataPathService::appPath('exports/…')` — a copy no file
+manager can open and a reinstall destroys, which is exactly what
+`auth::recovery_codes.saved_native` says, down to telling the reader to use Copy
+codes if nothing appeared.
+
+`RecoveryCodesExportBridge` also hands that copy to `Share::file()`.
+nativephp/mobile 4.1.0 ships the PHP `Share` facade but registers `Share.File`
+in neither shell's bridge registry, and `NativePHPCall` returns nil for an
+unregistered function without raising — so on both platforms that call does
+nothing and reports nothing, which is what "no sheet, no error" was on iOS.
+Nothing on the iOS path depends on it any more.
+
+Publishing the container instead was considered and rejected. `UIFileSharingEnabled`
+and `LSSupportsOpeningDocumentsInPlace` expose the app's whole `Documents`
+directory, and on this shell that directory holds `app/.env`,
+`persisted_data/database/database.sqlite` and
+`persisted_data/storage/app/secrets/` — the app key, every transaction and the
+sync keyring — browsable and copyable over Finder file sharing, and deletable
+from the Files app. `scripts/nativephp_exclude_data_from_backup.php` exists to
+keep that same tree out of iCloud and Google backup; publishing it to Files to
+surface one 249-byte file would undo that decision.
+
 ## Data flow
 
 The signup ceremony, walked end-to-end:

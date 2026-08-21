@@ -18,7 +18,7 @@ return [
     'export_pdf_title' => 'Λήψη του beatrax-tax-:year.pdf',
 
     'country_prompt_heading' => 'Σε ποια χώρα υποβάλλεις φορολογική δήλωση;',
-    'country_prompt_body' => 'Μπορείς να το αλλάξεις όποτε θέλεις από τις Ρυθμίσεις → Φόροι.',
+    'country_prompt_body' => 'Μπορείς να το αλλάξεις όποτε θέλεις από τις Ρυθμίσεις → :section.',
     'country_prompt_cta' => 'Ρύθμιση φορολογικών κατηγοριών',
 
     'total_deductions' => 'Σύνολο εκπτώσεων',
@@ -31,7 +31,7 @@ return [
     'go_to_transactions' => 'Μετάβαση στις Συναλλαγές για να ξεκινήσεις την επισήμανση →',
 
     'no_category' => 'Χωρίς κατηγορία',
-    'items_count_aria' => ':count στοιχεία',
+    'items_count_aria' => ':count στοιχείο|:count στοιχεία',
 
     'col_date' => 'Ημερομηνία',
     'col_account' => 'Λογαριασμός',

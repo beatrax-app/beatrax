@@ -174,7 +174,6 @@ final class TaxTagQuery
 
         $cpId = self::toInt($tx->counterparty_id);
 
-        // display_name is ciphertext at rest once encryption is on.
         $cpRow = $connection
             ->table('counterparties')
             ->where('id', $cpId)
@@ -230,7 +229,6 @@ final class TaxTagQuery
         return array_values(array_map(static fn (mixed $v): int => is_numeric($v) ? (int) $v : 0, $rows->all()));
     }
 
-    // Never throws — a pass-through no-op when encryption is not enabled.
     private function decryptNoteOrNull(mixed $value, int $userId): ?string
     {
         if (! is_string($value) || $value === '') {

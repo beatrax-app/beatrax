@@ -21,7 +21,7 @@ return [
         'budget_nudge' => ':category — :spent / :budget käytetty.',
         'receipts_matched' => ':count kuitti täsmäytettiin sähköpostistasi.|:count kuittia täsmäytettiin sähköpostistasi.',
         'import_finished' => ':count tapahtuma tuotu.|:count tapahtumaa tuotu.',
-        'drift' => 'Toistuvan veloituksen summa :direction :delta :currency.',
+        'drift' => 'Toistuvan veloituksen summa :direction :amount.',
         'forecast' => 'Ennustettu saldosi painuu nollan alle seuraavien 30 päivän aikana.',
         'ics_statement_ready' => 'Lataa se ICS-portaalista ja pudota Beatraxiin, niin tämän kortin kulutus pysyy ajan tasalla.',
         'payment_reminder_hedged' => ':name — odotettavissa noin :day, :amount.',

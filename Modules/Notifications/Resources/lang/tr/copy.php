@@ -21,7 +21,7 @@ return [
         'budget_nudge' => ':category — :budget bütçesinin :spent kadarı harcandı.',
         'receipts_matched' => 'E-postandan :count fiş eşleştirildi.',
         'import_finished' => ':count işlem içe aktarıldı.',
-        'drift' => 'Düzenli bir harcama :delta :currency :direction.',
+        'drift' => 'Düzenli bir harcama :amount :direction.',
         'forecast' => 'Öngörülen bakiyen önümüzdeki 30 gün içinde sıfırın altına iniyor.',
         'ics_statement_ready' => "Bunu ICS portalından indir ve bu kartın harcamalarını güncel tutmak için Beatrax'a bırak.",
         'payment_reminder_hedged' => ':name — :day civarı bekleniyor, :amount.',

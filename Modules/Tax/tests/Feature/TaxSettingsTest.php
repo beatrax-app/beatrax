@@ -395,6 +395,32 @@ it('shows the chosen country as a value, not as a picker', function (): void {
         ->assertSee('Netherlands');
 });
 
+// Restored with the section it guards. Once the section became only a
+// signpost to #country, nothing else asserted that Settings still renders it —
+// and a signpost nobody renders is the same as the setting having vanished
+// from where the reader learned to find it, which is the defect the signpost
+// exists to prevent. Resolved through the view finder rather than a path built
+// from __DIR__: the mobile-app composer root has its own base_path().
+it('settings page blade includes the tax settings section livewire tag', function (): void {
+    /** @var Illuminate\View\Factory $views */
+    $views = app('view');
+
+    $content = file_get_contents($views->getFinder()->find('shell::livewire.settings-page'));
+
+    expect($content)->toBeString()->toContain("@livewire('tax.settings-section')");
+});
+
+// The tag is only half of it: the section is reached by an in-page anchor, so
+// the target it points at has to exist on the same screen.
+it('settings page carries the #country anchor the signpost links to', function (): void {
+    /** @var Illuminate\View\Factory $views */
+    $views = app('view');
+
+    $content = file_get_contents($views->getFinder()->find('shell::livewire.settings-page'));
+
+    expect($content)->toBeString()->toContain('id="country"');
+});
+
 it('renders unauthenticated without throwing at mount', function (): void {
     Livewire::test(TaxSettingsSection::class)
         ->assertOk()

@@ -37,7 +37,8 @@ final class BudgetProgressQuery
         $budgets = $connection->table('category_budgets as b')
             ->join('categories as c', 'c.id', '=', 'b.category_id')
             ->where('b.user_id', $user->id)
-            // A mis-keyed budget row must not leak a foreign category's name.
+            // A budget row can key a category the user does not own; joining that
+            // row unfiltered would put a foreign category's name on the page.
             ->where(static function (QueryBuilder $query) use ($user): void {
                 $query->whereNull('c.user_id')->orWhere('c.user_id', $user->id);
             })
@@ -80,7 +81,8 @@ final class BudgetProgressQuery
 
         // Alphabetical by what the reader sees, not by what is stored — the
         // stored English orders a Dutch budget screen by the wrong word.
-        usort($rows, static fn (BudgetProgressRow $a, BudgetProgressRow $b): int => strcasecmp($a->name, $b->name));
+        usort($rows, static fn (BudgetProgressRow $a, BudgetProgressRow $b): int => strcasecmp($a->name, $b->name)
+            ?: $a->categoryId <=> $b->categoryId);
 
         return $rows;
     }
@@ -90,6 +92,22 @@ final class BudgetProgressQuery
      */
     public function expenseCategories(User $user): array
     {
+        $options = [];
+        foreach ($this->expenseCategoryNaming($user) as $categoryId => $naming) {
+            $options[$categoryId] = $naming['name'];
+        }
+
+        return $options;
+    }
+
+    // Name AND the provenance behind it. A nudge fires from an hourly job with
+    // no reader in sight, so the category has to travel as what it is rather
+    // than as a name already resolved into the worker's language.
+    /**
+     * @return array<int, array{name: string, slug: string, isDefault: bool}>
+     */
+    public function expenseCategoryNaming(User $user): array
+    {
         $rows = $this->db->connection()->table('categories')
             ->where('kind', CategoryKind::Expense->value)
             ->where(static function (QueryBuilder $query) use ($user): void {
@@ -97,14 +115,20 @@ final class BudgetProgressQuery
             })
             ->get(['id', 'name', 'slug', 'name_is_default']);
 
-        $options = [];
+        $naming = [];
         foreach ($rows as $row) {
-            $options[self::toInt($row->id)] = CategoryDisplayName::fromRow($row) ?? '';
+            $naming[self::toInt($row->id)] = [
+                'name' => CategoryDisplayName::fromRow($row) ?? '',
+                'slug' => self::toString($row->slug),
+                'isDefault' => CategoryDisplayName::isDefaultRow($row),
+            ];
         }
 
-        asort($options, SORT_NATURAL | SORT_FLAG_CASE);
+        // Alphabetical by the resolved name, which is the order every caller
+        // of this and of expenseCategories() renders in.
+        uksort($naming, static fn (int $a, int $b): int => strnatcasecmp($naming[$a]['name'], $naming[$b]['name']) ?: $a <=> $b);
 
-        return $options;
+        return $naming;
     }
 
     // The Livewire category id is client-supplied, so every write path has to

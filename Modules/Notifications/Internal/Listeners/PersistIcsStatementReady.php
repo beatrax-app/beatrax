@@ -49,7 +49,6 @@ final class PersistIcsStatementReady
             ));
             $this->writer->write($draft);
         } catch (Throwable $e) {
-            // A failed persist must never break the detector job run.
             $this->log->error('PersistIcsStatementReady: failed to persist nudge', [
                 ...SafeExceptionContext::describe($e),
                 'userId' => $event->userId,

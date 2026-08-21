@@ -19,6 +19,6 @@ return [
 
     'error_backoff' => 'Demasiados intentos — vuelve a probar en :wait.',
 
-    'error_incorrect_remaining' => 'PIN incorrecto. Te quedan :remaining intentos.',
+    'error_incorrect_remaining' => 'PIN incorrecto. Te queda :count intento.|PIN incorrecto. Te quedan :count intentos.',
     'error_incorrect' => 'PIN incorrecto.',
 ];

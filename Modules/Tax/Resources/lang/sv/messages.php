@@ -8,7 +8,7 @@ return [
     'tagged' => 'Märkt som avdragsgill.',
     'untagged' => 'Skattemärkningen togs bort.',
     'batch_none_reconciled' => 'Inget märktes — de transaktionerna är avstämda. Häv avstämningen för att göra ändringar.',
-    'batch_tagged' => 'Märkte ytterligare :count transaktioner.',
+    'batch_tagged' => 'Märkte ytterligare :count transaktion.|Märkte ytterligare :count transaktioner.',
 
     'errors' => [
         'name_empty' => 'Kategorinamnet får inte vara tomt.',

@@ -21,7 +21,7 @@ return [
         'budget_nudge' => ':category — δαπανήθηκαν :spent από :budget.',
         'receipts_matched' => ':count απόδειξη αντιστοιχίστηκε από το email σου.|:count αποδείξεις αντιστοιχίστηκαν από το email σου.',
         'import_finished' => 'Εισήχθη :count συναλλαγή.|Εισήχθησαν :count συναλλαγές.',
-        'drift' => 'Μια επαναλαμβανόμενη χρέωση :direction κατά :delta :currency.',
+        'drift' => 'Μια επαναλαμβανόμενη χρέωση :direction κατά :amount.',
         'forecast' => 'Το προβλεπόμενο υπόλοιπό σου πέφτει κάτω από το μηδέν μέσα στις επόμενες 30 ημέρες.',
         'ics_statement_ready' => 'Κατέβασέ την από την πύλη ICS και άφησέ την στο Beatrax για να παραμείνουν ενημερωμένες οι δαπάνες αυτής της κάρτας.',
         'payment_reminder_hedged' => ':name — αναμένεται περίπου :day, :amount.',

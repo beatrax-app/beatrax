@@ -19,6 +19,6 @@ return [
 
     'error_backoff' => 'Πάρα πολλές προσπάθειες — δοκίμασε ξανά σε :wait.',
 
-    'error_incorrect_remaining' => 'Λανθασμένο PIN. Απομένουν :remaining προσπάθειες.',
+    'error_incorrect_remaining' => 'Λανθασμένο PIN. Απομένει :count προσπάθεια.|Λανθασμένο PIN. Απομένουν :count προσπάθειες.',
     'error_incorrect' => 'Λανθασμένο PIN.',
 ];

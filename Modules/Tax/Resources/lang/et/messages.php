@@ -8,7 +8,7 @@ return [
     'tagged' => 'Märgistatud maksust mahaarvatavaks.',
     'untagged' => 'Maksumärgend on eemaldatud.',
     'batch_none_reconciled' => 'Midagi ei märgistatud — need tehingud on kooskõlastatud. Muudatuste tegemiseks tühista nende kooskõlastus.',
-    'batch_tagged' => 'Märgistati veel :count tehingut.',
+    'batch_tagged' => 'Märgistati veel :count tehing.|Märgistati veel :count tehingut.',
 
     'errors' => [
         'name_empty' => 'Kategooria nimi ei saa olla tühi.',

@@ -8,7 +8,7 @@ return [
     'tagged' => 'Atzīmēts kā attaisnotie izdevumi.',
     'untagged' => 'Nodokļu atzīme noņemta.',
     'batch_none_reconciled' => 'Nekas netika atzīmēts — šie darījumi ir saskaņoti. Lai veiktu izmaiņas, atceliet to saskaņojumu.',
-    'batch_tagged' => 'Papildus atzīmētie darījumi: :count.',
+    'batch_tagged' => 'Papildus atzīmēti :count darījumu.|Papildus atzīmēts :count darījums.|Papildus atzīmēti :count darījumi.',
 
     'errors' => [
         'name_empty' => 'Kategorijas nosaukums nedrīkst būt tukšs.',

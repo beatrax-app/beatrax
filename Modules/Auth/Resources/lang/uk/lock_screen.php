@@ -19,6 +19,6 @@ return [
 
     'error_backoff' => 'Забагато спроб — повтори через :wait.',
 
-    'error_incorrect_remaining' => 'Неправильний PIN. Залишилося спроб: :remaining.',
+    'error_incorrect_remaining' => 'Неправильний PIN. Залишилася :count спроба.|Неправильний PIN. Залишилося :count спроби.|Неправильний PIN. Залишилося :count спроб.',
     'error_incorrect' => 'Неправильний PIN.',
 ];

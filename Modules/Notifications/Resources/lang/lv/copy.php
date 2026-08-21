@@ -21,7 +21,7 @@ return [
         'budget_nudge' => ':category — iztērēts :spent no :budget.',
         'receipts_matched' => 'No jūsu e-pasta sasaistīti :count čeku.|No jūsu e-pasta sasaistīts :count čeks.|No jūsu e-pasta sasaistīti :count čeki.',
         'import_finished' => 'Importēti :count darījumu.|Importēts :count darījums.|Importēti :count darījumi.',
-        'drift' => 'Regulārs maksājums mainījies :direction par :delta :currency.',
+        'drift' => 'Regulārs maksājums mainījies :direction par :amount.',
         'forecast' => 'Jūsu prognozētais atlikums tuvāko 30 dienu laikā noslīd zem nulles.',
         'ics_statement_ready' => 'Lejupielādējiet to no ICS portāla un ievelciet Beatrax, lai šīs kartes tēriņi būtu aktuāli.',
         'payment_reminder_hedged' => ':name — gaidāms ap :day, :amount.',
