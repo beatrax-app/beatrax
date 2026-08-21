@@ -48,16 +48,17 @@
 
         {{-- Progress bar. Indeterminate while the running step has nothing
              countable: a fixed full bar through a long rebuild read as a
-             finished sync that had stalled. --}}
+             finished sync that had stalled.
+
+             The valuetext always names the running step, so an indeterminate
+             bar still announces what it is waiting on; the number is added
+             only when the step actually has one. The component drops
+             aria-valuenow while indeterminate, which is what makes the
+             valuetext the whole announcement rather than a "0%" beside it. --}}
         <x-core::progress-bar
             :value="$percent"
             :indeterminate="$percent === 0"
             :label="Lang::get('mobile::setup.progress_aria')"
-            {{-- Always names the running step, so an indeterminate bar still
-                 announces what it is waiting on; the number is added only
-                 when the step actually has one. The component drops
-                 aria-valuenow while indeterminate, which is what makes the
-                 valuetext the whole announcement rather than a "0%" beside it. --}}
             aria-valuetext="{{ Lang::get('mobile::setup.step.'.$step->value) }}"
         />
 

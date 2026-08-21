@@ -76,12 +76,19 @@ final readonly class HttpPublisherManifestFetcher implements PublisherManifestFe
             return null;
         }
 
-        $signatureBytes = $this->decodeHexSignature(trim($signature->body()));
+        return $this->manifestPayload($manifest->body(), trim($signature->body()));
+    }
+
+    /**
+     * @return array{body: string, signature: string, latest_version: string, sha512_hex: string, published_at: CarbonImmutable}|null
+     */
+    private function manifestPayload(string $body, string $signatureHex): ?array
+    {
+        $signatureBytes = $this->decodeHexSignature($signatureHex);
         if ($signatureBytes === null) {
             return null;
         }
 
-        $body = $manifest->body();
         $parsed = $this->parseManifestBody($body);
         if ($parsed === null) {
             return null;
@@ -109,9 +116,6 @@ final readonly class HttpPublisherManifestFetcher implements PublisherManifestFe
         return $binary === '' ? null : $binary;
     }
 
-    // The manifest carries the digest as base64; verifyBinary() compares hex.
-    // A decode that is not exactly 64 bytes is not a SHA512 digest, so the whole
-    // manifest drops rather than reaching the binary check as a bad expectation.
     /**
      * @return array{version: string, sha512_hex: string, published_at: CarbonImmutable}|null
      */
@@ -123,21 +127,31 @@ final readonly class HttpPublisherManifestFetcher implements PublisherManifestFe
         }
 
         $version = $data['version'] ?? null;
-        $sha512Base64 = $data['sha512'] ?? null;
         $releaseDate = $data['releaseDate'] ?? null;
-        if (! is_string($version) || ! is_string($sha512Base64) || ! is_string($releaseDate)) {
-            return null;
-        }
+        $sha512Hex = $this->decodeBase64Digest($data['sha512'] ?? null);
 
-        $sha512Binary = base64_decode($sha512Base64, true);
-        if ($sha512Binary === false || strlen($sha512Binary) !== 64) {
+        if (! is_string($version) || ! is_string($releaseDate) || $sha512Hex === null) {
             return null;
         }
 
         return [
             'version' => $version,
-            'sha512_hex' => bin2hex($sha512Binary),
+            'sha512_hex' => $sha512Hex,
             'published_at' => CarbonImmutable::parse($releaseDate),
         ];
+    }
+
+    // The manifest carries the digest as base64; verifyBinary() compares hex.
+    // A decode that is not exactly 64 bytes is not a SHA512 digest, so the whole
+    // manifest drops rather than reaching the binary check as a bad expectation.
+    private function decodeBase64Digest(mixed $sha512Base64): ?string
+    {
+        if (! is_string($sha512Base64)) {
+            return null;
+        }
+
+        $binary = base64_decode($sha512Base64, true);
+
+        return $binary !== false && strlen($binary) === 64 ? bin2hex($binary) : null;
     }
 }

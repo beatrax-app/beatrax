@@ -96,13 +96,14 @@ final class RelayConfig
         // must be an RFC 1918 PRIVATE address. Link-local (169.254 — APIPA and
         // the 169.254.169.254 metadata endpoint) and other reserved ranges are
         // refused, so a scanned QR cannot drive a plaintext POST at one of them.
-        if (str_starts_with($host, '127.')) {
-            return true;
-        }
+        return str_starts_with($host, '127.') || $this->isPrivateIpv4($host);
+    }
 
-        // NO_PRIV_RANGE fails only for the private ranges, so a failure here is
-        // precisely the RFC 1918 LAN case (reserved/link-local addresses pass it
-        // and are therefore rejected).
+    // NO_PRIV_RANGE fails only for the private ranges, so a failure here is
+    // precisely the RFC 1918 LAN case (reserved/link-local addresses pass it
+    // and are therefore rejected).
+    private function isPrivateIpv4(string $host): bool
+    {
         return filter_var(
             $host,
             FILTER_VALIDATE_IP,

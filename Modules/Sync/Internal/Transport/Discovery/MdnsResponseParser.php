@@ -60,10 +60,23 @@ final class MdnsResponseParser
 
         /** @var array{qd: int, an: int, ns: int, ar: int}|false $header */
         $header = unpack('nid/nflags/nqd/nan/nns/nar', substr($datagram, 0, self::HEADER_BYTES));
+
         if ($header === false) {
             return;
         }
 
+        $this->readSections($datagram, $header, $sender, $table);
+    }
+
+    // The questions are walked only to get past them; the answer, authority
+    // and additional sections all hold records, and a responder is free to put
+    // the SRV in one and the TXT in another, so all three are read the same
+    // way. A section that will not parse stops the walk where it stands.
+    /**
+     * @param  array{qd: int, an: int, ns: int, ar: int}  $header
+     */
+    private function readSections(string $datagram, array $header, string $sender, MdnsInstanceTable $table): void
+    {
         $offset = self::HEADER_BYTES;
 
         for ($i = 0; $i < $header['qd']; $i++) {
@@ -72,9 +85,6 @@ final class MdnsResponseParser
             }
         }
 
-        // Answers, authority and additional all hold records, and a responder
-        // is free to put the SRV in one and the TXT in another, so all three
-        // sections are read the same way.
         $records = min($header['an'] + $header['ns'] + $header['ar'], self::MAX_RECORDS_PER_MESSAGE);
 
         for ($i = 0; $i < $records; $i++) {
@@ -97,27 +107,9 @@ final class MdnsResponseParser
     private function readRecord(string $datagram, int &$offset, string $sender, MdnsInstanceTable $table): bool
     {
         $name = $this->readName($datagram, $offset);
+        $preamble = $this->readPreamble($datagram, $offset);
 
-        if ($offset + self::RECORD_PREAMBLE_BYTES > strlen($datagram)) {
-            return false;
-        }
-
-        /** @var array{type: int, class: int, ttlHigh: int, ttlLow: int, length: int}|false $preamble */
-        $preamble = unpack(
-            'ntype/nclass/nttlHigh/nttlLow/nlength',
-            substr($datagram, $offset, self::RECORD_PREAMBLE_BYTES)
-        );
-
-        if ($preamble === false) {
-            return false;
-        }
-
-        $offset += self::RECORD_PREAMBLE_BYTES;
-
-        // A declared rdlength that overruns the datagram is the classic
-        // malformed-packet case; refuse the record rather than reading
-        // whatever happens to follow in memory.
-        if ($preamble['length'] < 0 || $offset + $preamble['length'] > strlen($datagram)) {
+        if ($preamble === null) {
             return false;
         }
 
@@ -136,6 +128,36 @@ final class MdnsResponseParser
         );
 
         return true;
+    }
+
+    // Leaves $offset at the start of the rdata, and answers null when the
+    // record header is truncated or declares an rdlength that overruns the
+    // datagram — the classic malformed-packet case, refused rather than
+    // reading whatever happens to follow in memory.
+    /**
+     * @return array{type: int, class: int, ttlHigh: int, ttlLow: int, length: int}|null
+     */
+    private function readPreamble(string $datagram, int &$offset): ?array
+    {
+        if ($offset + self::RECORD_PREAMBLE_BYTES > strlen($datagram)) {
+            return null;
+        }
+
+        /** @var array{type: int, class: int, ttlHigh: int, ttlLow: int, length: int}|false $preamble */
+        $preamble = unpack(
+            'ntype/nclass/nttlHigh/nttlLow/nlength',
+            substr($datagram, $offset, self::RECORD_PREAMBLE_BYTES)
+        );
+
+        if ($preamble === false) {
+            return null;
+        }
+
+        $offset += self::RECORD_PREAMBLE_BYTES;
+
+        return $preamble['length'] >= 0 && $offset + $preamble['length'] <= strlen($datagram)
+            ? $preamble
+            : null;
     }
 
     private function apply(
@@ -265,18 +287,9 @@ final class MdnsResponseParser
             }
 
             if (($length & self::LABEL_TYPE_MASK) === self::POINTER_MARKER) {
-                if ($cursor + 1 >= $limit) {
-                    break;
-                }
+                $target = $this->followPointer($datagram, $cursor, $shortestPointerSeen, $offset, $followed);
 
-                $target = (($length & self::POINTER_HIGH_BITS_MASK) << 8) | ord($datagram[$cursor + 1]);
-
-                if (! $followed) {
-                    $offset = $cursor + self::POINTER_BYTES;
-                    $followed = true;
-                }
-
-                if ($target >= $shortestPointerSeen) {
+                if ($target === null) {
                     break;
                 }
 
@@ -305,5 +318,30 @@ final class MdnsResponseParser
         }
 
         return implode('.', $labels);
+    }
+
+    // The offset a pointer at $cursor names, or null when the walk must stop:
+    // its second byte is missing, or it does not point strictly backwards.
+    // $offset lands past the FIRST well-formed pointer, since that is where
+    // the name ended as it appeared here rather than where it continues.
+    private function followPointer(
+        string $datagram,
+        int $cursor,
+        int $shortestPointerSeen,
+        int &$offset,
+        bool &$followed,
+    ): ?int {
+        if ($cursor + 1 >= strlen($datagram)) {
+            return null;
+        }
+
+        $target = ((ord($datagram[$cursor]) & self::POINTER_HIGH_BITS_MASK) << 8) | ord($datagram[$cursor + 1]);
+
+        if (! $followed) {
+            $offset = $cursor + self::POINTER_BYTES;
+            $followed = true;
+        }
+
+        return $target < $shortestPointerSeen ? $target : null;
     }
 }

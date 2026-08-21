@@ -63,10 +63,11 @@ class SecureStorageKeyCustodian implements KeyCustodian
             return $handle;
         }
 
-        if (isset($this->keyCache[$handle])) {
-            return $this->keyCache[$handle];
-        }
+        return $this->keyCache[$handle] ?? $this->readThrough($handle);
+    }
 
+    private function readThrough(string $handle): ?string
+    {
         $stored = $this->nativeGet($handle);
         if (! is_string($stored)) {
             // Entry missing / evicted — the key is unrecoverable. Return null

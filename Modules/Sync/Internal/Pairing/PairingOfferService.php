@@ -44,6 +44,15 @@ final readonly class PairingOfferService
             return null;
         }
 
+        $row = $this->offerableRow($tokenHash, $userId);
+
+        return $row === null ? null : $this->publicIdentity($row, $userId);
+    }
+
+    // The live handshake row this hash names, or null when there is none the
+    // caller may be told about.
+    private function offerableRow(string $tokenHash, int $userId): ?\stdClass
+    {
         // expires_at is TEXT compared lexically, which is correct only
         // because every value is written via toIso8601String() in UTC —
         // identical fixed-width offset, so lexical order is chronological.
@@ -58,6 +67,16 @@ final readonly class PairingOfferService
             return null;
         }
 
+        return $row;
+    }
+
+    // Null unless all three halves of the initiator's identity are bound: a
+    // partial offer would let a peer pair against keys nobody holds.
+    /**
+     * @return array{device_id: string, ed25519: string, x25519: string, name: string}|null
+     */
+    private function publicIdentity(\stdClass $row, int $userId): ?array
+    {
         $deviceId = $this->stringColumn($row, 'initiator_device_id');
         $ed25519 = $this->stringColumn($row, 'initiator_ed25519_pub_hex');
         $x25519 = $this->stringColumn($row, 'initiator_x25519_pub_hex');

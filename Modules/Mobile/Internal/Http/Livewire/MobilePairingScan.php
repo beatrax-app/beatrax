@@ -13,13 +13,13 @@ use Illuminate\Http\Request;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
-use LogicException;
 use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\Lang;
+use Modules\Mobile\Internal\Http\Livewire\Concerns\AcceptsPairingCode;
 use Modules\Mobile\Internal\Pairing\QrScanBridge;
 use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
 use Modules\Sync\Public\Services\DeviceRegistryService;
@@ -29,6 +29,7 @@ use Throwable;
 
 final class MobilePairingScan extends Component
 {
+    use AcceptsPairingCode;
     use HoldsFlashMessage;
 
     // Read once by MobileLockScreen::mount(). A public property cannot carry
@@ -276,65 +277,23 @@ final class MobilePairingScan extends Component
     ): void {
         $userId = $currentUser->user()->id;
 
-        // Read the QR for EVERY scan, not just an import: the desktop learns
-        // of this device only through the relay frame below, so gating that
-        // on import mode made pairing from /sync a silent dead end.
-        $identity = $scannedPayload !== null
-            ? $qrBridge->extractIdentity($scannedPayload)
-            : null;
+        $identity = $this->initiatorIdentity($scannedPayload, $qrBridge, $gateway);
 
-        if ($scannedPayload !== null && $identity === null) {
-            $this->flashMessage = Lang::get('mobile::pairing.errors.invalid_code');
-
+        // false, never null: a typed code outside import mode legitimately
+        // carries no identity, while false means one was named and could not
+        // be read — and the reason is already on screen.
+        if ($identity === false) {
             return;
         }
 
-        // A typed code carries the token alone, so ask the LAN for the public
-        // half it cannot carry. An mDNS answer proves nothing — the
-        // safety-number comparison is still the only trust gate.
-        if ($scannedPayload === null && $this->importMode) {
-            $identity = $gateway->discoverInitiatorOnLan($this->wordCode);
-
-            if ($identity === null) {
-                $this->flashMessage = Lang::get('mobile::pairing.errors.relay_unreachable');
-
-                return;
-            }
-        }
-
         if ($identity !== null) {
-            // Before accepting, so the send below has somewhere to deliver.
-            $gateway->configureRelayFromQr($identity['relayEndpoint'], $identity['relayAuthToken'], $identity['relayPin']);
+            $this->adoptInitiator($gateway, $identity, $userId);
         }
 
-        // Every phone holds a separate database from the desktop, so the
-        // token issued over there is never present here. No trust decision:
-        // the seeded row is Pending and still faces the whole ceremony.
-        if ($identity !== null) {
-            $gateway->seedResponderToken(
-                $identity['token'],
-                $identity['deviceId'],
-                $identity['ed25519PubHex'],
-                $identity['x25519PubHex'],
-                $userId,
-                // Without it the desktop is admitted as "Paired device".
-                $identity['deviceName'],
-            );
-        }
+        if (! $this->ownIdentityReady($gateway, $session, $userId)) {
+            $this->sendToUnlock($urls, $session, $lock, $userId);
 
-        // Gated on the FILE, never on a null: null also means "locked", and
-        // minting over a locked device's identity would orphan every pairing
-        // it had.
-        if (! $gateway->hasIdentityFile($userId)) {
-            try {
-                // Identity only, no epoch — a responder receives the
-                // initiator's epochs on confirm; self-minting strands them.
-                $gateway->enableSyncIdentityWithoutEpoch($userId, $session);
-            } catch (LogicException) {
-                $this->sendToUnlock($urls, $session, $lock, $userId);
-
-                return;
-            }
+            return;
         }
 
         $result = $scannedPayload !== null
@@ -342,20 +301,7 @@ final class MobilePairingScan extends Component
             : $gateway->acceptWordCode($this->wordCode, $userId, $session);
 
         if ($result === null) {
-            // Clear the attempt, not just the message: a token expiring
-            // mid-flow otherwise leaves stale addressing in place and the
-            // next scan is judged against a pairing that no longer exists.
-            $this->resetPairingAttempt();
-
-            // An unopenable identity means locked, not a bad code — sending
-            // that user for a fresh QR is advice that can never work.
-            if (! $gateway->hasUsableIdentity($userId, $session)) {
-                $this->sendToUnlock($urls, $session, $lock, $userId);
-
-                return;
-            }
-
-            $this->flashMessage = Lang::get('mobile::pairing.errors.invalid_code');
+            $this->reportRejectedCode($gateway, $urls, $session, $lock, $userId);
 
             return;
         }
@@ -371,20 +317,7 @@ final class MobilePairingScan extends Component
         // Best-effort: a relay failure never dead-ends the confirm step
         // already rendered above; the desktop's poll simply does not advance.
         if ($identity !== null) {
-            $tokenHash = hash('sha256', $identity['token']);
-
-            // Stashed so the poll can re-emit if this delivery is lost.
-            $this->importResponderTokenHash = $tokenHash;
-            $this->importDesktopDeviceId = $identity['deviceId'];
-
-            try {
-                $gateway->sendResponderAccept($userId, $tokenHash, $identity['deviceId'], $session);
-            } catch (Throwable $e) {
-                $logger->warning('MobilePairingScan: cross-device PAIR_RESPONDER_ACCEPT relay delivery failed.', [
-                    'pairing_token_id' => $this->pairingTokenId,
-                    'exception' => $e::class,
-                ]);
-            }
+            $this->announceResponderAccept($gateway, $logger, $identity, $userId, $session);
         }
     }
 
@@ -554,17 +487,6 @@ final class MobilePairingScan extends Component
                 'exception' => $e::class,
             ]);
         }
-    }
-
-    // This screen only ever plays responder, so the peer is the initiator —
-    // the device whose QR was scanned.
-    private function hydrateDeviceNames(PairingGateway $gateway, DeviceRegistryService $devices, int $userId): void
-    {
-        $names = $gateway->deviceNamesFor((int) $this->pairingTokenId, $userId);
-        $fallback = Lang::get('mobile::pairing.peer_default_name');
-
-        $this->selfDeviceName = $devices->localDeviceName($userId) ?? $fallback;
-        $this->peerDeviceName = $names['initiator'] ?? $fallback;
     }
 
     // A confirmed peer alone suffices: this screen only plays responder, so

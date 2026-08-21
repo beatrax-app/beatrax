@@ -31,6 +31,35 @@ final class GoalContributionWriter
             return false;
         }
 
+        return $this->insertAndAnnounce($user, $goalId, $transactionId);
+    }
+
+    /**
+     * @return bool whether a contribution row was removed
+     */
+    public function detach(User $user, int $goalId, int $transactionId): bool
+    {
+        $contributionId = $this->contributionId($user, $goalId, $transactionId);
+        if ($contributionId === null) {
+            return false;
+        }
+
+        $this->db->connection()
+            ->table('goal_contributions')
+            ->where('id', $contributionId)
+            ->delete();
+
+        $this->events->dispatch(new GoalContributionMutated(
+            contributionId: $contributionId,
+            userId: $user->id,
+            mutationType: 'delete',
+        ));
+
+        return true;
+    }
+
+    private function insertAndAnnounce(User $user, int $goalId, int $transactionId): bool
+    {
         $now = $this->clock->now();
 
         $inserted = $this->db->connection()->table('goal_contributions')->insertOrIgnore([
@@ -59,30 +88,6 @@ final class GoalContributionWriter
                 'goal_id' => $goalId,
                 'transaction_id' => $transactionId,
             ],
-        ));
-
-        return true;
-    }
-
-    /**
-     * @return bool whether a contribution row was removed
-     */
-    public function detach(User $user, int $goalId, int $transactionId): bool
-    {
-        $contributionId = $this->contributionId($user, $goalId, $transactionId);
-        if ($contributionId === null) {
-            return false;
-        }
-
-        $this->db->connection()
-            ->table('goal_contributions')
-            ->where('id', $contributionId)
-            ->delete();
-
-        $this->events->dispatch(new GoalContributionMutated(
-            contributionId: $contributionId,
-            userId: $user->id,
-            mutationType: 'delete',
         ));
 
         return true;

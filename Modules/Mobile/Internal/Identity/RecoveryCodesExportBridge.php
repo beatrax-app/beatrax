@@ -33,13 +33,20 @@ class RecoveryCodesExportBridge
     // than one that offers no export at all.
     public function export(string $filename, string $contents, string $shareTitle, string $shareMessage): bool
     {
-        if (! $this->isAvailable() || ! class_exists(Share::class)) {
+        if (! $this->isAvailable()) {
             return false;
         }
 
         $path = $this->write($filename, $contents);
 
-        if ($path === null) {
+        return $path !== null && $this->handToShareSheet($shareTitle, $shareMessage, $path);
+    }
+
+    // The in-method class_exists() re-check is load-bearing: PHPStan narrowing
+    // is scope-local, so it has to sit in the same method as the Share:: call.
+    private function handToShareSheet(string $shareTitle, string $shareMessage, string $path): bool
+    {
+        if (! class_exists(Share::class)) {
             return false;
         }
 
@@ -59,13 +66,8 @@ class RecoveryCodesExportBridge
     {
         try {
             $path = UserDataPathService::appPath(self::EXPORT_SUB.DIRECTORY_SEPARATOR.$filename);
-            $directory = dirname($path);
 
-            if (! is_dir($directory) && ! @mkdir($directory, 0700, true) && ! is_dir($directory)) {
-                return null;
-            }
-
-            if (@file_put_contents($path, $contents) === false) {
+            if (! $this->ensureDirectory(dirname($path)) || @file_put_contents($path, $contents) === false) {
                 return null;
             }
 
@@ -75,5 +77,13 @@ class RecoveryCodesExportBridge
         } catch (Throwable) {
             return null;
         }
+    }
+
+    // The second is_dir() is not the first one repeated: mkdir() fails with
+    // EEXIST when a racing writer got there in between, and the directory it
+    // lost the race for is exactly the one this needed.
+    private function ensureDirectory(string $directory): bool
+    {
+        return is_dir($directory) || @mkdir($directory, 0700, true) || is_dir($directory);
     }
 }

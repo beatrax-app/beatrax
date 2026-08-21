@@ -212,3 +212,27 @@ jobs:
         with:
           args: >
             -Dsonar.php.coverage.reportPaths=coverage-reports/coverage-1/coverage.xml,coverage-reports/coverage-2/coverage.xml,coverage-reports/coverage-3/coverage.xml
+
+      # A check nobody has watched fail is what let twenty issues through, so
+      # the step below is put through its failure paths against a loopback stub
+      # before its verdict is trusted. About a second, and it catches the
+      # regression that matters: a gate edited into always passing.
+      - name: Prove the gate still fails
+        run: python3 .github/scripts/sonar-gate-selftest.py
+
+      # The scan uploads a report and returns success; the verdict is computed
+      # afterwards and, until this step existed, nothing read it.
+      #
+      # `-Dsonar.qualitygate.wait=true` would only re-check the gate, and the
+      # gate is the built-in "Sonar way": it cannot be edited, and it conditions
+      # on ratings rather than on issue count. Forty-five new code smells sat
+      # under an A maintainability rating, which is why it stayed green. This
+      # asks for the issue list itself.
+      #
+      # It lives in the `coverage` job on purpose: that job name is already a
+      # required status check, so the enforcement starts blocking on merge
+      # rather than once someone remembers to edit the ruleset.
+      - name: Fail on new SonarCloud issues
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: python3 .github/scripts/sonar-gate.py

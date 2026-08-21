@@ -19,6 +19,8 @@ use ValueError;
 // nl 1.234,5). Currency stays with Money, which formats by currency instead.
 final class Fmt
 {
+    private const FALLBACK_DATE_PATTERN = 'DD-MM-YYYY';
+
     public static function number(int|float $value, int $decimals = 0): string
     {
         $locale = Container::getInstance()->make(Translator::class)->getLocale();
@@ -45,17 +47,21 @@ final class Fmt
     // The locale's own short-date pattern, corrected where it writes the month
     // before the day. English is the only shipped locale that does, and it is
     // what a fresh install runs on, so 08/20/2026 is what a new reader met.
+    public static function datePattern(): string
+    {
+        $pattern = CarbonImmutable::now()->getIsoFormats(self::locale())['L'] ?? self::FALLBACK_DATE_PATTERN;
+
+        if (! is_string($pattern)) {
+            return self::FALLBACK_DATE_PATTERN;
+        }
+
+        return self::dayBeforeMonth($pattern);
+    }
 
     // Year-first locales are left alone: sv's 2026-08-20 is unambiguous, and
     // reordering it would be the odd thing to a Swedish reader.
-    public static function datePattern(): string
+    private static function dayBeforeMonth(string $pattern): string
     {
-        $pattern = CarbonImmutable::now()->getIsoFormats(self::locale())['L'] ?? 'DD-MM-YYYY';
-
-        if (! is_string($pattern)) {
-            return 'DD-MM-YYYY';
-        }
-
         $month = strpos($pattern, 'MM');
         $day = strpos($pattern, 'DD');
 

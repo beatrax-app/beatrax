@@ -13,6 +13,7 @@ use Modules\Sync\Internal\Exceptions\RelayRefusedException;
 use Modules\Sync\Internal\Exceptions\RelayUnavailableException;
 use Modules\Sync\Internal\Exceptions\SecretFileException;
 use Modules\Sync\Internal\Exceptions\SessionNotAuthenticatedException;
+use Modules\Sync\Internal\Exceptions\UnreadableColumnException;
 
 // Sync's failure types build their message in a named constructor rather than at
 // the throw site, so the identifiers a maintainer needs — which user, which epoch,
@@ -72,6 +73,7 @@ it('keeps every failure catchable as a RuntimeException', function (string $clas
     NoiseNonceExhaustedException::class,
     PeerDisconnectedException::class,
     RebuildInProgressException::class,
+    UnreadableColumnException::class,
 ]);
 
 // The relay hop, the Noise session and the op-log rebuild lock all fail on a

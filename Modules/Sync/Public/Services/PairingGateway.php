@@ -5,20 +5,17 @@ declare(strict_types=1);
 namespace Modules\Sync\Public\Services;
 
 use Illuminate\Contracts\Session\Session;
-use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
-use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Identity\DeviceNameDetector;
-use Modules\Sync\Internal\Pairing\InvalidPublicKeyException;
 use Modules\Sync\Internal\Pairing\LanPairingOfferFetcher;
 use Modules\Sync\Internal\Pairing\PairingRelayCourier;
 use Modules\Sync\Internal\Pairing\PairingRowGuards;
 use Modules\Sync\Internal\Pairing\PairingState;
+use Modules\Sync\Internal\Pairing\PairingTokenRowReader;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
-use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use stdClass;
@@ -36,14 +33,12 @@ final class PairingGateway
         private readonly DeviceIdentityLoader $identityLoader,
         private readonly PairingTokenService $tokenService,
         private readonly WordCodeEncoder $wordEncoder,
-        private readonly SafetyNumberDeriver $safetyDeriver,
-        private readonly DatabaseManager $db,
+        private readonly PairingTokenRowReader $rows,
         private readonly DeviceIdentityService $identityService,
         private readonly GdkRotationService $rotationService,
         private readonly RelayConfig $relayConfig,
         private readonly DeviceNameDetector $deviceNameDetector,
         private readonly PairingRelayCourier $relayCourier,
-        private readonly Clock $clock,
         private readonly LanPairingOfferFetcher $lanOfferFetcher,
     ) {}
 
@@ -131,12 +126,9 @@ final class PairingGateway
             return;
         }
 
-        $tokenHash = $this->db->connection()->table('pairing_tokens')
-            ->where('id', $tokenId)
-            ->where('user_id', $userId)
-            ->value('token_hash');
+        $tokenHash = $this->rows->tokenHash($tokenId, $userId);
 
-        if (! is_string($tokenHash) || $tokenHash === '') {
+        if ($tokenHash === null) {
             return;
         }
 
@@ -190,15 +182,7 @@ final class PairingGateway
      */
     public function deviceNamesFor(int $pairingTokenId, int $userId): array
     {
-        $row = $this->db->connection()->table('pairing_tokens')
-            ->where('id', $pairingTokenId)
-            ->where('user_id', $userId)
-            ->first(['initiator_name', 'responder_name']);
-
-        return [
-            'initiator' => $row !== null && is_string($row->initiator_name) ? $row->initiator_name : null,
-            'responder' => $row !== null && is_string($row->responder_name) ? $row->responder_name : null,
-        ];
+        return $this->rows->deviceNames($pairingTokenId, $userId);
     }
 
     // Closes the gap where acceptToken() finds no local row on a fresh device
@@ -242,7 +226,7 @@ final class PairingGateway
 
         return [
             'pairingTokenId' => $pairingTokenId,
-            'safetyWords' => $this->deriveSafetyWords($pairingTokenId, $userId),
+            'safetyWords' => $this->rows->safetyWords($pairingTokenId, $userId),
         ];
     }
 
@@ -301,68 +285,11 @@ final class PairingGateway
      */
     public function inFlightFor(int $userId): ?array
     {
-        $row = $this->db->connection()->table('pairing_tokens')
-            ->where('user_id', $userId)
-            ->whereIn('state', [PairingState::AwaitingConfirm->value, PairingState::Confirmed->value])
-            ->where('expires_at', '>', $this->clock->now()->toIso8601String())
-            ->orderByDesc('id')
-            ->first(['id', 'state', 'token_hash', 'initiator_device_id', 'responder_device_id']);
-
-        if ($row === null || ! is_numeric($row->id) || ! is_string($row->state)) {
-            return null;
-        }
-
-        // Derived, not read: reading a `safety_number_words` column here 500'd every
-        // GET of the pairing screen — that column is on device_registry, and
-        // pairing_tokens has never had one.
-        $words = $this->deriveSafetyWords((string) $row->id, $userId);
-
-        // token_hash and the device ids ride along so a resumed screen can re-emit its
-        // responder accept; without them the one retry that heals a lost frame is
-        // disarmed exactly when a frame is most likely to have been lost.
-        return [
-            'id' => (int) $row->id,
-            'state' => $row->state,
-            'safety_words' => $words,
-            'token_hash' => is_string($row->token_hash) ? $row->token_hash : '',
-            'peer_device_id' => is_string($row->initiator_device_id) ? $row->initiator_device_id : '',
-            // peer_device_id stays the initiator's; the phone is always the responder.
-            'initiator_device_id' => is_string($row->initiator_device_id) ? $row->initiator_device_id : null,
-            'responder_device_id' => is_string($row->responder_device_id) ? $row->responder_device_id : null,
-        ];
+        return $this->rows->inFlight($userId);
     }
 
     public function tokenState(int $tokenId, int $userId): ?string
     {
-        $row = $this->db->connection()->table('pairing_tokens')
-            ->where('id', $tokenId)
-            ->where('user_id', $userId)
-            ->first(['state']);
-
-        return $row !== null && is_string($row->state) ? $row->state : null;
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function deriveSafetyWords(string $pairingTokenId, int $userId): array
-    {
-        $row = $this->db->connection()->table('pairing_tokens')
-            ->where('id', (int) $pairingTokenId)
-            ->where('user_id', $userId)
-            ->first(['initiator_ed25519_pub_hex', 'responder_ed25519_pub_hex']);
-
-        $initiatorEd = $row !== null && is_string($row->initiator_ed25519_pub_hex) ? $row->initiator_ed25519_pub_hex : null;
-        $responderEd = $row !== null && is_string($row->responder_ed25519_pub_hex) ? $row->responder_ed25519_pub_hex : null;
-
-        if ($initiatorEd === null || $responderEd === null) {
-            return [];
-        }
-
-        try {
-            return $this->safetyDeriver->deriveWords($initiatorEd, $responderEd);
-        } catch (InvalidPublicKeyException) {
-            return [];
-        }
+        return $this->rows->state($tokenId, $userId);
     }
 }
