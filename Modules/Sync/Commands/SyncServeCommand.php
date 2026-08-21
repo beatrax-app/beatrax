@@ -115,13 +115,14 @@ final class SyncServeCommand extends Command
                 $handler->localUserId(),
             );
 
+            // Advertised BEFORE the socket binds: dns-sd is a child and
+            // inherits every open descriptor, so advertising afterwards handed
+            // it the bound port and the orphan outlived the daemon, holding the
+            // port against the watchdog that meant to rebind it.
+            $this->advertiser->advertise($handler->localDeviceId(), $port);
+
             $errorHandler = new DefaultErrorHandler;
             $httpServer->start($requestHandler, $errorHandler);
-
-            // advertise() is a best-effort shell-out (dns-sd / avahi-publish-service);
-            // it silently no-ops when neither CLI is available, falling through to
-            // manual host:port entry or the relay.
-            $this->advertiser->advertise($handler->localDeviceId(), $port);
 
             $this->logger->info('sync:serve: listener started.', ['port' => $port]);
             $stopHint = $this->canTrapSignals() ? 'SIGTERM/SIGINT to stop' : 'no signal handling on this runtime';
