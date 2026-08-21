@@ -8,9 +8,6 @@ namespace Modules\Core\Public\Enums;
 // then parsed, or skipped/unmatched. Shared by EmailScan (inbox_messages) and
 // Receipts (file_imports), whose queries validate a caller-supplied status
 // against it, so the vocabulary lives once in Core.
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 enum InboxMessageStatus: string
 {
     case Fetched = 'fetched';

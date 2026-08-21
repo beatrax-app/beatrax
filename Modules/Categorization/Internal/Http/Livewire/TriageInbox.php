@@ -14,14 +14,11 @@ use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Categorization\Public\Services\UncategorizedTriageQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 
-// Users stage assignments (selectForRow) and commit them all at once via
-// `save`. The cursor is a (posted_at, id) pair so rows sharing a
-// posted_at value never silently drop between pages. The header count is
-// read directly from `transactions` rather than the on-page row count.
+// The cursor is a (posted_at, id) pair so rows sharing a posted_at value
+// never silently drop between pages.
 final class TriageInbox extends Component
 {
-    // The quick-assign row shows at most this many categories as one-tap
-    // chips; the fixed cap keeps the row to a single line in the triage grid.
+    // Capped so the chip row stays on one line in the triage grid.
     private const int QUICK_ASSIGN_CATEGORY_LIMIT = 9;
 
     /** @var array<int, ?int> map of transactionId => pending categoryId */
@@ -36,9 +33,8 @@ final class TriageInbox extends Component
         $this->pending[$transactionId] = $categoryId;
     }
 
-    // Empty body — the re-render is the side effect; the listener
-    // existing on the component is what triggers Livewire to walk
-    // render() again, picking up the new community_settings value.
+    // Empty body: the listener existing is what makes Livewire render again
+    // and pick up the new community_settings value.
     #[On('shared-list-settings:saved')]
     public function refreshSettings(): void {}
 

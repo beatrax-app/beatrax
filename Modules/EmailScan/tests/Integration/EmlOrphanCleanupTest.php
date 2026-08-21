@@ -23,21 +23,10 @@ use Modules\EmailScan\Public\Services\KnownSenderQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * Orphan-cleanup invariant: when the DB transaction that follows
- * a .eml write fails, the catch block unlinks the .eml so there
- * is never a blob on disk without a matching index row.
- *
- * The test injects a wrapper DatabaseManager whose connection
- * proxy throws on the FIRST transaction() call. The job has just
- * written the .eml to disk; after the throw it must unlink the
- * blob and re-throw.
- *
- * The second part of the test runs the same job again WITHOUT
- * the injected failure to confirm the path is fully idempotent —
- * UNIQUE on (inbox_id, provider_message_id) + insertOrIgnore +
- * atomic .eml-then-DB ordering makes a retry safe.
- */
+// A blob on disk with no index row behind it would be invisible to every
+// later scan, so a failed transaction has to unlink the .eml it just wrote.
+// The second pass re-runs without the injected failure, because the retry
+// after such a rollback is the case that has to stay idempotent.
 
 beforeEach(function (): void {
     Sleep::fake();
@@ -84,15 +73,13 @@ it('unlinks the .eml when the following DB transaction throws, then succeeds on 
         'updated_at' => $now,
     ]);
 
-    // Bind the Fake.
     $fake = new FakeGmailApiClient($this->app->make(Filesystem::class));
     $this->app->instance(GmailApiClientContract::class, $fake);
     $graphFake = new FakeGraphApiClient($this->app->make(Filesystem::class));
     $this->app->instance(GraphApiClientContract::class, $graphFake);
 
-    // First pass: inject a one-shot failing connection wrapper so
-    // the FIRST per-page transaction throws RuntimeException after
-    // the .eml is on disk.
+    // The throw lands on the first per-page transaction, by which point the
+    // .eml is already on disk.
     $failingDb = new FailingTransactionDbManager($realDb, failOnCall: 1);
 
     $job = new BackfillInboxJob($inboxId, 3);
@@ -113,7 +100,6 @@ it('unlinks the .eml when the following DB transaction throws, then succeeds on 
         expect($e->getMessage())->toContain('injected-tx-failure');
     }
 
-    // Assert: NO .eml blobs remain on disk for the inbox.
     $inboxRoot = storage_path('app/inbox/'.$user->id.'/'.$inboxId);
     if (is_dir($inboxRoot)) {
         $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(
@@ -129,16 +115,14 @@ it('unlinks the .eml when the following DB transaction throws, then succeeds on 
         expect($leftover)->toBe([], 'Expected no orphan .eml blobs');
     }
 
-    // Assert: no inbox_messages rows landed either.
     $rowsAfterFail = $realDb->connection()
         ->table('inbox_messages')
         ->where('inbox_id', $inboxId)
         ->count();
     expect($rowsAfterFail)->toBe(0);
 
-    // Second pass: re-dispatch without the failure injection.
-    // Reset the Fake's page cursor since the first pass consumed
-    // it (a fresh Fake mirrors a fresh provider session).
+    // A fresh Fake, because the first pass consumed the page cursor and a
+    // retry starts a new provider session.
     $fake2 = new FakeGmailApiClient($this->app->make(Filesystem::class));
     $this->app->instance(GmailApiClientContract::class, $fake2);
     $graphFake2 = new FakeGraphApiClient($this->app->make(Filesystem::class));
@@ -154,24 +138,15 @@ it('unlinks the .eml when the following DB transaction throws, then succeeds on 
     expect($rowsAfterRetry)->toBe(3);
 });
 
-/**
- * Minimal DatabaseManager wrapper that proxies every call to the
- * underlying real manager EXCEPT `connection()`, which returns a
- * Connection proxy whose `transaction()` throws on the configured
- * call number.
- *
- * Used only by EmlOrphanCleanupTest to force the .eml-then-DB
- * rollback path without touching production code paths.
- */
+// Forces the .eml-then-DB rollback path without touching production code.
 final class FailingTransactionDbManager extends DatabaseManager
 {
     public function __construct(
         private readonly DatabaseManager $inner,
         private readonly int $failOnCall,
     ) {
-        // Skip parent constructor — we proxy every call through
-        // $this->inner. The DatabaseManager constructor signature
-        // is not part of the public contract.
+        // Every call proxies to $this->inner, so the parent constructor has
+        // nothing to set up.
     }
 
     /**
@@ -186,11 +161,6 @@ final class FailingTransactionDbManager extends DatabaseManager
     }
 }
 
-/**
- * Decorator over a real Connection that counts transaction()
- * calls and throws RuntimeException once the configured call
- * number is reached. Every other method is forwarded verbatim.
- */
 final class FailingTransactionConnection extends Connection
 {
     private int $transactionCallCount = 0;
@@ -199,10 +169,8 @@ final class FailingTransactionConnection extends Connection
         private readonly Connection $inner,
         private readonly int $failOnCall,
     ) {
-        // Skip parent constructor — the inner connection is fully
-        // initialised; we only intercept transaction() + table()
-        // + statement(). The parent Connection's protected state
-        // is never touched.
+        // The inner connection is already initialised and the parent's
+        // protected state is never read here.
     }
 
     public function transaction(Closure $callback, $attempts = 1)

@@ -16,9 +16,6 @@ use Throwable;
 
 // Every script is idempotent and marker-guarded, so running them per build
 // costs nothing when they are already applied.
-/**
- * @link ../../../../.docs/features/mobile/architecture.md
- */
 final readonly class NativeBuildPatches
 {
     // Generous: these rewrite generated sources on disk and never wait on

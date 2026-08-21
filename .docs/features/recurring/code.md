@@ -123,7 +123,7 @@ Modules/Recurring/
   `/recurring/review` triage queue (pending rows).
 - `Internal/Http/Livewire/RecurringSeriesDetailPage` —
   `/recurring/{seriesId}`.
-- `Internal/Http/Livewire/FixedPaymentsCard` — dashboard
+- `Public/Http/Livewire/FixedPaymentsCard` — dashboard
   tile.
 
 ## Models + migrations

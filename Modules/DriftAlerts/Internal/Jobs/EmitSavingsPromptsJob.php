@@ -19,9 +19,6 @@ use Modules\Core\Public\Support\LockStore;
 use Modules\DriftAlerts\Public\Events\SavingsPromptDue;
 use Modules\DriftAlerts\Public\Services\SavingsInsightsQuery;
 
-/**
- * @link ../../../../.docs/features/drift-alerts/architecture.md
- */
 final class EmitSavingsPromptsJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Dispatchable;

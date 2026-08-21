@@ -8,16 +8,6 @@ use Modules\Core\Models\User;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for the two threshold-related migrations:
- *   - recurring_series.drift_threshold_percent (nullable per-series override)
- *   - users.drift_alert_threshold_percent (per-user default, default 5)
- *
- * Locks the column existence, the nullable / default semantics, and
- * the integer cast on the User model so query-time arithmetic stays
- * accurate.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);

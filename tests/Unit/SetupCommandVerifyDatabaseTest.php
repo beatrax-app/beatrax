@@ -10,12 +10,9 @@ use Illuminate\Console\View\Components\Factory;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\BufferedOutput;
 
-/*
- * verifyDatabase() is a private method of an interactive command, so it is
- * reached the same way SetupCommandEnvEncodingTest reaches encodeEnvValue:
- * by reflection. The command's output components are wired to a buffered
- * output so what the operator would have been shown can be asserted on.
- */
+// verifyDatabase() is private on an interactive command, so it is reached by
+// reflection with the output components wired to a buffer — what the operator
+// would have seen is the thing being asserted on.
 
 /**
  * @param  array<string, string>  $env

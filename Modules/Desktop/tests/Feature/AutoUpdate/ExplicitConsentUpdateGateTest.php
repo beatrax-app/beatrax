@@ -16,14 +16,6 @@ use Native\Desktop\Events\AutoUpdater\UpdateAvailable;
 use Native\Desktop\Events\AutoUpdater\UpdateDownloaded;
 use Psr\Log\NullLogger;
 
-/*
- * The explicit-consent update gate: an update reaches the banner only after
- * its Ed25519-signed manifest verifies against the pinned publisher key, and
- * a downloaded binary installs only after its SHA512 matches that verified
- * manifest. Every failure path leaves the app on its current version rather
- * than trusting an unproven update.
- */
-
 /**
  * @return array{body: string, signature: string, latest_version: string, sha512_hex: string, published_at: CarbonImmutable}
  */

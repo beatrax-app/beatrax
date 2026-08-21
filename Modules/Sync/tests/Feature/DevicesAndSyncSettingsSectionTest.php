@@ -7,19 +7,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
-use Modules\Sync\Internal\Http\Livewire\DevicesAndSyncSettingsSection;
 use Modules\Sync\Internal\Http\Livewire\PairingFlowModal;
+use Modules\Sync\Public\Http\Livewire\DevicesAndSyncSettingsSection;
 
 uses(RefreshDatabase::class);
-
-/*
- * DevicesAndSyncSettingsSectionTest — PAIR-03 Livewire device list + rename,
- * plus the D-02 "set an app-lock first" enable-sync gate.
- *
- * RED until Plan 03 ships the Livewire component
- * Modules\Sync\Internal\Http\Livewire\DevicesAndSyncSettingsSection and its
- * registration. Failure is "class not found" / "Unable to find component".
- */
 
 function devicesSyncSettingsUser(string $username = 'devices-settings-user'): User
 {
@@ -39,7 +30,7 @@ it('mounts with a 200 status for an authenticated user', function (): void {
         ->assertStatus(200);
 });
 
-it('blocks enable-sync with the app-lock gate copy when no app-lock is configured (D-02)', function (): void {
+it('blocks enable-sync with the app-lock gate copy when no app-lock is configured', function (): void {
     $user = devicesSyncSettingsUser('devices-nolock');
     $this->actingAs($user);
 
@@ -82,11 +73,10 @@ it('it_can_rename_a_device', function (): void {
     expect($name)->toBe('New Name');
 });
 
-it('refreshes the enable-sync gate live when an app-lock-configured event arrives (D-02)', function (): void {
-    // Regression: setting an app-lock in the sibling AppLockSettingsSection must
-    // clear the "Set an app lock first" gate without a full page reload. mount()
-    // computes appLockConfigured once; the #[On('app-lock-configured')] listener
-    // re-evaluates it. Previously the gate stayed stale until a manual refresh.
+it('refreshes the enable-sync gate live when an app-lock-configured event arrives', function (): void {
+    // mount() computes the app-lock flag once, so without the listener the
+    // "set an app lock first" gate stayed up until a manual page reload even
+    // after the sibling section had just configured one.
     $user = devicesSyncSettingsUser('devices-gate-refresh');
     $this->actingAs($user);
 
@@ -98,7 +88,6 @@ it('refreshes the enable-sync gate live when an app-lock-configured event arrive
         ->assertSet('appLockConfigured', false)
         ->assertSet('flashMessage', 'Set an app lock first to enable sync.');
 
-    // Configure an app-lock out of band (as AppLockSettingsSection::setPin would).
     $db->connection()->table('user_app_lock_configs')->insert([
         'user_id' => $user->id,
         'lock_enabled' => 1,
@@ -113,11 +102,10 @@ it('refreshes the enable-sync gate live when an app-lock-configured event arrive
         ->assertSet('flashMessage', '');
 });
 
-it('opens the hosted pairing modal when the open-pairing-modal event is dispatched (D-11)', function (): void {
-    // Regression: the modal component is rendered unconditionally and opened by
-    // an event so <flux:modal wire:model="open"> sees a real false→true
-    // transition. Previously it mounted already-open behind @if, so Flux never
-    // fired and "Pair a new device" appeared to do nothing.
+it('opens the hosted pairing modal when the open-pairing-modal event is dispatched', function (): void {
+    // The modal renders unconditionally and opens on an event, so Flux sees a
+    // real false-to-true transition. Mounted already-open behind a conditional
+    // it never fired, and the pairing button appeared to do nothing.
     $user = devicesSyncSettingsUser('devices-modal-open');
     $this->actingAs($user);
 
@@ -128,17 +116,14 @@ it('opens the hosted pairing modal when the open-pairing-modal event is dispatch
         ->assertSet('step', 'choose_direction');
 });
 
-it('flags an http:// relay endpoint as insecure and renders the warning, https:// as secure (T-13-08)', function (): void {
-    // UAT item 4: entering a non-HTTPS relay URL must surface the amber
-    // insecure-connection warning banner; an https:// URL must not.
+it('flags an http:// relay endpoint as insecure and renders the warning, https:// as secure', function (): void {
     $user = devicesSyncSettingsUser('devices-relay-insecure');
     $this->actingAs($user);
 
     $relayPath = UserDataPathService::appPath('sync/relay.json');
 
     try {
-        // http:// → insecure flag set + warning banner rendered
-        // (the relay field + warning render only once sync is enabled)
+        // The relay field and its warning render only once sync is enabled.
         Livewire::test(DevicesAndSyncSettingsSection::class)
             ->set('appLockConfigured', true)
             ->set('syncEnabled', true)
@@ -149,7 +134,6 @@ it('flags an http:// relay endpoint as insecure and renders the warning, https:/
             ->assertSee('relay-insecure-warning', escape: false)
             ->assertSee('uses plain HTTP');
 
-        // https:// → no warning
         Livewire::test(DevicesAndSyncSettingsSection::class)
             ->set('appLockConfigured', true)
             ->set('syncEnabled', true)
@@ -159,7 +143,6 @@ it('flags an http:// relay endpoint as insecure and renders the warning, https:/
             ->assertSet('relayFlashMessage', 'Relay endpoint saved.')
             ->assertDontSee('relay-insecure-warning', escape: false);
 
-        // clear → reverts to not-configured, no warning
         Livewire::test(DevicesAndSyncSettingsSection::class)
             ->set('appLockConfigured', true)
             ->set('relayEndpointUrl', '')
@@ -171,7 +154,7 @@ it('flags an http:// relay endpoint as insecure and renders the warning, https:/
     }
 });
 
-it('blocks a relay-endpoint save behind the app-lock gate (T-13-18)', function (): void {
+it('blocks a relay-endpoint save behind the app-lock gate', function (): void {
     $user = devicesSyncSettingsUser('devices-relay-gate');
     $this->actingAs($user);
 

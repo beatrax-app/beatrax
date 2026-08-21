@@ -57,6 +57,7 @@ return [
         'meta_eur_equiv' => '(≈ :amount/an)',
         'cancel_impact' => 'Anulează → economisești :amount/an',
         'cadence_flipped' => 'Frecvența s-a schimbat — apare și în',
+        'cadence_flipped_link' => 'Verifică recurentele',
         'acknowledge' => 'Confirmă',
         'acknowledge_aria' => 'Confirmă alerta de abatere :id',
         'snooze' => 'Amână ▾',

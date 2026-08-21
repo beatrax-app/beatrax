@@ -6,7 +6,9 @@ namespace Modules\Notifications\Internal\Listeners;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Internal\Support\NotificationCopyRenderer;
 use Modules\Notifications\Internal\Support\NotificationDraft;
@@ -14,9 +16,6 @@ use Modules\Notifications\Internal\Support\NotificationWriter;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final class PersistDriftAlert
 {
     public function __construct(
@@ -30,8 +29,8 @@ final class PersistDriftAlert
     {
         try {
             $direction = $event->direction === 'up' ? 'up' : 'down';
-            $delta = number_format(abs($event->deltaMinor) / 100, 2);
             $currency = $event->currency;
+            $delta = MoneyInput::formatAbsMinor($event->deltaMinor);
 
             $draft = $this->copyRenderer->forUser($event->userId, fn (): NotificationDraft => new NotificationDraft(
                 userId: $event->userId,
@@ -52,7 +51,7 @@ final class PersistDriftAlert
             // Swallow - a failed persist must never break the
             // originating drift-detection run.
             $this->log->error('PersistDriftAlert: failed to persist drift alert notification', [
-                'exception' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
                 'driftAlertId' => $event->driftAlertId,
                 'userId' => $event->userId,
             ]);

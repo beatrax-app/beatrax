@@ -8,8 +8,6 @@ return [
     'error_enroll_failed' => 'Tvoj uređaj je odbio pohraniti ključ. Biometrijsko otključavanje nije dostupno.',
     'heading' => 'Zaključavanje aplikacije',
 
-    // Settings keeps a pointer only; the controls themselves live on the
-    // sync surface at /sync#app-lock.
     'moved_help' => 'Tvoj PIN, vrijeme automatskog zaključavanja i biometrijsko otključavanje nalaze se uz postavke sinkronizacije ovog uređaja.',
     'moved_cta' => 'Otvori Sinkronizaciju i uređaj',
 

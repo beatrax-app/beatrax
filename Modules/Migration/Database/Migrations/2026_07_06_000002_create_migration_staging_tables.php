@@ -5,26 +5,6 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Creates the six `migration_staging_*` scratch tables (D-06/D-07): the
- * relational, no-destructive-write preview state a parsed import lands in
- * before `confirm` promotes it to the real domain tables via the public
- * writers (`EnvelopeWriter::setAssigned`, `RecordTransactions`,
- * `SaveTransactionSplit`, `ResolvesCounterparties`, `PairsTransferLegs`,
- * `GoalWriter`). Every row here is scoped to one `migration_run_id` (FK,
- * cascade-deletes with the run) and is safe to truncate wholesale on
- * discard/abandon without ever touching a domain table (Req 11).
- *
- * None of these six tables are registered in `MergeRulesRegistry` — they are
- * per-device scratch, never a sync surface (see the persistent
- * `migration_source_map`/`migration_import_baseline` tables in the sibling
- * migrations for the two tables that ARE registered).
- *
- * All monetary columns are `bigInteger` (never float, `NoFloatMoneyArchTest`)
- * paired with a `char(3)` currency column (ADR-0009). `user_id` is a
- * denormalized nullable copy alongside `migration_run_id` per the
- * project-wide nullable-user_id convention (ADR-0008).
- */
 return new class extends ModuleMigration
 {
     public function up(): void
@@ -35,8 +15,8 @@ return new class extends ModuleMigration
             $table->string('source_external_id');
             $table->string('source_group_name')->nullable();
             $table->string('name');
-            // Self-referential to another row in this SAME staging table
-            // (this run's category tree), not to the real categories table.
+            // Points at another row in this same staging table (this run's
+            // category tree), not at the real categories table.
             $table->string('parent_source_external_id')->nullable();
             $table->string('kind');
             // 'mapped' | 'unmapped'
@@ -62,8 +42,8 @@ return new class extends ModuleMigration
         $this->schema()->create('migration_staging_payees', function (Blueprint $table): void {
             $table->id();
             $this->scopeColumns($table);
-            // Nullable: some YNAB payees have no stable source id (D-10
-            // natural-key fallback applies at the source_map layer, not here).
+            // Nullable: some YNAB payees carry no stable source id; the
+            // natural-key fallback lives on migration_source_map, not here.
             $table->string('source_external_id')->nullable();
             $table->string('normalized_name');
             $table->string('resolution_status')->default('unmapped');
@@ -97,12 +77,9 @@ return new class extends ModuleMigration
             $table->text('description')->nullable();
             $table->string('cleared_status');
             $table->boolean('is_split_parent')->default(false);
-            // Self-referential to another row in THIS staging table (the
-            // split parent), reconstructed heuristically for YNAB4/nYNAB
-            // (Pitfall 2) or read directly from Actual's explicit parent_id.
+            // The split parent in this same staging table: reconstructed
+            // heuristically for YNAB, read from Actual's explicit parent_id.
             $table->string('parent_source_external_id')->nullable();
-            // The other leg of a transfer pair, resolved at promote-time via
-            // Transfers\PairsTransferLegs.
             $table->string('transfer_counterpart_source_external_id')->nullable();
 
             $table->index(['migration_run_id']);
@@ -131,11 +108,6 @@ return new class extends ModuleMigration
         $this->schema()->dropIfExists('migration_staging_categories');
     }
 
-    /**
-     * Every staging table shares the same scope pair: a nullable denormalized
-     * `user_id` (ADR-0008) plus the required `migration_run_id` FK that scopes
-     * the row to one run and cascade-deletes with it.
-     */
     private function scopeColumns(Blueprint $table): void
     {
         $table->foreignId('user_id')->nullable()->constrained('users')->cascadeOnDelete();

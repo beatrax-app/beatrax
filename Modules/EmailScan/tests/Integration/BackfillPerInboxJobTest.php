@@ -6,29 +6,10 @@ use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
 
-/*
- * BackfillInboxJob single-flight contract.
- *
- * The plan-level invariant is "two concurrent dispatches for the
- * same inbox must collapse into one in-flight job AND the lock holds
- * for the entire walk so two workers never race the cursor"; Laravel's
- * unique-lock middleware does the actual collapsing via the cache
- * store returned from uniqueVia(). This test asserts the structural
- * pieces the middleware reads:
- *
- *  - the job implements ShouldBeUnique (lock held until handle()
- *    returns, NOT released on pickup) + ShouldQueue
- *  - uniqueId() returns the inboxId so two different inboxes get
- *    two different unique keys
- *  - uniqueFor() returns 1800 — the 30-minute ceiling that bounds the
- *    lock if a worker crashes mid-walk
- *  - tries = 3 + backoff = [60, 300, 900] — the retry envelope
- *
- * The end-to-end "two simultaneous dispatches" behaviour is
- * exercised by Horizon at runtime; the test environment uses the
- * sync queue driver so a real lock-versus-second-push race cannot
- * be observed here without bringing Redis online.
- */
+// Two dispatches for one inbox must collapse into a single in-flight job and
+// the lock must hold for the whole walk, or two workers race the cursor. Only
+// the structural pieces the unique-lock middleware reads can be asserted here:
+// the test environment's sync queue driver cannot stage the real race.
 
 it('implements the per-inbox single-flight queue contract', function (): void {
     $reflection = new ReflectionClass(BackfillInboxJob::class);
@@ -44,10 +25,8 @@ it('keys the unique lock on inbox_id so different inboxes do not collide', funct
 
     expect($jobInbox1->uniqueId())->toBe('1');
     expect($jobInbox2->uniqueId())->toBe('2');
-    // The second dispatch with the SAME inbox id but a different
-    // window collapses with the first because the lock key ignores
-    // window — extending the window mid-backfill re-queues against
-    // the same in-flight job, never a second one.
+    // The key ignores the window, so extending it mid-backfill re-queues
+    // against the in-flight job rather than starting a second one.
     expect($jobInbox1Again->uniqueId())->toBe('1');
 });
 
@@ -65,11 +44,8 @@ it('uses the project-wide retry envelope (tries=3, backoff=60/300/900)', functio
 });
 
 it('routes the unique lock through a Cache Repository', function (): void {
-    // uniqueVia() returns LockStore::forUniqueJobs() in production,
-    // resolving the cache store named by config('cache.locks_store').
-    // The assertion is on the method shape rather than the resolved
-    // store — Laravel queue infrastructure invokes uniqueVia at
-    // push-time before any cache writes happen.
+    // uniqueVia is invoked at push-time, before any cache write, so only its
+    // shape can be asserted here — not the store it resolves.
     $reflection = new ReflectionClass(BackfillInboxJob::class);
 
     expect($reflection->hasMethod('uniqueVia'))->toBeTrue();

@@ -14,7 +14,7 @@ use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
 /**
- * @link ../../../../.docs/features/ledger/architecture.md
+ * @link ../../../../.docs/features/ledger/architecture.md#topcategoriesbyperiodquery--breadcrumb-category-tree-walk
  */
 final class TopCategoriesByPeriodQuery
 {

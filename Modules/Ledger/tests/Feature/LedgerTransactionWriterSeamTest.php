@@ -9,14 +9,8 @@ use Modules\Ledger\Public\Actions\SetTransactionNote;
 use Modules\Ledger\Public\Contracts\ReassignsCounterparty;
 use Modules\Ledger\Public\Contracts\SetsTransactionNote;
 
-/*
- * Plan 13.4-04 Task 2 — proves the two new Ledger Public write seams
- * (T-13.4-13b module-boundary fix) are PURE guarded writers: reconciled
- * lock, counterparty ownership, and write-only-on-change all resolve to
- * 0 affected rows with NO event dispatch (these actions never dispatch
- * events themselves — that stays the caller's job, mirroring
- * UpdateTransactionCategory).
- */
+// Both seams are pure guarded writers: they never dispatch events themselves,
+// which stays the caller's job, as with UpdateTransactionCategory.
 
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
@@ -31,8 +25,6 @@ it('binds the contracts to their default implementations', function (): void {
     expect($this->app->make(ReassignsCounterparty::class))->toBeInstanceOf(ReassignCounterparty::class);
     expect($this->app->make(SetsTransactionNote::class))->toBeInstanceOf(SetTransactionNote::class);
 });
-
-// ── ReassignCounterparty ──────────────────────────────────────────────
 
 it('ReassignCounterparty — reassigns and returns 1 on a genuine change', function (): void {
     $tx = $this->makeTransaction($this->fixtureUser, $this->asnAccount, $this->run, ['type' => 'expense', 'amount_minor' => -1000]);
@@ -115,8 +107,6 @@ it('ReassignCounterparty — unchanged value returns 0, no write', function (): 
 
     expect($affected)->toBe(0);
 });
-
-// ── SetTransactionNote ────────────────────────────────────────────────
 
 it('SetTransactionNote — mode=set overwrites the note and returns 1', function (): void {
     $tx = $this->makeTransaction($this->fixtureUser, $this->asnAccount, $this->run, ['type' => 'expense', 'amount_minor' => -1000]);

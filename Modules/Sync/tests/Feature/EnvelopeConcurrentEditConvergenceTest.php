@@ -17,24 +17,10 @@ use Modules\Sync\Internal\OpLog\OpType;
 
 uses(RefreshDatabase::class);
 
-/*
- * Wave 0 RED stub for Req 11's convergence half (13.2-VALIDATION.md),
- * mirroring TransactionSplitConcurrentEditConvergenceTest's shape. None of
- * EnvelopeWriter (Plan 04), the envelope_assignments table (Plan 02), or the
- * registry/listener/provider wiring (Plan 05) exist yet -- expected to fail
- * on the missing class/table, never a parse error.
- *
- * Scenario: one assignment row is seeded once, so both "device A" and
- * "device B" hold an IDENTICAL assignment row (same stable PK, per D-01's
- * updateOrCreate upsert). Offline (no cross-sync yet): device A edits
- * assigned_minor to one value; device B (unaware of A's edit) edits the
- * SAME field to a different value. Both devices' real, captured op-log
- * entries are merged and replayed. Per-(table,pk,field) LWW must converge
- * DETERMINISTICALLY -- replaying the merged op set in either application
- * order must yield the IDENTICAL final state (order-independence is the
- * property this test pins, since the internal HLC tie-break rule is not
- * something this Wave 0 stub needs to hard-code).
- */
+// Two devices edit the same assignment field while offline, and the merged
+// ops are replayed in both orders. Order-independence is the property pinned
+// here rather than which value wins: a merge that agreed with itself only when
+// ops arrived in one order would still look correct from one device.
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-07-04 11:00:00');
@@ -55,11 +41,8 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-/**
- * Constructs a fresh OpLogWriter for the given device, binds it into the
- * container (so SyncCaptureListener's lazy resolution picks it up), and
- * returns its hex-encoded public key for the replayer's device-key map.
- */
+// Bound into the container so the capture listener's lazy resolution picks it
+// up, and returns the public key the replayer needs to verify what it signs.
 function bindEnvelopeDeviceWriter(int $userId, string $deviceId): string
 {
     $keypair = sodium_crypto_sign_keypair();
@@ -119,8 +102,8 @@ it('two devices concurrently editing the SAME assignment field converge determin
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
-    // Origin device seeds the assignment -- both device A and device B are
-    // assumed to already hold this identical row (same PK, D-01 upsert).
+    // Seeded once, so both devices start from an identical row under the same
+    // stable pk.
     bindEnvelopeDeviceWriter((int) $this->user->id, 'device-origin');
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->period->start, 20000);
 
@@ -130,19 +113,16 @@ it('two devices concurrently editing the SAME assignment field converge determin
         ->where('period_start', $this->period->start->toDateString())
         ->value('id');
 
-    // --- Device A (offline): edits assigned_minor. ---
     $pkA = bindEnvelopeDeviceWriter((int) $this->user->id, 'device-a');
     $watermarkA = envelopeAssignmentMaxOpLogId($db);
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->period->start, 25000);
     $aOps = envelopeAssignmentOpsAfter($db, (int) $this->user->id, $watermarkA);
     expect($aOps)->not->toBeEmpty();
 
-    // Restore the live row to its ORIGINAL value -- device B is offline and
-    // has NOT seen A's edit (scratch-state manipulation only; the final
-    // converged state is entirely determined by replaying the merged ops).
+    // Device B never saw A's edit, so the live row goes back to where B would
+    // have found it. The converged state comes only from replaying the ops.
     $db->connection()->table('envelope_assignments')->where('id', $assignmentId)->update(['assigned_minor' => 20000]);
 
-    // --- Device B (offline, independently): edits the SAME field to a different value. ---
     $pkB = bindEnvelopeDeviceWriter((int) $this->user->id, 'device-b');
     $watermarkB = envelopeAssignmentMaxOpLogId($db);
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->period->start, 30000);
@@ -151,12 +131,11 @@ it('two devices concurrently editing the SAME assignment field converge determin
 
     $deviceKeys = ['device-a' => $pkA, 'device-b' => $pkB];
 
-    // Replay in one order.
     $replayerForward = new OpLogReplayer($db, $deviceKeys, new MergeRulesRegistry);
     $replayerForward->replay([...$aOps, ...$bOps], (int) $this->user->id);
     $forwardResult = (int) $db->connection()->table('envelope_assignments')->where('id', $assignmentId)->value('assigned_minor');
 
-    // Reset and replay in the REVERSE order -- LWW must converge to the SAME value.
+    // The reverse order must land on the same value.
     $db->connection()->table('envelope_assignments')->where('id', $assignmentId)->update(['assigned_minor' => 20000]);
     $replayerReverse = new OpLogReplayer($db, $deviceKeys, new MergeRulesRegistry);
     $replayerReverse->replay([...$bOps, ...$aOps], (int) $this->user->id);
@@ -165,10 +144,7 @@ it('two devices concurrently editing the SAME assignment field converge determin
     expect($reverseResult)->toBe($forwardResult);
     expect([25000, 30000])->toContain($forwardResult);
 
-    // Exactly one row -- no duplicate/lost assignment.
     expect($db->connection()->table('envelope_assignments')->where('id', $assignmentId)->count())->toBe(1);
 
-    // No quarantine -- both devices' keys were known, signatures verified,
-    // and every _create_required/strategy path resolved cleanly.
     expect($db->connection()->table('op_log_quarantine')->where('user_id', $this->user->id)->count())->toBe(0);
 });

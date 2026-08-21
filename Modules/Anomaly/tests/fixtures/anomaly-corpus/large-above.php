@@ -2,10 +2,8 @@
 
 declare(strict_types=1);
 
-// large-above: a €23.49 Spotify charge against a stable €9.99 per-merchant
-// baseline. Well above the user's per-counterparty typical amount, so the
-// large-vs-typical detector fires exactly one `large` reason. Consumed by
-// Plan 02's evaluator tests as the canonical "large fires" case.
+// A €23.49 Spotify charge against a stable €9.99 per-merchant baseline: the
+// canonical "large fires" case, exactly one reason.
 
 return [
     'settings' => [

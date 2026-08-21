@@ -16,15 +16,11 @@ use Modules\Notifications\Public\NotificationCopy;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final readonly class NotificationQuery
 {
     use CoercesScalars;
 
-    // 25 + 1 lookahead, matching the DriftAlertQuery
-    // precedent.
+    // 25 rows + 1 lookahead, matching the DriftAlertQuery precedent.
     private const PAGE_LIMIT = 26;
 
     public function __construct(
@@ -70,9 +66,8 @@ final readonly class NotificationQuery
         return $this->paginate($query, $user, $cursor);
     }
 
-    // The nav-badge unread count. Deliberately runs with no encryption
-    // key: it counts rows on the plaintext read_at/dismissed_at columns
-    // and never touches title/body/params/trigger_type.
+    // Deliberately key-less: counts on the plaintext read_at/dismissed_at
+    // columns and never touches title/body/params/trigger_type.
     public function unreadCountForUser(User $user): int
     {
         return $this->db->connection()->table('notifications')
@@ -82,9 +77,7 @@ final readonly class NotificationQuery
             ->count();
     }
 
-    // Opaque cursor encoding the (created_at, id) pair of the last row
-    // on the current page. The page renderer passes this back verbatim
-    // as the next page's $cursor argument.
+    // Opaque cursor over the (created_at, id) pair of the page's last row.
     public static function encodeCursor(string $createdAt, string $id): string
     {
         return base64_encode(json_encode(['created_at' => $createdAt, 'id' => $id], JSON_THROW_ON_ERROR));
@@ -121,9 +114,8 @@ final readonly class NotificationQuery
         return $result;
     }
 
-    // A missing, malformed, or non-conforming cursor is treated as null
-    // (first page) rather than thrown - a tampered #[Url] param must not
-    // 500 the inbox.
+    // A tampered #[Url] param must not 500 the inbox, so a malformed cursor
+    // reads as the first page rather than throwing.
     /**
      * @return array{createdAt: string, id: string}|null
      */

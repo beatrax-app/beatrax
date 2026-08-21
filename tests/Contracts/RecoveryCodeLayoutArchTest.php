@@ -2,15 +2,8 @@
 
 declare(strict_types=1);
 
-/*
- * Recovery codes are the only way back into an account and every screen that
- * shows them says to write them down. At 411px a two-column grid leaves ~180px
- * for a 24-character code, and `break-all` then orphans the last character
- * onto a line of its own: "X9NN-4CTG-CTRX-HPPP-PCS" / "4".
- *
- * That was fixed once, on one of the three screens. The other two kept an
- * unconditional `grid-cols-2` and kept orphaning — measured on a Galaxy S24
- * as two line boxes, the second 7px wide. This pins all of them.
+/**
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#grid-cols-2-recovery-codes-at-411px
  */
 
 /** @return list<string> */

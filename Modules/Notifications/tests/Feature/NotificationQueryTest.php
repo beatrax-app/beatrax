@@ -10,18 +10,6 @@ use Modules\Notifications\Public\Services\NotificationQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * NotificationQueryTest — the inbox read model with a compound
- * (created_at, id) cursor (Req 2) and the KEK-less nav-badge unread count.
- *
- * Covers: newest-first ordering; unreadForUser excludes read AND dismissed
- * rows; dismissedForUser returns only dismissed rows; the compound cursor
- * pages correctly across 60 rows created within the SAME second (no dropped,
- * no duplicated row); a malformed cursor returns the first page rather than
- * throwing; user A never sees user B's rows; unreadCountForUser matches the
- * unread row count.
- */
-
 function queryUser(string $username): User
 {
     return User::query()->create([

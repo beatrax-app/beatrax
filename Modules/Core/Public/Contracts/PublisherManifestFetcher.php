@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Modules\Core\Public\Contracts;
 
 /**
- * @link ../../../../.docs/features/core/architecture.md
- *
  * @phpstan-type FetchedManifest array{
  *     body: string,
  *     signature: string,
@@ -17,9 +15,8 @@ namespace Modules\Core\Public\Contracts;
  */
 interface PublisherManifestFetcher
 {
-    // `stable` resolves `latest.yml`; `preview` resolves `beta.yml`. Returns
-    // null when no manifest is available (404, offline, unknown channel) —
-    // treated identically to a signature-verification failure by the caller.
+    // Null when no manifest is available (404, offline, unknown channel) —
+    // the caller treats that identically to a signature-verification failure.
     /**
      * @return FetchedManifest|null
      */

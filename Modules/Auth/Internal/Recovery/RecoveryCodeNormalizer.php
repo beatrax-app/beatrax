@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Internal\Recovery;
 
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 final class RecoveryCodeNormalizer
 {
     // Same ambiguous-free alphabet the generator draws from -- excludes

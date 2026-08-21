@@ -1,5 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
-{{-- D-06 / UI-SPEC §19: overflow-x:auto on outer wrapper so this surface
+{{-- UI-SPEC §19: overflow-x:auto on outer wrapper so this surface
      scrolls horizontally at phone width rather than forcing page overflow. --}}
 <div class="space-y-6 overflow-x-auto">
     <header class="space-y-1">
@@ -19,50 +19,39 @@
             LoggerInterface so it surfaces on /dev/logs alongside the
             other ERROR-severity entries.
         --}}
-        <aside
-            role="alert"
-            class="rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:bg-rose-950 dark:border-rose-800 dark:text-rose-200"
-            data-testid="upload-error-banner"
-        >
+        <x-core::alert tone="danger" role="alert"
+            data-testid="upload-error-banner">
             {{ $uploadError }}
-        </aside>
+        </x-core::alert>
     @endif
 
     <form wire:submit="submit" class="space-y-4">
-        <div class="space-y-1">
-            <label for="issuer" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('import::upload.source_label') }}</label>
-            <select
-                id="issuer"
-                name="issuer"
-                wire:model.live="issuer"
-                class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
-            >
-                <option value="asn">ASN</option>
-                <option value="ics">ICS</option>
-                <option value="paypal">PayPal</option>
-                <option value="other-bank">{{ Lang::get('import::upload.issuer_other_bank') }}</option>
-                <option value="email-file">{{ Lang::get('import::upload.issuer_email_file') }}</option>
-            </select>
-            @error('issuer')
-                <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
-            @enderror
-        </div>
+        <x-core::form-field
+            name="issuer"
+            type="select"
+            :label="Lang::get('import::upload.source_label')"
+            wire:model.live="issuer"
+        >
+            <option value="asn">ASN</option>
+            <option value="ics">ICS</option>
+            <option value="paypal">PayPal</option>
+            <option value="other-bank">{{ Lang::get('import::upload.issuer_other_bank') }}</option>
+            <option value="email-file">{{ Lang::get('import::upload.issuer_email_file') }}</option>
+        </x-core::form-field>
 
-        <div class="space-y-1" aria-live="polite">
-            <label for="sourceFormat" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('import::upload.format_label') }}</label>
-            <select
-                id="sourceFormat"
+        {{-- aria-live wraps the field: the option list is rebuilt whenever the
+             issuer above changes, and that swap has to be announced. --}}
+        <div aria-live="polite">
+            <x-core::form-field
                 name="sourceFormat"
+                type="select"
+                :label="Lang::get('import::upload.format_label')"
                 wire:model="sourceFormat"
-                class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
             >
                 @foreach ($this->availableFormats() as $fmt)
                     <option value="{{ $fmt['value'] }}">{{ $fmt['label'] }}</option>
                 @endforeach
-            </select>
-            @error('sourceFormat')
-                <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
-            @enderror
+            </x-core::form-field>
         </div>
 
         <div class="space-y-1">
@@ -82,12 +71,9 @@
             @enderror
         </div>
 
-        <button
-            type="submit"
-            class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
-        >
+        <x-core::primary-button>
             {{ Lang::get('import::upload.submit') }}
-        </button>
+        </x-core::primary-button>
     </form>
 
     {{-- Rename counterparty popover. Mounted here so the FirstImportStep

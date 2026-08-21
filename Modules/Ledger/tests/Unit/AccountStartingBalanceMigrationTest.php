@@ -89,7 +89,7 @@ it('backfills starting_balance_minor from the earliest statement_summaries.openi
         'status' => 'previewed',
     ]);
 
-    // Account A: two summaries; the earlier opening_balance_date wins (12345).
+    // Two summaries: the earlier opening_balance_date wins.
     StatementSummary::query()->create([
         'user_id' => $user->id,
         'import_run_id' => $runA1->id,
@@ -110,7 +110,6 @@ it('backfills starting_balance_minor from the earliest statement_summaries.openi
         'opening_balance_date' => CarbonImmutable::parse('2026-03-15 00:00:00'),
     ]);
 
-    // Account B: one summary.
     StatementSummary::query()->create([
         'user_id' => $user->id,
         'import_run_id' => $runB->id,

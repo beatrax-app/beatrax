@@ -5,13 +5,6 @@ declare(strict_types=1);
 use Modules\Core\Models\User;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
-/*
- * Cross-user isolation for the per-user SQLite-backed
- * OAuthSecretsRepository: a credential or inbox token stored by one
- * user is never visible through the repository when a different user
- * is bound to the guard.
- */
-
 beforeEach(function (): void {
     $this->userA = User::query()->create([
         'username' => 'oauth-user-a',

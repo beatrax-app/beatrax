@@ -6,22 +6,6 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\EmailScan\Models\OAuthSecret;
 
-/*
- * LogStreamController invariants.
- *
- * The poll endpoint replaces the earlier SSE handler so the request
- * returns immediately and PHP's single-threaded built-in dev server
- * (which NativePHP uses) does not stall every other in-app request
- * while a tail is active. We cover:
- *   - Both routes are gated by EnsureDeveloperMode (404 for non-devs).
- *   - The poll endpoint returns JSON with chunk + newOffset + inode,
- *     applies redaction, and signals reset on a stale `since` offset.
- *   - The context endpoint validates inputs and clamps radius.
- *   - The context endpoint re-applies the on-stream redaction.
- *   - The context endpoint never reads outside the daily log file
- *     path (path is computed via UserDataPathService).
- */
-
 function logStreamUser(string $username, bool $isDeveloper = true): User
 {
     return User::query()->create([
@@ -35,13 +19,9 @@ function logStreamUser(string $username, bool $isDeveloper = true): User
 
 function ensureDailyLogFile(string $contents): string
 {
-    // UserDataPathService::dailyLogFile() resolves the log path via the
-    // NATIVEPHP_STORAGE_PATH env var when set, falling back to the
-    // project's `storage/` directory otherwise. Without an override the
-    // test would write into the same file the local dev Monolog writer
-    // uses for dev, clobbering the developer's local log. We point the
-    // accessor at a per-test sandbox so writes stay isolated. The
-    // afterEach hook below restores the env.
+    // Without the NATIVEPHP_STORAGE_PATH override, dailyLogFile() falls back
+    // to the project's storage/ and the test clobbers the developer's own
+    // local log. afterEach drops the override again.
     $sandboxRoot = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-test-storage-'.bin2hex(random_bytes(6));
     putenv('NATIVEPHP_STORAGE_PATH='.$sandboxRoot);
 
@@ -53,11 +33,9 @@ function ensureDailyLogFile(string $contents): string
 }
 
 afterEach(function (): void {
-    // Drop the sandbox override so a subsequent test starts clean.
-    // We intentionally do NOT rm -rf the sandbox dir: it lives under
-    // sys_get_temp_dir() which the OS reaps on its own schedule, and
-    // a recursive delete here would be one more chance to wipe the
-    // wrong path if the env was already empty.
+    // The sandbox dir is deliberately left behind for the OS to reap: a
+    // recursive delete here would be one more chance to wipe the wrong path
+    // if the env was already empty.
     putenv('NATIVEPHP_STORAGE_PATH');
 });
 
@@ -177,16 +155,14 @@ it('GET /dev/logs/context clamps radius at MAX_CONTEXT_RADIUS = 50', function ()
 
     $response = $this->actingAs($user)->getJson('/dev/logs/context?line=100&radius=500');
 
-    // Validator rejects radius > 50 as 422 (validation failure), proving
-    // the clamp lives at the parse layer not deep inside the handler.
+    // 422, not a silently clamped 200: the bound lives at the parse layer.
     $response->assertUnprocessable();
 });
 
 it('GET /dev/logs/context returns empty lines when the daily file does not exist', function (): void {
     $user = logStreamUser('logs-ctx-nofile');
 
-    // Delete any pre-existing daily log file to simulate a fresh boot
-    // before the first Monolog write of the day.
+    // No file at all is the state before the day's first Monolog write.
     $path = UserDataPathService::dailyLogFile();
     if (is_file($path)) {
         @unlink($path);

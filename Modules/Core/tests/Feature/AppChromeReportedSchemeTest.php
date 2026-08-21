@@ -5,12 +5,10 @@ declare(strict_types=1);
 use Illuminate\Http\Request;
 use Modules\Core\Public\Support\AppChromeResolver;
 
-/*
- * A `system` theme is decided by prefers-color-scheme, which the server
- * cannot read. Left to a client-side script alone, the server renders one
- * answer and the client computes another moments later — and the page
- * visibly changes theme between them, most obviously on the lock screen.
- */
+// A `system` theme is decided by prefers-color-scheme, which the server cannot
+// read. Left to a client-side script alone the server renders one answer and the
+// client computes another moments later, and the page visibly changes theme
+// between them — most obviously on the lock screen.
 
 function chromeWithCookie(?string $scheme): AppChromeResolver
 {
@@ -42,8 +40,6 @@ it('renders light server-side when the client reported light', function (): void
 it('defers to the pre-paint script until the client has reported', function (): void {
     $chrome = chromeWithCookie(null)->resolve();
 
-    // First ever render: nothing to trust yet, so the script decides and the
-    // shell must not claim a theme it cannot know.
     expect($chrome->needsPrePaintScript)->toBeTrue();
 });
 

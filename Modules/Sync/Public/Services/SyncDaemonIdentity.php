@@ -17,9 +17,6 @@ use Throwable;
 // sealed, so a reader of this environment can impersonate the device on the
 // LAN but cannot forge an op-log entry. Environment rather than a file, so
 // it never rests on disk in the clear.
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class SyncDaemonIdentity
 {
     public const ENV_USER = 'BEATRAX_SYNC_USER_ID';

@@ -11,9 +11,6 @@ use Modules\Sync\Internal\Exceptions\SecretFileException;
 // to trust it. No CA can vouch for a LAN address, so the QR — already an
 // out-of-band channel carrying identity keys — carries the pin instead, which
 // admits exactly one key rather than anything a public CA has signed.
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 final class RelayTlsMaterial
 {
     private const CERT_FILE = 'sync-relay-cert.pem';

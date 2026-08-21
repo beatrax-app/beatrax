@@ -33,17 +33,19 @@
 <nav {{ $attributes->class(['wiz-dots']) }} aria-label="{{ Lang::get('onboarding::components.progress_aria') }}">
     @foreach ($stepKeys as $index => $stepKey)
         @php
-            $status = $progress[$stepKey]['status'] ?? \Modules\Onboarding\Public\Enums\WizardStepStatus::Pending->value;
+            $status = $progress[$stepKey]['status'] ?? \Modules\Onboarding\Internal\Enums\WizardStepStatus::Pending->value;
             $isCurrent = $stepKey === $current;
             $dotClass = match (true) {
                 $isCurrent => 'dot now',
-                $status === \Modules\Onboarding\Public\Enums\WizardStepStatus::Done->value, $status === \Modules\Onboarding\Public\Enums\WizardStepStatus::Skipped->value => 'dot done',
+                $status === \Modules\Onboarding\Internal\Enums\WizardStepStatus::Done->value, $status === \Modules\Onboarding\Internal\Enums\WizardStepStatus::Skipped->value => 'dot done',
                 default => 'dot',
             };
         @endphp
+        {{-- The dots carry no aria-label: each one would repeat what the
+             .wiz-dots-label text beside them already says, so labelling every
+             dot made a screen reader read the step count once per dot. --}}
         <span
             class="{{ $dotClass }}"
-            aria-label="{{ Lang::get('onboarding::components.step_dot_aria', ['number' => $index + 1, 'total' => $totalSteps]) }}"
             @if ($isCurrent) aria-current="step" @endif
         ></span>
     @endforeach

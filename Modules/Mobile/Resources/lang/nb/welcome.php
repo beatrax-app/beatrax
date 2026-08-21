@@ -8,4 +8,5 @@ return [
     'subtitle' => 'Sett opp denne enheten for å se økonomien din på ett sted.',
     'create_account' => 'Opprett konto',
     'import' => 'Importer fra en annen enhet',
+    'create_account_note' => 'Det fungerer på egen hånd, men å sette det opp på en datamaskin og synkronisere hit er enklere.',
 ];

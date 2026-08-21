@@ -11,9 +11,10 @@ use Modules\Chains\Public\Enums\CardStatementState;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Enums\AccountKind;
+use Modules\Ledger\Public\Enums\Currency;
 
 /**
- * @link ../../../../.docs/features/chains/architecture.md
+ * @link ../../../../.docs/features/chains/card-statement-lifecycle.md
  *
  * @internal Bound to UpsertsCardStatements in ChainsServiceProvider —
  *           call sites depend on the contract, not this class directly.
@@ -39,17 +40,12 @@ final class CardStatementUpserter implements UpsertsCardStatements
 
     public function upsertForUser(User $user): int
     {
-        // User-scoped backfill — drops the import_run_id predicate; the
-        // UNIQUE constraint inside insertOrIgnore short-circuits rows
-        // that already have a matching card_statements row.
         /** @var list<\stdClass> $rows */
         $rows = $this->buildCandidatesQuery($user)->get()->values()->all();
 
         return $this->promoteCandidates($rows, $user);
     }
 
-    // Callers narrow further by import_run_id (per-import path) or leave
-    // it open (backfill).
     private function buildCandidatesQuery(User $user): Builder
     {
         return $this->db->connection()
@@ -63,6 +59,7 @@ final class CardStatementUpserter implements UpsertsCardStatements
                 'statement_summaries.period_start',
                 'statement_summaries.period_end',
                 'statement_summaries.closing_balance_minor',
+                'statement_summaries.closing_balance_currency',
             );
     }
 
@@ -71,7 +68,8 @@ final class CardStatementUpserter implements UpsertsCardStatements
      *                                       carrying account_id,
      *                                       import_run_id,
      *                                       period_start, period_end,
-     *                                       closing_balance_minor
+     *                                       closing_balance_minor,
+     *                                       closing_balance_currency
      */
     private function promoteCandidates(array $candidates, User $user): int
     {
@@ -93,8 +91,7 @@ final class CardStatementUpserter implements UpsertsCardStatements
             $closing = self::intProp($row, 'closing_balance_minor');
             $importRunId = self::intProp($row, 'import_run_id');
 
-            // insertOrIgnore returns 0/1 per row; summing avoids a second
-            // COUNT(*) round trip per statement.
+            // insertOrIgnore returns 0 or 1 per row, so the sum is the count.
             $inserted += $connection->table('card_statements')->insertOrIgnore([
                 'user_id' => $user->id,
                 'account_id' => self::intProp($row, 'account_id'),
@@ -103,6 +100,7 @@ final class CardStatementUpserter implements UpsertsCardStatements
                 'period_end' => $periodEnd,
                 'total_amount_minor' => $closing,
                 'open_balance_minor' => abs($closing),
+                'currency' => self::currencyOf($row),
                 'state' => CardStatementState::Open->value,
                 'created_at' => $now,
                 'updated_at' => $now,
@@ -110,6 +108,16 @@ final class CardStatementUpserter implements UpsertsCardStatements
         }
 
         return $inserted;
+    }
+
+    // The summary the statement is promoted from states the currency its
+    // closing balance was read in. A summary written before that column
+    // existed has none, and only the EUR-pinned ICS reader wrote those.
+    private static function currencyOf(\stdClass $row): string
+    {
+        $currency = self::nullableProp($row, 'closing_balance_currency');
+
+        return $currency === null || $currency === '' ? Currency::Eur->value : $currency;
     }
 
     private static function nullableProp(\stdClass $row, string $name): ?string

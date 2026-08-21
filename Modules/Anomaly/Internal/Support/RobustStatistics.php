@@ -5,31 +5,18 @@ declare(strict_types=1);
 namespace Modules\Anomaly\Internal\Support;
 
 /**
- * @link ../../../../.docs/features/anomaly/architecture.md
+ * @link ../../../../.docs/features/anomaly/detector-maths.md
  */
 final class RobustStatistics
 {
-    // 12 months is the upper end of the 6-12 month target: it captures a
-    // full seasonal cycle (annual subscription / salary shifts) without
-    // anchoring on years-old amounts.
     public const WINDOW_MONTHS = 12;
 
-    // Per-counterparty sample count below which the detector abandons the
-    // noisy per-merchant baseline and falls back to the per-category
-    // percentile.
     public const THIN_HISTORY_CUTOFF = 5;
 
-    // MAD -> standard-deviation consistency constant for normally
-    // distributed data: robust sigma ~= 1.4826 x MAD.
     public const MAD_CONSISTENCY = 1.4826;
 
-    // A charge above the category p95 (same direction, same window) trips
-    // the large reason on the fallback path.
     public const CATEGORY_PERCENTILE = 95.0;
 
-    // Sensitivity -> k curve: k = K_BASE - K_SLOPE * (sensitivity -
-    // K_PIVOT), clamped to [K_MIN, K_MAX]. At the 50% default this yields
-    // k = 3.0; higher sensitivity => lower k => more alerts.
     public const K_BASE = 3.0;
 
     public const K_SLOPE = 0.04;
@@ -40,9 +27,6 @@ final class RobustStatistics
 
     public const K_MAX = 4.0;
 
-    // Applied to the robust-sigma denominator so a near-constant merchant
-    // (MAD ~= 0) does not divide by zero. Callers may pass a larger
-    // context-derived floor; this is the hard minimum.
     public const MAD_FLOOR_MINOR = 50;
 
     /**
@@ -84,10 +68,6 @@ final class RobustStatistics
         return self::median($deviations);
     }
 
-    // `x` and the sample are compared as absolute magnitudes so a signed
-    // convention never flips the result. `floorMinor` is the caller's
-    // context floor; MAD_FLOOR_MINOR still applies underneath so the
-    // denominator is never below it.
     /**
      * @param  list<int|float>  $sample
      */
@@ -109,8 +89,8 @@ final class RobustStatistics
         return ($absX - $median) / $denominator;
     }
 
-    // Absolute magnitudes are the caller's responsibility; `p` is a
-    // percentage in [0, 100].
+    // Unlike robustZ()/exceedsPercentile(), this does NOT reduce the sample to
+    // absolute magnitudes; `p` is a percentage in [0, 100].
     /**
      * @param  list<int|float>  $sample
      */
@@ -136,10 +116,9 @@ final class RobustStatistics
         return $sorted[$low] + ($sorted[$high] - $sorted[$low]) * $fraction;
     }
 
-    // Deliberately TIE-INCLUSIVE (`>=`): for small samples, linear
-    // interpolation collapses p95 toward the sample maximum, so a strict
-    // `>` would let a charge that exactly repeats the largest-ever charge
-    // slip past as a false negative. Sample is reduced to absolute magnitudes.
+    // Tie-inclusive (`>=`): at small n the interpolated p95 collapses onto the
+    // sample maximum, and a strict `>` would silently pass a repeat of the
+    // largest-ever charge.
     /**
      * @param  list<int|float>  $sample
      */
@@ -155,8 +134,6 @@ final class RobustStatistics
         return abs((float) $x) >= $threshold;
     }
 
-    // Maps the user's single sensitivity knob onto the robust-z trip
-    // multiplier `k`. Higher sensitivity => lower k => more alerts.
     public static function kForSensitivity(int $sensitivityPercent): float
     {
         $k = self::K_BASE - self::K_SLOPE * ((float) $sensitivityPercent - self::K_PIVOT);

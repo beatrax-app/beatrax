@@ -8,8 +8,6 @@ return [
     'error_enroll_failed' => 'Il tuo dispositivo ha rifiutato di salvare la chiave. Lo sblocco biometrico non è disponibile.',
     'heading' => 'Blocco app',
 
-    // Settings keeps a pointer only; the controls themselves live on the
-    // sync surface at /sync#app-lock.
     'moved_help' => 'Il PIN, i tempi di blocco automatico e lo sblocco biometrico si trovano nelle impostazioni di sincronizzazione di questo dispositivo.',
     'moved_cta' => 'Apri Sincronizzazione e dispositivo',
 

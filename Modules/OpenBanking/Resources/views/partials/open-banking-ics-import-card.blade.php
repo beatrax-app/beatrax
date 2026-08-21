@@ -1,6 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
-{{-- Surface B7: Guided ICS file-import affordance (Req 13, UI-SPEC Surface
-     B7, 19-15). Visually and functionally SEPARATE from the live OB cards
+{{-- Surface B7: guided ICS file-import affordance (UI-SPEC Surface B7).
+     Visually and functionally SEPARATE from the live OB cards
      above — this path stores NO credentials and routes a dropped statement
      directly through the EXISTING ICS SourceAdapter (`ics-pdf`) via
      RunsImports::runFromUpload, skipping the generic import wizard's
@@ -16,7 +16,7 @@
      there is no CAMT.053/CSV ICS adapter in this codebase (confirmed
      against `Modules\Ingestion\Internal\Adapters\Ics\IcsPdfAdapter`) — so
      the mini-step row and format chip below say "PDF statement", matching
-     what the existing adapter actually accepts (Rule 1 correction vs the
+     what the existing adapter actually accepts (a correction to the
      UI-SPEC's generic "CAMT.053 or CSV" placeholder copy, which described
      the ASN bank-statement shape, not ICS). --}}
 <section id="ics-import" class="space-y-3" data-testid="open-banking-ics-import-card">
@@ -24,8 +24,8 @@
         {{ Lang::get('openbanking::messages.ics.section_label') }}
     </p>
 
-    <div class="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
-        <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('openbanking::messages.ics.heading') }}</h2>
+    <x-core::card>
+        <x-core::section-heading :title="Lang::get('openbanking::messages.ics.heading')" />
 
         <ol class="mt-4 grid grid-cols-3 gap-3">
             <li class="rounded-md bg-slate-50 p-3 text-center dark:bg-slate-900">
@@ -52,17 +52,18 @@
         </div>
 
         @if ($icsImportError !== null)
-            <div
+            <x-core::alert
+                tone="danger"
+                class="mt-3"
                 role="alert"
-                class="mt-3 rounded-lg border border-rose-300 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300"
                 data-testid="ob-ics-import-error"
-            >{{ $icsImportError }}</div>
+            >{{ $icsImportError }}</x-core::alert>
         @endif
 
         @error('icsStatement')
-            <div role="alert" class="mt-3 rounded-lg border border-rose-300 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300">
+            <x-core::alert tone="danger" class="mt-3" role="alert">
                 {{ $message }}
-            </div>
+            </x-core::alert>
         @enderror
 
         <div class="mt-4">
@@ -92,25 +93,17 @@
 
         @if ($icsStatement !== null)
             <div class="mt-4">
-                <button
-                    type="button"
+                <x-core::neutral-button
+                    class="min-h-[44px] disabled:cursor-not-allowed disabled:opacity-50"
                     wire:click="importIcsStatement"
                     wire:loading.attr="disabled"
                     wire:target="importIcsStatement,icsStatement"
-                    class="inline-flex min-h-[44px] items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white
-                           hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                           disabled:cursor-not-allowed disabled:opacity-50
-                           dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                     data-testid="ob-ics-import-button"
                 >
-                    <span
-                        wire:loading
-                        wire:target="importIcsStatement"
-                        class="mr-2 inline-block h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white dark:border-slate-900/40 dark:border-t-slate-900"
-                    ></span>
+                    <x-core::spinner size="sm" wire:loading wire:target="importIcsStatement" class="mr-2" />
                     {{ Lang::get('openbanking::messages.ics.import_button') }}
-                </button>
+                </x-core::neutral-button>
             </div>
         @endif
-    </div>
+    </x-core::card>
 </section>

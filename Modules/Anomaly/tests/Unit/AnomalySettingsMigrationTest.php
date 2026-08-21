@@ -8,19 +8,6 @@ use Modules\Core\Models\User;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for the anomaly users-settings migration and the
- * anomaly_suppression_rules table:
- *   - users.anomaly_sensitivity_percent (default 50, integer cast)
- *   - users.anomaly_min_amount_minor   (default 1000 = €10.00)
- *   - users.anomaly_backfilled_at      (nullable first-activation guard)
- *   - anomaly_suppression_rules column shape + per-user scoping index
- *
- * Locks the column existence, the nullable / default semantics, and the
- * integer casts on the User model so query-time arithmetic stays
- * accurate.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);

@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Public\Events;
 
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 final readonly class AppLockPassphraseChanged
 {
     public function __construct(

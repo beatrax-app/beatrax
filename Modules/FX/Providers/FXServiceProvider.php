@@ -15,9 +15,6 @@ use Modules\FX\Internal\RateProviderRegistry;
 use Modules\FX\Public\Contracts\RateProvider;
 use Modules\FX\Public\Services\ExchangeRateService;
 
-/**
- * @link ../../../.docs/features/fx/architecture.md
- */
 final class FXServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;

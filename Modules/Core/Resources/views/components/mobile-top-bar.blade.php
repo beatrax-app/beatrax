@@ -1,7 +1,7 @@
 @use('Modules\Core\Public\Support\Lang')
 @props([
     'title'   => null,       // null = use config app.name
-    'backUrl' => null,       // null = show hamburger; non-null = show ← back (D-05)
+    'backUrl' => null,       // null = show hamburger; non-null = show ← back
 ])
 @php
     $showBack = $backUrl !== null;
@@ -9,11 +9,11 @@
 @endphp
 
 {{--
-    Mobile top bar (D-01/D-02/D-05/D-14, UI-SPEC §6.1).
+    Mobile top bar (UI-SPEC §6.1).
     Visible only at <1024px (CSS .top-bar rule sets display:none at >=1024px).
     Default: hamburger + app name + palette button.
     Detail: back affordance + page title + palette button (set :backUrl to parent URL).
-    44×44 tap targets on all buttons (D-14 / WCAG 2.5.5).
+    44×44 tap targets on all buttons (WCAG 2.5.5).
 --}}
 <header {{ $attributes->merge(['class' => 'top-bar']) }} aria-label="{{ Lang::get('core::components.topbar.mobile_nav') }}">
     {{-- Hamburger or back affordance --}}
@@ -57,7 +57,7 @@
     {{-- One palette/search affordance, not two: this bar used to render a
          separate "palette" and "search" button that carried the same ⌕ glyph
          and dispatched the same event, which read as a duplicated icon. The
-         palette IS the transaction search on phone (D-25/D-29), so the two
+         palette IS the transaction search on phone, so the two
          collapse into this single control. --}}
     <button
         type="button"

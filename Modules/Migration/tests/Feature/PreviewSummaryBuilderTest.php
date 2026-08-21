@@ -5,23 +5,15 @@ declare(strict_types=1);
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Migration\Internal\Actions\StartMigrationRun;
+use Modules\Migration\Internal\Dto\PreviewSummary;
 use Modules\Migration\Internal\Exceptions\MigrationRunNotParsedException;
 use Modules\Migration\Internal\Pipeline\PreviewSummaryBuilder;
 use Modules\Migration\Models\MigrationRun;
-use Modules\Migration\Public\Actions\StartMigrationRun;
-use Modules\Migration\Public\Dto\PreviewSummary;
 use Modules\Migration\Tests\Support\ActualFixtureBuilder;
 use Modules\Migration\Tests\Support\MigrationFixturePaths;
 
 uses(RefreshDatabase::class);
-
-/*
- * Task 3's own acceptance criteria describe testable behavior with no
- * pre-existing RED stub targeting PreviewSummaryBuilder directly — the read
- * side of MigrationWizardTest exercises the future /migrations/{run}/preview
- * ROUTE (Plan 08, not yet built), not this read model in isolation. Mirrors
- * the Rule 3 precedent Plans 03/04 established for dedicated coverage.
- */
 
 beforeEach(function (): void {
     $this->user = User::create([
@@ -31,7 +23,7 @@ beforeEach(function (): void {
     ]);
 });
 
-it('PreviewSummaryBuilder: returns the 5 mapped counts for a staged ynab4 v1 run — Req 11/12', function (): void {
+it('PreviewSummaryBuilder: returns the 5 mapped counts for a staged ynab4 v1 run', function (): void {
     $run = app(StartMigrationRun::class)->__invoke(
         $this->user,
         'ynab4',
@@ -42,9 +34,8 @@ it('PreviewSummaryBuilder: returns the 5 mapped counts for a staged ynab4 v1 run
     $summary = app(PreviewSummaryBuilder::class)->forRun($run->id, $this->user);
 
     expect($summary)->toBeInstanceOf(PreviewSummary::class);
-    // 3 real categories (Groceries, Household, Salary) + 2 category-group
-    // parents (Frequent, Income) materialized as real parent categories
-    // (WR-03).
+    // 3 real categories (Groceries, Household, Salary) plus the 2 group parents
+    // (Frequent, Income), which are materialized as real parent categories.
     expect($summary->categoriesCount)->toBe(5);
     expect($summary->accountsCount)->toBe(2);
     expect($summary->counterpartiesCount)->toBe(3);
@@ -58,7 +49,7 @@ it('PreviewSummaryBuilder: returns the 5 mapped counts for a staged ynab4 v1 run
     expect($summary->unmapped['conflict']['count'])->toBe(0);
 });
 
-it('PreviewSummaryBuilder: the unmapped summary lists >=1 unresolvable payee/extra grouped by type with counts — Req 12', function (): void {
+it('PreviewSummaryBuilder: the unmapped summary lists >=1 unresolvable payee/extra grouped by type with counts', function (): void {
     $zipPath = sys_get_temp_dir().'/preview-summary-actual-'.uniqid('', true).'.zip';
     ActualFixtureBuilder::build($zipPath);
     $extracted = MigrationFixturePaths::extractZip($zipPath);
@@ -76,7 +67,7 @@ it('PreviewSummaryBuilder: the unmapped summary lists >=1 unresolvable payee/ext
     @unlink($zipPath);
 });
 
-it('WR-06: throws MigrationRunNotParsedException for a discarded run (staging deliberately truncated)', function (): void {
+it('PreviewSummaryBuilder: throws MigrationRunNotParsedException for a discarded run (staging deliberately truncated)', function (): void {
     $run = MigrationRun::create([
         'user_id' => $this->user->id,
         'source_product' => 'ynab4',
@@ -88,13 +79,9 @@ it('WR-06: throws MigrationRunNotParsedException for a discarded run (staging de
         ->toThrow(MigrationRunNotParsedException::class);
 });
 
-it('WR-06: a genuinely-empty PARSED run (zero staged rows) does NOT throw — it is a legitimate empty preview', function (): void {
-    // A 'parsed' status is only ever set by StartMigrationRun AFTER
-    // parsing+staging has already succeeded — this simulates a brand-new,
-    // completely empty source budget file (zero categories/accounts/
-    // payees/transactions/budget-months), which is a valid preview outcome,
-    // NOT the same "nothing to preview" condition a discarded run's
-    // truncated staging represents.
+it('PreviewSummaryBuilder: a genuinely-empty PARSED run (zero staged rows) does NOT throw — it is a legitimate empty preview', function (): void {
+    // 'parsed' is only ever set after staging succeeded, so zero staged rows
+    // here means an empty source file, not a truncated one.
     $run = MigrationRun::create([
         'user_id' => $this->user->id,
         'source_product' => 'ynab4',
@@ -112,7 +99,7 @@ it('WR-06: a genuinely-empty PARSED run (zero staged rows) does NOT throw — it
     expect($summary->budgetMonthsCount)->toBe(0);
 });
 
-it('PreviewSummaryBuilder: a run belonging to another user resolves to a not-found exception — IDOR (T-13.5-14)', function (): void {
+it('PreviewSummaryBuilder: a run belonging to another user resolves to a not-found exception — IDOR', function (): void {
     $owner = User::create(['username' => 'preview-summary-owner', 'password' => 'opensesame', 'period_start_day' => 1]);
     $run = app(StartMigrationRun::class)->__invoke(
         $owner,

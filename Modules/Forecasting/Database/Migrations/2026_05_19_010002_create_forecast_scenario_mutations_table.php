@@ -5,43 +5,18 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * A single mutation inside a saved scenario (cancel a series, add a
- * one-off, etc.). The `payload` column is a typed JSON envelope keyed
- * by `kind`; the Eloquent ScenarioMutationPayloadCast hydrates it into
- * the appropriate ScenarioMutationPayload subtype.
- *
- * Allowed kinds (enum-by-string, validated at the cast layer):
- *   - cancel_series
- *   - add_one_off
- *   - add_recurring
- *   - change_series_amount
- *   - shift_series_date
- *
- * `target_series_id` is nullable and NOT FK-constrained: `add_one_off`
- * and `add_recurring` mutations carry no target series, and we avoid a
- * hard cross-module FK because `recurring_series` lives in another
- * module. Runtime existence is validated by the Public Action.
- *
- * `payload` is a JSON column (TEXT on SQLite with JSON1 functions
- * available). The typed cast happens at the ORM boundary, not the
- * schema boundary.
- *
- * Never JOINed onto the transaction substrate — see
- * noScenarioMutationsJoinedToTransactionQueries arch test.
- */
 return new class extends ModuleMigration
 {
     public function up(): void
     {
         $this->schema()->create('forecast_scenario_mutations', static function (Blueprint $table): void {
             $table->id();
-            // user_id is non-nullable (chain_resolution_runs + forecast_runs
-            // precedent): every mutation belongs to exactly one user, and a
-            // NULL would silently escape per-user filters.
+            // Non-nullable: a NULL user_id would silently escape per-user filters.
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('forecast_scenario_id')->constrained('forecast_scenarios')->cascadeOnDelete();
             $table->string('kind', 40);
+            // Deliberately un-FK'd: `recurring_series` belongs to another module.
+            // NULL for add_one_off / add_recurring, which target no series.
             $table->unsignedBigInteger('target_series_id')->nullable();
             $table->json('payload');
             $table->timestamps();
@@ -50,13 +25,9 @@ return new class extends ModuleMigration
             $table->index('kind');
         });
 
-        // Defence-in-depth kind-enum guard at the schema layer. The
-        // typed ORM cast enforces this at the Eloquent boundary, but a
-        // raw INSERT / future Artisan command / manual SQL fix could
-        // otherwise land an invalid value and silently corrupt the
-        // table. Mirror the recurring_series.state trigger pattern:
-        // BEFORE INSERT + BEFORE UPDATE on `kind`, with RAISE(ABORT) on
-        // a violating value.
+        // The typed ORM cast only guards the Eloquent boundary; a raw INSERT or a
+        // manual SQL fix would otherwise land an unknown kind. Mirrors the
+        // recurring_series.state trigger pair.
         $conn = $this->db()->connection($this->getConnection());
         $conn->statement(<<<'SQL'
             CREATE TRIGGER forecast_scenario_mutations_kind_insert_check

@@ -24,10 +24,12 @@ return [
     'source_txn' => 'operacija',
     'source_counterparty' => 'kita šalis',
     'source_category' => 'kategorija',
+    'results_aria' => 'Rezultatai',
     'no_results' => 'Rezultatų nėra.',
     'foot_navigate' => 'naršyti',
     'foot_select' => 'pasirinkti',
     'foot_close' => 'uždaryti',
+    'close_aria' => 'Uždaryti paiešką',
     'foot_try' => 'Pabandyk',
     'results_suffix' => ' rezultatai',
 ];

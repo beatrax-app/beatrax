@@ -1,13 +1,7 @@
 @use('Modules\Core\Public\Support\Lang')
-{{--
-    Bank-type Overview tab body — fee-bar layout per UI-SPEC. Tab bar
-    above carries Overview / Entries / Aliases plus the right-of-tab
-    note `— bank-fee counterparty doesn't generate funding chains`.
-
-    The fee-bar rows render the per-category fee totals as horizontal
-    amber bars. The data feed here uses categoryBreakdown for the
-    moment; a richer Bank-fee aggregation lands with Plan 17-06c.
---}}
+{{-- The bars are fed from categoryBreakdown, which is per-category spend
+    rather than a bank-fee aggregation — close enough while every row on a
+    bank counterparty is a fee. --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
 @php
     $maxFee = max(1, ...array_map(fn ($cat) => abs((int) $cat->total_minor), $categoryBreakdown->all() ?: [(object) ['total_minor' => 0]]));

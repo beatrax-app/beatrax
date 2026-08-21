@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Budgets\Public\Events;
 
-/**
- * @link ../../../../.docs/features/budgets/architecture.md
- */
 final readonly class BudgetThresholdCrossed
 {
     public function __construct(

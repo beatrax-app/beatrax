@@ -13,13 +13,8 @@ use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
 
 uses(EnablesEncryptionForUser::class);
 
-/*
- * 14.1-10 Task 2 (D-06 cosmetic-display cluster) — under an encrypted
- * user, `counterparties.display_name` is ciphertext at rest.
- * ReportBuilder's counterparty filter list must decrypt it for
- * display rather than leaking ciphertext into the picker, and drop
- * its ORDER BY on the ciphertext column.
- */
+// Under an encrypted user, counterparties.display_name is ciphertext at rest:
+// the picker has to decrypt it, and it cannot sort on the stored column.
 
 function rbddUser(): User
 {

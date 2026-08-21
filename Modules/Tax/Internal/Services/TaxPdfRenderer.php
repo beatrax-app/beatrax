@@ -9,9 +9,6 @@ use Dompdf\Options;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Modules\Core\Models\User;
 
-/**
- * @link ../../../../.docs/features/tax/architecture.md
- */
 final class TaxPdfRenderer
 {
     public function __construct(

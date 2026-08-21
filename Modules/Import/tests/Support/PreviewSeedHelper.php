@@ -10,17 +10,6 @@ use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Dto\PreviewRowDto;
 use Modules\Ledger\Models\ImportRun;
 
-/**
- * Shared test seeder: creates an ImportRun row with status='previewed' and
- * populates the in-memory PreviewCache with $newRowCount synthetic PreviewRowDto
- * rows so downstream consumers (FirstImportStep, BuildConsolidatedPreviewQuery)
- * see a realistic preview.
- *
- * The optional fourth $accountId argument lets callers pin every seeded row to
- * a specific accounts.id; when omitted, rows fall back to accountId=1 so the
- * three-argument call shape used by the consolidated-preview load test keeps
- * working unchanged.
- */
 final class PreviewSeedHelper
 {
     public static function seedRunWithPreview(

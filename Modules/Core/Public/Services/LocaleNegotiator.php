@@ -6,9 +6,6 @@ namespace Modules\Core\Public\Services;
 
 use Modules\Core\Public\Enums\Locale;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class LocaleNegotiator
 {
     // Resolve the active UI locale in precedence order: an explicit per-user

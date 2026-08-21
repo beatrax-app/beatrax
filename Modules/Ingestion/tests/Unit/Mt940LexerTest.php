@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Ingestion\Internal\Adapters\Banking\Mt940Lexer;
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 
 beforeEach(function (): void {
     $this->lexer = $this->app->make(Mt940Lexer::class);
@@ -95,8 +95,8 @@ it('aborts when total line count exceeds the line cap', function (): void {
 })->group('phase-2');
 
 it('aborts when a single source line exceeds the per-line buffer cap', function (): void {
-    // 17,000 'A's on a single :86: line — the bounded read should refuse
-    // the line outright before any tag-buffer concatenation runs.
+    // Over the per-line cap on its own, so the bounded read refuses it before
+    // any tag-buffer concatenation happens.
     $body = ':86:'.str_repeat('A', 17_000)."\n";
     $tmp = writeMt940Temp($body);
 

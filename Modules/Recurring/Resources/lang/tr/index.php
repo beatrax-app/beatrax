@@ -16,6 +16,7 @@ return [
     'empty' => [
         'heading' => 'Henüz düzenli hareket yok',
         'before_link' => 'Algılanan önerileri',
+        'link' => 'Düzenli işlemleri gözden geçir',
         'after_link' => 'sayfasında onayla; burada görünsünler.',
     ],
 

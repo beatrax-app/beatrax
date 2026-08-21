@@ -14,13 +14,8 @@ use Modules\Mobile\Internal\Identity\BiometricKeyVault;
 
 uses(RefreshDatabase::class);
 
-/*
- * Settings section (item 3 UI): the toggle enables via a PIN re-verify and
- * disables via clear(); on a non-biometric build the vault is unavailable and
- * the section renders an empty-state instead of the toggle. The enclave is
- * faked; the orchestration + component wiring are exercised here.
- */
-
+// The enclave is unreachable in the repo toolchain, so it is faked here and only
+// the orchestration and component wiring are exercised.
 function settingsVault(bool $available = true): BiometricKeyVault
 {
     return new class($available, app(BiometricKeyBlobCodec::class), app(CurrentUser::class)) extends BiometricKeyVault

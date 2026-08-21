@@ -14,25 +14,6 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\StatementSummary;
 use Modules\Ledger\Models\Transaction;
 
-/*
- * End-to-end coverage for Option-B's IcsSettlementResolver rewire.
- *
- * The resolver now iterates ASN-side `transfer_out` rows whose
- * counterparty_iban resolves via ResolvesKnownCounterpartyIban to an
- * `ics_card`-kind Account, then looks up the open card_statement on
- * that ICS account. NO ICS-side `transfer_in` synthesis is required.
- *
- * Test 1 is the canonical proof of Blocker 1: a real ASN transfer_out
- * + an ICS PDF's statement_summaries row (promoted to card_statements
- * via the Task 1+2 pipeline) + ICS-side expense rows summing to
- * roughly the statement total produce at least one chain_links row of
- * `kind='ics_bulk_settle'` WITHOUT any manually-injected unrealistic
- * `transfer_in` on the ICS side.
- */
-
-/**
- * Seed an ICS-side `expense` row inside the given statement period.
- */
 function aliasIcsExpense(
     User $user,
     Account $icsAccount,
@@ -63,15 +44,8 @@ function aliasIcsExpense(
     ]);
 }
 
-/**
- * Seed an ASN-side `transfer_out` row pointing at the alias-bridged
- * counterparty IBAN.
- *
- * `$rowIndex` varies the fingerprint base so a single test can
- * persist multiple transfer_out rows without colliding on the
- * `transactions.fingerprint` UNIQUE constraint — mirrors the
- * `aliasIcsExpense` helper's per-row index pattern.
- */
+// $rowIndex varies the fingerprint base so one test can persist several
+// transfer_out rows without colliding on the fingerprint UNIQUE.
 function aliasAsnTransferOut(
     User $user,
     Account $bank,
@@ -164,9 +138,8 @@ beforeEach(function (): void {
 });
 
 it('end-to-end: ICS card_statement (from upserter) + ASN transfer_out → resolver writes ics_bulk_settle chain_links via the alias bridge', function (): void {
-    // Stage 1: write an ICS statement_summary; promote it via the
-    // production-path upserter so the fixture matches what the real
-    // ConfirmImport boundary produces (Task 1+2 → Task 3 pipeline).
+    // Promote the statement_summary through the production upserter so the
+    // fixture matches what the real ConfirmImport boundary produces.
     $statementTotalAbs = 10000;
     StatementSummary::query()->create([
         'user_id' => $this->user->id,
@@ -189,16 +162,13 @@ it('end-to-end: ICS card_statement (from upserter) + ASN transfer_out → resolv
     $inserted = $upserter->upsertForImportRun($this->icsRun->id, $this->user);
     expect($inserted)->toBe(1);
 
-    // Stage 2: seed three ICS-side expense rows within the statement
-    // period, summing to the statement total exactly.
+    // Three ICS expenses inside the period, summing to the statement total exactly.
     $expense1 = aliasIcsExpense($this->user, $this->icsCard, $this->icsRun, 4000, '2026-04-05', 1);
     $expense2 = aliasIcsExpense($this->user, $this->icsCard, $this->icsRun, 3500, '2026-04-12', 2);
     $expense3 = aliasIcsExpense($this->user, $this->icsCard, $this->icsRun, 2500, '2026-04-22', 3);
 
-    // Stage 3: seed the ASN-side transfer_out whose counterparty IBAN
-    // is the alias-bridged ICS institution IBAN (NL08ABNA0526650664 →
-    // ics_card per DefaultKnownCounterpartyIbansSeeder). posted_at is
-    // within ±10 days of the statement's period_end (2026-04-30).
+    // The ASN counterparty IBAN alias-resolves to ics_card, and posted_at sits
+    // within the resolver's ±10-day window around period_end (2026-04-30).
     $transferOut = aliasAsnTransferOut(
         $this->user,
         $this->bank,
@@ -208,11 +178,8 @@ it('end-to-end: ICS card_statement (from upserter) + ASN transfer_out → resolv
         '2026-05-02',
     );
 
-    // Stage 4: run the resolver.
     $this->resolver->resolveForUser($this->user);
 
-    // Stage 5: assert at least one chain_links row of kind=ics_bulk_settle
-    // exists. from_transaction_id must reference the ASN transfer_out.
     $links = ChainLink::query()
         ->where('user_id', $this->user->id)
         ->where('kind', 'ics_bulk_settle')
@@ -245,9 +212,8 @@ it('ASN transfer_out whose counterparty does NOT alias-resolve to ics_card is sk
     ]);
     aliasIcsExpense($this->user, $this->icsCard, $this->icsRun, 10000, '2026-04-15', 1);
 
-    // ASN transfer_out's counterparty is the PayPal Luxembourg IBAN —
-    // resolves to a `paypal`-kind Account, NOT ics_card. The resolver
-    // must skip it.
+    // This counterparty IBAN alias-resolves to a paypal-kind account, not
+    // ics_card, so the resolver must skip the row.
     aliasAsnTransferOut(
         $this->user,
         $this->bank,
@@ -280,8 +246,6 @@ it('ASN transfer_out with no matching open card_statement is a no-op (half-state
         '2026-05-02',
     );
 
-    // No exceptions, no chain_links — the resolver's existing half-state
-    // behaviour (find no statement → return without writing) holds.
     $this->resolver->resolveForUser($this->user);
 
     expect(

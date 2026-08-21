@@ -9,27 +9,6 @@ use Modules\Tax\Public\Services\TaxYearQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit tests for TaxYearQuery — the grouped tax-year query service.
- *
- * Tests cover:
- *  - Expense-type tagged transactions counted in deductionsTotalMinor.
- *  - Income-type tagged transactions counted in incomeTotalMinor.
- *  - COALESCE tax_year_override resolution (D-10, T-07-07).
- *  - Category grouping with per-group subtotals.
- *  - "No category" trailing group for unclassified rows.
- *  - Cross-user isolation (T-07-05).
- *  - availableYears distinct + descending.
- *  - Empty result when no tags exist for a year.
- */
-
-// ---------------------------------------------------------------------------
-// Shared fixture helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Inserts a minimal user row and returns its id.
- */
 function taqUser(DatabaseManager $db, string $username): int
 {
     return $db->connection()->table('users')->insertGetId([
@@ -42,9 +21,6 @@ function taqUser(DatabaseManager $db, string $username): int
 }
 
 /**
- * Inserts an account + import run + transaction for the given user and
- * returns the transaction id. Accepts extra transaction column overrides.
- *
  * @param  array<string, mixed>  $overrides
  */
 function taqTransaction(
@@ -105,9 +81,6 @@ function taqTransaction(
     );
 }
 
-/**
- * Inserts a deduction category for the user and returns its id.
- */
 function taqCategory(DatabaseManager $db, int $userId, string $name = 'Zorgkosten', int $sortOrder = 0): int
 {
     return $db->connection()->table('tax_deduction_categories')->insertGetId([
@@ -122,8 +95,6 @@ function taqCategory(DatabaseManager $db, int $userId, string $name = 'Zorgkoste
 }
 
 /**
- * Inserts a tax_transaction_tags row and returns the tag id.
- *
  * @param  array<string, mixed>  $overrides
  */
 function taqTag(DatabaseManager $db, int $userId, int $txId, ?int $catId = null, array $overrides = []): int
@@ -142,10 +113,6 @@ function taqTag(DatabaseManager $db, int $userId, int $txId, ?int $catId = null,
         array_merge($defaults, $overrides),
     );
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 it('counts an expense-tagged transaction in deductionsTotalMinor', function (): void {
     /** @var DatabaseManager $db */
@@ -197,7 +164,7 @@ it('applies COALESCE tax_year_override when determining the tax year', function 
 
     $userId = taqUser($db, 'taq-override');
 
-    // Transaction booked in 2026 but overridden to tax year 2025
+    // Booked in 2026, overridden to tax year 2025.
     $txId = taqTransaction($db, $userId, [
         'booked_at' => '2026-01-10 00:00:00',
         'type' => 'expense',
@@ -209,12 +176,10 @@ it('applies COALESCE tax_year_override when determining the tax year', function 
     /** @var TaxYearQuery $query */
     $query = app(TaxYearQuery::class);
 
-    // Must appear in 2025 (override)
     $result2025 = $query->forUser($userId, 2025);
     expect($result2025->itemCount)->toBe(1)
         ->and($result2025->deductionsTotalMinor)->toBe(3300);
 
-    // Must NOT appear in 2026 (booked year)
     $result2026 = $query->forUser($userId, 2026);
     expect($result2026->itemCount)->toBe(0);
 });
@@ -243,16 +208,13 @@ it('groups rows by category with per-group subtotals', function (): void {
     expect($result->itemCount)->toBe(3)
         ->and($result->deductionsTotalMinor)->toBe(3500);
 
-    // Two category groups
     expect(count($result->categories))->toBe(2);
 
-    // Find Alpha group
     $alpha = collect($result->categories)->firstWhere('name', 'Cat Alpha');
     expect($alpha)->not->toBeNull()
         ->and($alpha['subtotalMinor'])->toBe(3000)
         ->and(count($alpha['rows']))->toBe(2);
 
-    // Find Beta group
     $beta = collect($result->categories)->firstWhere('name', 'Cat Beta');
     expect($beta)->not->toBeNull()
         ->and($beta['subtotalMinor'])->toBe(500)
@@ -278,7 +240,6 @@ it('places rows with no deduction_category in a trailing no-category group', fun
 
     expect($result->itemCount)->toBe(2);
 
-    // Last group should be the "no category" trailing group
     $lastGroup = $result->categories[array_key_last($result->categories)];
     expect($lastGroup['id'])->toBeNull();
     expect(count($lastGroup['rows']))->toBe(1);
@@ -327,15 +288,12 @@ it('availableYears returns distinct effective tax years in descending order', fu
     $userId = taqUser($db, 'taq-avail-years');
     $catId = taqCategory($db, $userId, 'AYCat');
 
-    // Transactions booked in different years
     $tx2024 = taqTransaction($db, $userId, ['booked_at' => '2024-06-01 00:00:00', 'type' => 'expense']);
     $tx2025 = taqTransaction($db, $userId, ['booked_at' => '2025-06-01 00:00:00', 'type' => 'expense']);
-    // tx2023 via override
     $tx2026 = taqTransaction($db, $userId, ['booked_at' => '2026-01-01 00:00:00', 'type' => 'expense']);
 
     taqTag($db, $userId, $tx2024, $catId);
     taqTag($db, $userId, $tx2025, $catId);
-    // Override to 2023
     taqTag($db, $userId, $tx2026, $catId, ['tax_year_override' => 2023]);
 
     /** @var TaxYearQuery $query */

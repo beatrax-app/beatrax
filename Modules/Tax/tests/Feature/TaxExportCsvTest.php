@@ -6,21 +6,6 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Tax\Internal\Services\TaxCsvExporter;
 
-/*
- * Feature tests for TaxCsvExporter — full-stack export content tests.
- *
- * Tests verify the CSV output as produced end-to-end:
- *  - Header is the exact 16-column D-15 spec.
- *  - One data row per tagged transaction; settled_eur_amount is a 2-decimal string.
- *  - COALESCE tax_year_override assigns rows to the correct year.
- *  - Null category name → empty string in deduction_category column.
- *  - Empty year → header-only CSV (no error).
- */
-
-// ---------------------------------------------------------------------------
-// Helpers (prefixed tcef_ to avoid collisions)
-// ---------------------------------------------------------------------------
-
 function tcefUser(DatabaseManager $db, string $username): User
 {
     /** @var User */
@@ -119,11 +104,7 @@ function tcefTag(DatabaseManager $db, int $userId, int $txId, ?int $catId = null
     ], $overrides));
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
-it('CSV header is the exact 16 D-15 columns in documented order', function (): void {
+it('CSV header is the exact 16 columns in documented order', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = tcefUser($db, 'tcef-header-user');
@@ -200,7 +181,7 @@ it('uses COALESCE tax_year_override: row with override=2025 appears in 2025, not
 
     $catId = tcefCategory($db, $user->id, 'Override Cat');
 
-    // Transaction booked in 2026 but tagged with override 2025
+    // Booked in 2026, tagged with an override of 2025.
     $txId = tcefTransaction($db, $user->id, [
         'booked_at' => '2026-02-10 00:00:00',
         'settled_amount_minor' => -7700,
@@ -210,7 +191,6 @@ it('uses COALESCE tax_year_override: row with override=2025 appears in 2025, not
     /** @var TaxCsvExporter $exporter */
     $exporter = app(TaxCsvExporter::class);
 
-    // Appears in 2025 export
     $csv2025 = $exporter->export($user, 2025);
     $lines2025 = array_values(array_filter(explode("\n", trim($csv2025))));
     expect(count($lines2025))->toBe(2);
@@ -218,7 +198,6 @@ it('uses COALESCE tax_year_override: row with override=2025 appears in 2025, not
     $row2025 = str_getcsv($lines2025[1]);
     expect($row2025[0])->toBe('2025'); // tax_year column
 
-    // Does NOT appear in 2026 export
     $csv2026 = $exporter->export($user, 2026);
     $lines2026 = array_values(array_filter(explode("\n", trim($csv2026))));
     expect(count($lines2026))->toBe(1); // header only
@@ -230,7 +209,7 @@ it('null deduction category renders as empty string in the deduction_category co
     $user = tcefUser($db, 'tcef-no-cat-user');
 
     $txId = tcefTransaction($db, $user->id, ['booked_at' => '2025-03-15 00:00:00']);
-    tcefTag($db, $user->id, $txId, null); // no category
+    tcefTag($db, $user->id, $txId, null);
 
     /** @var TaxCsvExporter $exporter */
     $exporter = app(TaxCsvExporter::class);

@@ -20,9 +20,8 @@ final class ClassifyTransactionType
 {
     private const PAYPAL_FORMAT = 'paypal-csv';
 
-    // Types NormalizeStage already settled that classification must not
-    // override, plus the transfer legs that exclude a row from the
-    // amount-sign income default.
+    // Types NormalizeStage already settled, plus the transfer legs that are
+    // excluded from the amount-sign income default.
     private const TERMINAL_TYPES = [TransactionType::Refund, TransactionType::Fee, TransactionType::Adjustment];
 
     private const NON_INCOME_TYPES = [
@@ -51,10 +50,9 @@ final class ClassifyTransactionType
         return $resolved === null ? $tx : $tx->withType($resolved);
     }
 
-    // Two-arm cross-account-IBAN check, both scoped by $user->id: the
-    // alias bridge (Arm A) maps real institution IBANs to the user's
-    // synthetic-IBAN account; the literal own-IBAN match (Arm B) catches
-    // transfers between two of the user's own accounts.
+    // Two arms, both scoped by $user->id: the alias bridge maps a real
+    // institution IBAN onto the user's synthetic-IBAN account, and the
+    // literal match catches transfers between two of the user's accounts.
     private function transferType(CanonicalTransaction $tx, User $user): ?string
     {
         if ($tx->counterpartyIban === null || $tx->counterpartyIban === '') {
@@ -97,10 +95,9 @@ final class ClassifyTransactionType
         return $this->mapPaypalEvent($parentEventType, $language);
     }
 
-    // Unmapped event types are user data, not bugs (the adapter already
-    // raised at parse time for genuinely-unmappable events), so they fall
-    // through to null. A MissingPaypalTransactionTypeMapException is a
-    // code-internal inconsistency and re-throws loudly.
+    // An unmapped event type is user data, not a bug — the adapter already
+    // raised at parse time for the genuinely unmappable — so it falls
+    // through to null. A missing map entry is ours, and re-throws.
     private function mapPaypalEvent(string $parentEventType, string $language): ?string
     {
         try {

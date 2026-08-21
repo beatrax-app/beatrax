@@ -8,18 +8,11 @@ use Carbon\CarbonInterface;
 use Modules\DevMode\Public\Contracts\AuditWriter;
 use Modules\DevMode\Public\Dto\CommandRunAudit;
 
-// Every method is a no-op fallback for callers that instantiate the
-// contract outside the full container (e.g. ad-hoc unit tests); the
-// runtime binding routes to SpatieAuditWriter instead.
+// Null object for callers that construct the contract outside the container;
+// the runtime binding is SpatieAuditWriter.
 final class NullAuditWriter implements AuditWriter
 {
-    public function recordCommandRun(CommandRunAudit $run): void
-    {
-        // Null-object no-op: ad-hoc callers resolving the contract outside
-        // the full container get a writer that silently discards the run
-        // rather than touching dev_mode_audit. The real SpatieAuditWriter
-        // binding persists it in every wired-up environment.
-    }
+    public function recordCommandRun(CommandRunAudit $run): void {}
 
     public function finalizeCommandRun(
         string $runId,
@@ -39,18 +32,12 @@ final class NullAuditWriter implements AuditWriter
         string $action,
         array $context,
         int $callerUserId,
-    ): void {
-        // Null-object no-op — see recordCommandRun(). The queue action is
-        // discarded rather than written when the null writer is in scope.
-    }
+    ): void {}
 
     public function recordSelectQuery(
         string $query,
         int $rowcount,
         int $durationMs,
         int $callerUserId,
-    ): void {
-        // Null-object no-op — see recordCommandRun(). The SELECT audit is
-        // discarded rather than written when the null writer is in scope.
-    }
+    ): void {}
 }

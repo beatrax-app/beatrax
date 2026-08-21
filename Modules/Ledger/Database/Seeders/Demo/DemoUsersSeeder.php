@@ -6,10 +6,8 @@ namespace Modules\Ledger\Database\Seeders\Demo;
 
 use Modules\Core\Models\User;
 
-// Identity values are obviously developer-marked (demo-1@beatrax.local,
-// demo-2@beatrax.local) so a contributor can't mistake them for real
-// rows; password is the literal 'demo-only' on every machine, so
-// anyone with the repo can log in without a credential store.
+// The identities are obviously developer-marked so nobody mistakes them for
+// real rows, and the password is the same literal on every machine.
 final class DemoUsersSeeder
 {
     /** @var list<array{username: string, password: string, period_start_day: int, is_developer: bool}> */
@@ -28,8 +26,7 @@ final class DemoUsersSeeder
         ],
     ];
 
-    // Returns both demo users keyed by username so downstream seeders
-    // can address each one without a second query.
+    // Keyed by username, so downstream seeders need no second query.
     /** @return array<string, User> */
     public function run(): array
     {

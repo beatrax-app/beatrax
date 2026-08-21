@@ -25,9 +25,6 @@ use Throwable;
 // Measured on an iPhone: GET /cash answered 500 "Undefined property:
 // Redirector::$headers" from the CSRF middleware, on every request, until the
 // app was relaunched.
-/**
- * @link ../../../../../.docs/features/mobile/architecture.md
- */
 final class RestoreFrameworkRedirector
 {
     public function __construct(private readonly Application $app) {}

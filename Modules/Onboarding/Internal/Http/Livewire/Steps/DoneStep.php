@@ -9,11 +9,8 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
-use Modules\Onboarding\Public\Events\WizardCompleted;
+use Modules\Onboarding\Internal\Events\WizardCompleted;
 
-/**
- * @link ../../../../../../.docs/features/onboarding/architecture.md
- */
 final class DoneStep extends Component
 {
     public function finish(
@@ -22,9 +19,8 @@ final class DoneStep extends Component
     ): mixed {
         $events->dispatch(new WizardCompleted($currentUser->id()));
 
-        // $this->redirect(...) so the wire:click navigation actually
-        // fires; a plain Redirector::to(...) response is dropped by
-        // Livewire's action dispatcher.
+        // Livewire's action dispatcher drops a returned Redirector::to(...)
+        // response; only $this->redirect(...) navigates.
         return $this->redirect('/');
     }
 

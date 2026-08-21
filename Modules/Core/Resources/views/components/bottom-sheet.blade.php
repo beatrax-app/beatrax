@@ -12,7 +12,7 @@
 @endphp
 
 {{--
-    Bottom sheet wrapper (D-10, UI-SPEC §6.3, Pitfall 6).
+    Bottom sheet wrapper (UI-SPEC §6.3).
 
     At >=768px: the .bottom-sheet CSS class is inactive (no override at desktop);
     the slot renders normally and the Flux modal inside it behaves as a standard
@@ -22,7 +22,7 @@
     app.css), turning this into a fixed bottom panel that slides up from below.
     A scrim appears behind it; Escape and outside-tap both close it.
 
-    Pitfall 6 mitigation: this component wraps the Livewire component that
+    This component wraps the Livewire component that
     CONTAINS the flux:modal trigger — not the <flux:modal> element itself —
     so Flux's teleport to the top layer is never disrupted.
 

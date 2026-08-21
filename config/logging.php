@@ -11,48 +11,18 @@ use Monolog\Processor\PsrLogMessageProcessor;
 
 return [
 
-    /*
-    |--------------------------------------------------------------------------
-    | Default Log Channel
-    |--------------------------------------------------------------------------
-    |
-    | The default channel is `daily`. The Dev Console's log tailer
-    | expects rolling per-day files under storage/logs so the panel
-    | can list "today / yesterday / earlier" without consulting
-    | Monolog. Override via the LOG_CHANNEL env var when a
-    | deviating environment (CI, single-shot script, NativePHP
-    | bundle) needs a different shape.
-    */
-
+    // `daily`, not `stack`: the Dev Console tailer reads "today / yesterday /
+    // earlier" straight off the rolling filenames.
     'default' => env('LOG_CHANNEL', 'daily'),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Deprecations Log Channel
-    |--------------------------------------------------------------------------
-    */
 
     'deprecations' => [
         'channel' => env('LOG_DEPRECATIONS_CHANNEL', 'null'),
         'trace' => env('LOG_DEPRECATIONS_TRACE', false),
     ],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Log Channels
-    |--------------------------------------------------------------------------
-    |
-    | Each channel with an actual driver carries a `tap` array slot
-    | pointing at PushRedactProcessor. That tap class resolves
-    | RedactSecretsProcessor from the container on every channel
-    | boot and pushes it onto every handler so OAuth scrub-set +
-    | Bearer + JWT redaction runs on every log record before the
-    | formatter writes the line to disk.
-    |
-    | Available drivers: "single", "daily", "slack", "syslog",
-    |                    "errorlog", "monolog", "custom", "stack"
-    */
-
+    // Only the channels that write to the local log file tap
+    // PushRedactProcessor, which redacts the OAuth scrub set, Bearer tokens
+    // and JWTs before the formatter reaches disk.
     'channels' => [
 
         'stack' => [

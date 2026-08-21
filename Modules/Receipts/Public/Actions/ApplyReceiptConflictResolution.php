@@ -19,9 +19,6 @@ use stdClass;
 // every held pending_enrichment_conflicts row accordingly:
 // prefer_receipt updates the transactions field then deletes the row;
 // prefer_first_write keeps the stored value and just deletes the row.
-/**
- * @link ../../../../.docs/features/receipts/architecture.md
- */
 final class ApplyReceiptConflictResolution
 {
     use CoercesScalars;

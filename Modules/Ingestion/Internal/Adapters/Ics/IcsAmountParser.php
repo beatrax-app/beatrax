@@ -4,12 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Ingestion\Internal\Adapters\Ics;
 
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 use Modules\Ledger\Public\ValueObjects\Money;
 
-/**
- * @link ../../../../../.docs/features/ingestion/architecture.md
- */
 final class IcsAmountParser
 {
     public function parse(string $raw): int
@@ -19,17 +16,14 @@ final class IcsAmountParser
             throw new InvalidAmountException('Empty amount string.');
         }
 
-        // Strip currency symbols + the constrained set of ISO alpha-3 codes
-        // the project's ingestion paths emit — narrower than a naive
-        // \b[A-Z]{3}\b so it never over-consumes an unrelated token.
+        // A closed list of ISO alpha-3 codes, not \b[A-Z]{3}\b, which would eat a non-currency token.
         $stripped = preg_replace('/[€$£¥]|\b(?:EUR|USD|GBP|JPY|CHF|CAD|AUD)\b/u', '', $trimmed);
         if ($stripped === null) {
             throw new InvalidAmountException(sprintf('Invalid amount string: %s', $raw));
         }
         $stripped = trim($stripped);
 
-        // Accept a leading or trailing minus; the body table itself never
-        // renders one (the Af/Bij column marker carries the sign there).
+        // The body table prints no minus at all — the Af/Bij marker carries the sign there.
         $sign = 1;
         if (str_starts_with($stripped, '-')) {
             $sign = -1;
@@ -40,8 +34,7 @@ final class IcsAmountParser
         }
         $stripped = trim($stripped);
 
-        // Dutch decimal convention: comma is the decimal separator, period
-        // is the thousands separator.
+        // Dutch convention: comma decimal, period thousands.
         $stripped = str_replace('.', '', $stripped);
         $parts = explode(',', $stripped);
 

@@ -6,10 +6,8 @@ namespace Modules\Desktop\Internal\Native;
 
 use Modules\Core\Public\Contracts\SecretShield;
 
-// Runs a persisted secret through Electron safeStorage so the stored
-// blob is machine-bound ciphertext, layered under the caller's own
-// APP_KEY encryption. Delegates to DesktopKeyCustodian — the only
-// class calling System::encrypt()/decrypt().
+// Makes a persisted secret machine-bound ciphertext, layered under the caller's
+// own APP_KEY encryption.
 final class SafeStorageSecretShield implements SecretShield
 {
     public function __construct(
@@ -23,10 +21,8 @@ final class SafeStorageSecretShield implements SecretShield
 
     public function reveal(string $shielded): string
     {
-        // null means the value never decrypts as safeStorage
-        // ciphertext — a legacy row written before shielding, or a
-        // keychain that changed — so the stored bytes ARE the
-        // plaintext.
+        // null means the value never was safeStorage ciphertext — a row written
+        // before shielding, or a changed keychain — so the stored bytes are it.
         return $this->custodian->read($shielded) ?? $shielded;
     }
 }

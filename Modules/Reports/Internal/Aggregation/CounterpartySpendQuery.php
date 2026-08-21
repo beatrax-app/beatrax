@@ -6,17 +6,13 @@ namespace Modules\Reports\Internal\Aggregation;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
-use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use Modules\Ledger\Public\Dto\Period;
-use Modules\Reports\Public\Dto\ReportResultRow;
+use Modules\Reports\Internal\Dto\ReportResultRow;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final class CounterpartySpendQuery
 {
     use CoercesScalars;
@@ -40,16 +36,18 @@ final class CounterpartySpendQuery
         string $currency,
         SpendQueryFilters $filters = new SpendQueryFilters,
     ): array {
+        $reportMetric = ReportMetric::fromMetric($metric);
+
         $rows = $this->db->connection()
             ->table('transactions')
             ->where('user_id', $user->id)
-            ->whereIn('type', self::metricTypes($metric))
+            ->whereIn('type', $reportMetric->types())
             ->where('settled_currency', $currency)
             ->where('posted_at', '>=', $period->start->toDateString())
             ->where('posted_at', '<', $period->endExclusive->toDateString())
             ->tap(fn (QueryBuilder $q): QueryBuilder => $this->filterApplier->apply($q, $filters))
             ->groupBy('counterparty_id')
-            ->selectRaw('counterparty_id, '.self::amountExpr($metric).' AS amount_minor')
+            ->selectRaw('counterparty_id, '.$reportMetric->sumExpr().' AS amount_minor')
             ->get();
 
         /** @var array<int, int> $map */
@@ -80,30 +78,5 @@ final class CounterpartySpendQuery
         }
 
         return $result;
-    }
-
-    /**
-     * @return list<string>
-     */
-    private static function metricTypes(string $metric): array
-    {
-        return match ($metric) {
-            'spend' => ['expense'],
-            'income' => ['income'],
-            'net' => ['expense', 'income'],
-            default => throw new InvalidArgumentException("Unknown report metric: {$metric}"),
-        };
-    }
-
-    /**
-     * @return literal-string
-     */
-    private static function amountExpr(string $metric): string
-    {
-        return match ($metric) {
-            'spend' => 'SUM(-settled_amount_minor)',
-            'income', 'net' => 'SUM(settled_amount_minor)',
-            default => throw new InvalidArgumentException("Unknown report metric: {$metric}"),
-        };
     }
 }

@@ -3,18 +3,11 @@
     active goals. Chrome matches the NetWorthCard section. Empty-state shows a
     calm single-line "No goals yet" copy when the user has no active goals.
 
-    Mini progress bar: 4px height, 80px wide, same 3-state color logic as the
+    Mini progress bar: 8px height, 80px wide, same 3-state color logic as the
     full goals-page card. Tabular numerics throughout.
 --}}
 
 @use('Modules\Core\Public\Support\Lang')
-@php
-    $progressColor = [
-        'in_progress' => 'bg-emerald-500 dark:bg-emerald-400',
-        'reached'     => 'bg-emerald-500 dark:bg-emerald-400',
-        'overdue'     => 'bg-amber-500 dark:bg-amber-400',
-    ];
-@endphp
 
 <div class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-950">
     {{-- Card header --}}
@@ -41,24 +34,23 @@
                 @php
                     $pct = $row->percentComplete();
                     $barWidth = $pct === 0 ? 0 : max(2, $pct);
-                    $color = $progressColor[$row->progressState] ?? $progressColor['in_progress'];
                 @endphp
                 {{-- Wraps below sm: the 80px bar, the percentage and the status
                      badge do not shrink, so on a phone the goal name was left
                      ~64px for text needing 113px. --}}
                 <li class="flex flex-wrap items-center gap-x-3 gap-y-1 sm:flex-nowrap">
                     <p class="w-full min-w-0 truncate text-sm text-slate-900 sm:w-auto sm:flex-1 dark:text-slate-100">{{ $row->name }}</p>
-                    {{-- Mini progress bar: 4px × 80px --}}
-                    <div
-                        class="h-1 w-20 shrink-0 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"
-                        role="progressbar"
-                        aria-valuenow="{{ $pct }}"
-                        aria-valuemin="0"
-                        aria-valuemax="100"
-                        aria-label="{{ Lang::get('goals::messages.progress.aria', ['name' => $row->name, 'pct' => $pct]) }}"
-                    >
-                        <div class="h-1 rounded-full {{ $color }}" style="width: {{ $barWidth }}%;"></div>
-                    </div>
+                    {{-- Mini progress bar: 8px × 80px. `width` is a prop and
+                         `shrink-0` a class because two Tailwind width utilities
+                         on one element resolve by stylesheet order, not by the
+                         order the call site wrote them. --}}
+                    <x-core::progress-bar
+                        :value="$barWidth"
+                        :tone="$row->progressState === 'overdue' ? 'warning' : 'positive'"
+                        :label="Lang::get('goals::messages.progress.aria', ['name' => $row->name, 'pct' => $pct])"
+                        width="w-20"
+                        class="shrink-0"
+                    />
                     <span class="shrink-0 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $pct }}%</span>
                     <span class="shrink-0 text-xs text-slate-500 dark:text-slate-400">
                         @if ($row->progressState === 'overdue')

@@ -11,14 +11,6 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\Category;
 use Modules\Ledger\Public\Services\PeriodQuery;
 
-/*
- * Phase 13.2 Plan 07 Task 1: the rebuilt `/budgets` zero-based envelope grid
- * (Req 3/6/8/12). Supersedes the flat `category_budgets`-era test suite this
- * file used to hold — the rebuilt page no longer exposes
- * setBudget/updateBudget/removeBudget/newCategoryId; that flow is retired by
- * CarryoverQuery/EnvelopeWriter.
- */
-
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'envelopegrid-'.bin2hex(random_bytes(4)),
@@ -27,9 +19,8 @@ beforeEach(function (): void {
     ]);
     $this->actingAs($this->user);
 
-    // Genesis anchor well before "current" so month-nav + copy-last-month
-    // fixtures below always have a real prior period to read from (mirrors
-    // the CarryoverQueryTest/EnvelopeMoveTest genesis-anchor precedent).
+    // Genesis anchor well before "current" so the copy-last-month fixtures
+    // below always have a real prior period to read from.
     DB::table('users')->where('id', $this->user->id)->update([
         'envelope_activated_at' => CarbonImmutable::now()->subMonths(3)->startOfMonth(),
     ]);
@@ -46,7 +37,7 @@ it('renders the envelope grid with the ready-to-assign header', function (): voi
         ->assertSee('Groceries');
 });
 
-it('assigns an amount inline and live-updates that rows available and the to-budget header (Req 3)', function (): void {
+it('assigns an amount inline and live-updates that rows available and the to-budget header', function (): void {
     $component = Livewire::test(BudgetsPage::class)
         ->set("assignedInputs.{$this->groceries->id}", '50.00')
         ->call('setAssigned', $this->groceries->id);
@@ -63,7 +54,7 @@ it('assigns an amount inline and live-updates that rows available and the to-bud
     ]);
 });
 
-it('permits over-assignment: to-budget goes negative and the write is never rejected (Req 8)', function (): void {
+it('permits over-assignment: to-budget goes negative and the write is never rejected', function (): void {
     $component = Livewire::test(BudgetsPage::class)
         ->set("assignedInputs.{$this->groceries->id}", '900.00')
         ->call('setAssigned', $this->groceries->id);
@@ -75,7 +66,7 @@ it('permits over-assignment: to-budget goes negative and the write is never reje
     ]);
 });
 
-it('clears an envelopes assigned amount back to zero (tombstone, D-06)', function (): void {
+it('clears an envelopes assigned amount back to zero, tombstoning the row', function (): void {
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, app(PeriodQuery::class)->current()->start, 5000);
 
     Livewire::test(BudgetsPage::class)
@@ -104,7 +95,7 @@ it('toggles the overspend mode for an envelope', function (): void {
     expect($rows[$this->groceries->id]->overspendMode)->toBe('carry_negative');
 });
 
-it('copies last months assignments only when the selected month has none and the prior month has some (Req 6)', function (): void {
+it('copies last months assignments only when the selected month has none and the prior month has some', function (): void {
     $current = app(PeriodQuery::class)->current();
     $previous = app(PeriodQuery::class)->previous($current);
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $previous->start, 12000);

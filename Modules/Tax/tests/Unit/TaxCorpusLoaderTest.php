@@ -6,13 +6,6 @@ use Mockery\MockInterface;
 use Modules\Tax\Internal\Corpus\TaxCorpusLoader;
 use Psr\Log\LoggerInterface;
 
-/*
- * Unit tests for TaxCorpusLoader — the built-in deduction category corpus.
- *
- * Tests verify that the loader reads the bundled YAML files failure-tolerantly
- * and returns well-formed entry arrays for each supported country.
- */
-
 it('loads the Dutch corpus and returns a non-empty list with key and name', function (): void {
     /** @var TaxCorpusLoader $loader */
     $loader = app(TaxCorpusLoader::class);
@@ -56,8 +49,8 @@ it('logs a warning and returns empty list when a known country has no corpus fil
 
     $loader = new TaxCorpusLoader($logger);
 
-    // Move a shipped country's corpus aside so the enum still accepts the
-    // code but the file is absent, then always restore it.
+    // Moved aside, not deleted: the enum must still accept the code while the
+    // file is absent.
     $corpusPath = resource_path('corpus/tax/us.yaml');
     $stashed = $corpusPath.'.stash';
     rename($corpusPath, $stashed);
@@ -96,19 +89,18 @@ it('logs a warning and returns empty list when the corpus file contains malforme
 
     $loader = new TaxCorpusLoader($logger);
 
-    // Temporarily overwrite the NL corpus with malformed YAML, then restore.
     $corpusPath = resource_path('corpus/tax/nl.yaml');
     $backup = file_get_contents($corpusPath);
     assert(is_string($backup));
 
-    // Write invalid YAML that triggers a ParseException via PARSE_EXCEPTION_ON_INVALID_TYPE.
+    // A native !!php/object tag: rejected only because the loader passes
+    // PARSE_EXCEPTION_ON_INVALID_TYPE.
     file_put_contents($corpusPath, "entries:\n  - !!php/object 'O:8:\"stdClass\":0:{}'");
 
     try {
         $entries = $loader->loadForCountry('nl');
         expect($entries)->toBeEmpty();
     } finally {
-        // Always restore the original file.
         file_put_contents($corpusPath, $backup);
     }
 });

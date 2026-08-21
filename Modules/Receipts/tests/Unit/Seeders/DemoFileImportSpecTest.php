@@ -4,11 +4,8 @@ declare(strict_types=1);
 
 use Modules\Receipts\Database\Seeders\Demo\DemoFileImportSpec;
 
-/*
- * The spec derives source_kind from the filename extension rather than
- * carrying it separately, so the two can never drift. sourceKind() is
- * lower-cased so a .EML drop and a .eml drop land the same kind.
- */
+// source_kind is derived from the filename extension rather than carried
+// alongside it, so the two cannot drift apart.
 
 it('derives source_kind from an .eml filename', function (): void {
     $spec = new DemoFileImportSpec(

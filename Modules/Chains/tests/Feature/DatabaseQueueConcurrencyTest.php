@@ -21,30 +21,9 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 
-/*
- * SC2 — proves the shipped `database` queue + cache-lock slice keeps
- * chain resolution duplicate-free under concurrent dispatch with no
- * Redis daemon. The whole test runs with `cache.locks_store=database`
- * and `queue.default=database` so the SQLite-backed lock store and the
- * `jobs` table are the surfaces under test — not the `array` /
- * `sync` phpunit.xml defaults, which would prove nothing.
- *
- * The scenario-1 empirical contract (Modules/Chains/tests/fixtures/
- * scenario-1/scenario-1.md) fixes the multi-source shape: 23 ICS
- * statement transactions totalling 84732 cents, settled in one ASN
- * bulk-iDEAL transfer. The fixture data is seeded directly here in the
- * same shape ResolveChainLinksJobTest uses so the resolver has real
- * cross-source data to fold into a chain_resolution_runs row.
- */
-
 uses(RefreshDatabase::class)->group('Phase14');
 
 /**
- * Seed a user + ICS account + import run + the scenario-1 multi-month
- * transaction set (23 expense rows + the matching ASN bulk-iDEAL
- * transfer_in + the open card statement). Mirrors the empirical
- * contract in scenario-1.md (84732 cents across 23 rows).
- *
  * @return array{user: User, account: Account, run: ImportRun}
  */
 function seedConcurrencyScenario(): array
@@ -135,9 +114,9 @@ function seedConcurrencyScenario(): array
 }
 
 beforeEach(function (): void {
-    // Exercise the SHIPPED slice: SQLite-backed database lock store and
-    // the database queue connection — not the array/sync phpunit.xml
-    // defaults, which would never touch the cache_locks or jobs tables.
+    // Exercise the shipped slice: the SQLite-backed database lock store and
+    // the database queue connection, not the array/sync phpunit.xml defaults
+    // which never touch cache_locks or jobs.
     config([
         'cache.locks_store' => 'database',
         'queue.default' => 'database',
@@ -156,9 +135,6 @@ it('rejects a duplicate concurrent unique-lock acquire on the database lock stor
     $firstLock = $store->lock($lockKey, $job->uniqueFor());
     expect($firstLock->get())->toBeTrue();
 
-    // A second overlapping acquire of the same key — the duplicate
-    // dispatch — must be rejected by the SQLite database lock before
-    // any handle() runs.
     $secondLock = $store->lock($lockKey, $job->uniqueFor());
     expect($secondLock->get())->toBeFalse();
 
@@ -191,25 +167,17 @@ it('database queue admits one job row and a duplicate dispatch is dropped by the
     $job = new ResolveChainLinksJob($fixtures['user']->id);
     $lockKey = UniqueLock::getKey($job);
 
-    // The seeding above closes every transaction; dispatch happens
-    // strictly post-commit (the ResolveChainLinksJobTest discipline).
-    // The first dispatch enqueues one job row on the database queue and
-    // — because ResolveChainLinksJob is ShouldBeUniqueUntilProcessing —
-    // acquires the per-user unique lock on the database lock store.
+    // Dispatch happens strictly post-commit. ResolveChainLinksJob is
+    // ShouldBeUniqueUntilProcessing, so the first dispatch also takes the
+    // per-user unique lock on the database lock store.
     ResolveChainLinksJob::dispatch($fixtures['user']->id);
 
     expect($db->connection()->table('jobs')->count())->toBe(1);
 
-    // The first dispatch holds the unique lock; a fresh acquire of the
-    // same framework-derived key is rejected by the SQLite database
-    // lock store — proof the lock is genuinely held.
     $contendedLock = Cache::store(config('cache.locks_store'))
         ->lock($lockKey, $job->uniqueFor());
     expect($contendedLock->get())->toBeFalse();
 
-    // A second overlapping dispatch is therefore dropped by the
-    // UniqueLock middleware before it reaches the queue — the jobs
-    // table still holds exactly one row.
     ResolveChainLinksJob::dispatch($fixtures['user']->id);
 
     expect($db->connection()->table('jobs')->count())->toBe(1);

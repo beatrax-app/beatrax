@@ -7,23 +7,8 @@ use Modules\Core\Models\User;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectBankStep;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\FirstImportStep;
 
-/*
- * Acceptance coverage for WIZ-05 — first-import-step width relaxation.
- *
- * The wizard's default card width is 620px (sketch 002D lock); the
- * first-import step is the single locked exception (UI-SPEC §"Density
- * rules"), relaxing the card to 1120px because the preview table needs
- * the horizontal room.
- *
- * Two assertions:
- *
- *  1. FirstImportStep renders the wiz-card--wide CSS class — the
- *     load-bearing visual signal for the relaxed width.
- *
- *  2. ConnectBankStep (representative of every other connector step)
- *     does NOT render wiz-card--wide. Every other step uses the
- *     default 620px wrapper that the SetupWizard parent provides.
- */
+// Wizard cards are 620px wide. first-import is the one exception, relaxed
+// to 1120px via wiz-card--wide because the preview table needs the room.
 
 beforeEach(function (): void {
     $this->user = User::query()->create([

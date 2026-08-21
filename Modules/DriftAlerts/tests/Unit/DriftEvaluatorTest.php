@@ -11,15 +11,6 @@ use Modules\DriftAlerts\Models\DriftAlert;
 
 uses(RefreshDatabase::class);
 
-/*
- * Core happy-path coverage for the drift evaluator: every cadence
- * multiplier (monthly, weekly, quarterly, yearly), stable + below-
- * threshold + above-threshold deltas, and the EUR + USD currency
- * personalities. Each row in the Pest dataset seeds two occurrences
- * for one approved recurring_series row and asserts the row count +
- * column shape against the expected outcome.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -116,11 +107,9 @@ dataset('drift_evaluator_cases', [
         'cadence' => 'monthly',
         'currency' => 'USD',
         'direction' => 'expense',
-        // Round prior+latest pair so the ratio is exactly 25.0% —
-        // avoids the per-mille rounding hazard a non-round pair like
-        // -1199 → -1499 would introduce when a future contributor
-        // copies the case shape with a 25% threshold (which compares
-        // strictly-greater-than the ratio).
+        // A round pair, so the ratio is exactly 25.0%: against a 25% threshold the
+        // strictly-greater-than test would turn a per-mille rounding error into a
+        // flipped expectation.
         'priorMinor' => -1200,
         'latestMinor' => -1500,
         'expectedAlertCount' => 1,
@@ -167,8 +156,8 @@ it('evaluates drift for a single (series, occurrence) pair across cadences and c
         'updated_at' => '2026-05-19 00:00:00',
     ]);
 
-    // The detector requires a distinct transaction_id per occurrence
-    // because (recurring_series_id, transaction_id) is UNIQUE.
+    // (recurring_series_id, transaction_id) is UNIQUE, so the second occurrence
+    // needs its own transaction.
     $latestTxId = devalSeedTransaction($this->db, $user->id, $priorId + 1);
     $latestOccurrenceId = $this->db->connection()->table('recurring_series_occurrences')->insertGetId([
         'user_id' => $user->id,
@@ -212,11 +201,8 @@ it('evaluates drift for a single (series, occurrence) pair across cadences and c
     }
 })->with('drift_evaluator_cases');
 
-/**
- * Seeds the prerequisite accounts/import_runs/transactions FK chain.
- * The seed is per-call so the (account_id, fingerprint) UNIQUE on
- * transactions does not collide across dataset rows.
- */
+// Seeded per call: a shared account would collide on the
+// (account_id, fingerprint) UNIQUE across dataset rows.
 function devalSeedTransaction(DatabaseManager $db, int $userId, int $salt = 0): int
 {
     static $counter = 0;

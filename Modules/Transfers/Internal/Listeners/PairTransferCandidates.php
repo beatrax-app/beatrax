@@ -9,7 +9,6 @@ use Modules\Transfers\Internal\Exceptions\MismatchedTransferUserException;
 use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 
 /**
- * @link ../../../../.docs/features/transfers/architecture.md
  * @see PairsTransferLegs::pairOne()
  */
 final readonly class PairTransferCandidates

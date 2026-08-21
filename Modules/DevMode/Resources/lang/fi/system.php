@@ -7,6 +7,10 @@ return [
 
     'subtitle_html' => 'Ympäristö, ajonaikaiset tiedot ja voimassa oleva konfiguraatio. Arkaluonteiset avaimet (päätteet <code class="font-mono text-xs">*password*</code>, <code class="font-mono text-xs">*secret*</code>, <code class="font-mono text-xs">*key</code>, <code class="font-mono text-xs">*token*</code>) on peitetty.',
     'php' => 'PHP',
+    'php_version' => 'versio',
+    'php_sapi' => 'sapi',
+    'php_ini_path' => 'ini-polku',
+    'php_extensions' => 'laajennukset',
     'laravel' => 'Laravel',
     'sqlite' => 'SQLite',
     'sqlite_file' => 'tiedosto',

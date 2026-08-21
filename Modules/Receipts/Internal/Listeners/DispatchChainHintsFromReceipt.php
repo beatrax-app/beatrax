@@ -15,9 +15,6 @@ use Psr\Log\LoggerInterface;
 // cannot dispatch the hint event itself since the canonical
 // transactions row doesn't exist yet. Hints ride through
 // raw_payload['chain_hints'] until this listener re-hydrates them.
-/**
- * @link ../../../../.docs/features/receipts/architecture.md
- */
 final class DispatchChainHintsFromReceipt
 {
     private const RECEIPT_FORMATS = ['eml', 'mbox'];

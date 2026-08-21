@@ -8,6 +8,7 @@ return [
     'subtitle' => 'Imprímelos o guárdalos en un sitio seguro. No se volverán a mostrar.',
     'copy' => 'Copiar códigos',
     'copied' => 'Copiado',
+    'copy_failed' => 'No se ha podido copiar. Anote los códigos.',
     'download' => 'Descargar como .txt',
 
     'saved_as' => 'Guardado como beatrax-recovery-codes-:username.txt',

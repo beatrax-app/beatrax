@@ -13,9 +13,6 @@ use PDO;
 use Pdo\Sqlite as PdoSqlite;
 use PDOStatement;
 
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 final class ActualSqliteReader
 {
     use CoercesScalars;
@@ -190,8 +187,8 @@ final class ActualSqliteReader
         $table = $this->budgetType() === 'envelope' ? 'zero_budgets' : 'reflect_budgets';
 
         if (! $this->tableExists($table)) {
-            // The active mode's own table is missing entirely — genuinely no
-            // budget history in this export, not "wrong mode".
+            // The ACTIVE mode's own table is missing, so this export genuinely
+            // has no budget history — it is not a wrong-mode read.
             return [];
         }
 
@@ -252,9 +249,6 @@ final class ActualSqliteReader
      */
     public function goalDefs(): array
     {
-        // Returns the RAW goal_def JSON string per category — decoding and
-        // interpreting the flat-vs-non-flat grammar is
-        // ActualGoalDefInterpreter's job, not this reader's.
         $sql = $this->viewExists('v_categories')
             ? 'SELECT id, goal_def FROM v_categories WHERE goal_def IS NOT NULL'
             : 'SELECT id, goal_def FROM categories WHERE tombstone = 0 AND goal_def IS NOT NULL';

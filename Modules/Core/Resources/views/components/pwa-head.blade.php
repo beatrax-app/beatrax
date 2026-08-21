@@ -1,5 +1,5 @@
 {{--
-    PWA head block (D-14/D-18/D-21, PWA-01/02). Shared by the main app and
+    PWA head block. Shared by the main app and
     lock shells; the dev-console and wizard shells omit it.
     - Manifest link: tells browsers/OS install affordance where to find
       the app name, icons, and display mode (standalone).
@@ -17,3 +17,8 @@
 <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#020617" media="(prefers-color-scheme: dark)" />
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+{{-- Declared, so the browser stops falling back to its default request for
+     /favicon.ico — which this app has never shipped, so every page load
+     answered a 404 that showed up in the console and the dev log. --}}
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+<link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />

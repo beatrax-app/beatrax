@@ -7,9 +7,6 @@ namespace Modules\Categorization\Public\Dto;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/categorization/architecture.md
- */
 final class AutoCategorizationOutcomeDto extends Data
 {
     public function __construct(

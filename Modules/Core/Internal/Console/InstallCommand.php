@@ -13,9 +13,6 @@ use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Events\UserInstalled;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 class InstallCommand extends Command
 {
     /** @var string */
@@ -29,10 +26,8 @@ class InstallCommand extends Command
     /** @var string */
     protected $description = 'Idempotent first-run setup: validate DB path, run migrations, create or re-confirm the single user, and re-dispatch UserInstalled so seed listeners can heal missing reference data. Pass --launchd to install macOS background workers.';
 
-    // Matched case-insensitively against the resolved real path before any
-    // file IO runs. Combines per-vendor product names with the canonical
-    // macOS Monterey+ mountpoint `Library/CloudStorage`, which catches every
-    // cloud provider Apple registers with the system.
+    // Per-vendor product names plus `Library/CloudStorage`, the canonical macOS
+    // mountpoint that catches every provider Apple registers with the system.
     /**
      * @var list<string>
      */
@@ -75,8 +70,6 @@ class InstallCommand extends Command
         return $this->runInstall();
     }
 
-    // The single-user first-run path: refuse a cloud-synced DB, migrate +
-    // seed reference data, then create or re-confirm the account.
     private function runInstall(): int
     {
         $dbPathValue = $this->config->get('database.connections.sqlite.database');
@@ -103,9 +96,6 @@ class InstallCommand extends Command
         return $this->ensureUser();
     }
 
-    // The first cloud-sync token the resolved database path matches, or null
-    // when the path is local. Matched case-insensitively so per-vendor names
-    // and the canonical macOS mountpoint are both caught.
     private function cloudSyncToken(string $resolvedPath): ?string
     {
         foreach (self::CLOUD_SYNC_TOKENS as $token) {
@@ -123,18 +113,14 @@ class InstallCommand extends Command
             return false;
         }
 
-        // Currency reference data is owned by the Ledger module. Referenced
-        // by FQN string so InstallCommand does not import a class from
-        // another module's private namespace.
+        // Referenced by name so Core does not import a class from another
+        // module's private namespace.
         return $this->call('db:seed', [
             '--class' => 'Modules\\Ledger\\Database\\Seeders\\CurrenciesSeeder',
             '--force' => true,
         ]) === 0;
     }
 
-    // Re-confirms and re-dispatches UserInstalled for an existing account
-    // (password untouched), or creates the single user from the resolved
-    // username/password/period inputs.
     private function ensureUser(): int
     {
         $existingId = self::resolveExistingUserId($this->db);
@@ -180,9 +166,8 @@ class InstallCommand extends Command
         return self::SUCCESS;
     }
 
-    // Uses the raw query builder so the lookup stays out of the Eloquent
-    // global-scope path (UserScope filters by authenticated user id, which
-    // is meaningless during a console install run).
+    // Raw query builder so UserScope's global scope — which filters by the
+    // authenticated user id — does not apply during a console install run.
     private static function resolveExistingUserId(DatabaseManager $db): ?int
     {
         $row = $db->connection()
@@ -200,10 +185,9 @@ class InstallCommand extends Command
         return is_numeric($value) ? (int) $value : null;
     }
 
-    // Resolves through `realpath` so symlink targets are detected. When the
-    // database file does not yet exist (first install), falls back to the
-    // parent directory's real path; when even that fails, returns the
-    // original input so the token scan still gets a chance against it.
+    // realpath so a symlink into a cloud folder is detected. On first install
+    // the file does not exist yet, so it falls back to the parent directory,
+    // then to the raw input so the token scan still gets a chance at it.
     private static function resolveRealPath(string $path): string
     {
         if ($path === '') {
@@ -244,10 +228,6 @@ class InstallCommand extends Command
         return max(1, min(28, $day));
     }
 
-    // Refuses to run on non-Darwin hosts. For each plist: read the template,
-    // substitute {{ABS_PHP_BINARY}}/{{ABS_PROJECT_ROOT}}, ensure
-    // ~/Library/LaunchAgents/ exists (chmod 700), write it, then bootstrap
-    // via bootstrapPlist() (funnelled through a seam so tests can stub it).
     private function installLaunchdPlists(): int
     {
         if (PHP_OS_FAMILY !== 'Darwin') {
@@ -281,9 +261,8 @@ class InstallCommand extends Command
         return $this->writePlists($plistNames, $launchAgentsDir, $substitutions, self::resolveCurrentUid());
     }
 
-    // Renders and writes each plist, then bootstraps it. A missing source
-    // plist is fatal (FAILURE); a non-zero launchctl bootstrap is only a
-    // warning, since launchctl exits non-zero for an already-loaded agent.
+    // A non-zero launchctl bootstrap is only a warning: launchctl exits
+    // non-zero for an already-loaded agent, which is fine on re-install.
     /**
      * @param  list<string>  $plistNames
      * @param  array<string, string>  $substitutions
@@ -314,17 +293,13 @@ class InstallCommand extends Command
         return self::SUCCESS;
     }
 
-    // Extracted so tests can override + redirect into a sandbox without
-    // mutating the developer's real ~/Library/LaunchAgents.
+    // A seam so tests redirect away from the developer's real LaunchAgents dir.
     protected function resolveLaunchAgentsDir(string $home): string
     {
         return $home.'/Library/LaunchAgents';
     }
 
-    // Extracted so tests can override to capture the intended bootstrap
-    // target without mutating the developer's running launchd. Non-zero is
-    // surfaced as a warning, not a hard failure — launchctl exits non-zero
-    // for "already loaded", which is fine on re-install.
+    // A seam so tests capture the bootstrap target without touching launchd.
     protected function bootstrapPlist(int $uid, string $plistPath): int
     {
         $cmd = 'launchctl bootstrap gui/'.$uid.' '.escapeshellarg($plistPath);
@@ -334,10 +309,9 @@ class InstallCommand extends Command
         return $exitCode;
     }
 
-    // posix_getuid() is missing on Windows; the launchd path is Darwin-only
-    // so it's available wherever this is reached, but the fallback returns 0
-    // (root) so a missing function fails the launchctl call visibly rather
-    // than silently writing to the wrong user's launchd.
+    // posix_getuid() is missing on Windows. The fallback returns 0 (root) so a
+    // missing function fails the launchctl call visibly, rather than silently
+    // writing to the wrong user's launchd.
     private static function resolveCurrentUid(): int
     {
         if (function_exists('posix_getuid')) {

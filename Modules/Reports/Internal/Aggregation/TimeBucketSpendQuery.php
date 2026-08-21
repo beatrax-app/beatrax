@@ -6,17 +6,13 @@ namespace Modules\Reports\Internal\Aggregation;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
-use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Dto\Period;
-use Modules\Reports\Public\Dto\ReportResultRow;
-use Modules\Reports\Public\Enums\ReportGranularity;
+use Modules\Reports\Internal\Dto\ReportResultRow;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final class TimeBucketSpendQuery
 {
     use CoercesScalars;
@@ -40,8 +36,9 @@ final class TimeBucketSpendQuery
         SpendQueryFilters $filters = new SpendQueryFilters,
     ): array {
         $buckets = $this->timeBucketGenerator->generate($period, $granularity ?? ReportGranularity::default());
-        $types = self::metricTypes($metric);
-        $amountExpr = self::amountExpr($metric);
+        $reportMetric = ReportMetric::fromMetric($metric);
+        $types = $reportMetric->types();
+        $amountExpr = $reportMetric->sumExpr();
 
         $result = [];
         foreach ($buckets as $bucket) {
@@ -66,30 +63,5 @@ final class TimeBucketSpendQuery
         }
 
         return $result;
-    }
-
-    /**
-     * @return list<string>
-     */
-    private static function metricTypes(string $metric): array
-    {
-        return match ($metric) {
-            'spend' => ['expense'],
-            'income' => ['income'],
-            'net' => ['expense', 'income'],
-            default => throw new InvalidArgumentException("Unknown report metric: {$metric}"),
-        };
-    }
-
-    /**
-     * @return literal-string
-     */
-    private static function amountExpr(string $metric): string
-    {
-        return match ($metric) {
-            'spend' => 'SUM(-settled_amount_minor)',
-            'income', 'net' => 'SUM(settled_amount_minor)',
-            default => throw new InvalidArgumentException("Unknown report metric: {$metric}"),
-        };
     }
 }

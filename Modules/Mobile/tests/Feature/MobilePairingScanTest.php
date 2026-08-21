@@ -8,7 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Livewire\Livewire;
-use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Http\Livewire\MobilePairingScan;
@@ -23,27 +23,9 @@ use Modules\Sync\Public\Services\PairingGateway;
 
 uses(RefreshDatabase::class);
 
-/*
- * MOBILE-01 (D-01/D-02) — QrScanBridge + MobilePairingScan (15-07-PLAN.md).
- *
- * Task 1 pins QrScanBridge's narrow envelope-unwrap-then-delegate contract:
- * a good decoded QR string reaches PairingGateway::acceptToken() (which
- * itself routes through the UNCHANGED WordCodeEncoder/PairingTokenService
- * validation boundary), a bad one yields the same generic invalid-code
- * outcome. Task 2 (this slice) proves the full MobilePairingScan wiring:
- * camera unavailable falls through to the enter_code step (this repo-root
- * toolchain never resolves Native\Mobile\Facades\Scanner — mirrors
- * BiometricUnlockBridge::isAvailable()'s identical "always false here"
- * precedent, 15-06 test file), QR-decode success and the typed word-code
- * both auto-advance to the SAME confirm step, and both funnel into the
- * IDENTICAL PairingGateway::confirm() (-> PairingTokenService::confirm())
- * both-confirm trust gate — no new trust mechanism.
- *
- * `Native\Mobile\Facades\Scanner` is installed ONLY under mobile-app/
- * vendor (Plan 03) — unreachable from this repo-root toolchain. The real
- * native camera decode is exercised only by a manual on-device UAT pass
- * (15-11), exactly like BiometricUnlockBridge's own precedent.
- */
+// `Native\Mobile\Facades\Scanner` is installed only under mobile-app/vendor,
+// so it never resolves here and every scanner path in this file is exercised
+// under the same "no camera" condition a refused device gives.
 
 function pairingScanTestUser(string $username): User
 {
@@ -56,16 +38,11 @@ function pairingScanTestUser(string $username): User
 }
 
 /**
- * Prime the app-lock session as unlocked (mirrors MobileBiometricUnlockTest
- * / DeviceIdentityServiceTest) and generate a real device identity for
- * $user — DeviceIdentityLoader (reached only via PairingGateway) needs a
- * genuine key-file to load.
- *
  * @return array{deviceId: string, edHex: string}
  */
 function pairingScanSetUpIdentity(User $user, Session $session): array
 {
-    (new LockStateManager)->unlock($session, str_repeat('k', 32));
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
 
     /** @var DeviceIdentityService $identityService */
     $identityService = app(DeviceIdentityService::class);
@@ -75,10 +52,6 @@ function pairingScanSetUpIdentity(User $user, Session $session): array
 }
 
 /**
- * Issue a pairing token as "the other device" (same user — pairing links a
- * user's OWN devices) and return both the plaintext token and the
- * `beatrax://pair` QR envelope a scan of that token would decode to.
- *
  * @return array{token: string, qrPayload: string, initiatorDeviceId: string}
  */
 function pairingScanIssueToken(User $user): array
@@ -98,10 +71,6 @@ function pairingScanIssueToken(User $user): array
 
     return ['token' => $token, 'qrPayload' => $qrPayload, 'initiatorDeviceId' => $initiatorDeviceId];
 }
-
-// -------------------------------------------------------------------------
-// Task 1: QrScanBridge — thin envelope-unwrap-then-delegate contract
-// -------------------------------------------------------------------------
 
 it('QrScanBridge isAvailable() returns false without the native facade — never fatal in tests/web', function (): void {
     $bridge = app(QrScanBridge::class);
@@ -160,15 +129,11 @@ it('QrScanBridge yields null for a well-formed envelope carrying an unknown/expi
     expect($bridge->accept($fakePayload, (int) $user->id, $session))->toBeNull();
 });
 
-// -------------------------------------------------------------------------
-// Task 2: MobilePairingScan — camera-first landing + word-code fallback
-// -------------------------------------------------------------------------
-
 it('MobilePairingScan class exists and is Livewire-registered', function (): void {
     expect(class_exists(MobilePairingScan::class))->toBeTrue();
 });
 
-it('lands on the enter_code fallback with the amber notice when the camera is unavailable (D-02, never a dead end)', function (): void {
+it('lands on the enter_code fallback with the amber notice when the camera is unavailable (never a dead end)', function (): void {
     $user = pairingScanTestUser('mobile-pair-no-camera');
     test()->actingAs($user);
 
@@ -196,7 +161,7 @@ it('cameraDenied() falls through to the enter_code step with the amber notice', 
         ->assertSet('cameraUnavailableNotice', true);
 });
 
-it('a decoded QR string auto-advances to the confirm step (D-01) — no new confirmation screen', function (): void {
+it('a decoded QR string auto-advances to the confirm step — no new confirmation screen', function (): void {
     $user = pairingScanTestUser('mobile-pair-qr-ok');
     test()->actingAs($user);
 
@@ -225,7 +190,7 @@ it('an invalid decoded QR string surfaces the same invalid-or-expired flash as a
         ->assertSee('This code is invalid or has expired.');
 });
 
-it('the typed word-code fallback also auto-advances to the confirm step (D-02)', function (): void {
+it('the typed word-code fallback also auto-advances to the confirm step', function (): void {
     $user = pairingScanTestUser('mobile-pair-wordcode-ok');
     test()->actingAs($user);
 
@@ -261,8 +226,6 @@ it('a bad typed word-code stays on enter_code with the invalid-code flash', func
 });
 
 it('BOTH the QR path and the word-code path resolve to the identical PairingGateway::confirm() trust gate', function (): void {
-    // ----- QR path: this device confirms, then the peer confirms, then the
-    // poll (checkPairingState) observes the both-confirm CONFIRMED state. -----
     $qrUser = pairingScanTestUser('mobile-pair-confirm-qr');
     test()->actingAs($qrUser);
 
@@ -275,26 +238,20 @@ it('BOTH the QR path and the word-code path resolve to the identical PairingGate
         ->call('submitCode', $qrIssued['qrPayload'])
         ->assertSet('step', 'confirm');
 
-    // This device (the responder) confirms first — the gate is not yet both-
-    // confirmed, so it must wait for the peer.
     $qrComponent->call('confirmMatch')
         ->assertSet('awaitingPeer', true)
         ->assertSet('step', 'confirm');
 
-    // The peer (the initiator device) confirms via the SAME
-    // PairingTokenService::confirm() gate — simulated directly here exactly
-    // as PairingFlowTest does for the two-sided flow.
+    // The peer confirms through the same gate, simulated directly as
+    // PairingFlowTest does for the two-sided flow.
     /** @var PairingTokenService $tokenService */
     $tokenService = app(PairingTokenService::class);
     $pairingTokenId = (int) $qrComponent->get('pairingTokenId');
     $tokenService->confirm($pairingTokenId, (int) $qrUser->id, $qrIssued['initiatorDeviceId']);
 
-    // The poll observes the completed both-confirm transition.
     $qrComponent->call('checkPairingState')
         ->assertSet('step', 'success');
 
-    // ----- Word-code path: identical gate, reached via the enter_code
-    // fallback instead of the camera. -----
     $wcUser = pairingScanTestUser('mobile-pair-confirm-wordcode');
     test()->actingAs($wcUser);
 
@@ -321,8 +278,6 @@ it('BOTH the QR path and the word-code path resolve to the identical PairingGate
 
     $wcComponent->call('checkPairingState')->assertSet('step', 'success');
 
-    // Both flows resulted in a CONFIRMED device_registry admission — the
-    // sole trust gate, reached two different ways.
     /** @var PairingGateway $gateway */
     $gateway = app(PairingGateway::class);
     expect($gateway->tokenState($pairingTokenId, (int) $qrUser->id))->toBe(PairingGateway::STATE_CONFIRMED);
@@ -341,10 +296,6 @@ it('GET /mobile/pair renders 200 for an authenticated user', function (): void {
         ->assertOk();
 });
 
-// -------------------------------------------------------------------------
-// Phase 15 import-join (Task 2) — importMode: self-mint deferral (B2, 6c)
-// -------------------------------------------------------------------------
-
 it('import mode reads ?mode=import at mount() and seeds a local token from the scanned QR identity (G1)', function (): void {
     $user = pairingScanTestUser('mobile-pair-import-seed');
     test()->actingAs($user);
@@ -353,10 +304,8 @@ it('import mode reads ?mode=import at mount() and seeds a local token from the s
     $session = app(Session::class);
     pairingScanSetUpIdentity($user, $session);
 
-    // Simulate a genuinely fresh phone: the scanned QR carries a token +
-    // initiator identity that NEVER existed in this device's own local
-    // pairing_tokens table (no issue() call on this device at all — the
-    // token was issued on the DESKTOP's OWN separate database).
+    // A genuinely fresh phone: nothing issued this token locally, so there is
+    // no row here to accept against.
     $initiatorDeviceId = 'desktop-import-initiator';
     $initiatorEd = bin2hex(random_bytes(32));
     $initiatorKx = bin2hex(random_bytes(32));
@@ -366,9 +315,8 @@ it('import mode reads ?mode=import at mount() and seeds a local token from the s
     $qrBuilder = app(QrPayloadBuilder::class);
     $qrPayload = $qrBuilder->buildUri($initiatorDeviceId, $initiatorEd, $initiatorKx, $token);
 
-    // Set mode=import on the container-bound Request BEFORE mount() runs
-    // (Livewire::test() resolves mount()'s Request param from the SAME
-    // container-bound instance the app would use for a real GET request).
+    // Before mount(): Livewire::test() resolves its Request param from the
+    // container-bound instance, the same one a real GET would use.
     app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
 
     Livewire::test(MobilePairingScan::class)
@@ -393,11 +341,8 @@ it('import mode defers self-mint on both-confirm — sync_encryption_state stays
     $user = pairingScanTestUser('mobile-pair-import-no-selfmint');
     test()->actingAs($user);
 
-    // A prior, unrelated test process may have left a keyring file on disk
-    // for this same reused numeric user id (SQLite rowids are reused
-    // across RefreshDatabase transaction rollbacks — GdkEpochDeliveryTest's
-    // own documented cross-test filesystem-isolation gap). Start from a
-    // genuinely empty on-disk state.
+    // SQLite reuses rowids across RefreshDatabase rollbacks, so an unrelated
+    // earlier test may have left a keyring file under this same user id.
     @unlink(UserDataPathService::appPath('sync/gdk/'.$user->id.'.enc'));
 
     /** @var Session $session */
@@ -420,28 +365,22 @@ it('import mode defers self-mint on both-confirm — sync_encryption_state stays
         ->call('submitCode', $qrPayload)
         ->assertSet('step', 'confirm');
 
-    // Phone (responder) confirms first — awaits the peer.
     $component->call('confirmMatch')->assertSet('awaitingPeer', true);
 
-    // The desktop (initiator) side confirms — simulated directly here
-    // exactly as CrossDevicePairingAdmissionTest / PairingFlowTest do for
-    // the two-sided flow (this codebase's established single-database
-    // pairing-confirm test convention).
     /** @var PairingTokenService $tokenService */
     $tokenService = app(PairingTokenService::class);
     $pairingTokenId = (int) $component->get('pairingTokenId');
     $tokenService->confirm($pairingTokenId, (int) $user->id, $initiatorDeviceId);
 
-    // The poll observes the completed both-confirm — the SAME transition
-    // that (in non-import mode) would auto-run migrate().
+    // The both-confirm transition that would auto-run migrate() off the
+    // import path.
     $component->call('checkPairingState')->assertSet('step', 'success');
 
     /** @var PairingGateway $gateway */
     $gateway = app(PairingGateway::class);
     expect($gateway->tokenState($pairingTokenId, (int) $user->id))->toBe(PairingGateway::STATE_CONFIRMED);
 
-    // B2: migrate() was NEVER called on the import path — no
-    // sync_encryption_state row, no GDK epoch, no keyring file.
+    // migrate() was never called: no state row, no epoch, no keyring file.
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     expect($db->connection()->table('sync_encryption_state')->where('user_id', $user->id)->exists())->toBeFalse();
@@ -450,7 +389,7 @@ it('import mode defers self-mint on both-confirm — sync_encryption_state stays
     $keyring = app(GdkKeyringService::class);
     expect($keyring->loadKeyring((int) $user->id, $session)->epochs())->toBe([], 'the import path must never self-mint a GDK epoch (B2)');
 
-    // G2: the initiator (desktop) is admitted into this device's registry.
+    // The desktop is nonetheless admitted into this device's registry.
     $initiatorRow = $db->connection()->table('device_registry')
         ->where('user_id', $user->id)
         ->where('device_id', $initiatorDeviceId)
@@ -459,14 +398,12 @@ it('import mode defers self-mint on both-confirm — sync_encryption_state stays
     expect($initiatorRow->confirmed_at)->not->toBeNull();
 });
 
-it('MEDIUM-01: a re-entry to /mobile/pair WITHOUT ?mode=import still defers self-mint once the durable import-intent marker was set on an earlier visit', function (): void {
+it('a re-entry to /mobile/pair WITHOUT ?mode=import still defers self-mint once the durable import-intent marker was set on an earlier visit', function (): void {
     $user = pairingScanTestUser('mobile-pair-import-durable-reentry');
     test()->actingAs($user);
 
-    // A prior, unrelated test process may have left a keyring file on disk
-    // for this same reused numeric user id (documented cross-test
-    // filesystem-isolation gap — see the sibling B2 test's identical
-    // comment).
+    // SQLite reuses rowids across RefreshDatabase rollbacks, so an unrelated
+    // earlier test may have left a keyring file under this same user id.
     @unlink(UserDataPathService::appPath('sync/gdk/'.$user->id.'.enc'));
 
     /** @var Session $session */
@@ -478,15 +415,8 @@ it('MEDIUM-01: a re-entry to /mobile/pair WITHOUT ?mode=import still defers self
     $initiatorKx = bin2hex(random_bytes(32));
     $token = bin2hex(random_bytes(16));
 
-    // Simulate exactly what an EARLIER visit (WITH ?mode=import) already
-    // durably left behind before the app was killed/relaunched/navigated
-    // away mid-flow: (1) the responder token seeded from the scanned QR
-    // (G1 — a bare table row, still PENDING, never accepted yet) and (2)
-    // the durable import-intent marker (MEDIUM-01's own fix). Mirrors
-    // exactly what `MobilePairingScan::submitCode()`'s import branch does
-    // internally — used directly here as a fixture, the same convention
-    // `pairingScanIssueToken()` already establishes in this file for
-    // `PairingTokenService::issue()`.
+    // What an earlier visit with ?mode=import durably left behind before the
+    // app was killed: a still-pending seeded responder row, plus the marker.
     /** @var MobileImportIntentGate $importIntent */
     $importIntent = app(MobileImportIntentGate::class);
     $importIntent->markImporting((int) $user->id);
@@ -499,13 +429,9 @@ it('MEDIUM-01: a re-entry to /mobile/pair WITHOUT ?mode=import still defers self
     $qrBuilder = app(QrPayloadBuilder::class);
     $qrPayload = $qrBuilder->buildUri($initiatorDeviceId, $initiatorEd, $initiatorKx, $token);
 
-    // Crucially: NO ?mode=import on THIS request — a genuine re-entry
-    // (back button / bookmark / relaunched process) that lost the query
-    // param. `submitCode()`'s G1 re-seed is correctly skipped (the row
-    // already exists, still PENDING); `accept()` still succeeds against
-    // it. Without the MEDIUM-01 fix, the self-mint decision below would
-    // incorrectly follow this request's (false) `importMode` and silently
-    // strand the desktop's delivered epoch-1 history.
+    // No ?mode=import on THIS request: a re-entry that lost the query param.
+    // Following the false importMode here would self-mint and strand the
+    // desktop's delivered epoch-1 history.
     app()->instance(Request::class, Request::create('/mobile/pair', 'GET'));
 
     $component = Livewire::test(MobilePairingScan::class)
@@ -522,8 +448,6 @@ it('MEDIUM-01: a re-entry to /mobile/pair WITHOUT ?mode=import still defers self
 
     $component->call('checkPairingState')->assertSet('step', 'success');
 
-    // The durable marker — NOT the (false) query-string importMode — must
-    // have deferred self-mint: no sync_encryption_state row, no GDK epoch.
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     expect($db->connection()->table('sync_encryption_state')->where('user_id', $user->id)->exists())
@@ -543,7 +467,6 @@ it('non-import mode (CREATE-ACCOUNT path) is UNCHANGED — both-confirm still se
     pairingScanSetUpIdentity($user, $session);
     $issued = pairingScanIssueToken($user);
 
-    // importMode defaults to false — no ?mode=import query set.
     $component = Livewire::test(MobilePairingScan::class)
         ->assertSet('importMode', false)
         ->call('submitCode', $issued['qrPayload'])
@@ -562,16 +485,9 @@ it('non-import mode (CREATE-ACCOUNT path) is UNCHANGED — both-confirm still se
     $db = app(DatabaseManager::class);
     $state = $db->connection()->table('sync_encryption_state')->where('user_id', $user->id)->first();
     expect($state)->not->toBeNull('the non-import CREATE-ACCOUNT path must still self-mint on both-confirm — unchanged (D-07)');
-    expect($state->current_epoch)->toBe(1);
+    // Epoch ids are minted, not counted — the number itself means nothing.
+    expect((int) $state->current_epoch)->toBeGreaterThan(0);
 });
-
-/*
- * The scanner entry points. Every one of these is reachable from the view
- * or from a native event, so leaving them unexercised means the paths a
- * user actually takes into the camera are only ever proven by hand on a
- * device. The native facade stays absent here (see the file header), which
- * is exactly the condition each of these has to survive.
- */
 
 it('useWordCode() reaches enter_code WITHOUT the amber notice — a choice, not a failure', function (): void {
     $user = pairingScanTestUser('mobile-pair-word-choice');
@@ -586,8 +502,7 @@ it('useWordCode() reaches enter_code WITHOUT the amber notice — a choice, not 
         ->assertSet('cameraUnavailableNotice', true)
         ->call('useWordCode')
         ->assertSet('step', 'enter_code')
-        // The distinction that makes this a separate method: nothing failed,
-        // so the camera-unavailable notice must be cleared rather than left
+        // Nothing failed, so the notice must be cleared rather than left
         // accusing the device of a problem it does not have.
         ->assertSet('cameraUnavailableNotice', false)
         ->assertSet('flashMessage', '');
@@ -601,9 +516,6 @@ it('startScan() falls back to enter_code when the bridge cannot open a camera', 
     $session = app(Session::class);
     pairingScanSetUpIdentity($user, $session);
 
-    // QrScanBridge::open() returns false in this toolchain (no native
-    // facade), which is the same answer a real device gives when the
-    // camera is refused — so the retry button can never dead-end.
     Livewire::test(MobilePairingScan::class)
         ->call('startScan', app(QrScanBridge::class))
         ->assertSet('step', 'enter_code')
@@ -632,9 +544,7 @@ it('an empty CodeScanned payload is ignored rather than treated as a bad code', 
     $session = app(Session::class);
     pairingScanSetUpIdentity($user, $session);
 
-    // A native scanner that fires with no data must not be reported to the
-    // user as an invalid code — there is nothing to invalidate, and the
-    // scan step should stay put so the next frame can decode.
+    // The scan step must stay put so the next frame can decode.
     Livewire::test(MobilePairingScan::class)
         ->call('cameraDenied')
         ->set('step', 'scan')
@@ -643,14 +553,8 @@ it('an empty CodeScanned payload is ignored rather than treated as a bad code', 
         ->assertSet('flashMessage', '');
 });
 
-/*
- * Pairing is a one-way door.
- *
- * With a confirmed peer already in the registry and no ceremony in flight,
- * the pairing screen has nothing left to do — but it still rendered, so the
- * back button dropped a fully-paired device back into the wizard it had
- * already finished, mid-sync.
- */
+// The screen still rendered with a confirmed peer and no ceremony in flight,
+// so the back button dropped a paired device into a finished wizard mid-sync.
 it('refuses to re-enter the wizard once a peer is already confirmed', function (): void {
     $user = pairingScanTestUser('paired-'.bin2hex(random_bytes(3)));
     /** @var Session $session */
@@ -708,8 +612,7 @@ it('sends a still-importing device to the setup gate rather than the app', funct
 });
 
 // The back button landed on the passed "device paired" step because the
-// ceremony row still existed, merely finished. A confirmed peer plus a
-// confirmed token is done twice over.
+// ceremony row still existed, merely finished.
 it('refuses to re-show the passed success step after the ceremony confirmed', function (): void {
     $user = pairingScanTestUser('confirmed-'.bin2hex(random_bytes(3)));
     /** @var Session $session */

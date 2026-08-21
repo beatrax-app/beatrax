@@ -14,6 +14,7 @@ use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Internal\Support\AmountStringParser;
 use Modules\Forecasting\Public\Actions\SetAccountForecastBuffer;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class AccountBufferEditor extends Component
@@ -40,10 +41,8 @@ final class AccountBufferEditor extends Component
         CurrentUser $currentUser,
         DatabaseManager $db,
     ): void {
-        // Cross-user safety: refuse to mount with another user's account id
-        // — the query below scopes the lookup to the current user, so a
-        // tampered accountId prop resolves to no row and throws 404
-        // instead of leaking another user's buffer.
+        // Scoped to the current user so a tampered accountId prop resolves to no
+        // row and 404s instead of leaking another user's buffer.
         $row = $db->connection()->table('accounts')
             ->where('id', $accountId)
             ->where('user_id', $currentUser->user()->id)
@@ -57,7 +56,7 @@ final class AccountBufferEditor extends Component
         $this->currency = $currency;
         $this->accountName = $accountName;
         $this->bufferInput = $currentBufferMinor !== null
-            ? number_format($currentBufferMinor / 100, 2, ',', '.')
+            ? MoneyInput::formatMinor($currentBufferMinor)
             : '';
     }
 

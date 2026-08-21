@@ -7,6 +7,10 @@ return [
 
     'subtitle_html' => 'Prostredie + runtime + efektívna konfigurácia. Citlivé kľúče (prípony <code class="font-mono text-xs">*password*</code>, <code class="font-mono text-xs">*secret*</code>, <code class="font-mono text-xs">*key</code>, <code class="font-mono text-xs">*token*</code>) sú maskované.',
     'php' => 'PHP',
+    'php_version' => 'verzia',
+    'php_sapi' => 'sapi',
+    'php_ini_path' => 'cesta k ini',
+    'php_extensions' => 'rozšírenia',
     'laravel' => 'Laravel',
     'sqlite' => 'SQLite',
     'sqlite_file' => 'súbor',

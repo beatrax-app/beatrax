@@ -9,15 +9,12 @@ use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Exception\BadResponseException;
 use GuzzleHttp\Exception\GuzzleException;
 use JsonException;
-use Modules\OpenBanking\Public\Dto\FetchWindow;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Exceptions\EnableBankingApiException;
-use Modules\OpenBanking\Public\Exceptions\UnsafeOpenBankingRequestException;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Dto\FetchWindow;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Exceptions\EnableBankingApiException;
+use Modules\OpenBanking\Internal\Exceptions\UnsafeOpenBankingRequestException;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 
-/**
- * @link ../../../../../.docs/features/open-banking/architecture.md
- */
 class EnableBankingHttpClient
 {
     private const ACCOUNTS_PATH = 'accounts/';
@@ -29,10 +26,8 @@ class EnableBankingHttpClient
         private readonly EnableBankingJwtSigner $jwtSigner,
     ) {}
 
-    // Named initiateAuth() rather than the more obvious auth(): the shared
-    // BoundaryArchTest's Auth-facade guard bans the literal pattern `auth(`
-    // and would otherwise false-positive-flag this method and its call
-    // site, even though neither touches Laravel's Auth facade.
+    // Not named auth(): BoundaryArchTest's Auth-facade guard bans the literal
+    // `auth(` and would flag this method and its call site.
     /**
      * @return array<string, mixed>
      */
@@ -66,10 +61,8 @@ class EnableBankingHttpClient
         return $this->postJson('sessions', ['code' => $code]);
     }
 
-    // Isolated here, inside the sole Enable Banking HTTP boundary class,
-    // rather than inline at DB-touching call sites: a guard test asserts no
-    // file referencing DatabaseManager also references a raw credential
-    // field name, so callers use this method instead of indexing directly.
+    // Callers index the response through this: a guard test bans naming a raw
+    // credential field in any file that also references DatabaseManager.
     /**
      * @param  array<string, mixed>  $sessionResponse
      */
@@ -80,10 +73,8 @@ class EnableBankingHttpClient
         return is_string($sessionId) && $sessionId !== '' ? $sessionId : null;
     }
 
-    // A single PSD2 consent can, in principle, cover multiple accounts at
-    // the same bank; this project's connection model tracks only one
-    // account per connection, so the first accounts[] entry is the one
-    // persisted here.
+    // One PSD2 consent can cover several accounts at the bank; a connection
+    // row tracks exactly one, so accounts[0] is the one persisted.
     /**
      * @param  array<string, mixed>  $sessionResponse
      */
@@ -112,8 +103,8 @@ class EnableBankingHttpClient
         return $this->getJson('aspsps', ['country' => $country]);
     }
 
-    // Resolves the own-account IBAN, which the /sessions response's bare
-    // uid does not carry directly.
+    // The extra round-trip resolves the own-account IBAN, which the /sessions
+    // response's bare uid does not carry.
     /**
      * @return array<string, mixed>
      */
@@ -138,8 +129,6 @@ class EnableBankingHttpClient
         return $this->getJson(self::ACCOUNTS_PATH.rawurlencode($uid).'/transactions', $query);
     }
 
-    // A point-in-time balance reading, not a statement opening/closing
-    // pair — there is no bounded-period summary to persist alongside it.
     /**
      * @return array<string, mixed>
      */
@@ -148,25 +137,20 @@ class EnableBankingHttpClient
         return $this->getJson(self::ACCOUNTS_PATH.rawurlencode($uid).'/balances');
     }
 
-    // Overridden by the SSRF regression test to exercise attacker/look-alike/
-    // non-HTTPS/unparseable hosts without touching production URL-building.
+    // Protected so the SSRF test can substitute a hostile base.
     protected function baseUri(): string
     {
         return 'https://'.self::EB_API_HOST.'/';
     }
 
-    // Overridden by the SSRF regression test's positive (accepted-host) case
-    // to inject a MockHandler-backed client, so that case never attempts a
-    // real network call.
+    // Protected so the SSRF test can inject a MockHandler instead of the network.
     protected function makeHttpClient(): GuzzleClient
     {
         return new GuzzleClient([
             'timeout' => 30,
             'connect_timeout' => 10,
-            // JSON API must not redirect; a 3xx is an error body, not a
-            // silent egress. Following redirects would let a Location
-            // target bypass the once-only assertAllowedUrl() allow-list
-            // check and downgrade https to http.
+            // A followed Location would reach the network after the once-only
+            // assertAllowedUrl() check, with a bearer token already attached.
             'allow_redirects' => false,
         ]);
     }
@@ -230,8 +214,6 @@ class EnableBankingHttpClient
     }
 
     /**
-     * @link ../../../../../.docs/features/open-banking/architecture.md
-     *
      * @return list<string>
      */
     private function allowedHosts(OpenBankingCredentials $credentials): array
@@ -245,10 +227,8 @@ class EnableBankingHttpClient
         return $hosts;
     }
 
-    // SSRF defence — refuse to attach a bearer token to any URL whose
-    // scheme is not https or whose host is not on the allow-list. Runs
-    // before the JWT is built/attached on every request (both postJson()
-    // and getJson() load credentials, run this check, then sign).
+    // SSRF gate. Both postJson() and getJson() call this before signing, so
+    // no bearer token is ever built for a non-https or non-allow-listed URL.
     private function assertAllowedUrl(string $url, OpenBankingCredentials $credentials): void
     {
         $scheme = parse_url($url, PHP_URL_SCHEME);
@@ -278,9 +258,7 @@ class EnableBankingHttpClient
             return [];
         }
 
-        // Narrow array<mixed, mixed> -> array<string, mixed>: the
-        // top-level shape is always a JSON object, but PHPStan's strict
-        // mode can't infer that from json_decode.
+        // PHPStan cannot infer that a decoded JSON object has only string keys.
         $out = [];
         foreach ($decoded as $key => $value) {
             $out[(string) $key] = $value;

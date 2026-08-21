@@ -8,9 +8,6 @@ namespace Modules\Notifications\Public\Enums;
 // terminal `resolved`. The column stays string; this enum owns the
 // vocabulary and the one legal edge (open -> resolved) the state machine
 // guards.
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 enum NotificationState: string
 {
     case Open = 'open';

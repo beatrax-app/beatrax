@@ -7,11 +7,6 @@ use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\AccountResolution;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 
-/**
- * Builds a CAMT.053 document with one Ntry carrying `$count` TxDtls children.
- * Each child carries its own EndToEndId, an InstdAmt under AmtDtls, and a
- * counterparty so the split produces $count distinct SourceTransactionDto rows.
- */
 function buildBatchCamt053Doc(int $count): string
 {
     $txDtls = '';
@@ -112,7 +107,7 @@ it('yields N DTOs from one Ntry with N TxDtls children', function (): void {
         $endToEndIds = array_map(static fn (SourceTransactionDto $d): ?string => $d->sourceRef, $dtos);
         expect($endToEndIds)->toBe(['BATCH-EREF-1', 'BATCH-EREF-2', 'BATCH-EREF-3']);
 
-        // Per-TxDtls amounts come from <AmtDtls><InstdAmt> on each child, not the entry-level Amt
+        // Each child's own AmtDtls amount, not a share of the entry-level 60.00.
         $amounts = array_map(static fn (SourceTransactionDto $d): int => $d->amountMinor, $dtos);
         expect($amounts)->toBe([-1000, -2000, -3000]);
     } finally {
@@ -214,9 +209,8 @@ XML;
     file_put_contents($tmp, $xxePayload);
 
     try {
-        // Either the parse throws (acceptable — DTD rejected), or it succeeds
-        // with the entity left UNEXPANDED. In every outcome, no DTO field
-        // may contain the canonical `/etc/passwd` marker "root:".
+        // Rejecting the DTD outright and leaving the entity unexpanded are both
+        // acceptable; what neither may do is put "root:" in a DTO field.
         $dtos = [];
         try {
             $dtos = iterator_to_array(

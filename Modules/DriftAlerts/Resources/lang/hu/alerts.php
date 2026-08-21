@@ -57,6 +57,7 @@ return [
         'meta_eur_equiv' => '(≈ :amount/év)',
         'cancel_impact' => 'Mondd le → :amount/év megtakarítás',
         'cadence_flipped' => 'A gyakoriság megváltozott — itt is megjelenik:',
+        'cadence_flipped_link' => 'Ismétlődők áttekintése',
         'acknowledge' => 'Tudomásul vétel',
         'acknowledge_aria' => 'A(z) :id eltérésriasztás tudomásul vétele',
         'snooze' => 'Halasztás ▾',

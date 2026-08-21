@@ -7,9 +7,6 @@ namespace Modules\Ledger\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use Modules\Ledger\Public\Enums\ClearedStatus;
 
-/**
- * @link ../../../../.docs/features/ledger/architecture.md
- */
 final class TransactionStatusQuery
 {
     public function __construct(

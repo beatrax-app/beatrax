@@ -2,12 +2,7 @@
 
 declare(strict_types=1);
 
-// Buffer-crossing fixture (load-bearing for the shortfall semantic):
-// same ASN account but forecast_min_buffer_minor=50000 (€500 buffer)
-// + opening balance €600 + 3 monthly expense series totaling
-// -€200/mo. The 30-day fold drops below €500 on day 7 (when the
-// largest expense lands) and recovers by day 22. One shortfall is
-// expected.
+/** @link ../../../../../.docs/features/forecasting/forecast-corpus.md#buffer-crossing */
 
 return [
     'accounts' => [

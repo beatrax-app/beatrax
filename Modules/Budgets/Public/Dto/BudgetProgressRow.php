@@ -7,9 +7,7 @@ namespace Modules\Budgets\Public\Dto;
 use Spatie\LaravelData\Data;
 
 // status buckets fractionUsed for the bar colour: under (< 80%),
-// near (80-100%), over (> 100%). All money is signed minor units in
-// currency; the view wraps them in the Money value object for
-// locale formatting.
+// near (80-100%), over (> 100%).
 final class BudgetProgressRow extends Data
 {
     public function __construct(

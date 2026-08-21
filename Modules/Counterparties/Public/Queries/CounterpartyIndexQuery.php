@@ -14,9 +14,6 @@ use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/counterparties/architecture.md
- */
 final readonly class CounterpartyIndexQuery
 {
     public function __construct(
@@ -26,9 +23,7 @@ final readonly class CounterpartyIndexQuery
         private Session $session,
     ) {}
 
-    // typeFilter is one of all|merchant|personal|bank|government|self|
-    // unknown; `self` maps onto the resolver's internal self_account type
-    // so the chip label and the type column read consistently.
+    // typeFilter is one of all|merchant|personal|bank|government|self|unknown.
     /**
      * @return Collection<int, CounterpartyIndexRow>
      */
@@ -41,10 +36,9 @@ final readonly class CounterpartyIndexQuery
             $query = $query->where('type', $resolvedType);
         }
 
-        // Not ordered by the ciphertext display_name column — meaningless
-        // once encryption is enabled. orderBy('id') just makes iteration
-        // deterministic; the real user-facing order is the post-decrypt
-        // usort() below (12-month total desc, then name asc).
+        // Never order by display_name here: it is ciphertext once encryption
+        // is on. orderBy('id') only makes iteration deterministic — the
+        // user-facing order is the post-decrypt usort() below.
         /** @var iterable<stdClass> $cpRows */
         $cpRows = $query->orderBy('id')->get(['id', 'slug', 'display_name', 'type']);
 
@@ -59,8 +53,6 @@ final readonly class CounterpartyIndexQuery
             }
         }
 
-        // Sort by 12-month absolute total descending, tie-broken by name
-        // ascending.
         usort($result, static function (CounterpartyIndexRow $a, CounterpartyIndexRow $b): int {
             $order = abs($b->total12mMinor) <=> abs($a->total12mMinor);
 
@@ -70,10 +62,6 @@ final readonly class CounterpartyIndexQuery
         return new Collection($result);
     }
 
-    // One counterparty row -> one index card, or null for a row whose id
-    // does not parse (defensive: the id column is a PK, so this only fires
-    // on a corrupt read). The heavy per-row aggregate/recent-line reads live
-    // in their own helpers so forUser stays a thin map-and-sort.
     private function buildRow(stdClass $cpRow, User $user, string $cutoffDate): ?CounterpartyIndexRow
     {
         $cpId = is_numeric($cpRow->id ?? null) ? (int) $cpRow->id : 0;
@@ -84,15 +72,11 @@ final readonly class CounterpartyIndexQuery
         $userId = $user->id;
         $slug = is_string($cpRow->slug ?? null) ? $cpRow->slug : '';
         $storedDisplayName = is_string($cpRow->display_name ?? null) ? $cpRow->display_name : '';
-        // Read-side decrypt — a pass-through no-op when encryption is not
-        // enabled for this user.
         $displayName = $storedDisplayName === ''
             ? ''
             : $this->codec->decryptValue('counterparties', 'display_name', $storedDisplayName, $userId, $this->session)['value'];
         $type = is_string($cpRow->type ?? null) ? $cpRow->type : CounterpartyType::Unknown->value;
 
-        // 12-month total + transaction count via a single aggregate query,
-        // covered by the (user_id, counterparty_id) composite index.
         /** @var stdClass|null $totals */
         $totals = $this->db->connection()->table('transactions')
             ->where('user_id', $userId)
@@ -117,9 +101,6 @@ final readonly class CounterpartyIndexQuery
         );
     }
 
-    // Most-recent transaction's posted date + short description — feeds the
-    // card's recent-line strip. Null when the counterparty has no
-    // transactions or the joined row carries nothing renderable.
     private function recentLineFor(User $user, int $counterpartyId): ?string
     {
         $userId = $user->id;
@@ -139,8 +120,6 @@ final readonly class CounterpartyIndexQuery
         $postedAt = $recent->posted_at ?? null;
         $description = $recent->description ?? null;
         $counterpartyName = $recent->counterparty_name ?? null;
-        // Read-side decrypt — a pass-through no-op when encryption is not
-        // enabled for this user.
         if (is_string($description) && $description !== '') {
             $description = $this->codec->decryptValue('transactions', 'description', $description, $userId, $this->session)['value'];
         }
@@ -148,9 +127,8 @@ final readonly class CounterpartyIndexQuery
             $counterpartyName = $this->codec->decryptValue('transactions', 'counterparty_name', $counterpartyName, $userId, $this->session)['value'];
         }
 
-        // Fmt, not a substr of the ISO column: it renders the locale's own
-        // short-date pattern, the same source the date field takes its own
-        // from, so the two agree by construction rather than by luck.
+        // Fmt, not a substr of the ISO column: this line and the card's date
+        // field then share one locale pattern instead of agreeing by luck.
         $date = is_string($postedAt) && $postedAt !== ''
             ? Fmt::shortDate($postedAt)
             : '';
@@ -164,8 +142,6 @@ final readonly class CounterpartyIndexQuery
         return $recentLine === '' ? null : $recentLine;
     }
 
-    // Feeds the <x-counterparties::filter-chips> row atop /counterparties;
-    // `all` is the unfiltered total.
     /**
      * @return array<string, int>
      */
@@ -193,8 +169,6 @@ final readonly class CounterpartyIndexQuery
             $cnt = is_numeric($row->cnt ?? null) ? (int) $row->cnt : 0;
             $counts['all'] += $cnt;
 
-            // Map the resolver's `self_account` storage type onto the
-            // `self` chip key the UI uses.
             $chipKey = $type === CounterpartyType::SelfAccount->value ? 'self' : $type;
             if (array_key_exists($chipKey, $counts)) {
                 $counts[$chipKey] = $cnt;
@@ -204,8 +178,7 @@ final readonly class CounterpartyIndexQuery
         return $counts;
     }
 
-    // Builds oldest -> newest so the card's last-bar emphasis flags the
-    // current month.
+    // Ordered oldest -> newest, so the last bar is the current month.
     /**
      * @return array<int, int>
      */

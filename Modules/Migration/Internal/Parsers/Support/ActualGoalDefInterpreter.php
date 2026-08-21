@@ -6,13 +6,10 @@ namespace Modules\Migration\Internal\Parsers\Support;
 
 use Carbon\CarbonImmutable;
 use JsonException;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\Ledger\Public\ValueObjects\Money;
-use Modules\Migration\Public\Dto\MigrationGoalDto;
-use Throwable;
+use Modules\Migration\Internal\Dto\MigrationGoalDto;
 
-/**
- * @link ../../../../../.docs/features/migration/architecture.md
- */
 final class ActualGoalDefInterpreter
 {
     private const MAX_JSON_BYTES = 65536;
@@ -44,9 +41,6 @@ final class ActualGoalDefInterpreter
      */
     private function flatGoalAmount(array $decoded): ?int
     {
-        // A multi-step template/schedule, or an unrecognised type keyword,
-        // is non-flat — treated conservatively as "no single target"
-        // rather than guessing at its shape.
         if (isset($decoded['steps']) || isset($decoded['schedule'])) {
             return null;
         }
@@ -67,15 +61,8 @@ final class ActualGoalDefInterpreter
     private function parseTargetDate(array $decoded): ?CarbonImmutable
     {
         $raw = $decoded['targetDate'] ?? null;
-        if (! is_string($raw) || $raw === '') {
-            return null;
-        }
 
-        try {
-            return CarbonImmutable::parse($raw);
-        } catch (Throwable) {
-            return null;
-        }
+        return is_string($raw) ? SafeDate::parseOrNull($raw) : null;
     }
 
     private function boundedDecode(string $json): mixed

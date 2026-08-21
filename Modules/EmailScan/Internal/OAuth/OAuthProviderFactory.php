@@ -10,15 +10,8 @@ use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Psr\Http\Client\ClientInterface;
 use TheNetworg\OAuth2\Client\Provider\Azure;
 
-// Builds the League provider objects GoogleOAuthProvider and
-// MicrosoftOAuthProvider talk through. They constructed these inline, which
-// put the only seam for the token exchange and refresh inside a private
-// method, leaving both unreachable from a test at ~2% covered.
-
-// $httpClient is why this class exists. League treats the HTTP client as an
-// injectable collaborator; left null the provider builds its own Guzzle
-// instance, which is what production wants. A test supplies one backed by a
-// mock handler and drives the whole exchange without a socket.
+// $httpClient is why this class exists: it is the seam a test uses to drive
+// the whole token exchange through a mock handler without a socket.
 final class OAuthProviderFactory
 {
     public function __construct(

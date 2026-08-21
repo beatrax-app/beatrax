@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Receipts\Public\Support;
 
-/**
- * @link ../../../../.docs/features/receipts/architecture.md
- */
 final class UploadLimits
 {
     // One receipt message read whole into memory is kilobytes; even

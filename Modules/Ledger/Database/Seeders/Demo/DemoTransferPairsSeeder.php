@@ -16,10 +16,8 @@ use Modules\Ledger\Public\Enums\ImportRunStatus;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 
-// Materialises one explicit "reimburse for shared dinner" transfer
-// pair (transfer_out on demo-1's ASN account, transfer_in on their
-// PayPal wallet), distinct from DemoTransactionsSeeder's monthly
-// chain-flow transfers; idempotent via a dedicated demo ImportRun.
+// One explicit reimbursement pair, distinct from DemoTransactionsSeeder's
+// monthly chain-flow transfers; idempotent via its own demo ImportRun.
 final class DemoTransferPairsSeeder
 {
     private const PAIR_DAY_OFFSET = 50;
@@ -144,8 +142,7 @@ final class DemoTransferPairsSeeder
         Transaction::query()->insertOrIgnore($attrs);
     }
 
-    // Wires pair_transaction_id on both legs once persisted; a second
-    // invocation on an already-linked pair is a no-op write.
+    // A second invocation on an already-linked pair is a no-op write.
     private function linkPair(User $user, CarbonImmutable $pairDate): void
     {
         $out = Transaction::query()

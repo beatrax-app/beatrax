@@ -45,10 +45,8 @@ final class ResetPasswordAction
                 'force_password_change_at_next_login' => false,
             ]);
 
-        // A recovery-code reset means the account may have been out of the
-        // owner's hands, so every existing session for it is severed — there
-        // is no current session to preserve here, the user signs in fresh on
-        // /login afterwards.
+        // The account may have been out of the owner's hands, so every session
+        // goes; the caller is a guest with none to preserve.
         $this->db->connection()->table('sessions')
             ->where('user_id', $user->id)
             ->delete();

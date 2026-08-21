@@ -6,11 +6,6 @@ namespace Modules\Anomaly\Internal\StateMachines;
 
 use RuntimeException;
 
-// Thrown inside the AnomalyAlertStateMachine transaction when the
-// lockForUpdate row lookup returns null — the anomaly_alerts row vanished
-// mid-flight (a cascade delete from a deleted transaction) after the
-// caller handed us the model.
-/**
- * @link ../../../../.docs/features/anomaly/architecture.md
- */
+// The anomaly_alerts row vanished between the caller loading the model and the
+// state machine's lockForUpdate — a cascade delete from a deleted transaction.
 final class AnomalyAlertNotFoundException extends RuntimeException {}

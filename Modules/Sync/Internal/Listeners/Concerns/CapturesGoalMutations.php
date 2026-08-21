@@ -8,9 +8,6 @@ use Modules\Sync\Internal\OpLog\OpLogWriter;
 use Modules\Sync\Public\Events\GoalContributionMutated;
 use Modules\Sync\Public\Events\GoalMutated;
 
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 trait CapturesGoalMutations
 {
     private function handleGoalContributionDelete(GoalContributionMutated $event, OpLogWriter $writer): void

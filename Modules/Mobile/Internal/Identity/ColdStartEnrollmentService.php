@@ -7,9 +7,6 @@ namespace Modules\Mobile\Internal\Identity;
 use Illuminate\Contracts\Session\Session;
 use Modules\Auth\Public\Services\MobileLockGateway;
 
-/**
- * @link ../../../../.docs/features/mobile/architecture.md
- */
 final class ColdStartEnrollmentService
 {
     public function __construct(

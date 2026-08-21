@@ -7,9 +7,6 @@ namespace Modules\Onboarding\Internal\Listeners;
 use Modules\Core\Public\Events\UserInstalled;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 
-/**
- * @link ../../../../.docs/features/onboarding/architecture.md
- */
 final readonly class InitializeWizardProgressOnInstall
 {
     public function __construct(private WizardProgressInitializer $initializer) {}

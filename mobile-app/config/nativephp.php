@@ -20,7 +20,7 @@ declare(strict_types=1);
  * nothing. That provider is now invoked from `bootstrap/app.php`'s `->booted()`
  * hook, the same on-device attach point the storage reconciliation uses.
  *
- * Phase 15 topology note (15-02): desktop and mobile cannot share one Composer
+ * Topology note: desktop and mobile cannot share one Composer
  * `vendor/` tree because `nativephp/desktop` declares
  * `"conflict": {"nativephp/mobile": "*"}`. This file lives under the sibling
  * `mobile-app/` root, which has its OWN `vendor/` (with `nativephp/mobile`) and
@@ -82,10 +82,10 @@ return [
      * mobile-app/vendor/nativephp/mobile/config/nativephp.php for the
      * shape this mirrors).
      *
-     * NSLocalNetworkUsageDescription is REQUIRED for Plan 05's LanSyncClient
-     * (15-05-PLAN.md): the phone's outbound amphp/websocket-client dial to
+     * NSLocalNetworkUsageDescription is REQUIRED for the LAN sync client:
+     * the phone's outbound amphp/websocket-client dial to
      * the desktop's `sync:serve` listener crosses iOS's Local Network
-     * Privacy boundary. 15-SPIKE-FINDINGS.md (Spike A, real iPhone) proved
+     * Privacy boundary. A real-iPhone spike proved
      * this permission gates the FIRST LAN connection per install — without
      * this string declared, iOS never shows the permission prompt at all
      * and every LAN dial fails permanently. Unlike camera/biometric
@@ -93,7 +93,7 @@ return [
      * and must be declared here.
      */
     'permissions' => [
-        'NSLocalNetworkUsageDescription' => 'beatrax uses your local network to sync your finances directly with your other beatrax devices — nothing ever leaves your home network for this.',
+        'NSLocalNetworkUsageDescription' => 'Beatrax uses your local network to sync your finances directly with your other Beatrax devices — nothing ever leaves your home network for this.',
     ],
 
     /*

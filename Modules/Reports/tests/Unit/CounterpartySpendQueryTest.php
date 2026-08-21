@@ -12,12 +12,6 @@ use Modules\Reports\Internal\Aggregation\CounterpartySpendQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * Covers 999.6-04 Task 3 / Req 2/3: CounterpartySpendQuery's canonical
- * type-based single-table aggregation. Fixture helpers prefixed cpq_ to
- * avoid cross-file global-function collisions.
- */
-
 function cpqUser(): User
 {
     /** @var User */

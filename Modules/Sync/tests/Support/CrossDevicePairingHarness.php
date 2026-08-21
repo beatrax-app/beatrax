@@ -21,9 +21,9 @@ use Modules\Sync\Commands\RelayServeCommand;
 use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
-use Modules\Sync\Internal\Transport\Relay\RelayDeliverRateLimiter;
 use Modules\Sync\Internal\Transport\Relay\RelayDrainRegistry;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
+use Modules\Sync\Internal\Transport\Relay\RelayRateLimiter;
 use Modules\Sync\Internal\Transport\Relay\RelayTlsMaterial;
 use Psr\Log\NullLogger;
 use ReflectionMethod;
@@ -31,32 +31,13 @@ use ReflectionMethod;
 use function Amp\ByteStream\buffer;
 
 /**
- * Two-separate-database + fake-relay test harness (Phase 15 HIGH-01,
- * `15-crossdevice-pairing-PLAN.md` §4).
- *
- * The single-DB pairing-test convention elsewhere in this suite (one
- * database, distinct device_ids on the SAME `pairing_tokens` row) is exactly
- * what masked HIGH-01: `confirm()` against a shared row can never prove the
- * cross-device relay propagation actually reaches a genuinely SEPARATE
- * database. This trait configures THREE physically distinct SQLite
- * connections — `desktop`, `phone` (each device's own local DB — see
- * {@see self::asDevice()}) and `relay` (the zero-knowledge mailbox store,
- * reachable by both but never holding either device's `pairing_tokens`) —
- * and fakes the relay's HTTP surface by routing `RelayClient`'s outbound
- * requests through the REAL `RelayServeCommand::route()` handler (mirrors
- * `RelayRoundTripTest`'s established fake-Illuminate-HTTP-Factory precedent)
- * so the real CR-01..CR-04 wire contract + per-device drain authorization
- * are exercised for real, not re-implemented as a test double.
+ * @link ../../../../.docs/features/sync/cross-device-pairing-test-harness.md
  */
 trait CrossDevicePairingHarness
 {
     private RelayConfig $harnessRelayConfig;
 
-    /**
-     * Configure the three named connections, migrate the desktop/phone
-     * pairing schema onto each, and install the fake relay HTTP transport.
-     * Call once per test, before any device-role code runs.
-     */
+    // Call once per test, before any device-role code runs.
     protected function crossDevicePairingSetUp(): void
     {
         /** @var DatabaseManager $db */
@@ -76,15 +57,9 @@ trait CrossDevicePairingHarness
         $this->harnessMigratePairingSchema($db, 'phone');
         $this->harnessMigrateRelaySchema($db, 'relay');
 
-        // A real production database carries a `relay_mailbox` table
-        // regardless of whether that device runs `relay:serve` itself —
-        // GdkRotationService writes GDK_EPOCH_WRAP entries into the LOCAL
-        // relay_mailbox (an outbox for both a live LAN push and eventual
-        // relay forwarding), distinct from the `relay` connection above
-        // (the transport-level ZK mailbox the fake RelayServeCommand
-        // handler reads/writes for PAIRING frames). Both device
-        // connections need their own copy so GDK epoch fan-out tests
-        // (case 8) do not fail on a missing table.
+        // Each device carries its own local relay_mailbox outbox, a different thing
+        // from the `relay` connection's transport mailbox; without these two copies
+        // the GDK epoch fan-out tests fail on a missing table.
         $this->harnessMigrateRelaySchema($db, 'desktop');
         $this->harnessMigrateRelaySchema($db, 'phone');
 
@@ -93,15 +68,12 @@ trait CrossDevicePairingHarness
         $this->harnessRelayConfig->setAuthToken('cross-device-harness-relay-secret');
 
         $mailbox = new RelayMailbox($db, $this->app->make(Clock::class));
-        // The harness drives the relay in-process over a fake HTTP factory, so
-        // it never binds a socket and needs no TLS material of its own. The
-        // per-device drain auth is now TOFU via RelayDrainRegistry, so the
-        // command no longer takes the relay-wide RelayConfig.
+        // In-process over a fake HTTP factory: no socket, so the TLS material is inert.
         $command = new RelayServeCommand(
             new NullLogger,
             $mailbox,
             new RelayDrainRegistry,
-            new RelayDeliverRateLimiter($this->app->make(Clock::class)),
+            new RelayRateLimiter($this->app->make(Clock::class)),
             new RelayTlsMaterial,
             new DaemonShutdownSignal,
         );
@@ -112,22 +84,13 @@ trait CrossDevicePairingHarness
             new NullLogger,
         );
 
-        // Rebind the SINGLETON so any container resolution (Livewire
-        // components, PairingRelayCourier resolved via app()) receives this
-        // fake-transport-backed client instead of a real network call.
+        // Rebound as an instance so Livewire components and PairingRelayCourier
+        // resolve the fake-transport client rather than opening a real connection.
         $this->app->instance(RelayClient::class, $relayClient);
     }
 
-    /**
-     * Run $fn with the DatabaseManager's default connection swapped to
-     * $connection ('desktop' or 'phone') — every collaborator in this
-     * codebase resolves its storage via `$this->db->connection()` (the
-     * DEFAULT connection), so this is what makes "device acts on its own
-     * DB" faithful without threading a connection name through every
-     * service signature (mirrors the plan's own documented technique).
-     * Restores the previous default connection afterward, even on
-     * exception.
-     */
+    // Runs $fn with the default connection swapped to 'desktop' or 'phone', and
+    // restores the previous default even when $fn throws.
     protected function asDevice(string $connection, Closure $fn): mixed
     {
         /** @var DatabaseManager $db */
@@ -142,12 +105,8 @@ trait CrossDevicePairingHarness
         }
     }
 
-    /**
-     * Delete the on-disk relay config + token artifacts this trait wrote
-     * (mirrors `RelayRoundTripTest::afterEach()`) — call from the consuming
-     * test file's own `afterEach()` so no relay configuration leaks into an
-     * unrelated later test in the same process.
-     */
+    // Call from the consuming test file's afterEach(): these artifacts are on disk,
+    // so without this a later test starts with a relay already configured.
     protected function crossDevicePairingTearDown(): void
     {
         $secretsDir = UserDataPathService::secretsPath();
@@ -163,16 +122,9 @@ trait CrossDevicePairingHarness
         }
     }
 
-    /**
-     * Build an HttpFactory whose requests are routed through the REAL
-     * RelayServeCommand handler instead of the network — identical wiring
-     * to `RelayRoundTripTest::relayServerHttpFactory()`, with one addition:
-     * the DatabaseManager default connection is swapped to `relay` for the
-     * duration of the handler invocation, so `RelayMailbox`'s internal
-     * `$this->db->connection()` calls land on the dedicated relay store
-     * rather than whichever device connection happened to be active when
-     * `RelayClient::deliver()/drain()/confirm()` was called.
-     */
+    // Routes requests through the real RelayServeCommand handler, with the default
+    // connection swapped to `relay` so RelayMailbox writes land on the relay store
+    // rather than whichever device connection was active at the call site.
     private function harnessRelayHttpFactory(RelayServeCommand $command, DatabaseManager $db): HttpFactory
     {
         $factory = new HttpFactory;
@@ -188,8 +140,7 @@ trait CrossDevicePairingHarness
                 $url = $request->url();
 
                 $ampClient = Mockery::mock(AmpClient::class);
-                // Deliver reads the source IP for its rate-limit bucket; the
-                // in-process harness has no socket, so supply a stable address.
+                // Deliver reads the source IP for its rate-limit bucket; no socket here.
                 $ampClient->shouldReceive('getRemoteAddress')->andReturn(new InternetAddress('127.0.0.1', 12345));
                 $ampUri = HttpUri::new($url);
 
@@ -219,11 +170,8 @@ trait CrossDevicePairingHarness
         return $factory;
     }
 
-    /**
-     * Mirror the production `pairing_tokens` + `device_registry` +
-     * `sync_encryption_state` schema onto $connection — a genuinely separate
-     * SQLite database from the app's own default test connection.
-     */
+    // Mirrors the production schema, indexes included, onto a genuinely separate
+    // SQLite database from the app's own default test connection.
     private function harnessMigratePairingSchema(DatabaseManager $db, string $connection): void
     {
         $schema = $db->connection($connection)->getSchemaBuilder();
@@ -238,8 +186,6 @@ trait CrossDevicePairingHarness
             $table->string('responder_device_id')->nullable();
             $table->string('responder_ed25519_pub_hex')->nullable();
             $table->string('responder_x25519_pub_hex')->nullable();
-            // Mirrors the pairing_tokens migration: the responder's own device
-            // name rides here from accept until admission.
             $table->string('responder_name')->nullable();
             $table->string('state')->default('pending');
             $table->text('expires_at');
@@ -247,9 +193,6 @@ trait CrossDevicePairingHarness
             $table->text('initiator_confirmed_at')->nullable();
             $table->text('responder_confirmed_at')->nullable();
             $table->text('initiator_seeded_at')->nullable();
-            // Mirrors the migration too: the initiator's own name rides from
-            // the scanned QR until admission, so the peer is labelled with
-            // what it calls itself rather than a placeholder.
             $table->string('initiator_name')->nullable();
             $table->text('created_at');
         });
@@ -292,12 +235,6 @@ trait CrossDevicePairingHarness
         );
     }
 
-    /**
-     * Mirror the production `relay_mailbox` schema onto $connection — the
-     * ZK store `RelayMailbox` (driven by the real `RelayServeCommand`
-     * handler) reads/writes when the fake HTTP factory swaps the default
-     * connection to `relay`.
-     */
     private function harnessMigrateRelaySchema(DatabaseManager $db, string $connection): void
     {
         $schema = $db->connection($connection)->getSchemaBuilder();

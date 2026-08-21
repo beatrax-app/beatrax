@@ -11,10 +11,8 @@ use Modules\Reports\Internal\Http\ReportDefinitionRequestFactory;
 use Modules\Reports\Internal\Services\ReportCsvExporter;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-// ServiceProvider::loadRoutesFrom() uses a plain require (not require_once),
-// so this file can re-execute within the same PHP process across multiple
-// app boots. A top-level named function here would fatal with "Cannot
-// redeclare" on the second boot, so every helper below is an anonymous closure.
+// loadRoutesFrom() uses a plain require, so this file can re-execute in one
+// process and a top-level named function would fatal on the second boot.
 Route::middleware(['web', 'auth'])->group(static function (): void {
     Route::get('/reports/export', static function (
         Request $request,
@@ -23,13 +21,10 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
         CurrentUser $currentUser,
         ReportDefinitionRequestFactory $definitions,
     ): StreamedResponse {
-        // Defense-in-depth: the route already sits behind the 'auth'
-        // middleware group above, so this branch is unreachable in practice.
+        // Defence in depth: the 'auth' group above already makes this unreachable.
         if (! $currentUser->isAuthenticated()) {
             return new StreamedResponse(static function (): void {
-                // Nothing to stream: the guard above only fires in the
-                // unreachable unauthenticated case, so an empty body keeps
-                // the StreamedResponse return type without leaking a report.
+                // Empty body: satisfies the return type without leaking a report.
             });
         }
 
@@ -44,16 +39,12 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
         );
     })->name('reports.export');
 
-    // The live single-page builder. Optional ?report={id} query param
-    // loads a user-owned saved definition (ReportBuilder::mount()); the
-    // query param is resolved here into a plain view variable rather than
-    // read via the request() global helper inside the Blade view itself.
+    // ?report={id} is resolved into a view variable here so the Blade view does
+    // not reach for the request() global helper.
     Route::get('/reports', static fn (Request $request) => view('reports::report-builder', [
         'report' => $request->integer('report') ?: null,
     ]))->name('reports.index');
 
-    // Routes directly to the Livewire component class since its own
-    // render() calls $view->extends('layouts.app', ...), so a wrapper
-    // Blade view is unnecessary here.
+    // No wrapper view: this component's own render() calls $view->extends().
     Route::get('/reports/library', ReportsIndex::class)->name('reports.library');
 });

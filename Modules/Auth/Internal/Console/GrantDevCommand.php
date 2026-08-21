@@ -7,10 +7,8 @@ namespace Modules\Auth\Internal\Console;
 use Illuminate\Console\Command;
 use Modules\Core\Models\User;
 
-// The Dev Console wraps this runner's destructive equivalent in a
-// triple-gate modal (typed-app-name confirmation + advanced-toggle +
-// dev-mode-on). At the CLI there is no triple gate — the operator is
-// expected to know what they are doing.
+// The Dev Console gates the equivalent action behind a triple-confirm modal.
+// There is deliberately no such gate at the CLI.
 class GrantDevCommand extends Command
 {
     /** @var string */
@@ -21,10 +19,8 @@ class GrantDevCommand extends Command
 
     public function handle(): int
     {
-        // The required `username` argument is narrowed to a string by
-        // Larastan against the typed signature (mirrors the
-        // ResetPasswordCommand carve-out), so no is_string() guard
-        // is needed here.
+        // Larastan narrows the required `username` argument to string from the
+        // typed signature, so no is_string() guard is needed.
         $username = strtolower(trim($this->argument('username')));
         if ($username === '') {
             $this->error('Username is required.');

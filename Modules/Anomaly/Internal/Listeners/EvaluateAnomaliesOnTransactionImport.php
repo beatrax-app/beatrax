@@ -8,10 +8,8 @@ use Illuminate\Contracts\Bus\Dispatcher;
 use Modules\Anomaly\Internal\Jobs\DetectAnomaliesJob;
 use Modules\Import\Public\Events\TransactionImported;
 
-// Stays synchronous (no ShouldQueue on the listener itself — the JOB is
-// queued; double-queueing would defeat the unique-job key). Does NO
-// baseline math inline. TransactionImported carries a Transaction model +
-// User, not a flat transactionId.
+// Deliberately NOT a ShouldQueue listener: the job it dispatches is the queued
+// half, and queueing both would defeat DetectAnomaliesJob's unique key.
 final readonly class EvaluateAnomaliesOnTransactionImport
 {
     public function __construct(private Dispatcher $bus) {}

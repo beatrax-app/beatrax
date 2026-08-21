@@ -7,31 +7,16 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
-use Modules\Forecasting\Internal\Http\Livewire\OpeningBalanceEditor;
+use Modules\Forecasting\Internal\Exceptions\OpeningBalanceDivergenceWarning;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 use Modules\Forecasting\Public\Actions\SetAccountOpeningBalance;
-use Modules\Forecasting\Public\Exceptions\OpeningBalanceDivergenceWarning;
+use Modules\Forecasting\Public\Http\Livewire\OpeningBalanceEditor;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 uses(RefreshDatabase::class);
-
-/*
- * Feature coverage for the per-account opening-balance editor on
- * /settings + its companion SetAccountOpeningBalance Public Action.
- *
- * Covers the four documented behaviours:
- *   - mount() populates inputs from stored values.
- *   - save() with missing as-of-date raises a validation error.
- *   - save() with a divergent value pops the soft-warning banner.
- *   - useMyNumber() commits with allowDivergence=true.
- *   - useBeatraxsNumber() populates the input with the sum-of-
- *     transactions value.
- *   - Cross-user 404 on mount.
- *   - ProjectForecastJob dispatched per horizon after save.
- */
 
 function obeUser(string $username): User
 {
@@ -69,11 +54,6 @@ function obeImportRun(User $user): ImportRun
     ]);
 }
 
-/**
- * Synthesise N transactions with the given total `$totalMinor` on the
- * account so the soft-warning divergence check has a real sum to
- * compare the user's input against.
- */
 function obeTxn(User $user, Account $account, ImportRun $run, int $amountMinor, string $bookedAt, int $row): Transaction
 {
     return Transaction::query()->create([
@@ -160,9 +140,8 @@ it('pops the soft-warning banner when the entered value diverges by more than �
 
     $account = obeAccount($this->user, 'paypal', 'paypal-4');
     $run = obeImportRun($this->user);
-    // Sum-of-transactions on the account: -€100.00. User enters €1000.00.
-    // |diff| = 100000 + 10000 = ... actually user enters €1000 = 100000 minor;
-    // sum is -10000; diff = 100000 - (-10000) = 110000 minor = €1100 (well over €500).
+    // The account sums to -10000 and the user enters 100000, so the divergence
+    // is 110000 — far past the 50000 warning threshold.
     obeTxn($this->user, $account, $run, -10000, '2026-04-15 09:00:00', 1);
 
     Livewire::test(OpeningBalanceEditor::class, [
@@ -223,18 +202,14 @@ it('commits with allowDivergence=true when useMyNumber is clicked', function ():
         ->assertSet('currentOpeningMinor', 100000)
         ->assertSet('saved', true);
 
-    // The account row reflects the user's number.
     $row = Account::query()->find($account->id);
     expect($row?->opening_balance_minor)->toBe(100000);
 });
 
 it('refuses a cross-user account at the Public Action layer (cross-user 404 contract)', function (): void {
-    // Mirrors the Wave 4 AccountBufferEditor cross-user pattern: the
-    // Livewire test harness in this project does not synchronously
-    // propagate mount-time NotFoundHttpException through ->toThrow().
-    // The runtime guard inside the SFC still raises the exception when
-    // invoked via a real HTTP request, so the canonical assertion locks
-    // the SetAccountOpeningBalance Public Action's cross-user 404.
+    // The Livewire harness does not propagate a mount-time
+    // NotFoundHttpException through ->toThrow(), so the Public Action carries
+    // the assertion instead; the SFC still raises it over real HTTP.
     $other = obeUser('other');
     $foreign = obeAccount($other, 'paypal', 'foreign-paypal');
 

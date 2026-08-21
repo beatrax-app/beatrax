@@ -7,24 +7,6 @@ use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
 use Modules\DevMode\Internal\Doctor\ProbeOutputParser;
 
-/*
- * DoctorPanelPage + ProbeOutputParser invariants.
- *
- * Covers:
- *   - GET /dev/doctor renders the page header + primary "Re-run"
- *     button + empty-state card for a developer when no
- *     `beatrax:doctor` audit row exists yet.
- *   - GET /dev/doctor renders the last `beatrax:doctor` audit
- *     row's parsed pass/warn/fail rows (via ProbeOutputParser)
- *     with the correct glyph + accent class.
- *   - GET /dev/doctor returns 404 for a non-developer
- *     (EnsureDeveloperMode).
- *   - ProbeOutputParser (pure unit) accepts the DoctorCommand line
- *     format ('%-24s %-8s %s') and yields list of
- *     {status, label, detail}. Severity ok → pass; warning →
- *     warn; critical → fail; info → info.
- */
-
 function doctorUser(string $username, bool $isDeveloper = true): User
 {
     return User::query()->create([
@@ -44,7 +26,6 @@ it('renders GET /dev/doctor for an authenticated developer with the page header 
     $response->assertOk();
     $response->assertSee('Doctor', escape: false);
     $response->assertSee('Re-run', escape: false);
-    // Empty-state — no audit row exists yet.
     $response->assertSee('No probe output captured yet.', escape: false);
 });
 
@@ -98,17 +79,12 @@ TXT;
     $response->assertOk();
     $html = (string) $response->getContent();
 
-    // Probe labels.
     expect($html)->toContain('PHP version');
     expect($html)->toContain('Backup freshness');
     expect($html)->toContain('ext-imap');
-    // Pass-row glyph (UI-SPEC § Color → Accent #10: emerald check).
     expect($html)->toContain('data-probe-status="pass"');
-    // Warn-row glyph (amber).
     expect($html)->toContain('data-probe-status="warn"');
-    // Fail-row glyph (rose).
     expect($html)->toContain('data-probe-status="fail"');
-    // Info-row glyph (ext-imap).
     expect($html)->toContain('data-probe-status="info"');
 });
 

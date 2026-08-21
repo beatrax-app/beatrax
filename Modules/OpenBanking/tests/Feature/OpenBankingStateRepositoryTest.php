@@ -8,20 +8,8 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\OpenBanking\Internal\OAuth\OpenBankingStateRepository;
 
-/*
- * Every way consumeState() says no.
- *
- * This is the CSRF binding for the Enable Banking consent redirect: the value
- * it guards is a callback that attaches a bank connection to an account. A
- * rejection that silently became an acceptance would let a redirect crafted
- * elsewhere land a connection on the wrong user, so each refusal is asserted
- * on its own rather than inferred from the happy path failing.
- *
- * The entry is written into the session directly rather than through
- * issueState(), because half of these shapes are ones issueState() cannot
- * produce — which is the point: they describe what the reader must refuse,
- * not what the writer happens to emit.
- */
+// Written into the session directly rather than through issueState(), because
+// half of these shapes describe what the reader must refuse, not what it emits.
 
 const OBSR_KEY = 'open_banking_oauth_state';
 
@@ -47,8 +35,7 @@ it('accepts the state it issued for the user it issued it to', function (): void
     expect($repository->consumeState($state, 42))->toBeTrue();
 });
 
-// Single-use: the pull() is what enforces it, so a replayed callback finds
-// nothing left to match against.
+// pull() is what makes the state single-use, so a replay finds nothing.
 it('refuses the same state a second time', function (): void {
     $repository = obsrRepository();
     $state = $repository->issueState(42);
@@ -85,9 +72,8 @@ it('refuses a state that does not match the one issued', function (): void {
     expect(obsrRepository()->consumeState(str_repeat('b', 64), 42))->toBeFalse();
 });
 
-// The consent flow must finish under the account that began it. Without this
-// binding, a callback completed while signed in as somebody else would attach
-// the bank connection to that other account.
+// Without this binding, a callback completed while signed in as somebody else
+// would attach the bank connection to that other account.
 it('refuses a state issued to a different user', function (mixed $storedUserId): void {
     Session::put(OBSR_KEY, [
         'state' => str_repeat('a', 64),
@@ -117,9 +103,8 @@ it('refuses an entry with no usable issue time', function (mixed $issuedAt): voi
     'not a date' => ['not-a-timestamp'],
 ]);
 
-// Ten minutes is the whole window. A negative age is refused too: it means
-// the entry claims to have been issued after the clock reads now, which no
-// honest issueState() can produce.
+// A negative age is refused too: it means the entry claims to have been issued
+// after the clock reads now, which no honest issueState() can produce.
 it('refuses a state outside its ten-minute window', function (string $issuedAt, bool $accepted): void {
     Session::put(OBSR_KEY, [
         'state' => str_repeat('a', 64),

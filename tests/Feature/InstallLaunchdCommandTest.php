@@ -9,35 +9,9 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Internal\Console\InstallCommand;
 
-/*
- * `beatrax:install --launchd` plist install path.
- *
- * Plan 09: the artisan command must render the three deploy/launchd
- * plist templates with PHP_BINARY + base_path() substituted, write
- * them into ~/Library/LaunchAgents/, and bootstrap each via launchctl.
- * The Redis plist is OPTIONAL (skipped via `--without-redis`).
- *
- * Test invariants:
- *  - Non-Darwin hosts: skip (the production code refuses to run on
- *    non-Darwin; the test mirrors that).
- *  - LaunchAgents writes land in a sandbox dir (NOT the developer's
- *    real ~/Library/LaunchAgents) — achieved via a subclass that
- *    overrides resolveLaunchAgentsDir.
- *  - launchctl bootstrap is NOT actually called (the developer's real
- *    launchd must stay untouched) — the subclass overrides
- *    bootstrapPlist to capture the call without invoking the binary.
- *  - The rendered plists contain PHP_BINARY's value (NOT the literal
- *    `{{ABS_PHP_BINARY}}` placeholder).
- *  - With `--without-redis`: only horizon + scheduler land.
- *  - Without `--without-redis`: all three land.
- *  - The command exits 0 (SUCCESS).
- */
-
-/**
- * Subclass of InstallCommand that:
- *  - Redirects ~/Library/LaunchAgents to a per-test sandbox path.
- *  - Captures the bootstrap calls instead of invoking launchctl.
- */
+// Both overrides keep the developer's real machine out of the test: plists go
+// to a sandbox directory instead of ~/Library/LaunchAgents, and launchctl is
+// recorded rather than run.
 final class CaptureBootstrapInstallCommand extends InstallCommand
 {
     /** @var list<array{uid: int, plistPath: string}> */
@@ -67,18 +41,15 @@ beforeEach(function (): void {
         $this->markTestSkipped('launchd plist install is macOS-only; skipping on '.PHP_OS_FAMILY);
     }
 
-    // Fresh per-test sandbox under sys_get_temp_dir() so a parallel
-    // test run does not contend on the same path.
+    // A per-test sandbox so parallel runs do not contend on one path.
     $sandbox = sys_get_temp_dir().'/beatrax-launchd-test-'.bin2hex(random_bytes(6));
     mkdir($sandbox, 0700, recursive: true);
     CaptureBootstrapInstallCommand::$sandboxDir = $sandbox;
     CaptureBootstrapInstallCommand::$capturedBootstraps = [];
     $this->sandbox = $sandbox;
 
-    // Rebind the InstallCommand the artisan kernel resolves so
-    // `$this->artisan('beatrax:install', ...)` picks up the test
-    // subclass. The Symfony console binds commands by their resolved
-    // class; rebinding the abstract InstallCommand here is sufficient.
+    // Symfony console resolves commands by class, so rebinding InstallCommand is
+    // enough for $this->artisan('beatrax:install') to pick up the subclass.
     $this->app->bind(
         InstallCommand::class,
         static fn ($app) => new CaptureBootstrapInstallCommand(
@@ -118,10 +89,8 @@ it('renders horizon + scheduler plists with placeholders substituted, skips redi
     expect(file_exists($redisPath))->toBeFalse();
 
     $horizonContents = (string) file_get_contents($horizonPath);
-    // Placeholders MUST be substituted — neither token can remain.
     expect($horizonContents)->not->toContain('{{ABS_PHP_BINARY}}');
     expect($horizonContents)->not->toContain('{{ABS_PROJECT_ROOT}}');
-    // The substituted values MUST appear.
     expect($horizonContents)->toContain(PHP_BINARY);
     expect($horizonContents)->toContain(base_path());
 
@@ -129,8 +98,6 @@ it('renders horizon + scheduler plists with placeholders substituted, skips redi
     expect($schedulerContents)->not->toContain('{{ABS_PHP_BINARY}}');
     expect($schedulerContents)->toContain('schedule:work');
 
-    // launchctl bootstrap was captured (NOT actually invoked) for the
-    // two installed plists.
     expect(CaptureBootstrapInstallCommand::$capturedBootstraps)->toHaveCount(2);
     $captured = array_map(
         static fn (array $c): string => $c['plistPath'],
@@ -155,8 +122,7 @@ it('renders all three plists (horizon + scheduler + redis) when --without-redis 
     $redisContents = (string) file_get_contents($redisPath);
     expect($redisContents)->toContain('redis:7-alpine');
     expect($redisContents)->toContain('127.0.0.1:6379:6379');
-    // The redis plist references the project root for log paths but
-    // not PHP_BINARY (Redis has no PHP dependency).
+    // Redis has no PHP dependency, so only the project-root token is substituted.
     expect($redisContents)->not->toContain('{{ABS_PROJECT_ROOT}}');
     expect($redisContents)->toContain(base_path());
 
@@ -168,9 +134,7 @@ it('renders plists that contain the substituted PHP_BINARY path used by the arti
         ->assertExitCode(0);
 
     $horizonContents = (string) file_get_contents($this->sandbox.'/com.beatrax.horizon.plist');
-    // The plist's ProgramArguments must reference the absolute path
-    // to the artisan script in this project (so the launchd-managed
-    // process runs against the correct codebase).
+    // The launchd-managed process must run against this checkout's artisan.
     expect($horizonContents)->toContain(base_path().'/artisan');
     expect($horizonContents)->toContain('<string>horizon</string>');
 

@@ -14,22 +14,10 @@ use Modules\Sync\Internal\Identity\DeviceIdentityService;
 
 uses(RefreshDatabase::class);
 
-/*
- * What the crypto paths do when a primitive misbehaves.
- *
- * Each of these operations wraps its work in a `catch (SodiumException)` and
- * re-throws a typed failure naming the operation, so a caller is not left
- * matching on a libsodium message. None of those catches could be reached
- * before: every argument reaching libsodium has had its length fixed upstream,
- * so no input the callers can construct makes the real implementation throw.
- *
- * The conversions and the file encryptor are injected now, which is what makes
- * the translation testable. The doubles below fail on purpose; the assertions
- * are that the failure is translated at all, names the operation, and keeps
- * the original as its cause. They assert RuntimeException because that is what
- * these paths still throw — #90 narrows them to the module's own types, and
- * those are subclasses, so these assertions keep holding afterwards.
- */
+// Every argument these paths hand libsodium has had its length fixed upstream,
+// so no input a caller can construct reaches the SodiumException catches. The
+// conversions and the file encryptor are injected purely so a double can fail
+// on purpose and the translation can be asserted at all.
 function failingSodium(): SodiumPrimitives
 {
     return new class implements SodiumPrimitives
@@ -73,12 +61,8 @@ function failingEncryptor(): FileEncryptor
     };
 }
 
-/**
- * Drops the cached singleton so the next resolve picks up the doubles. Both
- * services are registered with singleton(), so binding a replacement after one
- * has already been resolved would otherwise have no effect and the test would
- * silently exercise the real primitives.
- */
+// Both services are container singletons, so a double bound after the first
+// resolve is ignored and the test would silently run the real primitives.
 function forgetCryptoSingletons(mixed $app): void
 {
     $app->forgetInstance(GdkKeyringService::class);

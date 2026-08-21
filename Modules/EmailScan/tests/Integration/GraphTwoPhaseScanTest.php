@@ -14,24 +14,10 @@ use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
 
 uses(RefreshDatabase::class);
 
-/*
- * Two-phase Graph scan ordering invariant.
- *
- * RESEARCH Pattern 4 states the Microsoft branch MUST:
- *   1. Walk /me/messages with the OData (from in [...]) +
- *      receivedDateTime ge {windowStart} filter (the backfill phase).
- *   2. AFTER the page walk terminates (page-2-empty has no nextLink
- *      in Plan 01's fixture), issue EXACTLY ONE
- *      /me/mailFolders/inbox/messages/delta call with $deltaLink=null
- *      to establish the baseline @odata.deltaLink (the baseline
- *      phase).
- *   3. Persist that deltaLink into inbox_scan_state.last_delta_link
- *      via InboxScanStateMachine::recordCursor — the sole legal
- *      mutator (BoundaryArchTest invariant).
- *
- * This test asserts the call sequence + the single-shot deltaPage
- * invariant by inspecting the FakeGraphApiClient's request log.
- */
+// The Microsoft branch walks /me/messages to exhaustion first, and only then
+// issues one delta call with $deltaLink=null to establish the baseline. A
+// delta call raised mid-walk would anchor the cursor on a mailbox the backfill
+// has not finished reading.
 
 beforeEach(function (): void {
     Sleep::fake();
@@ -88,19 +74,9 @@ it('walks pages, then calls deltaPage(null) EXACTLY ONCE after the walk complete
     $calls = $fake->getRequestedCalls();
     $methodSequence = array_map(static fn (array $c): string => (string) $c['method'], $calls);
 
-    // The Fake's listSenderMessagesPaged returns the page-1 fixture
-    // (3 messages, no nextLink in this fixture's wire shape — note:
-    // page-1 carries @odata.nextLink but the FakeGraphApiClient
-    // serves page-2-empty.json on a non-null nextLink, which has NO
-    // nextLink itself, so the walker exits after two listSender calls).
-    //
-    // Expected exact call sequence:
-    //   1. listSenderMessagesPaged   (page 1, nextLink=null cursor in)
-    //   2. getRawMessage             (paypal)
-    //   3. getRawMessage             (ics)
-    //   4. getRawMessage             (googleplay)
-    //   5. listSenderMessagesPaged   (page 2 follow, the URL acts as cursor)
-    //   6. deltaPage                 (baseline, deltaLink=null)
+    // Page 1 carries an @odata.nextLink, and the Fake answers a non-null
+    // nextLink with page-2-empty.json, which carries none — so the walker
+    // exits after exactly two listSenderMessagesPaged calls.
     expect($methodSequence)->toBe([
         'listSenderMessagesPaged',
         'getRawMessage',
@@ -110,9 +86,7 @@ it('walks pages, then calls deltaPage(null) EXACTLY ONCE after the walk complete
         'deltaPage',
     ]);
 
-    // Assert: deltaPage was called EXACTLY ONCE — the walker does
-    // NOT incrementally re-walk via delta during backfill. The
-    // single baseline call sits at the END of the sequence.
+    // Once, not per page: the walker does not re-walk via delta mid-backfill.
     $deltaCalls = array_values(array_filter(
         $calls,
         static fn (array $c): bool => $c['method'] === 'deltaPage',
@@ -123,9 +97,7 @@ it('walks pages, then calls deltaPage(null) EXACTLY ONCE after the walk complete
         'deltaLink' => null,
     ]);
 
-    // The single deltaPage call must come AFTER the last
-    // listSenderMessagesPaged call (the baseline establishes only
-    // once the backfill walk has fully terminated).
+    // The baseline may only be established once the walk has terminated.
     $lastListIndex = max(array_keys(array_filter(
         $methodSequence,
         static fn (string $m): bool => $m === 'listSenderMessagesPaged',
@@ -136,9 +108,6 @@ it('walks pages, then calls deltaPage(null) EXACTLY ONCE after the walk complete
     ))[0];
     expect($deltaIndex)->toBeGreaterThan($lastListIndex);
 
-    // Assert: last_delta_link was written ONLY after the deltaPage
-    // call (the recordCursor surface persisted the @odata.deltaLink
-    // from the Fake's baseline fixture).
     $scanState = $db->connection()
         ->table('inbox_scan_state')
         ->where('inbox_id', $inboxId)

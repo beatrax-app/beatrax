@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Public\Contracts;
 
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 interface KeyCustodian
 {
     // Implementations that cannot reach their backing store right now

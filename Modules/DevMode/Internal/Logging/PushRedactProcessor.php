@@ -9,9 +9,6 @@ use Illuminate\Log\Logger;
 use Monolog\Handler\ProcessableHandlerInterface;
 use Monolog\Logger as MonologLogger;
 
-/**
- * @link ../../../../.docs/features/dev-mode/architecture.md
- */
 final class PushRedactProcessor
 {
     public function __invoke(Logger $logger): void
@@ -21,18 +18,14 @@ final class PushRedactProcessor
 
         $underlying = $logger->getLogger();
 
-        // Illuminate\Log\Logger::getLogger() is typed as a generic PSR
-        // logger interface, but every Monolog-driven channel (single,
-        // daily, stack, etc.) is concretely a Monolog\Logger; the
-        // instanceof check narrows the type and skips any other channel.
+        // getLogger() is typed to the PSR interface, so the instanceof both
+        // narrows it and skips any non-Monolog channel.
         if (! $underlying instanceof MonologLogger) {
             return;
         }
 
         foreach ($underlying->getHandlers() as $handler) {
-            // Most concrete Monolog handlers implement
-            // ProcessableHandlerInterface via ProcessableHandlerTrait; a
-            // bare custom adapter that doesn't is silently skipped
+            // A custom handler without ProcessableHandlerTrait is skipped
             // rather than crashing channel boot.
             if ($handler instanceof ProcessableHandlerInterface) {
                 $handler->pushProcessor($processor);

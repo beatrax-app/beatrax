@@ -9,25 +9,7 @@ use Modules\Core\Models\User;
 use Modules\Recurring\Internal\Http\Livewire\RecurringPage;
 use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
 
-/*
- * "Re-detect now" button on /recurring. Dispatches the same
- * DetectRecurringSeriesJob the daily sweep dispatches, but via
- * dispatchSync (14.1-04, CRYPT-01): the KEK needed to decrypt
- * counterparty_iban for the detectors is only reachable through the
- * live, unlocked Session on this request, so the job now runs
- * in-process rather than being queued. dispatchSync bypasses the
- * queue-push boundary entirely, so the job's per-user
- * ShouldBeUniqueUntilProcessing lock (queue-only) no longer collapses
- * spam-clicks — each click now runs a full, idempotent, redundant
- * pass instead.
- *
- * The arch invariant `noSynchronousDetectionInRequestLifecycle`
- * forbids the SFC from importing a `SeriesDetector` directly — only
- * the Job class is allowed at the HTTP layer. This is unaffected by
- * the dispatchSync change: the SFC still only references
- * `DetectRecurringSeriesJob`, never `SeriesDetector`.
- */
-
+/** @link ../../../../.docs/features/recurring/detection-encryption-posture.md#the-cost-that-was-accepted-no-dispatch-collapsing */
 function rprdUser(string $username): User
 {
     return User::query()->create([

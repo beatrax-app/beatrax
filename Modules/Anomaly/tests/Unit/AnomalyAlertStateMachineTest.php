@@ -13,15 +13,6 @@ use Modules\Core\Public\StateMachine\InvalidStateTransitionException;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for the anomaly alert state machine — the sole legal
- * mutator of anomaly_alerts.state. Covers the ALLOWED_TRANSITIONS map
- * (including the diverging dismissed -> open undo edge), the atomic
- * state + audit-row write, the busy-timeout fence, the actor whitelist,
- * the missing-row guard, the extraColumns patch, and the
- * actor/reason/timestamp propagation into the audit row.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -232,11 +223,6 @@ it('writes user_id=NULL on the audit row when the source anomaly_alerts.user_id 
     expect($transition->user_id)->toBeNull();
 });
 
-/**
- * Seeds a transactions row sufficient to satisfy the FK constraint on
- * anomaly_alerts.transaction_id without pulling in the full Ingestion
- * fixture stack.
- */
 function seedAnomalyStateMachineTransaction(DatabaseManager $db, int $userId): int
 {
     $accountId = $db->connection()->table('accounts')->insertGetId([

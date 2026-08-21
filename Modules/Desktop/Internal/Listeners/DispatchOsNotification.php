@@ -12,13 +12,8 @@ use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 use Native\Desktop\Facades\Notification;
 
-// The sole desktop delivery adapter: the Notifications module decides
-// WHAT to notify and persists the row first; this listener only
-// decides whether/how to deliver it to the OS (suppression, then the
-// focus gate, then hide-details).
-/**
- * @link ../../../../.docs/features/desktop/architecture.md
- */
+// The Notifications module decides WHAT to notify and persists the row first;
+// this listener only decides whether and how the OS shows it.
 final class DispatchOsNotification
 {
     public function __construct(
@@ -44,8 +39,7 @@ final class DispatchOsNotification
         $this->fire($event->title, $body, $event->deepLinkRoute);
     }
 
-    // An OS notification fires only when the window is unfocused; when
-    // focused the in-app banner already surfaces the same information.
+    // When focused the in-app banner already surfaces the same information.
     private function shouldFire(): bool
     {
         return ! $this->focus->isFocused();

@@ -6,9 +6,6 @@ namespace Modules\Position\Public\Events;
 
 use Modules\Position\Public\Dto\PositionSummaryDto;
 
-/**
- * @link ../../../../.docs/features/position/architecture.md
- */
 final readonly class PositionDigestDue
 {
     /**

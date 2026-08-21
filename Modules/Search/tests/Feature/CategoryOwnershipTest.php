@@ -7,26 +7,11 @@ use Modules\Core\Models\User;
 use Modules\Search\Public\Dto\SearchFilters;
 use Modules\Search\Public\Services\SearchQuery;
 
-/**
- * CategoryOwnershipTest — WR-04 (999.6-persistence review).
- *
- * Proves `SearchQuery::applyFilters()` validates `categories` filter ids
- * against ownership before applying `whereIn`, mirroring the account and
- * counterparty blocks (T-08-06 / T-999.6-04): a foreign (non-owned,
- * non-global) category id must yield the caller's own empty result set,
- * never another user's rows. Categories may also be global (seeded,
- * null-user) rows — those must remain usable as a filter for every user
- * (see `it_filters_by_category` in SearchQueryTest.php, which relies on
- * exactly this behavior and must not regress).
- */
 beforeEach(function (): void {
     $this->userAId = $this->searchTestUser('catown-user-a');
     $this->userBId = $this->searchTestUser('catown-user-b');
 });
 
-/**
- * Inserts a categories row (optionally user-owned) and returns its id.
- */
 function catOwnMakeCategory(?int $userId, string $name): int
 {
     $db = app(DatabaseManager::class)->connection();
@@ -42,7 +27,6 @@ function catOwnMakeCategory(?int $userId, string $name): int
     ]);
 }
 
-// (a) A foreign (another user's) category id returns an empty result, never that user's data.
 it('SearchQuery returns empty result for a foreign category id', function (): void {
     $foreignId = catOwnMakeCategory($this->userBId, 'Foreign Category');
 
@@ -52,7 +36,6 @@ it('SearchQuery returns empty result for a foreign category id', function (): vo
         'description' => 'Belongs to user B',
     ]);
 
-    // User A has an unrelated transaction that must also not leak through.
     $this->searchTestTransaction($this->userAId, [
         'category_id' => null,
         'counterparty_name' => 'User A Vendor',
@@ -63,14 +46,12 @@ it('SearchQuery returns empty result for a foreign category id', function (): vo
     $searchQuery = app(SearchQuery::class);
     $user = User::findOrFail($this->userAId);
 
-    // User A queries with User B's category id.
     $filters = new SearchFilters(categories: [$foreignId]);
     $page = $searchQuery->search($user, '', $filters);
 
     expect($page->totalCount)->toBe(0);
 });
 
-// (b) A category the user owns still restricts results correctly.
 it('SearchQuery restricts results to the owned category', function (): void {
     $ownedId = catOwnMakeCategory($this->userAId, 'Owned Category');
 
@@ -97,8 +78,8 @@ it('SearchQuery restricts results to the owned category', function (): void {
     expect($page->rows[0]->id)->toBe($matchingTxId);
 });
 
-// (c) A global (null-user) category still works as a filter for any user —
-// must not regress SearchQueryTest's `it_filters_by_category`.
+// Ownership validation must not reject the seeded global categories, which
+// every user is allowed to filter on.
 it('SearchQuery still restricts results to a global (null-user) category', function (): void {
     $globalId = catOwnMakeCategory(null, 'Global Category');
 

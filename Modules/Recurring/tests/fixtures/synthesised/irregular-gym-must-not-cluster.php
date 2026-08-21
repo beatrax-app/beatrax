@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-// Irregular gym charges — 5 occurrences with random amounts and
-// non-uniform interval spacing (5, 40, 70, 120, 200 day gaps). The
-// median interval lands outside all cadence snap bands; detector must
-// classify as `irregular` and SKIP the candidate. Expectation: ZERO
-// series.
+// Gaps of 5, 40, 70 and 120 days put the median interval outside every cadence
+// snap band, so the candidate has to be skipped rather than clustered.
 
 $transactions = [];
 $start = new DateTimeImmutable('2025-01-10');

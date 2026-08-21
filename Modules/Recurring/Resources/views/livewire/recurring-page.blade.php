@@ -20,11 +20,9 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    $fmt = static fn (Money $money): string => $money->currency() === 'EUR'
-        ? $money->format('nl_NL')
-        : $money->format('en_US');
+    $fmt = static fn (Money $money): string => $money->format();
 
-    $eurFmt = static fn (int $minor): string => Money::ofMinor($minor, 'EUR')->format('nl_NL');
+    $eurFmt = static fn (int $minor): string => Money::ofMinor($minor, 'EUR')->format();
 
     $expenseTotal = (int) ($totals['expense_eur_minor'] ?? 0);
     $incomeTotal = (int) ($totals['income_eur_minor'] ?? 0);
@@ -41,11 +39,11 @@
     <header class="mb-8">
         <div class="flex items-baseline justify-between gap-4">
             <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('recurring::index.title') }}</h1>
-            <button
-                type="button"
+            <x-core::secondary-button
+                size="sm"
+                class="gap-1"
                 wire:click="reDetect"
-                class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900"
-            >{{ Lang::get('recurring::index.re_detect') }}</button>
+            >{{ Lang::get('recurring::index.re_detect') }}</x-core::secondary-button>
         </div>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
             {{ Lang::get('recurring::index.subtitle') }}
@@ -66,14 +64,17 @@
     </header>
 
     @if ($sectionEmpty)
-        <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('recurring::index.empty.heading') }}</h2>
-            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+        <x-core::empty-state :heading="Lang::get('recurring::index.empty.heading')">
+            {{-- A slot, not the :body prop: the link finishes the sentence, and
+                 the prop escapes its value. Its text is the destination page's
+                 own title — "/recurring/review" was one word of English URL
+                 inside a translated sentence. --}}
+            <x-slot:body>
                 {{ Lang::get('recurring::index.empty.before_link') }}
-                <a href="{{ route('recurring.review') }}" class="text-slate-900 underline underline-offset-2 dark:text-slate-100">/recurring/review</a>
+                <a href="{{ route('recurring.review') }}" class="text-slate-900 underline underline-offset-2 dark:text-slate-100">{{ Lang::get('recurring::index.empty.link') }}</a>
                 {{ Lang::get('recurring::index.empty.after_link') }}
-            </p>
-        </div>
+            </x-slot:body>
+        </x-core::empty-state>
     @else
         @if (count($expenses) > 0)
             <section class="mb-8">
@@ -112,7 +113,7 @@
                      ============================================================ --}}
                 <ul class="hidden md:block space-y-2">
                     @foreach ($expenses as $row)
-                        <li class="rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700">
+                        <x-core::card tag="li" padding="tight">
                             <div class="flex items-center justify-between gap-4">
                                 <div class="min-w-0 flex-1">
                                     <p class="text-sm text-slate-900 dark:text-slate-100">
@@ -138,6 +139,7 @@
                                 <div class="flex shrink-0 items-center gap-3">
                                     @if ($row->latestFundingChainLinkId !== null)
                                         <span
+                                            role="img"
                                             class="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                                             data-chain-badge="true"
                                             aria-label="{{ Lang::get('recurring::index.chain_aria') }}"
@@ -146,7 +148,7 @@
                                     <span class="text-sm text-slate-700 dark:text-slate-300" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($row->monthlyEquivalent->toMinor()) }}{{ Lang::get('recurring::index.per_month_suffix') }}</span>
                                 </div>
                             </div>
-                        </li>
+                        </x-core::card>
                     @endforeach
                 </ul>
             </section>
@@ -186,7 +188,7 @@
                      ============================================================ --}}
                 <ul class="hidden md:block space-y-2">
                     @foreach ($income as $row)
-                        <li class="rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700">
+                        <x-core::card tag="li" padding="tight">
                             <div class="flex items-center justify-between gap-4">
                                 <div class="min-w-0 flex-1">
                                     <p class="text-sm text-slate-900 dark:text-slate-100">
@@ -212,6 +214,7 @@
                                 <div class="flex shrink-0 items-center gap-3">
                                     @if ($row->latestFundingChainLinkId !== null)
                                         <span
+                                            role="img"
                                             class="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                                             data-chain-badge="true"
                                             aria-label="{{ Lang::get('recurring::index.chain_aria') }}"
@@ -220,7 +223,7 @@
                                     <span class="text-sm text-slate-700 dark:text-slate-300" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($row->monthlyEquivalent->toMinor()) }}{{ Lang::get('recurring::index.per_month_suffix') }}</span>
                                 </div>
                             </div>
-                        </li>
+                        </x-core::card>
                     @endforeach
                 </ul>
             </section>

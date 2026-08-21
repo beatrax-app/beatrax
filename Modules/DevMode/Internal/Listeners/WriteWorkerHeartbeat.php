@@ -7,9 +7,8 @@ namespace Modules\DevMode\Internal\Listeners;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Modules\Core\Public\Contracts\Clock;
 
-// Wired via QueueManager::looping(closure), NOT $events->listen(Looping::class,
-// ...) — Laravel's queue:work does not reliably dispatch that event per
-// loop iteration, only the closure-form callback fires every tick.
+// Registered through QueueManager::looping() in DevModeServiceProvider, inside
+// a closure that re-resolves this listener from the container each tick.
 final readonly class WriteWorkerHeartbeat
 {
     public const CACHE_KEY = 'dev_mode.queue_worker_heartbeat';

@@ -13,28 +13,28 @@ use Illuminate\Database\Query\Builder;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Scopes\UserScope;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Services\BaseCurrency;
+use Modules\Reports\Internal\Actions\SaveReport;
+use Modules\Reports\Internal\Actions\UpdateReport;
 use Modules\Reports\Internal\Aggregation\PeriodPresetResolver;
 use Modules\Reports\Internal\Aggregation\ReportAggregator;
+use Modules\Reports\Internal\Dto\ReportDefinition;
+use Modules\Reports\Internal\Dto\ReportResultDto;
+use Modules\Reports\Internal\Dto\ReportResultRow;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 use Modules\Reports\Internal\Http\DrilldownUrlBuilder;
 use Modules\Reports\Internal\Services\ReportCsvExporter;
 use Modules\Reports\Models\SavedReport;
-use Modules\Reports\Public\Actions\SaveReport;
-use Modules\Reports\Public\Actions\UpdateReport;
-use Modules\Reports\Public\Dto\ReportDefinition;
-use Modules\Reports\Public\Dto\ReportResultDto;
-use Modules\Reports\Public\Dto\ReportResultRow;
-use Modules\Reports\Public\Enums\ReportGranularity;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-/**
- * @link ../../../../../.docs/features/reports/architecture.md
- */
 final class ReportBuilder extends Component
 {
+    use HoldsFlashMessage;
+
     #[Url(as: 'metric', except: 'spend')]
     public string $metric = 'spend';
 
@@ -83,20 +83,15 @@ final class ReportBuilder extends Component
     #[Url(as: 'amount_dir', except: 'both')]
     public string $filterAmountDir = 'both';
 
-    // The saved report id this builder was opened from, when any
-    // (?report= on mount).
     public ?int $loadedReportId = null;
 
-    // Stashed in mount() so openSaveForm() can pre-fill saveName with it
-    // instead of showing a blank field that implies "Save report" will
-    // create a new row rather than update the one currently open.
+    // Stashed so openSaveForm() can pre-fill saveName: a blank field implies
+    // "Save report" forks a new row rather than updating the open one.
     public string $loadedReportName = '';
 
     public bool $showSaveForm = false;
 
     public string $saveName = '';
-
-    public string $flashMessage = '';
 
     public function mount(CurrentUser $currentUser, ?int $report = null): void
     {
@@ -104,10 +99,8 @@ final class ReportBuilder extends Component
             return;
         }
 
-        // IDOR guard: explicit user_id check via withoutGlobalScope. A
-        // foreign or missing id falls through to the default empty
-        // composition — never another user's data, never a 404 (which
-        // would confirm existence to an attacker).
+        // An explicit user_id check, since a 404 would confirm existence to an
+        // attacker; a foreign or missing id falls through to the empty default.
         /** @var SavedReport|null $saved */
         $saved = SavedReport::query()
             ->withoutGlobalScope(UserScope::class)
@@ -127,9 +120,6 @@ final class ReportBuilder extends Component
     public function openSaveForm(): void
     {
         $this->showSaveForm = true;
-        // Pre-fill with the currently-loaded report's name (rather than
-        // resetting to '') so the user sees at a glance that submitting
-        // will update that report, not fork a second identically-named row.
         $this->saveName = $this->loadedReportId !== null ? $this->loadedReportName : '';
     }
 
@@ -139,10 +129,8 @@ final class ReportBuilder extends Component
         $this->saveName = '';
     }
 
-    // A builder opened from a saved report (loadedReportId !== null)
-    // updates that same row rather than forking a new one; a fresh save's
-    // id is stashed into loadedReportId so a subsequent save on the same
-    // page load also updates in place instead of duplicating.
+    // A builder opened from a saved report updates that row; a fresh save stashes
+    // its id, so a second save on the same page load also updates in place.
     public function save(SaveReport $action, UpdateReport $updateAction, CurrentUser $currentUser): void
     {
         $name = trim($this->saveName);
@@ -170,29 +158,21 @@ final class ReportBuilder extends Component
         $this->flashMessage = '';
     }
 
-    // Dispatches a browser event after every Livewire property sync so the
-    // mounted ApexCharts instance can refresh in place via
-    // chart.updateOptions() — a single generic hook rather than one
-    // dispatch per action, since every control here is a bare setter.
+    // One generic hook rather than a dispatch per action, since every control
+    // here is a bare setter; ApexCharts refreshes in place off the event.
     public function updated(string $property): void
     {
         $this->dispatch('report-updated');
     }
 
-    // A real Livewire action (not a plain <a href>) so it can participate
-    // in wire:loading/wire:target; reads through the same
-    // currentDefinition() the table/chart render from, so the download
-    // can never disagree with what's on screen.
+    // A Livewire action rather than an <a href> so it joins wire:loading, and it
+    // reads the same currentDefinition() the table renders from.
     public function export(ResponseFactory $responses, ReportCsvExporter $exporter, CurrentUser $currentUser): StreamedResponse
     {
         if (! $currentUser->isAuthenticated()) {
-            // Defensive branch: the 'auth' middleware already blocks
-            // unauthenticated access before this method ever runs, so the
-            // stream body is intentionally empty here.
+            // The 'auth' middleware already blocks this, so the body is empty.
             return new StreamedResponse(static function (): void {
-                // No authenticated user means no report to stream; an empty
-                // body satisfies the StreamedResponse contract without
-                // exposing another user's data.
+                // No user, no report to stream.
             });
         }
 
@@ -221,9 +201,8 @@ final class ReportBuilder extends Component
         $user = $currentUser->user();
         $definition = $this->currentDefinition();
 
-        // The "custom" preset requires both dates; while the user is
-        // mid-selection (dates not both filled yet) resolving the period
-        // would throw, so render the friendly empty state instead of a 500.
+        // "custom" needs both dates, and resolving mid-selection would throw,
+        // so render the empty state rather than a 500.
         $customIncomplete = $definition->periodPreset === 'custom'
             && ($definition->customFrom === null || $definition->customFrom === '' || $definition->customTo === null || $definition->customTo === '');
 
@@ -233,10 +212,8 @@ final class ReportBuilder extends Component
             $drilldownUrls = [];
         } else {
             $result = $aggregator->run($user, $definition);
-            // When compare is on, `comparisonRows` is the richer union of
-            // current+previous group keys (deltaMinor populated) sorted by
-            // abs(delta) desc — that is the set the table/chart renders,
-            // never the plain `rows` (which carries no delta info).
+            // With compare on, comparisonRows is the union of current+previous
+            // keys carrying deltaMinor; plain `rows` has no delta info.
             $displayRows = ($definition->compare && $result->comparisonRows !== null) ? $result->comparisonRows : $result->rows;
             $period = $periodPresetResolver->resolve($definition->periodPreset, $definition->customFrom, $definition->customTo);
             $drilldownUrls = array_map(
@@ -351,10 +328,9 @@ final class ReportBuilder extends Component
      */
     private function availableCounterparties(DatabaseManager $db, int $userId, SensitiveColumnCodec $codec, Session $session): array
     {
-        // No ORDER BY on the ciphertext display_name column — SQL order
-        // over ciphertext is meaningless once encryption is enabled. A
-        // stable orderBy('id') keeps row iteration deterministic; the
-        // real, user-facing order is the post-decrypt usort() below.
+        // SQL order over the ciphertext display_name is meaningless once
+        // encryption is on, so orderBy('id') only keeps iteration deterministic;
+        // the user-facing order is the post-decrypt usort() below.
         $rows = $db->connection()
             ->table('counterparties')
             ->where('user_id', $userId)

@@ -2,12 +2,7 @@
 
 declare(strict_types=1);
 
-// FX-only USD subscription: same ASN account + a Netflix USD series
-// (latest_amount_minor=-1199 USD, latest_currency='USD',
-// latest_fx_rate_used=0.9050). Per-series legend renders
-// "$11.99/mo (≈ €10.85/mo)"; per-account ASN chart converts to EUR
-// via the stored fx_rate; daily fold runs in EUR; band reflects the
-// EUR-converted amounts. Exercises the FX-preservation invariant.
+/** @link ../../../../../.docs/features/forecasting/forecast-corpus.md#fx-only-usd-subscription */
 
 return [
     'accounts' => [

@@ -176,15 +176,12 @@ it('writes a second memory row for a different category on the same merchant', f
 });
 
 it('falls back to atomic increment when the row already exists (race-safe upsert)', function (): void {
-    // Simulates the second of two concurrent events landing after a
-    // sibling event has already inserted the row: a pre-seeded row at
-    // occurrence_count = 1 must be incremented to 2 (NOT clobbered or
-    // duplicated) by the listener's QueryException fallback path.
+    // The second of two concurrent events: a row already at occurrence_count 1
+    // must be incremented to 2 by the listener's QueryException fallback,
+    // never clobbered or duplicated.
     $merchantId = seedWriterMerchant($this->user->id, 'spotify premium');
     $tx = makeMemoryTransaction($this->user, $this->account, $this->run, 'Spotify Premium', 'spotify premium');
 
-    // Pre-seed the row at occurrence_count = 1 as if a concurrent
-    // dispatch already inserted it.
     DB::table('merchant_memories')->insert([
         'user_id' => $this->user->id,
         'merchant_id' => $merchantId,

@@ -16,6 +16,7 @@ return [
     'empty' => [
         'heading' => 'Brak aktywności cyklicznej',
         'before_link' => 'Zatwierdź wykryte sugestie w',
+        'link' => 'Przegląd cyklicznych',
         'after_link' => 'aby zobaczyć je tutaj.',
     ],
 

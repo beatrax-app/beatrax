@@ -10,9 +10,6 @@ use RuntimeException;
 // fails: custody fails closed rather than hold the raw key in-session, where
 // SESSION_DRIVER=database with session encryption off would persist the KEK
 // to the sessions table in plaintext. The caller re-runs the PIN unlock path.
-/**
- * @link ../../../../.docs/features/mobile/architecture.md
- */
 final class SecureStorageException extends RuntimeException
 {
     public static function nativeSetFailed(string $slot): self

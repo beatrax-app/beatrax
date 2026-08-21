@@ -11,14 +11,6 @@ use Modules\Core\Models\User;
 
 uses(RefreshDatabase::class);
 
-/*
- * Locks the Eloquent surface for system_alerts rows: cast map (metadata
- * array + acknowledged_at / created_at immutable_datetime), the active()
- * + byKind() scopes that the SystemAlertQuery and the banner consumer
- * read through, and the BelongsToUser-trait-provided user() relation
- * back into Modules\Core\Models\User.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);

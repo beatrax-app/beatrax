@@ -10,10 +10,9 @@ use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
-// Failure modes are tolerated and logged, never thrown, following the
-// CorpusYamlReader convention from the Community module: unknown
-// country / malformed YAML / missing entries all log a warning and
-// return []. PARSE_EXCEPTION_ON_INVALID_TYPE guards against native-tag object instantiation.
+// Every failure mode logs a warning and returns [] rather than throwing, so a
+// bad corpus file cannot break the tax page. PARSE_EXCEPTION_ON_INVALID_TYPE
+// stops a YAML native tag from instantiating an object.
 final class TaxCorpusLoader
 {
     public function __construct(
@@ -29,8 +28,7 @@ final class TaxCorpusLoader
         $code = strtolower(trim($countryCode));
 
         if (TaxCountry::tryFrom($code) === null) {
-            // Not an error — the caller may be probing an unavailable
-            // country for availability.
+            // Not an error: the caller may be probing whether a country exists.
             return [];
         }
 
@@ -39,9 +37,6 @@ final class TaxCorpusLoader
         return $this->extractEntries($parsed);
     }
 
-    // Reads and decodes a corpus file, tolerating every failure mode with a
-    // logged warning and a null return: a missing file, a ParseException
-    // (including the native-tag object guard), or any other read error.
     private function readCorpusYaml(string $path): mixed
     {
         if (! is_file($path)) {
@@ -73,8 +68,7 @@ final class TaxCorpusLoader
     private function extractEntries(mixed $parsed): array
     {
         if ($parsed === null) {
-            // A null here means readCorpusYaml already logged the missing-file
-            // or parse failure; stay quiet rather than double-warning.
+            // readCorpusYaml already logged the failure; do not double-warn.
             return [];
         }
 

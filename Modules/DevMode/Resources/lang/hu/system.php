@@ -7,6 +7,10 @@ return [
 
     'subtitle_html' => 'Környezet + futásidő + tényleges konfiguráció. Az érzékeny kulcsok (<code class="font-mono text-xs">*password*</code>, <code class="font-mono text-xs">*secret*</code>, <code class="font-mono text-xs">*key</code>, <code class="font-mono text-xs">*token*</code> végződéssel) maszkolva vannak.',
     'php' => 'PHP',
+    'php_version' => 'verzió',
+    'php_sapi' => 'sapi',
+    'php_ini_path' => 'ini útvonal',
+    'php_extensions' => 'bővítmények',
     'laravel' => 'Laravel',
     'sqlite' => 'SQLite',
     'sqlite_file' => 'fájl',

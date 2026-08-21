@@ -10,9 +10,6 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Internal\Services\TaxYearQuery as InternalTaxYearQuery;
 use Modules\Tax\Public\Dto\TaxYearData;
 
-/**
- * @link ../../../../.docs/features/tax/architecture.md
- */
 final class TaxYearQuery
 {
     public function __construct(

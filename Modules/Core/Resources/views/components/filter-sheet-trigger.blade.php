@@ -5,11 +5,11 @@
 ])
 
 {{--
-    Filter sheet trigger row (D-07, UI-SPEC §6.4).
+    Filter sheet trigger row (UI-SPEC §6.4).
     Phone-only: search field + "Filters" button with active-count badge.
     The consuming Livewire component passes wire:click to open the bottom sheet.
 
-    - Search input uses font-size: 16px to prevent iOS Safari auto-zoom (D-14).
+    - Search input uses font-size: 16px to prevent iOS Safari auto-zoom.
     - .side-badge reuses the existing sidebar badge pattern.
     - $attributes forwards wire:click from the consumer to the Filters button.
 --}}

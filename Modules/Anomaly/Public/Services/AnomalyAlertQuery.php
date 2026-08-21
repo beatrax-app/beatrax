@@ -16,16 +16,12 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/anomaly/architecture.md
- */
 final readonly class AnomalyAlertQuery
 {
     use CoercesScalars;
 
-    // 25 rows shown plus 1 look-ahead row the caller uses to decide
-    // whether a "next page" cursor exists; the look-ahead row is never
-    // rendered.
+    // Despite the name, nothing is held back: the page renders all 26 and reads
+    // a full 26 as "there may be more", seeding the next cursor off the last row.
     public const PAGE_SIZE_WITH_LOOKAHEAD = 26;
 
     public function __construct(
@@ -34,23 +30,25 @@ final readonly class AnomalyAlertQuery
         private CounterpartyProfileQuery $counterpartyQuery,
     ) {}
 
-    // The state filter is widened to include rows in `state='snoozed'`
-    // whose `snoozed_until` has elapsed: the sweep is the durable write,
-    // this query is the fresh read reflecting "open again" between sweeps.
+    // Elapsed snoozes count as open here: the sweep is the durable write, this
+    // is the fresh read that covers the gap between sweeps.
     /**
      * @return list<AnomalyAlertDto>
      */
-    public function openForUser(User $user, ?int $cursorId = null, int $limit = self::PAGE_SIZE_WITH_LOOKAHEAD): array
-    {
+    public function openForUser(
+        User $user,
+        ?string $cursorDetectedAt = null,
+        ?int $cursorId = null,
+        int $limit = self::PAGE_SIZE_WITH_LOOKAHEAD,
+    ): array {
         $query = $this->db->connection()->table('anomaly_alerts')
             ->where('user_id', $user->id)
             ->where(fn (Builder $q) => $this->applyOpenStateFilter($q))
+            ->orderByDesc('detected_at')
             ->orderByDesc('id')
             ->limit($limit);
 
-        if ($cursorId !== null) {
-            $query->where('id', '<', $cursorId);
-        }
+        $this->applyCursor($query, $cursorDetectedAt, $cursorId);
 
         return $this->materialise($user, $query->get());
     }
@@ -58,17 +56,25 @@ final readonly class AnomalyAlertQuery
     /**
      * @return list<AnomalyAlertDto>
      */
-    public function historyForUser(User $user, ?int $cursorId = null, int $limit = self::PAGE_SIZE_WITH_LOOKAHEAD): array
-    {
-        return $this->scoped($user, [AnomalyAlertState::Acknowledged->value], $cursorId, $limit);
+    public function historyForUser(
+        User $user,
+        ?string $cursorDetectedAt = null,
+        ?int $cursorId = null,
+        int $limit = self::PAGE_SIZE_WITH_LOOKAHEAD,
+    ): array {
+        return $this->scoped($user, [AnomalyAlertState::Acknowledged->value], $cursorDetectedAt, $cursorId, $limit);
     }
 
     /**
      * @return list<AnomalyAlertDto>
      */
-    public function dismissedForUser(User $user, ?int $cursorId = null, int $limit = self::PAGE_SIZE_WITH_LOOKAHEAD): array
-    {
-        return $this->scoped($user, [AnomalyAlertState::Dismissed->value], $cursorId, $limit);
+    public function dismissedForUser(
+        User $user,
+        ?string $cursorDetectedAt = null,
+        ?int $cursorId = null,
+        int $limit = self::PAGE_SIZE_WITH_LOOKAHEAD,
+    ): array {
+        return $this->scoped($user, [AnomalyAlertState::Dismissed->value], $cursorDetectedAt, $cursorId, $limit);
     }
 
     public function openCountForUser(User $user): int
@@ -79,10 +85,8 @@ final readonly class AnomalyAlertQuery
             ->count();
     }
 
-    // A multi-reason alert contributes to every reason it carries, so
-    // counts across detectors can exceed openCountForUser. Computed in
-    // PHP since `reasons` is a JSON list (SQLite has no first-class
-    // JSON-array aggregation here).
+    // A multi-reason alert contributes to every reason it carries, so these
+    // counts can sum to more than openCountForUser.
     /**
      * @return array<string, int>
      */
@@ -109,19 +113,35 @@ final readonly class AnomalyAlertQuery
      * @param  list<string>  $states
      * @return list<AnomalyAlertDto>
      */
-    private function scoped(User $user, array $states, ?int $cursorId, int $limit): array
+    private function scoped(User $user, array $states, ?string $cursorDetectedAt, ?int $cursorId, int $limit): array
     {
         $query = $this->db->connection()->table('anomaly_alerts')
             ->where('user_id', $user->id)
             ->whereIn('state', $states)
+            ->orderByDesc('detected_at')
             ->orderByDesc('id')
             ->limit($limit);
 
-        if ($cursorId !== null) {
-            $query->where('id', '<', $cursorId);
-        }
+        $this->applyCursor($query, $cursorDetectedAt, $cursorId);
 
         return $this->materialise($user, $query->get());
+    }
+
+    // The id is derived from the alert's own columns, so it sorts in hash order,
+    // not insertion order — paging on `id < cursor` alone would skip and repeat
+    // rows at random. detected_at leads; id only breaks ties within a timestamp.
+    private function applyCursor(Builder $query, ?string $cursorDetectedAt, ?int $cursorId): void
+    {
+        if ($cursorDetectedAt === null || $cursorId === null) {
+            return;
+        }
+
+        $query->where(function (Builder $page) use ($cursorDetectedAt, $cursorId): void {
+            $page->where('detected_at', '<', $cursorDetectedAt)
+                ->orWhere(function (Builder $tie) use ($cursorDetectedAt, $cursorId): void {
+                    $tie->where('detected_at', $cursorDetectedAt)->where('id', '<', $cursorId);
+                });
+        });
     }
 
     /**
@@ -134,9 +154,6 @@ final readonly class AnomalyAlertQuery
             return [];
         }
 
-        // Resolve transaction_id -> counterparty_id (a permitted ledger
-        // READ — the anomaly table keys per-transaction, not per-merchant),
-        // then transaction_id -> display name via the resolved counterparty.
         $counterpartyByTxn = $this->counterpartyIdsForTransactions($user, $rows);
         $displayNames = $this->loadDisplayNames($user, $counterpartyByTxn);
 
@@ -151,9 +168,9 @@ final readonly class AnomalyAlertQuery
         return $result;
     }
 
-    // A permitted READ of the ledger (noTransactionWritesFromAnomaly
-    // forbids only writes); the anomaly table keys per-transaction so the
-    // merchant id lives on the transaction.
+    // A permitted cross-module READ of the ledger (the boundary test pins only
+    // writes); anomaly_alerts keys per-transaction, so the merchant id is over
+    // on the transaction.
     /**
      * @param  Collection<int, stdClass>  $rows
      * @return array<int, int>
@@ -191,8 +208,6 @@ final readonly class AnomalyAlertQuery
         return $map;
     }
 
-    // Rows in `state='open'`, plus rows in `state='snoozed'` whose
-    // `snoozed_until` has elapsed.
     private function applyOpenStateFilter(Builder $query): void
     {
         $now = $this->clock->now()->toDateTimeString();

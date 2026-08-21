@@ -6,9 +6,6 @@ namespace Modules\EmailScan\Public\Events;
 
 use Carbon\CarbonImmutable;
 
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final readonly class IcsStatementReady
 {
     public function __construct(

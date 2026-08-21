@@ -8,9 +8,8 @@ use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Spatie\LaravelData\Data;
 
-// The root node has $chainLinkId null and $kind = 'root'; funder legs
-// carry their chain_links.id and a $confidenceTier mapping (state,
-// resolver, confidence) to the UI's Deterministic/Confirmed/Candidate chip.
+// The root node is encoded as $chainLinkId null + $kind "root"; every
+// other node carries its chain_links.id.
 final class ChainTreeNode extends Data
 {
     /**

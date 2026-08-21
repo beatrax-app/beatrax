@@ -18,9 +18,8 @@ final class ShiftSeriesDatePayload extends ScenarioMutationPayload
         public readonly string $newNextDate,
         public readonly string $scope,
     ) {
-        // A typo like 'next_only' would otherwise silently fall through
-        // to 'next' (shifting only the first occurrence) even when the
-        // user picked "all subsequent".
+        // ScenarioApplier only tests for 'all_subsequent', so any other value
+        // collapses to shifting the first occurrence alone.
         if (ShiftScope::tryFrom($scope) === null) {
             throw new InvalidArgumentException(
                 'ShiftSeriesDatePayload.scope must be one of: '.implode(' | ', array_map(static fn (ShiftScope $c): string => "'".$c->value."'", ShiftScope::cases()))."; got '{$scope}'."

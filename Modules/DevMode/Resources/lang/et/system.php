@@ -7,6 +7,10 @@ return [
 
     'subtitle_html' => 'Keskkond, käituskeskkond ja tegelik konfiguratsioon. Tundlikud võtmed (lõpud <code class="font-mono text-xs">*password*</code>, <code class="font-mono text-xs">*secret*</code>, <code class="font-mono text-xs">*key</code>, <code class="font-mono text-xs">*token*</code>) on varjatud.',
     'php' => 'PHP',
+    'php_version' => 'versioon',
+    'php_sapi' => 'sapi',
+    'php_ini_path' => 'ini tee',
+    'php_extensions' => 'laiendused',
     'laravel' => 'Laravel',
     'sqlite' => 'SQLite',
     'sqlite_file' => 'fail',

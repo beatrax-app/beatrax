@@ -8,12 +8,8 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Exceptions\NotAuthenticatedException;
 use Modules\Core\Public\Scopes\UserScope;
 
-/*
- * UserScope must fail closed on a web request with no authenticated user: a
- * per-user table is constrained to match nothing rather than leaking every
- * user's rows. The console keeps its historical unscoped behaviour, which is
- * why the rest of the suite (running in the console) is unaffected.
- */
+// The console keeps its historical unscoped behaviour, which is why the rest of
+// the suite — running in the console — is unaffected by the fail-closed path.
 
 it('constrains a web query to nothing when no user is authenticated', function (): void {
     $currentUser = Mockery::mock(CurrentUser::class);

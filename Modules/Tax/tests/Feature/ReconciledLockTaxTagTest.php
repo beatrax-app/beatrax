@@ -10,23 +10,7 @@ use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 
-/*
- * U-1 regression (browser UAT): the whole-transaction "Tag as tax-relevant"
- * path (HandlesTaxTagging → TagTransaction/UntagTransaction) must honour the
- * D-08 reconciled lock the same warn-first way the Ledger-side leg toggle
- * does (review WR-01, ReconciledLockGuardsTest::toggleLegTax). Before the fix
- * this parallel cross-module path wrote a tax_transaction_tags row to a
- * reconciled transaction with no guard.
- *
- * Driven through TransactionDetail — the trait consumer and the exact surface
- * UAT exercised (the tx detail page) — using the new Ledger Public
- * TransactionStatusQuery seam the Tax trait now consults.
- */
-
 /**
- * Insert one transaction row and return its id. Mirrors the raw-insert
- * fixture idiom in TaxTagActionTest / ReconciledLockGuardsTest.
- *
  * @param  array<string, mixed>  $overrides
  */
 function taxLockTx(int $userId, int $accountId, int $runId, array $overrides = []): int
@@ -130,7 +114,6 @@ it('untag refuses to remove the tax tag of a reconciled transaction (warn-first,
         ->call('untag')
         ->assertDispatched('toast');
 
-    // The existing tag survives — the reconciled lock blocked the delete.
     expect(DB::table('tax_transaction_tags')->where('transaction_id', $txId)->count())->toBe(1);
 });
 

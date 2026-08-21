@@ -13,17 +13,6 @@ use Modules\Recurring\Public\Actions\UnRejectRecurringSeries;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/*
- * End-to-end cross-user isolation:
- *  - Every Public Action raises NotFoundHttpException when the series
- *    belongs to a different user.
- *  - Every RecurringSeriesQuery read scopes by user_id; cross-user
- *    reads return empty lists or null.
- *
- * Two users, two series — one owned by user A, one by user B. Calls
- * from each side assert the other side's row is untouched / unread.
- */
-
 function cusUser(string $username): User
 {
     return User::query()->create([
@@ -105,7 +94,6 @@ it('UnRejectRecurringSeries 404s when invoked against a cross-user id', function
     /** @var UnRejectRecurringSeries $action */
     $action = $this->app->make(UnRejectRecurringSeries::class);
 
-    // Try unrejecting user B's rejected row from user A.
     expect(fn () => ($action)($this->seriesB->id, $this->userA))
         ->toThrow(NotFoundHttpException::class);
 });
@@ -120,7 +108,7 @@ it('RecurringSeriesQuery::pendingForUser returns only the user own pending rows'
     expect($aRows)->toHaveCount(1);
     expect($aRows[0]->seriesId)->toBe($this->seriesA->id);
 
-    // User B has only a rejected row → no pending rows.
+    // User B has only a rejected row.
     expect($bRows)->toBeEmpty();
 });
 
@@ -140,7 +128,6 @@ it('RecurringSeriesQuery::approvedForUser stays empty cross-user', function (): 
     /** @var RecurringSeriesQuery $query */
     $query = $this->app->make(RecurringSeriesQuery::class);
 
-    // Approve A's row.
     /** @var ApproveRecurringSeries $approve */
     $approve = $this->app->make(ApproveRecurringSeries::class);
     ($approve)($this->seriesA->id, $this->userA);

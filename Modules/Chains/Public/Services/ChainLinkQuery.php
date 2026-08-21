@@ -24,29 +24,23 @@ use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/chains/architecture.md
- */
 final class ChainLinkQuery
 {
     use CoercesScalars;
 
     private const COUNTERPARTY_SLUG = 'counterparties.slug as counterparty_slug';
 
-    // The sentinel a missing posted_at collapses to, so an unsorted row
-    // orders first rather than throwing on a null date comparison.
+    // Sentinel for a missing posted_at: sorts first instead of throwing.
     private const EPOCH_DATE = '1970-01-01';
 
-    // Mirrored in ConfirmChainLink; kept private here because the only
-    // consumer is the confirmsRemaining derivation.
+    // Mirrored in ConfirmChainLink — the two have to move together.
     private const AUTO_PROMOTE_THRESHOLD = 3;
 
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly SensitiveColumnCodec $codec,
-        // A factory, not the session itself: resolving a session builds the
-        // encrypter, and this class is reachable from a console command that
-        // Artisan constructs merely to list it.
+        // A factory, not the session: resolving one builds the encrypter, and
+        // Artisan constructs this class merely to list the console command.
         private readonly SessionFactory $session,
         private readonly HintEvidenceSummary $hintEvidence,
         private readonly ChainTreeWalker $treeWalker,
@@ -81,8 +75,6 @@ final class ChainLinkQuery
         return $result;
     }
 
-    // Gates the transaction-detail page's "View chain" trigger so it only
-    // renders for rows that actually have something behind the click.
     public function hasChainForTransaction(int $transactionId, User $user): bool
     {
         return $this->db->connection()->table('chain_links')
@@ -95,10 +87,8 @@ final class ChainLinkQuery
             ->exists();
     }
 
-    // Used by the Forecasting module's chain-aware router to rewrite
-    // contribution account ids onto the funder accounts. An empty result
-    // means "no chain resolution" — the contribution stays on the series's
-    // own account.
+    // Forecasting's chain-aware router rewrites contribution account ids onto
+    // these funders; an empty result leaves the contribution where it is.
     /**
      * @return list<SeriesFunderLink>
      */
@@ -155,9 +145,8 @@ final class ChainLinkQuery
         );
     }
 
-    // The cursor is the (confidence, id) tuple of the previous page's last
-    // row; lexicographic (confidence, id) < (cursor) keeps the sort stable
-    // across ties on confidence.
+    // Keyset cursor: the (confidence, id) tuple of the previous page's last
+    // row, compared lexicographically so ties on confidence stay stable.
     /**
      * @return list<ChainLinkRow>
      */
@@ -167,9 +156,8 @@ final class ChainLinkQuery
         ?string $cursorConfidence = null,
         int $limit = 26,
     ): array {
-        // Hint-shaped rows carry to_transaction_id IS NULL and cannot be
-        // confirmed/rejected via the queue's buttons — filtered out here
-        // so the review queue only surfaces actionable rows.
+        // Hint-shaped rows (to_transaction_id IS NULL) have no confirm/reject
+        // path, so the queue filters them out as unactionable.
         $query = $this->db->connection()->table('chain_links')
             ->where('user_id', $user->id)
             ->where('state', ChainLinkState::Candidate->value)
@@ -201,9 +189,7 @@ final class ChainLinkQuery
         return $result;
     }
 
-    // The complement of candidatesForReview() — every candidate row with
-    // to_transaction_id IS NULL, dismissable only via DismissChainLinkHint.
-    // Sorted newest-first so a fresh scan surfaces at the top to triage.
+    // DismissChainLinkHint is the only way to clear one of these.
     /**
      * @return list<ChainLinkHintRow>
      */
@@ -226,8 +212,7 @@ final class ChainLinkQuery
         return $result;
     }
 
-    // Separate from hintsForReview() so a badge can show the count
-    // without paying the per-row from-transaction lookup cost.
+    // Separate from hintsForReview() so a badge skips the per-row lookup.
     public function hintCount(User $user): int
     {
         return $this->db->connection()->table('chain_links')
@@ -237,8 +222,6 @@ final class ChainLinkQuery
             ->count();
     }
 
-    // Reads through SensitiveColumnCodec; a pass-through no-op when
-    // encryption is not enabled for this user.
     private function decryptCounterpartyName(?string $raw, int $userId): string
     {
         $stored = $raw ?? '';
@@ -249,8 +232,6 @@ final class ChainLinkQuery
         return $this->codec->decryptValue('transactions', 'counterparty_name', $stored, $userId, ($this->session)())['value'];
     }
 
-    // An empty slug or a missing column both collapse to null so the
-    // consumer falls back to plain-text rendering instead of a dead-end URL.
     private static function extractCounterpartySlug(stdClass $row): ?string
     {
         if (! property_exists($row, 'counterparty_slug') || $row->counterparty_slug === null) {

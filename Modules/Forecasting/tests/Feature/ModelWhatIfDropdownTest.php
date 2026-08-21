@@ -6,25 +6,13 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
-use Modules\Forecasting\Internal\Http\Livewire\ModelWhatIfDropdown;
 use Modules\Forecasting\Public\Actions\CreateAmountChangeScenarioForSeries;
 use Modules\Forecasting\Public\Actions\CreateCancellationScenarioForSeries;
+use Modules\Forecasting\Public\Http\Livewire\ModelWhatIfDropdown;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 uses(RefreshDatabase::class);
-
-/*
- * Phase 8 `/recurring/series/{id}` "Model what-if ↗" dropdown.
- *
- *   - Mounts with the current series amount pre-populated.
- *   - Model cancellation → invokes launchpad + redirects.
- *   - Model amount change → opens inline form pre-populated;
- *     Save invokes launchpad + redirects.
- *   - Cross-user mount via the series query → 404.
- *   - Invalid amount surfaces inline error and does NOT invoke the
- *     launchpad.
- */
 
 function mwidUser(string $username = 'mwid'): User
 {
@@ -82,7 +70,6 @@ it('Model cancellation invokes CreateCancellationScenarioForSeries + redirects t
         ->call('modelCancellation')
         ->assertRedirectContains('/forecast?scenarioId=');
 
-    // The scenario row was created with the cancel mutation.
     $scenarios = $this->db->connection()->table('forecast_scenarios')->where('user_id', $this->user->id)->get();
     expect($scenarios->count())->toBe(1);
     $mutations = $this->db->connection()->table('forecast_scenario_mutations')->where('forecast_scenario_id', $scenarios->first()->id)->get();
@@ -125,12 +112,9 @@ it('cross-user mount via RecurringSeriesQuery::forSeries returns null', function
     $seriesId = mwidSeries($this->db, $other->id);
     /** @var RecurringSeriesQuery $sq */
     $sq = $this->app->make(RecurringSeriesQuery::class);
+    // Livewire::test() does not surface mount-time exceptions here, so the null
+    // the dropdown's mount() 404s on is what gets asserted.
     expect($sq->forSeries($seriesId, $this->user))->toBeNull();
-    // The dropdown's mount() raises NotFoundHttpException whenever
-    // forSeries returns null; the cross-user contract is locked at the
-    // Public Service layer here (Livewire mount-time exceptions don't
-    // surface synchronously in Livewire::test() in this project's
-    // Livewire 4 setup — same pattern as Plan 10-04's AccountBufferEditor).
 });
 
 it('invalid amount input surfaces the inline error and does NOT invoke the launchpad', function (): void {
@@ -143,7 +127,6 @@ it('invalid amount input surfaces the inline error and does NOT invoke the launc
         ->call('saveAmountChange')
         ->assertSet('errorMessage', 'Amount must be a positive number.');
 
-    // No scenario was created.
     expect($this->db->connection()->table('forecast_scenarios')->where('user_id', $this->user->id)->count())->toBe(0);
 });
 

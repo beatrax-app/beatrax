@@ -6,24 +6,6 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Mobile\Internal\Exceptions\SecureStorageException;
 use Modules\Mobile\Internal\Identity\SecureStorageKeyCustodian;
 
-/*
- * Unit tests for SecureStorageKeyCustodian.
- *
- * Two layers:
- *   - OFF-DEVICE fallback: in the repo-root toolchain the SecureStorage facade
- *     is absent and NATIVEPHP_PLATFORM is unset, so runtimeAvailable() is false
- *     and the custodian is the identity function — what keeps every unrelated
- *     test green without the plugin.
- *   - ON-DEVICE: a subclass overrides the nativeSet/nativeGet/nativeDelete/
- *     runtimeAvailable seams with an in-memory Keychain so the per-user slot,
- *     the null-on-missing guard, and the base64-failure guard are all covered
- *     without the real facade (which is unreachable here). The real Keychain
- *     round-trip is on-device UAT.
- */
-
-/**
- * In-memory stand-in for the native secure store, driving the on-device paths.
- */
 class FakeSecureStorageCustodian extends SecureStorageKeyCustodian
 {
     /** @var array<string, string> */
@@ -65,7 +47,10 @@ function secureStorageCurrentUser(int $id): CurrentUser
     return $user;
 }
 
-// --- Off-device fallback (identity) -----------------------------------------
+// In the repo-root toolchain the SecureStorage facade is absent and
+// runtimeAvailable() is false, so the custodian is the identity function, which is
+// what keeps every unrelated test green without the plugin. The on-device paths
+// run against an in-memory subclass; the real Keychain is on-device verification.
 
 it('degrades store() to pass-through when the mobile runtime is unavailable', function (): void {
     $custodian = new SecureStorageKeyCustodian(secureStorageCurrentUser(1));
@@ -86,8 +71,6 @@ it('forget() is a safe no-op off-device', function (): void {
 
     expect(fn () => $custodian->forget('beatrax.session.data_key.1'))->not->toThrow(Throwable::class);
 });
-
-// --- On-device (fake Keychain) ----------------------------------------------
 
 it('stores the key under a per-user slot and returns the slot name as the handle', function (): void {
     $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7));

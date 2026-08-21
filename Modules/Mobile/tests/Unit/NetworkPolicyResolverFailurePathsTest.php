@@ -6,28 +6,9 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Exceptions\NetworkPolicyException;
 use Modules\Mobile\Internal\Sync\NetworkPolicyResolver;
 
-/*
- * NetworkPolicyResolverFailurePathsTest — the two I/O failure branches of
- * NetworkPolicyResolver::setPauseOnCellular() that the happy-path
- * NetworkPolicyResolverTest never reaches:
- *
- *   - the policy directory cannot be created            -> NetworkPolicyException::directoryNotCreatable()
- *   - the policy file itself cannot be written           -> NetworkPolicyException::notWritable()
- *
- * Both are local-storage faults the resolver surfaces (never silently
- * drops), since a lost toggle would let sync run on a paused connection.
- *
- * UserDataPathService::appPath() derives its root from NATIVEPHP_STORAGE_PATH
- * (see UserDataPathService::storageRoot()), so each test redirects that env
- * var to a throwaway temp tree it can make un-creatable / un-writable
- * without touching the real device store, then restores it.
- */
-
-/**
- * Point UserDataPathService at a fresh temp storage root for the duration of
- * $body, restoring the previous NATIVEPHP_STORAGE_PATH afterwards. Returns
- * the temp root so the caller can shape it (e.g. block directory creation).
- */
+// UserDataPathService derives its root from NATIVEPHP_STORAGE_PATH, so each test
+// redirects it at a throwaway tree it can make un-creatable or un-writable without
+// touching the real device store.
 function withTempStorageRoot(Closure $body): void
 {
     $previous = getenv('NATIVEPHP_STORAGE_PATH');
@@ -49,11 +30,13 @@ function withTempStorageRoot(Closure $body): void
     }
 }
 
+// A silently dropped toggle would let sync run on a connection the user paused, so
+// both local-storage faults surface as exceptions.
+
 it('throws NetworkPolicyException::directoryNotCreatable when the policy directory cannot be made', function (): void {
     withTempStorageRoot(function (string $root): void {
-        // appPath() is "<root>/app/mobile/network-policy.json"; its parent
-        // dir is "<root>/app/mobile". Plant a regular FILE at "<root>/app"
-        // so mkdir() of any child underneath it can never succeed.
+        // A regular file planted at "<root>/app" means mkdir() of any child
+        // underneath it can never succeed.
         $appAsFile = $root.DIRECTORY_SEPARATOR.'app';
         file_put_contents($appAsFile, 'not a directory');
 
@@ -70,11 +53,9 @@ it('throws NetworkPolicyException::notWritable when the policy file cannot be wr
     withTempStorageRoot(function (): void {
         $path = UserDataPathService::appPath('mobile/network-policy.json');
 
-        // Create the parent dir the resolver expects, then occupy the exact
-        // target path with a DIRECTORY — file_put_contents() to a path that
-        // is itself a directory fails regardless of the running uid (so this
-        // stays deterministic even under a root CI runner where chmod would
-        // not bite).
+        // Occupying the exact target path with a directory makes
+        // file_put_contents() fail whatever the running uid, so this stays
+        // deterministic under a root CI runner where chmod would not bite.
         mkdir($path, 0700, true);
 
         $resolver = new NetworkPolicyResolver;

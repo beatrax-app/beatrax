@@ -7,10 +7,9 @@ namespace Modules\Desktop\Internal\Listeners;
 use Modules\Desktop\Internal\Native\FileOpenIntake;
 use Native\Desktop\Events\App\OpenFile;
 
-// Bridges NativePHP's macOS app.on('open-file') event (and the
-// cross-OS argv / second-instance paths the published Electron main.js
-// extends to Windows/Linux) to FileOpenIntake — the one validation
-// boundary every OS-file-open path converges on.
+// Bridges NativePHP's macOS app.on('open-file') event — and the argv /
+// second-instance paths the published Electron main.js extends to Windows and
+// Linux — to FileOpenIntake.
 final class HandleNativeOpenFile
 {
     public function __construct(
@@ -27,9 +26,8 @@ final class HandleNativeOpenFile
         $this->intake->receive($path);
     }
 
-    // NativePHP's event delivers `path` as an untyped property: some
-    // versions send a plain string, others a keyed or list-shaped
-    // array. A string passes through; an array is resolved key-first.
+    // NativePHP's event delivers `path` as an untyped property: some versions
+    // send a plain string, others a keyed or list-shaped array.
     private function normalize(mixed $raw): ?string
     {
         return match (true) {
@@ -39,9 +37,8 @@ final class HandleNativeOpenFile
         };
     }
 
-    // A key-aware lookup takes the explicit `path` entry first so a
-    // sibling metadata string (e.g. 'open-file') is never picked over
-    // the real path; only then does it fall back to list iteration.
+    // The explicit `path` entry wins so a sibling metadata string (e.g.
+    // 'open-file') is never picked over the real path.
     /**
      * @param  array<array-key, mixed>  $raw
      */

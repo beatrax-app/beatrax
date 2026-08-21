@@ -11,9 +11,6 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Public\Dto\ForecastHighlightsDto;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final readonly class ForecastHighlightsQuery
 {
     private const int HORIZON_DAYS = 30;
@@ -54,9 +51,8 @@ final readonly class ForecastHighlightsQuery
         );
     }
 
-    // Lowest projected balance across all accounts in the next 30 days.
-    // The forecast run carries every account's points in a single
-    // result_json, so the run is loaded once (not once per account).
+    // One run holds every account's points in its result_json, so this loads
+    // the run once rather than once per account.
     /**
      * @return array{balanceMinor: int, date: string, accountId: int, accountName: string}|null
      */
@@ -129,9 +125,8 @@ final readonly class ForecastHighlightsQuery
      */
     private function pointMinorOnDate(mixed $point): ?array
     {
-        // Skip malformed rows entirely — a point without a string date
-        // contributes nothing to the "lowest on date X" surface; a ''
-        // sentinel would let the tile render " on " with no date.
+        // Dropped rather than defaulted: a '' date sentinel would let the tile
+        // render "… on " with nothing after it.
         if (! is_array($point) || ! is_string($point['date'] ?? null) || $point['date'] === '') {
             return null;
         }

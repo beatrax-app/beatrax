@@ -5,24 +5,9 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Calendar\Internal\Dto\CalendarDayDto;
 use Modules\Calendar\Internal\Services\CalendarQuery;
-use Modules\Calendar\Public\Dto\CalendarDayDto;
 use Modules\Core\Models\User;
-
-/*
- * CalendarQuery — start-of-day balance chain honesty (WR-08) and past-day
- * actual balances (WR-09, D-07).
- *
- * Contract:
- *   - Past days carry the REAL cumulative transaction balance (actuals),
- *     independent of forecast runs (D-07: "real balances up to today and
- *     projection after").
- *   - SoD is the prior grid day's EoD ONLY when that EoD is known
- *     (non-computing). A day after a data-less day carries
- *     sodBalanceMinor === null ("unknown"), never a fabricated 0.
- *   - Today's SoD chains from yesterday's actual EoD; the forecast's
- *     todayBalanceMinor anchor is the fallback when no actual exists.
- */
 
 function cqsbUser(string $suffix): User
 {
@@ -94,8 +79,6 @@ function cqsbTransaction(DatabaseManager $db, int $userId, int $accountId, strin
 }
 
 /**
- * Seed a complete 365-day forecast_run with explicit points.
- *
  * @param  array<string, int>  $pointsByDate  date => pointMinor
  */
 function cqsbForecastRun(DatabaseManager $db, int $userId, int $accountId, int $todayBalanceMinor, array $pointsByDate): void
@@ -157,18 +140,15 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow(null);
 });
 
-it('chains today\'s SoD from yesterday\'s actual and marks unknown SoD as null (WR-08, WR-09)', function (): void {
+it('chains today\'s SoD from yesterday\'s actual and marks unknown SoD as null', function (): void {
     $db = app(DatabaseManager::class);
     $user = cqsbUser('anchor');
     $accountId = cqsbAccount($db, $user->id);
 
-    // Real balance: one +€500,00 income on June 10 → actual EoD 50000 from
-    // June 10 onward (past days are actuals per D-07 / WR-09).
     cqsbTransaction($db, $user->id, $accountId, '2026-06-10', 50000);
 
-    // Forecast: points on today (June 12), June 19 and June 20 only — gaps
-    // elsewhere. The anchor agrees with the real balance (as in production,
-    // where the anchor IS the transactions sum).
+    // Three points only — the gaps between them are what this exercises. The
+    // anchor matches the real balance, as it does in production.
     cqsbForecastRun($db, $user->id, $accountId, 50000, [
         '2026-06-12' => 48000,
         '2026-06-19' => 30000,
@@ -179,7 +159,7 @@ it('chains today\'s SoD from yesterday\'s actual and marks unknown SoD as null (
     $calendarQuery = app(CalendarQuery::class);
     $days = $calendarQuery->forMonth($user, 2026, 6, null, [$accountId]);
 
-    // Past days carry actuals (WR-09): known balance, no computing sentinel.
+    // Past days carry actuals: a known balance, no computing sentinel.
     $june10 = cqsbDay($days, '2026-06-10');
     expect($june10->isComputing)->toBeFalse();
     expect($june10->eodBalanceMinor)->toBe(50000);
@@ -196,19 +176,15 @@ it('chains today\'s SoD from yesterday\'s actual and marks unknown SoD as null (
     expect($today->sodBalanceMinor)->toBe(50000);
     expect($today->eodBalanceMinor)->toBe(48000);
 
-    // June 13: prior day's EoD is known → SoD chains from it.
     expect(cqsbDay($days, '2026-06-13')->sodBalanceMinor)->toBe(48000);
 
-    // June 14: prior day (13) had no point → unknown EoD → SoD must be null,
-    // not a fabricated 0 (WR-08).
+    // June 13 had no point, so June 14's SoD must be null, not a fabricated 0.
     expect(cqsbDay($days, '2026-06-14')->sodBalanceMinor)->toBeNull();
 
-    // June 20: prior day (19) is known again → SoD chains.
     expect(cqsbDay($days, '2026-06-20')->sodBalanceMinor)->toBe(30000);
 
-    // The first grid day (Mon June 1 — June 2026 starts on a Monday) has no
-    // prior day inside the grid → SoD unknown (WR-08), while its own EoD is
-    // a real actual (€0,00 — no transactions existed yet).
+    // June 2026 starts on a Monday, so June 1 is the first grid day and has no
+    // prior day to chain from — while its own EoD is a real (zero) actual.
     $gridFirst = cqsbDay($days, '2026-06-01');
     expect($gridFirst->sodBalanceMinor)->toBeNull();
     expect($gridFirst->isComputing)->toBeFalse();

@@ -8,16 +8,10 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Mobile\Internal\Identity\BiometricKeyVault;
 use Modules\Mobile\Internal\Identity\BiometricRecoverResult;
 
-/*
- * Unit tests for BiometricKeyVault — the cold-start enclave vault.
- *
- * The native BiometricVault facade is unreachable in the repo toolchain, so a
- * subclass overrides the runtimeAvailable/vaultSet/vaultGet/vaultDelete seams
- * with an in-memory enclave. The blob crypto (BiometricKeyBlobCodec) is REAL,
- * so the enroll→recover round-trip exercises the true wrap/unwrap path; only
- * the OS biometric gate is faked (its release decision is the on-device UAT).
- */
-
+// The native BiometricVault facade is unreachable in the repo toolchain, so this
+// subclass supplies an in-memory enclave. The blob crypto is real, so the
+// enroll/recover round-trip exercises the true wrap and unwrap path; only the OS
+// biometric gate is faked.
 class FakeBiometricKeyVault extends BiometricKeyVault
 {
     /** @var array<string, string> */
@@ -28,7 +22,6 @@ class FakeBiometricKeyVault extends BiometricKeyVault
     /** @var array<string, mixed>|null forces a specific native get() outcome */
     public ?array $forcedGet = null;
 
-    /** Value the async pollRecovered() seam returns (base64 blob, or null). */
     public ?string $pollValue = null;
 
     protected function runtimeAvailable(): bool
@@ -154,13 +147,11 @@ it('returns missing when the stored blob is corrupt (fails closed)', function ()
     expect($vault->recover()->status)->toBe(BiometricRecoverResult::MISSING);
 });
 
-// --- completePendingRecover() (Android async) --------------------------------
-
 it('completePendingRecover round-trips a stashed blob to RECOVERED', function (): void {
     $vault = fakeVault();
     $dataKey = random_bytes(32);
-    // Stash what the async native callback would have decrypted: base64 of the
-    // real biometric blob, produced by the same codec the vault uses.
+    // What the async native callback would have decrypted: base64 of the real
+    // biometric blob, produced by the same codec the vault uses.
     $vault->pollValue = base64_encode((new BiometricKeyBlobCodec(new AppLockKeyWrap))->wrap($dataKey));
 
     $result = $vault->completePendingRecover();

@@ -15,25 +15,6 @@ use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
 
 uses(RefreshDatabase::class, EnablesEncryptionForUser::class);
 
-/*
- * 14.1-14 Task 1 (Cluster 4 / CRYPT-01, T-14.1-14a) —
- * ThreeWayMergeResolver::reconcileTransactionDescriptions() must decrypt the
- * LIVE stored transactions.description before the === compare against the
- * plaintext $baseline snapshot. Pre-fix, the compare ran the raw stored
- * CIPHERTEXT against the plaintext baseline, so ciphertext could never equal
- * the baseline and every migration re-sync registered a spurious conflict on
- * every row once encryption was enabled (same bug class as
- * FingerprintStage::detectConflicts()'s Cluster 3 fix). Tests run against a
- * REAL encrypted user via EnablesEncryptionForUser so a decrypt-of-plaintext
- * no-op can never mask a still-broken compare.
- *
- * These construct the migration_source_map / migration_import_baseline /
- * migration_staging_transactions rows directly rather than driving the full
- * ynab4-fixture CheckForUpdates pipeline (ThreeWayMergeReconciliationTest's
- * own established style) — the resolver's decrypt-before-compare behavior is
- * unit-testable in isolation and does not need a real parsed export.
- */
-
 function mtwmUser(): User
 {
     return User::query()->create([
@@ -55,15 +36,8 @@ function mtwmAccount(User $user): Account
     ]);
 }
 
-/**
- * Seeds the full 3-way-merge fixture for a single transaction: a real
- * `transactions` row with `description` stored as GENUINE CIPHERTEXT (via
- * `SensitiveColumnCodec::encryptValue`, mirroring what a real import writes
- * at rest), a persistent `migration_source_map` row mapping it to a source
- * external id, a `migration_import_baseline` row snapshotting the plaintext
- * baseline description, and a `migration_staging_transactions` row for a
- * freshly-started re-import run carrying the new source value.
- */
+// The stored description is genuine ciphertext while the baseline snapshot is
+// plaintext — the mismatch the resolver has to bridge.
 function mtwmSeed(
     User $user,
     Account $account,
@@ -170,10 +144,8 @@ it('applies the source description cleanly (no spurious conflict) when the decry
     /** @var SensitiveColumnCodec $codec */
     $codec = app(SensitiveColumnCodec::class);
 
-    // Stored (ciphertext, decrypts to) == baseline; source has genuinely
-    // changed. Pre-fix: raw ciphertext !== plaintext baseline would have
-    // wrongly classified this as a CONFLICT (current diverged from
-    // baseline) instead of a clean apply.
+    // Stored decrypts to the baseline; only the source changed. Pre-fix, raw
+    // ciphertext !== plaintext baseline made this a spurious conflict.
     $fixture = mtwmSeed(
         $user,
         $account,
@@ -203,8 +175,6 @@ it('registers a conflict carrying the DECRYPTED plaintext local value when the s
     /** @var SensitiveColumnCodec $codec */
     $codec = app(SensitiveColumnCodec::class);
 
-    // Stored (ciphertext, decrypts to) genuinely differs from baseline AND
-    // the source also changed — a genuine conflict.
     $fixture = mtwmSeed(
         $user,
         $account,
@@ -222,8 +192,6 @@ it('registers a conflict carrying the DECRYPTED plaintext local value when the s
         static fn ($conflict): bool => $conflict->entityType === 'transaction' && $conflict->fieldName === 'description',
     ));
     expect($conflicts)->toHaveCount(1);
-    // The conflict's local value must be the DECRYPTED plaintext, never the
-    // raw ciphertext blob.
     expect($conflicts[0]->localValue)->toBe('Weekly groceries plus wine');
     expect($conflicts[0]->sourceValue)->toBe('Weekly groceries (updated by store)');
     expect($conflicts[0]->baselineValue)->toBe('Weekly groceries');

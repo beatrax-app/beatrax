@@ -10,11 +10,8 @@ use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 
 uses(RefreshDatabase::class);
 
-/*
- * Mirrors EnvelopeMovesRegistryColumnsTest for the goal_contributions pivot.
- * An attribution made on the desktop has to reach the phone, so the table is
- * covered append-only: create + delete, no LWW-mutable field.
- */
+// An attribution made on the desktop has to reach the phone, so the pivot is
+// covered append-only: create and delete, with no LWW-mutable field.
 
 it('MergeRulesRegistry goal_contributions _create_required is a subset of the real NOT-NULL-without-default columns', function (): void {
     $connection = app(DatabaseManager::class)->connection();

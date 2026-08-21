@@ -5,26 +5,11 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
+// Deliberately not `constrained('counterparties')`: pruning an orphaned
+// counterparty must not cascade its transaction history away. The garbage
+// collector NULLs this column itself before deleting.
 /**
- * Adds the nullable `counterparty_id` column to the transactions
- * table — the FK link the ResolveCounterpartyStage (Plan 17-05b)
- * stamps onto every row after the resolver upserts the matching
- * Counterparty.
- *
- * Deliberate omission: NO `constrained('counterparties')`. The
- * cascade is from the user side only (transactions inherit
- * cascadeOnDelete from users via the existing schema) so an orphaned
- * Counterparty row pruned by the future garbage-collector job does
- * NOT cascade-delete its history. Transactions keep their resolved
- * counterparty_id reference; the GC job nulls them out via an
- * explicit `UPDATE transactions SET counterparty_id = NULL WHERE
- * counterparty_id IN (...)` before the prune so referential integrity
- * is maintained without losing the underlying transaction rows.
- *
- * Index (user_id, counterparty_id) powers the counterparty-profile
- * page's "all transactions for this counterparty" hot-path query
- * with a user-scoped composite that survives partner-multi-user
- * separation.
+ * @link ../../../../.docs/features/counterparties/garbage-collection.md#the-prune
  */
 return new class extends ModuleMigration
 {

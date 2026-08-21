@@ -6,12 +6,6 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
-/**
- * Coverage for the recurring ↔ counterparty link queries that power the
- * bidirectional navigation (a counterparty profile's Recurring card and the
- * series detail page's "View counterparty" link). Both resolve through
- * occurrences → transactions.counterparty_id.
- */
 function linkChain(DatabaseManager $db, int $userId, int $counterpartyId, string $state = 'approved'): int
 {
     $seriesId = $db->connection()->table('recurring_series')->insertGetId([

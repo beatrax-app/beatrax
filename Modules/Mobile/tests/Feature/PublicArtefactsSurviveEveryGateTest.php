@@ -13,26 +13,14 @@ use Symfony\Component\HttpFoundation\Response;
 
 uses(RefreshDatabase::class);
 
-/*
- * The manifest and the icon set are fetched by the WebView itself, and no web
- * server sits in front of PHP on a phone — so a gate that catches them answers
- * an image request with a page of HTML.
- *
- * Driving a real iPhone mid-setup, /icon.png returned 200 with
- * content-type: text/html and the body of "Setting up… · Beatrax".
- * MobileEnsureDatabaseReady already exempted these; MobileEnsureImportCompleted
- * did not, and that is the gate running during setup.
- *
- * The guard used to grep the middleware source for the route names, which a
- * name sitting in a comment or an unread constant satisfies just as well.
- */
-
 /** @return list<string> the route names every mobile gate must let through */
 function publicArtefactRouteNames(): array
 {
     return ['site.webmanifest', 'pwa.icon', 'app.icon', 'app.splash'];
 }
 
+// Driven through the middleware rather than grepped out of its source: a route
+// name sitting in a comment or an unread constant satisfies a grep just as well.
 function artefactRequestNamed(string $routeName): Request
 {
     $request = Request::create('/icon.png', 'GET');
@@ -43,6 +31,11 @@ function artefactRequestNamed(string $routeName): Request
 
     return $request;
 }
+
+// The manifest and the icon set are fetched by the WebView itself, and no web
+// server sits in front of PHP on a phone, so a gate that catches them answers an
+// image request with a page of HTML. MobileEnsureImportCompleted did not exempt
+// them, and that is the gate running during setup.
 
 it('lets the public artefacts past the import gate while a setup is unfinished', function (): void {
     $user = User::query()->create([

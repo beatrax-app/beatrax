@@ -21,21 +21,6 @@ use Modules\Recurring\Public\Events\RecurringSeriesRejected;
 
 uses(RefreshDatabase::class);
 
-/*
- * Confirms the Forecasting projection listeners fan each upstream event
- * out into ProjectForecastJob dispatches across both the baseline
- * (scenarioId=null) AND every saved scenario the user owns. Wave 4
- * extends the Wave 2 baseline-only fan-out — when a user has zero
- * saved scenarios the fan-out collapses to the 3 baseline horizons
- * (back-compat with Wave 2).
- *
- * ProjectForecastOnScenarioChange is the Forecasting-internal lifecycle
- * listener: it fans out baseline + the AFFECTED scenario only (not every
- * scenario), because the picker may surface a delta against the
- * baseline. Wave 5's ScenarioIsolationContractTest will exercise the
- * end-to-end isolation contract.
- */
-
 function elUser(string $username = 'el-user'): User
 {
     return User::query()->create([

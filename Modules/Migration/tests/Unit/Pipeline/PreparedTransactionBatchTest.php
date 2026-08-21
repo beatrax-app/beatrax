@@ -6,17 +6,6 @@ use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Migration\Internal\Pipeline\PreparedTransactionBatch;
 
-/*
- * PreparedTransactionBatch — the value object that groups a prepared chunk's
- * staging rows and their index-aligned canonical transactions so
- * persistPromotedRows() takes one value instead of two paired args.
- *
- * Covers:
- *   - The class is final + readonly.
- *   - It carries the rows and canonicals it was constructed with, aligned
- *     by index.
- */
-
 function preparedBatchCanonical(int $accountId): CanonicalTransaction
 {
     return new CanonicalTransaction(

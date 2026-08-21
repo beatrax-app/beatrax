@@ -16,9 +16,7 @@
         'low' => 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-200',
         default => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
     };
-    $symbol = $confidence->currency === 'EUR' ? '€' : ($confidence->currency === 'USD' ? '$' : $confidence->currency.' ');
-    $point = abs($confidence->pointMinor) / Money::MINOR_UNITS_PER_MAJOR;
-    $formattedPoint = $symbol.number_format($point, 2, ',', '.');
+    $formattedPoint = Money::ofMinor(abs($confidence->pointMinor), $confidence->currency)->format();
     $rangeWidthPercent = $confidence->pointMinor !== 0
         ? round((float) $confidence->bandWidthMinor / abs($confidence->pointMinor) * 100, 0)
         : 0;
@@ -30,6 +28,7 @@
         <p class="text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $formattedPoint }}{{ Lang::get('forecasting::forecast.per_month_suffix') }}</p>
     </div>
     <span
+        role="img"
         class="rounded-full px-2 py-0.5 text-xs font-medium {{ $tint }}"
         aria-label="{{ Lang::get('forecasting::forecast.confidence_chip_aria', ['name' => $confidence->seriesName, 'confidence' => $confidence->confidence, 'percent' => $rangeWidthPercent]) }}"
     >{{ $confidence->confidence }}</span>

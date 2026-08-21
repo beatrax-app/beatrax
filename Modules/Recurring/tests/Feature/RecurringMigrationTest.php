@@ -14,17 +14,6 @@ use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Models\RecurringSeriesOccurrence;
 use Modules\Recurring\Models\RecurringSeriesTransition;
 
-/*
- * Feature-level coverage for the four Recurring migrations.
- *
- * Locks the column shape, default values, SQLite state-validation
- * triggers, and the UNIQUE constraint that gates detector idempotency.
- *
- * The migrations are loaded automatically by RecurringServiceProvider
- * via loadMigrationsFrom; RefreshDatabase rebuilds the full schema for
- * every test in this file.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);

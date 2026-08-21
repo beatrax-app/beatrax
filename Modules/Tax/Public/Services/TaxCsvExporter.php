@@ -11,9 +11,6 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Internal\Services\TaxCsvExporter as InternalTaxCsvExporter;
 use Modules\Tax\Internal\Services\TaxYearQuery as InternalTaxYearQuery;
 
-/**
- * @link ../../../../.docs/features/tax/architecture.md
- */
 final class TaxCsvExporter
 {
     public function __construct(

@@ -7,9 +7,6 @@ namespace Modules\Mobile\Internal\Sync;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 
-/**
- * @link ../../../../.docs/features/mobile/architecture.md
- */
 final class MobileImportIntentGate
 {
     public function __construct(

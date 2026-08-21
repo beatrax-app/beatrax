@@ -22,9 +22,6 @@ use Modules\Sync\Public\Events\EnvelopeAssignmentMutated;
 use Modules\Sync\Public\Events\EnvelopeMoveMutated;
 use Modules\Sync\Public\Events\EnvelopeSettingMutated;
 
-/**
- * @link ../../../../.docs/features/budgets/architecture.md
- */
 final class EnvelopeWriter
 {
     use CoercesScalars;
@@ -59,10 +56,9 @@ final class EnvelopeWriter
         $event = null;
 
         $this->db->connection()->transaction(function () use ($user, $categoryId, $periodDate, $minor, &$event): void {
-            // Raw query-builder reads/writes here, NOT the EnvelopeAssignment
-            // Eloquent model -- its 'date' cast would embed a spurious
-            // "00:00:00" suffix on save(), breaking the fold's exact
-            // where('period_start', 'Y-m-d') string match (architecture.md).
+            // Query builder, not the EnvelopeAssignment model: its 'date' cast
+            // writes a "00:00:00" suffix that misses the fold's exact
+            // where('period_start', 'Y-m-d') string match.
             $connection = $this->db->connection();
 
             /** @var \stdClass|null $existing */
@@ -203,9 +199,8 @@ final class EnvelopeWriter
         }
     }
 
-    // Server-side bounds check 1..200 -- a tampered Livewire payload cannot
-    // persist an out-of-range value even though the column is
-    // unsignedTinyInteger (which alone would reject only negative/>255).
+    // The column is unsignedTinyInteger, which alone would accept anything up to
+    // 255, so a tampered Livewire payload is bounded here instead.
     /**
      * @throws InvalidArgumentException category not owned/global (IDOR), or an
      *                                  out-of-range threshold
@@ -274,13 +269,11 @@ final class EnvelopeWriter
         }
     }
 
-    // Never overwrites an assignment that already exists in $toPeriod, so
-    // calling this on a partially-assigned target is safe even though the
-    // sole caller only offers it on an empty target.
+    // Never overwrites an assignment already present in $toPeriod, so a
+    // partially-assigned target is safe even though the caller only offers
+    // this on an empty one.
     public function copyFromPeriod(User $user, Period $fromPeriod, Period $toPeriod): void
     {
-        // Batch-load the target period's already-assigned categories once so
-        // the copy never clobbers an existing target assignment.
         $existingTargetCategoryIds = $this->db->connection()
             ->table('envelope_assignments')
             ->where('user_id', $user->id)
@@ -331,9 +324,8 @@ final class EnvelopeWriter
 
         $periodDate = $periodStart->toDateString();
 
-        // One shared correlation id for both paired rows, so undoMove()
-        // matches the counterpart deterministically rather than by
-        // second-precision created_at.
+        // Shared by both rows so undoMove() finds the counterpart deterministically,
+        // not by a created_at that is only second-precision.
         $groupId = (string) Str::uuid();
 
         /** @var array{debitId: int, creditId: int} $ids */
@@ -407,8 +399,7 @@ final class EnvelopeWriter
         return $ids['debitId'];
     }
 
-    // A foreign or missing move id is a silent no-op (mirrors
-    // PotWriter::archive's cross-user handling).
+    // A foreign move id reads as a missing one: silent no-op, never a 404 oracle.
     public function undoMove(User $user, int $moveId): void
     {
         $connection = $this->db->connection();
@@ -430,10 +421,9 @@ final class EnvelopeWriter
         $createdAtRaw = $row->created_at;
         $groupId = is_string($row->move_group_id) && $row->move_group_id !== '' ? $row->move_group_id : null;
 
-        // Matches the paired counterpart by its shared move_group_id when
-        // present -- deterministic even when two moves share a wall-clock
-        // second. Legacy rows written before move_group_id existed fall
-        // back to the original created_at-based match.
+        // move_group_id pairs the two rows even when two moves land in the same
+        // wall-clock second. Rows written before the column existed still have to
+        // fall back to matching on created_at.
         $pairQuery = $connection->table('envelope_moves')
             ->where('user_id', $user->id)
             ->where('id', '!=', $moveId);
@@ -466,17 +456,10 @@ final class EnvelopeWriter
         }
     }
 
-    // Parses a user-entered positive amount to integer minor units — the
-    // shared MoneyInput handles the Dutch/plain decimal forms — or null for a
-    // blank, malformed, zero or negative entry.
     public function parseAmount(string $value): ?int
     {
         return MoneyInput::tryToPositiveMinor($value);
     }
-
-    // -------------------------------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------------------------------
 
     /**
      * @throws InvalidArgumentException

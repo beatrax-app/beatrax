@@ -13,7 +13,9 @@ use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Identity\DeviceNameDetector;
 use Modules\Sync\Internal\Pairing\InvalidPublicKeyException;
+use Modules\Sync\Internal\Pairing\LanPairingOfferFetcher;
 use Modules\Sync\Internal\Pairing\PairingRelayCourier;
+use Modules\Sync\Internal\Pairing\PairingRowGuards;
 use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
@@ -21,14 +23,14 @@ use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class PairingGateway
 {
     public const string STATE_AWAITING_CONFIRM = PairingState::AwaitingConfirm->value;
 
     public const string STATE_CONFIRMED = PairingState::Confirmed->value;
+
+    // So a polling caller can recognise the unhappy end without reaching into Internal.
+    public const string STATE_EXPIRED = PairingState::Expired->value;
 
     public function __construct(
         private readonly DeviceIdentityLoader $identityLoader,
@@ -42,31 +44,36 @@ final class PairingGateway
         private readonly DeviceNameDetector $deviceNameDetector,
         private readonly PairingRelayCourier $relayCourier,
         private readonly Clock $clock,
+        private readonly LanPairingOfferFetcher $lanOfferFetcher,
     ) {}
 
-    // Auto-configures this device's relay endpoint (+ optional token) from a
-    // scanned QR: a fresh phone has no relay otherwise. No new trust decision
-    // — the human-verified safety words remain the sole trust anchor.
+    // A word-code carries the token alone, so a fresh responder has no local row to
+    // accept against; this asks the LAN for the identity half the code cannot carry.
+    /**
+     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null}|null
+     */
+    public function discoverInitiatorOnLan(string $wordCode): ?array
+    {
+        return $this->lanOfferFetcher->fetchForWordCode($wordCode);
+    }
 
+    // No new trust decision — the human-verified safety words remain the sole anchor.
     public function configureRelayFromQr(?string $endpoint, ?string $authToken, ?string $pin = null): void
     {
         if ($endpoint === null || $endpoint === '') {
             return;
         }
 
-        // One rule, owned by RelayConfig: storing an endpoint the transport
-        // would later refuse is how the phone ended up holding a relay it
-        // could never send to.
+        // Storing an endpoint the transport would later refuse is how a phone ended
+        // up holding a relay it could never send to.
         if (! $this->relayConfig->wouldAcceptEndpoint($endpoint)) {
             return;
         }
 
         $existing = $this->relayConfig->endpointUrl();
 
-        // A scanned QR is out-of-band trusted — the same code carries the
-        // initiator's identity keys — but only far enough to point this device
-        // at a LAN relay. An operator's self-hosted relay is never redirected
-        // by something a camera read.
+        // A camera-read endpoint may point this device at a LAN relay, but never
+        // redirects an operator's self-hosted one.
         if ($existing !== null && $existing !== $endpoint && ! $this->relayConfig->isLanEndpoint($existing)) {
             return;
         }
@@ -75,30 +82,24 @@ final class PairingGateway
             $this->relayConfig->setEndpointUrl($endpoint);
         }
 
-        // Refreshed even when the endpoint is unchanged. Bailing out on
-        // "already configured" is how a phone that scanned a first, broken QR
-        // stayed broken through every retry: it held the endpoint, so no later
-        // scan could hand it the token and pin that endpoint needs.
+        // Refreshed even when the endpoint is unchanged: bailing out on "already
+        // configured" left a phone that scanned a first, broken QR unable to ever
+        // receive the token and pin that endpoint needs.
         if ($authToken !== null && $authToken !== '') {
             $this->relayConfig->setAuthToken($authToken);
         }
 
-        // Without the pin a self-signed relay cannot be verified at all, so
-        // this is what makes the https endpoint above usable rather than
-        // merely encrypted-to-an-unknown-peer.
+        // Without the pin a self-signed relay cannot be verified at all.
         if ($pin !== null && $pin !== '') {
             $this->relayConfig->setPin($pin);
         }
     }
 
-    // Deliver this device's PAIR_RESPONDER_ACCEPT frame (phone -> desktop)
-    // over the relay. Loads this device's own identity first — the
-    // responder's OWN keys always come from the LOCAL identity, never wire
-    // content. No-op (silent) when the local identity is locked/unavailable.
+    // The responder's OWN keys always come from the LOCAL identity, never wire
+    // content. Silent no-op when that identity is locked or unavailable.
     /**
-     * @throws \RuntimeException when the relay is unconfigured or the
-     *                           delivery request fails — the caller must
-     *                           catch and surface a non-blocking retry.
+     * @throws \RuntimeException when the relay is unconfigured or delivery fails;
+     *                           callers must catch and offer a non-blocking retry.
      */
     public function sendResponderAccept(int $userId, string $tokenHash, string $desktopDeviceId, Session $session): void
     {
@@ -113,16 +114,13 @@ final class PairingGateway
             $tokenHash,
             $identity->ed25519PublicKeyHex,
             $identity->x25519PublicKeyHex,
-            // This device's own name, so the peer can label the row instead of
-            // falling back to a generic placeholder.
+            // This device's own name, so the peer can label the row.
             $this->deviceNameDetector->detect(),
         );
     }
 
-    // Deliver this device's Ed25519-signed PAIR_CONFIRM frame to
-    // $peerDeviceId over the relay. Reads the token's token_hash from the
-    // local row so the caller never reconstructs trust state itself. No-op
-    // when the local identity is locked, or $tokenId resolves to no row.
+    // Reads token_hash from the local row so the caller never reconstructs trust
+    // state itself. No-op when the identity is locked or $tokenId matches no row.
     /**
      * @throws \RuntimeException see {@see self::sendResponderAccept()}.
      */
@@ -145,34 +143,29 @@ final class PairingGateway
         $this->relayCourier->sendConfirm($identity, $peerDeviceId, $tokenHash);
     }
 
-    // Drain this device's own relay mailbox and apply every pending pairing
-    // frame. Callers invoke this at the TOP of their poll handler, before
-    // re-reading local pairing state. Never throws out of the poll — every
-    // failure inside the courier's drain loop is caught, logged, and skipped.
+    // Call at the TOP of a poll handler, before re-reading local pairing state.
+    // Never throws out of the poll: the courier catches and logs each failure.
     public function drainPairingFrames(int $userId): void
     {
         $this->relayCourier->drainAndApply($userId);
     }
 
-    // Whether the identity can actually be opened right now — false when it
-    // was never minted AND when the app-lock is holding the KEK.
+    // False both when the identity was never minted and when the app-lock holds the KEK.
     public function hasUsableIdentity(int $userId, Session $session): bool
     {
         return $this->identityLoader->load($userId, $session) !== null;
     }
 
-    // Whether this device has ever minted an identity, regardless of whether
-    // the app is unlocked right now. Callers that mint MUST gate on this and
-    // not on a null from acceptToken()/the loader, which also means "locked".
+    // Callers that mint must gate on this, not on a null from acceptToken() or the
+    // loader — that null also means "locked".
     public function hasIdentityFile(int $userId): bool
     {
         return $this->identityLoader->exists($userId);
     }
 
-    // Identity only — the import path defers epoch acquisition entirely to
-    // the desktop's delivered epochs; self-minting here would permanently
-    // strand desktop epoch-1 entries (see architecture doc). MUST NOT be
-    // extended to touch the GDK keyring or EncryptionMigrationService.
+    // Identity only: self-minting an epoch here collides with the desktop's epoch 1
+    // and strands every desktop epoch-1 entry in quarantine. Must never be extended
+    // to touch the GDK keyring or EncryptionMigrationService.
     /**
      * @throws \LogicException when the app-lock KEK is unavailable.
      */
@@ -181,10 +174,8 @@ final class PairingGateway
         $this->identityService->generateAndPersist($userId, $session);
     }
 
-    // Fan out every epoch in $userId's GDK keyring to $newDeviceRegistryId's
-    // confirmed device over the relay. Callers MUST reach this only from
-    // the CONFIRMED both-confirm transition — see architecture doc for the
-    // full trust-gate ordering and channel-authentication precondition.
+    // Reachable only from the CONFIRMED both-confirm transition — never
+    // speculatively, never on a pending/awaiting/expired/rejected token.
     /**
      * @throws \LogicException when the app-lock KEK is unavailable.
      */
@@ -193,9 +184,7 @@ final class PairingGateway
         $this->rotationService->fanOutAllEpochsToDevice($userId, $newDeviceRegistryId, $session);
     }
 
-    // The two device names on a pairing row, so the confirm screen can show
-    // WHICH devices are being paired alongside the words. Either may be null
-    // on an older row; the caller falls back to its own placeholder.
+    // Either name may be null on a row written before that column existed.
     /**
      * @return array{initiator: ?string, responder: ?string}
      */
@@ -212,10 +201,8 @@ final class PairingGateway
         ];
     }
 
-    // Seed a LOCAL pending pairing_tokens row from a scanned QR's initiator
-    // identity — closes the gap where acceptToken() finds no local row on a
-    // fresh device database. No new trust decision: the seeded row still
-    // requires the full acceptToken() + both-confirm ceremony.
+    // Closes the gap where acceptToken() finds no local row on a fresh device
+    // database. The seeded row still requires the full accept + both-confirm ceremony.
     public function seedResponderToken(
         string $tokenHex,
         string $initiatorDeviceId,
@@ -227,9 +214,8 @@ final class PairingGateway
         $this->tokenService->seedFromInitiator($userId, $initiatorDeviceId, $initiatorEd25519Hex, $initiatorX25519Hex, $tokenHex, $initiatorName);
     }
 
-    // Accept a pairing token already in raw hex form — the QR path. The QR
-    // carries the token directly (no base32 round-trip); the word-code path
-    // base32-encodes the same raw hex purely so a human can type it.
+    // Raw hex — the QR path. The word-code path base32-encodes this same hex
+    // purely so a human can type it.
     /**
      * @return array{pairingTokenId: string, safetyWords: list<string>}|null
      */
@@ -260,9 +246,6 @@ final class PairingGateway
         ];
     }
 
-    // Accept a typed word-code (base32) — decodes then delegates to the
-    // same acceptToken() trust boundary above. Used by the mobile
-    // enter_code fallback step.
     /**
      * @return array{pairingTokenId: string, safetyWords: list<string>}|null
      */
@@ -277,9 +260,8 @@ final class PairingGateway
         return $this->acceptToken($tokenHex, $userId, $session);
     }
 
-    // Record this side's safety-number confirmation — pass-through to the
-    // sole gate admitting a device to device_registry. Null when the
-    // caller owns neither side of the token.
+    // The sole gate admitting a device to device_registry. Null when the caller
+    // owns neither side of the token.
     public function confirm(int $tokenId, int $userId, string $confirmingDeviceId): ?string
     {
         return $this->tokenService->confirm($tokenId, $userId, $confirmingDeviceId);
@@ -290,19 +272,32 @@ final class PairingGateway
         $this->tokenService->expire($tokenId, $userId);
     }
 
-    // Load THIS device's own identity (device id only) — the confirming
-    // side must be derived from the caller's own identity, never a
-    // client-supplied value. Null when locked / sync never enabled.
+    // The confirming side must be derived from this device's own identity, never
+    // from a client-supplied value. Null when locked or sync was never enabled.
     public function currentDeviceId(int $userId, Session $session): ?string
     {
         return $this->identityLoader->load($userId, $session)?->deviceId;
     }
 
-    // The ceremony still in flight for this user, if any. Screens hold their
-    // step in component state, which a reload wipes while the ROW carries on,
-    // so callers resume from here rather than restarting the ceremony.
+    // Null means neither side: the row belongs to two other devices, or this one is
+    // locked and cannot say who it is. Exposed so no caller derives the side twice.
+    public function sideOwnedBySelf(
+        ?string $initiatorDeviceId,
+        ?string $responderDeviceId,
+        int $userId,
+        Session $session,
+    ): ?string {
+        return PairingRowGuards::sideOwnedByIds(
+            $initiatorDeviceId,
+            $responderDeviceId,
+            $this->currentDeviceId($userId, $session) ?? '',
+        );
+    }
+
+    // Screens hold their step in component state, which a reload wipes while the row
+    // carries on, so callers resume from here rather than restarting the ceremony.
     /**
-     * @return array{id: int, state: string, safety_words: list<string>, token_hash: string, peer_device_id: string}|null
+     * @return array{id: int, state: string, safety_words: list<string>, token_hash: string, peer_device_id: string, initiator_device_id: string|null, responder_device_id: string|null}|null
      */
     public function inFlightFor(int $userId): ?array
     {
@@ -311,33 +306,32 @@ final class PairingGateway
             ->whereIn('state', [PairingState::AwaitingConfirm->value, PairingState::Confirmed->value])
             ->where('expires_at', '>', $this->clock->now()->toIso8601String())
             ->orderByDesc('id')
-            ->first(['id', 'state', 'token_hash', 'initiator_device_id']);
+            ->first(['id', 'state', 'token_hash', 'initiator_device_id', 'responder_device_id']);
 
         if ($row === null || ! is_numeric($row->id) || ! is_string($row->state)) {
             return null;
         }
 
-        // Derived from the two stored public keys, exactly as the accept path
-        // does. Reading a `safety_number_words` column here 500'd every GET of
-        // the pairing screen: that column is on device_registry, and
+        // Derived, not read: reading a `safety_number_words` column here 500'd every
+        // GET of the pairing screen — that column is on device_registry, and
         // pairing_tokens has never had one.
         $words = $this->deriveSafetyWords((string) $row->id, $userId);
 
-        // Carried so a resumed screen can keep re-emitting its responder
-        // accept. A resume that dropped them left the one retry that heals a
-        // lost frame permanently disarmed, which is the exact moment — after a
-        // reload or an app-lock — the frame is most likely to have been lost.
+        // token_hash and the device ids ride along so a resumed screen can re-emit its
+        // responder accept; without them the one retry that heals a lost frame is
+        // disarmed exactly when a frame is most likely to have been lost.
         return [
             'id' => (int) $row->id,
             'state' => $row->state,
             'safety_words' => $words,
             'token_hash' => is_string($row->token_hash) ? $row->token_hash : '',
             'peer_device_id' => is_string($row->initiator_device_id) ? $row->initiator_device_id : '',
+            // peer_device_id stays the initiator's; the phone is always the responder.
+            'initiator_device_id' => is_string($row->initiator_device_id) ? $row->initiator_device_id : null,
+            'responder_device_id' => is_string($row->responder_device_id) ? $row->responder_device_id : null,
         ];
     }
 
-    // Read the current state of a pairing token — lets a poll-driven step
-    // machine detect a peer-side confirm without re-deriving trust logic.
     public function tokenState(int $tokenId, int $userId): ?string
     {
         $row = $this->db->connection()->table('pairing_tokens')

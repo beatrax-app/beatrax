@@ -94,10 +94,8 @@ final class BoundaryRule implements Rule
         return $matches[1];
     }
 
-    // The FQN's tail (after Modules\<Y>\) decides whether the import is on
-    // the module's public surface; anything not matching PUBLIC_PREFIXES is
-    // a boundary violation, so new private directories added later (Routes,
-    // Resources, Database, ...) are covered without a rule change.
+    // An allow-list, so a private directory added later is covered without
+    // touching this rule.
     private function violatesBoundary(string $fqn, string $targetModule): bool
     {
         $prefix = 'Modules\\'.$targetModule.'\\';

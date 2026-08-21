@@ -13,14 +13,6 @@ use Modules\Ledger\Models\StatementSummary;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for DetectStartingBalancesQuery — the aggregator
- * that walks the tagged per-source detectors and applies the
- * per-account conflict-resolution rules. Resolves the singleton
- * from the container so the test exercises the real production
- * detector list bound under `starting-balance.detector`.
- */
-
 it('returns one candidate per account when only one detector fires for that account', function (): void {
     $user = User::query()->create([
         'username' => 'agg-single',
@@ -84,7 +76,6 @@ it('prefers earliest opening_balance_date when two detectors fire for the same a
         'default_currency' => 'EUR',
     ]);
 
-    // CAMT.053 has the EARLIER date (2026-01-01) so it wins on rule 1.
     $camtRun = ImportRun::query()->create([
         'user_id' => $user->id,
         'source_format' => 'camt053',
@@ -168,7 +159,6 @@ it('breaks ties on the same date in favour of CAMT.053 over MT940', function ():
         'status' => 'previewed',
     ]);
 
-    // Identical opening_balance_date — different values.
     StatementSummary::query()->create([
         'user_id' => $user->id,
         'import_run_id' => $camtRun->id,
@@ -233,7 +223,6 @@ it('surfaces both candidates when two CAMT.053 imports disagree on the same date
         'status' => 'previewed',
     ]);
 
-    // Same date, same source format, different values — surface BOTH.
     StatementSummary::query()->create([
         'user_id' => $user->id,
         'import_run_id' => $camtA->id,

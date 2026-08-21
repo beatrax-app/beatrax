@@ -21,13 +21,7 @@
 @use('Modules\Ledger\Public\Services\BaseCurrency')
 @use('Modules\Core\Public\Support\Lang')
 @php
-    $fmt = static function (int $absMinor, string $currency = 'EUR'): string {
-        $value = $absMinor / Money::MINOR_UNITS_PER_MAJOR;
-        $formatter = new \NumberFormatter('nl_NL', \NumberFormatter::CURRENCY);
-        $rendered = $formatter->formatCurrency($value, $currency);
-
-        return $rendered === false ? number_format($value, 2, ',', '.') : $rendered;
-    };
+    $fmt = static fn (int $absMinor, string $currency = 'EUR'): string => Money::ofMinor($absMinor, $currency)->format();
 @endphp
 
 <section class="mb-6 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:bg-slate-900 dark:border-slate-700" aria-label="{{ Lang::get('forecasting::forecast.net_diff_section_aria') }}">
@@ -47,6 +41,7 @@
             @endphp
             <div>
                 <p
+                    role="img"
                     class="text-3xl font-semibold {{ $tint }}"
                     style="font-variant-numeric: tabular-nums;"
                     aria-label="{{ Lang::get('forecasting::forecast.net_diff_delta_aria', ['day' => $horizonKey, 'value' => $sign.$formatted, 'state' => $aria]) }}"

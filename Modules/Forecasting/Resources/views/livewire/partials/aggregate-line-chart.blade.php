@@ -70,7 +70,7 @@
         'grid' => ['borderColor' => '#E2E8F0'],
         'legend' => ['show' => false],
         'tooltip' => ['shared' => true, 'intersect' => false],
-        // D-11: phone-tuned responsive breakpoints baked into server-rendered
+        // Phone-tuned responsive breakpoints baked into server-rendered
         // options — chart fills the container at phone width with fewer x-axis
         // labels and hidden legend; tooltip stays active on touch.
         'responsive' => [
@@ -106,7 +106,7 @@
     a Livewire-driven horizon / scenario flip refreshes the line
     chart without remounting the component.
 --}}
-{{-- D-11: width:100% ensures the chart fills the container column at all
+{{-- width:100% ensures the chart fills the container column at all
      viewport widths including phone. The responsive[] breakpoints above
      handle tick/label tuning at <768px. --}}
 <div

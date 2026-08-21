@@ -6,14 +6,6 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Modules\DevMode\Internal\Logging\RecentLogEntriesReader;
 use Modules\DevMode\Internal\Logging\RedactSecretsProcessor;
 
-/*
- * RecentLogEntriesReader: parses the tail of today's daily Laravel
- * log file into structured entries. Continuation lines fold into
- * the preceding entry, messages are scrubbed by RedactSecretsProcessor,
- * and each returned row carries a /dev/logs deep-link with
- * severity + contains pre-set.
- */
-
 function readerWithLogFixture(string $fixture): RecentLogEntriesReader
 {
     $logFile = UserDataPathService::dailyLogFile();
@@ -96,8 +88,6 @@ it('folds continuation lines into the preceding entry rather than emitting stand
 
     expect($entries)->toHaveCount(2);
     expect($entries[0]['severity'])->toBe('ERROR');
-    // The continuation lines were folded into the message and then
-    // the dashboard truncation collapses whitespace into one line.
     expect($entries[0]['message'])->toContain('outer boom');
     expect($entries[0]['message'])->toContain('#0 /app/foo.php');
 });
@@ -138,24 +128,16 @@ it('emits a /dev/logs deep-link href with severity + contains query parameters',
 });
 
 it('href contains filter NEVER includes the ellipsis truncation suffix (user-reported regression)', function (): void {
-    // User report: "click on an error on the dev overview does not
-    // show the record properly because it includes the truncate
-    // characters, so the search fails (the …)".
-    //
-    // The displayed message excerpt uses '…' to signal truncation,
-    // but the URL's `contains` filter is a literal substring match
-    // against the source log line at /dev/logs. '…' never appears
-    // in the source — appending it to the href silently makes the
-    // deep-link return zero rows.
+    // `contains` is a literal substring match against the source log line,
+    // and '…' never appears there. Carrying the truncation marker into the
+    // href made every deep-link from a long message return zero rows.
     $longMessage = str_repeat('lorem ', 60); // ~360 chars
     $reader = readerWithLogFixture('[2026-05-24 12:00:01] local.ERROR: '.$longMessage.PHP_EOL);
 
     $entries = $reader->recent(5);
 
     expect($entries)->toHaveCount(1);
-    // The display message MUST end in '…' (truncation indicator).
     expect($entries[0]['message'])->toEndWith('…');
-    // The href contains value MUST NOT contain the ellipsis at all.
     expect($entries[0]['href'])->not->toContain('%E2%80%A6'); // urlencoded '…'
     expect($entries[0]['href'])->not->toContain('…');
 });

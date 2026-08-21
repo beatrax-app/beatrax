@@ -14,23 +14,9 @@ use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 use Modules\Onboarding\Models\WizardProgress;
 use Tests\Helpers\UploadIsolation;
 
-/*
- * Regression for the live "0 ROWS · READY" PayPal section: when the
- * synthetic PayPal account ALREADY exists for the user before they
- * reach ConnectPaypalStep (typical when the user previously used the
- * standalone /imports/upload PayPal flow, or restarted the wizard
- * without clearing accounts), the step's "only re-preview when the
- * action INSERTed" guard causes the pre-account-creation cache
- * snapshot — full of `'error'`-status rows because the resolver did
- * not have the account to resolve against — to remain the source of
- * truth. The FirstImportStep section then renders 0 ROWS · READY.
- *
- * This test sets up a fresh wizard run with the PayPal account
- * already present (mirroring a returning user), drives
- * ConnectPaypalStep::submit, and asserts the cache contains
- * `'new'`-status rows and BuildConsolidatedPreviewQuery returns
- * totalRows > 0. Pre-fix this test fails: every row is `'error'`.
- */
+// The returning-user case: an "only re-preview when the action INSERTed"
+// guard skips the re-preview when the PayPal account already exists, leaving
+// the all-error pre-account cache as the source of truth.
 
 beforeEach(function (): void {
     UploadIsolation::isolate();
@@ -48,11 +34,8 @@ beforeEach(function (): void {
 
     $this->paypalFixturePath = base_path('Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv');
 
-    // Pre-create the synthetic PayPal account so EnsurePaypalAccountAction
-    // returns false on submit. This mirrors a returning user whose
-    // account row was created by a previous import (standalone wizard,
-    // /imports/upload, or an earlier wizard run that was reset by
-    // clearing wizard_progress without dropping accounts).
+    // EnsurePaypalAccountAction now returns false on submit, as it would for
+    // a user whose account row came from an earlier import.
     /** @var EnsurePaypalAccountAction $ensure */
     $ensure = $this->app->make(EnsurePaypalAccountAction::class);
     ($ensure)($this->user);

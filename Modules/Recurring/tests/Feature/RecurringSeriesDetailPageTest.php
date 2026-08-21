@@ -12,12 +12,6 @@ use Modules\Recurring\Internal\Http\Livewire\RecurringSeriesDetailPage;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Models\RecurringSeriesOccurrence;
 
-/*
- * /recurring/series/{id} drill-in tests — Livewire SFC, ApexCharts
- * dataset injection, occurrences table, cross-user 404, and the
- * "view all points" toggle.
- */
-
 function rsdUser(string $username): User
 {
     return User::query()->create([
@@ -74,10 +68,6 @@ function rsdSeries(User $user, string $detectedName, array $overrides = []): Rec
 }
 
 /**
- * Seeds N monthly transactions for $user/$account/$run and a parent
- * RecurringSeries. Returns the series + the list of inserted
- * transaction ids in chronological order.
- *
  * @return array{series: RecurringSeries, transactionIds: list<int>}
  */
 function rsdSeedSeriesWithOccurrences(
@@ -191,8 +181,8 @@ it('renders a valid ApexCharts JSON config in the data-options attribute (chart-
     $content = $response->getContent() ?: '';
     expect($content)->toContain('data-options=');
 
-    // Extract data-options="{...}" content (Blade `@json` escapes
-    // quotes as `&quot;`).
+    // Extract the data-options="{...}" payload; Blade's @json escapes quotes
+    // as &quot;.
     $extracted = null;
     if (preg_match('/data-options=("|\')([^"\']*)\1/u', $content, $matches) === 1) {
         $extracted = $matches[2];
@@ -211,7 +201,6 @@ it('renders a valid ApexCharts JSON config in the data-options attribute (chart-
     $seriesArray = $parsed['series'] ?? null;
     expect($seriesArray)->toBeArray();
     /** @var array<int, mixed> $seriesArray */
-    // EUR-only series renders exactly one chart series.
     expect(count($seriesArray))->toBe(1);
 })->group('chart-dataset');
 

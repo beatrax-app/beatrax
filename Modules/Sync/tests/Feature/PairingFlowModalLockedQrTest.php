@@ -10,16 +10,10 @@ use Modules\Sync\Internal\Http\Livewire\PairingFlowModal;
 
 uses(RefreshDatabase::class);
 
-/*
- * PairingFlowModal — $qrSvg is the component's only raw-echoed property.
- *
- * pairing-flow-modal.blade.php renders it with {!! !!} because an inline
- * SVG cannot be escaped and still draw. That is sound only while the
- * markup is server-built, and a public Livewire property is rehydrated
- * from the client payload on every request — so the raw echo and the
- * #[Locked] attribute are a pair. Removing the lock turns the QR tile
- * into an XSS sink, which is what this file guards.
- */
+// The QR is echoed raw, because an inline SVG cannot be escaped and still
+// draw. That is sound only while the markup stays server-built, and a public
+// Livewire property is rehydrated from the client payload on every request —
+// so the raw echo and the lock attribute are a pair, and losing one is an XSS sink.
 
 function lockedQrUser(string $username): User
 {

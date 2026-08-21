@@ -22,18 +22,17 @@ final class AddRecurringPayload extends ScenarioMutationPayload
         public readonly string $cadence,
         public readonly ?string $note = null,
     ) {
-        // A tampered or mistyped value here would otherwise silently
-        // produce zero occurrences (unknown cadence) or flip the sign
-        // (typo'd direction) rather than raising loudly.
+        // Unchecked, an unknown cadence yields zero occurrences and a typo'd
+        // direction flips the sign — both silently.
         if (Direction::tryFrom($direction) === null) {
             throw new InvalidArgumentException(
                 'AddRecurringPayload.direction must be one of: '.implode(' | ', array_map(static fn (Direction $d): string => "'".$d->value."'", Direction::cases()))."; got '{$direction}'."
             );
         }
         $cadenceEnum = SeriesCadence::tryFrom($cadence);
+        // Irregular is what detection assigns to an observed series; it is not
+        // something a user can choose to add.
         if ($cadenceEnum === null || $cadenceEnum === SeriesCadence::Irregular) {
-            // A scenario add-recurring is a regular series; Irregular (which
-            // SeriesCadence carries for detected series) is not a choice here.
             $valid = array_map(
                 static fn (SeriesCadence $c): string => "'".$c->value."'",
                 array_filter(SeriesCadence::cases(), static fn (SeriesCadence $c): bool => $c !== SeriesCadence::Irregular),

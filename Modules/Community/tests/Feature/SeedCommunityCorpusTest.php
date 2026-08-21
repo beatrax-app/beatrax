@@ -85,7 +85,6 @@ it('updates the existing row when the YAML name changes on re-dispatch', functio
     $events = $this->app->make(Dispatcher::class);
     $events->dispatch(new UserInstalled($user->id));
 
-    // Rewrite the corpus file with a new name for ALPHA.
     $updated = <<<'YAML'
 entries:
   - pattern: "ALPHA"
@@ -116,7 +115,6 @@ YAML;
 });
 
 it('tolerates a malformed extra country file without aborting the main corpus seed', function (): void {
-    // A second, broken country file must not abort the seed of the valid one.
     file_put_contents($this->merchantsDir.'/de.yaml', "entries:\n  - { this is : not valid : yaml ::");
 
     $user = makeCommunityTestUser('corpus-seed-d');

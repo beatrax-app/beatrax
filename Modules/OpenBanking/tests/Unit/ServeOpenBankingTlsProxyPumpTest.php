@@ -10,19 +10,8 @@ use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Process\Process;
 
-/*
- * The proxy loop's pump/relay/select helpers, driven directly over real
- * in-process socket pairs.
- *
- * The command's handle() body is a blocking single-threaded socket proxy: it
- * accepts on a TLS listener, opens an upstream per client, and pumps bytes
- * between the two until a signal arrives. Running the whole loop against real
- * ports would race a proxy against itself and fail for reasons unrelated to the
- * code under test — so instead each helper is exercised in isolation with
- * stream_socket_pair() sockets and a throwaway loopback listener. These are the
- * per-tick decisions (what is readable, which halves to flush, when a peer has
- * hung up) that the loop is made of.
- */
+// Each helper is driven in isolation over stream_socket_pair() sockets: running
+// the whole loop on real ports would race the proxy against itself.
 
 /**
  * @return array{0: ServeOpenBankingTlsCommand, 1: string} the command and the
@@ -91,14 +80,12 @@ it('relay forwards a client read to its peer and flushes it through', function (
         $upstreamId => ['sock' => $upstreamNear, 'peer' => $clientId, 'wbuf' => ''],
     ];
 
-    // A client byte arrives; relay() must land it on the upstream half.
     fwrite($clientFar, 'GET / HTTP/1.1');
 
     $args = [&$conns, $clientNear];
     tlsPumpMethod('relay')->invokeArgs($this->tlsCommand, $args);
 
     expect(fread($upstreamFar, 4096))->toBe('GET / HTTP/1.1');
-    // Fully flushed — nothing left buffered on the upstream half.
     expect($conns[$upstreamId]['wbuf'])->toBe('');
 });
 
@@ -114,8 +101,7 @@ it('relay closes the whole pair when the socket has reached EOF', function (): v
         $upstreamId => ['sock' => $upstreamNear, 'peer' => $clientId, 'wbuf' => ''],
     ];
 
-    // The client hangs up: the near end now reads '' at EOF, so the pair is torn
-    // down on both halves.
+    // The client hangs up, so the near end now reads '' at EOF.
     fclose($clientFar);
 
     $args = [&$conns, $clientNear];
@@ -137,9 +123,8 @@ it('relay ignores a socket it is not tracking', function (): void {
 });
 
 it('relay leaves the pair intact when a readable socket yields no bytes yet', function (): void {
-    // A non-blocking socket whose peer is still open but has written nothing:
-    // fread() returns '' with feof() false, so relay() must simply return
-    // without tearing anything down.
+    // A non-blocking socket whose peer is open but silent: fread() returns ''
+    // with feof() false, which relay() must not mistake for EOF.
     [$clientNear, $clientFar] = tlsSocketPair();
     [$upstreamNear, $upstreamFar] = tlsSocketPair();
     $this->tlsCloseables = [$clientNear, $clientFar, $upstreamNear, $upstreamFar];
@@ -218,19 +203,15 @@ it('pumpReadable accepts a pending client on the server and relays a tracked soc
     ];
     fwrite($trackedFar, 'relayed');
 
-    // A backend port nothing is listening on: accept() will take the pending
-    // client, fail to reach the upstream, and drop it — the branch that proves
-    // the server arm ran without leaving a half-open connection tracked.
+    // Nothing listens on this port, so accept() takes the pending client, fails
+    // to reach upstream and drops it without leaving a half-open pair tracked.
     $deadBackendPort = 1;
 
     $read = [$server, $trackedNear];
     $args = [$server, $deadBackendPort, &$conns, $read];
     tlsPumpMethod('pumpReadable')->invokeArgs($this->tlsCommand, $args);
 
-    // The tracked read was relayed onto its peer.
     expect(fread($peerFar, 4096))->toBe('relayed');
-    // The accepted client could not reach the dead backend, so no new pair was
-    // registered — only the two tracked sockets remain.
     expect($conns)->toHaveCount(2);
 });
 
@@ -257,9 +238,7 @@ it('selectSockets surfaces the ready read set and the buffered write set', funct
     $readableId = (int) $readableNear;
     $bufferedId = (int) $bufferedNear;
     $conns = [
-        // Readable this tick (data waiting), no pending write.
         $readableId => ['sock' => $readableNear, 'peer' => $bufferedId, 'wbuf' => ''],
-        // Has bytes queued to write, so it must appear in the write set.
         $bufferedId => ['sock' => $bufferedNear, 'peer' => $readableId, 'wbuf' => 'queued'],
     ];
     fwrite($readableFar, 'incoming');
@@ -271,10 +250,8 @@ it('selectSockets surfaces the ready read set and the buffered write set', funct
         ->and($writeSet)->toContain($bufferedNear);
 });
 
-/**
- * Drives the command's private `running` flag; the loop reads it every tick and
- * there is no public setter outside the signal handler.
- */
+// The loop reads the private `running` flag every tick and there is no public
+// setter outside the signal handler.
 function tlsSetRunning(ServeOpenBankingTlsCommand $command, bool $running): void
 {
     $property = new ReflectionProperty(ServeOpenBankingTlsCommand::class, 'running');
@@ -282,10 +259,8 @@ function tlsSetRunning(ServeOpenBankingTlsCommand $command, bool $running): void
     $property->setValue($command, $running);
 }
 
-/**
- * Gives the command a throwaway output sink so its newLine()/error() calls have
- * somewhere to write when the loop is exercised outside a real console run.
- */
+// A throwaway output sink, so newLine()/error() have somewhere to write when the
+// loop runs outside a real console.
 function tlsSilenceOutput(ServeOpenBankingTlsCommand $command): void
 {
     $command->setOutput(new OutputStyle(new ArrayInput([]), new BufferedOutput));
@@ -305,7 +280,6 @@ it('accept pairs the client with a reachable backend and tracks both halves', fu
     $args = [$server, $backendPort, &$conns];
     tlsPumpMethod('accept')->invokeArgs($this->tlsCommand, $args);
 
-    // The accepted client and its freshly dialled upstream are both registered.
     expect($conns)->toHaveCount(2);
     foreach ($conns as $conn) {
         $this->tlsCloseables[] = $conn['sock'];
@@ -334,9 +308,8 @@ it('flush drains the buffered bytes onto the socket', function (): void {
 });
 
 it('flush tears the pair down when the socket write fails', function (): void {
-    // A read-only handle is an open resource whose fwrite() returns false, so it
-    // trips the write-failure branch without the TypeError a closed resource
-    // would raise.
+    // A read-only handle's fwrite() returns false, tripping the write-failure
+    // branch without the TypeError a closed resource would raise.
     $readOnly = fopen('php://temp', 'r');
     [$peerNear, $peerFar] = tlsSocketPair();
     $this->tlsCloseables = [$readOnly, $peerNear, $peerFar];

@@ -92,11 +92,9 @@ it('dispatches suggest-mapping:open when the "Suggest a name" button on a card i
     $count = $db->connection()->table('transactions')->where('user_id', $this->user->id)->count();
     expect($count)->toBe(1);
 
-    // Livewire's `wire:click="$dispatch(...)"` on the per-card button
-    // is a Browser-side dispatch that does not flow through the
-    // page component's call() surface — the page rendering itself is
-    // the assertion target. Confirm the rendered HTML carries the
-    // dispatch directive for the row's verbatim description.
+    // The per-card button dispatches browser-side via wire:click="$dispatch(...)",
+    // which never reaches the component's call() surface, so the rendered HTML is
+    // the only assertion target.
     Livewire::test(MysteryMerchantsPage::class)
         ->assertSee('suggest-mapping:open')
         ->assertSee($description);

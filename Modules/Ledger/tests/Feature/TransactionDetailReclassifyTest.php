@@ -10,24 +10,13 @@ use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
 use Modules\Ledger\Models\Account;
 use Modules\Sync\Public\Events\TransactionMutated;
 
-/*
- * Feature tests for the manual reclassify action on
- * `/transactions/{id}`. The Livewire `reclassify` action owns the
- * user-override path: single-click type change, atomic break-pair
- * invariant on non-transfer reclassify, and cross-user 404 safety
- * inherited from the detail page's existing user-scoping.
- */
-
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-05-15 12:00:00'));
 
-    // Suppress SyncCaptureListener: reclassify now dispatches TransactionMutated,
-    // but the Sync capture listener requires OpLogWriter with runtime device creds
-    // that are not bound in this test context. Fake the event so these tests remain
-    // focused on the Ledger behaviour (type change, pair break); Sync capture is
-    // covered separately in Modules/Sync/tests/Feature/OpLogCaptureWiringTest.
+    // The Sync capture listener wants an OpLogWriter with runtime device creds
+    // that nothing binds here, so the event is faked rather than handled.
     Event::fake([TransactionMutated::class]);
 
     /** @var Account $asnAccount */
@@ -71,7 +60,7 @@ it('changesType — reclassifies a single unpaired row and persists the new type
 })->group('phase-4');
 
 it('breaksPair — reclassifying a paired transfer to a non-transfer clears pair_transaction_id on BOTH rows', function (): void {
-    // Two rows pre-paired (mirrors the listener's terminal state).
+    // Pre-paired, as the matching listener would leave them.
     $asnRow = $this->makeTransaction($this->fixtureUser, $this->asnAccount, $this->run, [
         'type' => 'transfer_out',
         'amount_minor' => -10000,
@@ -103,9 +92,8 @@ it('breaksPair — reclassifying a paired transfer to a non-transfer clears pair
 
     expect($asnRow->type)->toBe('expense');
     expect($asnRow->pair_transaction_id)->toBeNull();
-    // Partner row's pair_transaction_id must be cleared atomically.
     expect($icsRow->pair_transaction_id)->toBeNull();
-    // Partner's own type is preserved — reclassify only un-pairs, never re-types the partner.
+    // Reclassify un-pairs; it never re-types the partner.
     expect($icsRow->type)->toBe('transfer_in');
 })->group('phase-4');
 
@@ -155,23 +143,15 @@ it('crossUser404 — User B cannot reclassify User A\'s transaction', function (
     ]);
     $this->actingAs($intruder);
 
-    // The detail-page HTTP route itself must return 404 for a cross-user
-    // request — this is the canonical user-facing invariant that mirrors
-    // the existing cross-user test on the same detail page surface.
     $this->get(route('transactions.show', $tx->id))->assertStatus(404);
 
-    // Defence-in-depth at the action layer: mount() refuses to seat the
-    // Livewire component because the row is unreachable under the
-    // intruder's user_id scope, so the call chain raises before any DB
-    // write happens. We assert SOME exception is raised (Livewire wraps
-    // mount() throwables for the test harness) and that the row stays
-    // untouched.
+    // Bare Exception because Livewire wraps whatever mount() throws when the
+    // row is unreachable under the intruder's scope.
     expect(
         fn () => Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
             ->call('reclassify', 'expense'),
     )->toThrow(Exception::class);
 
-    // Original row stays untouched.
     $tx->refresh();
     expect($tx->type)->toBe('income');
 })->group('phase-4');
@@ -201,10 +181,7 @@ it('emptyTypeIsNoOp — passing an empty string produces no DB write and raises 
         'booked_at' => '2026-05-10 12:00:00',
     ]);
 
-    // Empty string is not in Transaction::TYPES, so it is rejected by the
-    // same allow-list guard as any other invalid value. The Blade `disabled`
-    // attribute on Save prevents this in normal UX; the action itself
-    // remains defensive.
+    // The Save button is disabled in the UI; the action guards anyway.
     expect(
         fn () => Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
             ->call('reclassify', ''),
@@ -227,8 +204,7 @@ it('rendersReclassifyDropdownOnDetailPage — the /transactions/{id} page render
     $response->assertOk();
     $response->assertSee('Reclassify', false);
     $response->assertSee('wire:click="reclassify', false);
-    // Allow-listed types appear in the dropdown options (except the
-    // transaction's own current type, which is filtered out).
+    // The row's own current type is filtered out of the options.
     $response->assertSee('income', false);
     $response->assertSee('transfer_in', false);
     $response->assertDontSee('value="expense"', false);

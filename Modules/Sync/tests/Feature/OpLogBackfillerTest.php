@@ -9,11 +9,9 @@ use Modules\Sync\Internal\OpLog\OpLogWriter;
 
 uses(RefreshDatabase::class);
 
-/*
- * Covers the gap that left a freshly paired device on "0 of 0 records":
- * capture is event-driven, so rows that predate sync were never in the log
- * and a peer asking for everything received nothing.
- */
+// Capture is event-driven, so rows written before sync was switched on were
+// never in the log at all — and a freshly paired peer asking for everything
+// received nothing, sitting on "0 of 0 records".
 
 function backfillFixtureUser(DatabaseManager $db): int
 {
@@ -25,19 +23,45 @@ function backfillFixtureUser(DatabaseManager $db): int
     ]);
 }
 
-function backfillWriter(int $userId): OpLogWriter
+function backfillWriter(int $userId, string $deviceId = 'backfill-device'): OpLogWriter
 {
     $keypair = sodium_crypto_sign_keypair();
 
+    // Coverage is only counted for authors a peer can still verify, so an
+    // unregistered writer leaves everything it wrote uncovered — the defect
+    // these tests sit on top of, not the state they mean to set up.
+    backfillRegisterDevice($userId, $deviceId, sodium_crypto_sign_publickey($keypair));
+
     /** @var OpLogWriter $writer */
     $writer = app(OpLogWriter::class, [
-        'deviceId' => 'backfill-device',
+        'deviceId' => $deviceId,
         'userId' => $userId,
         'secretKey' => sodium_crypto_sign_secretkey($keypair),
         'publicKey' => sodium_crypto_sign_publickey($keypair),
     ]);
 
     return $writer;
+}
+
+function backfillRegisterDevice(int $userId, string $deviceId, string $publicKey): void
+{
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $db->connection()->table('device_registry')->insert([
+        'user_id' => $userId,
+        'device_id' => $deviceId,
+        'name' => 'Fixture device',
+        'ed25519_public_key_hex' => sodium_bin2hex($publicKey),
+        'x25519_public_key_hex' => str_repeat('00', 32),
+        'safety_number_words' => '',
+        'is_self' => 1,
+        'paired_at' => '2026-06-14T00:00:00+00:00',
+        'confirmed_at' => '2026-06-14T00:00:00+00:00',
+        'last_seen_at' => null,
+        'created_at' => '2026-06-14T00:00:00+00:00',
+        'updated_at' => '2026-06-14T00:00:00+00:00',
+    ]);
 }
 
 function backfillSeedAccount(DatabaseManager $db, int $userId): int
@@ -121,13 +145,12 @@ it('still captures pre-sync rows when an import already wrote ops for other rows
     $db = app(DatabaseManager::class);
     $userId = backfillFixtureUser($db);
 
-    // The account that predates sync — the one that must reach the new peer.
     $preSyncAccount = backfillSeedAccount($db, $userId);
 
     $writer = backfillWriter($userId);
 
-    // An import runs between switching sync on and pairing, capturing its own
-    // rows. That is the only op-log history this user has.
+    // An import between switching sync on and pairing, capturing its own rows.
+    // That is the whole of this user's op-log history.
     $importedAccount = backfillSeedAccount($db, $userId);
     /** @var OpLogBackfiller $backfiller */
     $backfiller = app(OpLogBackfiller::class);
@@ -135,8 +158,8 @@ it('still captures pre-sync rows when an import already wrote ops for other rows
 
     expect($db->connection()->table('op_log_entries')->where('user_id', $userId)->exists())->toBeTrue();
 
-    // Pairing confirm. The whole backfill used to be skipped here because the
-    // user "had history", and the pre-sync account never left the desktop.
+    // The backfill used to be skipped entirely here because the user "had
+    // history", and the pre-sync account never left the desktop.
     $captured = $backfiller->backfill($userId, $writer);
 
     expect($captured)->toBeGreaterThan(0);
@@ -178,4 +201,51 @@ it('does not write a second create op for a row the import already captured', fu
         ->where('table_name', 'accounts')
         ->where('pk', (string) $accountId)
         ->count())->toBe($afterImport);
+});
+
+it('re-captures a row whose only create op was signed by an identity the registry lost', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $userId = backfillFixtureUser($db);
+    $accountId = backfillSeedAccount($db, $userId);
+
+    // Switching sync off and on again used to mint a fresh identity, leaving
+    // the log signed by a device the registry no longer held. Peers dropped
+    // every entry, and the backfill considered each row captured already and
+    // refused to re-emit it.
+    /** @var OpLogBackfiller $backfiller */
+    $backfiller = app(OpLogBackfiller::class);
+    $captured = $backfiller->backfill($userId, backfillWriter($userId, 'retired-identity'));
+    expect($captured)->toBeGreaterThan(0);
+
+    $db->connection()->table('device_registry')
+        ->where('user_id', $userId)
+        ->where('device_id', 'retired-identity')
+        ->delete();
+
+    $recaptured = $backfiller->backfill($userId, backfillWriter($userId, 'current-identity'));
+
+    expect($recaptured)->toBeGreaterThan(0);
+
+    $verifiable = $db->connection()->table('op_log_entries')
+        ->where('user_id', $userId)
+        ->where('table_name', 'accounts')
+        ->where('pk', (string) $accountId)
+        ->where('device_id', 'current-identity')
+        ->count();
+
+    expect($verifiable)->toBeGreaterThan(0, 'the row is still unreachable by any peer');
+});
+
+it('leaves a row alone when its create op author is still a confirmed device', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $userId = backfillFixtureUser($db);
+    backfillSeedAccount($db, $userId);
+
+    /** @var OpLogBackfiller $backfiller */
+    $backfiller = app(OpLogBackfiller::class);
+    $backfiller->backfill($userId, backfillWriter($userId, 'still-here'));
+
+    expect($backfiller->backfill($userId, backfillWriter($userId, 'second-writer')))->toBe(0);
 });

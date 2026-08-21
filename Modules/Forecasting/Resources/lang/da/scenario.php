@@ -11,6 +11,7 @@ return [
     'rename' => 'Omdøb',
     'confirm_delete' => 'Bekræft sletning',
     'delete_scenario' => 'Slet scenarie',
+    'delete_confirm' => 'Slet dette scenarie?',
 
     'mutations_count' => 'Ændringer (:count)',
     'no_mutations' => 'Ingen ændringer endnu. Tilføj en nedenfor for at se, hvordan dette scenarie klarer sig i forhold til din basislinje.',
@@ -67,6 +68,7 @@ return [
         'new_amount' => 'Nyt beløb',
         'new_next_date' => 'Ny næste dato',
         'scope' => 'Omfang',
+        'scope_legend' => 'Hvilke hændelser skal flyttes',
         'scope_next' => 'Kun den næste hændelse',
         'scope_all' => 'Alle efterfølgende hændelser',
     ],
@@ -80,6 +82,8 @@ return [
         'current_amount' => 'Nuværende beløb',
         'new_amount' => 'Nyt beløb',
     ],
+
+    'series_name_fallback' => 'serie',
 
     'summary' => [
         'cancel' => 'Opsig :name',

@@ -1,17 +1,17 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    LOCK-04 dev-console probe (D-19).
+    App-lock data-key gate probe.
 
     Displays the current release/withhold state of the data-key gate.
     Mounted on the Developer Console overview page ONLY — behind the
-    `developer` middleware (T-05-27).
+    `developer` middleware.
 
-    D-22 note: the lock gates the per-session UI release only.
+    The lock gates the per-session UI release only.
     Long-lived background workers retain the data key independently of
     the session lock state.
 
     Security: NEVER output raw key bytes — only the 8-char SHA-256
-    fingerprint prefix is rendered (T-05-26).
+    fingerprint prefix is rendered.
 --}}
 <div
     class="rounded-md p-3 space-y-2"
@@ -46,7 +46,6 @@
         </div>
     @endif
 
-    {{-- D-22 note for developers reading this panel --}}
     <div class="text-[#475569] text-[10px] leading-snug pt-1">
         {{ Lang::get('auth::key_probe.note') }}
     </div>

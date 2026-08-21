@@ -51,7 +51,6 @@ beforeEach(function (): void {
     );
 });
 
-/** Persist a transaction inside the fixture period for $user. */
 function spendCatTx(int $userId, int $accountId, int $runId, int $settledMinor, ?int $categoryId, string $currency = 'EUR'): Transaction
 {
     static $i = 200000;
@@ -84,7 +83,6 @@ function spendCatTx(int $userId, int $accountId, int $runId, int $settledMinor, 
     return $tx;
 }
 
-/** Persist a leg row for $transaction. */
 function spendCatLeg(Transaction $transaction, int $categoryId, int $settledMinor, ?int $userId = null): TransactionSplit
 {
     return TransactionSplit::create([
@@ -133,9 +131,6 @@ it('combines legs and unsplit parents in the same category without double-counti
 });
 
 it('ignores a split parent vestigial category_id entirely — leg presence is the only signal', function (): void {
-    // Parent still carries category_id = Groceries (vestigial, D-11) even
-    // though its legs are Groceries/Household. The parent must contribute
-    // NOTHING extra via that vestigial category_id.
     $tx = spendCatTx($this->user->id, $this->account->id, $this->run->id, -8000, $this->groceries->id);
     spendCatLeg($tx, $this->groceries->id, -3000);
     spendCatLeg($tx, $this->household->id, -5000);
@@ -161,27 +156,23 @@ it('keys forUserAndPeriodByCurrency by "categoryId|currency" across currencies',
     expect($result[$this->groceries->id.'|USD'])->toBe(1500);
 });
 
-it('falls back to the parent category when legs do not sum to the parent (WR-03 read-time guard)', function (): void {
-    // Drive a transaction into a divergent 1-leg state: a −80,00 expense
-    // categorised Groceries whose only surviving leg is −60,00 Household
-    // (legs sum to −6000, not the parent's −8000). A per-leg LWW replay that
-    // let one leg's delete op win can leave exactly this shape.
+it('falls back to the parent category when legs do not sum to the parent', function (): void {
+    // The legs sum to −6000 against a −8000 parent. A per-leg LWW replay where
+    // one leg's delete op won leaves exactly this shape.
     $tx = spendCatTx($this->user->id, $this->account->id, $this->run->id, -8000, $this->groceries->id);
-    spendCatLeg($tx, $this->household->id, -6000); // single, non-summing leg
+    spendCatLeg($tx, $this->household->id, -6000);
 
     $result = app(SpendByCategoryQuery::class)->forUserAndPeriod($this->user->id, $this->period, 'EUR');
 
-    // Fail safe to pre-split behaviour: attribute the parent's OWN full amount
-    // to its own category, and IGNORE the partial leg entirely — never
-    // attribute the partial −6000 to Household.
+    // Fail safe to pre-split behaviour: the parent's own amount, leg ignored.
     expect($result[$this->groceries->id])->toBe(8000);
     expect($result)->not->toHaveKey($this->household->id);
     expect(array_sum($result))->toBe(8000);
 });
 
-it('falls back to the parent category for a non-summing split in forUserAndPeriodByCurrency too (WR-03)', function (): void {
+it('falls back to the parent category for a non-summing split in forUserAndPeriodByCurrency too', function (): void {
     $tx = spendCatTx($this->user->id, $this->account->id, $this->run->id, -8000, $this->groceries->id);
-    spendCatLeg($tx, $this->household->id, -6000); // single, non-summing leg
+    spendCatLeg($tx, $this->household->id, -6000);
 
     $result = app(SpendByCategoryQuery::class)->forUserAndPeriodByCurrency($this->user->id, $this->period);
 

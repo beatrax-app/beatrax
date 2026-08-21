@@ -2,9 +2,8 @@
 
 declare(strict_types=1);
 
-// Multi-employer payroll — 6 monthly incomes from IBAN_A + 6 from
-// IBAN_B, both at +€2200. Each distinct IBAN cluster becomes its own
-// income series. Expectation: TWO income series, both monthly.
+// Two employers paying the same +€2200 on the same cadence: the differing IBANs
+// are the only thing separating them into two series.
 
 $transactions = [];
 $start = new DateTimeImmutable('2025-10-25');

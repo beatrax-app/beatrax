@@ -42,16 +42,15 @@
 }
 
 /*
- * Sketch-validated calm-slate Linear/Notion token set (Phase 16 D-05,
- * sketch session 001 — 2026-05-24). Hand-ported from
+ * Sketch-validated calm-slate Linear/Notion token set, hand-ported from
  * `Skill("sketch-findings-beatrax")/sources/themes/default.css` into a
  * Tailwind v4 `@theme` block so utilities (`bg-[var(--color-bg)]`,
  * `text-[var(--color-text-muted)]`) and the bespoke component layer
  * below both resolve from the same source of truth.
  *
- * Sidebar width is exposed as `--side-w` so the Dev Console layout
- * (16-03) can override it to 220px without re-declaring every other
- * token (UI-SPEC § Density rules).
+ * Sidebar width is exposed as `--side-w` so the Dev Console layout can
+ * override it to 220px without re-declaring every other token
+ * (UI-SPEC § Density rules).
  */
 /*
  * Declares which schemes this page renders itself.
@@ -76,6 +75,8 @@
     --color-bg-subtle: #f8fafc;
     --color-surface: #ffffff;
     --color-surface-2: #f1f5f9;
+    --color-hover: #f1f5f9;
+    --color-switch-knob: #ffffff;
     --color-surface-raised: #ffffff;
     --color-border: #e2e8f0;
     --color-border-strong: #cbd5e1;
@@ -165,7 +166,7 @@
     --side-w: 248px;
     --side-w-dev: 220px;
 
-    /* Mobile shell tokens (Phase 4, D-01/D-14/D-10) */
+    /* Mobile shell tokens */
     --top-bar-h: 48px;
     --drawer-w: min(80vw, 280px);
     --sheet-radius: 12px 12px 0 0;
@@ -176,6 +177,8 @@
     --color-bg-subtle: #0b1220;
     --color-surface: #0b1220;
     --color-surface-2: #1e293b;
+    --color-hover: #1e293b;
+    --color-switch-knob: #ffffff;
     --color-surface-raised: #0f172a;
     --color-border: #1e293b;
     --color-border-strong: #334155;
@@ -249,9 +252,9 @@ td.date,
 }
 
 /*
- * Sidebar primitives (sketch-validated, Phase 16 D-05). The bespoke
- * classes below honour the token block above — no hard-coded colors,
- * sizes flip with `.dark` automatically.
+ * Sidebar primitives (sketch-validated). The bespoke classes below
+ * honour the token block above — no hard-coded colors, sizes flip
+ * with `.dark` automatically.
  */
 /*
  * The app shell never scrolls sideways as a whole.
@@ -568,7 +571,7 @@ td.date,
     .dot-live {
         box-shadow: none;
     }
-    /* Phase 4: suppress drawer and bottom-sheet slide animations */
+    /* Suppress drawer and bottom-sheet slide animations */
     .drawer-container {
         transition: none !important;
     }
@@ -586,6 +589,70 @@ td.date,
  * target route is absent.
  */
 @layer components {
+    /*
+     * The one inline action button, for an icon standing alone AS the verb.
+     * Twenty of these carried seventeen different class strings, several with
+     * no affordance at all. Its mark is an emoji: a sole action has no words
+     * to lean on, and a text glyph is drawn from the body font at whatever
+     * size and baseline it likes. See the x-core::emoji-action component.
+     */
+    .emoji-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        flex: none;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: var(--color-surface);
+        color: var(--color-text-muted);
+        line-height: 1;
+        transition:
+            background-color 120ms ease,
+            border-color 120ms ease,
+            color 120ms ease;
+    }
+
+    .emoji-action__mark {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        font-size: 17px;
+        line-height: 1;
+        /* Ask for the colour picture, not the monochrome text fallback. */
+        font-variant-emoji: emoji;
+    }
+
+    .emoji-action:hover {
+        background: var(--color-bg-subtle);
+        border-color: var(--color-border-strong);
+        color: var(--color-text);
+    }
+
+    /* Pressed reads as movement, which is what tells a thumb it landed. */
+    .emoji-action:active {
+        background: var(--color-border-faint);
+        transform: translateY(1px);
+    }
+
+    .emoji-action:focus-visible {
+        outline: 2px solid var(--color-text);
+        outline-offset: 2px;
+    }
+
+    .emoji-action:disabled {
+        opacity: 0.45;
+        pointer-events: none;
+    }
+
+    .emoji-action--danger:hover {
+        border-color: var(--color-danger, currentColor);
+        color: var(--color-danger, currentColor);
+    }
+
     .dev-side {
         background: var(--color-bg-subtle);
         border-right: 1px solid var(--color-border);
@@ -671,8 +738,8 @@ td.date,
     .switch {
         position: relative;
         display: inline-block;
-        width: 36px;
-        height: 20px;
+        width: 44px;
+        height: 26px;
         border-radius: var(--radius-full);
         background: var(--color-surface-2);
         border: 1px solid var(--color-border);
@@ -691,31 +758,35 @@ td.date,
         border-color: var(--color-emerald);
     }
 
+    /*
+     * The knob is the same colour on or off. It used to take --color-bg when
+     * on, which in dark mode is #020617 — so an enabled switch showed a black
+     * hole punched through a green pill rather than a thumb.
+     */
     .switch__thumb {
         position: absolute;
-        top: 1px;
-        left: 1px;
-        width: 16px;
-        height: 16px;
+        top: 2px;
+        left: 2px;
+        width: 20px;
+        height: 20px;
         border-radius: var(--radius-full);
-        background: var(--color-surface);
+        background: var(--color-switch-knob);
         box-shadow: var(--shadow-xs);
         transition: var(--tx-quick);
     }
 
     .switch--on .switch__thumb {
-        transform: translateX(16px);
-        background: var(--color-bg);
+        transform: translateX(18px);
     }
 }
 
 /*
  * First-run setup wizard primitives. Sketch-validated calm-slate
- * surface (sketches 002D / 003C, Phase 16.1 D-01..D-04, UI-SPEC §
- * "Component Inventory"). Every class below references existing
- * @theme tokens — Phase 16.1 introduces no new theme variables. The
- * `--color-emerald` and `--color-emerald-bg` tokens are exported from
- * the @theme block above and flip with `.dark` automatically.
+ * surface (sketches 002D / 003C, UI-SPEC § "Component Inventory").
+ * Every class below references existing @theme tokens — the wizard
+ * introduces no new theme variables. The `--color-emerald` and
+ * `--color-emerald-bg` tokens are exported from the @theme block
+ * above and flip with `.dark` automatically.
  *
  * Token-source notes:
  *  - `.wiz-card` padding triple (44px 48px 32px) is sketch-locked from
@@ -1413,7 +1484,7 @@ td.date,
     /*
      * Rename popover preview line — the explanation rendered under
      * the "Remember as this name" checkbox showing the generalized
-     * pattern (D-10). Faint by design so the popover's primary verbs
+     * pattern. Faint by design so the popover's primary verbs
      * (Save / Cancel) remain visually dominant.
      */
     .popover-preview-line {
@@ -1568,7 +1639,7 @@ td.date,
     }
 
     /*
-     * Settings → Aliases (Phase 16.1 Plan 07) primitives.
+     * Settings → Aliases primitives.
      *
      * `.aliases-table` is the dense per-row alias editor — read-only
      * raw pattern + inline-editable generalized pattern + friendly
@@ -1836,6 +1907,47 @@ td.date,
 
     /* "5 rows shown · 132 more" footer below the table when totalRows
        exceeds the sample window. */
+    /*
+     * Six classes in this family were written into the markup and never given
+     * a rule, so the onboarding preview rendered them as bare browser default
+     * text — in the first flow a new user sees. They follow the eyebrow and
+     * the more-row above: muted, small, indented to the section's gutter.
+     */
+    .preview-section-label {
+        font-size: var(--text-sm);
+        font-weight: 600;
+        color: var(--color-text);
+    }
+
+    .preview-section-count {
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .preview-section-empty,
+    .preview-section-filtered {
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+        margin: 0 0 var(--space-4);
+        padding-left: var(--space-3);
+    }
+
+    /* Reads as a problem rather than a note, matching .wiz-error's pairing. */
+    .preview-section-error {
+        font-size: var(--text-xs);
+        color: var(--color-rose);
+        margin: 0 0 var(--space-4);
+        padding-left: var(--space-3);
+    }
+
+    .wiz-empty {
+        font-size: var(--text-sm);
+        color: var(--color-text-muted);
+        text-align: center;
+        margin: var(--space-6) 0;
+    }
+
     .preview-section-more {
         font-size: var(--text-xs);
         color: var(--color-text-muted);
@@ -2922,10 +3034,10 @@ td.date,
 }
 
 /*
- * FX transparency layer primitives (Phase 1 plan 05, UI-SPEC §5.5).
- * D-11: per-figure disclosure icon + global rates line.
- * D-12: subtle amber stale/bundled marker — NOT an alert.
- * D-03: all FX markup is guarded so an all-EUR card is byte-identical to today.
+ * FX transparency layer primitives (UI-SPEC §5.5): a per-figure disclosure
+ * icon plus a global rates line, and a subtle amber stale/bundled marker that
+ * is a marker and not an alert. All FX markup is guarded so an all-EUR card
+ * is byte-identical to today.
  * Zero new @theme tokens — every value references an existing token.
  */
 
@@ -3024,14 +3136,14 @@ td.date,
 }
 
 /*
- * Phase 4: Mobile shell responsive rules.
+ * Mobile shell responsive rules.
  *
- * Drawer breakpoint (D-01/D-03): at <1024px the `.side` sidebar is
+ * Drawer breakpoint: at <1024px the `.side` sidebar is
  * hidden from the normal flow — the drawer component owns it. At
  * >=1024px the .drawer-container is a static sidebar (no translate,
  * no scrim, no top bar).
  *
- * Touch input (D-13): .hidden-touch hides kbd hint chips on coarse
+ * Touch input: .hidden-touch hides kbd hint chips on coarse
  * pointer devices (phone/tablet touchscreens).
  */
 
@@ -3113,7 +3225,7 @@ td.date,
     }
 }
 
-/* Detail pages mount their own top bar (back affordance, D-05) inside
+/* Detail pages mount their own top bar (back affordance) inside
    <main> — suppress the layout's global hamburger bar so the two never
    stack. Page-level bars never carry .top-bar-global. */
 @media (max-width: 1023px) {
@@ -3122,7 +3234,7 @@ td.date,
     }
 }
 
-/* Touch device: hide kbd hint chips (D-13) */
+/* Touch device: hide kbd hint chips */
 @media (pointer: coarse) {
     .hidden-touch {
         display: none !important;
@@ -3130,12 +3242,12 @@ td.date,
 }
 
 /*
- * Phase 4: Mobile shell component primitives.
+ * Mobile shell component primitives.
  * All classes use @theme token variables — no inline Tailwind utilities.
  * Follows the .side / .side-item convention established above.
  */
 @layer components {
-    /* card-list-item — phone card row primitive (D-06) */
+    /* card-list-item — phone card row primitive */
     .card-list-item {
         display: flex;
         align-items: center;
@@ -3175,7 +3287,7 @@ td.date,
         color: var(--color-emerald);
     }
 
-    /* .top-bar — mobile top bar (D-01/D-02/D-14).
+    /* .top-bar — mobile top bar.
      * Only visible at <1024px (CSS hidden at desktop via the .top-bar rule above).
      * safe-area-inset-top handles the notch/Dynamic Island on phones. */
     .top-bar {
@@ -3287,8 +3399,8 @@ td.date,
         white-space: nowrap;
     }
 
-    /* .top-bar-btn — 44x44 tap target for hamburger, back, and palette buttons.
-     * D-14: minimum 44x44 interactive touch target (WCAG 2.5.5). */
+    /* .top-bar-btn — 44x44 tap target for hamburger, back, and palette
+     * buttons: the minimum interactive touch target (WCAG 2.5.5). */
     .top-bar-btn {
         display: inline-flex;
         align-items: center;
@@ -3320,7 +3432,7 @@ td.date,
         outline-offset: 2px;
     }
 
-    /* .bottom-sheet — phone-only modal-to-sheet wrapper (D-10).
+    /* .bottom-sheet — phone-only modal-to-sheet wrapper.
      * At desktop falls through to normal Flux modal behavior. */
     @media (max-width: 767px) {
         .bottom-sheet {
@@ -3340,7 +3452,7 @@ td.date,
            shown, and `display: block !important` beat it — so on every
            phone-width page carrying a sheet, a fixed full-screen layer sat
            over the app swallowing taps while scrolling still worked. */
-        /* Small controls need a 44px TOUCH target (D-14 / WCAG 2.5.5) without
+        /* Small controls need a 44px TOUCH target (WCAG 2.5.5) without
            becoming 44px of visible button — growing them with min-height made
            every chip and link look inflated. An overlaid pseudo-element
            extends the hit area past the paint instead, so the control keeps
@@ -3396,7 +3508,7 @@ td.date,
         }
     }
 
-    /* .filter-trigger-row — phone search + filter badge row (D-07) */
+    /* .filter-trigger-row — phone search + filter badge row */
     .filter-trigger-row {
         display: flex;
         align-items: center;
@@ -3423,7 +3535,7 @@ td.date,
         border: 0;
         outline: 0;
         color: var(--color-text);
-        /* 16px minimum prevents iOS Safari auto-zoom (D-14) */
+        /* 16px minimum prevents iOS Safari auto-zoom */
         font-size: 16px;
     }
 
@@ -3500,7 +3612,7 @@ td.date,
     }
 
     /*
-     * Overflow-x-auto power surface wrapper (04-05 chains / D-06 power split).
+     * Overflow-x-auto power surface wrapper.
      * Wraps dense chain/graph tables so they scroll horizontally at phone width
      * without breaking the page layout. Desktop: no change.
      */
@@ -3511,16 +3623,16 @@ td.date,
 }
 
 /*
- * Phase 4: Per-page phone-responsive rules (WR-05 / WR-06).
+ * Per-page phone-responsive rules.
  *
  * These rules were previously emitted as inline <style> blocks inside the
  * Livewire component root divs (dashboard.blade.php, settings-page.blade.php).
  * Inline component styles are a footgun: they are not scoped, they apply to
  * the entire document, and on some Livewire rendering paths they can be
- * duplicated. Moved here alongside the rest of the Phase 4 responsive rules.
+ * duplicated. Moved here alongside the rest of the responsive rules.
  */
 
-/* Dashboard phone posture (D-15, UI-SPEC §9).
+/* Dashboard phone posture (UI-SPEC §9).
  *
  * At <768px the dashboard column switches to a flex container with explicit
  * order values so the inbox-like posture is achieved without moving markup.
@@ -3554,7 +3666,7 @@ td.date,
     .dashboard-phone-order-8  { order: 8; }
 }
 
-/* Settings page phone posture (UI-SPEC §19, D-22).
+/* Settings page phone posture (UI-SPEC §19).
  *
  * At <768px: max-width constraint is removed; .settings-grid collapses to a
  * single column. Desktop multi-column unchanged. The specificity of the
@@ -3569,7 +3681,7 @@ td.date,
 }
 
 /* ============================================================
- * Calendar page component classes (UI-SPEC Phase 06 §10).
+ * Calendar page component classes (UI-SPEC §10).
  *
  * All values reference existing @theme tokens — no new tokens.
  * Dark mode flips automatically via the .dark companion block.
@@ -3634,10 +3746,6 @@ td.date,
         outline-offset: -2px;
     }
 
-    /* Today ring */
-    .cal-cell--today {
-        box-shadow: inset 0 0 0 1.5px var(--color-border-strong);
-    }
 
     /* Risk day tint (balance < 0) */
     .cal-cell--risk {
@@ -3788,7 +3896,7 @@ td.date,
 }
 
 /*
- * Phase 07 — Tax / Deductible Tagging + Per-Year Export
+ * Tax / deductible tagging + per-year export
  *
  * UI-SPEC Section 14: 8 new CSS classes for the /tax cockpit, badge surfaces,
  * and export buttons. All resolve from existing @theme tokens — no new variables.
@@ -3799,9 +3907,9 @@ td.date,
  * .batch-tag-banner — Batch suggestion banner
  * .tax-export-btn  — Export buttons (pill-btn-ghost size + style)
  *
- * These classes are defined here so Plan 06 (badge surfaces on transactions
- * list, detail, counterparty tabs, cash book) can reuse them without touching
- * app.css again.
+ * These classes are defined here so the badge surfaces on the transactions
+ * list, detail, counterparty tabs and cash book can reuse them without
+ * touching app.css again.
  */
 @layer components {
     /* Tagged state pill: emerald fill, xs text, full radius, tabular-nums */
@@ -3852,11 +3960,10 @@ td.date,
     @media (pointer: coarse) {
         .tax-badge--untagged {
             opacity: 1;
-            min-height: 44px;
         }
     }
 
-    /* Year-override pill: amber fill (D-10 — tax year differs from booked year) */
+    /* Year-override pill: amber fill (tax year differs from booked year) */
     .tax-badge--amber {
         display: inline-flex;
         align-items: center;
@@ -3958,13 +4065,13 @@ td.date,
 }
 
 /* Phone: compact cell, entry-count badge only, no balance corner.
- * Min cell height 44px (Phase 4 D-14 touch-target rule).
+ * Min cell height 44px (touch-target rule).
  * Day panel hidden entirely at phone width (bottom sheet takes over). */
 @media (max-width: 767px) {
     .cal-cell {
         /* `height` rather than `min-height` for the same reason as the base
            rule — on a table cell min-height does nothing, and this one
-           carries the D-14 44px touch target, so losing it would shrink
+           carries the 44px touch target, so losing it would shrink
            every day below the minimum tap size on a phone. */
         height: 44px;
         padding: var(--space-1, 4px);
@@ -3983,9 +4090,8 @@ td.date,
 }
 
 /* ==========================================================================
-   Phase 8 — Full-text search & filter UI (.srch-* namespace)
-   UI-SPEC tokens: D-19 search toolbar, D-20 filter chips, D-21 no-results,
-   D-22 result row highlight/snippet.
+   Full-text search & filter UI (.srch-* namespace): search toolbar, filter
+   chips, no-results state, and result row highlight/snippet.
    ========================================================================== */
 
 /* ── Search toolbar container ────────────────────────────────────────────── */
@@ -4154,7 +4260,7 @@ td.date,
     -webkit-line-clamp: 1;
 }
 
-/* FTS5 highlight marks — server-generated <mark> tags (T-08-09: safe) */
+/* FTS5 highlight marks — server-generated <mark> tags */
 mark {
     background: color-mix(in oklch, oklch(85% 0.18 95) 40%, transparent);
     color: inherit;
@@ -4418,7 +4524,7 @@ mark {
     }
 }
 
-/* ── Token autocomplete overlay (palette, UI-SPEC #7, D-26) ─────────────── */
+/* ── Token autocomplete overlay (palette, UI-SPEC #7) ───────────────────── */
 /* Appears below the search input when the user types a recognized token     */
 /* prefix (account:, amount:, after:, before:, category:).                  */
 .srch-token-suggest {
@@ -4449,7 +4555,7 @@ mark {
     background: var(--color-surface-2, #f1f5f9);
 }
 
-/* ── Palette two-line transaction row (palette, UI-SPEC #6, D-19) ────────── */
+/* ── Palette two-line transaction row (palette, UI-SPEC #6) ──────────────── */
 /* Matches existing .palette-row padding; two lines give natural >= 44px.   */
 .palette-txn-row {
     padding: 8px 16px;
@@ -4471,7 +4577,7 @@ mark {
     color: var(--color-text-muted, #64748b);
 }
 
-/* ── Phone full-screen palette sheet (UI-SPEC #9, D-29) ─────────────────── */
+/* ── Phone full-screen palette sheet (UI-SPEC #9) ──────────────────────── */
 /* On phone (< 768px) the palette switches from the 760px desktop modal to  */
 /* a full-screen fixed sheet: input pinned at top, results scroll beneath,  */
 /* swipe-down or × to dismiss. Applied via the `phone-palette-sheet` class  */
@@ -4509,12 +4615,11 @@ mark {
 }
 
 /*
- * Split-transaction primitives (Phase 13.1 Plan 05, UI-SPEC §11). No new
- * @theme tokens — every value below resolves from tokens already declared
- * at the top of this file. `.split-badge`/`.split-leg-subrow` are consumed
- * by the list-surface expand/collapse row (Plan 06); `.split-leg-row` and
- * `.split-remaining-bar` are consumed by the TransactionDetail split editor
- * (this plan).
+ * Split-transaction primitives (UI-SPEC §11). No new @theme tokens — every
+ * value below resolves from tokens already declared at the top of this file.
+ * `.split-badge`/`.split-leg-subrow` are consumed by the list-surface
+ * expand/collapse row; `.split-leg-row` and `.split-remaining-bar` are
+ * consumed by the TransactionDetail split editor.
  */
 @layer components {
     /* Neutral pill on list rows — never emerald/amber/rose (color restraint
@@ -4556,7 +4661,7 @@ mark {
         border-bottom: 0;
     }
 
-    /* Read-only expanded leg row on list surfaces (§6, Plan 06). */
+    /* Read-only expanded leg row on list surfaces (§6). */
     .split-leg-subrow {
         background: var(--color-bg-subtle);
         border-left: 2px solid var(--color-border-strong);
@@ -4599,7 +4704,7 @@ mark {
 }
 
 /*
- * Cleared/uncleared/reconciled status pill (Phase 13.3 Plan 03, SC-1, D-11).
+ * Cleared/uncleared/reconciled status pill.
  * `.status-pill` is the shared calm-slate state primitive documented in
  * component-library.md (dev-console health rows, palette source chip); this
  * is its first consumer outside DevMode. No new @theme tokens — ok/warn/
@@ -4678,10 +4783,9 @@ mark {
 }
 
 /*
- * Notification type chip (Phase 18 Plan 12, D-46). The one new CSS class
- * this phase adds. One style for all 8 notification types — no per-type
- * color; the glyph (from NotificationCopy::typeChip()) is the only
- * per-type signal. Follows the import preview's leading Type-column
+ * Notification type chip. One style for all 8 notification types — no
+ * per-type color; the glyph (from NotificationCopy::typeChip()) is the
+ * only per-type signal. Follows the import preview's leading Type-column
  * glyph+word precedent.
  */
 @layer components {
@@ -4817,7 +4921,7 @@ mark {
 }
 
 /*
- * Failure pages (G2-R1). Deliberately plain: a page that appears because
+ * Failure pages. Deliberately plain: a page that appears because
  * something already went wrong should not depend on much. No grid, no
  * component classes borrowed from elsewhere, nothing that needs JS — if the
  * stylesheet itself fails to load the markup still reads top to bottom.
@@ -5071,6 +5175,66 @@ mark {
     label:has(> input[type='file']) {
         min-height: 44px;
         min-width: 44px;
+    }
+
+    /*
+     * The guideline asks for a 44px target, not a 44px picture. Inflating the
+     * box turned the 36x20 switch into a circle with its thumb stranded at the
+     * top, so the reach moves to a pseudo-element that no layout can see.
+     */
+    .switch,
+    [role='switch'],
+    .chip,
+    .srch-chip-toggle,
+    .split-badge,
+    .tax-badge,
+    .fx-disclosure-trigger,
+    .srch-chip-close,
+    .srch-sheet-apply,
+    .srch-sheet-clear {
+        position: relative;
+        min-height: 0;
+        min-width: 0;
+    }
+
+    /*
+     * The same reach for a chip-shaped LINK. The floor lands on button and
+     * [role='button'], so an <a> drawn as a chip — x-core::secondary-button
+     * given :href, the /email "Reconnect" pill — sat at 28-34px next to
+     * controls the floor had already taken to 44. It has no floor to undo,
+     * so it takes the halo and nothing else.
+     */
+    .tap-chip {
+        position: relative;
+    }
+
+    .switch::after,
+    [role='switch']::after,
+    .chip::after,
+    .tap-chip::after,
+    .srch-chip-toggle::after,
+    .split-badge::after,
+    .tax-badge::after,
+    .fx-disclosure-trigger::after,
+    .srch-chip-close::after,
+    .srch-sheet-apply::after,
+    .srch-sheet-clear::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 44px;
+        height: 44px;
+        transform: translate(-50%, -50%);
+    }
+
+    /*
+     * This close button sits beside the chip it clears, so a halo wide enough
+     * to reach 44px would swallow taps meant for the chip. It grows only in
+     * the axis that is free.
+     */
+    .srch-chip-close::after {
+        width: 24px;
     }
 }
 

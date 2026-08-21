@@ -13,16 +13,13 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Migration\Internal\Dto\PreviewSummary;
+use Modules\Migration\Internal\Enums\MigrationRunStatus;
 use Modules\Migration\Internal\Exceptions\MigrationRunNotParsedException;
 use Modules\Migration\Models\MigrationRun;
-use Modules\Migration\Public\Dto\PreviewSummary;
-use Modules\Migration\Public\Enums\MigrationRunStatus;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 final class PreviewSummaryBuilder
 {
     use CoercesScalars;
@@ -62,9 +59,6 @@ final class PreviewSummaryBuilder
             ->where('migration_run_id', $migrationRunId)
             ->count();
 
-        // Excludes split legs (rows with a non-null parent_source_external_id)
-        // so a 2-leg split counts as ONE transaction, matching the parser's
-        // own MigrationTransactionDto granularity.
         $transactionsCount = $connection->table('migration_staging_transactions')
             ->where('user_id', $user->id)
             ->where('migration_run_id', $migrationRunId)
@@ -77,10 +71,8 @@ final class PreviewSummaryBuilder
             ->distinct()
             ->count('period_start');
 
-        // Distinguishes "never staged" from "staged but genuinely empty" via
-        // migration_runs.status rather than an all-zero-counts heuristic —
-        // only a 'discarded' run has had its staging deliberately truncated;
-        // every other status means staging genuinely completed.
+        // Only a discarded run has had its staging truncated, so status — not an
+        // all-zero-counts heuristic — separates "never staged" from "empty".
         if (self::toString($run->status) === MigrationRunStatus::Discarded->value) {
             throw new MigrationRunNotParsedException($migrationRunId);
         }
@@ -149,9 +141,6 @@ final class PreviewSummaryBuilder
         $currency = $row->currency !== null ? self::toString($row->currency) : null;
         $resolution = $row->resolution !== null ? self::toString($row->resolution) : 'keep_local';
 
-        // A malformed row with no structured entity_type/field_name falls
-        // back to the legacy pre-baked display_label/reason rather than
-        // rendering a blank label.
         if ($entityType === '' || $fieldName === '') {
             return [
                 'id' => self::toInt($row->id),
@@ -178,9 +167,6 @@ final class PreviewSummaryBuilder
 
     private function conflictLabel(Connection $connection, User $user, string $sourceProduct, string $entityType, string $fieldName, ?string $sourceExternalId): string
     {
-        // Defensive fallback to the field name alone — every conflict is
-        // recorded against an already-mapped entity, so a null id here
-        // should not normally happen.
         if ($sourceExternalId === null) {
             return ucfirst($entityType).' '.$fieldName;
         }
@@ -238,9 +224,6 @@ final class PreviewSummaryBuilder
             return 'Transaction '.$fieldLabel;
         }
 
-        // Decrypt-for-display: a null-guarded pass-through call, since
-        // SensitiveColumnCodec is already a plaintext-user no-op, so no
-        // separate is-encrypted branch is needed here.
         $counterpartyName = $txn->counterparty_name === null
             ? null
             : $this->codec->decryptValue('transactions', 'counterparty_name', self::toString($txn->counterparty_name), $user->id, ($this->session)())['value'];
@@ -280,9 +263,6 @@ final class PreviewSummaryBuilder
 
     private function conflictReason(string $resolution, bool $isMoney, ?string $currency, ?string $localRaw, ?string $sourceRaw, ?string $baselineRaw): string
     {
-        // Reflects whichever choice is CURRENTLY selected, so picking "Take
-        // source" immediately updates what this line says will happen at
-        // Confirm — never a fixed "local value kept" string.
         $intro = $resolution === 'take_source'
             ? "The new export's value will be applied when you confirm — your local value will be replaced."
             : 'Your local value will be kept — the new export\'s value will not be applied.';
@@ -303,7 +283,7 @@ final class PreviewSummaryBuilder
         }
 
         if ($isMoney) {
-            return Money::ofMinor((int) $raw, $currency ?? $this->baseCurrency->code())->format('nl_NL');
+            return Money::ofMinor((int) $raw, $currency ?? $this->baseCurrency->code())->format();
         }
 
         return '"'.$raw.'"';

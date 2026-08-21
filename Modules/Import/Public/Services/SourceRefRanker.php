@@ -6,10 +6,8 @@ namespace Modules\Import\Public\Services;
 
 use Modules\Ingestion\Public\Enums\SourceFormat;
 
-// Ranks a present reference by the format that produced it (CAMT.053 >
-// MT940 > CSV > anything else); NULL/empty ranks zero. Centralising
-// this lets FingerprintStage and ApplyEnrichments agree on the
-// ordering, closing the preview-then-confirm TOCTOU window.
+// One ranking, so FingerprintStage and ApplyEnrichments agree and the
+// preview-then-confirm TOCTOU window closes.
 final class SourceRefRanker
 {
     /**
@@ -31,27 +29,17 @@ final class SourceRefRanker
         return match ($format) {
             SourceFormat::Camt053->value => 4,
             SourceFormat::Mt940->value => 2,
-            // PayPal email receipts win on ENRICHED over their CSV
-            // counterpart: the receipt carries the canonical PayPal
-            // Transaction ID while the CSV renders the same identifier
-            // as an `O-...` slug — ranked above 'paypal-csv' so it wins.
+            // Above paypal-csv: the receipt carries the canonical PayPal
+            // Transaction ID where the CSV renders it as an `O-...` slug.
             'paypal-receipt' => 2,
-            // ICS receipts beat ICS PDF on ENRICHED for merchant-name:
-            // the receipt carries a clean "Verkoper: <name>" value while
-            // the PDF fuses the merchant with a city/country fragment —
-            // rank one above the PDF so the receipt wins when present.
+            // Above ics-pdf: the receipt carries a clean "Verkoper: <name>"
+            // where the PDF fuses the merchant with a city fragment.
             'ics-receipt' => 2,
             'ics-pdf' => 1,
-            // Google Play receipts are standalone — no other ingestion
-            // path exists, so there is no cross-format dedup risk; the
-            // (account_id, currency, amount) tuple already keeps them
-            // disjoint from ASN/ICS rows under the fingerprint.
             'google-play-receipt' => 1,
             SourceFormat::AsnCsv->value => 1,
-            // PayPal Activity Download CSV rides in the same band as
-            // asn-csv — disjoint account_id values mean the two never
-            // collide under the fingerprint tuple, so cross-format
-            // enrichment between them is a non-goal for this ranker.
+            // Same band as asn-csv: disjoint account_id values keep the two
+            // from ever colliding under the fingerprint tuple.
             'paypal-csv' => 1,
             default => 0,
         };

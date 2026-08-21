@@ -1,6 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    `/reports/library` saved-report index (Req 9) — Cards|List CRUD:
+    `/reports/library` saved-report index — Cards|List CRUD:
     list/open/edit/delete + pin toggle. Cards-default grid mirroring
     `/counterparties` (999.6-PATTERNS.md "ReportsIndex.php" /
     999.6-UI-SPEC.md Component Inventory item 3).
@@ -29,13 +29,16 @@
             style="border-color: var(--color-rose); background: var(--color-rose-bg); color: var(--color-rose);"
         >
             <span>{{ $flashMessage }}</span>
-            <button type="button" wire:click="clearFlash" aria-label="{{ Lang::get('reports::index.dismiss') }}" style="color: inherit;">&times;</button>
+            <x-core::emoji-action
+                :label="Lang::get('reports::index.dismiss')"
+                wire:click="clearFlash"
+            >✖️</x-core::emoji-action>
         </div>
     @endif
 
     {{-- Toolbar: New report link + Cards|List toggle ---------------- --}}
     <div style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap;">
-        <a href="{{ route('reports.index') }}" class="pill-btn-primary" style="text-decoration: none;">
+        <a href="{{ route('reports.index') }}" class="pill-btn-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" style="text-decoration: none;">
             {{ Lang::get('reports::index.build_new') }}
         </a>
 
@@ -43,13 +46,13 @@
             <div class="view-toggle" role="group" aria-label="{{ Lang::get('reports::index.view_mode_aria') }}">
                 <button
                     type="button"
-                    class="{{ $activeView === 'cards' ? 'active' : '' }}"
+                    class="{{ $activeView === 'cards' ? 'active' : '' }} focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                     aria-pressed="{{ $activeView === 'cards' ? 'true' : 'false' }}"
                     wire:click="setView('cards')"
                 >▦ {{ Lang::get('reports::index.cards') }}</button>
                 <button
                     type="button"
-                    class="{{ $activeView === 'list' ? 'active' : '' }}"
+                    class="{{ $activeView === 'list' ? 'active' : '' }} focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                     aria-pressed="{{ $activeView === 'list' ? 'true' : 'false' }}"
                     wire:click="setView('list')"
                 >≡ {{ Lang::get('reports::index.list') }}</button>
@@ -59,17 +62,14 @@
 
     {{-- Body ------------------------------------------------------- --}}
     @if ($rows->isEmpty())
-        <section class="frame" style="text-align: center; padding: var(--space-10);">
-            <h2 style="font-size: var(--text-xl); font-weight: 600; color: var(--color-text); margin: 0 0 var(--space-3);">
-                {{ Lang::get('reports::index.empty.heading') }}
-            </h2>
-            <p style="font-size: var(--text-base); color: var(--color-text-muted); margin: 0 0 var(--space-4);">
-                {{ Lang::get('reports::index.empty.body') }}
-            </p>
-            <a href="{{ route('reports.index') }}" class="pill-btn-primary" style="display: inline-block; text-decoration: none;">
+        <x-core::empty-state
+            :heading="Lang::get('reports::index.empty.heading')"
+            :body="Lang::get('reports::index.empty.body')"
+        >
+            <a href="{{ route('reports.index') }}" class="pill-btn-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" style="display: inline-block; text-decoration: none;">
                 {{ Lang::get('reports::index.empty.cta') }}
             </a>
-        </section>
+        </x-core::empty-state>
     @elseif ($activeView === 'cards')
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-4);" class="cp-cards-grid">
             @foreach ($rows as $row)
@@ -82,39 +82,43 @@
                             aria-pressed="{{ $row->pinned ? 'true' : 'false' }}"
                             aria-label="{{ $row->pinned ? Lang::get('reports::index.pin.pinned_aria') : Lang::get('reports::index.pin.pin_aria') }}"
                             title="{{ $row->pinned ? Lang::get('reports::index.pin.pinned_title') : Lang::get('reports::index.pin.pin_title') }}"
-                            class="chip"
+                            class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                             style="{{ $row->pinned ? 'background: var(--color-text); color: var(--color-text-inverse); border-color: var(--color-text);' : '' }}"
                         ><span aria-hidden="true">📌</span> {{ $row->pinned ? Lang::get('reports::index.pin.pinned_label') : Lang::get('reports::index.pin.pin_label') }}</button>
                     </header>
 
                     <p class="cp-recent" style="margin: 0;">{{ $row->summary }}</p>
 
-                    <div
-                        class="opacity-0 group-hover:opacity-100 transition-opacity"
-                        style="display: flex; align-items: center; gap: var(--space-2); margin-top: auto; padding-top: var(--space-2);"
-                    >
-                        <a href="{{ route('reports.index', ['report' => $row->id]) }}" class="chip" style="text-decoration: none;">{{ Lang::get('reports::index.open') }}</a>
-                        <a href="{{ route('reports.index', ['report' => $row->id]) }}" class="chip" style="text-decoration: none;">{{ Lang::get('reports::index.edit') }}</a>
+                    {{-- The action row is hover-revealed, and the confirm strip
+                         used to live inside it: asking the question then fading
+                         it out as soon as the pointer left the card. The strip
+                         replaces the row instead, so the answer stays visible. --}}
+                    @if ($confirmingDeleteId === $row->id)
+                        <x-core::confirm-strip
+                            style="margin-top: auto;"
+                            :question="Lang::get('reports::index.delete_confirm', ['name' => $row->name])"
+                            :cancel-label="Lang::get('reports::index.cancel')"
+                            :confirm-label="Lang::get('reports::index.delete_report')"
+                            cancel="cancelDelete"
+                            :confirm="'deleteReport('.$row->id.')'"
+                        />
+                    @else
+                        <div
+                            class="opacity-0 group-hover:opacity-100 transition-opacity"
+                            style="display: flex; align-items: center; gap: var(--space-2); margin-top: auto; padding-top: var(--space-2);"
+                        >
+                            <a href="{{ route('reports.index', ['report' => $row->id]) }}" class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" style="text-decoration: none;">{{ Lang::get('reports::index.open') }}</a>
+                            <a href="{{ route('reports.index', ['report' => $row->id]) }}" class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" style="text-decoration: none;">{{ Lang::get('reports::index.edit') }}</a>
 
-                        @if ($confirmingDeleteId === $row->id)
-                            <span style="font-size: var(--text-xs); color: var(--color-text-muted);">{{ Lang::get('reports::index.delete_confirm', ['name' => $row->name]) }}</span>
-                            <button
-                                type="button"
-                                wire:click="deleteReport({{ $row->id }})"
-                                class="chip"
-                                style="color: var(--color-rose); border-color: var(--color-rose);"
-                            >{{ Lang::get('reports::index.delete_report') }}</button>
-                            <button type="button" wire:click="cancelDelete" class="chip">{{ Lang::get('reports::index.cancel') }}</button>
-                        @else
                             <button
                                 type="button"
                                 wire:click="confirmDelete({{ $row->id }})"
                                 aria-label="{{ Lang::get('reports::index.delete_aria', ['name' => $row->name]) }}"
-                                class="chip"
+                                class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                                 style="color: var(--color-rose);"
                             >{{ Lang::get('reports::index.delete') }}</button>
-                        @endif
-                    </div>
+                        </div>
+                    @endif
                 </div>
             @endforeach
         </div>
@@ -147,35 +151,36 @@
                                     wire:click="togglePin({{ $row->id }})"
                                     aria-pressed="{{ $row->pinned ? 'true' : 'false' }}"
                                     aria-label="{{ $row->pinned ? Lang::get('reports::index.pin.pinned_aria') : Lang::get('reports::index.pin.pin_aria') }}"
-                                    class="chip"
+                                    class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                                     style="{{ $row->pinned ? 'background: var(--color-text); color: var(--color-text-inverse); border-color: var(--color-text);' : '' }}"
                                 ><span aria-hidden="true">📌</span> {{ $row->pinned ? Lang::get('reports::index.pin.pinned_label') : Lang::get('reports::index.pin.pin_label') }}</button>
                             </td>
-                            <td style="padding: var(--space-2) var(--space-3); text-align: right;">
-                                <div style="display: inline-flex; align-items: center; gap: var(--space-2);">
-                                    <a href="{{ route('reports.index', ['report' => $row->id]) }}" class="chip" style="text-decoration: none;">{{ Lang::get('reports::index.open') }}</a>
-                                    <a href="{{ route('reports.index', ['report' => $row->id]) }}" class="chip" style="text-decoration: none;">{{ Lang::get('reports::index.edit') }}</a>
+                            @if ($confirmingDeleteId === $row->id)
+                                <x-core::confirm-strip
+                                    tag="td"
+                                    style="padding: var(--space-2) var(--space-3);"
+                                    :question="Lang::get('reports::index.delete_confirm', ['name' => $row->name])"
+                                    :cancel-label="Lang::get('reports::index.cancel')"
+                                    :confirm-label="Lang::get('reports::index.delete_report')"
+                                    cancel="cancelDelete"
+                                    :confirm="'deleteReport('.$row->id.')'"
+                                />
+                            @else
+                                <td style="padding: var(--space-2) var(--space-3); text-align: right;">
+                                    <div style="display: inline-flex; align-items: center; gap: var(--space-2);">
+                                        <a href="{{ route('reports.index', ['report' => $row->id]) }}" class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" style="text-decoration: none;">{{ Lang::get('reports::index.open') }}</a>
+                                        <a href="{{ route('reports.index', ['report' => $row->id]) }}" class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900" style="text-decoration: none;">{{ Lang::get('reports::index.edit') }}</a>
 
-                                    @if ($confirmingDeleteId === $row->id)
-                                        <span style="font-size: var(--text-xs); color: var(--color-text-muted);">{{ Lang::get('reports::index.delete_confirm', ['name' => $row->name]) }}</span>
-                                        <button
-                                            type="button"
-                                            wire:click="deleteReport({{ $row->id }})"
-                                            class="chip"
-                                            style="color: var(--color-rose); border-color: var(--color-rose);"
-                                        >{{ Lang::get('reports::index.delete_report') }}</button>
-                                        <button type="button" wire:click="cancelDelete" class="chip">{{ Lang::get('reports::index.cancel') }}</button>
-                                    @else
                                         <button
                                             type="button"
                                             wire:click="confirmDelete({{ $row->id }})"
                                             aria-label="{{ Lang::get('reports::index.delete_aria', ['name' => $row->name]) }}"
-                                            class="chip"
+                                            class="chip focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                                             style="color: var(--color-rose);"
                                         >{{ Lang::get('reports::index.delete') }}</button>
-                                    @endif
-                                </div>
-                            </td>
+                                    </div>
+                                </td>
+                            @endif
                         </tr>
                     @endforeach
                 </tbody>

@@ -8,22 +8,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Desktop\Internal\Native\SyncListenerProcess;
 use Modules\Sync\Public\Services\DeviceRegistryService;
+use Modules\Sync\Public\Services\SyncPorts;
 use Psr\Log\AbstractLogger;
 
 uses(RefreshDatabase::class);
-
-/*
- * The `sync:serve` daemon starts only for a device that has enabled sync.
- *
- * It used to start on every desktop launch. With no device identity there is
- * no peer that could dial in and every inbound connection would be rejected,
- * so the app bound a listening socket on each launch for a feature the user
- * may never turn on — and a crash-looping listener then filled the log of an
- * app that had nothing to sync.
- *
- * The pair of cases below is the whole contract: no identity means the
- * process is never asked for, and an identity means the gate stands aside.
- */
 
 // Captures whether the gate declined, without asserting on a mocked facade:
 // the "not starting" line is only ever emitted on the declining branch.
@@ -78,11 +66,15 @@ function seedDesktopSelfDevice(int $userId): void
     ]);
 }
 
+// The daemon used to start on every desktop launch. With no device identity
+// nothing could dial in, so the app bound a socket for a feature the user may
+// never turn on, and a crash-looping listener filled the log of an idle app.
 it('does not start the listener on a device that has never enabled sync', function (): void {
     $logger = syncListenerSpyLogger();
 
     $process = new SyncListenerProcess(
         app(DeviceRegistryService::class),
+        app(SyncPorts::class),
         $logger,
     );
 
@@ -105,14 +97,14 @@ it('starts the listener once a device identity exists', function (): void {
 
     $process = new SyncListenerProcess(
         app(DeviceRegistryService::class),
+        app(SyncPorts::class),
         $logger,
     );
 
     $process->startIfEnabled();
 
-    // Past the gate. Whether the child process actually spawns is NativePHP's
-    // business and unavailable outside the desktop runtime; the failure is
-    // caught and logged rather than thrown, which is the intended posture.
+    // Whether the child process spawns is NativePHP's business and unavailable
+    // outside the desktop runtime; the failure is caught and logged, not thrown.
     expect($logger->declined())->toBeFalse();
 });
 
@@ -135,9 +127,8 @@ it('reports a self device only when one is registered', function (): void {
 
 it('leaves a listener that is already holding the port alone', function (): void {
     // A persistent ChildProcess outlives the Electron process that spawned it,
-    // so a crash-and-relaunch finds the previous listener still bound. Starting
-    // a second one fatals with "Address already in use" — which is exactly what
-    // surfaced in the desktop console.
+    // so a crash-and-relaunch finds the previous listener still bound and a
+    // second start fatals with "Address already in use".
     $user = User::query()->create([
         'username' => 'sync-port-'.bin2hex(random_bytes(4)),
         'password' => bcrypt('irrelevant-for-this-gate'),
@@ -157,7 +148,7 @@ it('leaves a listener that is already holding the port alone', function (): void
     $logger = syncListenerSpyLogger();
 
     try {
-        (new SyncListenerProcess(app(DeviceRegistryService::class), $logger))->startIfEnabled();
+        (new SyncListenerProcess(app(DeviceRegistryService::class), app(SyncPorts::class), $logger))->startIfEnabled();
     } finally {
         fclose($stale);
     }

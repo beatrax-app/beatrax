@@ -8,11 +8,6 @@ use Modules\Ledger\Models\Category;
 use Psr\Log\AbstractLogger;
 use Psr\Log\LoggerInterface;
 
-/**
- * Tiny in-test PSR-3 recorder so we can assert the loader emits a
- * `warning` log when a corpus entry references a category that does
- * not match any row in the `categories` table.
- */
 $makeRecorder = function (): LoggerInterface {
     return new class extends AbstractLogger
     {
@@ -40,7 +35,6 @@ beforeEach(function () use ($makeRecorder): void {
     $config = $this->app->make(ConfigRepository::class);
     $config->set('community.corpus.root', $this->tmpRoot);
 
-    // Seed one valid category that we'll reference in the YAML.
     Category::create([
         'user_id' => null,
         'name' => 'Groceries',
@@ -126,8 +120,6 @@ YAML;
 });
 
 it('returns an empty list when the merchants corpus directory holds no files', function (): void {
-    // beforeEach created an empty merchants/ directory and wrote no YAML in
-    // this case, so the loader finds nothing to seed.
     /** @var CorpusLoader $loader */
     $loader = $this->app->make(CorpusLoader::class);
     $entries = $loader->loadBundled();

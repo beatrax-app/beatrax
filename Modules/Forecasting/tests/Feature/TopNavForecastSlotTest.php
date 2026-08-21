@@ -12,15 +12,6 @@ use Modules\Ledger\Models\Transaction;
 
 uses(RefreshDatabase::class);
 
-/*
- * Top-nav "Forecast" slot composer tests.
- *
- * The ForecastingServiceProvider attaches a `forecastShortfallCount`
- * integer to `core::livewire.top-nav` via the View Factory contract
- * (NEVER the `view()` global helper). The slot renders a rose-50
- * ↘-glyph pill when the user has at least one active shortfall.
- */
-
 function tnfsUser(string $username): User
 {
     return User::query()->create([
@@ -123,7 +114,6 @@ it('renders the rose-50 pill with the ↘ glyph when shortfallCount >= 1', funct
 
 it('caps the badge label at 99+ for very large shortfall counts', function (): void {
     $account = tnfsAsnAccount($this->user, 'sf-many-'.bin2hex(random_bytes(3)));
-    // Seed 100 distinct shortfall windows.
     tnfsSeedShortfall($this->user, $account, 100);
 
     $this->actingAs($this->user)

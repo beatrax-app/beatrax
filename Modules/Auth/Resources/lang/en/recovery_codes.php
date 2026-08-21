@@ -8,6 +8,7 @@ return [
     'subtitle' => 'Print these or save them somewhere safe. They will not be shown again.',
     'copy' => 'Copy codes',
     'copied' => 'Copied',
+    'copy_failed' => 'Could not copy. Write the codes down instead.',
     'download' => 'Download as .txt',
 
     'saved_as' => 'Saved as beatrax-recovery-codes-:username.txt',

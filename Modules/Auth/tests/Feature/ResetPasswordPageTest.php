@@ -10,17 +10,7 @@ use Modules\Auth\Public\Actions\LogoutAction;
 use Modules\Auth\Public\Actions\SignupAction;
 use Modules\Core\Models\User;
 
-/*
- * Feature coverage for the /reset-password page: it renders the UI-SPEC
- * copy, the route resolves (closing the dead login-page link), a valid
- * username + unused code + matching 12+ char password redeems and
- * redirects to /login, and wrong-code / mismatched-password submits show
- * the verbatim error copy without changing the password.
- */
-
 /**
- * Signs up an owner and returns it with its ten plaintext recovery codes.
- *
  * @return array{user: User, codes: list<string>}
  */
 function resetPageOwner(): array
@@ -34,11 +24,8 @@ function resetPageOwner(): array
 }
 
 it('renders the reset-password heading, subhead, inline help and button', function (): void {
-    // The reset-password page only makes sense once a user exists — the
-    // first-launch DB gate funnels a zero-user state through the welcome
-    // screen, so seed an owner first to exercise the actual page render.
-    // SignupAction auto-logs the new user in; the reset-password route is
-    // in the `guest` group, so log back out before issuing the GET.
+    // A zero-user state is funnelled through the welcome screen, so an owner
+    // has to exist first — and signup logs them in, while this route is guest.
     resetPageOwner();
     /** @var LogoutAction $logout */
     $logout = $this->app->make(LogoutAction::class);
@@ -118,7 +105,7 @@ it('shows a mismatch error when the two new passwords differ', function (): void
         ->assertNoRedirect()
         ->assertSet('flashMessage', 'Passwords do not match.');
 
-    // The code must not be consumed when the form fails before verification.
+    // Nothing is consumed when the form fails before verification.
     $unused = UserRecoveryCode::query()->whereNull('used_at')->count();
     expect($unused)->toBe(10);
 });

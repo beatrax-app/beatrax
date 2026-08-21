@@ -25,6 +25,8 @@ return [
         'tax_years' => 'Steuerjahre',
     ],
 
+    'tablist_aria' => 'Abschnitte des Zahlungspartners',
+
     'tab_note_personal' => '— keine Finanzierungsketten für private Kontakte',
     'tab_note_bank' => '— ein Zahlungspartner für Bankgebühren erzeugt keine Finanzierungsketten',
     'tab_note_government' => '— keine Finanzierungsketten für behördliche Zahlungspartner',

@@ -8,9 +8,6 @@ use InvalidArgumentException;
 use Native\Desktop\Contracts\Shell;
 use Psr\Log\LoggerInterface;
 
-/**
- * @link ../../../../.docs/features/community/architecture.md
- */
 final class OpenExternalUrlAction
 {
     /** @var list<string> */

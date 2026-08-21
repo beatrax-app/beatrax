@@ -25,6 +25,8 @@ return [
     'no_entries' => 'Kol kas rankinių įrašų nėra.',
     'delete_entry' => 'Ištrinti įrašą',
     'delete' => 'Ištrinti',
+    'delete_confirm' => 'Ištrinti šį įrašą?',
+    'delete_keep' => 'Palikti',
 
     'errors' => [
         'amount_positive' => 'Įvesk už nulį didesnę sumą.',

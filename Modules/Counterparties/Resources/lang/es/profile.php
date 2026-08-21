@@ -25,6 +25,8 @@ return [
         'tax_years' => 'Ejercicios fiscales',
     ],
 
+    'tablist_aria' => 'Secciones de la contraparte',
+
     'tab_note_personal' => '— no hay cadenas de financiación para contactos personales',
     'tab_note_bank' => '— una contraparte de comisiones bancarias no genera cadenas de financiación',
     'tab_note_government' => '— no hay cadenas de financiación para contrapartes de la Administración',

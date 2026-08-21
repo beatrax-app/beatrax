@@ -42,7 +42,7 @@
         </p>
     </header>
 
-    {{-- Toolbar: phone collapse (D-07) vs. full desktop toolbar --------- --}}
+    {{-- Toolbar: phone collapse vs. full desktop toolbar --------- --}}
     {{-- Phone (<768px): filter-sheet-trigger row only (search + Filters badge) --}}
     <div class="phone-only">
         <x-core::filter-sheet-trigger :activeCount="0" searchModel="" />
@@ -116,19 +116,16 @@
 
     {{-- Grid / list body ------------------------------------------ --}}
     @if ($rows->isEmpty())
-        <section class="frame" style="text-align: center; padding: var(--space-10);">
-            <h2 style="font-size: var(--text-xl); font-weight: 600; color: var(--color-text); margin: 0 0 var(--space-3);">
-                {{ Lang::get('counterparties::index.empty_heading') }}
-            </h2>
-            <p style="font-size: var(--text-base); color: var(--color-text-muted); margin: 0 0 var(--space-4); max-width: 480px; margin-left: auto; margin-right: auto;">
-                {{ Lang::get('counterparties::index.empty_body') }}
-            </p>
+        <x-core::empty-state
+            :heading="Lang::get('counterparties::index.empty_heading')"
+            :body="Lang::get('counterparties::index.empty_body')"
+        >
             <a
                 href="/imports"
                 class="pill-btn-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                 style="display: inline-block;"
             >{{ Lang::get('counterparties::index.empty_cta') }}</a>
-        </section>
+        </x-core::empty-state>
     @elseif ($activeView === 'cards')
         {{-- cards grid: single-column at phone width, auto-fill at >=768px --}}
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-5);"
@@ -195,7 +192,7 @@
                             <span class="value" style="font-size: var(--text-sm);">{{ $avgFormatted }}</span>
                             <span class="label">{{ Lang::get('counterparties::index.stat_avg_mo') }}</span>
                         </div>
-                        <div class="cp-spark" aria-label="{{ Lang::get('counterparties::index.sparkline_aria') }}">
+                        <div role="img" class="cp-spark" aria-label="{{ Lang::get('counterparties::index.sparkline_aria') }}">
                             @foreach ($row->sparkline as $idx => $bar)
                                 @php
                                     $isLast = $idx === count($row->sparkline) - 1;

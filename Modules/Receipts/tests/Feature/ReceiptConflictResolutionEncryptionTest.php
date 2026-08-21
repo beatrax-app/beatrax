@@ -15,16 +15,10 @@ use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
 
 uses(RefreshDatabase::class, EnablesEncryptionForUser::class);
 
-/*
- * 14.1-12 Task 2 (Cluster 3 / CR-01/CR-02 class) — the manual
- * "resolve held conflicts" write path (ApplyReceiptConflictResolution
- * ::resolveRow()) must encrypt the incoming counterparty_name/
- * description value before the transactions UPDATE for an encrypted
- * user. ReceiptConflictQuery reads a plaintext-only
- * pending_enrichment_conflicts.stored_value/incoming_value (guaranteed
- * by the Task 1 FingerprintStage fix upstream) and needs no code
- * change — this file adds a regression test proving that either way.
- */
+// The manual resolve path writes the incoming value straight into transactions,
+// so it has to encrypt first for an encrypted user. The pending conflict rows
+// themselves stay plaintext, which is what lets the query surface them to the
+// UI unchanged.
 
 function rcreUser(): User
 {
@@ -48,13 +42,6 @@ function rcreAccount(User $user): Account
 }
 
 /**
- * Seeds a transactions row + a matching pending_enrichment_conflicts
- * row. The transactions row's counterparty_name is seeded PLAINTEXT
- * (the pre-existing stored value) so the test can prove the
- * post-resolution value became ciphertext. `$incoming` is stored as
- * plaintext JSON in the pending row (matching what holdConflicts now
- * persists post the Task 1 fix).
- *
  * @return array{tx: Transaction, conflictId: int}
  */
 function rcreSeed(User $user, Account $account, string $stored, string $incoming): array
@@ -71,6 +58,9 @@ function rcreSeed(User $user, Account $account, string $stored, string $incoming
         'status' => 'confirmed',
     ]);
 
+    // counterparty_name is seeded plaintext on purpose: proving the resolved
+    // value came back as ciphertext only means something if it did not start
+    // out that way.
     $tx = Transaction::create([
         'user_id' => $user->id,
         'account_id' => $account->id,
@@ -122,7 +112,7 @@ it('encrypts the incoming value before the transactions UPDATE for an encrypted 
 
     $row = app(DatabaseManager::class)->connection()->table('transactions')->where('id', $seeded['tx']->id)->first();
 
-    // Pre-fix: this would be the raw incoming plaintext.
+    // The regression this catches is the incoming plaintext landing raw.
     expect($row->counterparty_name)->not->toBe('Albert Heijn');
 
     /** @var SensitiveColumnCodec $codec */

@@ -13,19 +13,9 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
 uses(RefreshDatabase::class);
 
-/*
- * D-06: Delete vs edit (tombstones) conflict scenario.
- *
- * Tests delete-wins (tombstone HLC 1001 > edit HLC 1000) and the reverse
- * (edit HLC 1000 > tombstone HLC 999, so edit-wins / add-wins).
- *
- * Both devices share the same throwaway Ed25519 keypair for signing;
- * the replayer's $deviceKeys map points both device-ids to the same
- * public key.
- *
- * RED: The OpLogReplayer skeleton (Wave 1) does not yet apply tombstone
- * logic, so both assertions fail until Wave 2 implements the merge.
- */
+// A tombstone does not win because it is a delete; it wins when its HLC is
+// higher. Both directions are covered, because a delete-always-wins rule would
+// pass the first case and silently lose an edit that genuinely came after.
 
 function tombUser(string $username): User
 {
@@ -38,8 +28,6 @@ function tombUser(string $username): User
 }
 
 /**
- * Seeds category + categorization_rule and returns [ruleId, categoryId].
- *
  * @return array{0: int, 1: int}
  */
 function tombRule(DatabaseManager $db, int $userId, string $suffix): array
@@ -53,10 +41,9 @@ function tombRule(DatabaseManager $db, int $userId, string $suffix): array
         'updated_at' => '2026-06-01 00:00:00',
     ]);
 
-    // Redesigned (2026_07_06) parent-rule shape: the flat field/match/value/
-    // category_id columns moved to rule_conditions/rule_actions; combinator is
-    // enum-guarded by a SQLite trigger. These tests only exercise `notes` SET
-    // ops + tombstones against the row id, so only the row shape matters here.
+    // Only the parent row's shape matters here: these tests drive notes SETs
+    // and tombstones against its id, never the conditions or actions that the
+    // flat columns moved out into.
     $ruleId = $db->connection()->table('categorization_rules')->insertGetId([
         'user_id' => $userId,
         'priority' => 0,
@@ -94,8 +81,7 @@ afterEach(function (): void {
 });
 
 it('tombstone (HLC 1001) wins over concurrent edit (HLC 1000) — row is absent after replay', function (): void {
-    // Device A edits notes at HLC [1000, 0]; device B tombstones at HLC [1001, 0].
-    // delete-wins: tombstone HLC 1001 > edit HLC 1000.
+    // The tombstone carries the higher HLC, so it wins.
 
     $editEntry = new OpLogEntry(
         table: 'categorization_rules',
@@ -159,7 +145,6 @@ it('tombstone (HLC 1001) wins over concurrent edit (HLC 1000) — row is absent 
 
     $replayer->replay([$editEntry, $tombEntry], (int) $this->userA->id);
 
-    // RED: delete-wins — row must not exist after replay.
     $exists = app(DatabaseManager::class)
         ->connection()
         ->table('categorization_rules')
@@ -168,8 +153,6 @@ it('tombstone (HLC 1001) wins over concurrent edit (HLC 1000) — row is absent 
 
     expect($exists)->toBeFalse();
 
-    // Assert: production path persists ops to op_log_entries (SYNC-01).
-    // RED: fails until Plan 11-02 wires op_log_entries writes.
     $logCount = app(DatabaseManager::class)
         ->connection()
         ->table('op_log_entries')
@@ -179,8 +162,7 @@ it('tombstone (HLC 1001) wins over concurrent edit (HLC 1000) — row is absent 
 });
 
 it('edit (HLC 1000) wins over tombstone (HLC 999) — row survives with edited notes', function (): void {
-    // Device A edits notes at HLC [1000, 0]; device B tombstones at HLC [999, 0].
-    // edit-wins: edit HLC 1000 > tombstone HLC 999.
+    // Reversed: the edit carries the higher HLC, so the row survives.
 
     $editEntry = new OpLogEntry(
         table: 'categorization_rules',
@@ -244,7 +226,6 @@ it('edit (HLC 1000) wins over tombstone (HLC 999) — row survives with edited n
 
     $replayer->replay([$editEntry, $tombEntry], (int) $this->userB->id);
 
-    // RED: add-wins in reverse — row must still exist with notes='edited'.
     $row = app(DatabaseManager::class)
         ->connection()
         ->table('categorization_rules')
@@ -254,8 +235,6 @@ it('edit (HLC 1000) wins over tombstone (HLC 999) — row survives with edited n
     expect($row)->not->toBeNull();
     expect($row->notes)->toBe('edited');
 
-    // Assert: production path persists ops to op_log_entries (SYNC-01).
-    // RED: fails until Plan 11-02 wires op_log_entries writes.
     $logCount = app(DatabaseManager::class)
         ->connection()
         ->table('op_log_entries')

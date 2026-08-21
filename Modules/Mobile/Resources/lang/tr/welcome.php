@@ -8,4 +8,5 @@ return [
     'subtitle' => 'Finanslarını tek bir yerde görmek için bu cihazı kur.',
     'create_account' => 'Hesap oluştur',
     'import' => 'Başka bir cihazdan içe aktar',
+    'create_account_note' => 'Bu tek başına da çalışır, ancak bilgisayarda kurup buraya senkronlamak daha kolaydır.',
 ];

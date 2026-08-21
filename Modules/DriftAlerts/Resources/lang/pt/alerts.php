@@ -57,6 +57,7 @@ return [
         'meta_eur_equiv' => '(≈ :amount/ano)',
         'cancel_impact' => 'Cancelar isto → poupas :amount/ano',
         'cadence_flipped' => 'A periodicidade mudou — também aparece em',
+        'cadence_flipped_link' => 'Rever recorrentes',
         'acknowledge' => 'Confirmar',
         'acknowledge_aria' => 'Confirmar o alerta de desvio :id',
         'snooze' => 'Adiar ▾',

@@ -2,10 +2,8 @@
 
 declare(strict_types=1);
 
-// Cross-user isolation for these routes is enforced by the underlying
-// ChainLinkQuery + Confirm/Reject Public actions (firstOrFail on
-// user_id), not by the routing layer. Route::facade is permitted in
-// module Routes files (BoundaryArchTest exempts Modules\*\Routes).
+// Cross-user isolation lives in ChainLinkQuery and the Confirm/Reject
+// actions (firstOrFail on user_id), not in the routing layer.
 
 use Illuminate\Support\Facades\Route;
 use Modules\Chains\Internal\Http\Livewire\ChainHintsQueue;

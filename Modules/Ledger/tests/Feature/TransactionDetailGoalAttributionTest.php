@@ -12,13 +12,6 @@ use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
 use Modules\Ledger\Models\Account;
 use Modules\Sync\Public\Events\GoalContributionMutated;
 
-/*
- * The transaction detail screen is where a transaction is assigned to a
- * savings goal, alongside the category, split and counterparty pickers that
- * already live there. Sync capture is faked out — the op-log behaviour is
- * covered in Modules/Sync/tests/Feature/GoalContributionSyncCaptureTest.
- */
-
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);

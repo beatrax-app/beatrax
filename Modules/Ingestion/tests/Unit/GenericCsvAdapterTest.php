@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 use Modules\Ingestion\Internal\Adapters\Csv\GenericCsvAdapter;
 use Modules\Ingestion\Internal\Adapters\Csv\GenericCsvAmountParser;
+use Modules\Ingestion\Internal\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\AccountResolution;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
-use Modules\Ingestion\Public\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
 

@@ -22,9 +22,8 @@ return new class extends Migration
 
             $table->index(['user_id', 'kind']);
 
-            // Per-user UNIQUE so two users on the same instance can each
-            // own an account that happens to share an IBAN or slug (joint
-            // bank accounts, family shares, etc.).
+            // Per-user, so two users on one instance can each own an account
+            // sharing an IBAN or slug — a joint bank account, say.
             $table->unique(['user_id', 'iban']);
             $table->unique(['user_id', 'slug']);
         });

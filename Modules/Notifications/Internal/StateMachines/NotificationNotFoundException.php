@@ -10,7 +10,4 @@ use RuntimeException;
 // lookup finds no notifications row for the given id and user — the row
 // was deleted (or never existed for this user) between the caller's read
 // and the state transition.
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final class NotificationNotFoundException extends RuntimeException {}

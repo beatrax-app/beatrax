@@ -21,18 +21,14 @@ final class LogoutAction
 
     public function __invoke(): void
     {
-        // lock() must precede session->invalidate(): invalidate() drops the
-        // session's data-key handle but never reaches the custodian, so on
-        // the mobile bundle the raw key would otherwise outlive the session
-        // in the iOS Keychain / Android Keystore.
+        // Before invalidate(), which drops the handle without reaching the
+        // custodian, leaving the raw key in the mobile Keychain.
         $this->lockState->lock(($this->session)());
 
         /** @var StatefulGuard $guard */
         $guard = $this->auth->guard();
 
-        // Read before logout(), while the user is still resolvable: a guest has
-        // no stored preference, SetLocale then negotiates from the session, and
-        // invalidate() takes the session with it.
+        // Read before logout(), while the user is still resolvable.
         $locale = $this->currentLocale($guard);
 
         $guard->logout();
@@ -40,8 +36,8 @@ final class LogoutAction
         ($this->session)()->invalidate();
         ($this->session)()->regenerateToken();
 
-        // Carried into the fresh session, not the old one: invalidate() flushes
-        // everything, so this has to be put back afterwards to survive.
+        // After invalidate(), which flushes everything: the locale has to land
+        // in the fresh session to survive.
         if ($locale !== null) {
             ($this->session)()->put('locale', $locale);
         }
@@ -51,8 +47,8 @@ final class LogoutAction
     {
         $user = $guard->user();
 
-        // null is a real stored value meaning "auto" — carrying nothing then
-        // is correct, because negotiation should resume from the browser.
+        // A null locale is the stored value for "auto", so carrying nothing
+        // forward is right — negotiation resumes from the browser.
         $locale = $user instanceof User ? $user->locale : null;
 
         return is_string($locale) && $locale !== '' ? $locale : null;

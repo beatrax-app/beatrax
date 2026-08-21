@@ -14,13 +14,6 @@ use Modules\Ledger\Models\StatementSummary;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for Mt940StartingBalanceDetector. Verifies the
- * detector pulls the earliest opening_balance_date per account
- * from `statement_summaries` joined to `import_runs` filtered to
- * `source_format = 'mt940'`.
- */
-
 it('returns the supports() flag only for the mt940 source format', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);

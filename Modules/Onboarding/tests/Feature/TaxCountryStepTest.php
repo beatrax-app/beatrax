@@ -10,17 +10,8 @@ use Modules\Onboarding\Internal\Http\Livewire\Steps\TaxCountryStep;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 use Modules\Onboarding\Internal\Services\WizardStepRegistry;
 
-/*
- * Acceptance coverage for the optional tax-country wizard step.
- *
- * The step sits between `budgets` and `done` in the registry, is
- * skippable, and persists the choice through the Tax module's public
- * TaxCountrySetup surface: choosing a country writes
- * users.tax_country_code AND seeds the per-country deduction
- * categories; skipping (or continuing with nothing chosen) writes
- * nothing. A wizard re-run (?force=1) preselects an already-stored
- * country.
- */
+// Choosing a country writes users.tax_country_code AND seeds the
+// per-country deduction categories; skipping writes nothing at all.
 
 beforeEach(function (): void {
     $this->user = User::query()->create([

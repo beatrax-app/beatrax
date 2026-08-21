@@ -15,32 +15,10 @@ use Modules\Import\Public\Dto\PreviewRowDto;
 use Modules\Import\Public\Services\BuildConsolidatedPreviewQuery;
 use Modules\Ledger\Models\ImportRun;
 
-/*
- * Covers BuildConsolidatedPreviewQuery — the read-side projection the
- * FirstImportStep renders as the "review everything before commit"
- * surface. The query receives the list of ImportRun ids stashed by the
- * connector steps and returns a per-source section batch, applying:
- *
- *   1. D-10 stale filter — runs older than 14 days are dropped before
- *      the cache lookup so a forgotten browser tab never replays last
- *      month's preview.
- *   2. D-10 already-confirmed filter — runs whose status is
- *      `confirmed` are dropped so a refresh / back-button never
- *      surfaces an already-committed run.
- *   3. User-id boundary — runs owned by another user are silently
- *      filtered out per the multi-user-readiness rule (T-16.1.1-21).
- *      The query MUST never trust a caller-supplied id list.
- *   4. Per-source grouping — surviving ids are grouped by
- *      source_format and one ConsolidatedPreviewSection is emitted per
- *      group so the wizard can render a section heading per format.
- */
-
 beforeEach(function (): void {
-    // Freeze BOTH the injected Clock contract and the global Carbon
-    // "now" so the 14-day stale window is deterministic AND the
-    // PreviewCache's `Repository::getSeconds()` TTL conversion (which
-    // calls Carbon::now() under the hood) does not collapse to zero
-    // — leaving the cached preview unreadable in subsequent reads.
+    // Carbon must be frozen alongside the Clock contract: PreviewCache's TTL
+    // goes through `Repository::getSeconds()`, which calls Carbon::now() and
+    // would otherwise collapse to zero, making the cached preview unreadable.
     $this->frozenNow = CarbonImmutable::parse('2026-05-15 12:00:00');
     Carbon::setTestNow($this->frozenNow);
     CarbonImmutable::setTestNow($this->frozenNow);
@@ -55,12 +33,9 @@ beforeEach(function (): void {
         }
     });
 
-    // PreviewCache + BuildConsolidatedPreviewQuery are singletons that
-    // captured the previous Clock binding when first resolved by an
-    // upstream service-provider boot. Drop both so a fresh resolve
-    // picks up the frozen Clock above. The query is the one under
-    // test; the cache it reads from must share the same Clock or its
-    // 30-minute TTL drifts away from the frozen window.
+    // Both are singletons an upstream provider boot may already have resolved
+    // against the real Clock; the cache must share the frozen one or its
+    // 30-minute TTL drifts away from the window under test.
     $this->app->forgetInstance(PreviewCache::class);
     $this->app->forgetInstance(BuildConsolidatedPreviewQuery::class);
 
@@ -82,21 +57,14 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-/**
- * Insert one `import_runs` row owned by the given user. Returns the id.
- * `createdAt` overrides the timestamps column for the stale-filter
- * tests; leave it null to pin to "now".
- */
 function seedConsolidatedRun(
     int $userId,
     string $sourceFormat,
     string $status = 'previewed',
     ?CarbonImmutable $createdAt = null,
 ): int {
-    // Mirror the frozen-clock instant the beforeEach pinned via
-    // Carbon::setTestNow so every default-seeded run lands INSIDE the
-    // 14-day stale window unless the caller explicitly overrides
-    // `$createdAt` to push the row past the cutoff.
+    // Same instant the beforeEach pins, so a default-seeded run always lands
+    // inside the 14-day stale window.
     $now = CarbonImmutable::parse('2026-05-15 12:00:00');
     $createdAt ??= $now;
 
@@ -110,9 +78,8 @@ function seedConsolidatedRun(
         'status' => $status,
     ]);
 
-    // The `created_at` timestamp is the column the stale filter reads
-    // (Plan 16.1.1-07 behaviour line). Force it directly because
-    // Eloquent overwrites it on insert when the model is auto-timestamping.
+    // `created_at` is what the stale filter reads, and auto-timestamping
+    // overwrites it on insert, so it has to be forced after the fact.
     DB::table('import_runs')
         ->where('id', $run->id)
         ->update([
@@ -124,10 +91,6 @@ function seedConsolidatedRun(
 }
 
 /**
- * Seed a single-row preview into the PreviewCache for the given run.
- * The row's `status` decides whether it counts as a NEW row or a
- * DUPLICATE in the resulting section totals.
- *
  * @param  list<string>  $rowStatuses  One status string per fixture row (e.g. ['new', 'new', 'duplicate']).
  */
 function seedConsolidatedPreview(int $importRunId, array $rowStatuses): void
@@ -256,8 +219,6 @@ it('respects the user_id boundary — runs owned by another user are never retur
     /** @var BuildConsolidatedPreviewQuery $query */
     $query = $this->app->make(BuildConsolidatedPreviewQuery::class);
 
-    // Alice queries with BOTH ids — Bob's run MUST be filtered out
-    // before any cache lookup or row count.
     $batch = $query->build([$aliceRun, $bobRun], $this->userA);
 
     expect($batch->sections)->toHaveCount(1);
@@ -265,24 +226,6 @@ it('respects the user_id boundary — runs owned by another user are never retur
     expect($batch->dedupedTotalCount)->toBe(1);
 })->group('phase-16.1.1');
 
-/*
- * Per-section row-cap override coverage.
- *
- * `BuildConsolidatedPreviewQuery::build()` accepts a third named
- * argument `array<string, int> $sectionLimitOverrides`. When present,
- * a section whose `source_format` is keyed in the map renders up to
- * the override row count instead of the default `SAMPLE_ROW_LIMIT`
- * (5). Sections absent from the map keep the 5-row default. Non-
- * positive overrides (≤ 0) are silently ignored as a server-side
- * clamp against a tampered wire-click payload.
- */
-
-/**
- * Repeat a single PreviewRowDto fixture `$rowCount` times and feed
- * them into the PreviewCache for the given ImportRun. Mirrors the
- * existing `seedConsolidatedPreview()` helper but lets the caller
- * pick an arbitrary row count without listing each status literal.
- */
 function seedConsolidatedPreviewRows(int $importRunId, int $rowCount): void
 {
     $statuses = array_fill(0, $rowCount, 'new');
@@ -325,7 +268,7 @@ it('honors per-section overrides via the sectionLimitOverrides array', function 
     }
 
     expect($bySource['asn-csv']->sampleRows)->toHaveCount(25);
-    expect($bySource['ics-pdf']->sampleRows)->toHaveCount(5); // default unchanged
+    expect($bySource['ics-pdf']->sampleRows)->toHaveCount(5);
 })->group('phase-16.1.2');
 
 it('clamps the override naturally when it exceeds the section totalRows', function (): void {
@@ -367,18 +310,9 @@ it('ignores non-positive overrides and falls back to the default 5-row cap', fun
     expect($negativeBatch->sections[0]->sampleRows)->toHaveCount(5);
 })->group('phase-16.1.2');
 
-/*
- * A parse that fails contributes exactly one row, an error row carrying the
- * reason. It counts as neither committable nor duplicate, so the section used
- * to come back `ready` with a total of zero — and the wizard drew "0 rows ·
- * ✓ READY" with a commit button beneath it.
- *
- * Measured on a device: an ASN CSV uploaded against the wizard's CAMT.053
- * default. The parser refused it correctly and said exactly why — "This XML
- * file does not declare an ISO 20022 CAMT.053 namespace" — and the screen
- * showed a tick.
- */
-
+// A failed parse contributes one error row, counting as neither committable
+// nor duplicate — so the section used to come back `ready` with a total of
+// zero and the wizard drew "0 rows · ✓ READY" over a commit button.
 function seedFailedParse(int $importRunId, string $reason): void
 {
     /** @var PreviewCache $cache */

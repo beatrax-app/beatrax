@@ -13,25 +13,10 @@ use Modules\Ledger\Models\ImportRun;
 
 uses(RefreshDatabase::class);
 
-/*
- * PreviewWizard rendering for status=enriched rows.
- *
- * Phase 16 UAT batch 7 locked the policy that statement-vs-statement
- * fingerprint collisions drop as DUPLICATE without upgrading
- * source_ref. The enriched-row UI state is therefore unreachable
- * through statement-only fixtures; it survives only on the receipt
- * path (one side is paypal-receipt / ics-receipt / google-play-receipt
- * — see Modules/Receipts/tests for the end-to-end happy paths through
- * the receipt matcher chain).
- *
- * These tests cover the PreviewWizard view's rendering of an
- * enriched-row payload independently of how the disposition was
- * produced. The preview is hand-assembled into the PreviewCache so
- * the test does not depend on a receipt fixture being present in the
- * import-side fixture tree; it asserts the Blade view renders the
- * Enriched badge + the from→to diff arrow + the empty-set placeholder
- * for a null from-ref.
- */
+// Statement-vs-statement collisions drop as DUPLICATE, so the enriched row
+// state is unreachable from statement fixtures and only arises on the receipt
+// path. The preview is hand-assembled into the cache so the Blade rendering can
+// be asserted without a receipt fixture in the import-side tree.
 
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
@@ -39,11 +24,6 @@ beforeEach(function (): void {
 });
 
 /**
- * Persist an ImportRun for the current fixture user and stage one
- * hand-built PreviewRowDto into the PreviewCache so the PreviewWizard
- * can render it without needing the full import pipeline to produce
- * an enriched disposition.
- *
  * @param  array{from: ?string, to: string}  $sourceRefDiff
  */
 function seedPreviewWithEnrichedRow(array $sourceRefDiff, int $userId): int

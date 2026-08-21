@@ -20,13 +20,8 @@ use Modules\Tax\Public\Actions\TagTransaction;
 use Modules\Tax\Public\Actions\UntagTransaction;
 use Modules\Tax\Public\Services\TaxTagQuery;
 
-// The inline split editor: its own session state, its own confirm flows,
-// and the two mutator calls that make any of it durable. It sits beside
-// TransactionDetail rather than inside it because it was fifteen of that
-// component's twenty-five methods and answers a question of its own.
-/**
- * @link ../../../../../../.docs/features/ledger/architecture.md
- */
+// Extracted from TransactionDetail: the inline split editor was fifteen
+// of that component's twenty-five methods.
 trait ManagesSplitEditor
 {
     use DispatchesToast;
@@ -35,15 +30,13 @@ trait ManagesSplitEditor
     // legs, or because the user just clicked "Split into categories".
     public bool $editingSplit = false;
 
-    // Distinct from $editingSplit: a freshly-opened, never-saved split
-    // editor has editingSplit=true but hasPersistedSplit=false —
-    // nothing persists until "Save split". Gates the whole-transaction
-    // tax section suppression.
+    // Distinct from $editingSplit: a freshly-opened, never-saved editor has
+    // editingSplit=true but hasPersistedSplit=false. Gates the
+    // whole-transaction tax section suppression.
     public bool $hasPersistedSplit = false;
 
-    // Session-local until saveSplit() persists them. categoryId is
-    // int|string|null because Livewire's <select> wire:model always
-    // arrives as a string; every read normalises via legCategoryId().
+    // categoryId is int|string|null because Livewire's <select> wire:model
+    // always arrives as a string; every read normalises via legCategoryId().
     /** @var list<array{id: ?int, categoryId: int|string|null, amount: string, note: string, tax: bool}> */
     public array $legs = [];
 
@@ -51,8 +44,6 @@ trait ManagesSplitEditor
     // = still to assign, negative = over-allocated, zero = exact.
     public int $remainingMinor = 0;
 
-    // Set when the server rejects a save (SplitSumMismatchException,
-    // invalid leg, etc).
     public ?string $splitError = null;
 
     public bool $confirmUnsplit = false;
@@ -63,10 +54,6 @@ trait ManagesSplitEditor
 
     public ?int $pendingRemoveIndex = null;
 
-    // Seeds exactly 2 in-memory legs for a not-yet-split transaction —
-    // leg 0 = current category + full parent amount, leg 1 = blank —
-    // and persists nothing. No-op if already split (legs are already
-    // loaded by loadSplitState() at mount time).
     public function openSplitEditor(CurrentUser $currentUser, DatabaseManager $db): void
     {
         if ($this->hasPersistedSplit) {
@@ -102,10 +89,8 @@ trait ManagesSplitEditor
         $this->legs[] = ['id' => null, 'categoryId' => null, 'amount' => self::formatAbsAmount(0), 'note' => '', 'tax' => false];
     }
 
-    // At >=3 legs this removes instantly. At exactly 2, removing would
-    // drop the count to 1 — instead of silently collapsing, this routes
-    // to the same two-step confirm as "Unsplit transaction", scoped to
-    // the leg that would become the sole survivor.
+    // Removing the second-to-last leg would collapse the split to a single
+    // category, so it routes to the same two-step confirm as "Unsplit".
     public function removeLeg(int $index, CurrentUser $currentUser, DatabaseManager $db): void
     {
         if (! array_key_exists($index, $this->legs)) {
@@ -131,9 +116,6 @@ trait ManagesSplitEditor
         $this->pendingRemoveIndex = null;
     }
 
-    // The other leg (not the one the user clicked remove on) becomes the
-    // surviving category. A never-persisted editor collapses in memory;
-    // persistUnsplit() owns that distinction and the mutator call.
     public function confirmRemoveToOneAction(SavesTransactionSplit $splitter, CurrentUser $currentUser): void
     {
         if ($this->pendingRemoveIndex === null || count($this->legs) !== 2) {
@@ -155,8 +137,6 @@ trait ManagesSplitEditor
         $this->toast(Lang::get('ledger::detail.toast.removed_one_remains'));
     }
 
-    // Defaults the survivor radio to the larger-magnitude leg — a
-    // pre-selected (not locked) radio choice.
     public function unsplit(): void
     {
         if ($this->legs === []) {
@@ -200,10 +180,8 @@ trait ManagesSplitEditor
         $this->toast(Lang::get('ledger::detail.toast.unsplit_restored'));
     }
 
-    // Drives the chosen survivor category through the unsplit mutator when
-    // a split is actually persisted; a never-saved editor has nothing to
-    // reverse, so this reports success and lets the caller collapse it in
-    // memory. Returns an error string to surface, or null to finish.
+    // A never-saved editor has nothing to reverse, so it returns null
+    // (success) and lets the caller collapse the editor in memory.
     private function persistUnsplit(
         SavesTransactionSplit $splitter,
         CurrentUser $currentUser,
@@ -227,10 +205,8 @@ trait ManagesSplitEditor
         return null;
     }
 
-    // Re-validates server-side (the disabled Save button is a UX gate
-    // only, never authoritative): recomputes remainingMinor fresh,
-    // rejects any leg that fails to parse or carries no category, then
-    // delegates to the sole mutator.
+    // Re-validates server-side: the disabled Save button is a UX gate only,
+    // never authoritative.
     public function saveSplit(SavesTransactionSplit $splitter, CurrentUser $currentUser, DatabaseManager $db, TaxTagQuery $taxTagQuery, SensitiveColumnCodec $codec, Session $session): void
     {
         $this->splitError = null;
@@ -278,10 +254,6 @@ trait ManagesSplitEditor
         }
     }
 
-    // Parses and validates every leg into the mutator's payload shape,
-    // signing each settled amount to match the parent. Returns null and
-    // sets splitError on the first leg that fails to parse or carries no
-    // category, so the caller aborts without saving anything.
     /**
      * @return list<array{id: ?int, category_id: int, settled_amount_minor: int, note: ?string}>|null
      */
@@ -332,9 +304,8 @@ trait ManagesSplitEditor
 
         $userId = $currentUser->user()->id;
 
-        // Reconciled lock: warn-first, no write. Tax tags on a
-        // reconciled transaction's legs are exactly the classification
-        // a reconcile is meant to freeze.
+        // Warn-first, no write: a leg's tax tag is exactly the
+        // classification a reconcile is meant to freeze.
         $status = $db->connection()
             ->table('transactions')
             ->where('id', $this->transactionId)
@@ -358,8 +329,6 @@ trait ManagesSplitEditor
         $this->legs[$index]['tax'] = $newState;
     }
 
-    // Called at mount and after every successful saveSplit() so leg
-    // ids stay in sync with the DB for subsequent edit diffs.
     private function loadSplitState(CurrentUser $currentUser, DatabaseManager $db, TaxTagQuery $taxTagQuery, SensitiveColumnCodec $codec, Session $session): void
     {
         $userId = $currentUser->user()->id;
@@ -386,8 +355,6 @@ trait ManagesSplitEditor
             $legId = is_numeric($row->id) ? (int) $row->id : 0;
             $key = $this->transactionId.':'.$legId;
 
-            // Read-side decrypt — pass-through no-op when encryption
-            // is not enabled for this user.
             $legNote = is_string($row->note)
                 ? $codec->decryptValue('transaction_splits', 'note', $row->note, $userId, $session)['value']
                 : '';
@@ -408,9 +375,6 @@ trait ManagesSplitEditor
         $this->recomputeRemaining($currentUser, $db);
     }
 
-    // Re-reads the parent's settled amount and re-sums every leg's
-    // parsed absolute amount, both via the Money value object — never
-    // client-supplied math.
     private function recomputeRemaining(CurrentUser $currentUser, DatabaseManager $db): void
     {
         $userId = $currentUser->user()->id;

@@ -1,13 +1,13 @@
 {{--
-    Pairing-flow modal — UI-SPEC Surface B (Phase 12, D-04/D-05/D-07/D-13).
+    Pairing-flow modal — UI-SPEC Surface B.
     Nested Livewire component hosted inside the Devices & Sync section's
     <flux:modal>. A step-based bidirectional pairing flow:
 
       Step 1  choose_direction — two equal cards: Show my code / Enter a code
-      Step 2a show_code        — 240px QR + word-code + live countdown (D-05/D-13)
+      Step 2a show_code        — 240px QR + word-code + live countdown
       Step 2b enter_code       — monospace uppercase input + inline error
       Step 3  confirm          — 6-word safety-number, mandatory both-screen
-                                 confirmation (D-07); the sole gate to confirmed_at
+                                 confirmation; the sole gate to confirmed_at
       Step 4  success          — "Device paired"
 
     wire:poll.3s="checkPairingState" runs only on the show_code and confirm steps
@@ -20,7 +20,7 @@
 <flux:modal wire:model="open" class="md:max-w-md" @close="$wire.cancelPairing()">
 <div class="space-y-4 p-6" wire:key="pairing-step-{{ $step }}">
 
-    {{-- ===== Step 1: choose direction (D-04) ===== --}}
+    {{-- ===== Step 1: choose direction ===== --}}
     @if ($step === 'choose_direction')
         <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100" id="pairing-modal-title">{{ Lang::get('sync::pairing.title') }}</h3>
         <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('sync::pairing.step_1_of_3') }}</p>
@@ -60,7 +60,7 @@
         </div>
     @endif
 
-    {{-- ===== Step 2a: show my code (QR + word-code + countdown, D-05/D-13) ===== --}}
+    {{-- ===== Step 2a: show my code (QR + word-code + countdown) ===== --}}
     @if ($step === 'show_code')
         <div wire:poll.3s="checkPairingState">
             <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('sync::pairing.show_this_code') }}</h3>
@@ -68,7 +68,7 @@
 
             @if ($expiresInSeconds > 0)
                 {{-- 240px QR on a white tile (QR needs a white background in dark mode too) --}}
-                {{-- IN-03: $qrSvg is raw-echoed by necessity (inline SVG). SAFE because
+                {{-- $qrSvg is raw-echoed by necessity (inline SVG). SAFE because
                      the QR payload is built ENTIRELY from server-side identity + a CSPRNG
                      token (QrPayloadBuilder) — NO user input ever reaches it, and the
                      property is #[Locked] so the client cannot rehydrate markup into it.
@@ -103,7 +103,7 @@
                 </p>
             @else
                 {{-- Expired state --}}
-                {{-- IN-03: see note above — $qrSvg is server-generated from CSPRNG +
+                {{-- See note above — $qrSvg is server-generated from CSPRNG +
                      identity only, never from user input, and #[Locked] against
                      client rehydration. --}}
                 <div class="mx-auto w-fit rounded-xl bg-white dark:bg-white p-4 opacity-30">
@@ -125,20 +125,18 @@
             @endif
 
             <div class="mt-4">
-                <button
-                    type="button"
+                <x-core::secondary-button
+                    block="full"
+                    class="min-h-[44px]"
                     wire:click="cancelPairing"
-                    class="min-h-[44px] w-full rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900
-                           hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                           dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                 >
                     {{ Lang::get('sync::pairing.cancel_pairing') }}
-                </button>
+                </x-core::secondary-button>
             </div>
         </div>
     @endif
 
-    {{-- ===== Step 2b: enter a code (D-05) ===== --}}
+    {{-- ===== Step 2b: enter a code ===== --}}
     @if ($step === 'enter_code')
         <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('sync::pairing.enter_the_code') }}</h3>
         <p class="mb-2 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('sync::pairing.step_2_of_3') }}</p>
@@ -172,28 +170,24 @@
         </div>
 
         <div class="flex gap-3">
-            <button
-                type="button"
+            <x-core::neutral-button
+                block="flex"
+                class="min-h-[44px]"
                 wire:click="submitCode"
-                class="flex-1 min-h-[44px] rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white
-                       hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                       dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
             >
                 {{ Lang::get('sync::pairing.submit_code') }}
-            </button>
-            <button
-                type="button"
+            </x-core::neutral-button>
+            <x-core::secondary-button
+                block="flex"
+                class="min-h-[44px]"
                 wire:click="cancelPairing"
-                class="flex-1 min-h-[44px] rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900
-                       hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                       dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
             >
                 {{ Lang::get('sync::pairing.cancel_pairing') }}
-            </button>
+            </x-core::secondary-button>
         </div>
     @endif
 
-    {{-- ===== Step 3: confirm safety numbers (the trust gate, D-07/D-08) ===== --}}
+    {{-- ===== Step 3: confirm safety numbers (the trust gate) ===== --}}
     @if ($step === 'confirm')
         <div wire:poll.3s="checkPairingState">
             <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('sync::pairing.compare_words') }}</h3>
@@ -213,6 +207,7 @@
             @endphp
             <div
                 class="space-y-2"
+                role="group"
                 aria-label="{{ Lang::get('sync::pairing.safety_number_words') }} {{ strtoupper(implode(' ', $safetyWords)) }}"
             >
                 <div class="flex justify-center gap-2">
@@ -233,36 +228,27 @@
 
             @if ($awaitingPeer)
                 <p class="mt-4 flex items-center justify-center gap-2 text-sm text-slate-500 dark:text-slate-400" aria-live="polite">
-                    <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-                    </svg>
+                    <x-core::spinner />
                     {{ Lang::get('sync::pairing.waiting_for_peer') }}
                 </p>
             @endif
 
             <div class="mt-4 flex gap-3">
-                <button
-                    type="button"
+                <x-core::neutral-button
+                    block="flex"
+                    :class="'min-h-[44px]' . ' ' . ($awaitingPeer ? 'opacity-50 cursor-wait' : '')"
+                    :disabled="$awaitingPeer"
                     wire:click="confirmMatch"
-                    @disabled($awaitingPeer)
-                    @class([
-                        'flex-1 min-h-[44px] rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white',
-                        'hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2',
-                        'dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100',
-                        'opacity-50 cursor-wait' => $awaitingPeer,
-                    ])
                 >
                     {{ Lang::get('sync::pairing.confirm_match') }}
-                </button>
-                <button
-                    type="button"
+                </x-core::neutral-button>
+                <x-core::secondary-button
+                    block="flex"
+                    class="min-h-[44px]"
                     wire:click="cancelPairing"
-                    class="flex-1 min-h-[44px] rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900
-                           hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                           dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                 >
                     {{ Lang::get('sync::pairing.cancel_pairing') }}
-                </button>
+                </x-core::secondary-button>
             </div>
         </div>
     @endif
@@ -277,17 +263,15 @@
             <p class="mx-auto max-w-xs text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('sync::pairing.device_paired_help') }}
             </p>
-            {{-- WR-03: success close uses closeModal() — it must NOT expire the
+            {{-- Success close uses closeModal() — it must NOT expire the
                  just-confirmed token the way the in-flow cancel does. --}}
-            <button
-                type="button"
+            <x-core::neutral-button
+                block="full"
+                class="min-h-[44px]"
                 wire:click="closeModal"
-                class="w-full min-h-[44px] rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white
-                       hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                       dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
             >
                 {{ Lang::get('sync::pairing.done') }}
-            </button>
+            </x-core::neutral-button>
         </div>
     @endif
 </div>

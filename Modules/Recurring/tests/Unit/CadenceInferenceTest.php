@@ -5,20 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Modules\Recurring\Internal\CadenceInferrer;
 
-/*
- * Cadence inference dataset — snap-band boundaries, missed-interval
- * tolerance, the confidence-low signal, and the two-occurrence
- * minimum. Each row drives a single call into
- * `CadenceInferrer::infer($timestamps)` and asserts the resulting
- * cadence class plus, where load-bearing, the missed_count and
- * confidence_low flags.
- */
-
 /**
- * Builds a sorted ascending list of CarbonImmutable timestamps starting
- * at $start, each separated by the matching $intervalDays gap. The
- * first timestamp is $start; subsequent ones add the previous gaps.
- *
  * @param  list<int>  $intervalDays
  * @return list<CarbonImmutable>
  */

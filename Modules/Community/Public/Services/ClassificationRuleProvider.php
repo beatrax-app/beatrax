@@ -8,9 +8,6 @@ use Modules\Community\Internal\Corpus\CorpusYamlReader;
 use Modules\Community\Public\Dto\ClassificationRule;
 use Psr\Log\LoggerInterface;
 
-/**
- * @link ../../../../.docs/features/community/architecture.md
- */
 final class ClassificationRuleProvider
 {
     public const TYPE_GOVERNMENT = 'government';

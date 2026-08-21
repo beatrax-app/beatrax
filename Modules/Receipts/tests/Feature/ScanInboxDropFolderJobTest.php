@@ -145,7 +145,7 @@ it('is idempotent: re-running on the same processed folder is a no-op', function
     expect($countAfterSecond)->toBe($countAfterFirst);
 });
 
-it('does NOT touch files under another user\'s inbox-drop folder (T-07-04)', function (): void {
+it('does NOT touch files under another user\'s inbox-drop folder', function (): void {
     $other = User::create([
         'username' => 'other-drop',
         'password' => 'opensesame',

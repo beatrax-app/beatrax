@@ -6,28 +6,13 @@ use Modules\Ingestion\Public\Exceptions\MissingPaypalTransactionTypeMapException
 use Modules\Ingestion\Public\Exceptions\UnknownPaypalEventTypeException;
 use Modules\Ingestion\Public\Paypal\PaypalCsvEventTypeMap;
 
-/*
- * Coverage for PaypalCsvEventTypeMap.
- *
- * The map carries two correlated tables — `MAP` (event-type → action)
- * and `TRANSACTION_TYPE` (parent-action event-type → Transaction::TYPES
- * enum value). They must stay in lock-step: every event type whose
- * action is 'parent' MUST have a TRANSACTION_TYPE row, and no other
- * event type may appear in TRANSACTION_TYPE.
- *
- * Reflection-based inspection lets the test pin that invariant without
- * exposing the constants on the public API of the class itself.
- */
-
 beforeEach(function (): void {
     $this->map = new PaypalCsvEventTypeMap;
 });
 
+// Reflection so the lock-step invariant can be pinned without making the two
+// tables public API.
 /**
- * Pulls the private constants from PaypalCsvEventTypeMap via reflection
- * so the parent-only invariant test does not depend on the constants
- * being public.
- *
  * @return array{0: array<string, array<string, string>>, 1: array<string, array<string, string>>}
  */
 function paypalMapConstants(): array
@@ -72,27 +57,13 @@ it('throws UnknownPaypalEventTypeException for an unmapped event type via classi
 })->group('phase-4');
 
 it('throws MissingPaypalTransactionTypeMapException for a non-parent event type via transactionType()', function (): void {
-    // 'Bankstorting naar PP-rekening' is mapped as 'child-fee' in MAP,
-    // so it deliberately has no TRANSACTION_TYPE entry. Calling
-    // transactionType() on it surfaces the narrower internal-
-    // inconsistency exception.
+    // A 'child-fee' event deliberately has no TRANSACTION_TYPE entry.
     expect(fn () => $this->map->transactionType('Bankstorting naar PP-rekening', 'nl'))
         ->toThrow(MissingPaypalTransactionTypeMapException::class);
 })->group('phase-4');
 
-/*
- * Funding-leg coverage. The three event types below are the canonical
- * funding-event vocabulary shared with
- * `PaypalFundingResolver::FUNDING_EVENT_TYPES`. Each must classify as
- * 'parent' (so the rollup walker creates a canonical row for the
- * standalone ASN→PayPal top-up) and resolve to 'transfer_in' (so
- * downstream PairTransferCandidates can match it to the ASN-side
- * transfer_out).
- *
- * The companion regression-guard cases pin the existing 'expense'
- * mappings so the funding-leg additions do not silently regress the
- * purchase-event arm.
- */
+// The three event types below are the funding vocabulary shared with
+// PaypalFundingResolver::FUNDING_EVENT_TYPES; the two tables have to agree.
 
 it('classifies Bankstorting (standalone funding parent) as parent', function (): void {
     expect($this->map->classify('Bankstorting', 'nl'))->toBe('parent');
@@ -129,40 +100,25 @@ it('preserves the expense mapping for Express Checkout-betaling', function (): v
 })->group('phase-4');
 
 it('keeps the child-fee classification for the localised Bankstorting-naar-PP-rekening child row', function (): void {
-    // The standalone 'Bankstorting' parent and the child-fee
-    // 'Bankstorting naar PP-rekening' are two distinct PayPal event-type
-    // literals. The funding-leg additions must NOT collapse them — the
-    // child variant remains 'child-fee' and continues to ride under its
-    // parent in the rollup walker.
+    // 'Bankstorting' and 'Bankstorting naar PP-rekening' are two distinct
+    // PayPal literals and must not be collapsed into one.
     expect($this->map->classify('Bankstorting naar PP-rekening', 'nl'))->toBe('child-fee');
 })->group('phase-4');
 
-// Exception narrowest-type contract — the two miss conditions raise
-// distinct exception types so the ClassifyTransactionType pipeline
-// stage can catch them separately:
-//
-//   - Event type not present in MAP at all → user-data condition →
-//     raise the broader UnknownPaypalEventTypeException.
-//   - Event type present in MAP (as `parent`) but missing from
-//     TRANSACTION_TYPE → code-internal inconsistency → raise the
-//     narrower MissingPaypalTransactionTypeMapException (which
-//     extends UnknownPaypalEventTypeException).
+// The two miss conditions raise different types so the pipeline can catch them
+// apart: absent from MAP is user data, while parent-without-TRANSACTION_TYPE is
+// our own inconsistency and raises the narrower subtype.
 it('throws the broad UnknownPaypalEventTypeException from classify() for an event type missing from MAP', function (): void {
     expect(fn () => $this->map->classify('Some Bogus Event Type That Is Not In The Map', 'nl'))
         ->toThrow(UnknownPaypalEventTypeException::class);
 })->group('phase-4');
 
 it('throws the broad UnknownPaypalEventTypeException from transactionType() for an event type missing from MAP', function (): void {
-    // The narrower MissingPaypalTransactionTypeMapException is
-    // reserved for the case where the event type IS in MAP (as
-    // `parent`) but absent from TRANSACTION_TYPE — a developer-
-    // facing inconsistency, not a user-data condition.
     expect(fn () => $this->map->transactionType('Some Bogus Event Type That Is Not In The Map', 'nl'))
         ->toThrow(UnknownPaypalEventTypeException::class);
 
-    // And specifically NOT the narrower subtype — the test pins the
-    // hierarchy so a future regression that conflates the two
-    // exception types trips this assertion.
+    // toThrow() would also pass on the subtype, so the hierarchy needs
+    // catching by hand.
     try {
         $this->map->transactionType('Some Bogus Event Type That Is Not In The Map', 'nl');
         expect(true)->toBeFalse(); // unreachable — the call must throw

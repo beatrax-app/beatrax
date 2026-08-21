@@ -7,15 +7,8 @@ use Modules\Core\Models\User;
 // The screen renders once from session state and 404s without it.
 const RECOVERY_CODES_SESSION_KEY = 'auth.signup.recovery_codes_plain';
 
-/*
- * The recovery-codes screen is shown once, immediately after signup, and it is
- * the one page a user is told to save. It was reported rendering in English
- * for a Dutch user — which would mean the locale chosen on the start page does
- * not survive into the screen that matters most.
- *
- * The view itself is fully translated, so any failure here is locale
- * resolution rather than a missing string.
- */
+// Reported rendering in English for a Dutch user. The view is fully
+// translated, so a failure here is locale resolution, not a missing string.
 
 function recoveryCodesUser(string $username, ?string $locale): User
 {
@@ -40,9 +33,8 @@ it('renders the recovery codes screen in the locale stored on the user', functio
 });
 
 it('falls back to the session locale when the user has no explicit choice', function (): void {
-    // "auto" is stored as null, which is what a user who never opened the
-    // language picker looks like — the start-page choice lives in the session
-    // at that point, and it still has to reach this screen.
+    // "auto" is stored as null: a user who never opened the language picker,
+    // whose start-page choice is still only in the session.
     $user = recoveryCodesUser('recovery-session', null);
 
     $this->actingAs($user)

@@ -8,21 +8,6 @@ use Modules\Core\Models\User;
 use Modules\Import\Internal\Http\Livewire\AliasesSettingsPage;
 use Modules\Import\Models\MerchantAlias;
 
-/*
- * Feature coverage for the Settings → Aliases page — ALIAS-01 and
- * ALIAS-02 from the Phase 16.1 requirements. Verifies:
- *
- *   - GET /settings/aliases renders for the authenticated user.
- *   - The list paginates at 25/page and only surfaces the current
- *     user's rows (cross-user isolation).
- *   - Inline-editing a row's generalized_pattern via Livewire
- *     persists the change to the DB.
- *   - Per-row delete works AND cross-user attempts hit 404-not-403.
- *   - Unauth GET /settings/aliases redirects to the login screen.
- *   - exportYaml streams the file via Livewire's assertFileDownloaded
- *     helper.
- */
-
 beforeEach(function (): void {
     $this->userA = User::create([
         'username' => 'alias-settings-a',
@@ -64,10 +49,8 @@ it('renders /settings/aliases for an authenticated user with the first 25 rows',
 it('paginates user A at 25 rows and excludes user B rows entirely', function (): void {
     $component = Livewire::actingAs($this->userA)->test(AliasesSettingsPage::class);
 
-    // First page must show 25 distinct USERA-RAW-NN patterns and zero
-    // USERB-RAW-NN patterns. We count distinct row indices because the
-    // pattern string appears multiple times per row (read-only column
-    // + wire:confirm attribute payload), which would double-count.
+    // Count distinct row indices: the pattern string appears twice per row
+    // (read-only column + wire:confirm payload), so raw matches double-count.
     $html = (string) $component->html();
     preg_match_all('/USERA-RAW-(\d{2})/', $html, $matchesA);
     preg_match_all('/USERB-RAW-(\d{2})/', $html, $matchesB);
@@ -126,8 +109,6 @@ it('refuses a cross-user delete with a calm flash and the foreign row stays in t
         ->call('deleteAlias', $userBAlias->id)
         ->assertSet('flashMessage', 'Alias not found (it may have been deleted in another tab).');
 
-    // The foreign row MUST remain untouched — the structural
-    // user_id filter is the guard.
     expect(DB::table('merchant_aliases')->where('id', $userBAlias->id)->exists())->toBeTrue();
 });
 

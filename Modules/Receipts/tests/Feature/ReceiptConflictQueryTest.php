@@ -8,13 +8,9 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Receipts\Public\Services\ReceiptConflictQuery;
 
-/*
- * The mount() fallback projection decodes each stored/incoming value out
- * of its JSON-at-rest form. A JSON-encoded *number* (the shape
- * ApplyEnrichments writes for a numeric field) decodes to a non-string
- * scalar, which decodeScalar() must coerce back to its string form
- * rather than dropping it.
- */
+// ApplyEnrichments stores each value JSON-encoded, so a numeric field decodes
+// back to an int rather than a string; decodeScalar() has to coerce it instead
+// of dropping the value.
 
 beforeEach(function (): void {
     $seeded = $this->seedFixtureUserAndAccount();
@@ -57,7 +53,6 @@ it('coerces a JSON-encoded numeric stored value to its string form', function ()
         'user_id' => $this->fixtureUser->id,
         'transaction_id' => $tx->id,
         'field_name' => 'amount_minor',
-        // A bare JSON number — decodes to int, NOT a string.
         'stored_value' => json_encode(1299),
         'incoming_value' => json_encode('2000'),
         'incoming_source_format' => 'paypal-receipt',

@@ -13,8 +13,6 @@ use Modules\Core\Public\Concerns\BelongsToUser;
 // unauthenticated-context fallthrough (CLI/queue/test) cannot leak a
 // foreign user's rule; BelongsToUser is the secondary Eloquent guard.
 /**
- * @link ../../../.docs/features/categorization/architecture.md
- *
  * @property int $id
  * @property int|null $user_id
  * @property int $priority

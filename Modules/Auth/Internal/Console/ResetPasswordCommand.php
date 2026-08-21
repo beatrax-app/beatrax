@@ -9,10 +9,8 @@ use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 
-// Refuses to run non-interactively: there is no --password option, and
-// a non-interactive invocation exits with a failure code without
-// touching the password. This keeps a scripted reset on an unattended
-// machine from silently rewriting a password.
+// No --password option, and a hard refusal when not interactive: a scripted
+// run on an unattended machine must not be able to rewrite a password.
 class ResetPasswordCommand extends Command
 {
     private const MINIMUM_PASSWORD_LENGTH = 12;
@@ -43,9 +41,8 @@ class ResetPasswordCommand extends Command
 
     private function resetInteractively(): int
     {
-        // The required `username` argument is narrowed to a string by
-        // Larastan against the typed signature, so no is_string() guard
-        // is needed here.
+        // Larastan narrows the required `username` argument to string from the
+        // typed signature, so no is_string() guard is needed.
         $username = strtolower(trim($this->argument('username')));
 
         $user = User::query()->where('username', $username)->first();

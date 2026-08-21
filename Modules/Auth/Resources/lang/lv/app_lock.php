@@ -8,8 +8,6 @@ return [
     'error_enroll_failed' => 'Ierīce atteicās saglabāt atslēgu. Biometriskā atbloķēšana nav pieejama.',
     'heading' => 'Lietotnes bloķēšana',
 
-    // Iestatījumos ir tikai norāde; pašas vadīklas atrodas
-    // sinhronizācijas lapā /sync#app-lock.
     'moved_help' => 'Jūsu PIN kods, automātiskās bloķēšanas laiks un biometriskā atbloķēšana atrodas šīs ierīces sinhronizācijas iestatījumos.',
     'moved_cta' => 'Atvērt sinhronizāciju un ierīci',
 

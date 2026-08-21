@@ -15,15 +15,9 @@ use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
 
 uses(RefreshDatabase::class);
 
-/*
- * IncrementalScanJob Microsoft Graph rate-limit backoff invariant.
- *
- * Mirrors GmailRateLimitBackoffTest but for the Graph deltaPage call.
- * Graph honours its Retry-After response header; the Plan 07 contract
- * threads that value through RateLimitedException::$retryAfterSeconds
- * into InboxScanStateMachine::applyRateLimited, which stamps it into
- * error_message as "Retry after Xs".
- */
+// Graph's own Retry-After value has to survive the whole chain —
+// RateLimitedException, then applyRateLimited — to reach error_message as
+// "Retry after Xs".
 
 beforeEach(function (): void {
     Sleep::fake();
@@ -72,9 +66,7 @@ it('catches RateLimitedException on Graph deltaPage, transitions to rate_limited
         'updated_at' => $now,
     ]);
 
-    // First run — arm a 120s retry-after on the next deltaPage call.
-    // (Verifies the Retry-After header is threaded all the way to
-    // error_message string.)
+    // First run: 120s retry-after on the next deltaPage call.
     $fake = new FakeGraphApiClient($this->app->make(Filesystem::class));
     $fake->simulateDeltaRateLimit($inboxId, 120);
     $this->app->instance(GraphApiClientContract::class, $fake);
@@ -99,10 +91,9 @@ it('catches RateLimitedException on Graph deltaPage, transitions to rate_limited
     expect($scanState)->not->toBeNull();
     expect($scanState->status)->toBe('rate_limited');
     expect((int) $scanState->retry_attempts)->toBe(1);
-    // The retry-after value (120) is threaded into error_message.
     expect((string) $scanState->error_message)->toContain('Retry after 120s');
 
-    // Second run — Horizon retried; arm another rate-limit at 60s.
+    // Second run: Horizon retried, and it is rate-limited again at 60s.
     $fake2 = new FakeGraphApiClient($this->app->make(Filesystem::class));
     $fake2->simulateDeltaRateLimit($inboxId, 60);
     $this->app->instance(GraphApiClientContract::class, $fake2);
@@ -127,8 +118,7 @@ it('catches RateLimitedException on Graph deltaPage, transitions to rate_limited
     expect((int) $scanStateAfter2->retry_attempts)->toBe(2);
     expect((string) $scanStateAfter2->error_message)->toContain('Retry after 60s');
 
-    // Third run — no rate-limit armed; default baseline deltaPage
-    // response (empty value array). Recovery path: resetRetryAttempts.
+    // Third run: nothing armed, so the recovery path resets retry_attempts.
     $fake3 = new FakeGraphApiClient($this->app->make(Filesystem::class));
     $this->app->instance(GraphApiClientContract::class, $fake3);
 

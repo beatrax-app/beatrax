@@ -8,23 +8,18 @@ use Illuminate\Contracts\Foundation\Application;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\SafeTrace;
 use Modules\Import\Public\Contracts\RunsImports;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-// The B7 guided ICS file-import affordance, kept apart from the live Open
-// Banking connection it sits beside: it stores no credentials and routes a
-// dropped PDF statement straight to the existing ics-pdf SourceAdapter. Its
-// own validation rules, upload property, and filename hardening travel here.
-/**
- * @link ../../../../../../.docs/features/open-banking/architecture.md
- */
+// Kept apart from the live connection it sits beside: this stores no
+// credentials and routes a dropped PDF at the existing ics-pdf SourceAdapter.
 trait ManagesGuidedIcsImport
 {
-    // The leaf format key the existing ICS SourceAdapter consumes. ICS
-    // Cards's consumer portal only ever exports monthly PDF statements, so
-    // the guided drop pre-selects this single format.
+    // ICS Cards's consumer portal only exports monthly PDF statements, so the
+    // guided drop pre-selects this one format.
     private const ICS_SOURCE_FORMAT = 'ics-pdf';
 
     public ?TemporaryUploadedFile $icsStatement = null;
@@ -37,8 +32,7 @@ trait ManagesGuidedIcsImport
     public function rules(): array
     {
         return [
-            // mimetypes checks the actual sniffed content type rather than
-            // trusting the client-supplied extension alone.
+            // mimetypes sniffs the content type, not the supplied extension.
             'icsStatement' => ['required', 'file', 'max:1024', 'mimetypes:application/pdf', 'extensions:pdf'],
         ];
     }
@@ -55,9 +49,6 @@ trait ManagesGuidedIcsImport
         ];
     }
 
-    /**
-     * @link ../../../../../../.docs/features/open-banking/architecture.md
-     */
     public function importIcsStatement(
         RunsImports $importer,
         CurrentUser $currentUser,
@@ -81,8 +72,7 @@ trait ManagesGuidedIcsImport
             $logger->error('OpenBankingSettingsPage: guided ICS import preview failed.', [
                 'source_format' => self::ICS_SOURCE_FORMAT,
                 'filename' => $originalFilename,
-                'exception_class' => $e::class,
-                'exception_message' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
                 'exception_trace' => SafeTrace::cap($e, $app->basePath()),
             ]);
             $this->icsImportError = Lang::get('openbanking::messages.ics.could_not_read', ['filename' => $originalFilename]);
@@ -93,8 +83,6 @@ trait ManagesGuidedIcsImport
         $this->redirectRoute('imports.preview', ['id' => $result->importRunId], navigate: false);
     }
 
-    // Strips path-traversal characters and locks the extension to .pdf,
-    // since both feed the same ics-pdf adapter.
     private static function sanitiseIcsFilename(string $original): string
     {
         $stem = pathinfo($original, PATHINFO_FILENAME);

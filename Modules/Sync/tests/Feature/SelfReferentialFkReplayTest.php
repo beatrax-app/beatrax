@@ -4,21 +4,17 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
-use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Merge\OpLogEntryApplier;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
 
-/*
- * transactions.pair_transaction_id is a FK onto transactions itself, and a
- * transfer pair points BOTH ways. No insert order satisfies that: whichever
- * row lands first names a partner that does not exist yet. On a phone pulling
- * a desktop's history this threw FOREIGN KEY constraint failed straight out
- * of the Livewire poll, so the replay rolled back AND the screen it drove
- * froze on "waiting for other device".
- */
+// transactions.pair_transaction_id is a foreign key onto transactions itself and
+// a transfer pair points both ways, so no insert order satisfies it: whichever
+// row lands first names a partner that does not exist yet. On a phone pulling a
+// desktop's history that threw FOREIGN KEY constraint failed and rolled the replay back.
 
 function selfRefUser(string $username): User
 {
@@ -49,7 +45,7 @@ function selfRefUnlock(int $userId): void
     test()->actingAs(User::query()->findOrFail($userId));
 
     $session = app(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat('k', 32));
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
     app(GdkKeyringService::class)->generateAndPersist($userId, $session);
 }
 

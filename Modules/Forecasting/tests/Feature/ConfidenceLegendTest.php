@@ -13,18 +13,9 @@ use Modules\Recurring\Models\RecurringSeriesOccurrence;
 
 uses(RefreshDatabase::class);
 
-/*
- * Feature coverage for the per-account confidence legend sidebar on
- * /forecast.
- *
- * The bucket thresholds are locked:
- *   - band_width / |point| <= 10%  → high (emerald)
- *   - 10% < ratio          <= 25%  → medium (slate)
- *   - 25% < ratio                  → low (amber)
- *
- * Series with var=5% → band=10% → "high"; var=10% → band=20% → "medium";
- * var=15% → band=30% → "low"; var=45% → band=90% → "low".
- */
+// The chip buckets band_width / |point|: up to 10% high, up to 25% medium, wider
+// than that low. A series' band is twice its variance tolerance, which is what
+// makes var=5% high, var=10% medium and var=45% low below.
 
 function clUser(): User
 {
@@ -121,7 +112,8 @@ it('renders the high-confidence emerald chip for a var=5% series (band=10%)', fu
     $accountId = clAccount($this->db, $this->user->id);
     clSeries($this->user->id, $accountId, 'Netflix', variancePercent: 5, amountMinor: -1199);
 
-    // Seed a complete forecast_runs row so ForecastQuery::forUser does not return the computing sentinel.
+    // Without a complete run, ForecastQuery::forUser returns the computing
+    // sentinel and no legend renders at all.
     $payload = json_encode(['as_of' => '2026-05-01', 'horizon_days' => 30, 'accounts' => [
         (string) $accountId => [
             'account_id' => $accountId,
@@ -219,15 +211,13 @@ it('hides the confidence legend on the All accounts tab', function (): void {
     $response = $this->actingAs($this->user)->get('/forecast');
     $content = (string) $response->getContent();
 
-    // No confidence legend on the aggregate tab; the aggregate chart marker is present.
     expect($content)->not->toContain('data-testid="confidence-legend"');
     expect($content)->toContain('data-testid="all-accounts-aggregate-chart"');
 });
 
 it('renders the empty-state body when no series contribute to the account forecast', function (): void {
     $accountId = clAccount($this->db, $this->user->id);
-    // No series — confidence list is empty.
-
+    // Deliberately no clSeries() call here.
     $payload = json_encode(['as_of' => '2026-05-01', 'horizon_days' => 30, 'accounts' => [
         (string) $accountId => [
             'account_id' => $accountId,

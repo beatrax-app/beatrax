@@ -15,15 +15,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 uses(RefreshDatabase::class);
 
-/*
- * End-to-end cross-user isolation for the three lifecycle Public Actions
- * (T-09-09). Each action MUST raise NotFoundHttpException when invoked
- * against an alert belonging to a different user; the underlying row MUST
- * stay untouched; zero transitions rows MUST be written.
- *
- * Mirrors the analog DriftAlertCrossUser404Test shape.
- */
-
 function anomXduUser(string $username): User
 {
     return User::query()->create([

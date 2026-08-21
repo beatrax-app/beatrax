@@ -59,7 +59,7 @@ What the module explicitly does NOT do:
     for stage-by-stage enrichment).
   - `RecordResult` — `(insertedCount, deduppedCount,
     enrichedCount)`.
-  - `MoneyDto`, `Period`, `PerCurrencyTile`, `DashboardSummary`,
+  - `Period`, `PerCurrencyTile`, `DashboardSummary`,
     `TransactionRowDto`, `TransactionListPage`,
     `TopCategoryRow`, `StatementSummaryData`.
 - **ValueObjects/**

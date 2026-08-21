@@ -37,15 +37,14 @@
 @switch ($alert->kind)
     @case ('update.available')
         <div class="flex flex-wrap items-center justify-end gap-2">
-            <button
-                type="button"
+            <x-core::neutral-button
+                size="sm"
                 wire:click="install({{ $alert->id }})"
                 wire:loading.attr="disabled"
                 wire:target="install({{ $alert->id }})"
                 aria-label="{{ Lang::get('core::alerts.actions.install_next_launch_aria', ['id' => $alert->id]) }}"
                 data-testid="resolve-alert-{{ $alert->id }}"
-                class="rounded bg-slate-900 text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900 px-3 py-1.5 text-sm font-medium dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-300"
-            >{{ Lang::get('core::alerts.actions.install_next_launch') }}</button>
+            >{{ Lang::get('core::alerts.actions.install_next_launch') }}</x-core::neutral-button>
             <button
                 type="button"
                 wire:click="skipVersion({{ $alert->id }})"

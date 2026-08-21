@@ -18,13 +18,10 @@ use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
 /**
- * @link ../../../.docs/features/drift-alerts/architecture.md
+ * @link ../../../.docs/features/drift-alerts/drift-detection.md
  */
 final readonly class DriftEvaluator
 {
-    // When a series carries no per-series threshold override and the user has
-    // set no positive global threshold, drift is measured against this
-    // fallback percent — the "hard default" the audit row records as 'default'.
     private const int DEFAULT_THRESHOLD_PERCENT = 5;
 
     public function __construct(
@@ -136,9 +133,8 @@ final readonly class DriftEvaluator
                 currency: $currency,
             ));
         } catch (QueryException) {
-            // UNIQUE(recurring_series_id, latest_occurrence_id) collision —
-            // re-evaluation against the same (series, occurrence) pair is
-            // a silent no-op. The idempotency seam is the seam.
+            // UNIQUE(recurring_series_id, latest_occurrence_id) collision. The
+            // dispatch sits inside the try so a re-detect cannot re-notify.
         }
     }
 
@@ -163,10 +159,6 @@ final readonly class DriftEvaluator
         return ['percent' => self::DEFAULT_THRESHOLD_PERCENT, 'source' => 'default'];
     }
 
-    // Irregular annualizes to 0 rather than to a guess: a series with no
-    // discernible interval has no meaningful yearly impact, and the zero is
-    // what lets callers short-circuit instead of publishing a number they
-    // made up.
     /**
      * @return int calendar-year multiplier for the cadence
      */

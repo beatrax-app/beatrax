@@ -7,18 +7,15 @@ namespace Modules\EmailScan\Internal\OAuth;
 use DateTimeImmutable;
 use League\OAuth2\Client\Provider\Exception\IdentityProviderException;
 use League\OAuth2\Client\Token\AccessTokenInterface;
+use Modules\EmailScan\Internal\Exceptions\InboxNotConfiguredException;
 use Modules\EmailScan\Internal\SafeMessage;
 use Modules\EmailScan\Public\Enums\MailProvider;
-use Modules\EmailScan\Public\Exceptions\InboxNotConfiguredException;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use RuntimeException;
 use TheNetworg\OAuth2\Client\Provider\Azure;
 use TheNetworg\OAuth2\Client\Token\AccessToken as AzureAccessToken;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 class MicrosoftOAuthProvider
 {
     private const MAIL_READ_SCOPE = 'Mail.Read';
@@ -48,10 +45,9 @@ class MicrosoftOAuthProvider
             'prompt' => 'consent',
         ]);
 
-        // The league provider mints the PKCE verifier while building the URL
-        // (pkceMethod is set on the factory); it is captured so the callback
-        // can send code_verifier on the exchange — the RFC 8252 defence that
-        // keeps an intercepted loopback code useless on its own.
+        // The league provider mints the PKCE verifier while building the URL;
+        // capturing it lets the callback send code_verifier on the exchange,
+        // which is what makes an intercepted loopback code useless alone.
         $verifier = $provider->getPkceCode();
 
         return new AuthorizationRequest($url, is_string($verifier) ? $verifier : '');
@@ -164,9 +160,8 @@ class MicrosoftOAuthProvider
     private function readEmailFromToken(Azure $provider, AccessTokenInterface $token): string
     {
         try {
-            // The thenetworg Azure provider's get() takes the token by
-            // reference because it auto-rotates an expired token mid
-            // call. Reassigning to a local variable keeps the reference
+            // The Azure provider's get() takes the token by reference so it
+            // can auto-rotate mid-call; a local keeps those reference
             // semantics off the caller-supplied AccessTokenWithEmail.
             $tokenRef = $token;
             $response = $provider->get('https://graph.microsoft.com/v1.0/me', $tokenRef);
@@ -177,10 +172,8 @@ class MicrosoftOAuthProvider
                 );
             }
 
-            // Microsoft Graph returns both `mail` and `userPrincipalName`.
             // For consumer Outlook.com accounts `mail` is often null and
-            // `userPrincipalName` holds the routable address; for work /
-            // school accounts both fields typically match.
+            // `userPrincipalName` holds the routable address instead.
             $mail = $response['mail'] ?? null;
             if (is_string($mail) && $mail !== '') {
                 return $mail;
@@ -221,9 +214,7 @@ class MicrosoftOAuthProvider
 
     private function safeMessage(Throwable $e): string
     {
-        // Delegate to the shared utility so the cap shape stays
-        // consistent across every module-internal surface that
-        // forwards provider error text.
+        // Shared so every provider-error surface caps the same way.
         return SafeMessage::cap($e->getMessage());
     }
 }

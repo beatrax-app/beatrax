@@ -8,9 +8,6 @@ use Modules\Ingestion\Internal\Adapters\Banking\Dto\Mt940BalanceTuple;
 use Modules\Ingestion\Internal\Adapters\Banking\Dto\Mt940StatementLine;
 use Modules\Ledger\Public\Dto\StatementSummaryData;
 
-/**
- * @link ../../../../../.docs/features/ingestion/architecture.md
- */
 final class Mt940StatementAccumulator
 {
     public ?string $statementId = null;
@@ -25,9 +22,8 @@ final class Mt940StatementAccumulator
 
     public ?string $currency = null;
 
-    // Once the first statement's closing balance is seen, later statements
-    // in a multi-statement file no longer overwrite header/balance fields;
-    // only their :61:/:86: entries keep streaming.
+    // Set at the first closing balance: later statements in a multi-statement
+    // file stop overwriting header fields but keep streaming their entries.
     public bool $firstStatementFrozen = false;
 
     public bool $multiStatement = false;

@@ -19,8 +19,6 @@ use Modules\Ledger\Models\Transaction;
 // arch-test invariant enforce the sole-mutator contract. `transaction_id`
 // is the idempotency seam (UNIQUE) the evaluator re-runs against.
 /**
- * @link ../../../.docs/features/anomaly/architecture.md
- *
  * @property int $id
  * @property int|null $user_id
  * @property int $transaction_id

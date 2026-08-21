@@ -16,24 +16,6 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\FirstImportStep;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 
-/*
- * Per-section "Load more" pagination on FirstImportStep.
- *
- * The FirstImportStep tracks a per-source-format row cap in
- * `$expandedRowCount` (keyed by `source_format`). The Livewire action
- * `loadMoreRows(string $sourceFormat)` increments that section's cap
- * by 25; the next render re-runs `BuildConsolidatedPreviewQuery::build()`
- * with the updated overrides so only the requested section grows.
- *
- * Two behaviours are pinned here:
- *
- *  1. Each click of loadMoreRows grows the target section by exactly
- *     25 rows; first paint stays at the SAMPLE_ROW_LIMIT (5); the
- *     cap clamps naturally at the section's totalRows.
- *  2. Per-section state is isolated — calling loadMoreRows on one
- *     section never grows another section.
- */
-
 beforeEach(function (): void {
     // Freeze the clock so the 14-day stale window inside
     // BuildConsolidatedPreviewQuery is deterministic.
@@ -71,12 +53,6 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-/**
- * Seed one ImportRun owned by the given user with `$newRowCount`
- * NEW-disposition rows pre-cached in PreviewCache so the
- * BuildConsolidatedPreviewQuery can resolve it without a real
- * importer run.
- */
 function seedLoadMoreRunWithRows(int $userId, string $sourceFormat, int $newRowCount): int
 {
     /** @var ImportRun $run */

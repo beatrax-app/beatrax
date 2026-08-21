@@ -11,13 +11,8 @@ use Modules\Anomaly\Tests\Support\AnomalyCorpusSeeder;
 
 uses(RefreshDatabase::class);
 
-/*
- * Suppression check happens BEFORE insert (D-17). The suppressed-skip
- * fixture is a €23.49 Spotify charge that WOULD fire `large`, but a
- * matching suppression rule (merchant + band + detector + direction)
- * exists — so the evaluator inserts NO anomaly_alerts row.
- */
-
+// The `suppressed-skip` fixture is a charge that would fire `large` but
+// carries a matching suppression rule, so the evaluator never inserts.
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);

@@ -20,16 +20,10 @@ use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 
 uses(RefreshDatabase::class);
 
-/*
- * Regression lock for the stale-window filter consumed by
- * FirstImportStep::commit(): runs whose created_at is older than
- * BuildConsolidatedPreviewQuery::STALE_WINDOW_DAYS=14 (relative to the
- * frozen clock) must not reach ConfirmsImports. The live commit() path
- * filters the stash via $buildPreview->build(...) → surviveBoundaryFilters,
- * then walks only the 'ready' sections — this test asserts that wiring
- * is intact so a future refactor that bypasses build() and inlines the
- * raw stash ids into the commit loop fails loudly.
- */
+// commit() filters the stash through build() → surviveBoundaryFilters and
+// walks only 'ready' sections, so a run older than the 14-day stale window
+// never reaches ConfirmsImports. A refactor that inlined the raw stash ids
+// into the commit loop would fail here.
 
 beforeEach(function (): void {
     $this->frozenNow = CarbonImmutable::parse('2026-05-15 12:00:00');
@@ -77,15 +71,11 @@ it('does not call ConfirmsImports for stale import runs (regression-locks BuildC
         'default_currency' => 'EUR',
     ]);
 
-    // Two ICS PDFs — one fresh (within the 14-day window relative to
-    // the frozen 2026-05-15 now), one ancient (44 days older).
+    // One inside the 14-day window from the frozen 2026-05-15 now, one 44
+    // days outside it.
     $freshRunId = PreviewSeedHelper::seedRunWithPreview($this->user->id, 'ics-pdf', 2, $cardAccount->id);
     $staleRunId = PreviewSeedHelper::seedRunWithPreview($this->user->id, 'ics-pdf', 2, $cardAccount->id);
 
-    // Push the stale run's created_at well outside the 14-day window.
-    // The query's surviveBoundaryFilters drops anything with
-    // created_at < cutoff, so the stale run never makes it into the
-    // preview the commit loop walks.
     DB::table('import_runs')
         ->where('id', $staleRunId)
         ->update(['created_at' => '2026-04-01 00:00:00']);
@@ -95,9 +85,8 @@ it('does not call ConfirmsImports for stale import runs (regression-locks BuildC
         ->where('step_key', 'connect-card')
         ->update(['data' => json_encode(['card_import_run_ids' => [$freshRunId, $staleRunId]])]);
 
-    // Recording double — captures every importRunId ConfirmsImports
-    // receives. Returns a synthetic success result so commit() continues
-    // through to the balance writes + wizard_progress flip.
+    // Returns a synthetic success so commit() runs on to the balance writes
+    // and the wizard_progress flip.
     $recorder = new class implements ConfirmsImports
     {
         /** @var list<int> */

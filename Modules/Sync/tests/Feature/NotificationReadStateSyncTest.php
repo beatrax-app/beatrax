@@ -16,29 +16,10 @@ use Modules\Sync\Public\Events\NotificationMutated;
 
 uses(RefreshDatabase::class);
 
-/*
- * Req 11 (18-04-PLAN.md), mirroring EnvelopeConcurrentEditConvergenceTest's
- * / StatusConcurrentEditConvergenceTest's two-device merge-simulation
- * harness. No domain "mark read"/"dismiss" action exists yet in this phase
- * (later plans wire it) — the test dispatches the real NotificationMutated
- * event directly, exercising the exact same production capture pipeline
- * (SyncCaptureListener::handleNotificationMutated -> OpLogWriter) a future
- * caller will use.
- *
- * Scenario setup: one notifications row is seeded once via a direct insert,
- * so both "device A" and "device B" hold an IDENTICAL row (same deterministic
- * string PK, D-05).
- *
- * Cases:
- *   1. Device A marks read -> ops replay onto device B -> B's row has the
- *      same non-null read_at (Req 11's stated acceptance criterion).
- *   2. Both devices mark the SAME notification read concurrently with
- *      DIFFERENT timestamps -> after merge both converge to the SAME single
- *      value regardless of replay order, no quarantine, exactly ONE row
- *      (D-09: either timestamp is correct).
- *   3. Device A dismisses, device B undoes the dismiss LATER -> LWW
- *      converges on the later write (D-10: dismiss is reversible).
- */
+// Read state and dismissal both converge on the later write, and either
+// timestamp is a correct answer for "when was this read". Dismissal is
+// reversible, so the last write has to win there too rather than a dismiss
+// being treated as terminal.
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-07-17 09:00:00');
@@ -54,11 +35,8 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-/**
- * Constructs a fresh OpLogWriter for the given device, binds it into the
- * container (so SyncCaptureListener's lazy resolution picks it up), and
- * returns its hex-encoded public key for the replayer's device-key map.
- */
+// Bound into the container so the capture listener's lazy resolution picks it
+// up, and returns the public key the replayer needs to verify what it signs.
 function notifSyncBindDeviceWriter(int $userId, string $deviceId): string
 {
     $keypair = sodium_crypto_sign_keypair();
@@ -115,7 +93,7 @@ function notifSyncMaxOpLogId(DatabaseManager $db): int
     return is_numeric($max) ? (int) $max : 0;
 }
 
-/** Insert a notifications row directly (bypassing any writer — simulates a row already known to both devices). */
+// Seeded directly, so both devices start from an identical row.
 function notifSyncSeedRow(DatabaseManager $db, int $userId, string $id): void
 {
     $db->connection()->table('notifications')->insert([
@@ -133,7 +111,7 @@ function notifSyncSeedRow(DatabaseManager $db, int $userId, string $id): void
     ]);
 }
 
-it('device A marks a notification read and device B replays to the same read_at (Req 11)', function (): void {
+it('device A marks a notification read and device B replays to the same read_at', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
@@ -155,7 +133,7 @@ it('device A marks a notification read and device B replays to the same read_at 
     $aOps = notifSyncOpsAfter($db, (int) $this->user->id, $notificationId, $watermark);
     expect($aOps)->not->toBeEmpty();
 
-    // Simulate device B: it has NOT applied A's edit yet.
+    // Device B has not applied A's edit yet.
     $db->connection()->table('notifications')->where('id', $notificationId)->update(['read_at' => null]);
     expect($db->connection()->table('notifications')->where('id', $notificationId)->value('read_at'))->toBeNull();
 
@@ -171,14 +149,13 @@ it('device A marks a notification read and device B replays to the same read_at 
     expect($db->connection()->table('op_log_quarantine')->where('user_id', $this->user->id)->count())->toBe(0);
 });
 
-it('two devices concurrently marking the SAME notification read converge deterministically regardless of replay order (Req 11)', function (): void {
+it('two devices concurrently marking the SAME notification read converge deterministically regardless of replay order', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
     $notificationId = hash('sha256', 'notif-read-case-2-'.bin2hex(random_bytes(4)));
     notifSyncSeedRow($db, (int) $this->user->id, $notificationId);
 
-    // --- Device A (offline): marks read at t_a. ---
     $pkA = notifSyncBindDeviceWriter((int) $this->user->id, 'device-a');
     $watermarkA = notifSyncMaxOpLogId($db);
     $readAtA = '2026-07-17 09:05:00';
@@ -192,10 +169,9 @@ it('two devices concurrently marking the SAME notification read converge determi
     $aOps = notifSyncOpsAfter($db, (int) $this->user->id, $notificationId, $watermarkA);
     expect($aOps)->not->toBeEmpty();
 
-    // Restore to unread — device B is offline and has NOT seen A's edit.
+    // Device B never saw A's edit, so the live row goes back to unread.
     $db->connection()->table('notifications')->where('id', $notificationId)->update(['read_at' => null]);
 
-    // --- Device B (offline, independently): marks read at a DIFFERENT t_b. ---
     $pkB = notifSyncBindDeviceWriter((int) $this->user->id, 'device-b');
     $watermarkB = notifSyncMaxOpLogId($db);
     $readAtB = '2026-07-17 09:07:30';
@@ -211,12 +187,11 @@ it('two devices concurrently marking the SAME notification read converge determi
 
     $deviceKeys = ['device-a' => $pkA, 'device-b' => $pkB];
 
-    // Replay in one order.
     $replayerForward = new OpLogReplayer($db, $deviceKeys, new MergeRulesRegistry);
     $replayerForward->replay([...$aOps, ...$bOps], (int) $this->user->id);
     $forwardResult = (string) $db->connection()->table('notifications')->where('id', $notificationId)->value('read_at');
 
-    // Reset and replay in the REVERSE order — LWW must converge to the SAME value.
+    // The reverse order must land on the same value.
     $db->connection()->table('notifications')->where('id', $notificationId)->update(['read_at' => null]);
     $replayerReverse = new OpLogReplayer($db, $deviceKeys, new MergeRulesRegistry);
     $replayerReverse->replay([...$bOps, ...$aOps], (int) $this->user->id);
@@ -225,21 +200,18 @@ it('two devices concurrently marking the SAME notification read converge determi
     expect($reverseResult)->toBe($forwardResult);
     expect([$readAtA, $readAtB])->toContain($forwardResult);
 
-    // Exactly one row — no duplicate/lost notification.
     expect($db->connection()->table('notifications')->where('id', $notificationId)->count())->toBe(1);
 
-    // No quarantine — both devices' keys were known, signatures verified.
     expect($db->connection()->table('op_log_quarantine')->where('user_id', $this->user->id)->count())->toBe(0);
 });
 
-it('device B undoing a dismiss LATER converges to the reopened state under LWW (D-10)', function (): void {
+it('device B undoing a dismiss LATER converges to the reopened state under LWW', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
     $notificationId = hash('sha256', 'notif-dismiss-case-3-'.bin2hex(random_bytes(4)));
     notifSyncSeedRow($db, (int) $this->user->id, $notificationId);
 
-    // --- Device A: dismisses at t1. ---
     $pkA = notifSyncBindDeviceWriter((int) $this->user->id, 'device-a');
     $watermarkA = notifSyncMaxOpLogId($db);
     $dismissedAt = CarbonImmutable::now()->toDateTimeString();
@@ -253,12 +225,10 @@ it('device B undoing a dismiss LATER converges to the reopened state under LWW (
     $aOps = notifSyncOpsAfter($db, (int) $this->user->id, $notificationId, $watermarkA);
     expect($aOps)->not->toBeEmpty();
 
-    // Force the wall-clock ms bucket to advance so device B's HLC tick is
-    // deterministically LATER than device A's (HybridLogicalClock::tick()
-    // reads raw microtime(), not the frozen CarbonImmutable test clock).
+    // The clock reads raw microtime rather than the frozen test clock, so the
+    // millisecond bucket has to actually advance for B's tick to sort later.
     usleep(5000);
 
-    // --- Device B (later): undoes the dismiss. ---
     $pkB = notifSyncBindDeviceWriter((int) $this->user->id, 'device-b');
     $watermarkB = notifSyncMaxOpLogId($db);
     $db->connection()->table('notifications')->where('id', $notificationId)->update(['dismissed_at' => null]);
@@ -271,9 +241,8 @@ it('device B undoing a dismiss LATER converges to the reopened state under LWW (
     $bOps = notifSyncOpsAfter($db, (int) $this->user->id, $notificationId, $watermarkB);
     expect($bOps)->not->toBeEmpty();
 
-    // Restore to the dismissed state, then replay BOTH devices' ops together
-    // (in either submission order — the assertion is on the LATER HLC winning,
-    // not on array order).
+    // Replayed together in either submission order: the assertion is on the
+    // later HLC winning, not on the order of the array.
     $db->connection()->table('notifications')->where('id', $notificationId)->update(['dismissed_at' => $dismissedAt]);
     $deviceKeys = ['device-a' => $pkA, 'device-b' => $pkB];
     $replayer = new OpLogReplayer($db, $deviceKeys, new MergeRulesRegistry);

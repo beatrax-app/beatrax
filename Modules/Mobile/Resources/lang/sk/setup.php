@@ -10,6 +10,7 @@ return [
         'reprojecting' => 'Obnovuje sa tvoja história…',
         'retrying' => 'Znova sa pripája k druhému zariadeniu…',
         'locked' => 'Odomkni aplikáciu a pokračuj v nastavovaní.',
+        'revoked' => 'Toto zariadenie bolo z druhého zariadenia odstránené. Spárujte ho znova a synchronizácia bude pokračovať.',
     ],
     'step' => [
         'connect' => 'Pripájanie k druhému zariadeniu',

@@ -1,5 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
-{{-- D-20 / UI-SPEC §19: overflow-x-auto at the page root ensures no surface
+{{-- UI-SPEC §19: overflow-x-auto at the page root ensures no surface
      overflows the viewport at phone width. The dark console pane preserves
      its fixed dark styling (localized dark exception per SKILL). --}}
 <div class="p-6 space-y-6 overflow-x-auto" data-testid="dev-overview-page">
@@ -122,16 +122,16 @@
         the two surfaces never visually disagree when one is empty.
     --}}
     {{--
-        LOCK-04 dev-console probe — App-lock key gate state (D-19).
+        App-lock data-key gate probe.
 
         Shows 'released' + fingerprint when the data key is held in the
         session (unlocked) and 'withheld' when locked. The raw key is never
-        rendered — only a truncated SHA-256 fingerprint proves presence (T-05-26).
+        rendered — only a truncated SHA-256 fingerprint proves presence.
 
-        D-22: lock gates the per-session UI release only; background workers
+        The lock gates the per-session UI release only; background workers
         retain the data key independently of the session lock state.
 
-        Developer-gated surface (T-05-27): this page is already behind the
+        Developer-gated surface: this page is already behind the
         `developer` middleware — the probe does not add a second gate.
     --}}
     <div class="mt-4">

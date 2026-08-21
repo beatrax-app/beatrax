@@ -8,6 +8,7 @@ return [
     'subtitle' => 'Skriv dem ut, eller lagre dem på et trygt sted. De blir ikke vist igjen.',
     'copy' => 'Kopier koder',
     'copied' => 'Kopiert',
+    'copy_failed' => 'Kunne ikke kopiere. Skriv ned kodene i stedet.',
     'download' => 'Last ned som .txt',
 
     'saved_as' => 'Lagret som beatrax-recovery-codes-:username.txt',

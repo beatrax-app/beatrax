@@ -11,18 +11,8 @@ use Modules\DriftAlerts\Public\Services\SavingsInsightsQuery;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
-/*
- * Req 7 — the savings-opportunity prompt trigger. Exercises
- * EmitSavingsPromptsJob end-to-end: a seeded savings insight produces exactly
- * one inbox row, a dismissed insight produces none (SavingsInsightsQuery's
- * OWN dismissal filter — the job never re-implements it), re-running the job
- * is idempotent on the stable insight key (D-06), the D-16/D-08 default-OFF
- * toggle still lands the row while only suppressing OS delivery, and
- * cross-user isolation holds.
- *
- * Event dispatch is wrapped in SuppressionEvaluator::suppressDelivery() (D-43)
- * so no test ever attempts a real OS notification.
- */
+// Dispatch runs inside suppressDelivery() so no case here attempts a real OS
+// notification.
 
 function sptUser(string $username): User
 {
@@ -34,13 +24,8 @@ function sptUser(string $username): User
     ]);
 }
 
-/**
- * Seeds a full approved-subscription chain whose resolved counterparty
- * ("Spotify") carries a bundled support-resource cheaper_url — the same
- * fixture shape as DriftAlerts\tests\Feature\SavingsInsightsQueryTest's
- * siChain(), reused here rather than re-deriving the insight-generation
- * rules (Req 7 forbids new insight-computation logic anywhere in this diff).
- */
+// "Spotify" is not arbitrary: the insight only resolves a cheaper_url for a
+// counterparty the bundled support-resource corpus knows.
 function sptChain(DatabaseManager $db, int $userId, string $merchant, int $monthlyMinor): int
 {
     $cpId = $db->connection()->table('counterparties')->insertGetId([
@@ -83,7 +68,6 @@ function sptChain(DatabaseManager $db, int $userId, string $merchant, int $month
     return $seriesId;
 }
 
-/** Runs the job for $user with delivery globally suppressed (D-43) — no test ever attempts a real OS notification. */
 function sptRunJob(User $user): void
 {
     /** @var SuppressionEvaluator $suppression */
@@ -117,7 +101,7 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-it('emits exactly one prompt for a seeded savings insight (Req 7)', function (): void {
+it('emits exactly one prompt for a seeded savings insight', function (): void {
     $user = sptUser('spt-seeded-insight');
     sptChain(app(DatabaseManager::class), $user->id, 'Spotify', 999);
 
@@ -126,12 +110,12 @@ it('emits exactly one prompt for a seeded savings insight (Req 7)', function ():
     expect(sptPromptCount($user->id))->toBe(1);
 });
 
-it('emits nothing for an insight already dismissed in savings_insight_dismissals (Req 7)', function (): void {
+it('emits nothing for an insight already dismissed in savings_insight_dismissals', function (): void {
     $user = sptUser('spt-dismissed-insight');
     $seriesId = sptChain(app(DatabaseManager::class), $user->id, 'Spotify', 999);
 
-    // Dismissed via the query's OWN dismiss() — the job must never re-derive
-    // or re-implement this filter itself (T-18-31).
+    // Dismissed through the query's own dismiss(): the job must never
+    // re-implement that filter.
     app(SavingsInsightsQuery::class)->dismiss($user, 'cheaper:'.$seriesId);
 
     sptRunJob($user);
@@ -139,7 +123,7 @@ it('emits nothing for an insight already dismissed in savings_insight_dismissals
     expect(sptPromptCount($user->id))->toBe(0);
 });
 
-it('produces still exactly one row when the job runs a second time (D-06 stable insight key)', function (): void {
+it('produces still exactly one row when the job runs a second time (stable insight key)', function (): void {
     $user = sptUser('spt-idempotent');
     sptChain(app(DatabaseManager::class), $user->id, 'Spotify', 999);
 
@@ -149,14 +133,13 @@ it('produces still exactly one row when the job runs a second time (D-06 stable 
     expect(sptPromptCount($user->id))->toBe(1);
 });
 
-it('still lands the inbox row with the shipped OFF default, but suppresses delivery with reason trigger_disabled (D-16/D-08)', function (): void {
+it('still lands the inbox row with the shipped OFF default, but suppresses delivery with reason trigger_disabled', function (): void {
     $user = sptUser('spt-off-by-default');
     sptChain(app(DatabaseManager::class), $user->id, 'Spotify', 999);
 
     sptRunJob($user);
 
-    // The row exists — D-08's binding contract is "store but do not push",
-    // never a silently dropped notification.
+    // A disabled toggle means "store but do not push", never a dropped row.
     expect(sptPromptCount($user->id))->toBe(1);
 
     /** @var SuppressionEvaluator $evaluator */

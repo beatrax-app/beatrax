@@ -6,10 +6,7 @@ namespace Modules\EmailScan\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-// Payload for the dashboard "Email scan health" tile: lines carries
-// up to three InboxHealthLine entries, overflowCount is the count
-// beyond the first three, and overallStatus mirrors the tile-level
-// dot (healthy/stale/reauth).
+// The tile shows at most three lines; $overflowCount is what is left over.
 /**
  * @phpstan-type LinesArray array<int, InboxHealthLine>
  */

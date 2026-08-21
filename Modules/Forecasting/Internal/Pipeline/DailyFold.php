@@ -7,9 +7,6 @@ namespace Modules\Forecasting\Internal\Pipeline;
 use Carbon\CarbonImmutable;
 use InvalidArgumentException;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final readonly class DailyFold
 {
     /**
@@ -23,10 +20,8 @@ final readonly class DailyFold
         int $horizonDays,
         string $defaultCurrency,
     ): array {
-        // Pre-aggregate contributions per Y-m-d date, converting to the
-        // default currency on the way in. `point` is the signed sum;
-        // `spread_sq` is the sum of half-width-squared per the quadrature
-        // formula.
+        // spread_sq accumulates half-widths squared: same-day uncertainties
+        // combine in quadrature, not by addition.
         /** @var array<string, array{point_minor: int, spread_sq: float}> $buckets */
         $buckets = [];
 
@@ -50,10 +45,8 @@ final readonly class DailyFold
                 $defaultCurrency,
             );
 
-            // Half-width of the (low, high) interval. The interval is
-            // signed; the half-width is always the absolute distance
-            // from the point to either bound, divided by two of the
-            // total span.
+            // Half the (low, high) span, taken absolute because the bounds
+            // are signed and an expense inverts their order.
             $halfWidth = abs($convertedHigh - $convertedLow) / 2.0;
 
             $key = $contribution->date->toDateString();
@@ -64,10 +57,8 @@ final readonly class DailyFold
             $buckets[$key]['spread_sq'] += $halfWidth * $halfWidth;
         }
 
-        // Walk each day in the horizon range from asOf through asOf +
-        // horizonDays inclusive. The per-day spread combines same-day
-        // contributions via quadrature but does NOT cumulate across days
-        // — a day without contributions carries the prior spread forward.
+        // Spread does not cumulate across days: a day with no contributions
+        // carries the prior spread forward rather than widening.
         /** @var array<string, array{date: string, low_minor: int, point_minor: int, high_minor: int, currency: string}> $result */
         $result = [];
         $running = $openingBalanceMinor;

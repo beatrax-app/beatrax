@@ -10,14 +10,10 @@ use Modules\Sync\Internal\Transport\SyncSession;
 
 uses(RefreshDatabase::class);
 
-/**
- * What SyncSession refuses to do before the Noise handshake has completed.
- *
- * Every method here is one a caller could reach by wiring the transport up in
- * the wrong order. The guards are the difference between a loud failure and
- * this session's worst outcome: op-log entries — a user's ledger — leaving the
- * device unencrypted because the AEAD state was never established.
- */
+// Every method guarded here is one a caller could reach by wiring the transport
+// up in the wrong order, and the guard is the difference between a loud failure
+// and a user's ledger leaving the device unencrypted because the AEAD state was
+// never established.
 beforeEach(function (): void {
     $this->session = app(SyncSession::class);
 });

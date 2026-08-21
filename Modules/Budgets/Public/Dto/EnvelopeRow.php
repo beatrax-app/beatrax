@@ -6,9 +6,6 @@ namespace Modules\Budgets\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/budgets/architecture.md
- */
 final class EnvelopeRow extends Data
 {
     public function __construct(

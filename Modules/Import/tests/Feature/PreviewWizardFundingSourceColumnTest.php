@@ -7,18 +7,6 @@ use Modules\Import\Internal\Http\Livewire\PreviewWizard;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
 
-/**
- * Locks in the "Funding source" column on the preview-wizard table:
- *  - header label reads "Funding source" (the old "Source" label is gone).
- *  - the cell renders the counterparty IBAN from the source row.
- *  - the cell renders an em-dash when the source row carries no
- *    counterparty IBAN (typical for bank-fee / interest / ATM rows
- *    where ASN never populates a counterparty IBAN).
- *
- * The asn-sample-1 fixture deliberately mixes both shapes — peer-to-peer
- * transfers with a populated counterparty IBAN AND interest / fee rows
- * with none — so a single preview exercises both render paths.
- */
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
@@ -51,8 +39,7 @@ it('renders the counterparty IBAN in the Funding source cell', function (): void
         BankCsvFormatHint::Asn,
     );
 
-    // Pick any preview row that actually carries a counterparty IBAN
-    // (peer-to-peer transfers populate this; bank-fee rows do not).
+    // Peer-to-peer transfers in the fixture populate this; bank-fee rows do not.
     $rowWithIban = null;
     foreach ($preview->rows as $row) {
         if ($row->counterpartyIban !== null) {
@@ -79,8 +66,7 @@ it('renders an em-dash when the source row carries no counterparty IBAN', functi
         BankCsvFormatHint::Asn,
     );
 
-    // The fixture must contain at least one row without a counterparty
-    // IBAN (interest / fee row) for the em-dash render to be exercised.
+    // The fixture's interest and fee rows are the ones ASN leaves IBAN-less.
     $rowWithoutIban = null;
     foreach ($preview->rows as $row) {
         if ($row->counterpartyIban === null) {

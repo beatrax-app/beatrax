@@ -10,26 +10,8 @@ use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
 
 uses(RefreshDatabase::class);
 
-/*
- * RelayDeliveryTest — XPORT-03: relay delivers blob to correct device.
- *
- * RED until Wave 4 ships RelayClient under
- * Modules\Sync\Internal\Transport\Relay\RelayClient.
- *
- * Validates the relay store-and-forward lifecycle (RESEARCH Pattern 4):
- *   1. A sender can "deliver" (POST) a ciphertext blob to a recipient's mailbox.
- *   2. The relay stores the blob with delivered_at = NULL (pending).
- *   3. The recipient can "drain" (GET) their pending blobs.
- *   4. After drain, delivered_at is set (not NULL); the blob is no longer pending.
- *   5. Only the correct recipient can drain their mailbox (addressing guard).
- *
- * At Wave 0, the RelayClient class does not exist. Tests use ->todo() or
- * assert at the schema/DB layer to confirm the migration structure is correct
- * for the relay lifecycle. Full end-to-end delivery tests require Wave 4.
- *
- * The relay is ZK: no test in this file decrypts the blob. The blob is always
- * treated as opaque bytes (see RelayZeroKnowledgeTest for the ZK invariant).
- */
+// The relay is zero-knowledge, so nothing here decrypts a blob: it is opaque
+// bytes throughout, and RelayZeroKnowledgeTest holds that invariant.
 
 it('relay mailbox accepts a ciphertext blob and marks it pending (delivered_at IS NULL)', function (): void {
     $blob = random_bytes(128);
@@ -80,7 +62,6 @@ it('drain marks a pending blob as delivered (sets delivered_at)', function (): v
 it('pending drain query returns only undelivered blobs for the recipient', function (): void {
     $recipientDid = 'device-recipient-only';
 
-    // One pending blob.
     DB::table('relay_mailbox')->insert([
         'sender_did' => 'device-x',
         'recipient_did' => $recipientDid,
@@ -90,7 +71,6 @@ it('pending drain query returns only undelivered blobs for the recipient', funct
         'expires_at' => '2026-07-15T10:00:00Z',
     ]);
 
-    // One already-delivered blob (should NOT appear in pending drain).
     DB::table('relay_mailbox')->insert([
         'sender_did' => 'device-y',
         'recipient_did' => $recipientDid,
@@ -126,17 +106,15 @@ it('addressing is isolated: recipient A cannot drain recipient B mailbox', funct
     expect($wrongRecipientBlobs)->toBe(0, 'device-attacker must not see device-target\'s pending blobs');
 });
 
-it('RelayClient class exists (Wave 4 implementation landed)', function (): void {
+it('RelayClient class exists', function (): void {
     expect(class_exists('Modules\\Sync\\Internal\\Transport\\Relay\\RelayClient'))->toBeTrue(
         'Wave 4: RelayClient must exist — implemented in Plan 13-03.'
     );
 });
 
-it('RelayMailbox writers produce zero-padded UTC Zulu timestamps (WR-03 GC invariant)', function (): void {
-    // The GC compares expires_at lexically, which is only safe when every
-    // timestamp is the same zero-padded Zulu form. Exercise deliver() + confirm()
-    // and assert the stored timestamps match ^\d{4}-..TZ$ so a future change that
-    // drops the Zulu form is caught here.
+it('RelayMailbox writers produce zero-padded UTC Zulu timestamps, so the GC compares expiries lexically', function (): void {
+    // The GC compares expires_at lexically, which is only safe while every
+    // timestamp is written in the same zero-padded Zulu form.
     $mailbox = new RelayMailbox(
         app(DatabaseManager::class),
         app(Clock::class),

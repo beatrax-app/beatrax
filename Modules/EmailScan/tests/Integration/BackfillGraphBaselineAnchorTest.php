@@ -15,22 +15,10 @@ use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
 
 uses(RefreshDatabase::class);
 
-/*
- * WR-02 iter-2 regression: runMicrosoftBackfill must capture the
- * walk-start wall-clock anchor BEFORE issuing any provider call, then
- * pass that anchor into the post-walk deltaPage(null, anchor) baseline
- * so messages arriving during the walk are picked up by the next
- * incremental tick rather than slipping through both the walk's
- * receivedDateTime cursor AND the baseline's "now" lower bound.
- *
- * The FakeGraphApiClient records the sinceOverride arg on every
- * deltaPage call. The test runs a happy-path backfill and asserts:
- *   1. deltaPage(null, ...) was invoked exactly once (baseline phase).
- *   2. The sinceOverride is non-null (regression guard — previously
- *      the call site was deltaPage(null) with no anchor).
- *   3. The sinceOverride equals the test's frozen wall-clock now,
- *      proving the anchor was captured before any other call.
- */
+// The wall-clock anchor is captured before the first provider call and passed
+// into the post-walk deltaPage baseline. Anchored on "now" instead, a message
+// arriving during the walk falls past the walk's receivedDateTime cursor and
+// below the baseline's lower bound, so no tick ever sees it.
 
 beforeEach(function (): void {
     Sleep::fake();

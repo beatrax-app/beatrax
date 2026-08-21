@@ -7,16 +7,8 @@ use Modules\Import\Internal\Parsers\Ics\IcsPdfPaymentTypeHinter;
 use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
-/*
- * Unit coverage for IcsPdfPaymentTypeHinter. The hinter scans the
- * canonical row's description for the small set of distinctive Dutch
- * CAPS tokens the Mijn ICS consumer-portal PDF layout actually emits.
- */
-
-/**
- * Build a CanonicalTransaction with `sourceFormat=ics-pdf` and the
- * supplied description.
- */
+// The descriptions below are the Dutch CAPS tokens the Mijn ICS consumer-portal
+// PDF layout actually emits.
 function icsRow(string $description, string $sourceFormat = 'ics-pdf'): CanonicalTransaction
 {
     return new CanonicalTransaction(

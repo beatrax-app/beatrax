@@ -9,21 +9,6 @@ use Modules\Goals\Models\Goal;
 use Modules\Ledger\Models\Account;
 use Modules\Pots\Models\Pot;
 
-/**
- * Wave 0 RED stubs for GOAL-01 and GOAL-05.
- *
- * These tests reference GoalsPage (Plan 04) and GoalWriter (Plan 03). They
- * will error with "class not found" until Plans 03 and 04 land — that is
- * correct Wave 0 RED behaviour.
- *
- * Covers:
- *   GOAL-01: createGoal writes a goals row and dispatches toast; invalid
- *            amount is rejected with an inline error.
- *   GOAL-05: edit updates the row; markComplete sets status=completed (goal
- *            stays in list); archive sets status=archived (hidden from active
- *            view); restore returns to active; cross-user cannot edit/archive
- *            another user's goal.
- */
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'wessel',
@@ -41,10 +26,6 @@ beforeEach(function (): void {
         'default_currency' => 'EUR',
     ]);
 });
-
-// ---------------------------------------------------------------------------
-// GOAL-01: Create goal
-// ---------------------------------------------------------------------------
 
 it('renders the goals page', function (): void {
     Livewire::test(GoalsPage::class)
@@ -104,10 +85,6 @@ it('parses the Dutch grouped amount format', function (): void {
     ]);
 });
 
-// ---------------------------------------------------------------------------
-// GOAL-05: Edit / lifecycle status transitions
-// ---------------------------------------------------------------------------
-
 it('updates an existing goals name and target via edit', function (): void {
     $goal = Goal::factory()->create([
         'user_id' => $this->user->id,
@@ -140,14 +117,13 @@ it('openEdit prefills the target date so the edit can be saved without re-entry'
         'status' => 'active',
     ]);
 
-    // openEdit must populate targetDate from the stored goal (WR-01); the
-    // previous behaviour blanked it, so a subsequent save failed date validation.
+    // openEdit must populate targetDate from the stored goal; blanking it made
+    // the very next save fail date validation.
     Livewire::test(GoalsPage::class)
         ->call('openEdit', $goal->id)
         ->assertSet('editGoalId', $goal->id)
         ->assertSet('name', 'Old name')
         ->assertSet('targetDate', '2027-06-01')
-        // Save immediately without re-entering the date — must succeed.
         ->set('name', 'New name')
         ->set('targetAmount', '750.00')
         ->call('updateGoal')
@@ -222,7 +198,6 @@ it('cross-user cannot edit another users goal', function (): void {
         'status' => 'active',
     ]);
 
-    // Wessel (actingAs) attempts to edit Mallory's goal — should be silently ignored.
     Livewire::test(GoalsPage::class)
         ->set('editGoalId', $foreignGoal->id)
         ->set('name', 'Hacked')
@@ -234,10 +209,6 @@ it('cross-user cannot edit another users goal', function (): void {
         'name' => 'Hacked',
     ]);
 });
-
-// ---------------------------------------------------------------------------
-// Inline validation feedback
-// ---------------------------------------------------------------------------
 
 it('shows a name error and writes nothing when the name is blank', function (): void {
     Livewire::test(GoalsPage::class)
@@ -308,8 +279,8 @@ it('resets the form instead of writing when updating a goal the user does not ow
     ]);
 
     // A valid name + date clears validation so the write is attempted; the
-    // cross-user goal id then raises GoalNotFoundException, which resets the
-    // form rather than surfacing a field error.
+    // cross-user id then raises GoalNotFoundException, which resets the form
+    // rather than surfacing a field error.
     Livewire::test(GoalsPage::class)
         ->set('editGoalId', $foreignGoal->id)
         ->set('name', 'Hacked')
@@ -322,10 +293,6 @@ it('resets the form instead of writing when updating a goal the user does not ow
 
     $this->assertDatabaseMissing('goals', ['id' => $foreignGoal->id, 'name' => 'Hacked']);
 });
-
-// ---------------------------------------------------------------------------
-// Linked-pot reconciliation
-// ---------------------------------------------------------------------------
 
 it('links a selected pot to the goal on create', function (): void {
     $pot = Pot::factory()->create([
@@ -413,7 +380,7 @@ it('cross-user cannot archive another users goal', function (): void {
     Livewire::test(GoalsPage::class)
         ->call('archive', $foreignGoal->id);
 
-    // Status must remain active — BelongsToUser scope rejects the foreign id.
+    // Still active: the BelongsToUser scope never resolved the foreign id.
     $this->assertDatabaseHas('goals', [
         'id' => $foreignGoal->id,
         'status' => 'active',

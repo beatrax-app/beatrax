@@ -10,13 +10,6 @@ use Modules\Sync\Internal\Pairing\PairingTokenService;
 
 uses(RefreshDatabase::class);
 
-/*
- * PairingTokenServiceTest — D-06/D-13 token single-use + expiry lifecycle.
- *
- * RED until Plan 02 ships PairingTokenService. References the planned FQCN
- * Modules\Sync\Internal\Pairing\PairingTokenService. Failure is "class not found".
- */
-
 function tokenUser(string $username = 'token-user'): User
 {
     return User::query()->create([
@@ -61,16 +54,14 @@ it('it_rejects_already_used_token', function (): void {
 
     $token = $service->issue((int) $user->id, 'device-init', str_repeat('a', 64), str_repeat('b', 64));
 
-    // First accept succeeds.
     $first = $service->accept($token, (int) $user->id, 'device-resp', str_repeat('c', 64), str_repeat('d', 64));
     expect($first)->not->toBeFalse();
 
-    // Second accept of the same token must be rejected (single-use).
     $second = $service->accept($token, (int) $user->id, 'device-resp-2', str_repeat('e', 64), str_repeat('f', 64));
     expect($second)->toBeFalse();
 });
 
-it('does not shorten the token TTL when the responder accepts early (CR-02)', function (): void {
+it('does not shorten the token TTL when the responder accepts early', function (): void {
     $user = tokenUser('token-early-accept');
 
     /** @var PairingTokenService $service */
@@ -96,7 +87,7 @@ it('does not shorten the token TTL when the responder accepts early (CR-02)', fu
     expect($newExpiry->greaterThanOrEqualTo($originalExpiry))->toBeTrue();
 });
 
-it('extends the token TTL when the responder accepts near the original expiry (CR-02)', function (): void {
+it('extends the token TTL when the responder accepts near the original expiry', function (): void {
     $user = tokenUser('token-late-accept');
 
     /** @var PairingTokenService $service */
@@ -121,7 +112,7 @@ it('extends the token TTL when the responder accepts near the original expiry (C
     expect($newExpiry->greaterThan($originalExpiry))->toBeTrue();
 });
 
-it('rejects an accept whose responder public key is not valid 64-char hex (WR-01)', function (): void {
+it('rejects an accept whose responder public key is not valid 64-char hex', function (): void {
     $user = tokenUser('token-bad-key');
 
     /** @var PairingTokenService $service */
@@ -136,7 +127,7 @@ it('rejects an accept whose responder public key is not valid 64-char hex (WR-01
     expect($result)->toBeFalse();
 });
 
-it('prunes expired and terminal token rows on the next issue (WR-04)', function (): void {
+it('prunes expired and terminal token rows on the next issue', function (): void {
     $user = tokenUser('token-prune');
 
     /** @var PairingTokenService $service */
@@ -145,7 +136,6 @@ it('prunes expired and terminal token rows on the next issue (WR-04)', function 
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
 
-    // An abandoned token from an earlier attempt.
     $service->issue((int) $user->id, 'device-init', str_repeat('a', 64), str_repeat('b', 64));
     expect($db->connection()->table('pairing_tokens')->where('user_id', $user->id)->count())->toBe(1);
 
@@ -153,7 +143,6 @@ it('prunes expired and terminal token rows on the next issue (WR-04)', function 
     CarbonImmutable::setTestNow('2026-06-15 10:20:00');
     $service->issue((int) $user->id, 'device-init', str_repeat('a', 64), str_repeat('b', 64));
 
-    // The stale row was pruned; only the fresh pending token remains.
     $rows = $db->connection()->table('pairing_tokens')->where('user_id', $user->id)->get();
     expect($rows)->toHaveCount(1);
     expect($rows->first()->state)->toBe('pending');

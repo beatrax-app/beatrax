@@ -8,9 +8,6 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\QuarantineReason;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class OpLogQuarantine
 {
     public function __construct(private DatabaseManager $db) {}

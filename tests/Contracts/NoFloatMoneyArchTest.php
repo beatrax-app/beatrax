@@ -27,19 +27,11 @@ it('no migration declares REAL or FLOAT on a money column', function (): void {
     expect($allMigrationContents)->toContain("bigInteger('amount_minor')");
 });
 
-/*
- * The migration guard above stops money being stored as a float. It does not
- * stop one being *read* as a float, which is the half that actually shipped.
- *
- * SQLite hands `decimal`/`numeric` columns back as PHP floats, and brick/math
- * 0.18 accepts only BigNumber|int|string — a float argument is coerced to int,
- * so `0.92917629` silently becomes `0`. That is how the transaction detail
- * page came to render "€0.000 / USD" against a correctly stored rate, with
- * nothing but a deprecation notice to say so.
- *
- * Every decimal-shaped column therefore needs a string cast on its model, so
- * the value is a decimal string from the database to the arithmetic.
+/**
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-decimal-column-read-as-a-float
  */
+// The guard above stops money being stored as a float; this one stops it being
+// read as one, which is the half that actually shipped.
 it('casts every decimal column to string so it never reaches BigDecimal as a float', function (): void {
     $decimalColumns = [
         // column => the model that owns it
@@ -67,15 +59,12 @@ it('casts every decimal column to string so it never reaches BigDecimal as a flo
 });
 
 it('names every decimal column the schema declares, so a new one cannot be forgotten', function (): void {
-    // The map above is hand-maintained; this keeps it honest against the real
-    // schema. A new decimal column fails here until it is either cast or
-    // consciously listed as exempt.
+    // Keeps the hand-maintained map above honest: a new decimal column fails
+    // here until it is either cast or consciously exempted.
     $exempt = [
-        // Confidence is a score compared against thresholds, never money and
-        // never fed to BigDecimal.
+        // A score compared against thresholds, never fed to BigDecimal.
         'chain_links.confidence',
-        // Read through ExchangeRateService::toString() before it reaches
-        // brick, which is the same guarantee by a different route.
+        // Reaches brick through ExchangeRateService::toString() instead.
         'exchange_rates.rate',
     ];
 

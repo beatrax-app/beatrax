@@ -3,19 +3,14 @@
 declare(strict_types=1);
 
 use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvHeaderProfile;
+use Modules\Ingestion\Internal\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Dto\SniffResult;
-use Modules\Ingestion\Public\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
 
 beforeEach(function (): void {
     $this->sniffer = $this->app->make(HeaderSniffer::class);
 });
 
-/**
- * Writes `$prefix.$body` to a fresh tempnam-keyed `.xml` file and registers a
- * shutdown cleanup so the temp file is removed when the PHP process exits.
- * Used by the CAMT.053 sniff cases below.
- */
 function writeTempXml(string $body, string $prefix = ''): string
 {
     $tmp = tempnam(sys_get_temp_dir(), 'sniff-camt-').'.xml';
@@ -67,10 +62,8 @@ it('rejects a CSV with the wrong column count', function (): void {
 });
 
 it('accepts the 19-column ASN variant (no trailing Categorie column)', function (): void {
-    // Real ASN exports ship a 19-col shape (header ends at
-    // `Afschriftnummer`, no `Categorie`). Drop the trailing
-    // `,Categorie` column from the gold fixture's header + every row
-    // and confirm the sniffer accepts it.
+    // Real ASN exports also ship a 19-column shape ending at
+    // `Afschriftnummer`, which the gold fixture reproduces minus `Categorie`.
     $body = file_get_contents(base_path('tests/fixtures/asn-sample-1.csv'));
     expect($body)->toBeString();
     /** @var string $body */
@@ -79,8 +72,7 @@ it('accepts the 19-column ASN variant (no trailing Categorie column)', function 
         if ($line === '') {
             continue;
         }
-        // Strip the LAST CSV column. Quoted-field aware enough for the
-        // fixture: drop everything after the final unquoted comma.
+        // Not CSV-aware, but the fixture has no comma inside its final field.
         $lastComma = strrpos($line, ',');
         if ($lastComma !== false) {
             $lines[$i] = substr($line, 0, $lastComma);

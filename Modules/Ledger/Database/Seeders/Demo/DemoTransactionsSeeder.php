@@ -17,26 +17,17 @@ use Modules\Ledger\Public\Enums\ImportRunStatus;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 
-/**
- * @link ../../../../../.docs/features/ledger/architecture.md
- */
 final class DemoTransactionsSeeder
 {
     private const AH_COUNTERPARTY = 'Albert Heijn';
 
-    // Consecutive calendar months the dataset spans, ending with the
-    // current month. Three months of monthly-cadence rows plus the
-    // windowed day-offset series produce the documented ~166-row set.
+    // With the day-offset series this yields the documented ~166-row set.
     private const MONTH_SPAN = 3;
 
-    // Plausible mid-2026 EUR/USD mid-market rate for the USD-denominated
-    // PayPal rows — the point is that the currency-mode toggle has
-    // non-trivial data to convert, not that it matches a real provider.
+    // A plausible rate, not a real provider's: the point is that the
+    // currency-mode toggle has non-trivial data to convert.
     private const EUR_PER_USD = '0.92000000';
 
-    // Inclusive upper bound for the day-offset series, set in run() to
-    // the last day of the current calendar month so the row count is
-    // stable on every run date; shared across the per-account methods.
     private CarbonImmutable $windowEnd;
 
     public function __construct(
@@ -49,21 +40,16 @@ final class DemoTransactionsSeeder
      */
     public function run(array $users, array $accounts): int
     {
-        // Anchor to the calendar-month boundary MONTH_SPAN-1 months back
-        // (not a rolling today->subDays(89) cursor, which previously
-        // clipped the oldest month's rows) via subMonthsNoOverflow so
-        // end-of-month run dates never collapse two months into one.
+        // A calendar-month boundary, not a rolling subDays(89) cursor, which
+        // clipped the oldest month; subMonthsNoOverflow so a run on the 31st
+        // does not collapse two months into one.
         $today = CarbonImmutable::today();
         $windowStart = $today->subMonthsNoOverflow(self::MONTH_SPAN - 1)->startOfMonth();
 
-        // Upper bound for the day-offset series: the last day of the
-        // current calendar month, so the row count stays stable across
-        // run dates (clamping to `today` would shrink a mid-month run).
+        // End of month, not `today`, or a mid-month run seeds fewer rows.
         $this->windowEnd = $today->endOfMonth();
 
-        // User 1: the active power-user persona — three accounts, ~120
-        // transactions covering salary, household bills, groceries,
-        // transit, and online purchases.
+        // The power-user persona: three accounts, ~120 transactions.
         if (isset($users['demo-1@beatrax.local'], $accounts['demo-1@beatrax.local'])) {
             $user = $users['demo-1@beatrax.local'];
             $perUserAccounts = $accounts['demo-1@beatrax.local'];
@@ -75,9 +61,8 @@ final class DemoTransactionsSeeder
             $this->linkUser1Transfers($user);
         }
 
-        // User 2: the secondary persona — proves multi-user isolation
-        // works (the dashboard for user 2 must never show user 1's
-        // data). Sparser slate.
+        // The sparse second persona, so multi-user isolation has something
+        // to prove: user 2's dashboard must never show user 1's data.
         if (isset($users['demo-2@beatrax.local'], $accounts['demo-2@beatrax.local'])) {
             $user = $users['demo-2@beatrax.local'];
             $perUserAccounts = $accounts['demo-2@beatrax.local'];
@@ -97,10 +82,8 @@ final class DemoTransactionsSeeder
         $rowIndex = 0;
         $inserted = 0;
 
-        // The fixed monthly slate: salary in on the 25th, then the direct
-        // debits that leave on the same day every month. Written in the
-        // order they are seeded — the row index feeds each fingerprint, so
-        // reordering these entries would rewrite the dataset's identity.
+        // The row index feeds each fingerprint, so reordering these entries
+        // rewrites the dataset's identity. Keep them in seed order.
         $inserted += $this->seedMonthlySeries($user, $asn, $run, $rowIndex, $windowStart, [
             ['day' => 25, 'type' => 'income', 'amountMinor' => 385000, 'description' => 'Salaris MijnWerkgever BV', 'counterpartyName' => 'MijnWerkgever BV', 'counterpartyIban' => 'NL44RABO0123456789', 'paymentType' => PaymentType::Transfer, 'categorySlug' => 'income-salary'],
             ['day' => 1, 'type' => 'expense', 'amountMinor' => -125000, 'description' => 'Huur Vesteda', 'counterpartyName' => 'Vesteda', 'counterpartyIban' => 'NL36INGB0007654321', 'paymentType' => PaymentType::DirectDebit, 'categorySlug' => 'housing-rent'],
@@ -111,15 +94,12 @@ final class DemoTransactionsSeeder
             ['day' => 27, 'type' => 'expense', 'amountMinor' => -8500, 'description' => 'Belastingdienst motorrijtuigenbelasting', 'counterpartyName' => 'Belastingdienst', 'counterpartyIban' => 'NL86INGB0002445588', 'paymentType' => PaymentType::DirectDebit, 'categorySlug' => null],
         ]);
 
-        // Albert Heijn — weekly groceries on Saturday + a midweek top-up on
-        // Wednesday. Amounts vary per week to look natural.
         $groceriesCategory = $this->categoryId('groceries');
         $inserted += $this->seedUser1AhWeekly($user, $asn, $run, $rowIndex, $windowStart, $groceriesCategory);
 
-        // Jumbo + Lidl + Dirk + Hema diversity — one each per month
-        // (MONTH_SPAN amounts each, oldest month first). Each list used to
-        // carry a fourth leading amount that nothing could reach: it paired
-        // with the month before the window, which every series then skipped.
+        // MONTH_SPAN amounts each, oldest month first. A fourth leading
+        // amount would be unreachable: it pairs with the month before the
+        // window, which every series skips.
         $diversityRows = [
             ['name' => 'Jumbo', 'description' => 'Jumbo Supermarkt Utrecht', 'amounts' => [-3211, -2890, -4055], 'category' => $groceriesCategory, 'iban' => null, 'paymentType' => PaymentType::Pin],
             ['name' => 'Lidl', 'description' => 'Lidl Filiaal 0042', 'amounts' => [-1989, -2210, -1875], 'category' => $groceriesCategory, 'iban' => null, 'paymentType' => PaymentType::Pin],
@@ -164,9 +144,8 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        // The cash withdrawal, the two internal legs and the P2P transfer.
-        // linkUser1Transfers() and the Chains demo seeder find their rows by
-        // description rather than by position, so this stays a table.
+        // linkUser1Transfers() and the Chains demo seeder find these rows by
+        // description rather than position, so this stays a table.
         $inserted += $this->seedMonthlySeries($user, $asn, $run, $rowIndex, $windowStart, [
             ['day' => 8, 'type' => 'expense', 'amountMinor' => -10000, 'description' => 'GEA ASN BANK Utrecht', 'counterpartyName' => 'ASN Bank GEA', 'counterpartyIban' => null, 'paymentType' => PaymentType::Cash, 'categorySlug' => 'cash-withdrawal'],
             ['day' => 10, 'type' => 'transfer_out', 'amountMinor' => -10000, 'description' => 'PayPal top-up', 'counterpartyName' => 'PayPal', 'counterpartyIban' => 'PAYPAL-DEMO-1', 'paymentType' => PaymentType::Transfer, 'categorySlug' => 'transfers-internal'],
@@ -259,10 +238,8 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        // The monthly ICS card settlement — an inbound transfer from
-        // the ASN account zeroing the card. Three of them across the
-        // window. These rows are the `to_transaction` side of the
-        // ics_bulk_settle chain.
+        // The monthly ICS card settlement, and the `to_transaction` side of
+        // the ics_bulk_settle chain.
         $inserted += $this->seedMonthlySeries($user, $ics, $run, $rowIndex, $windowStart, [
             ['day' => 18, 'type' => 'transfer_in', 'amountMinor' => 22500, 'description' => 'Afrekening MasterCard ICS', 'counterpartyName' => 'ASN Bank', 'counterpartyIban' => 'NL57ASNB0123456789', 'paymentType' => PaymentType::Transfer, 'categorySlug' => 'transfers-internal'],
         ]);
@@ -281,9 +258,8 @@ final class DemoTransactionsSeeder
             ['day' => 15, 'type' => 'expense', 'amountMinor' => -1499, 'description' => 'Netflix.com', 'counterpartyName' => 'Netflix International BV', 'counterpartyIban' => null, 'paymentType' => PaymentType::Online, 'categorySlug' => 'subscriptions-streaming'],
         ]);
 
-        // Google Play — five USD-denominated rows so the FX surface
-        // has data. Amounts are USD minor units; settled in EUR via
-        // the demo cross-rate.
+        // USD minor units, settled in EUR via the demo cross-rate, so the FX
+        // surface has data.
         $usdAmounts = [-499, -999, -299, -1299, -599];
         foreach ([4, 22, 39, 58, 79] as $i => $dayOffset) {
             $date = $windowStart->addDays($dayOffset);
@@ -308,17 +284,15 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        // The Bol.com purchase and the ASN→PayPal funding that covers it,
-        // both on the 10th. The chain_link wires that pair, and
-        // linkUser1Transfers() pairs the transfer_in with its ASN leg.
+        // The purchase and the ASN→PayPal funding that covers it, both on the
+        // 10th: the chain_link wires that pair.
         $inserted += $this->seedMonthlySeries($user, $paypal, $run, $rowIndex, $windowStart, [
             ['day' => 10, 'type' => 'expense', 'amountMinor' => -7995, 'description' => 'Bol.com via PayPal', 'counterpartyName' => 'Bol.com', 'counterpartyIban' => null, 'paymentType' => PaymentType::Online, 'categorySlug' => 'subscriptions-cloud'],
             ['day' => 10, 'type' => 'transfer_in', 'amountMinor' => 10000, 'description' => 'Top-up from ASN', 'counterpartyName' => 'ASN Bank', 'counterpartyIban' => 'NL57ASNB0123456789', 'paymentType' => PaymentType::Transfer, 'categorySlug' => 'transfers-internal'],
         ]);
 
-        // Bol.com + Coolblue refunds — two rows so the `refund` type
-        // and the `Refund` PaymentType chip both have multiple
-        // datapoints to render against.
+        // Two rows, so the `refund` type and the `Refund` chip each have
+        // more than one datapoint to render against.
         $refundsCategory = $this->categoryId('income-refunds');
         $refundRows = [
             ['day' => 35, 'amount' => 1250, 'description' => 'Retour Bol.com', 'merchant' => 'Bol.com'],
@@ -341,9 +315,7 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        // PayPal cross-currency conversion fee — two rows so the `fee`
-        // type + `Fee` PaymentType chip both have data to render against
-        // on the /transactions list.
+        // Two rows, so the `fee` type and the `Fee` chip each have data.
         foreach ([29, 73] as $dayOffset) {
             $date = $windowStart->addDays($dayOffset);
             if ($date->greaterThan($this->windowEnd)) {
@@ -361,10 +333,8 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        // PayPal balance adjustment — two rows: one positive (PayPal
-        // gives store credit after a chargeback) and one negative (PayPal
-        // claws back a previously-applied promo). Exercises the
-        // `adjustment` type chip + the `Unknown` PaymentType fallback.
+        // One positive and one negative, exercising the `adjustment` chip
+        // and the `Unknown` PaymentType fallback.
         $adjustmentRows = [
             ['day' => 21, 'amount' => 500, 'description' => 'PayPal goodwill credit'],
             ['day' => 64, 'amount' => -750, 'description' => 'PayPal promo clawback'],
@@ -456,10 +426,8 @@ final class DemoTransactionsSeeder
         return $inserted;
     }
 
-    // Walks the freshly-seeded ASN→PayPal transfer pairs for user 1 and
-    // links each pair via pair_transaction_id, mirroring the production
-    // Layer-1 pair-detection listener so demo data carries the same
-    // relationship shape consumers (chains, recurring, queries) expect.
+    // Mirrors the production pair-detection listener, so demo data carries
+    // the relationship shape chains, recurring and the queries expect.
     private function linkUser1Transfers(User $user): void
     {
         $pairs = Transaction::query()
@@ -491,10 +459,7 @@ final class DemoTransactionsSeeder
         }
     }
 
-    // Walks the window one week at a time from the first Saturday, seeding a
-    // Saturday grocery run plus a Wednesday top-up (the row three days back).
-    // rowIndex advances by reference so the fingerprints stay identical to
-    // the inline walk this replaced.
+    // A Saturday grocery run plus a Wednesday top-up (three days back).
     private function seedUser1AhWeekly(
         User $user,
         Account $asn,
@@ -540,9 +505,7 @@ final class DemoTransactionsSeeder
         return $inserted;
     }
 
-    // Twice-weekly (Tuesday/Thursday) train commute across the window, one
-    // amount per trip until the fixed amount table is exhausted. rowIndex
-    // advances by reference to preserve the original seed order.
+    // Tuesday/Thursday commute, one amount per trip until the table runs out.
     private function seedUser1NsTransit(
         User $user,
         Account $asn,
@@ -575,10 +538,6 @@ final class DemoTransactionsSeeder
         return $inserted;
     }
 
-    // Seeds each fixed monthly series in turn, one row per month. They are
-    // data rather than code because only the eight constants differed, and
-    // writing the walk out per series is what let the two personas drift
-    // into near-identical methods that had to be edited in step.
     /**
      * @param  list<array{day: int, type: string, amountMinor: int, description: string, counterpartyName: string, counterpartyIban: ?string, paymentType: PaymentType, categorySlug: ?string}>  $definitions
      */
@@ -612,10 +571,6 @@ final class DemoTransactionsSeeder
         return $inserted;
     }
 
-    // The date in each month of the window that falls on $dayOfMonth,
-    // oldest month first. Every monthly series in this seeder walks the
-    // window the same way, and writing that walk out per series is what
-    // let dayInMonth() drift away from its own parameter.
     /**
      * @param  int  $olderMonthStride  pushes each older month this many days
      *                                 later, so one merchant's rows do not all
@@ -636,15 +591,10 @@ final class DemoTransactionsSeeder
         return $dates;
     }
 
-    // Builds the Nth day in the month that is `$monthsBack` months before
-    // the newest month of the window, capped at that month's last day
-    // (day=31 in February clamps to Feb 28/29).
     private function dayInMonth(CarbonImmutable $windowStart, int $day, int $monthsBack): CarbonImmutable
     {
-        // Counted forward from $windowStart rather than backward from a
-        // second today(). That read anchored the dates to whenever this ran
-        // instead of to the window run() had fixed: a seed crossing midnight
-        // into a new month shifted every row while windowEnd stayed behind.
+        // Forward from $windowStart, never backward from a second today():
+        // a seed crossing midnight shifted every row while windowEnd stayed.
         $anchor = $windowStart
             ->addMonthsNoOverflow(self::MONTH_SPAN - 1 - $monthsBack)
             ->startOfMonth();
@@ -652,9 +602,6 @@ final class DemoTransactionsSeeder
         return $anchor->setDay(min($day, $anchor->daysInMonth));
     }
 
-    // Looks up the global default-tree category id for a slug; returns
-    // null when the slug is unknown (caller treats null as "leave
-    // category_id null").
     private function categoryId(string $slug): ?int
     {
         /** @var Category|null $cat */
@@ -666,9 +613,8 @@ final class DemoTransactionsSeeder
         return $cat?->id;
     }
 
-    // The sha256 is deterministic over (username, account-slug), so a
-    // second seed run finds the same row via the (user_id, sha256)
-    // UNIQUE index.
+    // Deterministic over (username, account-slug), so a re-seed finds the
+    // same row via the (user_id, sha256) UNIQUE index.
     private function ensureImportRun(User $user, Account $account): ImportRun
     {
         $sha = hash('sha256', 'demo|'.$user->username.'|'.$account->slug);
@@ -685,10 +631,8 @@ final class DemoTransactionsSeeder
         );
     }
 
-    // Builds a CanonicalTransaction, computes its production
-    // fingerprint, and INSERTs it via insertOrIgnore so an idempotent
-    // re-seed is a no-op (the composite UNIQUE on fingerprint + the v3
-    // tuple UNIQUE both catch a duplicate).
+    // insertOrIgnore, so a re-seed is a no-op: the fingerprint UNIQUE and
+    // the v3 tuple UNIQUE both catch a duplicate.
     /**
      * @param  array{type: string, amountMinor: int, description: string, counterpartyName: ?string, counterpartyIban: ?string, date: CarbonImmutable, paymentType: PaymentType, categoryId: ?int, currency?: string, settledAmountMinor?: int, settledCurrency?: string, fxRateUsed?: string|null}  $row
      */

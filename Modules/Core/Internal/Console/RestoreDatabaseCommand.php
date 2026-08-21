@@ -18,9 +18,6 @@ use Modules\Core\Public\Services\UserDataPathService;
 use PDO;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class RestoreDatabaseCommand extends Command
 {
     /** @var string */
@@ -44,8 +41,7 @@ final class RestoreDatabaseCommand extends Command
 
     public function handle(): int
     {
-        // Larastan narrows the `argument('path')` return to string for
-        // the typed signature, so no is_string() guard is needed here.
+        // Larastan narrows argument('path') to string, so no is_string() guard.
         $sourcePath = $this->argument('path');
 
         if ($sourcePath === '' || ! $this->files->exists($sourcePath)) {
@@ -57,9 +53,6 @@ final class RestoreDatabaseCommand extends Command
         return $this->restoreWithMaintenance($sourcePath);
     }
 
-    // Gates on maintenance mode, then runs the swap inside a try/finally so
-    // the app is brought back up unless a phase that touched the live file
-    // asked (via RestoreFailedException::$leaveDown) to leave it down.
     private function restoreWithMaintenance(string $sourcePath): int
     {
         $alreadyDown = $this->files->exists($this->paths->framework('down'));
@@ -72,8 +65,7 @@ final class RestoreDatabaseCommand extends Command
         }
 
         $broughtDown = false;
-        // Past the guard above, `! $alreadyDown` already implies
-        // $forceMaintenance was set, so this is the bring-it-down case.
+        // Past the guard, `! $alreadyDown` implies --force-maintenance.
         if (! $alreadyDown) {
             $this->artisan->call('down');
             $broughtDown = true;
@@ -87,8 +79,6 @@ final class RestoreDatabaseCommand extends Command
 
             return self::FAILURE;
         } finally {
-            // Bring the app back up ONLY when (a) this command brought it
-            // down AND (b) a swap-phase failure did NOT ask to keep it down.
             // A throw before any swap still releases maintenance mode — safer
             // than locking out a healthy app.
             if ($broughtDown && ! $leaveDown) {
@@ -109,10 +99,8 @@ final class RestoreDatabaseCommand extends Command
         return self::SUCCESS;
     }
 
-    // --confirm gate: non-TTY callers MUST pass --confirm or the command
-    // refuses; interactive TTY sessions get a y/N prompt (default "no"). The
-    // TTY check uses stream_isatty(STDIN), so CI runners and the test harness
-    // hit the refusal deterministically.
+    // stream_isatty(STDIN) is the gate, so CI runners and the test harness hit
+    // the "pass --confirm" refusal deterministically.
     private function confirmed(string $sourcePath): bool
     {
         if ($this->option('confirm') === true) {
@@ -125,9 +113,6 @@ final class RestoreDatabaseCommand extends Command
             return false;
         }
 
-        // Interactive TTY: y/N prompt defaulting to "no". A decline records
-        // the cancellation notice, then the same boolean drives the return so
-        // the accept/decline paths share one exit.
         $accepted = $this->confirm(sprintf('Restore %s over current DB? A pre-restore snapshot will be saved. [y/N]', $sourcePath), false);
         if (! $accepted) {
             $this->info('Restore cancelled.');
@@ -136,29 +121,23 @@ final class RestoreDatabaseCommand extends Command
         return $accepted;
     }
 
-    // Verifies the source, snapshots the current DB, then swaps. Each failure
-    // prints its error (and, once the live file is touched, records the
-    // critical alert) before throwing RestoreFailedException with the correct
-    // leaveDown intent for the finally in restoreWithMaintenance().
+    // Every failure past the point the live file is touched throws with
+    // leaveDown: true, so maintenance mode outlives the command.
     private function performRestore(string $sourcePath): void
     {
-        // Pre-swap integrity check on the source via fresh PDO — bypasses
-        // Laravel's connection pool. A non-`ok` result refuses the restore
-        // BEFORE touching the live DB.
+        // Fresh PDO, bypassing Laravel's pool: a non-`ok` source refuses the
+        // restore before the live DB is touched at all.
         if ($this->readIntegrityCheckFreshPdo($sourcePath) !== ['ok']) {
             $this->error('Source file failed integrity check. Refusing to restore.');
 
             throw new RestoreFailedException(leaveDown: false);
         }
 
-        // Pre-restore snapshot of the CURRENT live DB. Resolves the live path
-        // through the config (database.connections.sqlite.database).
         $livePath = $this->resolveLivePath();
         $preRestorePath = $this->backupsDirectory().DIRECTORY_SEPARATOR.'pre-restore-'.$this->clock->now()->format('Y-m-d-His').'.sqlite';
         $escaped = str_replace("'", "''", $preRestorePath);
-        // VACUUM INTO must NOT run inside a transaction. The sqlite-driver
-        // default does not auto-open one here; this call stands alone on the
-        // named `sqlite` connection.
+        // VACUUM INTO must not run inside a transaction; this call stands alone
+        // on the named `sqlite` connection, which opens none.
         $this->db->connection('sqlite')->statement(sprintf("VACUUM INTO '%s'", $escaped));
         if ($this->files->chmod($preRestorePath, 0o600) === false) {
             $this->error('Failed to chmod pre-restore snapshot to 0600; aborting.');
@@ -172,9 +151,6 @@ final class RestoreDatabaseCommand extends Command
         // re-applies the WAL + synchronous PRAGMAs on the swapped-in file.
         $this->db->purge('sqlite');
 
-        // Swap: copy the source over the configured live path. On failure,
-        // surface via the corrupt-path system_alerts row and keep maintenance
-        // mode ON for the operator to inspect.
         if ($this->files->copy($sourcePath, $livePath) === false) {
             $this->recordRestoreFailureAlert($sourcePath, $livePath, $preRestorePath, [
                 'phase' => 'copy',
@@ -185,15 +161,13 @@ final class RestoreDatabaseCommand extends Command
             throw new RestoreFailedException(leaveDown: true);
         }
 
-        // Post-swap integrity check via the framework's connection (NOT a
-        // fresh PDO) so SqliteOptimizationsProvider's ConnectionEstablished
-        // listener re-applies WAL + synchronous. `scalar()` returns `ok` on
-        // success, diagnostics otherwise.
+        // Framework connection, NOT a fresh PDO, so SqliteOptimizationsProvider's
+        // ConnectionEstablished listener re-applies WAL + synchronous on the
+        // swapped-in file.
         $rawIntegrity = $this->db->connection('sqlite')->scalar('PRAGMA integrity_check');
         if ((is_string($rawIntegrity) ? $rawIntegrity : '') !== 'ok') {
-            // Critical: filesystem-level corruption during copy. Keep
-            // maintenance mode ON so the operator notices and restores from
-            // the pre-restore snapshot.
+            // Maintenance mode stays ON so the operator notices and restores
+            // from the pre-restore snapshot.
             $this->recordRestoreFailureAlert($sourcePath, $livePath, $preRestorePath, [
                 'phase' => 'post_swap',
                 'integrity_check' => is_string($rawIntegrity) ? $rawIntegrity : '',
@@ -223,8 +197,6 @@ final class RestoreDatabaseCommand extends Command
         return $path;
     }
 
-    // Shape mirrors BackupDatabaseCommand::backupsDir() so both commands
-    // depend on the same injected UserDataPathService.
     private function backupsDirectory(): string
     {
         $backupsPath = $this->paths->backups();

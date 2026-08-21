@@ -5,17 +5,15 @@ declare(strict_types=1);
 namespace Modules\Chains\Internal\Listeners;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Chains\Internal\Exceptions\EvidenceEncodingFailedException;
 use Modules\Chains\Public\Enums\ChainLinkKind;
 use Modules\Chains\Public\Enums\ChainLinkState;
-use Modules\Chains\Public\Exceptions\EvidenceEncodingFailedException;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Receipts\Public\Dto\ChainHintPayload\FundedByCardPayload;
 use Modules\Receipts\Public\Dto\ChainHintPayload\RefundOfPayload;
 use Modules\Receipts\Public\Events\ChainHintDetected;
 
 /**
- * @link ../../../../.docs/features/chains/architecture.md
- *
  * @internal Row consumed exclusively by the Chains module's own resolvers
  *           + review-queue UI. Subscription wired in ChainsServiceProvider::boot().
  */
@@ -61,10 +59,8 @@ final class CreateChainLinkFromHint
 
         $connection = $this->db->connection();
 
-        // Idempotency: skip when a row for the (user, from, kind)
-        // triple already exists in any state. A manually-rejected row
-        // stays rejected — a repeated event will not propose a fresh
-        // candidate over it.
+        // Any state, so a manually-rejected row stays rejected — a repeated
+        // event will not propose a fresh candidate over it.
         $exists = $connection->table('chain_links')
             ->where('user_id', $event->userId)
             ->where('from_transaction_id', $event->sourceTransactionId)
@@ -79,10 +75,7 @@ final class CreateChainLinkFromHint
             JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
         );
         if ($encoded === false) {
-            // Loud failure: a non-encodable evidence payload is a bug
-            // upstream (e.g. a resource value sneaking into the
-            // payload). Surface it at write time rather than silently
-            // writing an empty string into a NOT NULL column.
+            // Loud, rather than writing the empty string into a NOT NULL column.
             throw new EvidenceEncodingFailedException('hint event');
         }
 

@@ -13,23 +13,6 @@ use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Contracts\NavigationRegistry;
 use Modules\DevMode\Public\Dto\NavigationEntry;
 
-/*
- * CommandPaletteModal registry + filter + Recent-cache invariants.
- *
- * Test 1: app(NavigationRegistry::class) resolves to the concrete
- *         NavigationRegistryImpl (NOT NullNavigationRegistry).
- * Test 2: The all() list contains every authenticated main-app
- *         view AND every Dev Console sub-route registered in the
- *         current bundle.
- * Test 3: Developer's palette JSON contains view + dev + action
- *         sources; ZERO DESTRUCTIVE-tier dev rows.
- * Test 4: Non-developer's palette JSON contains ZERO `source: dev`
- *         rows AND zero `dev.*` view rows.
- * Test 5: pickEntry() writes the Recent list to the per-user
- *         cache key, dedupes on id, and evicts the oldest when
- *         the list grows beyond RECENT_LIMIT.
- */
-
 function cpUser(bool $isDeveloper, string $username): User
 {
     return User::query()->create([
@@ -51,7 +34,6 @@ it('exposes the full main-app + Dev Console nav roster from NavigationRegistry::
 
     $ids = array_map(static fn (NavigationEntry $e): string => $e->id, $nav->all());
 
-    // Main-app entries
     expect($ids)->toContain('dashboard')
         ->and($ids)->toContain('transactions.index')
         ->and($ids)->toContain('forecast.index')
@@ -63,9 +45,8 @@ it('exposes the full main-app + Dev Console nav roster from NavigationRegistry::
         ->and($ids)->toContain('uncategorized')
         ->and($ids)->toContain('settings');
 
-    // Dev Console sub-routes (filtered at JSON-emit time for
-    // non-developers; present in the registry regardless so the
-    // palette filter is the single source of truth).
+    // Dev rows sit in the registry for everyone; the JSON-emit filter is the
+    // single place non-developers are excluded.
     expect($ids)->toContain('dev.overview')
         ->and($ids)->toContain('dev.artisan')
         ->and($ids)->toContain('dev.audit')
@@ -92,26 +73,22 @@ it('emits the merged palette JSON for a developer (view + dev SAFE + action; ZER
 
     $sources = array_map(static fn (array $row): string => $row['source'], $registry);
 
-    // At least one of each source for a developer.
     expect($sources)->toContain('view');
     expect($sources)->toContain('dev-view'); // Dev Console nav sub-routes
     expect($sources)->toContain('dev');      // SAFE-tier commands
     expect($sources)->toContain('action');
 
-    // Every dev row is SAFE-tier — DESTRUCTIVE commands are
-    // structurally absent from the palette JSON.
     $destructiveTiered = array_filter(
         $registry,
         static fn (array $row): bool => ($row['tier'] ?? null) === 'destructive',
     );
     expect($destructiveTiered)->toBe([]);
 
-    // Sanity: at least the locked SAFE-tier commands appear by name.
     $names = array_filter(array_map(static fn (array $row): ?string => $row['name'] ?? null, $registry));
     expect($names)->toContain('beatrax:doctor');
     expect($names)->toContain('cache:clear');
-    expect($names)->not->toContain('db:restore');     // DESTRUCTIVE — excluded
-    expect($names)->not->toContain('migrate:fresh');  // DESTRUCTIVE — excluded
+    expect($names)->not->toContain('db:restore');
+    expect($names)->not->toContain('migrate:fresh');
 });
 
 it('emits a palette JSON without any dev rows for a non-developer', function (): void {
@@ -130,12 +107,11 @@ it('emits a palette JSON without any dev rows for a non-developer', function ():
 
     $sources = array_unique(array_map(static fn (array $row): string => $row['source'], $registry));
 
-    // Zero dev / dev-view rows for non-developers.
     expect($sources)->not->toContain('dev');
     expect($sources)->not->toContain('dev-view');
 
-    // View + action rows still present (the palette is useful even
-    // to non-developers; it just elides the Dev Console).
+    // The palette itself still works for a non-developer; only the Dev
+    // Console rows are elided.
     expect($sources)->toContain('view');
     expect($sources)->toContain('action');
 });
@@ -163,18 +139,15 @@ it('persists Recent picks to dev_mode.palette_recent.{userId} with dedupe + cap-
         ]);
     };
 
-    // 1. Single pick → 1 entry.
     $pick('dashboard');
     $stored = $cache->get($key);
     expect($stored)->toBeArray()->toHaveCount(1)
         ->and($stored[0]['id'])->toBe('dashboard');
 
-    // 2. Dedupe: re-picking the same id does NOT duplicate.
     $pick('dashboard');
     $stored = $cache->get($key);
     expect($stored)->toHaveCount(1);
 
-    // 3. Eviction: 6 distinct picks → cap at 5 (oldest evicts).
     $pick('transactions.index');
     $pick('forecast.index');
     $pick('recurring.index');
@@ -184,11 +157,9 @@ it('persists Recent picks to dev_mode.palette_recent.{userId} with dedupe + cap-
     $stored = $cache->get($key);
     expect($stored)->toHaveCount(CommandPaletteModal::RECENT_LIMIT);
 
-    // The most recent pick lands at the head.
     expect($stored[0]['id'])->toBe('imports.new');
-    // The oldest pick ('dashboard') evicted — only one occurrence
-    // remained after dedupe, and 5 later distinct picks pushed it
-    // off the list.
+    // 'dashboard' deduped down to one entry, then five later picks pushed it
+    // past the cap.
     $ids = array_column($stored, 'id');
     expect($ids)->not->toContain('dashboard');
 });

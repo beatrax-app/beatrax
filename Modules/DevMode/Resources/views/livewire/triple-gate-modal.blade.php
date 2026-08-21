@@ -48,38 +48,38 @@
                     <p class="text-sm text-rose-600 dark:text-rose-500">{{ Lang::get('dev::triple_gate.error_app_name_mismatch') }}</p>
                 @endif
 
-                <form wire:submit="confirm" class="space-y-4">
-                    <div class="space-y-1" x-data="{ typed: @entangle('typed') }">
-                        <label for="triple-gate-typed" class="block text-sm text-slate-900 dark:text-slate-100">
-                            {!! Lang::get('dev::triple_gate.type_to_confirm_html') !!}
-                        </label>
-                        <input
-                            type="text"
-                            id="triple-gate-typed"
-                            wire:model.live="typed"
-                            x-model="typed"
-                            autocomplete="off"
-                            autocorrect="off"
-                            spellcheck="false"
-                            class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-mono text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
-                        />
+                <form wire:submit="confirm" class="space-y-4" x-data="{ typed: @entangle('typed') }">
+                    {{-- The word to be typed is set inside the label copy, so
+                         the label is markup and goes as a slot. --}}
+                    <x-core::form-field
+                        name="typed"
+                        field-id="triple-gate-typed"
+                        tone="danger"
+                        wire:model.live="typed"
+                        x-model="typed"
+                        autocomplete="off"
+                        autocorrect="off"
+                        spellcheck="false"
+                        class="font-mono"
+                    >
+                        <x-slot:label>{!! Lang::get('dev::triple_gate.type_to_confirm_html') !!}</x-slot:label>
+                    </x-core::form-field>
 
-                        <div class="flex items-center justify-end gap-2 pt-2">
-                            <button
-                                type="button"
-                                wire:click="cancel"
-                                class="inline-flex items-center rounded-md px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:bg-slate-800"
-                            >{{ Lang::get('dev::triple_gate.cancel') }}</button>
-                            <button
-                                type="submit"
-                                class="pill-btn danger inline-flex items-center rounded-md bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-slate-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 dark:bg-rose-500 dark:hover:bg-rose-400 dark:disabled:bg-slate-600"
-                                x-bind:disabled="typed !== 'Beatrax'"
-                                wire:loading.attr="disabled"
-                            >
-                                <span wire:loading.remove wire:target="confirm">{{ Lang::get('dev::triple_gate.run', ['command' => $command]) }}</span>
-                                <span wire:loading wire:target="confirm">{{ Lang::get('dev::triple_gate.running') }}</span>
-                            </button>
-                        </div>
+                    <div class="flex items-center justify-end gap-2 pt-2">
+                        <button
+                            type="button"
+                            wire:click="cancel"
+                            class="inline-flex items-center rounded-md px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:bg-slate-800"
+                        >{{ Lang::get('dev::triple_gate.cancel') }}</button>
+                        <button
+                            type="submit"
+                            class="pill-btn danger inline-flex items-center rounded-md bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-slate-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 dark:bg-rose-500 dark:hover:bg-rose-400 dark:disabled:bg-slate-600"
+                            x-bind:disabled="typed !== 'Beatrax'"
+                            wire:loading.attr="disabled"
+                        >
+                            <span wire:loading.remove wire:target="confirm">{{ Lang::get('dev::triple_gate.run', ['command' => $command]) }}</span>
+                            <span wire:loading wire:target="confirm">{{ Lang::get('dev::triple_gate.running') }}</span>
+                        </button>
                     </div>
                 </form>
             </div>

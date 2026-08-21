@@ -16,6 +16,7 @@ return [
     'on' => 'Activé',
     'securing' => 'Sécurisation de tes données…',
     'do_not_close' => 'Ne ferme pas cette fenêtre.',
+    'encryption_progress_aria' => 'Progression du chiffrement',
     'not_encrypted_offer' => 'Tes données ne sont pas chiffrées au repos. Configure le chiffrement pour les protéger si cet appareil est perdu ou volé.',
     'enable_encryption' => 'Activer le chiffrement',
 

@@ -8,31 +8,9 @@ use Modules\Core\Public\Bootstrap\EnsureAppKey;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Desktop\Internal\Native\FirstLaunchBootstrap;
 
-/*
- * Drives the four behaviours of the first-launch APP_KEY sentinel
- * (Phase 17-03):
- *
- *   (a) On a fresh user-data dir with no sentinel file,
- *       EnsureAppKey::run() invokes `key:generate --force` and
- *       creates the sentinel.
- *   (b) When the sentinel already exists the run is a no-op —
- *       no console invocation, APP_KEY is left untouched.
- *   (c) Calling run() twice in succession results in exactly one
- *       invocation and exactly one sentinel file.
- *   (d) The full FirstLaunchBootstrap chain on a fresh install
- *       produces a non-empty APP_KEY plus a present sentinel
- *       and raises no exception.
- *
- * The sentinel path resolves through `UserDataPathService::appPath()`
- * — the same accessor production code uses — so the test exercises
- * the production path resolution rather than a parallel one.
- */
-
 beforeEach(function (): void {
-    // Point NATIVEPHP_STORAGE_PATH at a fresh temp directory so the
-    // sentinel lands in a clean location for every test. The cleanup
-    // hook removes it; the env var is restored to its prior state in
-    // afterEach so unrelated tests are not contaminated.
+    // A fresh temp dir per test, with the env var restored in afterEach so
+    // unrelated tests are not contaminated.
     $this->previousStorageEnv = getenv('NATIVEPHP_STORAGE_PATH');
     $this->tempRoot = sys_get_temp_dir().DIRECTORY_SEPARATOR.'ensure-app-key-'.bin2hex(random_bytes(6));
     mkdir($this->tempRoot, 0755, true);
@@ -68,11 +46,8 @@ afterEach(function (): void {
     }
 });
 
+// A spy kernel so `key:generate` is counted, never run against the real .env.
 /**
- * Spy ConsoleKernel that records every `call()` invocation without
- * executing the underlying command. Lets us assert exactly how many
- * times `key:generate` ran without mutating the real .env file.
- *
  * @return ConsoleKernel
  */
 function ensureAppKeySpyKernel(): object
@@ -165,18 +140,12 @@ it('is idempotent across successive calls — exactly one invocation, one sentin
     expect($kernel->calls)->toHaveCount(1);
     expect(file_exists($sentinel))->toBeTrue();
 
-    // The sentinel must be a single file, not a directory or chain of files.
     expect(is_file($sentinel))->toBeTrue();
 });
 
 it('FirstLaunchBootstrap chain leaves the sentinel present and APP_KEY non-empty (integration)', function (): void {
-    // The integration assertion runs the EnsureAppKey path through the
-    // chained-bootstrap call site rather than constructing it standalone,
-    // so a regression in the FirstLaunchBootstrap wiring is caught here.
-    // The container's auto-wired FirstLaunchBootstrap injects a real
-    // ConsoleKernel; we drive the wiring through it and then assert the
-    // observable side effects (sentinel present, APP_KEY non-empty,
-    // re-running the chain is a no-op).
+    // Driven through the chained-bootstrap call site, not a standalone
+    // EnsureAppKey, so a regression in the FirstLaunchBootstrap wiring shows up.
     $config = $this->app->make(ConfigRepository::class);
 
     $sentinel = UserDataPathService::appPath('first-launch.app-key-generated');
@@ -184,14 +153,11 @@ it('FirstLaunchBootstrap chain leaves the sentinel present and APP_KEY non-empty
 
     $bootstrap = $this->app->make(FirstLaunchBootstrap::class);
 
-    // First run mints the sentinel and runs the real `key:generate`.
     $bootstrap->runPendingMigrations();
 
     expect(file_exists($sentinel))->toBeTrue();
     expect($config->get('app.key'))->not->toBeEmpty();
 
-    // Second run must be idempotent — sentinel stays a single file,
-    // no exception raised.
     $bootstrap->runPendingMigrations();
 
     expect(is_file($sentinel))->toBeTrue();

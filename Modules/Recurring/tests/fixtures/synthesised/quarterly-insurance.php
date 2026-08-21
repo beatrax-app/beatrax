@@ -2,10 +2,8 @@
 
 declare(strict_types=1);
 
-// Quarterly insurance premium — 6 occurrences at €89.99 spaced exactly
-// 90 days apart. Median interval lands inside the 80-100d quarterly
-// snap band. Detector expectation: ONE expense series, quarterly
-// cadence; monthly equivalent = latest / 3.
+// Spaced exactly 90 days, putting the median interval inside the 80-100 day
+// quarterly snap band.
 
 $transactions = [];
 $start = new DateTimeImmutable('2024-08-15');

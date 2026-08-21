@@ -24,10 +24,12 @@ return [
     'source_txn' => 'txn',
     'source_counterparty' => 'counterparty',
     'source_category' => 'category',
+    'results_aria' => 'Results',
     'no_results' => 'No results.',
     'foot_navigate' => 'navigate',
     'foot_select' => 'select',
     'foot_close' => 'close',
+    'close_aria' => 'Close search',
     'foot_try' => 'Try',
     'results_suffix' => ' results',
 ];

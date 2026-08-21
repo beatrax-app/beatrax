@@ -5,21 +5,6 @@ declare(strict_types=1);
 use Modules\Mobile\Internal\Boot\NativeBuildPatches;
 use Psr\Log\LoggerInterface;
 
-/*
- * The patch scripts re-run immediately before a mobile build because the build
- * tooling regenerates the Android project, and a regenerated project kept
- * whatever the last composer run left behind — the camera and theme fixes
- * simply vanished from the APK.
- *
- * Two properties matter and both are about not making things worse: a patch
- * that fails degrades to the unpatched shell rather than aborting the build,
- * and a root that does not ship the scripts at all boots normally.
- *
- * Real subprocesses, not a mocked runner. Each script ends in exit(0), so the
- * reason they are spawned rather than required is that requiring one would end
- * the BUILD process with it — that is exactly what a fake would paper over.
- */
-
 function buildPatchesDirectory(): string
 {
     $dir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-patches-'.bin2hex(random_bytes(6));
@@ -35,6 +20,11 @@ function writePatchScript(string $dir, string $name, string $body): string
 
     return $path;
 }
+
+// The patch scripts re-run immediately before a mobile build because the build
+// tooling regenerates the Android project, and a regenerated project kept whatever
+// the last composer run left behind, so the camera and theme fixes simply vanished
+// from the APK.
 
 it('runs every patch script it finds', function (): void {
     $dir = buildPatchesDirectory();

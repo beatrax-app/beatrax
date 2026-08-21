@@ -6,14 +6,8 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Forecasting\Public\Services\NetWorthQuery;
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Insert an account row — mirrors the helper in NetWorthQueryTest.php.
- * Guard prevents a redeclaration fatal when both files run together.
- */
+// NetWorthQueryTest.php declares the same helper, so the two files running
+// together would be a redeclaration fatal without this guard.
 if (! function_exists('nwAccount')) {
     function nwAccount(DatabaseManager $db, int $userId, string $name, string $kind, int $openingMinor, string $currency = 'EUR'): int
     {
@@ -26,9 +20,6 @@ if (! function_exists('nwAccount')) {
     }
 }
 
-/**
- * Insert a minimal exchange_rates row (EUR-based pair) at the given date.
- */
 function fxRate(DatabaseManager $db, string $quote, string $rate, string $date = '2026-06-05', string $source = 'ecb'): void
 {
     $db->connection()->table('exchange_rates')->updateOrInsert(
@@ -36,10 +27,6 @@ function fxRate(DatabaseManager $db, string $quote, string $rate, string $date =
         ['rate' => $rate, 'created_at' => now(), 'updated_at' => now()],
     );
 }
-
-// ---------------------------------------------------------------------------
-// Setup
-// ---------------------------------------------------------------------------
 
 beforeEach(function (): void {
     $this->db = app(DatabaseManager::class);
@@ -51,27 +38,21 @@ beforeEach(function (): void {
     ]);
 });
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
 it('includes a non-EUR account in the total after FX conversion', function (): void {
-    // EUR account: €2,000
     nwAccount($this->db, $this->user->id, 'Checking', 'bank', 200_000, 'EUR');
-    // USD account: $100 — rate 1.08 USD/EUR → €92.59 ≈ 9259 minor (rounded)
+    // $100 at 1.08 USD/EUR lands around 9259 minor once converted.
     nwAccount($this->db, $this->user->id, 'USD wallet', 'paypal', 10_000, 'USD');
     fxRate($this->db, 'USD', '1.08');
 
     $netWorth = app(NetWorthQuery::class)->forUser($this->user);
 
-    // USD included — total > 200 000 (EUR-only anchor)
     expect($netWorth->totalMinor)->toBeGreaterThan(200_000);
     expect($netWorth->currency)->toBe('EUR');
     expect($netWorth->hasExcludedAccounts)->toBeFalse();
     expect($netWorth->accountsWithoutRate)->toBe(0);
 });
 
-it('preserves the original currency on each account balance line (D-02)', function (): void {
+it('preserves the original currency on each account balance line', function (): void {
     nwAccount($this->db, $this->user->id, 'USD wallet', 'paypal', 10_000, 'USD');
     fxRate($this->db, 'USD', '1.08');
 
@@ -102,7 +83,6 @@ it('excludes an account and sets hasExcludedAccounts=true when no rate exists fo
 
     expect($netWorth->hasExcludedAccounts)->toBeTrue();
     expect($netWorth->accountsWithoutRate)->toBe(1);
-    // Only the EUR account contributes to the total
     expect($netWorth->totalMinor)->toBe(200_000);
 });
 
@@ -133,7 +113,7 @@ it('EUR-only accounts with EUR base currency work without any rate rows (passthr
 
     expect($netWorth->totalMinor)->toBe(140_000);
     expect($netWorth->hasExcludedAccounts)->toBeFalse();
-    expect($netWorth->ratesSource)->toBeNull(); // no conversion occurred
+    expect($netWorth->ratesSource)->toBeNull();
 });
 
 it('carries the converted base equivalent and per-pair rate metadata on a converted line (UI-SPEC §5.2/§5.4)', function (): void {
@@ -145,7 +125,7 @@ it('carries the converted base equivalent and per-pair rate metadata on a conver
 
     $usdLine = collect($netWorth->accounts)->firstWhere('currency', 'USD');
     expect($usdLine->isConverted())->toBeTrue();
-    // $100 at 1.08 USD/EUR converts to ~€92.59 — strictly less than the native 10 000 minor.
+    // ~9259 minor after conversion, hence strictly under the native 10 000.
     expect($usdLine->baseEquivalentMinor)->not->toBeNull();
     expect($usdLine->baseEquivalentMinor)->toBeLessThan(10_000);
     expect($usdLine->fxRate)->not->toBeNull();
@@ -166,19 +146,19 @@ it('leaves FX fields null on a base-currency (passthrough) line', function (): v
     expect($eurLine->hasNoRate('EUR'))->toBeFalse();
 });
 
-it('keeps a no-rate non-base account visible but without a base equivalent (D-07)', function (): void {
+it('keeps a no-rate non-base account visible but without a base equivalent', function (): void {
     nwAccount($this->db, $this->user->id, 'JPY wallet', 'paypal', 5_000_000, 'JPY'); // no JPY rate seeded
 
     $netWorth = app(NetWorthQuery::class)->forUser($this->user);
 
     $jpyLine = collect($netWorth->accounts)->firstWhere('currency', 'JPY');
-    expect($jpyLine)->not->toBeNull();           // still shown in the breakdown
+    expect($jpyLine)->not->toBeNull();
     expect($jpyLine->isConverted())->toBeFalse();
     expect($jpyLine->baseEquivalentMinor)->toBeNull();
     expect($jpyLine->hasNoRate('EUR'))->toBeTrue();
 });
 
-it('flags per-account staleness when the rate is older than the freshness threshold (D-12)', function (): void {
+it('flags per-account staleness when the rate is older than the freshness threshold', function (): void {
     $this->travelTo('2026-06-07'); // freeze clock so the 2026-05-20 rate is deterministically stale
     nwAccount($this->db, $this->user->id, 'USD wallet', 'paypal', 10_000, 'USD');
     fxRate($this->db, 'USD', '1.08', '2026-05-20', 'bundled'); // well past the 3-day threshold

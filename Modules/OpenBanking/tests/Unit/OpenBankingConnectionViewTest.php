@@ -3,14 +3,10 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use Modules\OpenBanking\Public\Dto\OpenBankingConnectionView;
+use Modules\OpenBanking\Internal\Dto\OpenBankingConnectionView;
 
-/*
- * The one question the settings page asks this view that is not a plain field
- * read. It gates the failure notice, so a null status — no attempt has run
- * yet — must not render as a failure the user cannot explain.
- */
-
+// This gates the failure notice, so a null status — no attempt has run yet —
+// must not render as a failure the user cannot explain.
 function obcvView(?string $lastAttemptStatus): OpenBankingConnectionView
 {
     return new OpenBankingConnectionView(

@@ -6,9 +6,6 @@ namespace Modules\Sync\Internal\Identity;
 
 use Modules\Sync\Internal\Exceptions\SecretFileException;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class SecureTempFile
 {
     // $path MUST live inside a directory that is itself not

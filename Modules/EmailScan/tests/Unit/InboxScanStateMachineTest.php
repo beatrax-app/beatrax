@@ -13,24 +13,10 @@ use Modules\EmailScan\Public\Dto\ScanCursor;
 
 uses(RefreshDatabase::class);
 
-/*
- * InboxScanStateMachine unit test — covers the ALLOWED_TRANSITIONS
- * matrix, applyRateLimited counter bump, resetRetryAttempts zeroing,
- * backoffForAttempt clamping, recordCursor provider-cross-check, and
- * empty-cursor no-op invariant.
- *
- * The state machine is the sole legal mutator of inbox_scan_state.status
- * + .retry_attempts + .last_history_id + .last_delta_link
- * (BoundaryArchTest noOtherInboxScanStateMutator invariant). Every
- * forbidden transition surface in the matrix MUST raise
- * InvalidStateTransitionException so a programming or race condition
- * cannot silently corrupt the per-inbox lifecycle.
- *
- * Helpers are bound to Pest's test scope via Closure::bind on the
- * underlying TestCase so they can access $this->app. Defining them as
- * top-level `function` would lose access to the protected $app
- * property.
- */
+// The machine is the sole legal mutator of inbox_scan_state's status,
+// retry_attempts and cursor columns, so a forbidden transition has to raise
+// rather than silently corrupt the lifecycle. The helpers are closures on
+// $this because a top-level function could not reach the protected $app.
 
 beforeEach(function (): void {
     $this->seedInbox = function (string $provider = 'gmail', string $status = 'idle', int $retryAttempts = 0): int {
@@ -197,9 +183,8 @@ it('applyStatus(needs_reauth → needs_reauth) is re-entrant safe', function ():
 });
 
 it('applyStatus(idle → idle) is permitted (no-senders early-exit path)', function (): void {
-    // BackfillInboxJob's "no senders configured" early-exit path calls
-    // applyStatus($inboxId, 'idle', '...') while the row is still
-    // 'idle' — must NOT throw.
+    // BackfillInboxJob's "no senders configured" early exit sets idle on a row
+    // that is already idle.
     $inboxId = ($this->seedInbox)(status: 'idle');
 
     ($this->makeMachine)()->applyStatus($inboxId, 'idle', 'No known senders are configured for this user.');
@@ -210,9 +195,8 @@ it('applyStatus(idle → idle) is permitted (no-senders early-exit path)', funct
 });
 
 it('applyStatus(backfilling → backfilling) is re-entrant safe (recovery dispatch resume)', function (): void {
-    // A backfill worker that died without flipping the row back to
-    // idle can have a recovery dispatch pick the same inbox up; the
-    // transition must NOT throw or the recovery flow stalls.
+    // A worker that died without flipping the row back to idle leaves a
+    // recovery dispatch to re-enter backfilling, and a throw would stall it.
     $inboxId = ($this->seedInbox)(status: 'idle');
     $sm = ($this->makeMachine)();
     $sm->applyStatus($inboxId, 'backfilling');
@@ -368,17 +352,10 @@ it('applyRateLimited against a missing inbox raises RuntimeException', function 
         ->toThrow(RuntimeException::class);
 });
 
-it('ALLOWED_TRANSITIONS map permits every transition Wave 4/5 BackfillInboxJob currently exercises', function (): void {
-    // Inventory captured in Task 0:
-    //   idle → idle              (no-senders early-exit path)
-    //   idle → error             (unknown-provider arm)
-    //   idle → backfilling       (Gmail + Microsoft branch entry)
-    //   backfilling → rate_limited (RateLimitedException catch)
-    //   backfilling → needs_reauth (InvalidGrantException catch)
-    //   backfilling → error      (Throwable catch)
-    //   backfilling → idle       (success / clearProgressAndIdle)
-    //
-    // Asserts each transition is permitted by the const map.
+it('ALLOWED_TRANSITIONS map permits every transition BackfillInboxJob currently exercises', function (): void {
+    // Each pair is a transition BackfillInboxJob really performs: the
+    // no-senders early exit, the unknown-provider arm, branch entry, the
+    // rate-limit / invalid-grant / throwable catches, and the success path.
     $cases = [
         ['idle', 'idle'],
         ['idle', 'error'],

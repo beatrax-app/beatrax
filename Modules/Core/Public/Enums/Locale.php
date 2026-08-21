@@ -4,19 +4,13 @@ declare(strict_types=1);
 
 namespace Modules\Core\Public\Enums;
 
-// The single source of truth for which languages the UI ships. Every seam
-// that has to enumerate locales — the settings switcher's allow-list, the
-// Accept-Language negotiation, each module's loadTranslationsFrom fallback —
-// derives from these cases rather than repeating a bare 'en'/'nl' literal.
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
+// Every seam that enumerates locales — the settings switcher, Accept-Language
+// negotiation, each module's loadTranslationsFrom fallback — derives from here.
 enum Locale: string
 {
-    // Declared in endonym order — Latin script A-Z, then Greek, then
-    // Cyrillic — because both switchers list cases() verbatim and a reader
-    // scanning a long select for their own language needs somewhere
-    // predictable to look. codes() re-sorts for negotiation.
+    // Declared in endonym order — Latin script A-Z, then Greek, then Cyrillic —
+    // because both switchers list cases() verbatim and a reader scanning a long
+    // select needs a predictable place to look. codes() re-sorts for negotiation.
     case Cs = 'cs';
 
     case Da = 'da';
@@ -72,9 +66,8 @@ enum Locale: string
 
     case Uk = 'uk';
 
-    // The fallback locale. A missing translation key and an unrecognised
-    // Accept-Language both resolve here, matching config/app.php's
-    // fallback_locale so the two never disagree.
+    // A missing translation key and an unrecognised Accept-Language both land
+    // here; it matches config/app.php's fallback_locale so the two never differ.
     public const string DEFAULT = self::En->value;
 
     // The endonym shown in the switcher — each language named in itself, so
@@ -146,10 +139,9 @@ enum Locale: string
         };
     }
 
-    // The digit-group separator this language writes, transcribed from the
-    // ICU 77/78 data for the same locale. It is here rather than read from
-    // ext-intl because the mobile PHP build ships ICU with English-only
-    // locale data, so on device the library cannot answer the question.
+    // Transcribed from ICU data rather than read from ext-intl: the mobile PHP
+    // build ships ICU with English-only locale data, so on device the library
+    // cannot answer the question at all.
     public function groupMark(): string
     {
         return match ($this) {

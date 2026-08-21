@@ -9,10 +9,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
-// Re-runs of the discovery scan are idempotent via the (user_id,
-// inbox_id, sender_email) UNIQUE key: the row is either inserted new
-// or its occurrence_count + last_seen_at are bumped. The discovery
-// scan suppresses rows already in 'added' or 'dismissed'.
+// A re-run of the discovery scan is idempotent through the (user_id, inbox_id,
+// sender_email) UNIQUE key: insert, or bump occurrence_count + last_seen_at.
 /**
  * @property int $id
  * @property int|null $user_id

@@ -8,7 +8,7 @@ use DateTimeImmutable;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Filesystem\Filesystem;
 use InvalidArgumentException;
-use Modules\Receipts\Public\Exceptions\FileDropBlobWriteException;
+use Modules\Receipts\Internal\Exceptions\FileDropBlobWriteException;
 use RuntimeException;
 use Throwable;
 

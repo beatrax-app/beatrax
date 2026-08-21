@@ -5,28 +5,21 @@ declare(strict_types=1);
 namespace Modules\Reports\Internal\Http;
 
 use Illuminate\Http\Request;
-use Modules\Reports\Public\Dto\ReportDefinition;
-use Modules\Reports\Public\Enums\ReportGranularity;
+use Modules\Reports\Internal\Dto\ReportDefinition;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final class ReportDefinitionRequestFactory
 {
-    // The CSV export route builds its ReportDefinition straight from query
-    // parameters. Keeping that coercion here leaves the route closure a
-    // thin dispatcher rather than a deeply-nested per-parameter ternary
-    // chain.
+    // Keeps the export route's per-parameter coercion out of the route closure.
     public function fromExportQuery(Request $request): ReportDefinition
     {
         return new ReportDefinition(
             metric: $this->stringOr($request->query('metric'), 'spend'),
             dimension: $this->stringOr($request->query('dim'), 'category'),
             periodPreset: $this->stringOr($request->query('period'), 'this_month'),
-            // tryFrom, not from: an unknown ?gran= is a bad link rather than
-            // corrupt state, and it used to reach TimeBucketGenerator and
-            // throw, so ?gran=nonsense was a 500. The stored-value rejection
-            // C7-R21 asks for happens in ReportDefinition::from() instead.
+            // tryFrom, not from: an unknown ?gran= is a bad link, not corrupt
+            // state, and it used to reach TimeBucketGenerator and 500. Rejecting
+            // a bad STORED value is ReportDefinition::from()'s job instead.
             granularity: ReportGranularity::tryFrom($this->stringOr($request->query('gran'), ''))
                 ?? ReportGranularity::default(),
             currencyMode: $this->stringOr($request->query('ccy'), 'base'),

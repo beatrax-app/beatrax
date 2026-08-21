@@ -65,8 +65,11 @@
     </div>
 
     @if ($showingDivergenceBanner)
-        <div aria-atomic="true" aria-live="polite" class="rounded-md border border-amber-200 bg-amber-50 p-3 dark:bg-amber-950" data-testid="opening-balance-divergence-banner">
-            <p class="text-sm text-amber-700">
+        {{-- The sentence carries no colour of its own any more: the shared
+             alert already paints the warning tone, and its dark: variant is
+             the one the hand-rolled copy was missing. --}}
+        <x-core::alert tone="warning" aria-atomic="true" aria-live="polite" data-testid="opening-balance-divergence-banner">
+            <p>
                 {{ Lang::get('forecasting::opening_balance.divergence') }}
             </p>
             <div class="mt-2 flex flex-wrap gap-3">
@@ -81,7 +84,7 @@
                     class="text-sm font-medium text-slate-900 underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:text-slate-100"
                 >{{ Lang::get('forecasting::opening_balance.use_mine') }}</button>
             </div>
-        </div>
+        </x-core::alert>
     @endif
 
     @if ($errorMessage !== null)

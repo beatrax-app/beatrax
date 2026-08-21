@@ -10,6 +10,7 @@ return [
         'reprojecting' => 'Ehitan sinu ajalugu uuesti üles…',
         'retrying' => 'Ühendun teise seadmega uuesti…',
         'locked' => 'Seadistamise jätkamiseks ava rakendus.',
+        'revoked' => 'See seade eemaldati teie teisest seadmest. Siduge uuesti, et sünkroonimine jätkuks.',
     ],
     'step' => [
         'connect' => 'Ühendun sinu teise seadmega',

@@ -16,6 +16,7 @@ return [
     'empty' => [
         'heading' => 'Vēl nav regulāru maksājumu',
         'before_link' => 'Apstipriniet atklātos ieteikumus sadaļā',
+        'link' => 'Pārskatīt regulāros maksājumus',
         'after_link' => 'lai tos redzētu šeit.',
     ],
 

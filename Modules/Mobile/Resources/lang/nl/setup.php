@@ -10,6 +10,7 @@ return [
         'reprojecting' => 'Je geschiedenis wordt opgebouwd…',
         'retrying' => 'Opnieuw verbinden met het andere apparaat…',
         'locked' => 'Ontgrendel de app om verder te gaan.',
+        'revoked' => 'Dit apparaat is verwijderd op je andere apparaat. Koppel opnieuw om te blijven synchroniseren.',
     ],
     'step' => [
         'connect' => 'Verbinden met je andere apparaat',

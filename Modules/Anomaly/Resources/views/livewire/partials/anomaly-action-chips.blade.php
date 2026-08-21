@@ -21,7 +21,7 @@
 
 <button
     type="button"
-    wire:click="acknowledgeAnomaly({{ $alert->anomalyAlertId }})"
+    wire:click="acknowledgeAnomaly('{{ $alert->anomalyAlertId }}')"
     aria-label="{{ Lang::get('anomaly::alerts.chips.acknowledge_aria', ['name' => $alert->displayName !== '' ? $alert->displayName : Lang::get('anomaly::alerts.chips.unknown_merchant')]) }}"
     @class([
         $base,
@@ -47,22 +47,22 @@
         aria-label="{{ Lang::get('anomaly::alerts.chips.snooze_options') }}"
         class="absolute right-0 z-10 mt-1 w-48 rounded-md border border-slate-200 bg-white p-2 text-xs shadow-lg dark:bg-slate-950 dark:border-slate-700"
     >
-        <button type="button" role="menuitem" wire:click="snoozeAnomaly({{ $alert->anomalyAlertId }}, '{{ $snoozeTargets['1w'] }}')" x-on:click="open = false" class="block w-full px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900">{{ Lang::get('anomaly::alerts.chips.snooze_1w') }}</button>
-        <button type="button" role="menuitem" wire:click="snoozeAnomaly({{ $alert->anomalyAlertId }}, '{{ $snoozeTargets['1m'] }}')" x-on:click="open = false" class="block w-full px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900">{{ Lang::get('anomaly::alerts.chips.snooze_1m') }}</button>
-        <button type="button" role="menuitem" wire:click="snoozeAnomaly({{ $alert->anomalyAlertId }}, '{{ $snoozeTargets['3m'] }}')" x-on:click="open = false" class="block w-full px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900">{{ Lang::get('anomaly::alerts.chips.snooze_3m') }}</button>
+        <button type="button" role="menuitem" wire:click="snoozeAnomaly('{{ $alert->anomalyAlertId }}', '{{ $snoozeTargets['1w'] }}')" x-on:click="open = false" class="block w-full px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900">{{ Lang::get('anomaly::alerts.chips.snooze_1w') }}</button>
+        <button type="button" role="menuitem" wire:click="snoozeAnomaly('{{ $alert->anomalyAlertId }}', '{{ $snoozeTargets['1m'] }}')" x-on:click="open = false" class="block w-full px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900">{{ Lang::get('anomaly::alerts.chips.snooze_1m') }}</button>
+        <button type="button" role="menuitem" wire:click="snoozeAnomaly('{{ $alert->anomalyAlertId }}', '{{ $snoozeTargets['3m'] }}')" x-on:click="open = false" class="block w-full px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900">{{ Lang::get('anomaly::alerts.chips.snooze_3m') }}</button>
     </div>
 </div>
 
 <button
     type="button"
-    wire:click="markAnomalyExpected({{ $alert->anomalyAlertId }})"
+    wire:click="markAnomalyExpected('{{ $alert->anomalyAlertId }}')"
     aria-label="{{ Lang::get('anomaly::alerts.chips.mark_expected_aria', ['name' => $alert->displayName !== '' ? $alert->displayName : Lang::get('anomaly::alerts.chips.unknown_merchant')]) }}"
     class="{{ $base }} {{ $size }} bg-slate-100 text-slate-700 hover:bg-slate-200 focus-visible:ring-slate-900 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
 >{{ Lang::get('anomaly::alerts.chips.mark_expected') }}</button>
 
 <button
     type="button"
-    wire:click="dismissAnomaly({{ $alert->anomalyAlertId }})"
+    wire:click="dismissAnomaly('{{ $alert->anomalyAlertId }}')"
     aria-label="{{ Lang::get('anomaly::alerts.chips.dismiss_aria', ['name' => $alert->displayName !== '' ? $alert->displayName : Lang::get('anomaly::alerts.chips.unknown_merchant')]) }}"
     class="{{ $base }} {{ $size }} text-slate-700 hover:bg-slate-100 focus-visible:ring-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
 >{{ Lang::get('anomaly::alerts.chips.dismiss') }}</button>

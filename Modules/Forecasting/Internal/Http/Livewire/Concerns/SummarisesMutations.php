@@ -12,13 +12,9 @@ use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ChangeSeriesAmountPay
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ScenarioMutationPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayload;
 use Modules\Forecasting\Public\Enums\ShiftScope;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
-// Human-readable one-line summaries for each scenario mutation kind, shown
-// in the sidebar's mutation list. Kept beside ScenarioEditorSidebar rather
-// than inside it so the component stays under the method ceiling.
-/**
- * @link ../../../../../../.docs/features/forecasting/architecture.md
- */
+// Split out of ScenarioEditorSidebar to keep it under the method ceiling.
 trait SummarisesMutations
 {
     private function summaryFor(string $kind, ScenarioMutationPayload $payload): string
@@ -33,9 +29,7 @@ trait SummarisesMutations
         };
     }
 
-    // Resolve the series display name from the catalog already populated by
-    // render(); fall back to "series #N" only when the series is missing
-    // from the catalog (e.g. deleted or filtered).
+    // Reads the catalog render() already populated, so no query here.
     private function resolveSeriesName(int $seriesId): string
     {
         foreach ($this->availableSeries as $entry) {
@@ -50,7 +44,7 @@ trait SummarisesMutations
     private function summariseOneOff(AddOneOffPayload $payload): string
     {
         $sign = $payload->direction === 'income' ? '+' : '−';
-        $amount = number_format($payload->amountMinor / 100, 2, ',', '.');
+        $amount = MoneyInput::formatAbsMinor($payload->amountMinor);
 
         return Lang::get('forecasting::scenario.summary.one_off', [
             'amount' => $sign.$amount,
@@ -62,7 +56,7 @@ trait SummarisesMutations
     private function summariseRecurring(AddRecurringPayload $payload): string
     {
         $sign = $payload->direction === 'income' ? '+' : '−';
-        $amount = number_format($payload->amountMinor / 100, 2, ',', '.');
+        $amount = MoneyInput::formatAbsMinor($payload->amountMinor);
 
         return Lang::get('forecasting::scenario.summary.recurring', [
             'amount' => $sign.$amount,
@@ -74,7 +68,7 @@ trait SummarisesMutations
 
     private function summariseChangeAmount(ChangeSeriesAmountPayload $payload): string
     {
-        $amount = number_format($payload->newAmountMinor / 100, 2, ',', '.');
+        $amount = MoneyInput::formatMinor($payload->newAmountMinor);
 
         return Lang::get('forecasting::scenario.summary.change_amount', [
             'name' => $this->resolveSeriesName($payload->seriesId),

@@ -13,10 +13,6 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Transaction;
 
-// Seeds four chain shapes for /chains and /chains/hints: a paypal_funding
-// link, an ics_bulk_settle link, and one candidate row each for
-// funded_by_card_hint and refund_of_hint (to_transaction_id stays NULL on
-// candidates). Every insert upserts on (user_id, from_transaction_id, kind).
 final class DemoChainsSeeder
 {
     public function __construct(
@@ -43,9 +39,6 @@ final class DemoChainsSeeder
         return $this->countDemoLinks($users);
     }
 
-    // Matches each Bol.com PayPal purchase to the ASN→PayPal top-up posted
-    // the same date by description — the demo transactions use stable
-    // descriptions, so the (downstream, funder) lookup is deterministic.
     private function seedPaypalFundingChain(User $user): void
     {
         $bolPaypalCharges = Transaction::query()
@@ -84,8 +77,6 @@ final class DemoChainsSeeder
         }
     }
 
-    // Settles every ICS card expense in the window against the next
-    // ASN→ICS bulk transfer posted at or after its booking date.
     /**
      * @param  array<string, Account>  $userAccounts
      */
@@ -134,9 +125,6 @@ final class DemoChainsSeeder
         }
     }
 
-    // Picks the Coolblue ICS card purchase and emits a funded_by_card_hint
-    // candidate with to_transaction_id = NULL — the receipt-derived hint
-    // names a card but the matching statement transaction has not landed.
     private function seedFundedByCardHintCandidate(User $user): void
     {
         $expense = Transaction::query()
@@ -164,9 +152,6 @@ final class DemoChainsSeeder
         );
     }
 
-    // Picks the Bol.com refund row and emits a refund_of_hint candidate
-    // with to_transaction_id = NULL — the receipt-derived hint names an
-    // original-order reference but the matching purchase has not surfaced.
     private function seedRefundOfHintCandidate(User $user): void
     {
         $refund = Transaction::query()
@@ -194,8 +179,6 @@ final class DemoChainsSeeder
         );
     }
 
-    // Iterating in-memory is cheap here because the demo window only
-    // carries three settlements.
     /**
      * @param  iterable<Transaction>  $settlements
      */
@@ -210,9 +193,8 @@ final class DemoChainsSeeder
         return null;
     }
 
-    // Keys on (user_id, from_transaction_id, kind); the schema has no
-    // UNIQUE on that triple, but the demo seeder only ever produces one
-    // link per cycle, so the tuple is a stable identity key here.
+    // No UNIQUE backs (user_id, from_transaction_id, kind); the seeder writes
+    // one link per cycle, so the read-then-insert is enough here.
     /**
      * @param  array<string, mixed>  $evidence
      */
@@ -247,10 +229,8 @@ final class DemoChainsSeeder
         ]);
     }
 
-    // Distinct from upsertChainLink: hint candidates legally ride with
-    // to_transaction_id = NULL (the schema's NULL-endpoint guard allows
-    // this for candidate hint kinds) and resolver = receipt_hint, so
-    // /chains/hints can distinguish them from confirmed links.
+    // Separate from upsertChainLink because the schema's NULL-endpoint guard
+    // permits to_transaction_id = NULL only for candidate hint kinds.
     /**
      * @param  array<string, mixed>  $evidence
      */

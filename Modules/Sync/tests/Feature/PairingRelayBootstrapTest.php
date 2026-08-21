@@ -10,15 +10,9 @@ use Modules\Sync\Public\Services\PairingGateway;
 
 uses(RefreshDatabase::class);
 
-/*
- * PairingRelayBootstrapTest — Phase 15 HIGH-01 (Task 1), case 10.
- *
- * PairingGateway::configureRelayFromQr() is the Mobile-reachable Public seam
- * wrapping RelayConfig::setEndpointUrl()/setAuthToken() — a fresh phone has
- * no relay configured, so the cross-device pre-confirm handshake has no
- * transport until this runs. No new trust decision: this only persists
- * transport config, exactly like the desktop's own RelayConfig call site.
- */
+// A fresh phone has no relay configured, so the cross-device pre-confirm
+// handshake has no transport at all until configureRelayFromQr() runs. It
+// persists transport config only; no new trust decision is taken here.
 
 function relayBootstrapUser(string $username): User
 {
@@ -31,8 +25,8 @@ function relayBootstrapUser(string $username): User
 }
 
 afterEach(function (): void {
-    // Mirrors RelayRoundTripTest's cleanup — never leave a relay config
-    // artifact in storage/app for a subsequent, unrelated test to trip over.
+    // Never leave a relay config artifact in storage/app for a subsequent,
+    // unrelated test to trip over.
     $tokenPath = UserDataPathService::secretsPath().DIRECTORY_SEPARATOR.'sync-relay-token.json';
     $relayPath = UserDataPathService::appPath('sync/relay.json');
 
@@ -90,7 +84,7 @@ it('configures the endpoint without a token when the relay is deployed token-les
     expect($config->authToken())->toBeNull();
 });
 
-it('MED-01: rejects a non-https endpoint from scanned QR input — never durably breaks relay transport', function (): void {
+it('rejects a non-https endpoint from scanned QR input — never durably breaks relay transport', function (): void {
     $user = relayBootstrapUser('relay-bootstrap-insecure');
     test()->actingAs($user);
 
@@ -104,7 +98,7 @@ it('MED-01: rejects a non-https endpoint from scanned QR input — never durably
     expect($config->isConfigured())->toBeFalse('an http:// endpoint from a scanned QR must never be persisted');
 });
 
-it('MED-01: does not clobber an already-configured relay — fresh-device bootstrap only', function (): void {
+it('does not clobber an already-configured relay — fresh-device bootstrap only', function (): void {
     $user = relayBootstrapUser('relay-bootstrap-noclobber');
     test()->actingAs($user);
 
@@ -113,11 +107,9 @@ it('MED-01: does not clobber an already-configured relay — fresh-device bootst
     /** @var RelayConfig $config */
     $config = app(RelayConfig::class);
 
-    // An existing, working relay (e.g. from prior desktop sync).
     $config->setEndpointUrl('https://existing-relay.example.com');
     $config->setAuthToken('existing-secret');
 
-    // Scanning ANY pairing QR must not redirect it.
     $gateway->configureRelayFromQr('https://attacker-relay.example.com', 'attacker-secret');
 
     expect($config->endpointUrl())->toBe('https://existing-relay.example.com');

@@ -1,4 +1,4 @@
-# Post every workflow run's outcome to the #build-log channel (OPS-R24).
+# Post every workflow run's outcome to the #build-log channel.
 # workflow_run executes in the base repo with the org secret available and never
 # in fork-PR code; values reach the reusable as inputs, not shell interpolations.
 name: discord-build

@@ -10,12 +10,9 @@ use Modules\Sync\Public\Events\GoalContributionMutated;
 
 uses(RefreshDatabase::class);
 
-/*
- * An attribution made on one device has to reach the other. Attributions are
- * append-only, so only create and delete ever reach the op log; a 'edit' has
- * no meaning here and is logged as an unknown mutation type rather than
- * written.
- */
+// Attributions are append-only, so only create and delete ever reach the op
+// log. An edit has no meaning here and is logged as an unknown mutation type
+// rather than written.
 
 /**
  * @return array{listener: SyncCaptureListener, userId: int, contributionId: int, goalId: int, transactionId: int}

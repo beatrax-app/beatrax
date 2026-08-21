@@ -6,13 +6,10 @@ namespace Modules\EmailScan\Internal\Listeners;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
-use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Core\Public\Services\UserDataPathService;
 
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final class EmitOAuthReauthRequiredAlert
 {
     private const REAUTH_KIND = 'oauth.reauth_required';
@@ -26,17 +23,18 @@ final class EmitOAuthReauthRequiredAlert
         private readonly CurrentUser $currentUser,
         private readonly DatabaseManager $db,
         private readonly UserDataPathService $paths,
+        private readonly SystemAlertWriter $alerts,
     ) {}
 
     public function handle(): void
     {
         if ($this->shouldEmitAlert()) {
-            SystemAlert::query()->create([
-                'user_id' => $this->currentUser->id(),
-                'kind' => self::REAUTH_KIND,
-                'severity' => 'warning',
-                'message' => self::MESSAGE,
-            ]);
+            $this->alerts->raiseForUser(
+                userId: $this->currentUser->id(),
+                kind: self::REAUTH_KIND,
+                severity: 'warning',
+                message: self::MESSAGE,
+            );
         }
     }
 
@@ -54,17 +52,15 @@ final class EmitOAuthReauthRequiredAlert
         return ! $this->userAlreadyHandled();
     }
 
-    // "Handled" means the user has either re-authorized (an
-    // oauth_secrets row exists) or already has an open reauth alert,
-    // so a duplicate must not be raised.
+    // Handled = re-authorized (an oauth_secrets row exists) or already
+    // holding an open reauth alert.
     private function userAlreadyHandled(): bool
     {
         $userId = $this->currentUser->id();
         $connection = $this->db->connection();
 
-        // Raw Query Builder exists() calls, not Eloquent's
-        // Model::query()->exists(), to clear PHPStan strict-rules
-        // staticMethod.dynamicCall.
+        // Query Builder rather than Model::query(): PHPStan strict-rules
+        // flags staticMethod.dynamicCall on the latter.
         $hasSecrets = $connection->table('oauth_secrets')
             ->where('user_id', $userId)
             ->exists();

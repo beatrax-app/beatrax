@@ -2,13 +2,8 @@
 
 declare(strict_types=1);
 
-// Spotify €9.99 → €10.99 → €11.99 over three escalations.
-// Each transition exceeds the ±5% threshold so the detector queues
-// TWO open alerts (one per drift event). Queue-all-as-open keeps an
-// honest per-event audit trail; the grouped-by-series UI later
-// collapses the visual noise. Math:
-//   step 1: delta = -1099 - (-999) = -100; annual = -1200 (-€12/yr)
-//   step 2: delta = -1199 - (-1099) = -100; annual = -1200 (-€12/yr)
+// Two escalations queue two open alerts rather than one merged row: the
+// per-event audit trail stays honest and the grouped-by-series UI collapses it.
 
 $transactions = [];
 $amounts = [-999, -999, -1099, -1099, -1199, -1199];

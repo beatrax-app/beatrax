@@ -11,25 +11,6 @@ use Modules\Desktop\Internal\Native\NativeBiometricUnlock;
 use Native\Desktop\Facades\System as SystemFacade;
 use Native\Desktop\System;
 
-/*
- * Touch ID cold-start unlock for the desktop.
- *
- * The prompt alone only answers yes/no, so the data key is wrapped by the
- * shared codec, handed to Electron safeStorage, and written 0600. Recovering
- * it therefore needs BOTH this machine's keychain and a live authentication —
- * and every refusal along that chain has to fail closed rather than fall back
- * to something readable.
- *
- * NativeBiometricUnlock is final and cannot be mocked, so the real one is
- * built against a config repository and the System facade, which is where it
- * reads availability from. The vault takes the concrete System by injection,
- * so one mock is swapped into the facade AND passed to the constructor.
- *
- * safeStorage is faked as a reversible prefix rather than an echo: enroll()
- * zeroes the plaintext immediately after encrypting it, and an echo would hand
- * back the very buffer that gets zeroed.
- */
-
 const COLD_START_USER_ID = 7;
 
 beforeEach(function (): void {
@@ -47,6 +28,10 @@ afterEach(function (): void {
  */
 function coldStartVault(bool $available = true, bool $prompted = true): DesktopColdStartVault
 {
+    // NativeBiometricUnlock is final, so the same System mock is both swapped
+    // into the facade it reads availability from and passed to the constructor.
+    // safeStorage is faked as a reversible prefix rather than an echo: enroll()
+    // zeroes the plaintext right after encrypting, and an echo would return it.
     $system = Mockery::mock(System::class);
     $system->shouldReceive('canPromptTouchID')->andReturn($available);
     $system->shouldReceive('promptTouchID')->andReturn($prompted);
@@ -69,6 +54,9 @@ function coldStartKeyFile(int $userId = COLD_START_USER_ID): string
     return UserDataPathService::secretsPath().DIRECTORY_SEPARATOR.'coldstart-datakey-'.$userId.'.bin';
 }
 
+// The prompt alone only answers yes/no, so the data key is wrapped, handed to
+// safeStorage and written 0600: recovering it needs both this machine's
+// keychain and a live authentication, and every refusal must fail closed.
 it('reports availability from the biometric gate', function (): void {
     expect(coldStartVault(available: true)->isAvailable())->toBeTrue()
         ->and(coldStartVault(available: false)->isAvailable())->toBeFalse();

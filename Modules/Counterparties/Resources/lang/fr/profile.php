@@ -25,6 +25,8 @@ return [
         'tax_years' => 'Années fiscales',
     ],
 
+    'tablist_aria' => 'Sections du tiers',
+
     'tab_note_personal' => '— pas de chaînes de financement pour les contacts personnels',
     'tab_note_bank' => '— un tiers de frais bancaires ne génère pas de chaînes de financement',
     'tab_note_government' => '— pas de chaînes de financement pour les tiers administratifs',

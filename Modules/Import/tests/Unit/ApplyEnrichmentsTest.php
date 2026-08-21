@@ -15,11 +15,6 @@ use Modules\Ledger\Public\Services\FingerprintComposer;
 
 uses(RefreshDatabase::class);
 
-/**
- * Persists a transactions row with a known (sourceFormat, sourceRef)
- * pair. Returns the freshly-loaded model so tests can assert on
- * source_ref + enriched_from after the action runs.
- */
 function seedExistingTransaction(
     User $user,
     int $accountId,
@@ -208,12 +203,9 @@ it('cross-user safety: a PendingEnrichment for another user\'s row returns 0', f
 })->group('phase-2');
 
 it('rank no-op: a cached weaker PendingEnrichment never overwrites a freshly-stored stronger source_ref', function (): void {
-    // Seed: row stored with a weak CSV ref (rank 1). Pretend the preview
-    // pipeline classified an enrichment that would promote to MT940
-    // (rank 2). Between preview and confirm, a parallel CAMT import has
-    // stored a CAMT EREF (rank 4) on the same row. Replaying the cached
-    // MT940 PendingEnrichment must NOT overwrite the now-stronger CAMT
-    // ref — re-ranking at write time has to detect the parallel update.
+    // Preview classified an MT940 promotion (rank 2); the row is then bumped to
+    // a CAMT ref (rank 4), standing in for a parallel import landing between
+    // preview and confirm. Re-ranking at write time is what has to notice.
     $tx = seedExistingTransaction($this->fixtureUser, $this->account->id, 'asn-csv', 'CSV-001', $this->composer);
     $tx->source_format = 'camt053';
     $tx->source_ref = 'EREF-PARALLEL';
@@ -238,9 +230,8 @@ it('rank no-op: a cached weaker PendingEnrichment never overwrites a freshly-sto
 })->group('phase-2');
 
 it('rank no-op: an equal-rank cached enrichment does not overwrite an equally-strong stored ref', function (): void {
-    // Both incoming and stored are CAMT-rank (4) but with different ref
-    // values. The existing equality short-circuit already handles
-    // ref===ref; this test pins the new same-rank-different-value path.
+    // Both sides are CAMT-rank (4) with different values, so the ref===ref
+    // equality short-circuit is not what is being exercised here.
     $tx = seedExistingTransaction($this->fixtureUser, $this->account->id, 'camt053', 'EREF-OLD', $this->composer);
 
     $count = ($this->applier)([

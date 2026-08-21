@@ -7,9 +7,6 @@ namespace Modules\Ledger\Public\Services;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Normalizer;
 
-/**
- * @link ../../../../.docs/features/ledger/architecture.md
- */
 final class FingerprintComposer
 {
     // Bump whenever the tuple shape or normalize()'s output changes;

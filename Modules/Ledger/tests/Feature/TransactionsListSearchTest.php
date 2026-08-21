@@ -8,17 +8,6 @@ use Livewire\Livewire;
 use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
 use Modules\Ledger\Models\Account;
 
-/**
- * Feature tests for the search-mode extension of TransactionsList.
- *
- * SRCH-01 / SRCH-02: /transactions search mode.
- * Each test seeds a user + account + transactions, populates the FTS index
- * directly (same as SearchQueryTest — no dependency on SearchIndexWriter),
- * then exercises the Livewire component via Livewire::test().
- *
- * Security gate: account filter ids that belong to another user are ignored
- * (T-08-06 — SearchQuery validates ownership before applying whereIn).
- */
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
@@ -35,12 +24,7 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
 /**
- * Insert a transaction and populate the FTS index for it.
- * Re-implements the seedFtsIndex() pattern from Search\Tests\TestCase.
- *
  * @param  array<string, mixed>  $overrides
  */
 function seedSearchableTransaction(int $userId, int $accountId, int $runId, array $overrides = []): int
@@ -75,7 +59,7 @@ function seedSearchableTransaction(int $userId, int $accountId, int $runId, arra
 
     $txId = (int) $conn->table('transactions')->insertGetId($txData);
 
-    // Seed FTS index directly (mirrors SearchIndexWriter logic)
+    // Mirrors SearchIndexWriter so the test does not depend on it.
     $tx = $conn->table('transactions')->where('id', $txId)->first(['counterparty_name', 'description']);
     $counterpartyName = is_string($tx?->counterparty_name) ? $tx->counterparty_name : '';
     $description = is_string($tx?->description) ? $tx->description : '';
@@ -94,8 +78,6 @@ function seedSearchableTransaction(int $userId, int $accountId, int $runId, arra
 
     return $txId;
 }
-
-// ─── isSearchActive() ────────────────────────────────────────────────────────
 
 it('isSearchActive is false by default', function (): void {
     $component = Livewire::test(TransactionsList::class)
@@ -128,8 +110,6 @@ it('isSearchActive is true when date filter is set', function (): void {
     expect($component->instance()->isSearchActive())->toBeTrue();
 })->group('phase-8');
 
-// ─── clearSearch() ───────────────────────────────────────────────────────────
-
 it('clearSearch resets all search props and cursor', function (): void {
     $component = Livewire::test(TransactionsList::class)
         ->set('currency', 'eur')
@@ -154,8 +134,6 @@ it('clearSearch resets all search props and cursor', function (): void {
     expect($component->instance()->accumulatedRows)->toBe([]);
 })->group('phase-8');
 
-// ─── Search-mode rendering ───────────────────────────────────────────────────
-
 it('renders search results when query is set matching a transaction', function (): void {
     $txId = seedSearchableTransaction(
         $this->fixtureUser->id,
@@ -174,15 +152,12 @@ it('renders search results when query is set matching a transaction', function (
         ->set('currency', 'eur')
         ->set('searchQuery', 'Jumbo');
 
-    // isSearchActive must be true
     expect($component->instance()->isSearchActive())->toBeTrue();
 
-    // The rendered HTML must contain the counterparty name
     $component->assertSee('Jumbo Supermarkt');
 })->group('phase-8');
 
 it('renders no results for a query that matches nothing', function (): void {
-    // Seed a transaction that will NOT match the query
     seedSearchableTransaction(
         $this->fixtureUser->id,
         $this->account->id,
@@ -200,12 +175,10 @@ it('renders no results for a query that matches nothing', function (): void {
 
     expect($component->instance()->isSearchActive())->toBeTrue();
 
-    // Should render the no-results state ("Nothing matches")
     $component->assertSee('Nothing matches');
 })->group('phase-8');
 
 it('search with filter-only (no query) returns filtered results', function (): void {
-    // Seed two transactions in different date ranges
     seedSearchableTransaction(
         $this->fixtureUser->id,
         $this->account->id,
@@ -232,7 +205,6 @@ it('search with filter-only (no query) returns filtered results', function (): v
         ]
     );
 
-    // Filter to January only — "Out Of Range Vendor" must not appear
     $component = Livewire::test(TransactionsList::class)
         ->set('currency', 'eur')
         ->set('filterAfter', '2026-01-01')
@@ -245,7 +217,7 @@ it('search with filter-only (no query) returns filtered results', function (): v
 })->group('phase-8');
 
 it('clears search and returns to default view', function (): void {
-    // Seed a transaction visible only in full-history (more than 90 days ago)
+    // Older than the 90-day default window, so only search mode reaches it.
     seedSearchableTransaction(
         $this->fixtureUser->id,
         $this->account->id,
@@ -259,7 +231,6 @@ it('clears search and returns to default view', function (): void {
         ]
     );
 
-    // Seed a recent transaction (within 90 days of 2026-06-15)
     seedSearchableTransaction(
         $this->fixtureUser->id,
         $this->account->id,
@@ -277,14 +248,10 @@ it('clears search and returns to default view', function (): void {
         ->set('currency', 'eur')
         ->set('searchQuery', 'Old Vendor');
 
-    // In search mode, Old Vendor should be visible (search spans all history)
     $component->assertSee('Old Vendor');
 
-    // Clear search
     $component->call('clearSearch');
 
-    // Now back to default 90-day view: Old Vendor should NOT appear (>90 days ago)
-    // searchQuery must be empty
     expect($component->instance()->searchQuery)->toBe('');
     expect($component->instance()->isSearchActive())->toBeFalse();
 })->group('phase-8');
@@ -309,7 +276,6 @@ it('summary strip fields are available in view when search is active', function 
         ->set('currency', 'eur')
         ->set('searchQuery', 'Strip');
 
-    // totalCount must be in view data (via searchTotalCount)
     $viewData = $component->viewData('searchTotalCount');
     expect($viewData)->toBeInt()->toBeGreaterThanOrEqual(1);
 })->group('phase-8');

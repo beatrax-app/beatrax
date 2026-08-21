@@ -10,15 +10,12 @@ use InvalidArgumentException;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Contracts\SecretShield;
+use Modules\EmailScan\Internal\Exceptions\ScanStateNotFoundException;
 use Modules\EmailScan\Models\OAuthSecret;
 use Modules\EmailScan\Public\Dto\InboxCredentials;
 use Modules\EmailScan\Public\Enums\MailProvider;
-use Modules\EmailScan\Public\Exceptions\ScanStateNotFoundException;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 class OAuthSecretsRepository
 {
     use CoercesScalars;
@@ -99,10 +96,8 @@ class OAuthSecretsRepository
     ): void {
         $this->assertProvider($provider);
 
-        // Removing any stale copy under a different provider and
-        // writing the fresh entry happen inside one transaction, so a
-        // re-provider'd inbox can never momentarily exist under two
-        // providers or vanish entirely.
+        // One transaction, so a re-provider'd inbox can never momentarily
+        // exist under two providers or vanish entirely.
         $this->db->connection()->transaction(function () use (
             $inboxId,
             $provider,
@@ -174,9 +169,8 @@ class OAuthSecretsRepository
         }
     }
 
-    // Persists a row through Eloquent; a DB-layer failure surfaces as
-    // a SecretsWriteFailed whose message never carries the credential
-    // payload, keeping one typed write-failure contract for callers.
+    // A DB failure surfaces as SecretsWriteFailed, whose message never
+    // carries the credential payload.
     private function persist(OAuthSecret $row): void
     {
         try {
@@ -238,9 +232,6 @@ class OAuthSecretsRepository
         return null;
     }
 
-    // Decodes the per-inbox token map from a row's decrypted
-    // tokens_blob (a JSON object keyed by inbox id, whose
-    // numeric-string keys PHP coerces to int, matching encodeInboxes()).
     /**
      * @return array<int|string, array<string, mixed>>
      */
@@ -249,8 +240,7 @@ class OAuthSecretsRepository
         if ($blob === null || $blob === '') {
             return [];
         }
-        // Reveals the keychain-shielded blob before decoding (identity
-        // when it isn't ciphertext, e.g. web/mobile or legacy rows).
+        // Reveal before decoding; identity when the blob isn't ciphertext.
         $blob = $this->shield->reveal($blob);
         $decoded = json_decode($blob, true);
         if (! is_array($decoded)) {
@@ -283,9 +273,8 @@ class OAuthSecretsRepository
             );
         }
 
-        // Shields the whole token blob uniformly across all three
-        // write paths (saveInboxRefreshToken, rotateRefreshToken,
-        // removeInbox); decodeInboxes reveals on the way back.
+        // Shielded uniformly on all three write paths; decodeInboxes
+        // reveals on the way back.
         return $this->shield->protect($encoded);
     }
 

@@ -10,77 +10,29 @@ use Illuminate\Foundation\Vite;
 use Modules\Ledger\Models\Account;
 
 /**
- * Root TestCase. Module-local TestCases extend this one.
- *
- * `$fixtureUser` and `seedFixtureUserAndAccount()` exist here so the
- * cross-module IdempotencyContractTest and the AsnCsvImportTest in the
- * Import module share a single canonical seeded user + ASN account row.
- * The helper resolves against the `App\Models\User` class alias that
- * `CoreServiceProvider` registers for `Modules\Core\Models\User`.
+ * @link ../.docs/conventions/test-harness-isolation.md
  */
 abstract class TestCase extends BaseTestCase
 {
-    /**
-     * The canonical fixture user resolved during seedFixtureUserAndAccount().
-     *
-     * Typed via the App\Models\User class alias for stability — the alias is
-     * registered in CoreServiceProvider so framework consumers expecting the
-     * default Laravel namespace (auth.providers.users.model, notification
-     * routing) resolve the same class as the module-namespaced model.
-     */
+    // Typed via the App\Models\User alias CoreServiceProvider registers, so
+    // framework consumers expecting the default Laravel namespace
+    // (auth.providers.users.model, notification routing) resolve the same class.
     protected ?User $fixtureUser = null;
 
-    /**
-     * A private storage root per test, so nothing on disk outlives its test.
-     *
-     * RefreshDatabase rolls back the database and leaves the disk alone. The
-     * sync keyring is written to a file named for the user id, and
-     * RefreshDatabase restarts those ids from 1 in every test — so a test
-     * inherited the previous test's encrypted keyring for "its" user, could not
-     * decrypt it with a session that had never held that key, and failed
-     * depending only on what ran before it.
-     *
-     * Isolating beats purging. An earlier attempt deleted the keyrings between
-     * tests and broke the writer, which stages a file and renames it into
-     * place. An empty root of its own leaves nothing to delete and nothing to
-     * race.
-     *
-     * Tests that sandbox the root themselves keep working: their beforeEach
-     * runs after this and wins, and tearDown only removes what it created.
-     */
+    // RefreshDatabase rolls the database back and leaves the disk alone, while
+    // restarting user ids from 1 — so a test inherited the previous test's
+    // encrypted sync keyring for "its" user and could not decrypt it. Deleting
+    // keyrings between tests raced the writer's stage-then-rename; isolating won.
     private ?string $isolatedStorageRoot = null;
 
-    /**
-     * Redirect the `redis` cache store to the array driver during
-     * tests so any `Cache::driver('redis')` call (e.g. inside
-     * `ResolveChainLinksJob::uniqueVia()`) returns an in-memory
-     * Repository instead of trying to open a TCP socket to a Redis
-     * server that the test harness does not provision. Without this
-     * override, every `ConfirmImport` feature test would fail with
-     * `Connection refused [tcp://127.0.0.1:6379]` because Laravel's
-     * UniqueLock machinery calls `$job->uniqueVia()` unconditionally
-     * during dispatch — including for the `sync` queue driver.
-     *
-     * Tests that explicitly need a real Redis (e.g.
-     * `HorizonBootsTest`) check the connection up front and skip
-     * when Redis is not reachable; this override does not interfere
-     * with those because they ignore the cache store and talk to
-     * Redis directly via the predis client.
-     *
-     * The shipped `cache.locks_store` default is `database`, whose lock
-     * repository writes to the `cache_locks` table. Unit tests do not run
-     * migrations, so dispatching a `ShouldBeUniqueUntilProcessing` job —
-     * which makes Laravel's `UniqueLock` machinery acquire a lock via
-     * `uniqueVia()` — would fail with `no such table: cache_locks`. The
-     * override below routes queue-uniqueness locks to the in-memory
-     * `array` store. Tests that exercise the real database lock store
-     * (e.g. `DatabaseQueueConcurrencyTest`) set `cache.locks_store` back
-     * to `database` in their own `beforeEach()`.
-     */
     protected function setUp(): void
     {
         parent::setUp();
 
+        // UniqueLock calls $job->uniqueVia() at dispatch even on the sync queue
+        // driver, so a ShouldBeUniqueUntilProcessing job would open a socket to a
+        // Redis nobody provisions and hit a cache_locks table unit tests never
+        // migrate. Both stores are redirected to the array driver.
         $this->app['config']->set('cache.stores.redis', [
             'driver' => 'array',
             'serialize' => false,
@@ -91,29 +43,22 @@ abstract class TestCase extends BaseTestCase
             .DIRECTORY_SEPARATOR.'beatrax-test-'.bin2hex(random_bytes(8))
             .DIRECTORY_SEPARATOR.'storage';
 
-        // The framework's own directories, or view compilation and the log
-        // channel have nowhere to write.
+        // Without these, view compilation and the log channel have nowhere to write.
         foreach (['app', 'logs', 'framework/cache', 'framework/sessions', 'framework/views'] as $dir) {
             @mkdir($this->isolatedStorageRoot.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $dir), 0777, true);
         }
 
-        // Both path APIs have to agree. Production code resolves through
-        // UserDataPathService, which reads the env var; tests assert through
-        // Laravel's storage_path(). Moving only one splits them, and the
-        // assertion then looks at a directory the code never wrote to.
+        // Both path APIs have to agree: production resolves through
+        // UserDataPathService (the env var), tests assert through storage_path().
+        // Move only one and the assertion inspects a directory nothing wrote to.
         putenv('NATIVEPHP_STORAGE_PATH='.$this->isolatedStorageRoot);
         $this->app->useStoragePath($this->isolatedStorageRoot);
         $this->app['config']->set('view.compiled', $this->isolatedStorageRoot.'/framework/views');
 
-        // A third path API, and it did not agree with the other two. Disk
-        // roots are resolved from storage_path() when config LOADS, which is
-        // before useStoragePath() above moves it — so Storage::disk('local')
-        // went on writing to the real tree while everything else relocated.
-
-        // Under --parallel that is one directory shared by every process. The
-        // import staging path is the content hash under the user id, both of
-        // which repeat across isolated databases, so processes overwrote each
-        // other's staged uploads mid-read.
+        // Disk roots resolve from storage_path() when config LOADS, before
+        // useStoragePath() above moves it, so Storage::disk('local') went on
+        // writing to the real tree — one directory shared by every --parallel
+        // worker, whose repeating staging paths overwrote each other mid-read.
         foreach (['local' => 'app/private', 'public' => 'app/public'] as $disk => $sub) {
             $this->app['config']->set(
                 "filesystems.disks.{$disk}.root",
@@ -121,10 +66,9 @@ abstract class TestCase extends BaseTestCase
             );
         }
 
-        // Vite decides between manifest URLs and dev-server URLs by looking
-        // for `public/hot`, which the running dev server writes. So starting
-        // the desktop app turned every rendered-HTML assertion red — asset
-        // URLs came back as http://[::1]:5174/… — for as long as it was up.
+        // Vite picks dev-server URLs over manifest URLs whenever `public/hot`
+        // exists, which the running dev server writes — so with the desktop app
+        // up, every rendered-HTML assertion saw http://[::1]:5174/… and failed.
         $this->app->make(Vite::class)->useHotFile(
             $this->isolatedStorageRoot.DIRECTORY_SEPARATOR.'vite-never-hot',
         );
@@ -142,8 +86,7 @@ abstract class TestCase extends BaseTestCase
         parent::tearDown();
     }
 
-    // Refuses to walk anything outside the system temp directory, so a
-    // mis-set root can never reach a real tree.
+    // A mis-set root must never let this walk reach a real tree.
     private static function removeTree(string $path): void
     {
         $tmp = realpath(sys_get_temp_dir());
@@ -172,25 +115,11 @@ abstract class TestCase extends BaseTestCase
         @rmdir($real);
     }
 
+    // `NL57ASNB0123456789` is baked into tests/fixtures/asn-sample-1.csv and is
+    // looked up directly by EloquentAccountResolver — do not change it.
+    // `ICS-CARD` and `PAYPAL` are the synthetic own-IBAN literals IcsPdfAdapter
+    // and PaypalCsvAdapter emit; AccountResolver already scopes lookups by user.
     /**
-     * Seeds the canonical fixture User + ASN Account + ICS Account +
-     * PayPal Account so the contract tests and the per-module
-     * *ImportTest files can resolve their respective own-IBANs without
-     * falling through to the unknown-IBAN wizard step.
-     *
-     * IBAN `NL57ASNB0123456789` is the load-bearing anonymisation value
-     * baked into tests/fixtures/asn-sample-1.csv. Do NOT change this
-     * literal — `EloquentAccountResolver` looks it up directly.
-     *
-     * IBAN `ICS-CARD` is the synthetic own-IBAN literal the
-     * `IcsPdfAdapter` emits for every parsed ICS PDF row. The
-     * AccountResolver scopes lookups by `user_id` already, so a single
-     * instance-wide literal is unambiguous.
-     *
-     * IBAN `PAYPAL` is the synthetic own-IBAN literal the
-     * `PaypalCsvAdapter` emits for every parsed PayPal Activity
-     * Download row. Same scoping shape as `ICS-CARD`.
-     *
      * @return array{user: User, account: Account, icsAccount: Account, paypalAccount: Account}
      */
     public function seedFixtureUserAndAccount(): array

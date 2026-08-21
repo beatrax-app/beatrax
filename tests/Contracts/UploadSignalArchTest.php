@@ -4,16 +4,8 @@ declare(strict_types=1);
 
 use Symfony\Component\Finder\Finder;
 
-/*
- * Every layout that can host a file input has to carry the upload-transport
- * signal, because the client reads it to decide whether multipart can cross at
- * all — and on the mobile runtimes it cannot.
- *
- * This exists because the signal was added to the two shared layouts and the
- * wizard's own layout was missed. The wizard is where the FIRST import
- * happens, so the one screen that most needed the encoded transport was the
- * one screen that did not get it, and every check short of driving a real
- * device said the fix was in.
+/**
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#the-upload-signal-missing-from-the-wizard-layout
  */
 
 /** @return array<string, string> layout path => contents */

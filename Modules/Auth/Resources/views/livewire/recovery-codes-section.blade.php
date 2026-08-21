@@ -15,10 +15,10 @@
     <p class="mt-1 text-xs text-[var(--color-text-muted)]">
         {{ Lang::get('auth::recovery_codes.settings.warning') }}
     </p>
-    <button
-        type="button"
+    <x-core::secondary-button
+        size="sm"
+        class="mt-3"
         wire:click="regenerate"
         wire:loading.attr="disabled"
-        class="mt-3 inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-    >{{ Lang::get('auth::recovery_codes.settings.regenerate') }}</button>
+    >{{ Lang::get('auth::recovery_codes.settings.regenerate') }}</x-core::secondary-button>
 </div>

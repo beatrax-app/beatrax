@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Crypto;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class GdkEpoch
 {
     // NEVER PERSIST THIS DTO OUTSIDE THE KEYRING'S OWN ENCRYPTED JSON FILE.

@@ -8,6 +8,7 @@ return [
     'subtitle' => 'Izdrukājiet tos vai saglabājiet drošā vietā. Tie vairs netiks rādīti.',
     'copy' => 'Kopēt kodus',
     'copied' => 'Nokopēts',
+    'copy_failed' => 'Neizdevās nokopēt. Pierakstiet kodus.',
     'download' => 'Lejupielādēt kā .txt',
 
     'saved_as' => 'Saglabāts kā beatrax-recovery-codes-:username.txt',

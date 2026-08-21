@@ -6,7 +6,6 @@ namespace Modules\Mobile\Internal\Identity;
 
 /**
  * @see BiometricKeyVault::recover()
- * @link ../../../../.docs/features/mobile/architecture.md
  */
 final class BiometricRecoverResult
 {

@@ -8,9 +8,6 @@ namespace Modules\Core\Public\Enums;
 // chain_resolution_runs): queued `pending`, flips to `running`, finishes
 // `complete` or `failed`. Columns stay string; this enum owns the
 // vocabulary and the transition graph the per-run guards enforce.
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 enum JobRunStatus: string
 {
     case Pending = 'pending';

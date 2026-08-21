@@ -16,13 +16,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 uses(RefreshDatabase::class);
 
-/*
- * DismissDriftAlertAsCancelled — records the user's intent that the
- * underlying recurring series was cancelled outside the app. Inserts
- * one drift_alert_transitions row with reason=user_dismissed_cancelled.
- * Does NOT mutate recurring_series.state.
- */
-
 function ddacUser(string $username): User
 {
     return User::query()->create([

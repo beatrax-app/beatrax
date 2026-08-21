@@ -453,6 +453,19 @@ yet confirmed, so a single lost relay delivery self-heals rather than
 stranding the ceremony. `confirmMatch()` sends this device's own signed
 `PAIR_CONFIRM` to the bound initiator peer unconditionally.
 
+**Typed codes while importing.** The typed word-code arm is offered on the
+import path too. A word-code carries the token alone, so before seeding,
+`submitCode()` asks `PairingGateway::discoverInitiatorOnLan()` for the public
+identity the code cannot carry: it browses `_beatrax-sync._tcp` and fetches
+`GET /pair/offer?token=…` from each discovered peer. From there the flow is
+the QR flow, unchanged — seed, accept, compare safety numbers on both
+screens. The discovered address proves nothing (an mDNS answer can be spoofed
+by anyone on the network, and the offer therefore hands out public keys
+only), so the human safety-number comparison remains the sole trust gate.
+When discovery finds nothing, or nothing found holds the token, the screen
+says so with the existing "cannot reach the other device" copy rather than
+spinning.
+
 **Self-mint deferral.** The import branch never self-mints a GDK epoch —
 it defers epoch acquisition entirely to the desktop's delivered epochs,
 because self-minting would collide with the epoch control handler's

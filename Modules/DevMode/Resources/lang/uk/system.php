@@ -7,6 +7,10 @@ return [
 
     'subtitle_html' => 'Середовище + runtime + чинна конфігурація. Чутливі ключі (закінчення <code class="font-mono text-xs">*password*</code>, <code class="font-mono text-xs">*secret*</code>, <code class="font-mono text-xs">*key</code>, <code class="font-mono text-xs">*token*</code>) маскуються.',
     'php' => 'PHP',
+    'php_version' => 'версія',
+    'php_sapi' => 'sapi',
+    'php_ini_path' => 'шлях до ini',
+    'php_extensions' => 'розширення',
     'laravel' => 'Laravel',
     'sqlite' => 'SQLite',
     'sqlite_file' => 'файл',

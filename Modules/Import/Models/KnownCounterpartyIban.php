@@ -8,10 +8,9 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
-// Every read/write path carries an EXPLICIT where('user_id', $userId)
-// filter — BelongsToUser's global scope is only a secondary guard
-// (doesn't fire under queue/console/factory paths). `real_iban` has no
-// shape validation yet (sole writer is a compile-time-constant seeder).
+// Every read and write carries an explicit where('user_id', …):
+// BelongsToUser's global scope does not fire on queue, console or factory
+// paths. `real_iban` is unvalidated because its only writer is a seeder.
 /**
  * @property int $id
  * @property int $user_id

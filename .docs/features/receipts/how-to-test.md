@@ -23,7 +23,6 @@ isolation.
     `ApplyEnrichments` called; assert
     `RecordsStatementSummary` called; assert
     `ChainHintDetected` raised for each hint).
-  - The `WizardEmailFileStep` for a drop-an-.eml flow.
   - The `ReceiptConflictToast` for a pending conflict.
   - The cross-user 404 posture on every action.
   - The chain-hint dispatcher (`DispatchChainHintsFromReceipt`)
@@ -177,7 +176,7 @@ The behavioural contract for the `Receipts` module.
 - **A `.eml` dropped before login** —
   `Desktop::PendingFileIntent` persists; after login the user
   lands on `/desktop/file-staging`; clicking Start import
-  routes through `WizardEmailFileStep`.
+  redirects to the import wizard.
 - **A re-fetched inbox message** — the `matcher_key` column
   on `inbox_messages` is the dedup signal; re-running
   `RecordReceipt` on a row that already carries a matcher_key

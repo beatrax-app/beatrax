@@ -8,15 +8,9 @@ use Modules\Core\Models\User;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
-/*
- * Cursor pagination correctness over `approvedForUser`, which sorts
- * by `monthly_equivalent_minor DESC` then `id DESC`. The cursor must
- * preserve the primary sort order — passing the previous page's tail
- * id should return the rows with strictly smaller monthly equivalent
- * (or equal equivalent with strictly smaller id), not a disjoint
- * id-window.
- */
-
+// approvedForUser sorts by monthly_equivalent_minor DESC then id DESC. The
+// cursor must preserve that primary sort — the previous page's tail id has to
+// yield strictly smaller equivalents, not a disjoint id-window.
 function rsqcUser(string $username): User
 {
     return User::query()->create([
@@ -29,9 +23,8 @@ function rsqcUser(string $username): User
 
 function rsqcSeries(User $user, int $monthlyEquivalentMinor, string $name): RecurringSeries
 {
-    // Use 'income' direction with positive monthly equivalents so the
-    // DESC ordering reads top-down as a literal "largest equivalent
-    // first" — matches the docblock contract on approvedForUser.
+    // 'income' with positive equivalents, so the DESC ordering reads top-down as
+    // a literal "largest equivalent first".
     return RecurringSeries::query()->create([
         'user_id' => $user->id,
         'direction' => 'income',
@@ -60,8 +53,7 @@ afterEach(function (): void {
 });
 
 it('returns approved rows in descending monthly_equivalent order across pages', function (): void {
-    // Five rows with distinct monthly equivalents inserted out of
-    // order so id ASC and equivalent DESC do NOT coincide.
+    // Inserted out of order so id ASC and equivalent DESC do not coincide.
     foreach ([1500, 5000, 800, 3000, 200] as $eq) {
         rsqcSeries($this->user, $eq, 'row-'.$eq);
     }
@@ -116,13 +108,8 @@ it('amountTrendForSeries returns an empty currency + empty points when the serie
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
 
-    // Insert a corrupt row directly through the query builder so the
-    // model boot hook does not auto-populate cluster_counterparty_key
-    // — but the trigger DOES require latest_currency. SQLite enforces
-    // the column constraint differently per dialect; use a single
-    // space as the smallest payload that bypasses the schema NULL
-    // check yet still trips the "currency === ''" branch after the
-    // detector's whitespace-strip pass would normally run.
+    // Written through the query builder because the model would reject an
+    // empty latest_currency; the schema's NULL check still passes on ''.
     $now = '2026-05-17 12:00:00';
     $id = $db->connection()->table('recurring_series')->insertGetId([
         'user_id' => $this->user->id,
@@ -158,9 +145,8 @@ it('amountTrendForSeries defaults to the base currency for a missing series', fu
 });
 
 it('paginates correctly when monthly_equivalent values tie — id-tiebreak descends within the tied band', function (): void {
-    // Two rows tie on monthly_equivalent so the cursor must compose
-    // both predicates: monthly_equivalent < cursorEq OR (equal AND id <
-    // cursorId).
+    // Two rows tie on monthly_equivalent, so the cursor has to compose both
+    // predicates: equivalent < cursorEq OR (equal AND id < cursorId).
     $a = rsqcSeries($this->user, 1000, 'tie-a');
     $b = rsqcSeries($this->user, 1000, 'tie-b');
     $c = rsqcSeries($this->user, 500, 'low-c');
@@ -170,7 +156,6 @@ it('paginates correctly when monthly_equivalent values tie — id-tiebreak desce
 
     $page1 = $query->approvedForUser($this->user, null, 1);
     expect($page1)->toHaveCount(1);
-    // The two tied rows sort by id DESC, so $b (created later) is first.
     expect($page1[0]->seriesId)->toBe($b->id);
 
     $page2 = $query->approvedForUser($this->user, $b->id, 1);

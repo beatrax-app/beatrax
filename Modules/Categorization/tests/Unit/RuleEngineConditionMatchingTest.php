@@ -11,15 +11,6 @@ use Modules\Core\Models\User;
 
 uses(RefreshDatabase::class);
 
-/*
- * Task 1 (13.4-02): pure condition-matching coverage for RuleEngine —
- * string equals/contains/starts_with, amount >/</between/equals, date
- * before/after/between, and the AND ('all') vs OR ('any') combinator
- * firing semantics. Rules are built directly against
- * categorization_rules/rule_conditions/rule_actions (no import
- * pipeline involved) per the plan's own instruction.
- */
-
 beforeEach(function (): void {
     $this->user = User::query()->create([
         'username' => 'rule-engine-test',
@@ -76,8 +67,6 @@ function matchInput(
         postedAt: $postedAt ?? CarbonImmutable::parse('2026-02-01'),
     );
 }
-
-// --- string operator coverage ---
 
 it('fires a string equals condition on exact case-insensitive match', function (): void {
     makeMatchingRule($this->user->id, 'all', [
@@ -159,8 +148,6 @@ it('reads a description-field condition against the description property', funct
     expect($result)->toHaveCount(1);
 });
 
-// --- amount operator coverage ---
-
 it('fires an amount > condition when the target exceeds the value', function (): void {
     makeMatchingRule($this->user->id, 'all', [
         ['field' => 'merchant', 'op' => '>', 'value_type' => 'amount', 'value' => '1000'],
@@ -221,8 +208,6 @@ it('fires an amount equals condition on an exact match', function (): void {
     expect($result)->toHaveCount(1);
 });
 
-// --- date operator coverage ---
-
 it('fires a date after condition when postedAt is later than the value', function (): void {
     makeMatchingRule($this->user->id, 'all', [
         ['field' => 'merchant', 'op' => 'after', 'value_type' => 'date', 'value' => '2026-01-01'],
@@ -272,8 +257,6 @@ it('does not fire a date between condition when postedAt is outside the range', 
 
     expect($result)->toHaveCount(0);
 });
-
-// --- combinator (AND / OR) firing semantics ---
 
 it('fires an "all" combinator rule only when both string conditions match', function (): void {
     makeMatchingRule($this->user->id, 'all', [

@@ -6,9 +6,6 @@ namespace Modules\Migration\Internal\Exceptions;
 
 use RuntimeException;
 
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 final class MigrationRunNotParsedException extends RuntimeException
 {
     public function __construct(int $migrationRunId)

@@ -2,11 +2,7 @@
 
 declare(strict_types=1);
 
-// Multi-account baseline: THREE accounts (ASN + ICS + PayPal) + a
-// mix of 6 approved series spanning all three account_ids. Expected
-// per-account projection points listed for each of the three
-// accounts at each of the 30/60/90 horizons. No shortfalls — locks
-// the multi-account baseline read path a later wave exercises.
+/** @link ../../../../../.docs/features/forecasting/forecast-corpus.md#multi-account-baseline */
 
 return [
     'accounts' => [

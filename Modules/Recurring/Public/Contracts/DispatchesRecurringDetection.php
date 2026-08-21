@@ -8,9 +8,6 @@ namespace Modules\Recurring\Public\Contracts;
 // surface (never referenced here) preserves the cross-module boundary
 // that App\PhpStan\Rules\BoundaryRule enforces.
 
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
 interface DispatchesRecurringDetection
 {
     /**

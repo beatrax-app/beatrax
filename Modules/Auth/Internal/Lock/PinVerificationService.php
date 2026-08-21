@@ -9,24 +9,19 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
 use Modules\Auth\Public\Actions\LogoutAction;
-use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\SystemAlertWriter;
 
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 final class PinVerificationService
 {
     private const BACKOFF_THRESHOLD = 5;
 
-    // Total failures before the session is signed out permanently. Public so
-    // UI surfaces (LockScreen attempts-remaining copy) reference this single
-    // source of truth instead of duplicating the number.
+    // Total failures before a permanent sign-out. Public so the lock screen's
+    // attempts-remaining copy reads it rather than duplicating the number.
     public const HARD_CAP = 10;
 
-    // Escalating backoff delays in seconds, indexed by the number of
-    // threshold breaches (0-based): the first breach at BACKOFF_THRESHOLD
-    // gives 30s, subsequent breaches double up to a 300s ceiling.
+    // Seconds, indexed by 0-based threshold breach: 30s at BACKOFF_THRESHOLD,
+    // doubling to a 300s ceiling.
     /**
      * @var array<int, int>
      */
@@ -45,14 +40,25 @@ final class PinVerificationService
         private readonly Clock $clock,
         private readonly LogoutAction $logout,
         private readonly BiometricDeviceStore $biometricStore,
+        private readonly SystemAlertWriter $alerts,
     ) {}
+
+    // Raised only after commit: these rows travel to the paired device, and
+    // one written inside a rolled-back transaction describes a lockout that
+    // never happened.
+    /** @var list<array{userId: int, kind: string, severity: string, message: string}> */
+    private array $pendingAlerts = [];
 
     public function verify(int $userId, string $pin, Session $session): ?string
     {
+        $this->pendingAlerts = [];
+
         /** @var string|null $result */
         $result = $this->db->connection()->transaction(
             fn (): ?string => $this->verifyWithinTransaction($userId, $pin, $session)
         );
+
+        $this->flushPendingAlerts();
 
         return $result;
     }
@@ -137,29 +143,23 @@ final class PinVerificationService
                 'failed_attempts' => 0,
                 'locked_until' => null,
                 'last_activity_at' => $this->clock->now(),
-                // Anchor the cold-start biometric PIN floor: a genuine PIN
-                // unlock refreshes the "must re-enter PIN every N days"
-                // clock (see MobileLockGateway::pinFloorDue()).
+                // Refreshes the cold-start "re-enter PIN every N days" clock
+                // read by MobileLockGateway::pinFloorDue().
                 'last_pin_unlock_at' => $this->clock->now(),
             ]);
 
-        // Drop the middleware's cached config. It carries last_activity_at,
-        // and the copy taken while the lock screen rendered still holds the
-        // stale value that caused the lock — leaving it would re-lock the
-        // session on the next request and demand a second PIN.
+        // The cached config still holds the last_activity_at that caused the
+        // lock, so leaving it demands a second PIN on the next request.
         $session->forget(AppLockMiddleware::SESSION_CONFIG_CACHE);
 
-        // A successful PIN unlock re-arms ALL of the user's biometric
-        // credentials (resets biometric_failed_count so a disarmed
-        // credential is usable again).
+        // A PIN unlock re-arms every disarmed biometric credential.
         $this->biometricStore->resetAllForUser($userId);
 
         $this->lockState->unlock($session, $dataKey);
     }
 
-    // Lets the lock screen distinguish "wrong PIN" from "backoff active" so
-    // a user entering their correct PIN during the window is told to wait
-    // instead of being told the PIN is wrong.
+    // Separates "backoff active" from "wrong PIN", so a correct PIN inside the
+    // window is told to wait rather than told it is wrong.
     public function lockedUntil(int $userId): ?CarbonImmutable
     {
         $row = $this->db->connection()
@@ -216,13 +216,23 @@ final class PinVerificationService
             ]);
     }
 
+    private function flushPendingAlerts(): void
+    {
+        $raised = $this->pendingAlerts;
+        $this->pendingAlerts = [];
+
+        foreach ($raised as $alert) {
+            $this->alerts->raiseForUser($alert['userId'], $alert['kind'], $alert['severity'], $alert['message']);
+        }
+    }
+
     private function emitAlert(int $userId, string $kind, string $severity, string $message): void
     {
-        SystemAlert::query()->create([
-            'user_id' => $userId,
+        $this->pendingAlerts[] = [
+            'userId' => $userId,
             'kind' => $kind,
             'severity' => $severity,
             'message' => $message,
-        ]);
+        ];
     }
 }

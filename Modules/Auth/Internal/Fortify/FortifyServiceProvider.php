@@ -13,16 +13,11 @@ use Laravel\Fortify\Fortify;
 use Modules\Core\Models\User;
 
 // No throttle middleware by design: this is a local-only, single-machine
-// deployment, so bcrypt's cost factor is the credential-guessing defence,
-// not a per-IP limiter. The authenticator returns a generic null on any
-// miss, so a wrong password and a missing account are indistinguishable.
+// deployment, so the password hash cost is the credential-guessing defence
+// rather than a per-IP limiter.
 final class FortifyServiceProvider extends ServiceProvider
 {
-    public function register(): void
-    {
-        // Fortify auto-binds its own services from its own service
-        // provider; this override exists only to configure boot() below.
-    }
+    public function register(): void {}
 
     public function boot(Hasher $hasher): void
     {

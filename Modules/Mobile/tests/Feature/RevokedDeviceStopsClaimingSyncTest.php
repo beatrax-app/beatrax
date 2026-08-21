@@ -7,13 +7,10 @@ use Modules\Core\Models\User;
 use Modules\Mobile\Internal\Exceptions\LanSyncException;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 
-/*
- * Removing a device on the desktop drops it from that side's registry, but
- * nothing travelled back — so the removed phone kept listing the peer and
- * describing itself as connected and synced. The desktop now says PEER_REVOKED
- * over the completed Noise session (IK proves the responder holds the static
- * key the phone dialled), and the phone clears its own confirmation.
- */
+// Removing a device on the desktop drops it from that side's registry, but
+// nothing travelled back, so the removed phone kept listing the peer and calling
+// itself connected and synced. The notice now rides the completed Noise session,
+// which is what proves the responder holds the static key the phone dialled.
 
 it('marks only a peer revocation as unretryable', function (): void {
     $revoked = LanSyncException::peerRevokedThisDevice();

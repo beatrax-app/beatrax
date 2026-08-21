@@ -9,23 +9,6 @@ use Modules\Calendar\Internal\Http\Livewire\CalendarPage;
 use Modules\Core\Models\User;
 use Modules\Recurring\Models\RecurringSeries;
 
-/*
- * CalendarPage — isComputing/stale forecast sentinel (CAL-02, D-13).
- *
- * RED state (Phase 6 Plan 01): CalendarPage does not yet read ForecastDto;
- * these tests will fail until Plan 02/03 wire the computing sentinel.
- *
- * Contract being tested:
- *   - When ForecastDto.isComputing=true for a balance-included account,
- *     the day-end balance corner shows "—" (em-dash or placeholder),
- *     not a numeric value.
- *   - When computing, series entries for that day still render normally —
- *     the stale forecast only affects the balance display, not entries.
- *
- * The isComputing state is triggered when no completed forecast_run exists
- * for the account+horizon combination (ForecastQuery returns a sentinel).
- */
-
 function cpcsUser(string $suffix = 'cpcs'): User
 {
     return User::query()->create([
@@ -83,9 +66,9 @@ it('renders "—" in the balance corner when ForecastDto.isComputing is true for
     $user = cpcsUser('cpcs-computing');
     $accountId = cpcsAccount($db, $user->id, 'Computing Account');
 
-    // A run that is genuinely in flight. A MISSING run is not the same thing
-    // and no longer claims to be computing — nothing is running, so the
-    // calendar would have promised a projection that was never coming.
+    // A run genuinely in flight. A missing run is not the same thing and no
+    // longer reports as computing, or the calendar would promise a projection
+    // nothing is going to deliver.
     $db->connection()->table('forecast_runs')->insert([
         'user_id' => $user->id,
         'scenario_id' => null,
@@ -102,7 +85,6 @@ it('renders "—" in the balance corner when ForecastDto.isComputing is true for
             'year' => 2026,
             'balanceAccountIds' => [$accountId],
         ])
-        // The balance corner should show "—" (em-dash) when computing
         ->assertSee('—');
 });
 
@@ -112,8 +94,6 @@ it('still renders series entries when the forecast is in computing state', funct
     $accountId = cpcsAccount($db, $user->id, 'Computing Account 2');
 
     cpcsSeries($user, 'Spotify Computing');
-
-    // No forecast_run → computing state for balance, but entries still render
 
     Livewire::actingAs($user)
         ->test(CalendarPage::class, [

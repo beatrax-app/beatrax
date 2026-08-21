@@ -4,13 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Receipts\Internal\Matchers;
 
-use Brick\Math\BigDecimal;
-use Brick\Math\Exception\NumberFormatException;
-use Brick\Math\RoundingMode;
-use Brick\Money\Exception\UnknownCurrencyException;
-use Brick\Money\Money;
 use Carbon\CarbonImmutable;
 use Modules\EmailScan\Public\Dto\InboxMessageDto;
+use Modules\Ledger\Public\Enums\Currency;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Receipts\Public\Contracts\SenderMatcher;
 use Modules\Receipts\Public\Dto\MatchOutcomeDto;
 use Modules\Receipts\Public\Dto\ParsedReceiptDto;
@@ -22,16 +19,13 @@ use Throwable;
 // — exact equality, not a google.com suffix match, defeats a spoofed
 // look-alike sender. Amounts are NEGATED (receipts confirm outgoing
 // charges); a "refund" subject skips rather than resolves the pairing.
-/**
- * @link ../../../../.docs/features/receipts/architecture.md
- */
 final class GooglePlayReceiptMatcher implements SenderMatcher
 {
     private const GOOGLE_PLAY_SENDER = 'googleplay-noreply@google.com';
 
     private const ORDER_ID_REGEX = '/GPA\.[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{5}/';
 
-    private const USD_AMOUNT_REGEX = '/\$\s*([0-9]+(?:\.[0-9]+)?)\s*USD/i';
+    private const USD_AMOUNT_REGEX = '/\$\s*([0-9.,]+)\s*USD/i';
 
     // Parenthesised, Dutch comma decimal — matches both `(€12,07 EUR)`
     // and `(€ 12,07 EUR)`.
@@ -188,20 +182,9 @@ final class GooglePlayReceiptMatcher implements SenderMatcher
 
     private function toMinorOrNull(string $raw, string $currency): ?int
     {
-        $normalised = trim($raw);
-        if (str_contains($normalised, ',') && str_contains($normalised, '.')) {
-            $normalised = str_replace('.', '', $normalised);
-            $normalised = str_replace(',', '.', $normalised);
-        } elseif (str_contains($normalised, ',')) {
-            $normalised = str_replace(',', '.', $normalised);
-        }
-
-        try {
-            $money = Money::of(BigDecimal::of($normalised), $currency, roundingMode: RoundingMode::HalfUp);
-        } catch (NumberFormatException|UnknownCurrencyException) {
-            return null;
-        }
-
-        return $money->getMinorAmount()->toInt();
+        // The rightmost of '.' or ',' is the decimal. Assuming the comma always
+        // was misread US grouping: "1,234.56" normalised to "1.23456", so a
+        // $1,234.56 receipt matched as $1.23 — a thousandfold understatement.
+        return Currency::tryFrom($currency) === null ? null : MoneyInput::tryToMinor($raw);
     }
 }

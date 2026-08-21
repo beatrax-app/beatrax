@@ -17,15 +17,6 @@ use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
 
 uses(RefreshDatabase::class, EnablesEncryptionForUser::class);
 
-/*
- * 14.1-12 Task 2 (Cluster 3 / CR-01/CR-02 class) — the prefer_receipt
- * write path in ApplyEnrichments must encrypt the incoming
- * counterparty_name/description value before the transactions UPDATE
- * for an encrypted user, and holdConflicts() must persist + dispatch
- * only PLAINTEXT (the FingerprintStage Task 1 fix guarantees
- * conflictingFields['stored'] arrives here already decrypted).
- */
-
 function aeeUser(): User
 {
     return User::query()->create([
@@ -119,7 +110,7 @@ it('encrypts the incoming counterparty_name/description before the prefer_receip
 
     $row = app(DatabaseManager::class)->connection()->table('transactions')->where('id', $tx->id)->first();
 
-    // Pre-fix: this would be the raw incoming plaintext. Post-fix: ciphertext.
+    // Tripwire: the regression wrote the incoming plaintext straight to the column.
     expect($row->counterparty_name)->not->toBe('Albert Heijn');
     expect($row->description)->not->toBe('Weekly groceries');
 
@@ -183,8 +174,7 @@ it('holdConflicts persists + dispatches PLAINTEXT stored/incoming values for an 
     $this->enablesEncryptionForUser($user);
     $account = aeeAccount($user);
     $tx = aeeExistingTransaction($user, $account);
-    // Policy stays 'unset' — the DB default — so the conflict is held
-    // rather than auto-resolved.
+    // No aeeSetPolicy call: the 'unset' DB default is what holds the conflict.
 
     Event::fake([ReceiptConflictDetected::class]);
 
@@ -196,8 +186,7 @@ it('holdConflicts persists + dispatches PLAINTEXT stored/incoming values for an 
             importRunId: $tx->import_run_id,
             sourceFormat: 'paypal-receipt',
             conflictingFields: [
-                // As produced by the FIXED FingerprintStage::detectConflicts
-                // — 'stored' is already plaintext (decrypted upstream).
+                // 'stored' arrives already decrypted from FingerprintStage::detectConflicts.
                 'counterparty_name' => ['stored' => 'Stored Merchant', 'incoming' => 'Albert Heijn'],
             ],
         ),

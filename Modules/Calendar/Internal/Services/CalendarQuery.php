@@ -5,16 +5,13 @@ declare(strict_types=1);
 namespace Modules\Calendar\Internal\Services;
 
 use Carbon\CarbonImmutable;
-use Modules\Calendar\Public\Dto\CalendarDayDto;
-use Modules\Calendar\Public\Dto\CalendarEntryDto;
+use Modules\Calendar\Internal\Dto\CalendarDayDto;
+use Modules\Calendar\Internal\Dto\CalendarEntryDto;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
-/**
- * @link ../../../../.docs/features/calendar/architecture.md
- */
 final readonly class CalendarQuery
 {
     public function __construct(
@@ -38,9 +35,6 @@ final readonly class CalendarQuery
         ?array $visibleAccountIds = null,
         ?array $balanceAccountIds = null,
     ): array {
-        // $effectiveVisible === null means "all accounts visible" (no filter
-        // specified); [] means "no visible accounts" (filter specified but
-        // everything dropped).
         $ownedIds = $this->accountResolver->ownedAccountIds($user);
         $effectiveVisible = $this->accountResolver->resolveVisibleAccountIds($visibleAccountIds, $ownedIds);
         $effectiveBalance = $this->accountResolver->resolveBalanceAccountIds($balanceAccountIds, $ownedIds, $user);
@@ -54,8 +48,8 @@ final readonly class CalendarQuery
             : [];
 
         $now = $this->clock->now();
-        // CarbonImmutable::create() returns CarbonImmutable|null — parse() on
-        // a formatted date string guarantees a non-null CarbonImmutable.
+        // parse() over create(), whose CarbonImmutable|null return would need
+        // a null branch PHPStan cannot see is unreachable.
         $monthStart = CarbonImmutable::parse(sprintf('%04d-%02d-01', $year, $month));
         $monthEnd = $monthStart->endOfMonth();
 
@@ -79,8 +73,8 @@ final readonly class CalendarQuery
             $cadenceBySeries[$series->seriesId] = $series->cadence;
         }
 
-        // SoD chain: null until a known (non-computing) EoD is seen — a day
-        // after a data-less day must report "SoD unknown", not a fake 0.
+        // Stays null until a known EoD is seen: the day after a data-less day
+        // must report "SoD unknown" rather than a fabricated 0.
         $prevEod = null;
         $baseCurrency = $user->base_currency;
 
@@ -92,9 +86,8 @@ final readonly class CalendarQuery
 
             [$eodMinor, $isComputing] = $balanceMap[$dateStr] ?? [0, true];
 
-            // SoD = prior day's EoD when known; today falls back to the
-            // forecast's as-of anchor sum (yesterday is a past day with no
-            // forecast point, so the chain alone would leave today unknown).
+            // Today needs the anchor fallback: yesterday is a past day with no
+            // forecast point, so the chain alone would leave today unknown.
             $sodMinor = $prevEod ?? ($isToday ? $todayAnchorMinor : null);
 
             $days[] = new CalendarDayDto(
@@ -148,8 +141,6 @@ final readonly class CalendarQuery
             return $rawEntries;
         }
 
-        // Past days resolve each expected entry to paid/missed by matching it
-        // against observed occurrences within the cadence-clamped window.
         $entries = [];
         foreach ($rawEntries as $entry) {
             $observedDates = $occurrenceMap[$entry->seriesId] ?? [];
@@ -180,8 +171,6 @@ final readonly class CalendarQuery
      */
     private function buildGridDays(int $year, int $month): array
     {
-        // CarbonImmutable::create() returns CarbonImmutable|null — parse a
-        // formatted string to guarantee a non-null CarbonImmutable.
         $firstOfMonth = CarbonImmutable::parse(sprintf('%04d-%02d-01', $year, $month))->startOfDay();
         $lastOfMonth = $firstOfMonth->endOfMonth()->startOfDay();
 

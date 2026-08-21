@@ -8,18 +8,8 @@ use Modules\Sync\Internal\Config\MergeRulesRegistry;
 
 uses(RefreshDatabase::class);
 
-/*
- * Contract test for Req 9/10 (999.6-01-PLAN.md), mirroring
- * EnvelopeSettingsRegistryColumnsTest exactly.
- *
- * Asserts requiredCreateColumns('saved_reports') is a SUBSET of the
- * migration's actual NOT-NULL-without-default columns (excluding the
- * auto-increment primary key), and pins the exact expected set per
- * 999.6-PATTERNS.md § "MergeRulesRegistry.php (add saved_reports entry)"
- * (D-02, Pitfall 5): name, definition. `pinned` carries a DB-level
- * default(false) so it is deliberately excluded even though NOT NULL;
- * `pin_order` is nullable.
- */
+// `pinned` carries a DB-level default, so it is excluded even though it is NOT
+// NULL, and `pin_order` is nullable.
 
 it('MergeRulesRegistry saved_reports _create_required is a subset of the real NOT-NULL-without-default columns', function (): void {
     $connection = app(DatabaseManager::class)->connection();

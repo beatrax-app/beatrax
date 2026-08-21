@@ -1,32 +1,24 @@
 @use('Modules\Core\Public\Support\Lang')
 @php
-    use Brick\Math\BigDecimal;
-    use Brick\Math\RoundingMode;
     use Carbon\CarbonImmutable;
     use Modules\Ledger\Public\ValueObjects\Money;
+    use Modules\Ledger\Public\ValueObjects\MoneyInput;
+    use Modules\Ledger\Public\ValueObjects\Rate;
 
-    // EUR amounts render in Dutch locale; non-EUR amounts in US English
-    // locale so the symbol prefix matches the user's mental model.
-    // brick/money routes the locale through ext-intl's NumberFormatter.
-    $fmt = static fn (Money $money): string => $money->currency() === 'EUR'
-        ? $money->format('nl_NL')
-        : $money->format('en_US');
+    $fmt = static fn (Money $money): string => $money->format();
 
-    // FX-rate display: scale the persisted decimal(18,8) string to three
-    // decimals via BigDecimal so the value never crosses the float
-    // boundary. number_format() with a float cast would silently corrupt
-    // FX precision; the integer-only money rule extends to rate display.
-    $fxRateDisplay = $transaction->fx_rate_used === null
-        ? null
-        : (string) BigDecimal::of($transaction->fx_rate_used)
-            ->toScale(3, RoundingMode::HalfUp);
+    // Rate, not number_format(): a float cast would silently corrupt the
+    // persisted decimal(18,8) precision, which is the whole reason the
+    // column is read as a string.
+    $fxRate = $transaction->fx_rate_used === null ? null : Rate::of($transaction->fx_rate_used);
+    $fxRateDisplay = $fxRate === null ? null : (string) $fxRate->toScale(3);
 @endphp
 
 <div>
     {{-- Tax tag picker — rendered once per page (not per row). --}}
     @include('tax::components.tax-tag-popover')
 
-    {{-- Mobile top bar (D-05): back affordance targeting /transactions parent list.
+    {{-- Mobile top bar: back affordance targeting /transactions parent list.
          Visible only at <1024px (CSS .top-bar rule sets display:none at >=1024px).
          The page title is "Transaction" + the posted date for context. --}}
     <x-core::mobile-top-bar
@@ -39,7 +31,7 @@
             <header class="space-y-1">
                 <div class="flex items-center gap-3">
                     <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('ledger::detail.heading') }}</h1>
-                    {{-- Cleared/uncleared/reconciled badge + toggle (SC-1, D-11). --}}
+                    {{-- Cleared/uncleared/reconciled badge + toggle. --}}
                     <x-ledger::cleared-badge :transaction="['id' => $transaction->id, 'status' => $clearedStatus ?? \Modules\Ledger\Public\Enums\ClearedStatus::Cleared->value]" />
                 </div>
                 <p class="text-sm text-slate-500 dark:text-slate-400">
@@ -55,11 +47,11 @@
                             <a
                                 href="{{ route('counterparties.profile', ['slug' => $transaction->counterparty->slug]) }}"
                                 wire:navigate
-                                class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
+                                class="break-words underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
                                 data-testid="tx-detail-counterparty-link"
                             >{{ $transaction->counterparty_name ?? '—' }}</a>
                         @else
-                            <span data-testid="tx-detail-counterparty-text">{{ $transaction->counterparty_name ?? '—' }}</span>
+                            <span class="break-words" data-testid="tx-detail-counterparty-text">{{ $transaction->counterparty_name ?? '—' }}</span>
                         @endif
                     </dd>
                 </dl>
@@ -89,8 +81,8 @@
                 @endif
             </div>
 
-            {{-- Split editor (Phase 13.1 Plan 05, UI-SPEC §7): inline, gated to
-                 non-transfer types (Req 6, D-07/D-08). Placed between the
+            {{-- Split editor (UI-SPEC §7): inline, gated to
+                 non-transfer types. Placed between the
                  money dl and Reclassify per §7.1 — category is the most
                  fundamental fact about a transaction after its amount. --}}
             @if ($isSplittable ?? false)
@@ -110,14 +102,14 @@
                                     {{ $transaction->category?->name ?? '—' }}
                                 </p>
                             </div>
-                            <button
-                                type="button"
+                            <x-core::secondary-button
+                                size="sm"
+                                class="shadow-sm"
                                 wire:click="openSplitEditor"
-                                class="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
                                 data-testid="split-open-button"
                             >
                                 {{ Lang::get('ledger::detail.split.open') }}
-                            </button>
+                            </x-core::secondary-button>
                         </div>
                     @else
                         {{-- §7.3 Editor — open state. --}}
@@ -129,7 +121,7 @@
                                 {{ Lang::get('ledger::detail.split.total', ['amount' => $fmt(Money::ofMinor($transaction->settled_amount_minor, $transaction->settled_currency))]) }}
                             </p>
                             @if ($hasPersistedSplit)
-                                {{-- D-06: tax ownership moves to legs once a split is persisted. --}}
+                                {{-- Tax ownership moves to legs once a split is persisted. --}}
                                 <p class="text-xs text-slate-400 dark:text-slate-500" data-testid="split-tax-ownership-note">
                                     {{ Lang::get('ledger::detail.split.tax_per_category') }}
                                 </p>
@@ -189,31 +181,25 @@
                                              own aria-label, so the visible text beside it is the
                                              same string rather than a second, unattached name. --}}
                                         <span class="inline-flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                                            <button
-                                                type="button"
+                                            {{-- :disabled, not @disabled — a directive inside a component
+                                                 tag defeats the tag compiler and ships it as raw HTML. --}}
+                                            <x-core::switch
+                                                :on="(bool) ($leg['tax'] ?? false)"
+                                                :label="Lang::get('ledger::detail.split.tax_deductible')"
                                                 wire:click="toggleLegTax({{ $index }})"
-                                                @disabled($leg['id'] === null)
-                                                role="switch"
-                                                aria-checked="{{ ($leg['tax'] ?? false) ? 'true' : 'false' }}"
-                                                aria-label="{{ Lang::get('ledger::detail.split.tax_deductible') }}"
-                                                class="switch {{ ($leg['tax'] ?? false) ? 'switch--on' : '' }}"
+                                                :disabled="$leg['id'] === null"
                                                 data-testid="split-leg-tax-toggle-{{ $index }}"
-                                            >
-                                                <span class="switch__thumb"></span>
-                                            </button>
+                                            />
                                             {{ Lang::get('ledger::detail.split.tax_deductible') }}
                                         </span>
                                     </div>
 
-                                    <button
-                                        type="button"
+                                    <x-core::emoji-action
+                                        :label="Lang::get('ledger::detail.split.remove_leg_aria')"
+                                        tone="danger"
                                         wire:click="removeLeg({{ $index }})"
-                                        class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
-                                        aria-label="{{ Lang::get('ledger::detail.split.remove_leg_aria') }}"
                                         data-testid="split-leg-remove-{{ $index }}"
-                                    >
-                                        &times;
-                                    </button>
+                                    >🗑️</x-core::emoji-action>
                                 </div>
                             @endforeach
                         </div>
@@ -254,18 +240,18 @@
                         </div>
 
                         <div class="flex flex-wrap items-center gap-3">
-                            <button
-                                type="button"
+                            <x-core::neutral-button
+                                size="sm"
+                                class="shadow-sm disabled:cursor-not-allowed disabled:bg-slate-300"
+                                :disabled="$remainingMinor !== 0 || count($legs) < 2"
                                 wire:click="saveSplit"
                                 wire:loading.attr="disabled"
                                 wire:target="saveSplit"
-                                @disabled($remainingMinor !== 0 || count($legs) < 2)
-                                class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 dark:bg-slate-100 dark:text-slate-900"
                                 data-testid="split-save-button"
                             >
                                 <span wire:loading.remove wire:target="saveSplit">{{ Lang::get('ledger::detail.split.save') }}</span>
                                 <span wire:loading wire:target="saveSplit">{{ Lang::get('ledger::detail.split.saving') }}</span>
-                            </button>
+                            </x-core::neutral-button>
 
                             <button
                                 type="button"
@@ -308,22 +294,32 @@
                         @if ($confirmUnsplit)
                             <div class="space-y-2" aria-live="polite" aria-atomic="true" data-testid="split-unsplit-confirm">
                                 <p class="text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('ledger::detail.split.restore_single') }}</p>
-                                <div class="flex flex-wrap items-center gap-3">
-                                    @foreach ($legs as $index => $leg)
-                                        @php
-                                            $radioCat = collect($splitCategories)->firstWhere('id', (int) ($leg['categoryId'] ?? 0));
-                                        @endphp
-                                        <label class="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-                                            <input
-                                                type="radio"
-                                                name="unsplit-survivor"
-                                                wire:click="selectUnsplitSurvivor({{ $index }})"
-                                                @checked($unsplitSurvivorIndex === $index)
-                                            >
-                                            {{ $radioCat->path ?? '—' }} €{{ $leg['amount'] }}
-                                        </label>
-                                    @endforeach
-                                </div>
+                                {{-- Without the legend a screen reader reads each radio with
+                                     nothing saying what is being chosen. sr-only because the
+                                     sentence above already asks it on screen. --}}
+                                <fieldset>
+                                    <legend class="sr-only">{{ Lang::get('ledger::detail.split.survivor_legend') }}</legend>
+                                    <div class="flex flex-wrap items-center gap-3">
+                                        @foreach ($legs as $index => $leg)
+                                            @php
+                                                $radioCat = collect($splitCategories)->firstWhere('id', (int) ($leg['categoryId'] ?? 0));
+
+                                                // Parsed back from the string the user typed so the symbol
+                                                // and grouping come from the leg's currency, not a literal €.
+                                                $radioMinor = MoneyInput::tryToMinor((string) ($leg['amount'] ?? ''));
+                                            @endphp
+                                            <label class="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                                                <input
+                                                    type="radio"
+                                                    name="unsplit-survivor"
+                                                    wire:click="selectUnsplitSurvivor({{ $index }})"
+                                                    @checked($unsplitSurvivorIndex === $index)
+                                                >
+                                                {{ $radioCat->path ?? '—' }} {{ $radioMinor === null ? '—' : $fmt(Money::ofMinor($radioMinor, $transaction->settled_currency)) }}
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                </fieldset>
                                 <div class="flex items-center gap-3">
                                     <button
                                         type="button"
@@ -347,8 +343,8 @@
                 </section>
             @endif
 
-            {{-- Tax badge: sits next to the reclassify section per D-01.
-                 Suppressed once the transaction is split (D-06) — tax
+            {{-- Tax badge: sits next to the reclassify section.
+                 Suppressed once the transaction is split — tax
                  ownership moves to the legs (see the Split section above). --}}
             @if (isset($txTaxRow) && ! ($hasPersistedSplit ?? false))
                 <section
@@ -391,19 +387,19 @@
                         <option value="">{{ Lang::get('ledger::detail.reclassify.choose_option') }}</option>
                         @foreach (\Modules\Ledger\Public\Enums\TransactionType::cases() as $type)
                             @if ($type->value !== $transaction->type)
-                                <option value="{{ $type->value }}">{{ $type->value }}</option>
+                                <option value="{{ $type->value }}">{{ Lang::get('ledger::detail.type_label.'.$type->value) }}</option>
                             @endif
                         @endforeach
                     </select>
 
-                    <button
-                        type="button"
+                    <x-core::neutral-button
+                        size="sm"
+                        class="shadow-sm disabled:cursor-not-allowed disabled:bg-slate-300"
+                        :disabled="$reclassifyType === ''"
                         wire:click="reclassify($wire.reclassifyType)"
-                        @disabled($reclassifyType === '')
-                        class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 dark:bg-slate-100"
                     >
                         {{ Lang::get('ledger::detail.reclassify.save') }}
-                    </button>
+                    </x-core::neutral-button>
 
                     <span
                         x-show="toast"
@@ -417,7 +413,7 @@
                 </div>
             </section>
 
-            {{-- Categorization provenance panel (D-712).
+            {{-- Categorization provenance panel.
 
                  Renders inline between the Reclassify section and the
                  View chain section. Three variants per UI-SPEC:
@@ -457,14 +453,14 @@
                     ></textarea>
 
                     <div class="flex items-center gap-3">
-                        <button
-                            type="button"
+                        <x-core::neutral-button
+                            size="sm"
+                            class="shadow-sm"
                             wire:click="saveNote"
-                            class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
                             data-testid="note-save-button"
                         >
                             {{ Lang::get('ledger::detail.note.save') }}
-                        </button>
+                        </x-core::neutral-button>
 
                         @if ($noteSaved)
                             <span
@@ -511,15 +507,15 @@
                             @endforeach
                         </select>
 
-                        <button
-                            type="button"
-                            :disabled="!selectedCp"
-                            @click="$wire.reassignCounterparty(Number(selectedCp))"
-                            class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 dark:bg-slate-100 dark:text-slate-900"
+                        <x-core::neutral-button
+                            size="sm"
+                            class="shadow-sm disabled:cursor-not-allowed disabled:bg-slate-300"
+                            x-bind:disabled="!selectedCp"
+                            x-on:click="$wire.reassignCounterparty(Number(selectedCp))"
                             data-testid="counterparty-reassign-button"
                         >
                             {{ Lang::get('ledger::detail.reassign.submit') }}
-                        </button>
+                        </x-core::neutral-button>
                     </div>
                 </section>
             @endif
@@ -578,15 +574,15 @@
                                 @endforeach
                             </select>
 
-                            <button
-                                type="button"
-                                :disabled="!selectedGoal"
-                                @click="$wire.attributeToGoal(Number(selectedGoal)); selectedGoal = ''"
-                                class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 dark:bg-slate-100 dark:text-slate-900"
+                            <x-core::neutral-button
+                                size="sm"
+                                class="shadow-sm disabled:cursor-not-allowed disabled:bg-slate-300"
+                                x-bind:disabled="!selectedGoal"
+                                x-on:click="$wire.attributeToGoal(Number(selectedGoal)); selectedGoal = ''"
                                 data-testid="goal-attribution-submit"
                             >
                                 {{ Lang::get('ledger::detail.goal.submit') }}
-                            </button>
+                            </x-core::neutral-button>
                         </div>
                     @endif
                 </section>
@@ -643,8 +639,8 @@
             </section>
 
             @if (($chainAvailable ?? false) === true)
-                {{-- UI-02 / CHN-04: "View chain" trigger opens the chain
-                     drill-down drawer (D-90, first Flux flyout in the
+                {{-- "View chain" trigger opens the chain
+                     drill-down drawer (the first Flux flyout in the
                      project). Text-link styling per UI-SPEC § Chain
                      drill-down drawer — visually subordinate to the
                      Reclassify save button so the page focal hierarchy

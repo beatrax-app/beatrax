@@ -16,16 +16,9 @@ use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
 
 uses(RefreshDatabase::class, EnablesEncryptionForUser::class);
 
-/*
- * 14.1-06 Task 1 — CR-03/D-02: TransferPairer's forward arm (literal
- * accounts.iban match + alias-bridge resolveAccount()) and reverse arm
- * (whereIn('counterparty_iban', ...) replaced by narrow-then-decrypt-
- * then-in_array) both resolve under a genuinely ENCRYPTED user. Every
- * seeded row is written through RecordTransactions (not
- * Transaction::create()) so counterparty_iban is real ciphertext at
- * rest — a decrypt-of-plaintext no-op would pass these tests for the
- * wrong reason.
- */
+// Seeded through RecordTransactions, not Transaction::create(), so
+// counterparty_iban is genuine ciphertext: against plaintext, a decrypt that
+// did nothing would pass for the wrong reason.
 
 /**
  * @param  array<string, mixed>  $overrides
@@ -121,18 +114,9 @@ beforeEach(function (): void {
     $this->db = $this->app->make(DatabaseManager::class);
 });
 
-/*
- * RecordTransactions dispatches TransactionImported SYNCHRONOUSLY on
- * every insert, and the Transfers module's PairTransferCandidates
- * listener calls PairsTransferLegs::pairOne() on the JUST-INSERTED row
- * inline. Insert order therefore controls which arm fires: the row
- * inserted SECOND is the one pairOne() runs on (its partner already
- * exists in the DB). Inserting the no-iban PayPal leg FIRST then the
- * iban-carrying ASN leg SECOND exercises the FORWARD arm (the newly
- * inserted ASN row has a counterparty_iban); inserting the iban-
- * carrying ASN leg FIRST then the no-iban PayPal leg SECOND exercises
- * the REVERSE arm (the newly inserted PayPal row has none).
- */
+// TransactionImported is dispatched synchronously, so pairOne() runs inline on
+// whichever row lands second. Insert order therefore picks the arm: PayPal
+// first exercises the forward arm, the iban-carrying leg first the reverse.
 
 it('forward arm pairs via literal accounts.iban match under an encrypted user', function (): void {
     ($this->recorder)([tpCanonical([
@@ -155,9 +139,6 @@ it('forward arm pairs via literal accounts.iban match under an encrypted user', 
         'sourceRef' => 'asn-literal',
     ])], $this->user);
 
-    // Confirm the row is genuinely ciphertext at rest — a pre-fix
-    // decrypt-of-plaintext no-op would pass this test for the wrong
-    // reason.
     $storedAsnTx = $this->db->connection()->table('transactions')
         ->where('account_id', $this->bank->id)->first();
     expect($storedAsnTx->counterparty_iban)->not->toBe('PAYPAL');
@@ -258,10 +239,8 @@ it('reverse arm still narrows on the plaintext amount dimension before any decry
         'target_account_kind' => 'paypal',
     ]);
 
-    // Decoy: same alias-matching iban but the WRONG amount — must never
-    // be selected as the partner regardless of decrypt-then-match,
-    // proving the SQL amount/currency/window narrowing still runs
-    // before the PHP-side iban comparison.
+    // Decoy: the right iban, wrong amount. Picking it means the SQL narrowing
+    // no longer runs before the PHP-side iban comparison.
     ($this->recorder)([tpCanonical([
         'userId' => $this->user->id,
         'accountId' => $this->bank->id,

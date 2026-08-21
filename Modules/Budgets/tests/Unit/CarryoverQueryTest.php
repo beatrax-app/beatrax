@@ -16,25 +16,7 @@ use Modules\Ledger\Public\Services\PeriodQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * Wave 0 RED stubs for Req 2, Req 8, Req 9 (13.2-VALIDATION.md).
- *
- * CarryoverQuery (Plan 03) does not exist yet, and the genesis anchor column
- * (users.envelope_activated_at, Plan 02) does not exist on the users table
- * either — every test below is expected to fail with "class not found" /
- * "no such column", never a PHP parse error. This file pins the executable
- * contract CarryoverQuery::forUserAndPeriod() must satisfy:
- *
- *   CarryoverQuery::forUserAndPeriod(User $user, Period $period): array{
- *       toBudgetMinor: int,
- *       overspentCount: int,
- *       rows: array<int, \Modules\Budgets\Public\Dto\EnvelopeRow>,
- *   }
- *
- * D-10 formula: to-budget(m) = income(m) + poolCarry(m-1) - Sum(assigned(m)).
- * Money is asserted as integer minor units ONLY — never a float.
- */
-
+// The fold under test: to-budget(m) = income(m) + poolCarry(m−1) − Σ assigned(m).
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-07-04 10:00:00');
 
@@ -65,10 +47,8 @@ beforeEach(function (): void {
 
     $this->groceries = Category::create(['user_id' => null, 'name' => 'Groceries', 'slug' => 'carry-groceries-'.bin2hex(random_bytes(3)), 'kind' => 'expense', 'display_order' => 1]);
 
-    // Genesis anchor (D-12b): the current period is the activation month, so
-    // "before genesis" never enters these tests' fold. Plan 02 adds this
-    // column; until then every test below fails on the missing column, which
-    // is the correct Wave 0 RED cause.
+    // The current period is the activation month, so "before genesis" never
+    // enters these tests' fold.
     DB::table('users')->where('id', $this->user->id)->update([
         'envelope_activated_at' => CarbonImmutable::now()->startOfMonth(),
     ]);
@@ -78,7 +58,6 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-/** Persist an income or expense transaction dated within the given period. */
 function carryoverTx(int $userId, int $accountId, int $runId, int $settledMinor, ?int $categoryId, CarbonImmutable $postedAt): void
 {
     static $i = 400000;
@@ -107,7 +86,7 @@ function carryoverTx(int $userId, int $accountId, int $runId, int $settledMinor,
     ]);
 }
 
-it('computes to-budget as income plus carryover minus assigned, to the cent, and moves symmetrically on assign/unassign (Req 2)', function (): void {
+it('computes to-budget as income plus carryover minus assigned, to the cent, and moves symmetrically on assign/unassign', function (): void {
     $period = app(PeriodQuery::class)->current();
 
     carryoverTx($this->user->id, $this->account->id, $this->run->id, 100000, null, $period->start);
@@ -127,19 +106,17 @@ it('computes to-budget as income plus carryover minus assigned, to the cent, and
     $result = app(CarryoverQuery::class)->forUserAndPeriod($this->user, $period);
     expect($result['toBudgetMinor'])->toBe(80000);
 
-    // Assigning an additional €100 drops it by exactly that amount (Req 2 symmetry).
     $assignment->assigned_minor = 30000;
     $assignment->save();
     $result = app(CarryoverQuery::class)->forUserAndPeriod($this->user, $period);
     expect($result['toBudgetMinor'])->toBe(70000);
 
-    // Unassigning (D-06 tombstone-on-zero) restores it symmetrically.
     $assignment->delete();
     $result = app(CarryoverQuery::class)->forUserAndPeriod($this->user, $period);
     expect($result['toBudgetMinor'])->toBe(100000);
 });
 
-it('permits assigning more than available, showing a negative to-budget without throwing (Req 8)', function (): void {
+it('permits assigning more than available, showing a negative to-budget without throwing', function (): void {
     $period = app(PeriodQuery::class)->current();
 
     // No income this period at all.
@@ -157,7 +134,7 @@ it('permits assigning more than available, showing a negative to-budget without 
     expect($result['toBudgetMinor'])->not->toBeFloat();
 });
 
-it('carries a positive leftover pool forward into the next period (D-10 sticky money)', function (): void {
+it('carries a positive leftover pool forward into the next period', function (): void {
     $current = app(PeriodQuery::class)->current();
     $next = app(PeriodQuery::class)->next($current);
 
@@ -178,15 +155,12 @@ it('carries a positive leftover pool forward into the next period (D-10 sticky m
     expect($result['toBudgetMinor'])->toBe(80000);
 });
 
-it('starts the genesis period with zero pool carry and zero carried-in (D-12b)', function (): void {
+it('starts the genesis period with zero pool carry and zero carried-in', function (): void {
     $period = app(PeriodQuery::class)->current();
 
-    // NEGATIVE settled minor: carryoverTx() infers type from sign ($settledMinor
-    // < 0 => 'expense'); SpendByCategoryQuery counts spend by amount sign, not
-    // type, so a positive value here would silently land as untracked income
-    // and never contribute to `spent` (Rule 1 fixture bug fix — the original
-    // Wave 0 fixture passed +50000, which cannot produce the expense this
-    // test's own comment/assertion require).
+    // Negative on purpose: SpendByCategoryQuery counts spend by amount sign,
+    // not type, so a positive value would land as untracked income and never
+    // contribute to `spent`.
     carryoverTx($this->user->id, $this->account->id, $this->run->id, -50000, $this->groceries->id, $period->start);
 
     EnvelopeAssignment::create([
@@ -205,12 +179,11 @@ it('starts the genesis period with zero pool carry and zero carried-in (D-12b)',
     expect($row->availableMinor)->toBe(60000 - 50000);
 });
 
-it('surfaces non-EUR settled spend via nonEurSpentMinor without altering availableMinor or overspentCount (CR-01)', function (): void {
+it('surfaces non-EUR settled spend via nonEurSpentMinor without altering availableMinor or overspentCount', function (): void {
     $period = app(PeriodQuery::class)->current();
 
-    // A $9.99 Google Play charge settled in USD, categorized to Groceries.
-    // SpendByCategoryQuery keys spend by settled_currency, so this lands under
-    // "{categoryId}|USD" and must NEVER be read into the EUR envelope's spent.
+    // SpendByCategoryQuery keys spend by settled_currency, so this USD charge
+    // lands under "{categoryId}|USD" and must never reach the EUR envelope.
     Transaction::create([
         'user_id' => $this->user->id,
         'account_id' => $this->account->id,
@@ -245,16 +218,16 @@ it('surfaces non-EUR settled spend via nonEurSpentMinor without altering availab
     $result = app(CarryoverQuery::class)->forUserAndPeriod($this->user, $period);
     $row = $result['rows'][$this->groceries->id];
 
-    // EUR figures are untouched by the USD spend (no currency collapse).
     expect($row->spentMinor)->toBe(0);
     expect($row->availableMinor)->toBe(20000);
     expect($result['overspentCount'])->toBe(0);
 
-    // ...but the dropped spend is now observable, in its own currency's minor.
+    // The dropped spend stays observable, as a positive magnitude in its own
+    // currency's minor units.
     expect($row->nonEurSpentMinor)->toBe(999);
 });
 
-it('shows income zero for a future period unless real income transactions exist there (Req 7/Req 9 edge)', function (): void {
+it('shows income zero for a future period unless real income transactions exist there', function (): void {
     $current = app(PeriodQuery::class)->current();
     $future = $current;
     for ($i = 0; $i < 3; $i++) {
@@ -264,7 +237,6 @@ it('shows income zero for a future period unless real income transactions exist 
     $withoutIncome = app(CarryoverQuery::class)->forUserAndPeriod($this->user, $future);
     $baselineToBudget = $withoutIncome['toBudgetMinor'];
 
-    // A real income transaction dated inside that future period changes the number.
     carryoverTx($this->user->id, $this->account->id, $this->run->id, 25000, null, $future->start->addDays(2));
 
     $withIncome = app(CarryoverQuery::class)->forUserAndPeriod($this->user, $future);

@@ -9,17 +9,9 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
 
 uses(RefreshDatabase::class);
 
-/*
- * DeviceRegistryServiceTest — PAIR-01/PAIR-03 confirmed-only deviceKeys filter.
- *
- * RED until Plan 02 ships DeviceRegistryService. References the planned public
- * FQCN Modules\Sync\Public\Services\DeviceRegistryService. Failure is
- * "class not found".
- *
- * Security invariant (RESEARCH Pitfall 2 / STRIDE T-12-03): deviceKeys() must
- * return ONLY rows whose confirmed_at IS NOT NULL. An unconfirmed device must
- * never appear in the map that OpLogReplayer trusts.
- */
+// deviceKeys() must return confirmed rows only. An unconfirmed device
+// appearing in that map would put a key the user never verified into the set
+// the replayer treats as trusted.
 
 function registryUser(string $username = 'registry-user'): User
 {
@@ -70,7 +62,6 @@ it('returns only confirmed devices keyed by device_id', function (): void {
     expect($keys)->toHaveKey('device-confirmed');
     expect($keys['device-confirmed'])->toBe($confirmedEd);
 
-    // The unconfirmed device's key must be ABSENT.
     expect($keys)->not->toHaveKey('device-unconfirmed');
 });
 

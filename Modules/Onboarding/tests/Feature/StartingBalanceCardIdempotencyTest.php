@@ -7,15 +7,9 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Onboarding\Internal\Http\Livewire\StartingBalanceCard;
 
-/*
- * Confirms the card emits a `starting-balance.confirmed` event with a
- * stable payload across every confirm/save cycle. The first-import
- * step listens for the event and aggregates the payload into a per-
- * account `$balanceConfirmations` map — the listener is keyed on
- * `accountId` so a repeat dispatch overwrites the prior entry, but the
- * dispatch payload must always carry the same three keys so the parent
- * never sees a half-populated row.
- */
+// The parent keys $balanceConfirmations on accountId, so a repeat dispatch
+// overwrites the prior entry — every payload must carry all three keys or
+// the parent ends up with a half-populated row.
 
 beforeEach(function (): void {
     $this->user = User::query()->create([
@@ -47,7 +41,6 @@ it('emits starting-balance.confirmed with the same payload across confirm and sa
         'state' => 'detected',
     ]);
 
-    // First confirm — dispatches with the detector's values.
     $component
         ->call('confirm')
         ->assertDispatched(
@@ -57,9 +50,6 @@ it('emits starting-balance.confirmed with the same payload across confirm and sa
             date: '2026-02-01',
         );
 
-    // Re-edit and save with a tweaked value — the listener overwrites
-    // the prior entry, but the dispatch payload still carries all
-    // three keys with the new values.
     $component
         ->call('startEdit')
         ->set('editedMinor', 300000)

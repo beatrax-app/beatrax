@@ -12,10 +12,6 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Actions\RecordTransactions;
 
 /**
- * Records the TransactionImported events the synchronous dispatcher saw, so
- * the tests can prove exactly one event fires per inserted row and none for
- * ignored duplicates.
- *
  * @var list<TransactionImported>
  */
 $recorded = [];
@@ -45,9 +41,8 @@ beforeEach(function () use (&$recorded): void {
         'status' => 'previewed',
     ]);
 
-    // Subscribe a recording listener for the duration of the test. Uses the
-    // container-bound Dispatcher (no facade) so the constructor-DI'd
-    // dispatcher inside RecordTransactions emits to the same instance.
+    // The container-bound Dispatcher, so this listener sits on the same
+    // instance RecordTransactions has injected.
     /** @var Dispatcher $events */
     $events = $this->app->make(Dispatcher::class);
     $events->listen(
@@ -57,12 +52,9 @@ beforeEach(function () use (&$recorded): void {
         },
     );
 
-    // Build $count canonical DTOs whose fingerprints are guaranteed distinct.
-    // Varying bookedAt seconds, counterparty_normalized, source_row_index and
-    // source_ref per row yields one unique fingerprint tuple per index, so
-    // every row is a genuine insert and a re-run's duplicates line up
-    // one-for-one. Lives here as a $this-bound closure because canonical() is
-    // a protected TestCase method — a free function could not reach it.
+    // Every row varies the fingerprint tuple, so each is a genuine insert and a
+    // re-run's duplicates line up one-for-one. A $this-bound closure because
+    // canonical() is protected.
     $this->distinctBatch = function (int $count): array {
         $rows = [];
 
@@ -96,10 +88,8 @@ it('persists every row and emits one event per insert across multiple chunks', f
     expect($result->inserted)->toBe(1200);
     expect($result->duplicates)->toBe(0);
 
-    // Same persisted rows: all 1,200 land in the ledger.
     expect(Transaction::query()->where('user_id', $this->user->id)->count())->toBe(1200);
 
-    // Exactly one TransactionImported event per inserted row.
     expect($recorded)->toHaveCount(1200);
 });
 
@@ -108,25 +98,21 @@ it('ignores duplicates straddling a chunk boundary on re-run with no events', fu
 
     $rows = ($this->distinctBatch)(1200);
 
-    // First run commits everything (1,200 events fire here).
     $first = $action($rows, $this->user);
 
     expect($first->inserted)->toBe(1200);
     expect($first->duplicates)->toBe(0);
     expect($recorded)->toHaveCount(1200);
 
-    // Reset so the re-run's event count is measured cleanly.
     $recorded = [];
 
-    // Re-run the identical batch. The duplicates span every chunk boundary
-    // (rows 499/500 and 999/1000 straddle a 500-row chunk edge), so this
-    // proves insertOrIgnore dedups across chunk commits, not just within one.
+    // The duplicates straddle both 500-row chunk edges, so this proves
+    // insertOrIgnore dedups across chunk commits, not only within one.
     $second = $action($rows, $this->user);
 
     expect($second->inserted)->toBe(0);
     expect($second->duplicates)->toBe(1200);
 
-    // No row-count growth and no events for ignored duplicates.
     expect(Transaction::query()->where('user_id', $this->user->id)->count())->toBe(1200);
     expect($recorded)->toHaveCount(0);
 });

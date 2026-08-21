@@ -12,31 +12,6 @@ use Modules\DevMode\Internal\Enums\AuditEvent;
 use Modules\DevMode\Internal\Http\Livewire\QueueInspectorPage;
 use Modules\DevMode\Internal\Http\Livewire\TripleGateModal;
 
-/*
- * Triple-gate enforcement on bulk delete.
- *
- * Bulk delete is the destructive sibling of bulk retry. The
- * triple-gate applies to bulk DESTRUCTIVE queue actions: the
- * bulk-delete affordance routes through the global TripleGateModal
- * (the same modal the artisan runner uses for DESTRUCTIVE
- * commands).
- *
- * The surface is two-layered (defense-in-depth, mirroring the
- * artisan-runner pattern):
- *   1. QueueInspectorPage::bulkDeleteRequest() dispatches
- *      `triple-gate:open` — the user-visible affordance.
- *   2. QueueInspectorPage::executeBulkDelete() is the listener for
- *      `triple-gate:confirmed`; it discriminates by the command
- *      string AND re-validates the three gates server-side so a
- *      tampered Livewire payload still cannot reach the delete
- *      path.
- *
- * The gate itself enforces the three locks server-side
- * (DevModeFlag + session.advanced + typed-name); those tests live
- * in TripleGateTest. This file exercises the bulk-delete-specific
- * round-trip end-to-end.
- */
-
 function queueGateUser(string $username): User
 {
     return User::query()->create([
@@ -55,13 +30,8 @@ function queueGateSetDevModeFlag(bool $on): void
     $config->set('app.dev_mode', $on);
 }
 
-/**
- * Open all three triple-gate locks for the current request.
- * executeBulkDelete re-validates the gates as defense-in-depth on
- * top of TripleGateModal's enforcement, so any test that fires
- * `triple-gate:confirmed` directly (bypassing the modal) must seed
- * the same three signals.
- */
+// executeBulkDelete re-checks all three gates itself, so a test that fires
+// `triple-gate:confirmed` directly still has to seed them.
 function queueGateOpenAllGates(): void
 {
     queueGateSetDevModeFlag(true);
@@ -110,7 +80,6 @@ it('the rows are NOT deleted until the triple-gate confirmed event fires', funct
         ->set('selected', ['uuid-gate-untouched-1', 'uuid-gate-untouched-2'])
         ->call('bulkDeleteRequest');
 
-    // The dispatch happened but no listener has fired yet → rows present.
     expect(DB::table('failed_jobs')->whereIn('uuid', ['uuid-gate-untouched-1', 'uuid-gate-untouched-2'])->count())->toBe(2);
 });
 
@@ -124,11 +93,8 @@ it('the triple-gate:confirmed event with the queue.bulk.delete discriminator tri
 
     Livewire::test(QueueInspectorPage::class, ['tab' => 'failed'])
         ->set('selected', ['uuid-confirmed-1', 'uuid-confirmed-2'])
-        // Simulate the gate's confirmed dispatch back to the page —
-        // mirrors what TripleGateModal::confirm() emits after the
-        // three gates pass. The defense-in-depth re-validation in
-        // executeBulkDelete reads dev_mode flag + session.advanced +
-        // confirmed_typed, so the payload must carry the typed token.
+        // Shaped exactly as TripleGateModal::confirm() emits it — the typed
+        // token has to be in the payload for the listener's own re-check.
         ->dispatch(
             'triple-gate:confirmed',
             command: 'queue.bulk.delete',
@@ -136,10 +102,8 @@ it('the triple-gate:confirmed event with the queue.bulk.delete discriminator tri
             confirmed_typed: 'beatrax',
         );
 
-    // Both rows should now be gone.
     expect(DB::table('failed_jobs')->whereIn('uuid', ['uuid-confirmed-1', 'uuid-confirmed-2'])->count())->toBe(0);
 
-    // An audit row with action=queue.bulk.delete should have landed.
     $auditRow = DB::table('dev_mode_audit')->latest('id')->first();
     expect($auditRow)->not->toBeNull();
     $properties = json_decode((string) $auditRow->properties, true);
@@ -160,15 +124,13 @@ it('a triple-gate:confirmed event with a DIFFERENT command (NOT queue.bulk.delet
         ->set('selected', ['uuid-not-deleted-1', 'uuid-not-deleted-2'])
         ->dispatch(
             'triple-gate:confirmed',
-            // Simulate an unrelated destructive command's confirm event
-            // (artisan-tier destructive) arriving while the inspector
-            // is mounted with queue rows selected.
+            // An artisan-tier confirm arriving while the inspector happens to
+            // be mounted with rows selected.
             command: 'db:restore',
             args: ['from' => '/tmp/backup.sqlite'],
             confirmed_typed: 'beatrax',
         );
 
-    // Queue rows untouched — the discriminator did its job.
     expect(DB::table('failed_jobs')->whereIn('uuid', ['uuid-not-deleted-1', 'uuid-not-deleted-2'])->count())->toBe(2);
 });
 
@@ -228,7 +190,6 @@ it('executeBulkDelete refuses when the dev_mode flag flipped off between gate co
             confirmed_typed: 'beatrax',
         );
 
-    // Defense-in-depth re-validation refused the listener — rows untouched.
     expect(DB::table('failed_jobs')->whereIn('uuid', ['uuid-dim-1', 'uuid-dim-2'])->count())->toBe(2);
 });
 
@@ -253,10 +214,8 @@ it('executeBulkDelete refuses when the confirmed_typed token is wrong (defense-i
 });
 
 it('the triple-gate is enforced through the global TripleGateModal — its three gates apply to queue bulk delete (composition check)', function (): void {
-    // This is a composition check — the actual gate-by-gate
-    // rejection paths are exhaustively covered by TripleGateTest.
-    // Here we just verify the modal still rejects when the three
-    // locks aren't satisfied (Gate 2: session.advanced not set).
+    // Only that the modal is in the path — TripleGateTest covers the
+    // gate-by-gate rejections.
     $user = queueGateUser('q-gate-composition');
     queueGateSetDevModeFlag(true);
     $this->actingAs($user);

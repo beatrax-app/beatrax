@@ -2,20 +2,9 @@
 
 declare(strict_types=1);
 
-/*
-|--------------------------------------------------------------------------
-| Queue Configuration
-|--------------------------------------------------------------------------
-|
-| The database driver is the shipped default. It is SQLite-backed and needs
-| no Redis daemon, so the desktop installer ships with zero external service
-| dependencies. The `jobs`, `job_batches`, and `cache_locks` tables back this
-| driver alongside `failed_jobs`.
-|
-| The redis connection remains defined for the developer's local dev box, where
-| `QUEUE_CONNECTION=redis` selects it.
-*/
-
+// The database driver is the shipped default so the desktop installer carries
+// no external service dependency; redis stays defined only for a dev box that
+// sets QUEUE_CONNECTION=redis.
 return [
 
     'default' => env('QUEUE_CONNECTION', 'database'),

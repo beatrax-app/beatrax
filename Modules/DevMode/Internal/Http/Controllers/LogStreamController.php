@@ -15,9 +15,6 @@ use Modules\DevMode\Internal\Logging\RedactSecretsProcessor;
 use Modules\DevMode\Internal\Process\FileTailer;
 use SplFileObject;
 
-/**
- * @link ../../../../../.docs/features/dev-mode/architecture.md
- */
 final readonly class LogStreamController
 {
     use CoercesScalars;
@@ -31,9 +28,8 @@ final readonly class LogStreamController
         private LogFileStats $stats,
     ) {}
 
-    // Single-shot poll: read new bytes past `?since=` (with rotation
-    // detection via `?inode=`), apply redaction, return JSON — no
-    // streaming, no long-running PHP process.
+    // A single-shot poll, deliberately not a stream: no PHP process is left
+    // running between polls.
     public function poll(Request $request): JsonResponse
     {
         $payload = $this->validator->make(
@@ -57,10 +53,8 @@ final readonly class LogStreamController
         $currentSize = self::sizeOf($path) ?? 0;
 
         $reset = false;
-        // Rotation detection: inode change (logrotate truncate+rename
-        // or midnight day rollover) OR client offset beyond current
-        // file size (logrotate copytruncate, fresh subscriber after a
-        // long pause). Either way the client must zero its cursor.
+        // Two rotation shapes: a new inode (truncate+rename, day rollover) and
+        // an offset past EOF (copytruncate). Both mean "zero your cursor".
         if (($clientInode !== null && $currentInode !== null && $clientInode !== $currentInode)
             || $offset > $currentSize) {
             $offset = 0;
@@ -81,9 +75,6 @@ final readonly class LogStreamController
         ]);
     }
 
-    // Returns the requested line and +/-radius surrounding lines from
-    // the daily log for the requested date; `line` clamps to
-    // [0, lineCount-1] via SplFileObject natural EOF semantics.
     public function context(Request $request): JsonResponse
     {
         $payload = $this->validator->make(
@@ -128,10 +119,8 @@ final readonly class LogStreamController
         $file->seek(PHP_INT_MAX);
         $total = $file->key() + 1;
 
-        // Clamp the requested line to the file's valid range before
-        // sizing the radius window so an out-of-range ?line=999999
-        // against a 5-line file returns the tail context the operator
-        // can see, not an empty array (start > end edge case).
+        // Clamped before the window is sized: an out-of-range ?line=999999
+        // against a 5-line file would otherwise give start > end and no rows.
         $targetLine = min(max(0, $targetLine), max(0, $total - 1));
 
         $start = max(0, $targetLine - $radius);
@@ -160,9 +149,8 @@ final readonly class LogStreamController
         ]);
     }
 
-    // The page polls this on a slower cadence (3s) than the main 1s
-    // tail poll so the O(N) file parse cost only fires when the
-    // operator is looking.
+    // Polled at 3s rather than the tail's 1s, because this one re-parses the
+    // whole file rather than reading forward from an offset.
     public function stats(): JsonResponse
     {
         $today = $this->stats->forToday();
@@ -185,9 +173,6 @@ final readonly class LogStreamController
         ]);
     }
 
-    // Coerces the optional `?inode=` cursor to an int: passes ints
-    // through, parses numeric strings, and treats anything else as absent
-    // so a missing or garbage inode simply skips the rotation compare.
     private static function nullableInt(mixed $value): ?int
     {
         if (is_int($value)) {

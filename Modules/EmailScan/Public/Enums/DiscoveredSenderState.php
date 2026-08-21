@@ -4,13 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\EmailScan\Public\Enums;
 
-// The review state of a discovered_senders row: a `candidate` the scan
-// surfaced, `added` to the known-senders list, or `dismissed`. The column
-// stays string (enforced by a trigger); this enum is the one canonical
-// spelling callers map through.
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
+// The column stays a string, enforced by a trigger; this enum is the one
+// canonical spelling every caller maps through.
 enum DiscoveredSenderState: string
 {
     case Candidate = 'candidate';

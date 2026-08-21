@@ -11,20 +11,6 @@ use Modules\Forecasting\Models\ForecastScenario;
 
 uses(RefreshDatabase::class);
 
-/*
- * /forecast side-by-side rendering coverage.
- *
- *   - When scenarioId is null, only the baseline chart renders.
- *   - When scenarioId !== null, both baseline and scenario charts
- *     render with a shared y-axis (RESEARCH Pitfall 2).
- *   - The Net diff tile renders three horizon delta numerics with
- *     direction-aware tints.
- *   - The wire:poll.2s element is conditionally rendered only when
- *     the latest forecast_runs.status is pending or running
- *     (RESEARCH Pitfall 3 — polling auto-stops on completion).
- *   - Cross-user 404 on scenarioId belonging to another user.
- */
-
 function sbsUser(string $username = 'sbs-user'): User
 {
     return User::query()->create([
@@ -246,7 +232,6 @@ it('computes a shared y-axis range across both panels', function (): void {
     $resp = $this->actingAs($this->user)->get('/forecast?account='.$this->accountId.'&scenarioId='.$scenario->id);
     $resp->assertOk();
     $html = $resp->getContent();
-    // Both panels must contain the same yaxis min and max — find both yaxis fragments and confirm they are identical.
     preg_match_all('/&quot;yaxis&quot;:\{&quot;min&quot;:([\-0-9.]+),&quot;max&quot;:([\-0-9.]+)/', (string) $html, $matches);
     expect(count($matches[1] ?? []))->toBeGreaterThanOrEqual(2);
     expect($matches[1][0])->toBe($matches[1][1]);

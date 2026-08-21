@@ -11,16 +11,6 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 
-/*
- * Schema-level coverage for the Phase 5 Wave 1 chain_links + card_statements
- * + card_statement_credits tables.
- *
- * The tests interact via the raw DatabaseManager query builder (no
- * Eloquent yet — those models land in Task 2). The intent is to prove
- * the CHECK triggers + UNIQUE constraint + FK cascades fire at the DB
- * layer regardless of write path.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -70,12 +60,6 @@ beforeEach(function (): void {
     $this->toTx = makeChainTx($this->user, $this->icsAccount, $this->run, 2);
 });
 
-/**
- * Seeds a synthetic transaction row via raw DatabaseManager insert so
- * the schema test doesn't depend on Eloquent or the Phase-1 writer
- * service. Each call yields a UNIQUE-safe row by varying amount + the
- * counterparty fingerprint via $index.
- */
 function makeChainTx(User $user, Account $account, ImportRun $run, int $index): Transaction
 {
     return Transaction::query()->create([
@@ -100,7 +84,7 @@ function makeChainTx(User $user, Account $account, ImportRun $run, int $index): 
     ]);
 }
 
-it('creates the three Wave 1 tables with the documented column lists', function (): void {
+it('creates the three chain-link tables with the documented column lists', function (): void {
     expect(Schema::hasTable('chain_links'))->toBeTrue();
     expect(Schema::hasTable('card_statements'))->toBeTrue();
     expect(Schema::hasTable('card_statement_credits'))->toBeTrue();
@@ -119,7 +103,7 @@ it('creates the three Wave 1 tables with the documented column lists', function 
     foreach ([
         'id', 'user_id', 'account_id', 'import_run_id',
         'period_start', 'period_end',
-        'total_amount_minor', 'open_balance_minor', 'state',
+        'total_amount_minor', 'open_balance_minor', 'currency', 'state',
         'created_at', 'updated_at',
     ] as $col) {
         expect($cardStatementCols)->toContain($col);
@@ -128,7 +112,7 @@ it('creates the three Wave 1 tables with the documented column lists', function 
     $creditCols = Schema::getColumnListing('card_statement_credits');
     foreach ([
         'id', 'user_id', 'from_statement_id', 'to_statement_id',
-        'amount_minor', 'reason', 'created_at', 'updated_at',
+        'amount_minor', 'currency', 'reason', 'created_at', 'updated_at',
     ] as $col) {
         expect($creditCols)->toContain($col);
     }
@@ -293,19 +277,15 @@ it('cascades card_statement_credits when from_statement is deleted and nulls to_
         'updated_at' => '2026-05-16 00:00:00',
     ]);
 
-    // Deleting the to_statement nulls the FK on the credit row.
     $this->conn->table('card_statements')->where('id', $idB)->delete();
     $survivor = $this->conn->table('card_statement_credits')->where('id', $creditId)->first(['to_statement_id', 'from_statement_id']);
     expect($survivor)->not->toBeNull();
     expect($survivor->to_statement_id)->toBeNull();
     expect((int) $survivor->from_statement_id)->toBe($idA);
 
-    // Deleting the from_statement cascades the credit row away.
     $this->conn->table('card_statements')->where('id', $idA)->delete();
     expect($this->conn->table('card_statement_credits')->where('id', $creditId)->count())->toBe(0);
 });
-
-// Tests 7a / 7b / 7c — chain_links.to_transaction_id conditional-NULL trigger pair.
 
 it('permits a NULL to_transaction_id for exceeded-tolerance ics_bulk_settle candidates', function (): void {
     $statementId = (int) $this->conn->table('card_statements')->insertGetId([

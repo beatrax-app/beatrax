@@ -17,30 +17,6 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 uses(RefreshDatabase::class);
 
-/*
- * Live-distribution sampled end-to-end test for the seed-rule pipeline.
- *
- * Setup:
- *   1. Create a User.
- *   2. Run DefaultCategoryTreeSeeder (categories must exist before rules).
- *   3. Run DefaultCategorizationRuleSeeder for the user.
- *   4. Create one synthetic Account using only Account::$fillable keys
- *      (name, slug, kind, iban, default_currency — never display_name or
- *      currency, which would be silently dropped).
- *   5. Load the live-distribution fixture (≈200 rows, 56 distinct
- *      counterparties, frequency-weighted multiplicity matching the
- *      2026-05-27 production snapshot).
- *
- * Test contract:
- *   - 8 universal-merchant anchor rows land in their expected categories.
- *   - 2 anonymised personal-identifier anchor rows stay uncategorised.
- *   - The ratio (categorised / total) is ≥0.40 against the live-distribution
- *     fixture — the ≥40% gate against a representative sample, not a
- *     trivial hand-built table.
- *   - Every categorised row carries `auto_category_provenance` matching
- *     the shape `ApplyAutoCategoryStage` produces.
- */
-
 beforeEach(function (): void {
     $this->app->make(DefaultCategoryTreeSeeder::class)->run();
 
@@ -72,20 +48,11 @@ beforeEach(function (): void {
     ]);
 });
 
-/**
- * Build a CanonicalTransaction for a fixture row. The row's counterparty
- * lands as both `counterpartyName` (raw) and `counterpartyNormalized`
- * (lowercase) so the RuleEvaluator's case-insensitive comparison
- * matches.
- */
 function buildCanonical(int $userId, int $accountId, int $importRunId, int $rowIndex, string $counterparty, string $description): CanonicalTransaction
 {
-    // Vary bookedAt + amount per row so each row produces a unique
-    // fingerprint and RecordTransactions does not silently dedupe rows
-    // that share counterparty+date. Without this variance, many fixture
-    // rows with the same posted_at + amount + counterparty would collapse
-    // to one persisted transaction, breaking the "persisted == categorised"
-    // assertion further below.
+    // Vary bookedAt and amount per row: without it the fixture rows sharing
+    // posted_at + amount + counterparty collapse to one persisted transaction
+    // on fingerprint, and the "persisted == categorised" assertion breaks.
     $minutes = $rowIndex % 60;
     $hours = intdiv($rowIndex, 60) % 24;
     $dayOffset = intdiv($rowIndex, 24 * 60);
@@ -231,14 +198,10 @@ it('keeps anonymised personal-identifier rows uncategorised', function (): void 
     }
 });
 
-it('a migrated single-condition rule assigns the exact category the old engine would have (Req 5 parity)', function (): void {
-    // Netflix is one of the default-categorization-rules.php fixture
-    // rows, forward-migrated by 13.4-01 from a flat (field/match/value)
-    // row into one categorization_rules parent + one rule_conditions
-    // row + one rule_actions row. Driving it through the real
-    // ApplyAutoCategoryStage (RuleEngine::match + RuleApplier::applyAtImport)
-    // proves the migrated rule still lands the exact pre-existing
-    // expected category — the regression-parity proof Req 5 demands.
+it('a migrated single-condition rule assigns the exact category the old engine would have', function (): void {
+    // The Netflix seed rule was forward-migrated from a flat
+    // field/match/value row into parent + condition + action; driving it
+    // through the real stage proves it still lands the same category.
     $stage = $this->app->make(ApplyAutoCategoryStage::class);
     $canonical = buildCanonical(
         userId: $this->user->id,
@@ -262,11 +225,8 @@ it('a migrated single-condition rule assigns the exact category the old engine w
 });
 
 it('falls back to the merchant_memories category when no seed rule matches (memory fallback parity)', function (): void {
-    // "Boerderij Winkel De Groene Erf" matches none of the
-    // universal-merchant seed rules — this is exactly the RESEARCH
-    // Pattern 4 scenario: RuleEngine::match() returns zero rules with
-    // a category action, so ApplyAutoCategoryStage must fall through
-    // to merchant_memories, not leave the row uncategorised.
+    // This counterparty matches no universal-merchant seed rule, so the
+    // stage must fall through to merchant_memories rather than give up.
     $counterparty = 'Boerderij Winkel De Groene Erf';
     $normalized = mb_strtolower($counterparty);
     $groceriesId = (int) Category::withoutGlobalScopes()->whereNull('user_id')->where('slug', 'groceries')->value('id');
@@ -333,15 +293,9 @@ it('leaves a transaction with neither a matching rule nor a memory uncategorised
 });
 
 it('every personal-identifier-prefix fixture row stays uncategorised under the seed rules (fixture-vs-rules consistency)', function (): void {
-    // Regression for WR-06. The 40% ratio gate alone cannot detect a
-    // contributor adding a categorisable rule whose value collides
-    // with an `EMPLOYER_` / `FAMILY_` / `P2P_` anonymisation prefix
-    // — the only signal would be a quiet ratio drop. This test
-    // walks every fixture row whose counterparty starts with one of
-    // the documented personal-identifier prefixes and asserts the
-    // ApplyAutoCategoryStage leaves it uncategorised. A future
-    // contributor that adds a seed rule for "EMPLOYER" trips this
-    // assertion immediately at CI time.
+    // The 40% ratio gate cannot detect a new seed rule whose value collides
+    // with an `EMPLOYER_` / `FAMILY_` / `P2P_` anonymisation prefix — the only
+    // signal would be a quiet ratio drop. This walks every such row instead.
     /** @var list<array{counterparty: string, description: string}> $fixture */
     $fixture = require base_path('Modules/Categorization/tests/Fixtures/seed-rules-live-distribution.php');
 
@@ -359,10 +313,8 @@ it('every personal-identifier-prefix fixture row stays uncategorised under the s
         }
     }
 
-    // Sanity — the fixture documents EMPLOYER_, FAMILY_, P2P_,
-    // EMPLOYER_PENSION_, and P2P_BUDGET_ prefixes; the loop above
-    // must find at least one fixture row per prefix family, else
-    // the fixture (or the anonymisation scheme) has drifted.
+    // Without this the test passes vacuously once the fixture's
+    // anonymisation prefixes drift.
     expect($personalRows)->not->toBeEmpty();
 
     $rowIndex = 1000;

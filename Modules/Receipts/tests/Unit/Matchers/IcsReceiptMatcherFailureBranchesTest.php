@@ -5,13 +5,6 @@ declare(strict_types=1);
 use Modules\Receipts\Internal\Matchers\IcsReceiptMatcher;
 use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 
-/*
- * Exercises the guard arms the happy-path fixtures never reach: an empty
- * body, the <td> merchant fallback, and every "can't parse this" exit
- * from parseReceipt (no merchant, no amount, unparseable amount). All
- * resolve to unmatched rather than a mis-parsed receipt.
- */
-
 function icsFailMatcher(): IcsReceiptMatcher
 {
     return new IcsReceiptMatcher(new EmlMimeReader);
@@ -38,7 +31,7 @@ it('returns unmatched for an empty body (no text and no html to resolve)', funct
 });
 
 it('returns unmatched when a text-only body carries an amount but no merchant', function (): void {
-    // No Verkoper:/Merchant: label and no html fallback available.
+    // No Verkoper:/Merchant: label, and a text body leaves no html to fall back on.
     $body = "Beste kaarthouder,\r\nBedrag: \u{20AC} 12,34\r\nReferentienummer: XYZ999\r\n";
     $outcome = icsFailMatcher()->match(icsEml('text/plain', $body));
 

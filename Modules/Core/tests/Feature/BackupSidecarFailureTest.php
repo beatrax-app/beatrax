@@ -10,28 +10,14 @@ use Illuminate\Support\Facades\DB;
 use Modules\Core\Public\Contracts\Clock;
 use Tests\Helpers\RealSqliteFixture;
 
-/*
- * What db:backup does when the .meta.json sidecar cannot be written.
- *
- * A backup on disk with no sidecar is worse than no backup: the next run's
- * smart-skip reads the missing sidecar as "no recent backup exists" and
- * silently re-writes, so the failure has to surface. The command records a
- * critical system_alerts row and exits non-zero.
- *
- * It did not, for as long as the guards had been there. file_put_contents(),
- * chmod() and rename() raise E_WARNING on failure, and Laravel's error handler
- * converts that to an ErrorException before the `=== false` comparison runs —
- * so the throw never happened, and the caller's catch (RuntimeException) would
- * not have caught an ErrorException anyway. The whole path was dead and the
- * alert never fired.
- */
+// A backup on disk with no sidecar is worse than no backup: the next run's
+// smart-skip reads the missing sidecar as "no recent backup exists" and
+// silently re-writes, so the failure has to surface rather than be swallowed.
+
 beforeEach(function (): void {
-    // Frozen because both tests occupy a path the command is about to choose,
-    // and that path carries a seconds-resolution timestamp. The test and the
-    // command each read the clock, so on a slow runner they land in different
-    // seconds, the pre-created obstruction no longer matches, the sidecar
-    // writes cleanly and the assertion fails for a reason unrelated to the
-    // behaviour under test.
+    // Frozen: both tests pre-occupy a path the command derives from the clock
+    // at seconds resolution. Unfrozen, test and command can land in different
+    // seconds, the obstruction misses, and the assertion fails spuriously.
     CarbonImmutable::setTestNow('2026-07-29 12:00:00');
 
     $this->sourcePath = RealSqliteFixture::create('backup-sidecar-source');
@@ -69,11 +55,8 @@ afterEach(function (): void {
     }
 });
 
-/**
- * The destination basename the command will choose on this run. The timestamp
- * comes from the injected Clock, so the sidecar paths can be occupied before
- * the command reaches them.
- */
+// The basename the command will choose on this run — timestamp from the
+// injected Clock, so the sidecar path can be occupied before it gets there.
 function sidecarBasename(mixed $app): string
 {
     /** @var Clock $clock */
@@ -94,8 +77,7 @@ it('records a critical alert and fails when the sidecar cannot be written', func
 
     $this->artisan('db:backup', ['--force' => true])->assertExitCode(1);
 
-    // The backup itself succeeded — that is the whole reason the missing
-    // sidecar is dangerous rather than merely disappointing.
+    // The backup itself succeeded — that is what makes the missing sidecar bad.
     expect(is_file($backupsDir.DIRECTORY_SEPARATOR.$basename))->toBeTrue()
         ->and(is_file($backupsDir.DIRECTORY_SEPARATOR.$basename.'.meta.json'))->toBeFalse();
 
@@ -108,9 +90,8 @@ it('records a critical alert and fails when the sidecar cannot be written', func
     expect((string) $alert->metadata)->toContain('sidecar_write');
 });
 
-// rename() onto a non-empty directory fails, which reaches the last of the
-// three guards — the one where the sidecar content was written correctly and
-// only the move into place failed.
+// rename() onto a non-empty directory fails, reaching the last of the three
+// guards — content written correctly, only the move into place failed.
 it('records a critical alert when the sidecar cannot be renamed into place', function (): void {
     /** @var string $backupsDir */
     $backupsDir = $this->backupsDir;
@@ -130,8 +111,7 @@ it('records a critical alert when the sidecar cannot be renamed into place', fun
 
     expect($alert)->not->toBeNull();
 
-    // The temp file is cleaned up even on the failing path, so a retry does
-    // not trip over its own leftovers.
+    // The temp file is cleaned up on the failing path too, so a retry is clean.
     expect(is_file($sidecar.'.tmp'))->toBeFalse();
 
     @unlink($sidecar.DIRECTORY_SEPARATOR.'occupied');

@@ -8,19 +8,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for the multi-user activation schema reshape — locks
- * the username-based `users` shape (no `email`, plus `username`,
- * `is_developer`, `force_password_change_at_next_login`), the
- * `user_recovery_codes` audit table (no `updated_at`), and the
- * `oauth_secrets` table with its unique (user_id, provider) index and
- * the provider enum trigger pair that rejects any value outside
- * {'gmail','microsoft'}.
- *
- * RefreshDatabase has already run every migration against the in-memory
- * test connection, so the assertions introspect the live schema rather
- * than re-running the migrator.
- */
+// RefreshDatabase has already run every migration against the test connection,
+// so these introspect the live schema rather than re-running the migrator.
 
 beforeEach(function (): void {
     /** @var DatabaseManager $db */

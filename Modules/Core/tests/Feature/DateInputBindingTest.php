@@ -4,26 +4,10 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Blade;
 
-/*
- * The date field's binding contract.
- *
- * `x-core::date-input` replaced `<input type="date">` across the app, and how
- * it hands its value to Livewire is the whole of its job — a calendar that
- * looks right and writes nowhere is worse than the untranslated native control
- * it replaced, because it fails silently.
- *
- * The first shape of this component put the caller's `wire:model` on an
- * `sr-only` input that ALSO carried `x-model="value"`. That looked harmless
- * and was not: Livewire implements `wire:model` by applying Alpine's `x-model`
- * to the element, so the input had two bindings claiming it. Alpine's copy —
- * still empty, because `x-data`'s `init()` runs before the subtree's own
- * `x-ref` is registered — won, and wiped the server's value out of the field
- * on every render. A reconcile page whose statement date is today rendered as
- * "—".
- *
- * These assert the shape that cannot regress into that: exactly one binding,
- * on the root, entangled with the component's own property by `x-modelable`.
- */
+// Livewire implements `wire:model` by applying Alpine's `x-model` to the
+// element, so the first shape — an sr-only input carrying both — had two
+// bindings claiming it. Alpine's still-empty copy won and wiped the server's
+// value on every render; a reconcile page dated today rendered as "—".
 
 it('puts the caller wire:model on the root and entangles it with x-modelable', function (): void {
     $html = Blade::render('<x-core::date-input wire:model.live="statementDate" field-id="rc-date" />');

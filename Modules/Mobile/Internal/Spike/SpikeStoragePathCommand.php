@@ -7,9 +7,6 @@ namespace Modules\Mobile\Internal\Spike;
 use Illuminate\Console\Command;
 use Modules\Core\Public\Services\UserDataPathService;
 
-/**
- * @link ../../../../.docs/features/mobile/architecture.md
- */
 final class SpikeStoragePathCommand extends Command
 {
     /** @var string */

@@ -14,16 +14,6 @@ use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * NotificationPreferenceQueryTest — the Public read/write seam (D-34/D-35).
- *
- * Covers: a device with no row reads back exactly the D-16/D-19/D-15
- * defaults; a saved row round-trips; forOtherDevices() excludes the self
- * row and includes a peer's row; user A cannot read user B's preferences;
- * invalid cadence / lead 0 / lead 31 each throw; a save dispatches exactly
- * one NotificationPreferenceMutated after commit.
- */
-
 function prefUser(string $username): User
 {
     return User::query()->create([
@@ -62,7 +52,7 @@ beforeEach(function (): void {
     $this->query = $query;
 });
 
-it('reads exactly the D-16/D-19/D-15 defaults for a device with no row', function (): void {
+it('reads reminders on, weekly digest, savings prompts off and quiet hours off for a device with no row', function (): void {
     $user = prefUser('pref-defaults');
     seedRegistryDevice($this->db, $user->id, 'self-device', isSelf: true);
 
@@ -126,7 +116,6 @@ it('excludes the self row and includes a peer device in forOtherDevices()', func
     seedRegistryDevice($this->db, $user->id, 'self-device', isSelf: true);
     seedRegistryDevice($this->db, $user->id, 'peer-device', isSelf: false);
 
-    // Give the peer a stored preference row.
     $this->db->connection()->table('notification_preferences')->insert([
         'user_id' => $user->id,
         'device_id' => 'peer-device',
@@ -143,7 +132,7 @@ it('excludes the self row and includes a peer device in forOtherDevices()', func
         'updated_at' => '2026-07-01T10:00:00Z',
     ]);
 
-    // And a self row that must NOT appear in forOtherDevices().
+    // A self row, which forOtherDevices() must exclude.
     $this->db->connection()->table('notification_preferences')->insert([
         'user_id' => $user->id,
         'device_id' => 'self-device',
@@ -215,9 +204,9 @@ it('refuses a cadence the enum cannot represent, at the column', function (): vo
         hideDetails: false,
     ));
 
-    // The DTO can no longer carry an invalid cadence, so the guarantee this
-    // test protects is the one that still applies to writes coming from
-    // outside the application: the column itself refuses the value (C8-R22).
+    // The DTO can no longer carry an invalid cadence, so what is left to
+    // protect is the guarantee against writes from outside the application:
+    // the column itself refuses the value.
     expect(fn () => $this->db->connection()->table('notification_preferences')
         ->where('user_id', $user->id)
         ->update(['digest_cadence' => 'monthly']))
@@ -286,8 +275,8 @@ it('throws on a malformed quiet-hours time', function (): void {
 
 it('dispatches exactly one NotificationPreferenceMutated on save', function (): void {
     Event::fake([NotificationPreferenceMutated::class]);
-    // Re-resolve AFTER Event::fake so the query captures the faked dispatcher
-    // (the beforeEach singleton captured the real one).
+    // The beforeEach singleton captured the real dispatcher, so it has to be
+    // rebuilt after Event::fake to see the faked one.
     $this->app->forgetInstance(NotificationPreferenceQuery::class);
     /** @var NotificationPreferenceQuery $query */
     $query = $this->app->make(NotificationPreferenceQuery::class);

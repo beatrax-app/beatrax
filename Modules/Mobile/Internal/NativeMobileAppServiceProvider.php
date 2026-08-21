@@ -9,9 +9,6 @@ use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../.docs/features/mobile/architecture.md
- */
 final class NativeMobileAppServiceProvider
 {
     public function __construct(

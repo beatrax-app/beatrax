@@ -17,6 +17,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\LockStore;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Receipts\Public\Actions\RecordReceipt;
 use Modules\Receipts\Public\Pipeline\MboxIterator;
 use Modules\Receipts\Public\Support\UploadLimits;
@@ -28,9 +29,6 @@ use Throwable;
 // Top-level .eml/.mbox files run through RecordReceipt exactly as the
 // wizard upload path does, then atomically move to a processed/ or
 // failed/ subtree keyed by year-month.
-/**
- * @link ../../../../.docs/features/receipts/architecture.md
- */
 final class ScanInboxDropFolderJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Dispatchable;
@@ -161,8 +159,7 @@ final class ScanInboxDropFolderJob implements ShouldBeUniqueUntilProcessing, Sho
                 [
                     'user_id' => $this->userId,
                     'path' => $path,
-                    'exception' => $inner::class,
-                    'message' => $inner->getMessage(),
+                    ...SafeExceptionContext::describe($inner),
                 ],
             );
         }

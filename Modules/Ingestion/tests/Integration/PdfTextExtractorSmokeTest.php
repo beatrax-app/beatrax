@@ -4,18 +4,8 @@ declare(strict_types=1);
 
 use Modules\Ingestion\Internal\Adapters\Ics\PdfTextExtractor;
 
-/*
- * Integration smoke test: exec's the REAL `pdftotext` binary via
- * `PdfTextExtractor` against the committed tiny synthetic PDF. Tagged
- * `->group('integration')` so CI hosts without poppler installed can
- * `vendor/bin/pest --exclude-group=integration` without failing the
- * suite.
- *
- * The unit-level `PdfTextExtractorTest` already exercises the wrapper
- * against the real binary on the executor's machine; this file exists
- * separately so the integration vs unit boundary is explicit and
- * exclude-by-group works cleanly.
- */
+// These exec the real `pdftotext`, hence the `integration` group: a CI host
+// without poppler runs `pest --exclude-group=integration`.
 
 it('extracts text from the tiny synthetic PDF via the real pdftotext binary', function (): void {
     $tinyPdf = base_path('Modules/Ingestion/tests/fixtures/ics/ics-sample-tiny.pdf');
@@ -34,12 +24,8 @@ it('preserves -layout column structure on the synthetic PDF', function (): void 
     $extractor = new PdfTextExtractor;
     $text = $extractor->extract($tinyPdf);
 
-    // The transaction row is laid out with whitespace padding between
-    // the merchant token, settled amount, and direction marker. The
-    // `-layout` flag preserves that padding via spaces; `-raw` mode
-    // would collapse it. We assert at least one space sits between
-    // `SYNTHETIC ICS TINY` and the trailing `Af` marker — the tightest
-    // heuristic that distinguishes layout from raw modes on this PDF.
+    // `-raw` would collapse the whitespace padding between the merchant token
+    // and the trailing direction marker; `-layout` keeps it as spaces.
     expect(str_contains($text, 'SYNTHETIC ICS TINY'))->toBeTrue();
     expect(str_contains($text, 'Af'))->toBeTrue();
 })->group('phase-3')->group('integration');

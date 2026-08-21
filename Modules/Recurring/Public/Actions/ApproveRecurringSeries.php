@@ -12,9 +12,6 @@ use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use Modules\Recurring\Public\Events\RecurringSeriesApproved;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
 final class ApproveRecurringSeries
 {
     public function __construct(

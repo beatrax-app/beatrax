@@ -16,9 +16,6 @@ final class ScenarioMutationDto extends Data
         public readonly int $forecastScenarioId,
         public readonly string $kind,
         public readonly ?int $targetSeriesId,
-        // Consuming code that needs a kind-specific field (e.g.
-        // newAmountMinor) must narrow with instanceof first — Larastan
-        // level 10 strict reports the access otherwise.
         public readonly ScenarioMutationPayload $payload,
         public readonly CarbonImmutable $createdAt,
     ) {}

@@ -1,5 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
-{{-- D-20 / UI-SPEC §19: overflow-x-auto wrapper ensures the iframe does not
+{{-- UI-SPEC §19: overflow-x-auto wrapper ensures the iframe does not
      force page-level horizontal overflow at phone width. The iframe keeps
      w-full so it fills the available column; the wrapper handles the scroll. --}}
 <div class="p-8 space-y-4 overflow-x-auto" data-testid="horizon-frame-page">

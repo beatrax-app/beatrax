@@ -9,13 +9,6 @@ use Modules\Import\Models\KnownCounterpartyIban;
 
 uses(RefreshDatabase::class);
 
-/**
- * Locks the seeder's behavioral invariants:
- *  - Two specific institution-IBAN aliases land for a fresh user.
- *  - Re-running the seeder is idempotent (firstOrCreate, not
- *    updateOrCreate — so an edited `notes` field stays untouched).
- *  - Per-user scoping: two users get two rows each, independently.
- */
 function makeUser(string $username): User
 {
     return User::query()->create([
@@ -87,18 +80,10 @@ it('seeds independently for two users', function (): void {
 });
 
 it('seeds user B correctly even when an HTTP request is actingAs(user A) — withoutGlobalScopes bypasses the UserScope cross-user filter', function (): void {
-    // Regression for WR-01. The KnownCounterpartyIban model uses
-    // BelongsToUser, which applies UserScope. Under an HTTP-
-    // authenticated context the scope adds
-    // `where('user_id', auth()->id())` to every query. Calling
-    // `firstOrCreate(['user_id' => $userB->id, ...])` then ANDs
-    // the user_id filter for user B with the scope's filter for
-    // user A — the lookup returns zero rows, firstOrCreate
-    // attempts an INSERT, and the per-user UNIQUE constraint on
-    // (user_id, real_iban) violates as soon as a second pass
-    // runs. Calling withoutGlobalScopes() drops the scope so the
-    // explicit user_id filter is the only one in play and the
-    // seeder is context-independent.
+    // UserScope ANDs `where('user_id', auth()->id())` onto every query, so under
+    // an authenticated request firstOrCreate() for another user matches nothing,
+    // INSERTs, and violates the (user_id, real_iban) UNIQUE on the second pass.
+    // withoutGlobalScopes() leaves the explicit user_id filter as the only one.
     $userA = makeUser('seeder-scope-a');
     $userB = makeUser('seeder-scope-b');
 
@@ -108,19 +93,13 @@ it('seeds user B correctly even when an HTTP request is actingAs(user A) — wit
 
     $seeder = app(DefaultKnownCounterpartyIbansSeeder::class);
 
-    // First pass — runs under authenticated context for user A,
-    // seeds rows for user B. The verification queries also drop
-    // the global scope so the assertions see the actual row state
-    // rather than the auth()-filtered subset (the UserScope on
-    // BelongsToUser would otherwise mask user B's rows from the
-    // actingAs(userA) caller).
+    // The assertions drop the scope too, or it masks user B's rows from the
+    // actingAs(userA) caller.
     $seeder->run($userB);
     expect(KnownCounterpartyIban::withoutGlobalScopes()->where('user_id', $userB->id)->count())->toBe(2);
     expect(KnownCounterpartyIban::withoutGlobalScopes()->where('user_id', $userA->id)->count())->toBe(0);
 
-    // Second pass — must remain idempotent (no UNIQUE-constraint
-    // violation, no duplicate rows for user B, still zero for
-    // user A).
+    // The second pass is where the UNIQUE constraint would fire.
     $seeder->run($userB);
     expect(KnownCounterpartyIban::withoutGlobalScopes()->where('user_id', $userB->id)->count())->toBe(2);
     expect(KnownCounterpartyIban::withoutGlobalScopes()->where('user_id', $userA->id)->count())->toBe(0);

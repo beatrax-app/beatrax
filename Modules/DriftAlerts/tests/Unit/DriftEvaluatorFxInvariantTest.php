@@ -11,18 +11,6 @@ use Modules\DriftAlerts\Models\DriftAlert;
 
 uses(RefreshDatabase::class);
 
-/*
- * FX-invariance contract for DriftEvaluator.
- *
- * A USD subscription whose original-currency amount stays at $11.99
- * across consecutive occurrences must produce zero drift alerts even
- * when the settled EUR amount drifts because of FX rate noise. The
- * evaluator reads observedAmount in the original currency only — it
- * never touches settled-EUR shadow fields — so this guard is the
- * regression test that catches any future refactor that accidentally
- * reads the wrong currency column.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -51,10 +39,8 @@ it('produces zero drift alerts for a stable USD series despite hypothetical EUR 
         'updated_at' => '2026-05-19 00:00:00',
     ]);
 
-    // Both occurrences observe the SAME amount in USD (the original
-    // currency the cluster keys on). The settled-EUR amount could
-    // hypothetically have drifted via FX rate change; the evaluator
-    // never reads that column.
+    // Identical in USD, the currency the cluster keys on. Any EUR movement is
+    // FX noise the evaluator must not see.
     devfxOccurrence($this->db, $user->id, $seriesId, '2026-04-08', -1199, 'USD');
     devfxOccurrence($this->db, $user->id, $seriesId, '2026-05-08', -1199, 'USD');
 
@@ -141,10 +127,8 @@ function devfxOccurrence(DatabaseManager $db, int $userId, int $seriesId, string
         'posted_at' => $observedAt,
         'booked_at' => $observedAt.' 00:00:00',
         'value_date' => $observedAt,
-        // Note that settled (EUR) values would in real data jitter due
-        // to FX. The evaluator never reads them so we keep them
-        // arbitrary; the test asserts behaviour off ORIGINAL currency
-        // (observed_currency on the occurrence row).
+        // Arbitrary: the evaluator reads observed_currency on the occurrence
+        // row, never these settled-EUR shadow columns.
         'amount_minor' => -1100,
         'currency' => 'EUR',
         'settled_amount_minor' => -1100,

@@ -12,16 +12,13 @@ use Modules\Mobile\Internal\Sync\MobileSyncTriggerService;
 use Psr\Log\LoggerInterface;
 use stdClass;
 
-/**
- * @link ../../../.docs/features/mobile/architecture.md
- */
 final class MobilePullCommand extends Command
 {
     /** @var string */
     protected $signature = 'sync:mobile-pull';
 
     /** @var string */
-    protected $description = 'Run one bounded background sync burst per user (D-07 background cadence leg, best-effort).';
+    protected $description = 'Run one bounded background sync burst per user (best-effort).';
 
     public function __construct(
         private readonly MobileSyncTriggerService $trigger,

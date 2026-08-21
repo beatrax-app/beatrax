@@ -11,12 +11,11 @@ use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\QueryFailure;
 use Modules\Forecasting\Models\ForecastScenario;
 use Modules\Forecasting\Public\Events\ScenarioCreated;
+use Modules\Sync\Public\Events\EntityMutated;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final class CreateScenario
 {
     public function __construct(
@@ -48,7 +47,7 @@ final class CreateScenario
                 ]);
             });
         } catch (QueryException $e) {
-            if (self::looksLikeUniqueViolation($e)) {
+            if (QueryFailure::isUniqueViolation($e)) {
                 throw new InvalidArgumentException(Lang::get('forecasting::scenario.errors.name_taken'), 0, $e);
             }
             throw $e;
@@ -60,15 +59,23 @@ final class CreateScenario
             name: $trimmed,
         ));
 
+        // Scenarios had merge rules and no capture, so one created after
+        // pairing stayed on the device that named it. The timestamps ride
+        // along because the scenario picker orders by created_at.
+        $this->events->dispatch(new EntityMutated(
+            table: 'forecast_scenarios',
+            pk: $newId,
+            userId: $user->id,
+            mutationType: 'create',
+            dirtyFields: [
+                'user_id' => $user->id,
+                'name' => $trimmed,
+                'description' => $description,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+        ));
+
         return $newId;
-    }
-
-    private static function looksLikeUniqueViolation(QueryException $e): bool
-    {
-        $msg = $e->getMessage();
-
-        return str_contains($msg, 'UNIQUE constraint failed')
-            || str_contains($msg, 'Integrity constraint violation')
-            || str_contains($msg, 'Duplicate entry');
     }
 }

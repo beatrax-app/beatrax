@@ -6,19 +6,13 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
+use Modules\Reports\Internal\Actions\SaveReport;
+use Modules\Reports\Internal\Actions\TogglePin;
+use Modules\Reports\Internal\Dto\ReportDefinition;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 use Modules\Reports\Models\SavedReport;
-use Modules\Reports\Public\Actions\SaveReport;
-use Modules\Reports\Public\Actions\TogglePin;
-use Modules\Reports\Public\Dto\ReportDefinition;
-use Modules\Reports\Public\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
-
-/*
- * Pins TogglePin's 3-pin cap invariant (Req 10, T-999.6-21) — enforced in
- * the write-service layer, never trusted from the UI. Test names carry the
- * `pin_cap_enforced` token per 999.6-07-PLAN.md Task 2.
- */
 
 function pctPinUser(): User
 {
@@ -97,19 +91,17 @@ it('pin_cap_enforced: unpinning one of 3 pinned reports frees a slot for a 4th',
         app(TogglePin::class)->toggle($user, $report->id);
     }
 
-    // Unpin the first pinned report.
     $unpinned = app(TogglePin::class)->toggle($user, $reports[0]->id);
     expect($unpinned->pinned)->toBeFalse();
     expect($unpinned->pin_order)->toBeNull();
 
-    // The 4th report can now be pinned.
     $pinnedFourth = app(TogglePin::class)->toggle($user, $reports[3]->id);
     expect($pinnedFourth->pinned)->toBeTrue();
 
     expect(SavedReport::query()->where('pinned', true)->count())->toBe(3);
 });
 
-it('pin_cap_enforced: WR-01 the pinned-count cap check runs inside the write transaction, not before it opens', function (): void {
+it('pin_cap_enforced: the pinned-count cap check runs inside the write transaction, not before it opens', function (): void {
     $user = pctPinUser();
     test()->actingAs($user);
 
@@ -125,12 +117,9 @@ it('pin_cap_enforced: WR-01 the pinned-count cap check runs inside the write tra
         $sql = strtolower($query->sql);
         if (str_contains($sql, 'count(*)') && str_contains($sql, 'saved_reports') && str_contains($sql, 'pinned')) {
             $sawCountQuery = true;
-            // WR-01: before the fix this count ran BEFORE `transaction()` was
-            // ever called, so `transactionLevel()` would have been 0 here.
-            // After the fix it runs from inside the write transaction's
-            // closure, so a concurrent second writer blocked on SQLite's
-            // write lock re-reads the up-to-date count once it resumes,
-            // instead of trusting a pre-transaction snapshot.
+            // The count has to run inside the write transaction: a second writer
+            // blocked on SQLite's write lock must re-read it on resume rather
+            // than trust a pre-transaction snapshot.
             $countQueryRanInsideTransaction = $db->connection()->transactionLevel() > 0;
         }
     });
@@ -151,7 +140,6 @@ it('pin_cap_enforced: unpinning compacts the remaining pin_order values to a den
         app(TogglePin::class)->toggle($user, $reports[$i - 1]->id);
     }
 
-    // Unpin the middle (pin_order = 2) report — the 3rd should compact down to 2.
     app(TogglePin::class)->toggle($user, $reports[1]->id);
 
     /** @var SavedReport $first */

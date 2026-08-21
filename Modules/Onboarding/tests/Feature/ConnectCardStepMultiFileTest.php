@@ -11,24 +11,6 @@ use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectCardStep;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 use Tests\Helpers\UploadIsolation;
 
-/*
- * Verifies the multi-file restructure of the ICS card connector step.
- *
- * Three behaviours under test:
- *
- *  1. The step accepts an array of PDF uploads via `statements[]` and
- *     produces one `ImportRun` row per uploaded file. Each ImportRun
- *     carries `source_format = 'ics-pdf'`.
- *
- *  2. The per-file validator (`statements.*` with `extensions:pdf`)
- *     rejects a non-PDF file without producing an ImportRun for it.
- *
- *  3. A per-file parse failure (malformed PDF among well-formed ones)
- *     does not abort the whole submit — the well-formed files still
- *     produce their ImportRuns; the bad file's failure is logged
- *     per-row, not raised.
- */
-
 beforeEach(function (): void {
     UploadIsolation::isolate();
 
@@ -43,9 +25,8 @@ beforeEach(function (): void {
     $initializer = $this->app->make(WizardProgressInitializer::class);
     $initializer->initialize($this->user->id);
 
-    // Pre-seed the ICS card account so the IcsPdfAdapter's synthetic
-    // own-IBAN ("ICS-CARD") resolves to a real account; without this
-    // every preview row would be an unknown-IBAN error.
+    // Without this row IcsPdfAdapter's synthetic "ICS-CARD" IBAN resolves
+    // to UnknownAccount and every preview row is an error.
     Account::query()->updateOrCreate(
         [
             'user_id' => $this->user->id,
@@ -63,10 +44,8 @@ beforeEach(function (): void {
 });
 
 it('accepts an array of PDF uploads and produces one ImportRun per file', function (): void {
-    // Three uploads with slightly different bytes so SHA-256 dedup does
-    // not collapse them into one ImportRun. The ICS adapter parses the
-    // structural-only fixture content; the byte tweak appends after
-    // %%EOF which a PDF parser tolerates.
+    // The bytes must differ or SHA-256 dedup collapses the three into one
+    // ImportRun; the tweak appends after %%EOF, which a PDF parser tolerates.
     $contents = file_get_contents($this->tinyPdfPath);
     expect($contents)->toBeString();
 
@@ -110,8 +89,8 @@ it('continues the loop when one file fails to parse instead of aborting the subm
     expect($goodContents)->toBeString();
 
     $good = UploadedFile::fake()->createWithContent('good.pdf', $goodContents);
-    // A .pdf-extensioned file with random bytes: passes the `extensions:pdf`
-    // rule (which checks extension only), then trips the parser later.
+    // Random bytes under a .pdf name: `extensions:pdf` checks the extension
+    // only, so this clears the validator and fails in the parser.
     $bad = UploadedFile::fake()->createWithContent('bad.pdf', str_repeat('not-a-real-pdf-body', 10));
 
     Livewire::test(ConnectCardStep::class)
@@ -119,10 +98,8 @@ it('continues the loop when one file fails to parse instead of aborting the subm
         ->call('submit')
         ->assertDispatched('wizard.step.completed');
 
-    // The well-formed file landed an ImportRun; the bad file either
-    // produced an ImportRun whose preview surfaces an ERROR row, or
-    // never got past sniffing. Either way the well-formed run is
-    // present and `source_format = 'ics-pdf'` so the chain continues.
+    // The bad file may or may not have produced a run of its own; what
+    // matters is that the well-formed one survived it.
     $runs = ImportRun::query()
         ->where('user_id', $this->user->id)
         ->where('source_format', 'ics-pdf')

@@ -13,29 +13,7 @@ use Modules\Counterparties\Internal\Http\Livewire\CounterpartyProfile;
 use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
 use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
 
-/*
- * Integration tests for TAX-01 badge integration on all four surfaces:
- * TransactionsList, TransactionDetail, CounterpartyProfile, CashBookPage.
- *
- * Assertions per surface:
- *   (a) Untagged row exposes the "Tag" ghost action
- *   (b) Dispatching tax-tag tags the transaction and the row re-renders as
- *       the emerald badge
- *   (c) Batch-loaded state uses a single DB query (Pitfall 1)
- *   (d) Tagging a counterparty transaction with ≥2 untagged siblings surfaces
- *       the batch suggestion; applying it tags all and does not re-surface (P-7)
- *   (e) Cross-user isolation: a user never sees another user's badge (Pitfall 6)
- *
- * Note: (c) DB query count is tested at the action level (single whereIn) rather
- * than counting Livewire render queries, which include framework overhead
- * not relevant to the Pitfall-1 constraint.
- */
-
 uses(RefreshDatabase::class);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Fixtures
-// ─────────────────────────────────────────────────────────────────────────────
 
 function badgeUser(string $username = 'badge-user'): User
 {
@@ -48,10 +26,6 @@ function badgeUser(string $username = 'badge-user'): User
     ]);
 }
 
-/**
- * Seed a manual transaction suitable for CashBookPage (source_format = manual).
- * Returns the transaction id.
- */
 function badgeManualTx(DatabaseManager $db, int $userId, ?int $counterpartyId = null): int
 {
     $suffix = bin2hex(random_bytes(4));
@@ -104,10 +78,6 @@ function badgeManualTx(DatabaseManager $db, int $userId, ?int $counterpartyId = 
     ]);
 }
 
-/**
- * Seed a regular (non-manual) transaction for TransactionsList / Detail / Counterparty.
- * Returns the transaction id.
- */
 function badgeTx(DatabaseManager $db, int $userId, ?int $counterpartyId = null, string $bookedAt = '2026-06-01 00:00:00'): int
 {
     $suffix = bin2hex(random_bytes(4));
@@ -160,9 +130,6 @@ function badgeTx(DatabaseManager $db, int $userId, ?int $counterpartyId = null, 
     ]);
 }
 
-/**
- * Seed a counterparty and link to a user. Returns the counterparty id.
- */
 function badgeCp(DatabaseManager $db, int $userId, string $name = 'Badge Gym BV'): int
 {
     $suffix = bin2hex(random_bytes(4));
@@ -177,7 +144,6 @@ function badgeCp(DatabaseManager $db, int $userId, string $name = 'Badge Gym BV'
     ]);
 }
 
-/** Tag a transaction for a user. */
 function badgeTag(DatabaseManager $db, int $userId, int $txId): void
 {
     $db->connection()->table('tax_transaction_tags')->insert([
@@ -192,9 +158,6 @@ function badgeTag(DatabaseManager $db, int $userId, int $txId): void
 }
 
 /**
- * Seed $count transactions on ONE shared account/import-run for paging tests.
- * Returns the transaction ids ordered newest-first (list render order).
- *
  * @return list<int>
  */
 function badgeTxBatch(DatabaseManager $db, int $userId, int $count): array
@@ -256,10 +219,6 @@ function badgeTxBatch(DatabaseManager $db, int $userId, int $count): array
     return $ids;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Surface 1: TransactionsList
-// ─────────────────────────────────────────────────────────────────────────────
-
 describe('TransactionsList tax badge', function (): void {
     it('shows the untagged Tag ghost button for an untagged row', function (): void {
         $user = badgeUser('tx-list-badge-user-1');
@@ -276,8 +235,7 @@ describe('TransactionsList tax badge', function (): void {
         $db = app(DatabaseManager::class);
         $txId = badgeTx($db, $user->id);
 
-        // tax-tag immediately tags (optimistic) and opens the picker — no toast
-        // at this step (toast fires after saveTaxCategory / untag / applyBatchTag).
+        // tax-tag tags optimistically; the toast waits for save / untag / batch.
         Livewire::actingAs($user)->test(TransactionsList::class)
             ->dispatch('tax-tag', id: $txId);
 
@@ -300,7 +258,7 @@ describe('TransactionsList tax badge', function (): void {
         $component->assertSee('data-testid="tax-badge-tagged-'.$txId.'"', false);
     });
 
-    it('loads tax state for a batch of rows with a single whereIn (Pitfall 1)', function (): void {
+    it('loads tax state for a batch of rows with a single whereIn', function (): void {
         $user = badgeUser('tx-list-batch-user');
         $db = app(DatabaseManager::class);
         $ids = [];
@@ -310,10 +268,8 @@ describe('TransactionsList tax badge', function (): void {
         badgeTag($db, $user->id, $ids[0]);
         badgeTag($db, $user->id, $ids[2]);
 
-        // taxTagStateFor internally calls TaxTagQuery::forTransactionIds which
-        // uses a single whereIn query — confirmed by the service implementation.
-        // Here we assert the rendered output shows the correct tagged/untagged state
-        // for all rows (confirming batch-load correctness).
+        // The single-whereIn claim is proven at the service level; this only
+        // asserts each row renders the right state after the batch load.
         $component = Livewire::actingAs($user)->test(TransactionsList::class);
         $component->assertSee('data-testid="tax-badge-tagged-'.$ids[0].'"', false);
         $component->assertSee('data-testid="tax-badge-tagged-'.$ids[2].'"', false);
@@ -326,9 +282,8 @@ describe('TransactionsList tax badge', function (): void {
         $user = badgeUser('tx-list-batch-sug-user');
         $db = app(DatabaseManager::class);
 
-        // WR-09: freeze the clock consistent with the June-2026 fixtures so
-        // this test cannot rot when the real calendar moves past the fixture
-        // year (resolveCurrentTaxYear is seasonal).
+        // Frozen to match the June-2026 fixtures: the current tax year is
+        // seasonal, so a real calendar would rot this test.
         $clock = Mockery::mock(Clock::class);
         $clock->allows('now')->andReturn(CarbonImmutable::create(2026, 6, 15));
         app()->instance(Clock::class, $clock);
@@ -342,11 +297,9 @@ describe('TransactionsList tax badge', function (): void {
         $component = Livewire::actingAs($user)->test(TransactionsList::class);
         $component->dispatch('tax-tag', id: $tx1);
 
-        // After tagging tx1, batchSuggestion should be populated.
         expect($component->get('batchSuggestion'))->not->toBeNull();
         expect($component->get('batchSuggestion')['untaggedCount'])->toBeGreaterThanOrEqual(2);
 
-        // Apply batch — all siblings should be tagged.
         $component->call('applyBatchTag');
 
         expect($db->connection()->table('tax_transaction_tags')
@@ -358,15 +311,14 @@ describe('TransactionsList tax badge', function (): void {
             ->where('transaction_id', $tx3)
             ->exists())->toBeTrue();
 
-        // After apply, batchSuggestionDismissed = true → suggestion should not re-surface.
         expect($component->get('batchSuggestionDismissed'))->toBeTrue();
     });
 
-    it('applyBatchTag applies the SAME category and note as the saved trigger tag (D-03)', function (): void {
+    it('applyBatchTag applies the SAME category and note as the saved trigger tag', function (): void {
         $user = badgeUser('tx-list-batch-cat-user');
         $db = app(DatabaseManager::class);
 
-        // WR-09: frozen clock consistent with the June-2026 fixtures.
+        // Frozen to match the June-2026 fixtures.
         $clock = Mockery::mock(Clock::class);
         $clock->allows('now')->andReturn(CarbonImmutable::create(2026, 6, 15));
         app()->instance(Clock::class, $clock);
@@ -388,17 +340,14 @@ describe('TransactionsList tax badge', function (): void {
             'updated_at' => now(),
         ]);
 
-        // One-tap tag tx1, then pick a category + note and save — this is the
-        // flow that resets the picker state via closePicker() before the
-        // banner is clicked.
+        // Tag, then pick a category and note and save: saving runs closePicker(),
+        // which wipes the picker fields before the banner can be clicked.
         $component = Livewire::actingAs($user)->test(TransactionsList::class);
         $component->dispatch('tax-tag', id: $tx1);
         $component->set('pickerCategoryId', $catId);
         $component->set('pickerNote', 'trigger note');
         $component->call('saveTaxCategory');
 
-        // Apply the batch from the banner — siblings must inherit the SAME
-        // category + note as the trigger tag, not null (D-03 regression).
         $component->call('applyBatchTag');
 
         foreach ([$tx2, $tx3] as $sibling) {
@@ -413,7 +362,7 @@ describe('TransactionsList tax badge', function (): void {
         }
     });
 
-    it('keeps tax state on previously-accumulated phone rows after loadMore (CR-03 regression)', function (): void {
+    it('keeps tax state on previously-accumulated phone rows after loadMore', function (): void {
         $user = badgeUser('tx-list-loadmore-user');
         $db = app(DatabaseManager::class);
 
@@ -435,7 +384,7 @@ describe('TransactionsList tax badge', function (): void {
         $component->assertDontSee('data-testid="tax-badge-untagged-'.$page1TxId.'"', false);
     });
 
-    it('renders the year-override row when the booked year differs from the tax year, and persists the override (CR-02 / D-10)', function (): void {
+    it('renders the year-override row when the booked year differs from the tax year, and persists the override', function (): void {
         $user = badgeUser('tx-list-year-override-user');
         $db = app(DatabaseManager::class);
 
@@ -450,12 +399,10 @@ describe('TransactionsList tax badge', function (): void {
         $component = Livewire::actingAs($user)->test(TransactionsList::class);
         $component->dispatch('tax-tag', id: $txId);
 
-        // The picker now knows the booked year, so the D-10 row renders.
         expect($component->get('pickerBookedYear'))->toBe(2024);
         expect($component->get('pickerTaxYear'))->toBe(2026);
         $component->assertSee('Assign to tax year');
 
-        // Choosing the current tax year persists tax_year_override on save.
         $component->set('pickerYearOverride', 2026);
         $component->call('saveTaxCategory');
 
@@ -484,7 +431,7 @@ describe('TransactionsList tax badge', function (): void {
         $component->assertDontSee('Assign to tax year');
     });
 
-    it('applyBatchTag honours a snapshotted "No category" — it never falls through to live picker state from another row (WR-03)', function (): void {
+    it('applyBatchTag honours a snapshotted "No category" — it never falls through to live picker state from another row', function (): void {
         $user = badgeUser('tx-list-batch-nullcat-user');
         $db = app(DatabaseManager::class);
         $cpId = badgeCp($db, $user->id, 'Batch NoCat Gym');
@@ -530,7 +477,7 @@ describe('TransactionsList tax badge', function (): void {
         }
     });
 
-    it('batch suggestion is keyed to the trigger transaction\'s booked year, not the seasonal current year (WR-05)', function (): void {
+    it('batch suggestion is keyed to the trigger transaction\'s booked year, not the seasonal current year', function (): void {
         $user = badgeUser('tx-list-batch-year-user');
         $db = app(DatabaseManager::class);
 
@@ -549,13 +496,11 @@ describe('TransactionsList tax badge', function (): void {
         $component = Livewire::actingAs($user)->test(TransactionsList::class);
         $component->dispatch('tax-tag', id: $trigger);
 
-        // The suggestion counts the 2024 siblings (2), not the 2026 one.
         $suggestion = $component->get('batchSuggestion');
         expect($suggestion)->not->toBeNull();
         expect($suggestion['taxYear'])->toBe(2024);
         expect($suggestion['untaggedCount'])->toBe(2);
 
-        // Applying tags the 2024 siblings and leaves the 2026 row untagged.
         $component->call('applyBatchTag');
 
         foreach ([$sib2024a, $sib2024b] as $sibling) {
@@ -570,7 +515,7 @@ describe('TransactionsList tax badge', function (): void {
             ->exists())->toBeFalse();
     });
 
-    it('opening the picker for another row resets note/category/year-override — no state bleed (WR-04)', function (): void {
+    it('opening the picker for another row resets note/category/year-override — no state bleed', function (): void {
         $user = badgeUser('tx-list-state-bleed-user');
         $db = app(DatabaseManager::class);
         $txA = badgeTx($db, $user->id);
@@ -601,15 +546,10 @@ describe('TransactionsList tax badge', function (): void {
         $ownerTxId = badgeTx($db, $owner->id);
         badgeTag($db, $owner->id, $ownerTxId);
 
-        // Partner renders — must NOT see owner's tagged badge.
         $component = Livewire::actingAs($partner)->test(TransactionsList::class);
         $component->assertDontSee('data-testid="tax-badge-tagged-'.$ownerTxId.'"', false);
     });
 });
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Surface 2: TransactionDetail
-// ─────────────────────────────────────────────────────────────────────────────
 
 describe('TransactionDetail tax badge', function (): void {
     it('shows untagged Tag button for an untagged transaction', function (): void {
@@ -653,15 +593,10 @@ describe('TransactionDetail tax badge', function (): void {
         $ownerTxId = badgeTx($db, $owner->id);
         badgeTag($db, $owner->id, $ownerTxId);
 
-        // Partner tries to view owner's transaction — should 404 at mount.
         Livewire::actingAs($partner)->test(TransactionDetail::class, ['transactionId' => $ownerTxId])
             ->assertStatus(404);
     });
 });
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Surface 3: CounterpartyProfile
-// ─────────────────────────────────────────────────────────────────────────────
 
 describe('CounterpartyProfile tax badge', function (): void {
     it('shows untagged Tag button on recent-activity rows', function (): void {
@@ -702,7 +637,6 @@ describe('CounterpartyProfile tax badge', function (): void {
         $ownerTxId = badgeTx($db, $owner->id, $ownerCpId);
         badgeTag($db, $owner->id, $ownerTxId);
 
-        // Partner tries to access owner's counterparty — should 404.
         $slug = $db->connection()->table('counterparties')
             ->where('id', $ownerCpId)
             ->value('slug');
@@ -711,10 +645,6 @@ describe('CounterpartyProfile tax badge', function (): void {
             ->assertStatus(404);
     });
 });
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Surface 4: CashBookPage
-// ─────────────────────────────────────────────────────────────────────────────
 
 describe('CashBookPage tax badge', function (): void {
     it('shows untagged Tag button for a manual entry', function (): void {
@@ -758,7 +688,6 @@ describe('CashBookPage tax badge', function (): void {
         $ownerTxId = badgeManualTx($db, $owner->id);
         badgeTag($db, $owner->id, $ownerTxId);
 
-        // Partner renders — must NOT see owner's tagged badge.
         $component = Livewire::actingAs($partner)->test(CashBookPage::class);
         $component->assertDontSee('data-testid="tax-badge-tagged-'.$ownerTxId.'"', false);
     });

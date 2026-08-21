@@ -1,0 +1,11 @@
+{
+    "name": "Shell",
+    "alias": "shell",
+    "description": "The application's own screens — primary navigation, dashboard, settings — the surfaces that compose every other module instead of owning a domain slice.",
+    "keywords": ["shell", "navigation", "dashboard", "settings"],
+    "priority": 45,
+    "providers": [
+        "Modules\\Shell\\Providers\\ShellServiceProvider"
+    ],
+    "files": []
+}

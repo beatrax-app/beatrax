@@ -8,9 +8,6 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class PeerConfirmVerifier
 {
     public function __construct(

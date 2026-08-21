@@ -16,13 +16,6 @@ use Modules\Pots\Models\Pot;
 
 uses(RefreshDatabase::class);
 
-/*
- * The read model behind /goals and the dashboard tile: contributed-vs-target,
- * the progress buckets, and the FX conversion into the goal's own
- * target_currency. Contributions come from a linked pot's balance or from the
- * transactions the user attributed to the goal; the attribution semantics
- * themselves live in GoalContributionsTest.
- */
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'wessel',
@@ -50,7 +43,6 @@ beforeEach(function (): void {
     ]);
 });
 
-/** Persist a transaction for $user. Reused verbatim from BudgetProgressQueryTest. */
 function goalTx(int $userId, int $accountId, int $runId, int $amountMinor, string $type, string $postedAt): Transaction
 {
     static $i = 0;
@@ -79,16 +71,11 @@ function goalTx(int $userId, int $accountId, int $runId, int $amountMinor, strin
     ]);
 }
 
-/** Persist a credit and attribute it to $goalId, the way the detail screen does. */
 function goalContribution(User $user, int $accountId, int $runId, int $goalId, int $amountMinor, string $postedAt): void
 {
     $tx = goalTx($user->id, $accountId, $runId, $amountMinor, 'transfer_in', $postedAt);
     app(GoalContributionWriter::class)->attribute($user, $goalId, $tx->id);
 }
-
-// ---------------------------------------------------------------------------
-// fractionComplete, progressState buckets
-// ---------------------------------------------------------------------------
 
 it('computes fractionComplete and reports in_progress when below target', function (): void {
     $startDate = CarbonImmutable::now()->subDays(5)->toDateString();
@@ -189,11 +176,10 @@ it('excludes another users transactions on the same account from the contributio
         'status' => 'active',
     ]);
 
-    // Wessel's legit contribution.
     goalContribution($this->user, $this->account->id, $this->run->id, $goal->id, 20000, CarbonImmutable::now()->toDateString());
 
-    // Mallory's transaction on the SAME account, aimed at Wessel's goal —
-    // the writer refuses it, so it never reaches the sum.
+    // Mallory's transaction on the same account, aimed at Wessel's goal — the
+    // writer refuses it, so it never reaches the sum.
     $foreign = goalTx($other->id, $this->account->id, $otherRun->id, 80000, 'transfer_in', CarbonImmutable::now()->toDateString());
     app(GoalContributionWriter::class)->attribute($this->user, $goal->id, $foreign->id);
 
@@ -206,17 +192,9 @@ it('returns an empty list when the user has no active goals', function (): void 
     expect(app(GoalProgressQuery::class)->forUser($this->user))->toBe([]);
 });
 
-// ---------------------------------------------------------------------------
-// CR-02: contributions are converted into the goal's target_currency, NOT the
-// user's current base_currency (D-05 makes target_currency immutable so the two
-// can diverge). Numerator and denominator must share a unit.
-// ---------------------------------------------------------------------------
-
 it('converts contributions into the goal target_currency when it diverges from base_currency', function (): void {
-    // User's base currency is EUR; the goal's target currency is USD.
     $this->user->update(['base_currency' => 'EUR']);
 
-    // Latest EUR->USD rate so the FX service can convert EUR contributions to USD.
     DB::table('exchange_rates')->insert([
         'base_currency' => 'EUR',
         'quote_currency' => 'USD',
@@ -251,11 +229,9 @@ it('converts contributions into the goal target_currency when it diverges from b
     expect($rows[0]->progressState)->toBe('reached');
 });
 
-// CR-02 (inverse, common real case): a foreign-currency CONTRIBUTION is
-// converted INTO an EUR goal's target_currency via the EUR-based provider's
-// derived cross-rate. Validates the conversion direction the typical user hits
-// (USD merchant credit landing in a EUR goal), which the divergence test above
-// only exercises in the opposite direction.
+// The inverse and commoner direction: a USD credit landing in a EUR goal, which
+// has to go through the EUR-based provider's derived cross-rate. The divergence
+// case above only exercises the other way round.
 it('converts a USD contribution into the goal target_currency for a EUR goal', function (): void {
     $this->user->update(['base_currency' => 'EUR']);
 
@@ -314,10 +290,6 @@ it('converts a USD contribution into the goal target_currency for a EUR goal', f
     expect($rows[0]->progressState)->toBe('in_progress');
 });
 
-// ---------------------------------------------------------------------------
-// A linked pot's balance drives goal progress
-// ---------------------------------------------------------------------------
-
 it('uses the linked pot balance as contributedMinor instead of the attributed sum', function (): void {
     $startDate = CarbonImmutable::now()->subDays(10)->toDateString();
     $goal = Goal::factory()->create([
@@ -327,14 +299,12 @@ it('uses the linked pot balance as contributedMinor instead of the attributed su
         'status' => 'active',
     ]);
 
-    // The link lives on pots.goal_id.
     $pot = Pot::factory()->create([
         'user_id' => $this->user->id,
         'account_id' => $this->account->id,
         'goal_id' => $goal->id,
     ]);
 
-    // Fund the pot — this is the contribution via the linked-pot path.
     DB::table('pot_movements')->insert([
         'user_id' => $this->user->id,
         'pot_id' => $pot->id,
@@ -347,13 +317,12 @@ it('uses the linked pot balance as contributedMinor instead of the attributed su
         'updated_at' => CarbonImmutable::now(),
     ]);
 
-    // Also attribute a credit to the same goal — it must NOT count, because
-    // the linked-pot path overrides the attributed-transaction path.
+    // Also attributed to the same goal, and must not count: the linked-pot path
+    // overrides the attributed-transaction path.
     goalContribution($this->user, $this->account->id, $this->run->id, $goal->id, 70000, CarbonImmutable::now()->toDateString());
 
     $rows = app(GoalProgressQuery::class)->forUser($this->user);
 
-    // contributedMinor must be the pot balance (40000), not the attributed sum (70000).
     expect($rows[0]->contributedMinor)->toBe(40000);
 });
 

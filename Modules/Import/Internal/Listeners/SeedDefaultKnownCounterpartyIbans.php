@@ -8,9 +8,9 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Events\UserInstalled;
 use Modules\Import\Database\Seeders\DefaultKnownCounterpartyIbansSeeder;
 
-// The User lookup lives here (not in the seeder) so the seeder keeps
-// its per-user `run(User $user)` signature; findOrFail() fail-loudly
-// throws on a userId that no longer resolves (a Core-module bug).
+// The User lookup lives here so the seeder keeps its run(User $user)
+// signature; a userId that no longer resolves is a Core bug, so
+// findOrFail() is deliberate.
 final class SeedDefaultKnownCounterpartyIbans
 {
     public function __construct(private readonly DefaultKnownCounterpartyIbansSeeder $seeder) {}

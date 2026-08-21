@@ -14,9 +14,6 @@ use Modules\Forecasting\Public\Dto\ScenarioDto;
 use Modules\Forecasting\Public\Dto\ScenarioMutationDto;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final readonly class ScenarioQuery
 {
     use CoercesScalars;

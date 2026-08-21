@@ -9,26 +9,6 @@ use Modules\Ingestion\Internal\Adapters\Paypal\PaypalTransactionRollup;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Paypal\PaypalCsvEventTypeMap;
 
-/*
- * Coverage for the three-pass PayPal Transaction-ID rollup walker. The
- * walker folds a flat list of PayPal Activity Download rows (parents +
- * child-fee + child-fx siblings) into one SourceTransactionDto per
- * logical payment.
- *
- * Empirical chain shapes covered:
- *
- *   - Single-level depth — parents have children, children never have
- *     grandchildren
- *   - Two orientations — parent's Reference Txn ID empty OR orphan
- *   - 4-row chain per USD purchase (parent USD + Bankstorting + EUR FX
- *     + USD FX, all sharing the parent's Transaction ID via Reference
- *     Txn ID)
- *
- * FX-direction safety net is tested explicitly: when a parent USD +
- * EUR FX pair share a Reference Txn ID, the walker MUST identify the
- * foreign leg by `Currency != 'EUR'` rather than by row order.
- */
-
 beforeEach(function (): void {
     $this->rollup = new PaypalTransactionRollup(
         events: new PaypalCsvEventTypeMap,
@@ -39,10 +19,6 @@ beforeEach(function (): void {
 });
 
 /**
- * Build one raw row mirroring the empirical NL PayPal column layout.
- * Convenience wrapper so each test below stays focused on the shape under
- * test rather than on repeated array construction.
- *
  * @param  array<string, string>  $overrides
  * @return array<string, string>
  */
@@ -95,14 +71,9 @@ it('rolls up a single flat parent payment row into one canonical DTO', function 
 })->group('phase-4');
 
 it('folds a 4-row USD currency-conversion chain into ONE DTO with the dual-amount pair populated', function (): void {
-    // Empirical chain shape from paypal-sample-1.csv lines 28-29 + 84-85:
-    // - parent USD -10,46
-    // - Bankstorting EUR  9,27 (funding-source)
-    // - EUR Algemene valutaomrekening -9,27 (settled leg)
-    // - USD Algemene valutaomrekening  10,46 (FX leg, USD in)
-    //
-    // The parent's Reference Txn ID is OUTSIDE the file (orphan) and
-    // the children point BACK to the parent's Transaction ID.
+    // The chain shape is copied from paypal-sample-1.csv lines 28-29 + 84-85:
+    // a USD parent whose own Reference Txn ID points outside the file, plus a
+    // funding row and both FX legs pointing back at the parent.
     $parent = paypalRow([
         'Omschrijving' => 'Vooraf goedgekeurde betaling – rekening betaald door gebruiker',
         'Valuta' => 'USD',
@@ -140,9 +111,8 @@ it('folds a 4-row USD currency-conversion chain into ONE DTO with the dual-amoun
         'Reference Txn ID' => 'O-00000000000000034',
     ]);
 
-    // Reorder the rows so the parent does NOT come first — the
-    // FX-direction safety net: the walker MUST identify the foreign
-    // leg via Currency != 'EUR', not by row order.
+    // The parent deliberately does not come first: the foreign leg has to be
+    // found by `Currency != 'EUR'`, never by row order.
     $rows = [$funding, $fxEur, $parent, $fxUsd];
 
     $dtos = $this->rollup->rollup($rows, 'nl');
@@ -181,9 +151,6 @@ it('drops rows whose event type classifies as skip and bumps the hold counter', 
 })->group('phase-4');
 
 it('promotes an orphan child whose parent is absent from the file to a standalone parent', function (): void {
-    // A single Bankstorting child row whose Reference Txn ID points at
-    // a Transaction ID that is NOT in this file. The walker treats it
-    // as a standalone parent + bumps the orphan counter.
     $rows = [
         paypalRow([
             'Transactiereferentie' => 'O-00000000000000010',
@@ -279,8 +246,6 @@ it('skips a parent row with a malformed Bruto cell and bumps skippedMalformedRow
 
     $dtos = $this->rollup->rollup($rows, 'nl');
 
-    // The well-formed parent still produces its canonical DTO; the
-    // malformed parent is dropped.
     expect($dtos)->toHaveCount(1);
     expect($dtos[0]->sourceRef)->toBe('O-00000000000000001');
     expect($this->rollup->skippedMalformedRowCount())->toBe(1);
@@ -312,17 +277,14 @@ it('drops a malformed FX child but still emits the parent DTO without the FX pai
     $dto = $dtos[0];
     expect($dto->currency)->toBe('USD');
     expect($dto->amountMinor)->toBe(-1046);
-    // The malformed FX child was dropped — no settled pair on the DTO.
     expect($dto->settledAmountMinor)->toBeNull();
     expect($dto->settledCurrency)->toBeNull();
     expect($this->rollup->skippedMalformedRowCount())->toBe(1);
 })->group('phase-4');
 
 it('produces 41 logical-payment groups when given the full redacted fixture rows', function (): void {
-    // End-to-end: load the 86-row redacted fixture and assert the
-    // walker collapses it into exactly 41 canonical DTOs (39 parents
-    // with 1 child each + 2 parents with 3 children = 41 distinct
-    // logical-payment groups).
+    // 86 rows collapse to 41: 39 parents with one child each, plus 2 parents
+    // with three children.
     $fixture = base_path('Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv');
     $handle = fopen($fixture, 'r');
     if ($handle === false) {
@@ -356,11 +318,4 @@ it('produces 41 logical-payment groups when given the full redacted fixture rows
 
     expect($dtos)->toHaveCount(41);
     expect($this->rollup->skippedHoldCount())->toBe(0);
-    // The walker's contract: a row whose RefId is absent (or points
-    // outside the file) AND the row is classified parent stays a
-    // parent; a row whose RefId points outside the file AND the row is
-    // classified child becomes a standalone parent and is counted via
-    // orphanChildCount(). In this fixture every child-classified row's
-    // RefId points to a parent inside the file, so the orphan-child
-    // counter is zero.
 })->group('phase-4');

@@ -10,21 +10,8 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
-/*
- * Plan 13.4-06 rewrite (Rule 1 — direct consequence of this plan's own
- * demotion of RuleEvaluator to a memory-only fallback lookup, D-06).
- *
- * Every rule-matching/specificity-scoring test case that used to live
- * here was deleted: `RuleEngine` + `RuleApplier` now own ALL
- * `categorization_rules` matching/application (see
- * `RuleEngineConditionMatchingTest`/`RuleEngineOrderingTest`, Plan 02,
- * for that coverage). What remains is RuleEvaluator's sole surviving
- * responsibility — the `merchant_memories` fallback lookup, exercised
- * directly via `lookupMemory()` (the shape `ApplyAutoCategoryStage`
- * actually calls in production — the `evaluate()`/`RuleEvaluationOutcome`
- * wrapper this file used to also cover had no production caller and was
- * removed as dead code, IN-01).
- */
+// RuleEvaluator is only the merchant_memories fallback lookup; categorization_rules
+// matching lives in RuleEngineConditionMatchingTest and RuleEngineOrderingTest.
 
 beforeEach(function (): void {
     $this->user = User::create([
@@ -161,7 +148,6 @@ it('skips the memory lookup when counterparty_normalized is the empty sentinel',
 });
 
 it('memory uses highest occurrence_count when multiple memories exist for the same merchant', function (): void {
-    // Two memories for the same merchant, different categories: groceries=10, streaming=2 → groceries wins
     $merchantId = (int) DB::table('merchants')->insertGetId([
         'user_id' => $this->user->id,
         'name' => 'spotify premium',

@@ -5,15 +5,10 @@ declare(strict_types=1);
 use Modules\Sync\Internal\Config\CoveredTableOrder;
 use Modules\Sync\Internal\OpLog\OpLogRebuilder;
 
-/*
- * The rebuild wipes replayable rows before replaying them, and the order has
- * to put children before parents. CoveredTableOrder derives that from live
- * foreign keys, but it was an OPTIONAL constructor parameter the container
- * left unresolved — so every real rebuild silently fell back to registry
- * order, which lists import_runs before transactions. The delete then hit
- * FOREIGN KEY constraint failed, the whole re-projection rolled back, and a
- * joining phone sat on "Rebuilding your history…" forever.
- */
+// The rebuild wipes replayable rows before replaying them, children first.
+// CoveredTableOrder derives that from live foreign keys, but it was an optional
+// constructor parameter the container left unresolved, so every real rebuild
+// fell back to registry order and the delete hit FOREIGN KEY constraint failed.
 
 it('resolves an FK-safe deletion order from the container, not registry order', function (): void {
     $rebuilder = app(OpLogRebuilder::class);

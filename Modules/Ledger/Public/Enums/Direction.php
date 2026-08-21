@@ -4,22 +4,15 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Public\Enums;
 
-// Money out (Expense) vs money in (Income) — the two-way split several
-// modules persist on their own rows (anomaly_alerts, drift_alerts,
-// recurring_series) and derive from a transaction's type. Owning the
-// type<->direction mapping here keeps it from being re-derived per caller.
-/**
- * @link ../../../../.docs/features/ledger/architecture.md
- */
+// Several modules persist this two-way split on their own rows
+// (anomaly_alerts, drift_alerts, recurring_series) and derive it from a
+// transaction's type; owning the mapping here stops it being re-derived.
 enum Direction: string
 {
     case Expense = 'expense';
 
     case Income = 'income';
 
-    // Which direction a transaction type represents: income, transfer_in and
-    // refund are money-in; every other type is money-out. (When
-    // TransactionType becomes an enum this becomes TransactionType::direction.)
     public static function fromTransactionType(string $type): self
     {
         return match ($type) {
@@ -28,8 +21,7 @@ enum Direction: string
         };
     }
 
-    // The inverse: the transaction types that make up this direction, used to
-    // filter a merchant's history to same-direction rows.
+    // Filters a merchant's history to same-direction rows.
     /** @return list<string> */
     public function transactionTypes(): array
     {

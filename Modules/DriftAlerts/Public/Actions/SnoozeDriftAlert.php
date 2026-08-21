@@ -14,7 +14,7 @@ use Modules\DriftAlerts\Public\Events\DriftAlertSnoozed;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * @link ../../../../.docs/features/drift-alerts/architecture.md
+ * @link ../../../../.docs/features/drift-alerts/snooze-lifecycle.md
  */
 final class SnoozeDriftAlert
 {
@@ -35,9 +35,6 @@ final class SnoozeDriftAlert
             throw new NotFoundHttpException('Drift alert not found.');
         }
 
-        // Compare via Unix timestamps (see the class @link) so the
-        // idempotency check stays correct across timezones rather than
-        // comparing formatted datetime strings.
         if (
             $alert->state === DriftAlertState::Snoozed->value
             && $alert->snoozed_until !== null

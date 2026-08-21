@@ -6,9 +6,8 @@ namespace Modules\Anomaly\Public\Events;
 
 use Carbon\CarbonImmutable;
 
-// A scheduled revival sweep flips the row back to `open` once
-// `snoozedUntil` passes — no listener needs to schedule that itself,
-// only react to the state change when it happens.
+// A scheduled sweep revives the alert once `snoozedUntil` passes; a listener
+// never has to schedule that itself.
 final readonly class AnomalyAlertSnoozed
 {
     public function __construct(

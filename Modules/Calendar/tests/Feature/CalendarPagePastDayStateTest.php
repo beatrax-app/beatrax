@@ -9,21 +9,6 @@ use Modules\Calendar\Internal\Http\Livewire\CalendarPage;
 use Modules\Core\Models\User;
 use Modules\Recurring\Models\RecurringSeries;
 
-/*
- * CalendarPage — past-day paid/missed state (CAL-02, D-07).
- *
- * RED state (Phase 6 Plan 01): CalendarPage does not yet implement
- * past-day paid/missed matching; these tests will fail until Plan 02/03.
- *
- * Contract being tested:
- *   - A past-day entry with a matching RecurringSeriesOccurrence within
- *     the tolerance window is marked isPaid (rendered with a ✓ or paid marker).
- *   - A past-day entry with NO matching occurrence is marked isMissed
- *     (rendered with a missed marker).
- *   - The balance line for past days uses the actual (real) balance up
- *     to today and projection after today.
- */
-
 function cppdsUser(string $suffix = 'cppds'): User
 {
     return User::query()->create([
@@ -55,7 +40,8 @@ function cppdsOccurrence(DatabaseManager $db, int $userId, int $seriesId, string
     static $cppdsOccCounter = 0;
     $cppdsOccCounter++;
 
-    // Create an account for the FK chain (transactions → accounts)
+    // An occurrence needs a real transaction, which needs the account/run
+    // FK chain underneath it.
     $hex = bin2hex(random_bytes(4));
     $accountId = $db->connection()->table('accounts')->insertGetId([
         'user_id' => $userId,
@@ -118,8 +104,8 @@ function cppdsOccurrence(DatabaseManager $db, int $userId, int $seriesId, string
 }
 
 beforeEach(function (): void {
-    // Set "today" to June 12 so June 5 is a past day with a paid occurrence
-    // and June 8 is a past day with a missed (no occurrence) entry
+    // June 12 makes June 5 a past day with a paid occurrence and June 8 a
+    // past day with no occurrence at all.
     CarbonImmutable::setTestNow('2026-06-12 00:00:00');
 });
 
@@ -132,37 +118,33 @@ it('marks a past-day entry as paid when a matching occurrence exists within the 
     $user = cppdsUser('cppds-paid');
     $series = cppdsSeries($user, 'Paid Subscription', CarbonImmutable::parse('2026-06-05'));
 
-    // Occurrence observed on June 5 — within the tolerance window of the expected date
     cppdsOccurrence($db, $user->id, $series->id, '2026-06-05');
 
     Livewire::actingAs($user)
         ->test(CalendarPage::class, ['month' => 6, 'year' => 2026])
         ->assertSee('Paid Subscription')
-        // The paid state indicator should be visible (✓ or data-testid="paid")
         ->assertSee('paid', false);
 });
 
-it('renders past-day balance cells from actual transactions, not the computing em-dash (WR-09, D-07)', function (): void {
+it('renders past-day balance cells from actual transactions, not the computing em-dash', function (): void {
     $db = app(DatabaseManager::class);
     $user = cppdsUser('cppds-actuals');
     $series = cppdsSeries($user, 'Actuals Series', CarbonImmutable::parse('2026-06-05'));
 
     // The occurrence fixture writes a real −€15,00 transaction on June 5;
     // no forecast_run exists, so future days stay "—" while past days must
-    // show the real cumulative balance (−€15 from June 5 onward).
+    // show the real cumulative balance from June 5 onward. The cell renders
+    // through Money, so it is the Dutch shape: symbol, NBSP, then the sign.
     cppdsOccurrence($db, $user->id, $series->id, '2026-06-05');
 
     Livewire::actingAs($user)
         ->test(CalendarPage::class, ['month' => 6, 'year' => 2026])
-        ->assertSee('−€15');
+        ->assertSee("€\u{00A0}-15");
 });
 
 it('marks a past-day entry as missed when no occurrence exists for an expected date that has passed', function (): void {
     $user = cppdsUser('cppds-missed');
-    // Expected June 8, now it is June 12 — the entry should be flagged as missed
     cppdsSeries($user, 'Missed Payment', CarbonImmutable::parse('2026-06-08'));
-
-    // No occurrence seeded — payment expected but not observed
 
     Livewire::actingAs($user)
         ->test(CalendarPage::class, ['month' => 6, 'year' => 2026])

@@ -6,7 +6,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
-use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Sync\InitialSyncPuller;
@@ -20,34 +20,10 @@ use Modules\Sync\Public\Services\GdkEpochDeliveryGateway;
 
 uses(RefreshDatabase::class);
 
-/*
- * R5 / D-03 / D-04 / MOBILE-01/MOBILE-02 — resumable initial-sync pull
- * (15-08-PLAN.md Task 1). Turns the Wave-0 RED class_exists() gate GREEN.
- *
- * Scenario: a prior pull was killed mid-batch (40 of 100 records applied,
- * durable cursor persisted at that watermark). InitialSyncPuller is
- * re-instantiated FRESH (simulating a cold-started process after an
- * app-kill — it carries zero in-memory state) and resumes from the
- * durable `mobile_sync_progress` cursor, applies the remaining 60 records
- * exactly once (no duplication), and reaches records_applied ===
- * records_expected with phase = 'complete'.
- *
- * No live LanSyncClient WebSocket dial is exercised here — a live loopback
- * connection is Manual-Only Verification (LanDirectSessionTest's own
- * documented precedent, reaffirmed by MobileBidirectionalMergeTest,
- * 15-05-SUMMARY.md). Instead, `MobileSyncTriggerService::syncOnce()`'s
- * completion signal (`true`) is obtained via the REAL off-LAN relay leg
- * against a faked HTTP endpoint (`RelayClient` is constructor-injected
- * with `Http\Client\Factory`, which `Http::fake()` intercepts) — no test
- * double/mock of any Mobile/Sync class is used (LanSyncClient and
- * MobileSyncTriggerService are both `final`, so neither is mockable by
- * design; this test exercises the real classes throughout). The "records
- * that arrived" are seeded directly into op_log_entries — mirroring
- * MobileEncryptedCopyTest's established "write directly via
- * DatabaseManager::table()->insert()" fixture pattern — standing in for
- * whatever transport actually applied them; InitialSyncPuller's own
- * watermark-delta bookkeeping (Task 1 behavior) is what this test proves.
- */
+// No live WebSocket dial here: syncOnce()'s completion signal comes from the
+// real off-LAN relay leg against a faked HTTP endpoint, since RelayClient is
+// constructor-injected with Http\Client\Factory. LanSyncClient and
+// MobileSyncTriggerService are final, so neither is mockable by design.
 
 function mobileResumeUser(string $username): User
 {
@@ -59,11 +35,8 @@ function mobileResumeUser(string $username): User
     ]);
 }
 
-/**
- * Seed $count raw op_log_entries rows directly (no signature verification
- * occurs anywhere in InitialSyncPuller's read-only watermark-delta count —
- * that gate belongs to OpLogReplayer::replay(), exercised elsewhere).
- */
+// Raw rows: no signature verification happens in the puller's read-only
+// watermark-delta count — that gate belongs to OpLogReplayer::replay().
 function seedResumeOpLogRows(DatabaseManager $db, int $userId, string $deviceId, int $count, int $startHlcL): void
 {
     for ($i = 0; $i < $count; $i++) {
@@ -89,21 +62,16 @@ it('resumes an initial sync from a durable mobile_sync_progress cursor with no d
     /** @var Session $session */
     $session = app(Session::class);
 
-    // Modules\Mobile\Tests\TestCase does not prime an unlocked session —
-    // unlock it (mirrors MobileBidirectionalMergeTest's own precedent) so
-    // the local device identity can be generated.
-    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
+    // The module TestCase does not prime an unlocked session, and the local
+    // device identity cannot be generated without one.
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
 
     /** @var DeviceIdentityService $identityService */
     $identityService = app(DeviceIdentityService::class);
     $identity = $identityService->generateAndPersist((int) $user->id, $session);
 
-    // A device that reaches InitialSyncPuller holds a GDK keyring — it has
-    // either self-minted (create-account) or received the peer's epochs
-    // (import). Self-mint one so this durable-cursor resume test reflects a
-    // decryptable device: LOW-01 (15-import-join-REVIEW.md) now gates
-    // 'complete' on an installed keyring so an import can't finish onto a
-    // dashboard of gdk_decrypt_failed rows.
+    // Any device reaching the puller holds a keyring, and 'complete' is
+    // gated on one, so self-mint here to model a decryptable device.
     /** @var GdkKeyringService $keyring */
     $keyring = app(GdkKeyringService::class);
     $keyring->generateAndPersist((int) $user->id, $session);
@@ -111,9 +79,7 @@ it('resumes an initial sync from a durable mobile_sync_progress cursor with no d
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
-    // A confirmed desktop peer — required for InitialSyncPuller's
-    // resolvePeerDeviceId() (mirrors LanSyncClient's own confirmed-only,
-    // first-non-self resolution).
+    // resolvePeerDeviceId() takes the first confirmed non-self device.
     $peerDeviceId = 'desktop-fixture-'.bin2hex(random_bytes(4));
     $db->connection()->table('device_registry')->insert([
         'user_id' => $user->id,
@@ -129,12 +95,10 @@ it('resumes an initial sync from a durable mobile_sync_progress cursor with no d
         'updated_at' => '2026-07-01 00:00:00',
     ]);
 
-    // 40 already-applied entries (hlc 1..40) — the state a prior,
-    // interrupted pull left behind before the app was killed mid-batch.
+    // What a pull killed mid-batch left behind: 40 of 100 applied, with the
+    // durable cursor's watermark advanced to the 40th entry's HLC.
     seedResumeOpLogRows($db, (int) $user->id, $peerDeviceId, 40, 1);
 
-    // The durable cursor exactly as a killed-mid-pull screen would have
-    // left it: 40 applied, watermark advanced to the 40th entry's HLC.
     $db->connection()->table('mobile_sync_progress')->insert([
         'user_id' => $user->id,
         'peer_device_id' => $peerDeviceId,
@@ -147,25 +111,18 @@ it('resumes an initial sync from a durable mobile_sync_progress cursor with no d
         'updated_at' => '2026-07-10 00:05:00',
     ]);
 
-    // The remaining 60 entries (hlc 41..100) now exist locally — standing
-    // in for whatever the resumed transport attempt applies.
+    // The remaining 60 entries, standing in for whatever the resumed
+    // transport attempt applies.
     seedResumeOpLogRows($db, (int) $user->id, $peerDeviceId, 60, 41);
 
-    // A configured, faked relay endpoint makes
-    // MobileSyncTriggerService::syncOnce() report a genuine `true` (the
-    // FULL bidirectional catch-up exchange completed) without a live
-    // socket. RelayClient is constructor-injected with Http\Client\Factory
-    // (never the Http facade internally), which Http::fake() intercepts —
-    // this is the real relay leg, not a mock of any Mobile/Sync class.
     /** @var RelayConfig $relayConfig */
     $relayConfig = app(RelayConfig::class);
     $relayConfig->setEndpointUrl('https://relay.fixture.test');
     $relayConfig->setAuthToken('fixture-relay-token');
     Http::fake(['relay.fixture.test/*' => Http::response(['blobs' => []], 200)]);
 
-    // Re-instantiate InitialSyncPuller FRESH — simulates a cold-started
-    // process after the app-kill; it carries no in-memory state, so
-    // resumption must come entirely from the durable cursor + local op-log.
+    // A FRESH puller carries no in-memory state, so a cold-started process
+    // must resume entirely from the durable cursor and the local op-log.
     /** @var InitialSyncPuller $puller */
     $puller = app(InitialSyncPuller::class);
 
@@ -182,12 +139,10 @@ it('resumes an initial sync from a durable mobile_sync_progress cursor with no d
     expect($progress['phase'])->toBe('complete');
     expect($progress['percent'])->toBe(100);
 
-    // No duplication: exactly 100 rows exist — a resumed pull must never
-    // re-insert or double-count the 40 already-applied rows.
+    // A resumed pull must never re-insert or double-count the first 40.
     expect($db->connection()->table('op_log_entries')->where('user_id', $user->id)->count())->toBe(100);
 
-    // The durable cursor is what actually persisted (not just the
-    // in-memory return value).
+    // What persisted, not just the in-memory return value.
     $row = $db->connection()->table('mobile_sync_progress')
         ->where('user_id', $user->id)
         ->where('peer_device_id', $peerDeviceId)
@@ -197,9 +152,7 @@ it('resumes an initial sync from a durable mobile_sync_progress cursor with no d
     expect($row->phase)->toBe('complete');
     expect((int) $row->last_hlc_l)->toBe(100);
 
-    // Idempotency: calling pull() again (e.g. a screen polling after
-    // completion) must not grow or duplicate anything — the puller
-    // short-circuits once phase === 'complete'.
+    // A screen still polling after completion must not grow anything.
     $again = $puller->pull((int) $user->id, $session);
     expect($again['records_applied'])->toBe(100);
     expect($again['phase'])->toBe('complete');
@@ -215,8 +168,7 @@ it('skips a pull entirely — no cursor mutation, data stays encrypted — when 
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
-    // No identity file exists for this user at all (sync never enabled) —
-    // DeviceIdentityLoader::load() returns null before any KEK check.
+    // No identity file at all, so the loader returns null before any KEK check.
     /** @var InitialSyncPuller $puller */
     $puller = app(InitialSyncPuller::class);
 
@@ -235,19 +187,13 @@ it('skips a pull entirely — no cursor mutation, data stays encrypted — when 
     expect($db->connection()->table('op_log_entries')->where('user_id', $user->id)->count())->toBe(0);
 });
 
-/*
- * Task 4 + threat item 6 (Phase 15 import-join) — resumability/idempotency
- * of the epoch-install -> rebuild-once step. 6h per
- * 15-import-join-PLAN.md's test-plan.
- */
-
 it('runs the history re-projection AT MOST ONCE per cursor once the keyring becomes non-empty; percent never regresses', function (): void {
     $user = mobileResumeUser('mobile-resume-reproject-'.bin2hex(random_bytes(4)));
     $userId = (int) $user->id;
 
     /** @var Session $session */
     $session = app(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
 
     @unlink(UserDataPathService::appPath('sync/gdk/'.$userId.'.enc'));
 
@@ -275,12 +221,9 @@ it('runs the history re-projection AT MOST ONCE per cursor once the keyring beco
 
     seedResumeOpLogRows($db, $userId, $peerDeviceId, 10, 1);
 
-    // The keyring is populated BEFORE the first pull() step — standing in
-    // for "LanSyncClient's post-catch-up receive leg just installed the
-    // desktop's epoch during THIS connection attempt" (Task 4's own
-    // sequence: sync step -> install epochs -> if newly decryptable,
-    // rebuild). current_epoch transitions null -> non-null exactly once,
-    // which is the ONLY signal InitialSyncPuller::pull() reads.
+    // Populated BEFORE the first pull(), standing in for the post-catch-up
+    // receive leg installing the desktop's epoch during this attempt.
+    // current_epoch going null -> non-null once is the only signal read.
     /** @var GdkKeyringService $keyring */
     $keyring = app(GdkKeyringService::class);
     $keyring->generateAndPersist($userId, $session);
@@ -309,8 +252,7 @@ it('runs the history re-projection AT MOST ONCE per cursor once the keyring beco
 
     $reprojectedAtAfterFirst = $cursorAfterFirst->reprojected_at;
 
-    // A second pull() tick (e.g. a wire:poll after phase === 'complete')
-    // must NOT re-run the re-projection — the guard flag stays UNCHANGED.
+    // A second tick must leave the guard flag unchanged.
     $second = $puller->pull($userId, $session);
     expect($second['phase'])->toBe('complete');
     expect($second['percent'])->toBe(100, 'percent must never regress');
@@ -329,7 +271,7 @@ it('re-delivering an already-installed (stale) epoch wrap through the receive ga
 
     /** @var Session $session */
     $session = app(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
 
     @unlink(UserDataPathService::appPath('sync/gdk/'.$userId.'.enc'));
 
@@ -340,8 +282,7 @@ it('re-delivering an already-installed (stale) epoch wrap through the receive ga
     /** @var GdkKeyringService $keyring */
     $keyring = app(GdkKeyringService::class);
 
-    // A confirmed desktop sender whose Ed25519 secret signs the wrap — the
-    // receive gateway rejects any wrap not signed by a confirmed device (F1).
+    // The receive gateway rejects any wrap not signed by a confirmed device.
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $senderSigKp = sodium_crypto_sign_keypair();
@@ -375,8 +316,7 @@ it('re-delivering an already-installed (stale) epoch wrap through the receive ga
     $afterFirst = $keyring->currentEpoch($userId, $session);
     expect($afterFirst->epochId)->toBe(1);
 
-    // Advance further (mirrors GdkEpochDeliveryTest's idempotency
-    // assertion at :346), then re-deliver the SAME stale epoch-1 wrap.
+    // Advance further, then re-deliver the SAME stale epoch-1 wrap.
     $keyring->appendEpoch(
         $userId,
         new GdkEpoch(2, sodium_bin2hex(random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES))),
@@ -398,19 +338,18 @@ it('re-delivering an already-installed (stale) epoch wrap through the receive ga
     expect($countOfEpochOne)->toBe(1, 'epoch 1 must not be duplicated in the keyring');
 });
 
-it('does not report complete while the GDK keyring is empty — an import awaiting the desktop epochs stays blocking (LOW-01)', function (): void {
+it('does not report complete while the GDK keyring is empty — an import awaiting the desktop epochs stays blocking', function (): void {
     $user = mobileResumeUser('mobile-low01-'.bin2hex(random_bytes(4)));
 
     /** @var Session $session */
     $session = app(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
 
     /** @var DeviceIdentityService $identityService */
     $identityService = app(DeviceIdentityService::class);
     $identityService->generateAndPersist((int) $user->id, $session);
 
-    // Deliberately NO keyring self-mint — this device is importing and has
-    // not yet received the desktop's epochs (empty keyring).
+    // Deliberately no keyring: an importing device awaiting the epochs.
 
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -430,8 +369,8 @@ it('does not report complete while the GDK keyring is empty — an import awaiti
     ]);
     seedResumeOpLogRows($db, (int) $user->id, $peerDeviceId, 10, 1);
 
-    // Faked relay so syncOnce() can report a genuine catch-up — the ONLY
-    // thing that must prevent 'complete' here is the empty keyring.
+    // Faked relay so syncOnce() reports a genuine catch-up: the empty
+    // keyring must be the only thing preventing 'complete'.
     /** @var RelayConfig $relayConfig */
     $relayConfig = app(RelayConfig::class);
     $relayConfig->setEndpointUrl('https://relay.fixture.test');

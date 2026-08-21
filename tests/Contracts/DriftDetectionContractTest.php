@@ -14,27 +14,6 @@ use Modules\DriftAlerts\Models\DriftAlertTransition;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 
-/*
- * Drift detection end-to-end contract.
- *
- * Loads each fixture from Modules/DriftAlerts/tests/fixtures/drift-corpus,
- * seeds the matching User + Account + ImportRun + Transaction rows + a
- * single recurring_series row with its two-or-more occurrences, then
- * runs DriftEvaluator over each occurrence pair and asserts the
- * resulting drift_alerts row count + key column values against the
- * fixture's `expected.alerts` array.
- *
- * The "snooze-expiry-revival" fixture exercises the Wave 4 hourly
- * revival job: the contract test seeds the detected drift, transitions
- * it through snoozed (snoozed_until in the past), then dispatches
- * `RevivedExpiredDriftSnoozesJob` and asserts the post-revival shape
- * declared by the fixture's `expected.transitions` block.
- *
- * The "volatile-series" fixture asserts a >=3 lower bound on alert
- * count rather than an exact figure (the fixture's `expected.alerts`
- * declares "multiple" semantics).
- */
-
 /**
  * @return array<string, array{0: string, 1: int|string}>
  */
@@ -64,9 +43,6 @@ function ddctFixtureExpectations(): array
         'rejected-state-ignored' => ['rejected-state-ignored', 0],
         'snoozed-at-series-level-ignored' => ['snoozed-at-series-level-ignored', 0],
         'irregular-cadence-ignored' => ['irregular-cadence-ignored', 0],
-        // Wave 4 revival flow — Plan 09-05 (the test detects the drift,
-        // transitions through snoozed-with-past-timestamp, then dispatches
-        // RevivedExpiredDriftSnoozesJob and asserts the revival).
         'snooze-expiry-revival' => ['snooze-expiry-revival', 'revival'],
     ];
 }
@@ -106,13 +82,6 @@ function ddctImportRun(User $user, string $sha): ImportRun
 }
 
 /**
- * Seeds the fixture's transactions + a recurring_series row + the
- * matching recurring_series_occurrences. Returns the seeded series id.
- *
- * The series's state, cadence, currency, and per-series threshold
- * override (when set on the fixture's `expected` block) are honored so
- * the evaluator sees the same shape the corpus describes.
- *
  * @param  array{transactions: array<int, array<string, mixed>>, expected: array<string, mixed>}  $fixture
  */
 function ddctSeedFixture(DatabaseManager $db, User $user, Account $account, ImportRun $run, array $fixture, string $name): int
@@ -150,12 +119,9 @@ function ddctSeedFixture(DatabaseManager $db, User $user, Account $account, Impo
         $seriesRow['drift_threshold_percent'] = (int) $expected['series_drift_threshold_percent'];
     }
     if (isset($expected['series_snoozed']) && $expected['series_snoozed'] === true) {
-        // The fixture's intent: "Recurring excludes snoozed series" so
-        // the evaluator must never see it. Phase 8's state machine
-        // makes 'snoozed' a distinct state — a series with snoozed_until
-        // in the future is in state='snoozed' by construction. Use the
-        // canonical Phase 8 shape so the evaluator's state filter
-        // catches it.
+        // A series with snoozed_until in the future is in state='snoozed' by
+        // construction, and the evaluator filters on state — so the corpus's
+        // "excludes snoozed series" intent needs both columns set.
         $seriesRow['state'] = 'snoozed';
         $seriesRow['snoozed_until'] = '2099-01-01 00:00:00';
     }
@@ -211,11 +177,7 @@ function ddctSeedFixture(DatabaseManager $db, User $user, Account $account, Impo
     return $seriesId;
 }
 
-/**
- * Walks every pair (prior, latest) in observation order and invokes
- * DriftEvaluator. Each pair is a candidate; the multi-drift fixture
- * relies on this to queue more than one alert.
- */
+// The multi-drift fixture depends on this queueing more than one alert.
 function ddctEvaluateAllOccurrencePairs(DatabaseManager $db, DriftEvaluator $evaluator, int $seriesId, User $user): void
 {
     $rows = $db->connection()->table('recurring_series_occurrences')
@@ -225,21 +187,9 @@ function ddctEvaluateAllOccurrencePairs(DatabaseManager $db, DriftEvaluator $eva
         ->orderBy('id')
         ->get(['id']);
 
-    // For every pair (i, i+1), simulate "the i+1 occurrence has just
-    // arrived" by deleting the future occurrences (i+2..n) before
-    // calling the evaluator, then restoring them afterward. Cleaner
-    // path here is to walk pair-by-pair and trim — but for the
-    // contract's purpose we only need to ensure the evaluator is
-    // invoked once per terminal pair. The simplest faithful semantic:
-    // delete forward occurrences in a copy, evaluate, restore.
-    //
-    // SQLite refuses to delete + re-insert because of the
-    // recurring_series_occurrences UNIQUE constraint on
-    // (recurring_series_id, transaction_id). The trick is to evaluate
-    // for the FULL ordered series with progressive "horizon" pointers.
-    //
-    // Implementation: re-evaluate from a window pointer. We drop
-    // newer-than-pointer rows, call evaluator, then restore them.
+    // Simulate "the i-th occurrence has just arrived" by temporarily deleting
+    // every later occurrence, evaluating, then restoring them — the evaluator
+    // always reads the two most recent rows for the series.
     $allRows = [];
     foreach ($rows as $row) {
         $orig = $db->connection()->table('recurring_series_occurrences')
@@ -256,9 +206,6 @@ function ddctEvaluateAllOccurrencePairs(DatabaseManager $db, DriftEvaluator $eva
     }
 
     for ($i = 1; $i < $count; $i++) {
-        // Delete every occurrence whose observed_at is strictly after
-        // the i-th row's observed_at (or same observed_at but greater
-        // id). Then run evaluator. Then restore.
         $cutoff = $allRows[$i];
         $deleted = [];
         for ($j = $i + 1; $j < $count; $j++) {
@@ -271,7 +218,6 @@ function ddctEvaluateAllOccurrencePairs(DatabaseManager $db, DriftEvaluator $eva
 
         $evaluator->evaluateForSeries($seriesId, $user);
 
-        // Restore deleted rows in original order.
         foreach ($deleted as $row) {
             $db->connection()->table('recurring_series_occurrences')->insert($row);
         }
@@ -307,11 +253,8 @@ it('runs the drift evaluator against every fixture in the 24-scenario corpus and
     if ($expectedAlertCount === 'multiple') {
         expect($actualCount)->toBeGreaterThanOrEqual(3);
     } elseif ($expectedAlertCount === 'revival') {
-        // Wave 4 revival flow: the detected alert is snoozed with a
-        // past snoozed_until, then the hourly RevivedExpiredDriftSnoozesJob
-        // flips it back to 'open' with the audit transition the fixture
-        // declares. The fixture's transactions produce exactly one drift
-        // alert (3× -999 → 3× -1149, a ~15% drift > 5% global threshold).
+        // The fixture's 3× -999 → 3× -1149 is a ~15% drift against the 5% global
+        // threshold, so exactly one alert exists to snooze and revive.
         expect($actualCount)->toBe(1);
 
         /** @var DriftAlert $detected */
@@ -355,8 +298,6 @@ it('runs the drift evaluator against every fixture in the 24-scenario corpus and
         expect($actualCount)->toBe($expectedAlertCount);
     }
 
-    // For drift-positive fixtures, check the first expected.alerts entry
-    // against at least one persisted row (by signed delta + currency).
     if (is_int($expectedAlertCount) && $expectedAlertCount > 0 && isset($fixture['expected']['alerts']) && is_array($fixture['expected']['alerts']) && $fixture['expected']['alerts'] !== []) {
         /** @var array<string, mixed> $firstExpected */
         $firstExpected = $fixture['expected']['alerts'][0];

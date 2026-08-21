@@ -48,7 +48,6 @@ beforeEach(function (): void {
     $this->household = Category::create(['user_id' => null, 'name' => 'Household', 'slug' => 'household', 'kind' => 'expense', 'display_order' => 2]);
 });
 
-/** Persist a transaction (default: expense) for the current period, for $user. */
 function splitTx(int $userId, int $accountId, int $runId, int $settledMinor, string $type = 'expense', ?int $categoryId = null): Transaction
 {
     static $i = 100000;
@@ -89,7 +88,6 @@ it('rejects a split whose legs do not sum to the parent settled_amount_minor, in
         ['id' => null, 'category_id' => $this->household->id, 'settled_amount_minor' => -1000, 'note' => null],
     ]))->toThrow(SplitSumMismatchException::class);
 
-    // The whole write rolled back — no leg rows persisted.
     expect(TransactionSplit::query()->where('transaction_id', $tx->id)->count())->toBe(0);
 });
 
@@ -165,7 +163,7 @@ it('rejects a leg whose category is not visible to the user', function (): void 
     expect(TransactionSplit::query()->where('transaction_id', $tx->id)->count())->toBe(0);
 });
 
-it('canonicalises an empty-string note to null on write (WR-04)', function (): void {
+it('canonicalises an empty-string note to null on write', function (): void {
     $tx = splitTx($this->user->id, $this->account->id, $this->run->id, -8000);
 
     app(SaveTransactionSplit::class)->save($this->user, $tx->id, [
@@ -179,7 +177,7 @@ it('canonicalises an empty-string note to null on write (WR-04)', function (): v
     }
 });
 
-it('does not churn a note op when the stored value is empty string and the incoming value is null (WR-04)', function (): void {
+it('does not churn a note op when the stored value is empty string and the incoming value is null', function (): void {
     $tx = splitTx($this->user->id, $this->account->id, $this->run->id, -8000);
 
     app(SaveTransactionSplit::class)->save($this->user, $tx->id, [
@@ -196,8 +194,8 @@ it('does not churn a note op when the stored value is empty string and the incom
 
     Event::fake([TransactionSplitMutated::class]);
 
-    // Re-save the identical legs (notes null). '' (stored) vs null (incoming)
-    // must NOT be treated as a change — no op churn, no LWW ping-pong.
+    // '' stored against null incoming must not count as a change, or the two
+    // devices churn ops at each other forever.
     app(SaveTransactionSplit::class)->save($this->user, $tx->id, [
         ['id' => $groceriesLegId, 'category_id' => $this->groceries->id, 'settled_amount_minor' => -6000, 'note' => null],
         ['id' => $householdLegId, 'category_id' => $this->household->id, 'settled_amount_minor' => -2000, 'note' => null],
@@ -220,7 +218,6 @@ it('preserves leg primary keys on edit: unchanged/edited legs keep their id, add
 
     $fuel = Category::create(['user_id' => null, 'name' => 'Fuel', 'slug' => 'fuel', 'kind' => 'expense', 'display_order' => 4]);
 
-    // Edit: rebalance the groceries leg, keep household leg untouched, add a fuel leg.
     app(SaveTransactionSplit::class)->save($this->user, $tx->id, [
         ['id' => $groceriesLegId, 'category_id' => $this->groceries->id, 'settled_amount_minor' => -5000, 'note' => null],
         ['id' => $householdLegId, 'category_id' => $this->household->id, 'settled_amount_minor' => -2000, 'note' => null],
@@ -239,7 +236,6 @@ it('preserves leg primary keys on edit: unchanged/edited legs keep their id, add
 
     $fuelLegId = $after->firstWhere('category_id', $fuel->id)->id;
 
-    // Edit again: drop the household leg entirely — only that row DELETEs.
     app(SaveTransactionSplit::class)->save($this->user, $tx->id, [
         ['id' => $groceriesLegId, 'category_id' => $this->groceries->id, 'settled_amount_minor' => -7000, 'note' => null],
         ['id' => $fuelLegId, 'category_id' => $fuel->id, 'settled_amount_minor' => -1000, 'note' => null],

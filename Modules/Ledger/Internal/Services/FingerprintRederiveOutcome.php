@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Internal\Services;
 
-// The status surface is small on purpose: callers only need to
-// distinguish "all good" from "stop, do not write", plus the
-// rows-affected count or collision detail for reporting.
+// The status surface is deliberately small: callers only have to tell
+// "all good" from "stop, do not write".
 final class FingerprintRederiveOutcome
 {
     /**

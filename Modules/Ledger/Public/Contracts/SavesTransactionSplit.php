@@ -8,9 +8,6 @@ use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Exceptions\SplitSumMismatchException;
 
-/**
- * @link ../../../../.docs/features/ledger/architecture.md
- */
 interface SavesTransactionSplit
 {
     // A leg with an id matching an existing leg is UPDATEd in place,

@@ -2,13 +2,8 @@
 
 declare(strict_types=1);
 
-// Salary €3500 → €3290 (−6.0% month-over-month, strictly greater than
-// the default ±5% threshold). The detector applies strict-greater-than
-// against the threshold, so an exactly-5.0% move would NOT fire — the
-// fixture picks a value past the boundary for unambiguous expectation.
-// Math:
-//   delta_minor = 329000 - 350000 = -21000 (signed income, negative)
-//   annualized_impact_minor = -21000 × 12 = -252000 (-€2520/yr)
+// -6.0% rather than exactly -5.0%: the threshold test is strictly
+// greater-than, so a move of precisely the threshold would not fire.
 
 $transactions = [];
 $amounts = [350000, 350000, 350000, 329000, 329000, 329000];

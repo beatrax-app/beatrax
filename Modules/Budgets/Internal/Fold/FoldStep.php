@@ -6,9 +6,6 @@ namespace Modules\Budgets\Internal\Fold;
 
 use Modules\Budgets\Public\Dto\EnvelopeRow;
 
-/**
- * @link ../../../../.docs/features/budgets/architecture.md
- */
 final class FoldStep
 {
     /**

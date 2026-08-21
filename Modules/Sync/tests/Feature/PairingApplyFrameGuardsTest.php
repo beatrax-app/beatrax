@@ -13,18 +13,10 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
 uses(RefreshDatabase::class);
 
-/*
- * The fail-closed guards in applyResponderAccept()/applyPeerConfirm() that the
- * cross-device suite does not reach. That suite drives the honest flow and the
- * forged-signature attack; these are the rejections that fire when the ROW
- * disagrees with the frame — an unknown token, a frame addressed to a device
- * this one is not, a sender that is not the identity the row bound, or key
- * material already stored malformed.
- *
- * They matter more than their size suggests: each one is the only thing
- * standing between a corrupt or hostile relay frame and a trust decision, and
- * none of them announces itself when it stops working.
- */
+// The rejections that fire when the stored row disagrees with the frame: an
+// unknown token, a frame this device is not the addressee of, a sender that is
+// not the identity the row bound. Each is the only thing between a hostile
+// relay frame and a trust decision, and none announces itself when it stops.
 
 const PAFG_DESKTOP = 'pafg-desktop';
 
@@ -98,9 +90,8 @@ function pafgArrangeAwaitingConfirm(mixed $app, int $userId, bool $withSelfRow =
             'initiator_confirmed_at' => '2026-06-15T09:30:00Z',
         ]);
 
-    // The X25519 sealing keys this arrangement bound — the desktop
-    // (initiator) key issued above and the responder key written onto the row
-    // — now covered by the PAIR_CONFIRM signature the guard tests reconstruct.
+    // The sealing keys this arrangement bound, which the confirm signature the
+    // guard tests reconstruct now covers.
     return ['tokenHash' => $tokenHash, 'phone' => $phone, 'phoneKx' => str_repeat('c', 64), 'desktopKx' => str_repeat('b', 64)];
 }
 
@@ -111,10 +102,6 @@ beforeEach(function (): void {
 afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
-
-// ---------------------------------------------------------------------
-// applyResponderAccept — rejections before the row is touched.
-// ---------------------------------------------------------------------
 
 it('refuses a responder-accept frame whose key material is not valid hex', function (): void {
     $user = pafgUser('pafg-bad-keys');
@@ -152,10 +139,6 @@ it('refuses a responder-accept frame for a token hash this database does not hol
         str_repeat('b', 64),
     ))->toBeFalse();
 });
-
-// ---------------------------------------------------------------------
-// applyPeerConfirm — rejections where the row disagrees with the frame.
-// ---------------------------------------------------------------------
 
 it('refuses a peer-confirm frame that was addressed to some other device', function (): void {
     $user = pafgUser('pafg-misaddressed');

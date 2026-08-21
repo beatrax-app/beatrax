@@ -9,15 +9,8 @@ use Modules\Ledger\Public\Services\AccountBalanceQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * Wave 0 RED stub (D-09, GREEN in 13.3-02). `AccountBalanceQuery` has no
- * `clearedBalance()` method yet — only `currentBalance()` (raw
- * `SUM(amount_minor)`, no status filter). This pins the sibling method's
- * contract: `SUM(amount_minor) WHERE status IN ('cleared','reconciled')`,
- * scoped by `account_id` + `user_id`, mirroring `currentBalance()`'s own
- * column choice (`amount_minor`, NOT `settled_amount_minor`) and inheriting
- * the IN-07 single-currency assumption unchanged.
- */
+// clearedBalance sums amount_minor, not settled_amount_minor, mirroring
+// currentBalance's column choice and its single-currency assumption.
 
 it('sums only cleared and reconciled rows, excluding uncleared', function (): void {
     $user = User::create(['username' => 'balance-fixture', 'password' => 'fixture-password', 'period_start_day' => 1]);

@@ -7,19 +7,9 @@ use Modules\Mobile\Internal\Pairing\QrScanBridge;
 
 uses(RefreshDatabase::class);
 
-/*
- * QrScanBridgeRelayIdentityTest — Phase 15 HIGH-01 (Task 1), case 10.
- *
- * extractIdentity() now ALSO reads the QR's optional `relay`/`rtok` query
- * params (QrPayloadBuilder::buildUri()) so a fresh phone can auto-configure
- * its own RelayConfig before the cross-device confirm handshake needs a
- * transport. This is still no bespoke trust decision — the fields are read
- * verbatim, exactly like the existing token/device/ed/kx fields.
- *
- * QrScanBridge is resolved via the container (its PairingGateway dependency
- * needs the full DI graph) but extractIdentity() itself never touches
- * PairingGateway — it is a pure envelope-unwrap.
- */
+// The relay fields are read verbatim, exactly like the token, device and key
+// fields, so no bespoke trust decision happens here. The bridge is resolved through
+// the container only because its constructor needs the full DI graph.
 
 it('extracts relayEndpoint + relayAuthToken when the QR carries both', function (): void {
     /** @var QrScanBridge $bridge */

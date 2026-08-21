@@ -13,24 +13,10 @@ use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 
 uses(RefreshDatabase::class);
 
-/*
- * Coverage for {@see PairsTransferLegs::pairOrphansForUser} — the
- * bulk-sweep entry point added so the chain-resolution job can close
- * pairs on rows that the per-row TransactionImported listener path
- * missed (the wizard-order race retyped them AFTER their import).
- *
- *   1. Pairs two unpaired-but-already-typed transfer legs that match
- *      via the alias bridge.
- *   2. Pairs two legs that match via literal own-IBAN equality (no
- *      alias bridge needed).
- *   3. Leaves already-paired rows alone (idempotency).
- *   4. Returns the number of NEW pairs written; re-running returns 0.
- *   5. Per-user scoped.
- */
+// A bulk sweep for rows the per-row listener missed: the wizard-order race
+// retypes legs as transfers only after their import has already passed it.
 
 /**
- * Build a user + bank/paypal account + the LU alias + one import run.
- *
  * @return array{user: User, bank: Account, paypal: Account, run: ImportRun}
  */
 function orphanFixture(string $username): array
@@ -126,7 +112,7 @@ it('pairs two unpaired transfer legs that match via the alias bridge', function 
 
 it('pairs two legs that match via literal own-IBAN equality (no alias bridge needed)', function (): void {
     $f = orphanFixture('beta');
-    // ASN row points DIRECTLY at the PayPal account's own iban literal.
+    // The ASN row points at the PayPal account's own iban literal, no alias bridge.
     $asn = orphanTx($f['user'], $f['bank'], $f['run']->id, 'transfer_out', -2599, 'PAYPAL');
     $paypal = orphanTx($f['user'], $f['paypal'], $f['run']->id, 'transfer_in', 2599, null);
 
@@ -153,8 +139,7 @@ it('leaves already-paired rows alone (idempotency on the second pass)', function
 it('is per-user scoped — never pairs across users', function (): void {
     $a = orphanFixture('hank');
     $b = orphanFixture('iris');
-    // Both users have an identical-amount unpaired ASN/PayPal pair.
-    // The sweep for A must NOT pair A's ASN row with B's PayPal row.
+    // Identical amounts across users, so an unscoped sweep pairs A with B.
     orphanTx($a['user'], $a['bank'], $a['run']->id, 'transfer_out', -1399, 'LU89751000135104200E');
     orphanTx($b['user'], $b['paypal'], $b['run']->id, 'transfer_in', 1399, null);
 

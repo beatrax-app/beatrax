@@ -19,19 +19,6 @@ use Modules\Sync\Public\Events\NotificationMutated;
 
 uses(RefreshDatabase::class);
 
-/*
- * NotificationWriterTest — the idempotent writer (D-05, Req 1) and the
- * three lifecycle actions (D-09/D-10).
- *
- * Covers: writing the same tuple twice yields exactly ONE row and exactly
- * ONE NotificationDeliverable/NotificationMutated; a different occurrence
- * yields a second row; the returned id matches DeterministicKeyDeriver's own
- * output; a duplicate write dispatches no events at all; MarkNotificationRead
- * twice leaves the first timestamp intact (latch); Dismiss then UndoDismiss
- * round-trips dismissed_at to null; none of the three actions change state;
- * a cross-user MarkNotificationRead does not mutate the row.
- */
-
 function writerUser(string $username): User
 {
     return User::query()->create([
@@ -205,7 +192,7 @@ it('leaves the first read_at timestamp intact when MarkNotificationRead runs twi
     $firstReadAt = $this->db->connection()->table('notifications')->where('id', $id)->value('read_at');
     expect($firstReadAt)->not->toBeNull();
 
-    // Advance the clock and mark read again — must be a no-op.
+    // The clock moves so a re-write would produce a visibly different value.
     $laterClock = $this->createStub(Clock::class);
     $laterClock->method('now')->willReturn(CarbonImmutable::parse('2026-07-19 10:00:00'));
     $this->app->instance(Clock::class, $laterClock);

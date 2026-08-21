@@ -36,8 +36,8 @@ it('ranks ics-receipt above ics-pdf and below camt053', function (): void {
 it('returns a non-zero rank for google-play-receipt', function (): void {
     $ranker = new SourceRefRanker;
     expect($ranker->rank('ref', 'google-play-receipt'))->toBeGreaterThan(0);
-    // Google Play sits in the same rank band as paypal-csv / asn-csv —
-    // no cross-format dedup risk so the equivalence is intentional.
+    // Google Play deliberately shares the rank band of paypal-csv and asn-csv:
+    // there is no cross-format dedup risk between them.
     expect($ranker->rank('ref', 'google-play-receipt'))->toBeLessThan($ranker->rank('ref', 'camt053'));
 });
 

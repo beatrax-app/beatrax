@@ -49,11 +49,8 @@ it('persists a transaction with a valid type', function (): void {
 });
 
 it('rejects an invalid transaction type at the DB layer', function (): void {
-    // The allowed-types invariant is enforced by paired BEFORE INSERT /
-    // BEFORE UPDATE triggers on the `transactions` table. The trigger
-    // raises RAISE(ABORT, 'Invalid transactions.type value'), which the
-    // driver surfaces as a QueryException — covering every write path,
-    // including raw insertOrIgnore from the recorder action.
+    // Paired BEFORE INSERT/UPDATE triggers RAISE(ABORT), which the driver
+    // surfaces as a QueryException on every write path, raw inserts included.
     expect(fn () => Transaction::create([
         'account_id' => $this->account->id,
         'type' => 'nonsense',

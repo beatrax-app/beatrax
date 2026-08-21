@@ -8,27 +8,9 @@ use Modules\Import\Internal\Services\AliasYamlExporter;
 use Modules\Import\Internal\Services\AliasYamlImporter;
 use Modules\Import\Models\MerchantAlias;
 
-/*
- * Round-trip snapshot for the YAML exporter / importer pair.
- *
- * Three properties are locked here:
- *
- *   1. The serialised YAML matches a committed snapshot — accidental
- *      drift in schema, ordering, or formatting fails CI before the
- *      file shape leaks into a downstream tool.
- *   2. The exported YAML parses cleanly back into a list of
- *      CorpusEntryDto values carrying the same pattern + name shape.
- *   3. Diffing the parsed entries against the user's current
- *      merchant_aliases classifies all of them as `unchanged`. Export
- *      → re-import must never appear as new rows or as conflicts.
- *
- * The export is deterministic because:
- *   - the query orders by id (stable across runs),
- *   - the user is created with a fixed username so the user_id is
- *     not surfaced in the output,
- *   - the exported payload uses symfony/yaml's `inline: 4` shape
- *     which is documented as stable.
- */
+// The snapshot holds still because the export query orders by id, the fixed
+// fixture username keeps user_id out of the output, and symfony/yaml's
+// `inline: 4` shape is documented as stable.
 
 beforeEach(function (): void {
     $this->user = User::create([
@@ -37,11 +19,8 @@ beforeEach(function (): void {
         'period_start_day' => 1,
     ]);
 
-    // Each row's `generalized_pattern` matches what
-    // `PatternGeneralizer::generalize($pattern)` produces so the
-    // round-trip diff classifies every re-imported entry as
-    // `unchanged`. A mismatched generalized_pattern would surface as
-    // a `conflict` row under the diff contract.
+    // Each generalized_pattern is exactly what PatternGeneralizer produces for
+    // its pattern; a mismatch would come back from the diff as a conflict.
     foreach ([
         ['BCK*SHELL PIETER NIEUW *0123', 'bck*shell pieter nieuw', 'Shell Pieter'],
         ['ALBERT HEIJN 1245 T07438', 'albert heijn', 'Albert Heijn'],

@@ -12,9 +12,6 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Internal\Services\TaxPdfRenderer as InternalTaxPdfRenderer;
 use Modules\Tax\Internal\Services\TaxYearQuery as InternalTaxYearQuery;
 
-/**
- * @link ../../../../.docs/features/tax/architecture.md
- */
 final class TaxPdfRenderer
 {
     public function __construct(

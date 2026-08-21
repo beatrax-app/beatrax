@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-// Wave 0 RED — implemented by plan 05-02
-
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Http\Request;
@@ -13,21 +11,11 @@ use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Core\Models\User;
 use Symfony\Component\HttpFoundation\Response;
 
-/*
- * Feature coverage for AppLockMiddleware: gates every authenticated route
- * behind the app-lock screen when the session is locked. The lock screen
- * and logout routes are exempt to prevent redirect loops.
- *
- * These tests go GREEN when plan 05-02 creates AppLockMiddleware and the
- * auth.lock named route.
- */
-
 it('AppLockMiddleware class exists (RED until 05-02)', function (): void {
     expect(class_exists(AppLockMiddleware::class))->toBeTrue();
 });
 
 it('redirects to auth.lock when the session is locked', function (): void {
-    // Requires: AppLockMiddleware class + auth.lock route from 05-02
     expect(class_exists(AppLockMiddleware::class))->toBeTrue();
 
     $user = User::query()->create([
@@ -37,9 +25,8 @@ it('redirects to auth.lock when the session is locked', function (): void {
     ]);
     $this->actingAs($user);
 
-    // The lock must actually be enabled: a locked session belonging to a user
-    // with no lock is released rather than redirected, since no PIN or
-    // biometric exists that could ever clear it.
+    // The lock has to be genuinely enabled: a locked session whose user has no
+    // lock is released rather than redirected, since nothing could clear it.
     DB::connection()->table('user_app_lock_configs')->insert([
         'user_id' => $user->id,
         'lock_enabled' => true,
@@ -69,9 +56,8 @@ it('passes through when the session is unlocked', function (): void {
     ]);
     $this->actingAs($user);
 
-    // The middleware should NOT redirect to auth.lock when unlocked.
-    // The dashboard may redirect elsewhere (e.g. imports.new for a new user) —
-    // we only assert that the lock screen redirect does NOT occur.
+    // The dashboard may still redirect elsewhere for a new user, so only the
+    // lock-screen redirect is asserted against.
     $response = $this->withSession([LockStateManager::SESSION_KEY => false])
         ->get(route('dashboard'));
 
@@ -114,8 +100,6 @@ it('passes through when the route is logout (exempt)', function (): void {
 it('passes through for guests (unauthenticated requests are not locked)', function (): void {
     expect(class_exists(AppLockMiddleware::class))->toBeTrue();
 
-    // Verify the middleware does NOT redirect guests to the lock screen.
-    // The middleware short-circuits for unauthenticated requests (isAuthenticated() === false).
     /** @var AppLockMiddleware $middleware */
     $middleware = $this->app->make(AppLockMiddleware::class);
 

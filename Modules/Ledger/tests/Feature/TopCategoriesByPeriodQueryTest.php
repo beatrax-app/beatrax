@@ -62,7 +62,7 @@ it('ranks categories by spend descending, unsplit transactions unchanged', funct
     expect($rows[1]->spend->toMinor())->toBe(1000);
 });
 
-it('counts a split transaction\'s legs individually, never the parent (Req 4)', function (): void {
+it('counts a split transaction\'s legs individually, never the parent', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
 
@@ -71,9 +71,7 @@ it('counts a split transaction\'s legs individually, never the parent (Req 4)', 
     /** @var Category $household */
     $household = Category::create(['user_id' => $this->user->id, 'name' => 'Household', 'slug' => 'tcbp-split-household', 'kind' => 'expense', 'display_order' => 2]);
 
-    // €80 split €60 Groceries / €20 Household — the parent keeps a
-    // vestigial category_id (Groceries), which must NOT add on top of the
-    // legs.
+    // The parent keeps a vestigial category_id that must not add to its legs.
     $tx = $this->makeTransaction($this->user, $this->account, $this->run, [
         'amount_minor' => -8000,
         'posted_at' => '2026-05-05',

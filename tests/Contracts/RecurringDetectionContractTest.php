@@ -14,15 +14,6 @@ use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
 use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
 use Modules\Recurring\Models\RecurringSeries;
 
-/*
- * Recurring detection end-to-end contract.
- *
- * Loads each synthesised fixture, seeds the matching transactions,
- * runs the sweep job synchronously over both the expense AND income
- * detectors, and asserts each detector produces the expected per-
- * direction series count per fixture.
- */
-
 /**
  * @return array<string, array{0: string, 1: int, 2: int}>
  *                                                         [fixtureName, expectedExpenseSeriesCount, expectedIncomeSeriesCount]
@@ -127,10 +118,8 @@ it('asserts the expected expense + income series counts for each synthesised fix
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = rdctUser('rdct-'.$fixtureName);
-    // Widen the detection window so a fixture that places its earliest
-    // occurrence beyond the 18-month default (e.g. yearly-domain at
-    // 2024-06-12) still produces every documented occurrence inside
-    // the look-back window.
+    // yearly-domain's earliest occurrence (2024-06-12) sits beyond the 18-month
+    // default look-back, so the window is widened for every fixture.
     $user->recurring_detection_window_months = 36;
     $user->save();
     $account = rdctAccount($user, 'rdct-'.substr($fixtureName, 0, 8));
@@ -174,17 +163,14 @@ it('produces no duplicate series rows when the full fixture corpus runs twice th
     $user->save();
 
     $fixtureNames = array_keys(rdctExpenseFixtureExpectations());
-    // Plus the empty real-export stub — its empty transactions list is
-    // a no-op for the detector but the load path must succeed so the
-    // contract covers the file lookup wiring.
+    // The empty real-export stub is a detector no-op, but its load path has to
+    // succeed so the fixture lookup wiring is covered.
     $fixtureNames[] = 'anonymised-asn-ics-6mo';
 
-    // One account + import-run per fixture so the
-    // (user_id, account_id, posted_at, booked_at, amount_minor,
-    // currency, counterparty_normalized) unique constraint on
-    // `transactions` does not collide across fixtures that share
-    // counterparty names (e.g. stable + drifting spotify both seed a
-    // 2024-11-15 spotify row).
+    // One account + import-run per fixture: two fixtures sharing a counterparty
+    // (stable and drifting spotify both seed a 2024-11-15 row) would otherwise
+    // collide on the transactions unique constraint over
+    // (user_id, account_id, posted_at, booked_at, amount_minor, currency, ...).
     foreach ($fixtureNames as $idx => $fixtureName) {
         $slug = 'fc-'.substr(md5($fixtureName), 0, 6);
         $account = rdctAccount($user, $slug);
@@ -207,21 +193,13 @@ it('produces no duplicate series rows when the full fixture corpus runs twice th
     (new DetectRecurringSeriesJob($user->id))->handle($db, $clock, [$expense, $income], $machine);
     $afterSecondRun = RecurringSeries::query()->where('user_id', $user->id)->count();
 
-    // Re-running the sweep against the same transaction set must NOT
-    // create additional series rows. The detector keys on
-    // (user_id, direction, cluster_key, latest_currency) so duplicate
-    // detection collapses cleanly.
+    // The detector keys on (user_id, direction, cluster_key, latest_currency), so
+    // a re-run collapses onto the same rows.
     expect($afterSecondRun)->toBe($afterFirstRun);
 
-    // Sanity check: the corpus produces a non-zero series set. The
-    // exact count is not asserted here — merging every fixture into a
-    // single user/account namespace can legitimately collapse series
-    // that share a counterparty across fixtures (e.g. the stable +
-    // drifting Spotify rows cluster into one series under the
-    // detector's cluster_key + currency + cadence key). The
-    // per-fixture variant of this test (the one driven by
-    // rdctExpenseFixtureExpectations) covers exact counts; this slice
-    // covers the load-bearing idempotency-on-re-run contract.
+    // No exact count: merging every fixture into one user namespace legitimately
+    // collapses series that share a counterparty across fixtures. The per-fixture
+    // test above covers exact counts; this one covers idempotency on re-run.
     expect($afterFirstRun)->toBeGreaterThan(0);
 
     CarbonImmutable::setTestNow();

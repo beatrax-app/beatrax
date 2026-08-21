@@ -7,18 +7,6 @@ use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Modules\Anomaly\Internal\Jobs\DetectAnomaliesJob;
 
-/*
- * Locks the DetectAnomaliesJob single-flight contract: implements
- * ShouldBeUniqueUntilProcessing keyed on "{userId}:{transactionId}",
- * uniqueFor=600, uniqueVia()=Cache repository, tries=3,
- * backoff=[60,300,900].
- *
- * Cloned from DetectDriftAlertsJobUniqueTest — re-keyed to the
- * per-transaction (userId, transactionId) shape. No RefreshDatabase:
- * every assertion is reflection-based or method-call against a
- * freshly-instantiated job.
- */
-
 it('declares ShouldBeUniqueUntilProcessing and ShouldQueue', function (): void {
     $reflection = new ReflectionClass(DetectAnomaliesJob::class);
     expect($reflection->implementsInterface(ShouldBeUniqueUntilProcessing::class))->toBeTrue();

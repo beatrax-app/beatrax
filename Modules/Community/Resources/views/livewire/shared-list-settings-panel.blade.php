@@ -26,16 +26,12 @@
                     {{ Lang::get('community::settings.use_shared_list.help') }}
                 </p>
             </div>
-            <label for="toggle-use-shared-list" class="cursor-pointer">
-                <span class="sr-only">{{ Lang::get('community::settings.use_shared_list.title') }}</span>
-                <input
-                    type="checkbox"
-                    id="toggle-use-shared-list"
-                    wire:change="toggleUseSharedList"
-                    @checked($useSharedList)
-                    class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600 dark:border-slate-600 dark:text-emerald-500"
-                />
-            </label>
+            <x-core::switch
+                id="toggle-use-shared-list"
+                :on="$useSharedList"
+                :label="Lang::get('community::settings.use_shared_list.title')"
+                wire:click="toggleUseSharedList"
+            />
         </div>
 
         <div class="toggle-row flex items-start justify-between gap-4 border-b border-slate-200 py-3 dark:border-slate-700">
@@ -45,16 +41,12 @@
                     {{ Lang::get('community::settings.offer_to_contribute.help') }}
                 </p>
             </div>
-            <label for="toggle-offer-to-contribute" class="cursor-pointer">
-                <span class="sr-only">{{ Lang::get('community::settings.offer_to_contribute.title') }}</span>
-                <input
-                    type="checkbox"
-                    id="toggle-offer-to-contribute"
-                    wire:change="toggleOfferToContribute"
-                    @checked($offerToContribute)
-                    class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600 dark:border-slate-600 dark:text-emerald-500"
-                />
-            </label>
+            <x-core::switch
+                id="toggle-offer-to-contribute"
+                :on="$offerToContribute"
+                :label="Lang::get('community::settings.offer_to_contribute.title')"
+                wire:click="toggleOfferToContribute"
+            />
         </div>
 
         <div class="toggle-row flex items-start justify-between gap-4 py-3">
@@ -67,16 +59,14 @@
                     {{ Lang::get('community::settings.update_on_updates.note') }}
                 </p>
             </div>
-            <label for="toggle-update-on-updates" class="cursor-not-allowed">
-                <span class="sr-only">{{ Lang::get('community::settings.update_on_updates.title') }}</span>
-                <input
-                    type="checkbox"
-                    id="toggle-update-on-updates"
-                    disabled
-                    @checked($updateOnAppUpdates)
-                    class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:text-emerald-500"
-                />
-            </label>
+            {{-- No wire:click: nothing to call until the auto-update plumbing lands. --}}
+            <x-core::switch
+                id="toggle-update-on-updates"
+                :on="$updateOnAppUpdates"
+                :label="Lang::get('community::settings.update_on_updates.title')"
+                disabled
+                class="disabled:cursor-not-allowed disabled:opacity-50"
+            />
         </div>
     </div>
 </div>

@@ -15,34 +15,9 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
 use Modules\Ledger\Models\Transaction;
 
-/*
- * The cross-user data-isolation matrix for every auth-gated GET route.
- *
- * This is the first Phase 12 test that creates TWO real users at once
- * (owner + partner) and probes every authenticated route from the
- * perspective of a second user. It enforces three guarantees:
- *
- *  1. Model-scoped routes (`/transactions/{id}`, `/recurring/series/{id}`)
- *     return HTTP 404 — never 403 — when a user requests a record that
- *     belongs to someone else. A 403 leaks the resource's existence.
- *
- *  2. List / index routes (`/`, `/settings`, `/transactions`,
- *     `/uncategorized`, `/rules`, ...) never surface another user's
- *     rows: the owner seeds user-scoped data, the partner loads the
- *     list, and the owner's data is absent from the partner's response.
- *
- *  3. A route-table-introspection guard fails the suite if a future
- *     auth GET route is added without either a probe case here or an
- *     entry on the explicit auth/guest-plumbing allow-list.
- */
-
+// Auth-gated GET routes bearing no cross-user data; each entry carries its
+// reviewed reason.
 /**
- * Auth-gated GET route names that legitimately carry no cross-user
- * data — authentication / account plumbing surfaces. Adding a route
- * here is a deliberate, reviewed exemption: these routes either render
- * the acting user's own account chrome (change-password, recovery
- * codes) or are POST-only verbs that surface no list of foreign rows.
- *
  * @var list<string>
  */
 const ISOLATION_ROUTE_ALLOW_LIST = [
@@ -51,140 +26,56 @@ const ISOLATION_ROUTE_ALLOW_LIST = [
     'auth.recovery-codes-display',
     'auth.users.create',
     'auth.users.manage',
-    // Phase 15 desktop chrome — neither surface lists foreign data.
-    // `desktop.close-prompt` is the D-08 modal: it renders the acting
-    // user's own close-behavior preference (`users.close_behavior`)
-    // and dispatches a Livewire choice event; it never reads another
-    // user's rows. `desktop.file-staging` consumes the
-    // session-scoped PendingFileIntent (cross-user isolation is
-    // proven by the dedicated test in FileOpenedFromOsTest "pending
-    // intent does not leak across users") and emits one of two
-    // copy-only states — file received vs empty — neither of which
-    // surfaces a foreign data row.
+    // The acting user's own close-behaviour preference; and the session-scoped
+    // file intent, whose isolation FileOpenedFromOsTest proves directly.
     'desktop.close-prompt',
     'desktop.file-staging',
-    // Phase 16 Dev Console — every /dev/* route is gated by
-    // EnsureDeveloperMode (404-not-403 for non-developers) and
-    // therefore is unreachable by the partner unless `is_developer`
-    // is true. Once inside, the Dev Console surfaces only operator-
-    // level data (registry rosters, the calling developer's own runs
-    // — `dev.artisan.stream` adds a per-controller cross-user
-    // ownership check on top, T-16-15). None of these GETs surface
-    // foreign user-row data.
+    // Every /dev/* route is EnsureDeveloperMode-gated (404, never 403) and
+    // surfaces operator-level data only — registry rosters, the calling
+    // developer's own runs — never another user's rows.
     'dev.overview',
     'dev.artisan.stream',
-    // 16-04b: dev.artisan scopes its timeline query to causer_id ===
-    // current user id; dev.audit is the operator-level audit log
-    // (shows ALL dev_mode_audit rows by design — operators inspecting
-    // each other's runs is the explicit Dev Console contract). Both
-    // routes are EnsureDeveloperMode-gated (non-developers see 404).
+    // dev.audit deliberately shows every operator's runs: mutual visibility is
+    // the Dev Console's contract, not a leak.
     'dev.artisan',
     'dev.audit',
-    // 16-05: log tailer surfaces. The page renders the dev-shell + a
-    // 10k-line client-side ring buffer; the SSE stream emits scrubbed
-    // log lines from the system-wide laravel-YYYY-MM-DD.log; the
-    // context endpoint reads ±radius lines from the same file. None
-    // of these surface foreign user-row data — the log file IS
-    // system-wide on a single-user-per-machine install, and the
-    // EnsureDeveloperMode gate blocks non-developers entirely.
+    // The log file is system-wide on a single-user-per-machine install, so the
+    // tailer, its poll and its context window carry no user rows.
     'dev.logs',
     'dev.logs.poll',
     'dev.logs.context',
-    // 16-06: queue inspector surfaces. The framework-managed `jobs`,
-    // `failed_jobs`, and `job_batches` tables are system-wide on a
-    // single-user-per-machine install (Laravel does not user-scope
-    // the queue tables); the EnsureDeveloperMode gate blocks
-    // non-developers entirely. `dev.queue` is the redirect, the
-    // canonical route is `dev.queue.tab` with a route param.
+    // Laravel does not user-scope the queue tables; they are system-wide here.
     'dev.queue',
     'dev.queue.tab',
-    // 16-06: Horizon iframe (D-38). The route is conditionally
-    // registered only when config('app.dev_mode')=true AND the
-    // Horizon package is installed; when registered it surfaces an
-    // <iframe src="/horizon"> wrapper — the iframe target has its own
-    // auth gate. EnsureDeveloperMode covers the wrapper.
+    // Registered only when dev mode is on and Horizon is installed, and then
+    // only as an <iframe> wrapper whose target keeps its own auth gate.
     'dev.horizon',
-    // Phase 15 Plan 10 — mobile pairing/biometric-unlock entries. Both
-    // routes are genuine closure-stub shapes today (`abort_unless
-    // (class_exists($component), 404)` in Modules/Mobile/Routes/web.php):
-    // MobilePairingScan/MobileLockScreen do not exist yet (Plans 06/07 are
-    // gated behind the Plan 03 paid-plugin license/supply-chain
-    // human-verify checkpoint per STATE.md). Every authenticated request —
-    // owner or partner — gets an identical 404 with zero rendered body, so
-    // there is structurally no per-user data to leak. Re-classify to
-    // ISOLATION_ROUTE_COVERED with a real two-user probe once Plans 06/07
-    // ship the real components.
-    'mobile.lock',
-    'mobile.pair',
-    // 16-07: Doctor + System snapshot surfaces. The doctor page reads
-    // the latest beatrax:doctor dev_mode_audit row (operator-level
-    // event log — same audit-disclosure contract as dev.audit) and
-    // the system page renders host + Laravel + SQLite facts via the
-    // ConfigFlattener's secret-suffix redaction. Neither surfaces
-    // foreign user-row data; the EnsureDeveloperMode gate blocks
-    // non-developers entirely.
+    // Operator-level: the latest doctor audit row, and host / framework /
+    // SQLite facts with the secret-suffix redaction applied.
     'dev.doctor',
     'dev.system',
-    // 16-07: SQL panel. Reads-only against the system-wide SQLite
-    // database; the schema viewer enumerates table metadata which
-    // does not surface per-user row data on its own. Every actual
-    // SELECT is gated by the session-scoped Advanced toggle (D-46)
-    // AND defense-in-depth (SelectOnlyValidator + PRAGMA query_only
-    // = 1). EnsureDeveloperMode blocks non-developers entirely. The
-    // schema viewer itself does not surface per-user data; the
-    // operator decides which SELECT to run after toggling Advanced
-    // and accepting the documented operator-level data-disclosure
-    // contract (same shape as dev.audit + dev.queue.tab).
+    // Schema metadata only. Running an actual SELECT needs the session-scoped
+    // Advanced toggle, and it is the operator who chooses the statement.
     'dev.sql',
-    // 16.1-03a: first-run setup wizard. SetupWizard reads the acting
-    // user's own wizard_progress rows via WizardProgressQuery, which
-    // explicitly filters by current user_id (Phase 16 multi-user
-    // readiness contract). The rendered surface is wizard chrome +
-    // the active step body — no foreign user-row data crosses the
-    // boundary. The mount-time UserInstalled safety-net + the
-    // `?force=1` reset both bound their writes to the acting user.
+    // The wizard reads the acting user's own wizard_progress rows, and both the
+    // mount-time safety net and the ?force=1 reset bound their writes to them.
     'setup',
-    // 16-05 follow-up: dev.logs.stats joins the dev.logs family above.
-    // The stats endpoint (LogStreamController::stats) returns byte /
-    // line counts over the same system-wide laravel-YYYY-MM-DD.log the
-    // tailer streams — operator-level file metadata, no user-row data.
-    // Same EnsureDeveloperMode gate as every other /dev/* route
-    // (non-developers see 404).
+    // Byte and line counts over the same system-wide log file as dev.logs.
     'dev.logs.stats',
-    // "Where is my data?" privacy help page. The HelpDataLocations
-    // component renders install-level paths from UserDataPathService
-    // (SQLite file, secrets dir, framework caches) plus an export CTA
-    // branched on the ACTING user's own is_developer flag read via
-    // CurrentUser exclusively — it queries no user-scoped rows at all,
-    // so there is no foreign data to bleed.
+    // Install-level paths plus a CTA branched on the acting user's own
+    // is_developer flag; it queries no user-scoped rows at all.
     'core.help.data-locations',
-    // Phase 05 app-lock screen. The /lock route is session-scoped:
-    // it renders a PIN pad bound to the currently authenticated
-    // user's own lock state (pin_hash, failed_attempts, locked_until
-    // all keyed on the authenticated user_id). There is no data-bearing
-    // list of foreign rows — the lock screen never queries another user's
-    // transaction, account, or recurring data.
+    // A PIN pad keyed on the authenticated user's own lock state; the lock
+    // screen never reads a transaction, account or recurring row.
     'auth.lock',
-    // (Plan 07-05 moved tax.index to ISOLATION_ROUTE_COVERED — real probe below)
-    // Phase 19 — Enable Banking OAuth plumbing. Both are redirect-only
-    // verbs that render no list of foreign rows: `connect` builds a
-    // user-scoped consent URL and `redirect()->away()`s to the bank;
-    // `callback` consumes the user-bound CSRF `state` (single-use, hash_equals,
-    // user-id-bound — proven by OpenBankingConsentDanceTest / the 19 state
-    // repository tests) and redirects to the settings page. Neither surfaces
-    // another user's data, so they are allow-listed rather than probed (a real
-    // probe would require mocking the outbound EB HTTP client for no isolation
-    // signal). The data-bearing settings surface they feed IS probed —
-    // see settings.open-banking in ISOLATION_ROUTE_COVERED.
+    // Redirect-only verbs: one builds a user-scoped consent URL, the other
+    // consumes the user-bound single-use CSRF state. Probing them would only
+    // exercise a mocked HTTP client; the settings surface they feed is probed.
     'oauth.open-banking.connect',
     'oauth.open-banking.callback',
 ];
 
 /**
- * GET route names with an explicit cross-user probe case below. Keeping
- * the covered set as a named constant lets the introspection guard
- * assert "every auth GET route is covered or allow-listed".
- *
  * @var list<string>
  */
 const ISOLATION_ROUTE_COVERED = [
@@ -220,63 +111,28 @@ const ISOLATION_ROUTE_COVERED = [
     'chains.index',
     'chains.hints',
     'drift.watch',
-    // Phase 07 — Tax cockpit: two-user tagged-transaction probe is below (Plan 07-05).
-    // ISOLATION_ROUTE_COVERED entry honors the contract promised in the Plan 01 allow-list comment.
     'tax.index',
-    // Phase 11 — Sync-health surface (D-07). Unlike the sibling /dev/* routes
-    // on the allow-list above (operator-level, no foreign user-row data), this
-    // panel DOES bear user-scoped data: it lists the acting user's own
-    // op_log_quarantine rows. op_log_quarantine has no BelongsToUser global
-    // scope (Pitfall 4), so the user-id filter is hand-applied in the
-    // component and must be probed, not allow-listed. Two-developer probe below.
+    // op_log_quarantine has no BelongsToUser global scope, so this panel's
+    // user-id filter is hand-applied and has to be probed rather than assumed.
     'dev.sync-health',
-    // 13.3-06 — Reconcile surface (T-13.3-16/T-13.3-17). The account picker
-    // and every statement pre-fill are user-scoped reads; probed below.
     'reconcile.index',
-    // 13.5-08 — Migration wizard (T-13.5-24). All four routes are user-scoped
-    // (`MigrationRun::query()->where('user_id', ...)->firstOrFail()` on every
-    // action + PreviewSummaryBuilder's own independent guard); probed below.
-    // `migrations.new` carries no per-entity id (same T-13.5-04 shape as
-    // `imports.new`) but is still explicitly probed for reachability.
     'migrations.index',
+    // Carries no per-entity id, but is probed for reachability anyway.
     'migrations.new',
     'migrations.preview',
     'migrations.results',
-    // 999.6-07 — Reports CSV export (Req 11, T-999.6-20). The route builds
-    // its ReportDefinition entirely from the REQUESTING user's own
-    // CurrentUser + query params and threads that $user through
-    // ReportAggregator's user-scoped dimension queries; probed below with
-    // a real two-user CSV-content check (not allow-listed — this route
-    // genuinely bears user-scoped data).
     'reports.export',
-    // 999.6-09 — the live builder (`?report={id}` IDOR surface, T-999.6-25)
-    // and the saved-report library index. Both genuinely bear user-scoped
-    // data (`saved_reports` rows); probed below with real two-user checks —
-    // 999.6-08's SUMMARY explicitly deferred this coverage to this plan.
+    // `?report={id}` is the IDOR surface; both routes read saved_reports rows.
     'reports.index',
     'reports.library',
-    // Phase 15 Plan 10 — the /sync status surface embeds the existing
-    // sync.sync-status-section component (SyncStatusService-backed peer
-    // rows) and reads the own-module mobile_sync_progress cursor; both
-    // genuinely bear user-scoped data (T-15-26). Probed below.
     'data-devices.index',
-    // Phase 15 Plan 08 shipped SetupProgressScreen behind this route; its
-    // mount() reads the user-scoped mobile_sync_progress durable cursor
-    // (InitialSyncPuller::progress()). Probed below (closes the gap
-    // 15-05-SUMMARY.md logged as deferred to a later plan).
     'mobile.setup',
-    // The confirmation the setup gate hands off to. It names the peer device
-    // it caught up from and the record count it applied — both user-scoped
-    // reads (device_registry, mobile_sync_progress). Probed below.
     'mobile.setup.done',
-    // Phase 18 — Notifications inbox. NotificationInbox lists the acting
-    // user's own `notifications` rows (user_id-scoped read); genuinely bears
-    // user-scoped data, so probed below rather than allow-listed.
+    // The pairing scanner reads device_registry and pairing_tokens, both of
+    // which carry other devices' rows; the PIN pad is probed for reachability.
+    'mobile.pair',
+    'mobile.lock',
     'notifications.index',
-    // Phase 19 — Open-banking settings surface. OpenBankingSettingsPage renders
-    // OpenBankingConnectionQuery::current() for the acting user (user_id-scoped;
-    // WR-05/19-11). It bears user-scoped connection data (institution / bank
-    // display name / consent), so probed below.
     'settings.open-banking',
 ];
 
@@ -291,11 +147,6 @@ function xuiUser(string $username, bool $developer = false): User
     ]);
 }
 
-/**
- * Seeds an account + import run + a single transaction for the given
- * user and returns the transaction id. Raw inserts keep the fixture
- * independent of any module's factory wiring.
- */
 function xuiTransaction(
     DatabaseManager $db,
     int $userId,
@@ -352,9 +203,6 @@ function xuiTransaction(
     ]);
 }
 
-/**
- * Seeds an approved recurring series for the user and returns its id.
- */
 function xuiRecurringSeries(DatabaseManager $db, int $userId, string $name): int
 {
     return $db->connection()->table('recurring_series')->insertGetId([
@@ -372,11 +220,8 @@ function xuiRecurringSeries(DatabaseManager $db, int $userId, string $name): int
     ]);
 }
 
-/**
- * Seeds a counterparty row for the user and returns its id. The
- * `type` value must be one of the trigger-enforced set
- * (merchant|personal|bank|government|self_account|unknown).
- */
+// `type` must be one of the trigger-enforced set: merchant, personal, bank,
+// government, self_account, unknown.
 function xuiCounterparty(DatabaseManager $db, int $userId, string $type, string $slug, string $displayName): int
 {
     return $db->connection()->table('counterparties')->insertGetId([
@@ -389,14 +234,8 @@ function xuiCounterparty(DatabaseManager $db, int $userId, string $type, string 
     ]);
 }
 
-/**
- * Seeds a `migration_runs` row plus one `migration_staging_categories` row
- * (so `PreviewSummaryBuilder::forRun()` does not throw
- * `MigrationRunNotParsedException`) for the given user, and returns the run
- * id. Raw inserts — deliberately does NOT depend on the Migration module's
- * own test fixtures/parsers, keeping this cross-module isolation test
- * self-contained (matches every other `xui*` helper's raw-insert style).
- */
+// The staging-categories row is what stops `PreviewSummaryBuilder::forRun()`
+// throwing `MigrationRunNotParsedException`.
 function xuiMigrationRun(DatabaseManager $db, int $userId, string $originalFilename): int
 {
     $runId = $db->connection()->table('migration_runs')->insertGetId([
@@ -419,10 +258,6 @@ function xuiMigrationRun(DatabaseManager $db, int $userId, string $originalFilen
     return $runId;
 }
 
-/**
- * Seeds a bare account row (pots / goals pickers need one) and
- * returns its id.
- */
 function xuiAccount(DatabaseManager $db, int $userId, string $name): int
 {
     $suffix = bin2hex(random_bytes(4));
@@ -439,15 +274,7 @@ function xuiAccount(DatabaseManager $db, int $userId, string $name): int
     ]);
 }
 
-/**
- * Seeds a `saved_reports` row for the given user and returns its id. Raw
- * insert — deliberately does NOT depend on the Reports module's own
- * write-action wiring (`SaveReport`), keeping this cross-module isolation
- * test self-contained (matches every other `xui*` helper's raw-insert
- * style). The `definition` JSON only needs enough shape for
- * `ReportBuilder`/`ReportsIndex` to render without erroring — the probes
- * below assert on the report's `name`, not its aggregated figures.
- */
+// Enough `definition` shape to render; the probes assert on name, not figures.
 function xuiSavedReport(DatabaseManager $db, int $userId, string $name): int
 {
     return $db->connection()->table('saved_reports')->insertGetId([
@@ -469,18 +296,14 @@ function xuiSavedReport(DatabaseManager $db, int $userId, string $name): int
 }
 
 beforeEach(function (): void {
-    // Every fixture here books into May 2026, and the pages under test scope
-    // to the CURRENT period — so this suite quietly stopped asserting
-    // anything the moment the real clock left that month, and then failed
-    // outright. Pinning now() to the fixture window makes it date-independent.
+    // The fixtures book into May 2026 and the pages scope to the current
+    // period, so an unpinned clock silently emptied every assertion.
     $this->travelTo(CarbonImmutable::parse('2026-05-19 12:00:00'));
 
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     $this->db = $db;
 
-    // The two-user setup MULTI-03 requires: an owner (developer) and a
-    // partner, each with their own scoped data.
     $this->owner = xuiUser('owner', developer: true);
     $this->partner = xuiUser('partner');
 
@@ -493,7 +316,6 @@ beforeEach(function (): void {
         'display_order' => 30,
     ]);
 
-    // Owner-scoped fixtures — the partner must never see any of these.
     $this->ownerTransactionId = xuiTransaction($this->db, $this->owner->id, 'OWNER MERCHANT BV');
     $this->ownerSeriesId = xuiRecurringSeries($this->db, $this->owner->id, 'Owner Subscription');
 
@@ -507,7 +329,7 @@ beforeEach(function (): void {
     ]);
 });
 
-it('creates two users — the first Phase 12 test to do so', function (): void {
+it('seeds two distinct users — a developer owner and a non-developer partner', function (): void {
     expect(User::query()->count())->toBe(2);
     expect($this->owner->id)->not->toBe($this->partner->id);
     expect($this->owner->is_developer)->toBeTrue();
@@ -531,8 +353,8 @@ it('returns 404 (never 403) when the partner requests the owner recurring series
 });
 
 it('does not bleed the owner transaction into the partner transactions list', function (): void {
-    // Give the partner their own transaction so the list is non-empty
-    // and we are asserting isolation, not just an empty page.
+    // A partner row of their own, so this asserts isolation rather than an
+    // empty page.
     xuiTransaction($this->db, $this->partner->id, 'PARTNER MERCHANT BV');
 
     $this->actingAs($this->partner)
@@ -568,9 +390,8 @@ it('does not bleed the owner categorization rule into the partner rules list', f
 });
 
 it('does not surface the owner figures on the partner dashboard or first-run redirect', function (): void {
-    // The partner has zero transactions, so the dashboard first-run
-    // logic redirects to /imports/new. Either way the owner's merchant
-    // must not appear.
+    // The partner has no transactions, so the dashboard's first-run logic
+    // redirects to /imports/new — hence the two accepted statuses.
     $response = $this->actingAs($this->partner)->get('/');
 
     expect($response->status())->toBeIn([200, 302]);
@@ -736,8 +557,8 @@ it('does not bleed the owner confirmed chain into the partner chains index', fun
 });
 
 it('does not bleed the owner hint candidates into the partner chain hints queue', function (): void {
-    // A receipt-derived hint: candidate state + NULL to-endpoint is
-    // the trigger-permitted shape for `funded_by_card_hint`.
+    // Candidate state with a NULL to-endpoint is the trigger-permitted shape
+    // for `funded_by_card_hint`.
     $this->db->connection()->table('chain_links')->insert([
         'user_id' => $this->owner->id,
         'from_transaction_id' => $this->ownerTransactionId,
@@ -759,9 +580,8 @@ it('does not bleed the owner hint candidates into the partner chain hints queue'
 });
 
 it('does not bleed the owner subscription series into the partner drift watch page', function (): void {
-    // Give the owner series two observed amounts so it genuinely
-    // qualifies for the drift-watch list (the query skips series with
-    // fewer than two occurrence points).
+    // Two observed amounts, because the drift-watch query skips a series with
+    // fewer than two occurrence points.
     $seed = function (string $date, int $amount): void {
         $txId = xuiTransaction($this->db, $this->owner->id, 'OWNER SUB CHARGE BV');
         $this->db->connection()->table('recurring_series_occurrences')->insert([
@@ -800,10 +620,8 @@ it('does not bleed the owner merchant aliases into the partner aliases settings 
     $insertAlias($this->owner->id, 'OWNER RAW PATTERN 123', 'Owner Secret Alias');
     $insertAlias($this->partner->id, 'PARTNER RAW PATTERN 456', 'Partner Visible Alias');
 
-    // The full-page GET renders only the layout chrome in the test
-    // environment (same as AliasesSettingsPageTest, which asserts
-    // content at the component level), so probe the component render
-    // directly — the page route still gets its assertOk smoke check.
+    // The full-page GET renders only layout chrome under test, so the content
+    // assertions have to run against the component render.
     $this->actingAs($this->partner)
         ->get('/settings/aliases')
         ->assertOk();
@@ -815,9 +633,6 @@ it('does not bleed the owner merchant aliases into the partner aliases settings 
 });
 
 it('does not bleed the owner shared-list counts into the partner community page', function (): void {
-    // The Community hub embeds the shared-merchant-list panel, which reads
-    // per-user mapping rows. A partner opening it must see their own state,
-    // never a count or name sourced from the owner.
     xuiTransaction($this->db, $this->owner->id, 'OWNER COMMUNITY MERCHANT BV', description: 'OWNER COMMUNITY DESCRIPTION QZ42');
 
     $this->actingAs($this->partner)
@@ -828,9 +643,8 @@ it('does not bleed the owner shared-list counts into the partner community page'
 });
 
 it('does not bleed the owner mystery descriptions into the partner mystery-merchants page', function (): void {
-    // An unresolvable description (no alias, no corpus match) becomes
-    // a mystery card on the OWNER's page — it must never surface on
-    // the partner's.
+    // No alias and no corpus match, so this description becomes a mystery card
+    // on the owner's page.
     xuiTransaction($this->db, $this->owner->id, 'OWNER MYSTERY MERCHANT BV', description: 'OWNER MYSTERY DESCRIPTION XJ91');
 
     $this->actingAs($this->partner)
@@ -840,8 +654,7 @@ it('does not bleed the owner mystery descriptions into the partner mystery-merch
         ->assertDontSee('OWNER MYSTERY DESCRIPTION XJ91');
 });
 
-it('does not bleed the owner tagged transactions into the partner tax page (T-07-15)', function (): void {
-    // Tag a transaction for the OWNER under a recognisable counterparty.
+it('does not bleed the owner tagged transactions into the partner tax page', function (): void {
     $ownerSuffix = bin2hex(random_bytes(4));
     $ownerAccountId = $this->db->connection()->table('accounts')->insertGetId([
         'user_id' => $this->owner->id,
@@ -887,7 +700,6 @@ it('does not bleed the owner tagged transactions into the partner tax page (T-07
         'updated_at' => '2026-05-19 00:00:00',
     ]);
 
-    // Owner tax category + tag
     $ownerCatId = $this->db->connection()->table('tax_deduction_categories')->insertGetId([
         'user_id' => $this->owner->id,
         'name' => 'Owner Secret Category',
@@ -908,7 +720,7 @@ it('does not bleed the owner tagged transactions into the partner tax page (T-07
         'updated_at' => '2026-05-19 00:00:00',
     ]);
 
-    // The partner gets a tagged item in their own year so their /tax is non-empty.
+    // A tagged item of the partner's own, so /tax is not merely empty.
     $partnerSuffix = bin2hex(random_bytes(4));
     $partnerAccountId = $this->db->connection()->table('accounts')->insertGetId([
         'user_id' => $this->partner->id,
@@ -973,8 +785,7 @@ it('does not bleed the owner tagged transactions into the partner tax page (T-07
         'updated_at' => '2026-05-19 00:00:00',
     ]);
 
-    // Partner visits /tax — must see their own data, never the owner's.
-    // The year param is 2026 (booked_at 2026-06-15 for both fixtures).
+    // Both fixtures book into 2026, hence the year param.
     $this->actingAs($this->partner)
         ->get('/tax?year=2026')
         ->assertOk()
@@ -983,15 +794,10 @@ it('does not bleed the owner tagged transactions into the partner tax page (T-07
         ->assertDontSee('owner-secret-note');
 });
 
-it('does not bleed the owner quarantine rows into a second developer\'s sync-health panel (Pitfall 4, T-11-13)', function (): void {
-    // /dev/sync-health is user-scoped: op_log_quarantine has no
-    // BelongsToUser global scope, so the component hand-filters by the
-    // acting user_id. Two developers must each see only their own rows.
-    // SyncHealthPage only surfaces quarantine rows from the last 7 days
-    // (created_at >= Clock::now()->subDays(7)). Seed relative to the same
-    // Clock the page reads so the fixture never ages out of the window as
-    // real wall-clock time advances (previously hardcoded 2026-06-14, which
-    // silently rotted past the window and turned this into a time-bomb).
+it('does not bleed the owner quarantine rows into a second developer\'s sync-health panel', function (): void {
+    // The page only surfaces quarantine rows from the last seven days, so the
+    // fixture is seeded off the same Clock it reads. A hardcoded date here
+    // rotted past the window and silently stopped asserting anything.
     $seededAt = app(Clock::class)->now()->subDay()->toDateTimeString();
     $seedQuarantine = function (int $userId, string $deviceId, string $reason) use ($seededAt): void {
         $this->db->connection()->table('op_log_quarantine')->insert([
@@ -1004,11 +810,10 @@ it('does not bleed the owner quarantine rows into a second developer\'s sync-hea
         ]);
     };
 
-    // Owner (a developer per the beforeEach fixture) gets a quarantine row
-    // with a unique, recognisable device + reason token.
     $seedQuarantine($this->owner->id, 'owner-secret-device-xj91', 'owner_secret_reason');
 
-    // A second developer with their own row — they must never see the owner's.
+    // A second developer: the isolation here is developer-to-developer, not
+    // developer-to-partner.
     $devPartner = xuiUser('sync-health-dev-partner', developer: true);
     $seedQuarantine($devPartner->id, 'dev-partner-device', 'dev_partner_reason');
 
@@ -1019,8 +824,7 @@ it('does not bleed the owner quarantine rows into a second developer\'s sync-hea
         ->assertDontSee('owner-secret-device-xj91')
         ->assertDontSee('owner_secret_reason');
 
-    // Defense-in-depth: the non-developer partner is blocked entirely by
-    // EnsureDeveloperMode (404, never 403 — T-11-14).
+    // Defence in depth: a non-developer never reaches the panel at all.
     $this->actingAs($this->partner)
         ->get('/dev/sync-health')
         ->assertNotFound();
@@ -1037,7 +841,7 @@ it('does not bleed the owner account into the partner reconcile account picker',
         ->assertDontSee('Owner Secret Reconcile Account');
 });
 
-it('returns 404 (never 403) when the partner requests the owner migration preview (T-13.5-24)', function (): void {
+it('returns 404 (never 403) when the partner requests the owner migration preview', function (): void {
     $runId = xuiMigrationRun($this->db, $this->owner->id, 'Owner Migration Export.zip');
 
     $response = $this->actingAs($this->partner)->get("/migrations/{$runId}/preview");
@@ -1046,7 +850,7 @@ it('returns 404 (never 403) when the partner requests the owner migration previe
     expect($response->status())->not->toBe(403);
 });
 
-it('returns 404 (never 403) when the partner requests the owner migration results (T-13.5-24)', function (): void {
+it('returns 404 (never 403) when the partner requests the owner migration results', function (): void {
     $runId = xuiMigrationRun($this->db, $this->owner->id, 'Owner Migration Export.zip');
 
     $response = $this->actingAs($this->partner)->get("/migrations/{$runId}/results");
@@ -1064,11 +868,11 @@ it('does not bleed the owner migration run into the partner migrations index', f
         ->assertDontSee('Owner Migration Export.zip', false);
 });
 
-it('renders /migrations/new for any authenticated user — no per-entity id, no data to leak (T-13.5-04 shape)', function (): void {
+it('renders /migrations/new for any authenticated user — no per-entity id, no data to leak', function (): void {
     $this->actingAs($this->partner)->get('/migrations/new')->assertOk();
 });
 
-it('does not bleed the owner peer device id into the partner /sync status surface (Phase 15 Plan 10, T-15-26)', function (): void {
+it('does not bleed the owner peer device id into the partner /sync status surface', function (): void {
     $seedSession = function (int $userId, string $localDeviceId, string $peerDeviceId): void {
         $this->db->connection()->table('sync_sessions')->insert([
             'user_id' => $userId,
@@ -1093,7 +897,7 @@ it('does not bleed the owner peer device id into the partner /sync status surfac
         ->assertDontSee('owner-secret-peer-device');
 });
 
-it('does not bleed the owner initial-sync progress cursor into the partner /mobile/setup screen (Phase 15 Plan 08/10)', function (): void {
+it('does not bleed the owner initial-sync progress cursor into the partner /mobile/setup screen', function (): void {
     $seedProgress = function (int $userId, string $peerDeviceId, int $applied, int $expected): void {
         $this->db->connection()->table('mobile_sync_progress')->insert([
             'user_id' => $userId,
@@ -1116,6 +920,61 @@ it('does not bleed the owner initial-sync progress cursor into the partner /mobi
         ->assertOk()
         ->assertSee('12 records')
         ->assertDontSee('77 records');
+});
+
+// The redirect is the assertion: MobilePairingScan::mount() sends anyone who
+// already has a confirmed peer to /data-devices, so an unscoped read of
+// device_registry would bounce the partner off a screen they must reach.
+it('does not let the owner paired device divert the partner away from /mobile/pair', function (): void {
+    $this->db->connection()->table('device_registry')->insert([
+        'user_id' => $this->owner->id,
+        'device_id' => 'owner-secret-pair-peer',
+        'name' => 'Owner Secret Desk',
+        'ed25519_public_key_hex' => str_repeat('a', 64),
+        'x25519_public_key_hex' => str_repeat('b', 64),
+        'safety_number_words' => '',
+        'is_self' => 0,
+        'paired_at' => '2026-05-19 09:55:00',
+        'confirmed_at' => '2026-05-19 09:55:00',
+        'created_at' => '2026-05-19 09:55:00',
+        'updated_at' => '2026-05-19 09:55:00',
+    ]);
+
+    $this->actingAs($this->partner)
+        ->get('/mobile/pair')
+        ->assertOk()
+        ->assertDontSee('Owner Secret Desk');
+});
+
+// The PIN pad reads only the acting user's own lock config, so this probes
+// reachability and pins that nothing user-scoped reaches the markup.
+it('renders /mobile/lock for the partner without the owner lock state', function (): void {
+    $this->db->connection()->table('user_app_lock_configs')->insert([
+        'user_id' => $this->owner->id,
+        'cold_start_biometric_enrolled' => 1,
+        'created_at' => '2026-05-19 09:55:00',
+        'updated_at' => '2026-05-19 09:55:00',
+    ]);
+
+    $this->db->connection()->table('device_registry')->insert([
+        'user_id' => $this->owner->id,
+        'device_id' => 'owner-secret-lock-peer',
+        'name' => 'Owner Secret Handset',
+        'ed25519_public_key_hex' => str_repeat('e', 64),
+        'x25519_public_key_hex' => str_repeat('f', 64),
+        'safety_number_words' => '',
+        'is_self' => 0,
+        'paired_at' => '2026-05-19 09:55:00',
+        'confirmed_at' => '2026-05-19 09:55:00',
+        'created_at' => '2026-05-19 09:55:00',
+        'updated_at' => '2026-05-19 09:55:00',
+    ]);
+
+    $this->actingAs($this->partner)
+        ->get('/mobile/lock')
+        ->assertOk()
+        ->assertDontSee('Owner Secret Handset')
+        ->assertDontSee('owner-secret-lock-peer');
 });
 
 it('does not bleed the owner peer device name or record count into the partner /mobile/setup/done screen', function (): void {
@@ -1158,7 +1017,7 @@ it('does not bleed the owner peer device name or record count into the partner /
         ->assertDontSee('4242');
 });
 
-it('does not bleed the owner spend into the partner reports CSV export (999.6-07, T-999.6-20)', function (): void {
+it('does not bleed the owner spend into the partner reports CSV export', function (): void {
     $ownerAccountId = xuiAccount($this->db, $this->owner->id, 'Owner Secret Export Account');
     $partnerAccountId = xuiAccount($this->db, $this->partner->id, 'Partner Visible Export Account');
 
@@ -1213,7 +1072,7 @@ it('does not bleed the owner spend into the partner reports CSV export (999.6-07
     expect($csv)->not->toContain('Owner Secret Export Account');
 });
 
-it('does not bleed the owner saved report into the partner reports library index (999.6-09, Req 9, T-999.6-25)', function (): void {
+it('does not bleed the owner saved report into the partner reports library index', function (): void {
     xuiSavedReport($this->db, $this->owner->id, 'Owner Secret Saved Report');
     xuiSavedReport($this->db, $this->partner->id, 'Partner Visible Saved Report');
 
@@ -1224,12 +1083,10 @@ it('does not bleed the owner saved report into the partner reports library index
         ->assertDontSee('Owner Secret Saved Report');
 });
 
-it('does not restore the owner saved report definition when the partner opens it by id (999.6-09, T-999.6-25)', function (): void {
-    // ReportBuilder::mount(?int $report) (Plan 08) silently falls back to
-    // the builder's own empty default on a foreign/missing id — never a
-    // 404, which would confirm the id's existence (999.6-08-SUMMARY.md).
-    // The isolation contract here is "the owner's report name never
-    // renders", not a particular HTTP status.
+it('does not restore the owner saved report definition when the partner opens it by id', function (): void {
+    // A foreign id falls back to the empty default rather than 404ing, which
+    // would confirm the id exists. The contract is that the owner's report
+    // name never renders, not any particular status.
     $ownerReportId = xuiSavedReport($this->db, $this->owner->id, 'Owner Secret Builder Report');
 
     $this->actingAs($this->partner)
@@ -1238,12 +1095,10 @@ it('does not restore the owner saved report definition when the partner opens it
         ->assertDontSee('Owner Secret Builder Report');
 });
 
-it('does not bleed the owner notification into the partner /notifications inbox (Phase 18, notifications.index)', function (): void {
-    // Raw plaintext insert into the (encryption-registered) notifications
-    // columns, mirroring xuiTransaction's approach — no encryption session is
-    // active for these fixtures, so columns store/read as plaintext. The
-    // partner's inbox query is user_id-scoped, so the owner's row must never
-    // render in the partner's response.
+it('does not bleed the owner notification into the partner /notifications inbox (notifications.index)', function (): void {
+    // The notifications columns are encryption-registered, but no encryption
+    // session is active for these fixtures, so a raw insert stores and reads
+    // back as plaintext.
     $this->db->connection()->table('notifications')->insert([
         'id' => 'xui-owner-notif-'.bin2hex(random_bytes(6)),
         'user_id' => $this->owner->id,
@@ -1261,11 +1116,7 @@ it('does not bleed the owner notification into the partner /notifications inbox 
         ->assertDontSee('Owner Secret Notification Title');
 });
 
-it('does not bleed the owner open-banking connection into the partner settings surface (Phase 19, settings.open-banking)', function (): void {
-    // OpenBankingConnectionQuery::current() filters by the acting user id, so
-    // the partner (who has no connection of their own) must see the off-state
-    // and never the owner's distinctive bank display name. A broken user-id
-    // filter would surface the owner's row here.
+it('does not bleed the owner open-banking connection into the partner settings surface (settings.open-banking)', function (): void {
     $this->db->connection()->table('open_banking_connections')->insert([
         'user_id' => $this->owner->id,
         'institution_id' => 'ASNBNL21',

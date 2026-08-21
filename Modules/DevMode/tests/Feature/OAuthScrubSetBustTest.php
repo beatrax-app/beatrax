@@ -8,22 +8,6 @@ use Modules\DevMode\Internal\Logging\PushRedactProcessor;
 use Modules\DevMode\Internal\Services\OAuthScrubSet;
 use Modules\EmailScan\Models\OAuthSecret;
 
-/*
- * OAuthScrubSet end-to-end + cache-bust invariants.
- *
- * Per-test ephemeral log channel built via LogManager::build() so
- * parallel-Pest workers don't race on the shared
- * laravel-{date}.log. The same PushRedactProcessor tap is applied
- * to the ephemeral channel, exercising the same wiring the real
- * `daily` channel resolves in config/logging.php.
- *
- * The compiled-pattern bust observer is registered by
- * DevModeServiceProvider::boot() via OAuthSecret::observe(
- * BustOAuthScrubSetOnSecretChange::class). Every save/delete fires
- * the observer; the next compiledPattern() call rebuilds from the
- * live table.
- */
-
 function scrubSetUser(string $username, bool $isDeveloper = true): User
 {
     return User::query()->create([
@@ -35,6 +19,8 @@ function scrubSetUser(string $username, bool $isDeveloper = true): User
     ]);
 }
 
+// A per-call ephemeral channel, so parallel Pest workers do not race on the
+// shared laravel-{date}.log.
 function logWithRedactionToTempFile(string $message): string
 {
     $tmpPath = tempnam(sys_get_temp_dir(), 'scrub-set-').'.log';
@@ -48,11 +34,8 @@ function logWithRedactionToTempFile(string $message): string
         'level' => 'debug',
     ]);
 
-    // LogManager::build() bypasses tap resolution for ondemand
-    // channels so we apply the SAME PushRedactProcessor that
-    // config/logging.php applies for the real channels. The
-    // processor resolves via the container so the constructor-DI
-    // upgrade to inject OAuthScrubSet propagates into this test.
+    // LogManager::build() skips tap resolution for on-demand channels, so the
+    // tap config/logging.php would have applied is applied by hand here.
     (new PushRedactProcessor)($channel);
 
     $channel->info($message);
@@ -73,7 +56,6 @@ it('busts the OAuthScrubSet cache when an OAuthSecret is saved', function (): vo
     $user = scrubSetUser('scrubset-save');
     $this->actingAs($user);
 
-    // Seed an oauth_secret with a distinctive client_secret value
     OAuthSecret::query()->create([
         'user_id' => $user->id,
         'provider' => 'gmail',
@@ -83,15 +65,11 @@ it('busts the OAuthScrubSet cache when an OAuthSecret is saved', function (): vo
         'tokens_blob' => null,
     ]);
 
-    // Sanity: the container singleton sees the new row after the
-    // observer-driven bust.
     /** @var OAuthScrubSet $scrubSet */
     $scrubSet = app(OAuthScrubSet::class);
     $secrets = $scrubSet->all();
     expect($secrets)->toContain('SECRET_AAA');
 
-    // End-to-end: log the secret literal — the on-write redaction
-    // path scrubs it before the bytes hit disk.
     $contents = logWithRedactionToTempFile('Used SECRET_AAA today');
 
     expect($contents)->toContain('[REDACTED]');
@@ -116,13 +94,12 @@ it('busts the cache on UPDATE so a rotated secret is scrubbed on the next log li
     $scrubSet = app(OAuthScrubSet::class);
     expect($scrubSet->all())->toContain('OLD_SECRET');
 
-    // First write — old secret is scrubbed.
     $first = logWithRedactionToTempFile('Used OLD_SECRET');
     expect($first)->toContain('[REDACTED]');
     expect($first)->not->toContain('OLD_SECRET');
 
-    // Rotate the secret. The observer fires; the next log line
-    // recomputes the compiled pattern from the live table.
+    // The first write already compiled a pattern, so this is the bust under
+    // test: the rotation has to invalidate it.
     $secret->client_secret = 'NEW_SECRET';
     $secret->save();
 
@@ -158,10 +135,8 @@ it('scrubs every leaf string inside an OAuthSecret tokens_blob (refresh tokens, 
     $scrubSet = app(OAuthScrubSet::class);
     $secrets = $scrubSet->all();
 
-    // The client_secret + each non-empty leaf string in tokens_blob
-    // is in the set — the email + scope qualify too because the
-    // scrub set is intentionally aggressive: every string value in
-    // tokens_blob is treated as a potential secret.
+    // The set is deliberately aggressive: every leaf string in tokens_blob
+    // counts, so the email and the scope end up in it too.
     expect($secrets)->toContain('CLIENT_SECRET_X');
     expect($secrets)->toContain('REFRESH_TOKEN_VALUE');
     expect($secrets)->toContain('ACCESS_TOKEN_VALUE');

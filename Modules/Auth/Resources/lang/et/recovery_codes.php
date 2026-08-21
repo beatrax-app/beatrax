@@ -8,6 +8,7 @@ return [
     'subtitle' => 'Prindi need välja või hoia kindlas kohas. Neid ei näidata enam uuesti.',
     'copy' => 'Kopeeri koodid',
     'copied' => 'Kopeeritud',
+    'copy_failed' => 'Kopeerimine ebaõnnestus. Kirjutage koodid üles.',
     'download' => 'Laadi alla .txt-failina',
 
     'saved_as' => 'Salvestatud kui beatrax-recovery-codes-:username.txt',

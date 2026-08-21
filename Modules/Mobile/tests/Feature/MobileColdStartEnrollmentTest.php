@@ -19,15 +19,8 @@ use Modules\Mobile\Internal\Identity\ColdStartEnrollmentService;
 
 uses(RefreshDatabase::class);
 
-/*
- * Cold-start enrollment (item 3): enroll is PIN-rooted — a fresh PIN re-verify
- * yields the live data key that gets wrapped into the enclave, and a wrong PIN
- * enrolls nothing. Disable clears the enclave + resets the flag. The enclave
- * itself is faked (unreachable in the repo toolchain); the orchestration is
- * fully exercised here.
- */
-
-/** A BiometricKeyVault whose enclave is available and in-memory. */
+// The secure enclave cannot be reached from the repo toolchain, so it is faked
+// here and only the orchestration around it is exercised.
 function fakeEnclaveVault(): BiometricKeyVault
 {
     return new class(app(BiometricKeyBlobCodec::class), app(CurrentUser::class)) extends BiometricKeyVault
@@ -97,7 +90,7 @@ it('does not enroll when the enclave vault is unavailable', function (): void {
     $user = enrollmentUser('enroll-unavailable');
     app(AppLockProvisioner::class)->enable((int) $user->id, '123456', 'account-password');
 
-    // Real vault → runtimeAvailable() false in the repo toolchain → unavailable.
+    // The real vault reports runtimeAvailable() false in the repo toolchain.
     $vault = app(BiometricKeyVault::class);
     $service = new ColdStartEnrollmentService($vault, app(MobileLockGateway::class));
 
@@ -120,8 +113,6 @@ it('disable clears the enclave and resets the flag', function (): void {
     expect($vault->cleared)->toBeTrue()
         ->and($service->isEnrolled((int) $user->id))->toBeFalse();
 });
-
-// --- PIN floor ---------------------------------------------------------------
 
 it('pinFloorDue is true when the user has never completed a PIN unlock', function (): void {
     $user = enrollmentUser('floor-fresh');
@@ -151,16 +142,14 @@ it('pinFloorDue is true when the last PIN unlock is older than the floor window'
     expect(app(MobileLockGateway::class)->pinFloorDue((int) $user->id))->toBeTrue();
 });
 
-// --- Lock-screen mount factors in cold-start enrollment + floor --------------
-
 it('lock screen offers biometric when enrolled, vault available, and floor not due', function (): void {
     $user = enrollmentUser('mount-ready');
     test()->actingAs($user);
     app(AppLockProvisioner::class)->enable((int) $user->id, '123456', 'account-password');
-    app(MobileLockGateway::class)->verifyPin((int) $user->id, '123456', app(Session::class)); // floor fresh
+    app(MobileLockGateway::class)->verifyPin((int) $user->id, '123456', app(Session::class));
     app(MobileLockGateway::class)->markColdStartEnrolled((int) $user->id, true);
 
-    app()->bind(BiometricKeyVault::class, fn () => fakeEnclaveVault()); // isAvailable() true
+    app()->bind(BiometricKeyVault::class, fn () => fakeEnclaveVault());
 
     Livewire::test(MobileLockScreen::class)->assertSet('biometricAvailable', true);
 });
@@ -170,14 +159,12 @@ it('lock screen hides biometric when the PIN floor is overdue (forces PIN)', fun
     test()->actingAs($user);
     app(AppLockProvisioner::class)->enable((int) $user->id, '123456', 'account-password');
     app(MobileLockGateway::class)->markColdStartEnrolled((int) $user->id, true);
-    // No PIN unlock → floor due.
+    // Nothing records a PIN unlock, so the floor is due.
 
     app()->bind(BiometricKeyVault::class, fn () => fakeEnclaveVault());
 
     Livewire::test(MobileLockScreen::class)->assertSet('biometricAvailable', false);
 });
-
-// --- Item 4: invalidate the enclave blob only on an ACTUAL key rotation ------
 
 it('clears the cold-start enrollment when the app-lock data key actually rotates', function (): void {
     $user = enrollmentUser('rotate-clear');
@@ -188,7 +175,7 @@ it('clears the cold-start enrollment when the app-lock data key actually rotates
     app()->instance(BiometricKeyVault::class, $vault);
     app()->forgetInstance(ColdStartEnrollmentService::class);
 
-    // oldKek !== newKek → a genuine data-key rotation.
+    // Different old and new KEKs, so the data key genuinely rotated.
     event(new AppLockPassphraseChanged((int) $user->id, str_repeat('a', 32), str_repeat('b', 32)));
 
     expect($vault->cleared)->toBeTrue()
@@ -204,14 +191,12 @@ it('leaves the enrollment intact on a normal PIN change (data key unchanged)', f
     app()->instance(BiometricKeyVault::class, $vault);
     app()->forgetInstance(ColdStartEnrollmentService::class);
 
-    // oldKek === newKek → the data key did not rotate (the normal case).
+    // The same KEK on both sides: a PIN change that left the data key alone.
     event(new AppLockPassphraseChanged((int) $user->id, str_repeat('a', 32), str_repeat('a', 32)));
 
     expect($vault->cleared)->toBeFalse()
         ->and(app(MobileLockGateway::class)->isColdStartEnrolled((int) $user->id))->toBeTrue();
 });
-
-// --- Item 4 (HIGH): app-lock re-provision / disable rekeys → reset the flag --
 
 it('re-enabling the app lock (which mints a new data key) resets the cold-start flag', function (): void {
     $user = enrollmentUser('reprovision-resets');
@@ -219,7 +204,8 @@ it('re-enabling the app lock (which mints a new data key) resets the cold-start 
     app(MobileLockGateway::class)->markColdStartEnrolled((int) $user->id, true);
     expect(app(MobileLockGateway::class)->isColdStartEnrolled((int) $user->id))->toBeTrue();
 
-    // Re-provision → NEW data key → any cold-start blob wraps the OLD key.
+    // Re-provisioning mints a new data key, leaving any cold-start blob wrapping
+    // the old one.
     app(AppLockProvisioner::class)->enable((int) $user->id, '654321', 'account-password');
 
     expect(app(MobileLockGateway::class)->isColdStartEnrolled((int) $user->id))->toBeFalse();

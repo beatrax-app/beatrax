@@ -7,10 +7,8 @@ namespace Modules\DevMode\Internal\Process;
 use Carbon\CarbonInterface;
 use Spatie\LaravelData\Data;
 
-// One spawn-then-tail run the Dev Console tracks, persisted in cache
-// under dev_mode.run.{runId} for 24 hours (RunRegistry::find()). Cross-
-// user inspection is rejected at the controller layer by comparing
-// callerUserId against the requesting developer's id.
+// callerUserId is what the stream and cancel controllers compare against the
+// requesting developer to refuse cross-user inspection.
 final class RunRecord extends Data
 {
     /**

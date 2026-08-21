@@ -5,13 +5,6 @@ declare(strict_types=1);
 use Modules\Auth\Internal\Recovery\RecoveryCodeGenerator;
 use Modules\Auth\Public\Recovery\RecoveryCodeFormatter;
 
-/*
- * Unit coverage for the recovery-code primitives: the phone-readable
- * code generator (CSPRNG-backed, ambiguous characters excluded) and the
- * downloadable `.txt` formatter.
- */
-
-/** Five groups of four phone-readable characters joined by hyphens. */
 const RECOVERY_CODE_PATTERN = '/^[A-NP-Z2-9]{4}(-[A-NP-Z2-9]{4}){4}$/';
 
 it('generates a code matching the five-group hyphenated pattern', function (): void {

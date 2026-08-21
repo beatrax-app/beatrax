@@ -2,11 +2,7 @@
 
 declare(strict_types=1);
 
-// Income coverage: same ASN account + TWO approved income series
-// (Salary €3500/mo monthly + Side income €450/mo monthly). Expected
-// 30-day projection shows net positive flow on payday(s); income
-// series project with the `+` direction in the daily fold. No
-// shortfalls because the inflows dominate.
+/** @link ../../../../../.docs/features/forecasting/forecast-corpus.md#salary-and-side-income */
 
 return [
     'accounts' => [

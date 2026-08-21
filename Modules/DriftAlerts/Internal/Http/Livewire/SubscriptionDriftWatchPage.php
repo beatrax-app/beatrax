@@ -11,9 +11,6 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
 use Modules\DriftAlerts\Public\Services\SubscriptionDriftWatchQuery;
 
-/**
- * @link ../../../../../.docs/features/drift-alerts/architecture.md
- */
 final class SubscriptionDriftWatchPage extends Component
 {
     public function render(CurrentUser $currentUser, SubscriptionDriftWatchQuery $query, ViewFactory $views): View

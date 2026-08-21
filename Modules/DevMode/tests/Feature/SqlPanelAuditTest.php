@@ -8,25 +8,6 @@ use Modules\Core\Models\User;
 use Modules\DevMode\Internal\Enums\AuditEvent;
 use Modules\DevMode\Internal\Http\Livewire\SqlPanelPage;
 
-/*
- * SqlPanelPage end-to-end invariants.
- *
- * Covers:
- *   - GET /dev/sql renders the page header + textarea + Run
- *     button + schema viewer inner sidebar for a developer.
- *   - With Advanced toggle OFF (default), the Run pathway is
- *     gated — a banner directs the operator to flip the toggle.
- *   - With Advanced toggle ON, running a SELECT writes a
- *     dev_mode_audit row with action `sql.select`
- *     (AuditEvent::SqlSelect->value) + properties
- *     { query, rowcount, duration_ms }.
- *   - The schema viewer enumerates tables + their columns /
- *     indexes / FKs / row counts via the native Schema API.
- *   - Browse-table triggers the same SELECT pipeline (audit row
- *     written).
- *   - Returns 404 for a non-developer.
- */
-
 function sqlPanelUser(string $username, bool $isDeveloper = true): User
 {
     return User::query()->create([
@@ -100,7 +81,6 @@ it('blocks a SELECT submission and surfaces a parse-rejection error when the inp
 
     $errorMessage = (string) $component->get('errorMessage');
     expect($errorMessage)->toContain('Only SELECT statements are allowed');
-    // No audit row should be written for a rejected query.
     expect(DB::table('dev_mode_audit')->count())->toBe(0);
 });
 

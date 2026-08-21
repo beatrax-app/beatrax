@@ -1,11 +1,11 @@
 {{--
-    Dashboard "Budgets" glance card (Req 12, D-21) — mirrors goals-summary-card
+    Dashboard "Budgets" glance card — mirrors goals-summary-card
     / tax-summary-card chrome exactly: rounded-lg border card, "Budgets"
     eyebrow + "See all →" link, and a single large "Ready to assign" figure
     (emerald ≥ 0 / rose < 0, tabular-nums) sourced from CarryoverQuery.
 
     Renders nothing at all when the user has zero expense categories
-    ($collapse === true) — envelopes are implicit per D-12a, so there is no
+    ($collapse === true) — envelopes are implicit, so there is no
     intermediate "no envelopes yet" chrome state, only "no categories yet."
 --}}
 
@@ -13,7 +13,7 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    $fmt = static fn (int $minor): string => Money::ofMinor($minor, 'EUR')->format('nl_NL');
+    $fmt = static fn (int $minor): string => Money::ofMinor($minor, 'EUR')->format();
     $figureColour = $toBudgetMinor !== null && $toBudgetMinor < 0
         ? 'text-rose-600 dark:text-rose-400'
         : 'text-emerald-600 dark:text-emerald-400';
@@ -24,7 +24,7 @@
      true — the collapse state renders NOTHING user-visible. --}}
 <div>
     @if (! $collapse)
-        <div class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-950">
+        <x-core::card>
             {{-- Card header --}}
             <div class="flex items-center justify-between">
                 <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.page.title') }}</p>
@@ -46,11 +46,11 @@
                 </div>
 
                 @if ($overspentCount >= 1)
-                    <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                    <x-core::status-pill tone="warning">
                         {{ Lang::get('budgets::messages.badge.over_budget', ['count' => $overspentCount]) }}
-                    </span>
+                    </x-core::status-pill>
                 @endif
             </div>
-        </div>
+        </x-core::card>
     @endif
 </div>

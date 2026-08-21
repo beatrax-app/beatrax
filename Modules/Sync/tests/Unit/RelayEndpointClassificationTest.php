@@ -5,19 +5,10 @@ declare(strict_types=1);
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 
-/*
- * Which relay endpoints the transport will talk to in the clear.
- *
- * Plaintext to a public host exposes ciphertext sizes and the routing
- * metadata — who is syncing with whom — so http:// is only ever accepted to a
- * host that cannot leave this network. That is the out-of-box pairing path:
- * the desktop's own relay, reachable only from this LAN.
- *
- * All three questions reduce to classifying the host, which is why they now
- * share one answer. The table below is what that answer has to be; a domain
- * name is never LAN however it resolves today, because it is not ours to
- * assume it resolves the same way tomorrow.
- */
+// Plaintext to a public host exposes ciphertext sizes and the routing metadata —
+// who is syncing with whom — so http:// is only ever accepted to a host that
+// cannot leave this network. A domain name is never LAN however it resolves
+// today, because how it resolves tomorrow is not ours to assume.
 
 beforeEach(function (): void {
     $this->storageRoot = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-relay-class-'.bin2hex(random_bytes(6)).DIRECTORY_SEPARATOR.'storage';

@@ -6,9 +6,6 @@ namespace Modules\Anomaly\Internal\Detectors;
 
 use Modules\Core\Models\User;
 
-/**
- * @link ../../../../.docs/features/anomaly/architecture.md
- */
 final readonly class LargeSampleContext
 {
     /**

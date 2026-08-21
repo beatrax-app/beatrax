@@ -74,7 +74,14 @@
     </header>
 
     @if ($total > 0)
-        <div class="progress-bar" aria-label="{{ Lang::get('counterparties::triage.progress_aria') }}">
+        <div
+            class="progress-bar"
+            role="progressbar"
+            aria-valuenow="{{ $percent }}"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-label="{{ Lang::get('counterparties::triage.progress_aria') }}"
+        >
             <div class="progress-fill" style="width: {{ $percent }}%;"></div>
         </div>
     @endif
@@ -239,7 +246,7 @@
                 </div>
             </div>
 
-            {{-- Kbd hint chips: hidden on touch devices per D-13 (pointer:coarse = hidden-touch) --}}
+            {{-- Kbd hint chips: hidden on touch devices (pointer:coarse = hidden-touch) --}}
             <p class="hidden-touch" style="font-size: var(--text-xs); color: var(--color-text-muted); margin: 0; text-align: center;">
                 <kbd class="kbd">Y</kbd> {{ Lang::get('counterparties::triage.kbd_yes') }} ·
                 <kbd class="kbd">N</kbd> {{ Lang::get('counterparties::triage.kbd_no') }} ·

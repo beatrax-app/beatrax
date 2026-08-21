@@ -15,8 +15,6 @@ use RuntimeException;
 final class LivewireRoundTrip
 {
     /**
-     * Calls $method on $component and returns the HTML it re-rendered.
-     *
      * @param  array<string, string>  $updates  public properties to set before the call
      */
     public static function call(

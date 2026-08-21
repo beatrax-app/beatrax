@@ -9,9 +9,6 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Public\Services\PairingGateway;
 use Native\Mobile\Scanner;
 
-/**
- * @link ../../../../.docs/features/mobile/architecture.md
- */
 final class QrScanBridge
 {
     // The pairing envelope is only ever carried in a QR code, so the

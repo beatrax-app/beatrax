@@ -7,9 +7,6 @@ namespace Modules\Anomaly\Public\Dto;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/anomaly/architecture.md
- */
 final class AnomalySuppressionRuleDto extends Data
 {
     public function __construct(

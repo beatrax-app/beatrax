@@ -25,6 +25,8 @@ return [
         'tax_years' => 'Mokestiniai metai',
     ],
 
+    'tablist_aria' => 'Kitos šalies skiltys',
+
     'tab_note_personal' => '— asmeniniams kontaktams finansavimo grandinių nėra',
     'tab_note_bank' => '— banko mokesčių kita šalis finansavimo grandinių nesukuria',
     'tab_note_government' => '— valstybės institucijoms finansavimo grandinių nėra',

@@ -10,15 +10,10 @@
         {{ Lang::get('core::settings.auto_import.heading') }}
     </h2>
 
-    <label for="auto-import-toggle" class="flex cursor-pointer items-start gap-3">
-        <input
-            type="checkbox"
-            id="auto-import-toggle"
-            @checked($enabled)
-            wire:change="toggle"
-            aria-describedby="auto-import-help"
-            class="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600 dark:border-slate-600 dark:text-emerald-500 dark:focus:ring-emerald-500"
-        />
+    {{-- Not x-core::setting-row: the help line carries a <code> path, which
+         that component's description prop escapes, and it needs an id of its
+         own for aria-describedby to point at. --}}
+    <div class="flex items-start justify-between gap-4">
         <div class="min-w-0 flex-1">
             <span class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.auto_import.label') }}</span>
             <p id="auto-import-help" class="mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -29,5 +24,12 @@
                 @endif
             </p>
         </div>
-    </label>
+        <x-core::switch
+            id="auto-import-toggle"
+            :on="$enabled"
+            :label="Lang::get('core::settings.auto_import.label')"
+            wire:click="toggle"
+            aria-describedby="auto-import-help"
+        />
+    </div>
 </div>

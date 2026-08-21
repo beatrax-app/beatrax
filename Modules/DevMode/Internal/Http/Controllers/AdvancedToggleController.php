@@ -9,10 +9,8 @@ use Illuminate\Contracts\Validation\Factory as ValidatorFactory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-// The Advanced toggle is one of the three triple-gate locks: session-
-// scoped, default OFF, resets on every login (ResetAdvancedToggleOnLogin).
-// No audit row here — the audit pipeline records actual destructive
-// command runs, not this pre-flight toggle state.
+// One of the three triple-gate locks: session-scoped and default OFF. No audit
+// row, because the pipeline records destructive runs, not the pre-flight.
 final readonly class AdvancedToggleController
 {
     public function __construct(

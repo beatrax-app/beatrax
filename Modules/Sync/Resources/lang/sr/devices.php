@@ -16,6 +16,7 @@ return [
     'on' => 'Uključeno',
     'securing' => 'Obezbeđivanje tvojih podataka…',
     'do_not_close' => 'Ne zatvaraj ovaj prozor.',
+    'encryption_progress_aria' => 'Napredak šifrovanja',
     'not_encrypted_offer' => 'Tvoji podaci nisu šifrovani u mirovanju. Podesi šifrovanje da ih zaštitiš ako uređaj bude izgubljen ili ukraden.',
     'enable_encryption' => 'Uključi šifrovanje',
 

@@ -17,9 +17,6 @@ use Modules\Counterparties\Internal\Resolver\CounterpartySlugResolver;
 use Modules\Counterparties\Public\Contracts\CounterpartyResolver;
 use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
 
-/**
- * @link ../../../.docs/features/counterparties/architecture.md
- */
 final class CounterpartiesServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;

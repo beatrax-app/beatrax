@@ -12,28 +12,22 @@ use Livewire\LivewireManager;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\DriftAlerts\Internal\DriftEvaluator;
-use Modules\DriftAlerts\Internal\Http\Livewire\DashboardDriftBadge;
 use Modules\DriftAlerts\Internal\Http\Livewire\DriftPage;
-use Modules\DriftAlerts\Internal\Http\Livewire\DriftThresholdEditor;
-use Modules\DriftAlerts\Internal\Http\Livewire\SavingsInsightsCard;
 use Modules\DriftAlerts\Internal\Http\Livewire\SubscriptionDriftWatchPage;
 use Modules\DriftAlerts\Internal\Listeners\EvaluateDriftOnMetricsRefreshed;
 use Modules\DriftAlerts\Internal\StateMachines\DriftAlertStateMachine;
 use Modules\DriftAlerts\Public\Actions\AcknowledgeDriftAlert;
 use Modules\DriftAlerts\Public\Actions\DismissDriftAlertAsCancelled;
 use Modules\DriftAlerts\Public\Actions\SnoozeDriftAlert;
+use Modules\DriftAlerts\Public\Http\Livewire\DashboardDriftBadge;
+use Modules\DriftAlerts\Public\Http\Livewire\DriftThresholdEditor;
+use Modules\DriftAlerts\Public\Http\Livewire\SavingsInsightsCard;
 use Modules\DriftAlerts\Public\Services\CancellationImpactQuery;
 use Modules\DriftAlerts\Public\Services\DriftAlertQuery;
 use Modules\DriftAlerts\Public\Services\SavingsInsightsQuery;
 use Modules\DriftAlerts\Public\Services\SubscriptionDriftWatchQuery;
 use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 
-// Queued jobs and Livewire components are intentionally NOT bound as
-// singletons — both are instantiated per-use and bypass the container's
-// singleton cache by design.
-
-// The dashboard drift badge renders via @livewire() directly, so this
-// provider registers no composer for it.
 final class DriftAlertsServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
@@ -65,10 +59,6 @@ final class DriftAlertsServiceProvider extends ServiceProvider
         $this->registerTopNavBadgeComposer();
     }
 
-    // Subscribes the drift detector to Recurring's per-series
-    // metrics-refreshed event; the listener queues a
-    // ShouldBeUniqueUntilProcessing DetectDriftAlertsJob so concurrent
-    // triggers collapse safely.
     private function registerListener(Dispatcher $events): void
     {
         $events->listen(
@@ -77,10 +67,8 @@ final class DriftAlertsServiceProvider extends ServiceProvider
         );
     }
 
-    // Resolved through $this->app->make() to keep the DI-only invariant
-    // visible; the global view() helper is forbidden. The $cache array
-    // captured by reference collapses repeated renders within a single
-    // boot cycle to one COUNT query per user.
+    // The by-reference $cache collapses repeated top-nav renders within one boot
+    // cycle to a single COUNT per user.
     private function registerTopNavBadgeComposer(): void
     {
         $app = $this->app;

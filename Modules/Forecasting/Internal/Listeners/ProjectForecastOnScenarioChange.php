@@ -10,9 +10,6 @@ use Modules\Forecasting\Public\Events\ScenarioCreated;
 use Modules\Forecasting\Public\Events\ScenarioDeleted;
 use Modules\Forecasting\Public\Events\ScenarioMutated;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final readonly class ProjectForecastOnScenarioChange
 {
     public function __construct(private Dispatcher $bus) {}

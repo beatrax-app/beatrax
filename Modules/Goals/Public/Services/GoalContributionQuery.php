@@ -10,9 +10,6 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Goals\Public\Dto\GoalAttributionRow;
 use Modules\Goals\Public\Enums\GoalStatus;
 
-/**
- * @link ../../../../.docs/features/goals/architecture.md
- */
 final class GoalContributionQuery
 {
     use CoercesScalars;

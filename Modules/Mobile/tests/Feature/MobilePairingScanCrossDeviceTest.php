@@ -7,7 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Livewire\Livewire;
-use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Http\Livewire\MobilePairingScan;
@@ -26,22 +26,6 @@ use Modules\Sync\Tests\Support\CrossDevicePairingHarness;
 uses(RefreshDatabase::class);
 uses(CrossDevicePairingHarness::class);
 
-/*
- * MobilePairingScanCrossDeviceTest — Phase 15 HIGH-01 (Task 6, C5 phone
- * wiring). Drives the ACTING (phone) side through the real MobilePairingScan
- * Livewire component — submitCode() propagates PAIR_RESPONDER_ACCEPT,
- * confirmMatch()/checkPairingState() propagate/apply PAIR_CONFIRM — against
- * a genuinely separate DESKTOP database (driven directly via
- * PairingTokenService/PairingGateway, mirroring PairingFlowModalCrossDeviceTest's
- * desktop half). The acting Livewire user IS "the phone" — its identity/
- * pairing rows live on the app's normal default test connection, itself a
- * genuinely separate SQLite database from the harness's `desktop`
- * connection.
- *
- * Also covers plan case 8: the full happy path THROUGH to epoch delivery —
- * the "truth #1 the review said was unreachable on real hardware."
- */
-
 function mpsUser(string $username): User
 {
     return User::query()->create([
@@ -58,6 +42,11 @@ afterEach(function (): void {
     $this->crossDevicePairingTearDown();
 });
 
+// The acting Livewire user is the phone: its identity and pairing rows live on
+// the default test connection, a genuinely separate SQLite database from the
+// harness's `desktop` connection, which is driven straight through
+// PairingTokenService and PairingGateway instead.
+
 it('submitCode() import branch sends PAIR_RESPONDER_ACCEPT to the desktop\'s own separate database', function (): void {
     $this->crossDevicePairingSetUp();
 
@@ -66,7 +55,7 @@ it('submitCode() import branch sends PAIR_RESPONDER_ACCEPT to the desktop\'s own
 
     /** @var Session $session */
     $session = app(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat('k', 32));
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
     app(DeviceIdentityService::class)->generateAndPersist((int) $user->id, $session);
 
     $desktopIdentity = $this->asDevice('desktop', fn () => app(DeviceIdentityService::class)->generateAndPersist(MPS_DESKTOP_USER_ID, $session));
@@ -93,7 +82,7 @@ it('submitCode() import branch sends PAIR_RESPONDER_ACCEPT to the desktop\'s own
         ->assertSet('step', 'confirm')
         ->assertSet('flashMessage', '');
 
-    // DESKTOP drains its own mailbox — applies the phone's responder-accept.
+    // The desktop drains its own mailbox and applies the phone's responder-accept.
     $this->asDevice('desktop', function (): void {
         app(PairingGateway::class)->drainPairingFrames(MPS_DESKTOP_USER_ID);
     });
@@ -112,27 +101,23 @@ it('the full happy path reaches CONFIRMED on both databases AND epoch delivery �
     $user = mpsUser('mps-full-happy-path');
     test()->actingAs($user);
 
-    // Cross-test filesystem-isolation gap (documented in GdkEpochDeliveryTest
-    // / MobilePairingScanTest): SQLite rowids can be reused across
-    // RefreshDatabase transaction rollbacks within one process, so a prior
-    // test's on-disk GDK keyring file may already exist for this same
-    // reused numeric user id. Start from a genuinely empty on-disk state so
-    // the epoch-1 idempotency guard (MEDIUM-02) cannot silently drop the
-    // desktop's delivered wrap as an already-present epoch_id.
+    // SQLite rowids get reused across RefreshDatabase rollbacks inside one process,
+    // so a prior test's on-disk GDK keyring can already exist for this same numeric
+    // user id. Left there, the epoch-1 idempotency guard silently drops the
+    // desktop's delivered wrap as an epoch that is already present.
     @unlink(UserDataPathService::appPath('sync/gdk/'.$user->id.'.enc'));
     @unlink(UserDataPathService::appPath('sync/gdk/'.MPS_DESKTOP_USER_ID.'.enc'));
 
     /** @var Session $session */
     $session = app(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat('k', 32));
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
     $phoneIdentity = app(DeviceIdentityService::class)->generateAndPersist((int) $user->id, $session);
 
-    // DESKTOP: real identity + encryption ALREADY enabled (epoch 1) —
-    // mirrors a desktop that has been using encrypted sync before this
-    // phone ever existed.
+    // A desktop that has been using encrypted sync since before this phone existed.
     $desktopIdentity = $this->asDevice('desktop', fn () => app(DeviceIdentityService::class)->generateAndPersist(MPS_DESKTOP_USER_ID, $session));
     $this->asDevice('desktop', fn () => app(GdkKeyringService::class)->generateAndPersist(MPS_DESKTOP_USER_ID, $session));
-    $desktopEpochKeyHex = $this->asDevice('desktop', fn () => app(GdkKeyringService::class)->currentEpoch(MPS_DESKTOP_USER_ID, $session)->keyHex);
+    $desktopEpoch = $this->asDevice('desktop', fn () => app(GdkKeyringService::class)->currentEpoch(MPS_DESKTOP_USER_ID, $session));
+    $desktopEpochKeyHex = $desktopEpoch->keyHex;
 
     $issuedToken = $this->asDevice('desktop', fn () => app(PairingTokenService::class)->issue(
         MPS_DESKTOP_USER_ID,
@@ -151,14 +136,14 @@ it('the full happy path reaches CONFIRMED on both databases AND epoch delivery �
 
     app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
 
-    // PHONE scans and accepts — sends PAIR_RESPONDER_ACCEPT.
+    // The phone scans and accepts, which sends PAIR_RESPONDER_ACCEPT.
     $component = Livewire::test(MobilePairingScan::class)
         ->assertSet('importMode', true)
         ->call('submitCode', $qrPayload)
         ->assertSet('step', 'confirm');
 
-    // DESKTOP drains, advances to confirm, and its human confirms — sends
-    // its own signed PAIR_CONFIRM to the phone.
+    // The desktop drains, its human confirms, and it sends its own signed
+    // PAIR_CONFIRM back to the phone.
     $this->asDevice('desktop', function (): void {
         app(PairingGateway::class)->drainPairingFrames(MPS_DESKTOP_USER_ID);
     });
@@ -172,22 +157,21 @@ it('the full happy path reaches CONFIRMED on both databases AND epoch delivery �
         app(PairingGateway::class)->sendConfirm(MPS_DESKTOP_USER_ID, (int) $row->id, $phoneIdentity->deviceId, $session);
     });
 
-    // PHONE's human confirms — confirmMatch() drains-independent send of its
-    // own PAIR_CONFIRM to the desktop; checkPairingState() will drain the
-    // desktop's already-sent PAIR_CONFIRM (delivered above) and reach
-    // CONFIRMED.
+    // confirmMatch() sends the phone's own PAIR_CONFIRM independently of any
+    // drain; checkPairingState() then drains the desktop's, delivered above, and
+    // reaches CONFIRMED.
     $component->call('confirmMatch')->assertSet('awaitingPeer', true);
     $component->call('checkPairingState')->assertSet('step', 'success');
 
-    // PHONE admits the desktop; import mode deferred self-mint — no
-    // sync_encryption_state row of its own yet.
+    // Import mode defers the phone's own self-mint, so it has no
+    // sync_encryption_state row yet.
     expect(app(DeviceRegistryService::class)->deviceKeys((int) $user->id))->toHaveKey($desktopIdentity->deviceId);
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     expect($db->connection()->table('sync_encryption_state')->where('user_id', $user->id)->exists())->toBeFalse();
 
-    // DESKTOP drains the phone's PAIR_CONFIRM too — admits the phone on
-    // ITS OWN database.
+    // The desktop drains the phone's PAIR_CONFIRM too, admitting it on its own
+    // database.
     $this->asDevice('desktop', function (): void {
         app(PairingGateway::class)->drainPairingFrames(MPS_DESKTOP_USER_ID);
     });
@@ -195,17 +179,9 @@ it('the full happy path reaches CONFIRMED on both databases AND epoch delivery �
         expect(app(DeviceRegistryService::class)->deviceKeys(MPS_DESKTOP_USER_ID))->toHaveKey($phoneIdentity->deviceId);
     });
 
-    // --- Case 8: epoch delivery. The desktop fans out every keyring epoch
-    // to the newly-confirmed phone (existing, UNCHANGED Phase 14/15
-    // machinery — GdkRotationService::fanOutAllEpochsToDevice(), reached in
-    // production from PairingFlowModal::fanOutToNewlyConfirmedDevice()).
-    // This writes into the DESKTOP's OWN relay_mailbox (that primitive is
-    // untouched by this plan — GDK epoch transport is Phase 14/15 scope,
-    // not the pairing-handshake propagation this plan adds). The bridge
-    // step below mirrors GdkEpochDeliveryTest's own established technique
-    // for simulating "the wrap reached the other device via some
-    // transport" without inventing a new cross-device epoch-wrap relay
-    // client in this plan.
+    // fanOutAllEpochsToDevice() writes into the desktop's own relay_mailbox, so the
+    // copy further down stands in for whatever transport carries the wrap to the
+    // phone, rather than inventing a cross-device epoch-wrap relay client here.
     $wraps = $this->asDevice('desktop', function () use ($phoneIdentity, $session) {
         $db = app(DatabaseManager::class);
         $deviceRegistryId = $db->connection()->table('device_registry')
@@ -222,7 +198,7 @@ it('the full happy path reaches CONFIRMED on both databases AND epoch delivery �
 
     expect($wraps)->toHaveCount(1, 'exactly one epoch (epoch 1) must be fanned out');
 
-    // The phone's OWN inbound relay_mailbox receives the SAME opaque blob.
+    // The phone's own inbound relay_mailbox receives the same opaque blob.
     foreach ($wraps as $wrap) {
         $db->connection()->table('relay_mailbox')->insert([
             'sender_did' => $wrap->sender_did,
@@ -234,9 +210,8 @@ it('the full happy path reaches CONFIRMED on both databases AND epoch delivery �
         ]);
     }
 
-    // PHONE's own daemon drains ITS OWN inbound mailbox and routes each
-    // wrap through GdkEpochControlHandler, converging its local keyring
-    // under its own KEK (mirrors GdkEpochDeliveryTest's receive-side).
+    // The phone's own daemon drains its inbound mailbox and routes each wrap
+    // through GdkEpochControlHandler, converging its keyring under its own KEK.
     $pending = $db->connection()->table('relay_mailbox')
         ->where('recipient_did', $phoneIdentity->deviceId)
         ->whereNull('delivered_at')
@@ -254,5 +229,8 @@ it('the full happy path reaches CONFIRMED on both databases AND epoch delivery �
     $loaded = $keyring->loadKeyring((int) $user->id, $session);
 
     expect($loaded->epochs())->not->toBe([], 'the phone keyring must converge from the desktop\'s delivered epoch (this plan\'s truth #1)');
-    expect($loaded->keyFor(1))->toBe($desktopEpochKeyHex, 'the delivered epoch-1 key must match the desktop\'s real key');
+    // Epoch ids are minted, so the phone adopts the desktop's number rather than
+    // starting its own count at 1.
+    expect($loaded->keyFor($desktopEpoch->epochId))
+        ->toBe($desktopEpochKeyHex, 'the delivered epoch key must match the desktop\'s real key');
 });

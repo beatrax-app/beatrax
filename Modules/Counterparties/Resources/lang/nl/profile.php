@@ -25,6 +25,8 @@ return [
         'tax_years' => 'Belastingjaren',
     ],
 
+    'tablist_aria' => 'Secties van de tegenpartij',
+
     'tab_note_personal' => '— geen financieringsketens voor persoonlijke contacten',
     'tab_note_bank' => '— tegenpartij voor bankkosten genereert geen financieringsketens',
     'tab_note_government' => '— geen financieringsketens voor overheidstegenpartijen',

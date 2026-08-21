@@ -2,34 +2,16 @@
 
 declare(strict_types=1);
 
-/*
- * Palette keybind handler + Livewire mount invariants.
- *
- * Both base layouts MUST host:
- *   - a body-level Alpine x-data block declaring the
- *     onKey($event) handler that dispatches `palette:open` on
- *     ⌘K / Ctrl+K and navigates to /dev on ⌘./Ctrl+.
- *   - an @livewire('dev.command-palette-modal') mount so the
- *     palette has a dispatch sink inside the layout.
- *
- * The tests grep the on-disk Blade source rather than render the
- * layouts because (a) a CLI test cannot resolve the layouts'
- * @inject contracts cleanly outside a real request, and (b) the
- * rendered HTML still contains the x-data + livewire markers we
- * want to lock — a source-grep is the simplest stable contract.
- */
-
+// Source-grep rather than render: the layouts' @inject contracts do not
+// resolve cleanly in a CLI test outside a real request.
 it('declares the palette + ⌘. keybind handler on the body tag of resources/views/layouts/app.blade.php', function (): void {
     $contents = (string) file_get_contents(base_path('resources/views/layouts/app.blade.php'));
 
     expect($contents)->toContain('x-on:keydown.window="onKey($event)"');
-    // The handler dispatches `palette:open` on ⌘K and navigates to
-    // /dev on ⌘. — both behaviours must be present in the body
-    // attribute.
     expect($contents)->toContain("'palette:open'");
     expect($contents)->toContain("'/dev'");
-    // The carve-out for text-input focus is required so the
-    // handler does not steal keystrokes inside an INPUT / TEXTAREA.
+    // 'INPUT' is the carve-out that stops the window-level handler stealing
+    // keystrokes while the caret is in a field.
     expect($contents)->toContain("'INPUT'");
 });
 

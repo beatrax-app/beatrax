@@ -7,10 +7,8 @@ namespace Modules\EmailScan\Public\Dto;
 use DateTimeImmutable;
 use Spatie\LaravelData\Data;
 
-// In-memory carrier for the persistent + freshly-refreshed token pair
-// OAuthSecretsRepository hands back. The persistent half lives in the
-// chmod-600 JSON repository; the volatile accessToken may be null and
-// is always treated as a hint, refreshed near-expiry via rotate().
+// The refresh token is the persistent half, held in the chmod-600 JSON
+// repository; $accessToken is only ever a hint, re-minted near expiry.
 final class InboxCredentials extends Data
 {
     public function __construct(

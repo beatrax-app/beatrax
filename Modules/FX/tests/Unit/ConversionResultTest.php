@@ -6,17 +6,6 @@ use Carbon\CarbonImmutable;
 use Modules\FX\Public\Dto\ConversionResult;
 use Modules\Ledger\Public\ValueObjects\Money;
 
-/**
- * Tests for the ConversionResult DTO (FX-04 transparency shape).
- *
- * Three behaviours verified:
- * 1. passthrough() yields isPassthrough=true, original===converted,
- *    and all rate/source/asOf null, isStale=false.
- * 2. A fully-constructed result exposes all FX-04 disclosure fields
- *    (rate, source, asOf, isStale) for the Blade affordance to render.
- * 3. $rate is typed ?string (never float) — guards Pitfall 1
- *    (float silently corrupts FX conversion precision).
- */
 it('passthrough() returns isPassthrough=true with original equal to converted', function (): void {
     $money = Money::ofMinor(10000, 'EUR');
 
@@ -39,7 +28,7 @@ it('passthrough() yields null rate, source, asOf and isStale=false', function ()
     expect($result->isStale)->toBeFalse();
 });
 
-it('fully-constructed result exposes rate, source, asOf, and isStale for FX-04 disclosure', function (): void {
+it('fully-constructed result exposes rate, source, asOf, and isStale for disclosure', function (): void {
     $original = Money::ofMinor(10000, 'USD');
     $converted = Money::ofMinor(9200, 'EUR');
     $asOf = CarbonImmutable::parse('2026-06-06');
@@ -81,7 +70,7 @@ it('fully-constructed stale result sets isStale=true', function (): void {
     expect($result->source)->toBe('bundled');
 });
 
-it('rate property is typed ?string and never float (Pitfall 1 guard)', function (): void {
+it('rate property is typed ?string and never float', function (): void {
     $reflection = new ReflectionClass(ConversionResult::class);
     $rateParam = null;
 

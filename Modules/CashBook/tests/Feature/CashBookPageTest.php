@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Lang;
 use Livewire\Livewire;
 use Modules\CashBook\Internal\Http\Livewire\CashBookPage;
 use Modules\Core\Models\User;
@@ -85,9 +86,26 @@ it('deletes only the user\'s own manual entry', function (): void {
 
     $id = (int) DB::table('transactions')->where('user_id', $this->user->id)->where('source_format', 'manual')->value('id');
 
-    $component->call('delete', $id);
+    // Two steps: deleting fired on the first tap with no confirmation and no
+    // undo, on a row whose only other control is an amount.
+    $component->call('confirmDelete', $id)->call('delete', $id);
 
     expect(DB::table('transactions')->where('id', $id)->exists())->toBeFalse();
+});
+
+it('does not delete an entry nobody was asked about', function (): void {
+    $component = Livewire::actingAs($this->user)
+        ->test(CashBookPage::class)
+        ->set('amount', '9,99')->set('counterparty', 'Market')->set('date', '2026-06-05')->call('add');
+
+    $id = (int) DB::table('transactions')->where('user_id', $this->user->id)->where('source_format', 'manual')->value('id');
+
+    // A delete arriving for anything other than the entry the confirm strip is
+    // open for is a client that skipped the question.
+    $component->call('delete', $id);
+
+    expect(DB::table('transactions')->where('id', $id)->exists())
+        ->toBeTrue('an unconfirmed delete went through');
 });
 
 it('records two identical same-day entries without silently dropping the second', function (): void {
@@ -97,8 +115,7 @@ it('records two identical same-day entries without silently dropping the second'
     $component->set('amount', '3,00')->set('counterparty', 'Coffee')->set('date', '2026-06-05')->call('add');
     $component->set('amount', '3,00')->set('counterparty', 'Coffee')->set('date', '2026-06-05')->call('add');
 
-    // Both must persist — the earlier per-day bookedAt would have collided on
-    // the fingerprint unique index and dropped the second.
+    // A per-day bookedAt collided on the fingerprint index and dropped one.
     expect(DB::table('transactions')->where('user_id', $this->user->id)->where('source_format', 'manual')->count())->toBe(2);
 });
 
@@ -116,4 +133,21 @@ it('drops a foreign (cross-user) category id rather than attaching it', function
 
     $tx = DB::table('transactions')->where('user_id', $this->user->id)->where('source_format', 'manual')->first();
     expect($tx->category_id)->toBeNull(); // foreign category never attached
+});
+
+// CarbonImmutable::parse('') returns NOW rather than throwing, so a cleared
+// date field fell through the catch and booked the entry today. SafeDate
+// rejects the empty string before parsing.
+it('refuses a cleared date instead of silently booking the entry today', function (): void {
+    Livewire::actingAs($this->user)
+        ->test(CashBookPage::class)
+        ->set('direction', 'expense')
+        ->set('amount', '9,99')
+        ->set('date', '')
+        ->set('counterparty', 'Nowhere')
+        ->call('add')
+        ->assertSet('error', Lang::get('cashbook::cash-book.errors.invalid_date'));
+
+    expect(DB::table('transactions')->where('user_id', $this->user->id)->where('counterparty_name', 'Nowhere')->exists())
+        ->toBeFalse('a cleared date must not write a transaction dated today');
 });

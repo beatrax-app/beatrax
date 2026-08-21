@@ -8,6 +8,7 @@ return [
     'subtitle' => 'Printează-le sau salvează-le într-un loc sigur. Nu vor mai fi afișate din nou.',
     'copy' => 'Copiază codurile',
     'copied' => 'Copiat',
+    'copy_failed' => 'Copierea nu a reușit. Notați codurile.',
     'download' => 'Descarcă drept .txt',
 
     'saved_as' => 'Salvat ca beatrax-recovery-codes-:username.txt',

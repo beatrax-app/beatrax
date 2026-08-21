@@ -8,8 +8,6 @@ return [
     'error_enroll_failed' => 'Enheten din nektet å lagre nøkkelen. Biometrisk opplåsing er ikke tilgjengelig.',
     'heading' => 'Applås',
 
-    // Innstillinger inneholder bare en henvisning; selve kontrollene ligger på
-    // synkroniseringssiden på /sync#app-lock.
     'moved_help' => 'PIN-koden din, tidspunkt for automatisk låsing og biometrisk opplåsing ligger sammen med synkroniseringsinnstillingene for denne enheten.',
     'moved_cta' => 'Åpne Synkronisering og enhet',
 

@@ -6,19 +6,14 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
-use Modules\Auth\Internal\Http\Livewire\DeleteAccountSection;
 use Modules\Auth\Public\Actions\DeleteAccountAction;
+use Modules\Auth\Public\Http\Livewire\DeleteAccountSection;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
 
-/*
- * The in-app account deletion both stores require.
- *
- * What is worth guarding is not that the users row goes — it is that
- * everything the account owned goes with it, that a household member's
- * identical-looking data does not, and that the device is never left with
- * users on it and nobody able to administer them.
- */
+// Not that the users row goes, but that everything it owned goes with it, that
+// a household member's identical-looking data does not, and that nobody is
+// left able to administer the device.
 
 function deleteAccountUser(string $username, bool $administrator): User
 {
@@ -58,9 +53,8 @@ function deleteAccountSeedOwnedRows(DatabaseManager $db, User $user, string $mar
     ]);
 }
 
-// A table the sweep can never clear, standing in for a module that ships one
-// the purge cannot reach. The point of the guard is that this rolls the whole
-// deletion back rather than half-erasing an account.
+// Stands in for a module shipping a table the purge cannot reach: the guard
+// must roll the whole deletion back rather than half-erase an account.
 function deleteAccountBlockPurge(DatabaseManager $db, int $userId): void
 {
     $connection = $db->connection();
@@ -112,7 +106,6 @@ it('erases every row the account owned and leaves the household member untouched
     expect(User::query()->where('id', $owner->id)->exists())->toBeFalse();
     expect(deleteAccountOwnedRowCount($db, $owner->id))->toBe(0);
 
-    // The half that a table-truncating "wipe" would get wrong.
     expect(User::query()->where('id', $partner->id)->exists())->toBeTrue();
     expect(deleteAccountOwnedRowCount($db, $partner->id))->toBeGreaterThan(0);
     expect($db->connection()->table('accounts')->where('name', 'partner-marker')->count())->toBe(1);
@@ -173,7 +166,6 @@ it('erases the sync identity and group keyring that belong to the account', func
     expect($paths->appRelative('sync/identity/'.$owner->id.'.enc'))->not->toBeFile();
     expect($paths->appRelative('sync/gdk/'.$owner->id.'.enc'))->not->toBeFile();
 
-    // Still a household device, so the device-wide material stays put.
     expect($paths->appRelative('sync/identity/'.$partner->id.'.enc'))->toBeFile();
     expect($paths->appRelative('sync/gdk/'.$partner->id.'.enc'))->toBeFile();
 });
@@ -210,8 +202,7 @@ it('offers the deletion path from settings and only deletes after confirming', f
 });
 
 it('says out loud that a paired device keeps its own copy', function (): void {
-    // The store requirement is an in-app deletion path; the honesty
-    // requirement is that it never implies it reached the other devices.
+    // The deletion must never imply it reached the other devices.
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
@@ -239,7 +230,7 @@ it('says out loud that a paired device keeps its own copy', function (): void {
 
 it('rolls the whole deletion back when one table cannot be cleared', function (): void {
     // Half an erased account is the worst outcome available: the user believes
-    // they are gone and their ledger is still on the disk.
+    // they are gone and the ledger is still on the disk.
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
@@ -278,9 +269,8 @@ it('reports a failure instead of pretending the account is gone', function (): v
 });
 
 it('keeps no plaintext password in the component after a rejected delete', function (): void {
-    // Every failure path leaves the component alive and re-serialised into the
-    // wire snapshot the browser holds. A mistyped password is the common case,
-    // so that snapshot would otherwise carry a near-miss of the real one.
+    // A failure re-serialises the component into the wire snapshot, and a
+    // mistyped password is a near-miss of the real one.
     $owner = deleteAccountUser('owner', administrator: true);
 
     $component = Livewire::actingAs($owner)
@@ -313,10 +303,8 @@ it('keeps no plaintext password in the component after a failed purge', function
     expect(json_encode($component->snapshot))->not->toContain('owner-password-12');
 });
 
-// A filesystem that refuses to unlink the account's own identity blob, the
-// way a held handle does on Windows. Narrow on purpose: this is the container's
-// shared `files` binding, and a blanket exists()/delete() override changes what
-// Blade and the translation loader see too.
+// Refuses one unlink, the way a held handle does on Windows. Narrow because
+// this replaces the shared `files` binding Blade and the translator use too.
 function deleteAccountRefuseFileDeletes(UserDataPathService $paths, int $userId): void
 {
     $blocked = $paths->appRelative(sprintf('sync/identity/%d.enc', $userId));
@@ -353,9 +341,8 @@ it('finishes the deletion when the file purge fails after the commit', function 
     $this->actingAs($owner);
     deleteAccountRefuseFileDeletes(app(UserDataPathService::class), $owner->id);
 
-    // The rows are already gone by the time the unlink fails. Throwing here
-    // reported "your account was not deleted, nothing was changed" over a
-    // committed purge, leaving the session pointed at a row that had gone.
+    // The rows are gone by the time the unlink fails, so throwing reported
+    // "nothing was changed" over a committed purge.
     app(DeleteAccountAction::class)($owner, 'owner-password-12');
 
     expect(User::query()->where('id', $owner->id)->exists())->toBeFalse()

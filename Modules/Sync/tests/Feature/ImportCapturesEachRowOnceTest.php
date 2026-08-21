@@ -9,16 +9,10 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Actions\RecordTransactions;
 
-/*
- * Capture moved into RecordTransactions so the cash book, receipts and the
- * migration pipeline were covered — but ConfirmImport already captured the
- * import itself, run and accounts first so a peer never meets a child whose
- * parent has not arrived. Both then ran, and every imported row was signed,
- * encrypted and written to the op log twice.
- *
- * The cost is permanent and it replays: a 3,000-row import wrote roughly
- * 168,000 entries where 84,000 were needed, and the peer receives all of it.
- */
+// Capture moved down into the record action to cover the cash book, receipts
+// and migration, but the import path already captured run and accounts first so
+// a peer never meets an orphan. Both ran, and every imported row was signed,
+// encrypted and logged twice — 168,000 entries for a 3,000-row import.
 
 function captureOnceUser(): User
 {

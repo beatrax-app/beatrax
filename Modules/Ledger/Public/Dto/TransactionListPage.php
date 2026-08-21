@@ -6,10 +6,8 @@ namespace Modules\Ledger\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-// The cursor pair (nextCursorPostedAt, nextCursorId) carries the last
-// visible row's ordering key for `WHERE (posted_at, id) < (?, ?)`, and
-// is null exactly when hasMore is false. The pair (not id alone)
-// prevents rows sharing a posted_at from dropping out between pages.
+// The cursor is the pair (posted_at, id), never id alone, so rows sharing a
+// posted_at cannot drop out between pages. Null exactly when hasMore is false.
 final class TransactionListPage extends Data
 {
     /**

@@ -14,16 +14,7 @@ use Modules\Recurring\Public\Enums\SeriesCadence;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for RangeProjector — the envelope-tier per-occurrence
- * emitter.
- *
- * Covers cadence walking (weekly, monthly, quarterly, yearly), sign-aware
- * low/point/high tuples for expense vs income series, and the
- * variance_tolerance_percent magnitude semantics. FX-series contributions
- * carry the original currency (USD); the daily fold handles conversion.
- */
-
+/** @link ../../../../.docs/features/forecasting/projection-math.md */
 beforeEach(function (): void {
     /** @var RangeProjector $projector */
     $projector = $this->app->make(RangeProjector::class);
@@ -75,9 +66,6 @@ function rpDtoSeries(array $overrides = []): RecurringSeriesDto
         detectedName: $merged['detectedName'],
         displayNameOverride: $merged['displayNameOverride'],
         state: $merged['state'],
-        // The helper's overrides array still names cadences as strings, which
-        // keeps each case reading as 'cadence' => 'weekly'; the DTO takes the
-        // enum, so the conversion happens once here rather than in ten cases.
         cadence: SeriesCadence::from($merged['cadence']),
         latestAmount: $merged['latestAmount'],
         eurEquivalent: $merged['eurEquivalent'],
@@ -92,10 +80,6 @@ function rpDtoSeries(array $overrides = []): RecurringSeriesDto
 }
 
 /**
- * Seeds a recurring_series plus $observedAmounts.count occurrence rows (each
- * behind its own transaction, per the FK chain) so occurrencesForSeries can
- * feed the percentile tier. Returns the series id.
- *
  * @param  list<int>  $observedAmounts
  */
 function rpSeedPercentileSeries(DatabaseManager $db, int $userId, array $observedAmounts): int
@@ -141,9 +125,8 @@ function rpSeedPercentileSeries(DatabaseManager $db, int $userId, array $observe
 }
 
 it('routes a wide-variance series with enough occurrences through the percentile tier and jitters the band', function (): void {
-    // varianceTolerancePercent 50 (>= the 40 threshold) AND six occurrences
-    // (>= the 6-sample minimum) escalate project() to the percentile tier,
-    // which the envelope-only tests never reach.
+    // 50% tolerance clears the 40% bar and six occurrences clear the 6-sample
+    // minimum, which is what escalates project() to the percentile tier.
     $seriesId = rpSeedPercentileSeries($this->db, $this->user->id, [-1000, -1100, -1200, -1300, -1400, -1500]);
 
     $series = rpDtoSeries([
@@ -158,9 +141,8 @@ it('routes a wide-variance series with enough occurrences through the percentile
 
     $contribs = $this->projector->project($series, accountId: 7, asOf: $asOf, horizonDays: 30, user: $this->user);
 
-    // One in-horizon occurrence, jittered across the ±3-day window → 2*3+1 = 7
-    // replicas centred on 2026-05-25. The envelope tier would have returned a
-    // single un-jittered contribution.
+    // The one in-horizon occurrence is smeared over a ±3-day window, so
+    // 2 × 3 + 1 replicas centred on 2026-05-25.
     expect($contribs)->toHaveCount(7);
     $dates = array_map(static fn ($c): string => $c->date->toDateString(), $contribs);
     expect(min($dates))->toBe('2026-05-22')
@@ -183,13 +165,10 @@ it('emits one monthly expense contribution inside a 30-day horizon with sign-awa
     expect($first)->toBeInstanceOf(ForecastContribution::class);
     expect($first->date->toDateString())->toBe('2026-05-25');
     expect($first->pointMinor)->toBe(-1199);
-    // ±5% on magnitude 1199 → low_mag = round(1199 × 0.95) = 1139,
-    //                         high_mag = round(1199 × 1.05) = 1259.
-    // For a negative point: low_minor = -1259 (more negative outflow),
-    //                       high_minor = -1139 (less negative outflow).
+    // ±5% is applied to the magnitude, then re-signed: the bigger outflow
+    // (-1259) is the low end, not the high one.
     expect($first->lowMinor)->toBe(-1259);
     expect($first->highMinor)->toBe(-1139);
-    // Always: low <= point <= high when read as signed integers.
     expect($first->lowMinor)->toBeLessThanOrEqual($first->pointMinor);
     expect($first->pointMinor)->toBeLessThanOrEqual($first->highMinor);
 });
@@ -225,9 +204,8 @@ it('walks weekly cadence to emit ~4 contributions in 30 days', function (): void
 
     $contribs = $this->projector->envelope($series, accountId: 1, asOf: $asOf, horizonDays: 30, user: $this->user);
 
-    // asOf=2026-05-19, horizonEnd=2026-06-18. Weekly steps from 05-22:
-    // 05-22, 05-29, 06-05, 06-12 → 4 contributions before 06-19 falls
-    // strictly outside the window.
+    // Weekly steps from 05-22 reach 06-12; the next one (06-19) falls past the
+    // 06-18 horizon end.
     expect($contribs)->toHaveCount(4);
     expect($contribs[0]->date->toDateString())->toBe('2026-05-22');
     expect($contribs[3]->date->toDateString())->toBe('2026-06-12');
@@ -305,8 +283,7 @@ it('skips occurrences strictly before asOf even when nextExpectedAt is in the pa
 
     $contribs = $this->projector->envelope($series, accountId: 1, asOf: $asOf, horizonDays: 30, user: $this->user);
 
-    // 2026-03-15 is before asOf → skipped. 2026-04-15 also before → skipped.
-    // 2026-05-15 also before → skipped. 2026-06-15 within horizon → included.
+    // The walk starts in the past: 03-15, 04-15 and 05-15 all fall before asOf.
     expect($contribs)->toHaveCount(1);
     expect($contribs[0]->date->toDateString())->toBe('2026-06-15');
 });

@@ -16,6 +16,7 @@ return [
     'empty' => [
         'heading' => 'Aún no hay actividad recurrente',
         'before_link' => 'Aprueba las sugerencias detectadas en',
+        'link' => 'Revisar recurrentes',
         'after_link' => 'para verlas aquí.',
     ],
 

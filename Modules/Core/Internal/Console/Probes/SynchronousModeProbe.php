@@ -7,9 +7,6 @@ namespace Modules\Core\Internal\Console\Probes;
 use Illuminate\Database\DatabaseManager;
 use Throwable;
 
-/**
- * @link ../../../../../.docs/features/core/architecture.md
- */
 final class SynchronousModeProbe implements Probe
 {
     public function __construct(

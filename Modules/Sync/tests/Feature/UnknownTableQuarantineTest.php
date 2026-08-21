@@ -13,23 +13,10 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
 uses(RefreshDatabase::class);
 
-/*
- * UnknownTableQuarantineTest — SECURITY finding proof.
- *
- * The docblock on OpLogReplayer and the op_log_quarantine migration both
- * document an 'unknown_table' rejection reason, but replay() never actually
- * enforced a table allow-list: strategyFor() silently defaults ANY unknown
- * table to 'lww', so a compromised-but-signature-valid peer device could
- * direct a SET/DELETE/CreateRow op at an arbitrary wire-supplied table name
- * — e.g. device_registry, field ed25519_public_key_hex — and replace a
- * trusted device's public key (full trust-store takeover), or delete rows
- * out of device_registry / op_log_entries via a forged DELETE tombstone.
- *
- * These tests prove: (1) SET and (2) DELETE ops against an unregistered
- * table are quarantined with reason 'unknown_table' and never write to the
- * target table, and (3) ops against a registered table are unaffected by
- * the new gate.
- */
+// replay() enforced no table allow-list, and strategyFor() defaults any unknown
+// table to lww, so a compromised-but-signature-valid peer could aim a set or a
+// tombstone at any table name it put on the wire — device_registry's
+// ed25519_public_key_hex being a complete trust-store takeover.
 
 function utqUser(string $username): User
 {
@@ -115,14 +102,12 @@ it('quarantines a SET op targeting an unregistered table (device_registry) with 
     $replayer = new OpLogReplayer($db, $this->deviceKeys);
     $replayer->replay([$hostileEntry], $userId);
 
-    // ASSERTION: the trusted device's public key is byte-for-byte unchanged.
     $keyAfter = $db->connection()
         ->table('device_registry')
         ->where('id', $this->victimDeviceRowId)
         ->value('ed25519_public_key_hex');
     expect($keyAfter)->toBe($this->trustedKey);
 
-    // ASSERTION: quarantined with reason unknown_table.
     $quarantined = $db->connection()
         ->table('op_log_quarantine')
         ->where('user_id', $userId)
@@ -131,9 +116,8 @@ it('quarantines a SET op targeting an unregistered table (device_registry) with 
         ->count();
     expect($quarantined)->toBeGreaterThanOrEqual(1);
 
-    // ASSERTION: the hostile op never becomes durable (never authenticated
-    // into op_log_entries) — an unregistered-table op must not survive a
-    // future full rebuild either.
+    // The hostile op must not become durable either: anything left behind in
+    // op_log_entries would come back on the next full rebuild.
     $persisted = $db->connection()
         ->table('op_log_entries')
         ->where('table_name', 'device_registry')
@@ -174,7 +158,6 @@ it('quarantines a DELETE tombstone targeting an unregistered table (device_regis
     $replayer = new OpLogReplayer($db, $this->deviceKeys);
     $replayer->replay([$hostileTomb], $userId);
 
-    // ASSERTION: the trusted device row still exists — no deletion occurred.
     expect(
         $db->connection()->table('device_registry')->where('id', $this->victimDeviceRowId)->exists()
     )->toBeTrue();
@@ -238,7 +221,6 @@ it('quarantines a DELETE tombstone targeting the authoritative op-log table itse
     $replayer = new OpLogReplayer($db, $this->deviceKeys);
     $replayer->replay([$hostileTomb], $userId);
 
-    // ASSERTION: no row was deleted from op_log_entries as a side-effect.
     expect($db->connection()->table('op_log_entries')->count())->toBe($countBefore);
 
     $quarantined = $db->connection()

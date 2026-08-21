@@ -10,6 +10,7 @@ return [
         'reprojecting' => 'Se reconstruiește istoricul tău…',
         'retrying' => 'Se reconectează la celălalt dispozitiv…',
         'locked' => 'Deblochează aplicația pentru a continua configurarea.',
+        'revoked' => 'Acest dispozitiv a fost eliminat de pe celălalt dispozitiv. Asociați-l din nou pentru a relua sincronizarea.',
     ],
     'step' => [
         'connect' => 'Se conectează la celălalt dispozitiv',

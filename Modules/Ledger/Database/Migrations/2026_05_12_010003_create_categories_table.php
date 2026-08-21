@@ -21,15 +21,13 @@ return new class extends Migration
             $table->unsignedInteger('display_order')->default(100);
             $table->timestamps();
 
-            // Per-user UNIQUE so two users can each own a category with the
-            // same slug (e.g. both customise "groceries"). Default-seeded
-            // global categories use user_id = NULL.
+            // Per-user, so two users can each own a "groceries" slug. The
+            // default-seeded global rows carry user_id = NULL.
             $table->unique(['user_id', 'slug']);
         });
 
-        // SQLite partial UNIQUE on the global (user_id = NULL) slug set
-        // keeps the default seed tree free of slug collisions while leaving
-        // the per-user unique above to handle the populated case.
+        // A partial UNIQUE for the global set, which the index above cannot
+        // cover: NULL user_ids never collide with each other.
         DB::statement('CREATE UNIQUE INDEX categories_global_slug_uq ON categories(slug) WHERE user_id IS NULL');
     }
 

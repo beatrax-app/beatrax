@@ -1,6 +1,6 @@
 {{--
     Inline dashboard card — "Unusual charges" open count + per-detector
-    breakdown helper line (D-03). Hidden entirely when openCount === 0 so
+    breakdown helper line. Hidden entirely when openCount === 0 so
     the dashboard collapses gracefully on a quiet day.
 
     The whole tile is wrapped in an <a> linking to /drift?type=anomaly so

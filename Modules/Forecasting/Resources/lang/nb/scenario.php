@@ -11,6 +11,7 @@ return [
     'rename' => 'Gi nytt navn',
     'confirm_delete' => 'Bekreft sletting',
     'delete_scenario' => 'Slett scenario',
+    'delete_confirm' => 'Slette dette scenarioet?',
 
     'mutations_count' => 'Endringer (:count)',
     'no_mutations' => 'Ingen endringer ennå. Legg til én nedenfor for å se hvordan dette scenarioet står seg mot baselinjen din.',
@@ -67,6 +68,7 @@ return [
         'new_amount' => 'Nytt beløp',
         'new_next_date' => 'Ny neste dato',
         'scope' => 'Omfang',
+        'scope_legend' => 'Hvilke hendelser som skal flyttes',
         'scope_next' => 'Bare den neste hendelsen',
         'scope_all' => 'Alle etterfølgende hendelser',
     ],
@@ -80,6 +82,8 @@ return [
         'current_amount' => 'Nåværende beløp',
         'new_amount' => 'Nytt beløp',
     ],
+
+    'series_name_fallback' => 'serie',
 
     'summary' => [
         'cancel' => 'Si opp :name',

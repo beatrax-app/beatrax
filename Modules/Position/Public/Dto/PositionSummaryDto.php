@@ -11,9 +11,6 @@ use Modules\Ledger\Public\Dto\PerCurrencyTile;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/position/architecture.md
- */
 final class PositionSummaryDto extends Data
 {
     /**

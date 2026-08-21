@@ -9,9 +9,6 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/open-banking/architecture.md
- */
 final class OpenBankingStateRepository
 {
     private const SESSION_KEY = 'open_banking_oauth_state';
@@ -46,10 +43,8 @@ final class OpenBankingStateRepository
         $storedUserId = $entry['user_id'] ?? null;
         $issuedAtRaw = $entry['issued_at'] ?? null;
 
-        // hash_equals avoids the timing-attack a naive `===` would expose; the
-        // user-id binding requires the consent to complete under the same
-        // authenticated user that started it; the two string guards keep both
-        // hash_equals and the DateTimeImmutable parse on well-typed input.
+        // hash_equals avoids the timing attack `===` would expose, and the
+        // user-id binding forces the consent to finish under the user who began it.
         if (! is_string($storedState) || $storedState === ''
             || ! hash_equals($storedState, $candidateState)
             || ! is_int($storedUserId) || $storedUserId !== $currentUserId

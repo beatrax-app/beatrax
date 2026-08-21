@@ -17,7 +17,6 @@ Modules/Ledger/
 │   ├── Dto/
 │   │   ├── CanonicalTransaction.php
 │   │   ├── RecordResult.php
-│   │   ├── MoneyDto.php
 │   │   ├── DashboardSummary.php
 │   │   ├── Period.php
 │   │   ├── PerCurrencyTile.php
@@ -86,9 +85,9 @@ Modules/Ledger/
     (`withCategoryId`, `withCounterpartyId`,
     `withAutoCategoryProvenance`, ...).
   - `RecordResult` — `(inserted, dedupped, enriched)` counts.
-  - `MoneyDto` — wire-shape money pair.
-  - `DashboardSummary` — `(perCurrency: PerCurrencyTile[],
-    total: MoneyDto, asOf: Date)`.
+  - `DashboardSummary` — `(period, inflow, outflow, net: Money,
+    topCategories, recentTransactions, uncategorizedCount,
+    isFirstRun)`.
   - `Period` — `(startDate, endDate, label)`.
   - `PerCurrencyTile`, `StatementSummaryData`,
     `TopCategoryRow`, `TransactionListPage`,

@@ -5,14 +5,10 @@ declare(strict_types=1);
 use Illuminate\Config\Repository;
 use Modules\Community\Public\Services\SupportResourceProvider;
 
-/*
- * The support map used to be keyed on merchant NAME alone, with files read in
- * sorted order — so when two countries carried the same brand, the
- * alphabetically-later file silently replaced the earlier one for EVERY user.
- * A Spanish user asking how to cancel Sanitas got the Swiss health insurer's
- * route. The corpus worked around it by forbidding duplicate names outright,
- * which cost real coverage rather than fixing the lookup.
- */
+// The support map used to be keyed on merchant name alone, with files read in
+// sorted order, so when two countries carried the same brand the alphabetically
+// later file silently replaced the earlier one for every user: a Spanish user
+// cancelling Sanitas got the Swiss health insurer's route.
 
 function supportCorpusFixture(string $root): void
 {
@@ -56,8 +52,6 @@ it('prefers the resource from the country the user files taxes in', function ():
 });
 
 it('gives a different country a different resource for the same brand', function (): void {
-    // The whole point: before the fix both of these returned the same row,
-    // because one file had overwritten the other at load time.
     /** @var SupportResourceProvider $provider */
     $provider = app(SupportResourceProvider::class);
 

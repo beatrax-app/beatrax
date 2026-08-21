@@ -11,6 +11,7 @@ return [
     'rename' => 'Rinomina',
     'confirm_delete' => "Conferma l'eliminazione",
     'delete_scenario' => 'Elimina lo scenario',
+    'delete_confirm' => 'Eliminare questo scenario?',
 
     'mutations_count' => 'Variazioni (:count)',
     'no_mutations' => 'Ancora nessuna variazione. Aggiungine una qui sotto per vedere come questo scenario si confronta con il tuo riferimento.',
@@ -67,6 +68,7 @@ return [
         'new_amount' => 'Nuovo importo',
         'new_next_date' => 'Nuova data successiva',
         'scope' => 'Ambito',
+        'scope_legend' => 'Quali occorrenze spostare',
         'scope_next' => 'Solo la prossima occorrenza',
         'scope_all' => 'Tutte le occorrenze successive',
     ],
@@ -80,6 +82,8 @@ return [
         'current_amount' => 'Importo attuale',
         'new_amount' => 'Nuovo importo',
     ],
+
+    'series_name_fallback' => 'serie',
 
     'summary' => [
         'cancel' => 'Annulla :name',

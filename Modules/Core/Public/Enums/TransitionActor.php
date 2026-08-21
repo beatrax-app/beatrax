@@ -8,9 +8,6 @@ namespace Modules\Core\Public\Enums;
 // automated detector/sweep. Recorded on the transition's history row and
 // validated by every alert/series state machine, so it lives in Core where
 // all three (Anomaly, DriftAlerts, Recurring) can share one definition.
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 enum TransitionActor: string
 {
     case User = 'user';

@@ -5,35 +5,10 @@ declare(strict_types=1);
 use Laravel\Horizon\Horizon;
 use Predis\Client as PredisClient;
 
-/*
- * Smoke-test the Phase 5 Wave 0 queue infrastructure preconditions:
- *
- *   - the Docker Redis container is reachable on 127.0.0.1:6379
- *   - the Horizon package is installed and its config publishes a
- *     non-empty array
- *   - the queue config defaults to the redis driver when the env var
- *     is set accordingly
- *
- * The Redis-ping test uses an EXPLICIT skip predicate. Earlier drafts
- * wrapped the test body in the swallow-on-throw alternative which
- * silently consumed any exception — meaning the Wave 0 precondition
- * (Redis container running) became invisible in test output. With the
- * predicate the skip reason surfaces in `pest` output as
- * "SKIPPED: Redis container required — run `docker start
- * beatrax-redis` or follow the README setup." so any maintainer or CI
- * job sees what is missing.
- *
- * NEVER replace the predicate with a swallow-on-throw alternative — a
- * CI grep gate runs against this file's literal text and trips when
- * that pattern reappears (locking the fix in place).
- */
-
-/**
- * Helper: tries a one-shot socket connect with a 1-second timeout.
- * Surfaces the precondition explicitly so the test output names what
- * is missing instead of silently passing as the swallow-on-throw
- * alternative would.
- */
+// The missing-Redis case is an explicit skip predicate, never a
+// swallow-on-throw around the body: swallowing turned "the container is not
+// running" into a silent pass. A CI grep gate reads this file's literal text
+// and trips if that pattern reappears.
 function isRedisReachable(string $host, int $port): bool
 {
     $errno = 0;

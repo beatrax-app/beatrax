@@ -15,17 +15,6 @@ use Modules\EmailScan\Public\Services\EmlBlobStore;
 
 uses(RefreshDatabase::class);
 
-/*
- * BackfillInboxJob happy-path integration test.
- *
- * Drives the Wave 0 FakeGmailApiClient against the real
- * BackfillInboxJob and asserts the end-of-walk state: three .eml
- * blobs on disk under storage/app/inbox/{user_id}/{inbox_id}/...,
- * three inbox_messages rows with status='fetched', the
- * backfill_progress payload cleared, and inbox_scan_state flipped
- * to idle with the historyId baseline persisted.
- */
-
 beforeEach(function (): void {
     Sleep::fake();
 
@@ -71,8 +60,6 @@ it('walks pages, persists .eml + inbox_messages rows, and flips status to idle',
         'updated_at' => $now,
     ]);
 
-    // Swap the Fake into the contract binding so the production job
-    // path consumes synthesised fixtures.
     $fake = new FakeGmailApiClient($this->app->make(Filesystem::class));
     $this->app->instance(GmailApiClientContract::class, $fake);
 
@@ -80,8 +67,6 @@ it('walks pages, persists .eml + inbox_messages rows, and flips status to idle',
     $job = $this->app->make(BackfillInboxJob::class, ['inboxId' => $inboxId, 'windowMonths' => 3]);
     $this->app->call([$job, 'handle']);
 
-    // Assert: three .eml files exist at the per-user / per-inbox
-    // partitioned paths.
     /** @var EmlBlobStore $store */
     $store = $this->app->make(EmlBlobStore::class);
     foreach (
@@ -95,8 +80,6 @@ it('walks pages, persists .eml + inbox_messages rows, and flips status to idle',
         expect($store->exists($path))->toBeTrue("Expected blob for {$messageId} at {$path}");
     }
 
-    // Assert: three inbox_messages rows with status='fetched' and
-    // the four index fields populated from the .eml headers.
     $rows = $db->connection()
         ->table('inbox_messages')
         ->where('inbox_id', $inboxId)
@@ -126,13 +109,11 @@ it('walks pages, persists .eml + inbox_messages rows, and flips status to idle',
     expect($play->sender_email)->toBe('googleplay-noreply@google.com');
     expect($play->subject)->toBe('Your Google Play Order Receipt');
 
-    // Assert: backfill_progress is null after completion.
     $inboxAfter = $db->connection()->table('inboxes')->where('id', $inboxId)->first(['backfill_progress']);
     expect($inboxAfter)->not->toBeNull();
     expect($inboxAfter->backfill_progress)->toBeNull();
 
-    // Assert: status flipped to idle + last_history_id set to the
-    // Fake's hard-coded '12345'.
+    // '12345' is what the Fake's users.getProfile stand-in reports.
     $scanState = $db->connection()
         ->table('inbox_scan_state')
         ->where('inbox_id', $inboxId)

@@ -57,6 +57,7 @@ return [
         'meta_eur_equiv' => '(≈ :amount/rok)',
         'cancel_impact' => 'Zrušit → úspora :amount/rok',
         'cadence_flipped' => 'Změna frekvence — zobrazuje se také v',
+        'cadence_flipped_link' => 'Kontrola opakovaných plateb',
         'acknowledge' => 'Potvrdit',
         'acknowledge_aria' => 'Potvrdit upozornění na odchylku :id',
         'snooze' => 'Odložit ▾',

@@ -17,9 +17,6 @@ use Modules\EmailScan\Public\Services\InboxQuery;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../../.docs/features/email-scan/architecture.md
- */
 final class OAuthConnectController
 {
     public function __construct(
@@ -56,9 +53,8 @@ final class OAuthConnectController
                 if ($inbox === null) {
                     throw new NotFoundHttpException('Inbox not found.');
                 }
-                // Reconnect must target the same provider as the
-                // existing inbox row — a cross-provider dance would
-                // permanently break the inbox's next scan.
+                // A cross-provider reconnect would permanently break the
+                // inbox's next scan.
                 if ($inbox->provider !== $provider) {
                     throw new NotFoundHttpException('Inbox not found.');
                 }

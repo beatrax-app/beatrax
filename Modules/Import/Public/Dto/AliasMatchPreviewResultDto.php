@@ -7,10 +7,8 @@ namespace Modules\Import\Public\Dto;
 use Spatie\LaravelData\Data;
 use stdClass;
 
-// Read-only result envelope for AliasMatchPreviewQuery. withMatches()
-// carries the populated result + bounded first-five sample;
-// withoutMatches() carries only emptyMessage (short pattern / empty
-// window) so the consumer branches on total===0 vs emptyMessage!==null.
+// The consumer branches on total === 0 against emptyMessage !== null: the
+// first is a real empty result, the second a pattern too short to scan.
 final class AliasMatchPreviewResultDto extends Data
 {
     /**

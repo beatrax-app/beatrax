@@ -16,6 +16,7 @@ return [
     'empty' => [
         'heading' => 'Ingen återkommande aktivitet ännu',
         'before_link' => 'Godkänn identifierade förslag under',
+        'link' => 'Granska återkommande',
         'after_link' => 'för att se dem här.',
     ],
 

@@ -29,33 +29,22 @@
                     />
                 </div>
 
-                <div class="space-y-1">
-                    <label for="rename-popover-friendly" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('import::rename.friendly_label') }}</label>
-                    <input
-                        type="text"
-                        id="rename-popover-friendly"
-                        wire:model.live="friendly"
-                        placeholder="{{ Lang::get('import::rename.friendly_placeholder') }}"
-                        autofocus
-                        class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
-                    />
-                    @error('friendly')
-                        <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
-                    @enderror
-                </div>
+                <x-core::form-field
+                    field-id="rename-popover-friendly"
+                    name="friendly"
+                    :label="Lang::get('import::rename.friendly_label')"
+                    wire:model.live="friendly"
+                    :placeholder="Lang::get('import::rename.friendly_placeholder')"
+                    autofocus
+                />
 
                 <div class="space-y-2">
-                    <label class="inline-flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
-                        <input
-                            type="checkbox"
-                            wire:model.live="remember"
-                            class="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600 dark:border-slate-700"
-                        />
-                        <span>
-                            <span class="block">{{ Lang::get('import::rename.remember', ['raw' => $raw]) }}</span>
-                            <span class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('import::rename.remember_help') }}</span>
-                        </span>
-                    </label>
+                    <x-core::checkbox-field
+                        align="start"
+                        :label="Lang::get('import::rename.remember', ['raw' => $raw])"
+                        :hint="Lang::get('import::rename.remember_help')"
+                        wire:model.live="remember"
+                    />
 
                     @if ($remember && $generalized !== '')
                         <p class="popover-preview-line">

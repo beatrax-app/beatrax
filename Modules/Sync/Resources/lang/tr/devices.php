@@ -16,6 +16,7 @@ return [
     'on' => 'Açık',
     'securing' => 'Verilerin güvenceye alınıyor…',
     'do_not_close' => 'Bu pencereyi kapatma.',
+    'encryption_progress_aria' => 'Şifreleme ilerlemesi',
     'not_encrypted_offer' => 'Verilerin durağan halde şifreli değil. Bu cihaz kaybolur ya da çalınırsa verilerini korumak için şifrelemeyi kur.',
     'enable_encryption' => 'Şifrelemeyi etkinleştir',
 

@@ -12,7 +12,7 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 
 /**
- * @link ../../../.docs/features/chains/architecture.md
+ * @link ../../../.docs/features/chains/card-statement-lifecycle.md
  *
  * @property int $id
  * @property int|null $user_id
@@ -22,6 +22,7 @@ use Modules\Ledger\Models\ImportRun;
  * @property CarbonImmutable $period_end
  * @property int $total_amount_minor
  * @property int $open_balance_minor
+ * @property string $currency
  * @property string $state
  * @property CarbonImmutable $created_at
  * @property CarbonImmutable $updated_at
@@ -39,6 +40,7 @@ final class CardStatement extends Model
         'period_end',
         'total_amount_minor',
         'open_balance_minor',
+        'currency',
         'state',
     ];
 

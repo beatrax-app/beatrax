@@ -10,6 +10,7 @@ return [
         'reprojecting' => 'Reconstruction de ton historique…',
         'retrying' => 'Reconnexion à l\'autre appareil…',
         'locked' => 'Déverrouille l\'app pour poursuivre la configuration.',
+        'revoked' => 'Cet appareil a été retiré depuis votre autre appareil. Associez-le à nouveau pour reprendre la synchronisation.',
     ],
     'step' => [
         'connect' => 'Connexion à ton autre appareil',

@@ -3,18 +3,16 @@
 declare(strict_types=1);
 
 /**
- * @link ../../../../.docs/conventions/00-index.md
+ * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md
  *
  * @return array<string, string> repo-relative path => reason the guard's
  *                               bare-column-name scan hits this file safely (no codec routing needed)
  */
 return [
-    // Section E (14.1-AUDIT.md): the `iban` bare-column match is
-    // `accounts.iban` — a plaintext, never-encrypted column
-    // (SensitiveFieldRegistry only lists `counterparties.iban`). These six
-    // sites predicate a raw Query Builder `where('iban', ...)` against
-    // `accounts`, not `counterparties`, so no ciphertext-vs-plaintext
-    // mismatch is possible.
+    // The `iban` bare-column match here is `accounts.iban`, a plaintext column
+    // SensitiveFieldRegistry never lists (it lists `counterparties.iban`). Every
+    // site below predicates a raw Query Builder where('iban', ...) against
+    // accounts, so no ciphertext-versus-plaintext mismatch is possible.
     'Modules/Receipts/Internal/Jobs/ProcessFetchedInboxMessagesJob.php' => 'where(\'iban\', ...) targets accounts.iban (own-account match on an inbound bank email) — Section E safe, not SensitiveFieldRegistry-listed.',
     'Modules/Import/Internal/Pipeline/Stages/ClassifyTransactionType.php' => 'where(\'iban\', ...) targets accounts.iban (transfer-classification own-account match against the still-plaintext import-time DTO) — Section E safe.',
     'Modules/Import/Public/Actions/EnsurePaypalAccountAction.php' => 'where(\'iban\', ...) targets accounts.iban (synthetic PayPal account existence check) — Section E safe.',

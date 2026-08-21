@@ -6,13 +6,6 @@ use Illuminate\Contracts\Config\Repository;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Services\BaseCurrency;
 
-/*
- * BaseCurrency is the one place the app-wide fallback currency resolves,
- * over config('currency.base'). It returns the configured code when the key
- * is a non-empty string, and falls back to the Currency::Eur enum default
- * when the key is absent, empty, or a non-string.
- */
-
 function baseCurrency(mixed $configured): BaseCurrency
 {
     /** @var Repository $config */
@@ -43,12 +36,6 @@ it('ships EUR as the shipped config default', function (): void {
     $config = app(Repository::class);
     expect($config->get('currency.base'))->toBe(Currency::Eur->value);
 });
-
-/*
- * value() is the static view-layer seam Blade templates reach for — it
- * resolves the container-bound service and returns the same code(), so the
- * one source of truth is shared with domain code that injects BaseCurrency.
- */
 
 it('resolves the configured code through the static view-layer accessor', function (): void {
     config(['currency.base' => 'USD']);

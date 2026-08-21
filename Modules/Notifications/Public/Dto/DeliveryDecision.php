@@ -6,7 +6,6 @@ namespace Modules\Notifications\Public\Dto;
 
 /**
  * @see SuppressionEvaluator::shouldDeliver()
- * @link ../../../../.docs/features/notifications/architecture.md
  */
 final readonly class DeliveryDecision
 {

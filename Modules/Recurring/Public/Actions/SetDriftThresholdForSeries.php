@@ -15,9 +15,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 // setting (which itself falls back to the hard 5% default at the
 // DriftEvaluator's effective-threshold resolution).
 
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
 final class SetDriftThresholdForSeries
 {
     /** @var list<int> */

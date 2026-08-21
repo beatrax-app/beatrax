@@ -11,6 +11,7 @@ return [
     'rename' => 'Yeniden adlandır',
     'confirm_delete' => 'Silmeyi onayla',
     'delete_scenario' => 'Senaryoyu sil',
+    'delete_confirm' => 'Bu senaryo silinsin mi?',
 
     'mutations_count' => 'Değişiklikler (:count)',
     'no_mutations' => 'Henüz değişiklik yok. Bu senaryonun referansınla nasıl karşılaştırıldığını görmek için aşağıdan bir tane ekle.',
@@ -67,6 +68,7 @@ return [
         'new_amount' => 'Yeni tutar',
         'new_next_date' => 'Yeni sonraki tarih',
         'scope' => 'Kapsam',
+        'scope_legend' => 'Hangi tekrarlar kaydırılsın',
         'scope_next' => 'Yalnızca bir sonraki tekrar',
         'scope_all' => 'Sonraki tüm tekrarlar',
     ],
@@ -80,6 +82,8 @@ return [
         'current_amount' => 'Güncel tutar',
         'new_amount' => 'Yeni tutar',
     ],
+
+    'series_name_fallback' => 'seri',
 
     'summary' => [
         'cancel' => ':name iptali',

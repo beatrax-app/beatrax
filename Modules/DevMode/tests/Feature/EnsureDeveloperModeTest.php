@@ -9,25 +9,8 @@ use Modules\DevMode\Public\Contracts\AuditWriter;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Contracts\NavigationRegistry;
 
-/*
- * EnsureDeveloperMode middleware invariants.
- *
- * Locks the 404-not-403 information-disclosure mitigation for the
- * in-app Developer Console at /dev/*. A non-developer —
- * authenticated or not — receives NotFoundHttpException, not a 403
- * and not a login redirect; the route's existence is never
- * disclosed.
- *
- * The /dev/__probe route is registered inside beforeEach so the
- * middleware behaviour is exercised in isolation from the
- * dev-shell + DevOverviewPage rendering paths. The route returns
- * the static string "PROBE" so a 200 response can be matched
- * without pulling Blade into the test.
- *
- * The contract-resolution test covers the four Public contract
- * bindings DevModeServiceProvider::register() declares.
- */
-
+// A throwaway route keeps these assertions on the middleware alone, with no
+// dev-shell or Blade rendering in the way.
 beforeEach(function (): void {
     Route::middleware(['web', 'ensureDeveloperMode'])
         ->get('/dev/__probe', static fn (): string => 'PROBE')
@@ -46,10 +29,8 @@ function edmUser(bool $isDeveloper, string $username = 'edm-fixture'): User
 }
 
 it('returns 404 for an unauthenticated request to /dev/__probe (NotFoundHttpException, not 403)', function (): void {
-    // Seed a developer user so the EnsureDatabaseReady first-launch
-    // gate (which redirects when the users table is empty) becomes a
-    // pass-through; the test is then a clean exercise of the
-    // EnsureDeveloperMode middleware in isolation.
+    // EnsureDatabaseReady redirects while the users table is empty, which
+    // would mask the 404 this test is about.
     edmUser(true, 'edm-seed-for-unauth');
 
     $response = $this->get('/dev/__probe');
@@ -75,12 +56,6 @@ it('returns 200 with body "PROBE" for an authenticated developer request to /dev
 });
 
 it('resolves all four Public contracts via the container', function (): void {
-    // DevCommandRegistry, NavigationRegistry, AppActionRegistry,
-    // and AuditWriter all resolve to their concrete singleton
-    // bindings declared in DevModeServiceProvider::register(). The
-    // full invariants live in dedicated tests (CommandRegistryTest,
-    // CommandPaletteRegistryTest) — this one just confirms the
-    // four contracts resolve cleanly.
     /** @var DevCommandRegistry $commands */
     $commands = app(DevCommandRegistry::class);
     expect($commands)->toBeInstanceOf(DevCommandRegistry::class);
@@ -97,8 +72,6 @@ it('resolves all four Public contracts via the container', function (): void {
     expect($actions)->toBeInstanceOf(AppActionRegistry::class);
     expect($actions->all())->not->toBe([]);
 
-    // AuditWriter is bound to SpatieAuditWriter; resolve it to
-    // confirm the binding shape.
     /** @var AuditWriter $audit */
     $audit = app(AuditWriter::class);
     expect($audit)->toBeInstanceOf(AuditWriter::class);

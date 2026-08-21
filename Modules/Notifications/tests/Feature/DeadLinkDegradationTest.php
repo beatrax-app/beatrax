@@ -9,17 +9,6 @@ use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 
 uses(RefreshDatabase::class);
 
-/*
- * DeadLinkDegradationTest — Req 14's stated acceptance criterion: deleting
- * a notification's target then opening the inbox and activating the entry
- * produces no error and no 404; the entry renders with a disabled/explained
- * link (D-25). Covers series/budget/counterparty target kinds, the
- * dashboard-digest always-live case, the negative control (a live target
- * stays a live link), and the T-18-49 security case (a cross-user target
- * degrades with the SAME generic copy as a genuinely deleted target — no
- * information disclosure).
- */
-
 function dldUser(string $username): User
 {
     return User::query()->create([
@@ -198,11 +187,11 @@ it('never disables a dashboard-target digest', function (): void {
     expect($response->getContent() ?: '')->not->toContain('aria-disabled="true"');
 });
 
-it('degrades a cross-user target with the SAME generic copy as a genuinely deleted target (no information disclosure, T-18-49)', function (): void {
+it('degrades a cross-user target with the SAME generic copy as a genuinely deleted target (no information disclosure)', function (): void {
     $owner = dldUser('dld-cross-user-owner');
     $attacker = dldUser('dld-cross-user-attacker');
 
-    // A LIVE series belonging to another user entirely.
+    // Alive, and owned by someone else.
     $foreignSeriesId = dldSeries($this->db, $owner->id);
 
     $attackerNotificationId = str_repeat('6', 64);
@@ -213,7 +202,7 @@ it('degrades a cross-user target with the SAME generic copy as a genuinely delet
     $crossUserResponse = $this->actingAs($attacker)->get('/notifications?tab=all');
     $crossUserResponse->assertOk()->assertSeeText('This series no longer exists.');
 
-    // A genuinely deleted series, for the SAME attacker, as the comparison baseline.
+    // The comparison baseline: genuinely deleted, and the attacker's own.
     $deletedSeriesId = dldSeries($this->db, $attacker->id);
     $deletedNotificationId = str_repeat('7', 64);
     dldInsertNotification($this->db, $attacker->id, $deletedNotificationId, [
@@ -224,8 +213,7 @@ it('degrades a cross-user target with the SAME generic copy as a genuinely delet
     $deletedResponse = $this->actingAs($attacker)->get('/notifications?tab=all');
     $deletedResponse->assertOk()->assertSeeText('This series no longer exists.');
 
-    // The cross-user row must not carry a live href — same disabled shape
-    // as the deleted-target row, no distinguishing signal either way.
+    // A live href on the cross-user row would confirm the series exists.
     expect($crossUserResponse->getContent() ?: '')->not->toContain('/recurring/series/'.$foreignSeriesId);
 });
 

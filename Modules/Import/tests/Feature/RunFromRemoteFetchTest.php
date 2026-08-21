@@ -8,18 +8,9 @@ use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ledger\Models\ImportRun;
 
-/*
- * Proves the ONLY legal cross-module entry point a remote-fetch caller
- * (e.g. Modules\OpenBanking's Enable Banking adapter, Wave 2) has into the
- * import pipeline: a Generator<SourceTransactionDto>-driven preview with
- * no local file.
- *
- * The idempotency key substitutes runFromUpload()'s file-SHA256 dedup
- * layer (RESEARCH.md Pitfall 1) — same key means the SAME ImportRun row
- * is reused across repeated "Sync now" clicks within the same fetch
- * window; a distinct fetch window (distinct key) creates a new row. The
- * key itself must never be derived from wall-clock time.
- */
+// A remote fetch has no local file, so the caller-supplied idempotency key
+// stands in for runFromUpload()'s file-SHA256 dedup: one key reuses one
+// ImportRun row across repeated "Sync now" clicks in the same fetch window.
 
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
@@ -70,10 +61,8 @@ it('creates a distinct ImportRun row for a different idempotency key', function 
 });
 
 it('never derives the idempotency dedup key from wall-clock time', function (): void {
-    // Two calls issued "at different moments" (Clock is not consulted for
-    // the key itself, only for uploaded_at bookkeeping) with the SAME
-    // caller-supplied key must still converge on one row — proves the key
-    // itself, not any internal timestamp, drives the dedup.
+    // The clock is moved between the two calls; only uploaded_at bookkeeping
+    // reads it, so one key must still converge on one row.
     $key = hash('sha256', 'open-banking:test-institution:1:2026-06-01:2026-06-30');
 
     $first = $this->importer->runFromRemoteFetch(fixtureRemoteFetchRows(), 'enable-banking', $this->fixtureUser, $key);

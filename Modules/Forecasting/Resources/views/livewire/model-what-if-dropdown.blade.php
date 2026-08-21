@@ -51,7 +51,7 @@
         >
             <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.whatif.current_amount') }}</p>
             <p class="mb-2 text-sm font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
-                {{ number_format(abs($currentAmountMinor) / Money::MINOR_UNITS_PER_MAJOR, 2, ',', '.') }} {{ $currency }}
+                {{ Money::ofMinor(abs($currentAmountMinor), $currency)->format() }}
             </p>
             <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.whatif.new_amount') }}
                 <input

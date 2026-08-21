@@ -14,20 +14,16 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/categorization/architecture.md
- */
 final class RuleEngine
 {
     use CoercesScalars;
 
     public function __construct(private readonly DatabaseManager $db) {}
 
-    // A rule with combinator = 'all' fires only when every condition
-    // matches (an empty condition set never fires); 'any' fires when at
-    // least one condition matches.
     /**
      * @return list<MatchedRule>
+     *
+     * @link ../../../../.docs/features/categorization/rule-evaluation-order.md
      */
     public function match(RuleMatchInput $tx, User $user): array
     {
@@ -73,10 +69,9 @@ final class RuleEngine
         return $matched;
     }
 
-    // Reads via the raw query builder (not the Eloquent RuleAction
-    // builder) to avoid a larastan strict-rules dynamic-call warning; each
-    // row is hydrated into a real RuleAction so `payload` casts. The id
-    // tiebreak matters because position has no write-layer uniqueness.
+    // Raw query builder rather than the Eloquent RuleAction builder, to
+    // avoid a larastan strict-rules dynamic-call warning. The id tiebreak
+    // matters because `position` carries no write-layer uniqueness.
     /**
      * @return list<RuleAction>
      */
@@ -100,9 +95,6 @@ final class RuleEngine
         return $actions;
     }
 
-    // `field` only matters for `value_type = 'string'` — `amount` and
-    // `date` always compare against the transaction's canonical
-    // settledAmountMinor / postedAt.
     private function conditionMatches(stdClass $condition, RuleMatchInput $tx): bool
     {
         $valueType = ConditionValueType::tryFrom(is_string($condition->value_type) ? $condition->value_type : '');
@@ -122,8 +114,6 @@ final class RuleEngine
         };
     }
 
-    // `merchant` and `counterparty` are both user-facing synonyms for the
-    // counterparty name.
     private static function targetFieldValue(RuleMatchInput $tx, string $field): ?string
     {
         return match ($field) {
@@ -133,8 +123,8 @@ final class RuleEngine
         };
     }
 
-    // Unicode-safe, case-insensitive matching via mb_strtolower/mb_strpos
-    // — never a SQL pattern-match clause.
+    // Matching runs in PHP over the mb_* family so a user-authored
+    // condition value never reaches a SQL pattern-match clause.
     private static function matchString(ConditionOperator $op, ?string $target, string $value): bool
     {
         if ($target === null || $value === '') {
@@ -165,9 +155,8 @@ final class RuleEngine
         };
     }
 
-    // $value/$value2 are date strings; comparisons are calendar-date-level
-    // (both sides normalized to start-of-day) so a postedAt timestamp
-    // later the same day as an `after` boundary still compares correctly.
+    // Both sides collapse to start-of-day, so `between`'s inclusive upper
+    // bound still contains a transaction posted later that same day.
     private static function matchDate(ConditionOperator $op, CarbonImmutable $target, string $value, ?string $value2): bool
     {
         $t = $target->startOfDay();

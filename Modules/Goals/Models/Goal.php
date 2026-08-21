@@ -12,8 +12,6 @@ use Modules\Core\Public\Concerns\BelongsToUser;
 use Modules\Goals\Database\Factories\GoalFactory;
 
 /**
- * @link ../../../.docs/features/goals/architecture.md
- *
  * @property int $id
  * @property int|null $user_id
  * @property string $name

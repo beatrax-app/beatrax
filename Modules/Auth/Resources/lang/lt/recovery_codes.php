@@ -8,6 +8,7 @@ return [
     'subtitle' => 'Atsispausdink juos arba išsaugok saugioje vietoje. Daugiau jie nebus rodomi.',
     'copy' => 'Kopijuoti kodus',
     'copied' => 'Nukopijuota',
+    'copy_failed' => 'Nepavyko nukopijuoti. Užsirašykite kodus.',
     'download' => 'Atsisiųsti kaip .txt',
 
     'saved_as' => 'Išsaugota kaip beatrax-recovery-codes-:username.txt',

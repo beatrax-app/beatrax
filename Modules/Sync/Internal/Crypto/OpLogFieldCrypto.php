@@ -6,9 +6,6 @@ namespace Modules\Sync\Internal\Crypto;
 
 use InvalidArgumentException;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class OpLogFieldCrypto
 {
     // Encrypts $plaintext under $rawGdkKey with $associatedData bound into

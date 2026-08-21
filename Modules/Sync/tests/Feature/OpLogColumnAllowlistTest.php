@@ -11,17 +11,10 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
 uses(RefreshDatabase::class);
 
-/*
- * INFO hardening — the per-table COLUMN allow-list in OpLogEntryVerifier.
- *
- * The table name was already gated by MergeRulesRegistry, but the field name
- * from a (signature-verified, paired-device) op-log entry flowed straight into
- * a query-builder update()/insert() column position. That is not injection —
- * identifiers are quoted and the entry is Ed25519-gated — but an entry naming a
- * column the table does not have used to fail only at the DB. These tests prove
- * it now quarantines EARLY as unknown_column (mirroring the unknown_table gate),
- * while a SET on a real column still applies untouched.
- */
+// The table name was gated but the field name went straight into a column
+// position. Not injection — identifiers are quoted and the entry is signed —
+// but an entry naming a column the table lacks failed only at the database,
+// deep inside the write, instead of quarantining like an unknown table.
 
 const COL_ALLOW_DEVICE = 'device-col-allow';
 
@@ -80,9 +73,8 @@ it('quarantines a SET whose field is not a real column of the registered table (
     $db = app(DatabaseManager::class);
     $device = colAllowDevice($db);
 
-    // transactions IS registered, the signature IS valid, and the device key IS
-    // known — only the field is bogus, so the column gate is the sole thing that
-    // can reject this.
+    // Registered table, valid signature, known device key: only the field is
+    // bogus, so the column gate is the sole thing that can reject this.
     $entry = colAllowSignedEntry(
         $device['sk'],
         'transactions',
@@ -97,8 +89,6 @@ it('quarantines a SET whose field is not a real column of the registered table (
     (new OpLogReplayer($db, [COL_ALLOW_DEVICE => $device['pkHex']]))
         ->replay([$entry], $device['userId']);
 
-    // Quarantined for the new reason, and never persisted to the authoritative
-    // op_log_entries table.
     expect($db->connection()->table('op_log_quarantine')->where('reason', 'unknown_column')->count())
         ->toBe(1, 'an unregistered column must quarantine as unknown_column');
     expect($db->connection()->table('op_log_entries')->where('field', 'not_a_real_column')->count())
@@ -121,8 +111,6 @@ it('still applies a SET on a real column of a registered table (the gate does no
         'updated_at' => '2026-06-15 00:00:00',
     ]);
 
-    // 'name' is both a registered LWW field and a real column, so it clears the
-    // column gate and the LWW merge writes it.
     $entry = colAllowSignedEntry(
         $device['sk'],
         'accounts',

@@ -35,7 +35,7 @@
     $seriesState = $seriesStates[$alert->recurringSeriesId] ?? null;
 @endphp
 
-<div class="rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700">
+<x-core::card padding="tight">
     <div class="flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-4">
         <div class="min-w-0 flex-1">
             <p class="flex flex-wrap items-baseline gap-2 text-sm">
@@ -69,12 +69,15 @@
                 @endif
             </p>
             @if ($seriesState === 'cadence_changed')
+                {{-- This read "/recurring/review": a route path shown as prose,
+                     and the one untranslated fragment in a localised sentence.
+                     The link text is the destination page's own title. --}}
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                     {{ Lang::get('drift-alerts::alerts.row.cadence_flipped') }}
                     <a
                         href="{{ route('recurring.review') }}"
                         class="text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:text-slate-100 dark:hover:text-slate-300"
-                    >/recurring/review</a>
+                    >{{ Lang::get('drift-alerts::alerts.row.cadence_flipped_link') }}</a>
                 </p>
             @endif
         </div>
@@ -141,4 +144,4 @@
             </div>
         @endif
     </div>
-</div>
+</x-core::card>

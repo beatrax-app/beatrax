@@ -1,6 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    Budgets step (optional, D-24) — assign this month's money per expense
+    Budgets step (optional) — assign this month's money per expense
     category before finishing setup. Reuses the wizard chrome (wiz-eyebrow /
     wiz-h1 / wiz-lede / wiz-actions). Each category row binds an amount to
     `amounts.<id>`; Continue persists the non-empty ones as month-1

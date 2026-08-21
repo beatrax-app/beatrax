@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Core\Providers;
 
 use App\Models\User;
+use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Internal\AutoUpdate\HttpPublisherManifestFetcher;
@@ -15,16 +17,8 @@ use Modules\Core\Internal\Console\InstallCommand;
 use Modules\Core\Internal\Console\Probes\BootProbeState;
 use Modules\Core\Internal\Console\RestoreDatabaseCommand;
 use Modules\Core\Internal\Encryption\PreMigrationSnapshot;
-use Modules\Core\Internal\Http\Livewire\AppSidebar;
-use Modules\Core\Internal\Http\Livewire\AutoImportSettingsSection;
-use Modules\Core\Internal\Http\Livewire\Dashboard;
-use Modules\Core\Internal\Http\Livewire\EncryptedBackupDownload;
-use Modules\Core\Internal\Http\Livewire\EncryptedBackupRestore;
 use Modules\Core\Internal\Http\Livewire\HelpDataLocations;
-use Modules\Core\Internal\Http\Livewire\NetWorthCard;
-use Modules\Core\Internal\Http\Livewire\SettingsPage;
-use Modules\Core\Internal\Http\Livewire\SpendingTrendCard;
-use Modules\Core\Internal\Http\Livewire\SystemAlertsBanner;
+use Modules\Core\Internal\Listeners\ClearGuardBetweenJobs;
 use Modules\Core\Internal\Providers\HealthCheckServiceProvider;
 use Modules\Core\Internal\Providers\SqliteOptimizationsProvider;
 use Modules\Core\Models\User as CoreUser;
@@ -35,6 +29,10 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Contracts\PublisherManifestFetcher;
 use Modules\Core\Public\Contracts\SecretShield;
+use Modules\Core\Public\Http\Livewire\AutoImportSettingsSection;
+use Modules\Core\Public\Http\Livewire\EncryptedBackupDownload;
+use Modules\Core\Public\Http\Livewire\EncryptedBackupRestore;
+use Modules\Core\Public\Http\Livewire\SystemAlertsBanner;
 use Modules\Core\Public\Services\BackupEncryptor;
 use Modules\Core\Public\Services\CurrentUserService;
 use Modules\Core\Public\Services\EncryptionMigrationService;
@@ -48,9 +46,6 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\AppChromeResolver;
 use Modules\Core\Public\Support\LoadsModuleResources;
 
-/**
- * @link ../../../.docs/features/core/architecture.md
- */
 final class CoreServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
@@ -112,18 +107,19 @@ final class CoreServiceProvider extends ServiceProvider
             set_time_limit(0);
         }
 
+        // Whoever a queued job binds must not outlive it. Registered here
+        // rather than left to each job's own discipline: a job that forgets is
+        // indistinguishable from one that succeeds, and the damage lands on
+        // the NEXT job, scoped to the wrong user.
+        $this->app->make(Dispatcher::class)->listen(JobProcessing::class, ClearGuardBetweenJobs::class);
+
         $this->loadModuleResources('core');
         $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
 
-        $livewire->component('core.dashboard', Dashboard::class);
-        $livewire->component('core.settings-page', SettingsPage::class);
         $livewire->component('core.auto-import-settings-section', AutoImportSettingsSection::class);
         $livewire->component('core.encrypted-backup-download', EncryptedBackupDownload::class);
         $livewire->component('core.encrypted-backup-restore', EncryptedBackupRestore::class);
-        $livewire->component('core.spending-trend-card', SpendingTrendCard::class);
-        $livewire->component('core.net-worth-card', NetWorthCard::class);
         $livewire->component('core.system-alerts-banner', SystemAlertsBanner::class);
-        $livewire->component('core.app-sidebar', AppSidebar::class);
         $livewire->component('core.help-data-locations', HelpDataLocations::class);
 
         if ($this->app->runningInConsole()) {

@@ -57,6 +57,7 @@ return [
         'meta_eur_equiv' => '(≈ :amount/rok)',
         'cancel_impact' => 'Anuluj → oszczędność :amount/rok',
         'cadence_flipped' => 'Zmiana częstotliwości — widoczne także w',
+        'cadence_flipped_link' => 'Przegląd cyklicznych',
         'acknowledge' => 'Potwierdź',
         'acknowledge_aria' => 'Potwierdź alert o odchyleniu :id',
         'snooze' => 'Odłóż ▾',

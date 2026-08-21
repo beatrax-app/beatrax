@@ -12,10 +12,8 @@ use Modules\Categorization\Public\Dto\MerchantMemoryDto;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 
-// Joins the merchants table on (user_id, normalized_name) because
-// CanonicalTransaction + transactions carry no merchant_id column —
-// merchant identity is derived from counterparty_normalized at query
-// time. merchants enforces UNIQUE(user_id, normalized_name).
+// Joins merchants on (user_id, normalized_name) because transactions carry no
+// merchant_id: identity is derived from counterparty_normalized at query time.
 final readonly class MerchantMemoryQuery
 {
     use CoercesScalars;
@@ -61,9 +59,7 @@ final readonly class MerchantMemoryQuery
         );
     }
 
-    // Names with no memory row are omitted from the returned map (no
-    // nulled placeholder). Executes a single SQL query regardless of
-    // input list size.
+    // A name with no memory row is absent from the map, not a null placeholder.
     /**
      * @param  list<string>  $counterpartyNormalizedList
      * @return array<string, MerchantMemoryDto>
@@ -98,9 +94,8 @@ final readonly class MerchantMemoryQuery
                 ? $row->normalized_name
                 : null;
             if ($normalized === null || isset($map[$normalized])) {
-                // orderByDesc(occurrence_count) makes the first row per
-                // name the winner; subsequent rows are shadow entries
-                // dropped on purpose so the shape stays one-DTO-per-name.
+                // orderByDesc(occurrence_count) makes the first row per name
+                // the winner; the rest are shadow entries, dropped on purpose.
                 continue;
             }
 

@@ -54,15 +54,12 @@ it('has no mailto when there is no cancellation email channel', function (): voi
 });
 
 it('does not match a different brand that merely shares a leading substring', function (): void {
-    // "Applebee's" must not resolve to Apple (substring "apple"), because
-    // matching is word-level, not substring.
     expect(app(SupportResourceProvider::class)->forCounterparty("Applebee's", 'merchant'))->toBeNull();
 });
 
 it('does not match a base-brand charge to a Premium-tier resource', function (): void {
     $provider = app(SupportResourceProvider::class);
-    // The corpus has "Albert Heijn Premium"; a plain "Albert Heijn" grocery
-    // charge must NOT inherit its cancellation card.
+    // The real corpus carries an "Albert Heijn Premium" entry.
     expect($provider->forCounterparty('Albert Heijn', 'merchant'))->toBeNull();
     expect($provider->forCounterparty('Albert Heijn Premium', 'merchant'))->not->toBeNull();
 });

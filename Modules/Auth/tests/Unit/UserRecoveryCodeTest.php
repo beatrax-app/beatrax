@@ -8,14 +8,6 @@ use Modules\Core\Models\User;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for the UserRecoveryCode Eloquent model — confirms the
- * model persists single-use recovery codes against the
- * user_recovery_codes table, leaves used_at null on a freshly issued
- * code, and exposes every code issued to a user via a direct user_id
- * query.
- */
-
 beforeEach(function (): void {
     $this->user = User::query()->create([
         'username' => 'recovery-fixture',

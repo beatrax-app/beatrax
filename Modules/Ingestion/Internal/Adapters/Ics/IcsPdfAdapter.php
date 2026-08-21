@@ -6,28 +6,24 @@ namespace Modules\Ingestion\Internal\Adapters\Ics;
 
 use Carbon\CarbonImmutable;
 use Generator;
+use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Contracts\SourceAdapter;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
 use Modules\Ledger\Public\Dto\StatementSummaryData;
 
 /**
- * @link ../../../../../.docs/features/ingestion/architecture.md
+ * @link ../../../../../.docs/features/ingestion/ics-pdf-text-extraction.md
  */
 final class IcsPdfAdapter implements SourceAdapter
 {
-    // Credit cards have no real IBAN; AccountResolver already scopes lookups
-    // to the current user, so a single per-instance literal is unambiguous.
+    // Credit cards carry no IBAN; AccountResolver scopes by user, so one literal is unambiguous.
     private const ICS_OWN_IBAN = 'ICS-CARD';
 
-    // Replacement text for any card-number-shaped run scrubbed from a
-    // per-transaction raw payload before persistence (security policy).
     private const SCRUB_LITERAL = '<discarded per security policy>';
 
-    // One euro summary cell: an amount followed by its Af/Bij direction
-    // marker, as it renders in the statement's four-column summary block.
+    // One euro summary cell: an amount followed by its Af/Bij direction marker.
     private const AMOUNT_AF_BIJ_FRAGMENT = '€\s+([\d.,]+)\s+(?:Af|Bij)';
 
     /** @var array<string, int> */
@@ -51,9 +47,7 @@ final class IcsPdfAdapter implements SourceAdapter
         return IcsPdfHeaderProfile::FORMAT;
     }
 
-    // Assembled in the generator's terminator step — callers must exhaust
-    // parse()'s iterator fully before reading this; partial iteration
-    // leaves this at null.
+    // Assembled in parse()'s terminator step: an abandoned iterator leaves this null.
     public function statementMetadata(): ?StatementSummaryData
     {
         return $this->lastStatementMetadata;
@@ -64,15 +58,9 @@ final class IcsPdfAdapter implements SourceAdapter
         $this->sniffer->sniff($localPath, IcsPdfHeaderProfile::FORMAT);
         $this->lastStatementMetadata = null;
 
-        // Extraction failures keep their typed identity so callers (the
-        // upload wizard, the importer) can render a tailored
-        // "pdftotext binary missing — install poppler" message rather
-        // than seeing an amount-parser exception.
         $text = $this->extractor->extract($localPath);
 
-        // Read summary tokens FROM THE RAW TEXT before stripping noise so
-        // the statement-level metadata can be assembled even though the
-        // per-page noise pass would otherwise drop the relevant lines.
+        // stripPageNoise() deletes the very lines the statement metadata is read from.
         $rawText = $text;
         $cleaned = $this->stripPageNoise($text);
 
@@ -86,10 +74,8 @@ final class IcsPdfAdapter implements SourceAdapter
         $bookedDates = [];
         $entryCount = 0;
         $ownIban = $this->ownIban();
-        // Fire-and-forget so the wizard's UnknownAccount branching still
-        // fires for ICS imports; the resolution is discarded since
-        // ParseStage re-resolves per row downstream (any failure still
-        // propagates).
+        // Result discarded: the call is here so the wizard's UnknownAccount
+        // branch still fires; ParseStage re-resolves per row downstream.
         $accounts->resolve($ownIban);
 
         foreach ($this->iterateTransactionBlocks($cleaned) as $block) {
@@ -115,8 +101,6 @@ final class IcsPdfAdapter implements SourceAdapter
         return self::ICS_OWN_IBAN;
     }
 
-    // Reads the per-statement masked-card line "Uw Card met als laatste vier
-    // cijfers <FOUR>"; returns null when the line is absent.
     private function parseCardLast4(string $text): ?string
     {
         if (preg_match('/Uw Card met als laatste vier cijfers (\S{4})/', $text, $m) === 1) {
@@ -126,8 +110,6 @@ final class IcsPdfAdapter implements SourceAdapter
         return null;
     }
 
-    // Locates the statement header date (e.g. "15 februari 2026") used to
-    // anchor each transaction row's derived year; null when absent.
     private function parseStatementDate(string $text): ?CarbonImmutable
     {
         if (
@@ -147,8 +129,6 @@ final class IcsPdfAdapter implements SourceAdapter
         return null;
     }
 
-    // Removes recurring per-page noise (cardholder banner, card watermark,
-    // marketing banners, header block) via IcsPdfExtractionMap::PAGE_NOISE_PATTERNS.
     private function stripPageNoise(string $text): string
     {
         foreach (IcsPdfExtractionMap::PAGE_NOISE_PATTERNS as $pattern) {
@@ -172,9 +152,6 @@ final class IcsPdfAdapter implements SourceAdapter
         }
 
         $count = count($lines);
-        // A while loop (not for) because an FX row consumes two input lines,
-        // so the cursor advances by a variable step the body decides — the
-        // counter is never rewritten behind a fixed for-increment.
         $i = 0;
         while ($i < $count) {
             $trimmed = trim($lines[$i]);
@@ -198,8 +175,6 @@ final class IcsPdfAdapter implements SourceAdapter
 
     private function looksLikeTransactionRow(string $line): bool
     {
-        // The row must start with a transactiedatum token and end with
-        // the `Af` / `Bij` column marker.
         if (preg_match('/^\d{1,2}\s+(jan|feb|mrt|apr|mei|jun|jul|aug|sep|okt|nov|dec)\.?\s+/i', $line) !== 1) {
             return false;
         }
@@ -213,8 +188,6 @@ final class IcsPdfAdapter implements SourceAdapter
         $primary = $lines[0];
         $fxLine = $lines[1] ?? null;
 
-        // Direction marker is the last whitespace-separated token on the
-        // primary line.
         if (preg_match('/\s(Af|Bij)$/', $primary, $dirMatch) !== 1) {
             throw new InvalidAmountException(sprintf(
                 'ICS transaction row does not end with Af/Bij marker: %s',
@@ -224,8 +197,6 @@ final class IcsPdfAdapter implements SourceAdapter
         $direction = $dirMatch[1];
         $withoutDirection = trim(substr($primary, 0, strlen($primary) - strlen($dirMatch[0])));
 
-        // Settled-EUR amount is the trailing whitespace-separated token
-        // once the direction marker has been removed.
         if (preg_match('/(.+?)\s+([\d.,]+)$/', $withoutDirection, $amountMatch) !== 1) {
             throw new InvalidAmountException(sprintf(
                 'ICS transaction row missing settled amount: %s',
@@ -239,8 +210,6 @@ final class IcsPdfAdapter implements SourceAdapter
             $settledMinor = -$settledMinor;
         }
 
-        // Native amount + currency (FX rows only). Captured if the
-        // remaining trailing tail of the row matches `<amount> <ISO>`.
         $nativeAmountMinor = null;
         $nativeCurrency = null;
         if (preg_match('/(.+?)\s+([\d.,]+)\s+([A-Z]{3})$/', $rest, $fxMatch) === 1) {
@@ -252,10 +221,6 @@ final class IcsPdfAdapter implements SourceAdapter
             $nativeCurrency = $fxMatch[3];
         }
 
-        // Dates are the two leading date tokens at the start of `rest`
-        // (transaction date, then booked date). Months are matched as bare
-        // three-letter runs and validated below against MONTH_ABBREV, so an
-        // unknown abbreviation still fails without a costly inline alternation.
         if (
             preg_match(
                 '/^(\d{1,2})\s+([a-z]{3})\.?\s+(\d{1,2})\s+([a-z]{3})\.?\s+(.*)$/i',
@@ -278,9 +243,6 @@ final class IcsPdfAdapter implements SourceAdapter
             ));
         }
 
-        // Both dates inherit the statement-header year, except when the
-        // transaction month is December and the booked month is January
-        // (a month-rollover within a January statement).
         $txYear = $statementYear;
         $bookYear = $statementYear;
         if ($txMonth === 12 && $bookMonth === 1) {
@@ -304,8 +266,6 @@ final class IcsPdfAdapter implements SourceAdapter
         $description = trim($dateMatch[5]);
         $counterpartyName = $this->extractCounterpartyName($description);
 
-        // Build the rawPayload with card-number scrubbing applied to the
-        // contiguous text block.
         $rawBlock = $this->scrubCardNumbers($block);
 
         return new SourceTransactionDto(
@@ -331,10 +291,6 @@ final class IcsPdfAdapter implements SourceAdapter
         );
     }
 
-    // The upstream "Omschrijving" column merges merchant, street, and city
-    // into one free-text field; the trailing country code is the only
-    // stable terminator the adapter can strip without a per-merchant
-    // heuristic, so the result may still carry address fragments.
     private function extractCounterpartyName(string $description): ?string
     {
         $trimmed = trim($description);
@@ -342,10 +298,7 @@ final class IcsPdfAdapter implements SourceAdapter
             return null;
         }
 
-        // Strip the trailing upper-case alpha-2 country code Mijn ICS appends
-        // to every description, then compact internal multi-space runs so the
-        // FingerprintComposer's normalisation sees a stable shape. Each
-        // preg_replace falls back to its input on the unreachable null return.
+        // The trailing alpha-2 country code is the only stable terminator; street/city fragments survive.
         $stripped = preg_replace('/\s+[A-Z]{2}$/', '', $trimmed) ?? $trimmed;
         $compact = trim(preg_replace('/\s{2,}/', ' ', $stripped) ?? $stripped);
 
@@ -365,18 +318,10 @@ final class IcsPdfAdapter implements SourceAdapter
         return null;
     }
 
-    // Security: defends the per-transaction raw_payload column from ever
-    // carrying card-number characters, replacing any masked-card
-    // placeholder or 12+ contiguous digit run (real PANs) with the policy
-    // literal before persistence.
     private function scrubCardNumbers(string $text): string
     {
         $patterns = [
-            // Canonical masked-card placeholder (any chars after the last
-            // hyphen).
             '/\*{4}-\*{4}-\*{4}-[^\s]{1,8}/',
-            // Any 12+ contiguous digit run, covering real PANs (no
-            // masking punctuation to anchor on).
             '/\d{12,}/',
         ];
 
@@ -410,9 +355,7 @@ final class IcsPdfAdapter implements SourceAdapter
         $creditLimit = $twoColumn['creditLimit'] ?? null;
         $minDue = $twoColumn['minDue'] ?? null;
 
-        // Opening/closing/charges display as positive with an "Af" marker
-        // ("owed to ICS"); negate so ledger sign semantics match the rest
-        // of the project (debits negative). Received stays positive.
+        // ICS prints these positive with an "Af" (owed to ICS) marker; ledger semantics need debits negative.
         $opening = $opening === null ? null : -$opening;
         $closing = $closing === null ? null : -$closing;
         $charges = $charges === null ? null : -$charges;
@@ -532,8 +475,6 @@ final class IcsPdfAdapter implements SourceAdapter
         }
     }
 
-    // Reads the sequence number from the value row under the "Volgnummer
-    // Bladnummer" header — the integer immediately preceding "N van M".
     private function parseStatementNumber(string $text): ?string
     {
         if (

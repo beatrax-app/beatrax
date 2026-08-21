@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Notifications\Public\Events;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final readonly class NotificationPreferenceMutated
 {
     /**

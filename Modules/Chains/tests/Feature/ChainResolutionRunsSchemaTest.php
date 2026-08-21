@@ -7,16 +7,8 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Schema;
 use Modules\Core\Models\User;
 
-/*
- * Schema-level coverage for the Phase 5 Wave 1 chain_resolution_runs
- * audit table.
- *
- * The table replaces the unsafe `failed_jobs.payload LIKE
- * '%userId:N%'` substring match that the original Wave 3 wizard-poll
- * design relied on. One row per resolver dispatch lets the wizard
- * scope its "Resolving chains…" poll to (user_id, latest) without
- * pattern-matching free-form payload JSON.
- */
+// The audit row replaces a `failed_jobs.payload LIKE '%userId:N%'` substring
+// match, letting the wizard scope its poll to (user_id, latest) instead.
 
 beforeEach(function (): void {
     /** @var DatabaseManager $db */

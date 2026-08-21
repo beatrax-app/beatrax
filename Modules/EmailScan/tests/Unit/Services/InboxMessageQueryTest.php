@@ -84,9 +84,8 @@ it('forStatus(unmatched) yields no DTOs when none are seeded', function (): void
 it('forStatus rejects an unknown status value', function (): void {
     $query = $this->app->make(InboxMessageQuery::class);
     expect(function () use ($query): void {
-        // Iteration triggers the generator body, which is where the
-        // validation runs (the throw lives at the top of the
-        // generator).
+        // The throw lives in the generator body, so nothing happens until
+        // something iterates.
         iterator_to_array($query->forStatus('BOGUS'), preserve_keys: false);
     })->toThrow(InvalidArgumentException::class);
 });
@@ -95,9 +94,8 @@ it('is lazy: the cursor does not materialise rows before the first iteration', f
     $query = $this->app->make(InboxMessageQuery::class);
     $gen = $query->forStatus('fetched');
     expect($gen)->toBeInstanceOf(Generator::class);
-    // Consume only the first row and assert the generator still has
-    // unconsumed entries (i.e. the implementation is not buffering
-    // the entire result set into an array before yielding).
+    // Rows still pending after the first one is consumed means the result set
+    // was not buffered into an array before yielding.
     $first = $gen->current();
     expect($first)->toBeInstanceOf(InboxMessageDto::class);
     expect($gen->valid())->toBeTrue();

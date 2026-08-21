@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-// sub-floor-ignored: a €4.50 charge that is large vs the merchant's €0.99
-// baseline in percentage terms, but falls under the user's €10.00 global
-// minimum-amount floor (D-11). The floor suppresses ALL three detectors, so
-// no reasons fire — trivial-charge noise is filtered regardless of the
-// percentage swing.
+// A €4.50 charge, hugely above the merchant's €0.99 baseline but under the
+// user's €10.00 floor: the floor gates all three detectors, so nothing fires.
 
 return [
     'settings' => [

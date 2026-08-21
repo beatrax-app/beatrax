@@ -5,18 +5,6 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Adds a nullable `matcher_key` column to file_imports symmetrical
- * to the matcher_key column on inbox_messages. The matcher consumer
- * records which SenderMatcher claimed each file-drop row so audit
- * + re-parse paths can resolve back to the matcher that owned it.
- *
- * The column lives alongside the lifecycle `status` column: NULL
- * while the row is in `status='fetched'`; populated to e.g.
- * `'paypal-receipt'` once the matcher dispatch transitions the row
- * to `'parsed'` / `'skipped'`. The pair (user_id, matcher_key) is
- * indexed so per-user audit queries land on a composite index.
- */
 return new class extends ModuleMigration
 {
     public function up(): void

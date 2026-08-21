@@ -6,10 +6,9 @@ namespace Modules\Forecasting\Internal\Pipeline;
 
 use Carbon\CarbonImmutable;
 
-// The (lowMinor, pointMinor, highMinor) triple is signed and in the
-// contribution's native currency (expense series negative, income
-// series positive); DailyFold converts to the account's default
-// currency using fxRateUsed before combining per day.
+// Amounts are signed (expense negative, income positive) and in the contribution's
+// own currency; DailyFold applies fxRateUsed to reach the account's default
+// currency before combining per day.
 final readonly class ForecastContribution
 {
     public function __construct(

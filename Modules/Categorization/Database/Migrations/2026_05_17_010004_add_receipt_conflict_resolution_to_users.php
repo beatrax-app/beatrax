@@ -5,26 +5,10 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Adds the `receipt_conflict_resolution` column to users — the
- * per-user policy that drives how ApplyEnrichments resolves field-
- * value conflicts between a previously-imported CSV row and a
- * newly-parsed receipt.
- *
- * Enum values:
- *
- *   - `unset` (default) — surface a one-time toast on the next
- *     conflict; capture the user's choice into this column.
- *   - `prefer_receipt` — receipts always overwrite the existing
- *     value when both are non-null and disagree.
- *   - `prefer_first_write` — the original (CSV) value wins; the
- *     receipt's value is archived into pending_enrichment_conflicts
- *     for later audit.
- *
- * The enum is enforced via paired BEFORE INSERT / BEFORE UPDATE
- * triggers as defence-in-depth on top of the PHP-side validation
- * the action layer performs.
- */
+// How ApplyEnrichments resolves a receipt disagreeing with an already
+// imported CSV row. The default `unset` means "ask on the next conflict";
+// under `prefer_first_write` the receipt's losing value is archived into
+// pending_enrichment_conflicts rather than dropped.
 return new class extends ModuleMigration
 {
     public function up(): void

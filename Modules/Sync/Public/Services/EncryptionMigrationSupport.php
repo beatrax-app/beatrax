@@ -12,9 +12,6 @@ use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use RuntimeException;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class EncryptionMigrationSupport
 {
     private ?int $cachedEpochId = null;

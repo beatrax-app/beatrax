@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Pairing;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class PairingFrame
 {
     public const string TYPE_RESPONDER_ACCEPT = 'PAIR_RESPONDER_ACCEPT';

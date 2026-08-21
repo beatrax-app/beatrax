@@ -10,7 +10,4 @@ use RuntimeException;
 // Deliberately does not distinguish a wrong passphrase from a tampered
 // file: the AEAD tag fails identically for both, and guessing which
 // would tell an attacker whether their passphrase was close.
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class BackupDecryptionException extends RuntimeException {}

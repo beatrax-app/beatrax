@@ -9,15 +9,12 @@ use Modules\Categorization\Public\Actions\CreateCategorizationRule;
 use Modules\Categorization\Public\Dto\RuleInput;
 use Modules\Core\Models\User;
 
-// Author-side rules for the demo install, covering the merchants the
-// seeded ledger repeats most. Written through the public action so the
-// stored conditions and actions match what the rule builder produces,
-// including its validation of every field.
+// Written through the public action so the stored conditions and actions match
+// what the rule builder produces, validation included.
 final class DemoCategorizationRulesSeeder
 {
-    // categoryPath is resolved against the default category tree by
-    // parent/child name; note attaches a second action so the demo shows
-    // a multi-action rule alongside the plain category ones.
+    // A non-null `note` attaches a second action, so the demo carries at least
+    // one multi-action rule.
     /** @var list<array{notes: string, match: string, categoryPath: list<string>, note: ?string, priority: int, active: bool}> */
     private const RULES = [
         [

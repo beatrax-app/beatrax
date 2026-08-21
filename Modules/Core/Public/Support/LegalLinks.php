@@ -8,9 +8,6 @@ namespace Modules\Core\Public\Support;
 // require the privacy policy to be reachable from inside the app and not only
 // from the store listing, so the URL is shipped in the build rather than only
 // in App Store Connect and Play Console.
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class LegalLinks
 {
     public const string PRIVACY_POLICY_URL = 'https://beatrax.app/privacy';

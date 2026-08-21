@@ -7,16 +7,10 @@ use Livewire\Livewire;
 use Modules\Calendar\Internal\Http\Livewire\CalendarPage;
 use Modules\Core\Models\User;
 
-/**
- * The calendar grid's markup, as accessibility depends on it.
- *
- * The month view used to be a flat div grid where the week rows existed only
- * as `display: contents` wrappers carrying role="row" — the construct screen
- * readers have historically dropped rows from, leaving the cells with no
- * position. It is a real table now. These assertions exist because that is
- * invisible from the rendered page: the two versions look identical, so
- * nothing else would notice a regression back to divs.
- */
+// The month view used to be a flat div grid whose week rows were only
+// `display: contents` wrappers carrying role="row" — the construct screen
+// readers drop rows from. These assertions exist because the two versions
+// render identically, so nothing else would catch a regression back to divs.
 function cgsUser(): User
 {
     return User::query()->create([
@@ -45,18 +39,16 @@ it('builds the month view from real table elements', function (): void {
         ->toContain('<tbody>');
 });
 
-// June 2026 starts on a Monday and has 30 days, so the grid is exactly five
-// Mon–Sun weeks with no leading or trailing spill. Any other row count means
-// the weeks stopped being rows.
+// June 2026 starts on a Monday and has 30 days: exactly five Mon–Sun weeks
+// with no spill, so six <tr> counting the header row and 35 <td>.
 it('groups the day cells into one row per week', function (): void {
     expect(substr_count($this->html, '<tr'))->toBe(6)
         ->and(substr_count($this->html, '<td'))->toBe(35);
 });
 
-// The native elements replace the roles, but role="grid" stays: it is what
-// makes this an interactive widget rather than a data table, and under ARIA
-// in HTML it also gives the tr/th/td their row/columnheader/gridcell mapping.
-// Dropping it would silently downgrade the whole grid.
+// role="grid" survives the native elements: it is what makes this an
+// interactive widget rather than a data table, and under ARIA-in-HTML it maps
+// the tr/th/td onto row/columnheader/gridcell.
 it('keeps the grid role and drops the roles the elements now imply', function (): void {
     expect($this->html)
         ->toContain('role="grid"')

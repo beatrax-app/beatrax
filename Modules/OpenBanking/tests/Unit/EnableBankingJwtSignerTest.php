@@ -10,15 +10,6 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingAccessScope;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingJwtSigner;
 
-/*
- * EnableBankingJwtSigner: proves the RS256 round-trip (signed via the
- * private key, verified via the paired public key) and the exact claim
- * shape Enable Banking requires — kid = application_id, exp - iat =
- * 3600. EnableBankingAccessScope: proves toArray() can never surface a
- * `payments` key (Req 11 / D-11 Pitfall 6), since no such property
- * exists on the class.
- */
-
 beforeEach(function (): void {
     $resource = openssl_pkey_new([
         'private_key_bits' => 2048,
@@ -40,9 +31,8 @@ beforeEach(function (): void {
     }
     $this->publicKeyPem = $details['key'];
 
-    // Fixed 5 minutes in the past, relative to the real clock — avoids
-    // JWT::decode's BeforeValidException (iat in the future) while
-    // staying deterministic per test run.
+    // Five minutes behind the real clock: deterministic per run, and far enough
+    // back that JWT::decode does not reject the iat as being in the future.
     $this->fixedNow = CarbonImmutable::now()->subMinutes(5);
     $this->clock = new class($this->fixedNow) implements Clock
     {

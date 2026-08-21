@@ -7,10 +7,8 @@ namespace Modules\Categorization\Internal\Services;
 use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
-// Deliberately decoupled from the full CanonicalTransaction DTO so the
-// re-apply job can build one from a persisted transactions row without
-// needing an import-pipeline DTO in scope — only the four properties a
-// rule condition can ever reference are carried.
+// A separate DTO from CanonicalTransaction so the re-apply job can build one
+// from a persisted row without an import-pipeline DTO in scope.
 final readonly class RuleMatchInput
 {
     public function __construct(

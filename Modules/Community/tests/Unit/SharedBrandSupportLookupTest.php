@@ -4,24 +4,10 @@ declare(strict_types=1);
 
 use Modules\Community\Public\Services\SupportResourceProvider;
 
-/*
- * The shipped corpus, not a fixture.
- *
- * Before the lookup was country-scoped, two countries carrying the same brand
- * meant the alphabetically-later file silently replaced the earlier one for
- * every user. The corpus worked around it twice over: brands were dropped
- * outright, and the survivors were renamed to "Verisure Suomi" and "Verisure
- * Italia" to keep the keys apart.
- *
- * Both workarounds cost coverage. The rename cost the most quietly — a key is
- * matched as a word prefix of the counterparty, so "verisure suomi" only ever
- * matched a statement that literally said both words, and a plain VERISURE
- * charge in Finland found nothing at all.
- *
- * The scoping made the collision safe, so these assert the shipped data
- * actually carries the entries and resolves each to its own country. A
- * fixture cannot show that: the point is the corpus, not the algorithm.
- */
+// Asserts the shipped corpus, not a fixture: the point is that the data carries
+// these entries and resolves each to its own country. Before country scoping,
+// collisions were worked around by renaming — and since a key matches as a word
+// prefix, "Verisure Suomi" never matched a bare VERISURE charge in Finland.
 
 /**
  * @return array{0: string, 1: string}
@@ -52,8 +38,6 @@ it('resolves a shared brand to the country the user files taxes in', function (s
     'Spain' => ['es', '900 909 139'],
 ]);
 
-// The rename is the point: a statement line rarely carries the country word,
-// and the key has to match what the bank actually printed.
 it('matches a bare brand line, not only one naming the country', function (string $line): void {
     [, $notes] = supportNotesFor($line, 'merchant', 'fi');
 
@@ -64,8 +48,7 @@ it('matches a bare brand line, not only one naming the country', function (strin
     'with a payment suffix' => ['Verisure Oy Helsinki'],
 ]);
 
-// The collision that motivated the scoping in the first place: a Swiss health
-// insurer and a Spanish one, neither of which may answer for the other.
+// Sanitas is a Swiss health insurer and, separately, a Spanish one.
 it('keeps the two Sanitas insurers apart', function (): void {
     [, $swiss] = supportNotesFor('Sanitas', 'merchant', 'ch');
     [, $spanish] = supportNotesFor('Sanitas', 'merchant', 'es');
@@ -75,8 +58,7 @@ it('keeps the two Sanitas insurers apart', function (): void {
         ->and($spanish)->toContain('seguro de salud');
 });
 
-// NAV is Norway's welfare administration and Hungary's tax authority — the
-// same three letters for two entirely unrelated bodies.
+// NAV is Norway's welfare administration and, separately, Hungary's tax authority.
 it('keeps the two NAV authorities apart', function (): void {
     [, $hungarian] = supportNotesFor('NAV', 'government', 'hu');
     [, $norwegian] = supportNotesFor('NAV', 'government', 'no');

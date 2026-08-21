@@ -25,6 +25,8 @@ return [
     'no_entries' => 'Ei vielä manuaalisia kirjauksia.',
     'delete_entry' => 'Poista kirjaus',
     'delete' => 'Poista',
+    'delete_confirm' => 'Poistetaanko tämä kirjaus?',
+    'delete_keep' => 'Säilytä',
 
     'errors' => [
         'amount_positive' => 'Anna nollaa suurempi summa.',

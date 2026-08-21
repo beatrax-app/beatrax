@@ -10,19 +10,21 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Modules\Auth\Public\Actions\SignupAction;
+use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\ValidationMessages;
 
 // Only reachable while the device has no users; the route guard returns
 // a 404 once one exists.
 final class SignupPage extends Component
 {
+    use HoldsFlashMessage;
+
     public string $username = '';
 
     public string $password = '';
 
     public string $passwordConfirmation = '';
-
-    public string $flashMessage = '';
 
     public function submit(SignupAction $signup, UrlGenerator $urls): void
     {
@@ -37,16 +39,15 @@ final class SignupPage extends Component
         try {
             $signup($this->username, $this->password);
         } catch (ValidationException $e) {
-            $this->flashMessage = self::firstErrorMessage($e);
+            $this->flashMessage = ValidationMessages::first($e, 'auth::signup.error_generic');
             $this->password = '';
             $this->passwordConfirmation = '';
 
             return;
         }
 
-        // The ceremony sits between signup and the wizard, not beside it:
-        // going straight to setup skipped the only screen that ever shows the
-        // recovery codes. RecoveryCodesDisplay hands off to setup afterwards.
+        // Not straight to setup: that skipped the only screen that ever shows
+        // the recovery codes. RecoveryCodesDisplay hands off to setup after.
         $this->redirect($urls->route('auth.recovery-codes-display'), navigate: false);
     }
 
@@ -58,25 +59,5 @@ final class SignupPage extends Component
         $view->extends('layouts.app', ['title' => Lang::get('auth::signup.page_title')]);
 
         return $view;
-    }
-
-    private static function firstErrorMessage(ValidationException $exception): string
-    {
-        /** @var array<string, mixed> $errors */
-        $errors = $exception->errors();
-
-        foreach ($errors as $messages) {
-            if (! is_array($messages)) {
-                continue;
-            }
-
-            foreach ($messages as $message) {
-                if (is_string($message) && $message !== '') {
-                    return $message;
-                }
-            }
-        }
-
-        return Lang::get('auth::signup.error_generic');
     }
 }

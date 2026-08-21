@@ -5,15 +5,6 @@ declare(strict_types=1);
 use Modules\Anomaly\Internal\Mapping\AnomalyAlertDtoMapper;
 use Modules\Anomaly\Public\Dto\AnomalyAlertDto;
 
-/*
- * Pure-data mapper tests for anomaly_alerts row → AnomalyAlertDto. No
- * database: the mapper is static and stateless. Asserts the anomaly-
- * specific divergences from the drift mapper — reasons[] JSON hydration,
- * Money fields in the settled currency, nullable baseline collapsing to a
- * zero-amount Money, dismissedAs nullability, and the loud-fail on a
- * missing detected_at.
- */
-
 function anomalyRow(array $overrides = []): stdClass
 {
     return (object) array_merge([

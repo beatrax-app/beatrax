@@ -2,12 +2,7 @@
 
 declare(strict_types=1);
 
-// Envelope-tier happy-path fixture: one ASN account + one approved
-// monthly expense series ("Netflix €11.99 × 6 stable occurrences",
-// variance_tolerance_percent=5). Expected 30-day projection shows a
-// tight band of ±€0.60 around the single occurrence in window; daily
-// fold yields low/high close to point. No shortfalls because the
-// opening balance (€1500) easily absorbs the outflow.
+/** @link ../../../../../.docs/features/forecasting/forecast-corpus.md#stable-monthly-subscription */
 
 return [
     'accounts' => [

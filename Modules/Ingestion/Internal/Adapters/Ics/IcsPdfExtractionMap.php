@@ -4,23 +4,13 @@ declare(strict_types=1);
 
 namespace Modules\Ingestion\Internal\Adapters\Ics;
 
-/**
- * @link ../../../../../.docs/features/ingestion/architecture.md
- */
 final class IcsPdfExtractionMap
 {
-    // Appears once per page directly below the four-column header; the
-    // most reliable anchor to the first transaction row regardless of
-    // whether header columns shifted between pages.
     public const TRANSACTIONS_TABLE_ANCHOR = 'transactie boeking';
 
     /**
      * @var list<string>
      */
-    // In order: cardholder banner, card watermark, repeating statement
-    // summary header, Apple Pay marketing banner, depositogarantiestelsel
-    // disclaimer, and two recurring body-paragraph directives (due-date,
-    // payments-updated-as-of).
     public const PAGE_NOISE_PATTERNS = [
         '/^\s*KAARTHOUDER.*$/m',
         '/^\s*Uw Card met als laatste vier cijfers .*$/m',
@@ -31,9 +21,7 @@ final class IcsPdfExtractionMap
         '/^.*Uw betalingen aan International Card Services BV.*$/m',
     ];
 
-    // The second line of a two-line FX-row block; the first line carries
-    // merchant + native amount + settled-EUR amount, and this literal
-    // prefixes the native currency code + displayed conversion rate.
+    // Prefixes the continuation line of a two-line foreign-currency row.
     public const FX_LINE_ANCHOR = 'Wisselkoers ';
 
     public const CARD_LAST4_LINE_PREFIX = 'Uw Card met als laatste vier cijfers ';

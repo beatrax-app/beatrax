@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Notifications\Internal\Support;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final class DeterministicKeyDeriver
 {
     public const TRIGGER_IMPORT_FINISHED = 'import_finished';

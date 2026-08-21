@@ -15,6 +15,7 @@ use Illuminate\Container\Container;
 use Illuminate\Contracts\Session\Session as LaravelSession;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Crypto\GdkEpochControlHandler;
@@ -30,7 +31,7 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
- * @link ../../../../.docs/features/sync/architecture.md
+ * @link ../../../../.docs/features/sync/peer-session-lifecycle.md
  */
 final class SyncWebSocketHandler implements WebsocketClientHandler
 {
@@ -98,13 +99,21 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
         return $this->localDeviceId;
     }
 
+    // Scopes the pairing-offer lookup SyncServeCommand mounts alongside this
+    // handler. Zero when the daemon spawned without a resolvable identity,
+    // which the offer service reads as "no user" and refuses.
+    public function localUserId(): int
+    {
+        return $this->userId;
+    }
+
     public function handleClient(WebsocketClient $client, Request $request, Response $response): void
     {
         try {
             $noiseSession = $this->performHandshake($client);
         } catch (Throwable $e) {
             $this->logger->warning('SyncWebSocketHandler: Noise handshake failed.', [
-                'error' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
             ]);
             $client->close();
 
@@ -168,7 +177,7 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
             $this->runCatchUp($client, $session, $deviceKeys);
         } catch (Throwable $e) {
             $this->logger->warning('SyncWebSocketHandler: catch-up exchange failed.', [
-                'error' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
             ]);
             $session->close();
             $client->close();
@@ -202,7 +211,7 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
             }
         } catch (Throwable $e) {
             $this->logger->warning('SyncWebSocketHandler: live stream error.', [
-                'error' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
             ]);
         }
 
@@ -241,7 +250,7 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
             )));
         } catch (Throwable $e) {
             $this->logger->info('SyncWebSocketHandler: could not tell the peer it was revoked.', [
-                'error' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
             ]);
         }
     }

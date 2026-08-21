@@ -57,6 +57,7 @@ return [
         'meta_eur_equiv' => '(≈ :amount/an)',
         'cancel_impact' => 'Résilier → économise :amount/an',
         'cadence_flipped' => 'Fréquence modifiée — visible aussi dans',
+        'cadence_flipped_link' => 'Vérifier les récurrences',
         'acknowledge' => 'Prendre en compte',
         'acknowledge_aria' => 'Prendre en compte l\'alerte de dérive :id',
         'snooze' => 'Reporter ▾',

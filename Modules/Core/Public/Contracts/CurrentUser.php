@@ -7,9 +7,6 @@ namespace Modules\Core\Public\Contracts;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Exceptions\NotAuthenticatedException;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 interface CurrentUser
 {
     /**

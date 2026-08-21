@@ -31,11 +31,8 @@ it('lands a single canonical transaction for a dropped PayPal .eml receipt', fun
         ->call('submit')
         ->assertHasNoErrors();
 
-    // Confirm the import (runFromUpload returned a previewed result; the
-    // wizard redirects to the preview page where the user confirms).
-    // The contract tests below drive runAndConfirm in one shot; this
-    // test uses the wizard path and follows up with a confirm action
-    // call directly so we exercise both halves.
+    // The wizard only gets as far as a previewed run — confirming is a separate
+    // user step, so drive it here to exercise both halves.
     $importRunId = ImportRun::query()->latest('id')->value('id');
     expect($importRunId)->not->toBeNull();
     $confirm = $this->app->make(ConfirmsImports::class);

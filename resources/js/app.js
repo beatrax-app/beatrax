@@ -34,6 +34,7 @@ import ApexCharts from 'apexcharts';
 import { palette } from './palette.js';
 import { datePicker } from './date-picker.js';
 import { timePicker } from './time-picker.js';
+import { tabStrip } from './tab-strip.js';
 import './lock.js';
 import './mobile-upload.js';
 
@@ -254,10 +255,6 @@ window.beatraxApplyChartTheme = function (options) {
 // CommandPaletteModal Blade view resolves through this
 // registration. Wraps Fuse.js with the configured weights +
 // threshold + ignoreLocation.
-//
-// Phase 4 additions inside the same alpine:init handler:
-//   - mobileNav store: drawer open/close/toggle for the mobile shell (D-01)
-//   - platform store: detects macOS for ⌘K vs Ctrl+K kbd labels (D-04)
 /**
  * In-page QR scanner for the mobile pairing screen.
  *
@@ -480,14 +477,78 @@ function beatraxInlineScanner($wire) {
     };
 }
 
+/**
+ * Copy text to the clipboard, reporting whether it actually worked.
+ *
+ * navigator.clipboard is gated to secure contexts, and the packaged app's
+ * webview is not one on either phone. Every call site used to guard with a
+ * bare `if (! navigator.clipboard) return`, so on a phone the button did
+ * nothing and said nothing — worst of all on the recovery codes, which are
+ * never shown again.
+ *
+ * @param {string} text
+ * @returns {Promise<boolean>} whether the text reached the clipboard
+ */
+window.beatraxCopy = async function beatraxCopy(text) {
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+
+            return true;
+        }
+
+        // A temporary textarea and the legacy command, which webviews still
+        // honour where the async API is withheld.
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.setAttribute('readonly', 'readonly');
+        area.style.position = 'fixed';
+        area.style.top = '0';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.focus();
+        area.select();
+        area.setSelectionRange(0, area.value.length);
+
+        try {
+            return document.execCommand('copy') === true;
+        } finally {
+            document.body.removeChild(area);
+        }
+    } catch (e) {
+        return false;
+    }
+};
+
+/**
+ * Apply a theme change to the root element straight away.
+ *
+ * The `dark` / `light` class is rendered by the layout, which a Livewire
+ * update never touches, so choosing a theme in settings persisted the
+ * preference and left the page exactly as it was.
+ */
+document.addEventListener('theme-changed', (event) => {
+    const root = document.documentElement;
+    const chosen = event?.detail?.theme ?? (Array.isArray(event?.detail) ? event.detail[0]?.theme : null);
+
+    const prefersDark = window.matchMedia
+        && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    const dark = chosen === 'dark' || (chosen !== 'light' && prefersDark);
+
+    root.classList.toggle('dark', dark);
+    root.classList.toggle('light', ! dark);
+});
+
 document.addEventListener('alpine:init', () => {
     if (window.Alpine) {
         window.Alpine.data('palette', palette);
         window.Alpine.data('beatraxInlineScanner', beatraxInlineScanner);
         window.Alpine.data('beatraxDatePicker', datePicker);
         window.Alpine.data('beatraxTimePicker', timePicker);
+        window.Alpine.data('tabStrip', tabStrip);
 
-        // Mobile navigation drawer state (Phase 4, D-01)
+        // Mobile navigation drawer state
         window.Alpine.store('mobileNav', {
             drawerOpen: false,
             open() { this.drawerOpen = true; },
@@ -503,7 +564,7 @@ document.addEventListener('alpine:init', () => {
             window.Alpine.store('mobileNav').close();
         });
 
-        // Platform detection for ⌘K vs Ctrl+K labels (Phase 4, D-04).
+        // Platform detection for ⌘K vs Ctrl+K labels.
         // Uses the modern userAgentData API first (Chromium 90+), falls back
         // to the legacy navigator.platform string for Safari + Firefox.
         window.Alpine.store('platform', {

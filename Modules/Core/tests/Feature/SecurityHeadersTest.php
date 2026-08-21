@@ -11,17 +11,10 @@ use Symfony\Component\HttpFoundation\Response;
 
 uses(RefreshDatabase::class);
 
-/*
- * Baseline response headers on every `web` response.
- *
- * The app renders text it did not write — counterparty names, payment
- * references and receipt bodies all arrive from bank exports and mailboxes,
- * and the transactions list deliberately emits server-built HTML for search
- * highlighting. Escaping is the control; these headers, and the nonce-based
- * Content-Security-Policy, are what stands between a missed escape and a
- * working attack. The policy admits first-party scripts by nonce and keeps
- * 'unsafe-eval' only because Alpine compiles its expressions at runtime.
- */
+// The app renders text it did not write — counterparty names, payment references,
+// receipt bodies — and the transactions list emits server-built HTML for search
+// highlighting. The nonce-based CSP is the backstop for a missed escape; it keeps
+// 'unsafe-eval' only because Alpine compiles its expressions at runtime.
 
 function securityHeadersUser(): User
 {

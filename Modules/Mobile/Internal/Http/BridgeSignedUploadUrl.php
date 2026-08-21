@@ -16,9 +16,6 @@ use Livewire\Features\SupportFileUploads\GenerateSignedUploadUrl;
 // while hasValidSignature() rebuilds it from Symfony's Request::url(), which
 // can only say `http://`. The two halves hashed different strings and the
 // upload endpoint answered 401 for every statement.
-/**
- * @link ../../../../.docs/features/mobile/architecture.md
- */
 final class BridgeSignedUploadUrl extends GenerateSignedUploadUrl
 {
     public function __construct(

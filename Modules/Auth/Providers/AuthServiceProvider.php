@@ -14,15 +14,11 @@ use Modules\Auth\Internal\Console\RegenerateRecoveryCodesCommand;
 use Modules\Auth\Internal\Console\ResetPasswordCommand;
 use Modules\Auth\Internal\Fortify\FortifyServiceProvider;
 use Modules\Auth\Internal\Http\Livewire\AddUserPage;
-use Modules\Auth\Internal\Http\Livewire\AppLockKeyProbe;
-use Modules\Auth\Internal\Http\Livewire\AppLockSettingsSection;
 use Modules\Auth\Internal\Http\Livewire\ChangePasswordPage;
-use Modules\Auth\Internal\Http\Livewire\DeleteAccountSection;
 use Modules\Auth\Internal\Http\Livewire\LockScreen;
 use Modules\Auth\Internal\Http\Livewire\LoginPage;
 use Modules\Auth\Internal\Http\Livewire\ManageUserPage;
 use Modules\Auth\Internal\Http\Livewire\RecoveryCodesDisplay;
-use Modules\Auth\Internal\Http\Livewire\RecoveryCodesSection;
 use Modules\Auth\Internal\Http\Livewire\ResetPasswordPage;
 use Modules\Auth\Internal\Http\Livewire\SignupPage;
 use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
@@ -51,24 +47,24 @@ use Modules\Auth\Public\Actions\ResetPasswordAction;
 use Modules\Auth\Public\Actions\SignupAction;
 use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Auth\Public\Contracts\KeyCustodian;
+use Modules\Auth\Public\Http\Livewire\AppLockKeyProbe;
+use Modules\Auth\Public\Http\Livewire\AppLockSettingsSection;
+use Modules\Auth\Public\Http\Livewire\DeleteAccountSection;
+use Modules\Auth\Public\Http\Livewire\RecoveryCodesSection;
 use Modules\Auth\Public\Recovery\RecoveryCodeFormatter;
 use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
 use Modules\Core\Public\Support\LoadsModuleResources;
 
-/**
- * @link ../../../.docs/features/auth/architecture.md
- */
 final class AuthServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
 
     public function register(): void
     {
-        // Overridden by the desktop (Touch ID) and mobile (enclave) bindings
-        // inside their own runtimes; everywhere else the lock screen simply
-        // finds no OS-gated vault and offers PIN + WebAuthn only.
+        // Overridden by the desktop and mobile runtimes; elsewhere the lock
+        // screen finds no OS vault and offers PIN + WebAuthn only.
         $this->app->singleton(ColdStartVault::class, NullColdStartVault::class);
 
         $this->app->register(FortifyServiceProvider::class);
@@ -84,10 +80,8 @@ final class AuthServiceProvider extends ServiceProvider
         $this->app->singleton(RecoveryCodeNormalizer::class);
         $this->app->singleton(RecoveryCodeAuthenticator::class);
 
-        // At-rest key custody while unlocked. Defaults to the pass-through
-        // NullKeyCustodian (session-held key, unchanged web behaviour); the
-        // Desktop / Mobile providers override this binding on their bundles
-        // to route the key through the OS keychain / Keystore.
+        // Key custody while unlocked. The pass-through default keeps the key
+        // in the session; the bundles override it onto the OS keychain.
         $this->app->singleton(KeyCustodian::class, NullKeyCustodian::class);
 
         $this->app->singleton(PinHasher::class);
@@ -121,23 +115,18 @@ final class AuthServiceProvider extends ServiceProvider
         $router->aliasMiddleware('first-user-only', FirstUserOnlyMiddleware::class);
         $router->aliasMiddleware('developer', RequireDeveloperMiddleware::class);
 
-        // Gates every authenticated route behind the app-lock screen; the
-        // middleware exempts auth.lock + logout to prevent redirect loops.
+        // The middleware exempts auth.lock and logout, or it loops.
         $router->pushMiddlewareToGroup('auth', AppLockMiddleware::class);
 
-        // Enforce the forced-password-change flag on every authenticated
-        // route. The middleware exempts the change-password page and the
-        // logout route by name so a flagged user is never trapped.
+        // Exempts the change-password page and logout by name, or a flagged
+        // user is trapped.
         $router->pushMiddlewareToGroup('auth', ForcePasswordChangeMiddleware::class);
 
-        // Defining an `auth` middleware group above shadows the framework's
-        // `auth` middleware alias on every `->middleware('auth')` route.
-        // Prepend the framework authentication middleware so the group still
-        // rejects guests before the module middleware run.
+        // The `auth` group above shadows the framework's `auth` alias, so the
+        // framework middleware is prepended to keep guests out.
         $router->prependMiddlewareToGroup('auth', Authenticate::class);
 
-        // Re-runs the lock gate on every Livewire component update request
-        // so a locked session cannot bypass the gate via /livewire/update.
+        // Or a locked session bypasses the gate through /livewire/update.
         $livewire->addPersistentMiddleware(AppLockMiddleware::class);
 
         $livewire->component('auth.login-page', LoginPage::class);

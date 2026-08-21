@@ -3,7 +3,7 @@
     /**
      * @var array<string,mixed> $transaction  Row array with keys: id, taxTagged, taxCategoryShortName
      * @var bool $showAlways  true = always visible (touch); false = hover-reveal (desktop)
-     * @var bool $readonly  Phase 13.1 Plan 06 — true renders a non-interactive badge (no
+     * @var bool $readonly  true renders a non-interactive badge (no
      *           click-to-tag/-edit dispatch). Used for split-leg sub-rows on list surfaces:
      *           legs are read-only there (editing only happens in TransactionDetail's split
      *           editor) and this component only knows how to dispatch a WHOLE-transaction

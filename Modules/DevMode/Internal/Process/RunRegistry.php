@@ -9,10 +9,9 @@ use Carbon\CarbonInterface;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Modules\Core\Public\Contracts\Clock;
 
-// The pid + run_id pair is persisted in cache (keyed dev_mode.run.{runId})
-// so a page refresh during a running command reconnects to the live SSE
-// stream. The 24h TTL lets the audit-pipeline finalize step copy
-// stdout/stderr excerpts before the entry disappears.
+// Cached rather than request-scoped so a page refresh mid-command reconnects
+// to the live SSE stream. The 24h TTL gives the audit finalize step time to
+// copy the stdout/stderr excerpts before the entry expires.
 final readonly class RunRegistry
 {
     private const KEY_PREFIX = 'dev_mode.run.';
@@ -24,9 +23,6 @@ final readonly class RunRegistry
         private Clock $clock,
     ) {}
 
-    // Takes the assembled RunRecord whole rather than a long positional
-    // parameter list; CommandSpawner builds the record (status 'running')
-    // and the cache round-trips it via serialize()/hydrate().
     public function store(RunRecord $record): void
     {
         $this->cache->put(self::KEY_PREFIX.$record->runId, $this->serialize($record), self::TTL_SECONDS);
@@ -92,9 +88,9 @@ final readonly class RunRegistry
         $this->cache->put(self::KEY_PREFIX.$runId, $this->serialize($updated), self::TTL_SECONDS);
     }
 
-    // Carbon dates serialise as ISO 8601 strings; hydrate() parses them
-    // back via CarbonImmutable::parse() to dodge spatie/laravel-data's
-    // strict default-format cast (which rejects timezone-offset strings).
+    // Dates go through ISO 8601 strings and CarbonImmutable::parse() rather
+    // than spatie/laravel-data's cast, whose strict default format rejects
+    // timezone-offset strings.
     /**
      * @return array<string, mixed>
      */

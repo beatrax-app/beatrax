@@ -6,20 +6,7 @@ use Carbon\CarbonImmutable;
 use Modules\Forecasting\Internal\Pipeline\DailyFold;
 use Modules\Forecasting\Internal\Pipeline\ForecastContribution;
 
-/*
- * Unit coverage for DailyFold — the per-day quadrature combiner.
- *
- * Asserts the load-bearing math: spreads of independent contributions
- * combine via √(Σ spread²), NOT linearly. Specifically, two ±€10
- * contributions on the same day yield a combined spread of
- * round(√2 × 10) = 14 minor units, not 20.
- *
- * Also covers: empty contributions (continuous running balance), single
- * contribution (band starts on that day), cross-day cumulation,
- * cross-currency conversion via fxRateUsed, and the InvalidArgumentException
- * raised when a cross-currency contribution lacks a stored fx rate.
- */
-
+/** @link ../../../../.docs/features/forecasting/projection-math.md#per-day-aggregation-and-quadrature */
 function dfFold(): DailyFold
 {
     return new DailyFold;
@@ -46,9 +33,8 @@ it('emits horizonDays+1 days starting at asOf with no contributions and a flat b
 });
 
 it('combines spreads of two independent contributions via quadrature (sqrt(2)*10 = 14, NOT 20)', function (): void {
-    // Two contributions on the same day, each with a half-width of 10
-    // minor units. Quadrature: spread = √(10² + 10²) = √200 ≈ 14.14.
-    // (int) round(14.14) = 14.
+    // Two same-day half-widths of 10 combine as √(10² + 10²) ≈ 14.14, which
+    // rounds to 14 — a linear sum would say 20.
     $asOf = CarbonImmutable::parse('2026-05-19');
     $on = CarbonImmutable::parse('2026-05-20');
 
@@ -83,15 +69,12 @@ it('combines spreads of two independent contributions via quadrature (sqrt(2)*10
         defaultCurrency: 'EUR',
     );
 
-    // On the contribution day: running = 1000 + (-100) + (-100) = 800,
-    // spread = round(√(10² + 10²)) = round(14.14) = 14.
     expect($points['2026-05-20']['point_minor'])->toBe(800);
     expect($points['2026-05-20']['high_minor'] - $points['2026-05-20']['low_minor'])->toBe(28); // 2 × 14
     expect($points['2026-05-20']['high_minor'])->toBe(814);
     expect($points['2026-05-20']['low_minor'])->toBe(786);
 
-    // Sanity: the linear sum (which the implementation must NOT use) would
-    // produce a spread of 20, not 14.
+    // A linear sum would half-width at 20, so a 40-wide band.
     expect($points['2026-05-20']['high_minor'] - $points['2026-05-20']['low_minor'])->not->toBe(40);
 });
 
@@ -124,7 +107,6 @@ it('carries the running balance forward on days with no contributions', function
     expect($points['2026-05-19']['low_minor'])->toBe(10000);
     expect($points['2026-05-20']['point_minor'])->toBe(9500);
     expect($points['2026-05-20']['high_minor'] - $points['2026-05-20']['low_minor'])->toBe(100); // 2 × half-width 50
-    // Day 21 and 22: no new contribution. Balance + spread carry forward.
     expect($points['2026-05-21']['point_minor'])->toBe(9500);
     expect($points['2026-05-21']['low_minor'])->toBe($points['2026-05-20']['low_minor']);
     expect($points['2026-05-22']['point_minor'])->toBe(9500);
@@ -190,10 +172,8 @@ it('throws InvalidArgumentException when a cross-currency contribution lacks fxR
 });
 
 it('does NOT cumulate spread across days for one-contribution-per-day occurrences', function (): void {
-    // The forecast band represents the uncertainty in the latest
-    // active period's amount, not uncertainty accumulated over time.
-    // One contribution per day with half-width 10 → each day's spread
-    // resets to round(√100) = 10, not the cumulative quadrature.
+    // The band is the uncertainty of the latest active period's amount, not
+    // uncertainty accumulated over time, so each day's spread resets to 10.
     $asOf = CarbonImmutable::parse('2026-05-19');
     $contributions = [];
     foreach (['2026-05-20', '2026-05-21', '2026-05-22'] as $date) {
@@ -218,15 +198,13 @@ it('does NOT cumulate spread across days for one-contribution-per-day occurrence
     );
 
     expect($points['2026-05-20']['high_minor'] - $points['2026-05-20']['low_minor'])->toBe(20); // 2 × 10
-    expect($points['2026-05-21']['high_minor'] - $points['2026-05-21']['low_minor'])->toBe(20); // stays at 10 (per-day spread, NOT cumulated)
-    expect($points['2026-05-22']['high_minor'] - $points['2026-05-22']['low_minor'])->toBe(20); // stays at 10
+    expect($points['2026-05-21']['high_minor'] - $points['2026-05-21']['low_minor'])->toBe(20);
+    expect($points['2026-05-22']['high_minor'] - $points['2026-05-22']['low_minor'])->toBe(20);
 });
 
 it('carries the latest-period spread forward on days without new contributions', function (): void {
-    // After a contribution on day 1 the spread persists until a new
-    // contribution overrides it. Confirms the carry-forward semantics
-    // chart consumers rely on (no chart gaps; band remains
-    // continuous).
+    // The spread persists until a new contribution overrides it, which is what
+    // keeps the rendered band continuous rather than gapped.
     $asOf = CarbonImmutable::parse('2026-05-19');
     $on = CarbonImmutable::parse('2026-05-20');
 
@@ -253,6 +231,6 @@ it('carries the latest-period spread forward on days without new contributions',
 
     expect($points['2026-05-19']['high_minor'] - $points['2026-05-19']['low_minor'])->toBe(0);
     expect($points['2026-05-20']['high_minor'] - $points['2026-05-20']['low_minor'])->toBe(20);
-    expect($points['2026-05-21']['high_minor'] - $points['2026-05-21']['low_minor'])->toBe(20); // carry forward
-    expect($points['2026-05-22']['high_minor'] - $points['2026-05-22']['low_minor'])->toBe(20); // carry forward
+    expect($points['2026-05-21']['high_minor'] - $points['2026-05-21']['low_minor'])->toBe(20);
+    expect($points['2026-05-22']['high_minor'] - $points['2026-05-22']['low_minor'])->toBe(20);
 });

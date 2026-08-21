@@ -5,19 +5,10 @@ declare(strict_types=1);
 use Modules\Core\Database\Support\ModuleMigration;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 
-/**
- * Constrains recurring_series.cadence to the vocabulary C2-R20 closes:
- * weekly, monthly, quarterly, yearly, irregular.
- *
- * The table was created with `state` guarded by a BEFORE INSERT / BEFORE
- * UPDATE trigger pair built from an explicit allowed list, and `cadence`
- * beside it as a bare string with a default. Two closed vocabularies on one
- * table, governed differently, for no reason anyone wrote down. This gives
- * the second one the same guard as the first.
- *
- * The allowed list is read from SeriesCadence rather than repeated, so the
- * enum stays the one place the vocabulary is written down.
- */
+// cadence was a bare string beside `state`, which has had a BEFORE INSERT /
+// BEFORE UPDATE trigger pair since the table was created — two closed
+// vocabularies on one table, governed differently. The allowed list is read
+// from SeriesCadence so the enum stays the one place it is written down.
 return new class extends ModuleMigration
 {
     public function up(): void

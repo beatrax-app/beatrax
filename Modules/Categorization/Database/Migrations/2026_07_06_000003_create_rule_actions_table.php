@@ -5,28 +5,9 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Creates the `rule_actions` child table (D-03) — one row per action a
- * `categorization_rules` parent performs when its conditions match.
- * A rule can carry multiple actions (e.g. set category AND tag tax
- * deduction in one firing); `position` orders their application.
- *
- * Schema:
- *
- *   - id, rule_id (FK -> categorization_rules, cascade delete).
- *   - position — application order among this rule's actions.
- *   - type (16) — category | counterparty | note | tax_tag.
- *   - payload (json) — type-specific shape:
- *       category:     {category_id}
- *       counterparty: {counterparty_id}
- *       note:         {text, mode: set|append}
- *       tax_tag:      {deduction_category_id, year?}
- *
- * The `type` enum is enforced via paired BEFORE INSERT / BEFORE UPDATE
- * triggers — mirrors the categorization_rules_field_check_* precedent
- * from 2026_05_17_010003_create_categorization_rules_table.php so a
- * typo in the action layer fails loud at the database boundary.
- */
+// The opaque `payload` is shaped per type: category {category_id},
+// counterparty {counterparty_id}, note {text, mode: set|append},
+// tax_tag {deduction_category_id, year?}.
 return new class extends ModuleMigration
 {
     public function up(): void

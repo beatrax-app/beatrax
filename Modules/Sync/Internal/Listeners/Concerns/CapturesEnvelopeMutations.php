@@ -9,9 +9,6 @@ use Modules\Sync\Public\Events\EnvelopeAssignmentMutated;
 use Modules\Sync\Public\Events\EnvelopeMoveMutated;
 use Modules\Sync\Public\Events\EnvelopeSettingMutated;
 
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 trait CapturesEnvelopeMutations
 {
     private function handleEnvelopeAssignmentEdit(EnvelopeAssignmentMutated $event, OpLogWriter $writer): void

@@ -7,9 +7,6 @@ namespace Modules\Mobile\Internal\Identity;
 use Modules\Core\Public\Services\UserDataPathService;
 use Native\Mobile\Facades\Biometrics;
 
-/**
- * @link ../../../../.docs/features/mobile/architecture.md
- */
 class BiometricUnlockBridge
 {
     // Safe to call unconditionally - returns false on web/CI/desktop

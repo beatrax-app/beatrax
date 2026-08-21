@@ -8,9 +8,6 @@ use Modules\Core\Models\User;
 use Modules\Import\Models\KnownCounterpartyIban;
 use Modules\Ledger\Public\Enums\AccountKind;
 
-/**
- * @link ../../../../.docs/features/import/architecture.md#module-boundary
- */
 final class DefaultKnownCounterpartyIbansSeeder
 {
     /**

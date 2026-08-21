@@ -2,19 +2,11 @@
 
 declare(strict_types=1);
 
-/*
- * .env.example carries APP_DEBUG=true so local work has a usable default, and
- * the release workflow stages the shipped bundle's .env by copying it. Every
- * release artefact therefore went out with debug on.
- *
- * Found on a device: /user/confirm-password answered with Laravel's debug page,
- * disclosing LARAVEL 13.24.0, PHP 8.5.9, the full exception trace and file
- * paths. The .env pulled off that build read APP_DEBUG=true.
+/**
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#app_debugtrue-in-the-shipped-bundle
  */
-
-// The suite runs from BOTH composer roots, and from mobile-app/ the workflow
-// sits one level up. Resolving only the desktop path made file_get_contents
-// return false there, the loop find nothing, and the guard pass by reading
+// Both composer roots run this suite, and from mobile-app/ the workflow sits
+// one level up. Resolving only the desktop path made the guard pass by reading
 // an empty string.
 function releaseWorkflowSource(): string
 {
@@ -43,8 +35,8 @@ it('never stages a shipped bundle without forcing production and debug off', fun
             continue;
         }
 
-        // The next handful of lines must neutralise the template's debug
-        // default. A run step that only copies is one that ships it.
+        // A run step that only copies is one that ships the template's debug
+        // default, so the neutralising lines must follow within the window.
         $window = implode("\n", array_slice($lines, $index, 8));
 
         if (str_contains($window, 'APP_DEBUG=false')) {

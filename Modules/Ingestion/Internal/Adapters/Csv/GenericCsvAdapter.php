@@ -9,19 +9,16 @@ use Generator;
 use League\Csv\CharsetConverter;
 use League\Csv\Reader;
 use League\Csv\SyntaxError;
+use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Internal\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Contracts\SourceAdapter;
 use Modules\Ingestion\Public\Dto\CsvPreset;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
-use Modules\Ingestion\Public\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
 use Modules\Ledger\Public\Dto\StatementSummaryData;
 use Throwable;
 
-/**
- * @link ../../../../../.docs/features/ingestion/architecture.md
- */
 final class GenericCsvAdapter implements SourceAdapter
 {
     public function __construct(
@@ -71,8 +68,7 @@ final class GenericCsvAdapter implements SourceAdapter
 
             $dateCell = trim($this->cell($record, $normMap, $this->preset->dateHeader));
             if ($dateCell === '') {
-                // No booking date — an incomplete/pending row; skip it rather
-                // than aborting the whole import.
+                // An incomplete/pending row (no booking date) is skipped, never fatal to the import.
                 continue;
             }
 
@@ -192,8 +188,6 @@ final class GenericCsvAdapter implements SourceAdapter
             return $magnitude;
         }
 
-        // A credit indicator is configured but the cell matches neither it
-        // nor the debit token — refuse to guess the sign.
         throw new InvalidAmountException(sprintf(
             "Unrecognised direction indicator '%s' (expected '%s' or '%s').",
             $indicator,

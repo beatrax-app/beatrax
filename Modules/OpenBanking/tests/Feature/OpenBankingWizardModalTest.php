@@ -4,27 +4,9 @@ declare(strict_types=1);
 
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingWizardModal;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
-
-/*
- * Open Banking onboarding wizard (19-06 Task 1):
- *
- *  - generateKeypair() produces a real RSA keypair, persists the private
- *    key straight to the secrets file, and reveals ONLY the public key
- *    on the component — the private PEM must never appear among the
- *    component's public (dehydrated/wire:snapshot-visible) properties.
- *  - saveApplicationId() persists the pasted application_id alongside
- *    the already-saved private key.
- *  - chooseBank()/continueToConsent() record a user-chosen institution
- *    id (ASN/SNS tile or the "Other institution" free-text fallback) —
- *    never a hardcoded bank.
- *  - connect() hands off to oauth.open-banking.connect with the chosen
- *    institution_id.
- *  - cancel() discards a partially-generated keypair (no application_id
- *    saved yet) but leaves a fully-registered application untouched.
- */
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 
 beforeEach(function (): void {
     $this->obwSecretsPath = storage_path('app/secrets/open-banking.json');
@@ -77,10 +59,8 @@ it('generateKeypair() produces a real RSA keypair, reveals only the public key, 
     expect($publicKeyPem)->toBeString();
     expect($publicKeyPem)->toContain('BEGIN PUBLIC KEY');
 
-    // get_object_vars() from outside the class only returns PUBLIC
-    // properties — exactly the set Livewire serializes into the
-    // wire:snapshot payload sent to the browser. None of them may ever
-    // contain private-key material.
+    // From outside the class get_object_vars() returns only PUBLIC properties —
+    // exactly the set Livewire serializes into the wire:snapshot sent to the browser.
     $publicProps = get_object_vars($testable->instance());
     foreach ($publicProps as $key => $value) {
         if (is_string($value)) {
@@ -90,10 +70,8 @@ it('generateKeypair() produces a real RSA keypair, reveals only the public key, 
         }
     }
 
-    // The private key WAS persisted to disk — just never round-tripped
-    // through the component. hasApplication() stays false until Step 3
-    // saves a non-empty application_id, even though load() can already
-    // see the partial (private-key-only) entry.
+    // The private key is on disk, just never round-tripped through the component.
+    // hasApplication() stays false until step 3 saves a non-empty application_id.
     $secrets = $this->app->make(OpenBankingSecretsRepository::class);
     expect($secrets->hasApplication())->toBeFalse();
     $loaded = $secrets->load();
@@ -236,16 +214,8 @@ it('cancel() leaves a fully-registered application untouched (reconnect flow ski
     expect($loaded->applicationId)->toBe('existing-application-id');
 });
 
-/*
- * D-16 Wave 3 review-and-fix gate (19-14): cancel() must forget the
- * `open_banking_acknowledged` session flag `OpenBankingSettingsPage::
- * confirmWarning()` sets before dispatching this wizard's open event —
- * otherwise abandoning the wizard mid-flow (after confirming the B2
- * warning but before completing the consent dance) leaves a live
- * "enable" authorization token sitting in the session, reachable later
- * without ever repeating the warning gate (see OpenBankingSettingsPage's
- * own hardening + OpenBankingWarningGateTest's stale-ack coverage).
- */
+// Abandoning the wizard after the warning but before consent would otherwise
+// leave a live enable authorization in the session, past the warning gate.
 it('cancel() forgets the session open-banking-acknowledged flag, regardless of registration state', function (): void {
     $user = obwUser('obw-cancel-forgets-ack');
 

@@ -5,21 +5,9 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Creates the oauth_secrets table — per-user OAuth client credentials
- * and token blob for a connected email provider.
- *
- * Each user holds at most one credential row per provider, enforced by
- * the unique (user_id, provider) index. The `client_secret` and
- * `tokens_blob` columns hold ciphertext: the owning Eloquent model
- * applies Laravel's `encrypted` cast so plaintext exists only inside
- * the application's attribute layer.
- *
- * The `provider` column is an enum-shaped string ('gmail' or
- * 'microsoft') enforced by a paired BEFORE INSERT / BEFORE UPDATE
- * trigger; SQLite cannot ALTER TABLE ADD CHECK after the fact, so the
- * trigger pair is the project-wide pattern for typed string columns.
- */
+// `client_secret` and `tokens_blob` hold ciphertext: the owning model's
+// `encrypted` cast keeps plaintext in the attribute layer only. The trigger
+// pair stands in for a CHECK, which SQLite cannot add after the fact.
 return new class extends ModuleMigration
 {
     public function up(): void

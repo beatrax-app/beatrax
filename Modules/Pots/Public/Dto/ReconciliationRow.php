@@ -6,9 +6,6 @@ namespace Modules\Pots\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/pots/architecture.md
- */
 final class ReconciliationRow extends Data
 {
     public function __construct(

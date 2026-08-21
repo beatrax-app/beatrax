@@ -10,13 +10,6 @@ use Modules\DriftAlerts\Models\DriftAlert;
 
 uses(RefreshDatabase::class);
 
-/*
- * /drift inline "Cancel this → save €X/yr" display test. Verifies the
- * CancellationImpactQuery hand-off is wired through the page render and
- * that the partial renders the inline projection on each open alert
- * row.
- */
-
 function cidUser(string $username): User
 {
     return User::query()->create([
@@ -143,24 +136,21 @@ afterEach(function (): void {
 });
 
 it('renders Cancel this → save €X/yr inline on each open alert row', function (): void {
-    // Series monthly_equivalent_minor = -1500 cents/month = €15/mo
-    // Annual savings = 1500 × 12 = 18000 cents = €180,00 (nl_NL locale).
+    // monthly_equivalent_minor -1500 × 12 = 18000 cents, rendered nl_NL.
     cidAlert($this->user, 'Spotify');
 
     $response = $this->actingAs($this->user)->get('/drift');
     $response->assertOk();
 
     $response->assertSeeText('Cancel this');
-    // Two separate assertions to avoid the NBSP between currency symbol
-    // and amount that the nl_NL NumberFormatter renders.
+    // Split in two: nl_NL puts an NBSP between the symbol and the amount.
     $response->assertSee('€');
     $response->assertSee('180,00');
     $response->assertSeeText('/yr');
 });
 
 it('renders USD-primary cancellation projection when the series is denominated in USD', function (): void {
-    // USD subscription with monthly_equivalent_minor = -1199 cents/month
-    // → annual savings = 1199 × 12 = 14388 cents = $143.88.
+    // monthly_equivalent_minor -1199 × 12 = 14388 cents.
     cidAlert($this->user, 'Google Play', seriesOverrides: [
         'latest_amount_minor' => -1199,
         'latest_currency' => 'USD',
@@ -176,7 +166,7 @@ it('renders USD-primary cancellation projection when the series is denominated i
     $response = $this->actingAs($this->user)->get('/drift');
     $response->assertOk();
 
-    // en_US NumberFormatter emits "$143.88" without NBSP.
+    // en_US emits "$143.88" with no NBSP, so one assertion suffices here.
     $response->assertSeeText('Cancel this');
     $response->assertSee('$143.88');
 });

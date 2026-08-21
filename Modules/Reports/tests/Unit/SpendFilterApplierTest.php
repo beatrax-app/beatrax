@@ -11,16 +11,12 @@ use Modules\Ledger\Models\Category;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Internal\Aggregation\AccountSpendQuery;
 use Modules\Reports\Internal\Aggregation\SpendQueryFilters;
-use Modules\Reports\Public\Dto\ReportResultRow;
+use Modules\Reports\Internal\Dto\ReportResultRow;
 
 uses(RefreshDatabase::class);
 
-/*
- * Exercises SpendFilterApplier — the shared account/category/counterparty/
- * amount/direction predicate the single-table dimension queries delegate to.
- * Driven through AccountSpendQuery (its host) so each predicate is asserted
- * against a real query rather than a mock. Helpers prefixed sfa_.
- */
+// Driven through AccountSpendQuery, one of its hosts, so every predicate is
+// asserted against a real query rather than a mock.
 
 function sfaUser(): User
 {

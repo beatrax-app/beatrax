@@ -17,13 +17,6 @@ use Modules\Ledger\Public\Services\PeriodQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * Wave 0 RED stub for Req 9 (13.2-VALIDATION.md): live-recompute rollover is
- * idempotent under re-import/edit/split -- carryover is never a stored
- * snapshot. CarryoverQuery (Plan 03) does not exist yet -- expected to fail
- * on the missing class, never a parse error.
- */
-
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'idempotent-'.bin2hex(random_bytes(4)),
@@ -32,11 +25,9 @@ beforeEach(function (): void {
     ]);
     $this->actingAs($this->user);
 
-    // Req 9 exercises CarryoverQuery's genesis→target fold, which returns an
-    // all-zero result for a pre-cutover user (null envelope_activated_at).
-    // Stamp the current period as the activation month so this test's own data
-    // stays inside the fold without depending on the Plan 06 cutover migration
-    // — mirrors CarryoverQueryTest / EnvelopeMoveTest.
+    // CarryoverQuery returns all zeros for a null `envelope_activated_at`, so
+    // stamping the current period as the activation month keeps this file's
+    // data inside the fold without depending on the cutover migration.
     DB::table('users')->where('id', $this->user->id)->update([
         'envelope_activated_at' => CarbonImmutable::now()->startOfMonth(),
     ]);
@@ -67,7 +58,7 @@ beforeEach(function (): void {
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->period->start, 40000);
 });
 
-it('leaves every envelope balance identical when the fold is recomputed over unchanged data (Req 9)', function (): void {
+it('leaves every envelope balance identical when the fold is recomputed over unchanged data', function (): void {
     $this->tx = Transaction::create([
         'user_id' => $this->user->id,
         'account_id' => $this->account->id,

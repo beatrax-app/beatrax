@@ -14,16 +14,12 @@ use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\BaseCurrency;
 
 /**
- * @link ../../../../.docs/features/anomaly/architecture.md
+ * @link ../../../../.docs/features/anomaly/detector-maths.md
  */
 final readonly class LargeVsTypicalDetector
 {
     use CoercesScalars;
 
-    // The value-scaled MAD floor is this fraction of the sample median
-    // magnitude — the companion to RobustStatistics::MAD_FLOOR_MINOR, so a
-    // high-value merchant's near-constant history floors at 1% of its typical
-    // charge rather than the flat absolute minor-unit floor.
     private const float MAD_FLOOR_MEDIAN_FRACTION = 0.01;
 
     public function __construct(
@@ -48,8 +44,8 @@ final readonly class LargeVsTypicalDetector
         }
 
         $direction = Direction::fromTransactionType(is_string($txn['type'] ?? null) ? $txn['type'] : TransactionType::Expense->value)->value;
-        $counterpartyId = self::toIntOrNull($txn['counterparty_id'] ?? null);
-        $categoryId = self::toIntOrNull($txn['category_id'] ?? null);
+        $counterpartyId = self::toPositiveIntOrNull($txn['counterparty_id'] ?? null);
+        $categoryId = self::toPositiveIntOrNull($txn['category_id'] ?? null);
 
         $context = new LargeSampleContext(
             user: $user,
@@ -59,8 +55,6 @@ final readonly class LargeVsTypicalDetector
             excludeId: self::toInt($txn['id'] ?? 0),
         );
 
-        // Per-counterparty sample in settled minor units, same direction,
-        // same settled currency, within the rolling window.
         $counterpartySample = $counterpartyId === null ? [] : $this->sample($context, 'counterparty_id', $counterpartyId);
 
         if (count($counterpartySample) >= RobustStatistics::THIN_HISTORY_CUTOFF) {
@@ -88,9 +82,6 @@ final readonly class LargeVsTypicalDetector
         ];
     }
 
-    // Per-category fallback: consulted only when the counterparty history is
-    // too thin, and it trips on a charge above the category p95 for the same
-    // direction and window.
     /**
      * @return array{baseline_amount_minor: int, latest_amount_minor: int, currency: string}|null
      */
@@ -102,9 +93,6 @@ final readonly class LargeVsTypicalDetector
 
         $categorySample = $this->sample($context, 'category_id', $categoryId);
 
-        // Tie-inclusive boundary via exceedsPercentile: a charge EQUAL to the
-        // category p95 fires, so a repeat of the largest-ever charge is not a
-        // silent false negative.
         if (count($categorySample) < RobustStatistics::THIN_HISTORY_CUTOFF
             || ! RobustStatistics::exceedsPercentile($absMinor, $categorySample, RobustStatistics::CATEGORY_PERCENTILE)) {
             return null;
@@ -141,10 +129,6 @@ final readonly class LargeVsTypicalDetector
         return $sample;
     }
 
-    // The larger of the hard MAD_FLOOR_MINOR and 1% of the sample median
-    // magnitude, so a high-value merchant's near-constant history does not
-    // trip on a tiny absolute deviation; cheap merchants get the flat
-    // floor, larger merchants get a value-scaled one.
     /**
      * @param  list<int>  $sample
      */
@@ -155,15 +139,5 @@ final readonly class LargeVsTypicalDetector
         $floor = max((float) RobustStatistics::MAD_FLOOR_MINOR, $median * self::MAD_FLOOR_MEDIAN_FRACTION);
 
         return (int) $floor;
-    }
-
-    private static function toIntOrNull(mixed $value): ?int
-    {
-        if (! is_numeric($value)) {
-            return null;
-        }
-        $int = (int) $value;
-
-        return $int > 0 ? $int : null;
     }
 }

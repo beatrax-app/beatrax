@@ -18,7 +18,7 @@
             default => $kind,
         };
     };
-    $fmt = static fn ($money) => $money->format($money->currency() === 'EUR' ? 'nl_NL' : 'en_US');
+    $fmt = static fn ($money) => $money->format();
 @endphp
 
 <div class="mx-auto max-w-3xl px-4 py-10 sm:py-12">
@@ -44,12 +44,11 @@
     </header>
 
     @if (count($settlements) === 0)
-        <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700" data-testid="chains-index-empty">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('chains::index.empty_heading') }}</h2>
-            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                {{ Lang::get('chains::index.empty_body') }}
-            </p>
-        </div>
+        <x-core::empty-state
+            data-testid="chains-index-empty"
+            :heading="Lang::get('chains::index.empty_heading')"
+            :body="Lang::get('chains::index.empty_body')"
+        />
     @else
         <ul class="space-y-4" data-testid="chains-index-list">
             @foreach ($settlements as $settlement)
@@ -157,6 +156,7 @@
                             >{{ $fmt($settlement->legTotal) }}</span>
                         </p>
                         <span
+                            role="img"
                             class="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 font-medium {{ $tierClasses }}"
                             aria-label="{{ Lang::get('chains::index.state_aria', ['state' => $settlement->state]) }}"
                         >{{ ucfirst($settlement->state) }}</span>

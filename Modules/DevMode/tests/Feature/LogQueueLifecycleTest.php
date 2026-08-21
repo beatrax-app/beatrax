@@ -10,23 +10,6 @@ use Modules\DevMode\Internal\Listeners\LogQueueLifecycle;
 use Psr\Log\AbstractLogger;
 use Psr\Log\LoggerInterface;
 
-/*
- * LogQueueLifecycle surfaces queue lifecycle to the Laravel log so
- * /dev/logs shows completed and failed jobs (the database driver +
- * Horizon both delete successful rows from the `jobs` table, so the
- * queue inspector cannot show them).
- *
- * Coverage:
- *
- *   1. JobProcessed emits `queue.processed` at INFO with the stable
- *      context keys (job, queue, connection, attempts, uuid).
- *   2. JobFailed emits `queue.failed` at WARNING with the same keys
- *      plus a stringified `exception` message.
- *   3. The DevModeServiceProvider wires both events to the listener,
- *      so dispatching a real Job{Processed,Failed} event through the
- *      container's Dispatcher produces a log record.
- */
-
 final class RecordingLogger extends AbstractLogger
 {
     /** @var list<array{level: string, message: string, context: array<string, mixed>}> */
@@ -69,10 +52,7 @@ final class FakeJob implements Job
         return '{}';
     }
 
-    public function fire()
-    {
-        // no-op
-    }
+    public function fire() {}
 
     public function payload()
     {
@@ -84,10 +64,7 @@ final class FakeJob implements Job
         return $this->name;
     }
 
-    public function release($delay = 0)
-    {
-        // no-op
-    }
+    public function release($delay = 0) {}
 
     public function isReleased()
     {
@@ -99,10 +76,7 @@ final class FakeJob implements Job
         return false;
     }
 
-    public function delete()
-    {
-        // no-op
-    }
+    public function delete() {}
 
     public function isDeletedOrReleased()
     {
@@ -119,15 +93,9 @@ final class FakeJob implements Job
         return false;
     }
 
-    public function markAsFailed()
-    {
-        // no-op
-    }
+    public function markAsFailed() {}
 
-    public function fail($e = null)
-    {
-        // no-op
-    }
+    public function fail($e = null) {}
 
     public function maxTries()
     {

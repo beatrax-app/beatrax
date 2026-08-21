@@ -7,27 +7,6 @@ use Illuminate\Database\DatabaseManager;
 use Modules\DevMode\Public\Contracts\AuditWriter;
 use Modules\DevMode\Public\Dto\CommandRunAudit;
 
-/*
- * SpatieAuditWriter eager-write + finalize-update round-trip.
- *
- * CommandSpawner now writes an "eager" audit row at spawn time with
- * exit_code=null and finished_at=null. FinalizeRunAudit locates that
- * row by `properties.run_id` and updates it in place — the audit
- * table never has two rows for one run.
- *
- * Coverage:
- *
- *   1. recordCommandRun(runId: X) writes a row whose properties
- *      contains run_id=X.
- *   2. finalizeCommandRun(runId: X, ...) finds and updates the same
- *      row (no second row created).
- *   3. finalizeCommandRun returns false when no row with the given
- *      run_id exists.
- *   4. The cancelled flag merges __cancelled=true into properties.args
- *      so the runner page's status mapping treats the row as
- *      cancelled.
- */
-
 function startedAt(): CarbonImmutable
 {
     return CarbonImmutable::parse('2026-05-28T10:00:00+00:00');

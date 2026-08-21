@@ -4,22 +4,15 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Modules\Chains\Internal\Exceptions\ChainLinkRequiresConcretePartnerException;
 use Modules\Chains\Models\ChainLink;
 use Modules\Chains\Public\Actions\ConfirmChainLink;
 use Modules\Chains\Public\Actions\RejectChainLink;
-use Modules\Chains\Public\Exceptions\ChainLinkRequiresConcretePartnerException;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
-
-/*
- * RejectChainLink Public action — per-pair only (D-89). Sets state to
- * 'rejected' and leaves the signature counter neutral: a rejected row
- * does NOT count toward the auto-promotion threshold, and does NOT
- * cause same-signature siblings to be demoted.
- */
 
 function rclUser(string $username): User
 {
@@ -133,7 +126,6 @@ it('leaves the signature counter neutral — does NOT demote same-signature conf
         rclLink($this->db, $this->user, (int) $f->id, (int) $t->id, 'confirmed', $signature);
     }
 
-    // A candidate of the same signature.
     $fc = rclTx($this->user, $this->paypal, $this->run, -400, 'expense', 's4', 4);
     $tc = rclTx($this->user, $this->asn, $this->run, 400, 'transfer_in', 's4b', 14);
     $rejectId = rclLink($this->db, $this->user, (int) $fc->id, (int) $tc->id, 'candidate', $signature);
@@ -171,9 +163,8 @@ it('does NOT trigger auto-promotion via rejection (per-pair only)', function ():
     $still = ChainLink::query()->findOrFail($stillCandidateId);
     expect($still->state)->toBe('candidate');
 
-    // Confirming THE OTHER candidate now (signature confirmed count rises
-    // from 2 to 3) DOES auto-promote (this proves the rejection itself
-    // didn't shift the threshold either direction).
+    // Confirming the other candidate lifts the count from 2 to 3 and DOES
+    // auto-promote, proving the rejection shifted the threshold neither way.
     /** @var ConfirmChainLink $confirm */
     $confirm = $this->app->make(ConfirmChainLink::class);
     $confirm($stillCandidateId, $this->user);

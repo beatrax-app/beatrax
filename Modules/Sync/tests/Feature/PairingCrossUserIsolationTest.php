@@ -10,15 +10,8 @@ use Modules\Sync\Internal\Pairing\PairingTokenService;
 
 uses(RefreshDatabase::class);
 
-/*
- * PairingCrossUserIsolationTest — cross-user isolation (STRIDE T-10-02 / T-12-03
- * extension). A pairing token issued for user A must NOT be consumable by
- * user B's session.
- *
- * RED until Plan 02 ships PairingTokenService with the user_id scope on accept().
- * References the planned FQCN Modules\Sync\Internal\Pairing\PairingTokenService.
- * Failure is "class not found".
- */
+// A pairing token is what admits a new device to an account, so one issued for
+// a household member must not be consumable from another member's session.
 
 function isolationUser(string $username): User
 {
@@ -45,11 +38,8 @@ it('rejects a pairing token for user A when consumed under user B', function ():
     /** @var PairingTokenService $service */
     $service = $this->app->make(PairingTokenService::class);
 
-    // User A issues a token.
     $token = $service->issue((int) $userA->id, 'device-a', str_repeat('a', 64), str_repeat('b', 64));
 
-    // User B attempts to accept user A's token — must be rejected by the
-    // user_id scope on accept().
     $result = $service->accept($token, (int) $userB->id, 'device-b', str_repeat('c', 64), str_repeat('d', 64));
 
     expect($result)->toBeFalse();
@@ -57,7 +47,6 @@ it('rejects a pairing token for user A when consumed under user B', function ():
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
 
-    // No device_registry row should have been created for user B.
     $leaked = $db->connection()->table('device_registry')
         ->where('user_id', $userB->id)
         ->count();

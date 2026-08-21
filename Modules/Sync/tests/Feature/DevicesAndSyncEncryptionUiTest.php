@@ -7,21 +7,10 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
-use Modules\Sync\Internal\Http\Livewire\DevicesAndSyncSettingsSection;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
+use Modules\Sync\Public\Http\Livewire\DevicesAndSyncSettingsSection;
 
 uses(RefreshDatabase::class);
-
-/*
- * DevicesAndSyncEncryptionUiTest — 14-UI-SPEC State Display Matrix regression
- * guard (Phase 14 Plan 09): pins the D-07 encryption-status row states, the
- * honest enable/revocation copy, and the device-remove trio's DB effects.
- *
- * The two 14-VALIDATION.md manual-only checks (honest enable-encryption copy,
- * honest revocation copy) are UAT — this test pins their presence/absence in
- * RENDERED output as an automated regression guard, per the plan's own
- * acceptance criteria.
- */
 
 function encryptionUiUser(string $username = 'encryption-ui-user'): User
 {
@@ -67,7 +56,7 @@ it('(b) single-device (sync off), app-lock set, encryption off: shows the blue o
         ->assertSee('Enable at-rest encryption');
 });
 
-it('(b2) synced, encryption off: shows the transient mandatory "Securing your data…" state with NO CTA and NO decline (D-07)', function (): void {
+it('(b2) synced, encryption off: shows the transient mandatory "Securing your data…" state with NO CTA and NO decline', function (): void {
     $user = encryptionUiUser('encryption-ui-mandatory');
     $this->actingAs($user);
 
@@ -116,7 +105,7 @@ it('the enable-encryption confirm step discloses amounts + search-index plaintex
         ->assertDontSee('your data is now safe from that device');
 });
 
-it('(d) startRemove opens the revocation modal for a non-self device with the honest D-06 copy', function (): void {
+it('(d) startRemove opens the revocation modal for a non-self device with copy that promises key rotation, never a remote wipe', function (): void {
     $user = encryptionUiUser('encryption-ui-remove-open');
     $this->actingAs($user);
 
@@ -157,9 +146,8 @@ it('(e) removeDevice revokes device_registry trust (rotateAndRevoke) and the row
     /** @var Session $session */
     $session = $this->app->make(Session::class);
 
-    // The acting/self device needs a REAL on-disk identity: removeDevice() ->
-    // rotateAndRevoke() now loads it to SIGN the fan-out wraps. generateAndPersist()
-    // inserts the is_self=1 self-row that stands in for 'self-device-2' here.
+    // The acting device needs a real on-disk identity: removal rotates, and the
+    // rotation loads it to sign the fan-out wraps.
     /** @var DeviceIdentityService $identityService */
     $identityService = $this->app->make(DeviceIdentityService::class);
     $self = $identityService->generateAndPersist((int) $user->id, $session);
@@ -179,9 +167,8 @@ it('(e) removeDevice revokes device_registry trust (rotateAndRevoke) and the row
         ->assertSee('removed-badge-'.$peerId, escape: false)
         ->assertSee('Removed');
 
-    // The core CRYPT-02 security property: rotateAndRevoke() clears
-    // confirmed_at, closing the Ed25519 trust gate DeviceRegistryService's
-    // confirmed-device queries already filter on.
+    // Clearing confirmed_at is what actually closes the trust gate: every
+    // confirmed-device query already filters on it.
     $confirmedAt = $db->connection()->table('device_registry')->where('id', $peerId)->value('confirmed_at');
     expect($confirmedAt)->toBeNull();
 });

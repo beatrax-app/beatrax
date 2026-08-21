@@ -400,8 +400,12 @@ the per-inbox state machine's `rate_limited`/`error` transitions ride
 the same curve.
 
 **Provider dispatch:** Gmail walks `users.messages.list` +
-`users.messages.get?format=raw`, capturing the historyId baseline
-cursor from per-page metadata. Microsoft walks `/me/messages` with an
+`users.messages.get?format=raw`. `users.messages.list` carries no
+historyId of its own, so the baseline cursor comes from a single
+`users.getProfile` call issued *before* the walk — a message arriving
+mid-walk then sits above the baseline and the first incremental tick
+replays it, where a post-walk read would skip it permanently.
+Microsoft walks `/me/messages` with an
 OData `$filter` over the sender allow-list + a `receivedDateTime`
 lower bound; after the walk completes, a single
 `/me/mailFolders/inbox/messages/delta` baseline call captures the
@@ -606,8 +610,10 @@ endpoint triggers a date-bounded fallback walk (`listSenderMessages`/
 `FALLBACK_WALK_DAYS` (7) plus a hard `FALLBACK_WALK_HARD_CAP` (500)
 defensive message ceiling so a misbehaving provider can't exhaust the
 heap even if the 7-day window cap somehow fails to bound the result
-set. After the fallback walk the cursor is re-baselined: Gmail
-captures the highest historyId seen across the page-walk's metadata;
+set. After the fallback walk the cursor is re-baselined for Microsoft
+only: the Gmail walk reads `users.messages.list`, which carries no
+historyId, so the stored cursor is left untouched and the next tick
+re-attempts `users.history.list` against it.
 Microsoft issues a fresh `deltaPage(null, $walkStartedAt)` baseline
 call anchored to the pre-walk timestamp — the same pre-walk-timestamp
 pattern `BackfillInboxJob` uses to close the gap-window race where
@@ -632,9 +638,11 @@ happened to share a prefix with `inboxId`.
 **Two early-exit paths skip the provider call entirely:** a
 `needs_reauth` inbox exits immediately on the first status read (no
 provider API call to burn refresh attempts against a known-revoked
-grant), and an empty cursor (no backfill has set
-`last_history_id`/`last_delta_link` yet) transitions to idle and exits
-— the next hour's tick after backfill completes picks up from there.
+grant), and an empty cursor transitions to idle and exits. For Gmail
+that exit first adopts a `users.getProfile` baseline, so an inbox
+backfilled before the baseline call existed starts delivering deltas
+on the tick after next instead of staying idle forever; Microsoft's
+`last_delta_link` waits for the backfill to write it.
 A third case collapses the contention where a backfill is mid-flight:
 the state machine rejects `backfilling → scanning`, so the job detects
 that upfront via `InvalidStateTransitionException` and skips rather
@@ -956,9 +964,9 @@ truth for the id itself stays the unique key on
 
 Public surface so the matcher consumer in the Receipts module can
 resolve `.eml` paths for messages persisted by the EmailScan fetcher
-without crossing the Internal namespace boundary enforced by the
-`Modules\EmailScan\Internal is only used inside Modules\EmailScan` arch
-invariant.
+without crossing the Internal namespace boundary enforced by
+`App\PhpStan\Rules\BoundaryRule` and the `pinnedCrossModuleInternalImports`
+arch invariant.
 
 ## `OAuthSecretsRepository`
 

@@ -6,10 +6,8 @@ namespace Modules\DevMode\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-// `id` is the stable client-side identifier Fuse.js uses for keying;
-// `keywords` extend the Fuse.js scoring surface beyond the label (e.g.
-// ["receipts", "imports"] for the "Email" view). The curated list of
-// entries lives in NavigationRegistryImpl.
+// `keywords` widen the Fuse.js scoring surface past the label — the way
+// "receipts" or "imports" reaches the "Email" view.
 final class NavigationEntry extends Data
 {
     /**

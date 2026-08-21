@@ -11,15 +11,11 @@ use Illuminate\Validation\ValidationException;
 use Modules\Auth\Public\Events\AppLockPassphraseChanged;
 use Modules\Core\Public\Contracts\Clock;
 
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 final class AppLockProvisioner
 {
-    // The app-lock PIN's only entropy is its length, so a short one is offline-
-    // brute-forceable from a stolen database (F3-R36). Enforced HERE so no
-    // caller — desktop UI, the mobile gateway, or a future one — can provision a
-    // data key below the floor, whatever the UI-layer validators do.
+    // A PIN's only entropy is its length, so a short one is offline-brute-
+    // forceable from a stolen database. Enforced here, below every UI-layer
+    // validator, so no caller can provision a data key beneath the floor.
     private const MIN_PIN_LENGTH = 6;
 
     public function __construct(
@@ -33,9 +29,6 @@ final class AppLockProvisioner
         private readonly Dispatcher $events,
     ) {}
 
-    // Refuses a PIN below the length floor. Called by every provisioning entry
-    // point (enable / changePin / rewrapForNewPin) so the floor holds whatever
-    // the caller is.
     private function assertPinMeetsFloor(string $pin): void
     {
         if (mb_strlen($pin) < self::MIN_PIN_LENGTH) {
@@ -50,10 +43,8 @@ final class AppLockProvisioner
      */
     public function enable(int $userId, string $pin, string $accountPassword, ?Session $session = null): void
     {
-        // Defense-in-depth: every known caller already validates its input
-        // before calling here, but a caller-level gap must never mint an
-        // app-lock key from an empty/weak PIN or empty password -- that key goes
-        // on to wrap the keyring holding delivered device epochs.
+        // Defence in depth: a caller-level gap must never mint a key from a
+        // weak PIN, because that key wraps the keyring of delivered epochs.
         if ($accountPassword === '') {
             throw ValidationException::withMessages([
                 'pin' => ['A PIN and account password are required to enable the app lock.'],
@@ -62,10 +53,8 @@ final class AppLockProvisioner
 
         $this->assertPinMeetsFloor($pin);
 
-        // Generates a NEW data key, which invalidates every existing
-        // per-device biometric wrap (they hold the OLD key). Delete stale
-        // credentials so a leftover enrollment from a previous
-        // enable/disable cycle can never unlock with divergent key material.
+        // The new data key invalidates every per-device biometric wrap, so a
+        // leftover enrollment must not survive to unlock with old material.
         $this->biometricStore->deleteForUser($userId);
 
         $dataKey = random_bytes(SODIUM_CRYPTO_SECRETBOX_KEYBYTES);
@@ -81,8 +70,7 @@ final class AppLockProvisioner
 
         $pinHash = $this->pinHasher->hash($pin);
 
-        // updateOrInsert does not manage timestamps, so they are set
-        // explicitly: created_at only when inserting.
+        // updateOrInsert does not manage timestamps; created_at on insert only.
         $now = $this->clock->now()->toDateTimeString();
         $exists = $this->db->connection()
             ->table('user_app_lock_configs')
@@ -98,10 +86,8 @@ final class AppLockProvisioner
             'failed_attempts' => 0,
             'locked_until' => null,
             'last_activity_at' => $this->clock->now(),
-            // enable() mints a NEW data key, so any prior cold-start enclave
-            // blob (which wraps the OLD key) is stale. Reset the flag so the
-            // mobile recover path refuses it (the dead blob is overwritten
-            // on the next enroll).
+            // Any prior cold-start enclave blob wraps the old key. The flag is
+            // reset so the mobile recover path refuses the dead blob.
             'cold_start_biometric_enrolled' => false,
             'updated_at' => $now,
         ];
@@ -115,16 +101,14 @@ final class AppLockProvisioner
             $values,
         );
 
-        // The user just proved their PIN + account password, so an unlocked
-        // session with the key is the coherent post-enable state -- not a
-        // locked session with no key.
+        // The user just proved PIN and password, so the coherent post-enable
+        // state is unlocked with the key, not locked without it.
         if ($session !== null) {
             $this->lockState->unlock($session, $dataKey);
         }
 
-        // Zeroed last, after both wrap blobs and the session copy (if any)
-        // are written. When $session holds the key the buffer is shared, so
-        // this is best-effort only -- the session copy persists by design.
+        // Last, after both wraps and any session copy are written. The session
+        // shares this buffer, so zeroing is best-effort by design.
         sodium_memzero($dataKey);
     }
 
@@ -198,10 +182,8 @@ final class AppLockProvisioner
         $pinHash = self::stringColumn($row, 'pin_hash');
         $pinWrapped = self::stringColumn($row, 'pin_wrapped_key');
 
-        // A wrong PIN and unusable stored key material refuse together and
-        // look the same from outside. Telling them apart would say whether
-        // the PIN was right about an account whose blob happens to be
-        // corrupt, which is more than a caller needs to know.
+        // A wrong PIN and an unusable blob refuse identically: separating them
+        // would confirm a correct PIN against a corrupt account.
         if ($salt === null || $pinHash === null || $pinWrapped === null
             || ! $this->pinHasher->verify($currentPin, $pinHash)
         ) {
@@ -227,9 +209,7 @@ final class AppLockProvisioner
                 'pin_wrapped_key' => $newPinWrappedKey,
             ]);
 
-        // $dataKey is the same value before and after a plain PIN change
-        // (only its PIN-derived wrap changed above) -- see
-        // AppLockPassphraseChanged's own docblock for the two-argument shape.
+        // $dataKey is unchanged by a plain PIN change; only its wrap moved.
         $this->events->dispatch(new AppLockPassphraseChanged($userId, $dataKey, $dataKey));
 
         sodium_memzero($dataKey);
@@ -237,9 +217,6 @@ final class AppLockProvisioner
         return true;
     }
 
-    /**
-     * @link ../../../../.docs/features/auth/architecture.md
-     */
     public function primeSessionAfterLogin(int $userId, string $accountPassword, Session $session): void
     {
         $row = $this->db->connection()
@@ -273,9 +250,8 @@ final class AppLockProvisioner
         sodium_memzero($dataKey);
     }
 
-    // Side-effect-free: deliberately bypasses the failed-attempt backoff
-    // meter, which is scoped to lock-screen unlock attempts. Callers sit on
-    // an already-unlocked, authenticated settings surface.
+    // Bypasses the failed-attempt backoff meter on purpose: that is scoped to
+    // lock-screen attempts, and callers here are already unlocked.
     public function verifyPin(int $userId, string $pin): bool
     {
         $row = $this->db->connection()
@@ -321,17 +297,14 @@ final class AppLockProvisioner
                 'cold_start_biometric_enrolled' => false,
             ]);
 
-        // The wrapped data key is gone -- remove every biometric credential
-        // that wrapped it.
         $this->biometricStore->deleteForUser($userId);
 
         return true;
     }
 
-    // Derives the wrap key, unwraps with it and zeroes it on every path,
-    // including the failing one where the caller has nothing left to zero.
-    // Null when the blob will not unwrap — a wrong credential and a corrupt
-    // blob are deliberately the same answer.
+    // Zeroes the derived wrap key on every path, including the failing one
+    // where the caller has nothing left to zero. Null when the blob will not
+    // unwrap: a wrong credential and a corrupt blob answer the same.
     private function unwrapDataKey(string $credential, string $salt, string $wrapped): ?string
     {
         $wrapKey = $this->kdf->deriveWrapKey($credential, $salt);
@@ -341,9 +314,7 @@ final class AppLockProvisioner
         return $dataKey === false ? null : $dataKey;
     }
 
-    // Null when the row is absent or the column does not hold the string the
-    // schema promises. Both mean the same thing to every caller here, so
-    // they are asked once rather than guarded separately.
+    // Absent row and off-schema column mean the same to every caller here.
     private static function stringColumn(?object $row, string $column): ?string
     {
         if ($row === null) {

@@ -6,9 +6,6 @@ namespace Modules\Mobile\Internal\Identity;
 
 use Modules\Auth\Public\Events\AppLockPassphraseChanged;
 
-/**
- * @link ../../../../.docs/features/mobile/architecture.md
- */
 final class ClearColdStartVaultOnKeyRotation
 {
     public function __construct(

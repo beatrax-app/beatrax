@@ -8,18 +8,6 @@ use Modules\Import\Internal\Pipeline\Stages\PaymentTypeClassifierStage;
 use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
-/*
- * End-to-end coverage for the `PaymentTypeClassifierStage` against the
- * REAL container-tagged hinter set. Resolves the stage from the
- * Application container so the test exercises exactly the wiring that
- * ImportPipeline relies on at runtime.
- *
- * Dataset rows assert each ingestion path's authoritative verdict
- * (ASN CSV → Pin / Online / DirectDebit / Transfer; PayPal CSV →
- * Refund / Fee via the event-type manifest) plus the
- * `PaymentType::Unknown` fallback when every hinter declines.
- */
-
 beforeEach(function (): void {
     /** @var PaymentTypeClassifierStage $stage */
     $stage = $this->app->make(PaymentTypeClassifierStage::class);
@@ -33,9 +21,6 @@ beforeEach(function (): void {
 });
 
 /**
- * Build a CanonicalTransaction with sane defaults; the test overrides
- * description / sourceFormat / rawPayload per case.
- *
  * @param  array<int|string, mixed>|null  $rawPayload
  */
 function ptypeFeatureRow(string $description, string $sourceFormat, ?array $rawPayload = null): CanonicalTransaction
@@ -143,9 +128,8 @@ it('falls back to PaymentType::Unknown when no hinter recognises the row', funct
 });
 
 it('prefers the source-specific hinter over the description-keyword fallback when both fire', function (): void {
-    // "iDEAL" matches both AsnCsvPaymentTypeHinter (confidence 80) and
-    // DescriptionKeywordFallbackHinter (confidence 40). The
-    // source-specific verdict must win.
+    // "iDEAL" fires AsnCsvPaymentTypeHinter at confidence 80 and
+    // DescriptionKeywordFallbackHinter at 40.
     $tx = ptypeFeatureRow('iDEAL Bestelling', 'asn-csv');
 
     $resolved = $this->stage->run($tx, $this->user, 'asn-csv');

@@ -8,8 +8,6 @@ return [
     'error_enroll_failed' => 'Tavo įrenginys atsisakė išsaugoti raktą. Biometrinis atrakinimas negalimas.',
     'heading' => 'Programėlės užraktas',
 
-    // Nustatymuose lieka tik nuoroda; patys valdikliai yra
-    // sinchronizavimo ekrane adresu /sync#app-lock.
     'moved_help' => 'PIN kodas, automatinio užrakinimo laikas ir biometrinis atrakinimas yra šio įrenginio sinchronizavimo nustatymuose.',
     'moved_cta' => 'Atidaryti sinchronizavimą ir įrenginį',
 

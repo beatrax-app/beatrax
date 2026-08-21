@@ -20,24 +20,6 @@ use Modules\Recurring\Models\RecurringSeriesOccurrence;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for ChainAwareForecastRouter.
- *
- * Covers the four documented routing behaviours:
- *   - PayPal-funded ASN: a series whose occurrences carry a confirmed
- *     chain_link to an ASN funder transaction is rewritten onto the
- *     funder account.
- *   - PayPal-only (no chain link): contribution stays on the original
- *     account.
- *   - ICS bulk-iDEAL synthesis: a non-null nextSettlement injects a
- *     synthesised contribution on the funder account on the due date.
- *   - De-duplication: when a routed Phase 8 contribution overlaps
- *     (funder account + date) with the synthesised settlement, the
- *     synthesised one wins.
- *   - Pass-through: zero chain links + no next settlement leaves the
- *     contribution list unchanged.
- */
-
 function carfUser(string $username): User
 {
     return User::query()->create([
@@ -151,9 +133,6 @@ it('rewrites a PayPal series contribution onto the ASN funder via confirmed chai
     $paypal = carfAccount($this->user, 'paypal', 'paypal');
     $run = carfImportRun($this->user, str_repeat('a', 64));
 
-    // Funded charge (PayPal) + funder (ASN) txn pair. The chain_link's
-    // from_transaction_id is the PayPal charge; to_transaction_id is
-    // the ASN funder transaction.
     $funded = carfTxn($this->user, $paypal, $run, [
         'amount_minor' => -12000,
         'counterparty_name' => 'Netflix',
@@ -264,7 +243,6 @@ it('synthesises a next ICS bulk-iDEAL settlement contribution onto the funder AS
         'state' => 'open',
     ]);
 
-    // No existing contributions; the synthesised one is the only entry.
     $routed = carfRouter()->route([], $this->user);
 
     expect($routed)->toHaveCount(1);
@@ -290,11 +268,9 @@ it('de-duplicates a synthesised settlement against a chain-routed ICS series con
         'state' => 'open',
     ]);
 
-    // Wire up an ICS-card series with a confirmed chain link to the ASN
-    // funder — step 1 will rewrite this contribution onto the ASN
-    // account, where the synthesised settlement also lands. Step 3 dedup
-    // drops the rewritten contribution in favour of the authoritative
-    // synthesised settlement amount.
+    // The chain link is what puts this series on the ASN funder, the same
+    // account and date the synthesised settlement lands on — which is the
+    // collision the dedup has to resolve.
     $funded = carfTxn($this->user, $ics, $run, [
         'amount_minor' => -50000,
         'counterparty_name' => 'ICS Bulk',
@@ -336,9 +312,6 @@ it('de-duplicates a synthesised settlement against a chain-routed ICS series con
         'evidence' => json_encode(['signature_hash' => 'ics-bulk']),
     ]);
 
-    // The contribution starts on the ICS card (step 1 will rewrite it
-    // onto the ASN funder, where step 2 also places the synthesised
-    // settlement, where step 3 then dedups).
     $overlap = new ForecastContribution(
         date: CarbonImmutable::parse('2026-05-05'),
         pointMinor: -50000,
@@ -352,8 +325,6 @@ it('de-duplicates a synthesised settlement against a chain-routed ICS series con
 
     $routed = carfRouter()->route([$overlap], $this->user);
 
-    // Exactly one row remains; the synthesised contribution wins
-    // (seriesId 0, point exactly equal to settlement, low == high).
     expect($routed)->toHaveCount(1);
     expect($routed[0]->seriesId)->toBe(0);
     expect($routed[0]->pointMinor)->toBe(-50000);
@@ -377,11 +348,9 @@ it('preserves an unrelated ASN recurring series whose occurrence lands on the IC
         'state' => 'open',
     ]);
 
-    // An UNRELATED recurring series — a salary inflow on ASN with no
-    // chain link to the ICS card. It happens to project an occurrence
-    // on 2026-05-05, the same date the synthesised settlement lands on
-    // the ASN funder. The earlier dedup bug dropped this contribution
-    // wholesale; the corrected scoped dedup must preserve it.
+    // Unrelated to the card, but lands on 2026-05-05 like the synthesised
+    // settlement does. The earlier dedup keyed on (account, date) alone and
+    // dropped this inflow wholesale.
     $salarySeries = RecurringSeries::query()->create([
         'user_id' => $this->user->id,
         'cadence' => 'monthly',
@@ -408,8 +377,6 @@ it('preserves an unrelated ASN recurring series whose occurrence lands on the IC
 
     $routed = carfRouter()->route([$salaryInflow], $this->user);
 
-    // Both contributions survive: the salary inflow (untouched) AND
-    // the synthesised ICS settlement.
     expect($routed)->toHaveCount(2);
 
     $bySeries = [];

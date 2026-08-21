@@ -12,13 +12,10 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\Fmt;
+use Modules\Ledger\Public\Services\TransactionCursor;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
-// Cursor pagination is a (posted_at, id) tuple compared via
-// WHERE (posted_at, id) < (?, ?). The pair (rather than id alone) is
-// required because rows inserted out of chronological order share
-// posted_at values, and a single-column cursor would silently drop them.
 final class UncategorizedTriageQuery
 {
     use CoercesScalars;
@@ -31,9 +28,7 @@ final class UncategorizedTriageQuery
 
     public function for(User $user, int $limit = 50, ?int $cursorId = null, ?string $cursorPostedAt = null): TriageBatch
     {
-        // Left-join counterparties so each row carries its resolved slug
-        // in a single query (no N+1 expansion). A NULL counterparty_id
-        // yields a NULL slug and the Blade falls back to plain text.
+        // Left-joined so each row carries its slug without an N+1.
         $query = $this->db->connection()
             ->table('transactions')
             ->leftJoin('counterparties', 'transactions.counterparty_id', '=', 'counterparties.id')
@@ -53,13 +48,7 @@ final class UncategorizedTriageQuery
             ])
             ->limit($limit + 1);
 
-        if ($cursorId !== null) {
-            if ($cursorPostedAt === null) {
-                $query->where('transactions.id', '<', $cursorId);
-            } else {
-                $query->whereRaw('(transactions.posted_at, transactions.id) < (?, ?)', [$cursorPostedAt, $cursorId]);
-            }
-        }
+        TransactionCursor::apply($query, $cursorPostedAt, $cursorId);
 
         $rows = $query->get();
         $hasMore = $rows->count() > $limit;
@@ -85,8 +74,6 @@ final class UncategorizedTriageQuery
     private function mapRow(stdClass $row, int $userId): TriageRow
     {
         $bookedAt = CarbonImmutable::parse(self::toString($row->booked_at));
-        // Read-side decrypt — pass-through no-op when encryption is not
-        // enabled for this user.
         $counterpartyName = $row->counterparty_name === null
             ? null
             : $this->codec->decryptValue('transactions', 'counterparty_name', self::toString($row->counterparty_name), $userId, ($this->session)())['value'];
@@ -96,9 +83,8 @@ final class UncategorizedTriageQuery
         $counterpartySlug = property_exists($row, 'counterparty_slug') && $row->counterparty_slug !== null
             ? self::toString($row->counterparty_slug)
             : null;
-        // An empty slug yields no profile-page target; defensive-cast
-        // it to null so the Blade falls back to plain text instead of
-        // emitting a /counterparties/ dead-end URL.
+        // An empty slug would emit a dead-end /counterparties/ URL; null makes
+        // the Blade fall back to plain text.
         if ($counterpartySlug === '') {
             $counterpartySlug = null;
         }

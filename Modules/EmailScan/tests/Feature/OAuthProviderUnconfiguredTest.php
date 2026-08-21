@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\EmailScan\Internal\Exceptions\InboxNotConfiguredException;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
-use Modules\EmailScan\Public\Exceptions\InboxNotConfiguredException;
 
 uses(RefreshDatabase::class);
 
@@ -21,16 +21,9 @@ beforeEach(function (): void {
     ]));
 });
 
-/*
- * Both OAuth providers need a client the operator registered through the
- * wizard before they can talk to anyone. Without one they refuse with a
- * message naming the wizard, rather than constructing a provider around nulls
- * and failing somewhere inside the league library where the cause is no longer
- * obvious.
- *
- * Nothing configures a client here, which is the whole setup: a fresh install
- * that has not been through the wizard is exactly this state.
- */
+// The refusal has to name the wizard rather than build a provider around nulls
+// and fail deep inside the league library. Nothing configures a client here:
+// that absence is the whole fixture.
 it('refuses to refresh a token before the OAuth client is configured', function (string $class): void {
     $provider = $this->app->make($class);
 

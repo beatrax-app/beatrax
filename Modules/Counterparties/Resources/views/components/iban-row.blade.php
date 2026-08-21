@@ -25,6 +25,7 @@
 >
     <span class="iban-label">{{ Lang::get('counterparties::components.iban_row.label') }}</span>
     <span
+        role="img"
         class="iban-hidden"
         x-show="!revealed"
         aria-label="{{ Lang::get('counterparties::components.iban_row.hidden_aria') }}"

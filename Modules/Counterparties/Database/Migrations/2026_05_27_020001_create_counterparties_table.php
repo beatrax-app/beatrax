@@ -5,42 +5,6 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Creates the counterparties table — one row per (user_id, slug)
- * materialises one entity the user transacts with (merchant, personal
- * P2P, bank, government, or unresolved unknown).
- *
- * Schema:
- *
- *   - id, user_id (FK to users with cascade delete) — per-user scope.
- *   - type (16) — one of merchant|personal|bank|government|
- *     self_account|unknown. The allowed set is enforced via paired
- *     BEFORE INSERT / BEFORE UPDATE OF type triggers; an application-
- *     layer typo fails loud at the database boundary rather than
- *     landing a silently-broken row.
- *   - slug (128) — URL-routing key, per-user-unique. For personal
- *     counterparties the slug is the kebab-cased display name only;
- *     the IBAN never leaks into this column.
- *   - display_name — the canonical name rendered in lists, profile
- *     pages, and transaction rows.
- *   - iban (64, nullable) — preserved when the source transaction
- *     carried one. For personal rows this column is populated but
- *     never echoed into the slug or any URL.
- *   - merchant_name (nullable) — set for type=merchant rows so the
- *     Categorization + Recurring modules can read the merchant string
- *     directly without re-running MerchantNameResolver.
- *   - metadata (JSON, nullable) — per-type opaque payload (e.g. the
- *     bank-fee subcategory flag for description-keyword-fallback
- *     rows; the institution-IBAN provenance for known-counterparty
- *     bridge rows).
- *   - timestamps.
- *
- * UNIQUE (user_id, slug) blocks duplicate slug insertion at the
- * database layer; the resolver's collision-suffixing algorithm
- * (`bol`, `bol-2`, `bol-3`, …) depends on this index for correctness.
- * Index (user_id, type) is the hot-path the index page's type-filter
- * chip query hits.
- */
 return new class extends ModuleMigration
 {
     public function up(): void
@@ -49,6 +13,9 @@ return new class extends ModuleMigration
             $table->id();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->string('type', 16);
+            // The slug is the kebab-cased display name and nothing else: it
+            // ends up in a URL, so a personal counterparty's IBAN must not
+            // reach it.
             $table->string('slug', 128);
             $table->string('display_name');
             $table->string('iban', 64)->nullable();
@@ -56,6 +23,9 @@ return new class extends ModuleMigration
             $table->json('metadata')->nullable();
             $table->timestamps();
 
+            // The resolver picks its `-2`/`-3` suffix by querying for a free
+            // slug, so this UNIQUE is what makes two concurrent resolves of
+            // the same name safe.
             $table->unique(['user_id', 'slug']);
             $table->index(['user_id', 'type']);
         });

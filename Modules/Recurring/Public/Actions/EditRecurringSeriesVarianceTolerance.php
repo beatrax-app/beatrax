@@ -11,9 +11,6 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Recurring\Models\RecurringSeries;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
 final class EditRecurringSeriesVarianceTolerance
 {
     /** @var list<int> */

@@ -17,14 +17,6 @@ use Modules\Pots\Models\Pot;
 
 uses(RefreshDatabase::class);
 
-/*
- * A goal's contributed figure comes from what the user explicitly attributed
- * to it, not from whatever landed in an account. These tests pin the
- * attribution semantics that the account-wide sum could not express:
- * two goals over one account diverge, and an attribution counts regardless
- * of when the transaction posted.
- */
-
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'wessel',

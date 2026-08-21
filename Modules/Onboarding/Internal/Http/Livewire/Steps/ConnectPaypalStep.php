@@ -12,6 +12,7 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\SafeTrace;
 use Modules\Core\Public\Support\UploadLimits;
 use Modules\Import\Public\Actions\EnsurePaypalAccountAction;
@@ -21,9 +22,6 @@ use Modules\Onboarding\Models\WizardProgress;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../../../.docs/features/onboarding/architecture.md
- */
 final class ConnectPaypalStep extends Component
 {
     use WithFileUploads;
@@ -32,8 +30,6 @@ final class ConnectPaypalStep extends Component
 
     public ?TemporaryUploadedFile $activityCsv = null;
 
-    // Cleared on every fresh submit so a retry does not keep the stale
-    // message.
     public ?string $uploadError = null;
 
     /**
@@ -74,8 +70,9 @@ final class ConnectPaypalStep extends Component
 
         $user = $currentUser->user();
 
-        // Account-before-preview ordering is load-bearing here — see
-        // architecture.md for why inverting it would poison the preview.
+        // Before the preview, never after: the pipeline tags every row
+        // 'error' while AccountResolver still returns UnknownAccount, and
+        // that all-error preview is what gets cached.
         ($ensurePaypalAccount)($user);
 
         $tmp = $this->activityCsv->getRealPath();
@@ -87,8 +84,7 @@ final class ConnectPaypalStep extends Component
             $logger->error('ConnectPaypalStep: import preview failed.', [
                 'source_format' => $this->selectedFormat,
                 'filename' => $originalFilename,
-                'exception_class' => $e::class,
-                'exception_message' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
                 'exception_trace' => SafeTrace::cap($e, $app->basePath()),
             ]);
             $this->uploadError = Lang::get('onboarding::connect_paypal.errors.unreadable');
@@ -133,10 +129,6 @@ final class ConnectPaypalStep extends Component
         return $views->make('onboarding::livewire.steps.connect-paypal-step');
     }
 
-    // Returns the first error-row message only when EVERY row is an error
-    // AND there are no unknown-IBAN naming prompts — see architecture.md
-    // for why this gate exists and why a mixed error/committable preview
-    // does not trip it.
     private function fatalParseMessage(ImportPreviewResult $result): ?string
     {
         if ($result->rows === [] || $result->accountsToName !== []) {
@@ -156,8 +148,7 @@ final class ConnectPaypalStep extends Component
         return $firstErrorMessage ?? Lang::get('onboarding::connect_paypal.errors.unreadable');
     }
 
-    // Strips path-traversal characters and locks the extension to .csv,
-    // the only format the PayPal Activity export ships in.
+    // Strips path-traversal characters before the name reaches a filesystem path.
     private function sanitiseFilename(string $original): string
     {
         $stem = pathinfo($original, PATHINFO_FILENAME);

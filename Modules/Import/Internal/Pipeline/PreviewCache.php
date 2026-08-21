@@ -7,15 +7,12 @@ namespace Modules\Import\Internal\Pipeline;
 use Illuminate\Contracts\Cache\Repository;
 use JsonException;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Import\Internal\Exceptions\PreviewCacheCorruptedException;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Dto\PendingEnrichment;
 use Modules\Import\Public\Dto\PreviewRowDto;
-use Modules\Import\Public\Exceptions\PreviewCacheCorruptedException;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
-/**
- * @link ../../../../.docs/features/import/architecture.md#preview-cache
- */
 final class PreviewCache
 {
     private const int TTL_MINUTES = 30;
@@ -62,9 +59,8 @@ final class PreviewCache
         );
     }
 
-    // Malformed-but-present payload throws PreviewCacheCorruptedException
-    // so the wizard can distinguish "preview window elapsed" from "the
-    // cache backend lost the shape" (a regression worth logging).
+    // A malformed-but-present payload throws rather than reading as a miss,
+    // so an expired preview stays distinguishable from a cache regression.
     public function getPreview(int $importRunId): ?ImportPreviewResult
     {
         $key = $this->previewKey($importRunId);
@@ -80,9 +76,8 @@ final class PreviewCache
         return ImportPreviewResult::from($raw);
     }
 
-    // Callers must distinguish "missing" (null — confirm has nothing to
-    // replay, surface a re-upload prompt) from "empty list" (legitimate:
-    // every row was a duplicate).
+    // null means confirm has nothing to replay and the user needs a
+    // re-upload prompt; an empty list is a legitimate all-duplicates import.
     /**
      * @return list<CanonicalTransaction>|null
      */
@@ -146,9 +141,8 @@ final class PreviewCache
         $this->cache->forget($this->enrichmentsKey($importRunId));
     }
 
-    // Returns false (never throws) when the cache is missing for the
-    // run or rowIndex is out of range — a stale dispatch or tampered
-    // index is silent. The TTL resets to a fresh 30 minutes on rewrite.
+    // False rather than a throw on a missing run or an out-of-range index,
+    // so a stale dispatch is silent. A rewrite resets the TTL to 30 minutes.
     public function applyAliasInPlace(int $importRunId, int $rowIndex, string $friendlyName): bool
     {
         $preview = $this->getPreview($importRunId);

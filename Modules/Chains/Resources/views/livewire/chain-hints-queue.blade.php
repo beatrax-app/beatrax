@@ -13,7 +13,7 @@
         };
     };
     $locale = ($user ?? null)?->locale ?? 'nl_NL';
-    $fmt = static fn ($money) => $money->format($locale === 'nl_NL' ? 'nl_NL' : 'en_US');
+    $fmt = static fn ($money) => $money->format();
 @endphp
 
 <div class="mx-auto max-w-5xl px-4 py-12">
@@ -31,24 +31,24 @@
     </header>
 
     @if ($statusMessage)
-        <div
-            class="mb-6 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-200"
+        <x-core::alert
+            tone="positive"
+            class="mb-6"
             aria-live="polite" aria-atomic="true"
             data-testid="chain-hints-status"
         >
             {{ $statusMessage }}
-        </div>
+        </x-core::alert>
     @endif
 
     @if (count($hints) === 0)
-        <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700" data-testid="chain-hints-empty">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('chains::hints.empty_heading') }}</h2>
-            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                {{ Lang::get('chains::hints.empty_body') }}
-            </p>
-        </div>
+        <x-core::empty-state
+            data-testid="chain-hints-empty"
+            :heading="Lang::get('chains::hints.empty_heading')"
+            :body="Lang::get('chains::hints.empty_body')"
+        />
     @else
-        {{-- overflow-x: auto wrapper so dense hint rows scroll horizontally at phone width (D-06 power split) --}}
+        {{-- overflow-x: auto wrapper so dense hint rows scroll horizontally at phone width --}}
         <div class="overflow-x-scroll-wrapper" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
         <ul class="space-y-4" data-testid="chain-hints-list" style="min-width: 480px;">
             @foreach ($hints as $hint)
@@ -98,13 +98,13 @@
                             @endif
                         </div>
                         <div class="flex shrink-0 items-center">
-                            <button
-                                type="button"
+                            <x-core::secondary-button
+                                size="sm"
+                                class="gap-1"
                                 wire:click="dismiss({{ $hint->chainLinkId }})"
                                 aria-label="{{ Lang::get('chains::hints.dismiss_aria', ['id' => $hint->chainLinkId]) }}"
-                                class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-800"
                                 data-testid="chain-hint-dismiss-{{ $hint->chainLinkId }}"
-                            >{{ Lang::get('chains::hints.dismiss') }}</button>
+                            >{{ Lang::get('chains::hints.dismiss') }}</x-core::secondary-button>
                         </div>
                     </div>
                 </li>

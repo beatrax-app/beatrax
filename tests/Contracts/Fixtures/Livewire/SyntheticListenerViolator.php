@@ -6,13 +6,9 @@ namespace Tests\Contracts\Fixtures\Livewire;
 
 use Livewire\Component;
 
-/**
- * Synthetic Livewire component used by SecretsInLivewireSnapshotTest's
- * self-test pass. It deliberately registers a `$listeners` key naming a
- * SecretsColumnRegistry entry verbatim so the arch invariant proves it
- * can detect that variant of the leak (events keyed on secret-column
- * names land in the wire snapshot just like properties).
- */
+// Deliberately broken: the $listeners key names a SecretsColumnRegistry entry
+// verbatim. SecretsInLivewireSnapshotTest's inverse pass fails if the scan
+// stops flagging it, so do not "fix" this component.
 final class SyntheticListenerViolator extends Component
 {
     /** @var array<string, string> */

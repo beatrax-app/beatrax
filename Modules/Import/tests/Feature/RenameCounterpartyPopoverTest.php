@@ -8,19 +8,6 @@ use Modules\Core\Models\User;
 use Modules\Import\Internal\Http\Livewire\RenameCounterpartyPopover;
 use Modules\Import\Public\Dto\PreviewRowDto;
 
-/*
- * RenameCounterpartyPopover is the Flux modal wrapping the click-italic
- * rename flow on the import preview row. Opening dispatches an event
- * carrying the raw description + rowIndex; saving writes the
- * merchant_aliases row via CreateMerchantAlias and dispatches a
- * `rename-counterparty:saved` event for the parent wizard to refresh
- * the affected row in place.
- *
- * The test cases below cover RENAME-01 (open + save persists alias),
- * RENAME-02 (validation) and the .desc-fallback / friendly-name
- * render branches on the preview-wizard blade.
- */
-
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'rename-popover',

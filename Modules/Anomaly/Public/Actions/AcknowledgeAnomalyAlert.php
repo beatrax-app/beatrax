@@ -13,10 +13,6 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-// Idempotent when already acknowledged (silent no-op). Cross-user
-// invocation raises NotFoundHttpException via the `(id, user_id)` guard.
-// Acknowledging closes only the alert acted on; future detection is
-// unaffected.
 final class AcknowledgeAnomalyAlert
 {
     public function __construct(

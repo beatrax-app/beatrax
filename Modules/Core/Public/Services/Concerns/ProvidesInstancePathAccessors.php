@@ -8,9 +8,6 @@ namespace Modules\Core\Public\Services\Concerns;
 // every method just forwards to its static twin so the class can be injected
 // and called as `$paths->backups()`. Split off the resolvers to keep the
 // class under its method ceiling while reading as one delegating surface.
-/**
- * @link ../../../../../.docs/features/core/architecture.md
- */
 trait ProvidesInstancePathAccessors
 {
     public function databasePath(): string

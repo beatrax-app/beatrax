@@ -5,22 +5,10 @@ declare(strict_types=1);
 use Illuminate\Validation\ValidationException;
 use Modules\DevMode\Internal\Sql\SelectOnlyValidator;
 
-/*
- * Contract test — locks the SelectOnlyValidator's @internal
- * Tokenizer mitigation surface.
- *
- * Doctrine\\SqlFormatter\\Tokenizer is marked `@internal`. The
- * SelectOnlyValidator class is the SINGLE seam in the codebase that
- * references it. This contract test pins the rejection cases so a
- * future doctrine/sql-formatter upgrade that reshapes the Tokenizer
- * fails LOUDLY here (and at PR review time) instead of silently
- * allowing a non-SELECT through.
- *
- * Maintenance contract: if you change SelectOnlyValidator.php you
- * MUST keep this test green (or update it together with the
- * implementation).
- */
-
+// SelectOnlyValidator is the only seam that touches
+// Doctrine\SqlFormatter\Tokenizer, which is marked `@internal`. Pinning the
+// rejection cases here makes an upgrade that reshapes it fail loudly instead of
+// letting a non-SELECT through.
 it('contract — rejects every non-SELECT first-token variant', function (string $sql): void {
     expect(fn () => (new SelectOnlyValidator)->validate($sql))
         ->toThrow(ValidationException::class);

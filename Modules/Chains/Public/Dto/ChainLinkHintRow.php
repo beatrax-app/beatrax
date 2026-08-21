@@ -8,9 +8,6 @@ use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Spatie\LaravelData\Data;
 
-// One instance per chain_links row whose to_transaction_id IS NULL,
-// carrying the "from" side display data + a human-readable evidence
-// summary so the blade view never re-queries the source row.
 final class ChainLinkHintRow extends Data
 {
     /**

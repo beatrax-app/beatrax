@@ -12,12 +12,6 @@ use Modules\Reports\Internal\Aggregation\AccountSpendQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * Covers 999.6-04 Task 3 / Req 2/3: AccountSpendQuery's canonical
- * type-based single-table aggregation. Fixture helpers prefixed acq_ to
- * avoid cross-file global-function collisions.
- */
-
 function acqUser(): User
 {
     /** @var User */

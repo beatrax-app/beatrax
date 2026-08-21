@@ -8,9 +8,6 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Migrations\Migrator;
 use Modules\Core\Public\Services\UserDataPathService;
 
-/**
- * @link ../../../../.docs/features/mobile/architecture.md
- */
 final class MobileFirstLaunchBootstrap
 {
     public function __construct(

@@ -5,18 +5,6 @@ declare(strict_types=1);
 use Modules\Mobile\Internal\Boot\NativeBuildPatches;
 use Symfony\Component\Process\Process;
 
-/*
- * End-to-end guards for scripts/nativephp_strip_unused_permissions.php.
- *
- * The script exists because `native:install` writes USE_EXACT_ALARM into the
- * manifest, Play restricts that permission to alarm clocks and calendars, and
- * shipping it is grounds for removal from the store.
- *
- * These run the real script against a fixture copy of the real generated
- * manifest — including its quirk of putting FLASHLIGHT and USE_BIOMETRIC on
- * the same line, which is what makes a line-based edit dangerous.
- */
-
 function stripPermissionsFixtureManifest(): string
 {
     return <<<'XML'
@@ -71,6 +59,11 @@ function runStripPermissions(string $root): Process
     return $process;
 }
 
+// native:install writes USE_EXACT_ALARM into the manifest, Play restricts that
+// permission to alarm clocks and calendars, and shipping it is grounds for removal
+// from the store. The fixture keeps the generated manifest's quirk of putting two
+// permissions on one line, which is what makes a line-based edit dangerous.
+
 it('pins out every permission the app never exercises', function (): void {
     [$root, $manifest] = stripPermissionsScaffold(stripPermissionsFixtureManifest());
 
@@ -80,6 +73,11 @@ it('pins out every permission the app never exercises', function (): void {
 
     $patched = (string) file_get_contents($manifest);
 
+    // What the merger will see: comments are invisible to it, and one of them
+    // deliberately carries a plain declaration so the plugin compiler's
+    // substring check finds the permission and stops re-adding it.
+    $merged = (string) preg_replace('/<!--.*?-->/s', '', $patched);
+
     foreach ([
         'android.permission.USE_EXACT_ALARM',
         'android.permission.SCHEDULE_EXACT_ALARM',
@@ -88,9 +86,12 @@ it('pins out every permission the app never exercises', function (): void {
         'android.permission.FOREGROUND_SERVICE',
         'android.permission.USE_FINGERPRINT',
     ] as $gone) {
-        expect($patched)
+        expect($merged)
             ->toContain('<uses-permission android:name="'.$gone.'" tools:node="remove" />')
             ->not->toContain('<uses-permission android:name="'.$gone.'" />');
+
+        // And the decoy the compiler reads is present in the raw file.
+        expect($patched)->toContain('<!-- <uses-permission android:name="'.$gone.'" />');
     }
 });
 

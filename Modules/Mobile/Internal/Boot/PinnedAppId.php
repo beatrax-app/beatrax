@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Mobile\Internal\Boot;
 
-/**
- * @link ../../../../.docs/features/mobile/architecture.md
- */
 final class PinnedAppId
 {
     // Mirrors nativephp/mobile's own guard in InstallCommand::ensureAppIdIsSet()

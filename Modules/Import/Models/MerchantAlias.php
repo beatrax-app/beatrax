@@ -8,10 +8,9 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
-// Aliases are pure presentation-layer rewrites, resolved at render
-// time only (never mutate transactions.description). Every read/write
-// path carries an EXPLICIT where('user_id', $userId) filter —
-// BelongsToUser's global scope is only a secondary, HTTP-only guard.
+// Resolved at render time and never written back to
+// transactions.description. Every read and write carries an explicit
+// where('user_id', …), since BelongsToUser's global scope is HTTP-only.
 /**
  * @property int $id
  * @property int|null $user_id

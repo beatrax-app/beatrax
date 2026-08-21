@@ -2,10 +2,6 @@
 
 declare(strict_types=1);
 
-/**
- * @link ../../../.docs/features/notifications/architecture.md
- */
-
 use Illuminate\Support\Facades\Route;
 use Modules\Notifications\Internal\Http\Livewire\NotificationsPage;
 

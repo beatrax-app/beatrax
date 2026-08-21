@@ -165,11 +165,9 @@ it('binds the AssignsCategory contract to AssignCategory', function (): void {
 });
 
 it('readPriorProvenance returns null on a corrupt auto_category_provenance JSON column without crashing', function (): void {
-    // Poison the column with non-JSON bytes that would crash a vanilla
-    // json_decode-without-flags caller (silent null) and a strict
-    // JSON_THROW_ON_ERROR caller without a catch (uncaught
-    // JsonException). The new wrapper must swallow both and return
-    // null so a downstream reclassify still works.
+    // Non-JSON bytes: a bare json_decode returns null silently, and a strict
+    // JSON_THROW_ON_ERROR caller without a catch throws. The wrapper has to
+    // swallow both and return null.
     DB::table('transactions')
         ->where('id', $this->tx->id)
         ->update(['auto_category_provenance' => '{not even close to json}']);
@@ -181,8 +179,7 @@ it('readPriorProvenance returns null on a corrupt auto_category_provenance JSON 
 
     expect($result)->toBeNull();
 
-    // And a full reclassify still succeeds — the corrupt provenance
-    // must NOT propagate up as an exception.
+    // A full reclassify still succeeds; the corrupt payload never propagates.
     /** @var AssignCategory $assign */
     $assign = $this->app->make(AssignCategory::class);
     $affected = ($assign)($this->tx->id, $this->groceries->id, $this->user);

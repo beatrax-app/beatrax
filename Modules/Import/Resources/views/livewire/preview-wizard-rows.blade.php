@@ -14,7 +14,7 @@
 
     Expects `$rows` (list<PreviewRowDto>) in scope.
 
-    D-06 / UI-SPEC §19: overflow-x:auto on the outer wrapper ensures
+    UI-SPEC §19: overflow-x:auto on the outer wrapper ensures
     counterparty name cells scroll horizontally at phone width when
     this partial is rendered standalone (e.g. in the test context).
     When embedded inside the preview-wizard table the parent section's

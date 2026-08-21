@@ -7,25 +7,10 @@ namespace Modules\Anomaly\Tests\Support;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 
-/**
- * Test-only helper that materialises an anomaly-corpus fixture
- * (`Modules/Anomaly/tests/fixtures/anomaly-corpus/*.php`) into real
- * `transactions` / `counterparties` / `categories` /
- * `recurring_series(_occurrences)` / `anomaly_suppression_rules` rows so
- * the evaluator and the three detectors run against the same substrate
- * they will read in production.
- *
- * Each fixture declares `settings`, `history`, `transaction`, and
- * `expected`; some add `suppression_rules`. This seeder maps the fixture's
- * counterparty *slugs* onto `counterparties` rows, resolves the optional
- * `category` slug onto `categories`, and seeds every history row plus the
- * single transaction-under-test, returning the under-test transaction id.
- *
- * The seeder is deliberately verbose and explicit (no Eloquent factories)
- * so the FK chain — accounts → import_runs → transactions — is obvious and
- * every UNIQUE constraint (accounts.iban, import_runs.sha256,
- * transactions.fingerprint) gets a salted unique value.
- */
+// Seeds fixture rows through the raw query builder rather than factories so
+// every UNIQUE value (accounts.iban, import_runs.sha256,
+// transactions.fingerprint) can be salted per call and repeated seeding of
+// the same fixture in one test run cannot collide.
 final class AnomalyCorpusSeeder
 {
     /**
@@ -36,7 +21,6 @@ final class AnomalyCorpusSeeder
     {
         $connection = $db->connection();
 
-        // Apply per-user anomaly settings.
         /** @var array<string, mixed> $settings */
         $settings = is_array($fixture['settings'] ?? null) ? $fixture['settings'] : [];
         $user->forceFill([
@@ -44,7 +28,6 @@ final class AnomalyCorpusSeeder
             'anomaly_min_amount_minor' => (int) ($settings['anomaly_min_amount_minor'] ?? 1000),
         ])->save();
 
-        // One shared account + import run for the whole fixture.
         $accountId = $connection->table('accounts')->insertGetId([
             'user_id' => $user->id,
             'name' => 'ASN corpus',
@@ -119,8 +102,6 @@ final class AnomalyCorpusSeeder
 
             $amountMinor = (int) ($row['amount_minor'] ?? 0);
             $currency = is_string($row['currency'] ?? null) ? $row['currency'] : 'EUR';
-            // Settled defaults to native amount/currency unless the fixture
-            // overrides it (mixed-currency fixture exercises the divergence).
             $settledAmountMinor = (int) ($row['settled_amount_minor'] ?? $amountMinor);
             $settledCurrency = is_string($row['settled_currency'] ?? null) ? $row['settled_currency'] : $currency;
             $direction = is_string($row['direction'] ?? null) ? $row['direction'] : 'expense';
@@ -156,7 +137,6 @@ final class AnomalyCorpusSeeder
             return ['id' => $txnId, 'counterparty_id' => $counterpartyId, 'on_recurring_series' => $onRecurringSeries];
         };
 
-        // A lazily-created recurring series so occurrence rows can attach.
         $seriesId = null;
         $ensureSeries = function (int $counterpartyId) use ($connection, $user, &$seriesId): int {
             if ($seriesId === null) {
@@ -192,7 +172,6 @@ final class AnomalyCorpusSeeder
             ]);
         };
 
-        // Seed history rows.
         /** @var list<array<string, mixed>> $history */
         $history = is_array($fixture['history'] ?? null) ? $fixture['history'] : [];
         foreach ($history as $row) {
@@ -208,7 +187,6 @@ final class AnomalyCorpusSeeder
             }
         }
 
-        // Seed the transaction under test.
         /** @var array<string, mixed> $under */
         $under = is_array($fixture['transaction'] ?? null) ? $fixture['transaction'] : [];
         $underOnSeries = (bool) ($under['on_recurring_series'] ?? false);
@@ -222,7 +200,6 @@ final class AnomalyCorpusSeeder
             );
         }
 
-        // Seed suppression rules (counterparty-keyed) if present.
         /** @var list<array<string, mixed>> $rules */
         $rules = is_array($fixture['suppression_rules'] ?? null) ? $fixture['suppression_rules'] : [];
         foreach ($rules as $rule) {
@@ -245,8 +222,6 @@ final class AnomalyCorpusSeeder
     }
 
     /**
-     * Loads a named corpus fixture array.
-     *
      * @return array<string, mixed>
      */
     public static function load(string $name): array
@@ -257,11 +232,6 @@ final class AnomalyCorpusSeeder
         return $fixture;
     }
 
-    /**
-     * Creates a fresh anomaly test user. Shared across every evaluator /
-     * detector test so the user shape (username, currency view) stays
-     * consistent.
-     */
     public static function makeUser(): User
     {
         return User::query()->create([
@@ -273,10 +243,7 @@ final class AnomalyCorpusSeeder
     }
 
     /**
-     * Loads a seeded transaction row as the raw associative array the
-     * detectors and the evaluator consume.
-     *
-     * @return array<string, mixed>
+     * @return array<string, mixed> the raw row shape the detectors consume
      */
     public static function transactionRow(DatabaseManager $db, int $txnId): array
     {

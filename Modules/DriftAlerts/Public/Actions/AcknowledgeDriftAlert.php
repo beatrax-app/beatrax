@@ -13,9 +13,6 @@ use Modules\DriftAlerts\Public\Enums\DriftAlertState;
 use Modules\DriftAlerts\Public\Events\DriftAlertAcknowledged;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../.docs/features/drift-alerts/architecture.md
- */
 final class AcknowledgeDriftAlert
 {
     public function __construct(

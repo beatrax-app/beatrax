@@ -14,29 +14,10 @@ use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
 
 uses(RefreshDatabase::class);
 
-/*
- * IncrementalScanJob Gmail cursor-expiry fallback invariant.
- *
- * RESEARCH Pitfall 3: Gmail's users.history.list returns 404 when
- * the startHistoryId is older than the ~7-day retention window.
- * The Plan 07 contract is:
- *  1. Catch CursorExpiredException.
- *  2. Fall back to a date-bounded messages.list walk over the
- *     sender allow-list.
- *  3. Re-baseline the cursor (in production via a getProfile call;
- *     the Wave 0 contract pins the post-fallback historyId to the
- *     prior value so the next hour's tick retries listHistory).
- *
- * Test flow:
- *  1. Seed user + Gmail inbox + scan_state with last_history_id='12345'.
- *  2. Bind a FakeGmailApiClient with NO queued history response —
- *     the default 404 fixture fires CursorExpiredException.
- *  3. Dispatch the job.
- *  4. Assert: the FakeGmailApiClient's request log shows listHistory
- *     FIRST (which threw) THEN listSenderMessages (the fallback walk).
- *  5. Assert: 3 inbox_messages rows landed (the Fake's page-1 fixture
- *     carries 3 messages).
- */
+// Gmail's users.history.list 404s once startHistoryId is older than its ~7-day
+// retention window. The job falls back to a date-bounded messages.list walk
+// over the sender allow-list, and leaves the stored historyId alone so the
+// next tick retries listHistory.
 
 beforeEach(function (): void {
     Sleep::fake();
@@ -85,8 +66,8 @@ it('catches CursorExpiredException on listHistory, falls back to listSenderMessa
         'updated_at' => $now,
     ]);
 
-    // No queued history response — listHistory falls back to the
-    // 404 fixture → CursorExpiredException.
+    // With nothing queued, listHistory serves the 404 fixture and the job
+    // sees CursorExpiredException.
     $fake = new FakeGmailApiClient($this->app->make(Filesystem::class));
     $this->app->instance(GmailApiClientContract::class, $fake);
 
@@ -94,15 +75,12 @@ it('catches CursorExpiredException on listHistory, falls back to listSenderMessa
     $job = $this->app->make(IncrementalScanJob::class, ['inboxId' => $inboxId]);
     $this->app->call([$job, 'handle']);
 
-    // Assert: 3 inbox_messages rows landed (from the fallback walk).
     $rows = $db->connection()
         ->table('inbox_messages')
         ->where('inbox_id', $inboxId)
         ->count();
     expect($rows)->toBe(3);
 
-    // Assert: call sequence shows listHistory FIRST (the 404 throw),
-    // then listSenderMessages (the fallback walk).
     $methodSequence = array_map(
         static fn (array $c): string => (string) $c['method'],
         $fake->getRequestedCalls(),
@@ -114,7 +92,6 @@ it('catches CursorExpiredException on listHistory, falls back to listSenderMessa
     expect($listSenderIndex)->not->toBeFalse();
     expect($listSenderIndex)->toBeGreaterThan($listHistoryIndex);
 
-    // Assert: status returned to idle after the fallback walk.
     $scanState = $db->connection()
         ->table('inbox_scan_state')
         ->where('inbox_id', $inboxId)
@@ -122,17 +99,12 @@ it('catches CursorExpiredException on listHistory, falls back to listSenderMessa
         ->first(['status', 'last_history_id']);
     expect($scanState)->not->toBeNull();
     expect($scanState->status)->toBe('idle');
-    // Cursor preserved (we did not learn a fresh historyId from the
-    // fallback walk; the next hour's run re-attempts listHistory).
+    // The fallback walk teaches us no fresh historyId, so the cursor stays put
+    // and the next tick re-attempts listHistory.
     expect($scanState->last_history_id)->toBe('12345');
 
-    // WR-07: the fallback walk must pass a date-bounded
-    // $windowStart so the server-side `after:` filter trims the
-    // result set tightly against last_scan_at - 7 days. A null
-    // windowStart would walk the entire allow-list history capped
-    // only by the 500-message defensive cap, contradicting the
-    // class docblock's "capped at last_scan_at minus 7 days"
-    // contract.
+    // A null windowStart would walk the whole allow-list history, bounded only
+    // by the 500-message defensive cap.
     $listSenderCall = null;
     foreach ($fake->getRequestedCalls() as $call) {
         if ($call['method'] === 'listSenderMessages') {

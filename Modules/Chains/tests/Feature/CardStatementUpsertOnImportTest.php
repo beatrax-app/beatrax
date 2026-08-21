@@ -12,19 +12,6 @@ use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 
-/*
- * Feature-level wiring coverage for ConfirmImport's new
- * UpsertsCardStatements call. Three invariants:
- *
- *   1. A real ICS PDF import → ConfirmImport → produces a fresh
- *      card_statements row for the imported period.
- *   2. Re-confirming an already-confirmed run does NOT duplicate
- *      card_statements rows.
- *   3. A zero-row ConfirmImport (no inserts AND no enrichments) does
- *      NOT call the upserter — proven via a counting spy bound on the
- *      Public contract.
- */
-
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
@@ -49,7 +36,6 @@ it('ConfirmImport promotes new ICS statement_summaries into card_statements befo
         ->count();
     expect($countAfter)->toBeGreaterThan($countBefore);
 
-    // The new row belongs to the user's ics_card account.
     /** @var Account $icsAccount */
     $icsAccount = Account::query()
         ->where('user_id', $this->fixtureUser->id)
@@ -73,8 +59,6 @@ it('re-confirming the same import_run does NOT duplicate card_statements rows', 
         ->where('user_id', $this->fixtureUser->id)
         ->count();
 
-    // Idempotent re-confirm — short-circuits via the
-    // status='confirmed' path AND would be a no-op even if it did not.
     ($this->confirmer)($first->importRunId, $this->fixtureUser);
 
     $countAfterSecond = CardStatement::query()
@@ -84,19 +68,10 @@ it('re-confirming the same import_run does NOT duplicate card_statements rows', 
 });
 
 it('re-confirming an already-confirmed import_run short-circuits via the status=confirmed path and never calls the upserter', function (): void {
-    // The action's first early-return runs when ImportRun.status is
-    // already `confirmed`; it returns an idempotent zero-action
-    // result and skips the post-commit block entirely. This test
-    // pins that invariant via a counting spy on the upserter — the
-    // spy's call count must stay at zero across the re-confirm.
-    //
-    // NOTE: a zero-inserts / zero-enrichments confirm whose
-    // ImportRun is NOT yet `confirmed` DOES call the upserter (the
-    // upserter is idempotent and Stage A of the post-commit block
-    // is no longer gated on the recorder counts — that recovery
-    // path lets a re-import refill a manually-deleted
-    // card_statements row). The `status=confirmed` short-circuit is
-    // the only path that bypasses Stage A.
+    // The status=confirmed short-circuit is the ONLY path that bypasses the
+    // post-commit upsert: a zero-inserts confirm on a not-yet-confirmed run
+    // still calls the upserter, so a re-import can refill a manually deleted
+    // card_statements row.
     $spy = new class($this->app->make(CardStatementUpserter::class)) implements UpsertsCardStatements
     {
         public int $callCount = 0;
@@ -133,6 +108,5 @@ it('re-confirming an already-confirmed import_run short-circuits via the status=
     ($this->confirmer)($run->id, $this->fixtureUser);
 
     expect($spy->callCount)->toBe(0);
-    // Sanity — no card_statements rows landed via the re-confirm.
     expect(CardStatement::query()->where('user_id', $this->fixtureUser->id)->count())->toBe(0);
 });

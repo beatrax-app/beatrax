@@ -6,25 +6,16 @@ use Carbon\CarbonImmutable;
 use Illuminate\Encryption\Encrypter;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Public\Contracts\SecretShield;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Exceptions\OpenBankingCredentialsException;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
-use Modules\OpenBanking\Public\Services\SecretsWriteFailed;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Exceptions\OpenBankingCredentialsException;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Services\SecretsWriteFailed;
 
-/*
- * Task 1 (19-03): OpenBankingSecretsRepository — file-backed, atomic,
- * chmod-600, SecretShield-wrapped credential store (D-05/06). Verbatim
- * port of the git-recovered pre-Phase-12 OAuthSecretsRepository
- * atomic-write primitive, layered with the SecretShield seam.
- *
- * The real bound SecretShield is PassthroughSecretShield (identity by
- * design on web/desktop-without-keychain) — asserting "not
- * plaintext-readable" against that binding would be tautologically
- * false. Instead every test here injects OpenBankingReversingShield, a
- * deterministic NON-identity double, to prove the repository actually
- * routes bytes through protect()/reveal() rather than writing the raw
- * JSON straight to disk.
- */
+/** @link ../../../../.docs/features/open-banking/secrets-at-rest.md#two-encryption-layers-applied-inner-to-outer */
+
+// The bound SecretShield is the identity function, so "not plaintext-readable"
+// would be tautologically false against it. Every test injects the reversing
+// double instead, proving the bytes really go through protect()/reveal().
 
 final class OpenBankingReversingShield implements SecretShield
 {
@@ -59,8 +50,7 @@ function openBankingSecretsFixtureCredentials(): OpenBankingCredentials
 beforeEach(function (): void {
     $this->obSecretsPath = openBankingSecretsFixturePath();
     $this->obFiles = new Filesystem;
-    // A real APP_KEY-style encrypter so the at-rest layer is exercised for
-    // real (genuine ciphertext on disk), not stubbed.
+    // A real APP_KEY-style encrypter, so the on-disk bytes are true ciphertext.
     $this->obEncrypter = new Encrypter(Encrypter::generateKey('aes-256-cbc'), 'aes-256-cbc');
     if ($this->obFiles->exists($this->obSecretsPath)) {
         $this->obFiles->delete($this->obSecretsPath);
@@ -164,19 +154,11 @@ it('clear removes the credential file, load returns null afterward, and clear is
     expect($repo->load())->toBeNull();
     expect(is_file($this->obSecretsPath))->toBeFalse();
 
-    // Idempotent — clearing an already-missing file does not throw.
     $repo->clear();
 });
 
-/*
- * What readAll() does with a file it cannot make sense of.
- *
- * The reveal happens before the decode, because on the desktop bundle the
- * on-disk bytes are safeStorage ciphertext rather than JSON. That ordering is
- * why a corrupt file cannot simply be detected by looking at it — every case
- * below writes bytes that reveal to something the decoder then has to judge.
- */
-
+// On the desktop bundle the on-disk bytes are safeStorage ciphertext, not JSON,
+// so corruption is only visible after the reveal — hence reveal before decode.
 it('treats an empty secrets file as no credentials rather than a corrupt one', function (): void {
     $this->obFiles->ensureDirectoryExists(dirname($this->obSecretsPath));
     $this->obFiles->put($this->obSecretsPath, '');
@@ -187,9 +169,8 @@ it('treats an empty secrets file as no credentials rather than a corrupt one', f
         ->and($repo->hasApplication())->toBeFalse();
 });
 
-// A file that will not decode is a different thing from a file with nothing
-// in it, and the difference matters: one means the wizard was never run, the
-// other means something on disk needs repairing.
+// A file that will not decode is a different thing from an empty one: empty
+// means the wizard was never run, undecodable means something needs repairing.
 it('refuses a secrets file whose revealed bytes are not JSON', function (): void {
     $this->obFiles->ensureDirectoryExists(dirname($this->obSecretsPath));
     $this->obFiles->put($this->obSecretsPath, strrev('{"applicationId": '));
@@ -200,9 +181,8 @@ it('refuses a secrets file whose revealed bytes are not JSON', function (): void
         ->toThrow(OpenBankingCredentialsException::class, $this->obSecretsPath);
 });
 
-// The message may name the path and nothing else — the revealed payload and
-// the raw bytes are both credential material, and this exception is logged
-// wherever it surfaces.
+// The revealed payload and the raw bytes are both credential material, and this
+// exception is logged wherever it surfaces, so the message may name the path only.
 it('names only the path when it refuses an unreadable secrets file', function (): void {
     $this->obFiles->ensureDirectoryExists(dirname($this->obSecretsPath));
     $this->obFiles->put($this->obSecretsPath, strrev('{"applicationId": "super-secret-value"'));
@@ -218,9 +198,8 @@ it('names only the path when it refuses an unreadable secrets file', function ()
     }
 });
 
-// Valid JSON that is not an object carries no fields to read. Treated as an
-// empty store rather than an error: there is nothing to repair, there is
-// simply nothing there.
+// Valid JSON that is not an object carries no fields, so it reads as an empty
+// store rather than an error: there is nothing to repair.
 it('reads a well-formed non-object secrets file as an empty store', function (string $revealed): void {
     $this->obFiles->ensureDirectoryExists(dirname($this->obSecretsPath));
     $this->obFiles->put($this->obSecretsPath, strrev($revealed));
@@ -234,19 +213,9 @@ it('reads a well-formed non-object secrets file as an empty store', function (st
     'null' => ['null'],
 ]);
 
-/*
- * writeAtomic() failure branches. Each raises SecretsWriteFailed (a
- * RuntimeException the controllers catch) and — as with the rename case above —
- * must never leak credential material into the message.
- */
-
-// The secrets directory could not be created because its parent is occupied by
-// a plain file: mkdir() fails and is_dir() stays false.
 it('raises SecretsWriteFailed when the secrets parent directory cannot be created', function (): void {
     $secretsDir = dirname($this->obSecretsPath);
     if (is_dir($secretsDir)) {
-        // Remove any pre-existing secrets dir so the blocking file can take
-        // its place.
         foreach (glob($secretsDir.'/*') ?: [] as $f) {
             @unlink($f);
         }
@@ -266,9 +235,8 @@ it('raises SecretsWriteFailed when the secrets parent directory cannot be create
     }
 });
 
-// json_encode() refuses the payload (here: an invalid-UTF-8 byte in a field);
-// encodePayload() maps the JsonException to SecretsWriteFailed without echoing
-// the payload.
+// encodePayload() maps json_encode()'s JsonException to SecretsWriteFailed
+// without echoing the payload it refused.
 it('raises SecretsWriteFailed when the payload cannot be encoded, without leaking it', function (): void {
     $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield, $this->obEncrypter);
 
@@ -293,11 +261,9 @@ it('raises SecretsWriteFailed when the payload cannot be encoded, without leakin
     expect(is_file($this->obSecretsPath))->toBeFalse();
 });
 
-// The temp file cannot be opened because a directory already occupies its
-// path: fopen() returns false and the umask is restored on the way out.
+// A directory occupying the temp file's path makes fopen() return false.
 it('raises SecretsWriteFailed when the temp file cannot be opened, and restores umask', function (): void {
     $this->obFiles->ensureDirectoryExists(dirname($this->obSecretsPath));
-    // A directory sitting where the temp file wants to be — fopen('wb') fails.
     @mkdir($this->obSecretsPath.'.tmp', 0700);
 
     $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield, $this->obEncrypter);
@@ -312,16 +278,9 @@ it('raises SecretsWriteFailed when the temp file cannot be opened, and restores 
     }
 });
 
-/*
- * At-rest encryption layer (APP_KEY encrypter) added on top of the shield.
- * The on-disk bytes are shield(encrypt(json)); with the reversing shield
- * that is strrev(ciphertext), so a test can strrev() back to the exact
- * Laravel ciphertext and decrypt it to prove the encrypter actually ran —
- * not merely the (identity-on-web) shield. Legacy installs whose file
- * predates this layer hold strrev(json) and must still load, upgrading to
- * ciphertext on the next save.
- */
-
+// The on-disk bytes are shield(encrypt(json)), so strrev() gets back the exact
+// Laravel ciphertext — proving the encrypter ran, not just the shield. Legacy
+// files hold shield(json) with no encryption and must still load.
 it('encrypts the payload at rest so the on-disk bytes decrypt back to the saved JSON, and reads its own encrypted file', function (): void {
     $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield, $this->obEncrypter);
     $repo->save(openBankingSecretsFixtureCredentials());
@@ -365,8 +324,7 @@ it('still reads a legacy plaintext secrets file, then re-persists it encrypted o
     expect($loaded->privateKeyPem)->toContain('legacy-bytes');
     expect($loaded->sessionId)->toBe('legacy-session-xyz');
 
-    // The upgrade path: saving again rewrites the file through the APP_KEY
-    // layer, so the bytes are now genuine ciphertext for the same secrets.
+    // Saving a legacy file again rewrites it through the APP_KEY layer.
     $repo->save($loaded);
     $upgradedCiphertext = strrev((string) file_get_contents($this->obSecretsPath));
     expect($this->obEncrypter->decryptString($upgradedCiphertext))->toContain('legacy-app-777');

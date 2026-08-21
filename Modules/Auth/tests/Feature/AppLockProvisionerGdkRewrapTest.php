@@ -7,19 +7,8 @@ use Illuminate\Contracts\Session\Session;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 
-/*
- * AppLockProvisionerGdkRewrapTest — D-10: a passphrase (PIN) change
- * re-wraps the GDK keyring under the new KEK; the old KEK can no longer
- * unwrap it. 14-VALIDATION.md D-10 row.
- *
- * RED until Plan 07 wires AppLockProvisioner::changePin() to re-wrap every
- * GDK epoch via the Sync Public re-wrap contract (cross-module boundary per
- * PATTERNS.md — Auth dispatches an event, a Sync listener calls
- * GdkKeyringService::rewrapUnderNewKek()). This test references the planned
- * production FQCN Modules\Sync\Internal\Crypto\GdkKeyringService, which does
- * not yet exist — the failure is "class not found", the correct Wave 0 RED
- * state.
- */
+// The re-wrap crosses a module boundary: Auth dispatches an event and a Sync
+// listener re-wraps every GDK epoch under the new KEK.
 
 beforeEach(function (): void {
     $this->user = User::query()->create([
@@ -45,9 +34,8 @@ it('re-wraps every GDK epoch when the app-lock PIN changes, and the old PIN can 
     $changed = $provisioner->changePin((int) $this->user->id, '123456', '654321');
     expect($changed)->toBeTrue();
 
-    // Re-loading the keyring under the (now unlocked, new-PIN) session must
-    // still resolve to the exact same GDK epoch/key material — only the
-    // at-rest wrapping key changed, not the GDK itself.
+    // Only the at-rest wrapping key changed, so the epoch and key material must
+    // come back identical.
     $afterRewrap = $keyring->currentEpoch((int) $this->user->id, $session);
     expect($afterRewrap->epochId)->toBe($original->epochId);
     expect($afterRewrap->keyHex)->toBe($original->keyHex);
@@ -69,19 +57,13 @@ it('fails changePin (returns false, no partial rewrap) when the current PIN is w
     $changed = $provisioner->changePin((int) $this->user->id, 'wrong-pin', '654321');
     expect($changed)->toBeFalse();
 
-    // The GDK must be untouched by the failed attempt.
     $unchanged = $keyring->currentEpoch((int) $this->user->id, $session);
     expect($unchanged->epochId)->toBe($original->epochId);
     expect($unchanged->keyHex)->toBe($original->keyHex);
 });
 
-/*
- * A user who never set up the app lock has no user_app_lock_configs row at
- * all. Both key-rotating entry points must refuse that as flatly as they
- * refuse a wrong PIN — returning true would tell the caller a re-wrap
- * happened when there was nothing to re-wrap, and the UI would report a
- * changed PIN for a lock that does not exist.
- */
+// With no config row there is nothing to re-wrap, and returning true would let
+// the UI report a changed PIN for a lock that does not exist.
 
 it('refuses to rotate keys for a user with no app-lock row', function (string $method): void {
     /** @var AppLockProvisioner $provisioner */

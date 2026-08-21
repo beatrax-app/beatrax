@@ -261,6 +261,12 @@ jobs:
               # CI step pins the same limit explicitly.
               run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
 
+            - name: Declared dependencies cover every import
+              # An import satisfied only by a dependency-of-a-dependency
+              # compiles until that middle package drops it, and then the
+              # break arrives on an unrelated `composer update`.
+              run: composer analyse:deps
+
     # The name the branch ruleset requires. Sharding turned one check into
     # three, and a required check has to be one name that means "the suite
     # passed" — so the shards report under their own names and this collapses
@@ -292,7 +298,7 @@ jobs:
     # modules correctly wired (Mobile enabled, Desktop excluded) and that
     # Mobile's own shared code passes — it does NOT attempt a full signed
     # native iOS/Android build (Xcode/Gradle + Apple signing stays a LOCAL
-    # `native:run` step for dev/sideload delivery until Phase 19 app-store
+    # `native:run` step for dev/sideload delivery until app-store
     # publishing).
     mobile-quality:
         name: mobile-app quality (PHP ${{ matrix.php }})
@@ -375,11 +381,11 @@ jobs:
               run: php artisan key:generate --ansi
 
             - name: Assert shared-module discovery (Mobile enabled, Desktop excluded)
-              # T-15-34: the mobile shell must never silently pick up a
+              # The mobile shell must never silently pick up a
               # Desktop-coupled provider or route — `Modules\Desktop` has no
               # `module.json` (loaded only via bootstrap/providers.php) and
               # `mobile-app/bootstrap/providers.php` deliberately omits
-              # DesktopServiceProvider (15-TOPOLOGY-SPIKE-FINDINGS.md).
+              # DesktopServiceProvider.
               working-directory: mobile-app
               run: |
                   php artisan config:clear

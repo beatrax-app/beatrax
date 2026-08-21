@@ -7,6 +7,10 @@ return [
 
     'subtitle_html' => 'Umgebung + Runtime + effektive Konfiguration. Sensible Schlüssel (Endungen <code class="font-mono text-xs">*password*</code>, <code class="font-mono text-xs">*secret*</code>, <code class="font-mono text-xs">*key</code>, <code class="font-mono text-xs">*token*</code>) werden maskiert.',
     'php' => 'PHP',
+    'php_version' => 'Version',
+    'php_sapi' => 'sapi',
+    'php_ini_path' => 'ini-Pfad',
+    'php_extensions' => 'Erweiterungen',
     'laravel' => 'Laravel',
     'sqlite' => 'SQLite',
     'sqlite_file' => 'Datei',

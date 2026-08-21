@@ -10,9 +10,6 @@ use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
 final class UnRejectRecurringSeries
 {
     public function __construct(

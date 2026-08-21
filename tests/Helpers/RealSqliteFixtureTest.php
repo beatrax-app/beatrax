@@ -4,18 +4,8 @@ declare(strict_types=1);
 
 use Tests\Helpers\RealSqliteFixture;
 
-/*
- * Sanity coverage for the RealSqliteFixture helper — Phase 11 Wave 1+
- * backup / restore feature tests need a real on-disk SQLite file
- * (`:memory:` cannot back VACUUM INTO + PRAGMA integrity_check
- * against a path), so this helper builds one with the default
- * minimal schema set, returns its absolute path, and removes the
- * temp directory on cleanup.
- *
- * The DEFAULT_SCHEMAS constant is the documented extension hook:
- * callers add to the array without losing the baseline tables.
- * One scenario exercises the override to lock the seam.
- */
+// The backup/restore tests need a real on-disk file: `:memory:` cannot back
+// VACUUM INTO or PRAGMA integrity_check against a path.
 
 it('create() returns a path to a file that exists on disk', function (): void {
     $path = RealSqliteFixture::create('fixture-a');

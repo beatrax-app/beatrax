@@ -18,34 +18,6 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
 
-/*
- * 13.4-07 Task 3 (Req 6): sync-capture MODE ASYMMETRY (D-05).
- *
- *  (a) A re-apply pass that changes N fields on a persisted transaction
- *      produces exactly N op_log_entries rows — proven through the REAL
- *      capture path (a genuine OpLogWriter bound into the container,
- *      mirroring Modules/Sync/tests/Feature/OpLogCaptureWiringTest.php's
- *      `buildWriterAndFixture()` pattern), never Event::fake(), so Req 6's
- *      "none bypass capture" is actually exercised end-to-end:
- *      RuleApplier -> TransactionMutated -> the SyncServiceProvider-wired
- *      SyncCaptureListener -> OpLogWriter -> op_log_entries.
- *
- *      The rule under test carries category/counterparty/note actions only
- *      (N=3) — tax_tag is deliberately excluded from this assertion because
- *      it delegates to TagTransaction, which dispatches its own
- *      TransactionTagged event (not TransactionMutated) and is not wired to
- *      the transactions-table SyncCaptureListener handler (Plan 05
- *      decision); including it would not add an op_log_entries row, but
- *      would make the "N changed fields -> N ops" claim ambiguous.
- *
- *  (b) An IMPORT-time rule application (RuleApplier::applyAtImport(), and
- *      the full ApplyAutoCategoryStage wrapping it) produces ZERO
- *      op_log_entries rows for the rule-set fields — applyAtImport() is a
- *      pure in-memory DTO fold with no DB write and no event dispatch, so
- *      there is structurally nothing for the op-log to capture at import
- *      time (import writes stay immutable/out-of-band until re-apply).
- */
-
 function bindRealOpLogWriterForRuleSync(int $userId): OpLogWriter
 {
     $keypair = sodium_crypto_sign_keypair();
@@ -60,9 +32,8 @@ function bindRealOpLogWriterForRuleSync(int $userId): OpLogWriter
         'publicKey' => $pk,
     ]);
 
-    // Bind into the container so SyncCaptureListener's lazy
-    // Container::make(OpLogWriter::class) resolves this REAL writer
-    // instead of throwing BindingResolutionException.
+    // SyncCaptureListener resolves OpLogWriter lazily from the container, so
+    // the real writer has to be bound or it throws instead of capturing.
     app()->instance(OpLogWriter::class, $writer);
 
     return $writer;
@@ -121,7 +92,9 @@ function seedRuleSyncCaptureFixtures(): array
     ];
 }
 
-/** category + counterparty + note only — see file docblock for why tax_tag is excluded. */
+// Category, counterparty and note only: tax_tag delegates to TagTransaction,
+// which dispatches TransactionTagged rather than TransactionMutated and adds
+// no op_log row, blurring the "N changed fields, N ops" count.
 function makeRuleSyncCaptureRule(int $userId, int $categoryId, int $counterpartyId): CategorizationRule
 {
     $rule = CategorizationRule::query()->create([

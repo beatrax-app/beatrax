@@ -8,9 +8,6 @@ namespace Modules\Core\Public\Services;
 // pipe it holds open. A force quit runs no shutdown hook, and the bundled PHP
 // has neither ext-pcntl to trap a signal nor ext-posix to poll a parent id —
 // the pipe is the only notice a child gets that it has been orphaned.
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class HostPipeWatch
 {
     // fstat()'s mode field packs the file type into its top bits; these are

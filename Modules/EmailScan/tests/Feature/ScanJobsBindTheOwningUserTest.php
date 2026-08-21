@@ -10,17 +10,10 @@ use Modules\EmailScan\Internal\Jobs\JobUserContext;
 
 uses(RefreshDatabase::class);
 
-/*
- * A queued scan has to carry its own user.
- *
- * The jobs know exactly whose inbox they are reading — they take the id off
- * the inboxes row — but the services they reach do not. OAuthSecretsRepository
- * scopes every query through CurrentUser, which reads the auth guard, and a
- * queue worker has nobody bound to it. So the very first credential lookup
- * threw NotAuthenticatedException and took the whole scan down: 292 of them in
- * one desktop log, with 96 IncrementalScanJob entries in queue.failed behind
- * them. Gmail scanning was not degraded, it was not running at all.
- */
+// OAuthSecretsRepository scopes every query through CurrentUser, which reads
+// the auth guard, and a queue worker has nobody bound to it. The first
+// credential lookup threw NotAuthenticatedException and took the scan with it:
+// 292 in one desktop log, 96 IncrementalScanJob entries in queue.failed.
 function scanJobUser(): User
 {
     return User::query()->create([

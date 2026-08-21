@@ -7,18 +7,6 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
 
-/*
- * Regression tests for the subtractive income rule on the dashboard
- * "this period at a glance" rollup.
- *
- * The rollup MUST classify by `transactions.type`, not by amount sign.
- * A `transfer_in` row (the ICS leg of an ASN→ICS settlement) is a
- * positive amount but MUST NOT inflate the income tile; a
- * `transfer_out` row is a negative amount but MUST NOT inflate the
- * expense tile; refunds are positive too but stay out of the income
- * tile.
- */
-
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
@@ -52,7 +40,6 @@ afterEach(function (): void {
 });
 
 it('excludesTransfers — transfer_in and refund rows never inflate the income tile', function (): void {
-    // a) Genuine income: type=income, amount=+1000 EUR.
     $this->makeTransaction($this->fixtureUser, $this->asnAccount, $this->run, [
         'type' => 'income',
         'amount_minor' => 100000,
@@ -61,7 +48,7 @@ it('excludesTransfers — transfer_in and refund rows never inflate the income t
         'booked_at' => '2026-05-05 12:00:00',
         'counterparty_name' => 'Employer NV',
     ]);
-    // b) ICS leg of an ASN→ICS settlement: type=transfer_in, amount=+500 EUR.
+    // The ICS leg of an ASN→ICS settlement: a transfer_in with a positive amount.
     $this->makeTransaction($this->fixtureUser, $this->icsAccount, $this->run, [
         'type' => 'transfer_in',
         'amount_minor' => 50000,
@@ -71,7 +58,6 @@ it('excludesTransfers — transfer_in and refund rows never inflate the income t
         'counterparty_name' => 'iDEAL bulk settlement',
         'counterparty_iban' => 'NL57ASNB0123456789',
     ]);
-    // c) Refund: type=refund, amount=+200 EUR — also excluded.
     $this->makeTransaction($this->fixtureUser, $this->asnAccount, $this->run, [
         'type' => 'refund',
         'amount_minor' => 20000,
@@ -85,15 +71,12 @@ it('excludesTransfers — transfer_in and refund rows never inflate the income t
     $query = $this->app->make(ThisPeriodAtAGlanceQuery::class);
     $summary = $query->for($this->fixtureUser, $this->period);
 
-    // Only the genuine income row counts toward the inflow total.
-    // 1000.00 EUR == 100000 minor units. Not 1700 (income + transfer_in
-    // + refund). Not 1500 (income + transfer_in). Not 1200 (income +
-    // refund). Exactly the income row.
+    // The income row alone — not 170000 with the transfer_in and refund
+    // folded in, and not 150000 with only the transfer_in.
     expect($summary->inflow->toMinor())->toBe(100000);
 })->group('phase-4');
 
 it('includesIncome — only type=income rows count toward the income tile', function (): void {
-    // Two income rows in the period.
     $this->makeTransaction($this->fixtureUser, $this->asnAccount, $this->run, [
         'type' => 'income',
         'amount_minor' => 100000,
@@ -108,7 +91,6 @@ it('includesIncome — only type=income rows count toward the income tile', func
         'posted_at' => '2026-05-15',
         'booked_at' => '2026-05-15 12:00:00',
     ]);
-    // Plus a refund that must NOT show up.
     $this->makeTransaction($this->fixtureUser, $this->asnAccount, $this->run, [
         'type' => 'refund',
         'amount_minor' => 99999,
@@ -121,12 +103,11 @@ it('includesIncome — only type=income rows count toward the income tile', func
     $query = $this->app->make(ThisPeriodAtAGlanceQuery::class);
     $summary = $query->for($this->fixtureUser, $this->period);
 
-    // Income tile = 100000 + 25000 = 125000 minor.
+    // 100000 + 25000.
     expect($summary->inflow->toMinor())->toBe(125000);
 })->group('phase-4');
 
 it('expenseTileExcludesTransfers — transfer_out and fee rows never inflate the expense tile', function (): void {
-    // Genuine expense: type=expense, amount=-50 EUR.
     $this->makeTransaction($this->fixtureUser, $this->asnAccount, $this->run, [
         'type' => 'expense',
         'amount_minor' => -5000,
@@ -135,7 +116,7 @@ it('expenseTileExcludesTransfers — transfer_out and fee rows never inflate the
         'booked_at' => '2026-05-05 12:00:00',
         'counterparty_name' => 'AH Amsterdam',
     ]);
-    // ASN leg of an ASN→ICS settlement: type=transfer_out, amount=-500 EUR.
+    // The ASN leg of an ASN→ICS settlement.
     $this->makeTransaction($this->fixtureUser, $this->asnAccount, $this->run, [
         'type' => 'transfer_out',
         'amount_minor' => -50000,
@@ -150,9 +131,7 @@ it('expenseTileExcludesTransfers — transfer_out and fee rows never inflate the
     $query = $this->app->make(ThisPeriodAtAGlanceQuery::class);
     $summary = $query->for($this->fixtureUser, $this->period);
 
-    // Only the expense row counts: 5000 minor (outflow is stored as a
-    // positive total of negative amounts' absolute values). The
-    // transfer_out row's 50000 absolute amount must NOT appear in the
-    // expense tile.
+    // Outflow is a positive total of absolute amounts, so the transfer_out
+    // row would show up as 50000 if it were counted.
     expect($summary->outflow->toMinor())->toBe(5000);
 })->group('phase-4');

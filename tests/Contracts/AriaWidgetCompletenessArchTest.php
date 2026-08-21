@@ -2,27 +2,10 @@
 
 declare(strict_types=1);
 
-/*
- * A control that takes an ARIA role instead of a native element has to carry
- * the state that native element would have supplied for free. A <progress>
- * reports its value without being asked; a div with role="progressbar" and no
- * aria-valuenow announces nothing. An <input type="radio"> reports checked; a
- * button with role="radio" and no aria-checked announces a selection that is
- * always absent.
- *
- * This replaces Web:S6819 for Blade, which is switched off in
- * sonar-project.properties. That rule asks a narrower question — is there a
- * native element for this role — and its answer is wrong for every one of the
- * 57 findings left after the calendar grid became a real table: an Alpine
- * popover is not <dialog>, a chip toolbar is not <fieldset>, a Livewire
- * picker is not <select>, and a CSS-drawn dot is not <img>. It also never
- * asks the question that actually decides whether the widget works, which is
- * the one below.
- *
- * Scope: it checks presence, not correctness of the value. An aria-checked
- * that is always "false" would pass here and is not something a template can
- * be read for.
- */
+// A control that takes an ARIA role has to carry the state the native element
+// would have supplied for free: a <progress> reports its value unasked, a div
+// with role="progressbar" and no aria-valuenow announces nothing. Presence only
+// — an aria-checked stuck at "false" passes, and a template cannot be read for it.
 
 /**
  * @return list<string>
@@ -48,13 +31,9 @@ function ariaCompletenessBladeFiles(): array
     return $files;
 }
 
+// Quote-aware on purpose: Alpine expressions put ">" inside attribute values
+// (x-show="a > b"), and a naive [^>]* would cut the tag in half there.
 /**
- * Every opening tag in the source, as [attributes, byte offset].
- *
- * The attribute run is matched quote-aware because Alpine expressions put
- * ">" inside attribute values (x-show="a > b"), and a naive [^>]* would cut
- * the tag in half there and lose the attributes after it.
- *
  * @return list<array{0: string, 1: int}>
  */
 function ariaCompletenessOpenTags(string $source): array
@@ -81,8 +60,6 @@ function ariaCompletenessHasName(string $attributes): bool
         || str_contains($attributes, ':aria-label=');
 }
 
-// What each role must carry, and why. The message names the state a screen
-// reader would otherwise never hear.
 /**
  * @return array<string, array{check: callable(string): bool, missing: string}>
  */
@@ -111,6 +88,10 @@ function ariaCompletenessRules(): array
     ];
 }
 
+// This stands in for Web:S6819, switched off for Blade in
+// sonar-project.properties: that rule asks only whether a native element exists
+// for the role, and its answer was wrong for all 57 remaining findings — an
+// Alpine popover is not <dialog>, a Livewire picker is not <select>.
 it('gives every ARIA-roled widget the state its native element would have carried', function (): void {
     $rules = ariaCompletenessRules();
     $offenders = [];
@@ -146,11 +127,10 @@ it('gives every ARIA-roled widget the state its native element would have carrie
     expect($offenders)->toBe([], "An ARIA role must carry the state its native element implies. Offenders:\n  ".implode("\n  ", $offenders));
 });
 
-// A radio outside a radiogroup, or an option outside a listbox, is announced
-// as a lone control with no set to be one of — "selected" with nothing to be
-// selected among. Native <input type="radio"> gets this from its name
-// attribute and <option> from its <select>; a roled widget only gets it from
-// the container being there.
+// A radio outside a radiogroup, or an option outside a listbox, is announced as
+// a lone control with no set to be one of. Native <input type="radio"> gets that
+// from its name attribute and <option> from its <select>; a roled widget only
+// gets it from the container being present.
 it('encloses every roled radio and option in the container that gives it meaning', function (): void {
     $containers = ['radio' => 'radiogroup', 'option' => 'listbox'];
     $offenders = [];

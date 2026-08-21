@@ -5,17 +5,6 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\App;
 use Modules\Import\Public\Enums\PaymentType;
 
-/*
- * PaymentType::chipLabel() returned eight literal English strings, and the
- * enum's own comment lists three surfaces that render them: the import-preview
- * legend, /transactions and /community/mystery-merchants. A Dutch phone showed
- * "? Unknown", "↔ Transfer" and "⌘ Online" on a page that was otherwise fully
- * Dutch.
- *
- * The glyph is deliberately not translated — it is the same mark in every
- * language, and it is what the colour mapping is keyed to.
- */
-
 it('translates every payment-type chip', function (): void {
     App::setLocale('nl');
 
@@ -44,6 +33,8 @@ it('leaves no chip reading the English source once the locale is Dutch', functio
     }
 });
 
+// The glyph stays untranslated: it is the same mark in every language, and the
+// chip colour mapping is keyed to it.
 it('keeps the glyph in front of every label', function (): void {
     App::setLocale('nl');
 

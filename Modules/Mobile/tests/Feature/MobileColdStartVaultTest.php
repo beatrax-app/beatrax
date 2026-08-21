@@ -14,21 +14,6 @@ use Modules\Mobile\Internal\Identity\MobileColdStartVault;
 
 uses(RefreshDatabase::class);
 
-/*
- * The vault presents the enclave through the shared ColdStartVault contract so
- * the lock screen asks one question on every platform. Two properties are the
- * whole reason it is a wrapper rather than a direct call:
- *
- * isEnrolled() reads the stored flag rather than the enclave — touching the
- * entry itself would fire the biometric prompt just to render a button. And
- * recover() does not prompt around the enclave, because the enclave entry IS
- * the gate; a second prompt would ask the user twice.
- *
- * The enclave is unreachable in the repo toolchain, so it is faked the way the
- * neighbouring cold-start tests fake it — as a subclass, keeping the real
- * gateway and the real database flag underneath.
- */
-
 /**
  * @param  ?string  $recovers  The key the enclave yields, or null to refuse.
  */
@@ -88,6 +73,11 @@ function coldStartVaultUser(string $username): User
 
     return $user;
 }
+
+// isEnrolled() reads the stored flag rather than the enclave: touching the entry
+// would fire the biometric prompt just to render a button. And recover() does not
+// prompt around the enclave, because the enclave entry is itself the gate and a
+// second prompt would ask the user twice.
 
 it('reports availability from the enclave', function (): void {
     $available = new MobileColdStartVault(coldStartEnclave(), app(MobileLockGateway::class));

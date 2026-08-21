@@ -31,7 +31,7 @@
                 <input type="text" wire:model.live="form.amount" placeholder="50,00" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
             </label>
             <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.currency') }}
-                <input type="text" wire:model.live="form.currency" placeholder="EUR" maxlength="3" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
+                <input type="text" wire:model.live="form.currency" maxlength="3" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
             </label>
             <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.direction') }}
                 <select wire:model.live="form.direction" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
@@ -52,7 +52,7 @@
                 <input type="text" wire:model.live="form.amount" placeholder="15,00" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
             </label>
             <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.currency') }}
-                <input type="text" wire:model.live="form.currency" placeholder="EUR" maxlength="3" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
+                <input type="text" wire:model.live="form.currency" maxlength="3" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
             </label>
             <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.direction') }}
                 <select wire:model.live="form.direction" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
@@ -96,17 +96,21 @@
             <div class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.new_next_date') }}
                 <x-core::date-input class="mt-1" wire:model.live="form.newNextDate" :aria-label="Lang::get('forecasting::scenario.form.new_next_date')" />
             </div>
-            <div class="text-xs text-slate-500 dark:text-slate-400">
+            {{-- Two radios under a plain <p> are orphans — nothing says what is
+                 being chosen. The legend answers that; the shared `name` is
+                 what makes the pair one group to the browser. --}}
+            <fieldset class="text-xs text-slate-500 dark:text-slate-400">
+                <legend class="sr-only">{{ Lang::get('forecasting::scenario.form.scope_legend') }}</legend>
                 <p class="mb-1">{{ Lang::get('forecasting::scenario.form.scope') }}</p>
                 <label class="inline-flex items-center gap-1">
-                    <input type="radio" wire:model.live="form.scope" value="next">
+                    <input type="radio" name="scenario-mutation-scope" wire:model.live="form.scope" value="next">
                     <span>{{ Lang::get('forecasting::scenario.form.scope_next') }}</span>
                 </label>
                 <label class="ml-3 inline-flex items-center gap-1">
-                    <input type="radio" wire:model.live="form.scope" value="all_subsequent">
+                    <input type="radio" name="scenario-mutation-scope" wire:model.live="form.scope" value="all_subsequent">
                     <span>{{ Lang::get('forecasting::scenario.form.scope_all') }}</span>
                 </label>
-            </div>
+            </fieldset>
             @break
     @endswitch
 

@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Livewire\Livewire;
 use Mockery\MockInterface;
-use Modules\Core\Models\User;
 use Modules\Import\Internal\Http\Livewire\UploadWizard;
 use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Import\Public\Events\TransactionImported;
@@ -24,14 +23,10 @@ beforeEach(function (): void {
     UploadIsolation::isolate();
 });
 
-/*
- * 14.1-05 — CR-05/D-04/A3: DispatchChainHintsFromReceipt resolves the
- * decoded raw_payload under an ENCRYPTED user (the listener runs
- * synchronously in the SAME call frame as RecordTransactions' write, so
- * whatever KEK availability applied at write time is identical at this
- * read), and logs a warning (rather than silently no-opping) when
- * raw_payload is present but fails to decode.
- */
+// The listener runs synchronously in the same call frame as RecordTransactions'
+// write, so whatever KEK availability applied at write time still applies to
+// this read. A raw_payload that is present but will not decode has to warn
+// rather than silently no-op.
 
 it('resolves chain hints from an encrypted raw_payload (request-context write and read share the same KEK availability)', function (): void {
     $seeded = $this->seedFixtureUserAndAccount();
@@ -55,16 +50,15 @@ it('resolves chain hints from an encrypted raw_payload (request-context write an
 
     $tx = Transaction::query()->where('user_id', $this->fixtureUser->id)->firstOrFail();
 
-    // Ciphertext at rest — proves this scenario genuinely exercised
-    // encryption rather than passing on a decrypt-of-plaintext no-op.
+    // Ciphertext at rest proves the scenario genuinely exercised encryption
+    // instead of passing on a decrypt-of-plaintext no-op.
     $stored = DB::table('transactions')->where('id', $tx->id)->first();
     expect($stored->raw_payload)->not->toContain('funded_by_card');
 
-    // The Eloquent EncryptedJsonCast decrypts it back correctly.
+    // EncryptedJsonCast decrypts it back on read.
     expect($tx->raw_payload)->toBeArray();
     expect($tx->raw_payload['chain_hints'][0]['hint_type'])->toBe('funded_by_card');
 
-    // ...and the post-persistence listener fired off the decrypted payload.
     $chainLinks = DB::table('chain_links')->where('user_id', $this->fixtureUser->id)->get();
     expect($chainLinks)->toHaveCount(1);
     expect($chainLinks->first()->kind)->toBe('funded_by_card_hint');

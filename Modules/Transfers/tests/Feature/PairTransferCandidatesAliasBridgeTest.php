@@ -16,15 +16,8 @@ use Modules\Ledger\Models\Transaction;
 
 uses(RefreshDatabase::class);
 
-/*
- * Coverage for the alias-bridge fallback arm of
- * PairTransferCandidates::handle(). The literal own-IBAN match runs
- * first (and is covered by the existing PairTransferCandidatesTest);
- * when it misses, the listener falls back to
- * ResolvesKnownCounterpartyIban so a real institution IBAN appearing
- * on the ASN side of a cross-account hop resolves to the user's own
- * synthetic-IBAN partner account.
- */
+// PairTransferCandidatesTest covers the literal own-IBAN arm; this covers the
+// fallback, where a real institution IBAN maps onto a synthetic-IBAN account.
 
 beforeEach(function (): void {
     $this->user = User::query()->create([
@@ -77,10 +70,6 @@ beforeEach(function (): void {
 });
 
 /**
- * Persist a Transaction with the test-fixture defaults; caller
- * overrides only the keys the test exercises. Matches the shape used
- * by the existing PairTransferCandidatesTest::pairTx() helper.
- *
  * @param  array<string, mixed>  $overrides
  */
 function aliasPairTx(User $user, Account $account, ImportRun $run, array $overrides = []): Transaction
@@ -112,17 +101,9 @@ function aliasPairTx(User $user, Account $account, ImportRun $run, array $overri
 }
 
 it('pairs ASN transfer_out with PayPal transfer_in via alias fallback when PayPal side carries no counterparty IBAN', function (): void {
-    // The empirical PayPal Activity Download CSV does NOT carry a
-    // per-row counterparty IBAN — the funding source IBAN flows
-    // through the funding-leg child row, not the parent
-    // (Bankstorting). So in the canonical ledger state the PayPal
-    // side has counterparty_iban = '' and the listener short-
-    // circuits on that side. The ONLY route to a pair is the ASN
-    // side firing with its real-institution counterparty IBAN
-    // ('LU89751000135104200E') AND the listener consulting the
-    // alias bridge to resolve the partner account. Arm A (literal)
-    // can never succeed here: 'LU89751000135104200E' does not match
-    // any of the user's Account.iban values.
+    // The PayPal CSV carries no per-row counterparty IBAN, so that side stores
+    // '' and short-circuits. Only the ASN side fires, and its institution IBAN
+    // matches no Account.iban, leaving the alias bridge as the only route.
     $asnLeg = aliasPairTx($this->user, $this->bank, $this->importRun, [
         'type' => 'transfer_out',
         'amount_minor' => -5000,
@@ -138,9 +119,7 @@ it('pairs ASN transfer_out with PayPal transfer_in via alias fallback when PayPa
     ]);
 
     $this->events->dispatch(new TransactionImported($asnLeg, $this->user));
-    // The PayPal side's empty counterparty_iban makes the listener
-    // short-circuit; dispatching the event is a no-op but mirrors
-    // the real import pipeline shape.
+    // A no-op, kept because the real import pipeline dispatches for every row.
     $this->events->dispatch(new TransactionImported($paypalLeg, $this->user));
 
     /** @var Transaction $asn */
@@ -152,13 +131,8 @@ it('pairs ASN transfer_out with PayPal transfer_in via alias fallback when PayPa
 });
 
 it('pairs when the ASN-side leg lands strictly BEFORE the PayPal-side leg — reverse alias lookup closes the pair', function (): void {
-    // Regression for the ordering-dependent half-state where the ASN
-    // side persisted first (with its real institution counterparty
-    // IBAN) but found no partner because the PayPal side had not yet
-    // arrived, and then the PayPal side persisted second (with its
-    // empty counterparty_iban) and previously short-circuited rather
-    // than running the reverse alias lookup. The pair MUST close on
-    // the PayPal-side fire.
+    // The PayPal side arriving second used to short-circuit on its empty
+    // counterparty_iban instead of running the reverse alias lookup.
     $asnLeg = aliasPairTx($this->user, $this->bank, $this->importRun, [
         'type' => 'transfer_out',
         'amount_minor' => -7777,
@@ -166,19 +140,15 @@ it('pairs when the ASN-side leg lands strictly BEFORE the PayPal-side leg — re
         'counterparty_iban' => 'LU89751000135104200E',
     ]);
 
-    // ASN first — its alias-resolved partner account is PayPal but no
-    // PayPal-side leg exists yet, so the listener writes nothing.
+    // ASN first: no PayPal leg exists yet, so the listener writes nothing.
     $this->events->dispatch(new TransactionImported($asnLeg, $this->user));
 
     /** @var Transaction $asnAfterFirst */
     $asnAfterFirst = Transaction::query()->findOrFail($asnLeg->id);
     expect($asnAfterFirst->pair_transaction_id)->toBeNull();
 
-    // PayPal second — empty counterparty_iban, but the reverse alias
-    // lookup builds the candidate IBAN set
-    // {'PAYPAL', 'LU89751000135104200E'} (own iban + every alias whose
-    // target_account_kind === 'paypal') and finds the now-persisted
-    // ASN partner.
+    // PayPal second: the reverse lookup spans the account's own iban plus every
+    // alias with target_account_kind 'paypal', so it finds the ASN partner.
     $paypalLeg = aliasPairTx($this->user, $this->paypal, $this->importRun, [
         'type' => 'transfer_in',
         'amount_minor' => 7777,
@@ -209,14 +179,9 @@ it('pairs symmetrically when PayPal-side leg fires first AND both rows are alrea
         'counterparty_iban' => '',
     ]);
 
-    // PayPal first — its counterparty_iban is empty so the listener
-    // runs the reverse alias lookup. The ASN partner is ALREADY
-    // persisted (both rows exist via Transaction::create() before
-    // either event fires — this mirrors the canonical in-batch shape
-    // RecordTransactions produces inside its outer DB transaction),
-    // so the reverse lookup finds it and the pair closes on this
-    // single dispatch. A subsequent ASN-side dispatch is then a
-    // defensive no-op because the row is already paired.
+    // The in-batch shape RecordTransactions produces inside its outer
+    // transaction: both rows exist before either event fires, so the pair
+    // closes on a single dispatch.
     $this->events->dispatch(new TransactionImported($paypalLeg, $this->user));
 
     /** @var Transaction $asn */
@@ -238,10 +203,8 @@ it('pairs symmetrically when PayPal-side leg fires first AND both rows are alrea
 });
 
 it('falls back to alias bridge ONLY when literal lookup misses', function (): void {
-    // Two bank accounts whose literal IBANs match each other's
-    // counterparty — Arm A (literal) succeeds, the alias resolver
-    // MUST NOT be consulted. Spy the resolver to assert it is never
-    // called.
+    // Literal IBANs matching each other's counterparty: the spy proves the
+    // alias resolver is never consulted.
     $bankB = Account::create([
         'user_id' => $this->user->id,
         'name' => 'Second ASN',
@@ -289,15 +252,11 @@ it('falls back to alias bridge ONLY when literal lookup misses', function (): vo
     expect($asn->pair_transaction_id)->toBe($partnerLeg->id);
     expect($partner->pair_transaction_id)->toBe($asnLeg->id);
 
-    // The literal arm succeeded on BOTH legs — the alias bridge was
-    // never consulted in either handle() call.
     expect($spy->callCount)->toBe(0);
 });
 
 it('alias-bridge fallback respects per-user scoping', function (): void {
-    // Bob has bank + paypal accounts but NO alias rows. An ASN
-    // transfer_out for Bob with the PayPal Luxembourg counterparty
-    // IBAN must NOT pair because Bob's alias resolver returns null.
+    // Bob has the accounts but no alias rows, so the same ASN leg must not pair.
     $bob = User::query()->create([
         'username' => 'pair-alias-bob',
         'password' => 'fixture-password',

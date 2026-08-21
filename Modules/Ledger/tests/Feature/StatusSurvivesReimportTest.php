@@ -14,16 +14,8 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 uses(RefreshDatabase::class);
 
-/**
- * SC-3 / D-04: re-importing the identical CanonicalTransaction must never
- * reset a user-set status. Per RESEARCH.md Pitfall 1, `RecordTransactions`
- * already dedupes via `insertOrIgnore` on the fingerprint UNIQUE index —
- * a fingerprint conflict leaves the ENTIRE existing row untouched (not a
- * partial on-conflict-update), so a user's manually-set `status` survives a
- * re-import automatically. This test locks in that existing guarantee; it
- * requires ZERO changes to `Modules/Ledger/Public` or `Modules/Ledger/Internal`
- * (modeled directly on the existing `SplitSurvivesReimportTest.php`).
- */
+// A fingerprint conflict makes insertOrIgnore drop the incoming row whole
+// rather than merge it, so nothing can overwrite a user-set status.
 it('leaves a user-set status unchanged after re-import of the same source row', function (): void {
     $user = User::create(['username' => 'wessel', 'password' => 'opensesame', 'period_start_day' => 1]);
 
@@ -71,29 +63,22 @@ it('leaves a user-set status unchanged after re-import of the same source row', 
         sourceRef: null,
     );
 
-    // 1. Import the source row (lands with whatever default status the
-    // import pipeline stamps — irrelevant here, overwritten in step 2).
     $firstResult = app(RecordTransactions::class)->__invoke([$canonical], $user);
     expect($firstResult->inserted)->toBe(1);
 
     /** @var Transaction $tx */
     $tx = Transaction::query()->where('user_id', $user->id)->firstOrFail();
 
-    // 2. The user manually sets the status (simulating a toggle/reconcile action).
     app(DatabaseManager::class)->connection()
         ->table('transactions')
         ->where('id', $tx->id)
         ->where('user_id', $user->id)
         ->update(['status' => 'uncleared']);
 
-    // 3. Re-run the SAME import (identical CanonicalTransaction -> identical
-    // fingerprint tuple -> insertOrIgnore silently drops it).
     $secondResult = app(RecordTransactions::class)->__invoke([$canonical], $user);
     expect($secondResult->inserted)->toBe(0);
     expect($secondResult->duplicates)->toBe(1);
 
-    // 4. The user-set status survives the re-import byte-for-byte. No
-    // duplicate row was created.
     expect(Transaction::query()->where('user_id', $user->id)->count())->toBe(1);
     expect(Transaction::query()->where('id', $tx->id)->value('status'))->toBe('uncleared');
 });

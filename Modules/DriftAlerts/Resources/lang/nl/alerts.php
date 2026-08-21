@@ -57,6 +57,7 @@ return [
         'meta_eur_equiv' => '(≈ :amount/jr)',
         'cancel_impact' => 'Dit opzeggen → bespaar :amount/jr',
         'cadence_flipped' => 'Frequentie gewijzigd — ook zichtbaar in',
+        'cadence_flipped_link' => 'Terugkerend beoordelen',
         'acknowledge' => 'Bevestigen',
         'acknowledge_aria' => 'Driftmelding :id bevestigen',
         'snooze' => 'Sluimeren ▾',

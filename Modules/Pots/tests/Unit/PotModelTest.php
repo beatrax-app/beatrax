@@ -9,14 +9,6 @@ use Modules\Pots\Models\Pot;
 
 uses(RefreshDatabase::class);
 
-/**
- * Smoke tests for the Pot model — exercises the model factory, casts, and
- * the BelongsToUser global-scope isolation.
- *
- * These tests are GREEN immediately in Wave 0 because the model and migration
- * exist. They prove the test harness resolves correctly (namespace, factory,
- * DB schema) before Plans 02–04 land.
- */
 it('creates and retrieves a pot via the factory', function (): void {
     $user = User::create([
         'username' => 'wessel',
@@ -80,7 +72,6 @@ it('hides another users pots via the BelongsToUser global scope', function (): v
     Pot::factory()->create(['user_id' => $alice->id, 'account_id' => $aliceAccount->id, 'name' => 'Alices pot']);
     Pot::factory()->create(['user_id' => $bob->id, 'account_id' => $bobAccount->id, 'name' => 'Bobs pot']);
 
-    // Act as Alice — the UserScope filters out Bob's pot.
     $this->actingAs($alice);
 
     $visible = Pot::query()->get();

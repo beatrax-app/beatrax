@@ -6,21 +6,8 @@ use Illuminate\Database\DatabaseManager;
 use Modules\DevMode\Internal\Sql\ReadOnlySqliteConnection;
 use Modules\DevMode\Internal\Sql\WallClockCap;
 
-/*
- * ReadOnlySqliteConnection invariants (defense-in-depth layer
- * alongside SelectOnlyValidator).
- *
- * Covers:
- *   - Engine-level rejection — even if a non-SELECT slipped past
- *     the validator, the SQLite engine rejects the write because
- *     the PDO connection is opened with PRAGMA query_only = 1
- *     (SQLITE_READONLY error).
- *   - Successful SELECT path returns the row set + duration_ms >= 0.
- *   - WallClockCap mockable seam: every execute() invokes
- *     WallClockCap::apply(5) before the query. The test mocks the
- *     seam and asserts the call.
- */
-
+// The engine layer under SelectOnlyValidator: PRAGMA query_only = 1 means a
+// write that slipped past the parser still cannot land.
 it('rejects a write attempt with SQLITE_READONLY (engine-level guard)', function (): void {
     $conn = app(ReadOnlySqliteConnection::class);
 
@@ -78,10 +65,8 @@ it('calls WallClockCap::apply(5) at least once with the timeout value (mockable 
     $conn = new ReadOnlySqliteConnection(app(DatabaseManager::class), $stub);
     $conn->execute('SELECT 1');
 
-    // execute() invokes apply(5) once to arm the cap, then apply(N)
-    // again after the query to RESTORE the previous limit. The seam
-    // test asserts the timeout value was applied at least once
-    // with the canonical 5-second value.
+    // Two calls, not one: the second restores the previous limit after the
+    // query, so only the first carries the cap value.
     expect($stub->callsRef[0])->toBe(ReadOnlySqliteConnection::TIMEOUT_SECONDS);
     expect(count($stub->callsRef))->toBeGreaterThanOrEqual(1);
 });

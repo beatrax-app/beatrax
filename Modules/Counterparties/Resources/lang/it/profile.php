@@ -25,6 +25,8 @@ return [
         'tax_years' => 'Anni fiscali',
     ],
 
+    'tablist_aria' => 'Sezioni della controparte',
+
     'tab_note_personal' => '— nessuna catena di finanziamento per i contatti personali',
     'tab_note_bank' => '— una controparte di commissioni bancarie non genera catene di finanziamento',
     'tab_note_government' => '— nessuna catena di finanziamento per le controparti pubbliche',

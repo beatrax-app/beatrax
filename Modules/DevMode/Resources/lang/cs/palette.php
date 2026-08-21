@@ -24,10 +24,12 @@ return [
     'source_txn' => 'txn',
     'source_counterparty' => 'protistrana',
     'source_category' => 'kategorie',
+    'results_aria' => 'Výsledky',
     'no_results' => 'Žádné výsledky.',
     'foot_navigate' => 'pohyb',
     'foot_select' => 'výběr',
     'foot_close' => 'zavřít',
+    'close_aria' => 'Zavřít hledání',
     'foot_try' => 'Zkus',
     'results_suffix' => ' výsledků',
 ];

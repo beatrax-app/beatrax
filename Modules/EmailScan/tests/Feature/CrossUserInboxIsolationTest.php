@@ -8,14 +8,8 @@ use Modules\Core\Models\User;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/*
- * Cross-user 404 invariant for /oauth/connect/{provider}?inbox_id={id}.
- *
- * User A connects an inbox. User B authenticates and tries to reconnect
- * user A's inbox by passing the foreign id as a query parameter. The
- * controller must respond 404 — never expose the existence of an
- * inbox row belonging to a different user.
- */
+// 404, not 403: the response must not confirm that an inbox row with that id
+// exists at all.
 
 beforeEach(function (): void {
     $this->path = storage_path('app/secrets/email-oauth.json');
@@ -43,8 +37,8 @@ it('cross-user reconnect attempt returns 404 — never leaks the foreign inbox',
     $userA = cuiUser('user-a@example.com');
     $userB = cuiUser('user-b@example.com');
 
-    // User B is the acting user. The per-user OAuth secrets store
-    // requires an authenticated user before a provider client is saved.
+    // The secrets store is per-user, so a provider client cannot be saved
+    // before someone is bound to the guard.
     $this->actingAs($userB);
 
     /** @var OAuthSecretsRepository $secrets */
@@ -79,14 +73,12 @@ it('cross-user reconnect attempt returns 404 — never leaks the foreign inbox',
         'updated_at' => $now,
     ]);
 
-    // User B tries to reconnect user A's inbox.
     $this->withoutExceptionHandling();
 
     expect(function () use ($inboxAId): void {
         $this->get('/oauth/connect/gmail?inbox_id='.$inboxAId);
     })->toThrow(NotFoundHttpException::class);
 
-    // User A's inbox row is unchanged.
     $check = $db->connection()->table('inboxes')->where('id', $inboxAId)->first(['user_id', 'email']);
     expect($check)->not->toBeNull();
     expect((int) $check->user_id)->toBe($userA->id);

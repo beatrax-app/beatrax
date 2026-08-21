@@ -9,10 +9,8 @@ use Illuminate\Database\Migrations\Migrator;
 use Modules\Core\Public\Bootstrap\EnsureAppKey;
 use Modules\Core\Public\Services\UserDataPathService;
 
-// Runs the migration runner, then ensures APP_KEY exists, in that
-// order so any table an "encrypt-on-store" step might need already
-// exists before the encrypter is first used. Both steps are
-// idempotent and safe to re-invoke on every launch.
+// Migrations run before APP_KEY is minted, so any table an encrypt-on-store step
+// needs already exists the first time the encrypter is used. Both are idempotent.
 final class FirstLaunchBootstrap
 {
     public function __construct(
@@ -30,8 +28,6 @@ final class FirstLaunchBootstrap
     public function hasPendingMigrations(): bool
     {
         if (! $this->migrator->repositoryExists()) {
-            // Repository absent — every migration on disk counts as
-            // pending, provided any migration files exist.
             return $this->discoverMigrationFiles() !== [];
         }
 

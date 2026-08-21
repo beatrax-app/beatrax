@@ -7,9 +7,6 @@ namespace Modules\Community\Internal\Shell;
 use Native\Desktop\Contracts\Shell;
 use Psr\Log\LoggerInterface;
 
-/**
- * @link ../../../../.docs/features/community/architecture.md
- */
 final class NoOpShell implements Shell
 {
     public function __construct(private readonly LoggerInterface $logger) {}

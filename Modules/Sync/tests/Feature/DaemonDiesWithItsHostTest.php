@@ -4,23 +4,10 @@ declare(strict_types=1);
 
 use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
 
-/*
- * A daemon must not outlive the app that spawned it.
- *
- * NativePHP spawns `sync:serve` and `relay:serve` as PERSISTENT child
- * processes, deliberately outliving the Electron process so a crash-restart
- * does not drop the listener. The supervisor's own before-quit hook stops them
- * on an orderly quit — but a force quit kills Electron outright, that hook
- * never runs, and the daemon is left holding its port.
- *
- * That is not hypothetical: a relay orphaned that way was still holding 51338
- * a day and nineteen hours later, running code from before three separate
- * fixes, and the next launch found the port taken and left it in place.
- *
- * The host holds the child's stdin. However Electron dies, that pipe closes,
- * and EOF on it is the one shutdown signal that survives a kill -9 of the
- * parent — which is what these tests pin.
- */
+// The listeners are spawned as persistent children, so a force quit skips the
+// before-quit hook and leaves one holding its port: an orphaned relay held
+// 51338 for a day and nineteen hours, running superseded code. The host owns
+// the child's stdin, and EOF on that pipe is the one signal a kill -9 cannot eat.
 
 it('returns as soon as the host closes the pipe it holds', function (): void {
     $script = <<<'PHP'

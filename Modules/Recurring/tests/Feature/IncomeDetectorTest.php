@@ -15,15 +15,6 @@ use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Models\RecurringSeriesOccurrence;
 
-/*
- * Feature-level coverage for the IncomeSeriesDetector.
- *
- * Income clusters by counterparty IBAN with a fallback to the
- * normalized counterparty description, scoped to type='income'
- * transactions above the per-user `recurring_income_min_amount_minor`
- * threshold (default 200000 minor units = €2000).
- */
-
 function idtUser(string $username): User
 {
     return User::query()->create([
@@ -151,9 +142,8 @@ beforeEach(function (): void {
     $db = $this->app->make(DatabaseManager::class);
     $this->db = $db;
     $this->user = idtUser('income-detector');
-    // Widen the detection window so the monthly-salary fixture's earliest
-    // 2025-04-25 occurrence sits inside the look-back window relative to
-    // the 2026-05-17 frozen clock.
+    // Wide enough for the fixture's earliest 2025-04-25 occurrence to sit
+    // inside the look-back from the frozen 2026-05-17 clock.
     $this->user->recurring_detection_window_months = 36;
     $this->user->save();
     $this->account = idtAccount($this->user, 'idt-asn');
@@ -189,8 +179,7 @@ it('clusters a monthly-salary fixture into one approved-pending income series', 
 })->group('income-cluster');
 
 it('drops income below the recurring_income_min_amount_minor threshold so small refunds never cluster', function (): void {
-    // Default threshold = 200000 (€2000). Seed monthly +€500 income for
-    // 12 months — every row is below threshold.
+    // The default threshold is €2000; every row seeded below is €500.
     $start = CarbonImmutable::parse('2025-04-25');
     for ($i = 0; $i < 12; $i++) {
         $date = $start->addMonths($i)->toDateString();
@@ -232,8 +221,6 @@ it('produces two distinct income series for multi-IBAN payroll', function (): vo
 })->group('two-employer');
 
 it('falls back to counterparty_normalized when IBAN is null', function (): void {
-    // 12 monthly income rows from a freelance client with NULL IBAN but
-    // consistent normalized description; should cluster on description.
     $start = CarbonImmutable::parse('2025-04-25');
     for ($i = 0; $i < 12; $i++) {
         $date = $start->addMonths($i)->toDateString();
@@ -261,8 +248,7 @@ it('falls back to counterparty_normalized when IBAN is null', function (): void 
 })->group('iban-missing-falls-back-to-description');
 
 it('clusters mixed-currency income (EUR vs USD same employer) into two separate series', function (): void {
-    // Six monthly EUR + six monthly USD income rows from the same IBAN.
-    // Each currency must cluster as its own series.
+    // Both runs below share one IBAN; only the currency differs.
     $start = CarbonImmutable::parse('2025-10-25');
     for ($i = 0; $i < 6; $i++) {
         $date = $start->addMonths($i)->toDateString();
@@ -337,9 +323,6 @@ it('does not touch expense-type transactions', function (): void {
 })->group('income-detector-ignores-expenses');
 
 it('leaves a snoozed series untouched — refreshing metrics during snooze would wake the row up', function (): void {
-    // Seed 12 monthly occurrences, run the detector to produce a
-    // pending series, transition it to snoozed, then run the detector
-    // again. The amount on the row must NOT have moved.
     $start = CarbonImmutable::parse('2024-04-25');
     for ($i = 0; $i < 12; $i++) {
         $date = $start->addMonths($i)->toDateString();
@@ -374,8 +357,7 @@ it('leaves a snoozed series untouched — refreshing metrics during snooze would
         extraColumns: ['snoozed_until' => '2026-09-01 00:00:00'],
     );
 
-    // Add a fresh occurrence with a different amount so a refresh
-    // would noticeably change the row.
+    // A different amount, so a refresh would visibly change the row.
     idtSeedTx(
         $this->db, $this->user, $this->account, $this->run,
         '2025-05-25',
@@ -395,12 +377,6 @@ it('leaves a snoozed series untouched — refreshing metrics during snooze would
 })->group('snoozed-series-skipped-on-sweep');
 
 it('suppresses every cadence variant when the counterparty has a rejected series — partial cadence-only un-rejection is not supported', function (): void {
-    // Seed 12 monthly occurrences for an income source, run the
-    // detector once so a series exists, mark that series rejected,
-    // then seed a fresh quarterly cadence for the SAME IBAN +
-    // currency. The detector must NOT spawn a new pending series —
-    // the rejection covers the (counterparty, currency) pair across
-    // every cadence band.
     $start = CarbonImmutable::parse('2024-04-25');
     for ($i = 0; $i < 12; $i++) {
         $date = $start->addMonths($i)->toDateString();
@@ -426,8 +402,6 @@ it('suppresses every cadence variant when the counterparty has a rejected series
     $machine = $this->app->make(RecurringSeriesStateMachine::class);
     $machine->transition($monthly, 'rejected', 'user_action', 'user');
 
-    // Wipe the monthly transactions and seed a fresh quarterly pattern
-    // for the same IBAN + currency.
     $this->db->connection()->table('transactions')
         ->where('user_id', $this->user->id)
         ->where('counterparty_iban', 'NL07REJE0000000001')
@@ -461,13 +435,9 @@ it('suppresses every cadence variant when the counterparty has a rejected series
 })->group('rejection-covers-every-cadence');
 
 it('keeps two IBAN-distinct payroll series isolated when both share a detected_name and one cadence flips', function (): void {
-    // Two employers with the SAME normalized detected_name but
-    // DISTINCT IBANs. Pass 1 seeds 13 monthly occurrences each. Pass 2
-    // inserts three additional Employer B occurrences at a quarterly
-    // cadence to push Employer B's cluster_key into a different
-    // cadence band — the cadence-flip fallback must resolve to
-    // Employer B's row (matched by cluster_counterparty_key), not
-    // Employer A's row (which shares the detected_name).
+    // Two employers share a normalised detected_name but not an IBAN, so the
+    // cadence-flip fallback must resolve B via cluster_counterparty_key rather
+    // than latch onto A on the strength of the shared name.
     $start = CarbonImmutable::parse('2024-04-25');
     for ($i = 0; $i < 13; $i++) {
         $date = $start->addMonths($i)->toDateString();
@@ -503,18 +473,16 @@ it('keeps two IBAN-distinct payroll series isolated when both share a detected_n
     expect($afterFirstPass[0]->cluster_counterparty_key)->toBe('NL44EMPA0000000001');
     expect($afterFirstPass[1]->cluster_counterparty_key)->toBe('NL52EMPB0000000002');
 
-    // Approve both so a cadence flip pushes them through the
-    // approved→cadence_changed seam (which is where the bug
-    // manifested: the wrong row would get demoted).
+    // Approved first, so the flip travels the approved→cadence_changed seam —
+    // where the bug was: the wrong row got demoted.
     /** @var RecurringSeriesStateMachine $machine */
     $machine = $this->app->make(RecurringSeriesStateMachine::class);
     foreach ($afterFirstPass as $row) {
         $machine->transition($row, 'approved', 'user_action', 'user');
     }
 
-    // Replace Employer B's recent occurrences with a quarterly pattern
-    // so the cluster_key (which encodes the cadence band) flips for B
-    // but not for A.
+    // Employer B's recent occurrences become quarterly, so the cluster_key
+    // (which encodes the cadence band) flips for B but not for A.
     $this->db->connection()->table('transactions')
         ->where('user_id', $this->user->id)
         ->where('counterparty_iban', 'NL52EMPB0000000002')

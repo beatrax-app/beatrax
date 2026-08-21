@@ -10,20 +10,8 @@ use Livewire\Features\SupportFileUploads\FileUploadConfiguration;
 use Modules\Core\Models\User;
 use Modules\Mobile\Internal\Http\Middleware\EncodedUploadTransport;
 
-/*
- * A file has to reach the pipeline on every platform, and on the iOS shell it
- * cannot cross as multipart at all: WebKit hands a custom scheme handler only
- * string bodies, so a FormData upload arrived as a multipart Content-Type over
- * a zero-byte php://input. It crosses base64-encoded instead.
- *
- * What these assert is that it is a *transport* and not a second import path:
- * the same temporary file lands on the same disk with the same bytes, whether
- * it arrived as multipart or encoded, and whether it is text or binary.
- */
-
-// The bytes as they lie on Livewire's temporary disk after an upload. It
-// writes a .json metadata sidecar beside each one, so the upload itself is
-// what is left after those are set aside.
+// Livewire writes a .json metadata sidecar beside each upload, so the upload
+// itself is what is left once those are set aside.
 function storedUpload(): string
 {
     $disk = Storage::disk(FileUploadConfiguration::disk());
@@ -73,6 +61,11 @@ beforeEach(function (): void {
     ]));
 });
 
+// WebKit hands a custom scheme handler string bodies only, so on the iOS shell a
+// FormData upload arrived as a multipart Content-Type over a zero-byte
+// php://input. It crosses base64-encoded instead, and what these assert is that
+// the encoding is a transport rather than a second import path.
+
 it('lands the same bytes a multipart upload would', function (): void {
     $contents = (string) file_get_contents(base_path('tests/fixtures/asn-sample-1.csv'));
 
@@ -83,8 +76,7 @@ it('lands the same bytes a multipart upload would', function (): void {
 
 it('carries binary as safely as text', function (): void {
     // Deliberately not valid UTF-8: the bytes a PDF is made of are exactly what
-    // a string-typed bridge would have mangled, and base64 is what makes the
-    // format restriction go away rather than merely move.
+    // a string-typed bridge would have mangled.
     $pdf = "%PDF-1.4\n".implode('', array_map(chr(...), range(128, 255)))."\n%%EOF";
 
     postEncoded([encodedFile($pdf, 'statement.pdf')])->assertOk();

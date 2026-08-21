@@ -10,17 +10,10 @@ use Modules\Core\Public\Services\ElectronUpdateChannel;
 use Modules\Core\Public\Services\SystemClock;
 use Psr\Log\NullLogger;
 
-/*
- * ElectronUpdateChannel::verifyBinary is the second layer of the
- * auto-update integrity chain: once the Ed25519-signed manifest has
- * been validated, every downloaded binary is hashed against the
- * SHA-512 value the manifest declared. Mismatch — even one bit — must
- * prevent quitAndInstall from firing.
- *
- * isStale() drives the 30-day "you're on an old version" banner from
- * UI-SPEC § Auto-update banner. The hardcoded threshold lives inside
- * the service per D-22.
- */
+// verifyBinary is the second layer of the auto-update integrity chain: once the
+// Ed25519-signed manifest has been validated every downloaded binary is hashed
+// against the SHA-512 the manifest declared, and a mismatch of a single bit has
+// to stop quitAndInstall from firing.
 
 function makeChannelForSha512(): ElectronUpdateChannel
 {
@@ -41,10 +34,6 @@ function makeChannelForSha512(): ElectronUpdateChannel
     );
 }
 
-/**
- * Build the channel with a frozen-Clock fake so the isStale tests can
- * pin "now" without sleeping through 30 days of wall-clock.
- */
 function makeChannelWithFrozenClock(CarbonImmutable $now): ElectronUpdateChannel
 {
     /** @var DatabaseManager $db */

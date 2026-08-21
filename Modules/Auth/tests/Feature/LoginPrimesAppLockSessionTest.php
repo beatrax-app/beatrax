@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-// Code-review fix WR-03 — coherent app-lock session state after credential login.
-
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
@@ -12,12 +10,8 @@ use Modules\Auth\Public\Actions\LoginAction;
 use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Models\User;
 
-/*
- * LOCK-04 contract: a lock-enabled session must never be "unlocked without a
- * data key". After a credential login, the plaintext password recovers the
- * data key via the D-21 password recovery wrap (session unlocked WITH key);
- * if the wrap cannot be unwrapped, the session starts LOCKED instead.
- */
+// A lock-enabled session must never be unlocked without a data key: login
+// recovers the key from the password wrap, or starts locked instead.
 
 function loginPrimeUser(string $username, string $password): User
 {
@@ -60,8 +54,8 @@ it('login starts the session LOCKED when the password recovery wrap cannot be un
     $provisioner = $this->app->make(AppLockProvisioner::class);
     $provisioner->enable($user->id, '123456', 'prime-pass');
 
-    // Corrupt the password wrap (simulates a stale wrap after an account
-    // password change that did not re-wrap).
+    // A stale wrap, as an account-password change that failed to re-wrap would
+    // leave behind.
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     $db->connection()->table('user_app_lock_configs')
@@ -79,7 +73,7 @@ it('login starts the session LOCKED when the password recovery wrap cannot be un
     /** @var AppLockKeyService $keyService */
     $keyService = $this->app->make(AppLockKeyService::class);
 
-    // Fail closed: locked, no key — the PIN wrap restores it on the lock screen.
+    // Fails closed: the PIN wrap restores the key on the lock screen instead.
     expect($lockState->isLocked($session))->toBeTrue();
     expect($keyService->release($session))->toBeNull();
 });

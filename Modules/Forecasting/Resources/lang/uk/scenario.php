@@ -11,6 +11,7 @@ return [
     'rename' => 'Перейменувати',
     'confirm_delete' => 'Підтвердити видалення',
     'delete_scenario' => 'Видалити сценарій',
+    'delete_confirm' => 'Видалити цей сценарій?',
 
     'mutations_count' => 'Зміни (:count)',
     'no_mutations' => 'Змін ще немає. Додай одну нижче, щоб побачити, як цей сценарій відрізняється від базового.',
@@ -67,6 +68,7 @@ return [
         'new_amount' => 'Нова сума',
         'new_next_date' => 'Нова наступна дата',
         'scope' => 'Обсяг',
+        'scope_legend' => 'Які повторення перемістити',
         'scope_next' => 'Лише наступне повторення',
         'scope_all' => 'Усі подальші повторення',
     ],
@@ -80,6 +82,8 @@ return [
         'current_amount' => 'Поточна сума',
         'new_amount' => 'Нова сума',
     ],
+
+    'series_name_fallback' => 'серія',
 
     'summary' => [
         'cancel' => 'Скасувати: :name',

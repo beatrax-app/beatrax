@@ -25,6 +25,8 @@ return [
     'no_entries' => 'Zatím žádné ruční záznamy.',
     'delete_entry' => 'Smazat záznam',
     'delete' => 'Smazat',
+    'delete_confirm' => 'Smazat tuto položku?',
+    'delete_keep' => 'Ponechat',
 
     'errors' => [
         'amount_positive' => 'Zadej částku větší než nula.',

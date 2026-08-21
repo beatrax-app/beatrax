@@ -12,12 +12,9 @@ dataset('idempotent_adapters', [
         'overlapBase' => __DIR__.'/../fixtures/asn-month-a.csv',
         'overlapNext' => __DIR__.'/../fixtures/asn-month-a-and-b.csv',
     ],
-    // The CAMT + MT940 fixture corpora do not yet ship matching
-    // overlap-period pairs, so the overlap variants fall back to the
-    // same-file pattern. Re-importing the same file produces zero new
-    // rows, which is still the strongest possible idempotency claim
-    // for the data available today. Replace with a real overlap pair
-    // the moment one lands in tests/fixtures/.
+    // No CAMT or MT940 fixture pair overlaps in period yet, so these rows
+    // re-import the same file instead. That still proves zero new rows, which
+    // is the strongest claim the available corpus supports.
     'camt053' => [
         'adapterFormat' => 'camt053',
         'fixture' => __DIR__.'/../fixtures/asn-camt053-sample-1.xml',
@@ -42,10 +39,8 @@ dataset('idempotent_adapters', [
         'overlapBase' => __DIR__.'/../../Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv',
         'overlapNext' => __DIR__.'/../../Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv',
     ],
-    // Receipt-path row: same .eml dropped twice must produce zero
-    // additional canonical transactions on the second drop. Backed
-    // by the file_imports UNIQUE on (user_id, provider_message_id)
-    // and the FingerprintComposer v3 dedup tuple.
+    // The receipt path dedupes on the file_imports UNIQUE over
+    // (user_id, provider_message_id) rather than on the fingerprint alone.
     'paypal-receipt-eml' => [
         'adapterFormat' => 'eml',
         'fixture' => __DIR__.'/../../Modules/Receipts/tests/fixtures/paypal/current-receipt.eml',

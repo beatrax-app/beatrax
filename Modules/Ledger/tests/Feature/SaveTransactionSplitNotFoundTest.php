@@ -12,16 +12,6 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Models\TransactionSplit;
 use Modules\Ledger\Public\Actions\SaveTransactionSplit;
 
-/*
- * The not-found paths of SaveTransactionSplit, which every entry point
- * shares. A row belonging to another user and a row that does not exist
- * are deliberately indistinguishable: both raise the same message, because
- * telling them apart would confirm that the other user's row is there.
- *
- * These are the guards a tampered Livewire payload lands on, so they are
- * worth asserting directly rather than only through the component.
- */
-
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
@@ -112,6 +102,5 @@ it('refuses to unsplit another user\'s transaction', function (): void {
     expect(fn () => $this->splitter->unsplit($this->other, (int) $this->transaction->id, $this->category->id))
         ->toThrow(InvalidArgumentException::class, 'Transaction not found or not owned by user.');
 
-    // The owner's split survives the refused call.
     expect(TransactionSplit::query()->where('transaction_id', $this->transaction->id)->count())->toBe(2);
 });

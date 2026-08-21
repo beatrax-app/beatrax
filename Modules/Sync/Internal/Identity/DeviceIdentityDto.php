@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Identity;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class DeviceIdentityDto
 {
     // Carries BOTH public and secret key material in hex form. MUST NEVER be

@@ -25,6 +25,8 @@ return [
         'tax_years' => 'Poreske godine',
     ],
 
+    'tablist_aria' => 'Odeljci druge strane',
+
     'tab_note_personal' => '— nema lanaca finansiranja za lične kontakte',
     'tab_note_bank' => '— druga strana za bankarske naknade ne stvara lance finansiranja',
     'tab_note_government' => '— nema lanaca finansiranja za državne ustanove',

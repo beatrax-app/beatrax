@@ -57,6 +57,7 @@ return [
         'meta_eur_equiv' => '(≈ :amount/gadā)',
         'cancel_impact' => 'Atsakieties → ietaupiet :amount/gadā',
         'cadence_flipped' => 'Biežums mainījies — redzams arī sadaļā',
+        'cadence_flipped_link' => 'Pārskatīt regulāros maksājumus',
         'acknowledge' => 'Pieņemt zināšanai',
         'acknowledge_aria' => 'Pieņemt zināšanai izmaiņu brīdinājumu :id',
         'snooze' => 'Atlikt ▾',

@@ -1,5 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
-{{-- D-20 / UI-SPEC §19: overflow-x-auto wrapper ensures the doctor panel
+{{-- UI-SPEC §19: overflow-x-auto wrapper ensures the doctor panel
      probe rows scroll horizontally at phone width. --}}
 <div class="p-6 space-y-6 overflow-x-auto" data-testid="doctor-panel-page">
     <header class="flex items-center justify-between gap-4">
@@ -65,16 +65,16 @@
                     >
                         @switch($row['status'])
                             @case('pass')
-                                <span class="text-emerald-600" aria-label="{{ Lang::get('dev::doctor.aria_pass') }}">✓</span>
+                                <span role="img" class="text-emerald-600" aria-label="{{ Lang::get('dev::doctor.aria_pass') }}">✓</span>
                                 @break
                             @case('warn')
-                                <span class="text-amber-500" aria-label="{{ Lang::get('dev::doctor.aria_warning') }}">⚠</span>
+                                <span role="img" class="text-amber-500" aria-label="{{ Lang::get('dev::doctor.aria_warning') }}">⚠</span>
                                 @break
                             @case('fail')
-                                <span class="text-rose-600" aria-label="{{ Lang::get('dev::doctor.aria_fail') }}">✗</span>
+                                <span role="img" class="text-rose-600" aria-label="{{ Lang::get('dev::doctor.aria_fail') }}">✗</span>
                                 @break
                             @default
-                                <span class="text-slate-500" aria-label="{{ Lang::get('dev::doctor.aria_info') }}">ℹ</span>
+                                <span role="img" class="text-slate-500" aria-label="{{ Lang::get('dev::doctor.aria_info') }}">ℹ</span>
                         @endswitch
                         <span class="font-mono text-xs w-48 truncate">{{ $row['label'] }}</span>
                         <span class="text-[var(--color-text-muted)] flex-1">{{ $row['detail'] }}</span>

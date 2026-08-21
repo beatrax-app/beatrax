@@ -15,8 +15,6 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\ValueObjects\Money;
 
 /**
- * @link ../../../.docs/features/forecasting/architecture.md
- *
  * @property int $id
  * @property int $user_id
  * @property int $account_id

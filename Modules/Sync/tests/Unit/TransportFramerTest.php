@@ -6,14 +6,10 @@ use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\Transport\Frame\TransportFramer;
 
-/**
- * The wire format between two paired devices.
- *
- * Every rejection here is a frame that would otherwise be interpreted, and a
- * misinterpreted frame writes wrong data into someone's ledger rather than
- * failing loudly. The length prefix in particular is the only thing separating
- * one op batch from the next on a stream.
- */
+// Every rejection here is a frame that would otherwise be interpreted, and a
+// misinterpreted frame writes wrong data into someone's ledger rather than
+// failing loudly. The length prefix is the only thing separating one op batch
+// from the next on a stream.
 function framerEntry(array $overrides = []): OpLogEntry
 {
     return new OpLogEntry(

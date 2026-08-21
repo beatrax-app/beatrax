@@ -1,5 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
-{{-- D-06 / UI-SPEC §19: overflow-x:auto on outer wrapper so this surface
+{{-- UI-SPEC §19: overflow-x:auto on outer wrapper so this surface
      scrolls horizontally at phone width rather than forcing page overflow. --}}
 <div class="space-y-6 overflow-x-auto">
     <header class="space-y-1">
@@ -25,11 +25,8 @@
     @endif
 
     <div>
-        <a
-            href="/imports/new"
-            class="inline-flex items-center rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-900 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
-        >
+        <x-core::secondary-button href="/imports/new">
             {{ Lang::get('import::results.upload_another') }}
-        </a>
+        </x-core::secondary-button>
     </div>
 </div>

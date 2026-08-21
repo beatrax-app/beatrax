@@ -4,15 +4,6 @@ declare(strict_types=1);
 
 return [
 
-    /*
-    |--------------------------------------------------------------------------
-    | Fortify Guard
-    |--------------------------------------------------------------------------
-    |
-    | beatrax is single-user and uses the default `web` session guard. No
-    | API guard, no Passport bridge.
-    */
-
     'guard' => 'web',
 
     'middleware' => ['web'],
@@ -25,11 +16,8 @@ return [
 
     'email' => 'email',
 
-    // No Fortify view is ever rendered here: the app owns its own auth
-    // screens, and 'features' is empty. Leaving this on registered
-    // /user/confirm-password, which then 500'd on a
-    // ConfirmPasswordViewResponse nothing binds — a dead route whose only
-    // behaviour was to crash, and on a debug build to print a stack trace.
+    // Left on, Fortify registers /user/confirm-password, which 500s on a
+    // ConfirmPasswordViewResponse nothing binds.
     'views' => false,
 
     'home' => '/',
@@ -97,16 +85,8 @@ return [
         'password-reset' => null,
     ],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Features Enabled
-    |--------------------------------------------------------------------------
-    |
-    | Features intentionally empty: signup uses a custom route gate;
-    | password reset uses recovery codes; there is no email verification
-    | or two-factor authentication. The login and logout routes are wired
-    | directly by the Auth module rather than by a Fortify feature flag.
-    */
+    // Deliberately empty: signup, password reset, login and logout are all
+    // wired by the Auth module, and there is no email verification or 2FA.
 
     'features' => [],
 

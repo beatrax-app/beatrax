@@ -12,7 +12,7 @@ use Native\Desktop\Events\AutoUpdater\UpdateDownloaded;
 use Psr\Log\LoggerInterface;
 
 /**
- * @link ../../../../.docs/features/desktop/architecture.md
+ * @link ../../../../.docs/features/desktop/auto-update.md
  */
 final readonly class VerifyAndInstallDownload
 {
@@ -31,10 +31,8 @@ final readonly class VerifyAndInstallDownload
 
         $manifest = $this->fetcher->fetch($this->channel->channel());
 
-        // Fail closed on every unverifiable branch — feed unreachable, bad
-        // Ed25519 signature, a version the signed manifest does not name, or a
-        // downloaded binary whose SHA512 is not the one it names — leaving the
-        // file on disk uninstalled rather than trusting an unproven update.
+        // Fail closed on every unverifiable branch, leaving the downloaded file on
+        // disk uninstalled rather than trusting an unproven update.
         if ($manifest === null
             || ! $this->channel->verifyManifest($manifest['body'], $manifest['signature'])
             || $manifest['latest_version'] !== $event->version

@@ -12,9 +12,6 @@ use Modules\Anomaly\Public\Enums\AnomalyAlertState;
 use Modules\Core\Models\User;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../.docs/features/anomaly/architecture.md
- */
 final class RemoveAnomalySuppressionRule
 {
     public function __construct(
@@ -40,8 +37,7 @@ final class RemoveAnomalySuppressionRule
             ->delete();
     }
 
-    // Undo path: deletes every rule created by the dismissal, then
-    // re-opens the anomaly via the state machine's dismissed -> open edge.
+    // The only caller of the state machine's `dismissed -> open` edge.
     public function undoSuppression(int $alertId, User $user): void
     {
         /** @var AnomalyAlert|null $alert */
@@ -59,9 +55,6 @@ final class RemoveAnomalySuppressionRule
             ->where('source_anomaly_alert_id', $alertId)
             ->delete();
 
-        // Only re-open if the alert is actually dismissed; the state
-        // machine rejects any other source state for the dismissed->open
-        // edge.
         if ($alert->state === AnomalyAlertState::Dismissed->value) {
             $this->stateMachine->transition(
                 $alert,

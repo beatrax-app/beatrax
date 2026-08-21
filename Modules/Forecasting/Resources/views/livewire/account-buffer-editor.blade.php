@@ -56,11 +56,10 @@
             wire:click="save"
             class="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
         >{{ Lang::get('forecasting::buffer.save') }}</button>
-        <button
-            type="button"
+        <x-core::secondary-button
+            size="sm"
             x-on:click="open = false"
-            class="inline-flex items-center rounded-md border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-900 dark:bg-slate-950 dark:text-slate-300 dark:border-slate-700"
-        >{{ Lang::get('forecasting::buffer.cancel') }}</button>
+        >{{ Lang::get('forecasting::buffer.cancel') }}</x-core::secondary-button>
     </div>
 
     <div class="mt-2 text-right">

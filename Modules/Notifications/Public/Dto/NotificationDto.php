@@ -8,9 +8,6 @@ use Carbon\CarbonImmutable;
 use Modules\Notifications\Public\Enums\NotificationState;
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final class NotificationDto extends Data
 {
     public function __construct(

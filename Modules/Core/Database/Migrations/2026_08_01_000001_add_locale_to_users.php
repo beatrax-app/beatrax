@@ -5,20 +5,14 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Adds the nullable `locale` column to `users` — the per-user language
- * override driving the translator locale and the `<html lang>` attribute.
- *
- * NULL means "auto": the language follows the browser's Accept-Language on
- * every request and falls back to English. A non-null `en` / `nl` is an
- * explicit choice the user made in Settings, which then wins over detection
- * on every device until they change it.
- */
 return new class extends ModuleMigration
 {
     public function up(): void
     {
         $this->schema()->table('users', static function (Blueprint $table): void {
+            // NULL is "auto": the language follows Accept-Language on every
+            // request. A stored 'en'/'nl' is an explicit Settings choice and
+            // outranks detection on every device until it changes.
             $table->string('locale', 8)
                 ->nullable()
                 ->after('theme');

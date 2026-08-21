@@ -2,9 +2,7 @@
 @extends('layouts.app', ['title' => Lang::get('categorization::rules.page_title').' · Beatrax'])
 
 @section('content')
-    <main class="min-h-screen bg-white dark:bg-slate-950">
-        <div class="mx-auto max-w-5xl px-8 py-12">
-            @livewire(\Modules\Categorization\Internal\Http\Livewire\RulesPage::class)
-        </div>
-    </main>
+    <x-core::page-shell width="5xl">
+        @livewire(\Modules\Categorization\Internal\Http\Livewire\RulesPage::class)
+    </x-core::page-shell>
 @endsection

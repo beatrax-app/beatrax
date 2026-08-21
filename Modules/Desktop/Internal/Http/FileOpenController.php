@@ -8,9 +8,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Modules\Desktop\Internal\Native\FileOpenIntake;
 
-/**
- * @link ../../../../.docs/features/desktop/architecture.md
- */
 final class FileOpenController
 {
     public function __construct(

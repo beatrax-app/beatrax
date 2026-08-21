@@ -5,15 +5,14 @@ declare(strict_types=1);
 namespace Modules\Import\Public\Actions;
 
 use Modules\Core\Models\User;
+use Modules\Import\Internal\Exceptions\ImportAlreadyConfirmedException;
 use Modules\Import\Internal\Pipeline\PreviewCache;
-use Modules\Import\Public\Exceptions\ImportAlreadyConfirmedException;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Enums\ImportRunStatus;
 
-// Refuses to discard an already-confirmed run — flipping a confirmed
-// row would orphan the ledger rows it created. The wizard UI never
-// exposes Discard post-confirm, but this Public action is reachable
-// programmatically, so the guard is enforced here regardless.
+// Discarding a confirmed run would orphan the ledger rows it created. The
+// wizard hides Discard after confirm, but this action is Public and
+// reachable programmatically, so the guard lives here.
 final class DiscardImport
 {
     public function __construct(private readonly PreviewCache $cache) {}

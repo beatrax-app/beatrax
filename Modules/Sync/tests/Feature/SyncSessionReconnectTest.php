@@ -16,12 +16,9 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
 
 uses(RefreshDatabase::class);
 
-/*
- * A SyncSession lives for ONE connection, so its cached row id is null on
- * every reconnect. Inserting the session row unconditionally meant the second
- * connection to the same peer died on the (user, local, peer) unique index —
- * only reachable once handshakes started succeeding at all.
- */
+// A SyncSession lives for one connection, so its cached row id is null on every
+// reconnect. Inserting the session row unconditionally meant the second
+// connection to the same peer died on the (user, local, peer) unique index.
 
 function reconnectNoiseSession(string $peerSecret, string $peerPublic, string $localSecret, string $localPublic): NoiseSession
 {

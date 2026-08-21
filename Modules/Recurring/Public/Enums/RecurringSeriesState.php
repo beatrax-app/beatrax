@@ -4,13 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Recurring\Public\Enums;
 
-// The lifecycle of a recurring_series row. The column, its DTOs and the
-// state machine's transition() signature stay string; this enum is the one
-// canonical spelling every caller maps through, and it owns the transition
-// graph the SQLite trigger pair and the state machine both enforce.
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
+// The column and the DTOs stay string; this enum is the canonical spelling
+// they map through, and it owns the graph the SQLite triggers also enforce.
 enum RecurringSeriesState: string
 {
     case Pending = 'pending';

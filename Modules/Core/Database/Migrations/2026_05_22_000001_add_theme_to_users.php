@@ -5,14 +5,6 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Adds the `theme` column to `users` — the per-user appearance
- * preference driving the dark-mode class on `<html>`.
- *
- * One of `light` / `dark` / `system`. The default `system` makes dark
- * mode follow the operating system out of the box; the user can pin
- * the app to `light` or `dark` from the Settings Appearance section.
- */
 return new class extends ModuleMigration
 {
     public function up(): void

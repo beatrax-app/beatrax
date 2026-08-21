@@ -169,7 +169,7 @@ Modules/Core/
 - `Internal/Http/Livewire/SettingsPage` — the `/settings` surface
   (theme, currency view, close-behavior, period-start-day, dev-mode
   toggle, community-list toggles).
-- `Internal/Http/Livewire/SystemAlertsBanner` — the layout banner
+- `Public/Http/Livewire/SystemAlertsBanner` — the layout banner
   consuming `SystemAlertQuery` + `AcknowledgeSystemAlert`.
 - `Internal/Http/Livewire/AppSidebar` — the navigation sidebar.
 - `Internal/Http/Livewire/HelpDataLocations` — `/help/data-locations`.

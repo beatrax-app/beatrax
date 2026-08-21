@@ -12,13 +12,9 @@ use Modules\Receipts\Internal\Listeners\DispatchChainHintsFromReceipt;
 use Modules\Receipts\Public\Dto\ChainHintPayload\RefundOfPayload;
 use Modules\Receipts\Public\Events\ChainHintDetected;
 
-/*
- * The listener rehydrates each raw_payload['chain_hints'] entry back
- * into a typed payload. The end-to-end fixtures only ever carry a
- * funded_by_card hint; these drive the refund_of arm and the two
- * malformed-hint guards (empty card_last4, empty original_reference_id)
- * which must be dropped silently rather than dispatched.
- */
+// The end-to-end fixtures only ever carry a funded_by_card hint, so these cover
+// the refund_of arm and the malformed-hint guards, which have to drop silently
+// rather than dispatch.
 
 beforeEach(function (): void {
     $seeded = $this->seedFixtureUserAndAccount();
@@ -69,7 +65,7 @@ it('rehydrates a refund_of hint into a RefundOfPayload and dispatches ChainHintD
     $tx = seedReceiptTransaction($this->fixtureUser, $this->fixtureAccount->id, [
         ['hint_type' => 'refund_of', 'original_reference_id' => 'ORIG-REF-123', 'evidence' => 'refund of ORIG-REF-123'],
     ]);
-    // Ensure the round-tripped payload really is the array the listener needs.
+    // The listener needs the cast to have round-tripped back into an array.
     expect($tx->raw_payload)->toBeArray();
 
     $this->app->make(DispatchChainHintsFromReceipt::class)->handle(new TransactionImported(

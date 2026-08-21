@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Recurring\Internal\Detection;
 
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
 final readonly class ClusterKeyComposer
 {
     private const MAX_PART_LENGTH = 60;

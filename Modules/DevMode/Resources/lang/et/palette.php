@@ -24,10 +24,12 @@ return [
     'source_txn' => 'tehing',
     'source_counterparty' => 'vastaspool',
     'source_category' => 'kategooria',
+    'results_aria' => 'Tulemused',
     'no_results' => 'Tulemusi pole.',
     'foot_navigate' => 'liigu',
     'foot_select' => 'vali',
     'foot_close' => 'sulge',
+    'close_aria' => 'Sulge otsing',
     'foot_try' => 'Proovi',
     'results_suffix' => ' tulemust',
 ];

@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Core\Internal\Console\Probes;
 
-/**
- * @link ../../../../../.docs/features/core/architecture.md
- */
 final class PhpVersionProbe implements Probe
 {
     private const MIN_PHP = '8.5';

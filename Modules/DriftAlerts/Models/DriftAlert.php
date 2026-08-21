@@ -15,11 +15,6 @@ use Modules\DriftAlerts\Database\Factories\DriftAlertFactory;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Models\RecurringSeriesOccurrence;
 
-// latest_occurrence_id points back into recurring_series_occurrences —
-// paired with recurring_series_id it is the idempotency seam that lets
-// DetectDriftAlertsJob re-run against the same (series, occurrence) pair
-// without producing duplicate alerts.
-
 /**
  * @property int $id
  * @property int|null $user_id

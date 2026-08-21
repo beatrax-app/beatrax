@@ -14,17 +14,10 @@ use Modules\Core\Models\User;
 
 uses(RefreshDatabase::class);
 
-/*
- * Locks the Fortify wiring for the username-based, localhost-only
- * authentication surface: the authenticator closure resolves a user by
- * `username`, the throttle middleware is absent from the pipeline, and
- * every email-related Fortify feature stays disabled.
- */
-
 it('relocates the Fortify provider into the Auth module', function (): void {
     expect(class_exists(FortifyServiceProvider::class))->toBeTrue();
-    // The legacy Core provider has been removed; reference it by string so
-    // the assertion does not pull a non-existent class through the loader.
+    // By string, so the assertion does not pull a removed class through the
+    // autoloader.
     expect(class_exists('Modules\\Core\\Internal\\Providers\\FortifyServiceProvider', false))->toBeFalse();
 });
 

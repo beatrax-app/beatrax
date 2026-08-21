@@ -32,8 +32,8 @@ it('extracts an EREF value verbatim including the literal NOTPROVIDED placeholde
 
     $parsed = $this->parser->parse($content);
 
-    // The parser extracts the raw EREF value; the adapter (Task 4) is
-    // responsible for the "NOTPROVIDED → NULL" promotion to sourceRef.
+    // Promoting "NOTPROVIDED" to a null sourceRef is the adapter's job, not
+    // this parser's.
     expect($parsed->gvcKeywords['EREF'])->toBe('NOTPROVIDED');
 })->group('phase-2');
 

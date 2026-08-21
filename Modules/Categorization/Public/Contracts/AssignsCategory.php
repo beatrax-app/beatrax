@@ -6,13 +6,11 @@ namespace Modules\Categorization\Public\Contracts;
 
 use Modules\Core\Models\User;
 
-// Implementations route writes through the Ledger Public surface so
-// Ledger remains the single mutator of `transactions.category_id`, and
-// fire TransactionCategorized after a successful write.
+// Implementations write through the Ledger Public surface, so Ledger stays the
+// single mutator of `transactions.category_id`.
 interface AssignsCategory
 {
-    // Assigns $categoryId, or NULL to un-categorize. Returns rows affected
-    // (0 when the transaction is not the user's; 1 on success); the event
-    // fires only when affected > 0.
+    // A null $categoryId un-categorises. Returns rows affected — 0 when the
+    // transaction is not the user's — and the event fires only when it is not.
     public function __invoke(int $transactionId, ?int $categoryId, User $user): int;
 }

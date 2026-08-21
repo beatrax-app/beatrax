@@ -8,4 +8,5 @@ return [
     'subtitle' => 'Iestatiet šo ierīci, lai redzētu savas finanses vienuviet.',
     'create_account' => 'Izveidot kontu',
     'import' => 'Imports no citas ierīces',
+    'create_account_note' => 'Tas darbojas arī atsevišķi, taču iestatīšana datorā un sinhronizēšana šeit ir vienkāršāka.',
 ];

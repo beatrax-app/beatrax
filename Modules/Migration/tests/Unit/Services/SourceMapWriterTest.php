@@ -10,13 +10,6 @@ use Modules\Migration\Internal\ValueObjects\SourceMapKey;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for `SourceMapWriter` (13.5-06 Task 1). Not pinned by a
- * Plan 02 RED stub — added per this task's own acceptance criteria, mirroring
- * Plan 05's precedent of authoring dedicated coverage for classes with no
- * pre-existing RED stub of their own.
- */
-
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'source-map-writer-fixture-user',
@@ -51,7 +44,7 @@ it('record() called twice for the same key yields exactly one migration_source_m
     expect($count)->toBe(1);
 });
 
-it('natural-key fallback resolves an entity whose source id is null (D-10)', function (): void {
+it('natural-key fallback resolves an entity whose source id is null', function (): void {
     $this->writer->record($this->user, new SourceMapKey('nynab', 'payee', null, 'albert heijn'), 'counterparty', 7);
 
     expect($this->writer->resolve($this->user, new SourceMapKey('nynab', 'payee', null, 'albert heijn')))->toBe(7);
@@ -74,7 +67,7 @@ it('record() called twice with a null source_external_id (natural key path) yiel
     expect($count)->toBe(1);
 });
 
-it('baseline rows capture the source field values at import time (D-11)', function (): void {
+it('baseline rows capture the source field values at import time', function (): void {
     $this->writer->record($this->user, new SourceMapKey('ynab4', 'category', 'grocery-key'), 'category', 42, [
         'name' => 'Groceries',
         'kind' => 'expense',

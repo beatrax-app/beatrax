@@ -12,14 +12,8 @@ use Modules\EmailScan\Public\Events\InboxTokenFailed;
 
 uses(RefreshDatabase::class);
 
-/*
- * RaiseReconsentAlertOnTokenFailure writes a deduped system_alerts row
- * of kind 'oauth_reconsent_required' whenever an InboxTokenFailed
- * event fires. At most one un-acknowledged row exists per
- * (user_id, inbox_id) at a time — once acknowledged, a subsequent
- * failure re-raises a fresh row (the dedup window is "active alert",
- * not time-based).
- */
+// The dedup window is "an active alert exists", not a time window: once a row
+// is acknowledged the next failure raises a fresh one.
 
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
@@ -33,8 +27,8 @@ beforeEach(function (): void {
         'default_currency_view' => 'eur_only',
     ]);
 
-    // Two inboxes for user A — one Gmail, one Microsoft. The provider
-    // string drives the alert message text branch in the listener.
+    // One Gmail and one Microsoft inbox: the provider string is what selects
+    // the listener's message-text branch.
     $now = CarbonImmutable::parse('2026-05-20 09:00:00')->toDateTimeString();
     $this->inboxAId = (int) $db->connection()->table('inboxes')->insertGetId([
         'user_id' => $this->userA->id,
@@ -146,9 +140,8 @@ it('re-raises a fresh alert when the previous one for the same inbox is acknowle
 
     $listener->handle($event);
 
-    // Acknowledge the row out-of-band via a direct stamp — the dedup
-    // window is "active alert", so the next handle() must create a
-    // fresh row rather than no-op.
+    // Acknowledged out-of-band, so the next handle() has to raise a fresh row
+    // rather than no-op.
     SystemAlert::query()
         ->where('user_id', $this->userA->id)
         ->where('kind', 'oauth_reconsent_required')

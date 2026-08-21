@@ -9,9 +9,6 @@ use Modules\Sync\Internal\OpLog\OpLogWriter;
 use Modules\Sync\Public\Events\NotificationMutated;
 use Modules\Sync\Public\Events\SavedReportMutated;
 
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 trait CapturesReportAndNotificationMutations
 {
     private function handleSavedReportEdit(SavedReportMutated $event, OpLogWriter $writer): void

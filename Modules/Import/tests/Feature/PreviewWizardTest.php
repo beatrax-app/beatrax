@@ -78,11 +78,9 @@ it('confirms an import and redirects to the results page', function (): void {
 });
 
 it('dispatches DetectRecurringSeriesJob alongside ResolveChainLinksJob synchronously after a successful confirm', function (): void {
-    // 14.1-04 (CRYPT-01): both dispatchers now call ::dispatchSync so
-    // the decrypt-requiring resolvers/detectors run in-process with
-    // this request's KEK available. Bus::fake + assertDispatchedSync
-    // replaces Queue::fake + assertPushed — dispatchSync never
-    // reaches the queue layer, so Queue::fake would see nothing.
+    // Both dispatchers use ::dispatchSync so the decrypt-requiring resolvers
+    // run in-process with this request's KEK. That never reaches the queue
+    // layer, so Queue::fake would see nothing — hence Bus::fake.
     /** @var RunsImports $importer */
     $importer = $this->app->make(RunsImports::class);
     $preview = $importer->runFromUpload(
@@ -124,9 +122,7 @@ it('does NOT dispatch DetectRecurringSeriesJob on a re-confirm with zero new wor
         ->call('confirm')
         ->assertRedirect();
 
-    // Second confirm on the same already-confirmed run: ConfirmImport's
-    // idempotent short-circuit returns zero inserted + zero enriched, so
-    // neither downstream sweep should fire again.
+    // Faked only now, so the first confirm's own dispatches are not counted.
     Bus::fake();
 
     /** @var ConfirmsImports $confirmer */
@@ -176,7 +172,6 @@ it('cross-user import access is blocked', function (): void {
 
     $this->actingAs($otherUser);
 
-    // Confirming someone else's run is a 404 via firstOrFail
     Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])
         ->call('confirm');
 })->throws(ModelNotFoundException::class);
@@ -195,9 +190,8 @@ it('returns inserted_count plus duplicate_count when an already-confirmed run is
     /** @var ImportRun $run */
     $run = ImportRun::query()->findOrFail($firstResult->importRunId);
     expect($run->status)->toBe('confirmed');
-    // Pin a non-zero duplicate_count so the idempotent re-confirm has
-    // something distinguishable to compose; the original fixture's first
-    // run inserts every row as new (duplicates = 0).
+    // The fixture's first run inserts every row as new, leaving duplicates at
+    // 0 — nothing for the re-confirm's sum to distinguish itself with.
     $run->update(['duplicate_count' => 7]);
     $expectedDuplicates = $run->inserted_count + 7;
 

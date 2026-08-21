@@ -15,9 +15,6 @@ use Modules\Ledger\Public\Enums\ClearedStatus;
 // to the user or be a global default-tree row. Without this, the FK
 // alone would accept any categories.id from another user, since the FK
 // target is the table, not the row's owner.
-/**
- * @link ../../../../.docs/features/ledger/architecture.md
- */
 final class UpdateTransactionCategory implements UpdatesTransactionCategory
 {
     public function __construct(private readonly DatabaseManager $db) {}

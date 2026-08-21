@@ -383,7 +383,7 @@ pings) and `Desktop` for OS notifications.
 
 `ForecastRunStateMachine` is the single legal mutator of
 `forecast_runs.status` — other module code reads the row freely but never
-UPDATEs the column directly; the `noTransactionWritesFromForecasting` arch
+UPDATEs the column directly; the `crossModuleRawTableWrites` arch
 invariant guards the broader substrate. Locked transition map: `pending →
 running | failed`, `running → complete | failed`, `complete`/`failed` are
 terminal. Every transition opens a DB transaction, takes a row lock (a no-op

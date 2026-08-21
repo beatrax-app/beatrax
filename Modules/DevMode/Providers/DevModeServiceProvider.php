@@ -64,9 +64,6 @@ use Modules\DevMode\Public\Dto\NavigationEntry;
 use Modules\EmailScan\Models\OAuthSecret;
 use Spatie\Activitylog\Support\ActivityLogger;
 
-/**
- * @link ../../../.docs/features/dev-mode/architecture.md
- */
 final class DevModeServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
@@ -82,9 +79,6 @@ final class DevModeServiceProvider extends ServiceProvider
         $this->registerQueueServices();
     }
 
-    // QueueInspectorPage resolves QueueRowLoader on demand each render
-    // (never as a persisted Livewire property); binding it here makes the
-    // collaborator's DatabaseManager dependency explicit at the container.
     private function registerQueueServices(): void
     {
         $this->app->singleton(QueueRowLoader::class, static fn (Application $app): QueueRowLoader => new QueueRowLoader(
@@ -92,10 +86,8 @@ final class DevModeServiceProvider extends ServiceProvider
         ));
     }
 
-    // SAFE + DESTRUCTIVE tier roster. NEVER-EXPOSED commands (migrate,
-    // migrate:rollback, db:seed) are deliberately absent — the spawner
-    // whitelists against CommandRegistry::find() so any attempt to spawn
-    // one throws InvalidArgumentException first.
+    // migrate, migrate:rollback and db:seed are deliberately absent: the
+    // spawner whitelists against find(), so spawning one throws.
     private function registerCommandRegistry(): void
     {
         $this->app->singleton(DevCommandRegistry::class, static fn (): CommandRegistry => new CommandRegistry([
@@ -167,10 +159,8 @@ final class DevModeServiceProvider extends ServiceProvider
                 label: 'Show config',
                 tier: 'safe',
                 argsSchema: [
-                    // Laravel's ConfigShowCommand signature is
-                    // `config:show {config}` — the positional argument
-                    // is REQUIRED; a no-arg invocation aborts Symfony
-                    // Console with "Not enough arguments (missing: config)".
+                    // config:show's positional argument is required upstream;
+                    // a no-arg invocation aborts Symfony Console.
                     new ArgSpec(
                         name: 'config',
                         label: 'Config key',
@@ -323,16 +313,11 @@ final class DevModeServiceProvider extends ServiceProvider
             $app->make(AuditWriter::class),
         ));
 
-        // The dev-shell layout gates `nav-disabled` on Router::has(...)
-        // at render time, so runtime truth wins over this constant;
-        // the constant's `enabled` field only documents intended state.
         $this->app->singleton(DevSidebarItems::class, static fn (): DevSidebarItems => new DevSidebarItems);
     }
 
-    // The full roster of authenticated app views (main-app surfaces + Dev
-    // Console sub-routes) is materialised lazily through the UrlGenerator,
-    // after every module has registered its routes. `dev.`-prefixed ids
-    // are filtered for non-developers at JSON-emit time.
+    // Route names resolve inside the singleton closure, not at register()
+    // time, so every module has registered its routes before the lookup.
     private function registerNavigationRegistry(): void
     {
         $this->app->singleton(NavigationRegistry::class, static function (Application $app): NavigationRegistryImpl {
@@ -345,10 +330,6 @@ final class DevModeServiceProvider extends ServiceProvider
         });
     }
 
-    // Resolves each row's route name to a relative URL, dropping rows
-    // whose route is absent in the current bundle (Horizon iframe,
-    // optional sub-features) so the registry stays well-defined across
-    // every load order.
     /**
      * @param  list<array{id: string, label: string, hint: string, icon: string, route: string, keywords: list<string>}>  $rows
      * @return list<NavigationEntry>
@@ -374,8 +355,8 @@ final class DevModeServiceProvider extends ServiceProvider
         return $entries;
     }
 
-    // Main-app nav. Each entry's `id` mirrors the route name so the
-    // palette's Recent cache dedupes on the canonical identifier.
+    // Each `id` mirrors its route name so the palette's Recent cache
+    // dedupes on one canonical identifier.
     /**
      * @return list<array{id: string, label: string, hint: string, icon: string, route: string, keywords: list<string>}>
      */
@@ -397,10 +378,8 @@ final class DevModeServiceProvider extends ServiceProvider
         ];
     }
 
-    // Dev Console sub-routes. Filtered at JSON-emit time by
-    // CommandPaletteModal::buildRegistry() so non-developers never see
-    // these labels — defense-in-depth on top of the EnsureDeveloperMode
-    // middleware on the routes themselves.
+    // CommandPaletteModal::buildRegistry() filters these out for
+    // non-developers, on top of the route middleware.
     /**
      * @return list<array{id: string, label: string, hint: string, icon: string, route: string, keywords: list<string>}>
      */
@@ -420,10 +399,6 @@ final class DevModeServiceProvider extends ServiceProvider
         ];
     }
 
-    // URL-shaped actions resolve route names through the UrlGenerator at
-    // resolution time so missing routes drop out cleanly. The handlerEvent
-    // rows ("Scan email now", "Toggle theme") dispatch as Livewire browser
-    // events instead of a URL.
     private function registerAppActionRegistry(): void
     {
         $this->app->singleton(AppActionRegistry::class, static function (Application $app): AppActionRegistryImpl {
@@ -486,26 +461,18 @@ final class DevModeServiceProvider extends ServiceProvider
 
     private function registerRedactionServices(): void
     {
-        // Lazily loads the decrypted oauth_secrets.client_secret + every
-        // string in tokens_blob on first all()/compiledPattern() call;
-        // the Eloquent observer registered in boot() busts this cache
-        // on every save/delete so a rotated secret applies immediately.
+        // Holds decrypted secrets, so it must be a singleton the boot()
+        // observer can bust — a rotated secret has to apply immediately.
         $this->app->singleton(OAuthScrubSet::class, static fn (Application $app): OAuthScrubSet => new OAuthScrubSet(
             $app->make(SecretShield::class),
         ));
 
-        // RedactionExcerptCap with the OAuthScrubSet singleton wired
-        // in so the audit-row excerpt scrubs every oauth_secret
-        // literal before the Bearer + JWT pattern. SpatieAuditWriter
-        // resolves the cap via this container singleton.
         $this->app->singleton(RedactionExcerptCap::class, static fn (Application $app): RedactionExcerptCap => new RedactionExcerptCap(
             $app->make(OAuthScrubSet::class),
         ));
 
-        // PushRedactProcessor (the Monolog tap class) resolves this
-        // singleton on every channel boot via the container, keeping its
-        // DI chain invisible to config/logging.php. Direct instantiation
-        // still works because the OAuthScrubSet constructor arg is nullable.
+        // config/logging.php cannot inject, so the Monolog tap resolves
+        // this binding instead of constructing the processor itself.
         $this->app->singleton(RedactSecretsProcessor::class, static fn (Application $app): RedactSecretsProcessor => new RedactSecretsProcessor(
             $app->make(OAuthScrubSet::class),
         ));
@@ -528,9 +495,6 @@ final class DevModeServiceProvider extends ServiceProvider
         ));
     }
 
-    // Resolves a route name to a relative URL, or null when the route is
-    // absent in the current bundle (Horizon iframe, optional sub-features)
-    // or its lookup throws, so callers stay well-defined across load order.
     private static function resolveRouteUrl(Router $router, string $name): ?string
     {
         if (! $router->getRoutes()->hasNamedRoute($name)) {
@@ -552,10 +516,8 @@ final class DevModeServiceProvider extends ServiceProvider
 
         $this->loadModuleResources('dev');
 
-        // Registered only when BOTH the dev_mode env flag is true AND the
-        // Horizon package (require-dev) is present; the dev-shell sidebar
-        // reads Route::has('dev.horizon') to gate the nav item. See
-        // .docs/features/dev-mode/architecture.md for the arch invariants.
+        // Horizon is a require-dev package, so its absence from a
+        // production build is a second guard beyond the dev_mode flag.
         if ($config->get('app.dev_mode') === true && class_exists(\Laravel\Horizon\HorizonServiceProvider::class)) {
             $horizonProviderClass = HorizonServiceProvider::class;
             if (class_exists($horizonProviderClass)) {
@@ -583,16 +545,11 @@ final class DevModeServiceProvider extends ServiceProvider
         $livewire->component('dev.doctor-panel-page', DoctorPanelPage::class);
         $livewire->component('dev.system-snapshot-page', SystemSnapshotPage::class);
         $livewire->component('dev.sql-panel-page', SqlPanelPage::class);
-        // Global command-palette modal. Mounted in both base layouts
-        // so ⌘K / Ctrl+K fires `palette:open` from anywhere in the
-        // app.
         $livewire->component('dev.command-palette-modal', CommandPaletteModal::class);
         $livewire->component('dev.command-arg-prompt-modal', CommandArgPromptModal::class);
 
-        // The QueueManager::looping(closure) form is used because the
-        // event-listener form (Looping::class) does NOT reliably fire
-        // under Laravel's queue:work. The closure resolves
-        // WriteWorkerHeartbeat from the container on every tick.
+        // Re-resolved per tick rather than closed over, so a worker running
+        // for hours keeps writing through current bindings.
         /** @var QueueManager $queueManager */
         $queueManager = $this->app->make(QueueManager::class);
         $appLocal = $this->app;
@@ -602,21 +559,15 @@ final class DevModeServiceProvider extends ServiceProvider
             ($heartbeat)();
         });
 
-        // The Advanced toggle resets to OFF on every successful Login;
-        // ArtisanRunnerPage::mount() resets it a second time on
-        // first-load-per-session as a belt-and-braces for the
-        // session-resume path that does NOT fire Login.
+        // Session resume does not fire Login, so ArtisanRunnerPage::mount()
+        // resets the Advanced toggle a second time per session.
         $events->listen(Login::class, [ResetAdvancedToggleOnLogin::class, 'handle']);
 
-        // Both the database queue driver and Horizon delete successful
-        // rows from `jobs` on completion, so the queue inspector cannot
-        // surface them — the Laravel log is the visibility seam instead.
+        // The database driver and Horizon both delete successful rows from
+        // `jobs`, so the log is the only seam that sees a completed job.
         $events->listen(JobProcessed::class, [LogQueueLifecycle::class, 'processed']);
         $events->listen(JobFailed::class, [LogQueueLifecycle::class, 'failed']);
 
-        // Attach the Eloquent observer so the scrub set busts on every
-        // OAuthSecret save/delete; the next log line or audit row's
-        // compiledPattern() lazy-rebuilds from the live table.
         OAuthSecret::observe(BustOAuthScrubSetOnSecretChange::class);
 
         if ($this->app->runningInConsole()) {

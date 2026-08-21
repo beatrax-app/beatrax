@@ -12,12 +12,6 @@ use Modules\Recurring\Public\Actions\ApproveRecurringSeries;
 use Modules\Recurring\Public\Events\RecurringSeriesApproved;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/*
- * ApproveRecurringSeries — promotes pending / cadence_changed / snoozed
- * rows to approved, inserts one transitions row, dispatches
- * RecurringSeriesApproved. Idempotent when already approved.
- */
-
 function arsUser(string $username): User
 {
     return User::query()->create([
@@ -80,8 +74,7 @@ it('promotes pending → approved, inserts one transitions row, dispatches event
 
 it('promotes cadence_changed → approved', function (): void {
     $series = arsSeries($this->user, 'pending', 'ars::cc');
-    // Move pending → approved → cadence_changed via state machine to
-    // get into the legal starting state.
+    // The state machine is the only legal route into cadence_changed.
     /** @var RecurringSeriesStateMachine $sm */
     $sm = $this->app->make(RecurringSeriesStateMachine::class);
     $sm->transition($series, 'approved', 'user_action', 'user');

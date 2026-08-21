@@ -2,18 +2,11 @@
 
 declare(strict_types=1);
 
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Makes tax_deduction_categories.short_name nullable.
- *
- * The Plan 01 migration created short_name as NOT NULL, but the domain model
- * requires it to be optional (corpus entries and user categories may omit a
- * short name). This corrective migration brings the schema in line with the
- * PATTERNS.md specification.
- */
+// A short name is optional in the domain model: both corpus entries and
+// user-created categories may omit one.
 return new class extends ModuleMigration
 {
     public function up(): void

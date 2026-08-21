@@ -8,25 +8,6 @@ use Modules\Core\Models\User;
 use Modules\Import\Internal\Http\Livewire\AliasesSettingsPage;
 use Modules\Import\Models\MerchantAlias;
 
-/*
- * Bulk-merge action coverage — ALIAS-03 from the Phase 16.1
- * requirements. The Settings → Aliases page surfaces a confirm
- * dialog (LCP-prefilled friendly_name + generalized_pattern); the
- * confirm step pipes through MergeMerchantAliases which writes the
- * surviving row + `merged_from` provenance + deletes the absorbed
- * rows in a single transaction.
- *
- * Cases:
- *   - happy path: 3 aliases with a shared 4+ char prefix merge into
- *     one surviving row whose merged_from carries the 2 absorbed
- *     entries.
- *   - LCP rejection: 2 unrelated patterns yield an empty
- *     mergeGeneralizedPattern in the dialog (the LCP service refuses
- *     1-3 char prefixes).
- *   - cross-user safety: a tampered selectedIds carrying a foreign
- *     user's alias id throws NotFoundHttpException via the action.
- */
-
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'bulk-merge-user',
@@ -131,8 +112,6 @@ it('refuses to merge an alias belonging to a different user via the calm-flash 4
         ->assertSet('showMergeModal', false)
         ->assertSet('flashMessage', 'One or more selected aliases were not found.');
 
-    // The foreign alias MUST remain in the DB — the structural
-    // user_id filter is the guard.
     expect(DB::table('merchant_aliases')->where('id', $foreignAlias->id)->exists())->toBeTrue();
 });
 

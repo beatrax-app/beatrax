@@ -14,13 +14,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 uses(RefreshDatabase::class);
 
-/*
- * AcknowledgeSystemAlert is the Public action that stamps
- * acknowledged_at on a system_alerts row. Cross-user invocation
- * raises NotFoundHttpException via the per-user-OR-system-wide guard;
- * already-acknowledged rows return idempotently without a re-write.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -39,7 +32,6 @@ beforeEach(function (): void {
         'default_currency_view' => 'eur_only',
     ]);
 
-    // Freeze the clock so the test asserts a precise acknowledged_at stamp.
     $this->frozenNow = CarbonImmutable::parse('2026-05-20 09:00:00');
     $clock = $this->createStub(Clock::class);
     $clock->method('now')->willReturn($this->frozenNow);

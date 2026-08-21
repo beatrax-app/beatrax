@@ -10,22 +10,6 @@ use Modules\DevMode\Internal\Process\RunRecord;
 use Modules\DevMode\Internal\Process\RunRegistry;
 use Symfony\Component\Process\Process;
 
-/*
- * ArtisanCancel controller invariants (Phase 16 plan 04 Task 2).
- *
- * Covers the explicit SIGTERM + 3s grace + SIGKILL fallback path.
- * Asserts:
- *   - 404 for an unknown runId.
- *   - SIGTERM dispatched against a real long-running child; the
- *     process is gone within the cancel window; the run status
- *     flips to `cancelled`.
- *   - Cross-user cancel attempts rejected — the PID comes from
- *     the cache, never the request body, so a forged runId
- *     resolves to 404 before any signal fires.
- *
- * Skipped on Windows — posix_kill is POSIX-only.
- */
-
 beforeEach(function (): void {
     if (! extension_loaded('posix')) {
         $this->markTestSkipped('posix extension required');
@@ -62,11 +46,6 @@ it('returns 204 idempotently when the process has already exited', function (): 
 
     /** @var RunRegistry $registry */
     $registry = app(RunRegistry::class);
-    // Use PID 1 (init) as "guaranteed alive" — posix_kill(1, 0) is true
-    // on Linux/macOS so the controller treats this as "still running"
-    // but is sandboxed from actually killing it (we'd need root). To
-    // simulate the "already-exited" path, use a never-allocated PID
-    // in the high range — posix_kill returns false.
     $registry->store(new RunRecord(
         runId: $runId,
         pid: 999_999_999, // Never-allocated PID; posix_kill(pid, 0) is false.
@@ -93,7 +72,6 @@ it('cancels a real long-running child via SIGTERM within the 3s grace', function
     $outPath = UserDataPathService::appPath('dev_mode/runs/'.$runId.'.out');
     @mkdir(dirname($outPath), 0700, true);
     @touch($outPath);
-    // Spawn a `sleep 30` detached child we own.
     $proc = Process::fromShellCommandline(
         'sleep 30 > '.escapeshellarg($outPath).' 2>&1 < /dev/null & echo $!',
     );
@@ -120,7 +98,6 @@ it('cancels a real long-running child via SIGTERM within the 3s grace', function
     $response = $this->actingAs($user)->postJson("/dev/artisan/cancel/{$runId}");
     $response->assertStatus(204);
 
-    // Within 5s of the cancel returning the child must be gone.
     $deadline = microtime(true) + 5.0;
     while (microtime(true) < $deadline && posix_kill($pid, 0)) {
         usleep(100_000);
@@ -157,8 +134,6 @@ it('rejects cross-user cancel with 403', function (): void {
     $response = $this->actingAs($intruder)->postJson("/dev/artisan/cancel/{$runId}");
     $response->assertStatus(403);
 
-    // The record must still be in `running` state — the intruder must
-    // not flip its lifecycle.
     $record = $registry->find($runId);
     expect($record?->status)->toBe('running');
 });

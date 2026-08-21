@@ -9,9 +9,6 @@ use Modules\Sync\Internal\Exceptions\RelayRefusedException;
 use Modules\Sync\Internal\Exceptions\RelayUnavailableException;
 use Psr\Log\LoggerInterface;
 
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 final readonly class RelayClient
 {
     private const TIMEOUT_SECONDS = 10;

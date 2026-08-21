@@ -9,13 +9,6 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 
-/**
- * Pins the cross-module click-through wiring (Plan 17-06c) for the
- * Categorization triage inbox: counterparty names on uncategorized
- * rows link to `counterparties.profile` when the row's
- * counterparty_id has been resolved by the CounterpartyResolver
- * chain, and render as plain text otherwise.
- */
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'wessel',

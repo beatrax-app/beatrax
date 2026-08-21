@@ -5,23 +5,6 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Creates the anomaly_alert_transitions append-only audit table — one
- * row per state transition produced by `AnomalyAlertStateMachine`.
- *
- * Each row carries `from_state`, `to_state`, the actor (`user` or
- * `detector`), and the structured `transition_reason`. Optional `notes`
- * text holds longer-form context surfaced by the alerts page.
- * `transitioned_at` is the canonical timestamp; `created_at` +
- * `updated_at` fall through to Laravel convention.
- *
- * The (anomaly_alert_id, transitioned_at) index supports the drill-in
- * audit query that walks the history of a single alert in chronological
- * order.
- *
- * No DDL trigger on the transitions table — append-only behaviour is a
- * project-wide schema invariant rather than a per-table SQL guard.
- */
 return new class extends ModuleMigration
 {
     public function up(): void

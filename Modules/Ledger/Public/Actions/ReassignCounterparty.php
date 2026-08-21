@@ -10,9 +10,6 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\ReassignsCounterparty;
 use Modules\Ledger\Public\Enums\ClearedStatus;
 
-/**
- * @link ../../../../.docs/features/ledger/architecture.md
- */
 final class ReassignCounterparty implements ReassignsCounterparty
 {
     public function __construct(private readonly DatabaseManager $db) {}

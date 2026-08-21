@@ -8,6 +8,7 @@ return [
     'subtitle' => 'Nyomtasd ki, vagy mentsd biztonságos helyre. Többé nem jelennek meg.',
     'copy' => 'Kódok másolása',
     'copied' => 'Másolva',
+    'copy_failed' => 'A másolás nem sikerült. Írja le a kódokat.',
     'download' => 'Letöltés .txt fájlként',
 
     'saved_as' => 'Mentve így: beatrax-recovery-codes-:username.txt',

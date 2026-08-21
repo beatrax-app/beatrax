@@ -50,8 +50,6 @@ final class SetAccountForecastBuffer
                 ]);
         });
 
-        // Re-project the baseline across all three horizons so the
-        // chart band + shortfall windows reflect the new buffer.
         foreach ([30, 60, 90] as $horizon) {
             $this->bus->dispatch(new ProjectForecastJob(
                 userId: $user->id,

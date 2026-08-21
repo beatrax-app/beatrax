@@ -8,25 +8,9 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Tests\Helpers\RealSqliteFixture;
 
-/*
- * Drives the happy path of `php artisan db:restore --confirm
- * --force-maintenance <source>`:
- *  - Source file is integrity-clean.
- *  - Command writes a pre-restore snapshot at chmod 0600 BEFORE the swap.
- *  - DB::purge() releases the live connection's file handle.
- *  - Source file is copied over the configured database path.
- *  - Post-swap PRAGMA integrity_check runs via the framework's connection
- *    (so the SqliteOptimizationsProvider's ConnectionEstablished
- *    listener re-applies WAL + synchronous against the swapped-in file).
- *  - --force-maintenance brought the app down at the start and the
- *    happy path brings it back up at the end.
- *  - Seeded row in the source is queryable after the swap.
- */
-
 beforeEach(function (): void {
-    // Build the live + source on-disk fixtures separately. The "live"
-    // file is what the command will overwrite; the "source" is the
-    // file passed on the command line.
+    // "live" is what the command overwrites; "source" is the file passed on the
+    // command line.
     $this->livePath = RealSqliteFixture::create('restore-success-live');
 
     /** @var Repository $config */
@@ -71,9 +55,7 @@ afterEach(function (): void {
 });
 
 it('round-trips a valid source: pre-restore snapshot saved, swap completes, integrity ok, app back up', function (): void {
-    // Build a source fixture and seed a known row so we can verify the
-    // post-swap DB carries it. Use raw PDO to write the row outside any
-    // Laravel connection cache.
+    // Raw PDO so the seeded row lands outside any Laravel connection cache.
     $sourcePath = RealSqliteFixture::create('restore-success-source');
     $pdo = new PDO('sqlite:'.$sourcePath, options: [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -96,14 +78,11 @@ it('round-trips a valid source: pre-restore snapshot saved, swap completes, inte
             ->expectsOutputToContain('Restore complete')
             ->assertExitCode(0);
 
-        // (a) Pre-restore snapshot exists at chmod 0600.
         $snapshots = (array) glob($backupsDir.DIRECTORY_SEPARATOR.'pre-restore-*.sqlite');
         expect($snapshots)->toHaveCount(1, 'Expected exactly one pre-restore-*.sqlite snapshot.');
         $snapshot = (string) $snapshots[0];
         expect(fileperms($snapshot) & 0o777)->toBe(0o600, 'Pre-restore snapshot must be chmod 0600.');
 
-        // (b) The live DB file now mirrors the source: a fresh PDO over
-        //     the live path should find the seeded row.
         $pdo = new PDO('sqlite:'.$livePath, options: [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         ]);
@@ -113,7 +92,6 @@ it('round-trips a valid source: pre-restore snapshot saved, swap completes, inte
         expect((int) $row)->toBe(4242);
         unset($pdo);
 
-        // (c) The app is back up after the happy path.
         /** @var Filesystem $files */
         $files = $this->app->make(Filesystem::class);
         expect($files->exists(base_path('storage/framework/down')))->toBeFalse('App should be up after the happy path.');

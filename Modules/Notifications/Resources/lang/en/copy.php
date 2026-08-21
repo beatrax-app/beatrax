@@ -3,10 +3,6 @@
 declare(strict_types=1);
 
 return [
-    // Titles. import_finished/receipts/drift/forecast/budget_nudge/
-    // savings_prompt/ics_statement_ready are LOCKED — their English wording is
-    // copied byte-for-byte from the desktop OS-notification adapter's original
-    // constants and must not be reworded without a UI-SPEC amendment.
     'title' => [
         'import_finished' => 'Import finished',
         'receipts' => 'New receipts found',
@@ -21,9 +17,6 @@ return [
         'position_digest_weekly' => 'Your weekly position',
     ],
 
-    // Bodies. Interpolated values (amounts, names, dates, day names) are
-    // formatted by the caller and passed through as placeholders; only the
-    // surrounding wording is translated here.
     'body' => [
         'budget_nudge' => ':category — :spent of :budget spent.',
         'receipts_matched' => ':count receipt matched from your email.|:count receipts matched from your email.',
@@ -36,15 +29,11 @@ return [
         'savings_prompt' => ':message (:monthly/mo)',
     ],
 
-    // The direction word interpolated into the drift body, translated so the
-    // Dutch sentence reads "omhoog"/"omlaag" rather than a stray English word.
     'drift_direction' => [
         'up' => 'up',
         'down' => 'down',
     ],
 
-    // The weekly/daily position digest is assembled from these parts, joined
-    // by spaces; only the parts that apply to the user's period are included.
     'digest' => [
         'nothing_notable' => 'Nothing needs your attention.',
         'flow' => 'In :in, out :out, net :net.',

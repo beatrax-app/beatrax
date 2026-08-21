@@ -8,34 +8,17 @@ use Modules\Sync\Internal\Config\MergeRulesRegistry;
 
 uses(RefreshDatabase::class);
 
-/*
- * Universal companion to the 7 per-table *ColumnsTest files. Those pin the
- * exact expected column set for one table each (sharper failures); this one
- * guards EVERY table in MergeRulesRegistry::rules() against two failure modes
- * that both silently break replication:
- *
- *   (a) EXISTENCE — a strategy-key column or a `_create_required` string that
- *       does not match a real migrated column. A phantom name in
- *       `_create_required` makes OpLogReplayer quarantine 100% of that table's
- *       CreateRow ops (incomplete_create_row); a phantom strategy key is dead
- *       config that will misroute a future SET op's merge strategy.
- *
- *   (b) SUBSET — `requiredCreateColumns($table)` must be a subset of the
- *       table's NOT-NULL-without-default columns (excluding the auto-increment
- *       PK). A NOT-NULL-with-default column (e.g. status default 'active')
- *       does not belong in `_create_required` — the row inserts fine without it.
- *
- * This is the oracle: registry columns must match the real schema. Never
- * weaken this test to make the registry pass — fix the registry.
- */
+// A phantom name in `_create_required` makes OpLogReplayer quarantine every one
+// of that table's CreateRow ops, and a phantom strategy key is dead config that
+// will misroute a future set. The registry must match the real schema, so a
+// failure here is fixed in the registry and never by weakening the test.
 
 /**
  * @return list<string>
  */
 function referencedColumnsFor(array $tableRules): array
 {
-    // Strategy-key columns: every top-level key that is NOT a '_'-prefixed
-    // control key ('_delete_wins', '_create_required').
+    // The '_'-prefixed keys are control keys, not columns.
     $strategyKeys = array_values(array_filter(
         array_keys($tableRules),
         static fn (string $key): bool => ! str_starts_with($key, '_'),
@@ -67,14 +50,14 @@ it('MergeRulesRegistry references only real columns and keeps _create_required a
         /** @var list<string> $realColumns */
         $realColumns = collect($columns)->pluck('name')->all();
 
-        // (a) EXISTENCE — every referenced column must be a real column.
         $referenced = referencedColumnsFor($tableRules);
         $phantom = array_values(array_diff($referenced, $realColumns));
         if ($phantom !== []) {
             $existenceFailures[$table] = $phantom;
         }
 
-        // (b) SUBSET — _create_required ⊆ NOT-NULL-without-default (no PK).
+        // A NOT-NULL column that carries a default inserts fine without being
+        // sent, so it does not belong in _create_required.
         /** @var list<string> $notNullWithoutDefault */
         $notNullWithoutDefault = collect($columns)
             ->reject(static fn (array $col): bool => (bool) $col['auto_increment'])

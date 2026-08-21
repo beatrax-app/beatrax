@@ -7,9 +7,6 @@ namespace Modules\Core\Internal\Console\Support;
 use Carbon\CarbonImmutable;
 use Throwable;
 
-/**
- * @link ../../../../../.docs/features/core/architecture.md
- */
 final class BackupRetentionPolicy
 {
     private const FILENAME_PATTERN = '/^beatrax-(\d{4})-(\d{2})-(\d{2})-(\d{6})\.sqlite$/';
@@ -18,8 +15,6 @@ final class BackupRetentionPolicy
 
     private const SUNDAY_KEEP_COUNT = 4;
 
-    // Output order mirrors the original input order, keeping callers'
-    // downstream iteration stable for logging.
     /**
      * @param  list<string>  $candidateFilenames
      * @return list<string>
@@ -45,16 +40,14 @@ final class BackupRetentionPolicy
             }
         }
 
-        // Re-key in original input order (not the DESC sort above) so the
-        // output is stable for downstream logging.
+        // Re-key in input order, not the DESC sort above, so output stays stable.
         ksort($kept);
 
         return array_values($kept);
     }
 
-    // Splits the input into non-matching filenames (always preserved, keyed
-    // by original index) and parsed daily backups carrying a zero-padded,
-    // lexicographically sortable date_key of the form "YYYY-MM-DD HHMMSS".
+    // date_key is zero-padded and lexicographically sortable, which is what lets
+    // the caller order it with strcmp instead of parsing dates.
     /**
      * @param  list<string>  $candidateFilenames
      * @return array{0: array<int, string>, 1: list<array{index: int, name: string, date_key: string, date_only: string}>}
@@ -66,8 +59,7 @@ final class BackupRetentionPolicy
 
         foreach ($candidateFilenames as $index => $name) {
             if (preg_match(self::FILENAME_PATTERN, $name, $m) !== 1) {
-                // Non-matching filenames (e.g. .suspect, pre-restore-*,
-                // .meta.json) are always preserved.
+                // .suspect, pre-restore-* and .meta.json are always preserved.
                 $kept[$index] = $name;
 
                 continue;
@@ -98,19 +90,16 @@ final class BackupRetentionPolicy
         return $indexes;
     }
 
-    // Weekly: the 4 most-recent Sunday-dated matched files. The regex accepts
-    // digit-shaped components without calendar validity, so a bogus date like
-    // 2026-13-99 would crash CarbonImmutable::parse() — treat it as non-Sunday
-    // (skipped) rather than halting the sweep.
+    // The 4 most-recent Sunday-dated files. The regex accepts digit-shaped
+    // components without calendar validity, so a bogus date would crash
+    // CarbonImmutable::parse() — skip it as non-Sunday rather than halt the sweep.
     /**
      * @param  list<array{index: int, name: string, date_key: string, date_only: string}>  $matched
      * @return array<int, true>
      */
     private function sundayKeepIndexes(array $matched): array
     {
-        // Sunday's day-of-week constant on Carbon equals 0. Read from the
-        // class constant rather than hardcoding so a future Carbon major
-        // version that bumps the value still resolves correctly.
+        // Read from the constant so a Carbon major that bumps the value still works.
         $sundayDow = CarbonImmutable::SUNDAY;
 
         $indexes = [];

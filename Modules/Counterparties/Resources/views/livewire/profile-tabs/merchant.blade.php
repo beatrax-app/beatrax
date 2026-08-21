@@ -55,7 +55,7 @@
                                 style="font-size: var(--text-sm); color: var(--color-text); text-decoration: underline; text-underline-offset: 2px;"
                             >{{ $series->displayName() }}</a>
                             <span style="font-size: var(--text-sm); color: var(--color-text-muted); font-variant-numeric: tabular-nums; white-space: nowrap;">
-                                {{ $series->monthlyEquivalent->format('nl_NL') }}{{ Lang::get('counterparties::profile.merchant.per_month_suffix') }}
+                                {{ $series->monthlyEquivalent->format() }}{{ Lang::get('counterparties::profile.merchant.per_month_suffix') }}
                             </span>
                         </li>
                     @endforeach

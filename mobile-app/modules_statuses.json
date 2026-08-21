@@ -21,6 +21,7 @@
     "Pots": true,
     "Reports": true,
     "Search": true,
+    "Shell": true,
     "Sync": true,
     "Tax": true
 }

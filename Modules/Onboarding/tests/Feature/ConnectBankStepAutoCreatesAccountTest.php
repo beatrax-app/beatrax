@@ -11,13 +11,6 @@ use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 use Modules\Onboarding\Models\WizardProgress;
 use Tests\Helpers\UploadIsolation;
 
-/*
- * Covers the auto-provision branch of ConnectBankStep::submit: when the
- * statement's own IBAN has no matching account yet, the step creates a
- * bank account for it, re-previews the run against the fresh account, and
- * still stashes the run id into wizard_progress.
- */
-
 beforeEach(function (): void {
     UploadIsolation::isolate();
 

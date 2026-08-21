@@ -13,12 +13,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 uses(RefreshDatabase::class);
 
-/*
- * The undo path (toast) deletes the suppression rule(s) AND re-opens the
- * anomaly via the diverging dismissed->open edge, while the settings
- * Remove deletes the rule only and leaves the anomaly dismissed (D-18).
- */
-
 function undoUser(): User
 {
     return User::query()->create([
@@ -60,10 +54,6 @@ function undoTxn(DatabaseManager $db, int $userId): array
     return [$txnId, $counterpartyId];
 }
 
-/**
- * Creates an OPEN alert then dismisses it as expected so a suppression
- * rule with provenance exists. Returns the alert id.
- */
 function undoDismissedAlert(User $user): int
 {
     /** @var DatabaseManager $db */
@@ -137,7 +127,6 @@ it('undoSuppression 404s on a cross-user alert', function (): void {
     expect(fn () => $remove->undoSuppression($alertId, $other))
         ->toThrow(NotFoundHttpException::class);
 
-    // Rule + dismissed state untouched.
     expect($this->db->connection()->table('anomaly_suppression_rules')
         ->where('source_anomaly_alert_id', $alertId)->count())->toBe(1);
     expect(AnomalyAlert::query()->findOrFail($alertId)->state)->toBe('dismissed');

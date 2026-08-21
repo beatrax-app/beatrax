@@ -7,13 +7,7 @@ namespace Modules\Migration\Internal\Pipeline;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use stdClass;
 
-// One chunk of staged transaction rows already prepared for persistence: the
-// surviving staging rows and their index-aligned canonical transactions.
-// prepareCanonicalRows() produces both together and persistPromotedRows()
-// consumes both together, so they travel as one value rather than two args.
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
+// $rows and $canonicals are index-aligned.
 final readonly class PreparedTransactionBatch
 {
     /**

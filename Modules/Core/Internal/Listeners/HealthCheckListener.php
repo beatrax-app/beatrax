@@ -12,12 +12,10 @@ use Modules\Core\Internal\Console\Probes\BootProbeState;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class HealthCheckListener
 {
     public function __construct(
@@ -50,7 +48,7 @@ final class HealthCheckListener
             // still has a chance to run the check).
             $this->logger->warning(
                 'HealthCheckListener: PRAGMA read failed; skipping drift check.',
-                ['exception' => $e::class, 'message' => $e->getMessage()],
+                SafeExceptionContext::describe($e),
             );
 
             return;
@@ -117,7 +115,7 @@ final class HealthCheckListener
         } catch (Throwable $e) {
             $this->logger->warning(
                 'HealthCheckListener: failed to write '.$kind.' alert; continuing.',
-                ['exception' => $e::class, 'message' => $e->getMessage()],
+                SafeExceptionContext::describe($e),
             );
         }
     }

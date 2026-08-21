@@ -11,9 +11,6 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 // which is lower-cased with the punctuation stripped, so "Domino's Pizza"
 // reached the review screen as "domino s pizza". merchants maps that key back
 // to the name as written, plaintext because rule evaluation joins on it.
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
 final readonly class MerchantDisplayName
 {
     use CoercesScalars;

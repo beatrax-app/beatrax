@@ -22,6 +22,7 @@ use Modules\Categorization\Internal\Services\RuleEngine;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
@@ -29,8 +30,6 @@ use stdClass;
 use Throwable;
 
 /**
- * @link ../../../../.docs/features/categorization/architecture.md
- *
  * @phpstan-type ReapplyProgress array{
  *     status: string,
  *     checked: int,
@@ -42,6 +41,8 @@ use Throwable;
  *     started_at: string,
  *     finished_at: string|null,
  * }
+ *
+ * @link ../../../../.docs/features/categorization/reapply-to-history.md
  */
 final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
 {
@@ -53,8 +54,6 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
 
     private const CHUNK = 500;
 
-    // Long enough to outlive the whole run (including retries) plus a
-    // reasonable UI poll gap after completion.
     private const PROGRESS_TTL_SECONDS = 3600;
 
     public function __construct(
@@ -125,9 +124,8 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
             'fields_updated' => 0,
             'transactions_updated' => 0,
             'reconciled_skipped' => 0,
-            // Rows skipped because match()/applyAtReapply() threw —
-            // surfaced so a run that silently skipped rows is still
-            // visible in the polled progress payload, not just logged.
+            // Rows skipped because match()/applyAtReapply() threw, so a run
+            // that skipped rows shows up in the payload, not just the log.
             'rows_errored' => 0,
             'started_at' => $clock->now()->toIso8601String(),
             'finished_at' => null,
@@ -209,9 +207,9 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        // Fail-open per row: a malformed condition value would otherwise
-        // throw uncaught out of the chunk closure, failing the ENTIRE
-        // queued job instead of just skipping the one bad row.
+        // Per-row fail-open: one malformed condition value throws for every
+        // row in the walk, so without this the whole queued job dies rather
+        // than skipping the rows that rule poisons.
         try {
             $changed = $matcher->changedFields($row, $transactionId);
         } catch (Throwable $e) {
@@ -219,8 +217,7 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
             $logger->warning('ReapplyRulesJob skipped a row after a match/apply failure.', [
                 'user_id' => $userId,
                 'transaction_id' => $transactionId,
-                'exception' => $e::class,
-                'message' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
             ]);
 
             return;

@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Forecasting\Internal\Pipeline;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final readonly class CadenceJitter
 {
     /**

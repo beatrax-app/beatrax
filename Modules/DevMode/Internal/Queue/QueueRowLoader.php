@@ -8,13 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
 
-// Reads and normalises the per-tab queue row set for QueueInspectorPage. The
-// raw query builder returns stdClass rows; this collaborator maps each tab's
-// columns into the single predictable QueueRow array shape the Blade view
-// consumes, keeping larastan-strict happy off the Livewire component.
 /**
- * @link ../../../../.docs/features/dev-mode/architecture.md
- *
  * @phpstan-type QueueRow array{
  *   key: string,
  *   queue?: string,
@@ -37,9 +31,8 @@ final readonly class QueueRowLoader
 
     public function __construct(private DatabaseManager $db) {}
 
-    // Raw query builder + an explicit array mapper keeps larastan-strict
-    // happy (no Eloquent dynamic-call narrowing) and gives the Blade a
-    // single, predictable contract.
+    // The query builder rather than Eloquent: dynamic-call narrowing on
+    // Eloquent\Builder trips larastan-strict.
     /**
      * @return list<QueueRow>
      */
@@ -71,9 +64,8 @@ final readonly class QueueRowLoader
     {
         $out = [];
         foreach ($raw as $row) {
-            // get_object_vars() converts the stdClass row to an array so
-            // larastan-strict-rules does not flag the dynamic property
-            // access on the raw query builder's per-column properties.
+            // Array access, not ->column: larastan-strict flags dynamic
+            // property reads on the builder's stdClass rows.
             $vars = get_object_vars($row);
             $key = self::stringKey($vars['id'] ?? null);
             $queue = $vars['queue'] ?? null;
@@ -166,9 +158,8 @@ final readonly class QueueRowLoader
         ];
     }
 
-    // The pending `jobs` table keys on an int id; failed jobs and batches
-    // key on a string uuid. Coerces either to the string row key the
-    // Blade selection model expects, defaulting to '' for absent ids.
+    // `jobs` keys on an int id, but the Blade selection model works in
+    // strings across all three tabs.
     private static function stringKey(mixed $idRaw): string
     {
         if (is_int($idRaw)) {

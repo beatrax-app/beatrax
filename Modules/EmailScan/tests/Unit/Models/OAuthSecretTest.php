@@ -9,13 +9,6 @@ use Modules\EmailScan\Models\OAuthSecret;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for the OAuthSecret Eloquent model — proves the
- * `encrypted` cast on client_secret and tokens_blob roundtrips a value
- * through Eloquent while persisting only ciphertext: a raw query-builder
- * read of the same column never sees the plaintext.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);

@@ -7,26 +7,11 @@ namespace Modules\Search\Tests;
 use Illuminate\Database\DatabaseManager;
 use Tests\TestCase as RootTestCase;
 
-/**
- * Search module-local TestCase. Extends the root TestCase.
- *
- * Provides helpers for seeding a minimal user + account + transaction
- * fixture. In Wave 2 (Plan 03 — SearchQuery implementation), the helper
- * also directly populates `transaction_search_docs` and
- * `transaction_search_fts` so tests can run without depending on
- * SearchIndexWriter (Plan 02, concurrently built in a parallel worktree).
- *
- * Note: the FTS seed in `searchTestTransaction()` is the same denormalized
- * body that SearchIndexWriter produces — counterparty_name + chr(12) separator
- * + description + chr(12) + optional note. Tests that add a tax note must call
- * `seedFtsIndex($txId, $userId)` after inserting the tax_transaction_tags row
- * to include the note in the FTS corpus.
- */
+// The fixtures seed the FTS tables themselves so search tests do not depend on
+// SearchIndexWriter. A test that adds a tax note after the fact has to call
+// seedFtsIndex() again, or the note never reaches the corpus.
 abstract class TestCase extends RootTestCase
 {
-    /**
-     * Inserts a minimal user row and returns its id.
-     */
     protected function searchTestUser(string $username): int
     {
         return $this->app->make(DatabaseManager::class)
@@ -42,9 +27,6 @@ abstract class TestCase extends RootTestCase
     }
 
     /**
-     * Inserts an account + import run + transaction for the given user,
-     * populates the FTS index for that transaction, and returns the transaction id.
-     *
      * @param  array<string, mixed>  $overrides
      */
     protected function searchTestTransaction(int $userId, array $overrides = [], bool $seedFts = true): int
@@ -98,16 +80,13 @@ abstract class TestCase extends RootTestCase
             'updated_at' => now(),
         ], $overrides);
 
-        // Remove account_id from overrides if it was used above to avoid re-inserting
         unset($txData['account_id']);
         $txData['account_id'] = is_int($accountId) ? $accountId : (int) $accountId;
 
         $txId = $db->table('transactions')->insertGetId($txData);
 
-        // Directly populate FTS index (Plan 03 worktree is parallel to Plan 02 which builds
-        // SearchIndexWriter — seed FTS directly so tests do not depend on the writer).
-        // Tests that exercise the rebuild path (search:reindex) need a populated
-        // transactions table with an EMPTY index — they pass $seedFts = false.
+        // Tests of the rebuild path need transactions with an empty index, which
+        // is what $seedFts = false is for.
         if ($seedFts) {
             $this->seedFtsIndex($txId, $userId);
         }
@@ -115,14 +94,9 @@ abstract class TestCase extends RootTestCase
         return $txId;
     }
 
-    /**
-     * (Re-)index a transaction into transaction_search_docs and transaction_search_fts.
-     *
-     * Builds the same denormalized search_body that SearchIndexWriter produces:
-     *   counterparty_name + chr(12) + description + chr(12) + tax_note
-     * The chr(12) (form-feed) separator is not trigram-indexable and cannot
-     * produce false-positive matches (RESEARCH Assumption A2).
-     */
+    // Builds the same denormalized body SearchIndexWriter produces. The chr(12)
+    // separator is not trigram-indexable, so joining the fields cannot conjure a
+    // match that straddles two of them.
     protected function seedFtsIndex(int $txId, int $userId): void
     {
         $db = $this->app->make(DatabaseManager::class)->connection();
@@ -145,21 +119,19 @@ abstract class TestCase extends RootTestCase
 
         $body = $counterpartyName.chr(12).$description.chr(12).$noteStr;
 
-        // Fetch existing body for FTS delete step
+        // FTS5 needs the old body handed back to it to delete the old posting.
         $existing = $db->table('transaction_search_docs')
             ->where('transaction_id', $txId)
             ->first(['search_body']);
 
         $oldBody = $existing !== null && is_string($existing->search_body) ? $existing->search_body : '';
 
-        // Upsert the denormalized doc
         $db->table('transaction_search_docs')->upsert(
             ['transaction_id' => $txId, 'user_id' => $userId, 'search_body' => $body],
             ['transaction_id'],
             ['user_id', 'search_body'],
         );
 
-        // Sync FTS: delete old entry if it existed, then insert new one
         if ($oldBody !== '') {
             $db->statement(
                 "INSERT INTO transaction_search_fts(transaction_search_fts, rowid, search_body) VALUES('delete', ?, ?)",

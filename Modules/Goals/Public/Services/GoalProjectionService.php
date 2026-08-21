@@ -13,9 +13,6 @@ use Modules\Goals\Models\Goal;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Pots\Public\Services\PotBalanceQuery;
 
-/**
- * @link ../../../../.docs/features/goals/architecture.md
- */
 final class GoalProjectionService
 {
     use CoercesScalars;
@@ -62,10 +59,9 @@ final class GoalProjectionService
         ];
     }
 
-    // Run-rate over the trailing window, measured against the same source the
-    // goal's progress comes from — pot movements for a pot-linked goal,
-    // attributed transactions otherwise — so the rate and the level can never
-    // describe different money.
+    // Measured against whatever source the goal's progress comes from — pot
+    // movements when linked, attributed transactions otherwise — so the rate and
+    // the level can never describe different money.
     /**
      * @param  array{balance: int, currency: string, potId: int}|null  $linkedPot
      */

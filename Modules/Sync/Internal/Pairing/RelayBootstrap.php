@@ -11,9 +11,6 @@ namespace Modules\Sync\Internal\Pairing;
 // first: a bearer token with no endpoint is a secret with no destination, and
 // a pin with no endpoint pins nothing. Keeping them in one object is what lets
 // that rule live next to the values rather than in each caller.
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class RelayBootstrap
 {
     public function __construct(

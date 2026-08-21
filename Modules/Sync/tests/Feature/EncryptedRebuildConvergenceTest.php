@@ -13,18 +13,10 @@ use Modules\Sync\Internal\OpLog\OpLogRebuilder;
 
 uses(RefreshDatabase::class);
 
-/*
- * EncryptedRebuildConvergenceTest — CRYPT-02 / D-04 (Pitfall 4):
- * OpLogRebuilder::rebuild() after multiple rotations converges to the same
- * projection as incremental replay — the keyring is append-only forever, so
- * every historical epoch still decrypts on a full maintenance-window replay.
- * 14-VALIDATION.md CRYPT-02 row 3.
- *
- * RED until Plan 05 ships Modules\Sync\Internal\Crypto\GdkRotationService and
- * OpLogRebuilder gains the per-entry GDK decrypt hook. This test references
- * the planned production FQCN, which does not yet exist — the failure is
- * "class not found", the correct Wave 0 RED state.
- */
+// A rebuild replays the whole history at once, so it decrypts entries written
+// under every epoch the device has ever held. That only works because the
+// keyring is append-only: drop an old epoch and a rebuild silently quarantines
+// everything written under it.
 
 function convergenceUser(string $username): User
 {
@@ -60,9 +52,8 @@ it('a full OpLogRebuilder rebuild after multiple GDK rotations converges to the 
         'updated_at' => '2026-07-01 00:00:00',
     ]);
 
-    // The acting/self device needs a REAL on-disk identity: rotateAndRevoke()
-    // now loads it to SIGN each fan-out wrap. generateAndPersist() inserts the
-    // is_self=1 self-row that the rotation excludes from its own fan-out.
+    // The acting device needs a real on-disk identity, because the rotation
+    // loads it to sign each fan-out wrap.
     /** @var DeviceIdentityService $identityService */
     $identityService = $this->app->make(DeviceIdentityService::class);
     $identityService->generateAndPersist($userId, $session);
@@ -81,9 +72,8 @@ it('a full OpLogRebuilder rebuild after multiple GDK rotations converges to the 
         'updated_at' => '2026-07-01T10:00:00Z',
     ]);
 
-    // Trigger a rotation (epoch N -> N+1) — the pre-rotation category rename
-    // above is now encrypted under epoch N; anything written after this
-    // point is encrypted under N+1.
+    // After this the rename above sits under the old epoch and everything
+    // later sits under the new one.
     /** @var GdkRotationService $rotation */
     $rotation = $this->app->make(GdkRotationService::class);
     $rotation->rotateAndRevoke($userId, $removedDeviceId, $session);
@@ -99,8 +89,8 @@ it('a full OpLogRebuilder rebuild after multiple GDK rotations converges to the 
     expect($afterRebuild)->toBe($beforeRebuild);
     expect($afterRebuild)->toBe('Pre-rotation category');
 
-    // No entry should have been silently quarantined as undecryptable across
-    // the rebuild — every historical epoch must still resolve.
+    // Nothing may quarantine as undecryptable: every historical epoch has to
+    // still resolve after the rebuild.
     $quarantinedAfterRebuild = $db->connection()
         ->table('op_log_quarantine')
         ->where('user_id', $userId)

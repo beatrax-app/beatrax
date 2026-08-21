@@ -19,15 +19,6 @@ use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Tax\Public\Actions\TagTransaction;
 
-/*
- * Plan 13.4-04 Task 3 — proves every MANUAL write path durably stamps its
- * logical field 'manual' in `transactions.field_provenance` (D-04, Req 4),
- * and that TagTransaction's engine-facing $provenanceSource param carries
- * 'rule' when the (future) rule engine invokes it. Also proves stamping
- * one field never erases another already-present entry (the
- * FieldProvenanceWriter merge contract).
- */
-
 function fpsUser(string $suffix): User
 {
     return User::create([

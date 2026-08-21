@@ -120,13 +120,9 @@
         <div class="mx-auto max-w-5xl space-y-2">
             <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('migration::preview.footer_note') }}</p>
             <div class="flex items-center justify-between gap-3">
-                <button
-                    type="button"
-                    wire:click="discard"
-                    class="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-900 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
-                >
+                <x-core::secondary-button wire:click="discard">
                     {{ Lang::get('migration::preview.discard_button') }}
-                </button>
+                </x-core::secondary-button>
                 <button
                     type="button"
                     wire:click="confirm"

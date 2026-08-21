@@ -34,26 +34,10 @@ use Modules\Recurring\Models\RecurringSeriesOccurrence;
 
 uses(RefreshDatabase::class);
 
-/*
- * Runtime end-to-end proof of FCT-03: scenarios never leak into the
- * transaction substrate.
- *
- * The dual proof at compile + runtime is the structural defense — the
- * BoundaryArchTest invariant
- * `noScenarioMutationsJoinedToTransactionQueries` catches any grep-
- * detectable JOIN of `forecast_scenario_mutations` onto the
- * `transactions / recurring_series_occurrences / chain_links /
- * card_statements` substrate at compile time. This contract test runs
- * every scenario lifecycle Public Action against a seeded substrate
- * and asserts row counts on the substrate tables NEVER change.
- *
- * The test exercises every Public Action documented for Phase 10's
- * scenario CRUD surface (CreateScenario, RenameScenario, DeleteScenario,
- * AddScenarioMutation × 5 kinds, EditScenarioMutation,
- * RemoveScenarioMutation) + the ProjectForecastJob run + every Public
- * read service (ForecastQuery::forUser, ScenarioQuery::forUser /
- * mutationsFor, ForecastHighlightsQuery::forUser).
- */
+// The compile-time half of this proof is BoundaryArchTest's
+// noScenarioMutationsJoinedToTransactionQueries, which greps for the forbidden
+// JOIN. This is the runtime half: every scenario Public Action runs against a
+// seeded substrate, and the substrate row counts must never move.
 
 /**
  * @return array{user: User, accountId: int, asnAccountId: int, seriesIds: list<int>, importRunId: int, baseline: array<string, int>}
@@ -97,7 +81,6 @@ function sisSeedSubstrate(DatabaseManager $db): array
     ]);
 
     $seriesIds = [];
-    // 5 approved recurring series with 3 occurrences each + 3 transactions per series.
     $row = 0;
     for ($s = 0; $s < 5; $s++) {
         $series = RecurringSeries::query()->create([
@@ -148,7 +131,6 @@ function sisSeedSubstrate(DatabaseManager $db): array
         }
     }
 
-    // 3 chain_link rows linking funded and funder transactions in pairs.
     $txns = Transaction::query()->where('user_id', $user->id)->orderBy('id')->limit(6)->get();
     for ($i = 0; $i < 3; $i++) {
         ChainLink::query()->create([
@@ -163,7 +145,6 @@ function sisSeedSubstrate(DatabaseManager $db): array
         ]);
     }
 
-    // 1 card_statement row on the ICS account.
     CardStatement::query()->create([
         'user_id' => $user->id,
         'account_id' => $ics->id,
@@ -175,7 +156,6 @@ function sisSeedSubstrate(DatabaseManager $db): array
         'state' => 'open',
     ]);
 
-    // 2 drift_alert rows backed by real recurring_series_occurrence rows.
     $occurrences = RecurringSeriesOccurrence::query()
         ->where('user_id', $user->id)
         ->orderBy('id')
@@ -253,14 +233,12 @@ it('keeps transaction-substrate row counts unchanged across the full scenario li
     /** @var list<int> $seriesIds */
     $seriesIds = $seed['seriesIds'];
 
-    // 1. CreateScenario
     $create = $this->app->make(CreateScenario::class);
     $scenarioId = ($create)($user, 'SIS scenario');
     expect($scenarioId)->toBeGreaterThan(0);
     expect($db->connection()->table('forecast_scenarios')->where('user_id', $user->id)->count())->toBe(1);
     sisAssertCounts($db, $user->id, $baseline, 'after CreateScenario');
 
-    // 2. AddScenarioMutation × 5 kinds.
     $add = $this->app->make(AddScenarioMutation::class);
 
     $mutationIds = [];
@@ -299,45 +277,36 @@ it('keeps transaction-substrate row counts unchanged across the full scenario li
 
     expect($db->connection()->table('forecast_scenario_mutations')->where('user_id', $user->id)->count())->toBe(5);
 
-    // 3. EditScenarioMutation on the cancel row (re-target a different series).
     $edit = $this->app->make(EditScenarioMutation::class);
     ($edit)($mutationIds['cancel'], $user, new CancelSeriesPayload(seriesId: $seriesIds[3]));
     sisAssertCounts($db, $user->id, $baseline, 'after EditScenarioMutation');
 
-    // 4. RemoveScenarioMutation on the one-off row.
     $remove = $this->app->make(RemoveScenarioMutation::class);
     ($remove)($mutationIds['oneoff'], $user);
     sisAssertCounts($db, $user->id, $baseline, 'after RemoveScenarioMutation');
     expect($db->connection()->table('forecast_scenario_mutations')->where('user_id', $user->id)->count())->toBe(4);
 
-    // 5. RenameScenario.
     $rename = $this->app->make(RenameScenario::class);
     ($rename)($scenarioId, $user, 'SIS renamed scenario');
     sisAssertCounts($db, $user->id, $baseline, 'after RenameScenario');
 
-    // 6. ProjectForecastJob — drop the Bus fake before running the job
-    // synchronously so the projection pipeline executes inline. The
-    // QUEUE_CONNECTION=sync default in phpunit.xml + Bus::dispatchSync
-    // route the job through the real handler.
+    // Drop the Bus fake so the projection pipeline actually executes inline.
     Bus::swap($this->app->make(Dispatcher::class));
     $job = new ProjectForecastJob(userId: $user->id, scenarioId: $scenarioId, horizonDays: 30);
     Bus::dispatchSync($job);
     sisAssertCounts($db, $user->id, $baseline, 'after ProjectForecastJob run');
-    // The projection writes a forecast_runs row scoped to this scenario.
     expect($db->connection()->table('forecast_runs')
         ->where('user_id', $user->id)
         ->where('scenario_id', $scenarioId)
         ->where('horizon_days', 30)
         ->count())->toBeGreaterThanOrEqual(1);
 
-    // 7. ForecastQuery::forUser — read the scenario projection.
     /** @var ForecastQuery $forecastQuery */
     $forecastQuery = $this->app->make(ForecastQuery::class);
     $dto = $forecastQuery->forUser($seed['accountId'], 30, $scenarioId, $user);
     expect($dto)->not->toBeNull();
     sisAssertCounts($db, $user->id, $baseline, 'after ForecastQuery::forUser scenario read');
 
-    // 8. ScenarioQuery::forUser + mutationsFor.
     /** @var ScenarioQuery $scenarioQuery */
     $scenarioQuery = $this->app->make(ScenarioQuery::class);
     $scenarios = $scenarioQuery->forUser($user);
@@ -346,16 +315,14 @@ it('keeps transaction-substrate row counts unchanged across the full scenario li
     expect($mutations)->toHaveCount(4);
     sisAssertCounts($db, $user->id, $baseline, 'after ScenarioQuery reads');
 
-    // 9. ForecastHighlightsQuery::forUser — composes CardStatementQuery + the
-    // forecast_shortfall_windows table. Verify no scenario contamination.
+    // Composes CardStatementQuery and forecast_shortfall_windows — substrate reads.
     /** @var ForecastHighlightsQuery $highlights */
     $highlights = $this->app->make(ForecastHighlightsQuery::class);
     $highlights->forUser($user);
     sisAssertCounts($db, $user->id, $baseline, 'after ForecastHighlightsQuery::forUser');
 
-    // 10. DeleteScenario — cascade-on-delete wipes the scenario + its
-    // mutations + runs + shortfall_windows atomically; transaction
-    // substrate row counts MUST stay unchanged.
+    // Cascade-on-delete wipes the scenario, its mutations, runs and shortfall
+    // windows; the transaction substrate must still not move.
     $delete = $this->app->make(DeleteScenario::class);
     ($delete)($scenarioId, $user);
     sisAssertCounts($db, $user->id, $baseline, 'after DeleteScenario');
@@ -380,7 +347,6 @@ it('isolates cross-user scenario activity from another users row counts', functi
     /** @var array<string, int> $baselineB */
     $baselineB = $seedB['baseline'];
 
-    // User A runs the full scenario lifecycle.
     $create = $this->app->make(CreateScenario::class);
     $scenarioId = ($create)($userA, 'A scenario');
 
@@ -399,21 +365,14 @@ it('isolates cross-user scenario activity from another users row counts', functi
     $delete = $this->app->make(DeleteScenario::class);
     ($delete)($scenarioId, $userA);
 
-    // User B's substrate is unchanged.
     sisAssertCounts($db, $userB->id, $baselineB, 'after user-A full lifecycle vs user-B substrate');
 
     CarbonImmutable::setTestNow();
 });
 
 it('confirms zero forbidden JOIN constructs at the source level (defensive grep complement)', function (): void {
-    // This test complements the BoundaryArchTest invariant
-    // `noScenarioMutationsJoinedToTransactionQueries` with a positive-
-    // surface scan: it walks Modules/Forecasting and finds zero
-    // occurrences of `forecast_scenario_mutations` being joined onto
-    // any of the forbidden substrate tables. The arch test catches the
-    // forbidden join pattern globally; this test fixes the assertion
-    // surface on the Forecasting module specifically, the module the
-    // boundary most directly protects.
+    // The arch invariant scans every module; this narrows the same scan to
+    // Forecasting, the module the boundary most directly protects.
     $forbiddenJoinAndTable = 0;
     $forecastingDir = base_path('Modules/Forecasting');
     $iterator = new RecursiveIteratorIterator(

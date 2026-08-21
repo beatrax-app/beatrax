@@ -1,3 +1,6 @@
+@use('Modules\Ledger\Public\Services\BaseCurrency')
+@use('Modules\Ledger\Public\ValueObjects\Money')
+@use('Modules\Ledger\Public\ValueObjects\MoneyInput')
 @use('Modules\Core\Public\Support\Lang')
 {{--
     Filter chip popovers — desktop (≥768px) only.
@@ -9,6 +12,12 @@
 
     Consumed by search-toolbar.blade.php (inside the .srch-chips flex row).
 --}}
+@php
+    // .srch-chip:hover paints var(--color-hover), a token this stylesheet never
+    // defines, so it lands on the near-white fallback: unreadable under dark
+    // mode's near-white text, and indistinguishable from the white popover in
+    // light. `!` because that rule is unlayered and outranks layered utilities.
+@endphp
 
 {{-- ─── Date chip ─────────────────────────────────────────────────────── --}}
 <div class="relative" x-data="{ open: false }" x-on:keydown.escape.window="open = false">
@@ -139,10 +148,16 @@
                 $amountLabel = Lang::get('ledger::list.filter.dir_out');
             }
             if (($filterAmountMin ?? '') !== '') {
-                $amountLabel .= ' &gt; €'.number_format((float) ($filterAmountMin ?? 0), 2, ',', '.');
+                $amountLabel .= ' &gt; '.Money::ofMinor(
+                    MoneyInput::tryToMinor((string) ($filterAmountMin ?? '')) ?? 0,
+                    BaseCurrency::value(),
+                )->format();
             }
             if (($filterAmountMax ?? '') !== '') {
-                $amountLabel .= ' &lt; €'.number_format((float) ($filterAmountMax ?? 0), 2, ',', '.');
+                $amountLabel .= ' &lt; '.Money::ofMinor(
+                    MoneyInput::tryToMinor((string) ($filterAmountMax ?? '')) ?? 0,
+                    BaseCurrency::value(),
+                )->format();
             }
         }
     @endphp

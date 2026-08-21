@@ -16,9 +16,6 @@ use Modules\EmailScan\Public\Enums\DiscoveredSenderState;
 use Modules\EmailScan\Public\Enums\InboxScanStatus;
 use Modules\EmailScan\Public\Enums\MailProvider;
 
-/**
- * @link ../../../../../.docs/features/email-scan/architecture.md
- */
 final class DemoEmailScanSeeder
 {
     private const GMAIL_EMAIL = 'demo-1+gmail@beatrax.local';

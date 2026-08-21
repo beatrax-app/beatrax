@@ -4,18 +4,12 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Filesystem\Filesystem;
-use Modules\Receipts\Public\Exceptions\FileDropBlobWriteException;
+use Modules\Receipts\Internal\Exceptions\FileDropBlobWriteException;
 use Modules\Receipts\Public\Pipeline\FileDropEmlBlobStore;
 
-/*
- * The atomic put() unwinds partway-failed writes into a named
- * FileDropBlobWriteException rather than a bare RuntimeException, so a
- * half-written blob is never mistaken for a stored receipt. These drive
- * two of the failure branches with real filesystem faults; the chmod /
- * short-write / catch-all arms are defence-in-depth that cannot be
- * provoked without privileged FS trickery and are covered by the
- * exception's own factory test.
- */
+// Only two of put()'s failure branches can be provoked with real filesystem
+// faults. The chmod, short-write and catch-all arms are defence-in-depth and
+// are covered by the exception's own factory test instead.
 
 beforeEach(function (): void {
     /** @var Application $app */
@@ -52,9 +46,8 @@ it('raises couldNotOpenTempFile when the target directory is read-only', functio
         $this->markTestSkipped('root bypasses directory write permissions.');
     }
 
-    // Pre-create the partition so put() takes the "directory existed"
-    // path (no chmod) — then strip write permission so fopen of the
-    // .tmp sibling cannot open.
+    // Pre-creating the directory sends put() down its "already existed" path,
+    // which skips the chmod; stripping write then blocks the .tmp fopen.
     mkdir($this->dir, 0o700, true);
     chmod($this->dir, 0o500);
 
@@ -63,8 +56,8 @@ it('raises couldNotOpenTempFile when the target directory is read-only', functio
 });
 
 it('raises atomicRenameFailed when the destination path is an existing directory', function (): void {
-    // A directory squatting on the final path makes rename() of the
-    // temp file impossible — the atomic swap cannot complete.
+    // A directory squatting on the final path makes rename() of the temp file
+    // impossible, so the atomic swap cannot complete.
     $target = $this->dir.'/collision.eml';
     mkdir($target, 0o700, true);
     // Non-empty so rename can never treat it as a replaceable empty dir.
@@ -73,6 +66,5 @@ it('raises atomicRenameFailed when the destination path is an existing directory
     expect(fn () => fileDropStore()->put($target, 'raw mime bytes'))
         ->toThrow(FileDropBlobWriteException::class, 'atomic rename failed');
 
-    // The temp file was unwound — no orphan .tmp is left behind.
     expect(is_file($target.'.tmp'))->toBeFalse();
 });

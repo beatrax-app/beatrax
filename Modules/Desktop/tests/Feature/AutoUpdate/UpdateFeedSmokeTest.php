@@ -17,23 +17,6 @@ use Native\Desktop\Events\AutoUpdater\UpdateAvailable;
 use Native\Desktop\Events\AutoUpdater\UpdateDownloaded;
 use Psr\Log\NullLogger;
 
-/*
- * End-to-end smoke test for the explicit-consent update path against a served
- * feed. Where ExplicitConsentUpdateGateTest hands the listeners an in-memory
- * manifest, this drives the REAL HttpPublisherManifestFetcher over a faked feed
- * so the whole chain is exercised at once: the configured feed URL, the
- * per-platform manifest name, the HTTP fetch of `<manifest>` + `<manifest>.sig`,
- * the YAML parse, electron-updater's base64 SHA512 normalised to hex, the hex
- * signature decoded to bytes, the Ed25519 verification against the pinned key,
- * the version-agreement guard, and the downloaded binary's SHA512 re-check.
- *
- * A validly signed manifest reaches the banner and installs; a manifest whose
- * signature or body was tampered, and a binary whose hash disagrees, are
- * refused. It is the in-session stand-in for pointing a real bundle at the live
- * GitHub Releases feed — the one step that additionally needs the production
- * ED25519 signing key and two published builds.
- */
-
 const SMOKE_FEED_URL = 'https://updates.smoke.test/releases/latest/download';
 const SMOKE_RELEASE_DATE = '2026-08-16T00:00:00.000Z';
 
@@ -46,14 +29,6 @@ function smokeManifestName(string $platformFamily): string
     };
 }
 
-/**
- * Serve a signed publisher manifest (and its detached hex `.sig`) at the feed
- * for the given platform, mirroring exactly what the `release` workflow's
- * Ed25519 signing step publishes to GitHub Releases. `sha512` is the base64 of
- * the raw SHA512 of $binaryBytes, so a downloaded file of those bytes matches.
- * The two tamper switches model an attacker swapping the signature or the body
- * after signing.
- */
 function smokePublishManifest(
     string $platformFamily,
     string $version,

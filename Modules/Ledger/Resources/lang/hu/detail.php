@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Kategória eltávolítása',
         'keep_category' => 'Kategória megtartása',
         'restore_single' => 'Visszaállítod egyetlen kategóriára?',
+        'survivor_legend' => 'Megtartandó kategória',
         'confirm_unsplit' => 'Igen, megszüntetem',
         'keep_split' => 'Felosztás megtartása',
     ],
@@ -51,6 +52,16 @@ return [
         'choose_aria' => 'Új tranzakciótípus választása',
         'choose_option' => 'Válassz típust…',
         'save' => 'Mentés',
+    ],
+
+    'type_label' => [
+        'expense' => 'Kiadás',
+        'income' => 'Bevétel',
+        'transfer_out' => 'Kimenő átutalás',
+        'transfer_in' => 'Bejövő átutalás',
+        'fee' => 'Díj',
+        'refund' => 'Visszatérítés',
+        'adjustment' => 'Korrekció',
     ],
 
     'note' => [

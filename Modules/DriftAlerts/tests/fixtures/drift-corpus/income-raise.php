@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-// Salary €3500 → €3650 (+4.3% month-over-month). The
-// raise sits below the default ±5% threshold so the detector skips
-// the alert. Expected: zero drift alerts.
+// +4.3%, under the default 5% threshold.
 
 $transactions = [];
 $amounts = [350000, 350000, 350000, 365000, 365000, 365000];

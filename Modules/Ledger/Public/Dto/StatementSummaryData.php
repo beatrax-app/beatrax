@@ -7,10 +7,8 @@ namespace Modules\Ledger\Public\Dto;
 use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Data;
 
-// CSV statements never produce this DTO. importRunId and accountId are
-// populated at the boundary between the adapter (which doesn't know
-// the surrounding import run) and the pipeline (which does), via
-// withImportRunId()/withAccountId() just before invoking the writer.
+// CSV statements never produce this DTO. importRunId and accountId are stamped
+// on at the pipeline boundary, because the adapter does not know the run.
 final class StatementSummaryData extends Data
 {
     /**

@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\OpLog;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class OpLogEntry
 {
     // Carried INSIDE the payload, so a v1 signature can never be replayed as

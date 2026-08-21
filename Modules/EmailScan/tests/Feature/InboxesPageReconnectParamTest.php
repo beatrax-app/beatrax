@@ -8,25 +8,11 @@ use Livewire\Livewire;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
 use Modules\EmailScan\Internal\Http\Livewire\InboxesPage;
-use Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal;
+use Modules\EmailScan\Public\Http\Livewire\OAuthClientWizardModal;
 
-/*
- * `/inboxes?reconnect={inbox_id}` query-param hand-off.
- *
- * The SystemAlertsBanner Reconnect link routes the user back to
- * /inboxes with a `?reconnect={id}` query param. InboxesPage::mount
- * reads the param, looks the inbox up via InboxQuery::findForUser
- * (which scopes by current user), and dispatches the
- * `oauth-client-wizard:open` Livewire event with the provider + inbox
- * id so the modal opens against the existing inbox row. Cross-user
- * attempts and missing inbox ids are silently ignored (404-not-403
- * contract; the dispatch never fires).
- *
- * Successful re-consent acknowledges the active
- * oauth_reconsent_required system_alerts row for that inbox; the test
- * simulates the modal firing `oauth-client-wizard:reconsented` and
- * asserts the row is acknowledged.
- */
+// A foreign or unknown inbox id is ignored in silence rather than refused:
+// the dispatch simply never fires, so the page cannot be used to probe which
+// inbox ids exist.
 
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
@@ -90,7 +76,6 @@ it('does NOT dispatch when no ?reconnect query param is supplied', function (): 
 });
 
 it('acknowledges the active oauth_reconsent_required alert when the modal signals oauth-client-wizard:reconsented', function (): void {
-    // Seed an active re-consent alert for inbox A.
     $alertId = (int) $this->db->connection()->table('system_alerts')->insertGetId([
         'user_id' => $this->userA->id,
         'kind' => 'oauth_reconsent_required',
@@ -118,7 +103,7 @@ it('OAuthClientWizardModal::open() stores the inbox id when supplied (backward-c
         ->assertSet('reconnectInboxId', $this->inboxAId);
 });
 
-it('OAuthClientWizardModal::open() leaves reconnectInboxId null when no inbox id is supplied (Plan 03b call-site stays working)', function (): void {
+it('OAuthClientWizardModal::open() leaves reconnectInboxId null when no inbox id is supplied', function (): void {
     Livewire::actingAs($this->userA)
         ->test(OAuthClientWizardModal::class)
         ->call('open', 'gmail')

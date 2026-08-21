@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
-use Modules\Import\Public\Exceptions\InvalidAccountNameException;
+use Modules\Import\Internal\Exceptions\InvalidAccountNameException;
 use Modules\Import\Public\Services\AccountNamer;
 use Modules\Ledger\Models\Account;
 

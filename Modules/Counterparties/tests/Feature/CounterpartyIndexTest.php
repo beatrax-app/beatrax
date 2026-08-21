@@ -8,19 +8,6 @@ use Modules\Core\Models\User;
 use Modules\Core\Models\UserPreference;
 use Modules\Counterparties\Internal\Http\Livewire\CounterpartyIndex;
 
-/*
- * Feature coverage for the `/counterparties` index page. Pins the seven
- * load-bearing behaviors documented in Plan 17-06b Task 2:
- *
- *   1. Renders cards-default with the page title + ▦ Cards active
- *   2. Filter chips work (URL gains ?type=merchant; only merchant rows render)
- *   3. View toggle persists to user_preferences.counterparty_index_view
- *   4. Empty state — verbatim heading "No counterparties yet"
- *   5. Self-row routes to /accounts/{slug} (link present)
- *   6. Cross-user isolation — user A never sees user B's counterparties
- *   7. Unknown card CTA routes to /counterparties/triage?queue_first={id}
- */
-
 function cpIndexUser(string $username = 'cp-index-fixture'): User
 {
     return User::query()->create([
@@ -58,7 +45,6 @@ it('Test 1: renders cards-default with page title and Cards view active', functi
     $component->assertSee('≡ List', escape: false);
     $html = (string) $component->html();
     expect($html)->toContain('aria-pressed="true"');
-    // Default view is 'cards' so the Cards button is the pressed one.
     expect($html)->toContain('view-toggle');
 });
 
@@ -75,7 +61,6 @@ it('Test 2: filter chips filter the grid (clicking Merchants narrows the rows)',
 
     $component->call('setType', 'merchant');
     $component->assertSet('type', 'merchant');
-    // Counts surface per type.
     $component->assertSee('Merchants');
 });
 
@@ -105,11 +90,8 @@ it('Test 4: empty state renders the verbatim heading and CTA', function (): void
 
 it('Test 5: self_account row routes to /accounts/{slug}', function (): void {
     $user = cpIndexUser('cp-index-self');
-    // self_account counterparties are not normally materialised by the
-    // resolver (the resolver short-circuits), but the index renderer
-    // must handle existing rows correctly — the row CAN appear if a
-    // legacy import wrote one. Insert directly via DB to bypass the
-    // resolver short-circuit and verify the rendering path.
+    // The resolver short-circuits before writing a self_account row, so this
+    // one goes in directly — a legacy import could still have left one behind.
     cpIndexCounterparty($user->id, 'asn-fixture', 'ASN Fixture Account', 'self_account');
 
     $component = Livewire::actingAs($user)->test(CounterpartyIndex::class);

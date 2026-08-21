@@ -9,13 +9,6 @@ use Modules\Core\Models\User;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for the drift_alerts migration — locks the column
- * shape, default values, the four indexes, and the schema-level state
- * trigger pair that rejects out-of-band INSERT / UPDATE statements
- * with a state value outside the allowed enum.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -225,11 +218,6 @@ it('accepts every documented drift_alerts.state enum value', function (string $s
     'dismissed_cancelled',
 ]);
 
-/**
- * Seeds a transactions row sufficient to satisfy the foreign-key
- * constraint on recurring_series_occurrences.transaction_id without
- * requiring the full Ingestion fixture stack.
- */
 function seedDriftAlertTransaction(DatabaseManager $db, int $userId): int
 {
     $accountId = $db->connection()->table('accounts')->insertGetId([

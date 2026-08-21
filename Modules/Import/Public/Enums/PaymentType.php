@@ -6,10 +6,7 @@ namespace Modules\Import\Public\Enums;
 
 use Modules\Core\Public\Support\Lang;
 
-// A schema-level BEFORE INSERT/UPDATE trigger on transactions.payment_type
-// rejects any value outside this set. `Unknown` is the safe default for
-// every existing row at migration time and every import whose hinters
-// can't agree on a value.
+// A trigger on transactions.payment_type rejects anything outside this set.
 enum PaymentType: string
 {
     case Pin = 'pin';
@@ -21,10 +18,9 @@ enum PaymentType: string
     case Refund = 'refund';
     case Unknown = 'unknown';
 
-    // Kept inside the enum so the import preview's legend bar copy
-    // matches the chip copy on every row (also rendered on /transactions
-    // and /community/mystery-merchants). The glyph is the same in every
-    // language; only the word beside it comes from the lang file.
+    // In the enum so the preview's legend bar and every row's chip cannot
+    // drift apart. The glyph is language-independent; only the word beside
+    // it comes from the lang file.
     public function chipLabel(): string
     {
         $glyph = match ($this) {
@@ -41,8 +37,7 @@ enum PaymentType: string
         return $glyph.' '.Lang::get('import::payment_type.'.$this->value);
     }
 
-    // Bare modifier (e.g. `pin`, `dd`); consumers build the full class
-    // via `.ptype-chip.{class}` to drive the sketch-locked color mapping.
+    // A bare modifier; consumers compose `.ptype-chip.{class}`.
     public function chipClass(): string
     {
         return match ($this) {

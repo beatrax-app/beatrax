@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Crypto;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class GdkEpochWrapSignature
 {
     // Domain-separation context prefixed onto every GDK_EPOCH_WRAP signing

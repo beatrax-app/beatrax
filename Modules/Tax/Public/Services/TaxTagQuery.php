@@ -13,9 +13,6 @@ use Modules\Tax\Public\Dto\BatchTagSuggestion;
 use Modules\Tax\Public\Dto\TaxTagData;
 use Modules\Tax\Public\Dto\TaxYearSummary;
 
-/**
- * @link ../../../../.docs/features/tax/architecture.md
- */
 final class TaxTagQuery
 {
     private const TAX_TAGS_ALIAS = 'tax_transaction_tags AS tag';
@@ -30,8 +27,8 @@ final class TaxTagQuery
         private readonly SessionFactory $session,
     ) {}
 
-    // Whole-transaction only (see the @link above for why); callers that
-    // need leg-aware state use forTransactionIdsWithLegs() instead.
+    // Whole-transaction tags only; callers that need leg-aware state use
+    // forTransactionIdsWithLegs() instead.
     /**
      * @param  array<int>  $transactionIds
      * @return array<int, TaxTagData>
@@ -62,7 +59,7 @@ final class TaxTagQuery
             $map[$txId] = new TaxTagData(
                 transactionId: $txId,
                 deductionCategoryId: $row->deduction_category_id !== null ? self::toInt($row->deduction_category_id) : null,
-                deductionCategoryShortName: self::toStrOrNull($row->category_short_name),
+                deductionCategoryShortName: self::toStringOrNull($row->category_short_name),
                 note: $this->decryptNoteOrNull($row->note, $userId),
                 taxYearOverride: $row->tax_year_override !== null ? self::toInt($row->tax_year_override) : null,
             );
@@ -104,7 +101,7 @@ final class TaxTagQuery
             $map[$key] = new TaxTagData(
                 transactionId: $txId,
                 deductionCategoryId: $row->deduction_category_id !== null ? self::toInt($row->deduction_category_id) : null,
-                deductionCategoryShortName: self::toStrOrNull($row->category_short_name),
+                deductionCategoryShortName: self::toStringOrNull($row->category_short_name),
                 note: $this->decryptNoteOrNull($row->note, $userId),
                 taxYearOverride: $row->tax_year_override !== null ? self::toInt($row->tax_year_override) : null,
                 transactionSplitId: $splitId,
@@ -133,8 +130,8 @@ final class TaxTagQuery
         return $year > 0 ? $year : null;
     }
 
-    // totalMinor is the deductions total only (see the @link above for
-    // why); count covers every tagged item regardless of type.
+    // totalMinor is the deductions total only; count covers every tagged
+    // item regardless of type.
     public function summaryForUser(int $userId, int $year): TaxYearSummary
     {
         $row = $this->db->connection()
@@ -155,9 +152,8 @@ final class TaxTagQuery
         );
     }
 
-    // Feeds TaxPage's "Also tag N more from [Gym] this year?" banner;
-    // returns untaggedCount=0 when the transaction has no counterparty.
-    // The count excludes the just-tagged transaction itself.
+    // Returns untaggedCount=0 when the transaction has no counterparty;
+    // the count excludes the just-tagged transaction itself.
     public function untaggedCountForCounterparty(int $userId, int $transactionId, int $taxYear): BatchTagSuggestion
     {
         $connection = $this->db->connection();
@@ -178,8 +174,7 @@ final class TaxTagQuery
 
         $cpId = self::toInt($tx->counterparty_id);
 
-        // Read-side decrypt — display_name is ciphertext at rest once
-        // encryption is enabled; a pass-through no-op otherwise.
+        // display_name is ciphertext at rest once encryption is on.
         $cpRow = $connection
             ->table('counterparties')
             ->where('id', $cpId)
@@ -235,8 +230,7 @@ final class TaxTagQuery
         return array_values(array_map(static fn (mixed $v): int => is_numeric($v) ? (int) $v : 0, $rows->all()));
     }
 
-    // Returns null when the stored value isn't a non-empty string; never
-    // throws — a pass-through no-op when encryption is not enabled.
+    // Never throws — a pass-through no-op when encryption is not enabled.
     private function decryptNoteOrNull(mixed $value, int $userId): ?string
     {
         if (! is_string($value) || $value === '') {
@@ -244,14 +238,5 @@ final class TaxTagQuery
         }
 
         return $this->codec->decryptValue('tax_transaction_tags', 'note', $value, $userId, ($this->session)())['value'];
-    }
-
-    private static function toStrOrNull(mixed $value): ?string
-    {
-        if ($value === null) {
-            return null;
-        }
-
-        return self::toStringOrNull($value);
     }
 }

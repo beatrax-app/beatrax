@@ -7,24 +7,9 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Public\Services\UserDataPathService;
 
-/**
- * Renames the legacy single-file OAuth secrets store out of the way.
- *
- * OAuth client credentials and inbox refresh tokens now live in the
- * per-user oauth_secrets table. The previous installation kept them in
- * a single shared JSON file named email-oauth.json inside the storage
- * secrets directory. This migration renames that file to
- * email-oauth.json.pre-phase-12.bak
- * (mode 0600) so the operator retains a rollback artefact, and writes a
- * README alongside it describing the rename and the recovery path. The
- * application never reads .bak files; re-authorizing Gmail and
- * Microsoft repopulates the table.
- *
- * The rename is filesystem-only — it touches no database table — and is
- * idempotent: it runs only when the legacy file is present and the .bak
- * target is absent, so a second run is a no-op. There is no rollback;
- * down() is intentionally empty.
- */
+// Filesystem-only: the shared secrets JSON is renamed aside once oauth_secrets
+// takes over. The presence guards keep a second run from clobbering the
+// rollback artefact.
 return new class extends Migration
 {
     private const LEGACY_FILENAME = 'email-oauth.json';
@@ -51,8 +36,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        // One-way: the renamed file is a rollback artefact the
-        // application never reads. Nothing to reverse.
+        // One-way: the renamed file is a rollback artefact the app never reads.
     }
 
     private function files(): Filesystem

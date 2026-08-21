@@ -7,22 +7,6 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Modules\Tax\Public\Actions\TagTransaction;
 
-/*
- * Phase 13.3 Finding B regression: the 2026_07_04_000002 migration widened
- * the unique constraint to (user_id, transaction_id, transaction_split_id).
- * SQLite treats every NULL as a DISTINCT value for uniqueness purposes, so
- * that compound constraint no longer rejects two whole-transaction rows
- * (transaction_split_id IS NULL) for the same (user_id, transaction_id) —
- * silently breaking TagTransaction's IN-06 select-then-insert race guard,
- * which relies on catching UniqueConstraintViolationException. A
- * double-clicked "Tag" button can create two whole-tx rows, and
- * TaxYearQuery double-counts the deduction.
- *
- * The fix is a partial unique index (WHERE transaction_split_id IS NULL)
- * that restores DB-level uniqueness for whole-tx rows while leaving the
- * per-leg compound constraint (non-NULL transaction_split_id) intact.
- */
-
 function wtcUser(DatabaseManager $db, string $username): int
 {
     return $db->connection()->table('users')->insertGetId([
@@ -173,7 +157,7 @@ it('still allows two leg-scoped tag rows for the same transaction (non-NULL tran
     expect(DB::table('tax_transaction_tags')->where('transaction_id', $txId)->count())->toBe(2);
 });
 
-it('TagTransaction survives a lost select-then-insert race for a whole-tx tag — exactly one row remains (IN-06)', function (): void {
+it('TagTransaction survives a lost select-then-insert race for a whole-tx tag — exactly one row remains', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
@@ -181,10 +165,9 @@ it('TagTransaction survives a lost select-then-insert race for a whole-tx tag �
     $txId = wtcTransaction($db, $userId);
     $catId = wtcDeductionCategory($db, $userId);
 
-    // Simulate a concurrent request winning the TOCTOU race: right after
-    // TagTransaction's own `exists()` check on tax_transaction_tags reports
-    // "no row yet", inject a competing whole-tx row directly — mirroring a
-    // second in-flight request that already committed its insert.
+    // Wins the race for TagTransaction: the moment its own exists() check
+    // reports "no row yet", a competing whole-tx row is injected, exactly as a
+    // second in-flight request that already committed would.
     $raceInjected = false;
     DB::listen(function ($query) use (&$raceInjected, $db, $userId, $txId): void {
         if ($raceInjected) {

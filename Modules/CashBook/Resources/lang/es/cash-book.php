@@ -25,6 +25,8 @@ return [
     'no_entries' => 'Aún no hay entradas manuales.',
     'delete_entry' => 'Eliminar entrada',
     'delete' => 'Eliminar',
+    'delete_confirm' => '¿Eliminar esta entrada?',
+    'delete_keep' => 'Conservar',
 
     'errors' => [
         'amount_positive' => 'Introduce un importe mayor que cero.',

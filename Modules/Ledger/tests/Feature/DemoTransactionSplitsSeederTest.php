@@ -12,17 +12,10 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Models\TransactionSplit;
 
-/*
- * The demo split seeder's four outcomes. Its rows are a private const and
- * applySplit is private, so the row is supplied by reflection — the same
- * approach SetupCommandEnvEncodingTest uses to reach encodeEnvValue.
- *
- * Three of the four outcomes are refusals, and they matter because this
- * seeder runs against a demo database that has drifted: a description that
- * no longer matches, a parent amount that has moved, or a category the
- * default tree no longer carries must all skip the row rather than abort
- * the seeding run or write a split that does not sum to its parent.
- */
+// applySplit and the rows it takes are both private, so the rows come in by
+// reflection. Three of the four outcomes are refusals: a drifted description, a
+// moved parent amount or a missing category must skip the row rather than abort
+// the run or write a split that does not sum to its parent.
 
 uses(RefreshDatabase::class);
 
@@ -109,8 +102,6 @@ it('skips a row whose description matches nothing', function (): void {
 });
 
 it('skips a row whose legs no longer sum to the parent', function (): void {
-    // The seeded amounts are fixed but a demo parent can drift, and a
-    // mismatch would abort the whole seeding run at the mutator.
     dtssApply($this->seeder, $this->user, 'DEMO SPLIT PARENT', [
         ['categoryPath' => ['Groceries'], 'minor' => -5000, 'note' => null],
         ['categoryPath' => ['Groceries'], 'minor' => -1000, 'note' => null],
@@ -120,8 +111,7 @@ it('skips a row whose legs no longer sum to the parent', function (): void {
 });
 
 it('writes nothing when a category path is not in the default tree', function (): void {
-    // The legs sum correctly, so only the unknown category stops this. The
-    // partially-built leg set must not reach the writer.
+    // The legs sum correctly, so only the unknown category stops this.
     dtssApply($this->seeder, $this->user, 'DEMO SPLIT PARENT', [
         ['categoryPath' => ['Groceries'], 'minor' => -5000, 'note' => null],
         ['categoryPath' => ['Nowhere', 'Missing'], 'minor' => -3000, 'note' => null],

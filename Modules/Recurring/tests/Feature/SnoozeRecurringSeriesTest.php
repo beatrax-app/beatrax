@@ -9,13 +9,6 @@ use Modules\Recurring\Models\RecurringSeriesTransition;
 use Modules\Recurring\Public\Actions\SnoozeRecurringSeries;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/*
- * SnoozeRecurringSeries — atomic write of `snoozed_until` + state
- * transition through the state machine. Idempotent when re-snoozing
- * to the same date. Cross-user 404. Transitions row notes carries
- * the snooze target.
- */
-
 function snrsUser(string $username): User
 {
     return User::query()->create([

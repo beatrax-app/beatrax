@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Mobile\Internal\Identity;
 
-/**
- * @link ../../../../.docs/features/mobile/architecture.md
- */
 final readonly class MobileProvisioningCredentials
 {
     // Carries the plaintext PIN and account password only for the duration

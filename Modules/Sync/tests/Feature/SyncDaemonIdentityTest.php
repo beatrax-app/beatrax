@@ -4,12 +4,9 @@ declare(strict_types=1);
 
 use Modules\Sync\Public\Services\SyncDaemonIdentity;
 
-/*
- * `sync:serve` was constructed with EMPTY placeholder credentials and a
- * comment promising an injection nobody wrote, so the responder answered
- * every Noise handshake with an unusable key. The daemon reads its transport
- * keypair from the environment the unlocked app spawns it with.
- */
+// `sync:serve` was constructed with empty placeholder credentials and a comment
+// promising an injection nobody wrote, so the responder answered every Noise
+// handshake with a key no peer could use.
 
 afterEach(function (): void {
     foreach ([

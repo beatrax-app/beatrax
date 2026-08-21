@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Clock;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class HybridLogicalClock
 {
     // Not readonly — $l and $c are mutable state. Bind as TRANSIENT in the

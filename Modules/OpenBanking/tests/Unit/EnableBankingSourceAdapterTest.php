@@ -6,29 +6,15 @@ use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingSourceAdapter;
-use Modules\OpenBanking\Public\Dto\FetchWindow;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Exceptions\EnableBankingApiException;
+use Modules\OpenBanking\Internal\Dto\FetchWindow;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Exceptions\EnableBankingApiException;
 use Modules\OpenBanking\Tests\Support\EnableBankingFixtures;
 
-/*
- * The load-bearing dedup-contract test (D-03/Req 5, T-19-08-01):
- * `EnableBankingSourceAdapter` must map EB rows onto `SourceTransactionDto`
- * using the EXACT same field choices `Camt053Adapter` uses, so a
- * `FingerprintComposer` hash derived from an EB-fetched row collides with
- * the hash derived from the SAME real-world transaction imported from the
- * committed ASN CAMT.053 fixture (`EnableBankingFixtures::
- * overlappingCamt053FixturePath()`).
- */
+// EB rows must map onto SourceTransactionDto with the exact field choices
+// Camt053Adapter uses, so both hash to one FingerprintComposer fingerprint.
 
 /**
- * Builds a stub `EnableBankingHttpClient` (empty-constructor anonymous
- * subclass, the pattern already established by
- * `EnableBankingHttpClientSsrfTest`) returning fixed fixture data instead
- * of making any real HTTP call. The returned instance carries a public
- * `recordedUids` array so the test can assert `fetch()` never hardcodes
- * a specific bank/account.
- *
  * @param  array<string, mixed>  $transactionsResponse
  * @param  array<string, mixed>  $accountDetailsResponse
  */
@@ -106,9 +92,8 @@ it('yields only booked rows and drops pending PSD2 rows', function (): void {
 });
 
 it('maps bookedAt and postedAt to the SAME midnight-zeroed booking_date, never value_date', function (): void {
-    // Deliberately diverge booking_date and value_date so a mistaken
-    // substitution of either field is caught (fixture rows carry equal
-    // booking_date/value_date, which would mask this bug).
+    // Fixture rows carry equal booking_date/value_date, which would mask a
+    // mistaken substitution of either field; these two diverge so it cannot.
     $transactions = [
         'transactions' => [[
             'entry_reference' => 'REF-1',
@@ -148,27 +133,21 @@ it('negates the amount for a DBIT row and keeps a CRDT row positive, following t
 
     $rows = iterator_to_array($adapter->fetch('acc-uid-123', $this->window, ebFixtureCredentials()));
 
-    // Row 0: Albert Heijn, DBIT, 3.99 EUR -> -399 minor, counterparty is
-    // the CREDITOR (matches Camt053Adapter's direction rule and the
-    // committed ASN CAMT.053 fixture entry for the same real-world txn).
+    // DBIT: the counterparty is the CREDITOR, matching Camt053Adapter's
+    // direction rule and the CAMT.053 fixture entry for the same transaction.
     expect($rows[0]->amountMinor)->toBe(-399);
     expect($rows[0]->currency)->toBe('EUR');
     expect($rows[0]->counterpartyName)->toBe('Albert Heijn');
     expect($rows[0]->counterpartyIban)->toBe('NL67BANK0000000019');
     expect($rows[0]->sourceRef)->toBeNull();
 
-    // Row 1: Coolblue 2, CRDT, 11.67 EUR -> +1167 minor, counterparty is
-    // the DEBTOR.
+    // CRDT: the counterparty is the DEBTOR.
     expect($rows[1]->amountMinor)->toBe(1167);
     expect($rows[1]->counterpartyName)->toBe('Coolblue 2');
     expect($rows[1]->counterpartyIban)->toBe('NL89BANK0000000011');
 
-    // Both rows' raw counterparty names, when normalised through the
-    // SAME FingerprintComposer::normalize() every other adapter's rows
-    // pass through downstream (Modules\Import\Public\Pipeline\
-    // NormalizeStage), must equal the normalized form of the identical
-    // real-world name — proving no second/divergent normalizer was
-    // introduced here.
+    // Normalising through the same FingerprintComposer::normalize() the other
+    // adapters meet in NormalizeStage proves no second normalizer crept in.
     expect($this->fingerprints->normalize($rows[0]->counterpartyName))
         ->toBe($this->fingerprints->normalize('Albert Heijn'));
     expect($this->fingerprints->normalize($rows[1]->counterpartyName))
@@ -222,13 +201,8 @@ it('is institution-parameterized: the same uid is threaded to accountDetails() a
 });
 
 it('produces fingerprint parity with the overlapping ASN CAMT.053 fixture rows', function (): void {
-    // Falsifiable proof of D-03: for the two overlapping real-world
-    // transactions (Albert Heijn -3.99 EUR, Coolblue 2 +11.67 EUR), the
-    // EB-mapped fields that feed FingerprintComposer's hash tuple must be
-    // byte-for-byte identical to what the committed CAMT.053 fixture
-    // (read directly here, no genkgo/camt dependency needed for this
-    // narrow assertion) is known to carry per
-    // `EnableBankingFixtures::overlappingCamt053FixturePath()`'s docblock.
+    // The hash tuple's EB fields must be byte-for-byte the committed CAMT.053
+    // fixture's. The XML is read directly to avoid a genkgo/camt dependency.
     expect(file_exists(EnableBankingFixtures::overlappingCamt053FixturePath()))->toBeTrue();
 
     $client = ebFixtureHttpClient(EnableBankingFixtures::transactions(), $this->accountDetailsResponse);
@@ -252,10 +226,8 @@ it('produces fingerprint parity with the overlapping ASN CAMT.053 fixture rows',
     expect($coolblue->currency)->toBe('EUR');
     expect($this->fingerprints->normalize((string) $coolblue->counterpartyName))->toBe('coolblue 2');
 
-    // Assemble the exact hash tuple string FingerprintComposer::compose()
-    // builds, using the same literal values the CAMT.053 fixture is known
-    // to carry for these two entries — proving the EB-mapped fields alone
-    // (independent of CanonicalTransaction/NormalizeStage) already agree.
+    // FingerprintComposer::compose()'s exact tuple string, so the EB fields are
+    // shown to agree before CanonicalTransaction or NormalizeStage touch them.
     $albertTuple = implode('|', [
         (string) $userId, (string) $accountId,
         $albertHeijn->postedAt->toDateString(), $albertHeijn->bookedAt->toDateTimeString(),
@@ -270,11 +242,8 @@ it('produces fingerprint parity with the overlapping ASN CAMT.053 fixture rows',
 });
 
 it('throws rather than silently deriving a fingerprinted date from the wall clock when booking_date is missing', function (): void {
-    // `CarbonImmutable::parse('')` does NOT throw — it silently resolves
-    // to "now". A malformed/incomplete EB row must never let that reach
-    // `bookedAt`/`postedAt` (the fingerprinted fields), mirroring
-    // `Camt053Adapter::buildDto()`'s explicit rejection of an `<Ntry>`
-    // missing both `BookgDt` and `ValDt`.
+    // CarbonImmutable::parse('') does not throw, it resolves to "now" — which
+    // would reach the fingerprinted bookedAt/postedAt. Refuse the row instead.
     $transactions = [
         'transactions' => [[
             'entry_reference' => 'REF-MISSING-DATE',
@@ -410,24 +379,14 @@ it('reports the stable format identifier', function (): void {
     expect($adapter->format())->toBe('enable-banking');
 });
 
-/*
- * Resolving the account's own IBAN, and the one row-level failure the fetch
- * absorbs rather than aborting on.
- *
- * The own IBAN is what every counterparty direction is judged against, so a
- * fetch that could not establish it must refuse outright — a fetch that
- * guessed would mislabel every row in the window.
- */
-
+// Every counterparty direction is judged against the own IBAN, so a fetch that
+// cannot establish it must refuse rather than mislabel the whole window.
 it('reads the own IBAN from account_id before falling back to the top level', function (array $details, string $expected): void {
     $client = ebFixtureHttpClient(EnableBankingFixtures::transactions(), $details);
     $adapter = new EnableBankingSourceAdapter($client);
 
     $rows = iterator_to_array($adapter->fetch('acc-uid-123', $this->window, ebFixtureCredentials()));
 
-    // The resolved IBAN rides on every row as ownIban, which is what decides
-    // which side of the transaction is us — so asserting it on the row proves
-    // the fallback resolved to the right value, not merely that it resolved.
     expect($rows)->not->toBeEmpty()
         ->and($rows[0]->ownIban)->toBe($expected);
 })->with([
@@ -449,9 +408,8 @@ it('refuses the whole fetch when no own IBAN can be resolved', function (array $
     'a non-string iban' => [['uid' => 'acc-uid-123', 'iban' => 12345]],
 ]);
 
-// One unparseable amount must not cost the whole window. The import is a
-// generator feeding a ledger write, so aborting mid-stream would leave the
-// user with a partial import and no indication of where it stopped.
+// The import is a generator feeding a ledger write, so aborting on one
+// unparseable amount would leave a partial import with no sign of where.
 it('skips a booked row whose money will not parse and keeps the rest', function (array $badAmount): void {
     $transactions = EnableBankingFixtures::transactions();
     $rows = $transactions['transactions'];

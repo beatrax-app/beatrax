@@ -8,9 +8,6 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Symfony\Component\Yaml\Yaml;
 
-/**
- * @link ../../../../.docs/features/import/architecture.md#merchant-aliases
- */
 final class AliasYamlExporter
 {
     public function __construct(private readonly DatabaseManager $db) {}

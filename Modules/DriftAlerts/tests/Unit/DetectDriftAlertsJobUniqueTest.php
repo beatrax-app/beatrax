@@ -7,15 +7,8 @@ use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Modules\DriftAlerts\Internal\Jobs\DetectDriftAlertsJob;
 
-/*
- * Locks the DetectDriftAlertsJob single-flight contract: implements
- * ShouldBeUniqueUntilProcessing keyed on "{userId}:{seriesId}",
- * uniqueFor=600, uniqueVia()=Cache repository, tries=3,
- * backoff=[60,300,900].
- *
- * No RefreshDatabase: every assertion is reflection-based or
- * method-call against a freshly-instantiated job — no DB needed.
- */
+// No RefreshDatabase: every assertion is reflection or a method call on a
+// freshly-instantiated job.
 
 it('declares ShouldBeUniqueUntilProcessing and ShouldQueue', function (): void {
     $reflection = new ReflectionClass(DetectDriftAlertsJob::class);

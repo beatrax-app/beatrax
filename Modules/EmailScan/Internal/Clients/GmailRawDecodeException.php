@@ -6,11 +6,6 @@ namespace Modules\EmailScan\Internal\Clients;
 
 use RuntimeException;
 
-// Gmail returned a raw message payload that is not valid base64url, so
-// the RFC 822 byte stream cannot be reconstructed. The bytes are
-// malformed at the source rather than in transit, so the fetch is
-// abandoned rather than retried.
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
+// Gmail returned a raw payload that is not valid base64url. Malformed at the
+// source rather than in transit, so the fetch is abandoned, not retried.
 final class GmailRawDecodeException extends RuntimeException {}

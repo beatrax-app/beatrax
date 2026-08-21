@@ -15,13 +15,13 @@ use Modules\Community\Public\Actions\OpenExternalUrlAction;
 use Modules\Community\Public\Dto\SuggestMappingDto;
 use Modules\Community\Public\Events\MysteryMerchantSubmitted;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 
-/**
- * @link ../../../../../.docs/features/community/architecture.md
- */
 final class SuggestMappingModal extends Component
 {
+    use DispatchesToast;
+
     public string $pattern = '';
 
     public string $name = '';
@@ -93,7 +93,7 @@ final class SuggestMappingModal extends Component
             pattern: $pattern,
         ));
 
-        $this->dispatch('toast.show', message: Lang::get('community::suggest.toast'));
+        $this->toast(Lang::get('community::suggest.toast'));
         $this->dispatch('modal-close', name: 'suggest-mapping');
 
         $this->pattern = '';

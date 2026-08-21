@@ -8,10 +8,8 @@ use Illuminate\Database\ConnectionInterface;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 
-// Re-numbers a user's remaining pinned saved_reports rows to a dense 1..N
-// pin_order sequence, returning only the rows whose order changed. Shared
-// by TogglePin and DeleteReport; callers must invoke this inside the same
-// DB transaction as the mutation that changed the pinned set.
+// Callers must run this inside the same transaction as the mutation that
+// changed the pinned set.
 final class PinOrderCompactor
 {
     use CoercesScalars;

@@ -10,9 +10,6 @@ use ZBateson\MailMimeParser\Header\AddressHeader;
 use ZBateson\MailMimeParser\Header\DateHeader;
 use ZBateson\MailMimeParser\MailMimeParser;
 
-/**
- * @link ../../../.docs/features/email-scan/architecture.md
- */
 final class MimeHeaderParser
 {
     public function parseHeadersWithFallbackDate(
@@ -52,10 +49,8 @@ final class MimeHeaderParser
                     $internalDate = $immutable;
                 }
             } catch (Throwable) {
-                // Malformed Date header — fall back to the provider-
-                // supplied date. Production callers always pass a real
-                // internal_date so the fallback never silently lands on
-                // the wall clock.
+                // Production callers always pass a real internal_date, so
+                // this fallback never silently lands on the wall clock.
                 $internalDate = $fallbackDate;
             }
         }

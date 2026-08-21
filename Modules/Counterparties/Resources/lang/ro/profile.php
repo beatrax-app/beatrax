@@ -25,6 +25,8 @@ return [
         'tax_years' => 'Ani fiscali',
     ],
 
+    'tablist_aria' => 'Secțiunile contrapărții',
+
     'tab_note_personal' => '— fără lanțuri de finanțare pentru contactele personale',
     'tab_note_bank' => '— o contraparte de comisioane bancare nu generează lanțuri de finanțare',
     'tab_note_government' => '— fără lanțuri de finanțare pentru instituțiile publice',

@@ -17,10 +17,8 @@ use Modules\Tax\Public\Services\TaxCategoryWriter;
 
 uses(RefreshDatabase::class);
 
-/*
- * Two more tables that had merge rules and no capture, so an edit to either
- * never left the device that made it.
- */
+// Two more tables that had merge rules and no capture, so an edit to either
+// never left the device that made it.
 
 function ptcUser(): User
 {

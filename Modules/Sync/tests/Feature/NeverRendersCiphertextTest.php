@@ -4,15 +4,10 @@ declare(strict_types=1);
 
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
-/*
- * A device that holds encrypted rows but not the key that opens them must show
- * the user nothing rather than base64. This happened for real: a phone synced
- * 124 transactions encrypted under the desktop's epoch, lost its keyring to an
- * app update, and rendered every description as a blob.
- *
- * The path fix (durable storage for the keyring) stops it recurring; this is
- * the belt to that pair of braces, and it must never blank real text.
- */
+// A device holding encrypted rows without the key must show nothing rather
+// than base64: a phone that lost its keyring to an app update rendered all 124
+// synced descriptions as blobs. Durable keyring storage stops that recurring;
+// this is the backstop, and it must never blank real text.
 
 function codecLooksLikeCiphertext(string $value): bool
 {

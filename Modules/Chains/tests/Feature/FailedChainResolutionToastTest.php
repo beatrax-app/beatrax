@@ -12,16 +12,6 @@ use Modules\Ledger\Models\Transaction;
 
 uses(RefreshDatabase::class);
 
-/*
- * Failed-job toast (D-103 / issue #1 + #8) tests preserved from the
- * retired NextIcsSettlementTileTest. The dashboard tile assertions
- * migrated to Modules/Forecasting/tests/Feature/ForecastHighlightsTileTest.php;
- * the failed-job toast tests live on here because the toast remains
- * Phase 5 functionality (Dashboard.php reads chain_resolution_runs
- * filtered by exact user_id match — issue #1 + #8 substring-attack
- * guard).
- */
-
 function fcrtUser(string $username, bool $isDeveloper = true): User
 {
     return User::query()->create([
@@ -74,7 +64,7 @@ beforeEach(function (): void {
     ]);
 });
 
-it('failed-job toast renders when chain_resolution_runs.status=failed for the user (16-06 D-37 — retargeted to /dev/queue/failed for developers)', function (): void {
+it('failed-job toast renders when chain_resolution_runs.status=failed for the user, linking to the Queue Inspector', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     $now = CarbonImmutable::now()->toDateTimeString();
@@ -93,7 +83,7 @@ it('failed-job toast renders when chain_resolution_runs.status=failed for the us
         ->assertSeeText('Open Queue Inspector');
 });
 
-it('failed-job toast hidden when chain_resolution_runs has no failed rows for the user (cross-user — issue #8)', function (): void {
+it('failed-job toast hidden when chain_resolution_runs has no failed rows for the user (cross-user)', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     $now = CarbonImmutable::now()->toDateTimeString();

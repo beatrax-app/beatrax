@@ -8,9 +8,6 @@ use Modules\Sync\Internal\OpLog\OpLogWriter;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
 
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 trait CapturesTransactionMutations
 {
     private function handleEdit(TransactionMutated $event, OpLogWriter $writer): void

@@ -27,18 +27,18 @@
                 <h2 id="community-contribute-heading" class="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">
                     {{ Lang::get('community::index.contribute_heading') }}
                 </h2>
-                <div class="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
+                <x-core::card>
                     <p class="max-w-prose text-sm text-slate-500 dark:text-slate-400">
                         {{ Lang::get('community::index.contribute_body') }}
                     </p>
-                    <a
-                        href="{{ route('community.mystery-merchants') }}"
+                    <x-core::neutral-button
+                        :href="route('community.mystery-merchants')"
+                        class="mt-4 min-h-[44px]"
                         wire:navigate
-                        class="mt-4 inline-flex min-h-[44px] items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
                     >
                         {{ Lang::get('community::index.contribute_cta') }}
-                    </a>
-                </div>
+                    </x-core::neutral-button>
+                </x-core::card>
             </section>
 
             {{-- Translations are the other thing the community owns: the app
@@ -48,37 +48,37 @@
                 <h2 id="community-translations-heading" class="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">
                     {{ Lang::get('community::index.translations_heading') }}
                 </h2>
-                <div class="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
+                <x-core::card>
                     <p class="max-w-prose text-sm text-slate-500 dark:text-slate-400">
                         {{ Lang::get('community::index.translations_body') }}
                     </p>
                     {{-- Said plainly rather than discovered: a translation that
                          reads slightly off is easier to forgive, and far easier
                          to fix, once you know where it came from. --}}
-                    <p class="mt-3 max-w-prose rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+                    <x-core::alert tone="warning" class="mt-3 max-w-prose">
                         {{ Lang::get('community::index.translations_ai_notice') }}
-                    </p>
+                    </x-core::alert>
                     <p class="mt-3 max-w-prose text-sm text-slate-500 dark:text-slate-400">
                         {{ Lang::get('community::index.translations_how') }}
                     </p>
-                    <a
-                        href="{{ Lang::get('community::index.translations_url') }}"
+                    <x-core::secondary-button
+                        :href="Lang::get('community::index.translations_url')"
+                        class="mt-4 min-h-[44px]"
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="mt-4 inline-flex min-h-[44px] items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
                     >
                         {{ Lang::get('community::index.translations_cta') }} &rarr;
-                    </a>
-                </div>
+                    </x-core::secondary-button>
+                </x-core::card>
             </section>
 
             <section class="space-y-3" id="shared-merchant-list" aria-labelledby="community-shared-heading">
                 <h2 id="community-shared-heading" class="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">
                     {{ Lang::get('community::index.shared_heading') }}
                 </h2>
-                <div class="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
+                <x-core::card>
                     @livewire('community.shared-list-settings-panel')
-                </div>
+                </x-core::card>
             </section>
         </div>
 @endsection

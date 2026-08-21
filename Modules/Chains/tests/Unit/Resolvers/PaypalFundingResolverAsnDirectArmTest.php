@@ -14,42 +14,7 @@ use Modules\Ledger\Models\Transaction;
 
 uses(RefreshDatabase::class);
 
-/*
- * Coverage for the new ASN-direct arm of PaypalFundingResolver — pairs
- * a PayPal `expense` directly with the ASN-side `transfer_out` that
- * funded it, in the empirical Activity Download shape where the
- * funding-leg `Bankstorting` row is ABSENT from the PayPal CSV.
- *
- * Invariants locked here:
- *
- *   1. Pairs an `expense` with a single ASN `transfer_out` via the
- *      alias bridge (counterparty_iban=LU…E → target_account_kind=paypal)
- *      → state='confirmed', confidence='1.000'.
- *   2. Marks as state='candidate', confidence='0.900' when ≥2 ASN
- *      candidates fall inside the date window — the closest by
- *      booked_at wins.
- *   3. Skips when no ASN row matches the amount, or matches outside
- *      the ±3-day window.
- *   4. Skips when the ASN row's counterparty_iban is not registered as
- *      an alias for `paypal` (other-kind aliases — e.g. ics_card — do
- *      not pair PayPal expenses).
- *   5. Per-user scoped — user A's PayPal expense never pairs with user
- *      B's ASN debit even when amounts and dates align.
- *   6. Does not double-claim — an ASN row already cited as
- *      `to_transaction_id` on another `paypal_funding` chain_link is
- *      excluded from the candidate set, so a second PayPal expense of
- *      the same amount falls through to the fuzzy arm (or returns
- *      null when no PayPal-side transfer_in exists, the user's actual
- *      data shape).
- *   7. Idempotent — re-running produces zero new chain_links.
- */
-
 /**
- * Seed a user + bank/paypal accounts + the canonical PayPal SARL
- * alias seeded by DefaultKnownCounterpartyIbansSeeder + a confirmed
- * ImportRun. The fixture mirrors the production install shape this
- * arm exists to heal.
- *
  * @return array{user: User, bank: Account, paypal: Account, run: ImportRun}
  */
 function asnDirectFixture(string $username): array
@@ -94,10 +59,7 @@ function asnDirectFixture(string $username): array
     return compact('user', 'bank', 'paypal', 'run');
 }
 
-/**
- * Persist a PayPal-side expense row (no Bankstorting in raw_payload —
- * the canonical shape this arm handles).
- */
+// The canonical shape this arm handles: no Bankstorting row in raw_payload.
 function paypalExpenseRow(
     User $user,
     Account $paypal,
@@ -132,10 +94,6 @@ function paypalExpenseRow(
     ]);
 }
 
-/**
- * Persist an ASN-side transfer_out row whose counterparty IBAN is the
- * canonical PayPal SARL alias (after Phase 16.1.2.1's retype arm).
- */
 function asnTransferOutToPaypal(
     User $user,
     Account $bank,
@@ -191,9 +149,8 @@ it('pairs a PayPal expense with the single matching ASN transfer_out → confirm
 it('marks state=candidate when ≥2 ASN candidates fall inside the date window (closest-by-date wins)', function (): void {
     $f = asnDirectFixture('beta-direct');
     $expense = paypalExpenseRow($f['user'], $f['paypal'], $f['run']->id, 999, '2026-04-30 00:00:00');
-    // Both ASN rows match the amount + alias + window. The closer one
-    // by booked_at wins, but the link is marked candidate so the user
-    // reviews it.
+    // Both ASN rows match on amount, alias and window; the closer booked_at
+    // wins but the link stays candidate for review.
     $closer = asnTransferOutToPaypal($f['user'], $f['bank'], $f['run']->id, 999, '2026-04-30 12:00:00');
     asnTransferOutToPaypal($f['user'], $f['bank'], $f['run']->id, 999, '2026-04-29 12:00:00');
 
@@ -210,7 +167,6 @@ it('marks state=candidate when ≥2 ASN candidates fall inside the date window (
 it('does NOT pair when no ASN row matches the amount', function (): void {
     $f = asnDirectFixture('gamma-direct');
     paypalExpenseRow($f['user'], $f['paypal'], $f['run']->id, 1399, '2026-04-30 00:00:00');
-    // Wrong amount — never matches the expense.
     asnTransferOutToPaypal($f['user'], $f['bank'], $f['run']->id, 2599, '2026-04-30 12:00:00');
 
     $resolver = $this->app->make(PaypalFundingResolver::class);
@@ -272,8 +228,7 @@ it('does NOT pair when the ASN row\'s counterparty IBAN aliases to a different k
 it('is per-user scoped — never pairs across users', function (): void {
     $a = asnDirectFixture('user-a-direct');
     $b = asnDirectFixture('user-b-direct');
-    // Both users have identical-amount + identical-date rows. Only
-    // each user's OWN rows must pair.
+    // Both users have identical-amount, identical-date rows.
     $aExpense = paypalExpenseRow($a['user'], $a['paypal'], $a['run']->id, 1399, '2026-04-30 00:00:00');
     $aAsn = asnTransferOutToPaypal($a['user'], $a['bank'], $a['run']->id, 1399, '2026-04-30 12:00:00');
     $bExpense = paypalExpenseRow($b['user'], $b['paypal'], $b['run']->id, 1399, '2026-04-30 00:00:00');
@@ -287,7 +242,6 @@ it('is per-user scoped — never pairs across users', function (): void {
     $aLink = ChainLink::query()->where('user_id', $a['user']->id)->firstOrFail();
     expect((int) $aLink->from_transaction_id)->toBe($aExpense->id);
     expect((int) $aLink->to_transaction_id)->toBe($aAsn->id);
-    // User B's rows must be untouched.
     expect($bAsn->refresh()->id)->toBe($bAsn->id);
     expect($bExpense->refresh()->id)->toBe($bExpense->id);
 });
@@ -301,17 +255,14 @@ it('does not double-claim an ASN row that is already to_transaction_id on anothe
     $resolver = $this->app->make(PaypalFundingResolver::class);
     $resolver->resolveForUser($f['user']);
 
-    // Exactly ONE link — the closest-by-date expense pairs with the
-    // ASN row; the second expense finds no candidate (ASN already
-    // claimed) and falls through to fuzzy / null.
+    // Exactly one link: the second expense finds no candidate because the ASN
+    // row is already claimed, and falls through to fuzzy / null.
     $links = ChainLink::query()->where('user_id', $f['user']->id)->get();
     expect($links->count())->toBe(1);
     expect((int) $links->first()->to_transaction_id)->toBe($asn->id);
 
-    // The first expense is the from-side since it's earlier-by-booked_at.
-    // (orderBy('transactions.posted_at') in resolveForUser).
+    // The earlier expense is the from-side (resolveForUser orders by posted_at).
     expect((int) $links->first()->from_transaction_id)->toBe($firstExpense->id);
-    // Defensive — ensure the second expense exists but is unlinked.
     expect($secondExpense->refresh()->id)->toBe($secondExpense->id);
 });
 

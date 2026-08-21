@@ -11,10 +11,8 @@ use Modules\Core\Models\User;
  */
 interface CapturesTransactionsForSync
 {
-    // Records newly written transactions in the op log so they reach the
-    // user's other devices, together with the import run and account each one
-    // names. Called post-commit; implementations must not throw into the
-    // write — a device that cannot capture has still recorded the money.
+    // Called post-commit, and an implementation must not throw back into the
+    // write: a device that cannot capture has still recorded the money.
     /**
      * @param  list<int>  $transactionIds
      */

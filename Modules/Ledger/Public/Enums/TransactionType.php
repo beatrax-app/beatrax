@@ -4,13 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Public\Enums;
 
-// The seven kinds of transaction. The DB-layer BEFORE INSERT/UPDATE triggers
-// reject any value outside this set regardless of write path, and this enum
-// is the code-side source of truth the write paths, the split rules and the
-// direction derivation all read from.
-/**
- * @link ../../../../.docs/features/ledger/architecture.md
- */
+// The DB-layer BEFORE INSERT/UPDATE triggers reject any value outside this
+// set regardless of write path; this enum is the code-side source of truth
+// the write paths, the split rules and the direction derivation read from.
 enum TransactionType: string
 {
     case Expense = 'expense';
@@ -27,23 +23,20 @@ enum TransactionType: string
 
     case Adjustment = 'adjustment';
 
-    // transfer_out/transfer_in own the paired equal-and-opposite invariant via
-    // pair_transaction_id; they are the only non-splittable types.
+    // The transfer legs own the paired equal-and-opposite invariant via
+    // pair_transaction_id.
     public function isTransfer(): bool
     {
         return $this === self::TransferOut || $this === self::TransferIn;
     }
 
-    // A transfer can never carry category legs (SaveTransactionSplit and the
-    // reclassify auto-unsplit coordination depend on this), so "splittable" is
-    // exactly "not a transfer".
+    // A transfer can never carry category legs — SaveTransactionSplit and the
+    // reclassify auto-unsplit coordination both depend on that.
     public function isSplittable(): bool
     {
         return ! $this->isTransfer();
     }
 
-    // Money in vs money out: income, transfer_in and refund are inflows;
-    // everything else is an outflow.
     public function direction(): Direction
     {
         return match ($this) {
@@ -52,8 +45,6 @@ enum TransactionType: string
         };
     }
 
-    // The two transfer legs, for `whereIn('type', …)` filters that select
-    // both sides of a transfer pair.
     /** @return list<string> */
     public static function transferValues(): array
     {

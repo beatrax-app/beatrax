@@ -8,10 +8,6 @@ use InvalidArgumentException;
 use Modules\EmailScan\Public\Enums\MailProvider;
 use Spatie\LaravelData\Data;
 
-// Normalises the Gmail history cursor and Microsoft Graph delta-link
-// behind one readonly value object, so callers treat a scan cursor as
-// a single type without per-provider conditionals. Both factories
-// validate their input to keep a malformed cursor off the DB.
 final class ScanCursor extends Data
 {
     public function __construct(
@@ -40,10 +36,6 @@ final class ScanCursor extends Data
     public static function microsoft(string $deltaLink): self
     {
         if (! str_starts_with($deltaLink, 'https://graph.microsoft.com/')) {
-            // v1 supports only the global Graph endpoint. Regional
-            // clouds (graph.microsoft.de / .us / chinacloudapi.cn)
-            // would relax this prefix check on the future-feature
-            // boundary.
             throw new InvalidArgumentException(
                 'ScanCursor::microsoft deltaLink must start with https://graph.microsoft.com/ '
                 .'(regional Graph endpoints are not supported in v1).'

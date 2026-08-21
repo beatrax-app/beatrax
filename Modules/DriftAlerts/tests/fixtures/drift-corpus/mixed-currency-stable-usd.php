@@ -2,11 +2,7 @@
 
 declare(strict_types=1);
 
-// USD $11.99 stable across 6 occurrences, the EUR
-// settlement also tracks stably (no FX jitter). Both original-
-// currency stability AND EUR stability — the detector fires zero
-// alerts in either evaluation. Currency on the recurring_series row
-// would be USD per the original-currency clustering rule.
+// The control for fx-only-swing: USD and EUR both stable, nothing fires.
 
 $transactions = [];
 for ($i = 0; $i < 6; $i++) {

@@ -21,9 +21,6 @@ use Modules\Ledger\Public\Events\TransactionBatchImported;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
-/**
- * @link ../../../../.docs/features/ledger/architecture.md
- */
 final class RecordTransactions implements RecordsTransactions
 {
     private const CHUNK_SIZE = 500;
@@ -51,9 +48,8 @@ final class RecordTransactions implements RecordsTransactions
         /** @var list<string> $sourceFormats */
         $sourceFormats = [];
 
-        // Buffer the (possibly lazy) iterable into bounded chunks and
-        // commit each on its own — iterator_to_array would force the
-        // whole batch into memory at once.
+        // iterator_to_array would force the whole (possibly lazy) batch into
+        // memory, so rows are buffered into chunks committed one at a time.
         $chunk = [];
         foreach ($canonical as $row) {
             $chunk[] = $row;
@@ -67,9 +63,7 @@ final class RecordTransactions implements RecordsTransactions
             $this->persistChunk($chunk, $user, $inserted, $duplicates, $sourceFormats, $insertedIds);
         }
 
-        // Dispatched exactly once per call, after every chunk
-        // transaction above has already committed, and only when at
-        // least one row actually landed.
+        // Once per call, after every chunk transaction above has committed.
         if ($inserted > 0) {
             $distinctFormats = array_values(array_unique($sourceFormats));
             sort($distinctFormats);
@@ -98,7 +92,10 @@ final class RecordTransactions implements RecordsTransactions
      */
     private function persistChunk(array $chunk, User $user, int &$inserted, int &$duplicates, array &$sourceFormats, array &$insertedIds): void
     {
-        $this->db->connection()->transaction(function () use ($chunk, $user, &$inserted, &$duplicates, &$sourceFormats, &$insertedIds): void {
+        /** @var list<Transaction> $persistedRows */
+        $persistedRows = [];
+
+        $this->db->connection()->transaction(function () use ($chunk, &$inserted, &$duplicates, &$sourceFormats, &$insertedIds, &$persistedRows): void {
             $now = $this->clock->now()->toDateTimeString();
             foreach ($chunk as $row) {
                 if ($row->userId === null) {
@@ -108,10 +105,9 @@ final class RecordTransactions implements RecordsTransactions
                     throw new InvalidArgumentException("Invalid transaction type: '{$row->type}'");
                 }
 
-                // The de-dup fingerprint is composed from the plaintext
-                // DTO ($row), never from the possibly-encrypted $attrs
-                // below — re-import idempotency must be identical
-                // whether or not encryption is enabled.
+                // Composed from the plaintext DTO, never the possibly-encrypted
+                // $attrs below: re-import idempotency must be identical whether
+                // or not encryption is enabled.
                 $fingerprint = $this->fingerprints->compose($row);
                 $attrs = $row->toAttributes() + [
                     'fingerprint' => $fingerprint,
@@ -120,10 +116,8 @@ final class RecordTransactions implements RecordsTransactions
                     'updated_at' => $now,
                 ];
 
-                // Encrypts the sensitive content columns before the row
-                // touches disk (pass-through no-op when not enabled).
-                // Amount columns are never touched, so SQL SUM()/GROUP
-                // BY keeps working.
+                // Content columns only — amount columns stay plaintext, so SQL
+                // SUM()/GROUP BY keeps working.
                 $attrs = $this->codec->encryptAttrs('transactions', $attrs, $row->userId, ($this->session)());
 
                 $effected = Transaction::insertOrIgnore($attrs);
@@ -138,15 +132,21 @@ final class RecordTransactions implements RecordsTransactions
                         ->firstOrFail();
 
                     $insertedIds[] = $persisted->id;
-
-                    $this->events->dispatch(new TransactionImported(
-                        transaction: $persisted,
-                        user: $user,
-                    ));
+                    $persistedRows[] = $persisted;
                 } else {
                     $duplicates++;
                 }
             }
         });
+
+        // After this chunk commits, never inside it. Anomaly, Receipts,
+        // Transfers and Search all listen synchronously, so a rollback left the
+        // search index and the transfer pairing acting on rows that vanished.
+        foreach ($persistedRows as $persisted) {
+            $this->events->dispatch(new TransactionImported(
+                transaction: $persisted,
+                user: $user,
+            ));
+        }
     }
 }

@@ -4,20 +4,8 @@ declare(strict_types=1);
 
 use Modules\Core\Models\User;
 
-/*
- * Two settings pages rendered the shell and nothing else: the page component
- * never mounted, <main> was empty, and the tab said only "Beatrax". One of
- * them is linked from /settings as "Aliassen beheren", so it was a reachable
- * dead end.
- *
- * layouts.app is a @yield('content') layout, reached by extending it at render
- * time — 41 pages do exactly that. AliasesSettingsPage was the only page that
- * ALSO declared #[Layout('layouts.app')], and OpenBankingSettingsPage declared
- * no layout at all.
- *
- * Measuring rendered text does not catch this: Alpine expressions inside
- * attributes survive tag-stripping and read as content. What is actually
- * missing is the component, so that is what these assert.
+/**
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-page-that-renders-the-shell-and-nothing-else
  */
 
 /** @return list<string> */

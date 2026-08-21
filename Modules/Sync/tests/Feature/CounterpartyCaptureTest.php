@@ -16,16 +16,10 @@ use Modules\Sync\Public\Events\EntityMutated;
 
 uses(RefreshDatabase::class);
 
-/*
- * Counterparties are created by the resolver during import, but they carry the
- * user's own work: the triage screen is where you say "yes, this IBAN is
- * Versio". Without capture that decision stayed on one device.
- *
- * The values go onto the event as PLAINTEXT. OpLogWriter encrypts sensitive
- * columns itself under the GDK epoch and the backfiller decrypts before
- * handing them over, so passing the stored ciphertext would encrypt it twice
- * and the peer would never read it back.
- */
+// The values go onto the event as plaintext. OpLogWriter encrypts sensitive
+// columns itself and the backfiller decrypts before handing them over, so
+// passing the stored ciphertext would encrypt it twice and the peer would
+// never read it back.
 
 it('writes the counterparty to the op log in plaintext, not stored ciphertext', function (): void {
     $user = User::query()->create([

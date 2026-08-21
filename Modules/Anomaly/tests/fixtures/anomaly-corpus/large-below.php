@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-// large-below: a €10.49 Spotify charge against a €9.99 baseline. Only a
-// ~5% increase — well within the typical spread at the default sensitivity,
-// so the large-vs-typical detector does NOT fire. Above the €10 floor, so
-// the floor is not what suppresses it; the statistical threshold is.
+// A €10.49 Spotify charge against a €9.99 baseline: nothing fires, and the
+// charge sits above the €10 floor so it is the threshold suppressing it, not
+// the floor.
 
 return [
     'settings' => [

@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Fjern kategori',
         'keep_category' => 'Behold denne kategorien',
         'restore_single' => 'Gjenopprette som én kategori?',
+        'survivor_legend' => 'Kategori som beholdes',
         'confirm_unsplit' => 'Ja, opphev oppdelingen',
         'keep_split' => 'Behold oppdelingen',
     ],
@@ -51,6 +52,16 @@ return [
         'choose_aria' => 'Velg ny transaksjonstype',
         'choose_option' => 'Velg en type…',
         'save' => 'Lagre',
+    ],
+
+    'type_label' => [
+        'expense' => 'Utgift',
+        'income' => 'Inntekt',
+        'transfer_out' => 'Overføring ut',
+        'transfer_in' => 'Overføring inn',
+        'fee' => 'Gebyr',
+        'refund' => 'Refusjon',
+        'adjustment' => 'Justering',
     ],
 
     'note' => [

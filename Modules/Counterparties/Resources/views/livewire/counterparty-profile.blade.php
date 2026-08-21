@@ -24,7 +24,7 @@
 <div style="padding: var(--space-6) var(--space-4); max-width: 980px; margin: 0 auto;" class="space-y-6">
     {{-- Tax tag picker — rendered once per profile (not per row). --}}
     @include('tax::components.tax-tag-popover')
-    {{-- Mobile top bar back affordance (D-05): shown at <1024px with ← to /counterparties.
+    {{-- Mobile top bar back affordance: shown at <1024px with ← to /counterparties.
          Must live INSIDE the root div — Livewire allows only one root element. --}}
     <x-core::mobile-top-bar
         :backUrl="route('counterparties.index')"
@@ -45,7 +45,7 @@
             </span>
         </header>
 
-        {{-- Hero stats strip: single-column at phone width (D-05), auto-fit at >=768px --}}
+        {{-- Hero stats strip: single-column at phone width, auto-fit at >=768px --}}
         <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-4);"
                  class="cp-profile-hero-stats">
             <div class="frame frame-tight">
@@ -116,14 +116,27 @@
             };
         @endphp
         {{-- overflow-x: auto ensures the tab bar scrolls at phone width rather than clipping --}}
-        <nav style="border-bottom: 1px solid var(--color-border); display: flex; align-items: center; gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+        {{-- The strip carried no tab semantics at all, so a reader heard
+             "button" four times and never which one was showing. The tablist and
+             its name stay here because this is what knows the tabs; x-core::tab
+             brings role and aria-selected, and its slate values are the same
+             pair --color-text already resolved to. --}}
+        <nav
+            style="border-bottom: 1px solid var(--color-border); display: flex; align-items: center; gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch;"
+            role="tablist"
+            aria-label="{{ Lang::get('counterparties::profile.tablist_aria') }}"
+            x-data="tabStrip()"
+            x-on:keydown="onKey($event)"
+        >
             @foreach ($tabs as $tab)
-                <button
-                    type="button"
-                    class="focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
-                    style="padding: 8px 14px; border: 0; background: transparent; font-size: var(--text-sm); font-weight: 500; color: {{ $activeTab === $tab['key'] ? 'var(--color-text)' : 'var(--color-text-muted)' }}; border-bottom: 1px solid {{ $activeTab === $tab['key'] ? 'var(--color-text)' : 'transparent' }}; cursor: pointer; white-space: nowrap; flex-shrink: 0;"
+                <x-core::tab
+                    :active="$activeTab === $tab['key']"
+                    class="shrink-0 whitespace-nowrap"
+                    id="counterparty-tab-{{ $tab['key'] }}"
+                    aria-controls="counterparty-tab-panel"
+                    tabindex="{{ $activeTab === $tab['key'] ? '0' : '-1' }}"
                     wire:click="switchTab('{{ $tab['key'] }}')"
-                >{{ $tab['label'] }}</button>
+                >{{ $tab['label'] }}</x-core::tab>
             @endforeach
             @if ($tabNote !== null)
                 <span style="font-size: var(--text-xs); color: var(--color-text-faint); margin-left: var(--space-3); white-space: nowrap; flex-shrink: 0;">
@@ -132,8 +145,9 @@
             @endif
         </nav>
 
-        {{-- Per-type body partial ----------------------------------- --}}
-        <div>
+        {{-- Per-type body partial. One panel for every tab: only the selected
+             tab's partial is included, so the panel is named by that tab. --}}
+        <div id="counterparty-tab-panel" role="tabpanel" aria-labelledby="counterparty-tab-{{ $activeTab }}">
             @include($partial, [
                 'profile' => $profile,
                 'recentActivity' => $recentActivity,

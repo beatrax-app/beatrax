@@ -11,16 +11,6 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
 
 uses(RefreshDatabase::class);
 
-/*
- * DeviceRegistryFeedsReplayerTest — integration bridge to the Phase 11
- * OpLogReplayer. After a confirmed pairing, an OpLogReplayer constructed with
- * DeviceRegistryService::deviceKeys() must receive a NON-EMPTY device-key map.
- *
- * RED until Plan 02 ships DeviceRegistryService. References the planned public
- * FQCN Modules\Sync\Public\Services\DeviceRegistryService (OpLogReplayer +
- * MergeRulesRegistry already exist from Phase 11). Failure is "class not found".
- */
-
 function replayerBridgeUser(string $username = 'replayer-bridge-user'): User
 {
     return User::query()->create([
@@ -62,7 +52,6 @@ it('produces a non-empty deviceKeys map that the OpLogReplayer can consume after
     expect($deviceKeys)->not->toBeEmpty();
     expect($deviceKeys)->toHaveKey('device-confirmed');
 
-    // The map is shaped exactly as OpLogReplayer's $deviceKeys constructor arg.
     $replayer = new OpLogReplayer(
         $db,
         $deviceKeys,

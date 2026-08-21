@@ -12,8 +12,7 @@ use Modules\Ledger\Public\Contracts\CapturesTransactionsForSync;
  */
 final class NullTransactionSyncCapture implements CapturesTransactionsForSync
 {
-    // The default when the Sync module is not loaded. A device that cannot
-    // sync has still recorded the transactions; there is simply nowhere to
-    // record them for a peer.
+    // The default when Sync is not loaded: a device that cannot sync has still
+    // recorded the transactions, there is just no peer to tell.
     public function captureTransactions(array $transactionIds, User $user): void {}
 }

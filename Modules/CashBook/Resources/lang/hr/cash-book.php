@@ -25,6 +25,8 @@ return [
     'no_entries' => 'Još nema ručnih unosa.',
     'delete_entry' => 'Izbriši unos',
     'delete' => 'Izbriši',
+    'delete_confirm' => 'Izbrisati ovaj unos?',
+    'delete_keep' => 'Zadrži',
 
     'errors' => [
         'amount_positive' => 'Unesi iznos veći od nule.',

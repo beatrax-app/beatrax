@@ -8,19 +8,12 @@ use Illuminate\Http\Client\Factory as HttpFactory;
 use Modules\FX\Public\Contracts\RateProvider;
 use Modules\FX\Public\Exceptions\RateFetchException;
 
-/**
- * @link ../../../../.docs/features/fx/architecture.md
- */
 final class FrankfurterRateProvider implements RateProvider
 {
-    // The old api.frankfurter.app domain 301-redirects to
-    // api.frankfurter.dev; use the new URL directly to avoid the
-    // redirect hop. Priority 100 - second in the chain after ECB.
+    // The old api.frankfurter.app 301-redirects here; named directly to skip
+    // the hop.
     private const string URL = 'https://api.frankfurter.dev/v1/latest';
 
-    // Http\Factory is constructor-injected, never the Http facade, so
-    // this class satisfies the arch test forbidding Illuminate facades
-    // inside Modules\.
     public function __construct(private readonly HttpFactory $http) {}
 
     public function key(): string
@@ -77,9 +70,8 @@ final class FrankfurterRateProvider implements RateProvider
             $rates[(string) $currency] = (string) $rate;
         }
 
-        // An HTTP 200 with no usable rates is a failure, not a success —
-        // otherwise the registry resets the circuit and stops here instead of
-        // falling through to the bundled snapshot (mirrors EcbRateProvider).
+        // A 200 with no usable rates must fail, or the registry resets the
+        // circuit and stops here instead of falling through to the snapshot.
         if ($rates === []) {
             throw new RateFetchException('Frankfurter response contained no usable rates.');
         }

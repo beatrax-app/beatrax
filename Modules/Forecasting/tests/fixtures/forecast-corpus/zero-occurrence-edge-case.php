@@ -2,12 +2,7 @@
 
 declare(strict_types=1);
 
-// Zero-occurrence edge case: same ASN + a single approved series
-// with EMPTY occurrence history (just-approved series;
-// latest_amount_minor is set but no prior occurrences exist).
-// Envelope tier applies since there's no occurrence history to
-// support percentile; 30-day points use latest_amount_minor ×
-// variance_tolerance_percent directly. No shortfalls.
+/** @link ../../../../../.docs/features/forecasting/forecast-corpus.md#zero-occurrence-edge-case */
 
 return [
     'accounts' => [

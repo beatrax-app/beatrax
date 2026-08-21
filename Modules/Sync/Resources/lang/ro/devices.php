@@ -16,6 +16,7 @@ return [
     'on' => 'Activat',
     'securing' => 'Se securizează datele tale…',
     'do_not_close' => 'Nu închide această fereastră.',
+    'encryption_progress_aria' => 'Progresul criptării',
     'not_encrypted_offer' => 'Datele tale nu sunt criptate în repaus. Configurează criptarea pentru a le proteja dacă acest dispozitiv este pierdut sau furat.',
     'enable_encryption' => 'Activează criptarea',
 

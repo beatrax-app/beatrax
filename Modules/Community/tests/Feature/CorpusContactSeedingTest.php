@@ -112,8 +112,7 @@ it('clears a contact field the YAML no longer declares on re-seed', function ():
     $events = $this->app->make(Dispatcher::class);
     $events->dispatch(new UserInstalled($user->id));
 
-    // A cancellation link that has gone stale must not survive the corpus
-    // update that removed it — a dead cancel link is worse than none.
+    // A dead cancellation link is worse than none.
     file_put_contents($this->merchantsDir.'/nl.yaml', <<<'YAML'
 entries:
   - pattern: "PARTIALCONTACT"

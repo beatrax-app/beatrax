@@ -8,21 +8,17 @@ use Illuminate\Support\Facades\Http;
 use Modules\Core\Internal\AutoUpdate\HttpPublisherManifestFetcher;
 use Psr\Log\NullLogger;
 
-/*
- * HttpPublisherManifestFetcher fetches the exact signed manifest bytes and
- * the detached signature the explicit-consent update listeners verify. It
- * must normalise electron-updater's base64 SHA512 to the hex verifyBinary()
- * compares, and it must fail to null on every malformed or missing input so
- * a broken feed can never reach the verification step as a bad expectation.
- */
+// The manifest carries the expectation verifyBinary() checks a downloaded
+// installer against, so every malformed or missing input has to fail to null
+// rather than arrive there as a weakened one. electron-updater writes sha512 in
+// base64; verifyBinary() compares hex.
 
 function makeManifestFetcher(?string $feedUrl, string $platformFamily = 'Windows'): HttpPublisherManifestFetcher
 {
     $config = new Repository(['auto_update' => ['manifest_feed_url' => $feedUrl]]);
 
     // Platform is injected so the manifest-name assertions do not depend on the
-    // OS the suite runs on (Windows -> latest.yml keeps the base-case fakes
-    // simple; the -mac/-linux cases assert the per-platform names explicitly).
+    // OS the suite runs on; the default keeps the base-case fakes on latest.yml.
     return new HttpPublisherManifestFetcher(app(HttpClient::class), $config, new NullLogger, $platformFamily);
 }
 

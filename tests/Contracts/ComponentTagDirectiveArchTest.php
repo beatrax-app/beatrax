@@ -2,23 +2,8 @@
 
 declare(strict_types=1);
 
-/*
- * A Blade component tag must not carry a Blade directive in its attribute
- * list.
- *
- * `<x-foo @if ($bad) aria-invalid="true" @endif />` does not error and does not
- * warn. Blade's component-tag compiler matches the tag with a regex over its
- * attributes, the directive defeats the match, and the tag is emitted into the
- * page VERBATIM as an unknown HTML element — which renders as nothing at all.
- *
- * It cost a shipped field. The goal edit form's target-date input was written
- * that way, and the modal went out with no date control in it: a label, then
- * empty space, then the next label. The page returned 200, no console error,
- * no failing test. It was found by reading the device's DOM and seeing a
- * literal `<x-core::date-input …>` element sitting in it.
- *
- * The fix is always the same shape — branch around the whole tag rather than
- * inside it — so this only has to say "not here".
+/**
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-blade-directive-inside-a-component-tag
  */
 
 /** @return list<string> */

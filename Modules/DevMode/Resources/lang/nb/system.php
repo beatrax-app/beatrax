@@ -7,6 +7,10 @@ return [
 
     'subtitle_html' => 'Miljø + runtime + effektiv konfigurasjon. Sensitive nøkler (endelsene <code class="font-mono text-xs">*password*</code>, <code class="font-mono text-xs">*secret*</code>, <code class="font-mono text-xs">*key</code>, <code class="font-mono text-xs">*token*</code>) maskeres.',
     'php' => 'PHP',
+    'php_version' => 'versjon',
+    'php_sapi' => 'sapi',
+    'php_ini_path' => 'ini-sti',
+    'php_extensions' => 'utvidelser',
     'laravel' => 'Laravel',
     'sqlite' => 'SQLite',
     'sqlite_file' => 'fil',

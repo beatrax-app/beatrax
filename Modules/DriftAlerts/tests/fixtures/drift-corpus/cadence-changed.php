@@ -2,14 +2,8 @@
 
 declare(strict_types=1);
 
-// Subscription on a series whose state is 'cadence_changed' with a
-// +10% drift on top. Drift detection still fires on cadence_changed
-// series — the user can act on cadence and drift independently.
-// Math:
-//   delta_minor = -1099 - (-999) = -100
-//   annualized_impact_minor = -100 × 12 = -1200 (-€12/yr)
-// The series_state on the recurring_series row is 'cadence_changed';
-// consumers of this fixture seed the row accordingly.
+// Drift still fires on a cadence_changed series: the interval flip and the
+// amount movement are separately actionable.
 
 $transactions = [];
 $amounts = [-999, -999, -999, -1099, -1099, -1099];

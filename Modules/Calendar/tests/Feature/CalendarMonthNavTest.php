@@ -7,15 +7,6 @@ use Livewire\Livewire;
 use Modules\Calendar\Internal\Http\Livewire\CalendarPage;
 use Modules\Core\Models\User;
 
-/*
- * CalendarPage — month navigation (T-06-01, D-14).
- *
- * Contract:
- *   - prevMonth() moves back one month.
- *   - nextMonth() is a no-op when the next month would exceed today + 12 months.
- *   - Invalid #[Url] month values (0, 13) are clamped to the current month.
- */
-
 function cmnUser(string $suffix = 'cmn'): User
 {
     return User::query()->create([
@@ -67,8 +58,7 @@ it('nextMonth advances the display month forward by one', function (): void {
 it('nextMonth is a no-op when the next month exceeds the 12-month forecast horizon', function (): void {
     $user = cmnUser('cmn-ceiling');
 
-    // today = 2026-06-12 → ceiling = 2027-06-12 → max month = 2027-06
-    // Trying to go from 2027-06 to 2027-07 should be blocked.
+    // today = 2026-06-12 → ceiling month = 2027-06.
     Livewire::actingAs($user)
         ->test(CalendarPage::class, ['month' => 6, 'year' => 2027])
         ->call('nextMonth')
@@ -76,11 +66,11 @@ it('nextMonth is a no-op when the next month exceeds the 12-month forecast horiz
         ->assertSet('year', 2027);
 });
 
-it('clamps a tampered ?year=&month= beyond the 12-month horizon to the ceiling month (WR-05)', function (): void {
+it('clamps a tampered ?year=&month= beyond the 12-month horizon to the ceiling month', function (): void {
     $user = cmnUser('cmn-url-ceiling');
 
-    // today = 2026-06-12 → ceiling = 2027-06. A direct URL for 2099-12 must
-    // render the ceiling month, not a far-future grid of phantom data.
+    // today = 2026-06-12 → ceiling month = 2027-06. A direct URL for 2099-12
+    // must render that, not a far-future grid of phantom data.
     Livewire::actingAs($user)
         ->test(CalendarPage::class, ['month' => 12, 'year' => 2099])
         ->assertSee('Jun 2027');
@@ -89,9 +79,8 @@ it('clamps a tampered ?year=&month= beyond the 12-month horizon to the ceiling m
 it('clamps an invalid #[Url] month value (0) to the current month', function (): void {
     $user = cmnUser('cmn-clamp-zero');
 
-    // month=0 is out of range; render() must fall back to the current month
-    // (June 2026) — asserting the rendered month label proves the clamp
-    // actually happened (IN-04), not merely that the render survived.
+    // Asserting the rendered month label proves the clamp actually happened,
+    // not merely that the render survived.
     Livewire::actingAs($user)
         ->test(CalendarPage::class, ['month' => 0, 'year' => 2026])
         ->assertSee('Jun 2026');

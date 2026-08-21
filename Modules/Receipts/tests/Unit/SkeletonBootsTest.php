@@ -13,12 +13,8 @@ it('boots the Receipts module skeleton and resolves the MatcherRegistry', functi
 
     expect($registry)->toBeInstanceOf(MatcherRegistry::class);
 
-    // The `receipts.matcher` container tag populates from whichever
-    // per-sender matcher classes are present on disk: PaypalReceiptMatcher
-    // lands in Wave 1, and IcsReceiptMatcher + GooglePlayReceiptMatcher
-    // land in Wave 2. Assert containment of the known active keys rather
-    // than equality so the test stays stable as later waves extend the
-    // list without an edit here.
+    // The receipts.matcher tag picks up whichever matcher classes are on disk,
+    // so assert containment rather than equality and let the list grow.
     expect($registry->supportedKeys())->toContain('paypal-receipt');
 });
 

@@ -7,9 +7,6 @@ namespace Modules\Core\Public\Controllers;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\JsonResponse;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class HealthController
 {
     public function __construct(

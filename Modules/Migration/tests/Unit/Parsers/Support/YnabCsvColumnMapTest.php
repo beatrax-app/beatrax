@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Migration\Internal\Exceptions\UnrecognizedMigrationFileException;
 use Modules\Migration\Internal\Parsers\Support\YnabCsvColumnMap;
-use Modules\Migration\Public\Exceptions\UnrecognizedMigrationFileException;
 
 it('YnabCsvColumnMap: accepts a valid ynab4 Register.csv header', function (): void {
     $map = new YnabCsvColumnMap;

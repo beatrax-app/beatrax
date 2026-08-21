@@ -4,14 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Internal\Lock;
 
-// Derives a symmetric wrap key from a PIN or password using Argon2id.
-// MODERATE limits (~256 MB RAM, ~500ms/derivation) raise the per-guess
-// cost and make derivation memory-hard, resisting an offline brute-force
-// of the low-entropy PIN against a stolen database.
+// MODERATE limits (~256 MB, ~500ms) keep this memory-hard, so a PIN's low
+// entropy is not cheaply brute-forced out of a stolen database.
 final class AppLockKdf
 {
-    // The caller MUST zero the returned key bytes with sodium_memzero()
-    // after use.
+    // The caller must sodium_memzero() the returned key bytes after use.
     public function deriveWrapKey(string $secret, string $salt): string
     {
         return sodium_crypto_pwhash(
@@ -24,8 +21,7 @@ final class AppLockKdf
         );
     }
 
-    // A fresh salt must be generated for every new PIN enrollment; store
-    // it in the kdf_salt column alongside the wrapped data key.
+    // One fresh salt per PIN enrollment — never reuse one across enrollments.
     public function generateSalt(): string
     {
         return random_bytes(SODIUM_CRYPTO_PWHASH_SALTBYTES);

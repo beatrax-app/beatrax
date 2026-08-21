@@ -7,13 +7,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for the drift_alert_transitions audit migration —
- * locks the column shape, the (drift_alert_id, transitioned_at)
- * read-side index, and validates that no DDL state trigger lives on
- * this append-only table.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);

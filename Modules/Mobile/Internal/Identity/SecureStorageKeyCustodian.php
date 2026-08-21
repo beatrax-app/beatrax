@@ -12,7 +12,6 @@ use Native\Mobile\Facades\SecureStorage;
 
 /**
  * @see KeyCustodian
- * @link ../../../../.docs/features/mobile/architecture.md
  */
 class SecureStorageKeyCustodian implements KeyCustodian
 {

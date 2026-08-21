@@ -13,16 +13,8 @@ use Modules\OpenBanking\Internal\Jobs\SyncOpenBankingAccountJob;
 
 uses(RefreshDatabase::class);
 
-/*
- * `open-banking.daily-sync` (routes/console.php, 19-12 Task 1, D-13/Req 9):
- * the no-op-when-off/expired requirement is enforced AT THE ENUMERATION
- * QUERY (`WHERE enabled AND consent_expires_at > now()`), not solely inside
- * `SyncOpenBankingAccountJob` (which additionally re-checks defensively on
- * pickup — see `SyncOpenBankingAccountJobTest`). This test drives the real
- * registered `CallbackEvent` end-to-end (not a re-implementation of its
- * query) so a future edit to the closure that silently breaks the
- * enabled/expired predicate is caught here.
- */
+// The off/expired no-op is enforced at the enumeration query, not only by the
+// job's re-check on pickup, so these drive the registered CallbackEvent itself.
 
 function ossFindEvent(Schedule $schedule, string $description): ?ScheduledEvent
 {

@@ -9,12 +9,6 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 
-/*
- * CardStatementQuery::openForAccount feeds the dashboard tile + chain
- * drawer. Returns the most recent open / partially_settled card_statement
- * row scoped to the user. Cross-user isolation via user_id filter.
- */
-
 beforeEach(function (): void {
     $this->user = User::query()->create([
         'username' => 'card-statement-query',
@@ -59,7 +53,6 @@ it('openForAccount returns null when no open / partially_settled statement exist
 });
 
 it('openForAccount returns the most recent open statement', function (): void {
-    // Older open statement.
     CardStatement::query()->create([
         'user_id' => $this->user->id,
         'account_id' => $this->account->id,
@@ -121,6 +114,5 @@ it('openForAccount isolates by user — other users do not leak through', functi
         'state' => 'open',
     ]);
 
-    // Query against this user with the OTHER user's account id → null.
     expect($this->query->openForAccount((int) $otherAccount->id, $this->user))->toBeNull();
 });

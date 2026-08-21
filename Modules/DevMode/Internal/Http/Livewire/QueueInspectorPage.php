@@ -20,8 +20,6 @@ use Modules\DevMode\Internal\Queue\QueueRowLoader;
 use Modules\DevMode\Internal\Services\DevModeFlag;
 
 /**
- * @link ../../../../../.docs/features/dev-mode/architecture.md
- *
  * @phpstan-import-type QueueRow from QueueRowLoader
  */
 #[Layout('dev::layouts.dev-shell')]
@@ -33,8 +31,7 @@ final class QueueInspectorPage extends Component
 
     public string $tab = 'pending';
 
-    // Pending tab holds string-encoded int ids; Failed tab holds uuids;
-    // Batches tab holds batch UUIDs.
+    // Pending ids are ints rendered as strings; the other tabs hold uuids.
     /**
      * @var list<string>
      */
@@ -92,15 +89,11 @@ final class QueueInspectorPage extends Component
         $this->toast(Lang::get('dev::queue.toast.batch_failures_requeued'));
     }
 
-    // Non-destructive — Blade dispatches a single-confirm Flux modal;
-    // this method runs on confirmation.
     public function bulkRetryConfirm(QueueActions $actions): void
     {
         if ($this->selected === []) {
             return;
         }
-        // Only the Failed tab surfaces bulk-retry — pending and
-        // batches do not offer the retry-all affordance.
         if ($this->tab !== 'failed') {
             return;
         }
@@ -109,9 +102,8 @@ final class QueueInspectorPage extends Component
         $this->toast(Lang::get('dev::queue.toast.failed_jobs_requeued'));
     }
 
-    // DESTRUCTIVE — Blade dispatches triple-gate:open with the current
-    // tab + selected ids forwarded so the TripleGate modal's confirm
-    // event arrives back here in executeBulkDelete().
+    // Only the tab and a count cross the wire; the selection stays in
+    // $selected, so a tampered gate confirm cannot widen it.
     public function bulkDeleteRequest(): void
     {
         if ($this->selected === []) {
@@ -124,10 +116,8 @@ final class QueueInspectorPage extends Component
         );
     }
 
-    // Re-validates the three triple-gate checks server-side (mirrors
-    // DestructiveSpawnController's re-validation on the artisan side) and
-    // discriminates on the command string so unrelated gate confirms
-    // (artisan-tier destructive) cannot accidentally delete queue rows.
+    // The gate is re-validated server-side, and keyed on the command string
+    // so an unrelated confirm cannot land here and delete queue rows.
     /**
      * @param  array<string, mixed>  $args
      */
@@ -162,10 +152,6 @@ final class QueueInspectorPage extends Component
         $this->toast(Lang::get('dev::queue.toast.rows_deleted'));
     }
 
-    // The triple gate re-validated server-side: Dev Mode env flag, session
-    // Advanced toggle, timing-safe compare of the typed app-name token.
-    // Returns the reason to surface, or null when all three pass. The arms
-    // short-circuit, so hash_equals runs only once the first two are open.
     private function bulkDeleteRefusal(DevModeFlag $devMode, Session $session, string $confirmedTyped): ?string
     {
         return match (true) {
@@ -184,10 +170,8 @@ final class QueueInspectorPage extends Component
     ): View {
         $connection = $db->connection();
 
-        // Count tiles — all three counts regardless of active tab.
-        // Use the raw query builder per the larastan-strict pattern
-        // (Eloquent\\Builder __call → Query\\Builder forwarding
-        // triggers staticMethod.dynamicCall flags).
+        // The query builder rather than Eloquent: Builder's __call forwarding
+        // trips larastan-strict staticMethod.dynamicCall.
         $pendingCount = $connection->table('jobs')->count();
         $failedCount = $connection->table('failed_jobs')->count();
         $batchesCount = $connection->table('job_batches')
@@ -195,9 +179,6 @@ final class QueueInspectorPage extends Component
             ->whereNull('finished_at')
             ->count();
 
-        // Per-tab row set. Read-only; the collaborator maps the raw
-        // query builder's stdClass rows into the normalised QueueRow
-        // shape the Blade view consumes.
         $rows = $rowLoader->load($this->tab);
 
         $expandedPayload = null;
@@ -217,8 +198,6 @@ final class QueueInspectorPage extends Component
         ]);
     }
 
-    // Pending + failed rows expose a payload column; batches use the
-    // options blob instead.
     /**
      * @param  list<QueueRow>  $rows
      */

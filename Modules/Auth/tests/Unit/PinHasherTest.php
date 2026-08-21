@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 use Modules\Auth\Internal\Lock\PinHasher;
 
-/*
- * Unit tests for PinHasher — Argon2id PIN hash + verify (D-09).
- */
-
 it('hashes a PIN and verifies the correct PIN successfully', function (): void {
     $hasher = new PinHasher;
 

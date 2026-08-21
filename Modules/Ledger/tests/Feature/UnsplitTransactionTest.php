@@ -91,7 +91,6 @@ it('rejects a surviving category that is not one of the current legs', function 
     expect(fn () => app(SaveTransactionSplit::class)->unsplit($this->user, $this->tx->id, $fuel->id))
         ->toThrow(InvalidArgumentException::class);
 
-    // Nothing changed — legs remain.
     expect(TransactionSplit::query()->where('transaction_id', $this->tx->id)->count())->toBe(2);
 });
 

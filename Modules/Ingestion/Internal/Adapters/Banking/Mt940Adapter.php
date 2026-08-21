@@ -9,17 +9,14 @@ use Generator;
 use Modules\Ingestion\Internal\Adapters\Banking\Dto\Mt940BalanceTuple;
 use Modules\Ingestion\Internal\Adapters\Banking\Dto\Mt940Narrative;
 use Modules\Ingestion\Internal\Adapters\Banking\Dto\Mt940StatementLine;
+use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Contracts\SourceAdapter;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
 use Modules\Ledger\Public\Dto\StatementSummaryData;
 use Throwable;
 
-/**
- * @link ../../../../../.docs/features/ingestion/architecture.md
- */
 final class Mt940Adapter implements SourceAdapter
 {
     private ?StatementSummaryData $lastStatementMetadata = null;
@@ -51,8 +48,6 @@ final class Mt940Adapter implements SourceAdapter
         $state = new Mt940StatementAccumulator;
 
         foreach ($this->lexer->tokenize($localPath) as [$tag, $content]) {
-            // The :61:/:86: entry pair streams DTOs; every other tag only
-            // accumulates header/balance state into $state.
             if ($tag === '61') {
                 yield from $this->handleEntryLine($state, $content);
 
@@ -76,9 +71,8 @@ final class Mt940Adapter implements SourceAdapter
 
     private function applyHeaderTag(Mt940StatementAccumulator $state, string $tag, string $content, AccountResolver $accounts): void
     {
-        // Unknown tags are ignored on purpose — MT940 files carry vendor
-        // extensions the ledger has no use for, and dropping them keeps the
-        // adapter tolerant of ASN export revisions.
+        // Unknown tags are ignored on purpose: MT940 files carry vendor
+        // extensions, and tolerating them survives an ASN export revision.
         match ($tag) {
             '20' => $this->applyStatementId($state, $content),
             '25' => $this->applyOwnIban($state, $content, $accounts),
@@ -173,8 +167,8 @@ final class Mt940Adapter implements SourceAdapter
         }
 
         $narrative = $this->tag86->parse($content);
-        // $ownIban + $currency are guaranteed non-null by the :61: branch,
-        // which is the only path that can populate $pendingTag61.
+        // The :61: branch is the only path that populates $pendingTag61, and
+        // it has already proved $ownIban and $currency non-null.
         yield $this->buildDto($state->pendingTag61, $narrative, (string) $state->ownIban, (string) $state->currency, $state->rowIndex);
         $state->rowIndex++;
         $state->pendingTag61 = null;
@@ -224,10 +218,8 @@ final class Mt940Adapter implements SourceAdapter
         );
     }
 
-    // Parses e.g. "C260401EUR1000,00" into a signed integer minor amount, a
-    // 3-letter currency, and the balance date, routing the comma-decimal
-    // amount through BankAmountParser so the integer-only path holds
-    // end-to-end.
+    // Reads a balance cell shaped "C260401EUR1000,00": sign, YYMMDD,
+    // currency, comma-decimal magnitude.
     private function parseBalance(string $content): ?Mt940BalanceTuple
     {
         if (preg_match('/^([CD])(\d{6})([A-Z]{3})([\d,]+)$/', trim($content), $m) !== 1) {
@@ -256,9 +248,7 @@ final class Mt940Adapter implements SourceAdapter
         }
     }
 
-    // Normalises a comma-decimal cell ("1000,00" / "1000") to a
-    // two-fractional-digit period-decimal before delegating to the
-    // integer-only amount parser.
+    // MT940 omits the fractional part on a whole amount.
     private function parseBalanceAmount(string $raw): int
     {
         $normalised = str_replace(',', '.', $raw);

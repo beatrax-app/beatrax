@@ -16,18 +16,16 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    $fmt = static fn (Money $money): string => $money->currency() === 'EUR'
-        ? $money->format('nl_NL')
-        : $money->format('en_US');
+    $fmt = static fn (Money $money): string => $money->format();
 
-    $eurFmt = static fn (int $minor): string => Money::ofMinor($minor, 'EUR')->format('nl_NL');
+    $eurFmt = static fn (int $minor): string => Money::ofMinor($minor, 'EUR')->format();
 
     $chartElementId = 'series-chart-'.$series->seriesId;
     $occurrenceCount = count($occurrences);
 @endphp
 
 <div class="mx-auto max-w-5xl px-4 py-12">
-    {{-- Mobile top bar (D-05): back affordance targeting /recurring parent list.
+    {{-- Mobile top bar: back affordance targeting /recurring parent list.
          Visible only at <1024px (CSS .top-bar rule sets display:none at >=1024px).
          The page title is the series display name, truncated to one line.
          Must live INSIDE the root div — Livewire allows only one root element. --}}
@@ -39,12 +37,8 @@
         <div class="min-w-0 flex-1">
             <h1 class="truncate text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ $series->displayName() }}</h1>
             <p class="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-slate-500 dark:text-slate-400">
-                <span
-                    class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                >{{ ucfirst($series->state) }}</span>
-                <span
-                    class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                >{{ $series->cadence->label() }}</span>
+                <x-core::status-pill>{{ ucfirst($series->state) }}</x-core::status-pill>
+                <x-core::status-pill>{{ $series->cadence->label() }}</x-core::status-pill>
                 <span style="font-variant-numeric: tabular-nums;">{{ $fmt($series->latestAmount) }}</span>
                 <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">·</span>
                 <span style="font-variant-numeric: tabular-nums;">{{ $eurFmt($series->monthlyEquivalent->toMinor()) }}/mo</span>
@@ -63,16 +57,16 @@
             @livewire('drift-alerts.drift-threshold-editor', ['recurringSeriesId' => $series->seriesId], key('threshold-detail-'.$series->seriesId))
             @livewire('forecasting.model-what-if-dropdown', ['seriesId' => $series->seriesId], key('what-if-'.$series->seriesId))
             <div x-data="{ open: false }" class="relative">
-                <button
-                    type="button"
+                <x-core::secondary-button
+                    size="sm"
+                    class="gap-1"
                     x-on:click="open = ! open"
                     aria-haspopup="listbox"
                     aria-label="{{ Lang::get('recurring::detail.variance_tolerance_aria') }}"
-                    class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900"
                 >
                     <span class="text-slate-500 dark:text-slate-400">{{ Lang::get('recurring::detail.tolerance') }}</span>
                     <span style="font-variant-numeric: tabular-nums;">{{ $series->varianceTolerancePercent }}%</span>
-                </button>
+                </x-core::secondary-button>
                 <div
                     x-show="open"
                     x-cloak
@@ -95,7 +89,7 @@
                     @endforeach
                 </div>
             </div>
-            {{-- Back link: visible at desktop (mobile top bar handles phone D-05) --}}
+            {{-- Back link: visible at desktop (the mobile top bar handles phone) --}}
             <a
                 href="{{ route('recurring.index') }}"
                 class="hidden md:inline text-sm text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
@@ -122,23 +116,25 @@
     <section>
         <h2 class="mb-3 text-sm font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('recurring::detail.occurrences') }}</h2>
         @if ($occurrenceCount === 0)
-            <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
+            <x-core::card>
                 <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('recurring::detail.no_occurrences') }}</p>
-            </div>
+            </x-core::card>
         @else
-            {{-- overflow-x: auto wrapper ensures the occurrences table is scrollable
-                 at phone width without horizontal page overflow (D-06). --}}
+            {{-- Two wrappers, not one: the outer element is the scroller and the
+                 inner one holds the 360px floor, so the frame grows past the
+                 viewport and the outer element is what scrolls. Put the floor on
+                 the scroller itself and there is nothing left to scroll.
+                 scroll="false" for the frame for the same reason — the scrolling
+                 already happened one level up. --}}
             <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-            <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700" style="min-width: 360px;">
-                <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
-                    <thead class="bg-slate-50 dark:bg-slate-900">
-                        <tr>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('recurring::detail.table.date') }}</th>
-                            <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('recurring::detail.table.amount') }}</th>
-                            <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('recurring::detail.table.transaction') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-200 bg-white dark:bg-slate-950 dark:divide-slate-700">
+                <div style="min-width: 360px;">
+                    <x-core::data-table :scroll="false">
+                        <x-slot:head>
+                            <x-core::th align="left">{{ Lang::get('recurring::detail.table.date') }}</x-core::th>
+                            <x-core::th align="right">{{ Lang::get('recurring::detail.table.amount') }}</x-core::th>
+                            <x-core::th align="right">{{ Lang::get('recurring::detail.table.transaction') }}</x-core::th>
+                        </x-slot:head>
+
                         @foreach ($occurrences as $occ)
                             <tr>
                                 <td class="px-4 py-2 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $occ->observedAt->translatedFormat('d M Y') }}</td>
@@ -151,10 +147,9 @@
                                 </td>
                             </tr>
                         @endforeach
-                    </tbody>
-                </table>
+                    </x-core::data-table>
+                </div>
             </div>
-            </div>{{-- end overflow-x scroller --}}
         @endif
     </section>
 </div>

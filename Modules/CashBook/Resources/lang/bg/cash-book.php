@@ -25,6 +25,8 @@ return [
     'no_entries' => 'Все още няма ръчни записи.',
     'delete_entry' => 'Изтрий записа',
     'delete' => 'Изтрий',
+    'delete_confirm' => 'Да се изтрие ли този запис?',
+    'delete_keep' => 'Запази',
 
     'errors' => [
         'amount_positive' => 'Въведи сума, по-голяма от нула.',

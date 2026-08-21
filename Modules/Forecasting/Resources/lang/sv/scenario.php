@@ -11,6 +11,7 @@ return [
     'rename' => 'Byt namn',
     'confirm_delete' => 'Bekräfta borttagning',
     'delete_scenario' => 'Ta bort scenario',
+    'delete_confirm' => 'Ta bort det här scenariot?',
 
     'mutations_count' => 'Ändringar (:count)',
     'no_mutations' => 'Inga ändringar än. Lägg till en nedan för att se hur det här scenariot står sig mot din baslinje.',
@@ -67,6 +68,7 @@ return [
         'new_amount' => 'Nytt belopp',
         'new_next_date' => 'Nytt nästa datum',
         'scope' => 'Omfattning',
+        'scope_legend' => 'Vilka händelser som ska flyttas',
         'scope_next' => 'Bara nästa händelse',
         'scope_all' => 'Alla efterföljande händelser',
     ],
@@ -80,6 +82,8 @@ return [
         'current_amount' => 'Nuvarande belopp',
         'new_amount' => 'Nytt belopp',
     ],
+
+    'series_name_fallback' => 'serie',
 
     'summary' => [
         'cancel' => 'Säg upp :name',

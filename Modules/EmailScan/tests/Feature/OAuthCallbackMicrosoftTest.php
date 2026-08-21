@@ -11,14 +11,6 @@ use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\OAuthStateRepository;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
-/*
- * OAuth callback (Microsoft 365) happy-path + state mismatch +
- * canceled-at-consent scenarios. The mock MicrosoftOAuthProvider
- * records the redirectUri argument so the test can prove the loopback
- * URI was computed server-side from app.url rather than smuggled from
- * the query string.
- */
-
 beforeEach(function (): void {
     $this->path = storage_path('app/secrets/email-oauth.json');
     if (is_file($this->path)) {
@@ -58,9 +50,8 @@ it('OAuth callback (microsoft) happy path inserts inbox + scan_state + saves ref
     $secrets = $this->app->make(OAuthSecretsRepository::class);
     ocmSeedProviderClient($secrets);
 
-    // Mock the MicrosoftOAuthProvider. Capture the redirectUri
-    // argument so we can assert it was the loopback IP scheme computed
-    // server-side, not a value smuggled from a query parameter.
+    // The mock records the redirectUri so the test can prove it was computed
+    // server-side rather than smuggled in through a query parameter.
     $fakeToken = new AccessTokenWithEmail(
         accessToken: 'fake-microsoft-access-token',
         refreshToken: 'fake-microsoft-refresh-token-67890',
@@ -142,7 +133,8 @@ it('OAuth callback (microsoft) happy path inserts inbox + scan_state + saves ref
     expect($loaded->refreshToken)->toBe('fake-microsoft-refresh-token-67890');
     expect($loaded->provider)->toBe('microsoft');
 
-    // Assert the loopback redirect URI was computed server-side.
+    // The port is derived from app.url, which is what makes the redirect URI
+    // server-side rather than caller-supplied.
     $expectedPort = parse_url((string) config('app.url'), PHP_URL_PORT);
     if (! is_int($expectedPort) || $expectedPort <= 0) {
         $expectedPort = 8000;

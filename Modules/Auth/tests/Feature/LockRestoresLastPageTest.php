@@ -7,12 +7,9 @@ use Illuminate\Support\Facades\DB;
 use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
 use Modules\Core\Models\User;
 
-/*
- * The idle timer locks from JAVASCRIPT and navigates straight to the lock
- * screen, so the middleware never sees the request that would have set
- * `url.intended` — and every idle unlock dropped the user on the dashboard
- * instead of the page they were reading.
- */
+// The idle timer locks from JavaScript and navigates straight to the lock
+// screen, so the middleware never sees a request that would set `url.intended`
+// — and every idle unlock dropped the user on the dashboard instead.
 
 it('remembers the page a user was on while unlocked', function (): void {
     $user = User::query()->create([

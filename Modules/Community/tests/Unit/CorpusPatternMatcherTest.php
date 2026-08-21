@@ -36,9 +36,8 @@ it('rejects an over-long regex body as a non-match without running it', function
 
 it('does not hang on a catastrophic-backtracking regex, returning a non-match', function (): void {
     // (a+)+$ against a long non-matching run backtracks exponentially, but
-    // pcre.backtrack_limit bounds it: the match bails to a non-match fast
-    // rather than hanging the matcher. The generous ceiling still fails loud
-    // if the guard/limit ever regresses to an unbounded run.
+    // pcre.backtrack_limit bounds it — the match bails fast rather than hanging.
+    // The generous ceiling still fails loud if that bound ever regresses.
     $start = microtime(true);
     $result = matcher()->matches('regex:(a+)+$', str_repeat('a', 40).'!');
 

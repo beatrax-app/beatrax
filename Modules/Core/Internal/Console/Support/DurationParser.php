@@ -7,9 +7,6 @@ namespace Modules\Core\Internal\Console\Support;
 use Carbon\CarbonImmutable;
 use InvalidArgumentException;
 
-/**
- * @link ../../../../../.docs/features/core/architecture.md
- */
 final class DurationParser
 {
     /**
@@ -18,6 +15,8 @@ final class DurationParser
      */
     public function subFromNow(string $input, CarbonImmutable $now): CarbonImmutable
     {
+        // `m` is deliberately absent: it is ambiguous between months and minutes.
+        // Sub-day callers use `12h`, month-scale callers use `30d` or `4w`.
         if (preg_match('/^(\d+)([dhw])$/i', $input, $matches) !== 1) {
             throw new InvalidArgumentException(sprintf(
                 "Duration must match /^\\d+[dhw]\$/ (e.g. '30d', '7d', '12h', '2w'). Got: '%s'.",
@@ -34,10 +33,8 @@ final class DurationParser
         }
         $unit = strtolower($matches[2]);
 
-        // The regex character class above already guarantees `$unit` is
-        // one of `d|h|w`. The default arm is included so PHPStan's
-        // match-exhaustiveness analysis stays happy without depending
-        // on cross-statement narrowing from the preg_match guard.
+        // The regex already guarantees d|h|w; the default arm exists only so
+        // PHPStan's exhaustiveness check needs no cross-statement narrowing.
         return match ($unit) {
             'd' => $now->subDays($amount),
             'h' => $now->subHours($amount),

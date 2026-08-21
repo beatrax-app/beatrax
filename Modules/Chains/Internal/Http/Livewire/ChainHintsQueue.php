@@ -12,14 +12,11 @@ use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
 
-// /chains/hints reviews hint-shaped chain_links (to_transaction_id IS
-// NULL) that /chains/review filters out, since Confirm/Reject there would
-// trip the schema's NULL-endpoint check triggers. Dismiss hard-deletes via
-// {@see DismissChainLinkHint}; rows surface newest-first (orderByDesc).
+// Hint-shaped chain_links (to_transaction_id IS NULL) get their own
+// queue because Confirm/Reject on /chains/review would trip the
+// schema's NULL-endpoint check triggers.
 final class ChainHintsQueue extends Component
 {
-    // Transient notice rendered above the queue on dismiss success or a
-    // guard rejection; cleared on every subsequent action call.
     public ?string $statusMessage = null;
 
     public function dismiss(int $chainLinkId, CurrentUser $currentUser, DismissChainLinkHint $dismiss): void

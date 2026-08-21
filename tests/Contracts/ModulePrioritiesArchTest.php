@@ -2,12 +2,9 @@
 
 declare(strict_types=1);
 
-/**
- * Asserts that Core's module.json priority is strictly less than every
- * other module's, so `CoreServiceProvider` always boots first. Core's
- * App\Models\User class_alias must be in place before any other module's
- * provider tries to resolve the alias.
- */
+// Core's App\Models\User class_alias has to be in place before any other
+// module's provider tries to resolve it, and provider boot order follows
+// module.json priority.
 it('Core module has the lowest priority of all modules', function (): void {
     $moduleJsons = glob(base_path('Modules/*/module.json')) ?: [];
 

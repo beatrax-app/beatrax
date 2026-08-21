@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Core\Public\Events;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class UserInstalled
 {
     // False when this install is JOINING an existing account and receives its

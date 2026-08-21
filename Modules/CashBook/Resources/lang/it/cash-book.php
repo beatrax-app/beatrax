@@ -25,6 +25,8 @@ return [
     'no_entries' => 'Nessuna voce manuale.',
     'delete_entry' => 'Elimina voce',
     'delete' => 'Elimina',
+    'delete_confirm' => 'Eliminare questa voce?',
+    'delete_keep' => 'Mantieni',
 
     'errors' => [
         'amount_positive' => 'Inserisci un importo maggiore di zero.',

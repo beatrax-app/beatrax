@@ -7,6 +7,10 @@ return [
 
     'subtitle_html' => 'Okolje + izvajanje + veljavna konfiguracija. Občutljivi ključi (pripone <code class="font-mono text-xs">*password*</code>, <code class="font-mono text-xs">*secret*</code>, <code class="font-mono text-xs">*key</code>, <code class="font-mono text-xs">*token*</code>) so maskirani.',
     'php' => 'PHP',
+    'php_version' => 'različica',
+    'php_sapi' => 'sapi',
+    'php_ini_path' => 'pot do ini',
+    'php_extensions' => 'razširitve',
     'laravel' => 'Laravel',
     'sqlite' => 'SQLite',
     'sqlite_file' => 'datoteka',

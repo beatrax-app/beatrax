@@ -8,14 +8,6 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Receipts\Database\Seeders\Demo\DemoReceiptsSeeder;
 
-/*
- * The demo seeder materialises the two mock file-drop rows (a PayPal and
- * an ICS receipt) via DemoFileImportSpec so a fresh demo install renders
- * the receipts surface with data. It is idempotent on the production
- * UNIQUE key (provider_message_id per user) and no-ops without a primary
- * demo user or a 'demo' ImportRun to anchor to.
- */
-
 function seedDemoPrimary(): User
 {
     $user = User::query()->create([
@@ -24,6 +16,7 @@ function seedDemoPrimary(): User
         'period_start_day' => 1,
     ]);
 
+    // The seeder anchors its rows to a 'demo' import run and no-ops without one.
     ImportRun::query()->create([
         'user_id' => $user->id,
         'source_format' => 'demo',
@@ -54,6 +47,7 @@ it('inserts the two demo file_imports rows with source_kind derived from the fil
     expect($rows->firstWhere('provider_message_id', 'demo-ics-statement-001')->matcher_key)->toBe('ics-receipt');
 });
 
+// Idempotency rides on the production UNIQUE key, provider_message_id per user.
 it('is idempotent — a second run inserts no duplicate file_imports', function (): void {
     $user = seedDemoPrimary();
 

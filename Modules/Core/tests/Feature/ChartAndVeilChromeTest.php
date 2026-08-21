@@ -5,21 +5,6 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\App;
 use Modules\Core\Models\User;
 
-/*
- * Three things the shell has to hand the client, all of which were missing.
- *
- * `data-base-currency` is read by beatraxLocaliseChart to format the money
- * axis and was never rendered, so every chart fell back to EUR — a GBP user
- * saw pounds on the page and euros on the axis beside them.
- *
- * `data-chart-labels` replaces the accessible name ApexCharts writes onto its
- * own <svg> ("donut chart with 14 data series"), which is English whatever
- * the page language is.
- *
- * `data-locked-label` names the privacy veil once lock.js raises it to
- * role="dialog". The name used to be a literal in the script.
- */
-
 beforeEach(function (): void {
     $this->chromeUser = User::query()->create([
         'username' => 'chrome-'.bin2hex(random_bytes(4)),
@@ -46,6 +31,8 @@ it('renders the reader own reporting currency, not the app-wide fallback', funct
         ->and($html)->not->toContain('data-base-currency="'.config('currency.base', 'EUR').'"');
 });
 
+// Left to itself ApexCharts writes an accessible name onto its own <svg>
+// ("donut chart with 14 data series"), in English whatever the page language is.
 it('hands the client a localised name for every chart type', function (): void {
     App::setLocale('nl');
 

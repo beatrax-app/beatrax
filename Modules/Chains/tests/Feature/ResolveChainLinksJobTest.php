@@ -25,24 +25,7 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 
-/*
- * Wave 2 coverage for the ResolveChainLinksJob lifecycle. Covers:
- *  - Interface contracts (ShouldQueue, ShouldBeUniqueUntilProcessing)
- *  - dispatchSync call counting via Bus::fake (14.1-04, CRYPT-01: the
- *    dispatcher now runs the job in-process so the decrypt-requiring
- *    resolvers have the KEK available; the queue-only unique lock no
- *    longer collapses repeat dispatches — see the "no queue-lock
- *    collapse" test below)
- *  - chain_resolution_runs row transitions (pending → running → complete)
- *  - ConfirmImport post-commit dispatch via the DispatchesChainResolution contract
- */
-
-/**
- * Seed a single user and ICS account + an ICS transfer_in matching one
- * statement. The synthetic shape is the minimum the resolver needs to
- * write at least one chain_link, so `linked_count` lands > 0 and the
- * `complete` row carries a non-zero count.
- */
+// The minimum shape the resolver needs to write at least one chain_link.
 function seedJobUserAndFixtures(int $userIndex = 1): array
 {
     $user = User::query()->create([
@@ -100,13 +83,10 @@ it('uniqueVia returns a Cache Repository resolved through the LockStore helper',
 });
 
 it('no queue-lock collapse: dispatchSync runs the job every call, even for the same user (14.1-04)', function (): void {
-    // BusChainResolutionDispatcher now calls ::dispatchSync (14.1-04,
-    // CRYPT-01) so the KEK is available in-process for the encrypted
-    // counterparty_iban resolvers. dispatchSync bypasses
-    // PendingDispatch::shouldDispatch() entirely, so the per-user
-    // ShouldBeUniqueUntilProcessing lock — which only exists at the
-    // queue-push boundary — never engages. Two calls for the same
-    // user therefore run the job body twice, not once.
+    // The dispatcher calls ::dispatchSync so the KEK is available in-process
+    // for the encrypted counterparty_iban resolvers. dispatchSync bypasses
+    // PendingDispatch::shouldDispatch(), so the ShouldBeUniqueUntilProcessing
+    // lock — a queue-push-boundary construct — never engages.
     Bus::fake();
     /** @var DispatchesChainResolution $dispatcher */
     $dispatcher = $this->app->make(DispatchesChainResolution::class);
@@ -130,8 +110,7 @@ it('different users each run their own dispatchSync call', function (): void {
 });
 
 it('handle() runs both resolvers and transitions chain_resolution_runs from running to complete', function (): void {
-    // Seed minimal fixtures so the ICS resolver has something to write.
-    // 23-expense fixture from IcsSettlementResolverTest:
+    // The 23-expense fixture from IcsSettlementResolverTest.
     $totalMinor = 84732;
     $count = 23;
     $each = intdiv($totalMinor, $count);
@@ -246,9 +225,8 @@ it('ConfirmImport invokes the chain dispatcher when inserted > 0 via the contrac
 });
 
 it('ConfirmImport dispatches via DispatchesChainResolution contract (not via internal Bus reference)', function (): void {
-    // Sanity-grep the source: the dispatch site references the
-    // public contract, NOT a direct ResolveChainLinksJob FQN — the
-    // BoundaryRule forbids cross-module Internal imports.
+    // Grep the source: the dispatch site must reference the Public contract,
+    // never the Internal job FQN, which the boundary rule forbids.
     $confirmImport = (string) file_get_contents(base_path('Modules/Import/Public/Actions/ConfirmImport.php'));
 
     expect($confirmImport)->toContain('DispatchesChainResolution');
@@ -256,10 +234,9 @@ it('ConfirmImport dispatches via DispatchesChainResolution contract (not via int
     expect($confirmImport)->not->toContain('Modules\\Chains\\Internal\\Jobs\\');
 });
 
-it('ConfirmImport dispatch happens AFTER the transaction closure (D-103, Pitfall 3)', function (): void {
-    // Static grep: the dispatch site MUST sit below the close of the
-    // db->connection()->transaction() block — never inside it. We
-    // assert via line-number arithmetic on the canonical method.
+it('ConfirmImport dispatch happens AFTER the transaction closure', function (): void {
+    // The dispatch site must sit below the close of the transaction() block;
+    // asserted by line-number arithmetic on the canonical method.
     $source = (string) file_get_contents(base_path('Modules/Import/Public/Actions/ConfirmImport.php'));
 
     $closurePos = strpos($source, '->transaction(function');
@@ -269,9 +246,8 @@ it('ConfirmImport dispatch happens AFTER the transaction closure (D-103, Pitfall
     expect($closurePos)->not->toBeFalse();
     expect($dispatchPos)->not->toBeFalse();
     expect($forgetPos)->not->toBeFalse();
-    // The cache forget happens after the transaction returns; the
-    // dispatch happens after the cache forget. Both must sit after
-    // the `transaction(function` literal.
+    // Both the cache forget and the dispatch must sit after the
+    // `transaction(function` literal.
     expect($dispatchPos)->toBeGreaterThan($closurePos);
     expect($dispatchPos)->toBeGreaterThan($forgetPos);
 });

@@ -8,19 +8,6 @@ use Illuminate\Support\Facades\URL;
 use Livewire\Facades\GenerateSignedUploadUrlFacade;
 use Modules\Mobile\Internal\Http\BridgeSignedUploadUrl;
 
-/*
- * The iOS shell's URL generator answers `php://` for every absolute URL it
- * writes, including the string Laravel signs. hasValidSignature() rebuilds the
- * URL from Request::url(), which can only say `http://`, so the two halves
- * hashed different strings and every upload was rejected 401 on the device —
- * no statement could be imported by any route.
- *
- * Asserted the way the device fails: mint the URL through a generator that
- * writes the exotic scheme, then verify it as the app's own verifier will,
- * against the request the WebView actually sends.
- */
-
-/** A stand-in for the shell's generator: identical, except for the scheme. */
 function phpSchemeGenerator(Request $request): UrlGenerator
 {
     $generator = new class(app('router')->getRoutes(), $request) extends UrlGenerator
@@ -35,6 +22,11 @@ function phpSchemeGenerator(Request $request): UrlGenerator
 
     return $generator;
 }
+
+// The iOS shell's URL generator answers `php://` for every absolute URL it
+// writes, including the string Laravel signs, while hasValidSignature() rebuilds
+// the URL from Request::url(), which can only say `http://`. The two halves
+// hashed different strings and every upload on the device was rejected 401.
 
 it('signs an upload URL a php:// shell can actually get verified', function (): void {
     $request = Request::create('http://127.0.0.1/imports/new');

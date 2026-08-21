@@ -10,18 +10,6 @@ use Modules\Auth\Public\Actions\AddUserAction;
 use Modules\Core\Models\User;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/*
- * Feature coverage for the owner-adds-partner surface: the AddUserAction
- * account-creation action and the developer-gated /settings/users/new
- * Livewire page. Covers the developer-caller happy path, username
- * normalisation, duplicate-username + short-password validation, the
- * defensive 404 on a non-developer caller, the route's developer gate,
- * and the partner's recovery-code provisioning.
- */
-
-/**
- * Creates and returns a developer (owner) user.
- */
 function developerCaller(): User
 {
     return User::query()->create([
@@ -133,8 +121,6 @@ it('returns 404 from the add-user route for a non-developer', function (): void 
 });
 
 it('does not expose the add-user page to an unauthenticated visitor', function (): void {
-    // The auth middleware bounces an unauthenticated visitor to /login
-    // before the page renders, so the add-user surface is never exposed.
     $this->get('/settings/users/new')->assertRedirect('/login');
 });
 

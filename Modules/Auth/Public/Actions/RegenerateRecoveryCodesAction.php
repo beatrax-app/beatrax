@@ -12,9 +12,8 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-// The caller must either be a developer (owner regenerating a partner's
-// codes) or the target user themselves; any other caller raises a 404,
-// never a 403, so a probing non-developer cannot confirm the surface exists.
+// A rejected caller gets a 404 and never a 403, so a prober cannot confirm the
+// surface exists.
 /**
  * @phpstan-type RecoveryCodeList list<string>
  */

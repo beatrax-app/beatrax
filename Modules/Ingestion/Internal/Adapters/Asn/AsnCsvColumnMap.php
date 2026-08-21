@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Ingestion\Internal\Adapters\Asn;
 
-/**
- * @link ../../../../../.docs/features/ingestion/architecture.md
- */
 final class AsnCsvColumnMap
 {
     public const POSTED_DATE = 0;

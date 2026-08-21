@@ -8,20 +8,6 @@ use Modules\Calendar\Internal\Http\Livewire\CalendarPage;
 use Modules\Core\Models\User;
 use Modules\Recurring\Models\RecurringSeries;
 
-/*
- * CalendarPage — renders approved recurring series on correct day cells (CAL-01).
- *
- * RED state (Phase 6 Plan 01): CalendarPage::render() does not yet call
- * CalendarQuery; it returns a static stub. These tests will fail until
- * Plan 02 wires CalendarQuery into the render method.
- *
- * Contract being tested:
- *   - An approved monthly RecurringSeries with nextExpectedAt inside the
- *     current display month appears on the matching day cell.
- *   - A pending series (not yet approved) does NOT appear.
- *   - Cross-user isolation: another user's series does not appear.
- */
-
 function cprsUser(string $suffix = 'cprs'): User
 {
     return User::query()->create([

@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 use Modules\Ingestion\Internal\Adapters\Banking\Camt053Adapter;
+use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\AccountResolution;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 
 beforeEach(function (): void {
     $this->resolver = new class implements AccountResolver
@@ -31,8 +31,6 @@ it('still parses a legitimate CAMT.053 export after XXE hardening', function ():
         preserve_keys: false,
     );
 
-    // Guards against the entity-loader change accidentally breaking legitimate
-    // parsing: a valid file must still yield SourceTransactionDto rows unchanged.
     expect($dtos)->not->toBeEmpty();
     foreach ($dtos as $dto) {
         expect($dto)->toBeInstanceOf(SourceTransactionDto::class);
@@ -41,16 +39,15 @@ it('still parses a legitimate CAMT.053 export after XXE hardening', function ():
 })->group('phase-2');
 
 it('does not leak a file:// external entity secret into any parsed field (XXE denied)', function (): void {
-    // A sentinel that would only appear in a parsed field if libxml resolved
-    // the malicious external entity and substituted the file's contents.
+    // This string can only reach a parsed field if libxml resolved the external
+    // entity and substituted the file's contents.
     $secret = 'XXE-SECRET-'.uniqid('', true);
     $secretFile = tempnam(sys_get_temp_dir(), 'camt-xxe-secret-').'.txt';
     file_put_contents($secretFile, $secret);
 
-    // camt.053.001.02 namespace so the HeaderSniffer passes and readMessage()
-    // (the hardened path) is reached. The DOCTYPE declares an external general
-    // entity pointing at the sentinel file and references it via &ent; inside
-    // the single entry's unstructured remittance (which surfaces as $dto->description).
+    // The namespace has to be a real one or the sniffer rejects the file before
+    // the hardened reader is ever reached. `&ent;` sits in the unstructured
+    // remittance, which surfaces as $dto->description.
     $xml = <<<XML
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Document [
@@ -119,8 +116,8 @@ XML;
                 preserve_keys: false,
             );
 
-            // The sentinel must not appear in ANY parsed field: check every
-            // DTO's description AND the JSON-encoded DTO list as a catch-all.
+            // The JSON encode is the catch-all: the sentinel must not reach any
+            // field, not just description.
             $encoded = (string) json_encode($dtos);
             if (str_contains($encoded, $secret)) {
                 $leaked = true;
@@ -132,9 +129,8 @@ XML;
                 }
             }
         } catch (InvalidAmountException $e) {
-            // A parse refusal is equally acceptable — it proves the loader
-            // refused to resolve the entity — provided the secret did not ride
-            // out on the exception message.
+            // A refusal is equally acceptable, as long as the secret did not
+            // ride out on the exception message.
             expect($e->getMessage())->not->toContain($secret);
         }
 

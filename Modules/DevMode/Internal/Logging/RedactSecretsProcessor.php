@@ -8,18 +8,14 @@ use Modules\DevMode\Internal\Services\OAuthScrubSet;
 use Monolog\LogRecord;
 use Monolog\Processor\ProcessorInterface;
 
-/**
- * @link ../../../../.docs/features/dev-mode/architecture.md
- */
 final class RedactSecretsProcessor implements ProcessorInterface
 {
     private const BEARER_PATTERN = '/Authorization:\s*Bearer\s+\S+/i';
 
     private const JWT_PATTERN = '/eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/';
 
-    // OAuthScrubSet is nullable so direct instantiation (e.g. unit tests
-    // exercising only the Bearer + JWT branches) still works; the
-    // container binding always passes the real singleton.
+    // Nullable so the Bearer + JWT branches can be exercised without a
+    // container; the binding always passes the real singleton.
     public function __construct(
         private readonly ?OAuthScrubSet $scrubSet = null,
     ) {}

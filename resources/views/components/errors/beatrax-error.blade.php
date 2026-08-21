@@ -15,14 +15,14 @@
     $chrome = $container->make(\Modules\Core\Public\Support\AppChromeResolver::class)->resolve();
 @endphp
 {{--
-    In-app failure page (G2-R1: state what happened and what to do next).
+    In-app failure page: state what happened and what to do next.
 
     The app ships as a desktop and mobile shell, so there is no address bar,
     no reload button and no browser back to fall back on. A raw framework
     status page is therefore a dead end: it names a number, offers no route
     onward, and looks like something other than the product. With APP_DEBUG on
     it is worse — the whole stack trace is put in front of the user, which
-    G2-R3 forbids.
+    this page must never do.
 
     Every status gets a sentence about what happened and a way back.
 --}}

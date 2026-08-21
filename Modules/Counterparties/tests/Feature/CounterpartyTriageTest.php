@@ -9,21 +9,6 @@ use Modules\Counterparties\Internal\Http\Livewire\CounterpartyTriage;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Ledger\Models\Account;
 
-/*
- * Feature coverage for `/counterparties/triage` — the focused
- * single-card queue. Pins the eight load-bearing behaviors documented
- * in Plan 17-06b Task 2:
- *
- *   16. Renders progress copy verbatim
- *   17. Suggestion banner with reasoning sub-line
- *   18. Y key (acceptSuggestion) links the unknown to the suggested name
- *   19. N key (rejectSuggestion) dismisses the banner
- *   20. S key (skipForNow) advances the cursor without labeling
- *   21. → key (nextItem) advances the queue
- *   22. Input carve-out: keys inside INPUT do not fire wire actions
- *   23. Empty queue: verbatim 🎉 caught-up state
- */
-
 function cpTriageUser(string $username): User
 {
     return User::query()->create([
@@ -122,16 +107,14 @@ function cpTriageAccount(User $user): Account
 
 it('Test 16: renders progress copy verbatim with seen/total/percent/minutes', function (): void {
     $user = cpTriageUser('cp-triage-progress');
-    // 3 unknowns total; we'll simulate 0 seen for a clean format check.
     for ($i = 1; $i <= 3; $i++) {
         cpTriageUnknown($user->id, 'mystery-'.$i, 'NL12RABO000000000'.$i);
     }
 
     $component = Livewire::actingAs($user)->test(CounterpartyTriage::class);
 
-    // Format pattern: `{seen} of {total} · {percent} % · ~{minutes} min remaining`
-    // Minutes is bounded by max(1, round(remaining * 0.4)); 3 unknowns
-    // → max(1, round(1.2)) = 1 min remaining.
+    // Minutes is max(1, round(remaining * 0.4)), so three unknowns round to
+    // 1.2 and then clamp up to the 1-minute floor.
     $component->assertSee('0 of 3 · 0 % · ~1 min remaining', escape: false);
 });
 
@@ -140,19 +123,13 @@ it('Test 17: suggestion banner renders verbatim copy + reasoning sub-line', func
     $account = cpTriageAccount($user);
     $unknownId = cpTriageUnknown($user->id, 'mystery-netflix', 'NL44RABO0123456789');
 
-    // 3 recent transactions whose descriptions all resolve via the
-    // MerchantNameResolver. Use a literal merchant name the resolver's
-    // community corpus / generalised name path will accept.
     $runId = cpTriageImportRun($user);
     for ($i = 0; $i < 3; $i++) {
         cpTriageTx($user, $account, $unknownId, $runId, 'NETFLIX SUBSCRIPTION ROW '.$i);
     }
 
-    // Seed a per-user merchant_aliases row so the MerchantNameResolver
-    // (consumed by CounterpartyTriageQueue::suggestionFor) returns
-    // 'Netflix' for each fixture transaction. The resolver's first
-    // step is the exact (user_id, pattern) match — feed it three
-    // identical patterns so all 3 of 3 transactions resolve.
+    // The suggestion comes from MerchantNameResolver, which needs an alias
+    // row before these descriptions resolve to a name at all.
     DB::table('merchant_aliases')->insert([
         'user_id' => $user->id,
         'pattern' => 'NETFLIX',
@@ -169,9 +146,6 @@ it('Test 17: suggestion banner renders verbatim copy + reasoning sub-line', func
     expect($html)->toContain('Looks like');
     expect($html)->toContain('<strong>Netflix</strong>');
     expect($html)->toContain('confidence high');
-    // Reasoning sub-line is rendered verbatim from the queue's output —
-    // shape is `{topHits} of {total} recent transactions on this IBAN
-    // resolve to {name} via the merchant name resolver.`
     expect($html)->toContain('of 3 recent transactions on this IBAN resolve to Netflix');
 });
 
@@ -182,9 +156,8 @@ it('Test 18: acceptSuggestion promotes the unknown to a merchant counterparty', 
     $unknownId = cpTriageUnknown($user->id, 'mystery-spotify', 'NL17RABO0123456790');
     cpTriageTx($user, $account, $unknownId, $runId, 'SPOTIFY P AMSTERDAM');
 
-    // Seed a merchant_aliases row so the resolver returns 'Spotify'
-    // for the fixture transaction; accept then promotes the unknown
-    // counterparty to a merchant row using the resolver's output.
+    // The name the accept path promotes the row to comes from the resolver,
+    // so it has to have an alias to resolve.
     DB::table('merchant_aliases')->insert([
         'user_id' => $user->id,
         'pattern' => 'SPOTIFY P AMSTERDAM',
@@ -227,7 +200,6 @@ it('Test 20: skipForNow advances the cursor without modifying the row', function
     $component->call('skipForNow');
     $component->assertSet('currentIndex', 1);
 
-    // The row was not modified.
     $cp1 = Counterparty::query()->where('id', $id1)->firstOrFail();
     expect($cp1->type)->toBe('unknown');
 });
@@ -249,8 +221,8 @@ it('Test 22: input carve-out — Alpine guard is wired on the root element', fun
     $component = Livewire::actingAs($user)->test(CounterpartyTriage::class);
 
     $html = (string) $component->html();
-    // The Alpine listener gates Y/N/S/→ on !inputFocused; that gate
-    // tracks INPUT/TEXTAREA focus via focusin.capture / focusout.capture.
+    // The Alpine listener gates Y/N/S/→ on !inputFocused, which the capture
+    // handlers keep in step with INPUT/TEXTAREA focus.
     expect($html)->toContain('inputFocused');
     expect($html)->toContain('focusin.capture');
     expect($html)->toContain('focusout.capture');
@@ -258,7 +230,6 @@ it('Test 22: input carve-out — Alpine guard is wired on the root element', fun
 
 it('Test 23: empty queue renders the verbatim 🎉 caught-up copy', function (): void {
     $user = cpTriageUser('cp-triage-empty');
-    // No unknowns seeded.
 
     $component = Livewire::actingAs($user)->test(CounterpartyTriage::class);
 

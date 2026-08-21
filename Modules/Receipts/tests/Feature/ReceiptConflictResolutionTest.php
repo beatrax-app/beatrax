@@ -161,7 +161,7 @@ it('prefer_first_write: keeps stored value + DELETEs pending row + persists user
     expect($userRow->receipt_conflict_resolution)->toBe('prefer_first_write');
 });
 
-it('cross-user T-07-09: a foreign pending row is NEVER touched by ApplyReceiptConflictResolution', function (): void {
+it('never touches a foreign user\'s pending row from ApplyReceiptConflictResolution', function (): void {
     $other = User::create([
         'username' => 'other-rcr',
         'password' => 'opensesame',

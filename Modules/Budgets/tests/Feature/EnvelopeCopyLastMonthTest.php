@@ -11,13 +11,6 @@ use Modules\Ledger\Public\Services\PeriodQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * Wave 0 RED stub for Req 6 (13.2-VALIDATION.md): template auto-fill (copy
- * the prior period's assignments into an empty month). EnvelopeWriter's
- * copyFromPeriod() (Plan 04) does not exist yet -- expected to fail on the
- * missing method, never a parse error.
- */
-
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'copylast-'.bin2hex(random_bytes(4)),
@@ -34,7 +27,7 @@ beforeEach(function (): void {
     $this->selected = app(PeriodQuery::class)->next($this->prior);
 });
 
-it('reproduces the prior periods assigned amount for every envelope that had one (Req 6)', function (): void {
+it('reproduces the prior periods assigned amount for every envelope that had one', function (): void {
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->prior->start, 40000);
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->dining->id, $this->prior->start, 15000);
     // Fuel is never assigned in the prior period.
@@ -67,7 +60,7 @@ it('leaves an envelope with no prior assignment unassigned after copy', function
     ]);
 });
 
-it('never overwrites an existing target assignment when copying into a partially-assigned month (IN-04)', function (): void {
+it('never overwrites an existing target assignment when copying into a partially-assigned month', function (): void {
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->prior->start, 40000);
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->dining->id, $this->prior->start, 15000);
 
@@ -76,14 +69,12 @@ it('never overwrites an existing target assignment when copying into a partially
 
     app(EnvelopeWriter::class)->copyFromPeriod($this->user, $this->prior, $this->selected);
 
-    // Groceries in the target is untouched (not clobbered by the €400 prior).
     $this->assertDatabaseHas('envelope_assignments', [
         'user_id' => $this->user->id,
         'category_id' => $this->groceries->id,
         'period_start' => $this->selected->start->toDateString(),
         'assigned_minor' => 99900,
     ]);
-    // Dining, which had no target assignment, is copied in.
     $this->assertDatabaseHas('envelope_assignments', [
         'user_id' => $this->user->id,
         'category_id' => $this->dining->id,

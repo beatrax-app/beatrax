@@ -6,16 +6,10 @@ use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
 
-/*
- * Demo content is the first thing a fresh install shows, and it was English
- * on a Dutch phone: goals "Emergency fund", "Japan trip", "Replace the
- * laptop", "Winter tyres"; saved reports "Where the money went", "Monthly net
- * position"; the counterparty "My ASN checking account".
- *
- * Bank and person names are deliberately NOT translated — ASN Bank is called
- * ASN Bank in Dutch too, and a demo that renamed a person would be lying
- * about what the resolver produces.
- */
+// Demo content is the first thing a fresh install shows, and it was English on
+// a Dutch phone. Bank and person names are deliberately left alone: ASN Bank is
+// called ASN Bank in Dutch too, and a demo that renamed a person would be lying
+// about what the resolver produces.
 
 beforeEach(function (): void {
     App::setLocale('nl');

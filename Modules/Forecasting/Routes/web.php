@@ -2,9 +2,8 @@
 
 declare(strict_types=1);
 
-// `/forecast` sits behind web + auth middleware. Cross-user isolation is
-// enforced by the underlying Public services + Actions (every read/write
-// scopes by user_id). The Route facade is permitted in module Routes files.
+// Cross-user isolation lives in the Public services and Actions (every read and
+// write scopes by user_id), not in the routing layer.
 
 use Illuminate\Support\Facades\Route;
 use Modules\Forecasting\Internal\Http\Livewire\ForecastPage;

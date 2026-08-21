@@ -21,9 +21,6 @@ use Modules\Core\Public\Events\UserInstalled;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\Lang;
 
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 final class SignupAction
 {
     private const MINIMUM_PASSWORD_LENGTH = 12;
@@ -60,14 +57,12 @@ final class SignupAction
 
         /** @var array{user: User, codesPlain: non-empty-list<string>} $result */
         $result = $this->db->connection()->transaction(function () use ($username, $password): array {
-            // Promote the connection to an immediate write lock before the
-            // existence check. A no-op UPDATE matches zero rows but still
-            // acquires the lock, so a concurrent signup blocks here rather
-            // than reading a stale zero-count snapshot under SQLite WAL.
+            // A no-op UPDATE matches nothing but still takes the write lock,
+            // so a concurrent signup blocks here instead of reading a stale
+            // zero-count snapshot under SQLite WAL.
             $this->db->connection()->statement('UPDATE users SET id = id WHERE 0 = 1');
 
-            // Re-check inside the transaction: the count outside it could
-            // read a stale value before a concurrent signup commits.
+            // The count outside the transaction can predate a concurrent commit.
             if ($this->db->connection()->table('users')->count() > 0) {
                 throw ValidationException::withMessages([
                     'signup' => Lang::get('auth::signup.error_closed'),
@@ -79,25 +74,21 @@ final class SignupAction
                 'password' => $this->hasher->make($password),
                 'is_developer' => true,
                 'force_password_change_at_next_login' => false,
-                // The language the account was created in. SetLocale prefers
-                // the user's own setting, so leaving it null made a fresh
-                // account fall back to the browser's idea of the language and
-                // the screens right after signup switched back to English.
+                // SetLocale prefers the user's own setting, so a null here
+                // fell back to the browser and flipped the post-signup
+                // screens back to English.
                 'locale' => $this->activeLocale(),
             ]);
 
-            // create() does not read the row back, so a DATABASE default is
-            // null on the instance it returns — and that instance is what the
-            // guard below holds. On the persistent mobile runtime it outlived
-            // the request, and SettingsPage fatally assigned null to a string.
+            // create() does not read the row back, so a database default is
+            // null on the returned instance, which the guard below holds. On
+            // the persistent mobile runtime that null outlived the request.
             $user->refresh();
 
             $now = $this->clock->now();
 
-            // Generate distinct codes: a collision is astronomically rare,
-            // but the unique code_hash index would reject a duplicate
-            // insert outright, so regenerate until ten distinct values
-            // exist.
+            // A collision is astronomically rare, but the unique code_hash
+            // index would reject the insert outright.
             $codesPlain = [];
             while (count($codesPlain) < self::RECOVERY_CODE_COUNT) {
                 $code = $this->codeGenerator->generate();
@@ -119,9 +110,8 @@ final class SignupAction
             return ['user' => $user, 'codesPlain' => $codesPlain];
         });
 
-        // Dispatched after commit (never for a rolled-back user) and before
-        // auto-login, so the listener chain runs in the same unauthenticated
-        // context as the beatrax:install console path.
+        // After commit and before auto-login, so the listener chain runs in
+        // the same unauthenticated context as the console install path.
         $this->events->dispatch(new UserInstalled($result['user']->id, $seedsStarterData));
 
         /** @var StatefulGuard $guard */
@@ -133,10 +123,9 @@ final class SignupAction
         return $result;
     }
 
-    // Session choice first, translator only as fallback: the translator needs
-    // SetLocale to have run on THIS request, and signup submits through a
-    // Livewire round-trip — so it stored null for a user who had plainly
-    // picked Dutch, and the recovery codes came back English.
+    // Session first, translator only as fallback: the translator needs
+    // SetLocale to have run on this request, and signup arrives over a
+    // Livewire round trip, so it returned English for a user who picked Dutch.
     private function activeLocale(): ?string
     {
         $chosen = ($this->session)()->get('locale');

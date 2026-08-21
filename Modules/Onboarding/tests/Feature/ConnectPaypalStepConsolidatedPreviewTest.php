@@ -11,19 +11,8 @@ use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 use Modules\Onboarding\Models\WizardProgress;
 use Tests\Helpers\UploadIsolation;
 
-/*
- * Verifies the end-to-end invariant the FirstImportStep depends on:
- * after a successful ConnectPaypalStep submit, feeding the stashed
- * paypal_import_run_id into BuildConsolidatedPreviewQuery::build()
- * MUST return a PayPal section whose `totalRows` matches the number
- * of canonical PayPal payments in the file (status='ready', NOT
- * 'empty'/'error', and totalRows > 0).
- *
- * The user's reported symptom is the negation of this: the section
- * comes back as 'ready' with totalRows = 0 — meaning the cache has
- * rows but none have status 'new'. This test reproduces that exact
- * failure mode at the BuildConsolidatedPreviewQuery boundary.
- */
+// The reported symptom this reproduces: the section comes back 'ready' with
+// totalRows = 0, meaning the cache holds rows but none have status 'new'.
 
 beforeEach(function (): void {
     UploadIsolation::isolate();

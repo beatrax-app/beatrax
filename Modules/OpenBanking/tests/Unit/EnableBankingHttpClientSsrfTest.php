@@ -10,27 +10,13 @@ use GuzzleHttp\Psr7\Response;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingJwtSigner;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Exceptions\UnsafeOpenBankingRequestException;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Exceptions\UnsafeOpenBankingRequestException;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 
-/*
- * SSRF / bearer-token-leak regression test for EnableBankingHttpClient
- * (D-11, T-19-04-01). Mirrors GraphApiClientSsrfTest's structure — 5
- * cases: attacker host, non-HTTPS on the EB host, look-alike host,
- * unparseable URL, and the dynamic bank-SCA-host case accepted.
- *
- * Unlike GraphApiClient, none of this client's public methods accept a
- * caller-supplied URL (GraphApiClient's deltaLink/nextLink parameters
- * let its test drive an attacker host straight through a real
- * production method argument). Every URL here is built from
- * `baseUri()`, so the negative cases override that protected hook to
- * substitute a hostile base — the request is refused before any bearer
- * token is attached or any Guzzle client is even constructed, so no
- * real network call is ever attempted. The one positive case
- * additionally overrides `makeHttpClient()` with a MockHandler-backed
- * client so the accepted-host path never leaves the process either.
- */
+// No public method takes a caller-supplied URL, so the rejection cases override
+// the protected baseUri() hook. The refusal lands before a bearer token is
+// attached or a Guzzle client is built, so nothing leaves the process.
 
 beforeEach(function (): void {
     $resource = openssl_pkey_new([
@@ -53,12 +39,6 @@ beforeEach(function (): void {
     $this->jwtSigner = new EnableBankingJwtSigner($this->clock);
 });
 
-/**
- * Builds a fixture secrets-repository stub (the "empty-constructor
- * anonymous-subclass stub" pattern GraphApiClientSsrfTest already
- * establishes) returning fixed application credentials, optionally
- * carrying a resolved bank SCA host.
- */
 function ebFixtureSecrets(string $privateKeyPem, ?string $bankScaHost = null): OpenBankingSecretsRepository
 {
     return new class($privateKeyPem, $bankScaHost) extends OpenBankingSecretsRepository

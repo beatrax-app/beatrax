@@ -10,8 +10,6 @@ use Modules\Core\Public\Concerns\BelongsToUser;
 use Modules\Ledger\Models\Category;
 
 /**
- * @link ../../../.docs/features/budgets/architecture.md
- *
  * @property int $id
  * @property int $user_id
  * @property int $category_id

@@ -2,12 +2,9 @@
 
 declare(strict_types=1);
 
-// thin-history-category-fallback: a €95.00 charge to a merchant with only
-// two prior samples (< the 5-sample per-counterparty minimum). Per D-06 the
-// large-vs-typical detector falls back to the per-category percentile path
-// rather than a noisy 2-sample per-merchant baseline. The category history
-// (other 'groceries' merchants) establishes the typical band; €95 is well
-// above it, so `large` fires via the category fallback.
+// A €95.00 charge to a merchant with only two prior samples, below the
+// 5-sample per-counterparty minimum: `large` fires via the per-category
+// percentile path against the other 'groceries' merchants.
 
 return [
     'settings' => [

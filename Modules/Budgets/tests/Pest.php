@@ -2,9 +2,6 @@
 
 declare(strict_types=1);
 
-/*
- * Per-module Pest.php is documented inert — Pest only auto-loads the
- * project-root tests/Pest.php. The Budgets TestCase + RefreshDatabase wire-up
- * lives in that root file's per-module map; this file exists to match the
- * convention shared by every other module.
- */
+// Inert: Pest only auto-loads the project-root tests/Pest.php, where the
+// per-module TestCase + RefreshDatabase wire-up lives. Kept to match the
+// convention shared by every other module.

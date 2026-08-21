@@ -6,17 +6,9 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-/**
- * Cold-start biometric unlock enrollment state (mobile).
- *
- *  - cold_start_biometric_enrolled: whether the user has stored a
- *    biometric-gated data-key blob in the enclave vault. A plain boolean so
- *    the lock screen / settings can check enrollment WITHOUT triggering a
- *    Face ID prompt just to read state.
- *  - last_pin_unlock_at: the PIN-floor anchor. A successful PIN unlock stamps
- *    it; the lock screen offers biometric only when the floor is not overdue
- *    (see cold_start_pin_floor_days config).
- */
+// cold_start_biometric_enrolled mirrors the enclave vault as a boolean, so the
+// lock screen reads enrolment without raising a Face ID prompt to do it.
+// last_pin_unlock_at anchors MobileLockGateway::PIN_FLOOR_DAYS.
 return new class extends Migration
 {
     public function up(): void

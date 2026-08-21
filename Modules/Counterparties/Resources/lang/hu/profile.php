@@ -25,6 +25,8 @@ return [
         'tax_years' => 'Adóévek',
     ],
 
+    'tablist_aria' => 'Partner szakaszai',
+
     'tab_note_personal' => '— magánszemély kapcsolatoknál nincs fedezeti lánc',
     'tab_note_bank' => '— a banki díjpartner nem hoz létre fedezeti láncot',
     'tab_note_government' => '— állami partnereknél nincs fedezeti lánc',

@@ -11,9 +11,6 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 // Modules\Counterparties\Internal (BoundaryArchTest enforces this).
 // Implementations MUST be side-effect-free on resolver failure: return
 // the transaction unmodified rather than aborting the import.
-/**
- * @link ../../../../.docs/features/counterparties/architecture.md
- */
 interface ResolvesCounterparties
 {
     public function run(CanonicalTransaction $tx, User $user): CanonicalTransaction;

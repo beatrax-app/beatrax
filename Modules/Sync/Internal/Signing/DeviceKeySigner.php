@@ -6,9 +6,6 @@ namespace Modules\Sync\Internal\Signing;
 
 use SodiumException;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class DeviceKeySigner
 {
     /**

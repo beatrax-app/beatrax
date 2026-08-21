@@ -10,21 +10,6 @@ use Modules\Core\Models\User;
 use Modules\EmailScan\Internal\Http\Livewire\BackfillWindowModal;
 use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
 
-/*
- * BackfillWindowModal Livewire SFC feature tests.
- *
- * Exercises three invariants:
- *  - open() sets the inboxId + months from the dispatched event
- *    (covers both the post-OAuth-callback auto-open path and the
- *    inline [Edit] re-open path).
- *  - Happy submit path: clamps months, updates the inbox row's
- *    backfill_window_months, dispatches BackfillInboxJob through
- *    the Bus contract, and emits modal-hide.
- *  - Cross-user 404 invariant: submitting against another user's
- *    inbox raises Symfony NotFoundHttpException — the modal never
- *    leaks the existence of a foreign row.
- */
-
 function bwmUser(string $username): User
 {
     return User::query()->create([
@@ -163,7 +148,6 @@ it('cross-user 404: submit against another user\'s inbox raises NotFoundHttpExce
         ->call('submit')
         ->assertStatus(404);
 
-    // User A's row is untouched and no job was dispatched.
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     $row = $db->connection()->table('inboxes')->where('id', $inboxA)->first(['backfill_window_months']);

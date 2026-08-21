@@ -5,8 +5,8 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\Repository;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Import\Internal\Exceptions\PreviewCacheCorruptedException;
 use Modules\Import\Internal\Pipeline\PreviewCache;
-use Modules\Import\Public\Exceptions\PreviewCacheCorruptedException;
 
 beforeEach(function (): void {
     /** @var Repository $cache */
@@ -37,8 +37,7 @@ it('returns null from getPreview when the key has never been set', function (): 
 })->group('phase-2');
 
 it('throws PreviewCacheCorruptedException on a non-string canonical payload', function (): void {
-    // Seed a non-string under the canonical key (simulating a backend
-    // regression that rotated the value type under load).
+    // Stands in for a cache backend that rotated the value type under load.
     $this->cacheBackend->put('import.123.canonical', ['not', 'a', 'string'], 600);
 
     expect(fn () => $this->cache->getCanonical(123))

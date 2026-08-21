@@ -10,26 +10,15 @@ use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
 use Tests\Helpers\RealSqliteFixture;
 
-/*
- * The two guards between a successful VACUUM INTO and a usable backup.
- *
- * VACUUM INTO can return without throwing and still leave nothing on disk,
- * and the file it writes is created by SQLite via open(2) — outside PHP's
- * umask — so it has to be narrowed to 0600 before it can be kept. Both
- * failures end in a critical alert and a non-zero exit, and the chmod one
- * additionally deletes the file: a backup of the whole database that might be
- * group- or world-readable is worse than no backup at all.
- *
- * Neither is reachable by arranging the filesystem, because both are about the
- * filesystem lying. The command takes its Filesystem by injection, so the test
- * substitutes one that reports the failure.
- */
+// VACUUM INTO can return without throwing and still leave nothing on disk, and
+// the file it writes is created by SQLite via open(2), outside PHP's umask. The
+// chmod failure additionally deletes the file: a whole-database backup that
+// might be group- or world-readable is worse than no backup at all.
 beforeEach(function (): void {
     // Frozen for the VACUUM-refusal case below, which occupies the exact path
     // the command is about to choose. That path carries a seconds-resolution
-    // timestamp, so an unfrozen clock lets the test and the command land in
-    // different seconds on a slow runner — the obstruction misses and the
-    // assertion fails for an unrelated reason.
+    // timestamp, so an unfrozen clock lets test and command land in different
+    // seconds on a slow runner and the obstruction misses.
     CarbonImmutable::setTestNow('2026-07-29 12:00:00');
 
     $this->sourcePath = RealSqliteFixture::create('backup-guards-source');
@@ -110,10 +99,9 @@ it('deletes the backup and alerts when it cannot be narrowed to 0600', function 
         ->and(json_encode($alert->metadata))->toContain('chmod');
 });
 
-// The corrupt-source tests never reach this branch: a truncated database
-// fails PRAGMA data_version first, which is an earlier catch with its own
-// phase. Getting here needs a source SQLite is happy to read and a
-// destination it refuses to write — VACUUM INTO will not write over an
+// The corrupt-source tests never reach this branch: a truncated database fails
+// PRAGMA data_version first. Getting here needs a source SQLite is happy to read
+// and a destination it refuses to write — VACUUM INTO will not write over an
 // existing path, so occupying the one the command is about to choose does it.
 it('alerts and preserves the output as .suspect when VACUUM INTO refuses', function (): void {
     /** @var Clock $clock */

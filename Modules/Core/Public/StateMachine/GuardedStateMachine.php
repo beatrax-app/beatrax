@@ -11,13 +11,8 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\TransitionActor;
 use Throwable;
 
-// The shared guard for a row-backed state machine: the one legal mutator that
-// validates the actor and the from->to edge, flips the row's state and stamps
-// a history row inside a locked transaction. The alert/series machines differ
-// only in table, state graph and exceptions (the hooks) — not this algorithm.
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
+// The alert and series machines differ only in table, state graph and
+// exceptions — the transition algorithm itself lives here, once.
 abstract class GuardedStateMachine
 {
     use CoercesScalars;
@@ -27,15 +22,11 @@ abstract class GuardedStateMachine
         protected readonly Clock $clock,
     ) {}
 
-    // The per-state allowed target states; a from->to edge absent here is
-    // rejected. Concrete machines build this from their lifecycle enum via
-    // transitionMap() rather than re-spelling the projection.
+    // Per-state allowed targets; an edge absent here is rejected. Build it from
+    // the lifecycle enum via transitionMap(), never by re-spelling the map.
     /** @return array<string, list<string>> */
     abstract protected function allowedTransitions(): array;
 
-    // Projects a backed-enum lifecycle (whose cases each declare their own
-    // successors) into the string map transitionRow() guards against, so the
-    // cases-to-string-map fold lives here once instead of in every machine.
     /**
      * @template TState of \BackedEnum
      *
@@ -64,13 +55,11 @@ abstract class GuardedStateMachine
 
     abstract protected function notFound(int $id): Throwable;
 
-    // Short machine name for the "unknown actor" rejection message — the only
-    // place a concrete machine's own identity surfaces in the shared algorithm.
+    // Short machine name for the "unknown actor" rejection message.
     abstract protected function label(): string;
 
-    // The one algorithm every row-backed machine shares: validate the actor,
-    // then within a locked transaction re-read the row, guard the edge, flip
-    // state (plus any caller extraColumns), and append the history row.
+    // The row is re-read under lockForUpdate INSIDE the transaction, so a
+    // concurrent transition cannot slip between the edge guard and the write.
     /**
      * @param  array<string, scalar|null>  $extraColumns  patched onto the same
      *                                                    row inside the transaction; `state`/`updated_at` are reserved.
@@ -132,9 +121,8 @@ abstract class GuardedStateMachine
         });
     }
 
-    // An id of 0, negative, or non-numeric is never a real user; degrade to
-    // null on the audit-row FK rather than throwing, so a corrupted source
-    // row never blocks the transition itself.
+    // A 0, negative or non-numeric id is never a real user: degrade the audit
+    // row's foreign key to null rather than blocking the transition.
     private static function toIntOrNull(mixed $value): ?int
     {
         if ($value === null || ! is_numeric($value)) {

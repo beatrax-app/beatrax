@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Mobile\Internal\Sync;
 
-// What the initial-sync pull is waiting on, or absent while it is simply
-// working. The backing value is the `mobile::setup.blocked.*` translation
-// key, so every case must have copy — SetupBlockedReasonsHaveCopyTest walks
-// cases() and fails on a case added without it.
+// The backing value is the `mobile::setup.blocked.*` translation key, so a
+// case added without copy fails SetupBlockedReasonsHaveCopyTest.
 /**
- * @link ../../../../.docs/features/mobile/architecture.md
+ * @link ../../../../.docs/features/mobile/mobile-initial-sync-gate.md
  */
 enum SyncBlockedReason: string
 {
@@ -23,8 +21,11 @@ enum SyncBlockedReason: string
 
     case Locked = 'locked';
 
-    // A poll tick that threw. The screen is driven entirely by those ticks,
-    // so an unhandled failure answered 500, which Livewire discards — the
-    // view kept its last frame and looked alive while nothing ran again.
+    // Terminal, not retryable: without it a revoked peer read as "no
+    // confirmed peer yet", which is what a device that never paired reports.
+    case Revoked = 'revoked';
+
+    // A poll tick that threw. Without it the failure answered 500, Livewire
+    // discarded it, and the last frame stayed on screen looking alive.
     case Retrying = 'retrying';
 }

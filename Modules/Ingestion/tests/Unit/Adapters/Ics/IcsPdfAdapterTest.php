@@ -7,26 +7,18 @@ use Modules\Ingestion\Internal\Adapters\Ics\IcsDateParser;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsPdfAdapter;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsPdfHeaderProfile;
 use Modules\Ingestion\Internal\Adapters\Ics\PdfTextExtractor;
+use Modules\Ingestion\Internal\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\AccountResolution;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
-use Modules\Ingestion\Public\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 use Modules\Ledger\Public\Dto\StatementSummaryData;
 
-/*
- * Coverage for the ICS PDF adapter built atop the empirical Mijn ICS
- * consumer-portal monthly-statement fixture. The unit tests use a test-
- * double `PdfTextExtractor` that returns the committed `ics-sample-1.txt`
- * verbatim, so the adapter is fully exercised against the real text
- * layout without ever shelling out to pdftotext.
- *
- * HeaderSniffer is bypassed via a no-op double — the redacted .txt file
- * does not begin with `%PDF-` so the production sniff would (correctly)
- * reject it. The integration smoke test exercises the real sniff path
- * against the tiny synthetic .pdf instead.
- */
+// The PdfTextExtractor double returns the committed ics-sample-1.txt verbatim,
+// so the adapter runs against a real Mijn ICS statement's text layout without
+// ever shelling out to pdftotext. The sniffer is the real one, hence the
+// tiny .pdf as the path argument.
 
 beforeEach(function (): void {
     $this->resolver = new class implements AccountResolver
@@ -79,18 +71,14 @@ it('parses the redacted .txt fixture into the expected SourceTransactionDto stre
     /** @var list<SourceTransactionDto> $dtos */
     $dtos = iterator_to_array($this->adapter->parse($this->tinyPdf, $this->resolver), false);
 
-    // Empirical fixture: 22 transactions on page 1 + 16 on page 2 = 38
-    // logical rows (each Wisselkoers FX line is folded into its merchant
-    // row so a foreign-currency charge yields one canonical DTO).
+    // 22 transactions on page 1 plus 16 on page 2, with each Wisselkoers FX
+    // line folded into its merchant row rather than counted separately.
     expect($dtos)->toHaveCount(38);
 
     foreach ($dtos as $dto) {
         expect($dto)->toBeInstanceOf(SourceTransactionDto::class);
     }
 
-    // Snapshot the canonical DTO stream so any future regression on the
-    // line-anchor parser or the FX-row folding is caught loudly. Each
-    // entry is serialised to a stable shape before snapshot comparison.
     $serialised = array_map(
         static fn (SourceTransactionDto $dto): array => [
             'sourceRowIndex' => $dto->sourceRowIndex,
@@ -132,9 +120,8 @@ it('emits monotonically increasing sourceRowIndex starting at zero', function ()
 })->group('phase-3');
 
 it('rejects a file that fails the magic-byte sniff before reading any transaction', function (): void {
-    // The redacted-text fixture (`.txt`) does NOT begin with %PDF- and
-    // does not have a `.pdf` extension; the production sniffer rejects
-    // it as not-a-PDF.
+    // The redacted `.txt` fixture neither begins with %PDF- nor carries a
+    // `.pdf` extension, so the real sniffer rejects it.
     expect(function (): void {
         iterator_to_array(
             $this->adapter->parse($this->fixtureTxt, $this->resolver),
@@ -147,7 +134,6 @@ it('yields native + settled pair for a foreign-currency row', function (): void 
     /** @var list<SourceTransactionDto> $dtos */
     $dtos = iterator_to_array($this->adapter->parse($this->tinyPdf, $this->resolver), false);
 
-    // Find the AUGMENT CODE USD row.
     $augment = null;
     foreach ($dtos as $dto) {
         if ($dto->counterpartyName !== null && str_contains($dto->counterpartyName, 'AUGMENT CODE')) {
@@ -185,7 +171,6 @@ it('discards card-number text from the per-transaction block before writing rawP
         $block = $dto->rawPayload['extractedText'] ?? '';
         expect($block)->toBeString();
         /** @var string $block */
-        // No canonical masked-card placeholder, no 12+ digit run.
         expect((bool) preg_match('/\*{4}-\*{4}-\*{4}-/u', $block))->toBeFalse();
         expect((bool) preg_match('/\d{12,}/', $block))->toBeFalse();
     }
@@ -219,11 +204,9 @@ it('parses the six empirical summary amounts column-by-column from the four-toke
 
     expect($metadata)->toBeInstanceOf(StatementSummaryData::class);
     /** @var StatementSummaryData $metadata */
-    // Opening balance and closing balance are stored as signed-negative
-    // minor units (debits = owed to ICS). The four-column header row on
-    // page 1 carries `€ 606,96  Af  € 606,96  Bij  € 1.416,50  Af
-    // € 1.416,50  Af` — opening 606.96, received 606.96, charges
-    // 1416.50, closing 1416.50.
+    // Balances are signed negative because a debit is owed to ICS. The
+    // numbers come off page 1's four-column header, which reads
+    // `€ 606,96 Af  € 606,96 Bij  € 1.416,50 Af  € 1.416,50 Af`.
     expect($metadata->openingBalanceMinor)->toBe(-60696);
     expect($metadata->closingBalanceMinor)->toBe(-141650);
 

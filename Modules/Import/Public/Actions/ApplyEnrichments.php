@@ -18,14 +18,10 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/import/architecture.md#applying-enrichments
- */
 final class ApplyEnrichments implements AppliesEnrichments
 {
-    // Mirrors FingerprintStage::detectConflicts()'s four field names;
-    // any other key is dropped before reaching the SQL builder so a
-    // poisoned cache or producer drift can't inject an arbitrary column.
+    // Mirrors FingerprintStage::detectConflicts(). Anything else is dropped
+    // before the SQL builder, so a poisoned cache cannot inject a column.
     private const ALLOWED_CONFLICT_FIELDS = ['counterparty_name', 'description', 'currency', 'amount_minor'];
 
     public function __construct(
@@ -44,10 +40,8 @@ final class ApplyEnrichments implements AppliesEnrichments
             return 0;
         }
 
-        // Method-local cache of the user's receipt-conflict policy.
-        // Single indexed SELECT on users.id; the per-call cost is
-        // negligible at single-user scale and stays correct at multi-
-        // user scale because we never store this on the action instance.
+        // Method-local, never on the instance: the action is a singleton and
+        // this value is per-user.
         $userChoice = $this->loadReceiptConflictChoice($user);
 
         $count = 0;
@@ -82,10 +76,9 @@ final class ApplyEnrichments implements AppliesEnrichments
         return $applied === true;
     }
 
-    // Re-evaluates rank against the stored ref at write time, not just the
-    // preview-time snapshot — a parallel import between preview and confirm
-    // may have already stored a stronger reference, which this check stops
-    // from being overwritten.
+    // Ranked again at write time, not just against the preview snapshot: a
+    // parallel import may have stored a stronger reference in between, and
+    // this is what stops it being overwritten.
     private function shouldEnrich(stdClass $row, PendingEnrichment $enrichment): bool
     {
         $existingRef = is_string($row->source_ref) ? $row->source_ref : null;
@@ -148,8 +141,6 @@ final class ApplyEnrichments implements AppliesEnrichments
             return [];
         }
 
-        // PreferFirstWrite keeps the stored value verbatim, so no
-        // per-field updates land.
         return match ($userChoice) {
             null => $this->resolveUnsetPolicy($enrichment, $user),
             ReceiptConflictChoice::PreferReceipt => $this->extractIncomingValues($enrichment, $user),
@@ -157,10 +148,9 @@ final class ApplyEnrichments implements AppliesEnrichments
         };
     }
 
-    // The conflict toast flow is the receipt-vs-CSV mitigation only: a
-    // receipt source holds its conflicts for the user to resolve, while
-    // any other source keeps the stored value silently (the safer
-    // default) and lets source_ref enrich on its own.
+    // Only a receipt source holds its conflicts for the user to resolve;
+    // every other source keeps the stored value and lets source_ref enrich
+    // on its own.
     /**
      * @return array<string, mixed>
      */
@@ -173,20 +163,16 @@ final class ApplyEnrichments implements AppliesEnrichments
         return [];
     }
 
-    // The (user_id, transaction_id, field_name) UNIQUE constraint makes
-    // re-import idempotent via insertOrIgnore. See
-    // architecture.md#applying-enrichments for the plaintext-persistence
-    // guarantee.
+    // UNIQUE (user_id, transaction_id, field_name) is what makes the
+    // insertOrIgnore below idempotent across re-imports.
     private function holdConflicts(PendingEnrichment $enrichment, User $user): void
     {
         $connection = $this->db->connection();
         $now = $this->clock->now()->toDateTimeString();
 
         foreach ($enrichment->conflictingFields as $fieldName => $values) {
-            // Defence-in-depth: skip unknown field names so a poisoned
-            // preview cache cannot persist arbitrary `field_name` values
-            // that would later flow into an UPDATE column list via
-            // ApplyReceiptConflictResolution.
+            // An unknown field name here would reach an UPDATE column list
+            // later, via ApplyReceiptConflictResolution.
             if (! in_array($fieldName, self::ALLOWED_CONFLICT_FIELDS, true)) {
                 continue;
             }
@@ -244,9 +230,8 @@ final class ApplyEnrichments implements AppliesEnrichments
             ? $row->receipt_conflict_resolution
             : null;
 
-        // A null or unrecognised column (including the stored 'unset'
-        // sentinel) reads as no choice — the receipt-vs-first-write toast
-        // has not been answered yet, handled by the null match arm above.
+        // Null, unrecognised, or the stored 'unset' sentinel all read as an
+        // unanswered toast.
         return $value === null ? null : ReceiptConflictChoice::tryFrom($value);
     }
 

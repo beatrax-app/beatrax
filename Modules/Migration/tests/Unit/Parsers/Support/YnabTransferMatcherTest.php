@@ -37,13 +37,11 @@ it('YnabTransferMatcher: an unmatched leg (no counterpart signal) is omitted fro
     expect($matcher->pair($legs))->toBe([]);
 });
 
-it('WR-05: two same-sign rows are NEVER paired as a transfer, even with matching date/magnitude/account names', function (): void {
+it('YnabTransferMatcher: two same-sign rows are NEVER paired as a transfer, even with matching date/magnitude/account names', function (): void {
     $matcher = new YnabTransferMatcher;
 
-    // Corrupted/hand-edited source data: both legs are outflows (-100.00),
-    // same date, mutually cross-referenced account names — everything the
-    // OLD predicate checked matches, but a real transfer pair is always one
-    // inflow + one outflow.
+    // Both legs are outflows, satisfying everything the old predicate checked;
+    // a real transfer pair is always one inflow and one outflow.
     $legs = [
         ['rowIndex' => 5, 'account' => 'Checking', 'date' => '01/18/2026', 'amountMinor' => -10000, 'counterpartAccount' => 'Savings'],
         ['rowIndex' => 6, 'account' => 'Savings', 'date' => '01/18/2026', 'amountMinor' => -10000, 'counterpartAccount' => 'Checking'],

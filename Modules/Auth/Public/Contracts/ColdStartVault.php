@@ -4,34 +4,29 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Public\Contracts;
 
-// A platform-gated store for the unlocked data key, so a returning user can
-// unlock with the OS biometric instead of re-entering the PIN. A prompt alone
-// only returns a bool; unlocking needs the KEY back.
+// Stores the data key rather than just prompting, because a prompt returns a
+// bool and unlocking needs the key itself.
 
 // Implementations MUST gate recover() behind the OS authentication prompt and
 // MUST persist nothing the OS cannot re-protect.
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 interface ColdStartVault
 {
     // False on platforms with no biometric gate, so callers can hide the
     // affordance without handling exceptions.
     public function isAvailable(): bool;
 
-    // Whether this user has a key stored. MUST NOT prompt — the lock screen
-    // reads this on render.
+    // MUST NOT prompt: the lock screen reads this on render.
     public function isEnrolled(int $userId): bool;
 
-    // Called while unlocked, with the live data key. False when the platform
-    // refused to protect it; the caller keeps PIN-only unlock.
+    // Called while unlocked. False when the platform refused to protect the
+    // key, leaving the caller on PIN-only unlock.
     public function enroll(int $userId, string $dataKey): bool;
 
     // Prompts, then returns the data key, or null when the user cancelled,
     // the prompt failed, or nothing is enrolled.
     public function recover(int $userId, string $reason): ?string;
 
-    // Invalidates the stored key — a passphrase change makes it undecryptable
-    // anyway, and leaving it invites a confusing failed unlock.
+    // A passphrase change leaves the stored key undecryptable, so it goes
+    // rather than failing an unlock confusingly later.
     public function forget(int $userId): void;
 }

@@ -4,26 +4,6 @@ declare(strict_types=1);
 
 use Modules\Core\Public\Services\UserDataPathService;
 
-/*
- * Unit coverage for UserDataPathService — the single class through which
- * every filesystem path the app reads or writes resolves.
- *
- * The service reads getenv('NATIVEPHP_STORAGE_PATH') directly, so the
- * env var is set with putenv('NATIVEPHP_STORAGE_PATH='.$tmp) and cleared
- * with putenv('NATIVEPHP_STORAGE_PATH') (no `=`) — getenv() is the only
- * mechanism the service observes.
- *
- * Coverage:
- *  - env-unset (local dev): every accessor resolves to the project-rooted
- *    paths used today, byte-identical to base_path()/storage_path() output
- *    (the A2 local-dev-parity regression guard).
- *  - env-set (simulated NativePHP): every storage-rooted accessor resolves
- *    under the NATIVEPHP_STORAGE_PATH root.
- *  - appPath() rejects `..` path-traversal segments.
- *  - modulesPath()/migrationsPath()/publicPath() stay project-rooted even
- *    when the env var is set (code/asset locations, not user data).
- */
-
 beforeEach(function (): void {
     putenv('NATIVEPHP_STORAGE_PATH');
 });
@@ -38,11 +18,8 @@ it('resolves the SQLite database file under the project root when the env var is
 });
 
 it('resolves storage-rooted accessors under the project storage dir when the env var is unset (local-dev parity)', function (): void {
-    // Asserted against base_path() rather than storage_path(): the fallback
-    // this test pins is literally projectRoot()/storage, and storage_path() is
-    // movable — the suite relocates it per test so nothing on disk outlives the
-    // test that wrote it. Comparing the fallback to a value that moves would
-    // make this test about the harness instead of about the service.
+    // base_path(), not storage_path(): storage_path() is relocated per test, so
+    // only base_path() pins the fallback under test — projectRoot()/storage.
     $projectStorage = base_path('storage');
 
     expect(UserDataPathService::storageBase())->toBe($projectStorage);
@@ -119,10 +96,9 @@ it('resolves UserDataPathService as the same singleton instance through the cont
 });
 
 it('keeps backupsPath byte-identical to the previously container-bound storage path when the env var is unset', function (): void {
-    // A2 local-dev-parity guard: before Phase 13, BackupDatabaseCommand resolved
-    // its directory from `$app->basePath('storage/app/backups')`. With the
-    // NativePHP env var unset the service must produce that exact string so
-    // a future refactor cannot silently shift the dev-mode path.
+    // BackupDatabaseCommand used to resolve its directory from
+    // $app->basePath('storage/app/backups'). With the env var unset the service
+    // must still produce that exact string, or the dev-mode path shifts silently.
     expect(UserDataPathService::backupsPath())
         ->toBe($this->app->basePath('storage/app/backups'));
 });

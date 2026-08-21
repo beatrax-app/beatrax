@@ -88,12 +88,9 @@ it('consumeState with invalid provider throws InvalidArgumentException', functio
 });
 
 it('hash_equals — a near-match on the first byte still returns null', function (): void {
-    // Deliberately craft a candidate that differs only in the last
-    // byte. A naive `===` would short-circuit on the first
-    // difference; hash_equals compares every byte regardless. We
-    // cannot test the timing directly but we CAN confirm the
-    // comparison is correctness-preserving even for prefix-similar
-    // candidates.
+    // A candidate differing only in the last byte. The timing property of
+    // hash_equals cannot be asserted here, only that a prefix-identical
+    // candidate is still rejected.
     $repo = makeStateRepo();
     $state = $repo->issueState('gmail', userId: 1);
     $almost = substr($state, 0, -1).(($state[-1] === '0') ? '1' : '0');
@@ -110,8 +107,6 @@ it('different providers maintain independent state slots', function (): void {
     expect($repo->consumeState('microsoft', $gmailState, currentUserId: 1))->toBeNull();
 
     $gmailRepoFresh = $repo; // same instance — the bad consumes already cleared both slots
-    // Both slots have been consumed by the failed match attempts;
-    // verify subsequent good lookups also return null (single-use).
     expect($gmailRepoFresh->consumeState('gmail', $gmailState, currentUserId: 1))->toBeNull();
     expect($gmailRepoFresh->consumeState('microsoft', $msState, currentUserId: 1))->toBeNull();
 });
@@ -135,9 +130,8 @@ it('consumeState rejects a state issued under a different user_id (cross-user at
     $repo = makeStateRepo();
     $state = $repo->issueState('gmail', userId: 1, existingInboxId: 42);
 
-    // User 2 attempts to land the callback that User 1 initiated.
-    // The state value is correct (single browser, shared session
-    // window) but the user_id binding refuses the consume.
+    // The state value is correct — one browser, one session — so the user_id
+    // binding is the only thing refusing the consume.
     expect($repo->consumeState('gmail', $state, currentUserId: 2))->toBeNull();
 });
 
@@ -150,7 +144,7 @@ it('consumeState rejects a state older than the configured max age', function ()
 
     $state = $repo->issueState('gmail', userId: 1, existingInboxId: 5);
 
-    // Advance the clock past the 10-minute issue window.
+    // Past the 10-minute issue window.
     $clock->current = $clock->current->addMinutes(11);
 
     expect($repo->consumeState('gmail', $state, currentUserId: 1))->toBeNull();

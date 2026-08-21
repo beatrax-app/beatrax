@@ -6,9 +6,6 @@ namespace Modules\Import\Public\Contracts;
 
 use Modules\Core\Models\User;
 
-/**
- * @link ../../../../.docs/features/import/architecture.md#module-boundary
- */
 interface NamesAccounts
 {
     /**

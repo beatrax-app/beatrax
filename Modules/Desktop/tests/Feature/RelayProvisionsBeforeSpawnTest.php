@@ -11,21 +11,11 @@ use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Internal\Transport\Relay\RelayTlsMaterial;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\LocalRelayProvisioner;
+use Modules\Sync\Public\Services\SyncPorts;
 use Psr\Log\AbstractLogger;
 
 uses(RefreshDatabase::class);
 
-/*
- * The relay has to be provisioned before it is started, not after.
- *
- * `relay:serve` decides between a TLS and a plaintext bind exactly once, at
- * startup, by asking whether the certificate exists. Starting it first and
- * writing the material second produced a relay that spoke plaintext for its
- * whole life while the very same call published an https endpoint into the
- * pairing QR — so every peer's handshake was refused by a relay that could
- * not answer it. Because a NativePHP ChildProcess is persistent, that daemon
- * then outlived the relaunch that would otherwise have corrected it.
- */
 beforeEach(function (): void {
     $this->storageRoot = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-relay-boot-'.bin2hex(random_bytes(6)).DIRECTORY_SEPARATOR.'storage';
     putenv('NATIVEPHP_STORAGE_PATH='.$this->storageRoot);
@@ -82,6 +72,10 @@ function relayBootSelfDevice(): void
     ]);
 }
 
+// `relay:serve` picks a TLS or a plaintext bind exactly once at startup, by
+// asking whether the certificate exists. Starting it before writing the
+// material gave a relay that spoke plaintext for life while publishing an
+// https endpoint into the pairing QR, and a ChildProcess outlives a relaunch.
 it('has the certificate and the endpoint in place by the time it starts the relay', function (): void {
     relayBootSelfDevice();
 
@@ -95,6 +89,7 @@ it('has the certificate and the endpoint in place by the time it starts the rela
     (new RelayListenerProcess(
         app(DeviceRegistryService::class),
         app(LocalRelayProvisioner::class),
+        app(SyncPorts::class),
         relayBootSpyLogger(),
     ))->startIfEnabled();
 
@@ -102,9 +97,8 @@ it('has the certificate and the endpoint in place by the time it starts the rela
         $this->markTestSkipped('no routable LAN address in this environment');
     }
 
-    // Whether the child process itself spawns is NativePHP's business and
-    // unavailable outside the desktop runtime — a failure there is caught and
-    // logged. What this pins is the state the daemon would have read.
+    // Whether the child process spawns is NativePHP's business and unavailable
+    // outside the desktop runtime; what this pins is the state it would read.
     expect($tls->exists())->toBeTrue()
         ->and($config->endpointUrl())->toStartWith('https://')
         ->and($config->authToken())->not->toBeNull()

@@ -25,6 +25,8 @@ return [
     'no_entries' => 'Ручних записів поки немає.',
     'delete_entry' => 'Видалити запис',
     'delete' => 'Видалити',
+    'delete_confirm' => 'Видалити цей запис?',
+    'delete_keep' => 'Залишити',
 
     'errors' => [
         'amount_positive' => 'Введи суму більшу за нуль.',

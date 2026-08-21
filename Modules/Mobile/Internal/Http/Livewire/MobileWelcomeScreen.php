@@ -10,9 +10,6 @@ use Livewire\Component;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap;
 
-/**
- * @link ../../../../../.docs/features/mobile/architecture.md
- */
 final class MobileWelcomeScreen extends Component
 {
     // Bounces already-set-up devices (a user exists) to the dashboard;

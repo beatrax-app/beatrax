@@ -6,9 +6,6 @@ namespace Modules\Sync\Public\Services;
 
 use Modules\Sync\Internal\OpLog\OpLogRebuilder;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class HistoryReprojector
 {
     public function __construct(

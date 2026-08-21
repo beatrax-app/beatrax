@@ -25,6 +25,8 @@ return [
     'no_entries' => 'Ingen manuelle poster ennå.',
     'delete_entry' => 'Slett post',
     'delete' => 'Slett',
+    'delete_confirm' => 'Slette denne posteringen?',
+    'delete_keep' => 'Behold',
 
     'errors' => [
         'amount_positive' => 'Skriv inn et beløp større enn null.',

@@ -6,6 +6,7 @@ namespace Modules\Notifications\Internal\Listeners;
 
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\DriftAlerts\Public\Events\SavingsPromptDue;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
@@ -16,9 +17,6 @@ use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final class PersistSavingsPrompt
 {
     public function __construct(
@@ -32,7 +30,7 @@ final class PersistSavingsPrompt
     {
         try {
             $monthlyText = Money::ofMinor($event->monthlyMinor, $event->currency)
-                ->format($event->currency === 'EUR' ? 'nl_NL' : 'en_US');
+                ->format();
 
             $draft = $this->copyRenderer->forUser($event->userId, fn (): NotificationDraft => new NotificationDraft(
                 userId: $event->userId,
@@ -49,7 +47,7 @@ final class PersistSavingsPrompt
             // Swallow - a failed persist must never break the
             // originating job run.
             $this->log->error('PersistSavingsPrompt: failed to persist savings prompt', [
-                'exception' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
                 'seriesId' => $event->seriesId,
                 'userId' => $event->userId,
             ]);

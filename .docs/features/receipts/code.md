@@ -16,7 +16,6 @@ Modules/Receipts/
 │   │   ├── MatcherInputDto.php
 │   │   ├── MatchOutcomeDto.php
 │   │   ├── ParsedReceiptDto.php
-│   │   ├── FileImportDto.php
 │   │   └── ChainHintPayload/
 │   │       ├── FundedByCardPayload.php
 │   │       └── RefundOfPayload.php
@@ -32,7 +31,6 @@ Modules/Receipts/
 │   │   ├── FileDropEmlBlobStore.php
 │   │   └── ReceiptSourceAdapter.php
 │   └── Services/
-│       ├── FileImportQuery.php
 │       └── ReceiptConflictQuery.php
 ├── Internal/
 │   ├── MatcherRegistry.php
@@ -44,7 +42,6 @@ Modules/Receipts/
 │   │   ├── HandleFileOpenedFromOs.php
 │   │   └── DispatchChainHintsFromReceipt.php
 │   └── Http/Livewire/
-│       ├── WizardEmailFileStep.php
 │       └── ReceiptConflictToast.php
 ├── Database/
 │   └── Migrations/
@@ -79,7 +76,6 @@ Modules/Receipts/
     enrichments, chainHints, statementSummary)`. Static
     `::miss()` for no-match.
   - `ParsedReceiptDto` — typed receipt structure.
-  - `FileImportDto` — file-imports list row.
   - `ChainHintPayload/*` — `FundedByCardPayload(cardLast4,
     cardKind)`, `RefundOfPayload(originalChargeRef)`.
 - **Events/**
@@ -89,8 +85,6 @@ Modules/Receipts/
   profiles, mbox iterator, drop-in blob store, source
   adapter.
 - **Services/**
-  - `FileImportQuery::list(User $user):
-    list<FileImportDto>`.
   - `ReceiptConflictQuery::pending(User $user):
     list<PendingConflictDto>`.
 
@@ -114,8 +108,6 @@ Modules/Receipts/
 - `Internal/Listeners/DispatchChainHintsFromReceipt::handle($event)`
   — handles `Import::TransactionImported`; if the row carries
   chain hints, dispatches `ChainHintDetected` per hint.
-- `Internal/Http/Livewire/WizardEmailFileStep` — the drop-an-
-  .eml wizard step.
 - `Internal/Http/Livewire/ReceiptConflictToast` — the
   first-conflict toast UI.
 
@@ -148,7 +140,7 @@ reads + writes it through `ReceiptConflictQuery` /
 - Tag-loops `MATCHER_FQNS` under `receipts.matcher`. Each
   binding is gated by `class_exists()` so a missing class
   skips gracefully.
-- Singletons `RecordReceipt`, `FileImportQuery`,
+- Singletons `RecordReceipt`,
   `DispatchChainHintsFromReceipt`,
   `HandleFileOpenedFromOs`,
   `ApplyReceiptConflictResolution`,

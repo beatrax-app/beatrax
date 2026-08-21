@@ -8,9 +8,6 @@ namespace Modules\Search\Internal\Services;
 // (never present in transaction text): FtsCandidateResolver emits them in
 // the highlight SQL and SearchRowMapper swaps them for XSS-safe <mark>
 // tags, so both sides share one source of truth for the sentinel pair.
-/**
- * @link ../../../../.docs/features/search/architecture.md
- */
 final class HighlightSentinels
 {
     public const START = "\x02";

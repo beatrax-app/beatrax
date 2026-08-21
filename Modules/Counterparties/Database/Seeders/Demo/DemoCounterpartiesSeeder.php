@@ -14,16 +14,13 @@ use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
-// Walks every demo transaction through the production CounterpartyResolver,
-// never short-circuited, so the resulting rows mirror a real import rather
-// than being hand-rolled. Resolutions with a null counterpartyId (e.g. the
-// self_account branch) are skipped when stamping transactions.counterparty_id.
+// Every demo transaction goes through the production resolver rather than
+// hand-rolled rows, so the demo data can only ever be shaped like a real import.
 final class DemoCounterpartiesSeeder
 {
-    // Per-user merchant-alias seed list mirroring what a user would build by
-    // hand via Settings -> Aliases; without it every demo merchant falls
-    // through to type=unknown and the type-chip strip never shows a
-    // `merchant` bucket. Shared across demo users (same Dutch retailers).
+    // Stands in for the aliases a user would build by hand: without them every
+    // demo merchant resolves to type=unknown and the type-chip strip has no
+    // `merchant` bucket to show.
     /**
      * @var list<array{generalized: string, friendly: string}>
      */
@@ -59,10 +56,9 @@ final class DemoCounterpartiesSeeder
         private readonly CounterpartyResolver $resolver,
     ) {}
 
-    // Seeds bank + self_account rows the resolver chain alone never produces
-    // for the demo dataset (its PayPal/bank-fee IBANs aren't in the
-    // known-institution seed list), so the type-chip strip shows all six
-    // legal type buckets. updateOrCreate on (user_id, slug) keeps re-seeds idempotent.
+    // The resolver never produces bank or self_account rows for this dataset —
+    // its PayPal and bank-fee IBANs are not in the known-institution seed list —
+    // so those two buckets have to be seeded directly to demo all six types.
     /**
      * @var list<array{type: string, slug: string, displayName: ?string, displayNameKey: ?string, iban: ?string, merchantName: ?string}>
      */
@@ -156,9 +152,6 @@ final class DemoCounterpartiesSeeder
         }
     }
 
-    // The (user_id, pattern) composite UNIQUE on merchant_aliases guarantees
-    // a second seed run skips existing rows; updateOrInsert makes the
-    // keying explicit rather than relying on an insert-and-catch pattern.
     private function seedAliasesForUser(User $user): void
     {
         $now = (new \DateTimeImmutable)->format('Y-m-d H:i:s');
@@ -194,10 +187,8 @@ final class DemoCounterpartiesSeeder
             $canonical = $this->reconstructCanonical($tx);
             $resolution = $this->resolver->resolve($canonical, $user);
 
-            // Null means the input carried neither IBAN, name, nor
-            // description (data this seeder never produces); a non-null
-            // resolution with a null counterpartyId is the self_account
-            // short-circuit — either way there is nothing to stamp.
+            // A resolution with a null counterpartyId is the self_account
+            // short-circuit, not a failure — there is simply nothing to stamp.
             if ($resolution === null || $resolution->counterpartyId === null) {
                 continue;
             }
@@ -209,18 +200,16 @@ final class DemoCounterpartiesSeeder
         }
     }
 
-    // The resolver only reads a subset of fields (type, counterpartyIban,
-    // counterpartyName, description), but the DTO's constructor is not
-    // partial, so every field is populated from the persisted row.
+    // The resolver reads four of these fields, but the DTO has no partial
+    // constructor, so the whole row is rebuilt.
     private function reconstructCanonical(Transaction $tx): CanonicalTransaction
     {
         $paymentType = $tx->payment_type instanceof PaymentType
             ? $tx->payment_type
             : PaymentType::Unknown;
 
-        // The attribute bag can hold this as either a string or a float
-        // depending on the driver; the DTO insists on `?string`, so coerce
-        // it when present.
+        // The driver decides whether the attribute bag hands this back as a
+        // string or a float; the DTO insists on `?string`.
         $fxRateUsed = $tx->fx_rate_used;
         if ($fxRateUsed !== null && ! is_string($fxRateUsed)) {
             $fxRateUsed = (string) $fxRateUsed;

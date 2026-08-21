@@ -10,12 +10,6 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Models\RecurringSeriesOccurrence;
 
-/*
- * /recurring page tests — the Livewire SFC that renders grouped
- * "Recurring expenses" + "Recurring income" + collapsed "Recurring
- * transfers" sections with a net-flow summary header.
- */
-
 function rpUser(string $username): User
 {
     return User::query()->create([
@@ -113,10 +107,8 @@ it('renders the EUR shadow alongside the original-currency amount for a non-EUR 
     ]);
 
     $response = $this->actingAs($this->user)->get(route('recurring.index'));
-    // Original currency text is rendered (USD primary)
     $content = $response->getContent() ?: '';
     expect($content)->toContain('netflix');
-    // Some USD-formatted dollar value is on the page
     expect(strpos($content, '$') !== false || strpos($content, 'USD') !== false)->toBeTrue();
 })->group('multi-currency-row-shows-eur-shadow');
 
@@ -126,8 +118,8 @@ it('renders the transfers section collapsed by default', function (): void {
     $response = $this->actingAs($this->user)->get(route('recurring.index'));
     $content = $response->getContent() ?: '';
 
-    // The toggle button exists but the transfers panel itself does
-    // not render `data-transfers-open="true"` until toggled.
+    // The toggle exists, but the panel does not render data-transfers-open="true"
+    // until it is clicked.
     expect($content)->toContain('toggleTransfers');
     expect($content)->not->toContain('data-transfers-open="true"');
 })->group('transfers-section-collapsed-by-default');
@@ -149,9 +141,8 @@ it('renders the low-confidence indicator on a row whose next_expected_confidence
     $response = $this->actingAs($this->user)->get(route('recurring.index'));
     $content = $response->getContent() ?: '';
 
-    // The Blade view emits a data-confidence-low="true" marker on the
-    // next-expected element so the calm-aesthetic dim/italic styling is
-    // queryable from tests + adjustable in a single class swap later.
+    // The Blade view emits a data-confidence-low="true" marker so the dim/italic
+    // styling stays queryable from tests and swappable in one place.
     expect($content)->toContain('data-confidence-low="true"');
 })->group('confidence-low-renders-dim-text');
 

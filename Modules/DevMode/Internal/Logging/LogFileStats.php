@@ -8,10 +8,8 @@ use Modules\Core\Public\Services\UserDataPathService;
 use SplFileObject;
 use Throwable;
 
-// Today's file is parsed line-by-line via SplFileObject (no full-file
-// load) so a multi-megabyte log does not blow the request budget.
-// Continuation lines (stack-trace rows, JSON tails) increment the
-// total-line count but not any per-severity bucket.
+// Line-by-line via SplFileObject rather than file_get_contents: a
+// multi-megabyte log would otherwise blow the request's memory budget.
 final readonly class LogFileStats
 {
     private const int MAX_LINES = 100_000;
@@ -85,9 +83,8 @@ final readonly class LogFileStats
                 }
             }
         } catch (Throwable) {
-            // Unreadable or mid-rotation — fall through with whatever
-            // we counted so far; the dashboard prefers a partial view
-            // over a hard error on a transient FS state.
+            // Mid-rotation is a transient FS state, so the counts so far beat
+            // a hard error on the dashboard.
         }
 
         return [
@@ -101,9 +98,8 @@ final readonly class LogFileStats
         ];
     }
 
-    // glob() targets `laravel-*.log` specifically to avoid pulling
-    // sibling non-log files (the dir hosts channel-specific sub-paths
-    // too in some deployments).
+    // The glob is narrowed to `laravel-*.log` because some deployments put
+    // channel-specific sub-paths in the same directory.
     /**
      * @return array{count: int, totalBytes: int}
      */
@@ -132,8 +128,8 @@ final readonly class LogFileStats
         return ['count' => $count, 'totalBytes' => $total];
     }
 
-    // Preserves the inode so the polling endpoint detects the size
-    // shrink via its `?since` past-current-size branch and signals reset.
+    // ftruncate rather than unlink: keeping the inode is what lets the polling
+    // endpoint see the size shrink and signal a reset to the tailer.
     public function truncateToday(): int
     {
         $path = UserDataPathService::dailyLogFile();
@@ -159,8 +155,8 @@ final readonly class LogFileStats
         return $sizeBytes;
     }
 
-    // Returns null when the line does not match the header shape
-    // (continuation line, stack-trace row, JSON payload tail).
+    // Null for stack-trace rows and JSON payload tails: they are continuations
+    // of the entry above, not entries of their own.
     private static function extractSeverity(string $line): ?string
     {
         if (preg_match('/^\[[^\]]+\]\s+[a-z0-9_]+\.([A-Z]+):/i', $line, $matches) !== 1) {

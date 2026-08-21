@@ -7,13 +7,6 @@ use Livewire\Livewire;
 use Modules\Auth\Internal\Http\Livewire\LoginPage;
 use Modules\Core\Models\User;
 
-/*
- * Feature coverage for the username-based sign-in surface: the /login
- * page render, the Livewire submit happy path, the generic-error copy
- * for both wrong-password and unknown-user, case-insensitive username
- * resolution, the remember-me cookie, and the /logout sign-out.
- */
-
 beforeEach(function (): void {
     /** @var Hasher $hasher */
     $hasher = $this->app->make(Hasher::class);

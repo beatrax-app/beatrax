@@ -57,6 +57,7 @@ return [
         'meta_eur_equiv' => '(≈ :amount/рік)',
         'cancel_impact' => 'Скасувати це → заощадиш :amount/рік',
         'cadence_flipped' => 'Періодичність змінилася — також показано в',
+        'cadence_flipped_link' => 'Перевірка регулярних',
         'acknowledge' => 'Підтвердити',
         'acknowledge_aria' => 'Підтвердити сповіщення про відхилення :id',
         'snooze' => 'Відкласти ▾',

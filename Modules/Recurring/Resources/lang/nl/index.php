@@ -16,6 +16,7 @@ return [
     'empty' => [
         'heading' => 'Nog geen terugkerende activiteit',
         'before_link' => 'Keur gedetecteerde suggesties goed op',
+        'link' => 'Terugkerend beoordelen',
         'after_link' => 'om ze hier te zien.',
     ],
 

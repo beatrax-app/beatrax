@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-// Approved series whose recurring_series.snoozed_until is in the
-// future (a series-level snooze). The Recurring-side projection
-// excludes snoozed series from the detector's input, so the
-// DriftAlerts detector never sees the rows. Zero alerts. Distinct
-// from drift_alerts.snoozed_until (the per-alert snooze).
+// recurring_series.snoozed_until, not the per-alert drift_alerts.snoozed_until:
+// the Recurring projection drops the series before the detector ever sees it.
 
 $transactions = [];
 $amounts = [-999, -999, -999, -1199, -1199, -1199];

@@ -6,17 +6,9 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Desktop\Internal\Http\Livewire\WelcomeScreen;
 
-/*
- * WelcomeScreen redirect guard.
- *
- * The welcome screen is only meaningful on a genuine fresh install (zero
- * users). Once an account exists the device is set up, so any later landing on
- * `/welcome` — a stale intended() URL after an app-lock unlock, the PWA
- * start_url, a bookmark — must bounce to the dashboard instead of stranding a
- * set-up user on the first-run screen. (The EnsureDatabaseReady gate exempts
- * `desktop.welcome`, so it cannot perform this bounce itself.)
- */
-
+// The gate exempts `desktop.welcome`, so the bounce has to happen in the
+// component: a stale intended() URL after an app-lock unlock, the PWA
+// start_url or a bookmark can all land a set-up device on the first-run screen.
 it('renders the welcome screen on a genuine fresh install (no users)', function (): void {
     Livewire::test(WelcomeScreen::class)
         ->assertNoRedirect()

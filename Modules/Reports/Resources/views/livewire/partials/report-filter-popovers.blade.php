@@ -1,6 +1,9 @@
+@use('Modules\Ledger\Public\Services\BaseCurrency')
+@use('Modules\Ledger\Public\ValueObjects\Money')
+@use('Modules\Ledger\Public\ValueObjects\MoneyInput')
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    Report builder filter chips (D-04 — reused Search filter language and
+    Report builder filter chips — reused Search filter language and
     `.srch-*` CSS verbatim from Modules/Ledger/Resources/views/livewire/
     partials/search-filter-popovers.blade.php). Account / Category /
     Counterparty / Amount — the date dimension is covered by the Period
@@ -145,10 +148,16 @@
                 $amountLabel = Lang::get('reports::builder.filter.dir_out');
             }
             if (($filterAmountMin ?? '') !== '') {
-                $amountLabel .= ' &gt; €'.number_format((float) ($filterAmountMin ?? 0), 2, ',', '.');
+                $amountLabel .= ' &gt; '.Money::ofMinor(
+                    MoneyInput::tryToMinor((string) ($filterAmountMin ?? '')) ?? 0,
+                    BaseCurrency::value(),
+                )->format();
             }
             if (($filterAmountMax ?? '') !== '') {
-                $amountLabel .= ' &lt; €'.number_format((float) ($filterAmountMax ?? 0), 2, ',', '.');
+                $amountLabel .= ' &lt; '.Money::ofMinor(
+                    MoneyInput::tryToMinor((string) ($filterAmountMax ?? '')) ?? 0,
+                    BaseCurrency::value(),
+                )->format();
             }
         }
     @endphp
@@ -176,7 +185,7 @@
                 @endforeach
             </div>
             <div class="srch-amount-range">
-                {{-- WR-01: debounced so rapid typing doesn't fire an overlapping Livewire round trip per keystroke (Livewire's own textbook race condition for un-debounced live text/number inputs). --}}
+                {{-- Debounced so rapid typing doesn't fire an overlapping Livewire round trip per keystroke (Livewire's own textbook race condition for un-debounced live text/number inputs). --}}
                 <input type="number" wire:model.live.debounce.500ms="filterAmountMin" min="0" step="0.01" placeholder="{{ Lang::get('reports::builder.filter.min') }}" class="srch-amount-input" aria-label="{{ Lang::get('reports::builder.filter.min_aria') }}" />
                 <span class="srch-date-sep">–</span>
                 <input type="number" wire:model.live.debounce.500ms="filterAmountMax" min="0" step="0.01" placeholder="{{ Lang::get('reports::builder.filter.max') }}" class="srch-amount-input" aria-label="{{ Lang::get('reports::builder.filter.max_aria') }}" />

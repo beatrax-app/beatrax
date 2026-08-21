@@ -13,24 +13,9 @@ use Psr\Log\LoggerInterface;
 
 uses(RefreshDatabase::class);
 
-/*
- * Per-job failed() hook invariant.
- *
- * BackfillInboxJob + IncrementalScanJob each define a public failed()
- * method that Laravel calls on the resolved job instance after the
- * worker exhausts its retry budget. The method flips
- * inbox_scan_state.status to 'error' with the truncated exception
- * message and does not escalate an invalid transition (e.g. an
- * already-needs_reauth row failing again) into a queue-worker error.
- *
- * Test flow per job:
- *  1. Seed user + inbox + inbox_scan_state with status='idle'.
- *  2. Instantiate the job with the seeded inboxId.
- *  3. Invoke failed() with a RuntimeException and the resolved
- *     collaborators.
- *  4. Assert the row's status flipped to 'error' and the error_message
- *     carries the exception's truncated text.
- */
+// failed() runs after the worker exhausts its retry budget. It flips the row
+// to 'error', and an invalid transition inside it must not escalate into a
+// queue-worker error of its own.
 
 beforeEach(function (): void {
     $this->user = User::query()->create([
@@ -123,9 +108,8 @@ it('IncrementalScanJob::failed() swallows invalid transitions (needs_reauth → 
     /** @var InboxScanStateMachine $sm */
     $sm = $this->app->make(InboxScanStateMachine::class);
 
-    // The state machine rejects needs_reauth → error; the failed()
-    // hook MUST swallow the exception so the queue-worker does not
-    // escalate a recovery scenario into a hard error.
+    // The machine rejects needs_reauth → error, and the hook has to swallow
+    // that rather than escalate a recovery scenario into a hard error.
     $job->failed(new RuntimeException('subsequent failure during reauth grace.'), $sm);
 
     $row = $db->connection()
@@ -140,15 +124,12 @@ it('IncrementalScanJob::failed() swallows invalid transitions (needs_reauth → 
 });
 
 it('BackfillInboxJob::failed() on a non-existent inbox swallows the RuntimeException', function (): void {
-    // The state machine raises RuntimeException when applyStatus is
-    // called for an inbox with no inbox_scan_state row. The failed()
-    // hook must swallow this too — a deleted-mid-flight inbox is not
-    // a queue-worker error.
+    // An inbox deleted mid-flight has no scan-state row for applyStatus to
+    // find, and that is not a queue-worker error either.
     $job = new BackfillInboxJob(inboxId: 99999, windowMonths: 3);
     /** @var InboxScanStateMachine $sm */
     $sm = $this->app->make(InboxScanStateMachine::class);
 
-    // Must not throw.
     $job->failed(
         new RuntimeException('vanished mid-flight.'),
         $sm,

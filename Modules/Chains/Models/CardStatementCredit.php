@@ -17,6 +17,7 @@ use Modules\Core\Public\Concerns\BelongsToUser;
  * @property int $from_statement_id
  * @property int|null $to_statement_id
  * @property int $amount_minor
+ * @property string $currency
  * @property string $reason
  * @property CarbonImmutable $created_at
  * @property CarbonImmutable $updated_at
@@ -31,6 +32,7 @@ final class CardStatementCredit extends Model
         'from_statement_id',
         'to_statement_id',
         'amount_minor',
+        'currency',
         'reason',
     ];
 

@@ -7,10 +7,9 @@ namespace Modules\Import\Internal\Detectors;
 use Modules\Core\Models\User;
 use Modules\Import\Public\Contracts\DetectsStartingBalance;
 
-// PayPal's per-event `Saldo` cell resets to zero after every funding
-// sweep, so it carries no usable opening-balance signal — this detector
-// always returns an empty list (never a 0-value candidate, which would
-// be silently confirmed and lose the user's actual opening balance).
+// PayPal's per-event `Saldo` resets to zero after every funding sweep, so
+// it carries no opening-balance signal. Always empty, never a 0-value
+// candidate: the user would confirm that and lose their real balance.
 final class PaypalCsvStartingBalanceDetector implements DetectsStartingBalance
 {
     private const SOURCE_FORMAT = 'paypal-csv';

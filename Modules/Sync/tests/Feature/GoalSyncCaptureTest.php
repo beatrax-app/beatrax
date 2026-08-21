@@ -11,16 +11,10 @@ use Modules\Sync\Internal\OpLog\OpLogWriter;
 
 uses(RefreshDatabase::class);
 
-/*
- * Goals were absent from the capture wiring, so a goal created on one device
- * wrote zero op-log rows and stayed on that device forever. Measured on a
- * paired Galaxy S24: creating a goal left op_log_entries at exactly the 6156
- * rows received from the desktop, none of them carrying the phone's own
- * device id, while a transaction note on the same device did produce one.
- *
- * These drive the real GoalWriter rather than the listener, so the dispatch
- * itself is under test — a handler nothing calls is what was already there.
- */
+// Goals were absent from the capture wiring, so one created on a phone wrote
+// zero op-log rows and stayed there forever. These drive the real writer rather
+// than the listener, because a handler nothing calls is exactly what was
+// already in place.
 
 function goalCaptureUser(): User
 {

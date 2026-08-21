@@ -11,8 +11,6 @@ use Illuminate\Database\Eloquent\Model;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
 /**
- * @link ../../../.docs/features/notifications/architecture.md
- *
  * @property int $id
  * @property int $user_id
  * @property string $device_id

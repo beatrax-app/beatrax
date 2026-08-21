@@ -10,9 +10,6 @@ use Modules\Core\Public\Contracts\Clock;
 // Writes preference columns onto a user's row and stamps updated_at from the
 // injected clock — the single-column settings write that several components and
 // services hand-rolled, each having to remember the updated_at stamp itself.
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class WriteUserPreference
 {
     public function __construct(

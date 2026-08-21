@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Categorie verwijderen',
         'keep_category' => 'Deze categorie behouden',
         'restore_single' => 'Herstellen als één categorie?',
+        'survivor_legend' => 'Categorie om te behouden',
         'confirm_unsplit' => 'Ja, splitsing ongedaan maken',
         'keep_split' => 'Splitsing behouden',
     ],
@@ -51,6 +52,16 @@ return [
         'choose_aria' => 'Kies een nieuw transactietype',
         'choose_option' => 'Kies een type…',
         'save' => 'Opslaan',
+    ],
+
+    'type_label' => [
+        'expense' => 'Uitgave',
+        'income' => 'Inkomsten',
+        'transfer_out' => 'Uitgaande overboeking',
+        'transfer_in' => 'Inkomende overboeking',
+        'fee' => 'Kosten',
+        'refund' => 'Terugbetaling',
+        'adjustment' => 'Correctie',
     ],
 
     'note' => [

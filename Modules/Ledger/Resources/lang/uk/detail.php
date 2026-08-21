@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Прибрати категорію',
         'keep_category' => 'Залишити цю категорію',
         'restore_single' => 'Відновити як одну категорію?',
+        'survivor_legend' => 'Категорія, яку залишити',
         'confirm_unsplit' => 'Так, скасувати розподіл',
         'keep_split' => 'Залишити розподіл',
     ],
@@ -51,6 +52,16 @@ return [
         'choose_aria' => 'Вибрати новий тип транзакції',
         'choose_option' => 'Вибери тип…',
         'save' => 'Зберегти',
+    ],
+
+    'type_label' => [
+        'expense' => 'Витрата',
+        'income' => 'Дохід',
+        'transfer_out' => 'Вихідний переказ',
+        'transfer_in' => 'Вхідний переказ',
+        'fee' => 'Комісія',
+        'refund' => 'Повернення коштів',
+        'adjustment' => 'Коригування',
     ],
 
     'note' => [

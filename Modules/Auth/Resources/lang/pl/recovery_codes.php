@@ -8,6 +8,7 @@ return [
     'subtitle' => 'Wydrukuj je lub zapisz w bezpiecznym miejscu. Nie zostaną pokazane ponownie.',
     'copy' => 'Kopiuj kody',
     'copied' => 'Skopiowano',
+    'copy_failed' => 'Nie udało się skopiować. Zapisz kody.',
     'download' => 'Pobierz jako .txt',
 
     'saved_as' => 'Zapisano jako beatrax-recovery-codes-:username.txt',

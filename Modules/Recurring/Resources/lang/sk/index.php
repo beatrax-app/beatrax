@@ -16,6 +16,7 @@ return [
     'empty' => [
         'heading' => 'Zatiaľ žiadna opakovaná aktivita',
         'before_link' => 'Schváľ zistené návrhy v',
+        'link' => 'Kontrola opakovaných',
         'after_link' => 'a objavia sa tu.',
     ],
 

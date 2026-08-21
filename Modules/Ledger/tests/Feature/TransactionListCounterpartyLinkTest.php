@@ -8,17 +8,6 @@ use Modules\Counterparties\Models\Counterparty;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Services\TransactionListQuery;
 
-/**
- * Pins the cross-module click-through wiring (Plan 17-06c):
- *
- *  - Counterparty names on the `/transactions` list link to
- *    `counterparties.profile` when the row's counterparty_id has been
- *    resolved by the CounterpartyResolver chain.
- *  - Rows without a resolved counterparty render the counterparty name
- *    as plain text (no dead-end `/counterparties/` URL).
- *  - The TransactionRowDto carries the resolved slug in a single JOIN
- *    so the render path stays free of N+1 expansion.
- */
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
@@ -99,7 +88,6 @@ it('renders the counterparty name as plain text when counterparty_id is null', f
 
     $response->assertOk();
     $response->assertSee('Unresolved Vendor');
-    // The plain-text testid is present; the link testid for this row is not.
     $response->assertSee('data-testid="tx-row-counterparty-text-', false);
     $response->assertDontSee('data-testid="tx-row-counterparty-link-', false);
 });
@@ -212,8 +200,6 @@ it('eager-loads counterparties in a single JOIN — no N+1 expansion across the 
     $page = $this->listQuery->recent($this->fixtureUser, daysBack: 90);
 
     expect($page->rows)->toHaveCount(5);
-    // Per-row counterparty rendering must NOT spawn one query per row.
-    // The single JOIN suffices for the entire page render.
     $counterpartyQueries = array_filter($queries, static fn (string $sql): bool => stripos($sql, '"counterparties"') !== false);
     expect(count($counterpartyQueries))->toBeLessThanOrEqual(1);
 });

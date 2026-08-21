@@ -17,9 +17,6 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/transfers/architecture.md
- */
 final class TransferPairer implements PairsTransferLegs
 {
     use CoercesScalars;
@@ -37,16 +34,14 @@ final class TransferPairer implements PairsTransferLegs
 
     public function pairOne(Transaction $tx, User $user): ?int
     {
-        // Skip non-transfer types and rows already paired (re-fire after
-        // pairing is a defensive no-op).
+        // A re-fire after pairing is a defensive no-op.
         if (! in_array($tx->type, TransactionType::transferValues(), true) || $tx->pair_transaction_id !== null) {
             return null;
         }
 
-        // Normalise to whole-day boundaries so the window is symmetric
-        // ±WINDOW_DAYS calendar days regardless of the row's time-of-day
-        // (different adapters book at different times: ASN at 12:00:00,
-        // PayPal at startOfDay, etc.).
+        // Whole-day boundaries keep the window symmetric in calendar days;
+        // adapters book at different times (ASN at 12:00:00, PayPal at
+        // startOfDay), which otherwise skews it.
         $windowStart = $tx->booked_at->copy()->startOfDay()->subDays(self::WINDOW_DAYS)->toDateTimeString();
         $windowEnd = $tx->booked_at->copy()->endOfDay()->addDays(self::WINDOW_DAYS)->toDateTimeString();
 
@@ -64,10 +59,9 @@ final class TransferPairer implements PairsTransferLegs
         return $partnerId;
     }
 
-    // Forward direction: Arm A (literal) matches one of the user's own
-    // Account.iban rows directly; Arm B (alias bridge) resolves real
-    // institution IBANs via ResolvesKnownCounterpartyIban. The ciphertext
-    // IBAN is decrypted once before either arm runs.
+    // Two arms: a literal match against the user's own Account.iban rows, and
+    // an alias bridge resolving institution IBANs. The ciphertext IBAN is
+    // decrypted once, before either.
     private function findPartnerForward(Transaction $tx, User $user, string $windowStart, string $windowEnd): ?stdClass
     {
         $ibanResult = $this->codec->decryptValue(
@@ -78,10 +72,9 @@ final class TransferPairer implements PairsTransferLegs
             ($this->session)(),
         );
 
-        // decryptValue never throws — on failure it returns the raw
-        // ciphertext with decrypted:false. Only distrust that when
-        // encryption is actually enabled for the user; otherwise
-        // decrypted:false is the expected pass-through signal.
+        // decryptValue never throws; it returns the raw ciphertext with
+        // decrypted:false, which is also the expected pass-through signal
+        // when encryption is off. Only distrust it when encryption is on.
         if ($this->encryptionService->isEnabled($user->id) && ! $ibanResult['decrypted']) {
             return null;
         }
@@ -91,9 +84,8 @@ final class TransferPairer implements PairsTransferLegs
             return null;
         }
 
-        // Uses the partial index transactions_unpaired_transfer_idx; the
-        // id != $tx->id clause guards the degenerate case where a row's
-        // counterparty IBAN matches its own account's IBAN.
+        // Hits transactions_unpaired_transfer_idx. The id guard covers a row
+        // whose counterparty IBAN is its own account's.
         return $this->db->connection()
             ->table('transactions')
             ->where('user_id', $user->id)
@@ -123,10 +115,9 @@ final class TransferPairer implements PairsTransferLegs
         return $this->aliasResolver->resolveAccount($plainIban, $user->id)?->id;
     }
 
-    // Symmetric write: both sides get pair_transaction_id set. Outside the
-    // listener's transaction frame the two updates are independent statements
-    // — safe because ShouldBeUniqueUntilProcessing rules out a concurrent run
-    // for the same user.
+    // The two updates are independent statements outside the listener's
+    // transaction frame, which ShouldBeUniqueUntilProcessing makes safe by
+    // ruling out a concurrent run for the same user.
     private function linkPair(Transaction $tx, User $user, int $partnerId): void
     {
         $now = $this->clock->now()->toDateTimeString();
@@ -149,8 +140,7 @@ final class TransferPairer implements PairsTransferLegs
                 'updated_at' => $now,
             ]);
 
-        // Keep the caller-supplied in-memory model in sync with the
-        // persisted change so downstream observers see the post-pair state.
+        // The caller's in-memory model, so observers see the post-pair state.
         $tx->pair_transaction_id = $partnerId;
         $tx->syncOriginalAttribute('pair_transaction_id');
     }
@@ -159,8 +149,7 @@ final class TransferPairer implements PairsTransferLegs
     {
         $connection = $this->db->connection();
 
-        // Snapshot the candidate ids once; iterating an updating result set
-        // is undefined under SQLite.
+        // Snapshotted: iterating an updating result set is undefined in SQLite.
         /** @var list<int<1, max>> $candidateIds */
         $candidateIds = $connection
             ->table('transactions')
@@ -181,8 +170,7 @@ final class TransferPairer implements PairsTransferLegs
             if ($tx === null) {
                 continue;
             }
-            // The matcher may have written to BOTH rows during a
-            // previous iteration; re-check before re-issuing the lookup.
+            // A previous iteration may have written both rows already.
             if ($tx->pair_transaction_id !== null) {
                 continue;
             }
@@ -194,9 +182,6 @@ final class TransferPairer implements PairsTransferLegs
         return $paired;
     }
 
-    /**
-     * @link ../../../../.docs/features/transfers/architecture.md
-     */
     private function findPartnerByReverseLookup(
         Transaction $tx,
         int $userId,
@@ -220,10 +205,9 @@ final class TransferPairer implements PairsTransferLegs
             return null;
         }
 
-        // counterparty_iban is ciphertext under encryption, so it can't be
-        // a whereIn predicate; the narrowing predicates below already yield
-        // a small candidate set, then each surviving row is decrypted and
-        // matched against $candidateIbans in PHP.
+        // counterparty_iban is ciphertext, so it cannot be a whereIn. The
+        // predicates below narrow to a small set, which is then decrypted
+        // and matched in PHP.
         $candidates = $connection
             ->table('transactions')
             ->where('user_id', $userId)
@@ -295,8 +279,7 @@ final class TransferPairer implements PairsTransferLegs
                 ($this->session)(),
             );
 
-            // Skip a candidate whose IBAN failed to decrypt rather than
-            // comparing $candidateIbans against ciphertext.
+            // Skipped rather than compared against ciphertext.
             if ($encryptionEnabled && ! $candidateResult['decrypted']) {
                 continue;
             }
@@ -307,17 +290,5 @@ final class TransferPairer implements PairsTransferLegs
         }
 
         return null;
-    }
-
-    private static function toStringOrNull(mixed $value): ?string
-    {
-        if ($value === null) {
-            return null;
-        }
-        if (is_string($value)) {
-            return $value;
-        }
-
-        return is_scalar($value) ? (string) $value : null;
     }
 }

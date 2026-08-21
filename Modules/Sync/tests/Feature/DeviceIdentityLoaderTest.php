@@ -12,13 +12,9 @@ use Modules\Sync\Internal\Identity\DeviceIdentityService;
 
 uses(RefreshDatabase::class);
 
-/*
- * DeviceIdentityLoaderTest — decrypt + load the device identity key-file
- * (PAIR-01, D-01), including the security fix for the plaintext-key-in-
- * sys_get_temp_dir() finding: the decrypted plaintext is staged inside the
- * 0700 sync/identity directory and locked to 0600, never in
- * sys_get_temp_dir().
- */
+// The decrypted plaintext is staged inside the 0700 identity directory and
+// locked to 0600. It used to land in the system temp directory, where any
+// local process could read a device's secret keys off disk.
 
 function loaderIdentityUser(string $username = 'loader-identity-user'): User
 {
@@ -85,11 +81,8 @@ it('never stages the decrypted plaintext in sys_get_temp_dir(), and cleans it up
 it('returns null when sync was never enabled for the user (no key-file)', function (): void {
     $user = loaderIdentityUser('loader-never-enabled');
 
-    // RefreshDatabase resets the DB but not real on-disk storage/app files —
-    // an earlier test run may have left a key-file behind for this same
-    // (reused) user id. Ensure the precondition this test actually cares
-    // about — "no key-file exists for this user" — holds regardless of
-    // leftover state from prior runs.
+    // RefreshDatabase resets the database but not on-disk files, and user ids
+    // are reused across runs, so an earlier run's key-file can still be there.
     @unlink(UserDataPathService::appPath("sync/identity/{$user->id}.enc"));
 
     /** @var DeviceIdentityLoader $loader */
@@ -112,7 +105,6 @@ it('returns null when the app-lock KEK is unavailable', function (): void {
 
     $service->generateAndPersist((int) $user->id, $session);
 
-    // A fake AppLockKeyService whose release() returns null (locked / no app-lock).
     $this->app->bind(AppLockKeyService::class, fn () => new class extends AppLockKeyService
     {
         public function __construct() {}

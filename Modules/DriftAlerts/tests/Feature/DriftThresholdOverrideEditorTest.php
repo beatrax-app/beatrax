@@ -6,19 +6,11 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
-use Modules\DriftAlerts\Internal\Http\Livewire\DriftThresholdEditor;
+use Modules\DriftAlerts\Public\Http\Livewire\DriftThresholdEditor;
 use Modules\Recurring\Public\Actions\SetDriftThresholdForSeries;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 uses(RefreshDatabase::class);
-
-/*
- * Per-series drift threshold override editor tests. Mounts on /drift
- * grouped-by-series headers AND on /recurring/series/{id}; saves go
- * through the Recurring-side SetDriftThresholdForSeries Public Action
- * so the noRecurringSeriesWritesFromDriftAlerts arch invariant stays
- * green.
- */
 
 function dteUser(string $username): User
 {
@@ -116,11 +108,8 @@ it('silently rejects invalid threshold values and leaves the DB row untouched', 
     $user = dteUser('dte-invalid');
     $seriesId = dteSeries($user, ['drift_threshold_percent' => 10]);
 
-    // 7 is not one of the popover's allowed values
-    // (DriftThresholdEditor::OPTIONS). The component rejects the
-    // payload silently so a tampered Livewire request cannot surface
-    // a noisy InvalidArgumentException on the user's screen, and the
-    // DB row stays at its prior value of 10.
+    // 7 is not in DriftThresholdEditor::OPTIONS. Rejected silently so a tampered
+    // Livewire payload cannot surface an exception on the user's screen.
     Livewire::actingAs($user)
         ->test(DriftThresholdEditor::class, ['recurringSeriesId' => $seriesId])
         ->call('save', 7)
@@ -133,11 +122,8 @@ it('silently rejects non-numeric strings on save and leaves the DB row untouched
     $user = dteUser('dte-non-numeric');
     $seriesId = dteSeries($user, ['drift_threshold_percent' => 10]);
 
-    // A tampered Livewire payload could pass the string "abc". Before
-    // the input guard a `(int) "abc"` coercion would have produced 0
-    // and then the Public Action would have raised
-    // InvalidArgumentException; the component now rejects the value
-    // before it reaches the action.
+    // Without the input guard, `(int) "abc"` coerced to 0 and the Public Action
+    // then raised InvalidArgumentException.
     Livewire::actingAs($user)
         ->test(DriftThresholdEditor::class, ['recurringSeriesId' => $seriesId])
         ->call('save', 'abc')

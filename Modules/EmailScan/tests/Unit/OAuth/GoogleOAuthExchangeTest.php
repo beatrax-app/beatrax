@@ -16,16 +16,9 @@ use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
 uses(RefreshDatabase::class);
 
-/**
- * The token exchange and refresh, driven through a mocked transport.
- *
- * These paths were unreachable until OAuthProviderFactory took over building
- * the League provider: the HTTP client is a collaborator League accepts, and
- * the factory is the only place that can hand it one. What is exercised here
- * is the part this codebase owns — reading the token, resolving the account
- * email, and deciding whether a failure means "retry" or "the user must
- * reconnect".
- */
+// What is exercised here is the part this codebase owns: reading the token,
+// resolving the account email, and deciding whether a failure means "retry" or
+// "the user must reconnect".
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'wessel',
@@ -40,9 +33,6 @@ beforeEach(function (): void {
 });
 
 /**
- * Binds a GoogleOAuthProvider whose League provider answers from the queue
- * rather than from Google.
- *
  * @param  array<int, Response>  $responses
  */
 function googleProviderReturning(array $responses): GoogleOAuthProvider
@@ -112,10 +102,9 @@ it('refreshes an access token without needing a fresh authorization', function (
 });
 
 it('reports a rejected refresh as needing reconsent, not as a transient failure', function (): void {
-    // invalid_grant is the one refresh failure a retry can never fix: the user
-    // revoked access or changed their password, and the only way forward is a
-    // new consent. Mapping it to the same exception as a 500 would leave the
-    // inbox retrying a token that will never work again.
+    // invalid_grant is the one refresh failure a retry can never fix. Mapping
+    // it to the same exception as a 500 would leave the inbox retrying a token
+    // that will never work again.
     $provider = googleProviderReturning([
         new Response(400, ['Content-Type' => 'application/json'], (string) json_encode([
             'error' => 'invalid_grant',

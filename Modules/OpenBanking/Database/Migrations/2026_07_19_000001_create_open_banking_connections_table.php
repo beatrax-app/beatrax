@@ -2,37 +2,12 @@
 
 declare(strict_types=1);
 
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Creates open_banking_connections — one row per linked Enable Banking
- * connection (Req 3/7/8), keyed on (user_id, institution_id).
- *
- * METADATA ONLY. `application_id`, the RSA private-key PEM, `session_id`,
- * and the resolved bank SCA host live EXCLUSIVELY in the chmod-600
- * secrets file `OpenBankingSecretsRepository` writes at
- * storage/app/secrets/open-banking.json — never a DB column, because any
- * secret in SQLite would leak into DB backups (D-07 arch guard, enforced
- * by `OpenBankingSecretsFileGuardTest`'s migration-content grep test,
- * which this migration must keep passing).
- *
- * Two DISTINCT timestamp columns (RESEARCH.md Pitfall 5 — never
- * collapse to a single `last_sync_at`):
- *  - `last_successful_sync_at` — advances ONLY on a genuinely successful
- *    fetch; this is the sole "freshness" signal the settings page shows
- *    (Req 7's "never present stale data as fresh" invariant).
- *  - `last_attempt_at` — advances on every attempt, success or failure,
- *    so a failing scheduled sync is visible independently of the last
- *    time data actually refreshed. `last_attempt_status` carries a short
- *    machine-readable outcome string for the same attempt.
- *
- * `enabled` defaults to false — Req 4/D-12 requires the user to
- * acknowledge a loud third-party-data warning (Wave 3's settings page)
- * before this flips true; completing the consent dance (this plan) never
- * enables the connection by itself.
- */
+// Metadata only: no credential column may ever be added to this table,
+// since a secret in SQLite would leak into every DB backup the user takes.
+// OpenBankingSecretsFileGuardTest greps this file to enforce that.
 return new class extends ModuleMigration
 {
     public function up(): void

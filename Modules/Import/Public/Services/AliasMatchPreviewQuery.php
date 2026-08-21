@@ -8,9 +8,6 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Import\Public\Dto\AliasMatchPreviewResultDto;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/import/architecture.md#merchant-aliases
- */
 final class AliasMatchPreviewQuery
 {
     private const MIN_PATTERN_LENGTH = 3;

@@ -6,9 +6,6 @@ namespace Modules\Core\Public\Events;
 
 use Illuminate\Foundation\Events\Dispatchable;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class UpdateInstallRequested
 {
     use Dispatchable;

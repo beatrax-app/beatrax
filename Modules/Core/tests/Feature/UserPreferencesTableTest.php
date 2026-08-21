@@ -8,22 +8,6 @@ use Illuminate\Support\Facades\Schema;
 use Modules\Core\Models\User;
 use Modules\Core\Models\UserPreference;
 
-/*
- * Schema + Eloquent coverage for the shared `user_preferences` table.
- *
- * The table is the per-user single-row preference store; downstream
- * domain modules extend it with their own additive column-add
- * migrations. The foundation migration owns three invariants only:
- *
- *   1. The column list is exactly (id, user_id, created_at, updated_at).
- *   2. user_id is UNIQUE — one preference row per user.
- *   3. Deleting a user cascades the matching user_preferences row.
- *
- * The UserPreference Eloquent model carries the BelongsToUser global
- * scope so any Eloquent surface that reaches this model inside an
- * authenticated request is automatically scoped to the current user.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -50,12 +34,9 @@ it('creates the user_preferences table with the foundation column list (plus any
 
     $cols = Schema::getColumnListing('user_preferences');
 
-    // The foundation migration owns these four columns; additive
-    // column-add migrations from downstream domain modules (e.g.
-    // `skipped_update_versions` for the auto-update banner) extend
-    // the table over time. The test asserts presence rather than
-    // strict equality so the foundation contract survives any
-    // future additive column without a coordinated rewrite.
+    // Presence, not strict equality: downstream modules add columns additively,
+    // so the foundation contract survives a new column without a coordinated
+    // rewrite here.
     foreach (['id', 'user_id', 'created_at', 'updated_at'] as $expected) {
         expect($cols)->toContain($expected);
     }
@@ -109,13 +90,11 @@ it('scopes UserPreference Eloquent queries to the authenticated user via Belongs
         ],
     ]);
 
-    // Acting as user A: Eloquent reads only user A's row.
     $this->actingAs($this->userA);
     $rowsForA = UserPreference::query()->get();
     expect($rowsForA)->toHaveCount(1);
     expect($rowsForA->first()?->user_id)->toBe($this->userA->id);
 
-    // Acting as user B: Eloquent reads only user B's row.
     $this->actingAs($this->userB);
     $rowsForB = UserPreference::query()->get();
     expect($rowsForB)->toHaveCount(1);

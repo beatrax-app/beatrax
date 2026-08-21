@@ -7,9 +7,8 @@ namespace Modules\Desktop\Internal\Listeners;
 use Modules\Desktop\Public\Events\NotificationDeepLink;
 use Native\Desktop\Facades\Window;
 
-// $screenRoute is always an app-emitted URL (never user input) — see
-// DispatchOsNotification, the sole producer. Destination screens still
-// sit behind auth, so a click can never reach another user's data.
+// $screenRoute is always an app-emitted URL, never user input — DispatchOsNotification
+// is the sole producer, and every destination still sits behind auth.
 final class NavigateOnNotificationDeepLink
 {
     public function handle(NotificationDeepLink $event): void

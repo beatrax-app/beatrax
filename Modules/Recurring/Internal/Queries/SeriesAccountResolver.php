@@ -10,12 +10,7 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use stdClass;
 
 // recurring_series carries no account column, so the originating account is
-// derived from the most recent occurrence and the transaction it points at,
-// with a fallback for series the detector has not emitted occurrences for.
-// It sits beside RecurringSeriesQuery because folding it in cost 27 complexity.
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
+// derived from the newest occurrence and the transaction it points at.
 final readonly class SeriesAccountResolver
 {
     use CoercesScalars;
@@ -58,8 +53,7 @@ final readonly class SeriesAccountResolver
             /** @var stdClass $row */
             $seriesId = self::toInt($row->series_id);
 
-            // The first row per series wins: the ORDER BY above puts the most
-            // recent occurrence first, so a later row is an older one.
+            // First row per series wins: the ORDER BY puts the newest first.
             if ($seriesId > 0 && ! isset($map[$seriesId])) {
                 $map[$seriesId] = self::toInt($row->account_id);
             }
@@ -68,9 +62,8 @@ final readonly class SeriesAccountResolver
         return $map;
     }
 
-    // Series with no occurrences yet take the user's alphabetically first
-    // account so projections still produce sensible output. Ownership is
-    // re-checked here, so a cross-user or deleted id gets no fallback at all.
+    // Ownership is re-checked here, so a cross-user or deleted id gets no
+    // fallback account at all.
     /**
      * @param  list<int>  $seriesIds
      * @return array<int, int>

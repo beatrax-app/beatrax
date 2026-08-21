@@ -6,6 +6,7 @@ namespace Modules\Notifications\Internal\Listeners;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\EmailScan\Public\Events\IcsStatementReady;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Internal\Support\NotificationCopyRenderer;
@@ -15,9 +16,6 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\Routing\Exception\RouteNotFoundException;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final class PersistIcsStatementReady
 {
     public function __construct(
@@ -29,9 +27,7 @@ final class PersistIcsStatementReady
 
     public function handle(IcsStatementReady $event): void
     {
-        // Resolve the deep link FIRST, tolerating a missing route
-        // (OpenBanking is optional and may be disabled/unregistered).
-        // Evaluating route() inside the write() call would let a
+        // Resolved first: a route() call inside write() would let a
         // RouteNotFoundException abort the persist entirely.
         $deepLinkRoute = $this->resolveDeepLinkRoute();
 
@@ -48,18 +44,14 @@ final class PersistIcsStatementReady
             ));
             $this->writer->write($draft);
         } catch (Throwable $e) {
-            // Swallow - a failed persist must never break the
-            // originating detector job run.
+            // A failed persist must never break the detector job run.
             $this->log->error('PersistIcsStatementReady: failed to persist nudge', [
-                'exception' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
                 'userId' => $event->userId,
             ]);
         }
     }
 
-    // The ICS nudge is conceptually independent of the OpenBanking
-    // module, so a missing route (module disabled/route unregistered)
-    // must degrade to "no deep link", never stop the row being written.
     private function resolveDeepLinkRoute(): ?string
     {
         try {

@@ -9,20 +9,6 @@ use Modules\Calendar\Internal\Http\Livewire\CalendarPage;
 use Modules\Core\Models\User;
 use Modules\Recurring\Models\RecurringSeries;
 
-/*
- * CalendarPage — day-panel drill-through links (CAL-03).
- *
- * RED state (Phase 6 Plan 01): CalendarPage does not yet render the day
- * panel or drill-through links; these tests will fail until Plan 02/03.
- *
- * Contract being tested:
- *   - Each day-panel entry row exposes a link to /recurring/series/{seriesId}.
- *   - When counterpartyIdForSeries resolves a counterparty, the entry also
- *     exposes a link to /counterparties/{slug}.
- *   - Cross-user isolation: foreign seriesIds in the URL cannot expose
- *     another user's series data (the page guards via user-scoped queries).
- */
-
 function cdtUser(string $suffix = 'cdt'): User
 {
     return User::query()->create([
@@ -78,13 +64,12 @@ it('renders a link to /recurring/series/{seriesId} for each day-panel entry', fu
         ->assertSee('/recurring/series/'.$series->id, false);
 });
 
-it('ignores an impossible tampered selectDay date instead of throwing (WR-06)', function (): void {
+it('ignores an impossible tampered selectDay date instead of throwing', function (): void {
     $user = cdtUser('cdt-tamper-date');
     cdtSeries($user, 'Tamper Series');
 
-    // "2026-13-01" / "2026-99-99" pass the shape regex but are not real
-    // dates — CarbonImmutable::parse() would throw InvalidFormatException.
-    // The action must no-op, not 500.
+    // These pass the shape regex but are not real dates, so
+    // CarbonImmutable::parse() would throw and the page would 500.
     Livewire::actingAs($user)
         ->test(CalendarPage::class, ['month' => 6, 'year' => 2026])
         ->call('selectDay', '2026-13-01')
@@ -101,8 +86,8 @@ it('renders a link to /counterparties/{slug} when the series has a resolved coun
     $series = cdtSeries($user, 'Counterparty Series');
     $cpId = cdtCounterparty($db, $user->id, 'spotify-drill', 'Spotify Drill');
 
-    // Wire the counterparty to the series via cluster_counterparty_key
-    // (RecurringSeriesQuery::counterpartyIdForSeries uses this to look up the counterparty)
+    // RecurringSeriesQuery::counterpartyIdForSeries resolves through
+    // cluster_counterparty_key, not a foreign key.
     $db->connection()->table('recurring_series')
         ->where('id', $series->id)
         ->update(['cluster_counterparty_key' => 'spotify-drill']);

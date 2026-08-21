@@ -2,15 +2,11 @@
 
 declare(strict_types=1);
 
-use Modules\Receipts\Public\Exceptions\FileDropBlobWriteException;
+use Modules\Receipts\Internal\Exceptions\FileDropBlobWriteException;
 
-/*
- * Each named factory carries the failure point in its message so an
- * operator reading the queue-worker log can tell a refused chmod from a
- * short write from a rename that could not land — the whole reason the
- * write path names its faults rather than throwing a bare
- * RuntimeException.
- */
+// The write path names each fault rather than throwing a bare RuntimeException
+// so an operator reading the worker log can tell a refused chmod from a short
+// write from a rename that never landed.
 
 it('names the newly-created-directory chmod failure', function (): void {
     $e = FileDropBlobWriteException::chmodDirectoryFailed('/var/inbox/9/2026/05');

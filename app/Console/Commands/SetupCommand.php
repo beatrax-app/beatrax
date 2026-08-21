@@ -17,10 +17,8 @@ use function Laravel\Prompts\password;
 use function Laravel\Prompts\select;
 use function Laravel\Prompts\text;
 
-// Walks a self-hoster through writing .env (app URL, an application key,
-// a database connection), verifies the database is reachable, and offers
-// to hand off to beatrax:install. Idempotent and re-runnable: existing
-// .env values are offered as the prompt defaults.
+// Re-runnable: existing .env values become the prompt defaults, so a
+// second run edits rather than overwrites.
 final class SetupCommand extends Command
 {
     protected $signature = 'beatrax:setup';
@@ -77,9 +75,8 @@ final class SetupCommand extends Command
         }
 
         if (confirm(label: 'Run database migrations and create your user now (beatrax:install)?', default: true)) {
-            // Run in a FRESH process: this process loaded .env once at boot, so
-            // calling beatrax:install in-process would migrate against the OLD
-            // (boot-time) database connection, not the one just written.
+            // A fresh process: .env was read once at boot, so an in-process
+            // call would migrate against the old connection, not the new one.
             note('Running beatrax:install in a fresh process so it reads the new .env…');
             $exitCode = 0;
             passthru(escapeshellarg(PHP_BINARY).' '.escapeshellarg($this->laravel->basePath('artisan')).' beatrax:install', $exitCode);
@@ -184,10 +181,9 @@ final class SetupCommand extends Command
         $lines = $contents === '' ? [] : explode("\n", rtrim(str_replace("\r\n", "\n", $contents), "\n"));
 
         foreach ($values as $key => $value) {
-            // Replace the existing line by array assignment (not preg_replace,
-            // whose replacement string would treat `$1`/`\1` in a password as
-            // backreferences). Match a live OR commented occurrence so a
-            // `# DB_HOST=` template line gets set rather than duplicated.
+            // Array assignment, not preg_replace, whose replacement would read
+            // `$1` in a password as a backreference. A commented occurrence
+            // matches too, so a `# DB_HOST=` line is set, not duplicated.
             $line = $key.'='.$this->encodeEnvValue($value);
             $pattern = '/^#?\s*'.preg_quote($key, '/').'=/';
             $replaced = false;
@@ -214,15 +210,12 @@ final class SetupCommand extends Command
             return '';
         }
 
-        // No quoting needed when the value has no shell/dotenv-special
-        // characters.
         if (preg_match('/[\s#"\'$\\\\]/', $value) === 0) {
             return $value;
         }
 
-        // Double-quote and escape so the app's own DotEnv parser reads back the
-        // exact value: backslash first, then quote, then `$` (so a password
-        // like `a${b}` is not treated as ${} interpolation).
+        // Escaped backslash, then quote, then `$`, so DotEnv reads back the
+        // exact value and a password like `a${b}` is not interpolated.
         $escaped = str_replace(['\\', '"', '$'], ['\\\\', '\\"', '\\$'], $value);
 
         return '"'.$escaped.'"';

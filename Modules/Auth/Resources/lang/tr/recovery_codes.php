@@ -8,6 +8,7 @@ return [
     'subtitle' => 'Bunları yazdır veya güvenli bir yere kaydet. Bir daha gösterilmeyecek.',
     'copy' => 'Kodları kopyala',
     'copied' => 'Kopyalandı',
+    'copy_failed' => 'Kopyalanamadı. Kodları not edin.',
     'download' => '.txt olarak indir',
 
     'saved_as' => 'beatrax-recovery-codes-:username.txt olarak kaydedildi',

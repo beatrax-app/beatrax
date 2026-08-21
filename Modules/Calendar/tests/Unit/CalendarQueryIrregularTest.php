@@ -8,27 +8,8 @@ use Modules\Calendar\Internal\Services\CalendarQuery;
 use Modules\Core\Models\User;
 use Modules\Recurring\Models\RecurringSeries;
 
-/*
- * CalendarQuery — irregular-cadence series placement (CAL-01 edge).
- *
- * RED state (Phase 6 Plan 01): CalendarQuery does not exist yet;
- * it arrives in Plan 02. These tests establish the contract that
- * CalendarQuery must honour:
- *
- *   1. An irregular-cadence series with nextExpectedAt=null is excluded
- *      from all calendar dates — no entry is placed.
- *   2. An irregular-cadence series with nextExpectedAt inside the
- *      display window appears exactly once on that date.
- *   3. An irregular-cadence series with nextExpectedAt outside the
- *      display window does not appear.
- *
- * The gate (Pitfall 4 in RESEARCH.md): CalendarQuery must gate on
- * `$series->cadence !== 'irregular' || $series->nextExpectedAt !== null`
- * to avoid null-pointer errors and phantom date placements.
- *
- * Fixtures: cross-user isolation — every query scopes to user_id.
- */
-
+// The gate is `cadence !== 'irregular' || nextExpectedAt !== null`: an
+// irregular series with no expected date must never land on a phantom date.
 function cqirUser(string $suffix = 'cqir'): User
 {
     return User::query()->create([
@@ -111,7 +92,6 @@ it('places an irregular-cadence series with nextExpectedAt inside the window exa
 
 it('excludes an irregular-cadence series with nextExpectedAt outside the display window', function (): void {
     $user = cqirUser('cqir-out-window');
-    // nextExpectedAt is in July — outside the June display window
     cqirSeries($user, 'irregular', CarbonImmutable::parse('2026-07-15'), 'irregular-out-of-window');
 
     /** @var CalendarQuery $calendarQuery */
@@ -137,7 +117,6 @@ it('does not leak irregular-cadence entries across users', function (): void {
     $owner = cqirUser('cqir-owner');
     $other = cqirUser('cqir-other');
 
-    // Other user's irregular series falls in the window
     cqirSeries($other, 'irregular', CarbonImmutable::parse('2026-06-20'), 'other-irregular');
 
     /** @var CalendarQuery $calendarQuery */

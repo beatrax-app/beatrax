@@ -6,9 +6,6 @@ namespace Modules\OpenBanking\Internal\Adapters\EnableBanking;
 
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../../.docs/features/open-banking/architecture.md
- */
 final class EnableBankingTransactionData extends Data
 {
     /**

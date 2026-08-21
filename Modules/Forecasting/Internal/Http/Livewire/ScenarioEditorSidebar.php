@@ -22,9 +22,6 @@ use Modules\Forecasting\Public\Services\ScenarioQuery;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../../.docs/features/forecasting/architecture.md
- */
 final class ScenarioEditorSidebar extends Component
 {
     use BuildsMutationForms;
@@ -205,9 +202,8 @@ final class ScenarioEditorSidebar extends Component
         try {
             ($action)($mutationId, $currentUser->user());
         } catch (NotFoundHttpException) {
-            // Already gone — a concurrent removal or a stale mutation id
-            // both resolve to the same "nothing left to remove" outcome,
-            // so the not-found is swallowed and the list still refreshes.
+            // Already gone. A concurrent removal and a stale id reach the
+            // same outcome, so the refresh below still has to run.
         }
         $this->refreshMutations($scenarioQuery, $currentUser);
         $this->toast(Lang::get('forecasting::scenario.toast.mutation_removed'));
@@ -271,9 +267,8 @@ final class ScenarioEditorSidebar extends Component
         try {
             ($action)($this->scenarioId, $currentUser->user());
         } catch (NotFoundHttpException) {
-            // Already deleted — treat a not-found scenario as success so
-            // the toast, event dispatch and cleanup below still run for
-            // the stale-id case.
+            // Already deleted, which is the asked-for outcome, so the toast
+            // and cleanup below still have to run.
         }
         $this->confirmingDeleteScenario = null;
         $this->toast(Lang::get('forecasting::scenario.toast.deleted'));

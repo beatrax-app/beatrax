@@ -28,7 +28,11 @@ return [
     'recovery_download' => 'Letöltés .txt fájlként',
     'recovery_copy' => 'Kódok másolása',
     'recovery_copied' => 'Másolva',
+    'recovery_copy_failed' => 'A másolás nem sikerült. Írja le a kódokat.',
     'recovery_saved' => 'Elmentve a letöltéseid közé.',
+    'recovery_share_title' => 'Beatrax helyreállítási kódok',
+    'recovery_share_message' => 'Tartsa ezeket biztonságos helyen.',
+    'recovery_save_failed' => 'A fájl mentése nem sikerült. Írja le a kódokat.',
     'recovery_confirm' => 'Biztonságos helyre mentettem ezeket a kódokat.',
     'continue_to_pairing' => 'Tovább a párosításhoz',
 

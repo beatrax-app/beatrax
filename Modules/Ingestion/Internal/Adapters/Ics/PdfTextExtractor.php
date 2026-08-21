@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ingestion\Internal\Adapters\Ics;
 
 use Modules\Core\Public\Support\UploadLimits;
-use Modules\Ingestion\Public\Exceptions\PdfExtractionFailed;
+use Modules\Ingestion\Internal\Exceptions\PdfExtractionFailed;
 use Spatie\PdfToText\Exceptions\BinaryNotFoundException;
 use Spatie\PdfToText\Exceptions\CouldNotExtractText;
 use Spatie\PdfToText\Exceptions\PdfNotFound;
@@ -13,7 +13,7 @@ use Spatie\PdfToText\Pdf;
 use Throwable;
 
 /**
- * @link ../../../../../.docs/features/ingestion/architecture.md
+ * @link ../../../../../.docs/features/ingestion/ics-pdf-text-extraction.md
  */
 class PdfTextExtractor
 {
@@ -38,9 +38,6 @@ class PdfTextExtractor
             ));
         }
 
-        // Defence-in-depth for callers that bypass the upload wizard's
-        // HeaderSniffer; Pdf::text() itself invokes Symfony Process with an
-        // argv array so $pdfPath never enters a shell-string regardless.
         if (preg_match('/\.pdf$/i', $pdfPath) !== 1) {
             throw new PdfExtractionFailed(
                 'PDF extraction requires a .pdf file.',
@@ -77,9 +74,6 @@ class PdfTextExtractor
                 $e,
             );
         } catch (Throwable $e) {
-            // Any underlying Symfony Process or other I/O error surfaces as
-            // PdfExtractionFailed so the upload pipeline can render a single
-            // user-facing message rather than a stack trace.
             throw new PdfExtractionFailed(
                 sprintf('PDF extraction failed: %s', $e->getMessage()),
                 0,

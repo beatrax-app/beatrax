@@ -6,18 +6,11 @@ namespace Modules\Categorization\Internal\Http\Livewire\Concerns;
 
 use Modules\Core\Public\Support\Lang;
 
-// The form's own validation pass, distinct from the backend action's: it
-// records every row's problem on its per-row error property in a single
-// sweep so the whole form surfaces its faults at once, then reports pass or
-// fail. Reads and writes the RuleFormModal state it is composed into.
-/**
- * @link ../../../../../../.docs/features/categorization/architecture.md
- */
+// The form's own pass, distinct from the backend action's: it records every
+// row's problem on that row's error property in one sweep, so a submit surfaces
+// the whole form's faults rather than one per attempt.
 trait ValidatesRuleForm
 {
-    // Returns the parsed priority, or null when any field failed validation —
-    // every row error is recorded on its own property first so the whole form
-    // surfaces its problems in one pass rather than one per submit.
     private function validatedPriority(): ?int
     {
         $trimmedPriority = trim($this->priorityInput);

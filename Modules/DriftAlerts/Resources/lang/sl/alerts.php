@@ -57,6 +57,7 @@ return [
         'meta_eur_equiv' => '(≈ :amount/leto)',
         'cancel_impact' => 'Prekliči to → prihrani :amount/leto',
         'cadence_flipped' => 'Pogostost se je spremenila — prikazuje se tudi v',
+        'cadence_flipped_link' => 'Pregled ponavljajočih se',
         'acknowledge' => 'Potrdi',
         'acknowledge_aria' => 'Potrdi opozorilo o odstopanju :id',
         'snooze' => 'Odloži ▾',

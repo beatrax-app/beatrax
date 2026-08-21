@@ -14,14 +14,6 @@ use Modules\Ledger\Public\Services\PeriodQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * Wave 0 RED stub for Req 5 (13.2-VALIDATION.md): move-money between
- * envelopes, undo, and the deliberate absence of any balance guard (Req 8 /
- * RESEARCH Pitfall 1). EnvelopeWriter::move()/undoMove() (Plan 04) do not
- * exist yet -- expected to fail on the missing class/method, never a parse
- * error.
- */
-
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'move-'.bin2hex(random_bytes(4)),
@@ -35,18 +27,15 @@ beforeEach(function (): void {
 
     $this->period = app(PeriodQuery::class)->current();
 
-    // Genesis anchor (D-12b, mirrors CarryoverQueryTest's fixture): this
-    // test exercises CarryoverQuery::forUserAndPeriod() to observe
-    // before/after available balances, which returns an all-zero result for
-    // a pre-cutover user (null envelope_activated_at). Stamping the current
-    // period as the activation month keeps this test's own moves inside the
-    // fold without depending on the separate Plan 06 cutover migration.
+    // CarryoverQuery returns all zeros for a null `envelope_activated_at`, so
+    // stamping the current period as the activation month keeps this file's
+    // moves inside the fold without depending on the cutover migration.
     DB::table('users')->where('id', $this->user->id)->update([
         'envelope_activated_at' => CarbonImmutable::now()->startOfMonth(),
     ]);
 });
 
-it('moves €20 A→B: A available drops €20, B available rises €20, to-budget is unchanged (Req 5)', function (): void {
+it('moves €20 A→B: A available drops €20, B available rises €20, to-budget is unchanged', function (): void {
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->period->start, 50000);
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->dining->id, $this->period->start, 10000);
 
@@ -85,7 +74,7 @@ it('undoes a move, restoring both envelopes to their pre-move values', function 
     expect(DB::table('envelope_moves')->where('category_id', $this->groceries->id)->where('counterpart_category_id', $this->dining->id)->count())->toBe(0);
 });
 
-it('permits a move that leaves the source envelope negative -- never balance-blocked (Req 8 / Pitfall 1)', function (): void {
+it('permits a move that leaves the source envelope negative -- never balance-blocked', function (): void {
     // No assignment at all: Groceries available is 0 before the move.
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->dining->id, $this->period->start, 10000);
 
@@ -96,7 +85,7 @@ it('permits a move that leaves the source envelope negative -- never balance-blo
     expect($after['rows'][$this->groceries->id]->availableMinor)->toBe(-2000);
 });
 
-it('undoes the exact paired rows via move_group_id when two identical moves share a wall-clock second (WR-04)', function (): void {
+it('undoes the exact paired rows via move_group_id when two identical moves share a wall-clock second', function (): void {
     // Freeze the clock so both moves get an identical second-precision
     // created_at — the ambiguity that previously let undoMove() delete the
     // wrong counterpart.
@@ -108,7 +97,6 @@ it('undoes the exact paired rows via move_group_id when two identical moves shar
     $firstMoveId = app(EnvelopeWriter::class)->move($this->user, $this->groceries->id, $this->dining->id, $this->period->start, 2000);
     $secondMoveId = app(EnvelopeWriter::class)->move($this->user, $this->groceries->id, $this->dining->id, $this->period->start, 2000);
 
-    // Both debit rows share the same created_at but distinct group ids.
     $firstGroup = DB::table('envelope_moves')->where('id', $firstMoveId)->value('move_group_id');
     $secondGroup = DB::table('envelope_moves')->where('id', $secondMoveId)->value('move_group_id');
     expect($firstGroup)->not->toBeNull();
@@ -117,8 +105,6 @@ it('undoes the exact paired rows via move_group_id when two identical moves shar
 
     app(EnvelopeWriter::class)->undoMove($this->user, $firstMoveId);
 
-    // Exactly the first move's two rows are gone; the second move's pair
-    // (both its rows) survives intact — no orphaned half.
     expect(DB::table('envelope_moves')->where('move_group_id', $firstGroup)->count())->toBe(0);
     expect(DB::table('envelope_moves')->where('move_group_id', $secondGroup)->count())->toBe(2);
     expect(DB::table('envelope_moves')->count())->toBe(2);

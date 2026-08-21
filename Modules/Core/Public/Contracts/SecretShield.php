@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Core\Public\Contracts;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 interface SecretShield
 {
     /**

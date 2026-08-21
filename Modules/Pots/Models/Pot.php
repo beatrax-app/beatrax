@@ -13,8 +13,6 @@ use Modules\Ledger\Models\Account;
 use Modules\Pots\Database\Factories\PotFactory;
 
 /**
- * @link ../../../.docs/features/pots/architecture.md
- *
  * @property int $id
  * @property int|null $user_id
  * @property int $account_id

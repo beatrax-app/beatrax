@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Internal\Recovery;
 
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 final class RecoveryCodeGenerator
 {
     // Phone-readable alphabet -- 31 characters, excludes I, L, O, 0, 1

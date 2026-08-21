@@ -11,9 +11,6 @@ use Modules\Core\Public\Exceptions\BackupIoException;
 use SodiumException;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class BackupEncryptor implements FileEncryptor
 {
     private const MAGIC = 'BTRXENC1';
@@ -21,15 +18,13 @@ final class BackupEncryptor implements FileEncryptor
     private const CHUNK_SIZE = 65536;
 
     // The header is unauthenticated and read BEFORE the key is derived, so an
-    // unbounded opslimit/memlimit would be a pre-auth DoS (hang / OOM). 10 ops
-    // is well above any sane setting (SENSITIVE = 4); the mem cap is
-    // libsodium's own SENSITIVE tier (1 GiB).
+    // unbounded opslimit/memlimit is a pre-auth hang or OOM. 10 ops is far above
+    // any sane setting (SENSITIVE = 4); the mem cap is libsodium's own ceiling.
     private const MAX_OPSLIMIT = 10;
 
-    // Cost for a secret that is already a uniformly random key (see
-    // encryptWithKey). Argon2 is retained purely for domain separation and
-    // format compatibility; stretching a 256-bit key adds nothing, and
-    // MODERATE cost ~500ms on every keyring read.
+    // encryptWithKey's secret is already a uniformly random key, so stretching
+    // it adds nothing; Argon2 is retained only for domain separation and format
+    // compatibility, and MODERATE cost would be ~500ms on every keyring read.
     private const KEY_OPSLIMIT = 1;
 
     private const KEY_MEMLIMIT = 8192;
@@ -213,9 +208,8 @@ final class BackupEncryptor implements FileEncryptor
 
     private function deriveKey(string $passphrase, string $salt, int $opslimit, int $memlimit): string
     {
-        // Reject out-of-range KDF parameters BEFORE deriving — the header they
-        // come from is attacker-controllable, and an unbounded memlimit/opslimit
-        // would let a corrupt/hostile file OOM or hang the process pre-auth.
+        // The header these come from is attacker-controllable, so they are
+        // range-checked before any derivation runs.
         if ($opslimit <= 0 || $opslimit > self::MAX_OPSLIMIT
             || $memlimit <= 0 || $memlimit > SODIUM_CRYPTO_PWHASH_MEMLIMIT_SENSITIVE) {
             throw new BackupFormatException('The backup header requests Argon2id parameters outside the accepted range.');

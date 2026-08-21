@@ -7,6 +7,10 @@ return [
 
     'subtitle_html' => 'Ortam + runtime + geçerli yapılandırma. Hassas anahtarlar (<code class="font-mono text-xs">*password*</code>, <code class="font-mono text-xs">*secret*</code>, <code class="font-mono text-xs">*key</code>, <code class="font-mono text-xs">*token*</code> ekleriyle bitenler) maskelenir.',
     'php' => 'PHP',
+    'php_version' => 'sürüm',
+    'php_sapi' => 'sapi',
+    'php_ini_path' => 'ini yolu',
+    'php_extensions' => 'uzantılar',
     'laravel' => 'Laravel',
     'sqlite' => 'SQLite',
     'sqlite_file' => 'dosya',

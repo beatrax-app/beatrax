@@ -25,6 +25,8 @@ return [
     'no_entries' => 'No manual entries yet.',
     'delete_entry' => 'Delete entry',
     'delete' => 'Delete',
+    'delete_confirm' => 'Delete this entry?',
+    'delete_keep' => 'Keep',
 
     'errors' => [
         'amount_positive' => 'Enter an amount greater than zero.',

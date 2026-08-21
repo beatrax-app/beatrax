@@ -7,10 +7,8 @@ namespace Modules\EmailScan\Public\Dto;
 use DateTimeImmutable;
 use Spatie\LaravelData\Data;
 
-// Single row from inbox_messages, in the shape the downstream parser
-// iterates. internalDate is the provider-stamped message time;
-// fetchedAt is when the fetcher persisted the .eml. status is the
-// lifecycle handoff — this module only ever writes 'fetched'.
+// $internalDate is the provider's stamp, $fetchedAt ours. $status is the
+// handoff to the parser; this module only ever writes 'fetched'.
 final class InboxMessageDto extends Data
 {
     public function __construct(

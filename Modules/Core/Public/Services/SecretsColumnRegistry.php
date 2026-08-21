@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Core\Public\Services;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class SecretsColumnRegistry
 {
     // Anchors the noSecretsInLivewireSnapshot arch invariant: every concrete

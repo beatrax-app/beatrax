@@ -110,7 +110,7 @@ proves it:
 
 If the module is the sole mutator of a state column or owns a
 read-only contract enforced by an arch invariant, name the invariant
-explicitly here (e.g. `noResolverWritesTransactions`,
+explicitly here (e.g. `crossModuleRawTableWrites`,
 `RecurringSeriesStateMachine is the sole mutator of recurring_series.state`).
 
 ## Edge cases

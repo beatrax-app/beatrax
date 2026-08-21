@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-// Series in state='rejected' (the user explicitly dismissed the
-// suggestion) with a +20% underlying drift. Drift detection skips
-// rejected series entirely. Zero alerts.
+// The underlying +20% movement is real; a rejected series is skipped entirely.
 
 $transactions = [];
 $amounts = [-999, -999, -999, -1199, -1199, -1199];

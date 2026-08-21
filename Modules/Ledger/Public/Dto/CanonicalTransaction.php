@@ -9,9 +9,6 @@ use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Public\Enums\ClearedStatus;
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/ledger/architecture.md
- */
 final class CanonicalTransaction extends Data
 {
     /**

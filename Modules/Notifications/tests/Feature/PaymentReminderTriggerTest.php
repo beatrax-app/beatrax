@@ -13,17 +13,9 @@ use Modules\Recurring\Internal\Jobs\EmitPaymentRemindersJob;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
-/*
- * Req 4 — upcoming fixed-payment reminders. Exercises
- * EmitPaymentRemindersJob end-to-end: series inside/outside the lead-time
- * window, the D-15 lead-time preference (passed as a constructor arg —
- * Recurring never reads Modules\Notifications), the D-17 confident/hedged
- * title pair, and the D-06 due-date occurrence key surviving a fire-date
- * shift.
- *
- * Event dispatch is wrapped in SuppressionEvaluator::suppressDelivery()
- * (D-43) so no test ever attempts a real OS notification.
- */
+// The lead time is a constructor argument because Recurring never reads
+// Modules\Notifications. Dispatch runs inside suppressDelivery() so no case
+// here attempts a real OS notification.
 
 function prtUser(string $username): User
 {
@@ -164,9 +156,8 @@ it('keys the occurrence on the due date, so a fire-date shift does not fracture 
     prtRunJob($user, 3);
     expect(prtNotificationCount($user->id))->toBe(1);
 
-    // Advance the fire date by one day; the due date on the series row is
-    // unchanged, so the same notification id is re-derived and the write
-    // is a no-op (D-06).
+    // The fire date moves but the series' due date does not, so the same id
+    // is re-derived and the write is a no-op.
     CarbonImmutable::setTestNow('2026-07-21 09:15:00');
     prtRunJob($user, 3);
 

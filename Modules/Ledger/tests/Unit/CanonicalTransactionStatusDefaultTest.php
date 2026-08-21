@@ -5,17 +5,6 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
-/*
- * Wave 0 RED stub (D-03, GREEN in 13.3-02). `CanonicalTransaction::toAttributes()`
- * currently hardcodes `'status' => 'cleared'` unconditionally
- * (Modules/Ledger/Public/Dto/CanonicalTransaction.php:310). Per D-03, every
- * institution-imported source (camt053/mt940/asn-csv/ics/paypal/demo/etc)
- * defaults to `cleared`; the synthetic `manual` cash-book source (the sole
- * current producer of `sourceFormat: 'manual'`, per
- * Modules/CashBook/Internal/Actions/RecordManualTransaction.php:93) must
- * default to `uncleared` instead.
- */
-
 it('defaults institution-imported rows to cleared', function (): void {
     $today = CarbonImmutable::parse('2026-07-04');
 

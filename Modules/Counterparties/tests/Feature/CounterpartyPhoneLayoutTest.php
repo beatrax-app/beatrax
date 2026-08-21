@@ -2,18 +2,14 @@
 
 declare(strict_types=1);
 
-/*
- * Both surfaces below were unreachable on device until /counterparties
- * stopped throwing IntlException, which is how their phone layout went
- * unlooked-at. A counterparty card is ~290px wide there and carries two
- * amounts with their labels; a profile tab halved that again.
- */
+// A counterparty card is ~290px wide on a phone and carries two amounts with
+// their labels; a profile tab halves that again.
 
 it('keeps an amount on the card from breaking mid-number', function (): void {
     $css = (string) file_get_contents(base_path('resources/css/app.css'));
 
-    // Without both halves the row broke inside a number — "€ 3.750," on one
-    // line and "00" on the next.
+    // Without both halves the row broke inside a number: "€ 3.750," on one
+    // line, "00" on the next.
     expect($css)->toContain(".cp-stats .value,\n    .cp-stats .label {\n        white-space: nowrap;\n    }")
         ->and($css)->toContain("    .cp-stats {\n        display: flex;\n        align-items: baseline;\n        flex-wrap: wrap;");
 });

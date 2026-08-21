@@ -12,26 +12,15 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
+use Modules\OpenBanking\Internal\Contracts\RemoteSourceAdapter;
+use Modules\OpenBanking\Internal\Dto\FetchWindow;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Events\OpenBankingConsentFailed;
+use Modules\OpenBanking\Internal\Exceptions\EnableBankingApiException;
 use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingSettingsPage;
-use Modules\OpenBanking\Public\Contracts\RemoteSourceAdapter;
-use Modules\OpenBanking\Public\Dto\FetchWindow;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
-use Modules\OpenBanking\Public\Exceptions\EnableBankingApiException;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 
 uses(RefreshDatabase::class);
-
-/*
- * Manual "Sync now" action (19-12 Task 2, UI-SPEC Surface B6, Req 9):
- * `OpenBankingFetchService::preview()` (never `fetchAndConfirm()` — success
- * routes to the EXISTING consolidated import-preview page for the user to
- * review, this button never auto-commits). Two-timestamp accounting mirrors
- * `SyncOpenBankingAccountJob` exactly: a successful fetch (new rows or zero
- * rows) advances `last_successful_sync_at`; a failed fetch advances ONLY
- * `last_attempt_*`, never `last_successful_sync_at` (Req 7's
- * never-stale-as-fresh invariant).
- */
 
 final class OmsStubRemoteSourceAdapter implements RemoteSourceAdapter
 {

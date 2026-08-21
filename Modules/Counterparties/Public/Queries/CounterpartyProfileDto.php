@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Counterparties\Public\Queries;
 
-// Hero-section shape for a profile page: identity plus hero stats
-// (12-month total for spend types, net received for personal,
-// transaction count). iban IS populated for personal rows; every
-// rendering path gates on the user's Show-IBAN opt-in before echoing it.
+// Unlike CounterpartyIndexRow this does carry `iban` for personal rows,
+// so every rendering path must gate on the user's Show-IBAN opt-in.
 final readonly class CounterpartyProfileDto
 {
     public function __construct(

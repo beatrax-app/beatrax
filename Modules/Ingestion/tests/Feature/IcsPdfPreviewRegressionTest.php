@@ -4,18 +4,6 @@ declare(strict_types=1);
 
 use Modules\Import\Public\Contracts\RunsImports;
 
-/*
- * Regression test for the ICS PDF upload path through the import
- * preview pipeline.
- *
- * Pins the working preview contract against future refactors of the
- * IcsPdfAdapter, the spatial extractor, the PaymentType classifier,
- * or the Livewire upload temp-file resolution. If any of those layers
- * regresses such that an ICS PDF upload produces zero preview rows
- * (silent parser drop) or every row carrying status='error' (loud
- * parser drop), this test fails.
- */
-
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
     $this->importer = $this->app->make(RunsImports::class);

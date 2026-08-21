@@ -4,18 +4,9 @@ declare(strict_types=1);
 use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Support\Fmt;
 
-/*
- * This app renders dates day-first. A census of the tree found 32 call sites
- * already using `d M Y`, `d M`, `j M Y` or `d M Y · H:i`, and exactly four
- * month-first ones — all on the calendar, all reaching a Dutch UI:
- *
- *   "Saldo daalt onder € 0 op 18 dagen — eerste: aug. 1."
- *   aria-label "augustus 18, 2026: 0 betalingen"
- *
- * The month name translated and the order did not, which reads as a bug in
- * the translation rather than in the format string.
+/**
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#month-first-dates-in-a-dutch-ui
  */
-
 it('never formats a date month-first', function (): void {
     $offenders = [];
 

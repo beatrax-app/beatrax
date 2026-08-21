@@ -10,28 +10,6 @@ use Modules\DevMode\Internal\Enums\AuditEvent;
 use Modules\DevMode\Internal\Http\Livewire\QueueInspectorPage;
 use Modules\DevMode\Internal\Queue\QueueActions;
 
-/*
- * Queue inspector + QueueActions invariants.
- *
- * Covers:
- *   - Route shape: /dev/queue redirects to /dev/queue/pending;
- *     /dev/queue/pending|failed|batches all return 200 for a
- *     developer, 404 for a non-developer (EnsureDeveloperMode
- *     gate).
- *   - QueueActions::forgetFailed removes the failed_jobs row +
- *     writes an audit row with action=queue.failed.forget.
- *   - QueueActions::retryFailed re-dispatches the payload +
- *     removes the failed_jobs row + writes
- *     action=queue.failed.retry.
- *   - QueueActions::cancelBatch sets cancelled_at on the batch
- *     row.
- *   - QueueActions::deletePending removes the pending jobs row +
- *     audit.
- *   - Count tiles render the live counts; wire:poll.5s attribute
- *     present.
- *   - Queue sidebar item enabled (no nav-disabled class).
- */
-
 function queueDeveloper(string $username = 'queue-fixture'): User
 {
     return User::query()->create([
@@ -158,10 +136,7 @@ it('QueueActions::retryFailed re-dispatches the payload AND removes the failed_j
     $actions = app(QueueActions::class);
     $actions->retryFailed($uuid);
 
-    // Failed row is gone.
     expect(DB::table('failed_jobs')->where('uuid', $uuid)->exists())->toBeFalse();
-
-    // Pending row should have been added by the re-push.
     expect(DB::table('jobs')->count())->toBe($pendingBefore + 1);
 
     $auditRow = DB::table('dev_mode_audit')->latest('id')->first();
@@ -209,7 +184,6 @@ it('QueueActions::cancelBatch sets cancelled_at on the batch row AND writes an a
 it('the count tiles render the live counts with the wire:poll.5s attribute', function (): void {
     $user = queueDeveloper('q-tiles');
 
-    // Seed 2 pending + 3 failed + 1 active batch.
     seedPendingJob();
     seedPendingJob();
     seedFailedJob('uuid-tile-1');
@@ -221,10 +195,8 @@ it('the count tiles render the live counts with the wire:poll.5s attribute', fun
     $response->assertOk();
     $html = (string) $response->getContent();
 
-    // wire:poll.5s on the count-tile container.
     expect(str_contains($html, 'wire:poll.5s'))->toBeTrue('wire:poll.5s attribute should be present on count tiles');
 
-    // The counts should match the seeded fixtures.
     expect($html)->toContain('data-testid="tile-pending-count">2<');
     expect($html)->toContain('data-testid="tile-failed-count">3<');
     expect($html)->toContain('data-testid="tile-batches-count">1<');
@@ -236,9 +208,6 @@ it('enables the Queue sidebar item (drops nav-disabled when dev.queue is registe
     $response = $this->actingAs($user)->get('/dev/queue/pending');
     $html = (string) $response->getContent();
 
-    // Find the Queue nav entry — it has the icon `↻` and label
-    // "Queue". With dev.queue registered, Queue should NOT carry
-    // nav-disabled.
     preg_match_all('#<a\s+href="[^"]*"\s+class="side-item([^"]*)"[^>]*>[\s\S]*?Queue[\s\S]*?</a>#', $html, $matches);
 
     expect($matches[0])->not->toBeEmpty('Queue sidebar entry should render');
@@ -256,13 +225,11 @@ it('the bulk-delete action dispatches triple-gate:open without performing the de
     seedFailedJob($uuid1);
     seedFailedJob($uuid2);
 
-    // Mount the component on the failed tab with both rows selected.
     Livewire::test(QueueInspectorPage::class, ['tab' => 'failed'])
         ->set('selected', [$uuid1, $uuid2])
         ->call('bulkDeleteRequest')
         ->assertDispatched('triple-gate:open');
 
-    // No row deleted until the triple-gate confirms.
     expect(DB::table('failed_jobs')->whereIn('uuid', [$uuid1, $uuid2])->count())->toBe(2);
 });
 
@@ -280,11 +247,11 @@ it('the bulk-retry action takes the single-confirm path (NOT triple-gate) and re
         ->call('bulkRetryConfirm')
         ->assertNotDispatched('triple-gate:open');
 
-    // Both failed rows gone (retryFailed forgets them after re-push).
+    // retryFailed forgets each row after re-pushing it.
     expect(DB::table('failed_jobs')->whereIn('uuid', [$uuid1, $uuid2])->count())->toBe(0);
 
-    // The bulk-retry audit row landed (the last write is the bulk
-    // umbrella row; individual retries also wrote rows beneath it).
+    // The per-retry rows sit above the bulk umbrella row, so the search has to
+    // scan back rather than read the latest.
     $auditRows = DB::table('dev_mode_audit')->orderByDesc('id')->limit(5)->get();
     $hasBulkRetry = false;
     foreach ($auditRows as $row) {

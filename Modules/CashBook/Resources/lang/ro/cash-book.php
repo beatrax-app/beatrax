@@ -25,6 +25,8 @@ return [
     'no_entries' => 'Încă nu există intrări manuale.',
     'delete_entry' => 'Șterge intrarea',
     'delete' => 'Șterge',
+    'delete_confirm' => 'Ștergeți această înregistrare?',
+    'delete_keep' => 'Păstrează',
 
     'errors' => [
         'amount_positive' => 'Introdu o sumă mai mare decât zero.',

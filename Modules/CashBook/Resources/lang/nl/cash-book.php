@@ -25,6 +25,8 @@ return [
     'no_entries' => 'Nog geen handmatige invoer.',
     'delete_entry' => 'Invoer verwijderen',
     'delete' => 'Verwijderen',
+    'delete_confirm' => 'Deze boeking verwijderen?',
+    'delete_keep' => 'Behouden',
 
     'errors' => [
         'amount_positive' => 'Voer een bedrag groter dan nul in.',

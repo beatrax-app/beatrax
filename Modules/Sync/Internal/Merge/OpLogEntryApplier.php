@@ -12,9 +12,6 @@ use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\OpLog\QuarantineReason;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class OpLogEntryApplier
 {
     public function __construct(
@@ -153,6 +150,10 @@ final readonly class OpLogEntryApplier
         return $selfRefs;
     }
 
+    // buildCreatePayload() writes these from the op itself, so a rule naming
+    // one of them is satisfied before a single field is read.
+    private const array SEEDED_FROM_PK = ['id'];
+
     // The row to write, or null when a gate refused it: a tombstone that
     // outranks the create, a create with fields still missing, a payload that
     // could not be built, or a row belonging to someone else.
@@ -176,6 +177,19 @@ final readonly class OpLogEntryApplier
         }
 
         $payload = $this->buildCreatePayload($table, $pk, $fields, $userId, $now);
+
+        // The ids a row NAMES are minted per device, so one can land on a
+        // different household member's row entirely. Refuse rather than write
+        // a transaction pointing at somebody else's account.
+        if ($payload !== null && ! $this->ownership->referencesBelongToUser($table, $payload, $userId, $pk)) {
+            $firstField = reset($fields);
+
+            if ($firstField !== false) {
+                $this->quarantine->record($firstField[0], QuarantineReason::CrossUser, $now);
+            }
+
+            return null;
+        }
 
         // A child row carries no user_id, so nothing above proves it belongs
         // here: without this, an op could attach a condition to ANOTHER
@@ -248,15 +262,17 @@ final readonly class OpLogEntryApplier
         ) >= 0;
     }
 
-    // A CreateRow needs every required column present; an incomplete set is
-    // quarantined (synthesized from the first field's first entry) rather than
-    // written as a partial row.
+    // A CreateRow needs every required column, minus the ones
+    // buildCreatePayload() seeds itself: a table naming `id` as required asked
+    // for a field the backfill never emits, so every row of it was discarded
+    // as incomplete on arrival rather than written.
     /**
      * @param  array<string, list<OpLogEntry>>  $fields
      */
     private function createRowComplete(string $table, array $fields, string $now): bool
     {
-        $missing = array_diff($this->rules->requiredCreateColumns($table), array_keys($fields));
+        $required = array_diff($this->rules->requiredCreateColumns($table), self::SEEDED_FROM_PK);
+        $missing = array_diff($required, array_keys($fields));
 
         if ($missing === []) {
             return true;
@@ -366,6 +382,16 @@ final readonly class OpLogEntryApplier
         try {
             $columnValue = $this->projector->encodeColumnValue($this->projector->resolveStrategy($table, $field)->resolve($fieldEntries));
             $columnValue = $this->projector->reencryptForProjection($table, $field, $columnValue, $userId);
+
+            // The create path gates the ids a row NAMES, but a Set rewrites
+            // that same column afterwards: create a transaction against your
+            // own account, then Set account_id to another member's, and the
+            // row scopes to you while reading their balance.
+            if (! $this->ownership->referencesBelongToUser($table, [$field => $columnValue], $userId, $pk)) {
+                $this->quarantine->record($fieldEntries[0], QuarantineReason::CrossUser, $now);
+
+                return;
+            }
 
             $query = $this->db->connection()
                 ->table($table)

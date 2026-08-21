@@ -8,7 +8,7 @@
 #
 # It deliberately does NOT push the tag. The spec's process is that a human
 # signs and pushes it (releasing.md), and the release workflow triggers only on
-# a tag push (REPO-R26) — a bot-pushed tag would be unsigned, and a tag pushed
+# a tag push — a bot-pushed tag would be unsigned, and a tag pushed
 # with the default token would not trigger the build at all.
 name: release-preflight
 
@@ -89,7 +89,7 @@ jobs:
           fi
 
       - name: The ruleset's required checks still name jobs that run
-        # A renamed job silently stops being required (OPS-R18), which is the
+        # A renamed job silently stops being required, which is the
         # failure this check exists to catch before a release rather than after.
         env:
           GH_TOKEN: ${{ github.token }}

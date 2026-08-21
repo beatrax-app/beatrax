@@ -12,9 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Core\Public\Concerns\BelongsToUser;
 use Modules\DriftAlerts\Database\Factories\DriftAlertTransitionFactory;
 
-// Append-only audit trail produced by DriftAlertStateMachine. actor is
-// either `user` (drift page acknowledge/snooze/dismiss-as-cancelled) or
-// `detector` (snooze-expiry revival flip back to open).
+// Append-only: DriftAlertStateMachine is the only writer.
 
 /**
  * @property int $id

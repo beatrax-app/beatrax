@@ -1,3 +1,4 @@
+@use('Illuminate\View\ComponentAttributeBag')
 @use('Modules\Core\Public\Support\Lang')
 {{-- `/settings/open-banking` trust surface (19-11, UI-SPEC Surface B). --}}
 
@@ -12,18 +13,15 @@
     </header>
 
     @if ($flashMessage !== '')
-        <div
+        <x-core::alert
+            :tone="$flashTone === 'error' ? 'danger' : 'positive'"
             role="{{ $flashTone === 'error' ? 'alert' : 'status' }}"
-            class="rounded-xl border p-4 text-sm
-                {{ $flashTone === 'error'
-                    ? 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300'
-                    : 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' }}"
             data-testid="ob-page-flash"
-        >{{ $flashMessage }}</div>
+        >{{ $flashMessage }}</x-core::alert>
     @endif
 
     {{-- ===== B1: header + toggle ===== --}}
-    <div class="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
+    <x-core::card>
         <div class="flex items-start justify-between gap-3">
             <div class="flex-1">
                 <p class="text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('openbanking::messages.page.toggle_label') }}</p>
@@ -35,66 +33,68 @@
                     @endif
                 </p>
             </div>
-            <button
-                type="button"
-                class="switch{{ $enabled ? ' switch--on' : '' }}"
+            <x-core::switch
+                :on="$enabled"
+                :label="Lang::get('openbanking::messages.page.toggle_label')"
                 wire:click="toggleClicked"
-                aria-pressed="{{ $enabled ? 'true' : 'false' }}"
-                aria-label="{{ Lang::get('openbanking::messages.page.toggle_label') }}"
                 data-testid="ob-toggle"
-            >
-                <span class="switch__thumb"></span>
-            </button>
+            />
         </div>
-    </div>
+    </x-core::card>
 
-    {{-- ===== WR-07: re-confirm CTA — the SCA dance completed but the
+    {{-- ===== Re-confirm CTA — the SCA dance completed but the
          acknowledgement TTL lapsed before mount() could finalize the
          enable. Surface a visible re-confirm instead of a silent no-op. ===== --}}
     @if ($needsReconfirm)
-        <div
+        <x-core::alert
+            tone="warning"
             role="alert"
-            class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800
-                   dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
             data-testid="ob-reconfirm-banner"
         >
             <p>{{ Lang::get('openbanking::messages.page.reconfirm_body') }}</p>
-            <button
-                type="button"
+            <x-core::neutral-button
+                class="mt-3 min-h-[44px]"
                 wire:click="reconfirmEnable"
                 wire:loading.attr="disabled"
                 wire:target="reconfirmEnable"
-                class="mt-3 inline-flex min-h-[44px] items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white
-                       hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                       dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                 data-testid="ob-reconfirm-button"
-            >{{ Lang::get('openbanking::messages.page.reconfirm_button') }}</button>
-        </div>
+            >{{ Lang::get('openbanking::messages.page.reconfirm_button') }}</x-core::neutral-button>
+        </x-core::alert>
     @endif
 
-    {{-- ===== B5: consent-expiry banner (Req 7/8) — rendered above the
+    {{-- ===== B5: consent-expiry banner — rendered above the
          transparency panel when consent has expired ===== --}}
     @include('openbanking::partials.open-banking-consent-banner')
 
-    {{-- ===== B4: transparency panel (Req 6) ===== --}}
+    {{-- ===== B4: transparency panel ===== --}}
     @include('openbanking::partials.open-banking-transparency-panel')
 
-    {{-- ===== B6: scheduled auto-sync + manual sync (Req 9) — only ever
+    {{-- ===== B6: scheduled auto-sync + manual sync — only ever
          rendered while OB is enabled; hidden entirely when off, per
          UI-SPEC's Copywriting Contract ("Sync-now disabled caption (OB
          off) | (button hidden entirely)") ===== --}}
     @if ($enabled)
         <div class="space-y-2" data-testid="open-banking-sync-now">
             @if ($syncFlashMessage !== '')
-                <div
+                {{-- Only the zero-result flash clears itself, so those two
+                     attributes cannot be written on the tag: a Blade @if
+                     inside a component tag is not parsed. They ride in as a
+                     bag instead. --}}
+                @php
+                    $syncFlashName = match ($syncFlashTone) {
+                        'error' => 'danger',
+                        'success' => 'positive',
+                        default => 'neutral',
+                    };
+                    $syncFlashSelfClear = new ComponentAttributeBag($syncFlashTone === 'zero' ? [
+                        'wire:init' => "\$set('syncFlashMessage', '')",
+                        'wire:transition.duration.4000ms' => true,
+                    ] : []);
+                @endphp
+                <x-core::alert
+                    :tone="$syncFlashName"
                     role="{{ $syncFlashTone === 'error' ? 'alert' : 'status' }}"
-                    @if ($syncFlashTone === 'zero') wire:init="$set('syncFlashMessage', '')" wire:transition.duration.4000ms @endif
-                    class="rounded-lg border p-3 text-sm
-                        {{ $syncFlashTone === 'error'
-                            ? 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300'
-                            : ($syncFlashTone === 'success'
-                                ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                                : 'border-slate-200 bg-white text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400') }}"
+                    :attributes="$syncFlashSelfClear"
                     data-testid="ob-sync-flash"
                 >
                     {{ $syncFlashMessage }}
@@ -105,7 +105,7 @@
                             data-testid="ob-review-import-link"
                         >{{ Lang::get('openbanking::messages.sync.review_import') }} &rarr;</a>
                     @endif
-                </div>
+                </x-core::alert>
             @endif
 
             <div class="flex items-center justify-between gap-3">
@@ -114,30 +114,22 @@
                 @else
                     <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('openbanking::messages.sync.auto_caption') }}</p>
                 @endif
-                <button
-                    type="button"
+                <x-core::neutral-button
+                    class="min-h-[44px] disabled:cursor-not-allowed disabled:opacity-50"
+                    :disabled="$consentStatus === 'expired'"
                     wire:click="syncNow"
                     wire:loading.attr="disabled"
                     wire:target="syncNow"
-                    @disabled($consentStatus === 'expired')
-                    class="inline-flex min-h-[44px] items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white
-                           hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                           disabled:cursor-not-allowed disabled:opacity-50
-                           dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                     data-testid="ob-sync-now-button"
                 >
-                    <span
-                        wire:loading
-                        wire:target="syncNow"
-                        class="mr-2 inline-block h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white dark:border-slate-900/40 dark:border-t-slate-900"
-                    ></span>
+                    <x-core::spinner size="sm" wire:loading wire:target="syncNow" class="mr-2" />
                     {{ Lang::get('openbanking::messages.sync.sync_now') }}
-                </button>
+                </x-core::neutral-button>
             </div>
         </div>
     @endif
 
-    {{-- ===== B7: guided ICS file-import affordance (Req 13) — always
+    {{-- ===== B7: guided ICS file-import affordance — always
          visible regardless of OB state, visually separated from the OB
          cards above by its own section label ===== --}}
     @include('openbanking::partials.open-banking-ics-import-card')
@@ -162,15 +154,13 @@
                                hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2"
                         data-testid="ob-confirm-disconnect"
                     >{{ Lang::get('openbanking::messages.disconnect.confirm') }}</button>
-                    <button
-                        type="button"
+                    <x-core::secondary-button
+                        block="flex"
+                        class="min-h-[44px]"
                         wire:click="cancelDisconnect"
                         autofocus
-                        class="flex-1 min-h-[44px] rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900
-                               hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                               dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                         data-testid="ob-cancel-disconnect"
-                    >{{ Lang::get('openbanking::messages.disconnect.cancel') }}</button>
+                    >{{ Lang::get('openbanking::messages.disconnect.cancel') }}</x-core::secondary-button>
                 </div>
             </div>
         </flux:modal>

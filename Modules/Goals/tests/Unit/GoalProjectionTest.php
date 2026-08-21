@@ -16,13 +16,6 @@ use Modules\Pots\Models\Pot;
 
 uses(RefreshDatabase::class);
 
-/*
- * The projected finish date: a run-rate over the trailing window, measured
- * against whichever source the goal's progress comes from. Covers the
- * in-horizon vs beyond-90-days confidence flag, the minimum observation
- * window, and the no-history and already-reached cases that suppress a
- * projection entirely.
- */
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'wessel',
@@ -50,7 +43,6 @@ beforeEach(function (): void {
     ]);
 });
 
-/** Persist a credit and attribute it to $goal, the way the detail screen does. */
 function projContribution(User $user, int $accountId, int $runId, int $goalId, int $amountMinor, string $postedAt): void
 {
     static $i = 0;
@@ -81,10 +73,6 @@ function projContribution(User $user, int $accountId, int $runId, int $goalId, i
     app(GoalContributionWriter::class)->attribute($user, $goalId, $tx->id);
 }
 
-// ---------------------------------------------------------------------------
-// Projected finish date — run-rate derivation
-// ---------------------------------------------------------------------------
-
 it('returns a projected finish date when there is a contribution history', function (): void {
     $startDate = CarbonImmutable::now()->subDays(90)->toDateString();
     $goal = Goal::factory()->create([
@@ -105,10 +93,9 @@ it('returns a projected finish date when there is a contribution history', funct
     expect($rows[0]->contributedMinor)->toBe(60000);
 });
 
-// A goal younger than the minimum observation window must NOT project a finish
-// date. One large early deposit divided by a 1-3 day window would otherwise
-// extrapolate a misleadingly-soon finish; the card shows the "building a
-// projection" copy until enough history accrues.
+// A goal younger than the minimum observation window must not project: one large
+// early deposit over a 1-3 day window extrapolates a misleadingly soon finish,
+// so the card shows "building a projection" until enough history accrues.
 it('suppresses the projected date until the minimum observation window has elapsed', function (): void {
     $startDate = CarbonImmutable::now()->subDays(3)->toDateString();
     $goal = Goal::factory()->create([
@@ -119,8 +106,6 @@ it('suppresses the projected date until the minimum observation window has elaps
         'status' => 'active',
     ]);
 
-    // A big day-2 deposit that, divided by the tiny window, would project a
-    // finish only days out.
     projContribution($this->user, $this->account->id, $this->run->id, $goal->id, 200000, CarbonImmutable::now()->subDays(1)->toDateString());
 
     $rows = app(GoalProgressQuery::class)->forUser($this->user);
@@ -201,10 +186,6 @@ it('derives the run-rate from pot movements for a pot-linked goal', function ():
     expect($rows[0]->contributedMinor)->toBe(30000);
     expect($rows[0]->projectedFinishDate)->not->toBeNull();
 });
-
-// ---------------------------------------------------------------------------
-// Edge cases
-// ---------------------------------------------------------------------------
 
 it('returns null projectedFinishDate when there is no contribution history', function (): void {
     Goal::factory()->create([

@@ -18,18 +18,10 @@ use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
 
 uses(RefreshDatabase::class, EnablesEncryptionForUser::class);
 
-/*
- * 14.1-12 Task 1 (Cluster 3 / CRYPT-01) — FingerprintStage::detectConflicts()
- * must decrypt the stored transactions.counterparty_name/description
- * before the stringsDiffer() compare. Pre-fix, the compare ran the raw
- * stored CIPHERTEXT against the incoming plaintext canonical value, so
- * ciphertext could never equal plaintext and every receipt-vs-statement
- * re-import registered a false-positive conflict on every row once
- * encryption was enabled (same bug class as SetTransactionNote's
- * Pitfall 4). Tests run against a REAL encrypted user via
- * EnablesEncryptionForUser so a decrypt-of-plaintext no-op can never
- * mask a still-broken compare.
- */
+// Without decrypting the stored value first, detectConflicts() compares
+// ciphertext against incoming plaintext — never equal — so every
+// receipt-vs-statement re-import registers a false conflict on every row. These
+// run against a real encrypted user so a decrypt no-op cannot mask that.
 
 function fseUser(): User
 {
@@ -64,21 +56,10 @@ function fseImportRun(User $user): ImportRun
     ]);
 }
 
-/**
- * Seeds an existing `transactions` row (source_format `paypal-csv`, i.e.
- * a bank-statement side) whose v3 fingerprint matches the incoming
- * `paypal-receipt` CanonicalTransaction this helper returns.
- * `counterparty_name`/`description` are written as GENUINE CIPHERTEXT
- * (via `SensitiveColumnCodec::encryptValue`, mirroring what
- * `RecordTransactions` writes at import time) — not plaintext — so a
- * still-broken compare would fail exactly as it would against real
- * encrypted history.
- *
- * `counterpartyNormalized` is held IDENTICAL across both sides (it is
- * part of the fingerprint tuple, `counterparty_name` is not) so the
- * fingerprint match fires regardless of what the raw display name says
- * on either side.
- */
+// The stored side is genuine ciphertext, as RecordTransactions writes at import
+// time. counterpartyNormalized is held identical on both sides because it is in
+// the fingerprint tuple and counterparty_name is not, so the match fires
+// whatever the display names say.
 function fseSeed(
     User $user,
     Account $account,

@@ -12,20 +12,9 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
 
 uses(RefreshDatabase::class);
 
-/*
- * RevokedDeviceCannotDecryptFutureEpochTest — CRYPT-02 core security
- * property: after removal, the removed device's stored (old) epoch cannot
- * decrypt a post-removal op-log entry AND its device_registry trust is
- * revoked (its Ed25519-signed entries no longer verify).
- * 14-VALIDATION.md CRYPT-02 row 2.
- *
- * RED until Plan 05 ships Modules\Sync\Internal\Crypto\GdkRotationService
- * and wires BOTH the epoch rotation AND the device_registry trust
- * revocation (RESEARCH's Security Domain: revocation must do BOTH, not
- * just one). This test references the planned production FQCN, which does
- * not yet exist — the failure is "class not found", the correct Wave 0 RED
- * state.
- */
+// Removal has to do both halves: the removed device's old epoch cannot open a
+// post-removal entry, and its device_registry trust is gone so nothing it signs
+// afterwards verifies. Doing only one of the two leaves the device inside.
 
 function revokedUser(string $username): User
 {
@@ -47,9 +36,8 @@ it('the removed device is no longer a confirmed/trusted key after rotateAndRevok
     /** @var Session $session */
     $session = $this->app->make(Session::class);
 
-    // The acting/self device: a REAL on-disk identity (rotateAndRevoke() now
-    // loads it to SIGN each fan-out wrap). Its is_self=1 row is the
-    // still-trusted device that must survive the rotation.
+    // rotateAndRevoke() loads the acting device's real on-disk identity to sign
+    // each fan-out wrap, and its is_self row must survive the rotation.
     /** @var DeviceIdentityService $identityService */
     $identityService = $this->app->make(DeviceIdentityService::class);
     $self = $identityService->generateAndPersist($userId, $session);
@@ -128,7 +116,6 @@ it('an op-log entry signed by the removed device after rotation is rejected (no 
     // replayer trusts — a post-rotation entry it signs can never verify.
     expect($registry->deviceKeys($userId))->not->toHaveKey('removed-device-2');
 
-    // sodium_memzero is best-effort process hygiene; this assertion pins the
-    // behavioral contract, not memory-safety internals.
+    // Best-effort process hygiene; nothing asserted above depends on it.
     sodium_memzero($removedSk);
 });

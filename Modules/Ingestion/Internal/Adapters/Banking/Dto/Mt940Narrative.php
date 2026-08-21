@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Ingestion\Internal\Adapters\Banking\Dto;
 
-/**
- * @link ../../../../../../.docs/features/ingestion/architecture.md
- */
 final readonly class Mt940Narrative
 {
     /**

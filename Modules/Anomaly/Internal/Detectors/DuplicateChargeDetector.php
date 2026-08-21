@@ -15,15 +15,12 @@ use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
 /**
- * @link ../../../../.docs/features/anomaly/architecture.md
+ * @link ../../../../.docs/features/anomaly/detector-maths.md
  */
 final readonly class DuplicateChargeDetector
 {
     use CoercesScalars;
 
-    // Backward-only look-back window: covers the common double-tap /
-    // retry pattern without catching a legitimate weekly recurrence
-    // (those are additionally excluded via recurring-series membership).
     public const DUPLICATE_WINDOW_DAYS = 7;
 
     public function __construct(
@@ -40,7 +37,7 @@ final readonly class DuplicateChargeDetector
     {
         $settledMinor = self::toInt($txn['settled_amount_minor'] ?? 0);
         $absMinor = abs($settledMinor);
-        $counterpartyId = self::toIntOrNull($txn['counterparty_id'] ?? null);
+        $counterpartyId = self::toPositiveIntOrNull($txn['counterparty_id'] ?? null);
 
         if ($absMinor < $minFloorMinor || $counterpartyId === null) {
             return false;
@@ -56,10 +53,9 @@ final readonly class DuplicateChargeDetector
         $windowOpen = $anchor->subDays(self::DUPLICATE_WINDOW_DAYS)->toDateString();
         $anchorDate = $anchor->toDateString();
 
-        // Look BACKWARD ONLY: same merchant, exact settled amount +
-        // currency, same direction, in [anchor-7d, anchor]. A genuine
-        // double-charge then fires exactly ONCE, on the LATER charge of the
-        // pair; the `id < $thisId` tie-break settles same-day siblings.
+        // Backward-only plus the `id <` tie-break: a genuine double-charge
+        // fires exactly once, on the later charge, whichever evaluation path
+        // reaches the pair first and in whatever order they were inserted.
         $siblingId = $this->db->connection()->table('transactions')
             ->where('user_id', $user->id)
             ->where('counterparty_id', $counterpartyId)
@@ -76,21 +72,9 @@ final readonly class DuplicateChargeDetector
 
         $siblingId = self::toInt($siblingId);
 
-        // Skip ONLY when BOTH the candidate and the sibling are series
-        // members; a one-off duplicate of a subscription charge still fires.
         $membership = $this->recurringQuery->seriesMembershipForTransactionIds([$thisId, $siblingId], $user);
         $bothOnSeries = ($membership[$thisId] ?? false) && ($membership[$siblingId] ?? false);
 
         return ! $bothOnSeries;
-    }
-
-    private static function toIntOrNull(mixed $value): ?int
-    {
-        if (! is_numeric($value)) {
-            return null;
-        }
-        $int = (int) $value;
-
-        return $int > 0 ? $int : null;
     }
 }

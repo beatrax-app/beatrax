@@ -11,9 +11,6 @@ use Modules\Sync\Internal\Exceptions\SecretFileException;
 // hash of the per-device drain secret it first presented. Replaces the old
 // shared-secret-derived token that every relay peer could recompute from the
 // QR relay token, closing the cross-tenant drain/confirm metadata hole.
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 final class RelayDrainRegistry
 {
     private const REGISTRY_FILE = 'sync-relay-drain-registry.json';

@@ -15,9 +15,6 @@ use Symfony\Component\HttpFoundation\Response;
 // shouldInterceptRequest() can only hand the WebView a body for the URL it
 // asked for, so /login rendered the dashboard under /login. iOS is excluded —
 // its PHPSchemeHandler already follows Location with a real navigation.
-/**
- * @link ../../../../../.docs/features/mobile/architecture.md
- */
 final class ClientSideRedirect
 {
     public function __construct(private readonly Vite $vite) {}

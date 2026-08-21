@@ -8,9 +8,6 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Exceptions\NetworkPolicyException;
 use Native\Mobile\Facades\Network;
 
-/**
- * @link ../../../../.docs/features/mobile/architecture.md
- */
 final class NetworkPolicyResolver
 {
     private const string CONFIG_SUB = 'mobile/network-policy.json';

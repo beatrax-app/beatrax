@@ -7,10 +7,8 @@ namespace Modules\DevMode\Public\Dto;
 use Carbon\CarbonInterface;
 use Spatie\LaravelData\Data;
 
-// One command-run audit fact, passed whole to AuditWriter::recordCommandRun
-// so the seam takes a single argument instead of ten positional ones. The
-// eager spawn-time write leaves finishedAt/exitCode null and the excerpts
-// empty; the finalize pass re-records with the run's outcome filled in.
+// The eager spawn-time write leaves finishedAt, exitCode and the excerpts
+// empty; the finalize pass fills in the outcome on the same row.
 final class CommandRunAudit extends Data
 {
     /**

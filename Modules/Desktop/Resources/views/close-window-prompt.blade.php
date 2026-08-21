@@ -1,6 +1,6 @@
 @php
     /**
-     * D-08 first-close prompt — Quit vs Keep-in-tray.
+     * First-close prompt — Quit vs Keep-in-tray.
      *
      * flux:modal chosen over a native dialog so it inherits the dark
      * theme (UI-SPEC Component Inventory).
@@ -19,7 +19,7 @@
 @endphp
 
 <div>
-    <flux:modal :name="$modalName" class="md:max-w-lg" dismissible="false">
+    <flux:modal :name="$modalName" class="md:max-w-lg" :dismissible="false">
         <div class="space-y-6">
             <flux:heading size="lg">{{ $title }}</flux:heading>
 
@@ -27,14 +27,7 @@
                 {{ $body }}
             </p>
 
-            <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-                <input
-                    type="checkbox"
-                    wire:model="rememberChoice"
-                    class="rounded border-slate-300 text-emerald-600 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900"
-                />
-                {{ $checkboxRemember }}
-            </label>
+            <x-core::checkbox-field :label="$checkboxRemember" wire:model="rememberChoice" />
 
             <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
                 {{--
@@ -55,7 +48,7 @@
                 {{--
                     "Keep running in the tray" — primary action,
                     emerald-600, default-focused (autofocus). Keeps
-                    the D-05 worker + D-06 scheduler alive so the
+                    the worker + scheduler alive so the
                     partner's background work continues uninterrupted.
                 --}}
                 <button

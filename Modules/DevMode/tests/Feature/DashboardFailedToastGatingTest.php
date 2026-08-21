@@ -9,23 +9,6 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 
-/*
- * Dashboard failed-chain toast gating + retarget.
- *
- * The dashboard's "Chain resolution failed" toast is gated on
- * is_developer AND points at the canonical
- * route('dev.queue.tab', ['tab' => 'failed']) URL.
- *
- * Non-developers see NO queue-failure messaging at all — their
- * channel is the existing SystemAlertsBanner (the system-wide
- * banner that surfaces operational failures through a separate
- * pipeline).
- *
- * The toast copy is locked:
- *   Body:   "Chain resolution failed."
- *   Action: "Open Queue Inspector"
- */
-
 function dashFailedToastUser(string $username, bool $isDeveloper): User
 {
     $user = User::query()->create([
@@ -36,10 +19,8 @@ function dashFailedToastUser(string $username, bool $isDeveloper): User
         'is_developer' => $isDeveloper,
     ]);
 
-    // Bypass the first-run EnsureDatabaseReady redirect by seeding
-    // one ImportRun + Account + Transaction for the user. Mirrors
-    // the fixture shape Modules/Chains/tests/Feature/FailedChainResolutionToastTest.php
-    // already uses.
+    // One of each, purely so EnsureDatabaseReady stops redirecting the
+    // dashboard request to the first-run flow.
     $run = ImportRun::query()->create([
         'user_id' => $user->id,
         'source_format' => 'asn-csv',
@@ -80,12 +61,6 @@ function dashFailedToastUser(string $username, bool $isDeveloper): User
     return $user;
 }
 
-/**
- * Seed a failed chain-resolution run for the given user — the
- * Dashboard's `refreshFailedChainResolution()` reads the
- * `chain_resolution_runs` table filtered by `user_id` AND
- * `status = 'failed'`.
- */
 function dashFailedToastSeedRun(int $userId): void
 {
     DB::table('chain_resolution_runs')->insert([
@@ -112,11 +87,9 @@ it('renders the "Open Queue Inspector" toast pointing at route("dev.queue.tab", 
     expect($html)->toContain('Chain resolution failed.');
     expect($html)->toContain('Open Queue Inspector');
 
-    // The dashboard MUST build the URL via
-    // route('dev.queue.tab', ['tab' => 'failed']) — assert the
-    // rendered href EQUALS the URL the route() helper resolves,
-    // NOT a hardcoded `/dev/queue/failed` literal (which would
-    // point at a non-existent dev.queue.failed route alias).
+    // Comparing against route() rather than a literal: a hardcoded
+    // `/dev/queue/failed` would imply a dev.queue.failed alias that does
+    // not exist, and the test would still pass.
     $expectedHref = route('dev.queue.tab', ['tab' => 'failed']);
     expect($html)->toContain('href="'.$expectedHref.'"');
 });
@@ -137,7 +110,6 @@ it('does NOT render the "Open Queue Inspector" toast for a non-developer EVEN wi
 it('does NOT render the toast for a developer WITHOUT a failed chain-resolution run (the trigger is the failed row, not the developer flag)', function (): void {
     dashFailedToastUser('dft-seed-for-clean', true);
     $user = dashFailedToastUser('dft-developer-clean', true);
-    // No seed → no failed row.
 
     $response = $this->actingAs($user)->get('/');
     $response->assertOk();

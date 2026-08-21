@@ -5,13 +5,6 @@ declare(strict_types=1);
 use Illuminate\Contracts\Hashing\Hasher;
 use Modules\Core\Models\User;
 
-/*
- * Feature coverage for the beatrax:reset-password CLI fallback: it sets
- * a new password through hidden interactive prompts, flags the user for a
- * forced password change at next login, refuses non-interactive
- * invocation, and exits non-zero for an unknown username.
- */
-
 it('updates the password and flags a forced change on a valid interactive run', function (): void {
     /** @var Hasher $hasher */
     $hasher = $this->app->make(Hasher::class);
@@ -86,8 +79,7 @@ it('refuses non-interactive invocation and changes nothing', function (): void {
         'period_start_day' => 1,
     ]);
 
-    // --no-interaction makes the input non-interactive; the command must
-    // refuse rather than fall through to an empty-string password.
+    // The command must refuse rather than fall through to an empty password.
     $this->artisan('beatrax:reset-password', ['username' => 'owner', '--no-interaction' => true])
         ->assertFailed();
 

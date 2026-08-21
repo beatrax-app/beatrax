@@ -6,9 +6,6 @@ namespace Modules\Sync\Internal\Crypto;
 
 use Modules\Core\Public\Services\UserDataPathService;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class GdkRewrapService implements GdkRewrapContract
 {
     public function __construct(

@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-// Keyed by the slug DefaultCategoryTreeSeeder assigns, which is stable and
-// never shown. The tree is created for every real user, so these names are
-// product copy rather than seeded demo data.
+// Keyed by the slug DefaultCategoryTreeSeeder assigns, never by display name.
 return [
     'income' => 'Gelir',
     'income-salary' => 'Maaş',

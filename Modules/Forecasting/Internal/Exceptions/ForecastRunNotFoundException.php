@@ -9,7 +9,4 @@ use RuntimeException;
 // Thrown inside the ForecastRunStateMachine transaction when the
 // lockForUpdate row lookup returns null — the forecast_runs row vanished
 // mid-flight after the caller handed us the model.
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final class ForecastRunNotFoundException extends RuntimeException {}

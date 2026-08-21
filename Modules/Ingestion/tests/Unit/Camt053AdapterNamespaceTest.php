@@ -6,12 +6,8 @@ use Modules\Ingestion\Internal\Adapters\Banking\Camt053Adapter;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\AccountResolution;
 
-/**
- * Builds a minimal but valid CAMT.053 XML document for the given sub-version.
- * One Statement, one Entry with one TxDtls carrying an EndToEndId. genkgo/camt
- * accepts 001.02 / 001.03 / 001.04 / 001.08 through the same Reader without
- * any branching on the adapter side.
- */
+// genkgo/camt takes every 001.NN sub-version through one Reader, so the adapter
+// needs no branching and one document body covers them all.
 function minimalCamt053Doc(string $nsVersion): string
 {
     return sprintf(

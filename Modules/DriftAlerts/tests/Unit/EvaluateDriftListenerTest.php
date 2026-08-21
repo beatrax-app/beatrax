@@ -7,13 +7,6 @@ use Modules\DriftAlerts\Internal\Jobs\DetectDriftAlertsJob;
 use Modules\DriftAlerts\Internal\Listeners\EvaluateDriftOnMetricsRefreshed;
 use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 
-/*
- * Confirms the EvaluateDriftOnMetricsRefreshed listener emits exactly
- * one DetectDriftAlertsJob per event, carrying the event's userId and
- * recurringSeriesId verbatim. Bus::fake() captures the dispatch
- * without booting a queue worker.
- */
-
 it('dispatches exactly one DetectDriftAlertsJob per inbound event', function (): void {
     Bus::fake();
 

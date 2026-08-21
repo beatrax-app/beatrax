@@ -4,13 +4,9 @@ declare(strict_types=1);
 
 use App\Setup\DatabaseProbe;
 
-/*
- * The setup command's reachability check. Exercised against SQLite rather
- * than the MySQL and Postgres DSNs it is built for, because the behaviour
- * under test is the same either way: open a connection, report which server
- * answered, and let a failure surface as PDOException for the command to
- * turn into a warning.
- */
+// Driven against SQLite rather than the MySQL and Postgres DSNs it is built
+// for: opening a connection, naming the server that answered and letting a
+// failure surface as PDOException is the same behaviour either way.
 
 it('reports the version of the server that answered', function (): void {
     $version = (new DatabaseProbe)->serverVersion('sqlite::memory:', '', '');

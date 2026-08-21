@@ -8,23 +8,19 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\EmailScan\Internal\Exceptions\ScanStateNotFoundException;
 use Modules\EmailScan\Public\Dto\ScanCursor;
 use Modules\EmailScan\Public\Enums\InboxScanStatus;
 use Modules\EmailScan\Public\Enums\MailProvider;
-use Modules\EmailScan\Public\Exceptions\ScanStateNotFoundException;
 
-/**
- * @link ../../../.docs/features/email-scan/architecture.md
- */
 final class InboxScanStateMachine
 {
     private const BUSY_TIMEOUT_PRAGMA = 'PRAGMA busy_timeout = 5000';
 
     use CoercesScalars;
 
-    // Per-attempt backoff schedule in seconds ([60s, 5min, 15min,
-    // 1h]); indices past the end clamp to the final entry so a
-    // runaway retry count cannot push the delay to infinity.
+    // Indices past the end clamp to the final entry, so a runaway retry
+    // count cannot push the delay past an hour.
     /** @var list<int> */
     private const BACKOFF_SCHEDULE = [60, 300, 900, 3600];
 
@@ -64,9 +60,8 @@ final class InboxScanStateMachine
                 'updated_at' => $now,
             ];
 
-            // last_scan_at advances ONLY on success-shaped transitions
-            // so the UI can surface "stuck since X" for a stalled
-            // rate_limited / needs_reauth / error inbox.
+            // last_scan_at advances only on success-shaped transitions, so
+            // the UI can say "stuck since X" for a stalled inbox.
             if (in_array($newStatus, [
                 InboxScanStatus::Idle->value,
                 InboxScanStatus::Backfilling->value,
@@ -146,9 +141,6 @@ final class InboxScanStateMachine
         });
     }
 
-    // Returns the seconds-to-wait for the given attempt index, clamped
-    // to the BACKOFF_SCHEDULE bounds so a runaway retry count cannot
-    // walk past the final entry.
     public function backoffForAttempt(int $attempt): int
     {
         $maxIndex = count(self::BACKOFF_SCHEDULE) - 1;
@@ -179,10 +171,8 @@ final class InboxScanStateMachine
                 );
             }
 
-            // Cross-checks the cursor provider against the inbox
-            // row's provider, since a Gmail cursor must never land on
-            // a Microsoft inbox row (a mismatch would otherwise
-            // silently write the wrong cursor column).
+            // A Gmail cursor landing on a Microsoft inbox row would silently
+            // write the wrong cursor column.
             $inboxProvider = self::toString(
                 $connection->table('inboxes')->where('id', $inboxId)->value('provider'),
             );
@@ -206,9 +196,7 @@ final class InboxScanStateMachine
         });
     }
 
-    // Writes (or clears, on null) the per-inbox backfill progress
-    // payload under the same busy_timeout=5000 fence as the rest of
-    // the lifecycle mutations, so the column stays in lockstep.
+    // Under the same busy_timeout=5000 fence as the other lifecycle writes.
     /**
      * @param  array{fetched_count: int, total_estimated: int, last_message_date: ?string}|null  $progress
      */

@@ -108,9 +108,9 @@ Modules/DriftAlerts/
 - `Internal/Mapping/DriftAlertDtoMapper` — pure mapper from a raw
   DB row to `DriftAlertDto`.
 - `Internal/Http/Livewire/DriftPage` — the `/drift` page.
-- `Internal/Http/Livewire/DashboardDriftBadge` — the open-count
+- `Public/Http/Livewire/DashboardDriftBadge` — the open-count
   badge on the dashboard.
-- `Internal/Http/Livewire/DriftThresholdEditor` — the per-series +
+- `Public/Http/Livewire/DriftThresholdEditor` — the per-series +
   user-global threshold editor.
 
 ## Models + migrations

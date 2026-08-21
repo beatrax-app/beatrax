@@ -9,24 +9,19 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Database\QueryException;
 use RuntimeException;
 
-// Erases every row one account owns. The table list is discovered from the
-// live schema rather than written down: a hand-kept list is a list that goes
-// stale the first time a module adds a table, and the failure mode is silent
-// orphaned financial data rather than a broken build.
+// The table list is discovered from the live schema, not written down: a
+// hand-kept list goes stale the first time a module adds a table, and it fails
+// as silent orphaned financial data rather than a broken build.
 
 // Ownership is the user_id column and nothing else. op_log_entries also carries
-// origin_user_id, which is provenance on ANOTHER account's replicated entry —
+// origin_user_id, which is provenance on ANOTHER account's replicated entry --
 // deleting by it would corrupt a household member's log.
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 final readonly class UserScopedDataPurge
 {
     private const OWNERSHIP_COLUMN = 'user_id';
 
-    // Children of a user-scoped parent that carry no user_id of their own.
-    // The FK cascades, but only while foreign keys are enforced, and a purge
-    // that quietly depends on a PRAGMA is a purge that quietly fails.
+    // Children with no user_id of their own. The FK cascades, but only while
+    // foreign keys are enforced, and a purge resting on a PRAGMA fails quietly.
     private const ORPHANED_CHILDREN = [
         'rule_actions' => ['rule_id', 'categorization_rules'],
         'rule_conditions' => ['rule_id', 'categorization_rules'],
@@ -69,10 +64,9 @@ final readonly class UserScopedDataPurge
         return $owned;
     }
 
-    // Retries rather than ordering: with foreign keys enforced, deleting a
-    // parent before its child raises, and there is no dependency order to be
-    // read off the schema without walking every constraint. A pass that clears
-    // nothing is a genuine cycle and stops the purge instead of looping.
+    // Retries rather than ordering: no dependency order can be read off the
+    // schema without walking every constraint. A pass that clears nothing is
+    // a genuine cycle and stops the purge instead of looping.
     /**
      * @param  list<string>  $tables
      */
@@ -101,9 +95,8 @@ final readonly class UserScopedDataPurge
         }
     }
 
-    // The relay mailbox is addressed by device id, not by account, so it is
-    // the one store the schema sweep cannot see. Left behind, it holds sealed
-    // envelopes addressed to an identity that no longer exists.
+    // Addressed by device id, not account, so the schema sweep cannot see it
+    // and it would keep envelopes for an identity that no longer exists.
     /** @param list<string> $deviceIds */
     private function sweepRelayMailbox(Connection $connection, array $deviceIds): void
     {
@@ -132,9 +125,8 @@ final readonly class UserScopedDataPurge
         }
     }
 
-    // The post-condition, read back off the database. This is what makes the
-    // discovery approach safe: a table the sweep could not clear fails the
-    // whole transaction rather than leaving a stranger's ledger on the disk.
+    // Read back off the database: this is what makes discovery safe, since a
+    // table the sweep missed fails the transaction instead of surviving.
     /**
      * @param  list<string>  $tables
      */

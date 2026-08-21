@@ -7,9 +7,6 @@ namespace Modules\Notifications\Public\Dto;
 use Modules\Notifications\Public\Enums\DigestCadence;
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final class NotificationPreferencesDto extends Data
 {
     public function __construct(

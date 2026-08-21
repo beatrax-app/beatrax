@@ -10,10 +10,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Core\Public\Concerns\BelongsToUser;
 use Modules\Ledger\Internal\Casts\MoneyMinorCast;
 
-// A transaction with >=2 TransactionSplit rows is a split parent; its
-// settled_amount_minor is excluded from category-sum roll-ups in favour
-// of its legs, and the sum of every leg's settled_amount_minor equals
-// the parent's exactly — enforced by SaveTransactionSplit, never a DB CHECK.
+// A transaction with >= 2 legs is a split parent: category roll-ups count its
+// legs instead of its own settled_amount_minor, and the legs sum to it exactly
+// — enforced by SaveTransactionSplit, never a DB CHECK.
 /**
  * @property int $id
  * @property int|null $user_id
@@ -42,8 +41,7 @@ final class TransactionSplit extends Model
         return [
             'settled_amount_minor' => 'integer',
             'sort_order' => 'integer',
-            // Virtual Money attribute — `settled_amount` is not a real
-            // column; the cast bridges it to the (minor, currency) pair.
+            // `settled_amount` is not a column; the cast bridges it to the pair.
             'settled_amount' => MoneyMinorCast::class.':settled_amount_minor,settled_currency',
         ];
     }

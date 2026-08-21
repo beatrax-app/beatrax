@@ -44,18 +44,19 @@
     {{-- Recent skips table --}}
     @if ($recentSkips->isEmpty())
         {{-- Calm empty state --}}
-        <div
-            class="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+        <x-core::alert
+            tone="positive"
+            class="flex items-center gap-2"
             data-testid="sync-health-empty-state"
         >
             <span aria-hidden="true" class="text-base">✓</span>
             {{ Lang::get('sync::health.empty') }}
-        </div>
+        </x-core::alert>
     @else
-        {{-- overflow-x-auto, not overflow-hidden: this table is the only
-                 rendering of these rows at every width, and hidden CLIPPED the
-                 right-hand columns on a phone rather than letting them scroll —
-                 so the category picker and row actions were unreachable. --}}
+        {{-- overflow-x-auto, not overflow-hidden: four diagnostic columns do
+             not fit a phone, and this table is their only rendering at any
+             width, so clipping would take the timestamp off the screen for
+             good. --}}
             <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
             <table
                 class="w-full text-sm"
@@ -64,30 +65,30 @@
             >
                 <thead>
                     <tr class="border-b border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900">
-                        <th
-                            class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                        <x-core::th
+                            align="left"
                             style="letter-spacing: 0.06em; font-size: 11px;"
                         >
                             {{ Lang::get('sync::health.col_reason') }}
-                        </th>
-                        <th
-                            class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                        </x-core::th>
+                        <x-core::th
+                            align="left"
                             style="letter-spacing: 0.06em; font-size: 11px;"
                         >
                             {{ Lang::get('sync::health.col_table') }}
-                        </th>
-                        <th
-                            class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                        </x-core::th>
+                        <x-core::th
+                            align="left"
                             style="letter-spacing: 0.06em; font-size: 11px;"
                         >
                             {{ Lang::get('sync::health.col_device') }}
-                        </th>
-                        <th
-                            class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                        </x-core::th>
+                        <x-core::th
+                            align="left"
                             style="letter-spacing: 0.06em; font-size: 11px;"
                         >
                             {{ Lang::get('sync::health.col_when') }}
-                        </th>
+                        </x-core::th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">

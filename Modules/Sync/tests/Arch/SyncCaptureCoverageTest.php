@@ -4,22 +4,13 @@ declare(strict_types=1);
 
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 
-/*
- * Every table the merge registry can sync must also have somewhere that
- * WRITES it to the op log. The two lists drifted apart silently: goals had
- * merge rules, shipped in the pairing snapshot, and had no capture at all, so
- * a goal created after pairing never left the device that made it.
- *
- * A table with merge rules but no capture syncs exactly once — in the initial
- * backfill — and then diverges forever. That is worse than not syncing at all,
- * because both devices show the same history and disagree about the present.
- */
+// A table with merge rules but no capture syncs exactly once, in the initial
+// backfill, and then diverges forever: both devices show the same history and
+// disagree about the present. goals shipped that way until this test existed.
 
+// Never on the wire, snapshot or incremental. They keep merge rules so a peer can
+// still apply an op from an older build; the rules screen tells the user.
 /**
- * Never put on the wire at all: not in the pairing snapshot, not
- * incrementally. They keep merge rules so a peer can still apply an op from an
- * older build, but nothing produces one. The rules screen tells the user.
- *
  * @return list<string>
  */
 function deviceLocalTables(): array
@@ -27,14 +18,10 @@ function deviceLocalTables(): array
     return ['categorization_rules', 'rule_conditions', 'rule_actions'];
 }
 
+// Written only by migrations, seeders and the bundled corpus: no runtime writer
+// means nothing to capture. They still travel — the backfill excludes only the
+// device-local tables.
 /**
- * Reference data: written by migrations, seeders and the bundled corpus, never
- * by a user action, so every device derives the same rows from the same build.
- * That is the whole justification — no runtime writer means nothing to capture.
- * It is not that these rows never travel: the backfill excludes only the
- * device-local tables, so `categories` does reach a peer, and
- * RulesStayOnTheDeviceTest asserts exactly that.
- *
  * @return list<string>
  */
 function referenceDataTables(): array
@@ -46,32 +33,37 @@ function referenceDataTables(): array
 function snapshotOnlyTables(): array
 {
     return [
-        // Rewritten wholesale by a migration run and never edited by hand; a
-        // partial op-log replay of one would describe a state neither device
-        // was ever in.
+        // Rewritten wholesale by a migration run; a partial op-log replay would
+        // describe a state neither device was ever in.
         'migration_import_baseline',
         'migration_source_map',
     ];
 }
 
+// May only ever shrink: the tests below fail both when a table outside this list
+// loses capture and when one inside it gains capture without being struck off.
 /**
- * Known gaps, still to be closed. This list may only ever SHRINK — the test
- * below fails both when a table outside it loses capture and when a table
- * inside it gains capture without being struck off, so it cannot quietly rot
- * into a permanent excuse.
- *
  * @return list<string>
  */
 function uncapturedBacklog(): array
 {
     return [
+        // All four are detector-driven, and each device mints its own local id for
+        // the same logical row: the idempotency UNIQUE drops the second create, and
+        // that device's later SETs then name a pk it does not hold. Blocked until
+        // each has an identity both devices compute.
+        'chain_links',
+        'recurring_series',
+        'recurring_series_occurrences',
+        'drift_alerts',
     ];
 }
 
+// `anomaly_alerts` came off that list by deriving its id from (user_id,
+// transaction_id) — the columns its own UNIQUE already names, neither of which
+// ever moves. The four left have no such settled identity yet.
+
 /**
- * Tables written to the op log: the literals in the Sync listeners, plus the
- * table named at every EntityMutated dispatch site across the modules.
- *
  * @return list<string>
  */
 function capturedTables(): array
@@ -95,9 +87,8 @@ function capturedTables(): array
 
             $isListener = str_contains($file->getPathname(), '/Internal/Listeners/');
             $isDispatch = str_contains($source, 'new EntityMutated(');
-            // Bulk capture names its tables in a list rather than one call
-            // each, so the whole file is scanned. Only CALLERS count — the
-            // file that defines the method also names the tables it EXCLUDES.
+            // Only callers count: the file defining captureRowsById() also names the
+            // tables it EXCLUDES.
             $isBulk = str_contains($source, '->captureRowsById(');
 
             if (! $isListener && ! $isDispatch && ! $isBulk) {
@@ -114,9 +105,8 @@ function capturedTables(): array
                 continue;
             }
 
-            // Only a list the file actually WALKS. Counting every const array
-            // meant a table struck out of the capture loop still read as
-            // captured for as long as its name sat in the constant.
+            // Only a list the file actually walks: counting every const array meant a
+            // table struck out of the capture loop still read as captured.
             preg_match_all("/const ([A-Z_]+) = \[([^\]]*)\];/", $source, $lists, PREG_SET_ORDER);
 
             foreach ($lists as $list) {
@@ -171,8 +161,6 @@ it('does not capture a table the merge registry cannot merge', function (): void
     expect(array_values(array_diff(capturedTables(), $syncable)))->toBe([]);
 });
 
-// Both excuse lists name real syncable tables. A stale entry silently widens
-// the exemption, which is how a gap becomes permanent.
 it('never captures a table that is meant to stay on the device', function (): void {
     $leaked = array_values(array_intersect(deviceLocalTables(), capturedTables()));
 
@@ -182,6 +170,8 @@ it('never captures a table that is meant to stay on the device', function (): vo
     ));
 });
 
+// A stale entry on an excuse list silently widens the exemption, which is how a
+// gap becomes permanent.
 it('keeps every excuse pointing at a real syncable table', function (): void {
     $syncable = array_keys(app(MergeRulesRegistry::class)->rules());
     $excused = array_merge(snapshotOnlyTables(), deviceLocalTables(), referenceDataTables(), uncapturedBacklog());
@@ -204,8 +194,7 @@ it('keeps reference data free of any runtime writer', function (string $table): 
             continue;
         }
 
-        // Migrations and seeders are exactly how reference data is meant to
-        // arrive; a demo seeder is not a user action either.
+        // Migrations and seeders are how reference data is meant to arrive.
         if (preg_match('#/(tests|Database/Migrations|Database/Seeders)/#', $path) === 1) {
             continue;
         }

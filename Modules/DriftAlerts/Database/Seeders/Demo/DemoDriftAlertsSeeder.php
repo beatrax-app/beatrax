@@ -13,16 +13,10 @@ use Modules\DriftAlerts\Public\Enums\DriftAlertState;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Enums\Direction;
 
-// The latest_occurrence_id FK is NOT NULL on drift_alerts, so the seeder
-// first upserts a recurring_series_occurrences row per target series and
-// then references that occurrence id. Alerts land already in the target
-// state via create() — the boundary arch test only blocks direct updates.
+// Alerts are created directly in their target state rather than driven through
+// DriftAlertStateMachine; the boundary arch test only blocks direct updates.
 final class DemoDriftAlertsSeeder
 {
-    // seriesClusterKey resolves to the existing demo recurring series;
-    // txDescription selects the underlying transaction the occurrence row
-    // anchors to. Amounts are signed minor units; expense direction means
-    // the delta should be negative to model "paying more than baseline".
     /** @var list<array{seriesClusterKey: string, txDescription: string, state: string, direction: string, baselineMinor: int, latestMinor: int, deltaMinor: int, annualMinor: int, thresholdPercent: int, ageDays: int, actionedAgeDays: ?int}> */
     private const ALERTS = [
         [
@@ -79,8 +73,6 @@ final class DemoDriftAlertsSeeder
         ],
     ];
 
-    // Keyed by seriesClusterKey so the application resolves alert ids
-    // deterministically at seed time.
     /** @var list<array{seriesClusterKey: string, fromState: string, toState: string, reason: string, actor: string, ageDays: int, notes: ?string}> */
     private const TRANSITIONS = [
         [
@@ -181,9 +173,8 @@ final class DemoDriftAlertsSeeder
         ]);
     }
 
-    // Uses the query builder rather than the RecurringSeries Eloquent
-    // model — the boundary arch test bans any RecurringSeries::* identifier
-    // inside the DriftAlerts source tree, even for read access.
+    // Query builder, not the Eloquent model: the boundary arch test bans any
+    // RecurringSeries* identifier inside this tree, read access included.
     private function lookupSeriesId(User $user, string $clusterKey): ?int
     {
         $row = $this->db->connection()
@@ -199,9 +190,6 @@ final class DemoDriftAlertsSeeder
         return (int) $row->id;
     }
 
-    // Idempotent upsert keyed on (recurring_series_id, transaction_id) via
-    // the query builder rather than the RecurringSeriesOccurrence Eloquent
-    // model, to keep the DriftAlerts boundary arch test green.
     private function ensureOccurrence(User $user, int $seriesId, Transaction $tx): int
     {
         $connection = $this->db->connection();

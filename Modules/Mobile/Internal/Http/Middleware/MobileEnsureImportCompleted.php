@@ -13,9 +13,6 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * @link ../../../../../.docs/features/mobile/architecture.md
- */
 final readonly class MobileEnsureImportCompleted
 {
     // Every surface the abandoned ceremony itself needs, plus the escape

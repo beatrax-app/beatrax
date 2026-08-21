@@ -59,8 +59,6 @@ it('refreshes import_runs.source_format when reusing an existing row', function 
     $sha = hash_file('sha256', $fixture);
     expect($sha)->toBeString();
 
-    // Simulate a prior previewed row created under a different adapter
-    // (the value the latest preview claims must override the old one).
     /** @var ImportRun $stale */
     $stale = ImportRun::create([
         'user_id' => $this->fixtureUser->id,
@@ -89,10 +87,8 @@ it('substitutes the no-counterparty sentinel on rows with an empty Naam column',
     $first = $this->importer->runAndConfirm($fixture, 'asn-csv', $this->fixtureUser, formatHint: BankCsvFormatHint::Asn);
     $sentinelRows = Transaction::query()->where('counterparty_normalized', '_no_counterparty')->count();
 
-    // The gold fixture contains at least one nameless BEA row, so the
-    // sentinel landing path must produce a positive count. Also assert the
-    // sentinel rows are a real subset of the inserted set so a mis-count
-    // from a different counterparty cannot satisfy the test.
+    // The gold fixture carries at least one nameless BEA row. The subset
+    // assertion stops a mis-count from another counterparty satisfying the test.
     expect($sentinelRows)->toBeGreaterThan(0);
     expect($sentinelRows)->toBeLessThanOrEqual($first->inserted);
 });

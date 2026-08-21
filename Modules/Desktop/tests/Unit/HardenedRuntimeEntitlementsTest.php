@@ -2,20 +2,9 @@
 
 declare(strict_types=1);
 
-/*
- * macOS Hardened Runtime entitlements (PKG-08 / T-15-14, T-15-15).
- *
- * The bundled NativePHP build runs an embedded static PHP interpreter
- * under the macOS Hardened Runtime once Phase 17 wires real Apple
- * Developer ID notarization. Two entitlements are the documented
- * minimum for an embedded interpreter — without them dyld refuses to
- * map the PHP binary into the notarized process and the app will not
- * launch on a notarized release build (RESEARCH.md Pitfall 6).
- *
- * Phase 15 only CONFIGURES the file (PKG-08). The signing + notarization
- * run themselves arrive in Phase 17.
- */
-
+// The bundle runs an embedded static PHP interpreter under the macOS Hardened
+// Runtime. Without these two entitlements dyld refuses to map the PHP binary
+// into the notarized process and a notarized release build will not launch.
 it('exists at the path the electron-builder mac config references', function (): void {
     expect(is_file(base_path('build/entitlements.mac.plist')))->toBeTrue();
 });
@@ -28,7 +17,6 @@ it('parses as a valid XML plist', function (): void {
     $xml = @simplexml_load_string($contents);
     expect($xml)->not->toBeFalse();
 
-    // Plist root element is <plist version="1.0"> containing a single <dict>.
     expect($xml->getName())->toBe('plist');
     expect(isset($xml->dict))->toBeTrue();
 });
@@ -46,10 +34,6 @@ it('declares com.apple.security.cs.disable-library-validation as true', function
 });
 
 /**
- * Parse the entitlements plist into a [key => bool] map. Plists alternate
- * <key>NAME</key> and the value element (<true/> / <false/>), so we walk
- * the <dict>'s children in pairs.
- *
  * @return array<string, bool>
  */
 function loadHardenedRuntimeEntitlements(): array
@@ -68,6 +52,8 @@ function loadHardenedRuntimeEntitlements(): array
     $children = $xml->dict->children();
     $map = [];
     $currentKey = null;
+    // A plist dict alternates <key>NAME</key> with its value element, so the
+    // children are walked in pairs.
     foreach ($children as $node) {
         $name = $node->getName();
         if ($name === 'key') {

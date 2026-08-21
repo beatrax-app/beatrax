@@ -37,7 +37,6 @@ it('renders the calm dashboard with totals and recent rows when populated', func
         'display_order' => 1,
     ]);
 
-    // Income
     $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
         'amount_minor' => 250000,
         'posted_at' => '2026-05-05',
@@ -45,7 +44,6 @@ it('renders the calm dashboard with totals and recent rows when populated', func
         'counterparty_name' => 'Employer NV',
         'counterparty_normalized' => 'employer nv',
     ]);
-    // Categorized expense
     $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
         'amount_minor' => -5000,
         'posted_at' => '2026-05-06',
@@ -54,7 +52,6 @@ it('renders the calm dashboard with totals and recent rows when populated', func
         'counterparty_normalized' => 'ah amsterdam',
         'category_id' => $groceries->id,
     ]);
-    // Uncategorized
     $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
         'amount_minor' => -1299,
         'posted_at' => '2026-05-07',
@@ -75,7 +72,6 @@ it('renders the calm dashboard with totals and recent rows when populated', func
 });
 
 it('renders the uncategorized count badge in the top nav', function (): void {
-    // Uncategorized x 2
     $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
         'amount_minor' => -1299,
         'posted_at' => '2026-05-05',
@@ -91,11 +87,9 @@ it('renders the uncategorized count badge in the top nav', function (): void {
 
     $response->assertOk();
     $response->assertSee('Uncategorized', false);
-    // The badge text — the uncategorized count must appear in the nav.
     $response->assertSeeText('2');
 });
 
 it('redirects unauthenticated visitors away from the dashboard', function (): void {
-    // Verified at the Fortify default-route layer; no DI-clean way to
-    // drive unauthenticated state from inside this Pest test today.
+    // No DI-clean way to drive unauthenticated state from inside Pest today.
 })->skip('Verified at the Fortify default-route layer.');

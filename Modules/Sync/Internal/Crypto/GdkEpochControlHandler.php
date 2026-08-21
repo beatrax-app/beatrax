@@ -13,9 +13,6 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
 use Psr\Log\LoggerInterface;
 use SodiumException;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class GdkEpochControlHandler
 {
     // The wrapped epoch key is an anonymous sodium_crypto_box_seal — confidential

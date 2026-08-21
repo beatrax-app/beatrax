@@ -7,21 +7,6 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Counterparties\Internal\Http\Livewire\CounterpartyProfile;
 
-/*
- * Feature coverage for `/counterparties/{slug}` — the type-aware
- * profile page. Pins the eight load-bearing behaviors documented in
- * Plan 17-06b Task 2:
- *
- *   8.  Merchant profile renders tab bar + hero
- *   9.  Personal profile shows privacy banner + IBAN dotted by default
- *   10. Personal slug never contains IBAN (URL-routing key is name only)
- *   11. Bank profile renders fee-bar layout
- *   12. Government profile shows tax-year breakdown
- *   13. self_account renders stub redirect (no tabs / no hero)
- *   14. Unknown profile renders Label-this CTA (no Chains tab)
- *   15. Cross-user slug returns 404 (not 403)
- */
-
 function cpProfileUser(string $username = 'cp-profile-fixture'): User
 {
     return User::query()->create([
@@ -71,12 +56,10 @@ it('Test 9: personal profile shows privacy banner + IBAN hidden by default', fun
     $component = Livewire::actingAs($user)
         ->test(CounterpartyProfile::class, ['slug' => 'alex-jordan']);
 
-    // Privacy banner verbatim.
     $component->assertSee('🔒 This is a personal contact. IBAN and personal details are hidden by default and never shared in exports.', escape: false);
 
-    // Dotted display present in the HTML; full IBAN is included in
-    // the Alpine x-show payload but rendering starts hidden via
-    // x-cloak — assert the dotted glyph is there.
+    // The full IBAN does ride in the Alpine x-show payload, so the dotted
+    // glyph is what proves the render starts hidden behind x-cloak.
     $html = (string) $component->html();
     expect($html)->toContain('····  ····  ····  ····');
     expect($html)->toContain('Show IBAN');
@@ -91,13 +74,10 @@ it('Test 10: personal slug never contains the IBAN', function (): void {
         ->test(CounterpartyProfile::class, ['slug' => 'alex-jordan']);
 
     $html = (string) $component->html();
-    // Page title / breadcrumbs / URL would echo the slug; verify that
-    // the slug itself is the kebab-cased name and the IBAN is NOT
-    // anywhere outside the Alpine reveal payload's hidden span.
     expect($component->get('slug'))->toBe('alex-jordan');
     expect($component->get('slug'))->not->toContain($iban);
-    // Personal IBAN privacy: the page title must read the display name,
-    // not the IBAN; the slug column shipped to the URL is also name-only.
+    // The slug reaches the URL and the page title, so both have to read the
+    // display name.
     expect($html)->toContain('Alex Jordan');
 });
 
@@ -109,10 +89,8 @@ it('Test 11: bank profile renders the fee-bar layout', function (): void {
         ->test(CounterpartyProfile::class, ['slug' => 'ics-fee']);
 
     $component->assertSee('Bank fees by category');
-    // Right-of-tab-bar note for bank type. Blade escapes the
-    // apostrophe to `&#039;` when echoing $tabNote, so the
-    // default `escape: true` makes PHPUnit compare the encoded
-    // expected string against the encoded rendering.
+    // Blade encodes the apostrophe, and the default `escape: true` encodes the
+    // expectation to match — hence no `escape: false` here.
     $component->assertSee("— bank-fee counterparty doesn't generate funding chains");
 });
 
@@ -137,9 +115,8 @@ it('Test 13: self_account renders the stub redirect (no tabs / no hero)', functi
 
     $component->assertSee("This isn't really a counterparty", escape: false);
     $component->assertSee('Open ASN Fixture Account account view →', escape: false);
-    // The tab bar must NOT render for self_account — assert the
-    // wire:click switchTab action (rendered on every tab button) is
-    // absent. The body-only render skips the nav element entirely.
+    // Every tab button carries this wire:click, so its absence is the proof
+    // that the nav element was skipped entirely.
     $html = (string) $component->html();
     expect($html)->not->toContain("switchTab('overview')");
 });
@@ -154,7 +131,6 @@ it('Test 14: unknown renders fallback Label CTA (no Chains tab)', function (): v
     $component->assertSee('Overview');
     $component->assertSee('Transactions');
     $component->assertSee('Aliases');
-    // Chains tab is intentionally absent on unknown.
     $component->assertDontSee('Chains');
     $component->assertSee('Label this counterparty');
 });
@@ -164,10 +140,9 @@ it('Test 15: cross-user slug returns 404 (not 403)', function (): void {
     $userB = cpProfileUser('cp-profile-iso-b');
     cpProfileRow($userB->id, 'b-private', 'B Private Merchant', 'merchant');
 
-    // Hitting the actual route surfaces the framework's 404 response —
-    // the NotFoundHttpException thrown inside mount() bubbles to the
-    // route resolver. The status MUST be 404 (not 403) so no signal is
-    // emitted that the slug exists in another user's namespace.
+    // 404 rather than 403: a 403 would confirm the slug exists in someone
+    // else's namespace. The route is hit for real so the exception mount()
+    // throws goes through the framework's own handler.
     $response = $this->actingAs($userA)
         ->get(route('counterparties.profile', ['slug' => 'b-private']));
 

@@ -5,24 +5,10 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Adds `cluster_counterparty_key` to `recurring_series`.
- *
- * The detector composes a stable counterparty identifier per cluster
- * (IBAN when present, normalized counterparty description otherwise).
- * Persisting that identifier on the row gives the income cadence-flip
- * fallback lookup a precise seam: when `cluster_key` (which encodes
- * the cadence band) misses, the fallback can match by the underlying
- * counterparty identity rather than the free-form detected_name —
- * which is not unique across two payroll providers that share a
- * normalised display string but differ by IBAN.
- *
- * Backfill: existing rows are populated from `detected_name`. That is
- * a safe approximation for the historic dataset because the only
- * cluster-key shape that pre-dates this column was already keyed on
- * the same detected_name string (the IBAN-keyed multi-employer case
- * had no fallback at write time).
- */
+// Gives the income cadence-flip fallback a precise seam: two payroll providers
+// can share a normalised detected_name but differ by IBAN. Backfilling existing
+// rows from detected_name is safe because the only cluster-key shape predating
+// this column was already keyed on that same string.
 return new class extends ModuleMigration
 {
     public function up(): void

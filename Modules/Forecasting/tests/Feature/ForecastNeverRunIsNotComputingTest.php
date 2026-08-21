@@ -10,13 +10,9 @@ use Modules\Forecasting\Public\Services\ForecastQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * A missing run, an in-flight run and an unreadable run all resolved to the
- * same "still computing" sentinel. On a device that had never computed one,
- * the calendar therefore sat on "Prognose wordt bijgewerkt…" permanently —
- * measured on a paired phone with an empty jobs table, so nothing was pending
- * and nothing ever would be.
- */
+// A missing, failed and unreadable run all resolved to the same "still
+// computing" sentinel, so a phone that had never computed one sat on
+// "Prognose wordt bijgewerkt…" forever with an empty jobs table behind it.
 
 function fnrUser(): User
 {

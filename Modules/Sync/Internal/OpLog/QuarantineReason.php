@@ -7,9 +7,6 @@ namespace Modules\Sync\Internal\OpLog;
 // Why a replayed op was routed to op_log_quarantine instead of applied. The
 // backing values are the durable strings written to the `reason` column, so
 // they are part of the on-disk contract and must not change.
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 enum QuarantineReason: string
 {
     case CrossUser = 'cross_user';

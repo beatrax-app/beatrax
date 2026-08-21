@@ -5,37 +5,10 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Creates the categorization_rules table — user-defined matchers
- * that pre-categorise an incoming transaction at import time.
- *
- * Schema:
- *
- *   - id, user_id (nullable FK with cascade delete) — per-user scope.
- *   - field (16) — which transaction column to match: `merchant`,
- *     `description`, or `counterparty`.
- *   - match (16) — comparison operator: `contains`, `equals`,
- *     `starts_with`. All matches are case-insensitive at evaluation
- *     time.
- *   - value — the literal substring / prefix / equality target.
- *   - category_id (FK to categories with cascade delete) — the
- *     destination category when the rule fires.
- *   - hits_count — denormalised firing counter incremented by
- *     ApplyAutoCategoryStage; surfaces in the /rules table.
- *   - active (boolean, default true) — disable a rule without
- *     deleting it.
- *   - notes (text, nullable) — free-form memo also surfaced in the
- *     rule-form modal.
- *
- * UNIQUE (user_id, field, match, value) blocks duplicate rule
- * insertion at the database layer. Index (user_id, active) is the
- * RuleEvaluator hot-path: every transaction asks "which active rules
- * does this user own?" once per ingestion.
- *
- * The field + match enums are enforced via paired BEFORE INSERT /
- * BEFORE UPDATE triggers; a typo in the action layer fails loud at
- * the database boundary rather than landing a silently-broken rule.
- */
+// UNIQUE (user_id, field, match, value) blocks a duplicate rule at the
+// database layer; (user_id, active) serves the once-per-transaction
+// "which active rules does this user own?" lookup. hits_count is
+// denormalised onto the rule for the /rules table.
 return new class extends ModuleMigration
 {
     public function up(): void

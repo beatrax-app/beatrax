@@ -28,7 +28,11 @@ return [
     'recovery_download' => 'Last ned som .txt',
     'recovery_copy' => 'Kopier koder',
     'recovery_copied' => 'Kopiert',
+    'recovery_copy_failed' => 'Kunne ikke kopiere. Skriv ned kodene i stedet.',
     'recovery_saved' => 'Lagret i nedlastingene dine.',
+    'recovery_share_title' => 'Beatrax-gjenopprettingskoder',
+    'recovery_share_message' => 'Oppbevar dem på et trygt sted.',
+    'recovery_save_failed' => 'Filen kunne ikke lagres. Skriv ned kodene i stedet.',
     'recovery_confirm' => 'Jeg har lagret disse kodene på et trygt sted.',
     'continue_to_pairing' => 'Fortsett til paringen',
 

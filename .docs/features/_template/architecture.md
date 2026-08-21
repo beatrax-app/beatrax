@@ -47,7 +47,7 @@ Describe the `Internal/` surface — what is intentionally hidden:
 
 - One-line summary of each major subdirectory under `Internal/`.
 - Any arch invariant that specifically guards this module (e.g.
-  `noResolverWritesTransactions` for the Chains module).
+  `noOtherCardStatementStateMutator` for the Chains module).
 
 ## Key services + events
 

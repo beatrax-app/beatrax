@@ -54,10 +54,8 @@ final class Transaction extends Model
 {
     use BelongsToUser;
 
-    // Three-state lifecycle uncleared -> cleared -> reconciled, owned by
-    // Ledger\Public\Enums\ClearedStatus (status carries no DB-layer trigger,
-    // unlike the transaction type). This allow-list is the enum's values, kept
-    // for the write paths that validate a raw string against the set.
+    // Unlike the transaction type, status has no DB-layer trigger guarding it;
+    // this is what the write paths that take a raw string validate against.
     /** @var list<string> */
     public const STATUSES = [
         ClearedStatus::Uncleared->value,
@@ -95,16 +93,15 @@ final class Transaction extends Model
             'fingerprint_version' => 'integer',
             'source_row_index' => 'integer',
             // SQLite hands this back as a float, and brick/math 0.18 converts a
-            // float argument to int — 0.92917629 silently becomes 0, so every
-            // rate rendered or recomputed from it collapses to zero. The column
-            // is a decimal string end to end; the cast keeps it one.
+            // float argument to int — 0.92917629 silently becomes 0, collapsing
+            // every rate recomputed from it to zero.
             'fx_rate_used' => 'string',
             'raw_payload' => EncryptedJsonCast::class,
             'auto_category_provenance' => 'array',
             'enriched_from' => AsArrayObject::class,
             'payment_type' => PaymentType::class,
-            // Virtual Money attributes — `amount` and `settled_amount` are not
-            // real columns; the cast bridges them to the (minor, currency) pair.
+            // `amount` and `settled_amount` are not columns; the cast bridges
+            // each to its (minor, currency) pair.
             'amount' => MoneyMinorCast::class,
             'settled_amount' => MoneyMinorCast::class.':settled_amount_minor,settled_currency',
         ];
@@ -126,10 +123,8 @@ final class Transaction extends Model
         return $this->belongsTo(Category::class);
     }
 
-    // Null for rows that pre-date the resolver, rows it couldn't
-    // materialise (self-account branch, or no IBAN/name/description),
-    // or rows whose linked counterparty was pruned by the GC job.
-    // Consumers eager-load via ->with('counterparty') to prevent N+1.
+    // Null on rows predating the resolver, self-account rows, rows with no
+    // IBAN/name/description to resolve from, and rows the GC has pruned.
     /**
      * @return BelongsTo<Counterparty, $this>
      */
@@ -146,9 +141,8 @@ final class Transaction extends Model
         return $this->belongsTo(ImportRun::class);
     }
 
-    // Populated for transfer_out/transfer_in rows whose cross-account
-    // counterpart landed in the ledger and was matched by the
-    // deterministic Layer-1 listener.
+    // Only set on a transfer_out/transfer_in row whose cross-account
+    // counterpart was also imported and matched.
     /**
      * @return BelongsTo<Transaction, $this>
      */

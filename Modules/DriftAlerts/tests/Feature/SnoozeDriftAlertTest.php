@@ -15,13 +15,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 uses(RefreshDatabase::class);
 
-/*
- * SnoozeDriftAlert — atomic write of `snoozed_until` + state transition
- * through the DriftAlertStateMachine. Idempotent when re-snoozed to
- * the same target timestamp. Cross-user 404. Audit row carries the
- * snooze target inside `notes`.
- */
-
 function sdaUser(string $username): User
 {
     return User::query()->create([

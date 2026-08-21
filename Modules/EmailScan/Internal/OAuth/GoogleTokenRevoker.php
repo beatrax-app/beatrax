@@ -5,12 +5,10 @@ declare(strict_types=1);
 namespace Modules\EmailScan\Internal\OAuth;
 
 use Illuminate\Http\Client\Factory as HttpClient;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final class GoogleTokenRevoker
 {
     private const REVOKE_URL = 'https://oauth2.googleapis.com/revoke';
@@ -22,10 +20,9 @@ final class GoogleTokenRevoker
         private readonly LoggerInterface $logger,
     ) {}
 
-    // Best-effort: a failed revoke (offline, already revoked, network) must
-    // not block the local disconnect that deletes the token regardless. A
-    // failure here only means Google's server-side grant may outlive the
-    // deleted local copy until it expires on its own.
+    // Best-effort: a failed revoke must not block the local disconnect. The
+    // cost is that Google's server-side grant may outlive the deleted local
+    // copy until it expires on its own.
     public function revoke(string $refreshToken): bool
     {
         if ($refreshToken === '') {
@@ -39,9 +36,7 @@ final class GoogleTokenRevoker
                 ->post(self::REVOKE_URL, ['token' => $refreshToken])
                 ->successful();
         } catch (Throwable $e) {
-            $this->logger->warning('GoogleTokenRevoker: revoke request failed.', [
-                'error' => $e->getMessage(),
-            ]);
+            $this->logger->warning('GoogleTokenRevoker: revoke request failed.', SafeExceptionContext::describe($e));
 
             return false;
         }

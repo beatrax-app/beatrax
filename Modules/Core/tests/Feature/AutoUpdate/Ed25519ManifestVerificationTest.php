@@ -10,24 +10,7 @@ use Modules\Core\Public\Services\ElectronUpdateChannel;
 use Modules\Core\Public\Services\SystemClock;
 use Psr\Log\NullLogger;
 
-/*
- * ElectronUpdateChannel::verifyManifest is the SOLE binary-integrity
- * signal for the auto-update path. With no OS-level code-signing on
- * any platform, a tampered latest.yml that flips even a single byte of
- * the manifest body or the detached signature MUST cause verification
- * to fail and prevent the SystemAlertsBanner from advertising a
- * compromised release.
- *
- * Tests construct the service directly with a stub Repository so the
- * production config file stays pristine while each test fixes a
- * throwaway Ed25519 keypair via sodium_crypto_sign_keypair().
- */
-
-/**
- * Build the channel against a stub config Repository carrying the
- * provided public-key hex under auto_update.publisher_public_key_hex.
- */
-/** Captures warning messages so the two "cannot verify" reasons stay distinguishable. */
+// Captures warning messages so the two "cannot verify" reasons stay distinguishable.
 final class EuvRecordingLogger extends NullLogger
 {
     /** @var list<string> */
@@ -59,10 +42,6 @@ function makeChannelWithPublicKeyHex(string $publicKeyHex): ElectronUpdateChanne
 }
 
 /**
- * Generate a throwaway Ed25519 keypair via libsodium. Returns
- * ['secret' => 64-byte binary, 'public' => 32-byte binary,
- *  'public_hex' => 64 hex chars].
- *
  * @return array{secret: string, public: string, public_hex: string}
  */
 function generateEd25519Fixture(): array
@@ -107,7 +86,6 @@ it('returns false when the signature has been tampered (single byte flipped) wit
     $manifestBody = "version: 0.1.1-rc.1\nsha512: abc123\n";
     $signature = sodium_crypto_sign_detached($manifestBody, $fixture['secret']);
 
-    // Flip the first byte of the 64-byte signature.
     $tamperedSig = ($signature[0] === 'a' ? 'b' : 'a').substr($signature, 1);
     expect($tamperedSig)->not->toBe($signature);
 
@@ -120,10 +98,8 @@ it('returns false on malformed signature length without throwing to callers', fu
     $fixture = generateEd25519Fixture();
     $manifestBody = "version: 0.1.1-rc.1\n";
 
-    // 17 bytes — clearly not the 64-byte Ed25519 signature size, so
-    // libsodium raises SodiumException internally. The contract says
-    // verifyManifest swallows it and returns false; this guards
-    // against a malformed wire packet crashing the poll loop.
+    // Not the 64-byte Ed25519 signature size, so libsodium raises internally;
+    // verifyManifest must swallow it rather than crash the poll loop.
     $channel = makeChannelWithPublicKeyHex($fixture['public_hex']);
 
     expect($channel->verifyManifest($manifestBody, 'not-a-valid-signature'))->toBeFalse();
@@ -251,13 +227,9 @@ it('poll() returns a populated DTO when the fetched manifest verifies cleanly', 
     expect($dto?->channel)->toBe('preview');
 });
 
-/*
- * An install with no publisher key configured cannot verify anything, which
- * is a different problem from a manifest that fails to verify: one is the
- * build being mis-shipped, the other is a manifest that should be distrusted.
- * The warning is what distinguishes them in the log, so it is asserted rather
- * than assumed.
- */
+// A missing publisher key is a mis-shipped build; a manifest that fails to
+// verify is a manifest to distrust. The warning is what tells them apart in
+// the log, so it is asserted rather than assumed.
 
 it('refuses to verify, and says why, when no publisher key is configured', function (mixed $configured): void {
     /** @var DatabaseManager $db */

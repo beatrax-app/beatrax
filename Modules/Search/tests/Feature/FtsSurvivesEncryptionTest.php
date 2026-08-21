@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
-use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
@@ -16,15 +16,9 @@ use Modules\Search\Public\Dto\SearchFilters;
 use Modules\Search\Public\Services\SearchQuery;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 
-/*
- * FtsSurvivesEncryptionTest — CRYPT-01 / BLOCKER-2 / D-02c: with encryption
- * enabled, a full-text query still matches merchant/description text
- * because SearchIndexWriter indexes the DECRYPTED plaintext shadow (not
- * ciphertext — FTS5 cannot index ciphertext, so the disclosed plaintext
- * shadow copy in transaction_search_docs/transaction_search_fts is an
- * accepted, honestly-disclosed exception to "encrypted at rest").
- * 14-VALIDATION.md CRYPT-01 row "Full-text search still matches...".
- */
+// FTS5 cannot index ciphertext, so SearchIndexWriter indexes a decrypted
+// plaintext shadow copy in transaction_search_docs — a knowingly accepted
+// exception to "encrypted at rest".
 
 it('a full-text search still matches a transaction description/counterparty after encryption is enabled', function (): void {
     /** @var DatabaseManager $db */
@@ -34,20 +28,18 @@ it('a full-text search still matches a transaction description/counterparty afte
     /** @var User $user */
     $user = User::query()->find($userId);
 
-    // Prime the session with an unlocked dummy app-lock KEK — mirrors
-    // Modules/Sync/tests/TestCase.php's own priming.
+    // The keyring can only be generated while the app lock is unlocked.
     /** @var Session $session */
     $session = $this->app->make(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
 
     /** @var GdkKeyringService $keyring */
     $keyring = $this->app->make(GdkKeyringService::class);
 
     $keyring->generateAndPersist($userId, $session);
 
-    // Insert the transaction WITHOUT the TestCase's default FTS seeding —
-    // the encrypted-write hook + SearchIndexWriter must build the index
-    // themselves via the decrypt-before-tokenize path.
+    // Skipping the fixture's FTS seeding forces the encrypted-write hook and
+    // SearchIndexWriter to build the index over the decrypt-before-tokenize path.
     $txId = $this->searchTestTransaction($userId, [
         'description' => 'Encrypted-at-rest groceries run',
         'counterparty_name' => 'Ciphertext Market',
@@ -63,9 +55,8 @@ it('a full-text search still matches a transaction description/counterparty afte
 
     expect(collect($result->rows)->pluck('id'))->toContain($txId);
 
-    // Disclosed-shadow assertion: the FTS body IS plaintext (D-02c honest
-    // disclosure), even though the transactions.counterparty_name column
-    // itself is ciphertext at rest.
+    // The shadow body is plaintext by design, even though the
+    // transactions.counterparty_name column itself is ciphertext at rest.
     $ftsBody = $db->connection()->table('transaction_search_docs')->where('transaction_id', $txId)->value('search_body');
     expect($ftsBody)->toContain('Ciphertext Market');
 });
@@ -78,11 +69,9 @@ it('the real import path (RecordTransactions, genuinely encrypted) still indexes
     /** @var User $user */
     $user = User::query()->find($userId);
 
-    // Prime the session with an unlocked dummy app-lock KEK — mirrors
-    // Modules/Sync/tests/TestCase.php's own priming.
     /** @var Session $session */
     $session = $this->app->make(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
 
     /** @var GdkKeyringService $keyring */
     $keyring = $this->app->make(GdkKeyringService::class);
@@ -129,14 +118,14 @@ it('the real import path (RecordTransactions, genuinely encrypted) still indexes
         ),
     ], $user);
 
-    // Ciphertext at rest — proves this row went through the real encrypt
-    // hook, not a raw plaintext insert.
+    // Ciphertext at rest proves the row went through the real encrypt hook
+    // rather than a raw plaintext insert.
     $stored = $db->connection()->table('transactions')->where('user_id', $userId)->first();
     expect($stored->description)->not->toBe('Genuinely encrypted groceries');
     expect($stored->counterparty_name)->not->toBe('Real Import Merchant');
 
-    // Yet full-text search still finds it — IndexTransactionOnImport ->
-    // SearchIndexWriter decrypted before tokenizing (BLOCKER-2 closed).
+    // Search still finds it because IndexTransactionOnImport decrypts before
+    // handing the text to SearchIndexWriter.
     /** @var SearchQuery $query */
     $query = $this->app->make(SearchQuery::class);
     $result = $query->search($user, 'Real Import Merchant', new SearchFilters);

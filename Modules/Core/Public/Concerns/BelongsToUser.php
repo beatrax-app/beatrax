@@ -9,9 +9,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Scopes\UserScope;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 trait BelongsToUser
 {
     public static function bootBelongsToUser(): void

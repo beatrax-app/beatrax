@@ -2,11 +2,7 @@
 
 declare(strict_types=1);
 
-// Electricity €120 → €150 (+25.0% month-over-month).
-// The series has a per-series threshold override of 50% so the
-// drift sits below the EFFECTIVE threshold and no alert fires.
-// Consumers of this fixture seed recurring_series.drift_threshold_percent
-// = 50; the global default of 5 is then ignored for this series.
+// +25.0%, but under the series's own 50% threshold, so nothing fires.
 
 $transactions = [];
 $amounts = [-12000, -12000, -12000, -15000, -15000, -15000];

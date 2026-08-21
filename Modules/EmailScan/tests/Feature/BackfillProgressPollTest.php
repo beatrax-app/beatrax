@@ -8,22 +8,6 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\EmailScan\Internal\Http\Livewire\InboxesPage;
 
-/*
- * Backfill progress strip rendering invariant.
- *
- * The /inboxes page renders the backfill progress strip while
- * any inbox has a non-null backfill_progress payload. The strip
- * carries a `wire:poll.2s="refreshBackfillProgress"` attribute
- * so a live count climbs without a full page reload. When every
- * inbox's payload returns to NULL the strip disappears
- * entirely (the @if guard short-circuits).
- *
- * The InboxQuery::forCurrentUser hydration projects the JSON
- * payload into fetched_count + total_estimated DTO fields; this
- * test verifies the Blade renders both numbers verbatim,
- * including the leading `~` on the estimate.
- */
-
 function bppUser(string $username): User
 {
     return User::query()->create([
@@ -155,10 +139,8 @@ it('stacks one line per active backfill when multiple inboxes are mid-backfill',
 });
 
 it('refreshBackfillProgress() is a no-op poll target that returns null', function (): void {
-    // The poll method is intentionally empty; Livewire re-renders
-    // the component on every poll tick, which re-queries the
-    // backfill_progress payload via InboxQuery and surfaces the
-    // latest counters.
+    // The method is empty on purpose: the re-render Livewire does on each
+    // poll tick is what re-queries the payload.
     $user = bppUser('poll@example.com');
     $this->actingAs($user);
 

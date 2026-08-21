@@ -6,11 +6,8 @@ namespace Modules\Ingestion\Internal\Adapters\Paypal;
 
 use Carbon\CarbonImmutable;
 use Carbon\Exceptions\InvalidFormatException;
-use Modules\Ingestion\Public\Exceptions\InvalidDateException;
+use Modules\Ingestion\Internal\Exceptions\InvalidDateException;
 
-/**
- * @link ../../../../../.docs/features/ingestion/architecture.md
- */
 final class PaypalDateParser
 {
     public function parse(string $raw): CarbonImmutable
@@ -20,8 +17,7 @@ final class PaypalDateParser
             throw new InvalidDateException('Empty PayPal date string.');
         }
 
-        // Shape A: M/D/YYYY (US numeric — the empirical PayPal Activity
-        // Download shape, regardless of account display locale).
+        // The Activity Download ships US numeric M/D/YYYY whatever the account's display locale.
         if (preg_match('/^\d{1,2}\/\d{1,2}\/\d{4}$/', $trimmed) === 1) {
             try {
                 $parsed = CarbonImmutable::createFromFormat('!n/j/Y', $trimmed);
@@ -38,8 +34,7 @@ final class PaypalDateParser
             }
         }
 
-        // Shape B: YYYY-MM-DD (ISO 8601 fallback for future PayPal
-        // export shape drift).
+        // ISO 8601 fallback for PayPal export shape drift.
         if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $trimmed) === 1) {
             try {
                 $parsed = CarbonImmutable::createFromFormat('!Y-m-d', $trimmed);

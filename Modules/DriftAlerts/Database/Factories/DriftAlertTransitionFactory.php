@@ -8,10 +8,6 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\DriftAlerts\Models\DriftAlertTransition;
 use Modules\DriftAlerts\Public\Enums\DriftAlertState;
 
-// The default state encodes a "user acknowledged an open alert"
-// transition. Callers can override from_state/to_state/transition_reason/
-// actor for the snooze/dismiss/revive shapes.
-
 /**
  * @extends Factory<DriftAlertTransition>
  */

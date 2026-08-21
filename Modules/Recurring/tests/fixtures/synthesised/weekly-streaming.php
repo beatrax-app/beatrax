@@ -2,10 +2,8 @@
 
 declare(strict_types=1);
 
-// Weekly streaming credit — 12 occurrences at €2.49 spaced exactly 7
-// days apart. Median interval lands in the <10d weekly snap band.
-// Detector expectation: ONE expense series, weekly cadence; monthly
-// equivalent ≈ latest × 52 / 12.
+// Spaced exactly 7 days, putting the median interval in the sub-10-day weekly
+// snap band.
 
 $transactions = [];
 $start = new DateTimeImmutable('2025-09-01');

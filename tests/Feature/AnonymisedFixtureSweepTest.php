@@ -4,19 +4,8 @@ declare(strict_types=1);
 
 use Modules\Ingestion\Internal\Adapters\Ics\PdfTextExtractor;
 
-/**
- * Repo-wide anonymisation-sweep guard. Reads the committed ICS PDF
- * fixtures and asserts no PII-shaped strings can creep back in. Green
- * by design — the file's job is to fail the build the moment any
- * future contributor pastes a raw ICS export into the fixture
- * directory.
- *
- * Case 5 (`->group('integration')`) round-trips the tiny synthetic PDF
- * through the project's `PdfTextExtractor`, which wraps the real
- * `pdftotext` binary with the same flag set the ingestion path uses.
- * CI hosts without poppler installed can exclude the integration group
- * via `vendor/bin/pest --exclude-group=integration`.
- */
+// The `integration` case shells out to the real pdftotext; a host without
+// poppler runs the rest via `vendor/bin/pest --exclude-group=integration`.
 $fixtureTxt = __DIR__.'/../../Modules/Ingestion/tests/fixtures/ics/ics-sample-1.txt';
 $fixtureTinyPdf = __DIR__.'/../../Modules/Ingestion/tests/fixtures/ics/ics-sample-tiny.pdf';
 

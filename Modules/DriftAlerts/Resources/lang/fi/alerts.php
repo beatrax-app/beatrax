@@ -57,6 +57,7 @@ return [
         'meta_eur_equiv' => '(≈ :amount/v)',
         'cancel_impact' => 'Irtisano tämä → säästä :amount/v',
         'cadence_flipped' => 'Maksuväli vaihtui — näkyy myös kohdassa',
+        'cadence_flipped_link' => 'Tarkista toistuvat',
         'acknowledge' => 'Kuittaa',
         'acknowledge_aria' => 'Kuittaa hinnanmuutoshälytys :id',
         'snooze' => 'Torkuta ▾',

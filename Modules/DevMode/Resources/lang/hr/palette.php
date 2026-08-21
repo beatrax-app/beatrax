@@ -24,10 +24,12 @@ return [
     'source_txn' => 'transakcija',
     'source_counterparty' => 'protustranka',
     'source_category' => 'kategorija',
+    'results_aria' => 'Rezultati',
     'no_results' => 'Nema rezultata.',
     'foot_navigate' => 'kretanje',
     'foot_select' => 'odabir',
     'foot_close' => 'zatvaranje',
+    'close_aria' => 'Zatvori pretraživanje',
     'foot_try' => 'Pokušaj',
     'results_suffix' => ' rezultata',
 ];

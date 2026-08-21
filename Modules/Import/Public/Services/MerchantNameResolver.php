@@ -8,14 +8,9 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Community\Public\Services\CommunityCorpusQuery;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/import/architecture.md#merchant-aliases
- */
 final class MerchantNameResolver
 {
-    // Defence-in-depth: 500+ live aliases would already indicate a
-    // settings-page misuse, but the bound keeps the PHP-side scan O(1)
-    // memory regardless of dataset size.
+    // Keeps the PHP-side scan bounded whatever the dataset does.
     private const GENERALIZED_SCAN_LIMIT = 500;
 
     public function __construct(

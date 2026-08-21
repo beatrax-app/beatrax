@@ -8,14 +8,6 @@ use Nwidart\Modules\Contracts\RepositoryInterface;
 
 uses(RefreshDatabase::class);
 
-/*
- * 15-01 Task 2: proves the module-skeleton + single-owner wiring is
- * correct — Mobile is enabled, the mobile_sync_progress durable cursor
- * table exists with the expected columns, the three Mobile testsuites are
- * declared in phpunit.xml, and MobileServiceProvider forward-registers
- * every future wave's FQCN (so downstream plans never re-edit it).
- */
-
 it('registers the Mobile module as enabled', function (): void {
     /** @var RepositoryInterface $modules */
     $modules = app(RepositoryInterface::class);
@@ -42,16 +34,13 @@ it('creates the mobile_sync_progress durable-cursor table with the expected colu
     expect($columns['user_id']['nullable'])->toBeFalse();
     expect($columns['records_applied']['nullable'])->toBeFalse();
 
-    // No float/double column types (RESEARCH.md convention — plain
-    // integers only for progress math).
+    // Plain integers only for progress math, never a float or a double.
     $types = $columns->pluck('type_name')->map(static fn (string $t): string => strtolower($t));
     expect($types->filter(static fn (string $t): bool => str_contains($t, 'float') || str_contains($t, 'double')))
         ->toBeEmpty();
 
-    // sqlite_master is the canonical introspection for indexes when
-    // Schema::getIndexes isn't reliable across every driver in this
-    // Laravel version (Modules/EmailScan/tests/Integration/MigrationsTest
-    // precedent).
+    // sqlite_master rather than Schema::getIndexes(), which is not reliable across
+    // every driver in this Laravel version.
     $indexSql = $connection
         ->table('sqlite_master')
         ->where('type', 'index')
@@ -63,10 +52,10 @@ it('creates the mobile_sync_progress durable-cursor table with the expected colu
     expect(str_contains($indexSql, 'user_id') && str_contains($indexSql, 'peer_device_id'))->toBeTrue();
 });
 
-// This used to require Mobile, MobileUnit and MobileFeature all be declared,
-// which pinned the bug: the latter two re-listed Mobile's own directories, and
-// PHPUnit answers a file claimed twice with a warning that exits the run 1 with
-// nothing failing. It now pins the invariant that was actually wanted.
+// This used to require Mobile, MobileUnit and MobileFeature all be declared, which
+// pinned the bug: the latter two re-listed Mobile's own directories, and PHPUnit
+// answers a file claimed twice with a warning that exits the run 1 with nothing
+// failing.
 it('declares the Mobile testsuite, and no two testsuites claim the same directory', function (): void {
     $config = new SimpleXMLElement((string) file_get_contents(base_path('phpunit.xml')));
 

@@ -2,10 +2,8 @@
 
 declare(strict_types=1);
 
-// Yearly domain renewal — 2 occurrences exactly 365 days apart at €12.00.
-// Detector expectation: ONE expense series, yearly cadence; monthly
-// equivalent = latest / 12. Hits the minimum-2-occurrences floor that
-// gates whether yearly subscriptions are caught after only one cycle.
+// Exactly two occurrences 365 days apart — the minimum-2-occurrences floor,
+// which decides whether a yearly subscription is caught after a single cycle.
 
 $transactions = [];
 $start = new DateTimeImmutable('2024-06-12');

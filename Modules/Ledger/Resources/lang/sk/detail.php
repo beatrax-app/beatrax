@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Odstrániť kategóriu',
         'keep_category' => 'Ponechať túto kategóriu',
         'restore_single' => 'Obnoviť ako jednu kategóriu?',
+        'survivor_legend' => 'Kategória, ktorá zostane',
         'confirm_unsplit' => 'Áno, zrušiť rozdelenie',
         'keep_split' => 'Ponechať rozdelenie',
     ],
@@ -51,6 +52,16 @@ return [
         'choose_aria' => 'Vyber nový typ transakcie',
         'choose_option' => 'Vyber typ…',
         'save' => 'Uložiť',
+    ],
+
+    'type_label' => [
+        'expense' => 'Výdavok',
+        'income' => 'Príjem',
+        'transfer_out' => 'Odchádzajúci prevod',
+        'transfer_in' => 'Prichádzajúci prevod',
+        'fee' => 'Poplatok',
+        'refund' => 'Vrátenie peňazí',
+        'adjustment' => 'Úprava',
     ],
 
     'note' => [

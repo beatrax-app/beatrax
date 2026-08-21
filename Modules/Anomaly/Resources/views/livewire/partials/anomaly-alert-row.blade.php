@@ -1,7 +1,7 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    A single anomaly alert row (D-16: one alert per transaction,
-    multi-reason). Cloned from drift-alert-row but re-shaped for a
+    A single anomaly alert row — one alert per transaction, possibly
+    multi-reason. Cloned from drift-alert-row but re-shaped for a
     point-in-time unusual charge:
       - reason micro-chips (large / first-time / duplicate) after the
         merchant name, color-coded per UI-SPEC §2
@@ -30,7 +30,7 @@
     $baselineMinor = $alert->baselineAmount->toMinor();
     $upArrow = abs($latestMinor) >= abs($baselineMinor);
 
-    // Canonical reason labels (D-16). Unknown reasons fall through with a
+    // Canonical reason labels. Unknown reasons fall through with a
     // titleized fallback so a future detector still renders.
     $reasonLabels = [
         'large' => Lang::get('anomaly::alerts.reasons.large'),
@@ -39,7 +39,7 @@
     ];
 @endphp
 
-<div class="rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700">
+<x-core::card padding="tight">
     <div class="flex items-start justify-between gap-4">
         <div class="min-w-0 flex-1">
             <p class="flex flex-wrap items-baseline gap-2 text-sm">
@@ -57,12 +57,14 @@
                     @php $label = $reasonLabels[$reason] ?? ucwords(str_replace('_', ' ', $reason)); @endphp
                     @if ($reason === 'first_time')
                         <span
+                            role="img"
                             class="rounded-full px-2 py-0.5 text-xs font-medium"
                             style="background: var(--color-blue-bg); color: var(--color-blue);"
                             aria-label="{{ Lang::get('anomaly::alerts.reason_aria.first_time') }}"
                         >{{ $label }}</span>
                     @elseif ($reason === 'duplicate')
                         <span
+                            role="img"
                             class="rounded-full px-2 py-0.5 text-xs font-medium"
                             style="background: var(--color-amber-bg); color: var(--color-amber);"
                             aria-label="{{ Lang::get('anomaly::alerts.reason_aria.duplicate') }}"
@@ -70,6 +72,7 @@
                     @else
                         {{-- large (or any future detector): direction-aware tint --}}
                         <span
+                            role="img"
                             class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium {{ $tint }} dark:bg-slate-800"
                             aria-label="{{ Lang::get('anomaly::alerts.reason_aria.generic', ['label' => strtolower($label)]) }}"
                         >{{ $label }}</span>
@@ -111,4 +114,4 @@
             </div>
         @endif
     </div>
-</div>
+</x-core::card>

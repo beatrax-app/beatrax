@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-// Weekly streaming credit €10/wk → €11/wk (+10.0%). The weekly
-// cadence multiplier is ×52 (calendar-year approximation, chosen for
-// integer consistency with the monthly-equivalent multiplier). Math:
-//   delta_minor = -1100 - (-1000) = -100
-//   annualized_impact_minor = -100 × 52 = -5200 (-€52/yr)
+// The weekly multiplier is 52, not 52.18: an integer keeps it consistent with
+// the monthly-equivalent multiplier.
 
 $transactions = [];
 $amounts = [-1000, -1000, -1000, -1000, -1100, -1100, -1100, -1100];

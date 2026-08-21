@@ -11,13 +11,6 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 
-/**
- * Pins the cross-module click-through wiring (Plan 17-06c) for the
- * Chains surfaces. Counterparty names rendered on chain rows and
- * chain-tree nodes link to `counterparties.profile` when the
- * underlying transaction has been resolved by the
- * CounterpartyResolver chain, and render as plain text otherwise.
- */
 function ccUser(string $username): User
 {
     return User::query()->create([
@@ -237,9 +230,7 @@ it('ChainTreeNode carries the resolved counterparty slug for the chain drawer', 
     $tree = $this->query->forTransaction((int) $paypalExpense->id, $this->user);
 
     expect($tree->nodes)->toHaveCount(2);
-    // Root (paypal expense) has a resolved counterparty.
     expect($tree->nodes[0]->counterpartySlug)->toBe('spotify');
-    // Partner (asn transfer) has no resolved counterparty.
     expect($tree->nodes[1]->counterpartySlug)->toBeNull();
 });
 

@@ -9,9 +9,6 @@ use Illuminate\Database\Events\ConnectionEstablished;
 use Illuminate\Support\ServiceProvider;
 use Modules\Core\Internal\Listeners\HealthCheckListener;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class HealthCheckServiceProvider extends ServiceProvider
 {
     public function boot(Dispatcher $events): void

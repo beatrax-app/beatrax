@@ -18,11 +18,8 @@ use Modules\Pots\Public\Services\PotWriter;
 
 uses(RefreshDatabase::class);
 
-/**
- * PotWriter is the only thing that moves money between the account balance and
- * a pot, so its guards matter as much as its happy paths: every rejection here
- * is a case where the alternative is an allocation the account cannot cover.
- */
+// PotWriter is the only thing that moves money between the account balance and a
+// pot, so every rejection here stands in for an allocation it cannot cover.
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'wessel',
@@ -112,10 +109,6 @@ function pwGoal(int $userId, int $accountId, string $name = 'Holiday'): Goal
     ]);
 }
 
-// ---------------------------------------------------------------------------
-// parseAmount
-// ---------------------------------------------------------------------------
-
 it('parses the amount formats a Dutch keyboard produces', function (string $input, ?int $expected): void {
     expect(app(PotWriter::class)->parseAmount($input))->toBe($expected);
 })->with([
@@ -132,17 +125,12 @@ it('parses the amount formats a Dutch keyboard produces', function (string $inpu
     'zero' => ['0', null],
     'zero with cents' => ['0,00', null],
     'thirteen digits' => ['1234567890123', null],
-    // A lone separator is read as a decimal point, so a Dutch thousands
-    // grouping on its own has three decimals and is refused. Rejecting beats
-    // the alternative reading, which would fund a pot with 1234 instead of
-    // 1.23 without telling anyone.
+    // A lone separator reads as a decimal point, so a Dutch thousands grouping
+    // has three decimals and is refused — the alternative reading would fund a
+    // pot with 1234 instead of 1.23 and say nothing.
     'lone dot grouping' => ['1.234', null],
     'lone comma grouping' => ['1,234', null],
 ]);
-
-// ---------------------------------------------------------------------------
-// save
-// ---------------------------------------------------------------------------
 
 it('refuses to create a pot without a name', function (): void {
     $this->writer->save($this->user, '   ', null, $this->account->id, null, null);
@@ -215,10 +203,6 @@ it('leaves no orphan pot when the initial funding exceeds what the account has',
     }
 });
 
-// ---------------------------------------------------------------------------
-// update
-// ---------------------------------------------------------------------------
-
 it('refuses to update a pot the user does not own', function (): void {
     $other = User::create(['username' => 'other3', 'password' => 'x', 'period_start_day' => 1]);
     $theirPot = pwPot($other->id, $this->account->id);
@@ -249,10 +233,6 @@ it('refuses to link a goal that another active pot already holds', function (): 
 
     $this->writer->update($this->user, $second->id, 'Second', $goal->id, null);
 })->throws(InvalidArgumentException::class);
-
-// ---------------------------------------------------------------------------
-// fund / withdraw
-// ---------------------------------------------------------------------------
 
 it('refuses to fund an amount the account cannot cover', function (): void {
     pwCredit($this->user->id, $this->account->id, $this->run->id, 1000);
@@ -314,10 +294,6 @@ it('refuses to withdraw from a pot that is not the user\'s', function (): void {
     $this->writer->withdraw($this->user, $theirPot->id, '1,00');
 })->throws(PotNotFoundException::class, 'Pot not found or not owned by user.');
 
-// ---------------------------------------------------------------------------
-// transfer
-// ---------------------------------------------------------------------------
-
 it('moves money between two pots as a mirrored pair of movements', function (): void {
     pwCredit($this->user->id, $this->account->id, $this->run->id, 50000);
     $from = pwPot($this->user->id, $this->account->id, 'From');
@@ -341,10 +317,9 @@ it('refuses a transfer into the same pot', function (): void {
     $this->writer->transfer($this->user, $pot->id, $pot->id, '1,00');
 })->throws(InvalidArgumentException::class, 'Source and target pot must be different.');
 
-// Both the amount and the same-pot rule reject this call. The amount has to
-// win: it is the cheaper check and the one the user can act on, and the
-// message naming the pots would be a red herring when the real problem is
-// the field they typed in.
+// Both the amount and the same-pot rule reject this call, and the amount has to
+// win: a message naming the pots would be a red herring when the real problem is
+// the field the user typed in.
 it('rejects an unparseable transfer amount before it compares the two pots', function (): void {
     $pot = pwPot($this->user->id, $this->account->id);
 
@@ -380,10 +355,6 @@ it('reports which side of a transfer is missing', function (): void {
 
     $this->writer->transfer($this->user, $from->id, 999999, '1,00');
 })->throws(PotNotFoundException::class, 'Target pot not found or not owned by user.');
-
-// ---------------------------------------------------------------------------
-// archive / restore
-// ---------------------------------------------------------------------------
 
 it('releases the balance back to the account when a pot is archived', function (): void {
     pwCredit($this->user->id, $this->account->id, $this->run->id, 50000);

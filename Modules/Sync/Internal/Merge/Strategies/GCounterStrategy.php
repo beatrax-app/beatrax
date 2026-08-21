@@ -6,9 +6,6 @@ namespace Modules\Sync\Internal\Merge\Strategies;
 
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 final class GCounterStrategy implements MergeStrategyInterface
 {
     // Used for fields like merchant_memories.occurrence_count where each

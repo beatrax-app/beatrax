@@ -6,17 +6,6 @@ use Illuminate\Contracts\Hashing\Hasher;
 use Modules\Auth\Models\UserRecoveryCode;
 use Modules\Core\Models\User;
 
-/*
- * beatrax:regenerate-recovery-codes CLI invariants (Phase 16 plan 04 Task 3).
- *
- * The operator-driven path to rotate a user's printed recovery sheet
- * when the original is lost or suspected leaked. Asserts:
- *   - Existing unused codes are stamped consumed (used_at not-null).
- *   - Exactly 10 fresh hashed codes are issued.
- *   - The plaintext codes are printed once for the operator to record.
- *   - Exits non-zero for an unknown username.
- */
-
 function regenUser(string $username): User
 {
     /** @var Hasher $hasher */
@@ -56,15 +45,13 @@ it('regenerates 10 fresh codes and burns the existing unused ones', function ():
         ->expectsOutputToContain('Regenerated rotator recovery codes')
         ->assertSuccessful();
 
-    // Old codes are now stamped consumed.
     $stillUnusedFromOld = UserRecoveryCode::query()
         ->where('user_id', $user->id)
         ->whereNull('used_at')
         ->count();
-    // Exactly 10 unused codes — the fresh batch.
     expect($stillUnusedFromOld)->toBe(10);
 
-    // And there are 20 total rows (10 old, now used_at-stamped + 10 fresh).
+    // Twenty rows in total: the old ten survive, stamped used.
     expect(UserRecoveryCode::query()->where('user_id', $user->id)->count())->toBe(20);
 });
 
@@ -89,7 +76,6 @@ it('issues 10 cryptographically distinct hyphenated codes on a user with no prio
 
     expect($codes)->toHaveCount(10);
     foreach ($codes as $code) {
-        // bcrypt hashes start with $2y$.
         expect($code->code_hash)->toStartWith('$2y$');
     }
 });

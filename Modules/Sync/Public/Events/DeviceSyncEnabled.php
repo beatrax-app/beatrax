@@ -11,9 +11,6 @@ namespace Modules\Sync\Public\Events;
 // Boot reads the persisted state; this event covers the other edge — sync
 // enabled inside a running app, which must not wait for a restart to become
 // reachable.
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class DeviceSyncEnabled
 {
     public function __construct(

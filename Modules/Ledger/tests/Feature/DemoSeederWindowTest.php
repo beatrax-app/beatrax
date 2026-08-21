@@ -9,21 +9,10 @@ use Illuminate\Support\Facades\DB;
 
 uses(RefreshDatabase::class);
 
-/**
- * The demo dataset's dates and its window have to agree.
- *
- * DemoTransactionsSeeder::run() fixes a three-month window once, from a
- * single clock read, and then hands that window to every series it seeds.
- * dayInMonth() used to ignore the window it was passed and read the clock
- * again, so the dates were anchored to whenever that method happened to run
- * rather than to the window. Under a still clock the two agreed and nothing
- * showed; a seed crossing midnight into a new month shifted every row a month
- * forward while windowEnd stayed behind, which drops the newest month.
- *
- * These assertions pin the agreement rather than the crossing: the crossing
- * itself is not reachable from outside the seeder, but a date that no longer
- * derives from the window will fall outside it or change the month count.
- */
+// dayInMonth() used to read the clock again instead of the window it was
+// handed, so a seed crossing midnight into a new month pushed every row past
+// windowEnd and lost the newest month. The crossing is unreachable from
+// outside the seeder, so these assertions pin the agreement instead.
 beforeEach(function (): void {
     // A month-end date on purpose — it is where subMonthsNoOverflow and
     // addMonthsNoOverflow disagree most, and where a rollover is closest.
@@ -61,10 +50,8 @@ it('places every demo transaction inside the window the seeder fixed', function 
     }
 });
 
-// The month count is the assertion that would have caught the drift: an
-// anchor read from a second clock lands the newest rows in a month the
-// window does not cover, and the distinct-month set stops being the three
-// consecutive months run() laid out.
+// The month count is what would have caught the drift: rows anchored to a
+// second clock read fall outside the three months the window covers.
 it('spans exactly the three consecutive months the window covers', function (): void {
     $months = array_values(array_unique(array_map(
         static fn (string $d): string => CarbonImmutable::parse($d)->format('Y-m'),

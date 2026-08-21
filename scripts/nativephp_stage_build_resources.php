@@ -12,11 +12,11 @@ declare(strict_types=1);
  * Why this is needed:
  *
  *   The canonical home for platform icons in this repo is `public/icon.*`
- *   (the in-repo brand surface — PROJECT.md D-17/D-18). The macOS Hardened
+ *   (the in-repo brand surface). The macOS Hardened
  *   Runtime entitlements file lives at `build/entitlements.mac.plist`.
  *   The tray-icon assets live at `resources/brand/tray-icon{,@2x}.png` as
  *   the monochrome black-on-transparent silhouettes macOS uses as a
- *   template image in the menu bar (D-09 / D-19).
+ *   template image in the menu bar.
  *
  *   electron-builder's `extraResources` block in `electron-builder.mjs`
  *   reads from `process.env.NATIVEPHP_BUILD_PATH`, which NativePHP sets to

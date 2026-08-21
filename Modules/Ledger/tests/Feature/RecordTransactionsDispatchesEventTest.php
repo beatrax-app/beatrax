@@ -12,8 +12,6 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Actions\RecordTransactions;
 
 /**
- * Records the just-inserted events the synchronous dispatcher saw.
- *
  * @var list<TransactionImported>
  */
 $recorded = [];
@@ -43,9 +41,8 @@ beforeEach(function () use (&$recorded): void {
         'status' => 'previewed',
     ]);
 
-    // Subscribe a recording listener for the duration of the test. Uses
-    // the container-bound Dispatcher (no facade) so the constructor-DI'd
-    // dispatcher inside RecordTransactions emits to the same instance.
+    // The container-bound Dispatcher, so this listener sits on the same
+    // instance RecordTransactions has injected.
     /** @var Dispatcher $events */
     $events = $this->app->make(Dispatcher::class);
     $events->listen(
@@ -91,7 +88,6 @@ it('does not dispatch when the row is a fingerprint duplicate (effected === 0)',
     expect($second->inserted)->toBe(0);
     expect($second->duplicates)->toBe(1);
     expect(Transaction::count())->toBe(1);
-    // The second invocation must NOT dispatch a second event.
     expect($recorded)->toHaveCount(1);
 });
 

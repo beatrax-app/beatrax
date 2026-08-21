@@ -9,9 +9,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\Goals\Models\Goal;
 use Modules\Goals\Public\Enums\GoalStatus;
 
-// user_id is left null in the default definition so callers always supply it
-// explicitly — silently assuming user_id=1 creates hard-to-debug cross-test
-// pollution in RefreshDatabase suites.
+// user_id stays null so callers must supply it: a default would silently
+// attribute goals to a user the test never created.
 /**
  * @extends Factory<Goal>
  */

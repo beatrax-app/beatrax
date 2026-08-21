@@ -2,18 +2,9 @@
 
 declare(strict_types=1);
 
-/*
- * On a phone there is no web server in front of Laravel — every request is
- * answered by PHP — so a file that only exists in public/ is a 404 unless a
- * route serves it.
- *
- * Measured on an iPhone: GET /icon.png returned 404 with the styled error page,
- * and the veil's <img> reported naturalWidth 0. GET /icons/icon-192.png did
- * worse: 200, Content-Length 23548, and 10 bytes of body — the PNG signature
- * and nothing after it, because a streamed BinaryFileResponse does not survive
- * the bridge. A header promising an image over a body that is not one.
+/**
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-public-file-with-no-route-behind-it
  */
-
 it('serves the app mark whole, not as a promise of one', function (string $uri): void {
     $response = test()->get($uri);
 

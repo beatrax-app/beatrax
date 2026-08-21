@@ -11,6 +11,7 @@ return [
     'rename' => 'Nimeta ümber',
     'confirm_delete' => 'Kinnita kustutamine',
     'delete_scenario' => 'Kustuta stsenaarium',
+    'delete_confirm' => 'Kas kustutada see stsenaarium?',
 
     'mutations_count' => 'Muudatused (:count)',
     'no_mutations' => 'Muudatusi veel pole. Lisa allpool üks, et näha, kuidas see stsenaarium sinu baasjoonega võrreldes välja näeb.',
@@ -67,6 +68,7 @@ return [
         'new_amount' => 'Uus summa',
         'new_next_date' => 'Uus järgmine kuupäev',
         'scope' => 'Ulatus',
+        'scope_legend' => 'Milliseid kordi nihutada',
         'scope_next' => 'Ainult järgmine kord',
         'scope_all' => 'Kõik järgnevad korrad',
     ],
@@ -80,6 +82,8 @@ return [
         'current_amount' => 'Praegune summa',
         'new_amount' => 'Uus summa',
     ],
+
+    'series_name_fallback' => 'seeria',
 
     'summary' => [
         'cancel' => 'Tühista :name',

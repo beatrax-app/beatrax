@@ -9,18 +9,6 @@ use Modules\Sync\Internal\OpLog\OpLogWriter;
 
 uses(RefreshDatabase::class);
 
-/*
- * SYNC-01: Op-log entry persisted after mutation.
- *
- * Asserts that OpLogWriter writes a Set op for transactions.category_id to
- * the op_log_entries table with the correct columns: op_type='set',
- * table_name='transactions', an always-JSON encoded value, and a non-empty
- * hex signature.
- *
- * RED: OpLogWriter does not exist yet (Wave 1 creates it). This test will
- * fail with "Class not found" until Plan 11-02 implements OpLogWriter.
- */
-
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-06-15 10:00:00');
 });
@@ -33,7 +21,6 @@ it('persists a Set op to op_log_entries after writing transactions.category_id',
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
-    // Seed a user.
     $userId = $db->connection()->table('users')->insertGetId([
         'username' => 'oplog-persist-u',
         'password' => 'fixture',
@@ -41,7 +28,6 @@ it('persists a Set op to op_log_entries after writing transactions.category_id',
         'default_currency_view' => 'eur_only',
     ]);
 
-    // Seed a category to reference.
     $catId = $db->connection()->table('categories')->insertGetId([
         'user_id' => $userId,
         'name' => 'PersistCat',
@@ -51,7 +37,6 @@ it('persists a Set op to op_log_entries after writing transactions.category_id',
         'updated_at' => '2026-06-15 00:00:00',
     ]);
 
-    // Seed a transaction to capture.
     $accountId = $db->connection()->table('accounts')->insertGetId([
         'user_id' => $userId,
         'name' => 'ASN persist test',
@@ -96,13 +81,10 @@ it('persists a Set op to op_log_entries after writing transactions.category_id',
         'updated_at' => '2026-06-15 00:00:00',
     ]);
 
-    // Generate a throwaway Ed25519 keypair for signing.
     $keypair = sodium_crypto_sign_keypair();
     $sk = sodium_crypto_sign_secretkey($keypair);
     $pk = sodium_crypto_sign_publickey($keypair);
 
-    // Construct OpLogWriter (Wave 1 will create this class).
-    // RED: class does not exist yet → "Class not found"
     $writer = app(OpLogWriter::class, [
         'deviceId' => 'device-persist',
         'userId' => $userId,
@@ -110,7 +92,6 @@ it('persists a Set op to op_log_entries after writing transactions.category_id',
         'publicKey' => $pk,
     ]);
 
-    // Write a Set op for transactions.category_id.
     $writer->writeSet(
         table: 'transactions',
         pk: $txnId,
@@ -118,7 +99,6 @@ it('persists a Set op to op_log_entries after writing transactions.category_id',
         value: $catId,
     );
 
-    // Assert: exactly one row in op_log_entries with the correct columns.
     $entries = $db->connection()
         ->table('op_log_entries')
         ->where('user_id', $userId)
@@ -132,10 +112,8 @@ it('persists a Set op to op_log_entries after writing transactions.category_id',
     expect($row->table_name)->toBe('transactions');
     expect($row->field)->toBe('category_id');
 
-    // value must be always-JSON encoded (not raw int).
     expect($row->value)->toBe(json_encode($catId));
 
-    // signature must be a non-empty hex string.
     expect($row->signature)->not->toBeEmpty();
     expect(ctype_xdigit($row->signature))->toBeTrue();
 });

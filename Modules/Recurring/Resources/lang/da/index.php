@@ -16,6 +16,7 @@ return [
     'empty' => [
         'heading' => 'Ingen tilbagevendende aktivitet endnu',
         'before_link' => 'Godkend genkendte forslag under',
+        'link' => 'Gennemgå tilbagevendende',
         'after_link' => 'for at se dem her.',
     ],
 

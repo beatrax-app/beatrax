@@ -28,8 +28,7 @@ Modules/Community/
 │   └── Http/Livewire/
 │       ├── MysteryMerchantsPage.php
 │       ├── SuggestMappingModal.php
-│       ├── SharedListSettingsPanel.php
-│       └── HelpOthersTriageButton.php
+│       └── SharedListSettingsPanel.php
 ├── Models/
 │   └── CommunityMerchantMapping.php
 ├── Database/
@@ -104,10 +103,9 @@ the module. The module reads them via `CorpusLoader`.
   composes a suggestion. DIs `OpenExternalUrlAction` into the
   `submit()` method.
 - `Internal/Http/Livewire/SharedListSettingsPanel` — the corpus
-  opt-in toggles surfaced under `/settings`.
-- `Internal/Http/Livewire/HelpOthersTriageButton` — the call-to-action
-  rendered inside the categorization triage row when an unresolved
-  mystery merchant appears.
+  opt-in toggles surfaced under `/settings`. The per-row triage
+  call-to-action is rendered by Categorization's own view, gated on the
+  `offerToContribute` toggle these panels write.
 
 ## Models + migrations
 

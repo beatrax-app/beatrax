@@ -8,10 +8,6 @@ use Native\Desktop\Fakes\ShellFake;
 use Psr\Log\AbstractLogger;
 use Psr\Log\LoggerInterface;
 
-/**
- * Tiny PSR-3 logger recorder used to confirm the action emits an
- * `info` line on the success branch.
- */
 function makeRecorderLogger(): LoggerInterface
 {
     return new class extends AbstractLogger

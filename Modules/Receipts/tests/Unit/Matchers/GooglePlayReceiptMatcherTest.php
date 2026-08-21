@@ -35,7 +35,7 @@ it('claims googleplay-noreply@google.com via exact equality', function (): void 
     expect($matcher->canHandle(googlePlayInbox('googleplay-noreply@google.com')))->toBeTrue();
 });
 
-it('rejects look-alike google.com.attacker.example senders (spoofing defence T-07-04)', function (): void {
+it('rejects look-alike google.com.attacker.example senders (spoofing defence)', function (): void {
     $matcher = googlePlayMatcher();
     expect($matcher->canHandle(googlePlayInbox('googleplay-noreply@google.com.attacker.example')))->toBeFalse();
 });

@@ -3,17 +3,11 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Livewire\Attributes\Url;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
-use Modules\Recurring\Internal\Http\Livewire\FixedPaymentsCard;
 use Modules\Recurring\Models\RecurringSeries;
-
-/*
- * Dashboard inline FixedPaymentsCard tests. The card sources its row
- * set from FixedPaymentsViewQuery::topByMonthlyEquivalent, supports an
- * "All series / This month only" toggle persisted via #[Url], and
- * always renders a "View all →" anchor to the /recurring index.
- */
+use Modules\Recurring\Public\Http\Livewire\FixedPaymentsCard;
 
 function fpcUser(string $username): User
 {
@@ -117,9 +111,9 @@ it('exposes the filter via a #[Url] query string binding (url-attribute-binds-fi
 
     $reflection = new ReflectionClass(FixedPaymentsCard::class);
     $filterProperty = $reflection->getProperty('filter');
-    $attributes = $filterProperty->getAttributes(\Livewire\Attributes\Url::class);
+    $attributes = $filterProperty->getAttributes(Url::class);
     expect($attributes)->not->toBe([]);
-    /** @var ReflectionAttribute<\Livewire\Attributes\Url> $attribute */
+    /** @var ReflectionAttribute<Url> $attribute */
     $attribute = $attributes[0];
     $arguments = $attribute->getArguments();
     expect($arguments)->toMatchArray(['as' => 'fp-filter']);

@@ -19,9 +19,6 @@ use Throwable;
 // used by both the file-drop wizard path and the inbox handoff path.
 // Never writes to transactions itself — chain hints ride through
 // raw_payload and are re-emitted once the canonical row exists.
-/**
- * @link ../../../../.docs/features/receipts/architecture.md
- */
 final class RecordReceipt
 {
     public function __construct(

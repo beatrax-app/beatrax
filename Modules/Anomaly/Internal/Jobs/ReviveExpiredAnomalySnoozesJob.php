@@ -18,12 +18,8 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\StateMachine\InvalidStateTransitionException;
 use stdClass;
 
-// Global (no `user_id` scope): alerts may belong to any user, and
-// revival is purely a timer-driven transition preserved on the audit row
-// by the state machine's own read of the alert's owning user.
-/**
- * @link ../../../../.docs/features/anomaly/architecture.md
- */
+// Deliberately unscoped by `user_id`: revival is a pure timer transition, and
+// the state machine reads each alert's own owner for the audit row.
 final class ReviveExpiredAnomalySnoozesJob implements ShouldQueue
 {
     use Dispatchable;
@@ -38,9 +34,6 @@ final class ReviveExpiredAnomalySnoozesJob implements ShouldQueue
     {
         $now = $clock->now()->toDateTimeString();
 
-        // lazyById so a large backlog of expired snoozes never loads every
-        // row into memory at once; each row is re-read fresh under its own
-        // row lock inside the callback.
         $db->connection()->table('anomaly_alerts')
             ->where('state', AnomalyAlertState::Snoozed->value)
             ->whereNotNull('snoozed_until')
@@ -71,8 +64,7 @@ final class ReviveExpiredAnomalySnoozesJob implements ShouldQueue
                     );
                 } catch (InvalidStateTransitionException) {
                     // A concurrent user action moved the row off 'snoozed'
-                    // between the scan and the state-machine row lock; skip
-                    // this row and continue the sweep.
+                    // between the scan and the row lock; skip it, sweep on.
                 }
             });
     }

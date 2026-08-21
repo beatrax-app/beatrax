@@ -10,18 +10,6 @@ use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Dto\PreviewRowDto;
 use Modules\Ledger\Models\ImportRun;
 
-/*
- * After the user saves the rename popover with `remember=true`, the
- * parent wizard listens for `rename-counterparty:saved` and updates
- * the affected row's `aliasFriendlyName` IN PLACE — no full pipeline
- * re-run, no DB roundtrip. The listener finds the row by rowIndex,
- * reconstructs the PreviewRowDto with the new alias, and writes it
- * back into the wizard's `$rows` array.
- *
- * Out-of-bounds rowIndex must silently no-op so a stale dispatch from
- * a previous render does not throw.
- */
-
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);

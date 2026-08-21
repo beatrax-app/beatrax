@@ -7,8 +7,8 @@ namespace Modules\DevMode\Internal\Registries;
 use Modules\DevMode\Public\Contracts\AppActionRegistry;
 use Modules\DevMode\Public\Dto\AppAction;
 
-// Fallback so consumer code can resolve the contract without bound()
-// guards when AppActionRegistryImpl has not been wired (ad-hoc tests).
+// Lets consumers resolve the contract without a bound() guard when the real
+// implementation has not been wired.
 final class NullAppActionRegistry implements AppActionRegistry
 {
     /**

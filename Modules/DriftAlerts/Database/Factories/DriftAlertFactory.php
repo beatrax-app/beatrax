@@ -10,10 +10,8 @@ use Modules\DriftAlerts\Models\DriftAlert;
 use Modules\DriftAlerts\Public\Enums\DriftAlertState;
 use Modules\Ledger\Public\Enums\Direction;
 
-// The default state mirrors a 15% monthly expense drift (EUR 9.99 to
-// 11.49). Callers must override the three FK columns (user_id,
-// recurring_series_id, latest_occurrence_id) — the schema constraints
-// reject the factory defaults of null.
+// Callers must override recurring_series_id and latest_occurrence_id: both are
+// non-nullable FKs the factory defaults to null.
 
 /**
  * @extends Factory<DriftAlert>
@@ -45,8 +43,6 @@ final class DriftAlertFactory extends Factory
         ];
     }
 
-    // Default state, but kept symmetric with the three terminal states
-    // below so call sites read explicitly.
     public function open(): self
     {
         return $this->state(fn (array $attributes): array => [
@@ -56,8 +52,6 @@ final class DriftAlertFactory extends Factory
         ]);
     }
 
-    // The user reviewed it and dismissed the alert without recording any
-    // further intent.
     public function acknowledged(): self
     {
         return $this->state(fn (array $attributes): array => [
@@ -67,8 +61,6 @@ final class DriftAlertFactory extends Factory
         ]);
     }
 
-    // Caller supplies snoozed_until explicitly — the revival sweep flips
-    // the row back to open once the timestamp is in the past.
     public function snoozed(CarbonImmutable $until): self
     {
         return $this->state(fn (array $attributes): array => [
@@ -78,8 +70,6 @@ final class DriftAlertFactory extends Factory
         ]);
     }
 
-    // Records the user's intent that the underlying recurring series was
-    // cancelled outside the app.
     public function dismissedCancelled(): self
     {
         return $this->state(fn (array $attributes): array => [

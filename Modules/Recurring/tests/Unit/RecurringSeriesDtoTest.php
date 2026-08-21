@@ -14,13 +14,6 @@ use Modules\Recurring\Public\Events\RecurringSeriesCadenceFlipped;
 use Modules\Recurring\Public\Events\RecurringSeriesDetected;
 use Modules\Recurring\Public\Events\RecurringSeriesRejected;
 
-/*
- * Unit coverage for the Public surface: DTO shape + helper behaviour,
- * Event class qualifiers, and the SeriesDetector contract identity.
- * These tests run without any database — Public DTOs / events are
- * plain value objects.
- */
-
 it('constructs RecurringSeriesDto with Money and CarbonImmutable props and the displayName helper falls back', function (): void {
     $dto = new RecurringSeriesDto(
         seriesId: 42,

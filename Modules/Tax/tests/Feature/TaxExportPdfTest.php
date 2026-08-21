@@ -7,25 +7,6 @@ use Modules\Core\Models\User;
 use Modules\Tax\Internal\Services\TaxPdfRenderer;
 use Modules\Tax\Internal\Services\TaxYearQuery;
 
-/*
- * Feature tests for TaxPdfRenderer — the D-14 PDF export.
- *
- * Tests verify:
- *  - render() returns a non-empty string starting with the PDF magic header "%PDF-".
- *  - A year with tagged transactions produces a larger output than an empty year.
- *  - A free-text note containing "<script>" is HTML-escaped in the Blade HTML
- *    (asserted against the view render, not the binary — binary assertions are
- *    fragile due to dompdf font embedding variance).
- *  - The dompdf Options object has isRemoteEnabled=false (no outbound fetch).
- *
- * Manual-only verification (deferred to Plan 05 UAT, 07-VALIDATION.md):
- *  - Multi-page PDF visual layout quality.
- */
-
-// ---------------------------------------------------------------------------
-// Helpers (prefixed tpdf_ to avoid collisions)
-// ---------------------------------------------------------------------------
-
 function tpdfUser(DatabaseManager $db, string $username): User
 {
     /** @var User */
@@ -124,10 +105,6 @@ function tpdfTag(DatabaseManager $db, int $userId, int $txId, ?int $catId = null
     ], $overrides));
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
 it('render() returns a non-empty string starting with the PDF magic header', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -168,24 +145,21 @@ it('a free-text note with <script> is HTML-escaped in the rendered view HTML', f
     $txId = tpdfTransaction($db, $user->id, ['booked_at' => '2025-07-01 00:00:00']);
     tpdfTag($db, $user->id, $txId, $catId, ['note' => '<script>alert(1)</script>']);
 
-    // Render the Blade view HTML directly (not the PDF bytes) to assert escaping.
+    // Assert against the view HTML, not the PDF bytes: dompdf font embedding
+    // makes binary assertions fragile.
     $data = app(TaxYearQuery::class)->forUser($user->id, 2025);
     $html = view('tax::pdf.export', ['year' => 2025, 'data' => $data])->render();
 
-    // The literal <script> must NOT appear in the HTML output.
     expect($html)->not->toContain('<script>alert(1)</script>');
-    // The escaped form MUST appear.
     expect($html)->toContain('&lt;script&gt;');
 });
 
 it('dompdf Options has isRemoteEnabled set to false in the renderer source', function (): void {
-    // Source assertion: verify the renderer file contains the isRemoteEnabled=false setting.
     $rendererPath = __DIR__.'/../../Internal/Services/TaxPdfRenderer.php';
     $source = file_get_contents($rendererPath);
 
     expect($source)->not->toBeFalse()
         ->and((string) $source)->toContain('isRemoteEnabled');
 
-    // Assert the value is false (not true).
     expect((string) $source)->toContain("'isRemoteEnabled', false");
 });

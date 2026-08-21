@@ -5,13 +5,6 @@ declare(strict_types=1);
 use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Migration\Internal\Parsers\Support\AmountStringParser;
 
-/*
- * Task 1 (13.5-03) — proves AmountStringParser is a genuine verbatim copy
- * of EnvelopeWriter::parseAmount(), not a re-derivation, per the plan's own
- * must_haves truth ("Amount strings parse via the shared Dutch/plain parser
- * copied verbatim ... not re-derived").
- */
-
 it('AmountStringParser: matches EnvelopeWriter::parseAmount() on the shared Dutch + plain sample set', function (): void {
     $parser = new AmountStringParser;
     $envelopeWriter = app(EnvelopeWriter::class);

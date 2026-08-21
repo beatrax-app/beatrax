@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 use Modules\Mobile\Internal\Boot\AndroidVersionCode;
 
-/*
- * Android orders releases by versionCode and nothing else. The release
- * workflow exports only NATIVEPHP_APP_VERSION, so without a derivation every
- * CI-built APK carries nativephp/mobile's package default of 1 — below the
- * code already on a developer's device, and refused by Play as a downgrade.
- */
+// Android orders releases by versionCode and nothing else. The release workflow
+// exports only NATIVEPHP_APP_VERSION, so without a derivation every CI-built APK
+// carries nativephp/mobile's package default of 1 — below the code already on a
+// developer's device, and refused by Play as a downgrade.
 
 it('derives a code that rises with the version', function (): void {
     expect(AndroidVersionCode::fromVersion('1.3.0'))->toBe(10300)

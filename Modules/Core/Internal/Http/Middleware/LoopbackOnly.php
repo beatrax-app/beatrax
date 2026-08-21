@@ -10,9 +10,6 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../../.docs/features/core/architecture.md
- */
 final class LoopbackOnly
 {
     public function __construct(private readonly Application $app) {}

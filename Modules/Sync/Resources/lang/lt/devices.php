@@ -16,6 +16,7 @@ return [
     'on' => 'Įjungta',
     'securing' => 'Apsaugomi tavo duomenys…',
     'do_not_close' => 'Neuždaryk šio lango.',
+    'encryption_progress_aria' => 'Šifravimo eiga',
     'not_encrypted_offer' => 'Tavo duomenys saugykloje nešifruojami. Nustatyk šifravimą, kad juos apsaugotum, jei šis įrenginys būtų pamestas ar pavogtas.',
     'enable_encryption' => 'Įjungti šifravimą',
 

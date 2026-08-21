@@ -9,13 +9,6 @@ use Modules\Recurring\Models\RecurringSeriesTransition;
 use Modules\Recurring\Public\Actions\EditRecurringSeriesName;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/*
- * EditRecurringSeriesName — metric-style write to display_name_override
- * with NO state transition. Passing null clears the override.
- * Cross-user 404. The next detector sweep refreshes detected_name but
- * never clobbers display_name_override.
- */
-
 function ersUser(string $username): User
 {
     return User::query()->create([

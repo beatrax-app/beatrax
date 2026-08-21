@@ -25,6 +25,8 @@ return [
         'tax_years' => 'Lata podatkowe',
     ],
 
+    'tablist_aria' => 'Sekcje kontrahenta',
+
     'tab_note_personal' => '— brak łańcuchów finansowania dla kontaktów osobistych',
     'tab_note_bank' => '— kontrahent typu opłaty bankowe nie tworzy łańcuchów finansowania',
     'tab_note_government' => '— brak łańcuchów finansowania dla instytucji publicznych',

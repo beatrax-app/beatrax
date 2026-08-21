@@ -25,12 +25,8 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
 use stdClass;
 
-// This job's sole dispatch origin is the daily scheduler tick (a queue
-// worker with no live Session, so never an app-lock KEK) — handle()'s
-// three-way encryption branch and the two-key orphan predicate are
-// documented in full at the @link below.
 /**
- * @link ../../../../.docs/features/counterparties/architecture.md
+ * @link ../../../../.docs/features/counterparties/garbage-collection.md
  */
 final class CounterpartyGarbageCollectorJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
@@ -84,10 +80,9 @@ final class CounterpartyGarbageCollectorJob implements ShouldBeUniqueUntilProces
         });
     }
 
-    // Only gate on KEK-absence when a real Session/AppLockKeyService/
-    // EncryptionMigrationService context was resolved (production dispatch).
-    // The legacy 1-arg test-call shape leaves all three null, defaulting to
-    // "not encrypted" for always-plaintext fixtures.
+    // The legacy 1-arg call shape leaves all three collaborators null, so it
+    // defaults to "not encrypted" rather than gating on a KEK it was never
+    // handed.
     /**
      * @return array{0: bool, 1: bool} [isEncrypted, canDecryptMerchantName]
      */
@@ -106,9 +101,6 @@ final class CounterpartyGarbageCollectorJob implements ShouldBeUniqueUntilProces
         return [$isEncrypted, $isEncrypted && $hasKek];
     }
 
-    // The orphan predicate is two halves. Step 1a (NULL merchant_name)
-    // always prunes; step 1b (NOT NULL) branches on encryption state — see
-    // the linked doc for the full rationale.
     /**
      * @return list<int>
      */
@@ -135,9 +127,9 @@ final class CounterpartyGarbageCollectorJob implements ShouldBeUniqueUntilProces
         return $orphans;
     }
 
-    // SQLite-portable date arithmetic. The 365-day window mirrors the
-    // long-history retention promise — a counterparty untouched for a full
-    // year is a strong prune candidate.
+    // The 365-day window is measured on transactions.created_at (row insert
+    // time), not posted_at, so re-importing an old statement re-arms
+    // retention for its counterparty.
     private function notRecentlyTransacted(Builder $query): void
     {
         $query
@@ -148,9 +140,8 @@ final class CounterpartyGarbageCollectorJob implements ShouldBeUniqueUntilProces
             ->whereRaw("transactions.created_at >= datetime('now', '-365 days')");
     }
 
-    // Step 1a — the `merchant_name IS NULL` half. Always plaintext-safe: a
-    // NULL column is never turned into ciphertext, so this half prunes
-    // unconditionally, encrypted or not.
+    // A NULL column is never turned into ciphertext, so this half of the
+    // predicate prunes unconditionally, encrypted or not.
     /**
      * @return list<int>
      */
@@ -169,8 +160,6 @@ final class CounterpartyGarbageCollectorJob implements ShouldBeUniqueUntilProces
         return array_values($ids);
     }
 
-    // Step 1b, plaintext: both sides of the comparison are genuinely
-    // plaintext, so the raw-SQL alias equality is valid.
     /**
      * @return list<int>
      */
@@ -199,9 +188,8 @@ final class CounterpartyGarbageCollectorJob implements ShouldBeUniqueUntilProces
         return array_values($ids);
     }
 
-    // Step 1b, encrypted with a KEK available: AEAD ciphertext can never
-    // byte-equal plaintext at the SQL layer, so decrypt each candidate's
-    // merchant_name in PHP and compare against the alias friendly_names.
+    // AEAD ciphertext can never byte-equal plaintext, so the alias equality
+    // cannot run in SQL once merchant_name is encrypted.
     /**
      * @return list<int>
      */
@@ -237,10 +225,9 @@ final class CounterpartyGarbageCollectorJob implements ShouldBeUniqueUntilProces
         return $orphans;
     }
 
-    // One candidate row -> its id when it is a genuine orphan, else null.
-    // decryptValue never throws; a decrypt failure returns raw ciphertext
-    // with decrypted:false, which would never match plaintext — skip that
-    // candidate rather than risk a wrongful prune.
+    // decryptValue never throws: a failure returns raw ciphertext with
+    // decrypted:false, which would never match an alias and would prune an
+    // alias-protected row. Skip that candidate instead.
     /**
      * @param  list<string>  $aliasNames
      */
@@ -270,9 +257,9 @@ final class CounterpartyGarbageCollectorJob implements ShouldBeUniqueUntilProces
         return in_array($result['value'], $aliasNames, true) ? null : $id;
     }
 
-    // Step 1b, encrypted with no KEK: skip this half entirely
-    // (preserve-on-uncertainty — never a wrongful prune) and, when a logger
-    // is present, warn naming the user and the skipped-row count.
+    // Encrypted with no KEK, the alias half is skipped rather than guessed
+    // at — never a wrongful prune. The candidates are re-evaluated on a
+    // later run that has one.
     private function logSkippedEncryptedHalf(ConnectionInterface $connection, ?LoggerInterface $logger): void
     {
         if ($logger === null) {
@@ -294,10 +281,8 @@ final class CounterpartyGarbageCollectorJob implements ShouldBeUniqueUntilProces
         }
     }
 
-    // Step 2 nulls the FK on every transaction pointing at a soon-to-be-
-    // pruned counterparty (counterparty_id carries no ON DELETE cascade, so
-    // this keeps referential integrity through the DELETE without losing
-    // history); step 3 deletes the orphans, bounded by user_id and the id list.
+    // transactions.counterparty_id carries no ON DELETE cascade, so the FK is
+    // NULLed before the DELETE: the history row stays, only the link goes.
     /**
      * @param  list<int>  $orphans
      */

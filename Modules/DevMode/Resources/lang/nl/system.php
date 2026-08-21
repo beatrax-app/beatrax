@@ -7,6 +7,10 @@ return [
 
     'subtitle_html' => 'Omgeving + runtime + effectieve configuratie. Gevoelige sleutels (suffixen <code class="font-mono text-xs">*password*</code>, <code class="font-mono text-xs">*secret*</code>, <code class="font-mono text-xs">*key</code>, <code class="font-mono text-xs">*token*</code>) worden gemaskeerd.',
     'php' => 'PHP',
+    'php_version' => 'versie',
+    'php_sapi' => 'sapi',
+    'php_ini_path' => 'ini-pad',
+    'php_extensions' => 'extensies',
     'laravel' => 'Laravel',
     'sqlite' => 'SQLite',
     'sqlite_file' => 'bestand',

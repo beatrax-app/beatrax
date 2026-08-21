@@ -10,9 +10,6 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\StateMachine\InvalidStateTransitionException;
 use Modules\Notifications\Public\Enums\NotificationState;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final class NotificationStateMachine
 {
     use CoercesScalars;

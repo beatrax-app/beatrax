@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-// Names the demo data seeds, which were English on a Dutch phone. They live in
-// Core rather than per module so the pot that funds a goal can name it with the
-// same string the goal was seeded under.
+// In Core rather than per module so a pot and the goal it funds share one string.
 
 return [
     'goal_emergency_fund' => 'Emergency fund',

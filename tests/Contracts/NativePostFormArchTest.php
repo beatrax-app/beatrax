@@ -2,20 +2,8 @@
 
 declare(strict_types=1);
 
-/*
- * Every plain POST form in a Blade view must submit through
- * `beatraxSubmitPostForm`.
- *
- * A native form POST does not survive the mobile shell. NativePHP intercepts
- * WebView requests and replays them into the embedded runtime; its form path
- * builds the body with `new FormData(form)` — which omits the submitter
- * button's own name/value — and the replayed request loses the POST method, so
- * Laravel answers 405 with `Allow: POST`. The app then follows the redirect
- * back to the same URL and loops on the error page.
- *
- * It fails silently: no exception, no console error, just a control that does
- * nothing. Sign-out and the pre-auth language switch were both dead on device
- * before this guard existed, and nothing in the suite noticed.
+/**
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-native-post-form-in-the-mobile-shell
  */
 
 /** @return list<string> */

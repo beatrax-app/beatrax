@@ -61,11 +61,11 @@
         </div>
         <div class="flex items-center gap-2 shrink-0">
             @if ($status === 'running')
-                <button
-                    type="button"
+                <x-core::secondary-button
+                    size="sm"
+                    class="pill-btn"
                     wire:click="cancel('{{ $runId }}')"
-                    class="pill-btn inline-flex items-center rounded border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                >{{ Lang::get('dev::runner.cancel') }}</button>
+                >{{ Lang::get('dev::runner.cancel') }}</x-core::secondary-button>
             @else
                 @if ($tier === 'destructive')
                     <button
@@ -75,11 +75,11 @@
                         class="pill-btn danger inline-flex items-center rounded border border-rose-300 bg-white px-3 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50 dark:bg-slate-900 dark:border-rose-700 dark:text-rose-300 dark:hover:bg-rose-900/30"
                     >{{ Lang::get('dev::runner.rerun') }}</button>
                 @else
-                    <button
-                        type="button"
+                    <x-core::secondary-button
+                        size="sm"
+                        class="pill-btn"
                         wire:click="rerun('{{ $runId }}')"
-                        class="pill-btn inline-flex items-center rounded border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                    >{{ Lang::get('dev::runner.rerun') }}</button>
+                    >{{ Lang::get('dev::runner.rerun') }}</x-core::secondary-button>
                 @endif
             @endif
         </div>

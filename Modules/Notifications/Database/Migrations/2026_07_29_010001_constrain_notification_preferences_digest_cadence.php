@@ -5,26 +5,16 @@ declare(strict_types=1);
 use Modules\Core\Database\Support\ModuleMigration;
 use Modules\Notifications\Public\Enums\DigestCadence;
 
-/**
- * Constrains notification_preferences.digest_cadence to the vocabulary
- * C8-R22 closes: daily, weekly, off.
- *
- * The column was created as a bare string with a default, so nothing but
- * application code stopped a hand-written UPDATE from storing a value no
- * case can represent. That is the same gap recurring_series.cadence has,
- * and the opposite of how recurring_series.state has always been governed:
- * a BEFORE INSERT / BEFORE UPDATE trigger pair raising on anything outside
- * the allowed list. This applies that pattern here.
- *
- * The allowed list is read from DigestCadence rather than repeated, so the
- * enum stays the one place the vocabulary is written down.
- */
+// digest_cadence was created as a bare string, so only application code
+// stopped a hand-written UPDATE from storing a value no enum case can
+// represent.
 return new class extends ModuleMigration
 {
     public function up(): void
     {
         $connection = $this->db()->connection($this->getConnection());
 
+        // Read from the enum so the vocabulary lives in exactly one place.
         $allowed = implode(',', array_map(
             static fn (string $value): string => "'".$value."'",
             DigestCadence::values(),

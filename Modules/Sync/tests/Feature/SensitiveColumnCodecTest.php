@@ -11,13 +11,8 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 uses(RefreshDatabase::class);
 
-/*
- * SensitiveColumnCodecTest — CRYPT-01: the Sync Public projection-column
- * codec's rotation-safe try-every-epoch decrypt contract (D-02b).
- *
- * Modules/Sync/tests/TestCase.php primes the session with a real (dummy)
- * app-lock KEK, so GdkKeyringService's crypto path runs for real here.
- */
+// The Sync TestCase primes the session with a real (dummy) app-lock KEK, so the
+// keyring crypto path runs for real here instead of being stubbed out.
 
 function codecUser(string $username = 'codec-user'): User
 {
@@ -63,20 +58,17 @@ it('still decrypts an epoch-1 ciphertext after rotating to epoch 2 (try-every-ep
 
     $epoch1Ciphertext = $codec->encryptValue('transactions', 'description', 'epoch-1 merchant text', $userId, $session);
 
-    // Rotate: append epoch 2 and advance current_epoch.
+    // Appending also advances current_epoch, so encrypts after this use epoch 2.
     $epoch2 = new GdkEpoch(epochId: $epoch1->epochId + 1, keyHex: bin2hex(random_bytes(32)));
     $keyringService->appendEpoch($userId, $epoch2, $session);
 
-    // A brand-new encrypt now uses epoch 2.
     $epoch2Ciphertext = $codec->encryptValue('transactions', 'description', 'epoch-2 merchant text', $userId, $session);
     expect($epoch2Ciphertext)->not->toBe($epoch1Ciphertext);
 
-    // The OLD epoch-1 ciphertext STILL decrypts correctly (try-every-epoch).
     $decryptedOld = $codec->decryptValue('transactions', 'description', $epoch1Ciphertext, $userId, $session);
     expect($decryptedOld['decrypted'])->toBeTrue();
     expect($decryptedOld['value'])->toBe('epoch-1 merchant text');
 
-    // The NEW epoch-2 ciphertext also decrypts correctly.
     $decryptedNew = $codec->decryptValue('transactions', 'description', $epoch2Ciphertext, $userId, $session);
     expect($decryptedNew['decrypted'])->toBeTrue();
     expect($decryptedNew['value'])->toBe('epoch-2 merchant text');
@@ -166,7 +158,6 @@ it('encryptAttrs/decryptRow round-trip every sensitive column present and skip n
 
     expect($encrypted['description'])->not->toBe('ALBERT HEIJN 1234');
     expect($encrypted['counterparty_name'])->not->toBe('Albert Heijn');
-    // Non-sensitive columns are left completely untouched.
     expect($encrypted['amount_minor'])->toBe(1234);
     expect($encrypted['currency'])->toBe('EUR');
 

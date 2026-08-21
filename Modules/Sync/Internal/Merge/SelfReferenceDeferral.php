@@ -11,9 +11,6 @@ use Illuminate\Database\QueryException;
 // cannot resolve these — a transfer pair references both ways, so whichever
 // row lands first names one that does not exist yet and SQLite rejects it.
 // They are stripped from the insert and written back once the batch is in.
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class SelfReferenceDeferral
 {
     // Columns whose FK targets their OWN table, named per table so the

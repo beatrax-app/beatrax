@@ -16,10 +16,8 @@ use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 
-// Records a hand-entered transaction through the same canonical pipeline
-// imports use, so it categorises/recur-detects/reports identically. It hangs
-// off two synthetic per-user fixtures (a "Cash" account, a "manual"
-// import_run); a random source_ref avoids same-day fingerprint collisions.
+// Routed through the same canonical pipeline imports use, so a hand-entered
+// row categorises, recur-detects and reports identically to an imported one.
 /**
  * @see RecordsTransactions
  */
@@ -54,10 +52,8 @@ final class RecordManualTransaction
 
         $counterpartyNormalized = $this->fingerprints->normalize($counterpartyName);
 
-        // postedAt/valueDate are the transaction's own date; bookedAt is when
-        // it entered the ledger. Both fingerprint indexes key on booked_at at
-        // second precision, so two identical same-second cash spends would
-        // otherwise collide; bump bookedAt by a second and retry until it lands.
+        // Both fingerprint indexes key booked_at at second precision, so two
+        // identical same-second cash spends collide.
         $now = $this->clock->now();
         for ($attempt = 0; $attempt < self::MAX_ATTEMPTS; $attempt++) {
             $canonical = new CanonicalTransaction(
@@ -125,9 +121,8 @@ final class RecordManualTransaction
         ]);
     }
 
-    // Re-selects on a unique-constraint violation so a concurrent double-submit
-    // (two adds racing to create the singleton Cash account / manual run)
-    // never surfaces as a 500.
+    // Re-selects on a unique violation, so two adds racing to create the
+    // singleton Cash account never surface as a 500.
     /**
      * @param  array<string, mixed>  $match
      * @param  array<string, mixed>  $attributes

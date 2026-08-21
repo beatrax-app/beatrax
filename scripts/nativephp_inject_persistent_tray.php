@@ -5,7 +5,7 @@ declare(strict_types=1);
 
 /**
  * Injects a persistent macOS menu-bar tray icon into the bundled NativePHP
- * Electron main process (D-09).
+ * Electron main process.
  *
  * Runs as a `prebuild` hook (see config/nativephp.php). It patches the
  * project-local `nativephp/electron/src/main/index.js` to:
@@ -37,9 +37,9 @@ declare(strict_types=1);
  *   items into a click handler that early-returns when `focusedWindow` is
  *   null. So once the main window is closed (the close handler in
  *   window.js deletes `state.windows[id]`), the tray's "Open Beatrax"
- *   item silently does nothing. That is the wrong paradigm for D-09 (a
+ *   item silently does nothing. That is the wrong paradigm for a
  *   persistent menu-bar icon that re-opens the main window after the X
- *   button was used).
+ *   button was used.
  *
  *   The proper paradigm is a native Electron `Tray` instance owned by the
  *   main process — lives for the app lifetime regardless of any
@@ -261,7 +261,7 @@ function findExpressionEnd(string $source, int $start): ?int
  *     flagged as a template image so macOS auto-tints it; the 2x sibling
  *     (`tray-icon@2x.png`) is loaded by Electron automatically when present.
  *
- *   - Builds the verbatim three-row context menu (D-09 / UI-SPEC labels:
+ *   - Builds the verbatim three-row context menu (UI-SPEC labels:
  *     "Open Beatrax", "Scan email now", "Quit"). The first two items show
  *     or re-open the main window and (for "Scan email now") navigate it to
  *     the inboxes page. "Quit" calls `app.quit()`.

@@ -7,19 +7,12 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Livewire\Livewire;
-use Modules\Anomaly\Internal\Http\Livewire\AnomalySettingsSection;
 use Modules\Anomaly\Internal\Jobs\BackfillAnomaliesJob;
 use Modules\Anomaly\Models\AnomalySuppressionRule;
+use Modules\Anomaly\Public\Http\Livewire\AnomalySettingsSection;
 use Modules\Core\Models\User;
 
 uses(RefreshDatabase::class);
-
-/*
- * Settings "Anomaly detection" section (D-11/D-18). Covers: persisting
- * sensitivity + floor with server-side validation, the first-activation
- * BackfillAnomaliesJob dispatch (once), and the visible + removable
- * suppression-rules list (cross-user remove is a no-op).
- */
 
 function assUser(string $username): User
 {
@@ -93,7 +86,7 @@ it('rejects an out-of-range sensitivity server-side and does not persist', funct
     $sensitivity = (int) $db->connection()->table('users')->where('id', $this->user->id)
         ->value('anomaly_sensitivity_percent');
 
-    // Untouched default.
+    // 50 is the schema default, i.e. untouched.
     expect($sensitivity)->toBe(50);
 });
 
@@ -124,7 +117,6 @@ it('dispatches BackfillAnomaliesJob exactly once on first save and never again',
     $db->connection()->table('users')->where('id', $this->user->id)
         ->update(['anomaly_backfilled_at' => '2026-06-20 09:05:00']);
 
-    // A second save must NOT re-dispatch.
     Livewire::actingAs($this->user)
         ->test(AnomalySettingsSection::class)
         ->set('anomalySensitivityPercent', 65)
@@ -155,9 +147,8 @@ it('does not remove another user rule (cross-user no-op)', function (): void {
         ->test(AnomalySettingsSection::class)
         ->call('removeSuppressionRule', $otherRule->id);
 
-    // The other user's rule survives. Read via a raw DB query so the
-    // BelongsToUser global scope (which would hide the other user's row
-    // from the acting user) does not mask a true deletion.
+    // Raw DB read: the BelongsToUser global scope would hide the other
+    // user's row and so mask a true deletion.
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $survives = $db->connection()->table('anomaly_suppression_rules')

@@ -7,9 +7,6 @@ namespace Modules\DevMode\Internal\Navigation;
 use Modules\DevMode\Public\Contracts\AppActionRegistry;
 use Modules\DevMode\Public\Dto\AppAction;
 
-// Mirrors NavigationRegistryImpl's shape — a final readonly class whose
-// roster is fixed at construction time, populated inside
-// DevModeServiceProvider::register() from the app-menu intent surface.
 final readonly class AppActionRegistryImpl implements AppActionRegistry
 {
     /** @var list<AppAction> */

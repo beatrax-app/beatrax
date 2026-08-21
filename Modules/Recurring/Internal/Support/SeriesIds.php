@@ -4,15 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Recurring\Internal\Support;
 
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
 final class SeriesIds
 {
-    // Ids arrive from request payloads and other modules as whatever the
-    // caller had: ints, numeric strings, the occasional null. Anything that
-    // is not a positive integer is dropped rather than coerced to 0, which
-    // would otherwise query for a row id that cannot exist.
+    // Non-positive input is dropped, not coerced to 0, which would otherwise
+    // put a row id that cannot exist into the query.
     /**
      * @param  array<int|string, mixed>  $seriesIds
      * @return list<int>

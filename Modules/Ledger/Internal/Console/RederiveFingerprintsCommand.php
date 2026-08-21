@@ -8,10 +8,8 @@ use Illuminate\Console\Command;
 use Modules\Ledger\Internal\Services\FingerprintRederiveOutcome;
 use Modules\Ledger\Internal\Services\FingerprintRederiveService;
 
-// Re-computes the sha256 fingerprint of every transactions row using
-// the current FingerprintComposer normalization version, via
-// FingerprintRederiveService; guarded against HTTP invocation by
-// LedgerServiceProvider's runningInConsole() check plus a BoundaryArchTest rule.
+// Registered behind the provider's runningInConsole() guard so it cannot be
+// reached over HTTP; an arch test holds that shut too.
 final class RederiveFingerprintsCommand extends Command
 {
     /** @var string */

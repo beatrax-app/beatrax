@@ -3,41 +3,12 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Schema;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 
-/*
- * Req 10 falsifiable credential-source guard (19-13 Task 2): "the test
- * fails if ... a credential is read from anywhere but the secrets file."
- *
- * Deliberately COMPLEMENTARY to, not a duplicate of, the existing D-07
- * guard (`OpenBankingSecretsFileGuardTest`, 19-03) — that test is a
- * STATIC content-grep over source text (file-path string literal +
- * DatabaseManager/credential-field-name co-occurrence, plus a
- * migration-content grep). This test adds two DIFFERENT signal sources
- * a pure text grep cannot see, while enforcing the SAME never-in-DB /
- * secrets-file-only invariant D-07 already pins — a violation here
- * would never contradict that guard, only fail alongside it:
- *
- *   (a) LIVE DATABASE SCHEMA introspection (`Schema::getColumns()`) —
- *       catches a credential column that landed via a dynamically-built
- *       column name or any construct a source-text grep could miss,
- *       because this inspects what actually materialized in SQLite,
- *       not what the migration source literally says;
- *   (b) a REFLECTION-level check that `OpenBankingSecretsRepository::
- *       load()` is the ONLY method, across every autoloaded class the
- *       module actually declares, whose return type is
- *       `OpenBankingCredentials`/`?OpenBankingCredentials` — enforcing
- *       "credentials are fabricated only by the repository" at the PHP
- *       type level, not merely by the absence of a string pattern.
- *
- * Classes are discovered by scanning the module's PHP source tree
- * (excluding tests/migrations/routes) and resolving each declared
- * class/interface/trait/enum's FQCN via `class_exists()` (which
- * triggers Composer's PSR-4 autoloader) — NOT via `get_declared_classes()`
- * alone, which would only see classes some earlier test happened to
- * already autoload and could silently under-report.
- */
+// Adds two signals a source grep cannot see: the live SQLite schema, and every
+// method's declared return type. Candidates come from scanning source and
+// calling class_exists(), because get_declared_classes() under-reports.
 
 const OB_CREDENTIAL_SOURCE_FORBIDDEN_COLUMN_PATTERN = '/private_key|application_id|session_id|refresh_token|access_token/i';
 
@@ -95,13 +66,6 @@ function credentialSourceGuardDiscoverClasses(string $relativeDir): array
 }
 
 /**
- * Reflects over the given candidate class list and returns the
- * `Class::method` identifiers of every method whose return type is
- * exactly `$returnType` (or `?$returnType`), excluding any class in
- * `$allowList`. Only methods DECLARED on the candidate class itself are
- * considered (inherited methods are attributed to their declaring
- * class, never double-counted).
- *
  * @param  list<class-string>  $candidates
  * @param  list<class-string>  $allowList
  * @return list<string>
@@ -137,9 +101,6 @@ function credentialSourceGuardMethodsReturning(array $candidates, string $return
 it('never lands a credential-shaped column in the live open_banking_connections schema', function (): void {
     foreach (credentialSourceGuardOpenBankingTables() as $table) {
         if (! Schema::hasTable($table)) {
-            // Table lands in a later wave than this guard; trivially
-            // satisfied until it exists (mirrors OpenBankingSecretsFileGuardTest's
-            // own not-yet-created-directory tolerance).
             continue;
         }
 
@@ -161,10 +122,8 @@ it('never lands a credential-shaped column in the live open_banking_connections 
         );
     }
 
-    // Falsifiability proof: the SAME pattern applied to a literal sample
-    // column-name list containing exactly the violation this guard
-    // exists to catch, alongside genuinely-safe metadata columns that
-    // must NOT trip it.
+    // Fire the same pattern at a known-bad and a known-good column list, so a
+    // clean live schema is never mistaken for a vacuously-true pattern.
     $violatingColumns = ['id', 'institution_id', 'application_id'];
     $violatingHits = array_values(array_filter(
         $violatingColumns,
@@ -197,11 +156,8 @@ it('makes OpenBankingSecretsRepository::load() the ONLY method in the module ret
         .'Offenders: '.implode(', ', $offenders),
     );
 
-    // Falsifiability proof: run the SAME reflection-based check against a
-    // fixture class that commits exactly the violation this guard exists
-    // to catch (a second class independently fabricating credentials,
-    // e.g. from a raw DB row) — proves the detector is not vacuously
-    // true just because no such class exists in the tree today.
+    // Run the same reflection check over a class that fabricates credentials
+    // itself, so an empty offender list is never mistaken for a broken check.
     $violatingClass = new class
     {
         public function readFromDatabaseRow(): OpenBankingCredentials

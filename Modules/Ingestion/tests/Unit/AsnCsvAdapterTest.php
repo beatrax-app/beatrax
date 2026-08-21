@@ -5,11 +5,11 @@ declare(strict_types=1);
 use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvAdapter;
 use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvColumnMap;
 use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvHeaderProfile;
+use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Internal\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\AccountResolution;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
-use Modules\Ingestion\Public\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Exceptions\UnsupportedFormatException;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 
@@ -80,8 +80,6 @@ it('preserves the full source row in rawPayload for audit', function (): void {
 
     foreach ($dtos as $dto) {
         expect($dto->rawPayload)->toHaveCount(AsnCsvHeaderProfile::EXPECTED_COLUMN_COUNT);
-        // Each cell must be a string (post charset conversion); rawPayload is
-        // the unprocessed source row, suitable for re-derivation later.
         foreach ($dto->rawPayload as $cell) {
             expect($cell)->toBeString();
         }
@@ -112,7 +110,7 @@ it('handles UTF-8 diacritics in counterparty names without mojibake', function (
         if ($dto->counterpartyName !== null
             && preg_match('/[\x{00C0}-\x{017F}]/u', $dto->counterpartyName) === 1) {
             $found = true;
-            // Make sure it's actually UTF-8 (no mojibake like `CafÃ©`).
+            // `Ã` is what a two-byte Unicode character looks like read as latin1.
             expect($dto->counterpartyName)->not->toContain('Ã');
             break;
         }
@@ -130,9 +128,9 @@ it('leaves counterpartyName null when the source row has no name', function (): 
         preserve_keys: false,
     );
 
-    // The fixture contains BEA (POS) rows with an empty Naam cell. Assert
-    // at least one comes through as null so the Normalize stage is the
-    // layer that substitutes the `_no_counterparty` sentinel.
+    // The fixture's BEA rows have an empty Naam cell. They must arrive here as
+    // null, because substituting the `_no_counterparty` sentinel is
+    // NormalizeStage's job, not the adapter's.
     $foundNullName = false;
     foreach ($dtos as $dto) {
         if ($dto->counterpartyName === null) {
@@ -155,7 +153,6 @@ it('asks the AccountResolver for the own IBAN of every parsed row', function ():
 });
 
 it('throws InvalidAmountException with the row index for malformed amount cells', function (): void {
-    // Build a synthetic 20-column row with a bogus amount, headerd correctly.
     $tmp = tempnam(sys_get_temp_dir(), 'asn-bad-').'.csv';
     $header = implode(',', [
         'Datum', 'Je rekening', 'Van / naar', 'Naam', 'Adres', 'Postcode', 'Woonplaats',
@@ -195,10 +192,8 @@ it('rejects a file that fails the header sniffer before reading any data row', f
 });
 
 it('parses the 19-column ASN variant (no trailing Categorie column) without errors', function (): void {
-    // Real ASN exports ship 19-col rows for some accounts — the
-    // `Categorie` column is absent. Build a synthetic 19-col fixture
-    // by stripping the trailing column from the gold 20-col fixture
-    // and confirm the adapter yields full DTOs without raising.
+    // Some real ASN accounts export without the trailing `Categorie` column,
+    // reproduced here by stripping it off the gold 20-column fixture.
     $body = file_get_contents(base_path('tests/fixtures/asn-sample-1.csv'));
     expect($body)->toBeString();
     /** @var string $body */
@@ -221,8 +216,6 @@ it('parses the 19-column ASN variant (no trailing Categorie column) without erro
             preserve_keys: false,
         );
 
-        // Same row count as the 20-col fixture — the absent column
-        // does not change the number of source rows.
         expect($dtos)->toHaveCount(229);
         expect($dtos[0])->toBeInstanceOf(SourceTransactionDto::class);
         expect($dtos[0]->ownIban)->toBe('NL57ASNB0123456789');
@@ -253,7 +246,6 @@ it('matches the snapshot of the parsed fixture (drift detector)', function (): v
         preserve_keys: false,
     );
 
-    // Project to a stable shape — formatted dates + the typed fields.
     $serialized = array_map(static fn (SourceTransactionDto $d): array => [
         'postedAt' => $d->postedAt->toDateString(),
         'valueDate' => $d->valueDate->toDateString(),

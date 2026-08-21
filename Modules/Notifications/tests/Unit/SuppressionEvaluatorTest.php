@@ -11,18 +11,9 @@ use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
 uses(RefreshDatabase::class);
 
-/*
- * SuppressionEvaluatorTest — the single delivery-suppression site (D-38
- * invariant 4). Exercises every toggle, both quiet-hours window shapes
- * (wrap-around + non-wrapping, inclusive lower / exclusive upper bound),
- * the four always-deliverable reactive types, and the D-43 seeding flag
- * (including flag restoration when the callback throws). hideDetails rides
- * on both delivered and suppressed outcomes.
- *
- * Lives in tests/Unit but is DB-backed (mirrors NotificationStateMachineTest)
- * because it reads through the real NotificationPreferenceQuery seam so an
- * unpaired/preference-less device transparently gets the D-16/D-19 defaults.
- */
+// DB-backed despite living in tests/Unit: going through the real
+// NotificationPreferenceQuery seam is what makes a preference-less device fall
+// back to the defaults the way it does in production.
 
 function evalUser(string $username): User
 {
@@ -95,7 +86,6 @@ it('suppresses only payment_reminder when reminders are disabled', function (): 
     expect($reminder->deliver)->toBeFalse();
     expect($reminder->reason)->toBe('trigger_disabled');
 
-    // Every OTHER toggle still delivers.
     expect($this->evaluator->shouldDeliver($user->id, DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE, $this->at)->deliver)->toBeTrue();
     expect($this->evaluator->shouldDeliver($user->id, DeterministicKeyDeriver::TRIGGER_SAVINGS_PROMPT, $this->at)->deliver)->toBeTrue();
     expect($this->evaluator->shouldDeliver($user->id, DeterministicKeyDeriver::TRIGGER_POSITION_DIGEST, $this->at)->deliver)->toBeTrue();
@@ -130,7 +120,6 @@ it('suppresses position_digest when cadence is off', function (): void {
     expect($digest->deliver)->toBeFalse();
     expect($digest->reason)->toBe('trigger_disabled');
 
-    // Other toggles are unaffected by an 'off' digest cadence.
     expect($this->evaluator->shouldDeliver($user->id, DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER, $this->at)->deliver)->toBeTrue();
 });
 
@@ -182,13 +171,10 @@ it('applies a wrap-around quiet window 22:00-08:00', function (): void {
 
     $suppressedAt = static fn (string $hm) => CarbonImmutable::parse($day.' '.$hm);
 
-    // Suppressed inside the window.
     expect($this->evaluator->shouldDeliver($user->id, $trigger, $suppressedAt('23:30'))->reason)->toBe('quiet_hours');
     expect($this->evaluator->shouldDeliver($user->id, $trigger, $suppressedAt('02:00'))->reason)->toBe('quiet_hours');
-    // Inclusive lower bound.
     expect($this->evaluator->shouldDeliver($user->id, $trigger, $suppressedAt('22:00'))->reason)->toBe('quiet_hours');
 
-    // Exclusive upper bound delivers at 08:00, and midday delivers.
     expect($this->evaluator->shouldDeliver($user->id, $trigger, $suppressedAt('08:00'))->deliver)->toBeTrue();
     expect($this->evaluator->shouldDeliver($user->id, $trigger, $suppressedAt('12:00'))->deliver)->toBeTrue();
 });
@@ -221,13 +207,11 @@ it('suppresses everything with reason seeding inside suppressDelivery() and rest
     });
     expect($insideReason)->toBe('seeding');
 
-    // Flag is restored in finally even when the callback throws.
     try {
         $this->evaluator->suppressDelivery(function (): void {
             throw new RuntimeException('boom');
         });
     } catch (RuntimeException) {
-        // expected
     }
 
     $after = $this->evaluator->shouldDeliver($user->id, $trigger, $this->at);
@@ -243,12 +227,10 @@ it('reflects hideDetails in both delivered and suppressed outcomes', function ()
         'reminders_enabled' => false,
     ]);
 
-    // Delivered outcome (reactive type) carries hideDetails.
     $delivered = $this->evaluator->shouldDeliver($user->id, DeterministicKeyDeriver::TRIGGER_IMPORT_FINISHED, $this->at);
     expect($delivered->deliver)->toBeTrue();
     expect($delivered->hideDetails)->toBeTrue();
 
-    // Suppressed outcome (disabled reminder) also carries hideDetails.
     $suppressed = $this->evaluator->shouldDeliver($user->id, DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER, $this->at);
     expect($suppressed->deliver)->toBeFalse();
     expect($suppressed->hideDetails)->toBeTrue();

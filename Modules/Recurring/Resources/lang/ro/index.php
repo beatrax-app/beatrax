@@ -16,6 +16,7 @@ return [
     'empty' => [
         'heading' => 'Nicio activitate recurentă deocamdată',
         'before_link' => 'Aprobă sugestiile detectate pe',
+        'link' => 'Verifică recurentele',
         'after_link' => 'ca să le vezi aici.',
     ],
 

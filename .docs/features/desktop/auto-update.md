@@ -1,0 +1,145 @@
+# The explicit-consent auto-update gate
+
+The desktop bundle ships with electron-updater, and electron-updater's
+default behaviour is the thing this page exists to prevent: on launch it
+calls `checkForUpdatesAndNotify()`, silently downloads whatever the
+configured feed offers, and installs it the next time the app quits. The
+only integrity it checks is TLS to the feed plus the SHA-512 the feed's
+*own* manifest declares — a self-consistent statement. Anyone who can
+serve that feed can therefore serve a manifest and a matching binary of
+their choosing, and the app installs it without the user ever seeing a
+prompt.
+
+Beatrax replaces that with a gate in two halves: **a publisher identity
+the feed cannot forge**, and **a human click before any byte is
+downloaded**.
+
+## The trust anchor
+
+`config/auto_update.php` pins `publisher_public_key_hex` — a 32-byte
+Ed25519 public key, hex-encoded, written as a literal and deliberately
+**not** env-overridable. A public key is not a secret, so committing it
+is the design; making it env-overridable would let a runtime `.env` write
+swap the trust anchor for an attacker's key. The matching secret half
+lives in the release pipeline only.
+
+Every release publishes, alongside the installers, the per-platform
+electron-updater manifest and a detached hex signature sibling:
+
+| Platform | Manifest | Signature |
+|---|---|---|
+| Windows | `latest.yml` | `latest.yml.sig` |
+| macOS | `latest-mac.yml` | `latest-mac.yml.sig` |
+| Linux | `latest-linux.yml` | `latest-linux.yml.sig` |
+
+The `preview` channel uses `beta*.yml` instead of `latest*.yml`.
+`config/auto_update.php`'s `manifest_feed_url` (env
+`AUTO_UPDATE_FEED_URL`) is the base URL those sit under; the release
+workflow sets it from the GitHub context, so moving the repository
+re-points the feed rather than stranding a hardcoded owner. **Left unset
+— self-hosted builds, the web app, the mobile runtime — the fetch yields
+`null` and no update is ever surfaced or applied.** That is the intended
+off switch, not a failure.
+
+## Holding electron-updater at the door
+
+`autoDownload` and `autoInstallOnAppQuit` are runtime setters on
+electron-updater's `autoUpdater` object, not electron-builder
+configuration, so they cannot be set from `config/nativephp.php`.
+`scripts/nativephp_inject_explicit_consent_updates.php` runs as a
+`prebuild` hook and injects both as `false` into the compiled Electron
+main-process JS, immediately after the `const { autoUpdater } =
+electronUpdater;` destructure. The patch is idempotent — a file that
+already sets `autoDownload` is left alone.
+
+With both false, electron-updater still *discovers* an update and still
+fires `UpdateAvailable`, but it stops there. Nothing is on disk yet.
+
+## The three listeners
+
+All three are registered in `DesktopServiceProvider::boot()` behind the
+`nativephp-internal.running` guard, so they exist only inside the
+bundle. Each also refuses outright under `UserDataPathService::
+isMobileRuntime()` — the app stores own the mobile update path, and a
+desktop binary must never be applied there.
+
+**1. `Modules\Desktop\Internal\Listeners\VerifyAndAnnounceUpdate`**
+— on `UpdateAvailable`.
+
+`ElectronUpdateChannel::poll()` fetches the manifest for the running
+platform and its `.sig`, verifies the detached signature over the **raw
+manifest bytes** against the pinned key, and suppresses a version that
+already has an unacknowledged `system_alerts` row (so repeated polls do
+not stack duplicate banners). The listener then adds one more check
+electron-updater cannot make for itself: the version the signed manifest
+names must equal the version electron-updater offered. Without it, a feed
+could serve a genuinely signed manifest for one release while offering
+the binary of another. Only when both agree does
+`RecordUpdateAvailableAlert` write the `update.available` row the banner
+renders from.
+
+**2. `Modules\Desktop\Internal\Listeners\TriggerUpdateDownload`**
+— on `Modules\Core\Public\Events\UpdateInstallRequested`.
+
+This event is raised by the user clicking install on that banner. It is
+the only thing that calls `AutoUpdater::downloadUpdate()`, which is what
+`autoDownload = false` was holding back. This is the consent step: no
+click, no download.
+
+**3. `Modules\Desktop\Internal\Listeners\VerifyAndInstallDownload`**
+— on `UpdateDownloaded`.
+
+The binary is now on disk but has not run. This listener re-fetches the
+manifest and fails closed on **every** unverifiable branch, in one
+condition:
+
+- the feed is unreachable or the manifest unparseable (`null`),
+- the Ed25519 signature does not verify against the pinned key,
+- the signed manifest's version is not the version that was downloaded,
+- the downloaded file's SHA-512 is not the digest that manifest names.
+
+Any of those logs at `critical` and returns, leaving the file on disk
+uninstalled. `AutoUpdater::quitAndInstall()` is reached only when all
+four pass.
+
+## Details that matter
+
+- **The signature covers bytes, not a parsed value.**
+  `HttpPublisherManifestFetcher` keeps the raw response body and hands
+  *that* to `verifyManifest()`. Verifying a re-serialised YAML value
+  would let a semantically-equivalent re-encoding pass.
+- **The digest is normalised, not reinterpreted.** electron-updater
+  writes `sha512` as base64; `verifyBinary()` compares hex. The fetcher
+  base64-decodes, checks the result is exactly 64 bytes, and hex-encodes.
+  A digest that is not 64 bytes drops the whole manifest rather than
+  reaching the binary check as a bad expectation.
+- **The `.sig` sibling is hex.** A non-hex or odd-length body is treated
+  as a corrupt signature and refused, never fed to `hex2bin`.
+- **`verifyBinary()` uses `hash_equals`**, so a partial-byte match cannot
+  leak through timing.
+- **Fetch timeout is 10 seconds**, and every fetch failure — offline,
+  DNS, malformed YAML, unparseable date — collapses to the same `null`.
+  Nothing from the update path bubbles an exception into app boot.
+- **macOS differential downloads are disabled** by a sibling prebuild
+  hook (`nativephp_inject_macos_update_settings.php`). The differential
+  path performs its own OS-signature check that the ad-hoc-signed bundle
+  fails; the full-binary path keeps the SHA-512 verification above, so
+  integrity is preserved either way.
+
+## Where to look
+
+- Listeners: `Modules/Desktop/Internal/Listeners/VerifyAndAnnounceUpdate.php`,
+  `TriggerUpdateDownload.php`, `VerifyAndInstallDownload.php`
+- Verification + channel resolution:
+  `Modules\Core\Public\Services\ElectronUpdateChannel`
+- Feed fetch + manifest parse:
+  `Modules\Core\Internal\AutoUpdate\HttpPublisherManifestFetcher`
+- Configuration: `config/auto_update.php`, `config/nativephp.php`
+- Tests: `Modules/Desktop/tests/Feature/AutoUpdate/ExplicitConsentUpdateGateTest.php`
+  (listeners against an in-memory manifest) and
+  `UpdateFeedSmokeTest.php` (the same chain driven through the real
+  fetcher over a faked feed, per platform, including a manifest signed by
+  a key other than the pinned one).
+
+See also [`architecture.md`](architecture.md) for the rest of the desktop
+module.

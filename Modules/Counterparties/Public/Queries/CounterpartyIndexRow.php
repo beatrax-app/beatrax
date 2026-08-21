@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Counterparties\Public\Queries;
 
-// No `iban` field exists on this DTO at all, even for personal-type
-// rows that have one on the underlying counterparty row — the index
-// never exposes a personal IBAN under any rendering path.
+// There is deliberately no `iban` field: the index must not be able to
+// expose a personal IBAN under any rendering path.
 final readonly class CounterpartyIndexRow
 {
     /**

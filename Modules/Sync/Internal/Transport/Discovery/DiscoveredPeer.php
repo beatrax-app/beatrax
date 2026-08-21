@@ -4,22 +4,19 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Transport\Discovery;
 
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 final readonly class DiscoveredPeer
 {
     /**
      * @param  string  $deviceId  The peer's device_id (from the `did=` TXT record).
      * @param  string  $host  Resolved hostname or IP address.
      * @param  int  $port  WebSocket port the peer is listening on.
-     * @param  string  $discoveryMode  How this peer was discovered: 'mdns' | 'manual' | 'relay'.
+     * @param  DiscoveryMode  $discoveryMode  How this peer's address was learned.
      */
     public function __construct(
         public readonly string $deviceId,
         public readonly string $host,
         public readonly int $port,
-        public readonly string $discoveryMode,
+        public readonly DiscoveryMode $discoveryMode,
     ) {}
 
     // Intentionally emits plaintext ws:// (not wss://): the Noise IK/XX
@@ -30,9 +27,8 @@ final readonly class DiscoveredPeer
         return "ws://{$this->host}:{$this->port}/sync";
     }
 
-    // dns-sd -B (macOS browse) yields a peer with host=''/port=0 because it
-    // does not resolve host/port without a -L step — such peers are
-    // filtered out by MdnsBrowser before reaching callers.
+    // A PTR answer names an instance without addressing it, so a peer learned
+    // before its SRV arrives carries host=''/port=0 and cannot be dialled.
     public function isConnectable(): bool
     {
         return $this->host !== '' && $this->port > 0;

@@ -6,11 +6,8 @@ namespace Modules\Reports\Internal\Http;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Ledger\Public\Dto\Period;
-use Modules\Reports\Public\Dto\ReportDefinition;
+use Modules\Reports\Internal\Dto\ReportDefinition;
 
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final class DrilldownUrlBuilder
 {
     public function __construct(private readonly UrlGenerator $urls) {}
@@ -20,9 +17,7 @@ final class DrilldownUrlBuilder
         $params = [];
 
         if ($groupKey !== null) {
-            // time_bucket (and anything unrecognised) has no group filter
-            // param — a time-bucket row carries no category/account/
-            // counterparty id to filter by.
+            // time_bucket, and anything unrecognised, carries no id to filter by.
             $groupParams = match ($dimension) {
                 'category' => ['category' => [(int) $groupKey]],
                 'account' => ['account' => [(int) $groupKey]],

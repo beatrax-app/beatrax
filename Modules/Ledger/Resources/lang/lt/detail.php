@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Pašalinti kategoriją',
         'keep_category' => 'Palikti šią kategoriją',
         'restore_single' => 'Atkurti kaip vieną kategoriją?',
+        'survivor_legend' => 'Kategorija, kurią palikti',
         'confirm_unsplit' => 'Taip, panaikinti padalijimą',
         'keep_split' => 'Palikti padalijimą',
     ],
@@ -51,6 +52,16 @@ return [
         'choose_aria' => 'Pasirink naują operacijos tipą',
         'choose_option' => 'Pasirink tipą…',
         'save' => 'Išsaugoti',
+    ],
+
+    'type_label' => [
+        'expense' => 'Išlaidos',
+        'income' => 'Pajamos',
+        'transfer_out' => 'Išeinantis pervedimas',
+        'transfer_in' => 'Gaunamas pervedimas',
+        'fee' => 'Mokestis',
+        'refund' => 'Grąžinimas',
+        'adjustment' => 'Koregavimas',
     ],
 
     'note' => [

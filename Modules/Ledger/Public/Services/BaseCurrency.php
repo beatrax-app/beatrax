@@ -8,10 +8,8 @@ use Illuminate\Container\Container;
 use Illuminate\Contracts\Config\Repository;
 use Modules\Ledger\Public\Enums\Currency;
 
-// Thin DI seam over config('currency.base') — the one place the app-wide
-// fallback currency resolves, so callers reach for it by intent instead of
-// pinning a bare 'EUR'. Falls back to the enum default if the key is absent
-// or malformed.
+// The one place the app-wide fallback currency resolves, so callers reach for
+// it by intent rather than pinning a bare 'EUR'.
 final readonly class BaseCurrency
 {
     public function __construct(private Repository $config) {}
@@ -23,10 +21,8 @@ final readonly class BaseCurrency
         return is_string($value) && $value !== '' ? $value : Currency::Eur->value;
     }
 
-    // View-layer accessor: a Blade template cannot inject BaseCurrency, so it
-    // reaches the same source of truth through this static seam rather than
-    // pinning 'EUR' or re-deriving the fallback. Domain code injects the
-    // service and calls code() directly instead of routing through here.
+    // For Blade, which cannot inject the service. Domain code injects it and
+    // calls code() directly.
     public static function value(): string
     {
         return Container::getInstance()->make(self::class)->code();

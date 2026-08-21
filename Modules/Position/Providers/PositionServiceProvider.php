@@ -8,9 +8,6 @@ use Illuminate\Support\ServiceProvider;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Position\Public\Services\PositionQuery;
 
-/**
- * @link ../../../.docs/features/position/architecture.md
- */
 final class PositionServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;

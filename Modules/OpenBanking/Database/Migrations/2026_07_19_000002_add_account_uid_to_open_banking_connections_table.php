@@ -2,30 +2,12 @@
 
 declare(strict_types=1);
 
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Adds `account_uid` to `open_banking_connections` (Wave 2, T-19-09 carried
- * gap from 19-08): the Enable Banking `/sessions` response returns
- * `session_id` PLUS a linked `accounts[].uid` list, but nothing in the
- * module persisted the account uid anywhere — `EnableBankingSourceAdapter::
- * fetch()`'s first parameter IS that account uid (see that class's
- * docblock), so `OpenBankingFetchService` has no value to pass without this
- * column.
- *
- * NOT a secret (D-07 arch guard, `OpenBankingSecretsFileGuardTest`'s
- * migration-content grep test): `account_uid` is an opaque
- * aggregator-assigned account identifier, not a credential — it carries no
- * more sensitivity than `institution_id`, which already lives on this table.
- *
- * Single-account-per-connection assumption: `open_banking_connections` is
- * keyed one row per (user_id, institution_id) (19-05 migration docblock).
- * `OpenBankingCallbackController` persists only the FIRST entry of
- * `accounts[]` — extending to a multi-account-per-connection model is out
- * of this migration's (and this plan's) scope.
- */
+// account_uid is an opaque aggregator-assigned account identifier, not
+// credential material, so unlike the session it belongs to it may live in a
+// column. One row holds one account: the callback persists accounts[0] only.
 return new class extends ModuleMigration
 {
     public function up(): void

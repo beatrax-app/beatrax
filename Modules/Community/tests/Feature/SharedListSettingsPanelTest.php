@@ -10,7 +10,7 @@ beforeEach(function (): void {
     $this->actingAs($this->user);
 });
 
-it('renders all three toggles with Toggle 3 disabled and a version-agnostic inline note (B-5)', function (): void {
+it('renders all three toggles with Toggle 3 disabled and a version-agnostic inline note', function (): void {
     $component = Livewire::test(SharedListSettingsPanel::class);
 
     $html = $component->html();
@@ -18,12 +18,14 @@ it('renders all three toggles with Toggle 3 disabled and a version-agnostic inli
     expect($html)->toContain('Offer to contribute');
     expect($html)->toContain('Update the shared list on app updates');
 
-    // Toggle 3 must render with the `disabled` attribute.
+    // A role="switch" button now, not a styled checkbox: these are on/off
+    // settings and a screen reader has to announce them as one thing.
     expect($html)->toContain('id="toggle-update-on-updates"');
-    expect(preg_match('/<input[^>]*id="toggle-update-on-updates"[^>]*disabled/i', $html))->toBe(1);
+    expect(preg_match('/<button[^>]*id="toggle-update-on-updates"[^>]*disabled/i', $html))->toBe(1);
+    expect(preg_match('/<button[^>]*role="switch"[^>]*id="toggle-update-on-updates"/i', $html))->toBe(1);
 
-    // The inline note must mention a future activation without
-    // pinning to a version literal — B-5 forbids any `N.M` shape.
+    // The note must promise a future activation without naming a version:
+    // no `N.M` shape may appear anywhere in the rendered panel.
     expect($html)->toContain('Activates with a future app update');
     expect(preg_match('/\b\d+\.\d+/', $html))->toBe(0);
 });

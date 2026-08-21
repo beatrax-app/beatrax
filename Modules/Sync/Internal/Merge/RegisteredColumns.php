@@ -10,9 +10,6 @@ use Illuminate\Database\DatabaseManager;
 // already gated by MergeRulesRegistry; this is its field-name companion, so a
 // SET/CREATE naming a column the table does not actually have is quarantined
 // before it reaches a query-builder update()/insert() and fails at the DB.
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class RegisteredColumns
 {
     /** @var array<string, list<string>> */

@@ -8,6 +8,7 @@ return [
     'subtitle' => 'Natisni jih ali shrani na varno mesto. Ne bodo prikazane znova.',
     'copy' => 'Kopiraj kode',
     'copied' => 'Kopirano',
+    'copy_failed' => 'Kopiranje ni uspelo. Zapišite kode.',
     'download' => 'Prenesi kot .txt',
 
     'saved_as' => 'Shranjeno kot beatrax-recovery-codes-:username.txt',

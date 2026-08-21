@@ -16,9 +16,6 @@ use stdClass;
 // (plus its optional FTS highlight row) into a SearchRowDto — decrypting
 // the counterparty name, resolving the secondary-currency leg, and
 // converting match sentinels into XSS-safe <mark> markup.
-/**
- * @link ../../../../.docs/features/search/architecture.md
- */
 final class SearchRowMapper
 {
     use CoercesScalars;

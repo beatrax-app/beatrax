@@ -2,7 +2,7 @@
 # non-maintainer, is flagged and posted to the private maintainer channel; the
 # flag clears when a review lands or the PR closes. Triggers are declared here
 # because a reusable cannot declare its caller's; the behaviour lives in the
-# spec repo. OPS-R22, OPS-R25.
+# spec repo.
 name: awaiting-maintainer
 
 on:

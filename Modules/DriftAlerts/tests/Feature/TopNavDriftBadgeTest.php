@@ -11,15 +11,6 @@ use Modules\Recurring\Models\RecurringSeries;
 
 uses(RefreshDatabase::class);
 
-/*
- * Top-nav Recurring badge composer tests for the drift secondary
- * chip. The DriftAlertsServiceProvider attaches a `driftOpenCount`
- * integer to `core::livewire.top-nav` via the View Factory contract
- * (NEVER the `view()` global helper). The Recurring slot renders a
- * compound badge when both the pending pill and the drift pill are
- * non-zero.
- */
-
 function tdbUser(string $username): User
 {
     return User::query()->create([
@@ -156,8 +147,6 @@ it('renders no drift pill when the user has no open alerts', function (): void {
     $response->assertOk();
     $content = $response->getContent() ?: '';
 
-    // The drift secondary pill chrome carries the ↗ glyph; with zero
-    // drift alerts the pill must not render.
     expect($content)->toContain('Recurring');
     expect($content)->not->toContain('open drift alerts');
 })->group('drift-badge-hidden-when-zero');
@@ -171,7 +160,6 @@ it('injects driftOpenCount > 0 and surfaces the rose drift pill in the aria-labe
     $content = $response->getContent() ?: '';
 
     expect($content)->toContain('2 open drift alerts');
-    // Rose chrome on the drift pill.
     expect($content)->toContain('bg-rose-50');
     expect($content)->toContain('text-rose-700');
 })->group('drift-badge-shows-rose-pill-when-non-zero')
@@ -185,7 +173,6 @@ it('renders the compound pill when both pending recurring suggestions and open d
     $response->assertOk();
     $content = $response->getContent() ?: '';
 
-    // Both pills present: pending slate-900 chrome AND drift rose-50 chrome.
     expect($content)->toContain('bg-slate-900');
     expect($content)->toContain('bg-rose-50');
     expect($content)->toContain('1 pending recurring suggestions');
@@ -200,21 +187,13 @@ it('renders only the drift pill when there are no pending suggestions but open d
     $response->assertOk();
     $content = $response->getContent() ?: '';
 
-    // Drift pill renders; pending pill does not (the slate-900 chrome
-    // is reserved for the pending pill in the Recurring slot).
     expect($content)->toContain('1 open drift alerts');
 
-    // Locate the Recurring anchor and ensure the slate-900 pill is
-    // absent within its scope. The anchor renders aria-label only on
-    // the Recurring link itself; the drift pill carries an aria-hidden
-    // arrow span so the literal string "open drift alerts" is the
-    // load-bearing marker.
     $start = strpos($content, 'href="'.route('recurring.index').'"');
     expect($start)->toBeInt();
     $segment = substr($content, (int) $start, 2000);
 
-    // Within the recurring anchor segment, the drift rose chrome must
-    // be present and the slate-900 chip chrome must be absent.
+    // bg-slate-900 is the pending pill's chrome, bg-rose-50 the drift pill's.
     expect($segment)->toContain('bg-rose-50');
     expect(str_contains($segment, 'bg-slate-900 px-2 py-0.5'))->toBeFalse();
 })->group('drift-only-pill-when-no-pending')

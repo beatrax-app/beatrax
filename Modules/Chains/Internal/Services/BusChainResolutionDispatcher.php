@@ -8,8 +8,6 @@ use Modules\Chains\Internal\Jobs\ResolveChainLinksJob;
 use Modules\Chains\Public\Contracts\DispatchesChainResolution;
 
 /**
- * @link ../../../../.docs/features/chains/architecture.md
- *
  * @internal Bound to the public contract — call sites inject the
  *           contract, never this class directly.
  */

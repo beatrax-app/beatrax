@@ -1,7 +1,7 @@
 import Fuse from 'fuse.js';
 
 /**
- * Alpine factory for the command palette modal (16-08, DEVUI-09).
+ * Alpine factory for the command palette modal.
  *
  * Mounted by `Modules/DevMode/Resources/views/livewire/command-palette-modal.blade.php`
  * via `<div x-data="palette(registry, recent)">`. The two arguments
@@ -17,14 +17,14 @@ import Fuse from 'fuse.js';
  *   - threshold: 0.35
  *   - ignoreLocation: true
  *
- * Server-backed search (08-05, SRCH-02):
+ * Server-backed search:
  *   - When query.length >= 2, a debounced (200ms) server fetch fires via
  *     $wire.search(q) on the mounted search.palette-search-endpoint component.
- *   - Server hits are merged into the results pane ABOVE Fuse results (D-01).
+ *   - Server hits are merged into the results pane ABOVE Fuse results.
  *   - Previous server hits shown while a new fetch is in-flight (no blank flash).
  *   - A loading spinner appears in the input trailing slot during fetch.
  *
- * Token autocomplete (D-26):
+ * Token autocomplete:
  *   - When the query ends with a recognized token prefix (account:, amount:,
  *     after:, before:, category:), a suggestion overlay appears.
  *   - Esc dismisses the overlay without closing the palette.
@@ -32,7 +32,7 @@ import Fuse from 'fuse.js';
  * Selecting a row:
  *   - source `dev` (or `dev.cmd.*` id)    → dispatch `spawn-command`
  *     with the resolved-args payload; the artisan runner page is the
- *     SOLE listener (per <interfaces> I-3 fix). The palette is a
+ *     SOLE listener. The palette is a
  *     calmer surface that dispatches the spawn intent only — it
  *     does NOT render an inline arg form here.
  *   - any other row with `url`            → window.location.href.
@@ -56,6 +56,11 @@ const TOKEN_SUGGESTIONS = {
     'category:': ['category:Groceries', 'category:Subscriptions', 'category:Travel'],
 };
 
+/** Every activatable row in the palette carries this hook. */
+const ROW_SELECTOR = '[data-palette-row]';
+
+const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]';
+
 export const palette = (registry, recent) => ({
     visible: false,
     query: '',
@@ -73,6 +78,11 @@ export const palette = (registry, recent) => ({
     // wire:id (string) of the PaletteSearchEndpoint component. We store the id,
     // never the component object — see _resolveSearchEndpoint() for why.
     _searchEndpointId: null,
+
+    // Where focus was when the palette opened, so Esc can hand it back.
+    // A DOM node is one of the types Alpine's reactivity leaves alone, so
+    // this reads back as the element the browser knows.
+    _returnFocusTo: null,
 
     // Token autocomplete state
     tokenSuggestions: [],
@@ -146,6 +156,9 @@ export const palette = (registry, recent) => ({
     },
 
     open() {
+        if (!this.visible) {
+            this._returnFocusTo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        }
         this.query = '';
         this.activeIndex = 0;
         this.serverTransactionHits = [];
@@ -172,6 +185,79 @@ export const palette = (registry, recent) => ({
     close() {
         this.tokenSuggestVisible = false;
         this.visible = false;
+
+        const origin = this._returnFocusTo;
+        this._returnFocusTo = null;
+        if (origin && document.contains(origin)) {
+            this.$nextTick(() => {
+                try {
+                    origin.focus();
+                } catch (_) {
+                    // The opener may have gone with a navigation.
+                }
+            });
+        }
+    },
+
+    _rows() {
+        const panel = this.$refs.panel;
+
+        return panel ? Array.from(panel.querySelectorAll(ROW_SELECTOR)) : [];
+    },
+
+    /** Walk DOM focus along the rows, carrying the highlight with it. */
+    _moveRowFocus(delta) {
+        const rows = this._rows();
+        if (rows.length === 0) {
+            return;
+        }
+
+        const current = rows.indexOf(document.activeElement);
+        const next = rows[Math.min(Math.max(current + delta, 0), rows.length - 1)];
+        if (!next) {
+            return;
+        }
+
+        const index = next.getAttribute('data-palette-index');
+        if (index !== null) {
+            this.activeIndex = Number(index);
+        }
+        next.focus();
+    },
+
+    /**
+     * Keep Tab inside the open dialog. Without this the next Tab from the
+     * last row lands on the page behind the scrim, which is inert to the
+     * eye and still reachable by keyboard.
+     */
+    _trapTab(e) {
+        const panel = this.$refs.panel;
+        if (!panel) {
+            return;
+        }
+
+        const stops = Array.from(panel.querySelectorAll(FOCUSABLE_SELECTOR)).filter((el) => el.tabIndex >= 0);
+        if (stops.length === 0) {
+            return;
+        }
+
+        const first = stops[0];
+        const last = stops[stops.length - 1];
+
+        if (!panel.contains(document.activeElement)) {
+            e.preventDefault();
+            first.focus();
+            return;
+        }
+        if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+            return;
+        }
+        if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+        }
     },
 
     get results() {
@@ -243,7 +329,7 @@ export const palette = (registry, recent) => ({
 
     /**
      * Debounced (200ms) server fetch — fires when query.length >= 2.
-     * Keeps previous hits visible while the new fetch is in-flight (D-01).
+ * Keeps previous hits visible while the new fetch is in-flight.
      */
     _scheduleServerFetch() {
         if (this._debounceTimer) {
@@ -309,12 +395,12 @@ export const palette = (registry, recent) => ({
 
     /**
      * Execute a transaction search hit — navigate to its detail page and
-     * persist the search query as a recent entry (D-10, D-13).
+ * persist the search query as a recent entry.
      */
     executeTransactionHit(hit) {
-        // Persist as a recent transaction-search entry (D-10).
-        // The entry URL is /transactions?q={query} so re-running navigates
-        // to the full-results page (D-13).
+        // Persist as a recent transaction-search entry. The entry URL is
+        // /transactions?q={query} so re-running navigates to the
+        // full-results page.
         try {
             if (window.Livewire) {
                 window.Livewire.dispatch('palette:picked', {
@@ -341,7 +427,7 @@ export const palette = (registry, recent) => ({
 
     /**
      * Navigate to /transactions?q={query} and persist the search as a recent
-     * entry (D-01 "See all results" row, D-10 recent searches).
+ * entry (the "See all results" row).
      */
     seeAllResults() {
         const q = this.query;
@@ -440,7 +526,7 @@ export const palette = (registry, recent) => ({
         }
         if (e.key === 'Escape') {
             e.preventDefault();
-            // Esc dismisses token autocomplete overlay first (D-26),
+            // Esc dismisses token autocomplete overlay first,
             // then closes the palette if no overlay was open.
             if (this.tokenSuggestVisible) {
                 this.tokenSuggestVisible = false;
@@ -450,8 +536,13 @@ export const palette = (registry, recent) => ({
             return;
         }
 
+        // A row is a real button, so the browser already turns Enter on a
+        // focused row into a click on it. Acting on the same key here would
+        // run that row a second time.
+        const onRow = e.target instanceof Element && e.target.closest(ROW_SELECTOR) !== null;
+
         // Token autocomplete keyboard nav
-        if (this.tokenSuggestVisible && this.tokenSuggestions.length > 0) {
+        if (!onRow && this.tokenSuggestVisible && this.tokenSuggestions.length > 0) {
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 this.tokenActiveIndex = Math.min(this.tokenActiveIndex + 1, this.tokenSuggestions.length - 1);
@@ -472,17 +563,33 @@ export const palette = (registry, recent) => ({
             }
         }
 
+        if (e.key === 'Tab') {
+            this._trapTab(e);
+            return;
+        }
+
         if (e.key === 'ArrowDown') {
             e.preventDefault();
+            if (onRow) {
+                this._moveRowFocus(1);
+                return;
+            }
             this.activeIndex = Math.min(this.activeIndex + 1, this.results.length - 1);
             return;
         }
         if (e.key === 'ArrowUp') {
             e.preventDefault();
+            if (onRow) {
+                this._moveRowFocus(-1);
+                return;
+            }
             this.activeIndex = Math.max(this.activeIndex - 1, 0);
             return;
         }
         if (e.key === 'Enter') {
+            if (onRow) {
+                return;
+            }
             const hit = this.results[this.activeIndex];
             if (hit && hit.item) {
                 e.preventDefault();

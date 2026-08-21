@@ -26,11 +26,11 @@
         if ($minor === null) {
             return '';
         }
-        return Money::ofMinor($minor, $currency)->format('nl_NL');
+        return Money::ofMinor($minor, $currency)->format();
     };
     $lowestFormatted = $fmtMinor($dto->lowestProjectedBalanceMinor);
     $nextSettlementFormatted = $dto->nextIcsSettlement !== null
-        ? Money::ofMinor((int) $dto->nextIcsSettlement->amount->toMinor(), $dto->nextIcsSettlement->amount->currency())->format('nl_NL')
+        ? Money::ofMinor((int) $dto->nextIcsSettlement->amount->toMinor(), $dto->nextIcsSettlement->amount->currency())->format()
         : '';
     $lowestDate = null;
     if (is_string($dto->lowestProjectedBalanceDate) && $dto->lowestProjectedBalanceDate !== '') {

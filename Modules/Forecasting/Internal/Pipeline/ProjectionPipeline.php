@@ -16,9 +16,6 @@ use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use stdClass;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final readonly class ProjectionPipeline
 {
     use CoercesScalars;
@@ -93,9 +90,8 @@ final readonly class ProjectionPipeline
             ->orderBy('id')
             ->get();
 
-        // Collect ALL contributions across ALL series first so the
-        // chain-aware router can rewrite an account-id-routed
-        // contribution before the per-account daily fold buckets them.
+        // Every series first, then route: the router rewrites which account a
+        // contribution lands on, so bucketing before it would misfile them.
         $allContributions = [];
         foreach ($allSeries as $series) {
             $seriesAccountId = $accountIdBySeriesId[$series->seriesId] ?? null;
@@ -120,10 +116,8 @@ final readonly class ProjectionPipeline
             viewByFunder: false,
         );
 
-        // Scenario-isolation boundary: ScenarioApplier folds the user's
-        // mutations on top of the baseline contributions purely in
-        // memory — it NEVER joins forecast_scenario_mutations onto the
-        // transaction substrate (noScenarioMutationsJoinedToTransactionQueries).
+        // The isolation boundary: mutations fold onto the baseline in memory,
+        // never as a join from forecast_scenario_mutations onto transactions.
         if ($scenarioId !== null) {
             $routed = $this->scenarioApplier->apply(
                 baselineContributions: $routed,

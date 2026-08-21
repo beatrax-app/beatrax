@@ -6,22 +6,8 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 
-/*
- * Top-nav "Inboxes" badge composer invariants.
- *
- * Verifies that EmailScanServiceProvider's View Factory composer
- * binds $inboxesBadgeCount onto the core::livewire.top-nav partial:
- *
- *  - Badge is hidden (no slate-900 pill) when count = 0.
- *  - Badge renders the integer when count > 0.
- *  - Badge caps at "99+" when count > 99.
- *  - The link itself is always present between "Imports" and
- *    "Uncategorized" regardless of the badge state.
- *  - No `view()` global helper appears in the provider source — the
- *    composer must resolve ViewFactoryContract via $this->app->make()
- *    (CLAUDE.md DI-only invariant; same shape Phase 5 issue #12 fixed
- *    for the chain-review badge).
- */
+// The composer must resolve ViewFactoryContract through the container, never
+// the global view() helper — the repo-wide DI-only invariant.
 
 function tnbcUser(string $username): User
 {
@@ -71,11 +57,8 @@ function tnbcSeedDiscoveredCandidates(User $owner, int $inboxId, int $count): vo
             'inbox_id' => $inboxId,
             'sender_email' => "candidate{$i}@example.com",
             'sender_name' => null,
-            // Plan 09 tightened InboxesBadgeCount to apply the same
-            // 2-occurrences-in-90-days threshold the panel uses; seed
-            // at occurrence_count=2 so the badge counts these rows
-            // (the seed was occurrence_count=1 pre-Plan-09 which now
-            // falls below threshold).
+            // At the threshold, not below it: the badge applies the panel's
+            // own 2-occurrences-in-90-days rule.
             'occurrence_count' => 2,
             'last_seen_at' => $now,
             'sample_message_id' => null,
@@ -93,16 +76,14 @@ it('renders the Inboxes link without a badge when count is zero', function (): v
     $user = tnbcUser('zero@example.com');
     $this->actingAs($user);
 
-    // Visit any page that mounts the top-nav. /inboxes itself is the
-    // simplest — empty-state hero renders without dependencies.
+    // /inboxes mounts the top-nav and its empty-state hero needs nothing else.
     $response = $this->get(route('inboxes.index'));
 
     $response->assertStatus(200);
-    // Anchor href ends with /inboxes regardless of absolute vs relative
-    // URL generation (route() may return either depending on URL config).
+    // Matching on the trailing quote works whether route() produced an
+    // absolute or a relative URL.
     $response->assertSee('/inboxes"', false);
     $response->assertSee('Inboxes', false);
-    // Badge hidden — no aria-label about items needing attention.
     $response->assertDontSee('items need attention', false);
 });
 
@@ -151,15 +132,12 @@ it('does not use the view() global helper inside EmailScanServiceProvider', func
     );
     expect($providerSource)->toBeString();
 
-    // Strip line comments + block comments so docblock prose mentioning
-    // "view()" as documentation does not trip the gate.
+    // Comments are stripped so prose mentioning "view()" cannot trip the gate.
     $stripped = preg_replace('#//[^\n]*#', '', (string) $providerSource);
     $stripped = preg_replace('#/\*.*?\*/#s', '', (string) $stripped);
 
-    // The runtime forbidden shapes: `view('...')` or `view("...")` or
-    // ` view(...)` as a bare function call. The grep matches the same
-    // shape the plan's gate script checks (call-site form, not the
-    // ViewFactoryContract type reference).
+    // Only the bare call-site form is forbidden; a ViewFactoryContract type
+    // reference is fine.
     $matched = preg_match_all('/(?<![A-Za-z0-9_>])view\s*\(\s*[\'"]/', (string) $stripped);
     expect($matched)->toBe(0);
 });

@@ -16,6 +16,7 @@ return [
     'empty' => [
         'heading' => 'Még nincs ismétlődő tétel',
         'before_link' => 'Hagyd jóvá a felismert javaslatokat itt:',
+        'link' => 'Ismétlődők áttekintése',
         'after_link' => 'hogy itt megjelenjenek.',
     ],
 

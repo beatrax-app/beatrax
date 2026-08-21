@@ -25,6 +25,8 @@ return [
         'tax_years' => 'Tax years',
     ],
 
+    'tablist_aria' => 'Counterparty sections',
+
     'tab_note_personal' => '— no funding chains for personal contacts',
     'tab_note_bank' => "— bank-fee counterparty doesn't generate funding chains",
     'tab_note_government' => '— no funding chains for government counterparties',

@@ -8,9 +8,6 @@ use Modules\Core\Public\Support\Lang;
 use Native\Mobile\Edge\Element;
 use Native\Mobile\Edge\NativeComponent;
 
-/**
- * @link ../../../../.docs/features/mobile/architecture.md
- */
 final class AppShellScreen extends NativeComponent
 {
     // The web path the embedded webview is currently showing. Every nav

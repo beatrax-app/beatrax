@@ -16,12 +16,12 @@
 --}}
 
 <div x-data="{ open: false }" class="relative inline-block">
-    <button
-        type="button"
+    <x-core::secondary-button
+        size="sm"
+        class="gap-1"
         x-on:click="open = ! open"
         aria-haspopup="listbox"
         aria-label="{{ Lang::get('drift-alerts::threshold.series_aria') }}"
-        class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900"
     >
         <span class="text-slate-500 dark:text-slate-400">{{ Lang::get('drift-alerts::threshold.label') }}</span>
         <span style="font-variant-numeric: tabular-nums;">
@@ -31,7 +31,7 @@
                 ±{{ $currentValue }}%
             @endif
         </span>
-    </button>
+    </x-core::secondary-button>
     <div
         x-show="open"
         x-cloak

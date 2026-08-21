@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Quitar la categoría',
         'keep_category' => 'Mantener esta categoría',
         'restore_single' => '¿Restaurar como una sola categoría?',
+        'survivor_legend' => 'Categoría que se mantiene',
         'confirm_unsplit' => 'Sí, deshacer el desglose',
         'keep_split' => 'Mantener el desglose',
     ],
@@ -51,6 +52,16 @@ return [
         'choose_aria' => 'Elegir un nuevo tipo de transacción',
         'choose_option' => 'Elige un tipo…',
         'save' => 'Guardar',
+    ],
+
+    'type_label' => [
+        'expense' => 'Gasto',
+        'income' => 'Ingreso',
+        'transfer_out' => 'Transferencia enviada',
+        'transfer_in' => 'Transferencia recibida',
+        'fee' => 'Comisión',
+        'refund' => 'Reembolso',
+        'adjustment' => 'Ajuste',
     ],
 
     'note' => [

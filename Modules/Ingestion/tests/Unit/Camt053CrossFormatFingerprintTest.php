@@ -24,13 +24,8 @@ beforeEach(function (): void {
     $this->fingerprints = $this->app->make(FingerprintComposer::class);
 });
 
-/**
- * Lifts a SourceTransactionDto into a synthetic CanonicalTransaction shaped
- * exactly the way `NormalizeStage` would produce it: same counterparty
- * normalisation, same sentinel for nameless rows, fixed user + account ids
- * so the fingerprint tuple depends only on the booking instant + amount +
- * counterparty — the cross-format invariant under test.
- */
+// The user and account ids are fixed so the fingerprint tuple varies only by
+// booking instant, amount and counterparty — the cross-format invariant.
 function liftToCanonical(SourceTransactionDto $dto, FingerprintComposer $fp): CanonicalTransaction
 {
     $rawName = $dto->counterpartyName;
@@ -82,8 +77,7 @@ it('produces identical v3 fingerprints for the same row across CSV and CAMT.053'
     expect($csvDtos)->not->toBeEmpty();
     expect($camtDtos)->not->toBeEmpty();
 
-    // Index every CSV fingerprint so the test does not depend on the parse
-    // order agreeing between the two formats.
+    // Indexed by hash so the two formats need not agree on parse order.
     $csvHashes = [];
     foreach ($csvDtos as $csvDto) {
         $hash = $this->fingerprints->compose(liftToCanonical($csvDto, $this->fingerprints));
@@ -98,11 +92,9 @@ it('produces identical v3 fingerprints for the same row across CSV and CAMT.053'
         }
     }
 
-    // The two fixtures cover the same calendar period (February 2026) on the
-    // same own IBAN. The cross-format dedup invariant requires that
-    // essentially every CAMT entry find an exact CSV twin under the v3
-    // tuple; a regression that mis-normalises counterparty names or
-    // mis-aligns booking dates would silently halve the match rate, so
-    // the threshold sits at 95% to fail loud rather than tolerate drift.
+    // Both fixtures are February 2026 on the same own IBAN, so nearly every
+    // CAMT entry should find a CSV twin. 95% rather than 100% leaves room for
+    // the handful of genuinely format-specific rows, while a name- or
+    // date-normalisation regression halves the rate and trips this.
     expect($matched)->toBeGreaterThanOrEqual((int) ceil(count($camtDtos) * 0.95));
 })->group('phase-2');

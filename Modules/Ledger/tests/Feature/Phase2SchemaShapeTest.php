@@ -5,15 +5,6 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Schema\Builder;
 
-/*
- * Schema-shape gate for the Ledger module migrations under
- * .../Database/Migrations/2026_05_13_010001..010004. Asserts that the
- * downstream columns + per-user UNIQUE-index swap on `transactions` are
- * in place so the ingestion pipeline + statement-summary writer can
- * rely on them at run time. Pest-based so it runs in the standard test
- * suite without coupling to a TTY or PsySH.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);

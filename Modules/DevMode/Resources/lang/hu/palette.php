@@ -24,10 +24,12 @@ return [
     'source_txn' => 'txn',
     'source_counterparty' => 'partner',
     'source_category' => 'kategória',
+    'results_aria' => 'Találatok',
     'no_results' => 'Nincs találat.',
     'foot_navigate' => 'navigálás',
     'foot_select' => 'kiválasztás',
     'foot_close' => 'bezárás',
+    'close_aria' => 'Keresés bezárása',
     'foot_try' => 'Próbáld',
     'results_suffix' => ' találat',
 ];

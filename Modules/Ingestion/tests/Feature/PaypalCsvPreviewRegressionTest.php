@@ -4,20 +4,6 @@ declare(strict_types=1);
 
 use Modules\Import\Public\Contracts\RunsImports;
 
-/*
- * End-to-end pipeline regression test for the PayPal CSV upload path.
- *
- * Locks two invariants for the wizard:
- *  - Uploading a PayPal Rapport Transactiegegevens (Transaction Details
- *    Report) CSV produces a non-empty preview, none of whose rows carry
- *    status='error'. Pins the happy-path contract against future parser
- *    / sniffer refactors.
- *  - Uploading a PayPal Saldorapport (Balance Reconciliation Report)
- *    CSV — the wrong export type — produces a single ERROR row whose
- *    message points the user at Rapport Transactiegegevens — not a
- *    generic 'language profile not supported' message.
- */
-
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
     $this->importer = $this->app->make(RunsImports::class);

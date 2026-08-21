@@ -12,13 +12,8 @@ use Modules\Anomaly\Tests\Support\AnomalyCorpusSeeder;
 
 uses(RefreshDatabase::class);
 
-/*
- * The min-amount floor (D-11) gates ALL THREE detectors. The
- * sub-floor-ignored fixture is a €4.50 charge under the €10 floor that
- * would otherwise be large vs its €0.99 baseline — every detector must
- * return its no-fire value.
- */
-
+// The sub-floor-ignored fixture is a €4.50 charge under the €10 floor that
+// would otherwise be large against its €0.99 baseline.
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -56,8 +51,7 @@ it('gates the first-time-merchant detector below the floor', function (): void {
 
 it('gates the duplicate-charge detector below the floor', function (): void {
     $user = AnomalyCorpusSeeder::makeUser();
-    // A sub-floor duplicate: two €4.50 charges to the same merchant in the
-    // window, both below the €10 floor — duplicate must not fire.
+    // Both sides of the duplicate pair pushed below the €10 floor.
     $fixture = AnomalyCorpusSeeder::load('duplicate-in-window');
     $fixture['history'][0]['amount_minor'] = -450;
     $fixture['transaction']['amount_minor'] = -450;

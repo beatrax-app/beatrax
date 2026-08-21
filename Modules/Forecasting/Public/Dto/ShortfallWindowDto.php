@@ -18,8 +18,7 @@ final class ShortfallWindowDto extends Data
         public readonly CarbonImmutable $endsAt,
         public readonly int $lowestBalanceMinor,
         public readonly string $currency,
-        // Captures the buffer effective at detection time so a later
-        // buffer edit does not rewrite the historical shortfall narrative.
+        // Frozen at detection time so a later buffer edit cannot rewrite it.
         public readonly int $bufferUsedMinor,
     ) {}
 }
