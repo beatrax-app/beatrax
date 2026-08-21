@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use Modules\OpenBanking\Public\Dto\OpenBankingConnectionView;
+use Modules\OpenBanking\Internal\Dto\OpenBankingConnectionView;
 
 // This gates the failure notice, so a null status — no attempt has run yet —
 // must not render as a failure the user cannot explain.

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Livewire\Livewire;
 use Modules\Core\Models\User;
-use Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal;
+use Modules\EmailScan\Public\Http\Livewire\OAuthClientWizardModal;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
 beforeEach(function (): void {

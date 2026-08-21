@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Modules\Chains\Internal;
 
 use Illuminate\Database\DatabaseManager;
-use Modules\Chains\Public\Exceptions\EvidenceEncodingFailedException;
+use Modules\Chains\Internal\Exceptions\EvidenceEncodingFailedException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 

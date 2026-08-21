@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
-use Modules\Core\Internal\Http\Livewire\SystemAlertsBanner;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Actions\AcknowledgeSystemAlert;
+use Modules\Core\Public\Http\Livewire\SystemAlertsBanner;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 beforeEach(function (): void {

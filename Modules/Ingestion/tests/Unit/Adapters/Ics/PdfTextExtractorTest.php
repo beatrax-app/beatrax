@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Ingestion\Internal\Adapters\Ics\PdfTextExtractor;
-use Modules\Ingestion\Public\Exceptions\PdfExtractionFailed;
+use Modules\Ingestion\Internal\Exceptions\PdfExtractionFailed;
 
 function tinyPdfPathForExtractorTest(): string
 {

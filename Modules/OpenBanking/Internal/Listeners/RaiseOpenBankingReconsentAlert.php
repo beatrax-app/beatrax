@@ -9,7 +9,7 @@ use Illuminate\Database\Query\Builder;
 use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeExceptionContext;
-use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
+use Modules\OpenBanking\Internal\Events\OpenBankingConsentFailed;
 use Psr\Log\LoggerInterface;
 use Throwable;
 

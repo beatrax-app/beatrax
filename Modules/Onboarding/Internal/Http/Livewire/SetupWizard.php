@@ -15,11 +15,11 @@ use Livewire\Component;
 use Modules\Community\Public\Actions\OpenExternalUrlAction;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Onboarding\Internal\Enums\WizardStepStatus;
 use Modules\Onboarding\Internal\Services\ResumeStepResolver;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
+use Modules\Onboarding\Internal\Services\WizardProgressQuery;
 use Modules\Onboarding\Internal\Services\WizardStepRegistry;
-use Modules\Onboarding\Public\Enums\WizardStepStatus;
-use Modules\Onboarding\Public\Services\WizardProgressQuery;
 use Psr\Log\LoggerInterface;
 
 #[Layout('onboarding::layouts.app-wizard')]

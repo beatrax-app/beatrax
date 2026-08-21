@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Modules\Reports\Internal\Http;
 
 use Illuminate\Http\Request;
-use Modules\Reports\Public\Dto\ReportDefinition;
-use Modules\Reports\Public\Enums\ReportGranularity;
+use Modules\Reports\Internal\Dto\ReportDefinition;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 
 final class ReportDefinitionRequestFactory
 {

@@ -12,10 +12,10 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\EmailScan\Public\LoopbackRedirectUri;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingAccessScope;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Exceptions\OpenBankingConnectException;
 use Modules\OpenBanking\Internal\OAuth\OpenBankingStateRepository;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Exceptions\OpenBankingConnectException;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 use RuntimeException;
 
 final class OpenBankingConnectController

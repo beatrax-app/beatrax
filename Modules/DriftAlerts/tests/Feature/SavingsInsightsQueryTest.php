@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
-use Modules\DriftAlerts\Internal\Http\Livewire\SavingsInsightsCard;
+use Modules\DriftAlerts\Public\Http\Livewire\SavingsInsightsCard;
 use Modules\DriftAlerts\Public\Services\SavingsInsightsQuery;
 
 function siChain(DatabaseManager $db, int $userId, string $merchant, int $monthlyMinor): int

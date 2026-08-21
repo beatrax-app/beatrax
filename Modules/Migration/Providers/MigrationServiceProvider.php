@@ -20,13 +20,13 @@ final class MigrationServiceProvider extends ServiceProvider
 
     private const ACTUAL_PARSER_CLASS = 'Modules\Migration\Internal\Parsers\ActualParser';
 
-    private const START_MIGRATION_RUN_CLASS = 'Modules\Migration\Public\Actions\StartMigrationRun';
+    private const START_MIGRATION_RUN_CLASS = 'Modules\Migration\Internal\Actions\StartMigrationRun';
 
-    private const CONFIRM_MIGRATION_CLASS = 'Modules\Migration\Public\Actions\ConfirmMigration';
+    private const CONFIRM_MIGRATION_CLASS = 'Modules\Migration\Internal\Actions\ConfirmMigration';
 
-    private const DISCARD_MIGRATION_RUN_CLASS = 'Modules\Migration\Public\Actions\DiscardMigrationRun';
+    private const DISCARD_MIGRATION_RUN_CLASS = 'Modules\Migration\Internal\Actions\DiscardMigrationRun';
 
-    private const CHECK_FOR_UPDATES_CLASS = 'Modules\Migration\Public\Actions\CheckForUpdates';
+    private const CHECK_FOR_UPDATES_CLASS = 'Modules\Migration\Internal\Actions\CheckForUpdates';
 
     private const SOURCE_MAP_WRITER_CLASS = 'Modules\Migration\Internal\Services\SourceMapWriter';
 

@@ -6,9 +6,9 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Category;
+use Modules\Migration\Internal\Actions\ConfirmMigration;
+use Modules\Migration\Internal\Actions\StartMigrationRun;
 use Modules\Migration\Models\MigrationRun;
-use Modules\Migration\Public\Actions\ConfirmMigration;
-use Modules\Migration\Public\Actions\StartMigrationRun;
 use Modules\Migration\Tests\Support\ActualFixtureBuilder;
 use Modules\Migration\Tests\Support\MigrationFixturePaths;
 

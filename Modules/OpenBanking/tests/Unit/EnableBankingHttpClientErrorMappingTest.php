@@ -13,9 +13,9 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingAccessScope;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingJwtSigner;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Exceptions\EnableBankingApiException;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Exceptions\EnableBankingApiException;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 
 // Asserted from a real Guzzle response, not by constructing the exception: the
 // status is the only thing telling a lapsed consent from a bank having a bad

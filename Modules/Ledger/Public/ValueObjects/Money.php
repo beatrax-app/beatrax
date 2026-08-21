@@ -52,11 +52,13 @@ final class Money implements Stringable
         }
     }
 
+    /** @throws CurrencyMismatchException */
     public function plus(self $other): self
     {
         return new self($this->inner->plus($this->sameCurrencyAs($other)->inner));
     }
 
+    /** @throws CurrencyMismatchException */
     public function minus(self $other): self
     {
         return new self($this->inner->minus($this->sameCurrencyAs($other)->inner));

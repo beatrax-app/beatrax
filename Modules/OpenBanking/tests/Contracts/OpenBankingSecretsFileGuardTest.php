@@ -42,7 +42,7 @@ function openBankingGuardPhpFiles(string $relativeDir, bool $excludeTests = true
 it('confines the on-disk secrets path reference to OpenBankingSecretsRepository alone', function (): void {
     $hits = [];
     foreach (openBankingGuardPhpFiles('Modules/OpenBanking') as $path) {
-        if (str_ends_with($path, '/Public/Services/OpenBankingSecretsRepository.php')) {
+        if (str_ends_with($path, '/Internal/Services/OpenBankingSecretsRepository.php')) {
             continue;
         }
         $stripped = openBankingGuardStripComments((string) file_get_contents($path));
@@ -55,7 +55,7 @@ it('confines the on-disk secrets path reference to OpenBankingSecretsRepository 
         [],
         'Only OpenBankingSecretsRepository may reference the filesystem secrets path '
         .'(storage/app/secrets/open-banking.json) — every other class must go through its '
-        ."save()/load()/clear()/hasApplication() Public API. Offenders:\n  "
+        ."save()/load()/clear()/hasApplication() API. Offenders:\n  "
         .implode("\n  ", $hits),
     );
 });
@@ -66,7 +66,7 @@ it('never reads a credential field via a DatabaseManager/Eloquent surface outsid
 
     $hits = [];
     foreach (openBankingGuardPhpFiles('Modules/OpenBanking') as $path) {
-        if (str_ends_with($path, '/Public/Services/OpenBankingSecretsRepository.php')) {
+        if (str_ends_with($path, '/Internal/Services/OpenBankingSecretsRepository.php')) {
             continue;
         }
         $stripped = openBankingGuardStripComments((string) file_get_contents($path));

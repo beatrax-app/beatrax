@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use Livewire\Livewire;
-use Modules\Core\Internal\Http\Livewire\EncryptedBackupDownload;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Http\Livewire\EncryptedBackupDownload;
 use Modules\Core\Public\Services\UserDataPathService;
 
 beforeEach(function (): void {

@@ -5,11 +5,11 @@ declare(strict_types=1);
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Migration\Internal\Actions\StartMigrationRun;
+use Modules\Migration\Internal\Dto\PreviewSummary;
 use Modules\Migration\Internal\Exceptions\MigrationRunNotParsedException;
 use Modules\Migration\Internal\Pipeline\PreviewSummaryBuilder;
 use Modules\Migration\Models\MigrationRun;
-use Modules\Migration\Public\Actions\StartMigrationRun;
-use Modules\Migration\Public\Dto\PreviewSummary;
 use Modules\Migration\Tests\Support\ActualFixtureBuilder;
 use Modules\Migration\Tests\Support\MigrationFixturePaths;
 

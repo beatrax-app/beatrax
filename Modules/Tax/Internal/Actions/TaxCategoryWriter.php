@@ -10,8 +10,8 @@ use Illuminate\Support\Carbon;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
 use Modules\Tax\Internal\Corpus\TaxCorpusLoader;
-use Modules\Tax\Public\Exceptions\CategoryPersistenceException;
-use Modules\Tax\Public\Exceptions\DuplicateTaxCategoryNameException;
+use Modules\Tax\Internal\Exceptions\CategoryPersistenceException;
+use Modules\Tax\Internal\Exceptions\DuplicateTaxCategoryNameException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class TaxCategoryWriter

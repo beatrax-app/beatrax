@@ -5,9 +5,9 @@ declare(strict_types=1);
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Livewire\Livewire;
 use Mockery\MockInterface;
-use Modules\Auth\Internal\Http\Livewire\AppLockSettingsSection;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Public\Contracts\ColdStartVault;
+use Modules\Auth\Public\Http\Livewire\AppLockSettingsSection;
 use Modules\Core\Models\User;
 
 // navigator.credentials.create() resolves to nothing behind the desktop shell,

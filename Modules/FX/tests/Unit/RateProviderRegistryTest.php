@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
+use Modules\FX\Internal\Exceptions\AllProvidersFailed;
 use Modules\FX\Internal\RateProviderRegistry;
 use Modules\FX\Public\Contracts\RateProvider;
-use Modules\FX\Public\Exceptions\AllProvidersFailed;
 use Modules\FX\Public\Exceptions\RateFetchException;
 
 /**

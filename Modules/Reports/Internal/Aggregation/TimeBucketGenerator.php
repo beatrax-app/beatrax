@@ -6,7 +6,7 @@ namespace Modules\Reports\Internal\Aggregation;
 
 use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\Dto\Period;
-use Modules\Reports\Public\Enums\ReportGranularity;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 
 final class TimeBucketGenerator
 {

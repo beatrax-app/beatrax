@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Modules\Forecasting\Public\Dto;
 
 use Modules\Chains\Public\Dto\NextSettlementDto;
-use Modules\Forecasting\Internal\Http\Livewire\ForecastHighlightsTile;
+use Modules\Forecasting\Public\Http\Livewire\ForecastHighlightsTile;
 use Spatie\LaravelData\Data;
 
 /**

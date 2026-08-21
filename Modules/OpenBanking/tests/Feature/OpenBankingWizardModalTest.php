@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingWizardModal;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 
 beforeEach(function (): void {
     $this->obwSecretsPath = storage_path('app/secrets/open-banking.json');

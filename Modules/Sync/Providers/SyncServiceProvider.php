@@ -507,11 +507,12 @@ final class SyncServiceProvider extends ServiceProvider
         // status surface. Referenced by runtime-built FQCN (not `use`
         // imports / `::class`) so this provider stays PHPStan-clean before
         // they exist; they register the moment they exist on disk.
-        $livewireNamespace = 'Modules\Sync\Internal\Http\Livewire\\';
+        $internal = 'Modules\Sync\Internal\Http\Livewire\\';
+        $public = 'Modules\Sync\Public\Http\Livewire\\';
         $components = [
-            'sync.devices-and-sync-settings-section' => $livewireNamespace.'DevicesAndSyncSettingsSection',
-            'sync.pairing-flow-modal' => $livewireNamespace.'PairingFlowModal',
-            'sync.sync-status-section' => $livewireNamespace.'SyncStatusSection',
+            'sync.devices-and-sync-settings-section' => $public.'DevicesAndSyncSettingsSection',
+            'sync.pairing-flow-modal' => $internal.'PairingFlowModal',
+            'sync.sync-status-section' => $public.'SyncStatusSection',
         ];
 
         foreach ($components as $alias => $componentClass) {

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
-use Modules\Auth\Internal\Http\Livewire\AppLockSettingsSection;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
+use Modules\Auth\Public\Http\Livewire\AppLockSettingsSection;
 use Modules\Core\Models\User;
 
 function appLockSettingsUser(string $username = 'settings-user'): User

@@ -10,10 +10,10 @@ use InvalidArgumentException;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Contracts\SecretShield;
+use Modules\EmailScan\Internal\Exceptions\ScanStateNotFoundException;
 use Modules\EmailScan\Models\OAuthSecret;
 use Modules\EmailScan\Public\Dto\InboxCredentials;
 use Modules\EmailScan\Public\Enums\MailProvider;
-use Modules\EmailScan\Public\Exceptions\ScanStateNotFoundException;
 use Throwable;
 
 class OAuthSecretsRepository

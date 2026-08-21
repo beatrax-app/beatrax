@@ -7,8 +7,8 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
-use Modules\DriftAlerts\Internal\Http\Livewire\DashboardDriftBadge;
 use Modules\DriftAlerts\Models\DriftAlert;
+use Modules\DriftAlerts\Public\Http\Livewire\DashboardDriftBadge;
 
 uses(RefreshDatabase::class);
 

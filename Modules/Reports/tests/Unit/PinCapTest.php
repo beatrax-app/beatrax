@@ -6,11 +6,11 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
+use Modules\Reports\Internal\Actions\SaveReport;
+use Modules\Reports\Internal\Actions\TogglePin;
+use Modules\Reports\Internal\Dto\ReportDefinition;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 use Modules\Reports\Models\SavedReport;
-use Modules\Reports\Public\Actions\SaveReport;
-use Modules\Reports\Public\Actions\TogglePin;
-use Modules\Reports\Public\Dto\ReportDefinition;
-use Modules\Reports\Public\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 

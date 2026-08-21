@@ -14,6 +14,18 @@ use Symfony\Component\Yaml\Yaml;
 // Modules\<X>` rule here any more: pest-arch could not see most of this tree.
 // pinnedCrossModuleInternalImports at the bottom of this file replaced all 34.
 
+// The exception is Internal\Http\Livewire, which pest-arch does resolve: a
+// component another module mounts now lives in Public\Http\Livewire, so an
+// import of a neighbour's Internal component is a real violation again.
+// The alias channel stays pinned below — a mount is not an import.
+foreach (glob(dirname(__DIR__, 2).'/Modules/*/Internal/Http/Livewire', GLOB_ONLYDIR) ?: [] as $livewireDirectory) {
+    $livewireModule = basename(dirname($livewireDirectory, 3));
+
+    arch('Modules\\'.$livewireModule.'\\Internal\\Http\\Livewire is only used inside Modules\\'.$livewireModule)
+        ->expect('Modules\\'.$livewireModule.'\\Internal\\Http\\Livewire')
+        ->toOnlyBeUsedIn('Modules\\'.$livewireModule);
+}
+
 // Module Routes/web.php files are closures under Modules\<Name>\Routes, not
 // classes, so pest-arch's file walk never classifies them and the Route facade
 // they use is invisible to this rule. A future class-based router shape would
@@ -2169,14 +2181,11 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'tests/Contracts/RecurringDetectionContractTest.php -> Modules\\Recurring\\Internal\\StateMachines\\RecurringSeriesStateMachine',
         'tests/Contracts/ScenarioIsolationContractTest.php -> Modules\\Forecasting\\Internal\\Jobs\\ProjectForecastJob',
         'tests/Contracts/SecretsInLivewireSnapshotTest.php -> Modules\\Auth\\Internal\\Http\\Livewire\\AddUserPage',
-        'tests/Contracts/SecretsInLivewireSnapshotTest.php -> Modules\\Auth\\Internal\\Http\\Livewire\\AppLockSettingsSection',
         'tests/Contracts/SecretsInLivewireSnapshotTest.php -> Modules\\Auth\\Internal\\Http\\Livewire\\ChangePasswordPage',
-        'tests/Contracts/SecretsInLivewireSnapshotTest.php -> Modules\\Auth\\Internal\\Http\\Livewire\\DeleteAccountSection',
         'tests/Contracts/SecretsInLivewireSnapshotTest.php -> Modules\\Auth\\Internal\\Http\\Livewire\\LoginPage',
         'tests/Contracts/SecretsInLivewireSnapshotTest.php -> Modules\\Auth\\Internal\\Http\\Livewire\\ManageUserPage',
         'tests/Contracts/SecretsInLivewireSnapshotTest.php -> Modules\\Auth\\Internal\\Http\\Livewire\\ResetPasswordPage',
         'tests/Contracts/SecretsInLivewireSnapshotTest.php -> Modules\\Auth\\Internal\\Http\\Livewire\\SignupPage',
-        'tests/Contracts/SecretsInLivewireSnapshotTest.php -> Modules\\EmailScan\\Internal\\Http\\Livewire\\OAuthClientWizardModal',
         'tests/Contracts/SecretsInLivewireSnapshotTest.php -> Modules\\Mobile\\Internal\\Http\\Livewire\\MobileImportBootstrap',
         'tests/Contracts/SelectOnlyValidatorContractTest.php -> Modules\\DevMode\\Internal\\Sql\\SelectOnlyValidator',
         'tests/Feature/AnonymisedFixtureSweepTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\PdfTextExtractor',

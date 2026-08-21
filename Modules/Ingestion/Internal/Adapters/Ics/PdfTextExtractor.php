@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ingestion\Internal\Adapters\Ics;
 
 use Modules\Core\Public\Support\UploadLimits;
-use Modules\Ingestion\Public\Exceptions\PdfExtractionFailed;
+use Modules\Ingestion\Internal\Exceptions\PdfExtractionFailed;
 use Spatie\PdfToText\Exceptions\BinaryNotFoundException;
 use Spatie\PdfToText\Exceptions\CouldNotExtractText;
 use Spatie\PdfToText\Exceptions\PdfNotFound;

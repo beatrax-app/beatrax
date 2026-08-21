@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ingestion\Internal\Adapters\Banking;
 
 use Generator;
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 
 final class Mt940Lexer
 {

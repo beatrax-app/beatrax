@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Ingestion\Internal\Adapters\Csv\GenericCsvAmountParser;
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 
 dataset('amounts', [
     // cell, decimalSeparator, expected minor

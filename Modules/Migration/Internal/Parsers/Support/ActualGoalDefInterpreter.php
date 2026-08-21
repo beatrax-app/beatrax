@@ -8,7 +8,7 @@ use Carbon\CarbonImmutable;
 use JsonException;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\Ledger\Public\ValueObjects\Money;
-use Modules\Migration\Public\Dto\MigrationGoalDto;
+use Modules\Migration\Internal\Dto\MigrationGoalDto;
 
 final class ActualGoalDefInterpreter
 {

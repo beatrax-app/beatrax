@@ -6,7 +6,7 @@ namespace Modules\Reports\Internal\Http;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Ledger\Public\Dto\Period;
-use Modules\Reports\Public\Dto\ReportDefinition;
+use Modules\Reports\Internal\Dto\ReportDefinition;
 
 final class DrilldownUrlBuilder
 {

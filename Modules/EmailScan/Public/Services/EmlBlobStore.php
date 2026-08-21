@@ -64,6 +64,7 @@ final class EmlBlobStore
 
     // Atomic: a reader must never see a partial .eml, and the bytes must
     // never be briefly world-readable.
+    /** @throws EmlBlobWriteException */
     public function put(string $absolutePath, string $rawMime): void
     {
         $dir = dirname($absolutePath);

@@ -5,8 +5,8 @@ declare(strict_types=1);
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
-use Modules\Auth\Internal\Http\Livewire\AppLockSettingsSection;
 use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
+use Modules\Auth\Public\Http\Livewire\AppLockSettingsSection;
 use Modules\Core\Models\User;
 
 // A longer auto-lock window saved correctly but changed nothing: the client

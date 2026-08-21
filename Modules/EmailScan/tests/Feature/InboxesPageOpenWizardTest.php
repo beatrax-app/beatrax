@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\EmailScan\Internal\Http\Livewire\InboxesPage;
-use Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal;
+use Modules\EmailScan\Public\Http\Livewire\OAuthClientWizardModal;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
 // openWizard dispatches `oauth-client-wizard:open`, not `modal-show`: the

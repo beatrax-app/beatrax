@@ -8,8 +8,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
+use Modules\OpenBanking\Internal\Events\OpenBankingConsentFailed;
 use Modules\OpenBanking\Internal\Listeners\RaiseOpenBankingReconsentAlert;
-use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
 
 uses(RefreshDatabase::class);
 

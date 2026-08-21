@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use Modules\Chains\Public\Exceptions\CardStatementNotFoundException;
-use Modules\Chains\Public\Exceptions\ChainLinkNotDismissableException;
-use Modules\Chains\Public\Exceptions\EvidenceEncodingFailedException;
+use Modules\Chains\Internal\Exceptions\CardStatementNotFoundException;
+use Modules\Chains\Internal\Exceptions\ChainLinkNotDismissableException;
+use Modules\Chains\Internal\Exceptions\EvidenceEncodingFailedException;
 
 // EvidenceEncodingFailedException is covered here rather than at its call
 // sites: reaching it needs a payload the insert paths cannot construct.

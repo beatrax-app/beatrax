@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Ingestion\Internal\Adapters\Paypal\PaypalAmountParser;
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 
 // PayPal renders amounts in NL locale — comma decimal, and no visible
 // thousands separator in any single-month export observed so far.

@@ -12,14 +12,14 @@ use Illuminate\Contracts\Events\Dispatcher as EventsDispatcher;
 use Illuminate\Database\DatabaseManager;
 use JsonException;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\EmailScan\Internal\Exceptions\InboxNotConfiguredException;
+use Modules\EmailScan\Internal\Exceptions\ProviderTransportException;
+use Modules\EmailScan\Internal\Exceptions\UnsafeProviderRequestException;
 use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\ReconsentRequiredException;
 use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Events\InboxTokenFailed;
-use Modules\EmailScan\Public\Exceptions\InboxNotConfiguredException;
-use Modules\EmailScan\Public\Exceptions\ProviderTransportException;
-use Modules\EmailScan\Public\Exceptions\UnsafeProviderRequestException;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
 /**

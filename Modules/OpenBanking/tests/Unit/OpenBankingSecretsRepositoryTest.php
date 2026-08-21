@@ -6,10 +6,10 @@ use Carbon\CarbonImmutable;
 use Illuminate\Encryption\Encrypter;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Public\Contracts\SecretShield;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Exceptions\OpenBankingCredentialsException;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
-use Modules\OpenBanking\Public\Services\SecretsWriteFailed;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Exceptions\OpenBankingCredentialsException;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Services\SecretsWriteFailed;
 
 /** @link ../../../../.docs/features/open-banking/secrets-at-rest.md#two-encryption-layers-applied-inner-to-outer */
 

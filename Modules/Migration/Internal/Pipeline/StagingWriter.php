@@ -8,14 +8,14 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\ValueObjects\Money;
-use Modules\Migration\Public\Dto\MigrationAccountDto;
-use Modules\Migration\Public\Dto\MigrationBatch;
-use Modules\Migration\Public\Dto\MigrationBudgetAssignmentDto;
-use Modules\Migration\Public\Dto\MigrationCategoryDto;
-use Modules\Migration\Public\Dto\MigrationGoalDto;
-use Modules\Migration\Public\Dto\MigrationPayeeDto;
-use Modules\Migration\Public\Dto\MigrationTransactionDto;
-use Modules\Migration\Public\Dto\UnmappedItemDto;
+use Modules\Migration\Internal\Dto\MigrationAccountDto;
+use Modules\Migration\Internal\Dto\MigrationBatch;
+use Modules\Migration\Internal\Dto\MigrationBudgetAssignmentDto;
+use Modules\Migration\Internal\Dto\MigrationCategoryDto;
+use Modules\Migration\Internal\Dto\MigrationGoalDto;
+use Modules\Migration\Internal\Dto\MigrationPayeeDto;
+use Modules\Migration\Internal\Dto\MigrationTransactionDto;
+use Modules\Migration\Internal\Dto\UnmappedItemDto;
 
 final class StagingWriter
 {

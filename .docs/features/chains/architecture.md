@@ -307,7 +307,7 @@ The confidence-tier mapping the tree and the review queue share:
 
 ## ChainDrawer — the chain drill-down side-drawer
 
-`Internal/Http/Livewire/ChainDrawer.php` mounts inside
+`Public/Http/Livewire/ChainDrawer.php` mounts inside
 `/transactions/{id}` and renders when the "View chain" button
 dispatches a `chain-drawer:open` event carrying the transaction id.
 Its Blade view is the project's first Flux flyout — it uses

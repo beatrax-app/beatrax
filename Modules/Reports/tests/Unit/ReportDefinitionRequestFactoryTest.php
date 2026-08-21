@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use Illuminate\Http\Request;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 use Modules\Reports\Internal\Http\ReportDefinitionRequestFactory;
-use Modules\Reports\Public\Enums\ReportGranularity;
 
 function rdrfFactory(): ReportDefinitionRequestFactory
 {

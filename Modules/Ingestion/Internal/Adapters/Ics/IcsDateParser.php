@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ingestion\Internal\Adapters\Ics;
 
 use Carbon\CarbonImmutable;
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 
 final class IcsDateParser
 {

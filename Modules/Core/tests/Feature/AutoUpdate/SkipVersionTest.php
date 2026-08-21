@@ -5,9 +5,9 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Livewire;
-use Modules\Core\Internal\Http\Livewire\SystemAlertsBanner;
 use Modules\Core\Models\User;
 use Modules\Core\Models\UserPreference;
+use Modules\Core\Public\Http\Livewire\SystemAlertsBanner;
 
 // Skipping a version filters later update.available rows for that version out
 // of the banner. It must never filter update.stale or update.critical: those

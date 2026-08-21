@@ -8,8 +8,8 @@ use League\Csv\EscapeFormula;
 use League\Csv\Writer;
 use Modules\Core\Models\User;
 use Modules\Reports\Internal\Aggregation\ReportAggregator;
+use Modules\Reports\Internal\Dto\ReportDefinition;
 use Modules\Reports\Internal\Support\MinorAmountFormatter;
-use Modules\Reports\Public\Dto\ReportDefinition;
 
 final class ReportCsvExporter
 {

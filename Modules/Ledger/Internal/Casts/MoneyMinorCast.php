@@ -7,7 +7,7 @@ namespace Modules\Ledger\Internal\Casts;
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
-use Modules\Ledger\Public\Exceptions\MoneyColumnMissingException;
+use Modules\Ledger\Internal\Exceptions\MoneyColumnMissingException;
 use Modules\Ledger\Public\ValueObjects\Money;
 
 // Cast arguments override the default (amount_minor, currency) column pair.

@@ -11,9 +11,9 @@ use Modules\Ledger\Models\Category;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Internal\Aggregation\PeriodComparison;
 use Modules\Reports\Internal\Aggregation\ReportAggregator;
-use Modules\Reports\Public\Dto\ReportDefinition;
-use Modules\Reports\Public\Dto\ReportResultRow;
-use Modules\Reports\Public\Enums\ReportGranularity;
+use Modules\Reports\Internal\Dto\ReportDefinition;
+use Modules\Reports\Internal\Dto\ReportResultRow;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 

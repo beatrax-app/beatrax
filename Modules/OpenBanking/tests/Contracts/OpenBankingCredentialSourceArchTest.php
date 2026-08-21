@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Schema;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 
 // Adds two signals a source grep cannot see: the live SQLite schema, and every
 // method's declared return type. Candidates come from scanning source and

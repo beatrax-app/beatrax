@@ -5,9 +5,9 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Migration\Internal\Enums\MigrationEntityType;
 use Modules\Migration\Internal\Pipeline\ThreeWayMergeResolver;
 use Modules\Migration\Models\MigrationRun;
-use Modules\Migration\Public\Enums\MigrationEntityType;
 
 uses(RefreshDatabase::class);
 

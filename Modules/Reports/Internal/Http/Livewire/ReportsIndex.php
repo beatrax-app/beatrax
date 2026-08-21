@@ -13,9 +13,9 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Services\UserPreferenceWriter;
 use Modules\Core\Public\Support\Lang;
-use Modules\Reports\Public\Actions\DeleteReport;
-use Modules\Reports\Public\Actions\TogglePin;
-use Modules\Reports\Public\Services\SavedReportsQuery;
+use Modules\Reports\Internal\Actions\DeleteReport;
+use Modules\Reports\Internal\Actions\TogglePin;
+use Modules\Reports\Internal\Services\SavedReportsQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class ReportsIndex extends Component

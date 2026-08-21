@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Modules\Calendar\Internal\Services;
 
 use Carbon\CarbonImmutable;
-use Modules\Calendar\Public\Dto\CalendarDayDto;
-use Modules\Calendar\Public\Dto\CalendarEntryDto;
+use Modules\Calendar\Internal\Dto\CalendarDayDto;
+use Modules\Calendar\Internal\Dto\CalendarEntryDto;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Recurring\Public\Enums\SeriesCadence;

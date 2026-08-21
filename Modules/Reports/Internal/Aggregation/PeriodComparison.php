@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Modules\Reports\Internal\Aggregation;
 
 use Modules\Ledger\Public\Dto\Period;
-use Modules\Reports\Public\Dto\ReportResultDto;
-use Modules\Reports\Public\Dto\ReportResultRow;
+use Modules\Reports\Internal\Dto\ReportResultDto;
+use Modules\Reports\Internal\Dto\ReportResultRow;
 
 final class PeriodComparison
 {

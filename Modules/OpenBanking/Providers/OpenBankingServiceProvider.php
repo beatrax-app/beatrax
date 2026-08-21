@@ -13,17 +13,17 @@ use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingJwtSigner;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingSourceAdapter;
 use Modules\OpenBanking\Internal\Console\ServeOpenBankingTlsCommand;
+use Modules\OpenBanking\Internal\Contracts\RemoteSourceAdapter;
+use Modules\OpenBanking\Internal\Events\OpenBankingConsentFailed;
 use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingSettingsPage;
-use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingStatusRow;
 use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingWizardModal;
 use Modules\OpenBanking\Internal\Listeners\RaiseOpenBankingReconsentAlert;
 use Modules\OpenBanking\Internal\OAuth\OpenBankingStateRepository;
+use Modules\OpenBanking\Internal\Services\OpenBankingConnectionQuery;
+use Modules\OpenBanking\Internal\Services\OpenBankingFetchService;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 use Modules\OpenBanking\Internal\Tls\LoopbackTlsCertificate;
-use Modules\OpenBanking\Public\Contracts\RemoteSourceAdapter;
-use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
-use Modules\OpenBanking\Public\Services\OpenBankingConnectionQuery;
-use Modules\OpenBanking\Public\Services\OpenBankingFetchService;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Public\Http\Livewire\OpenBankingStatusRow;
 
 final class OpenBankingServiceProvider extends ServiceProvider
 {

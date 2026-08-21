@@ -248,7 +248,7 @@ and the step only surfaces a blocking error when every file failed.
 `ConnectEmailStep` is the odd one out among connector steps — it has
 no file upload and holds no secrets state itself. Gmail/Microsoft 365
 OAuth lives entirely in
-`Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal`,
+`Modules\EmailScan\Public\Http\Livewire\OAuthClientWizardModal`,
 mounted globally by the wizard layout; this step is a thin event
 router: `authorizeProvider()` validates the provider against a closed
 allow-list and dispatches `oauth-client-wizard:open`, the modal runs

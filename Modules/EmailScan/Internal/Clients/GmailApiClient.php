@@ -16,12 +16,12 @@ use Illuminate\Contracts\Events\Dispatcher as EventsDispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\Duration;
+use Modules\EmailScan\Internal\Exceptions\InboxNotConfiguredException;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
 use Modules\EmailScan\Internal\OAuth\ReconsentRequiredException;
 use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Events\InboxTokenFailed;
-use Modules\EmailScan\Public\Exceptions\InboxNotConfiguredException;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Symfony\Component\HttpFoundation\Response;
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Modules\Onboarding\Internal\Services;
 
 use Illuminate\Database\DatabaseManager;
-use Modules\Onboarding\Public\Enums\WizardStepStatus;
+use Modules\Onboarding\Internal\Enums\WizardStepStatus;
 
 final readonly class ResumeStepResolver
 {

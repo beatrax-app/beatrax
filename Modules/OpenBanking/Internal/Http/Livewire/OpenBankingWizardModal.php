@@ -11,9 +11,9 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Support\Lang;
 use Modules\EmailScan\Public\LoopbackRedirectUri;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
-use Modules\OpenBanking\Public\Services\SecretsWriteFailed;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Services\SecretsWriteFailed;
 
 final class OpenBankingWizardModal extends Component
 {

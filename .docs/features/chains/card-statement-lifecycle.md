@@ -84,7 +84,7 @@ asks SQLite to wait up to five seconds for a competing writer instead
 of raising `SQLITE_BUSY` on first contention.
 
 An unknown statement id raises
-`Modules\Chains\Public\Exceptions\CardStatementNotFoundException`
+`Modules\Chains\Internal\Exceptions\CardStatementNotFoundException`
 rather than returning a null settlement — a settlement against a
 statement that is not there is a resolver bug, not a normal outcome.
 The call returns a `StatementSettlement` DTO carrying the statement id,

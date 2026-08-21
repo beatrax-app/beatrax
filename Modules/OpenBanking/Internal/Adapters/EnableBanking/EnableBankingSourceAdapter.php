@@ -9,10 +9,10 @@ use Generator;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
-use Modules\OpenBanking\Public\Contracts\RemoteSourceAdapter;
-use Modules\OpenBanking\Public\Dto\FetchWindow;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Exceptions\EnableBankingApiException;
+use Modules\OpenBanking\Internal\Contracts\RemoteSourceAdapter;
+use Modules\OpenBanking\Internal\Dto\FetchWindow;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Exceptions\EnableBankingApiException;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 

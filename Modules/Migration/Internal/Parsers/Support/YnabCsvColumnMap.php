@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Migration\Internal\Parsers\Support;
 
-use Modules\Migration\Public\Enums\MigrationSourceProduct;
-use Modules\Migration\Public\Exceptions\UnrecognizedMigrationFileException;
+use Modules\Migration\Internal\Enums\MigrationSourceProduct;
+use Modules\Migration\Internal\Exceptions\UnrecognizedMigrationFileException;
 
 final class YnabCsvColumnMap
 {

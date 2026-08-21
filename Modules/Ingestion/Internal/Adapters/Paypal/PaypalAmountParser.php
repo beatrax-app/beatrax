@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Ingestion\Internal\Adapters\Paypal;
 
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 use Modules\Ledger\Public\ValueObjects\Money;
 
 final class PaypalAmountParser

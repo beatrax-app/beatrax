@@ -6,7 +6,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
-use Modules\DriftAlerts\Internal\Http\Livewire\DriftThresholdEditor;
+use Modules\DriftAlerts\Public\Http\Livewire\DriftThresholdEditor;
 use Modules\Recurring\Public\Actions\SetDriftThresholdForSeries;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 

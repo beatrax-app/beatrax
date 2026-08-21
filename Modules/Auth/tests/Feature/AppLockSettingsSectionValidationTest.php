@@ -6,7 +6,7 @@ declare(strict_types=1);
 // an invalid PIN must flash and return before any provisioner work happens.
 
 use Livewire\Livewire;
-use Modules\Auth\Internal\Http\Livewire\AppLockSettingsSection;
+use Modules\Auth\Public\Http\Livewire\AppLockSettingsSection;
 use Modules\Core\Models\User;
 
 function settingsValidationUser(string $username): User

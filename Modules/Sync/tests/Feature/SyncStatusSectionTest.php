@@ -8,7 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Sync\Internal\Http\Livewire\SyncStatusSection;
+use Modules\Sync\Public\Http\Livewire\SyncStatusSection;
 use Modules\Sync\Public\Services\SyncStatusService;
 
 uses(RefreshDatabase::class);
@@ -196,7 +196,7 @@ it('SyncStatusService is registered as a singleton and returns user-scoped rows'
 });
 
 it('component does not contain raw sync_sessions query (boundary rule)', function (): void {
-    $componentFile = realpath(__DIR__.'/../../Internal/Http/Livewire/SyncStatusSection.php');
+    $componentFile = realpath(__DIR__.'/../../Public/Http/Livewire/SyncStatusSection.php');
 
     expect($componentFile)->not->toBeFalse()
         ->and(is_string($componentFile))->toBeTrue();

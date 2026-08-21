@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Migration\Internal\Pipeline;
 
-use Modules\Migration\Public\Dto\ConflictDto;
-use Modules\Migration\Public\Enums\MigrationEntityType;
+use Modules\Migration\Internal\Dto\ConflictDto;
+use Modules\Migration\Internal\Enums\MigrationEntityType;
 
 final class MergeDecision
 {

@@ -7,8 +7,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Reports\Internal\Aggregation\ReportAggregator;
-use Modules\Reports\Public\Dto\ReportDefinition;
-use Modules\Reports\Public\Enums\ReportGranularity;
+use Modules\Reports\Internal\Dto\ReportDefinition;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 

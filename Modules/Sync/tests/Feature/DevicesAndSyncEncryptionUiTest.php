@@ -7,8 +7,8 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
-use Modules\Sync\Internal\Http\Livewire\DevicesAndSyncSettingsSection;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
+use Modules\Sync\Public\Http\Livewire\DevicesAndSyncSettingsSection;
 
 uses(RefreshDatabase::class);
 

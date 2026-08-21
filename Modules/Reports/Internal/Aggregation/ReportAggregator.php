@@ -9,9 +9,9 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Reports\Internal\Aggregation\Dto\NetWorthSeriesPoint;
-use Modules\Reports\Public\Dto\ReportDefinition;
-use Modules\Reports\Public\Dto\ReportResultDto;
-use Modules\Reports\Public\Dto\ReportResultRow;
+use Modules\Reports\Internal\Dto\ReportDefinition;
+use Modules\Reports\Internal\Dto\ReportResultDto;
+use Modules\Reports\Internal\Dto\ReportResultRow;
 
 final class ReportAggregator
 {

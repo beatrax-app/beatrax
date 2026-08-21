@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 use Livewire\Component;
 use Modules\Auth\Internal\Http\Livewire\AddUserPage;
-use Modules\Auth\Internal\Http\Livewire\AppLockSettingsSection;
 use Modules\Auth\Internal\Http\Livewire\ChangePasswordPage;
-use Modules\Auth\Internal\Http\Livewire\DeleteAccountSection;
 use Modules\Auth\Internal\Http\Livewire\LoginPage;
 use Modules\Auth\Internal\Http\Livewire\ManageUserPage;
 use Modules\Auth\Internal\Http\Livewire\ResetPasswordPage;
 use Modules\Auth\Internal\Http\Livewire\SignupPage;
+use Modules\Auth\Public\Http\Livewire\AppLockSettingsSection;
+use Modules\Auth\Public\Http\Livewire\DeleteAccountSection;
 use Modules\Core\Public\Services\SecretsColumnRegistry;
-use Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal;
+use Modules\EmailScan\Public\Http\Livewire\OAuthClientWizardModal;
 use Modules\Mobile\Internal\Http\Livewire\MobileImportBootstrap;
 use Tests\Contracts\Fixtures\Livewire\SyntheticListenerViolator;
 use Tests\Contracts\Fixtures\Livewire\SyntheticPublicPropertyViolator;

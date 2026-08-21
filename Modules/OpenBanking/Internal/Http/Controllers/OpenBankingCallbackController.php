@@ -11,12 +11,12 @@ use Illuminate\Routing\Redirector;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Exceptions\OpenBankingCallbackException;
 use Modules\OpenBanking\Internal\OAuth\InvalidStateException;
 use Modules\OpenBanking\Internal\OAuth\OpenBankingStateRepository;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Exceptions\OpenBankingCallbackException;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
-use Modules\OpenBanking\Public\Services\SecretsWriteFailed;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Services\SecretsWriteFailed;
 use RuntimeException;
 
 final class OpenBankingCallbackController

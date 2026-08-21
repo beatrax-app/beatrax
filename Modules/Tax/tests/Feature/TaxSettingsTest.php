@@ -6,8 +6,8 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Tax\Internal\Actions\TaxCategoryWriter;
-use Modules\Tax\Internal\Http\Livewire\TaxSettingsSection;
 use Modules\Tax\Public\Enums\TaxCountry;
+use Modules\Tax\Public\Http\Livewire\TaxSettingsSection;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 function taxSettingsUser(string $username): User

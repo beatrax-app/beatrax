@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsDateParser;
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 
 // ICS prints `dd MMM.` on transaction lines and `dd MMMM YYYY` on the
 // statement header; the catalogue lives in tests/fixtures/ics/ics-sample-1.md.

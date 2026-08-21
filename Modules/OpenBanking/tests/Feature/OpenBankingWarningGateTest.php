@@ -7,10 +7,10 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingSettingsPage;
-use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingStatusRow;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Public\Http\Livewire\OpenBankingStatusRow;
 
 uses(RefreshDatabase::class);
 

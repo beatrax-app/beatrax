@@ -5,9 +5,9 @@ declare(strict_types=1);
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
-use Modules\Core\Internal\Http\Livewire\SystemAlertsBanner;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Http\Livewire\SystemAlertsBanner;
 use Tests\Helpers\RealSqliteFixture;
 
 beforeEach(function (): void {

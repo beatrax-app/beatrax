@@ -6,12 +6,12 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Migration\Internal\Actions\ConfirmMigration;
+use Modules\Migration\Internal\Actions\DiscardMigrationRun;
+use Modules\Migration\Internal\Actions\StartMigrationRun;
+use Modules\Migration\Internal\Exceptions\MigrationAlreadyConfirmedException;
+use Modules\Migration\Internal\Exceptions\MigrationAlreadyDiscardedException;
 use Modules\Migration\Models\MigrationRun;
-use Modules\Migration\Public\Actions\ConfirmMigration;
-use Modules\Migration\Public\Actions\DiscardMigrationRun;
-use Modules\Migration\Public\Actions\StartMigrationRun;
-use Modules\Migration\Public\Exceptions\MigrationAlreadyConfirmedException;
-use Modules\Migration\Public\Exceptions\MigrationAlreadyDiscardedException;
 use Modules\Migration\Tests\Support\MigrationFixturePaths;
 
 uses(RefreshDatabase::class);

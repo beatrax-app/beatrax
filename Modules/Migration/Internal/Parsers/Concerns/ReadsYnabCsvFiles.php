@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Modules\Migration\Internal\Parsers\Concerns;
 
 use League\Csv\Reader;
-use Modules\Migration\Public\Exceptions\UnrecognizedMigrationFileException;
+use Modules\Migration\Internal\Exceptions\UnrecognizedMigrationFileException;
 use Throwable;
 
 trait ReadsYnabCsvFiles

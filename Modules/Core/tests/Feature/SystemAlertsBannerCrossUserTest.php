@@ -5,10 +5,10 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
-use Modules\Core\Internal\Http\Livewire\SystemAlertsBanner;
 use Modules\Core\Models\User;
 use Modules\Core\Models\UserPreference;
 use Modules\Core\Public\Events\UpdateInstallRequested;
+use Modules\Core\Public\Http\Livewire\SystemAlertsBanner;
 
 // Both handlers take an alert id straight off the wire, and the ownership
 // check lives in the acknowledge action, which runs last — so a foreign id

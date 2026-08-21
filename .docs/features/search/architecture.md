@@ -69,7 +69,7 @@ What the module explicitly does NOT do:
 + **Internal/Listeners/IndexTransactionOnImport** — subscribes to
   `Import::TransactionImported`; calls the writer synchronously in the
   same DB transaction as the canonical insert.
-+ **Internal/Http/Livewire/PaletteSearchEndpoint** — the ⌘K palette's
++ **Public/Http/Livewire/PaletteSearchEndpoint** — the ⌘K palette's
   server-backed search action, mounted in both the main and dev-shell
   layouts.
 + **Internal/Console/ReindexSearchCommand** — `search:reindex`, the

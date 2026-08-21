@@ -7,9 +7,9 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Livewire\Livewire;
-use Modules\Anomaly\Internal\Http\Livewire\AnomalySettingsSection;
 use Modules\Anomaly\Internal\Jobs\BackfillAnomaliesJob;
 use Modules\Anomaly\Models\AnomalySuppressionRule;
+use Modules\Anomaly\Public\Http\Livewire\AnomalySettingsSection;
 use Modules\Core\Models\User;
 
 uses(RefreshDatabase::class);

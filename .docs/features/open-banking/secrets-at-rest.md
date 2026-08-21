@@ -12,7 +12,7 @@ takes, on every device the database reaches. So the credentials live outside the
 database entirely, in a single JSON file, and every layer below exists to make
 that file uninteresting to anyone who obtains a copy of it.
 
-`Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository` is the only
+`Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository` is the only
 class in the module permitted to touch that path. An arch test
 (`OpenBankingSecretsFileGuardTest`) enforces it, and a second guard asserts that
 no file which references `DatabaseManager` also references a raw credential field

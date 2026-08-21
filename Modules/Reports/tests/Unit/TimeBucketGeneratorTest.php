@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Internal\Aggregation\TimeBucketGenerator;
-use Modules\Reports\Public\Enums\ReportGranularity;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 
 it('generates 12 half-open monthly buckets for a 12-month span', function (): void {
     $period = new Period(

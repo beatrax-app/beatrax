@@ -11,10 +11,10 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingAccessScope;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingJwtSigner;
-use Modules\OpenBanking\Public\Dto\FetchWindow;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Exceptions\UnsafeOpenBankingRequestException;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Dto\FetchWindow;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Exceptions\UnsafeOpenBankingRequestException;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 use Modules\OpenBanking\Tests\Support\EnableBankingFixtures;
 
 function egressGuardRealSigner(): EnableBankingJwtSigner

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Modules\Receipts\Public\Exceptions\FileDropBlobWriteException;
+use Modules\Receipts\Internal\Exceptions\FileDropBlobWriteException;
 
 // The write path names each fault rather than throwing a bare RuntimeException
 // so an operator reading the worker log can tell a refused chmod from a short

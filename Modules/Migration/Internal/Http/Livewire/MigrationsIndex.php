@@ -10,7 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
-use Modules\Migration\Public\Enums\MigrationRunStatus;
+use Modules\Migration\Internal\Enums\MigrationRunStatus;
 
 final class MigrationsIndex extends Component
 {

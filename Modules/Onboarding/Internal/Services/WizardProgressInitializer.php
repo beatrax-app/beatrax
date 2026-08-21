@@ -7,7 +7,7 @@ namespace Modules\Onboarding\Internal\Services;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Onboarding\Public\Enums\WizardStepStatus;
+use Modules\Onboarding\Internal\Enums\WizardStepStatus;
 
 final readonly class WizardProgressInitializer
 {

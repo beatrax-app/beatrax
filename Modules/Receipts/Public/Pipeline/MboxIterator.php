@@ -16,6 +16,8 @@ final class MboxIterator
 {
     /**
      * @return Generator<int, array{eml: string, byteOffset: int, index: int}>
+     *
+     * @throws MboxReadException
      */
     public function iterate(string $mboxPath): Generator
     {

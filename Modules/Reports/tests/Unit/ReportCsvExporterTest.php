@@ -6,9 +6,9 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
+use Modules\Reports\Internal\Dto\ReportDefinition;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 use Modules\Reports\Internal\Services\ReportCsvExporter;
-use Modules\Reports\Public\Dto\ReportDefinition;
-use Modules\Reports\Public\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 

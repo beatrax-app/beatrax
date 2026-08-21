@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\EmailScan\Internal\Exceptions\ScanStateNotFoundException;
 use Modules\EmailScan\Internal\InboxScanStateMachine;
-use Modules\EmailScan\Public\Exceptions\ScanStateNotFoundException;
 
 uses(RefreshDatabase::class);
 

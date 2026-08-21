@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Modules\Chains\Internal;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Chains\Internal\Exceptions\CardStatementNotFoundException;
 use Modules\Chains\Public\Dto\StatementSettlement;
 use Modules\Chains\Public\Enums\CardStatementState;
-use Modules\Chains\Public\Exceptions\CardStatementNotFoundException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;

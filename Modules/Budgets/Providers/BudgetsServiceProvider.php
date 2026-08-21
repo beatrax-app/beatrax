@@ -16,7 +16,7 @@ final class BudgetsServiceProvider extends ServiceProvider
 
     private const CARRYOVER_QUERY_CLASS = 'Modules\Budgets\Public\Services\CarryoverQuery';
 
-    private const ENVELOPE_GLANCE_CARD_CLASS = 'Modules\Budgets\Internal\Http\Livewire\EnvelopeGlanceCard';
+    private const ENVELOPE_GLANCE_CARD_CLASS = 'Modules\Budgets\Public\Http\Livewire\EnvelopeGlanceCard';
 
     public function register(): void
     {

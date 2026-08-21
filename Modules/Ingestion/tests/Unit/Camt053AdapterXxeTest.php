@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 use Modules\Ingestion\Internal\Adapters\Banking\Camt053Adapter;
+use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\AccountResolution;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 
 beforeEach(function (): void {
     $this->resolver = new class implements AccountResolver

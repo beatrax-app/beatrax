@@ -5,8 +5,8 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\Repository;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Import\Internal\Exceptions\PreviewCacheCorruptedException;
 use Modules\Import\Internal\Pipeline\PreviewCache;
-use Modules\Import\Public\Exceptions\PreviewCacheCorruptedException;
 
 beforeEach(function (): void {
     /** @var Repository $cache */

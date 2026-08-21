@@ -8,10 +8,10 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\EmailScan\Internal\Exceptions\ScanStateNotFoundException;
 use Modules\EmailScan\Public\Dto\ScanCursor;
 use Modules\EmailScan\Public\Enums\InboxScanStatus;
 use Modules\EmailScan\Public\Enums\MailProvider;
-use Modules\EmailScan\Public\Exceptions\ScanStateNotFoundException;
 
 final class InboxScanStateMachine
 {

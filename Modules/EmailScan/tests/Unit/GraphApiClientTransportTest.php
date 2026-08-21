@@ -14,9 +14,9 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Internal\Clients\GraphApiClient;
 use Modules\EmailScan\Internal\Clients\GraphErrorMapper;
+use Modules\EmailScan\Internal\Exceptions\UnsafeProviderRequestException;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Public\Dto\InboxCredentials;
-use Modules\EmailScan\Public\Exceptions\UnsafeProviderRequestException;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
 beforeEach(function (): void {

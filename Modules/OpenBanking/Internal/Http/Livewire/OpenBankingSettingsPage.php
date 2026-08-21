@@ -17,13 +17,13 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
 use Modules\Import\Public\Dto\PreviewRowDto;
+use Modules\OpenBanking\Internal\Events\OpenBankingConsentFailed;
+use Modules\OpenBanking\Internal\Exceptions\EnableBankingApiException;
 use Modules\OpenBanking\Internal\Http\Livewire\Concerns\FormatsConnectionTimestamps;
 use Modules\OpenBanking\Internal\Http\Livewire\Concerns\ManagesGuidedIcsImport;
-use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
-use Modules\OpenBanking\Public\Exceptions\EnableBankingApiException;
-use Modules\OpenBanking\Public\Services\OpenBankingConnectionQuery;
-use Modules\OpenBanking\Public\Services\OpenBankingFetchService;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Services\OpenBankingConnectionQuery;
+use Modules\OpenBanking\Internal\Services\OpenBankingFetchService;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 use Throwable;
 
 final class OpenBankingSettingsPage extends Component

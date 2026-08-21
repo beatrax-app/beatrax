@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Reports\Internal\Actions\SaveReport;
+use Modules\Reports\Internal\Dto\ReportDefinition;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 use Modules\Reports\Models\SavedReport;
-use Modules\Reports\Public\Actions\SaveReport;
-use Modules\Reports\Public\Dto\ReportDefinition;
-use Modules\Reports\Public\Enums\ReportGranularity;
 use Spatie\LaravelData\Exceptions\CannotCastEnum;
 
 uses(RefreshDatabase::class);

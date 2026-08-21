@@ -9,7 +9,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
-use Modules\Onboarding\Public\Events\WizardCompleted;
+use Modules\Onboarding\Internal\Events\WizardCompleted;
 
 final class DoneStep extends Component
 {

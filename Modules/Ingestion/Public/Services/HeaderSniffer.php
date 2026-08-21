@@ -9,11 +9,11 @@ use Modules\Ingestion\Internal\Adapters\Banking\Camt053HeaderProfile;
 use Modules\Ingestion\Internal\Adapters\Banking\Mt940HeaderProfile;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsPdfHeaderProfile;
 use Modules\Ingestion\Internal\Adapters\Paypal\PaypalCsvLanguageProfile;
+use Modules\Ingestion\Internal\Exceptions\SniffMismatchException;
+use Modules\Ingestion\Internal\Exceptions\UnsupportedPaypalCsvLanguageException;
+use Modules\Ingestion\Internal\Exceptions\UnsupportedPaypalCsvShapeException;
 use Modules\Ingestion\Public\Dto\CsvPreset;
 use Modules\Ingestion\Public\Dto\SniffResult;
-use Modules\Ingestion\Public\Exceptions\SniffMismatchException;
-use Modules\Ingestion\Public\Exceptions\UnsupportedPaypalCsvLanguageException;
-use Modules\Ingestion\Public\Exceptions\UnsupportedPaypalCsvShapeException;
 use Modules\Receipts\Public\Pipeline\EmlHeaderProfile;
 use Modules\Receipts\Public\Pipeline\MboxHeaderProfile;
 

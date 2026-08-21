@@ -9,8 +9,8 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Dto\Period;
-use Modules\Reports\Public\Dto\ReportResultRow;
-use Modules\Reports\Public\Enums\ReportGranularity;
+use Modules\Reports\Internal\Dto\ReportResultRow;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 use stdClass;
 
 final class TimeBucketSpendQuery

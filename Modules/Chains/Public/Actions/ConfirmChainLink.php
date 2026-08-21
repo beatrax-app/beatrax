@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Modules\Chains\Public\Actions;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Chains\Internal\Exceptions\ChainLinkRequiresConcretePartnerException;
 use Modules\Chains\Models\ChainLink;
 use Modules\Chains\Public\Enums\ChainLinkState;
-use Modules\Chains\Public\Exceptions\ChainLinkRequiresConcretePartnerException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;

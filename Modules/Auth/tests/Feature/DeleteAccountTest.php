@@ -6,8 +6,8 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
-use Modules\Auth\Internal\Http\Livewire\DeleteAccountSection;
 use Modules\Auth\Public\Actions\DeleteAccountAction;
+use Modules\Auth\Public\Http\Livewire\DeleteAccountSection;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
 

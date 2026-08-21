@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use Modules\Core\Models\User;
-use Modules\Migration\Public\Contracts\ParsesMigrationSource;
-use Modules\Migration\Public\Dto\MigrationBatch;
+use Modules\Migration\Internal\Contracts\ParsesMigrationSource;
+use Modules\Migration\Internal\Dto\MigrationBatch;
 
 it('Contract: ParsesMigrationSource declares format(): string', function (): void {
     $reflection = new ReflectionClass(ParsesMigrationSource::class);

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\Dto\Period;
+use Modules\Reports\Internal\Dto\ReportDefinition;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 use Modules\Reports\Internal\Http\DrilldownUrlBuilder;
-use Modules\Reports\Public\Dto\ReportDefinition;
-use Modules\Reports\Public\Enums\ReportGranularity;
 
 /**
  * @param  array{amountMin?: ?string, amountMax?: ?string, amountDirection?: string}  $overrides

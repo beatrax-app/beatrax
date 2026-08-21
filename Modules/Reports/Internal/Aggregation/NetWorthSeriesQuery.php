@@ -15,7 +15,7 @@ use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Reports\Internal\Aggregation\Dto\NetWorthSeriesPoint;
-use Modules\Reports\Public\Enums\ReportGranularity;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 use stdClass;
 
 final class NetWorthSeriesQuery

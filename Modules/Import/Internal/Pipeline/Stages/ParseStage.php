@@ -8,7 +8,7 @@ use Generator;
 use Illuminate\Contracts\Filesystem\FileNotFoundException;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Models\User;
-use Modules\Import\Public\Exceptions\ReceiptParseException;
+use Modules\Import\Internal\Exceptions\ReceiptParseException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;

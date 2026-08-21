@@ -10,9 +10,9 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Reports\Internal\Aggregation\ReportAggregator;
+use Modules\Reports\Internal\Dto\ReportDefinition;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 use Modules\Reports\Internal\Http\Livewire\ReportBuilder;
-use Modules\Reports\Public\Dto\ReportDefinition;
-use Modules\Reports\Public\Enums\ReportGranularity;
 
 // Report metrics cover expense and income alone, so fees and adjustments fell
 // out silently: the demo month read EUR 2.459,11 against EUR 2.468,11, exactly a

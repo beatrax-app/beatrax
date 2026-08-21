@@ -6,8 +6,8 @@ use Carbon\CarbonImmutable;
 use Livewire\Attributes\Url;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
-use Modules\Recurring\Internal\Http\Livewire\FixedPaymentsCard;
 use Modules\Recurring\Models\RecurringSeries;
+use Modules\Recurring\Public\Http\Livewire\FixedPaymentsCard;
 
 function fpcUser(string $username): User
 {

@@ -4,7 +4,7 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
-use Modules\Search\Internal\Http\Livewire\PaletteSearchEndpoint;
+use Modules\Search\Public\Http\Livewire\PaletteSearchEndpoint;
 
 it('it_returns_top_five_transaction_hits', function (): void {
     $user = User::find($this->searchTestUser('palette-user-a'));

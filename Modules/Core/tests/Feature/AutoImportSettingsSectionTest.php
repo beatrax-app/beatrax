@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use Livewire\Livewire;
-use Modules\Core\Internal\Http\Livewire\AutoImportSettingsSection;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Http\Livewire\AutoImportSettingsSection;
 
 beforeEach(function (): void {
     $this->user = User::create([

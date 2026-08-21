@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Migration\Internal\Contracts\ParsesMigrationSource;
+use Modules\Migration\Internal\Dto\MigrationBatch;
+use Modules\Migration\Internal\Exceptions\UnrecognizedMigrationFileException;
 use Modules\Migration\Internal\Parsers\Ynab4Parser;
-use Modules\Migration\Public\Contracts\ParsesMigrationSource;
-use Modules\Migration\Public\Dto\MigrationBatch;
-use Modules\Migration\Public\Exceptions\UnrecognizedMigrationFileException;
 use Modules\Migration\Tests\Support\MigrationFixturePaths;
 
 uses(RefreshDatabase::class);

@@ -7,8 +7,8 @@ namespace Modules\FX\Internal;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\Repository;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\FX\Internal\Exceptions\AllProvidersFailed;
 use Modules\FX\Public\Contracts\RateProvider;
-use Modules\FX\Public\Exceptions\AllProvidersFailed;
 use Modules\FX\Public\Exceptions\RateFetchException;
 
 final class RateProviderRegistry

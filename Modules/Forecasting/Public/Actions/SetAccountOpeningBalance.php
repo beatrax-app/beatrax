@@ -11,8 +11,8 @@ use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Lang;
+use Modules\Forecasting\Internal\Exceptions\OpeningBalanceDivergenceWarning;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
-use Modules\Forecasting\Public\Exceptions\OpeningBalanceDivergenceWarning;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
+use Modules\OpenBanking\Internal\Contracts\RemoteSourceAdapter;
+use Modules\OpenBanking\Internal\Dto\FetchWindow;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Events\OpenBankingConsentFailed;
 use Modules\OpenBanking\Providers\OpenBankingServiceProvider;
-use Modules\OpenBanking\Public\Contracts\RemoteSourceAdapter;
-use Modules\OpenBanking\Public\Dto\FetchWindow;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
 
 it('registers OpenBankingServiceProvider with the application', function (): void {
     expect(app()->getProviders(OpenBankingServiceProvider::class))->not->toBeEmpty();

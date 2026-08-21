@@ -5,8 +5,8 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Calendar\Internal\Dto\CalendarDayDto;
 use Modules\Calendar\Internal\Services\CalendarQuery;
-use Modules\Calendar\Public\Dto\CalendarDayDto;
 use Modules\Core\Models\User;
 
 function cqsbUser(string $suffix): User

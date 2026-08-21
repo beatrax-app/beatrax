@@ -7,7 +7,7 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Contracts\SecretShield;
-use Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal;
+use Modules\EmailScan\Public\Http\Livewire\OAuthClientWizardModal;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Modules\EmailScan\Public\Services\SecretsWriteFailed;
 

@@ -9,11 +9,11 @@ use Livewire\Livewire;
 use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Category;
+use Modules\Migration\Internal\Actions\CheckForUpdates;
+use Modules\Migration\Internal\Actions\ConfirmMigration;
+use Modules\Migration\Internal\Actions\StartMigrationRun;
 use Modules\Migration\Internal\Http\Livewire\PreviewMigration;
 use Modules\Migration\Models\MigrationRun;
-use Modules\Migration\Public\Actions\CheckForUpdates;
-use Modules\Migration\Public\Actions\ConfirmMigration;
-use Modules\Migration\Public\Actions\StartMigrationRun;
 use Modules\Migration\Tests\Support\MigrationFixturePaths;
 
 uses(RefreshDatabase::class);

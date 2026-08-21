@@ -6,8 +6,8 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
-use Modules\Anomaly\Internal\Http\Livewire\DashboardAnomalyBadge;
 use Modules\Anomaly\Models\AnomalyAlert;
+use Modules\Anomaly\Public\Http\Livewire\DashboardAnomalyBadge;
 use Modules\Core\Models\User;
 
 uses(RefreshDatabase::class);

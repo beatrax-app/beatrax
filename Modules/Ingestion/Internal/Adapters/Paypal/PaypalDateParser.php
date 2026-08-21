@@ -6,7 +6,7 @@ namespace Modules\Ingestion\Internal\Adapters\Paypal;
 
 use Carbon\CarbonImmutable;
 use Carbon\Exceptions\InvalidFormatException;
-use Modules\Ingestion\Public\Exceptions\InvalidDateException;
+use Modules\Ingestion\Internal\Exceptions\InvalidDateException;
 
 final class PaypalDateParser
 {

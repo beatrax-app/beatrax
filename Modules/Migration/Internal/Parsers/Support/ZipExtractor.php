@@ -6,7 +6,7 @@ namespace Modules\Migration\Internal\Parsers\Support;
 
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Migration\Internal\Exceptions\ExtractionDirectoryException;
-use Modules\Migration\Public\Exceptions\UnrecognizedMigrationFileException;
+use Modules\Migration\Internal\Exceptions\UnrecognizedMigrationFileException;
 use ZipArchive;
 
 final class ZipExtractor
@@ -41,7 +41,7 @@ final class ZipExtractor
             $zip->close();
 
             throw new UnrecognizedMigrationFileException(sprintf(
-                'archive contains %d entries, exceeding the allowed maximum of %d (zip-bomb guard, T-13.5-05)',
+                'archive contains %d entries, exceeding the allowed maximum of %d (zip-bomb guard)',
                 $entryCount,
                 $this->maxEntries,
             ));
@@ -61,7 +61,7 @@ final class ZipExtractor
                 $zip->close();
 
                 throw new UnrecognizedMigrationFileException(sprintf(
-                    'archive exceeds the maximum allowed total uncompressed size of %d bytes (zip-bomb guard, T-13.5-05)',
+                    'archive exceeds the maximum allowed total uncompressed size of %d bytes (zip-bomb guard)',
                     $this->maxTotalUncompressedBytes,
                 ));
             }
@@ -71,7 +71,7 @@ final class ZipExtractor
                 $zip->close();
 
                 throw new UnrecognizedMigrationFileException(
-                    "archive entry '{$name}' resolves outside the extraction directory (zip-slip guard, T-13.5-06)",
+                    "archive entry '{$name}' resolves outside the extraction directory (zip-slip guard)",
                 );
             }
 
@@ -79,7 +79,7 @@ final class ZipExtractor
                 $zip->close();
 
                 throw new UnrecognizedMigrationFileException(
-                    "archive entry '{$name}' is a symlink, which is not permitted (zip-slip guard, WR-04/T-13.5-06)",
+                    "archive entry '{$name}' is a symlink, which is not permitted (zip-slip guard)",
                 );
             }
         }

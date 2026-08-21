@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
-use Modules\Budgets\Internal\Http\Livewire\EnvelopeGlanceCard;
+use Modules\Budgets\Public\Http\Livewire\EnvelopeGlanceCard;
 use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Category;

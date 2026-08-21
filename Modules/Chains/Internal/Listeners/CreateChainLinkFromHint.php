@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Modules\Chains\Internal\Listeners;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Chains\Internal\Exceptions\EvidenceEncodingFailedException;
 use Modules\Chains\Public\Enums\ChainLinkKind;
 use Modules\Chains\Public\Enums\ChainLinkState;
-use Modules\Chains\Public\Exceptions\EvidenceEncodingFailedException;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Receipts\Public\Dto\ChainHintPayload\FundedByCardPayload;
 use Modules\Receipts\Public\Dto\ChainHintPayload\RefundOfPayload;

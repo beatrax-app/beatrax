@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Filesystem\Filesystem;
-use Modules\Receipts\Public\Exceptions\FileDropBlobWriteException;
+use Modules\Receipts\Internal\Exceptions\FileDropBlobWriteException;
 use Modules\Receipts\Public\Pipeline\FileDropEmlBlobStore;
 
 // Only two of put()'s failure branches can be provoked with real filesystem

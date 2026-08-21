@@ -6,7 +6,7 @@ namespace Modules\Ingestion\Internal\Adapters\Banking;
 
 use Carbon\CarbonImmutable;
 use Modules\Ingestion\Internal\Adapters\Banking\Dto\Mt940StatementLine;
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 use Throwable;
 
 final class Mt940Tag61Parser

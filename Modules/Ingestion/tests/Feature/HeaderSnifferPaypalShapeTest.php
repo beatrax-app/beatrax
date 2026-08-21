@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Ingestion\Internal\Adapters\Paypal\PaypalCsvLanguageProfile;
-use Modules\Ingestion\Public\Exceptions\UnsupportedPaypalCsvShapeException;
+use Modules\Ingestion\Internal\Exceptions\UnsupportedPaypalCsvShapeException;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
 
 // PayPal's Saldorapport and Rapport Transactiegegevens exports are both

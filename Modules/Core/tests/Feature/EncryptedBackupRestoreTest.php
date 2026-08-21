@@ -7,9 +7,9 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
-use Modules\Core\Internal\Http\Livewire\EncryptedBackupRestore;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Exceptions\BackupFormatException;
+use Modules\Core\Public\Http\Livewire\EncryptedBackupRestore;
 use Modules\Core\Public\Services\BackupEncryptor;
 use Modules\Core\Public\Services\RestoreEncryptedBackup;
 

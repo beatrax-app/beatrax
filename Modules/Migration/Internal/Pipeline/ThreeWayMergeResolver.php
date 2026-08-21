@@ -9,8 +9,8 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\ValueObjects\Money;
-use Modules\Migration\Public\Dto\ConflictDto;
-use Modules\Migration\Public\Enums\MigrationEntityType;
+use Modules\Migration\Internal\Dto\ConflictDto;
+use Modules\Migration\Internal\Enums\MigrationEntityType;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 

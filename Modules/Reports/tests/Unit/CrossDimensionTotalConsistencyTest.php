@@ -13,7 +13,7 @@ use Modules\Reports\Internal\Aggregation\AccountSpendQuery;
 use Modules\Reports\Internal\Aggregation\CategorySpendQuery;
 use Modules\Reports\Internal\Aggregation\CounterpartySpendQuery;
 use Modules\Reports\Internal\Aggregation\TimeBucketSpendQuery;
-use Modules\Reports\Public\Enums\ReportGranularity;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 

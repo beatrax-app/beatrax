@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Ingestion\Internal\Adapters\Ics\IcsAmountParser;
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 
 // Every format below is copied from a real statement; the catalogue lives in
 // tests/fixtures/ics/ics-sample-1.md under "Dutch amount formats".

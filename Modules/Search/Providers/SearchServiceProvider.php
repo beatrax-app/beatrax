@@ -10,7 +10,6 @@ use Livewire\LivewireManager;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Import\Public\Events\TransactionImported;
 use Modules\Search\Internal\Console\ReindexSearchCommand;
-use Modules\Search\Internal\Http\Livewire\PaletteSearchEndpoint;
 use Modules\Search\Internal\Listeners\IndexTransactionOnImport;
 use Modules\Search\Internal\Services\DidYouMeanSuggester;
 use Modules\Search\Internal\Services\EntityNameSearch;
@@ -21,6 +20,7 @@ use Modules\Search\Internal\Services\SearchResultsProviderImpl;
 use Modules\Search\Internal\Services\SearchRowMapper;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Search\Public\Contracts\SearchResultsProvider;
+use Modules\Search\Public\Http\Livewire\PaletteSearchEndpoint;
 use Modules\Search\Public\Services\FtsHealthCheck;
 use Modules\Search\Public\Services\SearchQuery;
 

@@ -8,7 +8,7 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Goals\Internal\Http\Livewire\GoalsPage;
-use Modules\Goals\Internal\Http\Livewire\GoalsSummaryCard;
+use Modules\Goals\Public\Http\Livewire\GoalsSummaryCard;
 use Modules\Goals\Public\Services\GoalProgressQuery;
 
 final class GoalsServiceProvider extends ServiceProvider

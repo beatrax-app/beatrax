@@ -7,7 +7,7 @@ use Illuminate\Container\Container;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
-use Modules\Chains\Internal\Http\Livewire\ChainDrawer;
+use Modules\Chains\Public\Http\Livewire\ChainDrawer;
 use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;

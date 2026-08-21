@@ -8,7 +8,7 @@ use Livewire\Livewire;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
 use Modules\EmailScan\Internal\Http\Livewire\InboxesPage;
-use Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal;
+use Modules\EmailScan\Public\Http\Livewire\OAuthClientWizardModal;
 
 // A foreign or unknown inbox id is ignored in silence rather than refused:
 // the dispatch simply never fires, so the page cannot be used to probe which

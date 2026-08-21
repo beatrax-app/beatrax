@@ -22,19 +22,19 @@ final class ReportsServiceProvider extends ServiceProvider
 
     private const REPORT_DEFINITION_REQUEST_FACTORY_CLASS = 'Modules\Reports\Internal\Http\ReportDefinitionRequestFactory';
 
-    private const SAVE_REPORT_CLASS = 'Modules\Reports\Public\Actions\SaveReport';
+    private const SAVE_REPORT_CLASS = 'Modules\Reports\Internal\Actions\SaveReport';
 
-    private const UPDATE_REPORT_CLASS = 'Modules\Reports\Public\Actions\UpdateReport';
+    private const UPDATE_REPORT_CLASS = 'Modules\Reports\Internal\Actions\UpdateReport';
 
-    private const DELETE_REPORT_CLASS = 'Modules\Reports\Public\Actions\DeleteReport';
+    private const DELETE_REPORT_CLASS = 'Modules\Reports\Internal\Actions\DeleteReport';
 
-    private const TOGGLE_PIN_CLASS = 'Modules\Reports\Public\Actions\TogglePin';
+    private const TOGGLE_PIN_CLASS = 'Modules\Reports\Internal\Actions\TogglePin';
 
     private const REPORT_BUILDER_CLASS = 'Modules\Reports\Internal\Http\Livewire\ReportBuilder';
 
     private const REPORTS_INDEX_CLASS = 'Modules\Reports\Internal\Http\Livewire\ReportsIndex';
 
-    private const PINNED_REPORTS_ROW_CLASS = 'Modules\Reports\Internal\Http\Livewire\PinnedReportsRow';
+    private const PINNED_REPORTS_ROW_CLASS = 'Modules\Reports\Public\Http\Livewire\PinnedReportsRow';
 
     public function register(): void
     {

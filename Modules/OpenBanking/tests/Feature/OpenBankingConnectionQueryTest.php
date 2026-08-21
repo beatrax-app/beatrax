@@ -10,9 +10,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\SecretShield;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Services\OpenBankingConnectionQuery;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Services\OpenBankingConnectionQuery;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 
 uses(RefreshDatabase::class);
 

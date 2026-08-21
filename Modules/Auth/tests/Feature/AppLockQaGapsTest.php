@@ -8,9 +8,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
-use Modules\Auth\Internal\Http\Livewire\AppLockSettingsSection;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Auth\Public\Http\Livewire\AppLockSettingsSection;
 use Modules\Core\Models\User;
 
 it('enable() with a session stores the data key so AppLockKeyService::release returns non-null', function (): void {

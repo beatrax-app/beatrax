@@ -22,7 +22,7 @@ use Modules\Import\Public\Dto\ConsolidatedPreviewBatch;
 use Modules\Import\Public\Dto\StartingBalanceCandidate;
 use Modules\Import\Public\Services\BuildConsolidatedPreviewQuery;
 use Modules\Import\Public\Services\DetectStartingBalancesQuery;
-use Modules\Onboarding\Public\Enums\WizardStepStatus;
+use Modules\Onboarding\Internal\Enums\WizardStepStatus;
 use Modules\Recurring\Public\Contracts\DispatchesRecurringDetection;
 use Psr\Log\LoggerInterface;
 use Throwable;

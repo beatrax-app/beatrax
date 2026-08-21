@@ -9,11 +9,11 @@ use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Exception\BadResponseException;
 use GuzzleHttp\Exception\GuzzleException;
 use JsonException;
-use Modules\OpenBanking\Public\Dto\FetchWindow;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Exceptions\EnableBankingApiException;
-use Modules\OpenBanking\Public\Exceptions\UnsafeOpenBankingRequestException;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Dto\FetchWindow;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Exceptions\EnableBankingApiException;
+use Modules\OpenBanking\Internal\Exceptions\UnsafeOpenBankingRequestException;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 
 class EnableBankingHttpClient
 {

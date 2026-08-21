@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Migration\Internal\Exceptions\UnrecognizedMigrationFileException;
 use Modules\Migration\Internal\Parsers\Support\YnabSplitReconstructor;
-use Modules\Migration\Public\Exceptions\UnrecognizedMigrationFileException;
 
 it('YnabSplitReconstructor: recognizes both "Split (n/m)" and "Split n/m" memo conventions', function (): void {
     $reconstructor = new YnabSplitReconstructor;

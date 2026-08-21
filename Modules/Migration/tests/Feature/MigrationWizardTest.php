@@ -9,9 +9,9 @@ use Illuminate\Support\Facades\Validator;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Category;
+use Modules\Migration\Internal\Actions\DiscardMigrationRun;
+use Modules\Migration\Internal\Actions\StartMigrationRun;
 use Modules\Migration\Internal\Http\Livewire\NewMigration;
-use Modules\Migration\Public\Actions\DiscardMigrationRun;
-use Modules\Migration\Public\Actions\StartMigrationRun;
 use Modules\Migration\Tests\Support\MigrationFixturePaths;
 use Tests\Helpers\UploadIsolation;
 

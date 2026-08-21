@@ -9,13 +9,13 @@ use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\SecretShield;
-use Modules\OpenBanking\Public\Contracts\RemoteSourceAdapter;
-use Modules\OpenBanking\Public\Dto\FetchWindow;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Exceptions\OpenBankingConnectionException;
-use Modules\OpenBanking\Public\Exceptions\OpenBankingCredentialsException;
-use Modules\OpenBanking\Public\Services\OpenBankingFetchService;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Contracts\RemoteSourceAdapter;
+use Modules\OpenBanking\Internal\Dto\FetchWindow;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Exceptions\OpenBankingConnectionException;
+use Modules\OpenBanking\Internal\Exceptions\OpenBankingCredentialsException;
+use Modules\OpenBanking\Internal\Services\OpenBankingFetchService;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 
 uses(RefreshDatabase::class);
 

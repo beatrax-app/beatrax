@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use Modules\Reports\Internal\Http\Livewire\PinnedReportsRow;
-use Modules\Reports\Public\Dto\ReportResultRow;
+use Modules\Reports\Internal\Dto\ReportResultRow;
+use Modules\Reports\Public\Http\Livewire\PinnedReportsRow;
 
 // A donut with dataLabels and legend both off is a ring of colours: no axis on
 // the card, no hover on a phone. Asserted against the built options, because

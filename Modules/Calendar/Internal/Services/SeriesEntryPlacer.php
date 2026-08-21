@@ -7,7 +7,7 @@ namespace Modules\Calendar\Internal\Services;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
-use Modules\Calendar\Public\Dto\CalendarEntryDto;
+use Modules\Calendar\Internal\Dto\CalendarEntryDto;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Enums\Duration;

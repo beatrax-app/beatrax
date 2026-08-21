@@ -10,7 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use Modules\Ledger\Public\Dto\Period;
-use Modules\Reports\Public\Dto\ReportResultRow;
+use Modules\Reports\Internal\Dto\ReportResultRow;
 use stdClass;
 
 final class CounterpartySpendQuery

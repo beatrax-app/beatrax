@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Reports\Internal\Actions\DeleteReport;
+use Modules\Reports\Internal\Actions\SaveReport;
+use Modules\Reports\Internal\Actions\TogglePin;
+use Modules\Reports\Internal\Actions\UpdateReport;
+use Modules\Reports\Internal\Dto\ReportDefinition;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 use Modules\Reports\Models\SavedReport;
-use Modules\Reports\Public\Actions\DeleteReport;
-use Modules\Reports\Public\Actions\SaveReport;
-use Modules\Reports\Public\Actions\TogglePin;
-use Modules\Reports\Public\Actions\UpdateReport;
-use Modules\Reports\Public\Dto\ReportDefinition;
-use Modules\Reports\Public\Enums\ReportGranularity;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 uses(RefreshDatabase::class);

@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
-use Modules\Auth\Internal\Http\Livewire\AppLockSettingsSection;
 use Modules\Auth\Internal\Lock\AppLockKdf;
 use Modules\Auth\Internal\Lock\AppLockKeyWrap;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
+use Modules\Auth\Public\Http\Livewire\AppLockSettingsSection;
 use Modules\Core\Models\User;
 
 it('AppLockProvisioner has rewrapForNewPin, changePin, and disable methods', function (): void {

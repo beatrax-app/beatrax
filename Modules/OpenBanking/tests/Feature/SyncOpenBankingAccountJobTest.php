@@ -11,13 +11,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\SecretShield;
+use Modules\OpenBanking\Internal\Contracts\RemoteSourceAdapter;
+use Modules\OpenBanking\Internal\Dto\FetchWindow;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Events\OpenBankingConsentFailed;
+use Modules\OpenBanking\Internal\Exceptions\EnableBankingApiException;
 use Modules\OpenBanking\Internal\Jobs\SyncOpenBankingAccountJob;
-use Modules\OpenBanking\Public\Contracts\RemoteSourceAdapter;
-use Modules\OpenBanking\Public\Dto\FetchWindow;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
-use Modules\OpenBanking\Public\Exceptions\EnableBankingApiException;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 
 uses(RefreshDatabase::class);
 

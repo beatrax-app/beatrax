@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\EmailScan\Internal\Exceptions\InboxNotConfiguredException;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
-use Modules\EmailScan\Public\Exceptions\InboxNotConfiguredException;
 
 uses(RefreshDatabase::class);
 

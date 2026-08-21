@@ -15,11 +15,11 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingJwtSigner;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\OAuth\InvalidStateException;
 use Modules\OpenBanking\Internal\OAuth\OpenBankingStateRepository;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
-use Modules\OpenBanking\Public\Services\SecretsWriteFailed;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Services\SecretsWriteFailed;
 
 // State is issued straight through OpenBankingStateRepository, so no scenario
 // here depends on cross-request session persistence in the test client.

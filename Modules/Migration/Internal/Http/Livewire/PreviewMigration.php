@@ -10,11 +10,11 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Migration\Internal\Actions\ConfirmMigration;
+use Modules\Migration\Internal\Actions\DiscardMigrationRun;
+use Modules\Migration\Internal\Dto\PreviewSummary;
 use Modules\Migration\Internal\Pipeline\PreviewSummaryBuilder;
 use Modules\Migration\Models\MigrationRun;
-use Modules\Migration\Public\Actions\ConfirmMigration;
-use Modules\Migration\Public\Actions\DiscardMigrationRun;
-use Modules\Migration\Public\Dto\PreviewSummary;
 
 final class PreviewMigration extends Component
 {

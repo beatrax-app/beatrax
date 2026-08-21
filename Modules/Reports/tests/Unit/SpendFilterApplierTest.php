@@ -11,7 +11,7 @@ use Modules\Ledger\Models\Category;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Internal\Aggregation\AccountSpendQuery;
 use Modules\Reports\Internal\Aggregation\SpendQueryFilters;
-use Modules\Reports\Public\Dto\ReportResultRow;
+use Modules\Reports\Internal\Dto\ReportResultRow;
 
 uses(RefreshDatabase::class);
 

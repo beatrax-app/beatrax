@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Modules\Ingestion\Internal\Adapters\Paypal\PaypalDateParser;
-use Modules\Ingestion\Public\Exceptions\InvalidDateException;
+use Modules\Ingestion\Internal\Exceptions\InvalidDateException;
 
 // PayPal renders every Datum cell as US M/D/YYYY even though the amount cells
 // beside it use NL comma decimals. The ISO arm is speculative: no observed

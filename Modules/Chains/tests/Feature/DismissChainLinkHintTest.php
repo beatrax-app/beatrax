@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Modules\Chains\Internal\Exceptions\ChainLinkNotDismissableException;
 use Modules\Chains\Models\ChainLink;
 use Modules\Chains\Public\Actions\DismissChainLinkHint;
-use Modules\Chains\Public\Exceptions\ChainLinkNotDismissableException;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;

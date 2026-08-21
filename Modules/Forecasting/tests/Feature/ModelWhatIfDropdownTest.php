@@ -6,9 +6,9 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
-use Modules\Forecasting\Internal\Http\Livewire\ModelWhatIfDropdown;
 use Modules\Forecasting\Public\Actions\CreateAmountChangeScenarioForSeries;
 use Modules\Forecasting\Public\Actions\CreateCancellationScenarioForSeries;
+use Modules\Forecasting\Public\Http\Livewire\ModelWhatIfDropdown;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 

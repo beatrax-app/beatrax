@@ -10,9 +10,9 @@ use GuzzleHttp\Psr7\Response;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingJwtSigner;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Exceptions\UnsafeOpenBankingRequestException;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Exceptions\UnsafeOpenBankingRequestException;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 
 // No public method takes a caller-supplied URL, so the rejection cases override
 // the protected baseUri() hook. The refusal lands before a bearer token is

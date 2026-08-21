@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Migration\Internal\Exceptions\UnrecognizedMigrationFileException;
 use Modules\Migration\Internal\Parsers\Support\ZipExtractor;
-use Modules\Migration\Public\Exceptions\UnrecognizedMigrationFileException;
 
 /**
  * @param  array<string, string>  $entries  entryName => contents

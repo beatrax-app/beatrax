@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvHeaderProfile;
+use Modules\Ingestion\Internal\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Dto\SniffResult;
-use Modules\Ingestion\Public\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
 
 beforeEach(function (): void {

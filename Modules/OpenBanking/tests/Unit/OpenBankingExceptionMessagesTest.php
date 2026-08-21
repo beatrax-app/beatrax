@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
+use Modules\OpenBanking\Internal\Exceptions\EnableBankingApiException;
+use Modules\OpenBanking\Internal\Exceptions\OpenBankingConnectionException;
+use Modules\OpenBanking\Internal\Exceptions\OpenBankingCredentialsException;
+use Modules\OpenBanking\Internal\Exceptions\UnsafeOpenBankingRequestException;
 use Modules\OpenBanking\Internal\Tls\LoopbackTlsException;
-use Modules\OpenBanking\Public\Exceptions\EnableBankingApiException;
-use Modules\OpenBanking\Public\Exceptions\OpenBankingConnectionException;
-use Modules\OpenBanking\Public\Exceptions\OpenBankingCredentialsException;
-use Modules\OpenBanking\Public\Exceptions\UnsafeOpenBankingRequestException;
 
 // Several throw sites are unreachable from a test (openssl_pkey_new() failing
 // on a working build), so the named constructors are exercised directly.

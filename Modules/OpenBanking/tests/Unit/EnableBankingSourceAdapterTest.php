@@ -6,9 +6,9 @@ use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingSourceAdapter;
-use Modules\OpenBanking\Public\Dto\FetchWindow;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Exceptions\EnableBankingApiException;
+use Modules\OpenBanking\Internal\Dto\FetchWindow;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Exceptions\EnableBankingApiException;
 use Modules\OpenBanking\Tests\Support\EnableBankingFixtures;
 
 // EB rows must map onto SourceTransactionDto with the exact field choices

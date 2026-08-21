@@ -9,7 +9,7 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Internal\Aggregation\NetWorthSeriesQuery;
-use Modules\Reports\Public\Enums\ReportGranularity;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 

@@ -6,8 +6,8 @@ namespace Modules\Onboarding\Database\Seeders\Demo;
 
 use Carbon\CarbonImmutable;
 use Modules\Core\Models\User;
+use Modules\Onboarding\Internal\Enums\WizardStepStatus;
 use Modules\Onboarding\Models\WizardProgress;
-use Modules\Onboarding\Public\Enums\WizardStepStatus;
 
 final class DemoWizardProgressSeeder
 {

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Session\Session;
 use Livewire\Livewire;
-use Modules\Auth\Internal\Http\Livewire\AppLockKeyProbe;
 use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Auth\Public\Http\Livewire\AppLockKeyProbe;
 use Modules\Auth\Public\Services\AppLockKeyService;
 
 it('AppLockKeyProbe class exists', function (): void {

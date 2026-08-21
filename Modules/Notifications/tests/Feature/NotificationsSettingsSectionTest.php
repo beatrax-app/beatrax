@@ -7,8 +7,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
-use Modules\Notifications\Internal\Http\Livewire\NotificationsSettingsSection;
 use Modules\Notifications\Public\Events\NotificationPreferenceMutated;
+use Modules\Notifications\Public\Http\Livewire\NotificationsSettingsSection;
 
 uses(RefreshDatabase::class);
 

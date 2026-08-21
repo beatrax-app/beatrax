@@ -18,9 +18,9 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\LockStore;
-use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
-use Modules\OpenBanking\Public\Exceptions\EnableBankingApiException;
-use Modules\OpenBanking\Public\Services\OpenBankingFetchService;
+use Modules\OpenBanking\Internal\Events\OpenBankingConsentFailed;
+use Modules\OpenBanking\Internal\Exceptions\EnableBankingApiException;
+use Modules\OpenBanking\Internal\Services\OpenBankingFetchService;
 use Throwable;
 
 final class SyncOpenBankingAccountJob implements ShouldBeUniqueUntilProcessing, ShouldQueue

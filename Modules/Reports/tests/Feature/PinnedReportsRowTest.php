@@ -7,11 +7,11 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
-use Modules\Reports\Internal\Http\Livewire\PinnedReportsRow;
-use Modules\Reports\Public\Actions\SaveReport;
-use Modules\Reports\Public\Actions\TogglePin;
-use Modules\Reports\Public\Dto\ReportDefinition;
-use Modules\Reports\Public\Enums\ReportGranularity;
+use Modules\Reports\Internal\Actions\SaveReport;
+use Modules\Reports\Internal\Actions\TogglePin;
+use Modules\Reports\Internal\Dto\ReportDefinition;
+use Modules\Reports\Internal\Enums\ReportGranularity;
+use Modules\Reports\Public\Http\Livewire\PinnedReportsRow;
 
 uses(RefreshDatabase::class);
 

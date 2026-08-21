@@ -12,6 +12,7 @@ final class SourceAdapterRegistry
     /** @param array<string, SourceAdapter> $byFormat */
     public function __construct(private readonly array $byFormat) {}
 
+    /** @throws UnsupportedFormatException */
     public function for(string $format): SourceAdapter
     {
         if (! isset($this->byFormat[$format])) {
