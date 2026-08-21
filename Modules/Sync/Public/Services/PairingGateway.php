@@ -10,6 +10,7 @@ use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Identity\DeviceNameDetector;
+use Modules\Sync\Internal\Pairing\LanPairingFramePuller;
 use Modules\Sync\Internal\Pairing\LanPairingOfferFetcher;
 use Modules\Sync\Internal\Pairing\PairingFrameCourier;
 use Modules\Sync\Internal\Pairing\PairingRowGuards;
@@ -41,6 +42,8 @@ final class PairingGateway
         private readonly DeviceNameDetector $deviceNameDetector,
         private readonly PairingFrameCourier $relayCourier,
         private readonly LanPairingOfferFetcher $lanOfferFetcher,
+        private readonly LanPairingFramePuller $lanFramePuller,
+        private readonly DeviceRegistryService $devices,
     ) {}
 
     // A word-code carries the token alone, so a fresh responder has no local row to
@@ -142,6 +145,16 @@ final class PairingGateway
     public function drainPairingFrames(int $userId): void
     {
         $this->relayCourier->drainAndApply($userId);
+
+        // The other road home. Only one side of a pairing listens, so a device
+        // that runs no server — every phone — is never pushed to and has to
+        // ask. Without this the desktop's PAIR_CONFIRM never arrived on a LAN
+        // with no relay, and the ceremony finished half-done.
+        $ownDeviceId = $this->devices->localDeviceId($userId);
+
+        if ($ownDeviceId !== null) {
+            $this->lanFramePuller->pullAndApply($userId, $ownDeviceId);
+        }
     }
 
     // False both when the identity was never minted and when the app-lock holds the KEK.
