@@ -104,41 +104,6 @@ enum Locale: string
         };
     }
 
-    // A flag is a country and a locale is a language, so this is a
-    // convenience, not a truth: English is 🇬🇧 and Portuguese 🇵🇹 because
-    // those are the variants translated here. The endonym stays the label.
-    public function flag(): string
-    {
-        return match ($this) {
-            self::Cs => '🇨🇿',
-            self::Da => '🇩🇰',
-            self::De => '🇩🇪',
-            self::Et => '🇪🇪',
-            self::En => '🇬🇧',
-            self::Es => '🇪🇸',
-            self::Fr => '🇫🇷',
-            self::Hr => '🇭🇷',
-            self::It => '🇮🇹',
-            self::Lv => '🇱🇻',
-            self::Lt => '🇱🇹',
-            self::Hu => '🇭🇺',
-            self::Nl => '🇳🇱',
-            self::Nb => '🇳🇴',
-            self::Pl => '🇵🇱',
-            self::Pt => '🇵🇹',
-            self::Ro => '🇷🇴',
-            self::Sk => '🇸🇰',
-            self::Sl => '🇸🇮',
-            self::Sr => '🇷🇸',
-            self::Fi => '🇫🇮',
-            self::Sv => '🇸🇪',
-            self::Tr => '🇹🇷',
-            self::El => '🇬🇷',
-            self::Bg => '🇧🇬',
-            self::Uk => '🇺🇦',
-        };
-    }
-
     // Transcribed from ICU data rather than read from ext-intl: the mobile PHP
     // build ships ICU with English-only locale data, so on device the library
     // cannot answer the question at all.
