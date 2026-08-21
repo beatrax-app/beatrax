@@ -16,7 +16,6 @@ use Modules\Mobile\Internal\Pairing\QrScanBridge;
 use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
-use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\QrPayloadBuilder;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
@@ -537,7 +536,7 @@ it('returns a word-code reader to the keypad after a reset, not to the camera', 
         ->tap(function () use ($user): void {
             app(DatabaseManager::class)->connection()->table('pairing_tokens')
                 ->where('user_id', $user->id)
-                ->update(['state' => PairingState::Expired->value]);
+                ->update(['state' => PairingGateway::STATE_EXPIRED]);
         })
         ->call('checkPairingState')
         ->assertSet('step', 'enter_code');
