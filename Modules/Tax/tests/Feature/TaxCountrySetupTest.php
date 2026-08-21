@@ -30,11 +30,31 @@ it('offers every allow-listed country with a display label', function (): void {
         TaxCountry::cases(),
     );
 
-    expect(array_keys($available))->toBe($expectedCodes)
+    // Compared as a set: the list is ordered by the label the reader scans,
+    // which is not the enum's ISO-code order and differs per locale.
+    $offeredCodes = array_keys($available);
+    sort($offeredCodes);
+    sort($expectedCodes);
+
+    expect($offeredCodes)->toBe($expectedCodes)
         ->and($available)->each->toBeString();
 
     expect($available['nl'])->toBe('Netherlands')
         ->and($available['gb'])->toBe('United Kingdom');
+});
+
+// The list is scanned by eye and has no search box, so the only order that helps
+// is the one the reader sees.
+it('orders the countries by the name shown, not by their code', function (): void {
+    /** @var TaxCountrySetup $setup */
+    $labels = array_values(app(TaxCountrySetup::class)->availableCountries());
+
+    $sorted = $labels;
+    sort($sorted, SORT_LOCALE_STRING);
+
+    expect($labels[0])->toBe(min($labels));
+    expect(array_search('Switzerland', $labels, true))
+        ->toBeGreaterThan(array_search('Spain', $labels, true));
 });
 
 it('backs every offered country with a corpus file that actually loads', function (): void {
