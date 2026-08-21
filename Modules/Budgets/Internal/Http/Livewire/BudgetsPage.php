@@ -99,6 +99,12 @@ final class BudgetsPage extends Component
         $minor = $this->parseAssignedAmount($writer, $raw);
 
         if ($minor === null) {
+            // Drop the rejected text so the next render reseeds the cell from
+            // what is actually stored. Left in place it showed a budget that
+            // was never written, and the toast that says so does not survive
+            // the glance that follows it.
+            unset($this->assignedInputs[$categoryId]);
+
             $this->toast(Lang::get('budgets::messages.notices.invalid_amount'));
 
             return;
