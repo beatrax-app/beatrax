@@ -10,7 +10,7 @@ return [
         'reprojecting' => 'Ponovna gradnja tvoje zgodovine…',
         'retrying' => 'Ponovno povezovanje z drugo napravo…',
         'locked' => 'Odkleni aplikacijo za nadaljevanje nastavitve.',
-        'revoked' => 'Ta naprava je bila odstranjena z vaše druge naprave. Znova jo seznanite za nadaljevanje sinhronizacije.',
+        'revoked' => 'Ta naprava je bila odstranjena s tvoje druge naprave. Znova jo seznani za nadaljevanje sinhronizacije.',
     ],
     'step' => [
         'connect' => 'Povezovanje s tvojo drugo napravo',

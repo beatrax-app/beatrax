@@ -39,7 +39,7 @@ return [
         'code_not_accepted' => 'Nobena naprava v tem omrežju ni sprejela te kode. Preveri kodo in ali jo druga naprava še vedno prikazuje.',
         'rate_limited' => 'Preveč poskusov. Počakaj minuto in poskusi znova.',
         'identity_locked' => 'Identiteta tvoje naprave je zaklenjena. Odkleni aplikacijo in poskusi znova.',
-        'identity_needs_lock' => 'Najprej nastavite zaklepanje aplikacije — ščiti identiteto vaše naprave.',
+        'identity_needs_lock' => 'Najprej nastavi zaklepanje aplikacije — ščiti identiteto tvoje naprave.',
         'safety_number_changed' => 'Druga naprava se je med primerjanjem spremenila. Pred potrditvijo znova preveri spodnje besede.',
     ],
 ];
