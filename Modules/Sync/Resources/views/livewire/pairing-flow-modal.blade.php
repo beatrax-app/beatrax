@@ -16,6 +16,7 @@
 --}}
 
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Sync\Public\Enums\PairingWizardStep')
 <div>
 <flux:modal wire:model="open" class="md:max-w-md" @close="$wire.cancelPairing()">
 {{-- Flux forwards only class/style/autofocus to the <dialog>; anything else
@@ -23,13 +24,13 @@
      own heading is bound to the dialog from inside it. --}}
 <div
     class="space-y-4 p-6"
-    wire:key="pairing-step-{{ $step }}"
+    wire:key="pairing-step-{{ $wizardStep->value }}"
     x-data
     x-init="$el.closest('dialog')?.setAttribute('aria-labelledby', 'pairing-modal-title')"
 >
 
     {{-- ===== Step 1: choose direction ===== --}}
-    @if ($step === 'choose_direction')
+    @if ($wizardStep === PairingWizardStep::ChooseDirection)
         <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100" id="pairing-modal-title">{{ Lang::get('sync::pairing.title') }}</h3>
         <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('sync::pairing.step_1_of_3') }}</p>
 
@@ -69,7 +70,7 @@
     @endif
 
     {{-- ===== Step 2a: show my code (QR + word-code + countdown) ===== --}}
-    @if ($step === 'show_code')
+    @if ($wizardStep === PairingWizardStep::ShowCode)
         <div wire:poll.3s="checkPairingState">
             <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100" id="pairing-modal-title">{{ Lang::get('sync::pairing.show_this_code') }}</h3>
             <p class="mb-4 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('sync::pairing.step_2_of_3') }}</p>
@@ -145,7 +146,7 @@
     @endif
 
     {{-- ===== Step 2b: enter a code ===== --}}
-    @if ($step === 'enter_code')
+    @if ($wizardStep === PairingWizardStep::EnterCode)
         <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100" id="pairing-modal-title">{{ Lang::get('sync::pairing.enter_the_code') }}</h3>
         <p class="mb-2 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('sync::pairing.step_2_of_3') }}</p>
 
@@ -196,7 +197,7 @@
     @endif
 
     {{-- ===== Step 3: confirm safety numbers (the trust gate) ===== --}}
-    @if ($step === 'confirm')
+    @if ($wizardStep === PairingWizardStep::Confirm)
         <div wire:poll.3s="checkPairingState">
             <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100" id="pairing-modal-title">{{ Lang::get('sync::pairing.compare_words') }}</h3>
             <p class="mb-4 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('sync::pairing.step_3_of_3') }}</p>
@@ -262,7 +263,7 @@
     @endif
 
     {{-- ===== Step 4: success ===== --}}
-    @if ($step === 'success')
+    @if ($wizardStep === PairingWizardStep::Success)
         <div class="space-y-3 text-center">
             <svg class="mx-auto h-6 w-6 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

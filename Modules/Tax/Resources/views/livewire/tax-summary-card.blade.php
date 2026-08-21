@@ -14,12 +14,6 @@
 @use('Modules\Ledger\Public\Services\BaseCurrency')
 @use('Modules\Ledger\Public\ValueObjects\Money')
 
-@php
-    // The same seam every other card formats through, so the dashboard reads
-    // in one number system rather than this card's own.
-    $fmtEur = static fn (int $minor): string => Money::ofMinor(abs($minor), BaseCurrency::value())->format();
-@endphp
-
 <a
     href="{{ route('tax.index') }}"
     class="card block transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:hover:bg-slate-800"
@@ -42,7 +36,7 @@
             class="kpi-number"
             style="margin-top: var(--space-1); font-size: var(--text-xl); font-weight: 600; color: var(--color-text);"
         >
-            {{ $fmtEur($total ?? 0) }}
+            {{ Money::ofMinor($total ?? 0, BaseCurrency::value())->format() }}
         </p>
         <p style="margin-top: 2px; font-size: var(--text-xs); color: var(--color-text-muted);">
             {{ Lang::choice('tax::summary.tagged', $count, ['count' => $count]) }}

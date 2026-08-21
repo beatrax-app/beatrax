@@ -160,10 +160,13 @@ Three things belong to this session specifically:
 - Each mailbox row is confirmed only after its blob has been handed to the
   transport, so an interrupted drain is retried on the next connect.
 - The inbound drain touches no wire, so it runs whether or not a peer is
-  connected. When unwrapping fails — the daemon may hold no unlocked app-lock
-  session — the row is left unconfirmed for a request-scoped drain to retry and
-  the failure is never rethrown. Letting it escape aborted the whole exchange
-  *after* catch-up had already succeeded.
+  connected. `GdkEpochControlHandler::handle()` reports a `GdkWrapOutcome`
+  rather than throwing, and `InboundGdkWrapDrain` asks that outcome
+  `consumesCarrier()` before it retires the mailbox row: `Applied` and
+  `Refused` are terminal and retire it, `Deferred` and `Retained` leave it for
+  a later pass from a context that holds the app-lock key — which the listener
+  daemon never does. A blob that is not an epoch wrap is skipped without
+  spending the pass's budget, because pairing shares the same mailbox.
 
 The whole epoch step degrades to a no-op when its dependencies are unbound,
 rather than tearing down a sync session over one skippable delivery.

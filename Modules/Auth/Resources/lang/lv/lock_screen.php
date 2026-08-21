@@ -7,6 +7,7 @@ return [
     'native_unlock_failed' => 'Neizdevās atbloķēt. Ievadiet PIN kodu.',
     'page_title' => 'Atbloķēt · Beatrax',
     'sign_out' => 'Atteikties',
+    'forgot_pin' => 'Aizmirsāt PIN kodu? Atsakieties — varat pieteikties atkārtoti ar konta paroli un iestatīt jaunu PIN kodu. Dati netiek zaudēti.',
 
     'digits_suffix' => 'ievadīti cipari',
     'pad_label' => 'PIN koda tastatūra',

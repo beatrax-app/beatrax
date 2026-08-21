@@ -38,7 +38,7 @@ return [
         'nothing_notable' => 'Niente richiede la tua attenzione.',
         'flow' => 'Entrate :in, uscite :out, netto :net.',
         'over_budget' => ':amount oltre il budget finora.',
-        'payments_due' => '1 pagamento in scadenza in questo periodo.|:count pagamenti in scadenza in questo periodo.',
+        'payments_due' => ':count pagamento in scadenza in questo periodo.|:count pagamenti in scadenza in questo periodo.',
         'shortfall' => 'Si prospetta uno scoperto di cassa.',
     ],
 ];

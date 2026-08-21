@@ -18,12 +18,6 @@
     use Modules\Ledger\Public\ValueObjects\Money;
 
     $ruleFmt = static fn (Money $money): string => $money->format();
-
-    $detectorLabels = [
-        'large' => Lang::get('anomaly::settings.detectors.large'),
-        'first_time' => Lang::get('anomaly::settings.detectors.first_time'),
-        'duplicate' => Lang::get('anomaly::settings.detectors.duplicate'),
-    ];
 @endphp
 
 <div class="space-y-6" data-testid="anomaly-settings-section">
@@ -84,7 +78,7 @@
                     <li class="flex items-center justify-between gap-3 py-2" data-testid="suppression-rule-{{ $rule->id }}">
                         <span class="min-w-0 flex-1 truncate text-sm text-slate-700 dark:text-slate-300" style="font-variant-numeric: tabular-nums;">
                             {{ $rule->displayName !== '' ? $rule->displayName : Lang::get('anomaly::settings.unknown_merchant') }}
-                            <span class="mx-1 text-slate-400">·</span>{{ $detectorLabels[$rule->detector] ?? ucwords(str_replace('_', ' ', $rule->detector)) }}
+                            <span class="mx-1 text-slate-400">·</span>{{ Lang::get('anomaly::settings.detectors.'.$rule->detector) }}
                             <span class="mx-1 text-slate-400">·</span>{{ $ruleFmt($rule->bandLow) }} – {{ $ruleFmt($rule->bandHigh) }}
                         </span>
                         <button

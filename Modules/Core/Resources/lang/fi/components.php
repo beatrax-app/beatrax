@@ -42,12 +42,14 @@ return [
         'next_month' => 'Seuraava kuukausi',
         'today' => 'Tänään',
         'clear' => 'Tyhjennä',
+        'empty' => 'päivämäärää ei valittu',
     ],
 
     'time' => [
         'open' => 'Valitse kellonaika',
         'hour' => 'Tunti',
         'minute' => 'Minuutti',
+        'empty' => 'kellonaikaa ei valittu',
     ],
 
     'veil_locked' => 'Sovellus lukittu',

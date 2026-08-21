@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'title' => 'Informes',
     'page_title' => 'Informes · Beatrax',
-    'saved_report' => 'informe guardado|informes guardados',
+    'saved_report' => ':count informe guardado|:count informes guardados',
     'pinned_count' => 'fijados',
     'dismiss' => 'Descartar',
 

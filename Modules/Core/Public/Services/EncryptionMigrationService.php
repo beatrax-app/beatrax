@@ -14,6 +14,7 @@ use Modules\Core\Internal\Encryption\PreMigrationSnapshot;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Exceptions\StrandedEncryptionEpochException;
+use Modules\Core\Public\Support\RowChunk;
 use Modules\Ledger\Public\Services\CounterpartyKeyBackfill;
 use Modules\Sync\Public\Services\BlindIndexCodec;
 use Modules\Sync\Public\Services\EncryptionMigrationSupport;
@@ -21,7 +22,7 @@ use Throwable;
 
 class EncryptionMigrationService
 {
-    private const CHUNK_SIZE = 500;
+    private const CHUNK_SIZE = RowChunk::DEFAULT_SIZE;
 
     private const PROGRESS_CACHE_PREFIX = 'encryption-migration-progress:';
 
@@ -204,6 +205,8 @@ class EncryptionMigrationService
             ->whereNotNull('value')
             ->orderBy('id')
             ->chunkById(self::CHUNK_SIZE, function ($rows) use ($connection, $userId, $support, $total, &$processed): void {
+                $writes = [];
+
                 foreach ($rows as $row) {
                     /** @var mixed $rawTable */
                     $rawTable = $row->table_name;
@@ -226,18 +229,19 @@ class EncryptionMigrationService
 
                         $encrypted = $support->encryptOpLogValue($rawTable, $pk, $rawField, $rawValue);
 
-                        $connection->table('op_log_entries')
-                            ->where('id', $row->id)
-                            ->update([
-                                'value' => $encrypted['value'],
-                                'gdk_epoch' => $encrypted['epochId'],
-                            ]);
+                        $writes[] = [
+                            'id' => $row->id,
+                            'value' => $encrypted['value'],
+                            'gdk_epoch' => $encrypted['epochId'],
+                        ];
                     }
 
                     $processed++;
-                    $this->reportProgress($userId, $processed, $total);
                 }
 
+                PreMigrationSnapshot::writeRowsById($connection, 'op_log_entries', $writes);
+
+                $this->reportProgress($userId, $processed, $total);
                 $this->afterChunkProcessed($userId, $processed);
             }, 'id');
     }
@@ -259,17 +263,21 @@ class EncryptionMigrationService
             ->where('user_id', $userId)
             ->orderBy('id')
             ->chunkById(self::CHUNK_SIZE, function ($rows) use ($connection, $userId, $table, $columns, $support, $total, &$processed): void {
+                $writes = [];
+
                 foreach ($rows as $row) {
                     $updates = $this->projectionUpdatesForRow($support, $table, $columns, $row);
 
                     if ($updates !== []) {
-                        $connection->table($table)->where('id', $row->id)->update($updates);
+                        $writes[] = ['id' => $row->id] + $updates;
                     }
 
                     $processed++;
-                    $this->reportProgress($userId, $processed, $total);
                 }
 
+                PreMigrationSnapshot::writeRowsById($connection, $table, $writes);
+
+                $this->reportProgress($userId, $processed, $total);
                 $this->afterChunkProcessed($userId, $processed);
             }, 'id');
     }
@@ -317,6 +325,10 @@ class EncryptionMigrationService
         return max(1, $opLog + $projection);
     }
 
+    // Written once per chunk rather than once per row: every cache driver this
+    // ships with puts the value on the filesystem or in a DB table, and the
+    // number is only ever read by a poll, so per-row granularity buys nothing
+    // and costs a write per ledger row inside the migration transaction.
     private function reportProgress(int $userId, int $processed, int $total): void
     {
         $percent = (int) min(99, floor(($processed / max(1, $total)) * 100));

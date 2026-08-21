@@ -7,6 +7,7 @@ return [
     'native_unlock_failed' => 'A feloldás nem sikerült. Add meg inkább a PIN-kódot.',
     'page_title' => 'Feloldás · Beatrax',
     'sign_out' => 'Kijelentkezés',
+    'forgot_pin' => 'Elfelejtetted a PIN-kódot? Jelentkezz ki — a fiókjelszavaddal újra bejelentkezhetsz, és beállíthatsz egy új PIN-kódot. Nem vész el adat.',
 
     'digits_suffix' => 'számjegy beírva',
     'pad_label' => 'PIN-billentyűzet',

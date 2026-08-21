@@ -6,6 +6,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Mobile\Internal\Exceptions\LanSyncException;
 use Modules\Sync\Public\Services\DeviceRegistryService;
+use Modules\Sync\Public\Services\GdkEpochDeliveryGateway;
 
 // Removing a device on the desktop drops it from that side's registry, but
 // nothing travelled back, so the removed phone kept listing the peer and calling
@@ -76,4 +77,11 @@ it('sends the revocation notice before hanging up on an unconfirmed peer', funct
     expect($tell)->toBeInt()
         ->and($close)->toBeInt()
         ->and($tell)->toBeLessThan($close);
+});
+
+it('keeps the revocation notice spelled the way an older peer recognises it', function (): void {
+    // The literal is pinned here on purpose: it crosses between devices and
+    // between app versions, so a desktop that renames the frame would leave a
+    // phone syncing happily against a peer that had revoked it.
+    expect(GdkEpochDeliveryGateway::MSG_PEER_REVOKED)->toBe('PEER_REVOKED');
 });

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
-use Modules\Core\Models\User;
 use Modules\Community\Public\Services\CorpusPatternMatcher;
+use Modules\Core\Models\User;
 use Modules\Core\Public\Enums\Country;
 use Modules\Import\Public\Services\MerchantNameResolver;
 

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Internal\Http\Livewire;
 
-use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
@@ -16,17 +14,18 @@ use Livewire\Component;
 use Modules\Auth\Public\Actions\SignupAction;
 use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
+use Modules\Core\Public\Http\Livewire\Concerns\ReportsFieldRejections;
 use Modules\Core\Public\Services\LocaleNegotiator;
 use Modules\Core\Public\Services\UserCountry;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
-use Modules\Core\Public\Support\ValidationMessages;
 
 // Only reachable while the device has no users; the route guard returns
 // a 404 once one exists.
 final class SignupPage extends Component
 {
     use HoldsFlashMessage;
+    use ReportsFieldRejections;
 
     // The three boxes on the form. SignupAction also rejects under `signup`
     // when the device gained an owner mid-submit, and that has no box to sit
@@ -63,7 +62,7 @@ final class SignupPage extends Component
         try {
             $signup($this->username, $this->password, countryCode: $this->country);
         } catch (ValidationException $e) {
-            $this->reportRejection($e);
+            $this->reportRejection($e, 'auth::signup.error_generic');
 
             return;
         }
@@ -85,24 +84,16 @@ final class SignupPage extends Component
             : LocaleNegotiator::SYSTEM;
     }
 
-    // "System" is the absence of an override rather than a locale, so it clears
-    // the key instead of storing a code — the same rule the POST route follows.
-    // Without this arm the reader could leave System but never return to it.
-    public function updatedLocale(Session $session, Application $app): void
+    // Remembered for the next full page load, and applied to this one: the
+    // screen re-renders over a Livewire round trip rather than navigating, so
+    // nothing else would retarget the language before it is drawn again.
+    public function updatedLocale(Session $session, LocaleNegotiator $negotiator): void
     {
-        if ($this->locale === LocaleNegotiator::SYSTEM) {
-            $session->forget('locale');
+        $negotiator->rememberChoice($session, $this->locale);
 
-            return;
+        if (Locale::isSupported($this->locale)) {
+            $negotiator->apply($this->locale);
         }
-
-        if (! Locale::isSupported($this->locale)) {
-            return;
-        }
-
-        $session->put('locale', $this->locale);
-        $app->setLocale($this->locale);
-        CarbonImmutable::setLocale($this->locale);
     }
 
     public function render(ViewFactory $views, Router $routes, UrlGenerator $urls, UserCountry $countries): View
@@ -116,27 +107,6 @@ final class SignupPage extends Component
         $view->extends('layouts.app', ['title' => Lang::get('auth::signup.page_title')]);
 
         return $view;
-    }
-
-    // Field-scoped, so the message renders under the box it is about and the
-    // control carries aria-invalid. One shared form-level line put the
-    // username error below two other fields and the checklist, out of sight
-    // behind a raised keyboard and unannounced on the field it described.
-    private function reportRejection(ValidationException $exception): void
-    {
-        $placed = false;
-        $errors = $exception->validator->errors()->messages();
-
-        foreach (self::FIELD_KEYS as $field) {
-            foreach ($errors[$field] ?? [] as $message) {
-                $this->addError($field, $message);
-                $placed = true;
-            }
-        }
-
-        if (! $placed) {
-            $this->flashMessage = ValidationMessages::first($exception, 'auth::signup.error_generic');
-        }
     }
 
     // The screen the reader arrived from. It renders for a guest, so the app

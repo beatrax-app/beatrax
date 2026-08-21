@@ -7,6 +7,7 @@ return [
     'native_unlock_failed' => 'Avaaminen ei onnistunut. Anna PIN-koodi.',
     'page_title' => 'Avaa lukitus · Beatrax',
     'sign_out' => 'Kirjaudu ulos',
+    'forgot_pin' => 'Unohditko PIN-koodin? Kirjaudu ulos — voit kirjautua takaisin sisään tilisi salasanalla ja asettaa uuden PIN-koodin. Tietoja ei häviä.',
 
     'digits_suffix' => 'numeroa syötetty',
     'pad_label' => 'PIN-näppäimistö',

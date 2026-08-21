@@ -15,6 +15,7 @@ use Livewire\WithFileUploads;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeExceptionContext;
+use Modules\Import\Public\Services\UploadFilename;
 use Modules\Migration\Internal\Actions\CheckForUpdates;
 use Modules\Migration\Internal\Actions\StartMigrationRun;
 use Modules\Migration\Internal\Enums\MigrationRunStatus;
@@ -131,7 +132,7 @@ final class NewMigration extends Component
 
         $user = $currentUser->user();
         $tmp = $this->file->getRealPath();
-        $originalFilename = $this->sanitiseFilename($this->file->getClientOriginalName());
+        $originalFilename = UploadFilename::sanitise($this->file->getClientOriginalName(), '.zip');
 
         try {
             try {
@@ -174,14 +175,5 @@ final class NewMigration extends Component
         // One fixed line shared by the validation messages and submit()'s
         // banner, never the raw exception message.
         return Lang::get('migration::new.errors.unrecognised');
-    }
-
-    private function sanitiseFilename(string $original): string
-    {
-        $stem = pathinfo($original, PATHINFO_FILENAME);
-        $safe = preg_replace('/[^A-Za-z0-9_-]+/', '_', $stem);
-        $stemPart = ($safe === null || $safe === '') ? 'upload' : $safe;
-
-        return $stemPart.'.zip';
     }
 }

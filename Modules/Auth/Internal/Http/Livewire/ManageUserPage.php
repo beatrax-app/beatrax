@@ -11,6 +11,7 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Auth\Public\Actions\RegenerateRecoveryCodesAction;
+use Modules\Auth\Public\Contracts\PasswordPolicy;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
@@ -22,8 +23,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 final class ManageUserPage extends Component
 {
     use HoldsFlashMessage;
-
-    private const MINIMUM_PASSWORD_LENGTH = 12;
 
     // Locked so a Livewire update cannot retarget the password reset at another
     // account: mount() is the only writer, and it gates before setting this.
@@ -60,7 +59,7 @@ final class ManageUserPage extends Component
             throw new NotFoundHttpException;
         }
 
-        if (strlen($this->newPartnerPassword) < self::MINIMUM_PASSWORD_LENGTH) {
+        if (strlen($this->newPartnerPassword) < PasswordPolicy::MINIMUM_LENGTH) {
             $this->flashMessage = Lang::get('auth::manage_user.error_min_length');
             $this->newPartnerPassword = '';
 

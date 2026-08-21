@@ -8,27 +8,27 @@
     wrapper renders empty so screen-readers can navigate to the
     landmark, but nothing is painted on screen.
 
-    Severity branches are three explicit Blade snippets containing
-    literal Tailwind class strings. Tailwind's content scanner needs
-    direct string occurrences in source — no `border-{tier}-500`
-    interpolation, no PurgeCSS safelist comments.
+    Severity picks a tone name only. The literal Tailwind class strings
+    each tone resolves to live in x-core::alert, which is where the
+    content scanner finds them — no `border-{tier}-500` interpolation,
+    no PurgeCSS safelist comments, and no per-severity copy of the row.
 
-    Per-row actions are factored into `partials/system-alert-actions`
-    so the auto-update kinds can render multi-button rows
-    (Install / Skip / Release notes for `update.available`; Update
-    now / Remind me later for `update.stale`; Install on next launch
-    only for `update.critical`) without duplicating the layout across
-    the three severity branches.
+    A critical row is announced assertively (`role="alert"`, which
+    interrupts the reader); a warning or informational row is a polite
+    live region instead, so it waits for a pause. That difference is the
+    only thing severity changes about the wrapper's semantics.
+
+    Row content is factored into `partials/system-alert-body`, which in
+    turn includes `partials/system-alert-message` and
+    `partials/system-alert-actions` so the auto-update kinds can render
+    multi-button rows (Install / Skip / Release notes for
+    `update.available`; Update now / Remind me later for `update.stale`;
+    Install on next launch only for `update.critical`).
 
     Every interpolation uses Blade {{ }} default escaping. Unescaped
     output (raw-output Blade) is forbidden in this view —
     system_alerts.message may carry operator-controlled text that we
     treat as untrusted.
-
-    Each row stacks below `sm` and only sits the actions beside the
-    message from `sm` up. The buttons do not shrink, so on a phone a
-    side-by-side row left the message a ~130px column and broke one
-    sentence over six lines.
 --}}
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Core\Public\Enums\SystemAlertSeverity')
@@ -51,57 +51,21 @@
     ])
 >
     @foreach ($alerts as $alert)
-        @switch ($alert->severity)
-            @case (SystemAlertSeverity::Critical->value)
-                <x-core::alert tone="danger" role="alert">
-                    <div class="flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-4">
-                        <div class="min-w-0 flex-1">
-                            <p class="text-sm font-medium">@include('core::livewire.partials.system-alert-message', ['alert' => $alert])</p>
-                            <p class="mt-1 text-xs" style="font-variant-numeric: tabular-nums;">
-                                {{ $alert->created_at->translatedFormat('d M Y · H:i') }}
-                                <span class="mx-1">·</span>
-                                #{{ $alert->id }}
-                            </p>
-                        </div>
-                        <div class="shrink-0">
-                            @include('core::livewire.partials.system-alert-actions', ['alert' => $alert])
-                        </div>
-                    </div>
-                </x-core::alert>
-                @break
-            @case (SystemAlertSeverity::Warning->value)
-                <x-core::alert tone="warning" aria-live="polite" aria-atomic="true">
-                    <div class="flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-4">
-                        <div class="min-w-0 flex-1">
-                            <p class="text-sm font-medium">@include('core::livewire.partials.system-alert-message', ['alert' => $alert])</p>
-                            <p class="mt-1 text-xs" style="font-variant-numeric: tabular-nums;">
-                                {{ $alert->created_at->translatedFormat('d M Y · H:i') }}
-                                <span class="mx-1">·</span>
-                                #{{ $alert->id }}
-                            </p>
-                        </div>
-                        <div class="shrink-0">
-                            @include('core::livewire.partials.system-alert-actions', ['alert' => $alert])
-                        </div>
-                    </div>
-                </x-core::alert>
-                @break
-            @default
-                <x-core::alert tone="neutral" aria-live="polite" aria-atomic="true">
-                    <div class="flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-4">
-                        <div class="min-w-0 flex-1">
-                            <p class="text-sm font-medium">@include('core::livewire.partials.system-alert-message', ['alert' => $alert])</p>
-                            <p class="mt-1 text-xs" style="font-variant-numeric: tabular-nums;">
-                                {{ $alert->created_at->translatedFormat('d M Y · H:i') }}
-                                <span class="mx-1">·</span>
-                                #{{ $alert->id }}
-                            </p>
-                        </div>
-                        <div class="shrink-0">
-                            @include('core::livewire.partials.system-alert-actions', ['alert' => $alert])
-                        </div>
-                    </div>
-                </x-core::alert>
-        @endswitch
+        @php
+            $isCritical = $alert->severity === SystemAlertSeverity::Critical->value;
+            $tone = match ($alert->severity) {
+                SystemAlertSeverity::Critical->value => 'danger',
+                SystemAlertSeverity::Warning->value => 'warning',
+                default => 'neutral',
+            };
+        @endphp
+        <x-core::alert
+            :tone="$tone"
+            :role="$isCritical ? 'alert' : false"
+            :aria-live="$isCritical ? false : 'polite'"
+            :aria-atomic="$isCritical ? false : 'true'"
+        >
+            @include('core::livewire.partials.system-alert-body', ['alert' => $alert])
+        </x-core::alert>
     @endforeach
 </section>

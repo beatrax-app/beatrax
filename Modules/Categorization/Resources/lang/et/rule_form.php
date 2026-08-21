@@ -22,7 +22,6 @@ return [
     'condition_value_from_aria' => 'Tingimuse :number väärtus (alates)',
     'condition_value_to_aria' => 'Tingimuse :number väärtus (kuni)',
     'to' => 'kuni',
-    'amount_placeholder' => '0,00',
     'text_placeholder' => 'nt SPOTIFY',
     'remove_condition' => 'Eemalda tingimus',
     'add_condition' => '+ Lisa tingimus',

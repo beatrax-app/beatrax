@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Chains\Public\Dto\ChainLinkRow;
 use Modules\Chains\Public\Dto\ChainTree;
 use Modules\Chains\Public\Dto\ChainTreeNode;
+use Modules\Chains\Public\Enums\ConfidenceTier;
 use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
@@ -147,7 +148,7 @@ it('forTransaction assembles top-down chain tree (root → funder)', function ()
     expect($tree->nodes[0]->transactionId)->toBe((int) $paypalExpense->id);
     expect($tree->nodes[1]->kind)->toBe('paypal_funding');
     expect($tree->nodes[1]->transactionId)->toBe((int) $asnTransfer->id);
-    expect($tree->nodes[1]->confidenceTier)->toBe('Deterministic');
+    expect($tree->nodes[1]->confidenceTier)->toBe(ConfidenceTier::Deterministic);
 });
 
 it('forTransaction walks BOTH directions — rooting on the funder side surfaces the funded transaction', function (): void {
@@ -242,9 +243,9 @@ it('forTransaction labels each node Deterministic, Confirmed or Candidate from i
     $tree = $this->query->forTransaction((int) $paypalExpense->id, $this->user);
 
     expect($tree->nodes)->toHaveCount(4);
-    expect($tree->nodes[1]->confidenceTier)->toBe('Deterministic');
-    expect($tree->nodes[2]->confidenceTier)->toBe('Confirmed');
-    expect($tree->nodes[3]->confidenceTier)->toBe('Candidate');
+    expect($tree->nodes[1]->confidenceTier)->toBe(ConfidenceTier::Deterministic);
+    expect($tree->nodes[2]->confidenceTier)->toBe(ConfidenceTier::Confirmed);
+    expect($tree->nodes[3]->confidenceTier)->toBe(ConfidenceTier::Candidate);
 });
 
 it('forTransaction filters rejected chain_links out of the walk', function (): void {

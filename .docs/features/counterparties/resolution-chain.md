@@ -124,6 +124,12 @@ corpus token `OBI` inside "m*obi*el" and turned a phone bill into a DIY
 chain. The boundary is asserted only where the needle's own edge is
 alphanumeric, so `AMAZON.` still matches `AMAZON.NL`.
 
+**The alias tiers read one memoised list per reader.** Both of them share
+it, loaded and sorted once instead of two reads and a sort per
+transaction, and keyed by user id because the resolver is a singleton —
+see [merchant aliases](../import/architecture.md#merchant-aliases) for
+what a writer owes the memo.
+
 **The corpus tiers are scoped to the reader's country**, the alias tiers
 are not. `MerchantNameResolver::regionFor()` reads `UserCountry::current()`
 (memoised — this runs once per transaction across a whole import) and
@@ -135,14 +141,16 @@ passes it to all three `CommunityCorpusQuery` lookups, which filter
 boundary cannot help there — `albert` genuinely is a whole token in that
 description.
 
-Two deliberate widenings, both matching what `ClassificationRuleProvider`
-does for the government and bank-fee rules:
+Two deliberate widenings, both the merchant corpus's own:
 
 - **A reader who has named no country gets every region**, not nothing.
   `UserCountry::current()` returns `''` for that state and the filter is
-  skipped. It is why `ZORGPREMIE` — the ordinary Dutch word for a
-  health-insurance premium, and a Belgian government pattern — can still
-  misfire for a reader who skipped the country question.
+  skipped, so someone who never answered the country question still gets
+  merchant hits. Steps 5 and 6 read that same empty region the opposite
+  way and skip themselves entirely, which is why `ZORGPREMIE` — the
+  ordinary Dutch word for a health-insurance premium, and a Belgian
+  government pattern — cannot reach a reader with no country. A merchant
+  can be international; a government body and a bank's fee cannot.
 - **A mapping whose own `region` is null or empty matches every reader.**
   The column is nullable and `CorpusLoader` leaves it empty for a file it
   could not read a code from, so excluding those would drop mappings
@@ -189,8 +197,11 @@ Both delegate to the same `resolveByRules()` helper over a haystack of
 `Modules\Community\Public\Services\ClassificationRuleProvider` —
 `governmentRules()` and `bankFeeRules()`, read from the per-region
 corpus YAML — and are matched by `CorpusPatternMatcher`, which handles
-both literal and regex patterns. Government hits record
-`metadata.matched_keyword`; bank-fee hits add
+both literal and regex patterns. Neither step asks for rules at all
+unless the reader has named a country:
+`CounterpartyResolverService::namesANationalInstitution()` reads an
+empty region and each step returns null before the provider is reached.
+Government hits record `metadata.matched_keyword`; bank-fee hits add
 `metadata.subcategory = 'fee'`, which is what the profile page branches
 on to render a fee row rather than an institution row.
 
@@ -264,9 +275,31 @@ to the literal `counterparty` if nothing survives. The result is cut to
 128 characters — the width of the `slug` column that carries the
 UNIQUE.
 
+It is deliberately **not** `UniqueSlug::slugify()`, the shared
+`Str::slug()` helper that `AccountSlugResolver` and the migration
+promoter use. The two disagree, on ASCII alone and on every accented
+name: `Coolblue B.V.` slugs to `coolblue-b-v` here and `coolblue-bv`
+there, `Café Ambiance` to `caf-e-ambiance` against `cafe-ambiance`.
+Because `upsert()` `firstOrCreate`s on `(user_id, slug)`, the slug is a
+stored identifier and not a formatting choice: swapping the
+transliterator would miss every already-stored non-ASCII merchant and
+fork it into a second row on the next import — the same fragmentation
+the decrypt-before-compare rule below exists to prevent.
+`CounterpartySlugifierIsFrozenTest` pins the difference so the swap
+cannot be made by accident.
+
+`iconv`'s `//TRANSLIT` output is also platform-dependent (it is the C
+library's, not PHP's), so two devices on different operating systems can
+already derive different slugs from the same merchant name. Nothing here
+re-derives a slug for a row that has one, so this only reaches
+counterparties created for the first time.
+
 Collisions walk a numeric suffix: `bol`, then `bol-2`, `bol-3`, and so
-on until a free slug appears. A slug counts as free when no row holds
-it **or** when the row holding it is this same counterparty.
+on until a free slug appears — `Modules\Core\Public\Support\UniqueSlug::walk()`,
+shared with `AccountSlugResolver` and the migration promoter, which asks
+this class's own free-predicate rather than carrying one. A slug counts
+as free when no row holds it **or** when the row holding it is this same
+counterparty.
 
 That second half is the load-bearing part. `display_name` is an
 encrypted column, and AEAD ciphertext never byte-equals its plaintext —

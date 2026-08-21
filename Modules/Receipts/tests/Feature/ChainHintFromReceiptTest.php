@@ -15,6 +15,7 @@ use Modules\Ingestion\Public\Dto\AccountResolution;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Receipts\Public\Dto\ChainHintPayload\FundedByCardPayload;
+use Modules\Receipts\Public\Enums\ChainHintType;
 use Modules\Receipts\Public\Events\ChainHintDetected;
 use Tests\Helpers\UploadIsolation;
 
@@ -93,7 +94,7 @@ it('dispatches ChainHintDetected with the canonical transaction id and the impor
     Event::assertDispatched(ChainHintDetected::class, function (ChainHintDetected $event) use ($tx): bool {
         return $event->sourceTransactionId === (int) $tx->id
             && $event->userId === $this->fixtureUser->id
-            && $event->hintType === 'funded_by_card'
+            && $event->hintType === ChainHintType::FundedByCard
             && $event->hintPayload instanceof FundedByCardPayload
             && $event->hintPayload->cardLast4 === '1234';
     });

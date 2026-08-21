@@ -216,8 +216,9 @@ final readonly class CounterpartyProfileQuery
             ->where('t.user_id', $cp->user_id)
             ->where('t.counterparty_id', $cp->id)
             ->where('t.posted_at', '>=', $cutoffDate)
-            ->selectRaw('t.category_id as category_id, c.name as category_name, c.slug as category_slug, c.name_is_default as category_name_is_default, COALESCE(SUM(t.amount_minor), 0) as total_minor')
-            ->groupBy('t.category_id', 'c.name', 'c.slug', 'c.name_is_default')
+            ->select(['t.category_id as category_id', ...CategoryDisplayName::columns('c')])
+            ->selectRaw('COALESCE(SUM(t.amount_minor), 0) as total_minor')
+            ->groupBy('t.category_id', ...CategoryDisplayName::bareColumns('c'))
             ->orderByRaw('ABS(SUM(t.amount_minor)) DESC')
             ->get();
 

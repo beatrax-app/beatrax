@@ -78,7 +78,11 @@ another module.
   group so the category dimension's grand total never disagrees with
   the other (unfiltered-by-category) dimensions' totals for the same
   report — the `cross_dimension_total_consistency` invariant
-  `ReportAggregatorMetricsTest` guards.
+  `ReportAggregatorMetricsTest` guards. Its group labels are full
+  breadcrumbs, resolved through `Ledger`'s
+  `Public\Services\CategoryAncestry` — the same seam the dashboard's
+  `TopCategoriesByPeriodQuery` renders from, rather than a second copy
+  of the parent walk and its visibility predicate.
 - `CurrencyModeApplier::apply()` — applies a report's `currencyMode`
   (`'base'` | `'original'`) to a dimension query and assembles the
   `ReportResultDto`. Neither this class nor its caller ever hardcodes a
@@ -166,8 +170,13 @@ another module.
   CSV via `ReportAggregator::run()`, so the download can never disagree
   with the on-screen table/chart. `EscapeFormula` runs on every
   free-text column to mitigate spreadsheet formula injection. The
-  "Amount" column is formatted via `MinorAmountFormatter` (pure integer
-  arithmetic — CLAUDE.md forbids float division on money).
+  "Amount" column is written unsigned through
+  `MoneyInput::toDecimalString(abs($minor))` — the same seam
+  `TaxCsvExporter` uses, and pure integer arithmetic throughout
+  (CLAUDE.md forbids float division on money). It used to go through a
+  `MinorAmountFormatter` local to this module, which was the same
+  function with `100` written out instead of
+  `Money::MINOR_UNITS_PER_MAJOR`.
 
 ## Write actions: security & concurrency contracts
 

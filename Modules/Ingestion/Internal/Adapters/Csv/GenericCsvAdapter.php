@@ -82,7 +82,6 @@ final class GenericCsvAdapter implements SourceAdapter
             }
 
             $ownIban = $this->ownIban($record, $normMap);
-            $accounts->resolve($ownIban);
 
             yield new SourceTransactionDto(
                 bookedAt: $postedAt->startOfDay(),

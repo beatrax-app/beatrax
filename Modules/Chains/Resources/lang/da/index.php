@@ -15,7 +15,7 @@ return [
     'no_counterparty' => '(ingen modpart)',
     'open_from_row' => 'Åbn fra-rækken',
     'open_to_row' => 'Åbn til-rækken',
-    'leg_count' => '1 betaling|:count betalinger',
+    'leg_count' => ':count betaling|:count betalinger',
     'state_aria' => 'Status: :state',
 
     'kind' => [

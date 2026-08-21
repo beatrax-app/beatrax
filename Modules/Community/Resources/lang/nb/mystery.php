@@ -22,8 +22,7 @@ return [
 
     'card' => [
         'likely' => 'Sannsynligvis: en navnløs forhandler.',
-        'seen' => 'Sett',
-        'time' => 'gang|ganger',
+        'seen_times' => 'Sett :count gang|Sett :count ganger',
         'last_seen' => 'Sist sett :date',
         'suggest' => 'Foreslå et navn →',
     ],

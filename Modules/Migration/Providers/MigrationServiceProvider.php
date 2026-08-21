@@ -7,79 +7,48 @@ namespace Modules\Migration\Providers;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Support\LoadsModuleResources;
+use Modules\Migration\Internal\Actions\CheckForUpdates;
+use Modules\Migration\Internal\Actions\ConfirmMigration;
+use Modules\Migration\Internal\Actions\DiscardMigrationRun;
+use Modules\Migration\Internal\Actions\StartMigrationRun;
+use Modules\Migration\Internal\Http\Livewire\MigrationResults;
+use Modules\Migration\Internal\Http\Livewire\MigrationsIndex;
+use Modules\Migration\Internal\Http\Livewire\NewMigration;
+use Modules\Migration\Internal\Http\Livewire\PreviewMigration;
+use Modules\Migration\Internal\Parsers\ActualParser;
+use Modules\Migration\Internal\Parsers\NynabParser;
+use Modules\Migration\Internal\Parsers\Ynab4Parser;
+use Modules\Migration\Internal\Pipeline\EntityChangeApplier;
+use Modules\Migration\Internal\Pipeline\PreviewSummaryBuilder;
+use Modules\Migration\Internal\Services\SourceMapWriter;
 
 final class MigrationServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
 
-    private const PREVIEW_SUMMARY_BUILDER_CLASS = 'Modules\Migration\Internal\Pipeline\PreviewSummaryBuilder';
-
-    private const YNAB4_PARSER_CLASS = 'Modules\Migration\Internal\Parsers\Ynab4Parser';
-
-    private const NYNAB_PARSER_CLASS = 'Modules\Migration\Internal\Parsers\NynabParser';
-
-    private const ACTUAL_PARSER_CLASS = 'Modules\Migration\Internal\Parsers\ActualParser';
-
-    private const START_MIGRATION_RUN_CLASS = 'Modules\Migration\Internal\Actions\StartMigrationRun';
-
-    private const CONFIRM_MIGRATION_CLASS = 'Modules\Migration\Internal\Actions\ConfirmMigration';
-
-    private const DISCARD_MIGRATION_RUN_CLASS = 'Modules\Migration\Internal\Actions\DiscardMigrationRun';
-
-    private const CHECK_FOR_UPDATES_CLASS = 'Modules\Migration\Internal\Actions\CheckForUpdates';
-
-    private const SOURCE_MAP_WRITER_CLASS = 'Modules\Migration\Internal\Services\SourceMapWriter';
-
-    private const ENTITY_CHANGE_APPLIER_CLASS = 'Modules\Migration\Internal\Pipeline\EntityChangeApplier';
-
-    private const MIGRATIONS_INDEX_CLASS = 'Modules\Migration\Internal\Http\Livewire\MigrationsIndex';
-
-    private const NEW_MIGRATION_CLASS = 'Modules\Migration\Internal\Http\Livewire\NewMigration';
-
-    private const PREVIEW_MIGRATION_CLASS = 'Modules\Migration\Internal\Http\Livewire\PreviewMigration';
-
-    private const MIGRATION_RESULTS_CLASS = 'Modules\Migration\Internal\Http\Livewire\MigrationResults';
-
     public function register(): void
     {
-        $this->singletonIfExists(self::PREVIEW_SUMMARY_BUILDER_CLASS);
+        $this->app->singleton(PreviewSummaryBuilder::class);
 
-        $this->singletonIfExists(self::YNAB4_PARSER_CLASS);
-        $this->singletonIfExists(self::NYNAB_PARSER_CLASS);
-        $this->singletonIfExists(self::ACTUAL_PARSER_CLASS);
+        $this->app->singleton(Ynab4Parser::class);
+        $this->app->singleton(NynabParser::class);
+        $this->app->singleton(ActualParser::class);
 
-        $this->singletonIfExists(self::SOURCE_MAP_WRITER_CLASS);
-        $this->singletonIfExists(self::ENTITY_CHANGE_APPLIER_CLASS);
-        $this->singletonIfExists(self::START_MIGRATION_RUN_CLASS);
-        $this->singletonIfExists(self::CONFIRM_MIGRATION_CLASS);
-        $this->singletonIfExists(self::DISCARD_MIGRATION_RUN_CLASS);
-        $this->singletonIfExists(self::CHECK_FOR_UPDATES_CLASS);
+        $this->app->singleton(SourceMapWriter::class);
+        $this->app->singleton(EntityChangeApplier::class);
+        $this->app->singleton(StartMigrationRun::class);
+        $this->app->singleton(ConfirmMigration::class);
+        $this->app->singleton(DiscardMigrationRun::class);
+        $this->app->singleton(CheckForUpdates::class);
     }
 
     public function boot(LivewireManager $livewire): void
     {
         $this->loadModuleResources('migration');
 
-        if (class_exists(self::MIGRATIONS_INDEX_CLASS)) {
-            $livewire->component('migration.migrations-index', self::MIGRATIONS_INDEX_CLASS);
-        }
-        if (class_exists(self::NEW_MIGRATION_CLASS)) {
-            $livewire->component('migration.new-migration', self::NEW_MIGRATION_CLASS);
-        }
-        if (class_exists(self::PREVIEW_MIGRATION_CLASS)) {
-            $livewire->component('migration.preview-migration', self::PREVIEW_MIGRATION_CLASS);
-        }
-        if (class_exists(self::MIGRATION_RESULTS_CLASS)) {
-            $livewire->component('migration.migration-results', self::MIGRATION_RESULTS_CLASS);
-        }
-    }
-
-    private function singletonIfExists(string $class): void
-    {
-        // $class is a runtime-built FQCN string, never a ::class literal, so static
-        // analysis cannot fold this guard away for a class not yet on disk.
-        if (class_exists($class)) {
-            $this->app->singleton($class);
-        }
+        $livewire->component('migration.migrations-index', MigrationsIndex::class);
+        $livewire->component('migration.new-migration', NewMigration::class);
+        $livewire->component('migration.preview-migration', PreviewMigration::class);
+        $livewire->component('migration.migration-results', MigrationResults::class);
     }
 }

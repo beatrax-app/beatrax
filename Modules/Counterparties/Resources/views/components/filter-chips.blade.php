@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Counterparties\Internal\Enums\CounterpartyTypeFilter')
 {{--
     Filter chips — the type filter row on `/counterparties` index and
     `/counterparties/triage`. Renders an `All` chip plus one chip per
@@ -14,22 +15,22 @@
     aria, and class wiring.
 
     Props:
-      active — string; the currently-active filter key (all|merchant|personal|bank|government|self|unknown)
-      counts — array; per-type counts keyed by filter key (e.g. ['all' => 142, 'merchant' => 89, ...])
+      active — string; the currently-active CounterpartyTypeFilter value
+      counts — array; counts keyed by CounterpartyTypeFilter value
 --}}
 @props([
-    'active' => 'all',
+    'active' => CounterpartyTypeFilter::All->value,
     'counts' => [],
 ])
 @php
     $chips = [
-        ['key' => 'all', 'label' => Lang::get('counterparties::components.filter_chips.all'), 'dot' => null],
-        ['key' => 'merchant', 'label' => Lang::get('counterparties::components.filter_chips.merchant'), 'dot' => 'dot-merchant'],
-        ['key' => 'personal', 'label' => Lang::get('counterparties::components.filter_chips.personal'), 'dot' => 'dot-personal'],
-        ['key' => 'bank', 'label' => Lang::get('counterparties::components.filter_chips.bank'), 'dot' => 'dot-bank'],
-        ['key' => 'government', 'label' => Lang::get('counterparties::components.filter_chips.government'), 'dot' => 'dot-gov'],
-        ['key' => 'self', 'label' => Lang::get('counterparties::components.filter_chips.self'), 'dot' => 'dot-self'],
-        ['key' => 'unknown', 'label' => Lang::get('counterparties::components.filter_chips.unknown'), 'dot' => 'dot-unknown'],
+        ['key' => CounterpartyTypeFilter::All->value, 'label' => Lang::get('counterparties::components.filter_chips.all'), 'dot' => null],
+        ['key' => CounterpartyTypeFilter::Merchant->value, 'label' => Lang::get('counterparties::components.filter_chips.merchant'), 'dot' => 'dot-merchant'],
+        ['key' => CounterpartyTypeFilter::Personal->value, 'label' => Lang::get('counterparties::components.filter_chips.personal'), 'dot' => 'dot-personal'],
+        ['key' => CounterpartyTypeFilter::Bank->value, 'label' => Lang::get('counterparties::components.filter_chips.bank'), 'dot' => 'dot-bank'],
+        ['key' => CounterpartyTypeFilter::Government->value, 'label' => Lang::get('counterparties::components.filter_chips.government'), 'dot' => 'dot-gov'],
+        ['key' => CounterpartyTypeFilter::SelfAccount->value, 'label' => Lang::get('counterparties::components.filter_chips.self'), 'dot' => 'dot-self'],
+        ['key' => CounterpartyTypeFilter::Unknown->value, 'label' => Lang::get('counterparties::components.filter_chips.unknown'), 'dot' => 'dot-unknown'],
     ];
 @endphp
 <div

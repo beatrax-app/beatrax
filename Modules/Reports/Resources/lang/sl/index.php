@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'title' => 'Poročila',
     'page_title' => 'Poročila · Beatrax',
-    'saved_report' => 'shranjeno poročilo|shranjeni poročili|shranjena poročila|shranjenih poročil',
+    'saved_report' => ':count shranjeno poročilo|:count shranjeni poročili|:count shranjena poročila|:count shranjenih poročil',
     'pinned_count' => 'pripeto',
     'dismiss' => 'Opusti',
 

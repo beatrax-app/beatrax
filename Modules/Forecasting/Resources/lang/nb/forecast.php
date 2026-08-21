@@ -69,7 +69,7 @@ return [
     'highlights_shortfall_aria' => ':count aktiv underskuddsperiode de neste :days dagene|:count aktive underskuddsperioder de neste :days dagene',
     'dips_to' => ':name faller til :amount',
     'on_date_suffix' => ' den :date',
-    'shortfall_window' => '1 aktiv underskuddsperiode|:count aktive underskuddsperioder',
+    'shortfall_window' => ':count aktiv underskuddsperiode|:count aktive underskuddsperioder',
     'lowest_in_30' => 'Laveste på 30 dager: :amount',
     'next_ics' => 'Neste ICS-oppgjør: :amount den :date',
 ];

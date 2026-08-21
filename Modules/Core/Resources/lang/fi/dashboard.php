@@ -17,8 +17,7 @@ return [
     'net' => 'Netto',
 
     'status_tiles_aria' => 'Tilaruudut',
-    'email_scan_health' => 'Sähköpostin skannauksen tila — :count yhdistettyä',
-    'inbox' => 'postilaatikko|postilaatikkoa',
+    'email_scan_health' => 'Sähköpostin skannauksen tila — :count yhdistettyä postilaatikko|Sähköpostin skannauksen tila — :count yhdistettyä postilaatikkoa',
 
     'top_spending' => 'Suurimmat menot',
     'no_expenses' => 'Ei vielä luokiteltuja menoja.',

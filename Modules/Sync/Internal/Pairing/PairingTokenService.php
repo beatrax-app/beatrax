@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Internal\Clock\ZuluTimestamp;
+use Modules\Sync\Public\Enums\PairingSide;
 
 /**
  * @link ../../../../.docs/features/sync/pairing-handshake.md
@@ -160,15 +161,7 @@ final class PairingTokenService
         }
 
         $acceptedAt = $now->toIso8601String();
-
-        // A "grace extension" must only ever GROW the lifetime — take
-        // max(existing expiry, now + grace floor) so an early accept never
-        // shortens the live handshake.
-        $graceExpiry = $now->addMinutes(self::ACCEPT_GRACE_MINUTES);
-        $existingExpiry = is_string($row->expires_at)
-            ? CarbonImmutable::parse($row->expires_at)
-            : $graceExpiry;
-        $newExpiry = $graceExpiry->greaterThan($existingExpiry) ? $graceExpiry : $existingExpiry;
+        $newExpiry = $this->extendedExpiry($row, $now);
 
         $this->db->connection()->table('pairing_tokens')
             ->where('id', $row->id)
@@ -188,6 +181,20 @@ final class PairingTokenService
             ->first();
 
         return $accepted ?? false;
+    }
+
+    // A "grace extension" must only ever GROW the lifetime — take
+    // max(existing expiry, now + grace floor) so an early accept never
+    // shortens the live handshake. Both transports reach the responder
+    // binding, and neither may reach it with its own version of this rule.
+    private function extendedExpiry(\stdClass $row, CarbonImmutable $now): CarbonImmutable
+    {
+        $graceExpiry = $now->addMinutes(self::ACCEPT_GRACE_MINUTES);
+        $existingExpiry = is_string($row->expires_at)
+            ? CarbonImmutable::parse($row->expires_at)
+            : $graceExpiry;
+
+        return $graceExpiry->greaterThan($existingExpiry) ? $graceExpiry : $existingExpiry;
     }
 
     // The confirming side is derived from the caller's OWN device id, not a
@@ -215,7 +222,7 @@ final class PairingTokenService
             return null;
         }
 
-        $column = $side.'_confirmed_at';
+        $column = $side->confirmedAtColumn();
 
         // Those keys ride in the WHERE rather than being checked and then
         // trusted: a rebind landing in between matches no row, so nothing is
@@ -438,12 +445,7 @@ final class PairingTokenService
         string $responderX25519Hex,
         string $responderName,
     ): object|false {
-        $graceExpiry = $now->addMinutes(self::ACCEPT_GRACE_MINUTES);
-        $existingExpiry = is_string($row->expires_at)
-            ? CarbonImmutable::parse($row->expires_at)
-            : $graceExpiry;
-        $newExpiry = $graceExpiry->greaterThan($existingExpiry) ? $graceExpiry : $existingExpiry;
-
+        $newExpiry = $this->extendedExpiry($row, $now);
         $rowId = is_numeric($row->id) ? (int) $row->id : 0;
 
         $this->db->connection()->table('pairing_tokens')
@@ -532,7 +534,7 @@ final class PairingTokenService
 
     // The side this device may confirm on this token, or null when the token
     // is unknown or the device owns neither side.
-    private function confirmableSideFor(int $tokenId, int $userId, string $deviceId): ?string
+    private function confirmableSideFor(int $tokenId, int $userId, string $deviceId): ?PairingSide
     {
         $token = $this->db->connection()->table('pairing_tokens')
             ->where('id', $tokenId)

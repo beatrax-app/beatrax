@@ -161,10 +161,8 @@ it('keeps the pass-through list honest: every pinned file still exists and still
 function counterpartyKeyOpaqueReadExemptions(): array
 {
     return [
-        'Modules/Sync/Public/Services/BlindIndexCodec.php' =>
-            'Probes length() to ask whether any row is keyed at all; never reads the value.',
-        'Modules/Ledger/Public/Services/CounterpartyKeyBackfill.php' =>
-            'The sweep that converts these columns, which by definition reads the value it is replacing.',
+        'Modules/Sync/Public/Services/BlindIndexCodec.php' => 'Probes length() to ask whether any row is keyed at all; never reads the value.',
+        'Modules/Ledger/Public/Services/CounterpartyKeyBackfill.php' => 'The sweep that converts these columns, which by definition reads the value it is replacing.',
     ];
 }
 
@@ -198,8 +196,8 @@ it('never reads inside a blind-index column, because there is nothing in there t
 
     expect($hits)->toBe(
         [],
-        "A blind-index column holds a keyed one-way digest. Reading inside it does not fail loudly; "
-        ."it returns nothing, or sorts by hex. Compare it whole, or read the plaintext from the "
+        'A blind-index column holds a keyed one-way digest. Reading inside it does not fail loudly; '
+        .'it returns nothing, or sorts by hex. Compare it whole, or read the plaintext from the '
         ."column that still has it.\n  ".implode("\n  ", $hits),
     );
 });
@@ -219,3 +217,13 @@ function counterpartyKeyOpaqueReadShapes(string $column): array
         'substring' => '/(?:substr|mb_substr|str_starts_with|str_contains)\([^)]*'.$quoted.'/i',
     ];
 }
+
+it('keeps the two blind-index domains spelled the way stored digests were keyed', function (): void {
+    // The domain is an input to the digest, so respelling one silently orphans
+    // every value already stored under it: the column still reads, and every
+    // comparison against it quietly stops matching.
+    expect(CounterpartyKey::DOMAIN)->toBe('counterparty-normalized')
+        ->and(CounterpartyKey::DOMAIN_IBAN)->toBe('counterparty-iban')
+        ->and(CounterpartyKey::DOMAIN)->toBe(BlindIndexCodec::DOMAIN_COUNTERPARTY_NORMALIZED)
+        ->and(CounterpartyKey::DOMAIN_IBAN)->toBe(BlindIndexCodec::DOMAIN_COUNTERPARTY_IBAN);
+});

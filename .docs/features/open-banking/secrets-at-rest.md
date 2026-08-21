@@ -28,7 +28,10 @@ desktop bundle's own data directory. The constant `PATH_RELATIVE` is written
 relative to the `storage/app` root, with **no leading `app/`** — `appPath()`
 already supplies that segment.
 
-The directory is created `0700` and the file `0600`.
+The directory is created `0700` and the file `0600`, from
+`SecretFileMode::DIRECTORY` and `SecretFileMode::FILE` — the one place the
+on-disk permissions of every secret-blob store in the app are decided, so
+this store cannot drift a digit away from the `.eml` stores beside it.
 
 ## Two encryption layers, applied inner to outer
 

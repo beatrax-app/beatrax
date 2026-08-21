@@ -74,7 +74,7 @@ final readonly class PairingPullAuthorizer
 
         foreach ($rows as $row) {
             $side = PairingRowGuards::sideOwnedBy($row, $collectingDeviceId);
-            $key = $side === null ? null : $row->{$side.'_ed25519_pub_hex'};
+            $key = $side === null ? null : $row->{$side->columnPrefix().'ed25519_pub_hex'};
 
             if (is_string($key) && $key !== '') {
                 $keys[] = $key;

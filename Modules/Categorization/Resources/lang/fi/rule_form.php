@@ -22,7 +22,6 @@ return [
     'condition_value_from_aria' => 'Ehdon :number arvo (alkaen)',
     'condition_value_to_aria' => 'Ehdon :number arvo (asti)',
     'to' => 'ja',
-    'amount_placeholder' => '0,00',
     'text_placeholder' => 'esim. SPOTIFY',
     'remove_condition' => 'Poista ehto',
     'add_condition' => '+ Lisää ehto',

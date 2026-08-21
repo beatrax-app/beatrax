@@ -5,31 +5,18 @@ declare(strict_types=1);
 namespace Beatrax\BiometricVault;
 
 /**
- * SPIKE bridge to the biometric-gated native vault.
- *
- * Mirrors nativephp/mobile-secure-storage's PHP shape (a thin wrapper over
- * `nativephp_call`), but the entry is enclave-bound: `get()` only returns the
- * value after a fresh Face ID / Touch ID.
- *
- * Platform asymmetry (see the plugin's .kt docblock): iOS resolves get()
- * SYNCHRONOUSLY (the keychain blocks on the biometric sheet), so `get()`
- * returns the value inline. Android is ASYNCHRONOUS (BiometricPrompt), so
- * get() returns `['async' => true]` and the value arrives via the
- * `BiometricVault.Recovered` event — the S2 recover flow must handle both.
+ * @link ../../../../.docs/features/mobile/architecture.md#the-vault-bridges-own-contract
  */
 class BiometricVault
 {
-    /**
-     * Store a value in the biometric-gated entry. Passing null deletes it.
-     */
+    // A null value deletes the entry rather than storing an empty one, which is
+    // the native side's own convention for this call.
     public function set(string $key, ?string $value): bool
     {
         return $this->callSuccess('BiometricVault.Set', ['key' => $key, 'value' => $value]);
     }
 
     /**
-     * Attempt to read the value, presenting the biometric prompt.
-     *
      * @return array{value: ?string, authenticated: bool, async: bool, canceled: bool, failed: bool, missing: bool}
      */
     public function get(string $key, string $reason = 'Unlock Beatrax'): array
@@ -75,19 +62,10 @@ class BiometricVault
         return $this->callSuccess('BiometricVault.Delete', ['key' => $key]);
     }
 
-    /**
-     * Read + consume the transient blob the async (Android) BiometricPrompt
-     * callback stashed after a successful decrypt. Returns null when nothing is
-     * pending. NO biometric prompt happens here — the key never crosses the JS
-     * bridge in the prompt result; PHP collects it after the fact. iOS unused.
-     *
-     * REPLAY SAFETY (load-bearing native contract): the native PollRecovered
-     * MUST be single-shot — DELETE the transient slot on read — and MUST clear
-     * it on app background / re-lock, so a stashed blob cannot be replayed by a
-     * later spoofed `cold-start-recovered` dispatch to admit without a fresh
-     * biometric. The PHP-side gates (isColdStartEnrolled + PIN floor) defend in
-     * depth, but enclave freshness depends on this consume-on-read.
-     */
+    // Consume-on-read is the native side's contract as much as this method's:
+    // a transient slot that survives the read, or one that outlives a
+    // backgrounding, can be replayed by a later spoofed dispatch and admit a
+    // session with no fresh biometric behind it. Android only; iOS never calls.
     public function pollRecovered(): ?string
     {
         $value = $this->call('BiometricVault.PollRecovered', [])['value'] ?? null;

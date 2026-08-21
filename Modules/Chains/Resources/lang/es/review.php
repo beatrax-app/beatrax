@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Revisar cadenas',
     'heading' => 'Revisar cadenas',
-    'hint' => 'pista|pistas',
+    'hint' => ':count pista|:count pistas',
     'subtitle' => 'Confirma o rechaza los enlaces candidatos que el resolutor de cadenas no ha podido confirmar automáticamente.',
 
     'empty_heading' => 'No hay nada que revisar',

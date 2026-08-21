@@ -69,7 +69,7 @@ return [
     'highlights_shortfall_aria' => ':count aktiivne puudujäägi aken järgmise :days päeva jooksul|:count aktiivset puudujäägi akent järgmise :days päeva jooksul',
     'dips_to' => ':name langeb tasemele :amount',
     'on_date_suffix' => ' kuupäeval :date',
-    'shortfall_window' => '1 aktiivne puudujäägi aken|:count aktiivset puudujäägi akent',
+    'shortfall_window' => ':count aktiivne puudujäägi aken|:count aktiivset puudujäägi akent',
     'lowest_in_30' => 'Madalaim 30 päeva jooksul: :amount',
     'next_ics' => 'Järgmine ICS arveldus: :amount kuupäeval :date',
 ];

@@ -12,6 +12,7 @@ use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Exceptions\BackupFormatException;
 use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Exceptions\BackupNotSupportedException;
+use Modules\Core\Public\Support\SqliteDatabase;
 
 final class RestoreEncryptedBackup
 {
@@ -35,7 +36,7 @@ final class RestoreEncryptedBackup
     public function __invoke(string $encryptedPath, string $passphrase): string
     {
         $default = $this->config->get('database.default');
-        $livePath = $this->config->get('database.connections.sqlite.database');
+        $livePath = $this->config->get(SqliteDatabase::LIVE_PATH_CONFIG_KEY);
         if ($default !== 'sqlite' || ! is_string($livePath) || $livePath === '') {
             throw new BackupNotSupportedException('Restore is only available on the SQLite build.');
         }
@@ -93,7 +94,7 @@ final class RestoreEncryptedBackup
     {
         $connectionName = '_restore_verify';
         $this->config->set('database.connections.'.$connectionName, [
-            'driver' => 'sqlite',
+            'driver' => SqliteDatabase::DRIVER,
             'database' => $path,
             'foreign_key_constraints' => false,
         ]);

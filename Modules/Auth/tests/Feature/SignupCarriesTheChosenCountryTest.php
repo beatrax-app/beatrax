@@ -38,6 +38,18 @@ it('leaves the country unset when the reader skips the picker', function (): voi
     expect(DB::table('users')->where('id', $user->id)->value('country_code'))->toBeNull();
 });
 
+// Not choosing is an answer, so the reader has to be able to give it back
+// after picking something. Settings disables its empty option because
+// setCountry() refuses the empty value; nothing refuses it here.
+it('leaves the empty option choosable, and marks the chosen country selected', function (): void {
+    $component = Livewire::test(SignupPage::class);
+
+    expect($component->html())->toMatch('/<option value=""\s+selected>/')
+        ->not->toContain('<option value="" disabled');
+
+    expect($component->set('country', 'nl')->html())->toContain('<option value="nl" selected>');
+});
+
 it('drops a country code that is not on the allow-list', function (): void {
     $user = signupWithCountry('xx');
 

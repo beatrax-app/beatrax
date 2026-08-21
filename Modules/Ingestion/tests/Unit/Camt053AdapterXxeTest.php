@@ -11,13 +11,8 @@ use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 beforeEach(function (): void {
     $this->resolver = new class implements AccountResolver
     {
-        /** @var array<int, string> */
-        public array $askedFor = [];
-
         public function resolve(string $iban): AccountResolution
         {
-            $this->askedFor[] = $iban;
-
             return AccountResolution::unknown($iban);
         }
     };

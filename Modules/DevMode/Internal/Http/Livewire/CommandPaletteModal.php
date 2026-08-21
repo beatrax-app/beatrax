@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Public\Contracts\AppActionRegistry;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Contracts\NavigationRegistry;
@@ -135,7 +136,7 @@ final class CommandPaletteModal extends Component
                     'url' => null,
                     'handler' => $hasArgs ? 'command-args:prompt' : 'spawn-command',
                     'name' => $spec->name,
-                    'tier' => 'safe',
+                    'tier' => CommandTier::Safe->value,
                     'hasArgs' => $hasArgs,
                     'keywords' => [$spec->label, $spec->description ?? ''],
                 ];

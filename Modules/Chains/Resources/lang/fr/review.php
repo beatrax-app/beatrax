@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Vérifier les chaînes',
     'heading' => 'Vérifier les chaînes',
-    'hint' => 'indice|indices',
+    'hint' => ':count indice|:count indices',
     'subtitle' => 'Confirme ou rejette les liens candidats que le résolveur de chaînes n\'a pas pu confirmer automatiquement.',
 
     'empty_heading' => 'Rien à vérifier',

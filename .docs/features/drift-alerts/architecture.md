@@ -231,6 +231,15 @@ itself never writes to `recurring_series`, keeping the
 exemption list. `currentValue === null` means "use the user-global
 default" — the popover's "Use global default" option saves `null` back.
 
+`/drift` mounts one of these per alert group, so the value arrives as a
+prop: `DriftPage::render()` reads the whole column for the grouped series
+in one `DriftAlertQuery::seriesThresholdsForUser()` call and hands each
+editor its own entry. Because `null` is a real answer there, a bare
+`currentValue` cannot say "nothing was loaded"; `currentValueLoaded`
+carries that, and a surface that mounts the editor alone —
+`/recurring/series/{id}` — passes neither, and the component reads its
+own row.
+
 ## Job concurrency contracts
 
 **`DetectDriftAlertsJob`** — per-(user, series) drift evaluation,

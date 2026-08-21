@@ -17,8 +17,7 @@ return [
     'net' => 'Neto',
 
     'status_tiles_aria' => 'Statusne pločice',
-    'email_scan_health' => 'Stanje skeniranja e-pošte — :count povezano',
-    'inbox' => 'sanduče|sandučeta|sandučadi',
+    'email_scan_health' => 'Stanje skeniranja e-pošte — :count povezano sanduče|Stanje skeniranja e-pošte — :count povezano sandučeta|Stanje skeniranja e-pošte — :count povezano sandučadi',
 
     'top_spending' => 'Najveći troškovi',
     'no_expenses' => 'Još nema kategorizovanih troškova.',

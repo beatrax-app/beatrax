@@ -37,7 +37,7 @@ anchor in months that have it.
 Irregular-cadence series with a null `nextExpectedAt` are excluded entirely
 (there is no well-defined placement date). A series' occurrences are also
 floored at its **inception** — the earliest observed `recurring_series_occurrences`
-row, or `created_at` as a fallback, minus a small slack (`MATCH_WINDOW_DAYS`)
+row, or `created_at` as a fallback, minus a small slack (`MatchWindow::DAYS`)
 so a payment expected slightly before its first observed occurrence is not
 dropped along with genuine pre-inception phantoms. Without this floor, every
 history month before a series existed would render a phantom "expected — not
@@ -48,7 +48,10 @@ service issues a bounded number of queries per render regardless of how many
 series are approved, resolving counterparty identity primarily through
 occurrence → transaction → counterparty links and falling back to a
 `cluster_counterparty_key` ↔ counterparty-slug match for series with no
-linked occurrence yet.
+linked occurrence yet. That fallback only ever reaches a single-token
+merchant, and reaches nothing at all for a user with at-rest encryption
+enabled: the key is a 64-hex blind index by then, and no slug can equal
+one.
 
 ## Balance aggregation
 

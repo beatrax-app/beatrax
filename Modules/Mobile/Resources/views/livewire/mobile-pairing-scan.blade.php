@@ -19,20 +19,19 @@
 --}}
 @use('Modules\Core\Public\Support\Lang')
 @use('Illuminate\Support\Js')
-{{-- Full-screen safe-area chrome, matching setup-progress-screen and
-     sync-complete-screen. This screen used to render inside layouts.app,
+@use('Modules\Sync\Public\Enums\PairingWizardStep')
+{{-- .safe-screen, matching setup-progress-screen and sync-complete-screen.
+     This screen used to render inside layouts.app,
      which brought the drawer, sidebar and mobile top bar along with it —
      app navigation wrapped around a blocking setup step the user cannot
      leave, and tapping it left the wizard mid-ceremony. --}}
-<div class="min-h-screen bg-white dark:bg-slate-950
-            pl-[var(--safe-left)] pr-[var(--safe-right)]
-            pt-[var(--safe-top)] pb-[var(--safe-bottom)]"
+<div class="safe-screen min-h-screen bg-white dark:bg-slate-950"
      data-testid="mobile-pairing-scan"
-     wire:key="pairing-step-{{ $step }}">
+     wire:key="pairing-step-{{ $wizardStep->value }}">
 <div class="max-w-lg mx-auto px-6 py-8 space-y-4">
 
     {{-- ===== Step: camera scan (default landing) ===== --}}
-    @if ($step === 'scan')
+    @if ($wizardStep === PairingWizardStep::Scan)
         <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::pairing.scan_heading') }}</h1>
         <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('mobile::pairing.scan_subtitle') }}</p>
 
@@ -129,7 +128,7 @@
     @endif
 
     {{-- ===== Step: enter a code (fallback — camera unavailable/denied or user choice) ===== --}}
-    @if ($step === 'enter_code')
+    @if ($wizardStep === PairingWizardStep::EnterCode)
         <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::pairing.enter_heading') }}</h1>
 
         @if ($cameraUnavailableNotice)
@@ -204,7 +203,7 @@
     @endif
 
     {{-- ===== Step: confirm safety numbers (the trust gate) ===== --}}
-    @if ($step === 'confirm')
+    @if ($wizardStep === PairingWizardStep::Confirm)
         <div wire:poll.3s="checkPairingState">
             <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::pairing.confirm_heading') }}</h1>
 
@@ -276,7 +275,7 @@
     @endif
 
     {{-- ===== Step: success ===== --}}
-    @if ($step === 'success')
+    @if ($wizardStep === PairingWizardStep::Success)
         <div class="space-y-3 text-center">
             <svg class="mx-auto h-6 w-6 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

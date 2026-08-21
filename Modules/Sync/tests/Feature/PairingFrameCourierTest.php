@@ -5,8 +5,10 @@ declare(strict_types=1);
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Sync\Internal\Crypto\GdkEpochControlHandler;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
+use Modules\Sync\Internal\Pairing\PairingFrameCourier;
 use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
@@ -336,24 +338,13 @@ it('drainPairingFrames() never throws when no local self-identity exists yet', f
 });
 
 it('leaves a foreign frame type in the mailbox for its own transport', function (): void {
-    /** @var DatabaseManager $db */
-    $db = app(DatabaseManager::class);
-
     // GDK epoch wraps queue in this same mailbox but travel on the authenticated
     // sync session. The pairing poll used to confirm — and so DELETE — every type
     // it did not recognise, which destroyed the peer's key.
-    $userId = (int) $db->connection()->table('users')->insertGetId([
-        'username' => 'courier-foreign-'.bin2hex(random_bytes(4)),
-        'password' => 'fixture',
-        'period_start_day' => 1,
-        'default_currency_view' => 'eur_only',
-    ]);
+    $foreignType = (new ReflectionClass(PairingFrameCourier::class))->getConstant('FOREIGN_FRAME_TYPE');
 
-    $source = (string) file_get_contents(
-        dirname(__DIR__, 2).'/Internal/Pairing/PairingFrameCourier.php'
-    );
-
-    expect($userId)->toBeGreaterThan(0)
-        ->and($source)->toContain('self::FOREIGN_FRAME_TYPES => false')
-        ->and($source)->toContain("'GDK_EPOCH_WRAP'");
+    // The literal is pinned here on purpose: it crosses between devices and
+    // between app versions, so an older peer must still recognise it.
+    expect($foreignType)->toBe(GdkEpochControlHandler::MSG_GDK_EPOCH_WRAP)
+        ->and($foreignType)->toBe('GDK_EPOCH_WRAP');
 });

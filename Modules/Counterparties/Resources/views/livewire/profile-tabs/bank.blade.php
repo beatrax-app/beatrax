@@ -2,6 +2,7 @@
 {{-- The bars are fed from categoryBreakdown, which is per-category spend
     rather than a bank-fee aggregation — close enough while every row on a
     bank counterparty is a fee. --}}
+@use('Modules\Ledger\Public\Services\BaseCurrency')
 @use('Modules\Ledger\Public\ValueObjects\Money')
 @php
     $maxFee = max(1, ...array_map(fn ($cat) => abs((int) $cat->total_minor), $categoryBreakdown->all() ?: [(object) ['total_minor' => 0]]));
@@ -27,7 +28,7 @@
                     <div class="fee-bar-track">
                         <div class="fee-bar-fill" style="width: {{ $pct }}%; background: var(--color-amber);"></div>
                     </div>
-                    <span class="fee-total">{{ Money::ofMinor($absMinor, 'EUR')->format() }}</span>
+                    <span class="fee-total">{{ Money::ofMinor($absMinor, BaseCurrency::value())->format() }}</span>
                 </div>
             @endforeach
         @endif

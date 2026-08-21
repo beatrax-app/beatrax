@@ -11,6 +11,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Ledger\Public\Services\TransactionCursor;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -136,11 +137,10 @@ final class FtsCandidateResolver
             ->where('transactions.user_id', $user->id);
 
         $applyFilters($query);
+        TransactionCursor::orderNewestFirst($query);
 
         /** @var iterable<stdClass> $candidates */
         $candidates = $query
-            ->orderByDesc('transactions.posted_at')
-            ->orderByDesc('transactions.id')
             ->limit(self::LIKE_FALLBACK_CANDIDATE_CAP)
             ->get(['transactions.id', 'transactions.counterparty_name', 'transactions.description']);
 

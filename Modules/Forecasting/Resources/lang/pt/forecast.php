@@ -69,7 +69,7 @@ return [
     'highlights_shortfall_aria' => ':count janela de défice ativa nos próximos :days dias|:count janelas de défice ativas nos próximos :days dias',
     'dips_to' => ':name desce para :amount',
     'on_date_suffix' => ' a :date',
-    'shortfall_window' => '1 janela de défice ativa|:count janelas de défice ativas',
+    'shortfall_window' => ':count janela de défice ativa|:count janelas de défice ativas',
     'lowest_in_30' => 'Mínimo em 30 dias: :amount',
     'next_ics' => 'Próxima liquidação ICS: :amount a :date',
 ];

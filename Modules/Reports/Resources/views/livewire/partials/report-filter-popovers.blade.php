@@ -1,3 +1,4 @@
+@use('Modules\Ledger\Public\Enums\AmountDirection')
 @use('Modules\Ledger\Public\Services\BaseCurrency')
 @use('Modules\Ledger\Public\ValueObjects\Money')
 @use('Modules\Ledger\Public\ValueObjects\MoneyInput')
@@ -139,12 +140,12 @@
 {{-- ─── Amount chip ────────────────────────────────────────────────────── --}}
 <div class="relative" x-data="{ open: false }" x-on:keydown.escape.window="open = false">
     @php
-        $amountActive = ($filterAmountMin ?? '') !== '' || ($filterAmountMax ?? '') !== '' || ($filterAmountDir ?? 'both') !== 'both';
+        $amountActive = ($filterAmountMin ?? '') !== '' || ($filterAmountMax ?? '') !== '' || ($filterAmountDir ?? AmountDirection::Both->value) !== AmountDirection::Both->value;
         $amountLabel = Lang::get('reports::builder.filter.amount').' &#9662;';
         if ($amountActive) {
-            if (($filterAmountDir ?? 'both') === 'in') {
+            if (($filterAmountDir ?? AmountDirection::Both->value) === AmountDirection::In->value) {
                 $amountLabel = Lang::get('reports::builder.filter.dir_in');
-            } elseif (($filterAmountDir ?? 'both') === 'out') {
+            } elseif (($filterAmountDir ?? AmountDirection::Both->value) === AmountDirection::Out->value) {
                 $amountLabel = Lang::get('reports::builder.filter.dir_out');
             }
             if (($filterAmountMin ?? '') !== '') {
@@ -168,7 +169,7 @@
         @if ($amountActive)
             <button
                 type="button"
-                wire:click.stop="$set('filterAmountMin', ''); $set('filterAmountMax', ''); $set('filterAmountDir', 'both')"
+                wire:click.stop="$set('filterAmountMin', ''); $set('filterAmountMax', ''); $set('filterAmountDir', '{{ AmountDirection::Both->value }}')"
                 class="srch-chip-close"
                 aria-label="{{ Lang::get('reports::builder.filter.remove_amount') }}"
             >&times;</button>
@@ -177,7 +178,7 @@
     <div x-show="open" x-cloak x-on:click.outside="open = false" x-transition class="srch-popover" role="dialog" aria-label="{{ Lang::get('reports::builder.filter.amount_dialog') }}">
         <div class="srch-popover-inner">
             <div class="srch-dir-group mb-3">
-                @foreach (['both' => Lang::get('reports::builder.filter.dir_both'), 'in' => Lang::get('reports::builder.filter.dir_in'), 'out' => Lang::get('reports::builder.filter.dir_out')] as $val => $lbl)
+                @foreach ([AmountDirection::Both->value => Lang::get('reports::builder.filter.dir_both'), AmountDirection::In->value => Lang::get('reports::builder.filter.dir_in'), AmountDirection::Out->value => Lang::get('reports::builder.filter.dir_out')] as $val => $lbl)
                     <label class="srch-radio-row">
                         <input type="radio" wire:model.live="filterAmountDir" value="{{ $val }}" class="srch-radio" />
                         <span>{{ $lbl }}</span>

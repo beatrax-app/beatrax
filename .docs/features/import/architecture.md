@@ -87,7 +87,8 @@ What the module explicitly does NOT do:
 - **Internal/Pipeline/ImportPipeline** — orchestrates the stage
   chain.
 - **Internal/Pipeline/PreviewCache** — JSON-only cache of preview
-  rows.
+  rows, plus the per-run section summary the consolidated screen
+  renders from.
 - **Internal/Pipeline/Stages/** — `ParseStage`,
   `ClassifyTransactionType`, `PaymentTypeClassifierStage`,
   `FingerprintStage`. The other stages
@@ -237,6 +238,16 @@ otherwise the translated `ImportFailureReason` of the first failed row
 — never a caught exception's own message, which names internal classes
 and the reader's user id.
 
+None of that is computed by walking the rows. `build()` runs inside a
+Livewire `render()`, so it repeats on every round-trip of the step; a
+section reads `PreviewCache::sectionSummary()`, which answers from a
+small per-run entry holding the four counts, the file failure, the first
+failed row's reason and the five sample rows. The run's row set is read
+back only when a reader expands a section past the stored sample
+(`loadMoreRows()` grows the override by 25 a click) or when a preview was
+cached without a summary beside it. Three runs of 2,000 rows cost 794 ms
+a render through the rows and 0.9 ms through the summaries.
+
 
 ## What the results screen can still say
 
@@ -298,7 +309,9 @@ mutates `transactions.description`:
 1. The user's exact `merchant_aliases.pattern` match — the raw
    description as first seen.
 2. The user's `generalized_pattern` **whole-token** match, scanned over
-   the user's most recent 500 aliases.
+   the user's first 500 aliases by id. The exact tier above is not
+   capped: an alias past the cap still renames its own raw description,
+   it only stops widening to other rows.
 3. The community corpus's exact `pattern` match (`user_id IS NULL` rows).
 4. The community corpus's generalized-pattern whole-token match.
 5. `null` — the caller renders the raw, italic-muted description.
@@ -306,6 +319,18 @@ mutates `transactions.description`:
 Exact-then-generalized ordering is deliberate: if both an exact alias and
 a broader generalized alias match the same row, the exact one wins, so a
 broad rename can never silently override a more specific one.
+
+Both alias tiers read **one memoised list per reader**, loaded and sorted
+once and held for the life of the container — the same shape
+`CommunityCorpusQuery` holds its corpus tiers in, and the same reason:
+`resolve()` is called once per transaction, so a whole 40,000-row backfill
+paid two `merchant_aliases` reads and a sort per row. `MerchantNameResolver`
+is a **singleton**, so the memo is keyed by user id; a container-wide memo
+would answer one household member out of another's aliases.
+`CreateMerchantAlias` calls `MerchantNameResolver::forget($userId)` after
+it writes, and any other writer into `merchant_aliases` that runs in a
+process which then resolves has to do the same, or the screen renders the
+list as it stood before the write.
 
 Both generalized tiers run `CorpusPatternMatcher::containsToken()` — never
 SQL `LIKE`, mirroring the Categorization RuleEvaluator's defence against
@@ -628,7 +653,24 @@ would leak across users on the same queue-worker process.
 preview payload between the upload/preview click and the confirm click
 (30-minute TTL, DTOs round-tripped via JSON — never PHP's native
 object-deserialisation, so a corrupted or schema-skewed payload throws
-loudly instead of silently dropping rows). The cached content is a
+loudly instead of silently dropping rows).
+
+Four keys per run: `import.{id}.preview`, `import.{id}.preview-summary`,
+`import.{id}.canonical` and `import.{id}.enrichments`. The summary is
+derived from the preview payload and written, refreshed and dropped with
+it — `put()`, `applyAliasInPlace()` and `forget()` each touch both — so a
+writer that puts the preview key directly has to drop the summary key
+beside it or the consolidated screen answers from the older row set. A
+reader that needs more than the summary holds falls back to the preview
+payload on its own.
+
+Each getter reads its key **once**. `Repository::has()` is `get()` with
+the result thrown away, so the file store deserialises the whole payload
+twice for a `has()`-then-`get()` pair — on the preview key that is the
+entire row set, read twice per render. A single `get()` distinguishes the
+two cases just as well: nothing is ever stored as `null`, so `null` is
+absence and any other non-conforming payload is the corruption that
+throws. The cached content is a
 knowingly-accepted transient plaintext exposure: `counterparty_name`,
 `description`, `counterparty_iban`, and any decrypted conflict values sit
 in cleartext at rest for the TTL window (a plaintext file under

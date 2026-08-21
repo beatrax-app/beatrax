@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Internal\Queries\RecurringSeriesProjector;
@@ -421,9 +422,9 @@ final readonly class RecurringSeriesQuery
             $amountMinor = self::toInt($row->observed_amount_minor);
             $observedCurrency = self::toString($row->observed_currency);
             $eurAmountMinor = null;
-            if ($observedCurrency !== 'EUR') {
+            if ($observedCurrency !== Currency::Eur->value) {
                 $settledCurrency = self::toString($row->settled_currency ?? null);
-                if ($settledCurrency === 'EUR') {
+                if ($settledCurrency === Currency::Eur->value) {
                     $eurAmountMinor = self::toInt($row->settled_amount_minor ?? null);
                 }
             }

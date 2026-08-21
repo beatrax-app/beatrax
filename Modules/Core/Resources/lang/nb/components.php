@@ -42,12 +42,14 @@ return [
         'next_month' => 'Neste måned',
         'today' => 'I dag',
         'clear' => 'Tøm',
+        'empty' => 'ingen dato valgt',
     ],
 
     'time' => [
         'open' => 'Velg et tidspunkt',
         'hour' => 'Time',
         'minute' => 'Minutt',
+        'empty' => 'intet tidspunkt valgt',
     ],
 
     'veil_locked' => 'Appen er låst',

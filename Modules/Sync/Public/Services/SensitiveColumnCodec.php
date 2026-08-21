@@ -29,6 +29,15 @@ final class SensitiveColumnCodec
         return "{$table}:{$field}:{$epochId}";
     }
 
+    // The op-log shape, which binds the row's primary key as well. Writer and
+    // verifier have to emit identical bytes: one byte apart and decrypt()
+    // returns false, which quarantines the entry with nothing a user would
+    // ever see — so both sides read the shape from here, not from memory.
+    public static function opLogAssociatedData(string $table, int|string $pk, string $field, int $epochId): string
+    {
+        return "{$table}:{$pk}:{$field}:{$epochId}";
+    }
+
     // Pass-through (returns $value unchanged) when encryption is not
     // currently usable (not enabled for this user, or the app-lock is locked).
     public function encryptValue(string $table, string $field, string $value, int $userId, Session $session): string

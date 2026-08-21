@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'title' => 'Звіти',
     'page_title' => 'Звіти · Beatrax',
-    'saved_report' => 'збережений звіт|збережені звіти|збережених звітів',
+    'saved_report' => ':count збережений звіт|:count збережені звіти|:count збережених звітів',
     'pinned_count' => 'закріплено',
     'dismiss' => 'Відхилити',
 

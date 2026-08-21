@@ -6,6 +6,7 @@ namespace Modules\Ingestion\Internal\Adapters\Csv;
 
 use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
 final class GenericCsvAmountParser
 {
@@ -38,9 +39,9 @@ final class GenericCsvAmountParser
 
         [$intPart, $fracPart] = array_pad(explode('.', $raw, 2), 2, '');
 
-        // No real amount has a 16+ digit integer part; fail with the domain
-        // exception rather than letting the (int) cast raise a TypeError.
-        if (strlen($intPart) > 15) {
+        // Thrown rather than left to the (int) cast, which raises a TypeError
+        // once the minor-unit multiplication leaves the 64-bit range.
+        if (strlen($intPart) > MoneyInput::MAX_WHOLE_DIGITS) {
             throw new InvalidAmountException(sprintf("Amount out of range: '%s'.", $cell));
         }
 

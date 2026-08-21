@@ -6,8 +6,6 @@ namespace Modules\Ingestion\Internal\Adapters\Ics;
 
 final class IcsPdfExtractionMap
 {
-    public const TRANSACTIONS_TABLE_ANCHOR = 'transactie boeking';
-
     /**
      * @var list<string>
      */
@@ -36,16 +34,4 @@ final class IcsPdfExtractionMap
     public const SUMMARY_CREDIT_LIMIT = 'Bestedingslimiet';
 
     public const SUMMARY_MIN_DUE = 'Minimaal te betalen bedrag';
-
-    /**
-     * @var list<string>
-     */
-    public const SUMMARY_TOKENS = [
-        self::SUMMARY_OPENING,
-        self::SUMMARY_RECEIVED,
-        self::SUMMARY_CHARGES,
-        self::SUMMARY_CLOSING,
-        self::SUMMARY_CREDIT_LIMIT,
-        self::SUMMARY_MIN_DUE,
-    ];
 }

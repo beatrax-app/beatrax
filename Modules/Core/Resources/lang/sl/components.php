@@ -42,12 +42,14 @@ return [
         'next_month' => 'Naslednji mesec',
         'today' => 'Danes',
         'clear' => 'Počisti',
+        'empty' => 'datum ni izbran',
     ],
 
     'time' => [
         'open' => 'Izberi čas',
         'hour' => 'Ura',
         'minute' => 'Minuta',
+        'empty' => 'ura ni izbrana',
     ],
 
     'veil_locked' => 'Aplikacija je zaklenjena',

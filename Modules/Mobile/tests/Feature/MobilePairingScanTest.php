@@ -11,6 +11,7 @@ use Livewire\Livewire;
 use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Http\Livewire\MobilePairingScan;
 use Modules\Mobile\Internal\Pairing\QrScanBridge;
 use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
@@ -19,6 +20,7 @@ use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\QrPayloadBuilder;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
+use Modules\Sync\Public\Enums\PairingWizardStep;
 use Modules\Sync\Public\Services\PairingGateway;
 use Modules\Sync\Tests\Support\PairingSafetyDigest;
 
@@ -610,6 +612,55 @@ it('an empty CodeScanned payload is ignored rather than treated as a bad code', 
         ->call('onCodeScanned', data: '')
         ->assertSet('step', 'scan')
         ->assertSet('flashMessage', '');
+});
+
+// $step is a plain public property, so the client decides what arrives in it.
+// Typing it as a backed enum would make a crafted value a 500 rather than a
+// harmless fallback, which is why the property stays a string.
+it('renders the first screen when a step outside the wizard arrives from the wire', function (): void {
+    $user = pairingScanTestUser('mobile-pair-bogus-step');
+    test()->actingAs($user);
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    pairingScanSetUpIdentity($user, $session);
+
+    $html = (string) Livewire::test(MobilePairingScan::class)
+        ->set('step', 'not-a-step')
+        ->assertSet('step', 'not-a-step')
+        ->html();
+
+    expect($html)->toContain('pairing-step-'.PairingWizardStep::Scan->value)
+        ->and($html)->toContain(Lang::get('mobile::pairing.scan_heading'));
+});
+
+// entryStep carries no #[Locked], so a crafted payload can name any step in it.
+// A reset reads it to return the reader to the arm they chose, and honouring a
+// value outside those two arms walks a cancelled attempt onto a passed screen.
+it('returns a reset to the camera when entryStep names a step past the two entry arms', function (): void {
+    $user = pairingScanTestUser('mobile-pair-bogus-entry');
+    test()->actingAs($user);
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    pairingScanSetUpIdentity($user, $session);
+    $issued = pairingScanIssueToken($user);
+
+    /** @var WordCodeEncoder $encoder */
+    $encoder = app(WordCodeEncoder::class);
+
+    Livewire::test(MobilePairingScan::class)
+        ->set('wordCode', $encoder->encode($issued['token']))
+        ->call('submitCode', null)
+        ->assertSet('step', 'confirm')
+        ->set('entryStep', PairingWizardStep::Success->value)
+        ->tap(function () use ($user): void {
+            app(DatabaseManager::class)->connection()->table('pairing_tokens')
+                ->where('user_id', $user->id)
+                ->update(['state' => PairingGateway::STATE_EXPIRED]);
+        })
+        ->call('checkPairingState')
+        ->assertSet('step', PairingWizardStep::Scan->value);
 });
 
 // The screen still rendered with a confirmed peer and no ceremony in flight,

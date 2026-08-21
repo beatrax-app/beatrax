@@ -12,6 +12,7 @@ return [
     'ok' => 'Labi',
     'ok_aria' => 'Labi — apstiprināt PIN kodu',
     'sign_out' => 'Atteikties',
+    'forgot_pin' => 'Aizmirsāt PIN kodu? Atsakieties — varat pieteikties atkārtoti ar konta paroli un iestatīt jaunu PIN kodu. Dati netiek zaudēti.',
 
     'errors' => [
         'pin_length' => 'PIN kodā jābūt vismaz 6 cipariem.',

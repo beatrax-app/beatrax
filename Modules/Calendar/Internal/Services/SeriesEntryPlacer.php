@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
 use Modules\Calendar\Internal\Dto\CalendarEntryDto;
+use Modules\Calendar\Internal\Support\MatchWindow;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Enums\Duration;
@@ -20,10 +21,6 @@ use stdClass;
 final readonly class SeriesEntryPlacer
 {
     use CoercesScalars;
-
-    // Slack subtracted from a series' first observed occurrence so an entry
-    // expected just before its first payment is placed, not dropped.
-    private const int MATCH_WINDOW_DAYS = 7;
 
     private const int DAYS_PER_WEEK = 7;
 
@@ -341,7 +338,7 @@ final readonly class SeriesEntryPlacer
             }
             $map[$seriesId] = CarbonImmutable::parse($raw)
                 ->startOfDay()
-                ->subDays(self::MATCH_WINDOW_DAYS);
+                ->subDays(MatchWindow::DAYS);
         }
 
         return $map;

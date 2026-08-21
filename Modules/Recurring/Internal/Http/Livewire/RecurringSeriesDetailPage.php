@@ -11,6 +11,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
+use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Public\Actions\EditRecurringSeriesVarianceTolerance;
 use Modules\Recurring\Public\Dto\RecurringSeriesAmountTrendDto;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
@@ -96,13 +97,13 @@ final class RecurringSeriesDetailPage extends Component
         foreach ($trend->points as $point) {
             $primaryData[] = [
                 'x' => $point['date'],
-                'y' => self::minorToMajor($point['amount_minor']),
+                'y' => $point['amount_minor'] / Money::MINOR_UNITS_PER_MAJOR,
             ];
             if ($point['eur_amount_minor'] !== null) {
                 $hasShadow = true;
                 $shadowData[] = [
                     'x' => $point['date'],
-                    'y' => self::minorToMajor($point['eur_amount_minor']),
+                    'y' => $point['eur_amount_minor'] / Money::MINOR_UNITS_PER_MAJOR,
                 ];
             }
         }
@@ -145,10 +146,5 @@ final class RecurringSeriesDetailPage extends Component
                 'show' => $hasShadow,
             ],
         ];
-    }
-
-    private static function minorToMajor(int $minor): float
-    {
-        return $minor / 100;
     }
 }

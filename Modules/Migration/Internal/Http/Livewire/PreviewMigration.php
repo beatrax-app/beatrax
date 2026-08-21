@@ -13,6 +13,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Migration\Internal\Actions\ConfirmMigration;
 use Modules\Migration\Internal\Actions\DiscardMigrationRun;
 use Modules\Migration\Internal\Dto\PreviewSummary;
+use Modules\Migration\Internal\Enums\ConflictResolution;
 use Modules\Migration\Internal\Pipeline\PreviewSummaryBuilder;
 use Modules\Migration\Models\MigrationRun;
 
@@ -29,7 +30,8 @@ final class PreviewMigration extends Component
     {
         // Scoped to this run and user, so a forged $conflictId matches zero rows
         // and no-ops. Nothing is applied to the domain until ConfirmMigration.
-        if (! in_array($choice, ['keep_local', 'take_source'], true)) {
+        $resolution = ConflictResolution::tryFrom($choice);
+        if ($resolution === null) {
             return;
         }
 
@@ -40,7 +42,7 @@ final class PreviewMigration extends Component
             ->where('migration_run_id', $this->runId)
             ->where('user_id', $user->id)
             ->where('item_type', 'conflict')
-            ->update(['resolution' => $choice]);
+            ->update(['resolution' => $resolution->value]);
     }
 
     public function confirm(

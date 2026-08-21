@@ -17,8 +17,7 @@ return [
     'net' => 'Neto',
 
     'status_tiles_aria' => 'Olekuplaadid',
-    'email_scan_health' => 'E-posti skannimise seisund — :count ühendatud',
-    'inbox' => 'postkast|postkasti',
+    'email_scan_health' => 'E-posti skannimise seisund — :count ühendatud postkast|E-posti skannimise seisund — :count ühendatud postkasti',
 
     'top_spending' => 'Suurimad kulutused',
     'no_expenses' => 'Kategoriseeritud kulusid veel pole.',

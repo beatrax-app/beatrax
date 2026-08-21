@@ -12,13 +12,15 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Modules\Auth\Public\Actions\SignupAction;
+use Modules\Auth\Public\Contracts\PasswordPolicy;
 use Modules\Auth\Public\Recovery\RecoveryCodeFormatter;
 use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
+use Modules\Core\Public\Http\Livewire\Concerns\ReportsFieldRejections;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
-use Modules\Core\Public\Support\ValidationMessages;
+use Modules\Mobile\Internal\Identity\ImportBootstrapStep;
 use Modules\Mobile\Internal\Identity\MobileProvisioningCredentials;
 use Modules\Mobile\Internal\Identity\RecoveryCodesExportBridge;
 use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
@@ -28,6 +30,7 @@ use Throwable;
 final class MobileImportBootstrap extends Component
 {
     use HoldsFlashMessage;
+    use ReportsFieldRejections;
 
     private const RECOVERY_CODES_SESSION_KEY = 'auth.signup.recovery_codes_plain';
 
@@ -39,8 +42,6 @@ final class MobileImportBootstrap extends Component
     // window, and forgotten the moment provisioning succeeds.
     private const PENDING_CREDENTIALS_SESSION_KEY = 'mobile.import.pending_credentials';
 
-    private const MINIMUM_PASSWORD_LENGTH = 12;
-
     private const MINIMUM_PIN_LENGTH = 6;
 
     // The five boxes on the form. SignupAction also rejects under `signup` when
@@ -48,7 +49,10 @@ final class MobileImportBootstrap extends Component
     // so it stays on the form-level line.
     private const array FIELD_KEYS = ['username', 'password', 'passwordConfirmation', 'pin', 'confirmPin'];
 
-    public string $step = 'collect_pin';
+    // Stays a string on the wire: a public property is rehydrated straight from
+    // the client payload with no enum coercion, so typing it would turn a
+    // crafted step into a 500. currentStep() is the enum every reader uses.
+    public string $step = ImportBootstrapStep::CollectPin->value;
 
     // True when this device already has an account: the signup form is then
     // an offer the user cannot take, so the view points at pairing instead.
@@ -66,7 +70,7 @@ final class MobileImportBootstrap extends Component
         // Codes still in the session means signup just happened and the
         // one-time display is still owed.
         if ($this->recoveryCodesFromSession($session) !== [] && ! $this->recoveryCodesAlreadyShown($session)) {
-            $this->step = 'recovery_codes';
+            $this->step = ImportBootstrapStep::RecoveryCodes->value;
 
             return;
         }
@@ -116,7 +120,7 @@ final class MobileImportBootstrap extends Component
             // over sync, and a local set would collide id-for-id with them.
             $userId = $signup->__invoke($this->username, $this->password, seedsStarterData: false)['user']->id;
         } catch (ValidationException $e) {
-            $this->reportRejection($e);
+            $this->reportRejection($e, 'mobile::import.errors.account_failed');
 
             return;
         }
@@ -139,9 +143,9 @@ final class MobileImportBootstrap extends Component
 
         if ($this->provisionDeviceLocally($credentials, $session, $lockGateway, $pairingGateway, $db, $importIntent)) {
             $session->forget(self::PENDING_CREDENTIALS_SESSION_KEY);
-            $this->step = 'recovery_codes';
+            $this->step = ImportBootstrapStep::RecoveryCodes->value;
         } else {
-            $this->step = 'provisioning_failed';
+            $this->step = ImportBootstrapStep::ProvisioningFailed->value;
         }
     }
 
@@ -157,7 +161,7 @@ final class MobileImportBootstrap extends Component
             $broken['username'] = Lang::get('mobile::import.errors.username_required');
         }
 
-        if (strlen($this->password) < self::MINIMUM_PASSWORD_LENGTH) {
+        if (strlen($this->password) < PasswordPolicy::MINIMUM_LENGTH) {
             $broken['password'] = Lang::get('mobile::import.errors.password_length');
         }
 
@@ -178,23 +182,6 @@ final class MobileImportBootstrap extends Component
         }
 
         return $broken !== [];
-    }
-
-    private function reportRejection(ValidationException $exception): void
-    {
-        $placed = false;
-        $errors = $exception->validator->errors()->messages();
-
-        foreach (self::FIELD_KEYS as $field) {
-            foreach ($errors[$field] ?? [] as $message) {
-                $this->addError($field, $message);
-                $placed = true;
-            }
-        }
-
-        if (! $placed) {
-            $this->flashMessage = ValidationMessages::first($exception, 'mobile::import.errors.account_failed');
-        }
     }
 
     // Idempotent-safe retry of the provisioning steps only - never
@@ -220,7 +207,7 @@ final class MobileImportBootstrap extends Component
             // re-entry through collect_pin so the user re-types real
             // credentials.
             $this->flashMessage = Lang::get('mobile::import.errors.session_expired');
-            $this->step = 'collect_pin';
+            $this->step = ImportBootstrapStep::CollectPin->value;
 
             return;
         }
@@ -239,7 +226,12 @@ final class MobileImportBootstrap extends Component
         $this->password = '';
         $this->passwordConfirmation = '';
         $this->flashMessage = '';
-        $this->step = 'recovery_codes';
+        $this->step = ImportBootstrapStep::RecoveryCodes->value;
+    }
+
+    private function currentStep(): ImportBootstrapStep
+    {
+        return ImportBootstrapStep::tryFrom($this->step) ?? ImportBootstrapStep::CollectPin;
     }
 
     // Leaves the recovery-codes ceremony and enters the pairing flow,
@@ -263,7 +255,7 @@ final class MobileImportBootstrap extends Component
         // Only the recovery step has an authenticated user: every earlier step
         // renders before signup completes, so resolving the user up front
         // threw "No authenticated user is bound to the current guard".
-        $showingCodes = $this->step === 'recovery_codes';
+        $showingCodes = $this->currentStep() === ImportBootstrapStep::RecoveryCodes;
 
         // Recorded here because the render IS the display: the way off this
         // step is a plain link, so no later server call reports that the codes
@@ -274,6 +266,10 @@ final class MobileImportBootstrap extends Component
         }
 
         $view = $views->make('mobile::livewire.mobile-import-bootstrap', [
+            // Under its own name, not $step: view data cannot shadow a public
+            // property, and the view needs the resolved enum rather than the
+            // raw string the client last put on the wire.
+            'bootstrapStep' => $this->currentStep(),
             'codes' => $showingCodes ? $this->recoveryCodesFromSession($session) : [],
             // The browser saves the file itself and navigates by link, so the
             // one-shot recovery screen needs no Livewire round-trip at all —

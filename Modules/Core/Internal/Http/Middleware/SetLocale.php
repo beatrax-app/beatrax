@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Core\Internal\Http\Middleware;
 
-use Carbon\CarbonImmutable;
 use Closure;
-use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\Request;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\Locale;
@@ -20,7 +18,6 @@ use Symfony\Component\HttpFoundation\Response;
 final class SetLocale
 {
     public function __construct(
-        private readonly Application $app,
         private readonly CurrentUser $currentUser,
         private readonly LocaleNegotiator $negotiator,
     ) {}
@@ -43,17 +40,9 @@ final class SetLocale
         // than the first-declared case).
         $browserLocale = $request->getPreferredLanguage(Locale::codes());
 
-        $resolved = $this->negotiator->resolve($userLocale, $sessionLocale, $browserLocale);
-
-        // The APPLICATION locale, not the translator's alone: Livewire
-        // snapshots `app()->getLocale()` (which reads `config('app.locale')`)
-        // and replays it on hydrate, AFTER this middleware — so a desynced
-        // pair rendered every action-reached screen in English.
-        $this->app->setLocale($resolved);
-        // Carbon keeps its own locale, so dates rendered through isoFormat /
-        // translatedFormat / diffForHumans stay English unless it is told the
-        // active language too. Sync it here alongside the translator.
-        CarbonImmutable::setLocale($resolved);
+        $this->negotiator->apply(
+            $this->negotiator->resolve($userLocale, $sessionLocale, $browserLocale),
+        );
 
         /** @var Response $response */
         $response = $next($request);

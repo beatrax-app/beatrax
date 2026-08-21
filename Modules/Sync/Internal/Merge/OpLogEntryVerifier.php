@@ -15,6 +15,7 @@ use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\OpLog\QuarantineReason;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 final readonly class OpLogEntryVerifier
 {
@@ -236,7 +237,7 @@ final readonly class OpLogEntryVerifier
             $plain = $this->fieldCrypto->decrypt(
                 $entry->value,
                 $rawKey,
-                "{$entry->table}:{$entry->pk}:{$entry->field}:{$entry->gdkEpoch}",
+                SensitiveColumnCodec::opLogAssociatedData($entry->table, $entry->pk, $entry->field, $entry->gdkEpoch),
             );
         } finally {
             sodium_memzero($rawKey);

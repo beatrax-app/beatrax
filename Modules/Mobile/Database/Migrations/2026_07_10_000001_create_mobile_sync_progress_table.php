@@ -22,7 +22,8 @@ return new class extends ModuleMigration
             $table->unsignedInteger('records_applied')->default(0);
             $table->unsignedBigInteger('last_hlc_l')->default(0);
             $table->unsignedInteger('last_hlc_c')->default(0);
-            // Application-validated TEXT: pending | pulling | complete.
+            // Application-validated TEXT: the vocabulary is SyncPhase, whose
+            // backing values are exactly the strings this column stores.
             $table->text('phase')->default('pending');
             $table->text('created_at');
             $table->text('updated_at');

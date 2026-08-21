@@ -1,3 +1,5 @@
+@use('Modules\Core\Public\Enums\SnoozeWindow')
+@use('Modules\DriftAlerts\Public\Enums\DriftPageTab')
 @use('Modules\Core\Public\Support\Lang')
 {{--
     A single drift alert row. Renders the direction-aware icon + delta
@@ -10,20 +12,21 @@
 
     Variables in scope:
       - $alert : DriftAlertDto
-      - $tab : 'open' | 'history' | 'dismissed'
+      - $tab : DriftPageTab
       - $tintFor($alert) : Tailwind text-color class
       - $signedFmt($alert) : formatted delta string with leading sign
       - $annualizedFmt($alert) : formatted yearly impact with leading sign
       - $fmt($money) : currency-aware Money formatter
-      - $snoozeTargets : array<'1w'|'1m'|'3m', string ISO8601>
       - $primaryAcknowledge : bool — emerald primary chip if true, slate otherwise
       - $seriesStates : array<int, string> — series id → state
       - $cancellationImpact : ?CancellationImpactDto — projected savings if cancelled (null = unavailable)
       - $showThresholdEditor : bool (default false) — when true, mount the inline threshold-editor popover next to action chips
+      - $thresholdBySeriesId : ?array<int, ?int> (default null) — series id → drift_threshold_percent override, loaded by the parent; null (the variable, not an entry) means it was not loaded and the editor reads its own row
 --}}
 
 @php
     $showThresholdEditor = $showThresholdEditor ?? false;
+    $thresholdBySeriesId = $thresholdBySeriesId ?? null;
 @endphp
 
 @php
@@ -81,10 +84,14 @@
                 </p>
             @endif
         </div>
-        @if ($tab === 'open')
+        @if ($tab === DriftPageTab::Open)
             <div class="flex flex-wrap items-center gap-2 sm:shrink-0">
                 @if ($showThresholdEditor)
-                    @livewire('drift-alerts.drift-threshold-editor', ['recurringSeriesId' => $alert->recurringSeriesId], key('threshold-row-'.$alert->driftAlertId))
+                    @livewire('drift-alerts.drift-threshold-editor', [
+                        'recurringSeriesId' => $alert->recurringSeriesId,
+                        'currentValue' => $thresholdBySeriesId[$alert->recurringSeriesId] ?? null,
+                        'currentValueLoaded' => $thresholdBySeriesId !== null,
+                    ], key('threshold-row-'.$alert->driftAlertId))
                 @endif
                 <button
                     type="button"
@@ -108,24 +115,14 @@
                         x-on:click.outside="open = false"
                         class="absolute right-0 z-10 mt-1 w-48 rounded-md border border-slate-200 bg-white p-2 text-xs shadow-lg dark:bg-slate-950 dark:border-slate-700"
                     >
-                        <button
-                            type="button"
-                            wire:click="snooze({{ $alert->driftAlertId }}, '{{ $snoozeTargets['1w'] }}')"
-                            x-on:click="open = false"
-                            class="block w-full px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900"
-                        >{{ Lang::get('drift-alerts::alerts.row.snooze_1w') }}</button>
-                        <button
-                            type="button"
-                            wire:click="snooze({{ $alert->driftAlertId }}, '{{ $snoozeTargets['1m'] }}')"
-                            x-on:click="open = false"
-                            class="block w-full px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900"
-                        >{{ Lang::get('drift-alerts::alerts.row.snooze_1m') }}</button>
-                        <button
-                            type="button"
-                            wire:click="snooze({{ $alert->driftAlertId }}, '{{ $snoozeTargets['3m'] }}')"
-                            x-on:click="open = false"
-                            class="block w-full px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900"
-                        >{{ Lang::get('drift-alerts::alerts.row.snooze_3m') }}</button>
+                        @foreach (SnoozeWindow::cases() as $window)
+                            <button
+                                type="button"
+                                wire:click="snooze({{ $alert->driftAlertId }}, '{{ $snoozeTargets[$window->value] }}')"
+                                x-on:click="open = false"
+                                class="block w-full px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900"
+                            >{{ Lang::get($window->labelKey('drift-alerts::alerts.row')) }}</button>
+                        @endforeach
                     </div>
                 </div>
                 <button

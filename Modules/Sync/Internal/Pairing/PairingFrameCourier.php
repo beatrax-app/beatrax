@@ -6,6 +6,7 @@ namespace Modules\Sync\Internal\Pairing;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Support\SafeExceptionContext;
+use Modules\Sync\Internal\Crypto\GdkEpochControlHandler;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
@@ -18,9 +19,7 @@ use Throwable;
  */
 final class PairingFrameCourier
 {
-    // Mirrors GdkEpochControlHandler::MSG_GDK_EPOCH_WRAP — that class belongs
-    // to the crypto transport, so this is the wire string, not a reference.
-    private const FOREIGN_FRAME_TYPES = 'GDK_EPOCH_WRAP';
+    private const string FOREIGN_FRAME_TYPE = GdkEpochControlHandler::MSG_GDK_EPOCH_WRAP;
 
     public function __construct(
         private readonly RelayClient $relayClient,
@@ -275,7 +274,7 @@ final class PairingFrameCourier
             // epoch wraps wait in this same mailbox for the authenticated
             // sync session to carry them, and a pairing poll that ate one
             // left the peer permanently without that epoch's key.
-            self::FOREIGN_FRAME_TYPES => false,
+            self::FOREIGN_FRAME_TYPE => false,
             // Deferred is the only outcome worth redelivering: the frame is
             // valid but the local human has not confirmed yet. Applied and
             // Refused are both done with this copy of it.

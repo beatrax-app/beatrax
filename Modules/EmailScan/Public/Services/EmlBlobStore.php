@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use Illuminate\Filesystem\Filesystem;
 use InvalidArgumentException;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\SecretFileMode;
 use Modules\EmailScan\Public\Exceptions\EmlBlobWriteException;
 use Throwable;
 
@@ -18,10 +19,6 @@ final class EmlBlobStore
     private const MESSAGE_ID_PATTERN = '/^[A-Za-z0-9._%=+\-]{1,512}$/';
 
     private const MAX_PARENT_HOPS = 32;
-
-    private const DIR_MODE = 0700;
-
-    private const FILE_MODE = 0600;
 
     public function __construct(
         private readonly Filesystem $files,
@@ -70,7 +67,7 @@ final class EmlBlobStore
     public function put(string $absolutePath, string $rawMime): void
     {
         $dir = dirname($absolutePath);
-        $this->files->ensureDirectoryExists($dir, self::DIR_MODE, recursive: true);
+        $this->files->ensureDirectoryExists($dir, SecretFileMode::DIRECTORY, recursive: true);
 
         // ensureDirectoryExists only chmods the leaf, so the per-user and
         // per-inbox levels would inherit umask 0755 and let a cohabiting OS
@@ -107,7 +104,7 @@ final class EmlBlobStore
             @fclose($fp);
             $fp = null;
 
-            if (! @chmod($tmp, self::FILE_MODE)) {
+            if (! @chmod($tmp, SecretFileMode::FILE)) {
                 throw new EmlBlobWriteException(
                     "EmlBlobStore: failed to chmod temp file at {$tmp}.",
                 );
@@ -147,7 +144,7 @@ final class EmlBlobStore
             && str_starts_with($current, $root)
             && is_dir(rtrim($current, DIRECTORY_SEPARATOR))
         ) {
-            @chmod(rtrim($current, DIRECTORY_SEPARATOR), self::DIR_MODE);
+            @chmod(rtrim($current, DIRECTORY_SEPARATOR), SecretFileMode::DIRECTORY);
             $parent = dirname(rtrim($current, DIRECTORY_SEPARATOR));
             if ($parent === rtrim($current, DIRECTORY_SEPARATOR)) {
                 break;

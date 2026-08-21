@@ -12,6 +12,7 @@ return [
     'ok' => 'V redu',
     'ok_aria' => 'V redu — potrdi PIN',
     'sign_out' => 'Odjavi se',
+    'forgot_pin' => 'Si pozabil PIN? Odjavi se — znova se lahko prijaviš z geslom svojega računa in nastaviš nov PIN. Podatki se ne izgubijo.',
 
     'errors' => [
         'pin_length' => 'PIN mora imeti vsaj 6 števke.',

@@ -33,27 +33,39 @@ final readonly class SeriesAccountResolver
         return $map + $this->fallbackAccount($missing, $user);
     }
 
+    // One row per series comes back, not the whole occurrence history: the
+    // table gains a row per observed payment forever, and the answer is a map
+    // of at most one account id per series.
     /**
      * @param  list<int>  $seriesIds
      * @return array<int, int>
      */
     private function fromLatestOccurrence(array $seriesIds, User $user): array
     {
-        $rows = $this->db->connection()->table('recurring_series_occurrences as rso')
+        $connection = $this->db->connection();
+
+        $ranked = $connection->table('recurring_series_occurrences as rso')
             ->join('transactions as t', 't.id', '=', 'rso.transaction_id')
             ->where('rso.user_id', $user->id)
             ->where('t.user_id', $user->id)
             ->whereIn('rso.recurring_series_id', $seriesIds)
-            ->orderByDesc('rso.observed_at')
-            ->orderByDesc('rso.id')
-            ->get(['rso.recurring_series_id as series_id', 't.account_id as account_id']);
+            ->select(['rso.recurring_series_id as series_id', 't.account_id as account_id'])
+            ->selectRaw(
+                'row_number() over ('
+                .'partition by rso.recurring_series_id order by rso.observed_at desc, rso.id desc'
+                .') as occurrence_rank'
+            );
+
+        $rows = $connection->query()
+            ->fromSub($ranked, 'latest')
+            ->where('latest.occurrence_rank', 1)
+            ->get(['latest.series_id', 'latest.account_id']);
 
         $map = [];
         foreach ($rows as $row) {
-            /** @var stdClass $row */
             $seriesId = self::toInt($row->series_id);
 
-            if ($seriesId > 0 && ! isset($map[$seriesId])) {
+            if ($seriesId > 0) {
                 $map[$seriesId] = self::toInt($row->account_id);
             }
         }

@@ -297,6 +297,17 @@ coincidence), it is surfaced as a visible `unmapped` item rather than silently
 counted as a success, since nothing else (source-map, split legs, payee
 resolution) is linked for that row.
 
+Slugs for the rows this promoter creates come from two places.
+`accounts.slug` is `AccountSlugResolver`'s — the Ledger service that owns
+that column's `unique(user_id, slug)` — so an account reached by import and
+one reached by migration cannot disagree on how a name becomes a slug or on
+what an unsluggable name falls back to. `categories.slug` has no such owner
+and is derived here, through the shared
+`Modules\Core\Public\Support\UniqueSlug`: `Str::slug()` with the literal
+`item` standing in for a name that slugs to nothing, then the same numeric
+suffix walk. Both paths only ever allocate a slug for a row being created;
+promotion never re-derives one for a row the source map already resolves.
+
 ## Reconciliation: the 3-way merge
 
 `CheckForUpdates` is the entry point for re-importing a newer export of an
@@ -383,10 +394,13 @@ column names rather than the index name, so the classifier matches on
 for forward-compatibility with a driver that names the constraint instead).
 `FingerprintComposer::compose()`'s hash tuple does not consume
 `counterparty_name`/`counterparty_iban`/`description` bytes at all — only
-`counterparty_normalized`, which is never `SensitiveFieldRegistry`-listed and
-so is always plaintext — so recomputing the fingerprint here needs no
-decrypt step even for an encrypted user, and produces an identical result to
-a plaintext re-import of the same logical row.
+`counterparty_normalized`, which `SensitiveFieldRegistry` lists as a
+blind-index column rather than an AEAD-sealed one: for an enrolled user it
+holds a keyed HMAC-SHA256 digest of the normalised name rather than the
+name. The tuple hashes whatever that column holds, opaquely — a hash of a
+digest — so recomputing the fingerprint here needs no decrypt step even for
+an encrypted user, and lands on the same value a re-import of the same
+logical row would derive for that same user.
 
 `EntityChangeApplier::apply()` routes a non-amount field write through
 `SensitiveColumnCodec::encryptAttrs()` before the update (mirroring

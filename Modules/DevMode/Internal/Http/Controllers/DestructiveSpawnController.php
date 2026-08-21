@@ -9,10 +9,12 @@ use Illuminate\Contracts\Validation\Factory as ValidatorFactory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Exceptions\SpawnedRunVanishedException;
 use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Internal\Services\DevModeFlag;
+use Modules\DevMode\Internal\Support\DevModeSession;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\CommandSpec;
 use Symfony\Component\HttpFoundation\Response;
@@ -39,7 +41,7 @@ final readonly class DestructiveSpawnController
             throw new AccessDeniedHttpException('dev_mode_off');
         }
 
-        if ($session->get('dev_mode.advanced') !== true) {
+        if ($session->get(DevModeSession::ADVANCED_KEY) !== true) {
             throw new AccessDeniedHttpException('advanced_off');
         }
 
@@ -92,7 +94,7 @@ final readonly class DestructiveSpawnController
         /** @var array<string, mixed> $args */
         $args = is_array($argsRaw) ? $argsRaw : [];
 
-        $runId = $this->spawner->start($command, $args, $user->id(), 'destructive');
+        $runId = $this->spawner->start($command, $args, $user->id(), CommandTier::Destructive);
         $record = $this->runs->find($runId);
         if ($record === null) {
             throw SpawnedRunVanishedException::immediatelyAfterSpawn('DestructiveSpawnController', $runId);

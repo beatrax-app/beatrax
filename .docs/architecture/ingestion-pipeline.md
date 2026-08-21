@@ -313,8 +313,8 @@ mechanised.
 
 Per-row exceptions inside the try-catch around stages 4-8 produce
 ERROR-status `PreviewRowDto` entries. The row carries an
-`errorReason` — an `ImportFailureReason` backing value — and the view
-translates that; the exception's own message never reaches the screen.
+`errorReason` — an `ImportFailureReason` — and the view translates
+that; the exception's own message never reaches the screen.
 A caught message names internal classes and, for
 `BlindIndexKeyUnavailableException`, the reader's own user id, so it
 goes to the application log via the injected `LoggerInterface` and

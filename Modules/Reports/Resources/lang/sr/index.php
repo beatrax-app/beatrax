@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'title' => 'Izveštaji',
     'page_title' => 'Izveštaji · Beatrax',
-    'saved_report' => 'sačuvan izveštaj|sačuvana izveštaja|sačuvanih izveštaja',
+    'saved_report' => ':count sačuvan izveštaj|:count sačuvana izveštaja|:count sačuvanih izveštaja',
     'pinned_count' => 'zakačeno',
     'dismiss' => 'Odbaci',
 

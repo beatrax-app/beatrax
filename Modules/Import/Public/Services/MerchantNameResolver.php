@@ -17,6 +17,9 @@ final class MerchantNameResolver
     /** @var array<int, string> */
     private array $regionByUser = [];
 
+    /** @var array<int, array{exact: array<string, string>, generalized: list<array{needle: string, friendly: string}>}> */
+    private array $aliasesByUser = [];
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly CommunityCorpusQuery $corpus,
@@ -29,64 +32,92 @@ final class MerchantNameResolver
     public function resolve(string $rawDescription, int $userId): ?string
     {
         $region = $this->regionFor($userId);
+        $aliases = $this->aliasesFor($userId);
 
-        return $this->userExactMatch($rawDescription, $userId)
-            ?? $this->userGeneralizedMatch($rawDescription, $userId)
+        return $aliases['exact'][$rawDescription]
+            ?? self::generalizedMatch($aliases['generalized'], $rawDescription)
             ?? $this->corpus->lookupExact($rawDescription, $region)
             ?? $this->corpus->lookupGeneralized($rawDescription, $region)
             ?? $this->corpus->lookupRegex($rawDescription, $region);
     }
 
+    // The alias list is memoised for the life of the container, so anything that
+    // adds, edits or drops one of this reader's aliases has to say so here — the
+    // next resolve otherwise answers from the list as it stood before the write.
+    public function forget(int $userId): void
+    {
+        unset($this->aliasesByUser[$userId]);
+    }
+
     // Empty when the reader has named no country, which widens to every region
-    // rather than resolving nothing — the same fallback CounterpartyResolverService
-    // makes for the government and bank-fee rules. Memoised because this runs
-    // once per transaction across a whole import.
+    // rather than resolving nothing. The government and bank-fee tiers go the
+    // other way and stay silent, because a shop trades anywhere and a tax
+    // office does not. Memoised: this runs once per transaction on an import.
     private function regionFor(int $userId): string
     {
         return $this->regionByUser[$userId] ??= $this->countries->current($userId);
     }
 
-    private function userExactMatch(string $rawDescription, int $userId): ?string
+    // Both alias tiers read one memoised list, for the same reason the corpus
+    // tiers hold theirs: a whole import asks once per transaction, and the two
+    // reads and the sort were paid again on every one of them. Keyed by user
+    // because this service is a singleton and the aliases are not shared.
+    /**
+     * @return array{exact: array<string, string>, generalized: list<array{needle: string, friendly: string}>}
+     */
+    private function aliasesFor(int $userId): array
     {
-        $exact = $this->db->connection()->table('merchant_aliases')
-            ->where('user_id', $userId)
-            ->where('pattern', $rawDescription)
-            ->value('friendly_name');
+        if (isset($this->aliasesByUser[$userId])) {
+            return $this->aliasesByUser[$userId];
+        }
 
-        return is_string($exact) && $exact !== '' ? $exact : null;
-    }
-
-    // Longest alias first, for the same reason the corpus tier scans that way: a
-    // reader who has both `albert` and `albert heijn` gets the one that describes
-    // the line, not whichever they happened to save first.
-    private function userGeneralizedMatch(string $rawDescription, int $userId): ?string
-    {
-        $haystack = mb_strtolower($rawDescription);
-
-        /** @var iterable<stdClass> $generalized */
-        $generalized = $this->db->connection()->table('merchant_aliases')
+        /** @var iterable<stdClass> $rows */
+        $rows = $this->db->connection()->table('merchant_aliases')
             ->where('user_id', $userId)
             ->orderBy('id')
-            ->limit(self::GENERALIZED_SCAN_LIMIT)
-            ->get(['generalized_pattern', 'friendly_name']);
+            ->get(['pattern', 'generalized_pattern', 'friendly_name']);
 
-        $candidates = [];
-        foreach ($generalized as $row) {
+        $exact = [];
+        $generalized = [];
+        $scanned = 0;
+        foreach ($rows as $row) {
+            $pattern = is_string($row->pattern) ? $row->pattern : '';
             $needle = is_string($row->generalized_pattern) ? $row->generalized_pattern : '';
             $friendly = is_string($row->friendly_name) ? $row->friendly_name : '';
-            if ($needle !== '' && $friendly !== '') {
-                $candidates[] = ['needle' => $needle, 'friendly' => $friendly];
+
+            if ($friendly !== '' && ! array_key_exists($pattern, $exact)) {
+                $exact[$pattern] = $friendly;
             }
+            // The scan cap counts rows read, not candidates kept, because it
+            // stood on the query that read them: an alias past the cap is
+            // still matched exactly, and only the generalized tier stops.
+            if ($scanned < self::GENERALIZED_SCAN_LIMIT && $needle !== '' && $friendly !== '') {
+                $generalized[] = ['needle' => $needle, 'friendly' => $friendly];
+            }
+            $scanned++;
         }
 
         // usort is stable as of PHP 8.0, so two aliases of equal length keep the
         // order they were saved in and the answer stays deterministic.
         usort(
-            $candidates,
+            $generalized,
             static fn (array $left, array $right): int => mb_strlen($right['needle']) <=> mb_strlen($left['needle']),
         );
 
-        foreach ($candidates as $candidate) {
+        return $this->aliasesByUser[$userId] = ['exact' => $exact, 'generalized' => $generalized];
+    }
+
+    // Longest alias first, for the same reason the corpus tier scans that way: a
+    // reader who has both `albert` and `albert heijn` gets the one that describes
+    // the line, not whichever they happened to save first.
+    /**
+     * @param  list<array{needle: string, friendly: string}>  $generalized
+     */
+    private static function generalizedMatch(array $generalized, string $rawDescription): ?string
+    {
+        $haystack = mb_strtolower($rawDescription);
+
+        foreach ($generalized as $candidate) {
             // Whole token, as the corpus tier does: this tier is consulted
             // FIRST, so an unanchored match here wins before the corpus is even
             // asked and `obi` still renamed a phone bill after a DIY chain.

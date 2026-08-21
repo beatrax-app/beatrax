@@ -15,7 +15,7 @@ return [
     'no_counterparty' => '(kein Zahlungspartner)',
     'open_from_row' => 'Von-Zeile öffnen',
     'open_to_row' => 'Nach-Zeile öffnen',
-    'leg_count' => '1 Zahlung|:count Zahlungen',
+    'leg_count' => ':count Zahlung|:count Zahlungen',
     'state_aria' => 'Status: :state',
 
     'kind' => [

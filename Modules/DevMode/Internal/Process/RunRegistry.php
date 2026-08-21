@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\DevMode\Internal\Enums\CommandTier;
 
 // Cached rather than request-scoped so a page refresh mid-command reconnects
 // to the live SSE stream. The 24h TTL gives the audit finalize step time to
@@ -103,7 +104,7 @@ final readonly class RunRegistry
             'args' => $record->args,
             'startedAt' => $record->startedAt->toIso8601String(),
             'callerUserId' => $record->callerUserId,
-            'tier' => $record->tier,
+            'tier' => $record->tier->value,
             'status' => $record->status,
             'outPath' => $record->outPath,
             'exitCode' => $record->exitCode,
@@ -131,7 +132,7 @@ final readonly class RunRegistry
         $pid = $raw['pid'] ?? 0;
         $command = $raw['command'] ?? '';
         $callerUserId = $raw['callerUserId'] ?? 0;
-        $tier = $raw['tier'] ?? 'safe';
+        $tier = $raw['tier'] ?? null;
         $status = $raw['status'] ?? 'running';
         $outPath = $raw['outPath'] ?? '';
 
@@ -142,7 +143,7 @@ final readonly class RunRegistry
             args: $args,
             startedAt: $startedAt,
             callerUserId: is_int($callerUserId) ? $callerUserId : 0,
-            tier: is_string($tier) ? $tier : 'safe',
+            tier: CommandTier::fromStored($tier),
             status: is_string($status) ? $status : 'running',
             outPath: is_string($outPath) ? $outPath : '',
             exitCode: isset($raw['exitCode']) && is_int($raw['exitCode']) ? $raw['exitCode'] : null,

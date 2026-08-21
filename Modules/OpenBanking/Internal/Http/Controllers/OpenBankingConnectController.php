@@ -16,15 +16,12 @@ use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Exceptions\OpenBankingConnectException;
 use Modules\OpenBanking\Internal\OAuth\OpenBankingStateRepository;
 use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Support\ConsentWindow;
 use RuntimeException;
 
 final class OpenBankingConnectController
 {
     private const ASPSP_COUNTRY = 'NL';
-
-    // Kept in sync with the identically-named constant on
-    // OpenBankingCallbackController.
-    private const CONSENT_VALID_FOR_DAYS = 180;
 
     public function __construct(
         private readonly OpenBankingSecretsRepository $secrets,
@@ -83,7 +80,7 @@ final class OpenBankingConnectController
             country: self::ASPSP_COUNTRY,
             redirectUrl: $redirectUri,
             scope: new EnableBankingAccessScope(balances: true, transactions: true, accounts: true),
-            validUntil: $this->clock->now()->addDays(self::CONSENT_VALID_FOR_DAYS),
+            validUntil: $this->clock->now()->addDays(ConsentWindow::VALID_FOR_DAYS),
         );
 
         $consentUrl = $response['url'] ?? null;

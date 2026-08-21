@@ -1,8 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 <div
-    class="beatrax-shell min-h-screen flex items-center justify-center
-            pl-[var(--safe-left)] pr-[var(--safe-right)]
-            pt-[var(--safe-top)] pb-[var(--safe-bottom)]
+    class="safe-screen beatrax-shell min-h-screen flex items-center justify-center
             motion-reduce:transition-none"
     {{--
         PIN digits accumulate in this transient Alpine state,
@@ -42,14 +40,7 @@
 
         {{-- App mark --}}
         <div class="flex justify-center">
-            <img
-                src="{{ Vite::asset('resources/brand/logo.svg') }}"
-                width="48"
-                height="48"
-                alt="Beatrax"
-                class="rounded-xl"
-                aria-hidden="true"
-            />
+            <x-core::app-mark />
         </div>
 
         {{-- PIN pad (includes dot display + flash) --}}
@@ -86,21 +77,39 @@
             </button>
         @endif
 
-        {{-- Sign out. Forgot-PIN recovery: sign out →
-             password login (primes the session) → Settings →
-             "Forgot your PIN?" resets it via the password recovery wrap. --}}
-        <form method="POST" action="{{ route('logout') }}" x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
-            @csrf
-            <button
-                type="submit"
-                class="w-full text-center text-sm text-rose-600 dark:text-rose-400
-                       hover:text-rose-700 dark:hover:text-rose-300
-                       focus:outline-none focus-visible:underline
-                       py-2"
-            >
-                {{ Lang::get('auth::lock_screen.sign_out') }}
-            </button>
-        </form>
+        {{-- Forgot-PIN recovery is a sign-out, and this control has to say so
+             before it is tapped: password login primes the session from the
+             recovery wrap, and Settings → "Forgot your PIN?" re-wraps under a
+             new PIN. Neutral, not rose — it is the way back in, not the exit.
+             Grouped with the plain sign-out so three lines of copy cost one
+             gap on a screen the keypad has already nearly filled. --}}
+        <div class="space-y-1">
+            <form method="POST" action="{{ route('logout') }}" x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
+                @csrf
+                <button
+                    type="submit"
+                    class="w-full text-center text-sm text-slate-600 dark:text-slate-400
+                           hover:text-slate-900 dark:hover:text-slate-100
+                           focus:outline-none focus-visible:underline
+                           py-2"
+                >
+                    {{ Lang::get('auth::lock_screen.forgot_pin') }}
+                </button>
+            </form>
+
+            <form method="POST" action="{{ route('logout') }}" x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
+                @csrf
+                <button
+                    type="submit"
+                    class="w-full text-center text-sm text-rose-600 dark:text-rose-400
+                           hover:text-rose-700 dark:hover:text-rose-300
+                           focus:outline-none focus-visible:underline
+                           py-2"
+                >
+                    {{ Lang::get('auth::lock_screen.sign_out') }}
+                </button>
+            </form>
+        </div>
 
     </div>
 </div>

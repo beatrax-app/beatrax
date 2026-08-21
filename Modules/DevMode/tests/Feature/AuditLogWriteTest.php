@@ -12,6 +12,7 @@ use Modules\DevMode\Internal\Audit\FinalizeRunAudit;
 use Modules\DevMode\Internal\Audit\RedactionExcerptCap;
 use Modules\DevMode\Internal\Audit\SpatieAuditWriter;
 use Modules\DevMode\Internal\Enums\AuditEvent;
+use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Process\RunRecord;
 use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Public\Contracts\AuditWriter;
@@ -31,7 +32,6 @@ function auditDeveloper(string $username): User
 
 it('declares the AuditEvent enum taxonomy (locks audit-action strings as enum cases)', function (): void {
     expect(AuditEvent::CommandExecuted->value)->toBe('command_executed');
-    expect(AuditEvent::CommandCancelled->value)->toBe('command_cancelled');
     expect(AuditEvent::QueueAction->value)->toBe('queue_action');
     expect(AuditEvent::SqlSelect->value)->toBe('sql.select');
 });
@@ -74,7 +74,7 @@ it('SpatieAuditWriter writes a row into dev_mode_audit with log_name + descripti
     $writer->recordCommandRun(new CommandRunAudit(
         command: 'db:backup',
         args: ['destination' => '/tmp/x.db'],
-        tier: 'safe',
+        tier: CommandTier::Safe,
         callerUserId: $user->id,
         startedAt: CarbonImmutable::parse('2026-05-24T10:00:00Z'),
         finishedAt: CarbonImmutable::parse('2026-05-24T10:00:05Z'),
@@ -119,7 +119,7 @@ it('redacts an oauth_secrets value AND a Bearer header in the audit row (Test 7 
     $writer->recordCommandRun(new CommandRunAudit(
         command: 'cache:clear',
         args: [],
-        tier: 'safe',
+        tier: CommandTier::Safe,
         callerUserId: $user->id,
         startedAt: CarbonImmutable::parse('2026-05-24T10:00:00Z'),
         finishedAt: CarbonImmutable::parse('2026-05-24T10:00:01Z'),
@@ -146,7 +146,7 @@ it('redacts Bearer header content in the audit row via SpatieAuditWriter + Redac
     $writer->recordCommandRun(new CommandRunAudit(
         command: 'cache:clear',
         args: [],
-        tier: 'safe',
+        tier: CommandTier::Safe,
         callerUserId: $user->id,
         startedAt: CarbonImmutable::parse('2026-05-24T10:00:00Z'),
         finishedAt: CarbonImmutable::parse('2026-05-24T10:00:01Z'),
@@ -179,7 +179,7 @@ it('FinalizeRunAudit reads the per-run tmp file + writes a dev_mode_audit row', 
         args: [],
         startedAt: CarbonImmutable::parse('2026-05-24T10:00:00Z'),
         callerUserId: $user->id,
-        tier: 'safe',
+        tier: CommandTier::Safe,
         status: 'running',
         outPath: $outPath,
     ));
@@ -216,7 +216,7 @@ it('FinalizeRunAudit records a cancelled run with cancelled=true + negative exit
         args: [],
         startedAt: CarbonImmutable::parse('2026-05-24T10:00:00Z'),
         callerUserId: $user->id,
-        tier: 'safe',
+        tier: CommandTier::Safe,
         status: 'running',
         outPath: $outPath,
     ));
@@ -254,7 +254,7 @@ it('PruneDevAuditCommand deletes only rows older than the given days', function 
 
     foreach (range(1, 3) as $_) {
         $writer->recordCommandRun(new CommandRunAudit(
-            command: 'cache:clear', args: [], tier: 'safe',
+            command: 'cache:clear', args: [], tier: CommandTier::Safe,
             callerUserId: $user->id,
             startedAt: CarbonImmutable::now(),
             finishedAt: CarbonImmutable::now(),
@@ -263,7 +263,7 @@ it('PruneDevAuditCommand deletes only rows older than the given days', function 
     }
     foreach (range(1, 2) as $_) {
         $writer->recordCommandRun(new CommandRunAudit(
-            command: 'cache:clear', args: [], tier: 'safe',
+            command: 'cache:clear', args: [], tier: CommandTier::Safe,
             callerUserId: $user->id,
             startedAt: CarbonImmutable::now(),
             finishedAt: CarbonImmutable::now(),

@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'title' => 'Rapporter',
     'page_title' => 'Rapporter · Beatrax',
-    'saved_report' => 'sparad rapport|sparade rapporter',
+    'saved_report' => ':count sparad rapport|:count sparade rapporter',
     'pinned_count' => 'fästa',
     'dismiss' => 'Stäng',
 

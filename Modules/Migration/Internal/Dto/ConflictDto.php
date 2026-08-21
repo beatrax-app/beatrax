@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Migration\Internal\Dto;
 
+use Modules\Migration\Internal\Enums\ConflictResolution;
 use Spatie\LaravelData\Data;
 
 final class ConflictDto extends Data
@@ -16,6 +17,6 @@ final class ConflictDto extends Data
         public readonly mixed $sourceValue,
         public readonly mixed $baselineValue,
         public readonly ?string $currency = null,
-        public readonly string $resolution = 'keep_local',
+        public readonly string $resolution = ConflictResolution::KeepLocal->value,
     ) {}
 }

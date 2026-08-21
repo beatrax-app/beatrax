@@ -2,7 +2,11 @@
 {{-- The system bars are painted over this screen: without the bottom inset
      the Android navigation bar covers the lower half of "Continue to Beatrax",
      which is the only way off a screen shown exactly once. --}}
-<div class="min-h-screen bg-white pb-[calc(3rem+var(--safe-bottom))] pl-[var(--safe-left)] pr-[var(--safe-right)] pt-[calc(3rem+var(--safe-top))] dark:bg-slate-950">
+{{-- No top inset, so no .safe-screen: this page renders inside layouts.app's
+     <main>, below a .top-bar that already pads var(--safe-top) and stands in
+     the flow. Padding it again here reserved the status bar twice and pushed
+     the heading down by a second copy of its height. --}}
+<div class="min-h-screen bg-white pb-[calc(3rem+var(--safe-bottom))] pl-[var(--safe-left)] pr-[var(--safe-right)] pt-12 dark:bg-slate-950">
     <div class="max-w-xl mx-auto px-6 space-y-6">
         <x-core::page-header
             :title="Lang::get('auth::recovery_codes.title')"
@@ -33,28 +37,11 @@
         <div
             class="space-y-2"
             x-data="{
-                    copied: false,
+                    ...copyToClipboard(@js($codes).join('\n')),
                     saved: false,
-                    failed: false,
-                    codes: @js($codes),
                     payload: @js($downloadPayload),
                     filename: @js($downloadFilename),
                     exportUrl: @js($exportUrl),
-                    async copy() {
-                        // The webview withholds navigator.clipboard outside a
-                        // secure context, and this screen is the one that can
-                        // never be shown again — so a copy that quietly does
-                        // nothing is the worst possible outcome here.
-                        if (await window.beatraxCopy(this.codes.join('\n'))) {
-                            this.failed = false;
-                            this.copied = true;
-                            setTimeout(() => { this.copied = false; }, 2500);
-
-                            return;
-                        }
-
-                        this.failed = true;
-                    },
                     async save() {
                         // A phone: hand the file to the OS share sheet and
                         // report what the endpoint says. The blob path below

@@ -88,7 +88,6 @@ final class DemoSeedCommand extends Command
             $this->resetDemoData();
         }
 
-        // Makes demo:seed safe on a database the install flow never touched.
         $this->line('Ensuring reference data (currencies + default category tree)…');
         $this->currencies->run();
         $this->categories->run();
@@ -177,7 +176,8 @@ final class DemoSeedCommand extends Command
         $goalCount = $this->goals->run($userMap);
         $this->info(sprintf('  %d demo goals present', $goalCount));
 
-        // After the goals seeder: pots resolve their goal link by name.
+        // The pots seeder resolves each pot's goal link by name, so it has to run
+        // after the goals seeder; earlier, every pot lands with a null goal.
         $this->line('Seeding demo savings pots + allocations…');
         $potCount = $this->pots->run($userMap);
         $this->info(sprintf('  %d demo pots present', $potCount));

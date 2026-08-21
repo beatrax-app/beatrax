@@ -86,6 +86,35 @@ it('clears the session override when System is chosen, rather than storing it as
     $this->get(route('login'))->assertSee('Sign in', false);
 });
 
+// The three pickers share one x-core::locale-select, and each tells it which
+// option is chosen. Settings must answer with the STORED preference. A shared
+// control that read session('locale') for itself would mark System — the guest
+// screens' own answer, and the common case, since a signed-in reader has no
+// session key — while the page around it renders German.
+it('opens the settings picker on the stored language rather than on System', function (): void {
+    $user = guestLocaleUser('de');
+
+    $settings = $this->actingAs($user)->get(route('settings'))->getContent();
+
+    expect($settings)->toBeString()
+        ->toMatch('/<option\s+value="de"\s+lang="de"\s+selected/')
+        ->not->toMatch('/<option\s+value="'.preg_quote(LocaleNegotiator::SYSTEM, '/').'"\s+selected/');
+});
+
+// And not on the language they were reading before they signed in: the stored
+// override outranks the session key, so the picker has to say so too.
+it('opens the settings picker on the stored language rather than on a leftover guest session choice', function (): void {
+    $user = guestLocaleUser('de');
+
+    $this->post(route('locale.switch'), ['code' => 'fr']);
+
+    $settings = $this->actingAs($user)->get(route('settings'))->getContent();
+
+    expect($settings)->toBeString()
+        ->toMatch('/<option\s+value="de"\s+lang="de"\s+selected/')
+        ->not->toMatch('/<option\s+value="fr"\s+lang="fr"\s+selected/');
+});
+
 // Which option the select opens on. The translator always reports a concrete
 // locale, so "en chosen" and "nothing chosen" both read as en; only the
 // session key tells them apart, and without that the System option would never

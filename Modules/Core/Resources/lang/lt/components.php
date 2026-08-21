@@ -42,12 +42,14 @@ return [
         'next_month' => 'Kitas mėnuo',
         'today' => 'Šiandien',
         'clear' => 'Išvalyti',
+        'empty' => 'data nepasirinkta',
     ],
 
     'time' => [
         'open' => 'Pasirink laiką',
         'hour' => 'Valanda',
         'minute' => 'Minutė',
+        'empty' => 'laikas nepasirinktas',
     ],
 
     'veil_locked' => 'Programa užrakinta',

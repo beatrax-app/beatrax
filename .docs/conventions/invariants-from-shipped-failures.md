@@ -314,6 +314,38 @@ whose visible text is also static. Anything interpolated, and anything whose
 visible text is a glyph rather than a word, is left unchecked rather than
 wrongly reported.
 
+## An `aria-label` that hides the chosen value
+
+`Modules/Core/tests/Feature/DateTimeInputAccessibleNameTest.php`
+
+The sibling of the rule above, one step further down the same algorithm. A
+control whose visible content IS its value — `x-core::date-input` and
+`x-core::time-input` render the chosen date inside the `<button>` — cannot also
+carry a static `aria-label`, because the accessible name is computed in a fixed
+order and stops at the first source that answers:
+
+1. `aria-labelledby`
+2. `aria-label`
+3. the host language's own label — for a `<button>`, a `<label for="…">`
+4. the element's own text
+
+An `aria-label` of "Choose a date" therefore announced "Choose a date" over a
+field reading 31-12-2026, on the phone, in the goal form. Measured in Chrome on
+the shipped markup: the value never reaches the name, and neither does the
+`<label for="goal-date">Target date</label>` above it — step 2 answers first.
+
+Step 3 is the trap in the obvious fix. Dropping the `aria-label` so the button
+names itself from its own text does not work wherever a caller points a label at
+it: step 3 answers before step 4, and the name becomes the label's words with
+the value still missing. Only `aria-labelledby` outranks a label, so the name is
+stitched from two `sr-only` spans inside the button — what the field is, then
+what it holds — and the visible value and glyph are `aria-hidden`. With no field
+id there is no label to outrank, and the same two spans become the name by step
+4 unchanged.
+
+The empty state is a word, not the `—` the field draws: an em dash has no
+spoken reading, so an empty field announced its name and then nothing.
+
 ## A public/ file with no route behind it
 
 `tests/Feature/AppIconRoutesTest.php`
@@ -613,7 +645,29 @@ component to the view it renders and fails when any of the four edges is
 unpadded — including when it cannot resolve the view at all, because an
 unreadable consumer is an unchecked one. A new lock-layout screen with a bare
 `min-h-screen` root passes all three other arms and still sits under the status
-bar on both platforms.
+bar on both platforms. An edge counts as padded when the template spells the
+token in its own markup **or** wears a class `app.css` defines as padding that
+edge from the seam, which is how `.safe-screen` satisfies the arm. The lookup
+reads the stylesheet rather than the class name, so a class that quietly stops
+padding an edge fails every screen wearing it; only a lone class selector is
+credited, because in `.a .b` neither half pads anything on its own.
+
+The fifth arm is what keeps the string from being retyped. `.safe-screen` in
+`resources/css/app.css` is the single definition of *this screen owns the whole
+viewport*: all four paddings, each read from the seam. The arm fails any element
+whose class attribute carries all four single-edge inset utilities at once —
+which is what six screens did before the class existed, five of them
+identically and the sixth in a different token order, which is the only reason
+the set read as several spellings rather than one.
+
+A screen rendered inside `layouts.app`'s `<main>` is the case that arm
+deliberately does not cover, and the reason `.safe-screen` is not simply applied
+everywhere. `.top-bar` is `position: sticky`, so it stands in the flow and
+`<main>` already begins below it, and it pads the top inset itself. A screen
+under it that pads the top inset again reserves the status bar twice.
+`recovery-codes-display` did exactly that: on a 59px inset its content box
+started 107px into `<main>` where the design asked for 48px, a whole second
+status bar of empty space above the heading, invisible anywhere but a device.
 
 One caveat about this page itself: Tailwind v4 scans the project root, `.docs/`
 included, so a utility name written in a sentence here is a real candidate for
@@ -803,6 +857,203 @@ Two companion arms close the ways the fix comes undone. Reading a pluralised
 line with `Lang::get()` renders `1 transaction|1 transactions` verbatim at the
 reader and throws nothing, because the line is a valid string. And the ternary
 shape returns the moment someone needs a noun in the middle of a sentence.
+
+## A query that is correct for one row, on a page that has thousands
+
+The shape is a read that belongs to a single record, placed where the screen
+holds a list of them. `CounterpartyIndexQuery::buildRow()` asked `transactions`
+three questions per counterparty — a twelve-month total, the most recent line,
+and twelve monthly buckets for the sparkline — so the index page cost `1 + 3N`
+statements and then sorted the whole materialised set in PHP. The ledger screen
+did it the other way round: `transactions-list.blade.php` mounts an
+`InlineCategoryPicker` per row, and that component runs an uncached `categories`
+self-join in `render()` rather than `mount()`, so every row re-read the entire
+category tree on every Livewire round-trip.
+
+Neither is wrong for one row, and that is the whole difficulty. Each query is
+individually well written, indexed, and scoped to the user. The defect is only
+in the arithmetic between the query and its caller, which no single file shows.
+
+Measured on a fixture of sixteen counterparties, the index page issued 49
+statements where four answer the same question; twenty-five pickers issued
+twenty-five identical category reads where one does. Both grow with the ledger
+and neither ever stops: a counterparty row is added for every distinct merchant
+a user ever pays, and the transactions list accumulates up to 500 rows before it
+pages. On the single-threaded desktop server every one of those statements is
+also a request no other page can be served during.
+
+Nothing caught it because a test seeds two rows. At N=2 the fast shape and the
+slow shape return byte-identical results and differ by six statements, so every
+assertion about totals, ordering and formatting passes on both. The page returns
+200, the console is clean, and the suite is green — the count is the only thing
+that was ever different, and nothing was counting.
+
+So the pinning assertion is a **statement count, not a value**.
+`CounterpartyIndexQuerySetShapeTest` seeds enough counterparties that `1 + 3N`
+and `1 + 3` separate, then asserts the query log stays under a constant; its
+sibling assertions — a counterparty with no transactions at all, one whose only
+activity predates the twelve-month window, and two transactions sharing a date
+so the recent-line tie-break has to be resolved — are what prove the set-based
+rewrite returns the same answers rather than merely fewer rows. A window
+function replaced the per-row `->first()`, and the tie-break inside
+`ROW_NUMBER() OVER (… ORDER BY posted_at DESC, id DESC)` has to spell out the
+ordering the per-row query got from its own `orderByDesc` pair, or one
+counterparty in a hundred quietly shows the wrong line.
+
+Two follow-on rules come out of it. A Livewire child's `render()` runs on every
+round-trip and not only on mount, so a query there is per-render per-instance
+and belongs in the parent or behind a memo. And a memo on a container-shared
+service has to be keyed by reader: `CategoryOptionsQuery` is bound `scoped()`
+rather than `singleton()` and keys its cache by user id and locale, because a
+category cache that outlives the request hands one household member another's
+tree, and one that ignores the locale freezes the reader's language at whoever
+looked first.
+
+## A chunked read with an unchunked write
+
+The shape is a loop that pages its **read** correctly and then issues a
+statement per row on the **write**, so the bound everyone reads in the code —
+`chunkById(500)` — describes only half of what the pass does.
+`EncryptionMigrationService` had it in both of its passes: the op-log sweep and
+the projection sweep each paged 500 rows and then wrote them back one
+`->where('id', $row->id)->update(…)` at a time, inside the one transaction that
+spans the whole enable. `PreMigrationSnapshot::restoreFromSnapshot()` had the
+same shape on the rollback path. Beside them sat a third: a `$cache->put()` of
+a 0-99 integer per row, and `CACHE_STORE=file` makes that a filesystem write
+per ledger line, also inside the transaction.
+
+The snapshot had the matching read-side shape. It `->get()` every sensitive
+column of six whole tables — `transactions.raw_payload` is the entire original
+bank line — into one array, then `json_encode`d that array into one string, so
+peak memory held the ledger twice at once with no chunking anywhere.
+
+Measured on a 520-transaction fixture with counterparties, notifications and an
+op log beside it: 520 statements to sweep the transactions where 8 do, 1242
+cache writes where 7 do, and 525 statements to restore where 8 do. The snapshot
+of 1200 rows carrying 8 KB payloads each grew peak memory by 20.4 MB where the
+streamed writer stays under 12. None of that is a constant factor — every count
+is one per row of a ledger a user keeps for life, and a phone is where it runs
+out first.
+
+Nothing caught it because the read really was bounded, and that is what a
+reviewer checks. Correctness never wavered either: a statement per row and one
+statement per chunk write identical rows, so every assertion about values,
+epochs and idempotency passes on both. Only the counts differed, and nothing
+was counting.
+
+So the pinning assertions in `EncryptionMigrationBatchedWritesTest` are
+statement counts, cache-write counts and a peak-memory ceiling, seeded past one
+`CHUNK_SIZE` so the two shapes separate — each paired with a full before/after
+value comparison, because a fast pass that moves financial data wrongly is
+worse than a slow one. Three rules come out of the rewrite. Batch through
+`CASE id WHEN … ELSE <column> END` rather than `upsert()`: SQLite and Postgres
+both check `NOT NULL` on the proposed row *before* the conflict resolves, so an
+upsert would have to rewrite every non-defaulted column to update one, and any
+column left off the update list is overwritten on conflict. Size the batch by
+bound parameters rather than by rows, since a build compiled before SQLite
+raised its ceiling stops at 999. And a snapshot of user data is written as one
+line per row and read back a line at a time, so neither side ever holds the
+whole of it.
+
+## A column that is in an index but does not lead one
+
+The shape is a `WHERE` on a column a reviewer can find in a `CREATE INDEX` line,
+sitting in a position no lookup can seek on. `transactions.counterparty_normalized`
+appears exactly once in the schema: seventh, in the fingerprint composite
+`(user_id, account_id, posted_at, booked_at, amount_minor, currency,
+counterparty_normalized)`. A read filtering on `user_id` and
+`counterparty_normalized` and nothing between them cannot use it, so SQLite scans
+the user's whole `transactions` partition and sorts what survives.
+
+`MerchantDisplayName::fromTransactions()` is that read — newest
+`counterparty_name` for a merchant — and `ExpenseSeriesDetector` calls it once
+per distinct merchant on every sweep. The cost is the product of the two things a
+ledger grows in: merchants seen, times transactions kept. Beside it the same
+sweep asked `recurring_series` three separate questions per cluster —
+`cluster_key`, `cluster_counterparty_key`, and the stored variance tolerance keyed
+on the second of those. Measured on twelve merchants with a year of history each:
+178 `recurring_series` reads for a sweep that changes nothing, against one.
+
+Nothing caught it because the column is indexed, in the sense a `git grep` can
+confirm. A composite index reads as coverage for every column named in it, and
+the position is the whole of the difference. Nothing failed, either: the query
+is correct, scoped to the user, and returns in microseconds on the fixtures —
+which hold two merchants, where a scan and a seek are the same instruction.
+
+So the pinning assertion is an `EXPLAIN QUERY PLAN` over the exact query, in
+`ExpenseSeriesDetectorQueryShapeTest`, asserting the index by name and asserting
+the plan contains no `SCAN transactions` and no `TEMP B-TREE` — a plan, not a
+duration, because a duration on a fixture measures nothing. The trailing
+`posted_at` is part of it: it turns the `ORDER BY posted_at DESC` into a
+backwards walk of the index instead of a sort. Its sibling assertion is a full
+before/after dump of every `recurring_series` and occurrence row the sweep
+writes, seeded with two merchants sharing a `posted_at`, a merchant whose rows
+carry no `counterparty_name`, rows older than the detection window, a second
+currency, and a second user — because a lookup that got faster and picks a
+different merchant name is worse than the slow one.
+
+One rule comes out of it. A read is indexed when its equality columns are the
+index's leading columns, in order; anything else is a scan wearing an index's
+name. Write the index the read needs, and prove which one the planner picked.
+
+## A memo on a singleton that never asked whose data it holds
+
+`MerchantNameResolver::regionFor()` was memoised, with a comment above it
+saying why: it runs once per transaction across a whole import. The two
+`merchant_aliases` reads directly beneath that comment were not. `resolve()`
+cost an exact-match query, a 500-row candidate fetch and a `usort` of that
+fetch **per row** — a five-year backfill of 40,000 rows paid 80,000 statements
+and 40,000 sorts for a list that changes when the reader renames a merchant,
+and the Mystery Merchants page paid 4,000 statements and 2,000 sorts on every
+Livewire round-trip because its scan is 2,000 transactions wide.
+
+Nothing caught it because it is correct. Every answer is right, the suite is
+green, and a per-row query is invisible in a test that resolves one
+description. The cost only exists at the size of a real ledger, which no
+fixture has.
+
+The memo that fixes it carries the danger. `MerchantNameResolver` is a
+`singleton()`, so a container-wide memo would answer one household member out
+of another's aliases — a wrong name on someone else's money, arriving silently,
+and passing every test written for one user. The key is the user id, and the
+test that proves it resolves for two readers in both orders against one warmed
+instance; mutating the key to a constant turns it red. The second duty is the
+mirror of the first: a memo held for the life of the container is stale from
+the moment anything writes the table, so `CreateMerchantAlias` calls
+`forget($userId)` and the rename popover's save-then-render round-trip is the
+test that fails without it.
+
+## A row set read whole to answer a bounded question
+
+Three shapes of the same mistake, all in the import path, all correct.
+
+`BuildConsolidatedPreviewQuery` accumulated every row of every contributing run
+into `$allRows` to ask three things of it — is it empty, did every row fail,
+which reason did the first failure carry — and accumulated every non-error row
+into `$sampleCandidates` to take five. It runs inside a Livewire `render()`, so
+that is per round-trip of the onboarding step: three runs of 2,000 rows cost
+794 ms a render, against 0.9 ms once the counts, the first reason and the five
+rows are computed where the preview is written and read back as a small entry
+beside it. `RecordTransactions` had the write-side twin: a `firstOrFail()` by
+fingerprint per inserted row, inside the chunk transaction that had just
+written all of them — 40 statements for a 40-row chunk where one
+`whereIn('fingerprint', …)` per owner does it, and 500 per chunk on a real
+import.
+
+None of it was ever wrong, which is why review passed it and why the tests that
+pin it now are paired: a statement count or a millisecond figure beside a
+full value comparison on the same fixture, seeded for zero rows, all-failed,
+part-failed, exactly-the-limit and past-the-limit. A fast wrong answer about
+money is worse than a slow one, so "fewer queries" is never the whole
+assertion.
+
+Two rules come out of it. A read-back after a batch write is scoped by the
+owner as well as the key — `transactions.fingerprint` is unique per user and
+not globally — and it keeps the write order, because the listeners downstream
+run in it. And a cache entry that a render reads is shaped to what the render
+asks: `PreviewCache` writes the section summary with the preview payload,
+refreshes it with the payload, drops it with the payload, and anything writing
+the preview key directly drops the summary key beside it.
 
 ## Related
 

@@ -69,7 +69,7 @@ return [
     'highlights_shortfall_aria' => ':count finestra di scoperto attiva nei prossimi :days giorni|:count finestre di scoperto attive nei prossimi :days giorni',
     'dips_to' => ':name scende a :amount',
     'on_date_suffix' => ' il :date',
-    'shortfall_window' => '1 finestra di scoperto attiva|:count finestre di scoperto attive',
+    'shortfall_window' => ':count finestra di scoperto attiva|:count finestre di scoperto attive',
     'lowest_in_30' => 'Minimo in 30 giorni: :amount',
     'next_ics' => 'Prossimo regolamento ICS: :amount il :date',
 ];

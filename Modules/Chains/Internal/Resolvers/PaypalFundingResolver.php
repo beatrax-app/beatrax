@@ -12,12 +12,10 @@ use Modules\Chains\Public\Enums\ChainLinkKind;
 use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
-use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
-use Modules\Transfers\Public\Services\PairLookup;
 use stdClass;
 
 /**
@@ -60,22 +58,11 @@ final class PaypalFundingResolver
 
     public function __construct(
         private readonly DatabaseManager $db,
-        private readonly Clock $clock,
         private readonly FingerprintComposer $fingerprints,
-        private readonly PairLookup $pairLookup,
         private readonly ChainLinkInsertHelper $inserter,
         private readonly SensitiveColumnCodec $codec,
         private readonly SessionFactory $session,
     ) {}
-
-    // Exists only so PHPStan's onlyWritten lint sees a read of every injected
-    // collaborator; nothing in the resolution path calls it.
-    public function injectedCollaboratorsWired(): bool
-    {
-        return get_class($this->pairLookup) === PairLookup::class
-            && $this->fingerprints->version() > 0
-            && $this->clock->now()->year > 0;
-    }
 
     public function resolveForUser(User $user): void
     {

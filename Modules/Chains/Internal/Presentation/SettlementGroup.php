@@ -6,6 +6,7 @@ namespace Modules\Chains\Internal\Presentation;
 
 use Carbon\CarbonImmutable;
 use Modules\Chains\Public\Dto\ChainLinkRow;
+use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Ledger\Public\ValueObjects\Money;
 
 // A chain is a fan-in: several purchases collected into one settlement, and the
@@ -74,8 +75,8 @@ final class SettlementGroup
     private static function worstState(array $legs): string
     {
         foreach ($legs as $leg) {
-            if ($leg->state === 'candidate') {
-                return 'candidate';
+            if ($leg->state === ChainLinkState::Candidate->value) {
+                return ChainLinkState::Candidate->value;
             }
         }
 

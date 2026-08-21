@@ -6,11 +6,15 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Livewire\Livewire;
 use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Mobile\Internal\Http\Livewire\SetupProgressScreen;
 use Modules\Mobile\Internal\Sync\InitialSyncPuller;
+use Modules\Mobile\Internal\Sync\SetupStep;
 use Modules\Mobile\Internal\Sync\SyncBlockedReason;
+use Modules\Mobile\Internal\Sync\SyncPhase;
 use Modules\Sync\Internal\Crypto\GdkEpoch;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
@@ -129,14 +133,14 @@ it('resumes an initial sync from a durable mobile_sync_progress cursor with no d
     // The rebuild is announced on its own tick before it runs, so the
     // screen can show that step instead of jumping from transfer to done.
     $announced = $puller->pull((int) $user->id, $session);
-    expect($announced['phase'])->toBe('rebuilding')
+    expect($announced['phase'])->toBe(SyncPhase::Rebuilding)
         ->and($announced['blocked'])->toBe(SyncBlockedReason::Reprojecting);
 
     $progress = $puller->pull((int) $user->id, $session);
 
     expect($progress['records_applied'])->toBe(100, 'All 100 entries (40 pre-existing + 60 newly applied) must be counted exactly once.');
     expect($progress['records_expected'])->toBe(100);
-    expect($progress['phase'])->toBe('complete');
+    expect($progress['phase'])->toBe(SyncPhase::Complete);
     expect($progress['percent'])->toBe(100);
 
     // A resumed pull must never re-insert or double-count the first 40.
@@ -155,7 +159,7 @@ it('resumes an initial sync from a durable mobile_sync_progress cursor with no d
     // A screen still polling after completion must not grow anything.
     $again = $puller->pull((int) $user->id, $session);
     expect($again['records_applied'])->toBe(100);
-    expect($again['phase'])->toBe('complete');
+    expect($again['phase'])->toBe(SyncPhase::Complete);
     expect($db->connection()->table('op_log_entries')->where('user_id', $user->id)->count())->toBe(100);
 });
 
@@ -180,7 +184,7 @@ it('skips a pull entirely — no cursor mutation, data stays encrypted — when 
         'records_applied' => 0,
         'records_expected' => null,
         'percent' => 0,
-        'phase' => 'pending',
+        'phase' => SyncPhase::Pending,
         'blocked' => SyncBlockedReason::NoPeer,
     ]);
     expect($db->connection()->table('mobile_sync_progress')->where('user_id', $user->id)->count())->toBe(0);
@@ -238,10 +242,10 @@ it('runs the history re-projection AT MOST ONCE per cursor once the keyring beco
     $puller = app(InitialSyncPuller::class);
 
     // Tick one announces the rebuild; tick two performs it and completes.
-    expect($puller->pull($userId, $session)['phase'])->toBe('rebuilding');
+    expect($puller->pull($userId, $session)['phase'])->toBe(SyncPhase::Rebuilding);
 
     $first = $puller->pull($userId, $session);
-    expect($first['phase'])->toBe('complete');
+    expect($first['phase'])->toBe(SyncPhase::Complete);
     expect($first['percent'])->toBe(100);
 
     $cursorAfterFirst = $db->connection()->table('mobile_sync_progress')
@@ -254,7 +258,7 @@ it('runs the history re-projection AT MOST ONCE per cursor once the keyring beco
 
     // A second tick must leave the guard flag unchanged.
     $second = $puller->pull($userId, $session);
-    expect($second['phase'])->toBe('complete');
+    expect($second['phase'])->toBe(SyncPhase::Complete);
     expect($second['percent'])->toBe(100, 'percent must never regress');
     expect($second['records_applied'])->toBe($first['records_applied'], 'a completed pull is a cheap idempotent no-op');
 
@@ -381,5 +385,69 @@ it('does not report complete while the GDK keyring is empty — an import awaiti
     $puller = app(InitialSyncPuller::class);
     $progress = $puller->pull((int) $user->id, $session);
 
-    expect($progress['phase'])->not->toBe('complete', 'an import with an empty keyring must not report complete — it would land on a gdk_decrypt_failed dashboard');
+    expect($progress['phase'])->not->toBe(SyncPhase::Complete, 'an import with an empty keyring must not report complete — it would land on a gdk_decrypt_failed dashboard');
+});
+
+// The four phase strings are a storage format, not an internal spelling: a row
+// written by an earlier build has to hydrate, and a value no case can represent
+// has to resume the gate rather than throw on the read.
+it('hydrates every stored phase string, and falls back to pending on one no case can represent', function (): void {
+    $user = mobileResumeUser('mobile-resume-hydrate-'.bin2hex(random_bytes(4)));
+    $userId = (int) $user->id;
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    /** @var InitialSyncPuller $puller */
+    $puller = app(InitialSyncPuller::class);
+
+    $stored = [
+        'pending' => SyncPhase::Pending,
+        'pulling' => SyncPhase::Pulling,
+        'rebuilding' => SyncPhase::Rebuilding,
+        'complete' => SyncPhase::Complete,
+        'a-phase-no-case-can-represent' => SyncPhase::Pending,
+    ];
+
+    foreach ($stored as $column => $expected) {
+        $db->connection()->table('mobile_sync_progress')->where('user_id', $userId)->delete();
+        $db->connection()->table('mobile_sync_progress')->insert([
+            'user_id' => $userId,
+            'peer_device_id' => 'desktop-peer-dev',
+            'records_expected' => 100,
+            'records_applied' => 100,
+            'last_hlc_l' => 100,
+            'last_hlc_c' => 0,
+            'phase' => $column,
+            'created_at' => '2026-07-10 00:00:00',
+            'updated_at' => '2026-07-10 00:05:00',
+        ]);
+
+        expect($puller->progress($userId)['phase'])->toBe($expected, "a stored '{$column}' must hydrate to its own case");
+    }
+});
+
+it('drives the setup screen from a stored phase string alone', function (): void {
+    $user = mobileResumeUser('mobile-resume-screen-'.bin2hex(random_bytes(4)));
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $db->connection()->table('mobile_sync_progress')->insert([
+        'user_id' => $user->id,
+        'peer_device_id' => 'desktop-peer-dev',
+        'records_expected' => 100,
+        'records_applied' => 100,
+        'last_hlc_l' => 100,
+        'last_hlc_c' => 0,
+        'phase' => 'complete',
+        'created_at' => '2026-07-10 00:00:00',
+        'updated_at' => '2026-07-10 00:05:00',
+    ]);
+
+    $screen = Livewire::actingAs($user)->test(SetupProgressScreen::class);
+
+    expect($screen->instance()->phase)->toBe(SyncPhase::Complete)
+        ->and($screen->instance()->step)->toBe(SetupStep::Rebuild);
+
+    $screen->assertSet('percent', 100)->assertSet('isResuming', true);
 });

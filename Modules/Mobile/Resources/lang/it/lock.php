@@ -12,6 +12,7 @@ return [
     'ok' => 'OK',
     'ok_aria' => 'OK — conferma il PIN',
     'sign_out' => 'Esci',
+    'forgot_pin' => 'Hai dimenticato il PIN? Esci: puoi rientrare con la password del tuo account e impostare un nuovo PIN. Non si perde nessun dato.',
 
     'errors' => [
         'pin_length' => 'Il PIN deve avere almeno 6 cifre.',

@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'title' => 'Stanje sinhronizacije',
     'quarantined_ops' => 'Operacije v karanteni — zadnjih 7 dni',
-    'skipped' => 'preskočena operacija|preskočeni operaciji|preskočene operacije|preskočenih operacij',
+    'skipped' => ':count preskočena operacija|:count preskočeni operaciji|:count preskočene operacije|:count preskočenih operacij',
     'empty' => 'V zadnjih 7 dneh ni preskočenih operacij.',
 
     'col_reason' => 'Razlog',

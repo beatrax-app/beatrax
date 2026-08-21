@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Import\Public\Enums\PreviewSectionStatus')
 {{--
     First-import step — wizard step 5. The consolidated commit
     surface. No file uploads happen here; this page is the closing
@@ -29,7 +30,7 @@
 
     $hasAnyReadySection = false;
     foreach ($preview->sections as $section) {
-        if ($section->status === 'ready') {
+        if ($section->status === PreviewSectionStatus::Ready) {
             $hasAnyReadySection = true;
             break;
         }
@@ -37,7 +38,7 @@
 
     $sourceCount = 0;
     foreach ($preview->sections as $section) {
-        if ($section->status === 'ready' || $section->status === 'empty') {
+        if ($section->status === PreviewSectionStatus::Ready || $section->status === PreviewSectionStatus::Empty) {
             $sourceCount++;
         }
     }
@@ -80,7 +81,7 @@
             </p>
         @else
             @foreach ($preview->sections as $section)
-                <section class="source-subcard {{ $section->status === 'empty' ? 'empty' : '' }}">
+                <section class="source-subcard {{ $section->status === PreviewSectionStatus::Empty ? 'empty' : '' }}">
                     <x-onboarding::consolidated-preview-section :section="$section" />
                 </section>
             @endforeach

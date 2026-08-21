@@ -15,7 +15,7 @@ return [
     'no_counterparty' => '(χωρίς αντισυμβαλλόμενο)',
     'open_from_row' => 'Άνοιγμα γραμμής προέλευσης',
     'open_to_row' => 'Άνοιγμα γραμμής προορισμού',
-    'leg_count' => '1 πληρωμή|:count πληρωμές',
+    'leg_count' => ':count πληρωμή|:count πληρωμές',
     'state_aria' => 'Κατάσταση: :state',
 
     'kind' => [

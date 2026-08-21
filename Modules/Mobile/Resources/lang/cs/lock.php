@@ -12,6 +12,7 @@ return [
     'ok' => 'OK',
     'ok_aria' => 'OK — potvrdit PIN',
     'sign_out' => 'Odhlásit se',
+    'forgot_pin' => 'Nepamatuješ si PIN? Odhlas se — znovu se přihlásíš heslem k účtu a nastavíš si nový PIN. O žádná data nepřijdeš.',
 
     'errors' => [
         'pin_length' => 'PIN musí mít alespoň 6 číslice.',

@@ -6,6 +6,7 @@ namespace Modules\Chains\Internal\Services;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Collection;
 use Modules\Chains\Public\Contracts\UpsertsCardStatements;
 use Modules\Chains\Public\Enums\CardStatementState;
 use Modules\Core\Models\User;
@@ -21,6 +22,8 @@ use Modules\Ledger\Public\Enums\Currency;
  */
 final class CardStatementUpserter implements UpsertsCardStatements
 {
+    private const CHUNK_SIZE = 200;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
@@ -28,22 +31,34 @@ final class CardStatementUpserter implements UpsertsCardStatements
 
     public function upsertForImportRun(int $importRunId, User $user): int
     {
-        /** @var list<\stdClass> $rows */
-        $rows = $this->buildCandidatesQuery($user)
-            ->where('statement_summaries.import_run_id', $importRunId)
-            ->get()
-            ->values()
-            ->all();
-
-        return $this->promoteCandidates($rows, $user);
+        return $this->promoteInChunks(
+            $this->buildCandidatesQuery($user)->where('statement_summaries.import_run_id', $importRunId),
+            $user,
+        );
     }
 
     public function upsertForUser(User $user): int
     {
-        /** @var list<\stdClass> $rows */
-        $rows = $this->buildCandidatesQuery($user)->get()->values()->all();
+        return $this->promoteInChunks($this->buildCandidatesQuery($user), $user);
+    }
 
-        return $this->promoteCandidates($rows, $user);
+    // statement_summaries gains a row per imported statement forever, so the
+    // candidate set has no ceiling. chunkById walks the same rows in the same
+    // id order while holding one chunk of them at a time.
+    private function promoteInChunks(Builder $query, User $user): int
+    {
+        $inserted = 0;
+
+        /** @param Collection<int, \stdClass> $chunk */
+        $promote = function (Collection $chunk) use ($user, &$inserted): void {
+            /** @var list<\stdClass> $rows */
+            $rows = $chunk->values()->all();
+            $inserted += $this->promoteCandidates($rows, $user);
+        };
+
+        $query->chunkById(self::CHUNK_SIZE, $promote, 'statement_summaries.id', 'id');
+
+        return $inserted;
     }
 
     private function buildCandidatesQuery(User $user): Builder
@@ -54,6 +69,7 @@ final class CardStatementUpserter implements UpsertsCardStatements
             ->where('statement_summaries.user_id', $user->id)
             ->where('accounts.kind', AccountKind::IcsCard->value)
             ->select(
+                'statement_summaries.id',
                 'statement_summaries.account_id',
                 'statement_summaries.import_run_id',
                 'statement_summaries.period_start',
@@ -78,9 +94,8 @@ final class CardStatementUpserter implements UpsertsCardStatements
         }
 
         $now = $this->clock->now()->toDateTimeString();
-        $connection = $this->db->connection();
-        $inserted = 0;
 
+        $rows = [];
         foreach ($candidates as $row) {
             $periodStart = self::nullableProp($row, 'period_start');
             $periodEnd = self::nullableProp($row, 'period_end');
@@ -89,12 +104,11 @@ final class CardStatementUpserter implements UpsertsCardStatements
             }
 
             $closing = self::intProp($row, 'closing_balance_minor');
-            $importRunId = self::intProp($row, 'import_run_id');
 
-            $inserted += $connection->table('card_statements')->insertOrIgnore([
+            $rows[] = [
                 'user_id' => $user->id,
                 'account_id' => self::intProp($row, 'account_id'),
-                'import_run_id' => $importRunId,
+                'import_run_id' => self::intProp($row, 'import_run_id'),
                 'period_start' => $periodStart,
                 'period_end' => $periodEnd,
                 'total_amount_minor' => $closing,
@@ -103,10 +117,17 @@ final class CardStatementUpserter implements UpsertsCardStatements
                 'state' => CardStatementState::Open->value,
                 'created_at' => $now,
                 'updated_at' => $now,
-            ]);
+            ];
         }
 
-        return $inserted;
+        if ($rows === []) {
+            return 0;
+        }
+
+        // UNIQUE(user_id, account_id, period_start, period_end) is what
+        // decides which of these rows is new, and it decides for a whole
+        // chunk in one statement as readily as for one row.
+        return $this->db->connection()->table('card_statements')->insertOrIgnore($rows);
     }
 
     // The summary the statement is promoted from states the currency its

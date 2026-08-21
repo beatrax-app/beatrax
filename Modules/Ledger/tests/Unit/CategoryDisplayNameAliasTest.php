@@ -60,3 +60,36 @@ it('reads the aliases columns() actually emits', function (): void {
 
     expect(CategoryDisplayName::fromRow(categoryAliasRow('category_'), 'category'))->toBe('Groceries');
 });
+
+it('emits an unaliased select list a bare fromRow() can read back', function (): void {
+    expect(CategoryDisplayName::bareColumns())->toBe(['name', 'slug', 'name_is_default'])
+        ->and(CategoryDisplayName::bareColumns('c'))->toBe(['c.name', 'c.slug', 'c.name_is_default']);
+
+    $row = new stdClass;
+    foreach (CategoryDisplayName::bareColumns() as $column) {
+        $row->{$column} = match ($column) {
+            'name' => 'Groceries',
+            'name_is_default' => 1,
+            default => 'groceries',
+        };
+    }
+
+    expect(CategoryDisplayName::fromRow($row))->toBe('Groceries');
+});
+
+it('refuses the empty alias columns() cannot express rather than emitting _name', function (): void {
+    expect(static fn (): array => CategoryDisplayName::columns('c', ''))
+        ->toThrow(InvalidArgumentException::class, 'needs a non-empty alias');
+});
+
+// Both column lists are generated from PARTS, so a fourth part cannot reach one
+// shape of select and miss the other — the drift that put ten hand-written
+// lists in front of a seam that already existed.
+it('keeps the aliased and bare column lists naming the same parts', function (): void {
+    $aliased = array_map(
+        static fn (string $column): string => explode(' as ', $column)[0],
+        CategoryDisplayName::columns('c'),
+    );
+
+    expect($aliased)->toBe(CategoryDisplayName::bareColumns('c'));
+});

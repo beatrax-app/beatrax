@@ -11,6 +11,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Core\Public\Support\RowChunk;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -26,7 +27,7 @@ final class ReindexSearchCommand extends Command
     /** @var string */
     protected $description = 'Rebuild the FTS5 full-text search index from all transactions.';
 
-    private const CHUNK_SIZE = 500;
+    private const CHUNK_SIZE = RowChunk::DEFAULT_SIZE;
 
     public function __construct(
         private readonly DatabaseManager $db,

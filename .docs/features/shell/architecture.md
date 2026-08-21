@@ -45,7 +45,9 @@ The move is invisible from outside the module, and deliberately so:
 - **Translation keys** — `core::dashboard.*`, `core::sidebar.*`,
   `core::settings.*`, `core::net_worth.*` and `core::spending_trend.*` stay in
   `Core`. `core::settings.*` is shared with `Core`'s own locale switcher and
-  auto-import section, with `Auth`'s app-lock section and with `Mobile`'s sync
+  auto-import section, with `Auth`'s app-lock section, with `Onboarding`'s
+  country step — through `x-core::country-options`, which names the empty
+  option once for all three country pickers — and with `Mobile`'s sync
   screen, and `Mobile\Internal\Native\AppShellScreen` hard-codes
   `core::sidebar.nav.*` for its bottom bar. Moving the namespace would have been
   a change a paired device can observe.

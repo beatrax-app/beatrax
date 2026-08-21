@@ -72,6 +72,16 @@ out-of-band channel the network cannot touch, so the key it names is the only on
 in turn — at most eight, so a hostile peer answering a browse many times over cannot cost
 one request per answer — whether it holds this token.
 
+All three LAN roads run that browse through one seam, `Pairing\Concerns\BrowsesLanPeers`,
+which owns the browse timeout, the connect and request timeouts, and the peer bound. Eight
+belongs to this road alone and is passed in rather than declared: a typed code names no
+device, so any peer might be the one holding it and asking too few asks the wrong ones. The
+seam's own default is four, which is what a road spends when it already names the device it
+wants (`LanPairingFrameCourier`, whose bound counts only peers advertising that id) or when
+it runs on every three-second poll (`LanPairingFramePuller`). Both numbers are pinned in
+`LanBrowseBoundsTest`, because a merge that flattened them would either halve the reach of a
+typed code or double the blocking work inside a poll.
+
 The offer request carries `sha256(token)`, never the token itself. The row is stored under
 the hash, so the hash is all a lookup needs, and the token stays on the device that typed it
 rather than going to whichever peer answered a multicast question first. The reply carries a
@@ -128,6 +138,20 @@ look exactly as convincing as real ones.
 The word list is a flat 2048-entry constant rather than a Composer dependency — small,
 stable, and directly security-relevant, since the derivation is nothing but an index into it.
 
+### One derivation, both screens
+
+The comparison is only meaningful if the two screens derive from the same row the same way, so
+there is exactly one implementation of "read the row's two bound keys and turn them into six
+words": `PairingTokenRowReader::safetyWords()`. Both screens reach it through the same call —
+`PairingGateway::safetyWordsFor()` — the desktop from `PairingFlowModal`, the phone from
+`MobilePairingScan`.
+
+That includes the failure branches, which matter as much as the happy path: a row where only
+one side has bound a key, and a bound key that no longer decodes, both yield an empty list on
+both screens. An empty list is a comparison the human cannot make, and `confirm()` refuses the
+digest it produces — so a divergence degrades into a refusal rather than into two screens
+showing different words that one of them believes.
+
 ## The state machine
 
 ```
@@ -143,6 +167,11 @@ again.
 Accepting extends the window by five minutes — but only ever **grows** it. The new expiry is
 `max(existing expiry, now + grace)`, so an accept that arrives early cannot shorten a
 handshake that still has longer to run.
+
+Two transports reach that binding: a typed code goes through `accept()`, a relayed or LAN
+frame through `applyResponderAccept()` → `bindResponderOntoRow()`. Both take the new expiry
+from `PairingTokenService::extendedExpiry()`, so the grow-only rule cannot hold on one route
+and not the other.
 
 ### Nothing writes `expired`; the lapse is derived at read time
 
@@ -230,6 +259,12 @@ the one before:
    the frame was never meant for this device.
 3. **Which side does this device own?** Established from the row, and checked before the
    signature step — the peer columns the signature check reads are chosen by that side.
+   `PairingRowGuards` answers with a `PairingSide`, and every column that side selects comes
+   off that enum: `columnPrefix()`/`peerPrefix()` for the bound keys and device ids,
+   `confirmedAtColumn()`/`peerConfirmedAtColumn()` for the two stamps. All four route through
+   a single `peer()` flip, so a device's own column and its peer's cannot resolve to the same
+   name — the failure otherwise available here is both confirmations landing on one side,
+   `bothConfirmed()` never tripping, and no exception raised anywhere.
 4. **Is the signature authentic?** The frame must be signed by the key **the row bound for the
    peer side**, and `confirming_device_id` must equal the device id that same row bound. Both
    are checked against the row, never against the frame's own assertions about who it is.

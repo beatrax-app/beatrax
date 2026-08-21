@@ -17,8 +17,7 @@ return [
     'net' => 'Netto',
 
     'status_tiles_aria' => 'Statusfelter',
-    'email_scan_health' => 'Status for e-mailscanning — :count forbundet',
-    'inbox' => 'indbakke|indbakker',
+    'email_scan_health' => 'Status for e-mailscanning — :count forbundet indbakke|Status for e-mailscanning — :count forbundet indbakker',
 
     'top_spending' => 'Største udgifter',
     'no_expenses' => 'Ingen kategoriserede udgifter endnu.',

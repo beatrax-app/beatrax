@@ -11,6 +11,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
+use Modules\Auth\Public\Contracts\PasswordPolicy;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
@@ -20,8 +21,6 @@ use Modules\Core\Public\Support\Lang;
 final class ChangePasswordPage extends Component
 {
     use HoldsFlashMessage;
-
-    private const MINIMUM_PASSWORD_LENGTH = 12;
 
     public string $currentPassword = '';
 
@@ -52,7 +51,7 @@ final class ChangePasswordPage extends Component
             return;
         }
 
-        if (strlen($this->newPassword) < self::MINIMUM_PASSWORD_LENGTH) {
+        if (strlen($this->newPassword) < PasswordPolicy::MINIMUM_LENGTH) {
             $this->flashMessage = Lang::get('auth::change_password.error_min_length');
             $this->resetPasswordFields();
 

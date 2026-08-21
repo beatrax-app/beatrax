@@ -10,6 +10,7 @@ use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Fmt;
+use Modules\Counterparties\Internal\Enums\CounterpartyTypeFilter;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
@@ -24,16 +25,15 @@ final readonly class CounterpartyIndexQuery
     ) {}
 
     /**
-     * @param  string  $typeFilter  one of all|merchant|personal|bank|government|self|unknown
      * @return Collection<int, CounterpartyIndexRow>
      */
-    public function forUser(User $user, string $typeFilter = 'all'): Collection
+    public function forUser(User $user, CounterpartyTypeFilter $typeFilter = CounterpartyTypeFilter::All): Collection
     {
-        $resolvedType = $typeFilter === 'self' ? CounterpartyType::SelfAccount->value : $typeFilter;
+        $column = $typeFilter->toColumnValue();
 
         $query = $this->db->connection()->table('counterparties')->where('user_id', $user->id);
-        if ($resolvedType !== 'all') {
-            $query = $query->where('type', $resolvedType);
+        if ($column !== null) {
+            $query = $query->where('type', $column->value);
         }
 
         // Never order by display_name here: it is ciphertext once encryption
@@ -44,10 +44,15 @@ final readonly class CounterpartyIndexQuery
 
         $cutoffDate = $this->clock->now()->subYear()->toDateString();
 
+        $totals = $this->totalsByCounterparty($user, $cutoffDate);
+        $recentRows = $this->recentRowByCounterparty($user);
+        $monthlyTotals = $this->monthlyTotalsByCounterparty($user, $cutoffDate);
+        $sparklineMonths = $this->sparklineMonths();
+
         /** @var list<CounterpartyIndexRow> $result */
         $result = [];
         foreach ($cpRows as $cpRow) {
-            $row = $this->buildRow($cpRow, $user, $cutoffDate);
+            $row = $this->buildRow($cpRow, $user, $totals, $recentRows, $monthlyTotals, $sparklineMonths);
             if ($row !== null) {
                 $result[] = $row;
             }
@@ -62,8 +67,20 @@ final readonly class CounterpartyIndexQuery
         return new Collection($result);
     }
 
-    private function buildRow(stdClass $cpRow, User $user, string $cutoffDate): ?CounterpartyIndexRow
-    {
+    /**
+     * @param  array<int, array{total: int, count: int}>  $totals
+     * @param  array<int, stdClass>  $recentRows
+     * @param  array<int, array<string, int>>  $monthlyTotals
+     * @param  list<string>  $sparklineMonths
+     */
+    private function buildRow(
+        stdClass $cpRow,
+        User $user,
+        array $totals,
+        array $recentRows,
+        array $monthlyTotals,
+        array $sparklineMonths,
+    ): ?CounterpartyIndexRow {
         $cpId = is_numeric($cpRow->id ?? null) ? (int) $cpRow->id : 0;
         if ($cpId === 0) {
             return null;
@@ -77,17 +94,15 @@ final readonly class CounterpartyIndexQuery
             : $this->codec->decryptValue('counterparties', 'display_name', $storedDisplayName, $userId, $this->session)['value'];
         $type = is_string($cpRow->type ?? null) ? $cpRow->type : CounterpartyType::Unknown->value;
 
-        /** @var stdClass|null $totals */
-        $totals = $this->db->connection()->table('transactions')
-            ->where('user_id', $userId)
-            ->where('counterparty_id', $cpId)
-            ->where('posted_at', '>=', $cutoffDate)
-            ->selectRaw('COALESCE(SUM(amount_minor), 0) as total, COUNT(*) as cnt')
-            ->first();
-
-        $total = $totals !== null && is_numeric($totals->total ?? null) ? (int) $totals->total : 0;
-        $count = $totals !== null && is_numeric($totals->cnt ?? null) ? (int) $totals->cnt : 0;
+        $total = $totals[$cpId]['total'] ?? 0;
+        $count = $totals[$cpId]['count'] ?? 0;
         $avg = $count > 0 ? (int) round($total / 12) : 0;
+
+        $perMonth = $monthlyTotals[$cpId] ?? [];
+        $sparkline = [];
+        foreach ($sparklineMonths as $month) {
+            $sparkline[] = $perMonth[$month] ?? 0;
+        }
 
         return new CounterpartyIndexRow(
             id: $cpId,
@@ -96,23 +111,118 @@ final readonly class CounterpartyIndexQuery
             type: $type,
             total12mMinor: $total,
             avgPerMonthMinor: $avg,
-            recentLine: $this->recentLineFor($user, $cpId),
-            sparkline: $this->sparklineFor($user, $cpId, $cutoffDate),
+            recentLine: $this->recentLineFrom($recentRows[$cpId] ?? null, $userId),
+            sparkline: $sparkline,
         );
     }
 
-    private function recentLineFor(User $user, int $counterpartyId): ?string
+    /**
+     * @return array<int, array{total: int, count: int}>
+     */
+    private function totalsByCounterparty(User $user, string $cutoffDate): array
     {
-        $userId = $user->id;
+        /** @var iterable<stdClass> $rows */
+        $rows = $this->db->connection()->table('transactions')
+            ->where('user_id', $user->id)
+            ->whereNotNull('counterparty_id')
+            ->where('posted_at', '>=', $cutoffDate)
+            ->groupBy('counterparty_id')
+            ->selectRaw('counterparty_id, COALESCE(SUM(amount_minor), 0) as total, COUNT(*) as cnt')
+            ->get();
 
-        /** @var stdClass|null $recent */
-        $recent = $this->db->connection()->table('transactions')
-            ->where('user_id', $userId)
-            ->where('counterparty_id', $counterpartyId)
-            ->orderByDesc('posted_at')
-            ->orderByDesc('id')
-            ->first(['posted_at', 'description', 'counterparty_name']);
+        $totals = [];
+        foreach ($rows as $row) {
+            $cpId = is_numeric($row->counterparty_id ?? null) ? (int) $row->counterparty_id : 0;
+            if ($cpId === 0) {
+                continue;
+            }
 
+            $totals[$cpId] = [
+                'total' => is_numeric($row->total ?? null) ? (int) $row->total : 0,
+                'count' => is_numeric($row->cnt ?? null) ? (int) $row->cnt : 0,
+            ];
+        }
+
+        return $totals;
+    }
+
+    // Ranked in SQL rather than one ->first() per counterparty. The window's
+    // ORDER BY is the tie-break the per-row query used, so a counterparty with
+    // two transactions on one date still resolves to the same row.
+    /**
+     * @return array<int, stdClass>
+     */
+    private function recentRowByCounterparty(User $user): array
+    {
+        $connection = $this->db->connection();
+
+        $ranked = $connection->table('transactions')
+            ->where('user_id', $user->id)
+            ->whereNotNull('counterparty_id')
+            ->selectRaw('counterparty_id, posted_at, description, counterparty_name, ROW_NUMBER() OVER (PARTITION BY counterparty_id ORDER BY posted_at DESC, id DESC) as rn');
+
+        /** @var iterable<stdClass> $rows */
+        $rows = $connection->query()
+            ->fromSub($ranked, 'ranked')
+            ->where('rn', 1)
+            ->get(['counterparty_id', 'posted_at', 'description', 'counterparty_name']);
+
+        $recent = [];
+        foreach ($rows as $row) {
+            $cpId = is_numeric($row->counterparty_id ?? null) ? (int) $row->counterparty_id : 0;
+            if ($cpId !== 0) {
+                $recent[$cpId] = $row;
+            }
+        }
+
+        return $recent;
+    }
+
+    /**
+     * @return array<int, array<string, int>>
+     */
+    private function monthlyTotalsByCounterparty(User $user, string $cutoffDate): array
+    {
+        /** @var iterable<stdClass> $rows */
+        $rows = $this->db->connection()->table('transactions')
+            ->where('user_id', $user->id)
+            ->whereNotNull('counterparty_id')
+            ->where('posted_at', '>=', $cutoffDate)
+            ->groupBy('counterparty_id', 'ym')
+            ->selectRaw("counterparty_id, strftime('%Y-%m', posted_at) as ym, COALESCE(SUM(amount_minor), 0) as total")
+            ->get();
+
+        $monthly = [];
+        foreach ($rows as $row) {
+            $cpId = is_numeric($row->counterparty_id ?? null) ? (int) $row->counterparty_id : 0;
+            $ym = is_string($row->ym ?? null) ? $row->ym : '';
+            if ($cpId === 0 || $ym === '') {
+                continue;
+            }
+
+            $monthly[$cpId][$ym] = is_numeric($row->total ?? null) ? (int) $row->total : 0;
+        }
+
+        return $monthly;
+    }
+
+    /**
+     * @return list<string> twelve `Y-m` keys, oldest first — the last is the current month
+     */
+    private function sparklineMonths(): array
+    {
+        $months = [];
+        $cursor = $this->clock->now()->subMonths(11)->startOfMonth();
+        for ($i = 0; $i < 12; $i++) {
+            $months[] = $cursor->format('Y-m');
+            $cursor = $cursor->addMonth();
+        }
+
+        return $months;
+    }
+
+    private function recentLineFrom(?stdClass $recent, int $userId): ?string
+    {
         if ($recent === null) {
             return null;
         }
@@ -143,7 +253,7 @@ final readonly class CounterpartyIndexQuery
     }
 
     /**
-     * @return array<string, int>
+     * @return array<string, int> keyed by CounterpartyTypeFilter value
      */
     public function countsByType(User $user): array
     {
@@ -154,63 +264,24 @@ final readonly class CounterpartyIndexQuery
             ->groupBy('type')
             ->get();
 
-        $counts = [
-            'all' => 0,
-            'merchant' => 0,
-            'personal' => 0,
-            'bank' => 0,
-            'government' => 0,
-            'self' => 0,
-            'unknown' => 0,
-        ];
+        $counts = array_fill_keys(
+            array_map(
+                static fn (CounterpartyTypeFilter $filter): string => $filter->value,
+                CounterpartyTypeFilter::cases(),
+            ),
+            0,
+        );
 
         foreach ($rows as $row) {
-            $type = is_string($row->type ?? null) ? $row->type : '';
+            $type = CounterpartyType::tryFrom(is_string($row->type ?? null) ? $row->type : '');
             $cnt = is_numeric($row->cnt ?? null) ? (int) $row->cnt : 0;
-            $counts['all'] += $cnt;
+            $counts[CounterpartyTypeFilter::All->value] += $cnt;
 
-            $chipKey = $type === CounterpartyType::SelfAccount->value ? 'self' : $type;
-            if (array_key_exists($chipKey, $counts)) {
-                $counts[$chipKey] = $cnt;
+            if ($type !== null) {
+                $counts[CounterpartyTypeFilter::forColumnValue($type)->value] = $cnt;
             }
         }
 
         return $counts;
-    }
-
-    /**
-     * @return array<int, int> twelve monthly totals, oldest first — the last is the current month
-     */
-    private function sparklineFor(User $user, int $counterpartyId, string $cutoffDate): array
-    {
-        $connection = $this->db->connection();
-
-        /** @var iterable<stdClass> $rows */
-        $rows = $connection->table('transactions')
-            ->where('user_id', $user->id)
-            ->where('counterparty_id', $counterpartyId)
-            ->where('posted_at', '>=', $cutoffDate)
-            ->selectRaw("strftime('%Y-%m', posted_at) as ym, COALESCE(SUM(amount_minor), 0) as total")
-            ->groupBy('ym')
-            ->get();
-
-        $perMonth = [];
-        foreach ($rows as $row) {
-            $ym = is_string($row->ym ?? null) ? $row->ym : '';
-            $total = is_numeric($row->total ?? null) ? (int) $row->total : 0;
-            if ($ym !== '') {
-                $perMonth[$ym] = $total;
-            }
-        }
-
-        $sparkline = [];
-        $cursor = $this->clock->now()->subMonths(11)->startOfMonth();
-        for ($i = 0; $i < 12; $i++) {
-            $key = $cursor->format('Y-m');
-            $sparkline[] = $perMonth[$key] ?? 0;
-            $cursor = $cursor->addMonth();
-        }
-
-        return $sparkline;
     }
 }

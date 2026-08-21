@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Models\User;
+use Modules\Ledger\Public\Enums\AmountDirection;
 use Modules\Search\Public\Dto\SearchFilters;
 use Modules\Search\Public\Services\SearchQuery;
 
@@ -96,6 +97,23 @@ it('filters by amount direction out', function (): void {
 
     expect($page->totalCount)->toBe(1)
         ->and($page->rows[0]->counterpartyName)->toBe('Coffee Spend');
+});
+
+// SearchFilters' default now reads AmountDirection::Both->value while
+// SearchQuery still compares against bare 'in'/'out' literals. If those two
+// spellings ever drift the direction filter stops narrowing, which is
+// indistinguishable from an unfiltered search unless something asserts it.
+it('leaves both directions in the result when the direction filter is left at its default', function (): void {
+    [$user, $query] = tokenUserAndQuery('token-dir-both');
+    test()->searchTestTransaction($user->id, ['counterparty_name' => 'Coffee Refund', 'description' => 'coffee run', 'amount_minor' => 2500]);
+    test()->searchTestTransaction($user->id, ['counterparty_name' => 'Coffee Spend', 'description' => 'coffee run', 'amount_minor' => -2500]);
+
+    $filters = SearchFilters::empty();
+
+    expect($filters->amountDirection)->toBe(AmountDirection::Both->value)
+        ->and($filters->amountDirection)->toBe('both')
+        ->and($filters->isActive())->toBeFalse()
+        ->and($query->search($user, 'coffee', $filters)->totalCount)->toBe(2);
 });
 
 it('paginates with a posted-at cursor across pages', function (): void {

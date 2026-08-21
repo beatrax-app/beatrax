@@ -5,8 +5,12 @@ declare(strict_types=1);
 namespace Modules\Reports\Internal\Http;
 
 use Illuminate\Http\Request;
+use Modules\Ledger\Public\Enums\AmountDirection;
 use Modules\Reports\Internal\Dto\ReportDefinition;
+use Modules\Reports\Internal\Enums\ReportCurrencyMode;
 use Modules\Reports\Internal\Enums\ReportGranularity;
+use Modules\Reports\Internal\Enums\ReportPeriodPreset;
+use Modules\Reports\Internal\Enums\ReportViz;
 
 final class ReportDefinitionRequestFactory
 {
@@ -15,14 +19,14 @@ final class ReportDefinitionRequestFactory
         return new ReportDefinition(
             metric: $this->stringOr($request->query('metric'), 'spend'),
             dimension: $this->stringOr($request->query('dim'), 'category'),
-            periodPreset: $this->stringOr($request->query('period'), 'this_month'),
+            periodPreset: $this->stringOr($request->query('period'), ReportPeriodPreset::ThisMonth->value),
             // tryFrom, not from: an unknown ?gran= is a bad link, not corrupt
             // state, and it used to reach TimeBucketGenerator and 500. Rejecting
             // a bad STORED value is ReportDefinition::from()'s job instead.
             granularity: ReportGranularity::tryFrom($this->stringOr($request->query('gran'), ''))
                 ?? ReportGranularity::default(),
-            currencyMode: $this->stringOr($request->query('ccy'), 'base'),
-            viz: $this->stringOr($request->query('viz'), 'table'),
+            currencyMode: $this->stringOr($request->query('ccy'), ReportCurrencyMode::Base->value),
+            viz: $this->stringOr($request->query('viz'), ReportViz::Table->value),
             customFrom: $this->nullableString($request->query('from')),
             customTo: $this->nullableString($request->query('to')),
             compare: $request->boolean('cmp'),
@@ -31,7 +35,7 @@ final class ReportDefinitionRequestFactory
             counterparties: $this->toIntList($request->query('counterparty', [])),
             amountMin: $this->nullableString($request->query('amount_min')),
             amountMax: $this->nullableString($request->query('amount_max')),
-            amountDirection: $this->stringOr($request->query('amount_dir'), 'both'),
+            amountDirection: $this->stringOr($request->query('amount_dir'), AmountDirection::Both->value),
         );
     }
 

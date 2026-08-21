@@ -15,7 +15,7 @@ return [
     'no_counterparty' => '(bez protistrany)',
     'open_from_row' => 'Otvoriť zdrojový riadok',
     'open_to_row' => 'Otvoriť cieľový riadok',
-    'leg_count' => '1 platba|:count platby|:count platieb',
+    'leg_count' => ':count platba|:count platby|:count platieb',
     'state_aria' => 'Stav: :state',
 
     'kind' => [

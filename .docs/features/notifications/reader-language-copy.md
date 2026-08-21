@@ -147,11 +147,30 @@ there is no earlier sentence to fall back to.
 ## Which locale the write happens in
 
 `NotificationCopyRenderer::forUser()` switches the translator **and**
-Carbon to the recipient's stored locale for the duration of the build,
-then restores both. Every listener builds its draft inside that
-closure. Carbon has to be switched separately because it carries its
-own locale, and a job-built notification's dates would otherwise not
-match its sentence.
+Carbon to the recipient's language for the duration of the build, then
+restores both. Every listener builds its draft inside that closure.
+
+The translator is the target on purpose. Everywhere else a language
+change goes through `LocaleNegotiator::apply()`, which retargets the
+whole application — and Laravel relays that to Carbon for free, because
+`Carbon\Laravel\ServiceProvider` listens for `LocaleUpdated`. This is a
+job rendering for someone who is not the reader of the current request,
+so it must not leave `config('app.locale')` pointing at a recipient for
+whatever runs next. Swapping the translator alone is the narrow move —
+and nothing relays a translator swap to Carbon, which is why the dates
+are moved and put back by hand alongside it.
+
+`localeFor()` reads `users.locale` and then goes through
+`LocaleNegotiator::resolve()`, the same filter every other locale
+decision applies. It matters because the column can hold a code this
+release does not ship — a row merged from a device on a newer version, a
+restored backup, a language dropped since it was chosen. Handed straight
+to Carbon such a code is a **silent no-op**: `setLocale()` on an unknown
+language leaves the previous one in place, so the dates would have kept
+whatever language the caller was already reading in while the sentence
+around them fell back to English. Through `resolve()` the whole
+notification reads in English, the same answer the rest of the app gives
+that reader.
 
 ## Compatibility across versions
 

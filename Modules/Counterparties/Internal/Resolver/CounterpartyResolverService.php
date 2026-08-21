@@ -6,7 +6,6 @@ namespace Modules\Counterparties\Internal\Resolver;
 
 use Iban\Validation\Validator as IbanValidator;
 use Illuminate\Contracts\Events\Dispatcher;
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Community\Public\Dto\ClassificationRule;
 use Modules\Community\Public\Services\ClassificationRuleProvider;

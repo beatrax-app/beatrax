@@ -32,8 +32,9 @@ Two tempting shortcuts fail:
    to `awaiting_confirm`.
 4. **Desktop applies the accept.** `applyResponderAccept()` writes the responder identity
    carried by the frame and reaches `awaiting_confirm` too.
-5. **Both sides derive safety words** from the initiator and responder Ed25519 public keys.
-   They match only if nobody tampered with step 4.
+5. **Both sides derive safety words** from the initiator and responder Ed25519 public keys,
+   through the one shared `PairingGateway::safetyWordsFor()` seam rather than a per-screen
+   copy. They match only if nobody tampered with step 4.
 6. **Each human confirms locally** (`confirm()`), and each side sends the other a
    `PAIR_CONFIRM` signed with its Ed25519 device key over
    `PairingFrame::confirmSigningMessage(tokenHash, fromDeviceId, toDeviceId, fromKx, toKx)`.

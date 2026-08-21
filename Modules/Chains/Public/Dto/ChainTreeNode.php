@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Chains\Public\Dto;
 
 use Carbon\CarbonImmutable;
+use Modules\Chains\Public\Enums\ConfidenceTier;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Spatie\LaravelData\Data;
 
@@ -23,7 +24,7 @@ final class ChainTreeNode extends Data
         public readonly CarbonImmutable $bookedAt,
         public readonly string $accountName,
         public readonly string $kind,
-        public readonly string $confidenceTier,
+        public readonly ConfidenceTier $confidenceTier,
         public readonly array $children = [],
         public readonly ?string $counterpartySlug = null,
     ) {}

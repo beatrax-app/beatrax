@@ -43,6 +43,12 @@ point: a statement whose state has since moved to `settled` is never
 reset back to `open` by a re-import. Rows missing either period
 boundary are skipped, because the constraint needs both.
 
+The candidate summaries are walked with `chunkById` in
+`statement_summaries.id` order and promoted a chunk at a time, one
+`insertOrIgnore` per chunk. `statement_summaries` gains a row per
+imported statement and never loses one, so neither the read nor the
+write may be sized by how many the user has.
+
 Two entry points exist for the same query. `upsertForImportRun()`
 narrows to one import and runs from `ConfirmImport` after the import
 transaction commits. `upsertForUser()` drops that predicate and runs as

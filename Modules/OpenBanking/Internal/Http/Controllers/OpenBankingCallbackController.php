@@ -17,14 +17,11 @@ use Modules\OpenBanking\Internal\OAuth\InvalidStateException;
 use Modules\OpenBanking\Internal\OAuth\OpenBankingStateRepository;
 use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 use Modules\OpenBanking\Internal\Services\SecretsWriteFailed;
+use Modules\OpenBanking\Internal\Support\ConsentWindow;
 use RuntimeException;
 
 final class OpenBankingCallbackController
 {
-    // Kept in sync with the identically-named constant on
-    // OpenBankingConnectController.
-    private const CONSENT_VALID_FOR_DAYS = 180;
-
     public function __construct(
         private readonly EnableBankingHttpClient $client,
         private readonly OpenBankingSecretsRepository $secrets,
@@ -108,7 +105,7 @@ final class OpenBankingCallbackController
         $institutionId = $credentials->institutionId;
         $now = $this->clock->now();
         $nowString = $now->toDateTimeString();
-        $consentExpiresAt = $now->addDays(self::CONSENT_VALID_FOR_DAYS);
+        $consentExpiresAt = $now->addDays(ConsentWindow::VALID_FOR_DAYS);
         $consentExpiresAtString = $consentExpiresAt->toDateTimeString();
 
         $upsert = $this->upsertConnectionRow($userId, $institutionId, $accountUid, $nowString, $consentExpiresAtString);

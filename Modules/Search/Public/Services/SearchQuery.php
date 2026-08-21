@@ -266,7 +266,7 @@ final class SearchQuery
             ->where(function (Builder $scope) use ($user): void {
                 $scope->where('user_id', $user->id)->orWhereNull('user_id');
             })
-            ->get(['id', 'name', 'slug', 'name_is_default']);
+            ->get(['id', ...CategoryDisplayName::bareColumns()]);
 
         $ids = [];
         foreach ($rows as $row) {
@@ -326,11 +326,13 @@ final class SearchQuery
             $query->whereIn('transactions.id', $candidateIds);
         }
 
-        return $query
+        $query
             ->leftJoin('categories', 'transactions.category_id', '=', 'categories.id')
-            ->leftJoin('counterparties', 'transactions.counterparty_id', '=', 'counterparties.id')
-            ->orderByDesc('transactions.posted_at')
-            ->orderByDesc('transactions.id')
+            ->leftJoin('counterparties', 'transactions.counterparty_id', '=', 'counterparties.id');
+
+        TransactionCursor::orderNewestFirst($query);
+
+        return $query
             ->select([
                 'transactions.id',
                 'transactions.posted_at',

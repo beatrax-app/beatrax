@@ -8,6 +8,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Enums\SnoozeWindow;
+use Modules\Core\Public\Support\Lang;
 use Modules\DriftAlerts\Internal\Http\Livewire\DriftPage;
 use Modules\DriftAlerts\Models\DriftAlert;
 use Modules\DriftAlerts\Public\Events\DriftAlertDismissedCancelled;
@@ -181,6 +183,20 @@ it('persists the active tab through the URL via #[Url] state', function (): void
         ->assertSeeText('AlreadyDone');
 });
 
+it('persists the active type through the URL via #[Url] state', function (): void {
+    $response = $this->actingAs($this->user)->get('/drift?type=anomaly');
+    $response->assertOk()
+        ->assertSeeText(Lang::get('drift-alerts::alerts.intro_anomaly'));
+});
+
+it('reads a crafted type or tab as the default rather than failing the request', function (): void {
+    // The two are #[Url] properties, so anyone can put anything in the query
+    // string. A value outside the enum has to land on the default view, not
+    // on a 500.
+    $this->actingAs($this->user)->get('/drift?type=nonsense')->assertOk();
+    $this->actingAs($this->user)->get('/drift?tab=nonsense')->assertOk();
+});
+
 it('invokes Acknowledge and dispatches a toast', function (): void {
     $alert = dpAlert($this->user);
 
@@ -246,4 +262,23 @@ it('lets a phone reach every action chip on an open alert', function (): void {
     expect($content)->toContain('flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-4')
         ->toContain('flex flex-wrap items-center gap-2 sm:shrink-0')
         ->not->toContain('flex shrink-0 items-center gap-2');
+});
+
+// The three snooze buttons are drawn by one @foreach over SnoozeWindow, so
+// this holds the loop to the markup the three hand-written buttons had:
+// bare-integer alert id, the module's own label keys, and no menuitem role.
+it('draws a snooze button for every window, wired the way the hand-written three were', function (): void {
+    $alert = dpAlert($this->user, 'Netflix');
+
+    $content = (string) $this->actingAs($this->user)->get('/drift')->getContent();
+
+    foreach (SnoozeWindow::cases() as $window) {
+        expect($content)
+            ->toContain('wire:click="snooze('.$alert->id.", '")
+            ->toContain(Lang::get($window->labelKey('drift-alerts::alerts.row')));
+    }
+
+    expect(substr_count($content, 'class="block w-full px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900"'))
+        ->toBe(count(SnoozeWindow::cases()));
+    expect($content)->not->toContain('snooze_1w');
 });

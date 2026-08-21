@@ -1,7 +1,5 @@
-@use('Modules\Core\Public\Services\LocaleNegotiator')
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Core\Public\Support\LegalLinks')
-@use('Modules\Core\Public\Enums\Locale')
 @use('Modules\Core\Public\Enums\Theme')
 @php
     // Shared card chrome for the grouped settings sections. The redesign only
@@ -71,21 +69,20 @@
                 <label for="settings-locale-select" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.language.label') }}</label>
                 {{-- A select, not a button per language: the segmented row only
                      works while there are two or three, and the list is meant
-                     to grow. Auto is last here and in the theme switcher. --}}
-                <select
-                    id="settings-locale-select"
+                     to grow. Auto is last here and in the theme switcher.
+
+                     The 26 options and the System sentinel are the guest
+                     switcher's, drawn by the same component. What this screen
+                     supplies is which one opens selected: the STORED
+                     preference, which outranks the session key the pre-auth
+                     shells read. --}}
+                <x-core::locale-select
+                    labelled
+                    field-id="settings-locale-select"
+                    :selected="$locale"
+                    select-class="block w-full max-w-xs rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-slate-100"
                     wire:change="setLocale($event.target.value)"
-                    class="block w-full max-w-xs rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-slate-100"
-                >
-                    @foreach (Locale::cases() as $localeOption)
-                        <option
-                            value="{{ $localeOption->value }}"
-                            lang="{{ $localeOption->value }}"
-                            @selected($locale === $localeOption->value)
-                        >{{ $localeOption->label() }}</option>
-                    @endforeach
-                    <option value="{{ LocaleNegotiator::SYSTEM }}" @selected($locale === LocaleNegotiator::SYSTEM)>{{ Lang::get('core::settings.language.system') }}</option>
-                </select>
+                />
                 <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.language.help') }}</p>
                 @error('locale')
                     <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
@@ -109,16 +106,16 @@
                     class="block w-full max-w-xs rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-slate-100"
                     data-testid="settings-country-select"
                 >
-                    {{-- strlen, not a comparison against '': an empty-string
-                         literal inside a Blade directive reads to the HTML
-                         analyser as an opening attribute quote. Disabled rather
-                         than merely ignored — setCountry() returns early on the
-                         empty value, so re-choosing the placeholder was a
-                         round-trip that changed nothing and said nothing. --}}
-                    <option value="" disabled @selected(strlen($country) === 0)>{{ Lang::get('core::settings.country.choose') }}</option>
-                    @foreach ($countryOptions as $countryCode => $countryName)
-                        <option value="{{ $countryCode }}" @selected($country === $countryCode)>{{ $countryName }}</option>
-                    @endforeach
+                    {{-- Disabled rather than merely ignored — setCountry()
+                         returns early on the empty value, so re-choosing the
+                         placeholder was a round-trip that changed nothing and
+                         said nothing. This is the one of the three country
+                         pickers that cannot go back to unset. --}}
+                    <x-core::country-options
+                        :options="$countryOptions"
+                        :selected="$country"
+                        placeholder-disabled
+                    />
                 </select>
                 <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.country.help') }}</p>
                 @if ($country !== '')

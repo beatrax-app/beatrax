@@ -4,8 +4,8 @@
     owed an answer — did it work, and what happens now — passed in a flash of
     a progress bar.
 
-    Full-screen safe-area chrome and the 48x48 /icon.png app-mark block are
-    reused verbatim from setup-progress-screen.blade.php, so the two screens
+    The seam comes from .safe-screen and the app mark from x-core::app-mark,
+    the same two setup-progress-screen.blade.php uses, so the two screens
     read as one flow rather than two designs.
 
     Unlike that screen this one is NOT blocking: it offers exactly one way on,
@@ -13,23 +13,14 @@
 --}}
 @use('Modules\Core\Public\Support\Lang')
 <div
-    class="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950
-            pl-[var(--safe-left)] pr-[var(--safe-right)]
-            pt-[var(--safe-top)] pb-[var(--safe-bottom)]
+    class="safe-screen min-h-screen flex items-center justify-center bg-white dark:bg-slate-950
             motion-reduce:transition-none"
 >
     <div class="w-full max-w-sm px-6 py-10 space-y-8">
 
         <div class="space-y-4 text-center">
             <div class="flex justify-center">
-                <img
-                    src="{{ Vite::asset('resources/brand/logo.svg') }}"
-                    width="48"
-                    height="48"
-                    alt="Beatrax"
-                    class="rounded-xl"
-                    aria-hidden="true"
-                />
+                <x-core::app-mark />
             </div>
 
             <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">

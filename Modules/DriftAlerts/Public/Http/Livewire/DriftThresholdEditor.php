@@ -25,9 +25,24 @@ final class DriftThresholdEditor extends Component
 
     public ?int $currentValue = null;
 
-    public function mount(int $recurringSeriesId, CurrentUser $currentUser, DatabaseManager $db): void
-    {
+    // A parent that renders one editor per alert group already holds the whole
+    // column and says so with $currentValueLoaded; null on its own cannot, since
+    // null is also the answer for a series that follows the global default. A
+    // page that mounts this alone passes neither and reads its own row.
+    public function mount(
+        int $recurringSeriesId,
+        CurrentUser $currentUser,
+        DatabaseManager $db,
+        ?int $currentValue = null,
+        bool $currentValueLoaded = false,
+    ): void {
         $this->recurringSeriesId = $recurringSeriesId;
+
+        if ($currentValueLoaded) {
+            $this->currentValue = $currentValue;
+
+            return;
+        }
 
         $row = $db->connection()->table('recurring_series')
             ->where('id', $recurringSeriesId)

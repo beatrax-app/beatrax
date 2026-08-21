@@ -33,7 +33,6 @@ use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Http\Livewire\Concerns\HandlesClearedStatus;
 use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Ledger\Public\Services\ReconciliationWriter;
-use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -427,26 +426,6 @@ final class TransactionDetail extends Component
         if (str_starts_with($name, 'legs.') && str_ends_with($name, '.amount')) {
             $this->recomputeRemaining($currentUser, $db);
         }
-    }
-
-    /**
-     * @param  array{id: ?int, categoryId: int|string|null, amount: string, note: string, tax: bool}  $leg
-     */
-    private static function legCategoryId(array $leg): ?int
-    {
-        $raw = $leg['categoryId'];
-        if ($raw === null || $raw === '') {
-            return null;
-        }
-
-        return is_numeric($raw) ? (int) $raw : null;
-    }
-
-    // The sign belongs to the parent transaction, so a leg carries a
-    // positive magnitude and zero is not a valid leg amount.
-    private static function parseAmount(string $value): ?int
-    {
-        return MoneyInput::tryToPositiveMinor($value);
     }
 
     public function render(

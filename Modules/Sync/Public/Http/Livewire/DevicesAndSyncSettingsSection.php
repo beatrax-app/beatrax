@@ -17,6 +17,7 @@ use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeExceptionContext;
+use Modules\Sync\Internal\Crypto\EncryptionSetupStep;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\Http\Livewire\Concerns\ManagesDeviceRenaming;
 use Modules\Sync\Internal\Http\Livewire\Concerns\ReadsDeviceState;
@@ -61,9 +62,10 @@ final class DevicesAndSyncSettingsSection extends Component
 
     public bool $showEncryptionModal = false;
 
-    // Enable-encryption modal step: confirm|progress|done|error.
-    // 0-100 migration progress is sourced from EncryptionMigrationService::progress().
-    public string $encryptionStep = 'confirm';
+    // Stays a string on the wire: a public property is rehydrated straight from
+    // the client payload with no enum coercion. 0-100 migration progress is
+    // sourced from EncryptionMigrationService::progress().
+    public string $encryptionStep = EncryptionSetupStep::Confirm->value;
 
     public int $encryptionProgress = 0;
 
@@ -190,7 +192,7 @@ final class DevicesAndSyncSettingsSection extends Component
     // synced/mandatory path never renders this CTA.
     public function showEnableEncryptionModal(): void
     {
-        $this->encryptionStep = 'confirm';
+        $this->encryptionStep = EncryptionSetupStep::Confirm->value;
         $this->encryptionProgress = 0;
         $this->showEncryptionModal = true;
     }
@@ -198,7 +200,7 @@ final class DevicesAndSyncSettingsSection extends Component
     public function declineEncryption(): void
     {
         $this->showEncryptionModal = false;
-        $this->encryptionStep = 'confirm';
+        $this->encryptionStep = EncryptionSetupStep::Confirm->value;
     }
 
     // Runs the migration for the single-device optional-offer path (same
@@ -211,39 +213,44 @@ final class DevicesAndSyncSettingsSection extends Component
         Session $session,
         DatabaseManager $db,
     ): void {
-        $this->encryptionStep = 'progress';
+        $this->encryptionStep = EncryptionSetupStep::Progress->value;
 
         try {
             $migrationService->migrate($currentUser->user(), $session);
             $userId = $currentUser->user()->id;
             $this->encryptionOn = $this->encryptionEnabled($db, $userId);
             $this->encryptionProgress = $migrationService->progress($userId);
-            $this->encryptionStep = 'done';
+            $this->encryptionStep = EncryptionSetupStep::Done->value;
         } catch (\Throwable) {
             // migrate() already rolled back to zero half-encrypted rows and
             // restored the pre-migration snapshot on any throw — the error
             // copy reflects that guarantee.
-            $this->encryptionStep = 'error';
+            $this->encryptionStep = EncryptionSetupStep::Error->value;
         }
     }
 
     public function pollEncryptionProgress(EncryptionMigrationService $migrationService, CurrentUser $currentUser): void
     {
-        if ($this->encryptionStep !== 'progress') {
+        if ($this->currentEncryptionStep() !== EncryptionSetupStep::Progress) {
             return;
         }
 
         $this->encryptionProgress = $migrationService->progress($currentUser->user()->id);
 
         if ($this->encryptionProgress >= 100) {
-            $this->encryptionStep = 'done';
+            $this->encryptionStep = EncryptionSetupStep::Done->value;
         }
+    }
+
+    private function currentEncryptionStep(): EncryptionSetupStep
+    {
+        return EncryptionSetupStep::tryFrom($this->encryptionStep) ?? EncryptionSetupStep::Confirm;
     }
 
     public function closeEncryptionModal(): void
     {
         $this->showEncryptionModal = false;
-        $this->encryptionStep = 'confirm';
+        $this->encryptionStep = EncryptionSetupStep::Confirm->value;
         $this->encryptionProgress = 0;
     }
 
@@ -400,6 +407,11 @@ final class DevicesAndSyncSettingsSection extends Component
 
     public function render(ViewFactory $views): View
     {
-        return $views->make('sync::livewire.devices-and-sync-settings-section');
+        // Under its own name, not $encryptionStep: view data cannot shadow a
+        // public property, and the view needs the resolved enum rather than the
+        // raw string the client last put on the wire.
+        return $views->make('sync::livewire.devices-and-sync-settings-section', [
+            'encryptionModalStep' => $this->currentEncryptionStep(),
+        ]);
     }
 }

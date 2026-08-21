@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Láncok áttekintése',
     'heading' => 'Láncok áttekintése',
-    'hint' => '{0} tipp|[1,1] tipp|[2,*] tipp',
+    'hint' => '{0} :count tipp|[1,1] :count tipp|[2,*] :count tipp',
     'subtitle' => 'Erősítsd meg vagy utasítsd el azokat a jelölt kapcsolatokat, amelyeket a láncfeloldó nem tudott automatikusan megerősíteni.',
 
     'empty_heading' => 'Nincs áttekintendő tétel',

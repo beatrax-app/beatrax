@@ -6,6 +6,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
+use Modules\Auth\Public\Contracts\PasswordPolicy;
 use Modules\Core\Models\User;
 use Modules\Desktop\Internal\Http\Middleware\EnsureDatabaseReady;
 use Modules\Mobile\Internal\Http\Livewire\MobileImportBootstrap;
@@ -283,7 +284,7 @@ it('ticks the password requirements live, off the same binding the server valida
     expect($html)->toContain('id="password-requirements"')
         ->and($html)->toContain('aria-describedby="password-requirements"')
         ->and($html)->toContain('At least 12 characters')
-        ->and($html)->toContain('$wire.password');
+        ->and($html)->toContain(sprintf("passwordStrength(%d, 'password', 'passwordConfirmation')", PasswordPolicy::MINIMUM_LENGTH));
 });
 
 // Android paints the navigation bar over the page rather than beside it, so
@@ -352,4 +353,19 @@ it('drops the way back once the device holds an identity', function (): void {
         ->html();
 
     expect($html)->not->toContain(route('mobile.welcome'));
+});
+
+// $step carries no #[Locked], so the client decides what arrives in it. Typing
+// it as a backed enum would make a crafted value a 500 rather than a harmless
+// fallback, which is why the property stays a string and is read back with
+// tryFrom(). A wrong fallback here would also print the recovery codes.
+it('renders the first step when a step outside the wizard arrives from the wire', function (): void {
+    $this->withoutMiddleware(EnsureDatabaseReady::class);
+
+    $html = (string) Livewire::test(MobileImportBootstrap::class)
+        ->set('step', 'not-a-step')
+        ->assertSet('step', 'not-a-step')
+        ->html();
+
+    expect($html)->toContain(route('mobile.welcome'));
 });

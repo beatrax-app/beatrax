@@ -69,7 +69,7 @@ return [
     'highlights_shortfall_aria' => ':count aktívne okno nedostatku v najbližších :days dňoch|:count aktívne okná nedostatku v najbližších :days dňoch|:count aktívnych okien nedostatku v najbližších :days dňoch',
     'dips_to' => ':name klesá na :amount',
     'on_date_suffix' => ' dňa :date',
-    'shortfall_window' => '1 aktívne okno nedostatku|:count aktívne okná nedostatku|:count aktívnych okien nedostatku',
+    'shortfall_window' => ':count aktívne okno nedostatku|:count aktívne okná nedostatku|:count aktívnych okien nedostatku',
     'lowest_in_30' => 'Najnižšie za 30 dní: :amount',
     'next_ics' => 'Ďalšie zúčtovanie ICS: :amount dňa :date',
 ];

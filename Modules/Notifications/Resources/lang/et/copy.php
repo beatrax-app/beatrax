@@ -38,7 +38,7 @@ return [
         'nothing_notable' => 'Miski ei vaja sinu tähelepanu.',
         'flow' => 'Sisse :in, välja :out, neto :net.',
         'over_budget' => 'Seni :amount üle eelarve.',
-        'payments_due' => 'Sel perioodil tuleb tasuda 1 makse.|Sel perioodil tuleb tasuda :count makset.',
+        'payments_due' => 'Sel perioodil tuleb tasuda :count makse.|Sel perioodil tuleb tasuda :count makset.',
         'shortfall' => 'Ees ootab rahavoo puudujääk.',
     ],
 ];

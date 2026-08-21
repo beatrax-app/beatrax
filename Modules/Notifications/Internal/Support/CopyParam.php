@@ -15,49 +15,33 @@ use Modules\Ledger\Public\ValueObjects\Money;
  */
 final readonly class CopyParam
 {
-    private const KIND_DAY = 'day';
-
-    private const KIND_DATE = 'date';
-
-    private const KIND_LANG = 'lang';
-
-    private const KIND_MONEY = 'money';
-
-    private const KIND_CATEGORY = 'category';
-
     private const VALUE_SEPARATOR = '|';
-
-    private const MONEY_PATTERN = '/^-?\d+\|[A-Za-z]{3}$/';
-
-    // A 0-or-1 flag, the slug, then the stored name — the name last so one
-    // holding a separator still decodes. A slug is generated, so it holds none.
-    private const CATEGORY_PATTERN = '/^[01]\|[^|]*\|/';
 
     private const SHORT_DATE_FORMAT = 'd M';
 
     private function __construct(
-        private string $kind,
+        private CopyParamKind $kind,
         private string $value,
     ) {}
 
     public static function dayName(CarbonInterface $date): self
     {
-        return new self(self::KIND_DAY, $date->toDateString());
+        return new self(CopyParamKind::Day, $date->toDateString());
     }
 
     public static function shortDate(CarbonInterface $date): self
     {
-        return new self(self::KIND_DATE, $date->toDateString());
+        return new self(CopyParamKind::Date, $date->toDateString());
     }
 
     public static function line(string $key): self
     {
-        return new self(self::KIND_LANG, $key);
+        return new self(CopyParamKind::Lang, $key);
     }
 
     public static function money(int $minor, string $currencyCode): self
     {
-        return new self(self::KIND_MONEY, $minor.self::VALUE_SEPARATOR.$currencyCode);
+        return new self(CopyParamKind::Money, $minor.self::VALUE_SEPARATOR.$currencyCode);
     }
 
     // A category name is the one param that is not the reader's own words: an
@@ -65,7 +49,7 @@ final readonly class CopyParam
     // for, so it travels as provenance and is resolved at render.
     public static function category(string $storedName, string $slug, bool $nameIsDefault): self
     {
-        return new self(self::KIND_CATEGORY, implode(self::VALUE_SEPARATOR, [
+        return new self(CopyParamKind::Category, implode(self::VALUE_SEPARATOR, [
             $nameIsDefault ? '1' : '0',
             $slug,
             $storedName,
@@ -75,11 +59,11 @@ final readonly class CopyParam
     public function render(): string
     {
         return match ($this->kind) {
-            self::KIND_DAY => CarbonImmutable::parse($this->value)->dayName,
-            self::KIND_DATE => CarbonImmutable::parse($this->value)->translatedFormat(self::SHORT_DATE_FORMAT),
-            self::KIND_MONEY => self::renderMoney($this->value),
-            self::KIND_CATEGORY => self::renderCategory($this->value),
-            default => Lang::get($this->value),
+            CopyParamKind::Day => CarbonImmutable::parse($this->value)->dayName,
+            CopyParamKind::Date => CarbonImmutable::parse($this->value)->translatedFormat(self::SHORT_DATE_FORMAT),
+            CopyParamKind::Money => self::renderMoney($this->value),
+            CopyParamKind::Category => self::renderCategory($this->value),
+            CopyParamKind::Lang => Lang::get($this->value),
         };
     }
 
@@ -108,7 +92,7 @@ final readonly class CopyParam
      */
     public function toArray(): array
     {
-        return ['kind' => $this->kind, 'value' => $this->value];
+        return ['kind' => $this->kind->value, 'value' => $this->value];
     }
 
     public static function fromArray(mixed $raw): ?self
@@ -124,16 +108,18 @@ final readonly class CopyParam
             return null;
         }
 
-        if ($kind === self::KIND_MONEY) {
-            return preg_match(self::MONEY_PATTERN, $value) === 1 ? new self($kind, $value) : null;
+        $parsed = CopyParamKind::tryFrom($kind);
+
+        if ($parsed === null) {
+            return null;
         }
 
-        if ($kind === self::KIND_CATEGORY) {
-            return preg_match(self::CATEGORY_PATTERN, $value) === 1 ? new self($kind, $value) : null;
+        $pattern = $parsed->storedValuePattern();
+
+        if ($pattern !== null && preg_match($pattern, $value) !== 1) {
+            return null;
         }
 
-        return in_array($kind, [self::KIND_DAY, self::KIND_DATE, self::KIND_LANG], true)
-            ? new self($kind, $value)
-            : null;
+        return new self($parsed, $value);
     }
 }

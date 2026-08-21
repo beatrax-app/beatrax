@@ -69,7 +69,7 @@ return [
     'highlights_shortfall_aria' => ':count aktives Unterdeckungsfenster in den nächsten :days Tagen|:count aktive Unterdeckungsfenster in den nächsten :days Tagen',
     'dips_to' => ':name fällt auf :amount',
     'on_date_suffix' => ' am :date',
-    'shortfall_window' => '1 aktives Unterdeckungsfenster|:count aktive Unterdeckungsfenster',
+    'shortfall_window' => ':count aktives Unterdeckungsfenster|:count aktive Unterdeckungsfenster',
     'lowest_in_30' => 'Tiefstand in 30 Tagen: :amount',
     'next_ics' => 'Nächste ICS-Abrechnung: :amount am :date',
 ];

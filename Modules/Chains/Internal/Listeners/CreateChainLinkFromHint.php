@@ -11,6 +11,7 @@ use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Receipts\Public\Dto\ChainHintPayload\FundedByCardPayload;
 use Modules\Receipts\Public\Dto\ChainHintPayload\RefundOfPayload;
+use Modules\Receipts\Public\Enums\ChainHintType;
 use Modules\Receipts\Public\Events\ChainHintDetected;
 
 /**
@@ -33,14 +34,14 @@ final class CreateChainLinkFromHint
         $payload = $event->hintPayload;
 
         $row = match (true) {
-            $event->hintType === 'funded_by_card' && $payload instanceof FundedByCardPayload => [
+            $event->hintType === ChainHintType::FundedByCard && $payload instanceof FundedByCardPayload => [
                 'kind' => ChainLinkKind::FundedByCardHint->value,
                 'evidence' => [
                     'card_last4' => $payload->cardLast4,
                     'source_evidence' => $event->evidence,
                 ],
             ],
-            $event->hintType === 'refund_of' && $payload instanceof RefundOfPayload => [
+            $event->hintType === ChainHintType::RefundOf && $payload instanceof RefundOfPayload => [
                 'kind' => ChainLinkKind::RefundOfHint->value,
                 'evidence' => [
                     'original_reference_id' => $payload->originalReferenceId,

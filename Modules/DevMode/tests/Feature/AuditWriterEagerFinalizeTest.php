@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Public\Contracts\AuditWriter;
 use Modules\DevMode\Public\Dto\CommandRunAudit;
 
@@ -27,7 +28,7 @@ it('recordCommandRun with a runId stores run_id in properties', function (): voi
     $writer->recordCommandRun(new CommandRunAudit(
         command: 'cache:clear',
         args: [],
-        tier: 'safe',
+        tier: CommandTier::Safe,
         callerUserId: 0,
         startedAt: startedAt(),
         finishedAt: null,
@@ -58,7 +59,7 @@ it('finalizeCommandRun updates the existing row in place (no second row created)
     $writer->recordCommandRun(new CommandRunAudit(
         command: 'config:show',
         args: ['config' => 'app'],
-        tier: 'safe',
+        tier: CommandTier::Safe,
         callerUserId: 0,
         startedAt: startedAt(),
         finishedAt: null,
@@ -118,7 +119,7 @@ it('finalizeCommandRun with cancelled=true merges __cancelled into args', functi
     $writer->recordCommandRun(new CommandRunAudit(
         command: 'cache:clear',
         args: [],
-        tier: 'safe',
+        tier: CommandTier::Safe,
         callerUserId: 0,
         startedAt: startedAt(),
         finishedAt: null,

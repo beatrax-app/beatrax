@@ -321,6 +321,24 @@ it('the enable-encryption done step repeats the carve-out instead of restating a
         ->assertDontSee('Your data is now encrypted at rest.');
 });
 
+// $encryptionStep carries no #[Locked], so the client decides what arrives in
+// it. Typing it as a backed enum would make a crafted value a 500 rather than
+// a harmless fallback, which is why the property stays a string.
+it('shows the confirm step when an encryption step outside the modal arrives from the wire', function (): void {
+    $user = encryptionUiUser('encryption-ui-bogus-step');
+    $this->actingAs($user);
+
+    Livewire::test(DevicesAndSyncSettingsSection::class)
+        ->set('appLockConfigured', true)
+        ->set('syncEnabled', false)
+        ->set('encryptionOn', false)
+        ->set('showEncryptionModal', true)
+        ->set('encryptionStep', 'not-a-step')
+        ->assertSet('encryptionStep', 'not-a-step')
+        ->assertSee('Enable at-rest encryption')
+        ->assertDontSee('Encryption setup failed');
+});
+
 it('retires the unqualified done-step promise in every locale and replaces it with the scoped one', function (): void {
     $root = dirname(__DIR__, 2).'/Resources/lang';
     $locales = array_values(array_filter(scandir($root) ?: [], static fn (string $entry): bool => ! str_starts_with($entry, '.')));

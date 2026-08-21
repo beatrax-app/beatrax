@@ -22,8 +22,7 @@ return [
 
     'card' => [
         'likely' => 'Verjetno: neimenovani trgovec.',
-        'seen' => 'Zaznano',
-        'time' => 'krat|krat|krat|krat',
+        'seen_times' => 'Zaznano :count krat|Zaznano :count krat|Zaznano :count krat|Zaznano :count krat',
         'last_seen' => 'Nazadnje zaznano :date',
         'suggest' => 'Predlagaj ime →',
     ],

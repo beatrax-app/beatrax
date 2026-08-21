@@ -23,8 +23,8 @@
 
     $variant = $status === \Modules\Ledger\Public\Enums\ClearedStatus::Uncleared->value ? 'muted' : 'ok';
     $label = match ($status) {
-        'reconciled' => Lang::get('ledger::common.status.reconciled'),
-        'uncleared' => Lang::get('ledger::common.status.uncleared'),
+        \Modules\Ledger\Public\Enums\ClearedStatus::Reconciled->value => Lang::get('ledger::common.status.reconciled'),
+        \Modules\Ledger\Public\Enums\ClearedStatus::Uncleared->value => Lang::get('ledger::common.status.uncleared'),
         default => Lang::get('ledger::common.status.cleared'),
     };
 @endphp

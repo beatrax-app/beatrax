@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Counterparties\Public\Enums\CounterpartyType')
 {{--
     Type chip — categorical metadata badge for a counterparty's
     taxonomy. Renders the 5+1 type variants (merchant, personal, bank,
@@ -13,19 +14,19 @@
       type — string; one of merchant | personal | bank | government | self_account | unknown
 --}}
 @props([
-    'type' => 'unknown',
+    'type' => CounterpartyType::Unknown->value,
 ])
 @php
     $typeLabels = [
-        'merchant' => ['class' => 't-merchant', 'label' => Lang::get('counterparties::components.type_chip.merchant')],
-        'personal' => ['class' => 't-personal', 'label' => Lang::get('counterparties::components.type_chip.personal')],
-        'bank' => ['class' => 't-bank', 'label' => Lang::get('counterparties::components.type_chip.bank')],
-        'government' => ['class' => 't-gov', 'label' => Lang::get('counterparties::components.type_chip.government')],
-        'self_account' => ['class' => 't-self', 'label' => Lang::get('counterparties::components.type_chip.self')],
-        'unknown' => ['class' => 't-unknown', 'label' => Lang::get('counterparties::components.type_chip.unknown')],
+        CounterpartyType::Merchant->value => ['class' => 't-merchant', 'label' => Lang::get('counterparties::components.type_chip.merchant')],
+        CounterpartyType::Personal->value => ['class' => 't-personal', 'label' => Lang::get('counterparties::components.type_chip.personal')],
+        CounterpartyType::Bank->value => ['class' => 't-bank', 'label' => Lang::get('counterparties::components.type_chip.bank')],
+        CounterpartyType::Government->value => ['class' => 't-gov', 'label' => Lang::get('counterparties::components.type_chip.government')],
+        CounterpartyType::SelfAccount->value => ['class' => 't-self', 'label' => Lang::get('counterparties::components.type_chip.self')],
+        CounterpartyType::Unknown->value => ['class' => 't-unknown', 'label' => Lang::get('counterparties::components.type_chip.unknown')],
     ];
 
-    $resolved = $typeLabels[$type] ?? $typeLabels['unknown'];
+    $resolved = $typeLabels[$type] ?? $typeLabels[CounterpartyType::Unknown->value];
 @endphp
 <span
     {{ $attributes->merge(['class' => 'type-chip '.$resolved['class']]) }}

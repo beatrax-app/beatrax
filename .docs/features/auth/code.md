@@ -19,6 +19,7 @@ Modules/Auth/
 │   │   └── FortifyServiceProvider.php
 │   ├── Recovery/
 │   │   ├── RecoveryCodeGenerator.php
+│   │   ├── RecoveryCodeMinter.php
 │   │   ├── RecoveryCodeFormatter.php
 │   │   ├── RecoveryCodeNormalizer.php
 │   │   └── RecoveryCodeAuthenticator.php
@@ -86,7 +87,15 @@ domain model uses.
     codes and issues ten fresh ones. Two call paths: a user regenerates
     their own; the owner regenerates a partner's.
 
-There are no DTOs, contracts, or events in `Public/` — the action surface
+- **Contracts/**
+  - `PasswordPolicy` — `MINIMUM_LENGTH`, the one passphrase length every
+    gate measures against. `SignupAction`, `AddUserAction`,
+    `ResetPasswordAction`, `ResetPasswordCommand`, `ChangePasswordPage`,
+    `ManageUserPage` and Mobile's `MobileImportBootstrap` all read it, and
+    `x-core::password-requirements` renders it into the live checklist so
+    the browser cannot tick a rule the server does not enforce.
+
+There are no DTOs in `Public/` — the action surface plus `PasswordPolicy`
 is the contract. The `UserInstalled` event the module raises lives in
 [`Modules/Core/Public/Events`](../core/code.md) because it is part of
 the cross-module "a user just appeared" surface.
@@ -102,6 +111,12 @@ the cross-module "a user just appeared" surface.
   a 31-character phone-readable alphabet (excludes I, L, O, 0, 1),
   formatted as five hyphen-separated groups of four. Every character is
   drawn with `random_int` (~99 bits of entropy per code).
+- `Internal/Recovery/RecoveryCodeMinter` — the sole writer of a fresh
+  sheet: ten distinct codes from the generator, each hashed, inserted in
+  one statement stamped with the injected `Clock`. `SignupAction`,
+  `AddUserAction`, `RegenerateRecoveryCodesAction` and
+  `RegenerateRecoveryCodesCommand` all issue through it and differ only in
+  what they do with the returned plaintext.
 - `Internal/Recovery/RecoveryCodeNormalizer` — strips whitespace, hyphens,
   and case from user input so the same code typed in any common shape
   hashes identically.

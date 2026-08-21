@@ -38,7 +38,7 @@ return [
         'nothing_notable' => 'Inget kräver din uppmärksamhet.',
         'flow' => 'In :in, ut :out, netto :net.',
         'over_budget' => ':amount över budget hittills.',
-        'payments_due' => '1 betalning förfaller den här perioden.|:count betalningar förfaller den här perioden.',
+        'payments_due' => ':count betalning förfaller den här perioden.|:count betalningar förfaller den här perioden.',
         'shortfall' => 'Ett underskott i kassaflödet väntar.',
     ],
 ];

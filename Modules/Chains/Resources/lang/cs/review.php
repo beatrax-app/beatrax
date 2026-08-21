@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Kontrola řetězců',
     'heading' => 'Kontrola řetězců',
-    'hint' => 'náznak|náznaky|náznaků',
+    'hint' => ':count náznak|:count náznaky|:count náznaků',
     'subtitle' => 'Potvrď nebo odmítni navržené vazby, které se nepodařilo potvrdit automaticky.',
 
     'empty_heading' => 'Není co kontrolovat',

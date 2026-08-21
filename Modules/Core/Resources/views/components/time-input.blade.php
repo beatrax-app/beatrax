@@ -20,6 +20,9 @@
         CarbonImmutable::create(2026, 1, 5, 21, 0)->isoFormat('A'),
     ];
 
+    $fieldLabel = $ariaLabel ?? Lang::get('core::components.time.open');
+    $emptyLabel = Lang::get('core::components.time.empty');
+
     $bindings = $attributes->whereStartsWith('wire:');
     $passthrough = $attributes->whereDoesntStartWith('wire:')->except('class');
 @endphp
@@ -35,17 +38,20 @@
     x-on:click.outside="open = false"
     {{ $attributes->only('class')->class(['bx-date']) }}
 >
+    {{-- The chosen time is part of the field's NAME — same reasoning, and the
+         same trap, as x-core::date-input. --}}
     <button
         type="button"
-        @if ($fieldId !== null) id="{{ $fieldId }}" @endif
+        @if ($fieldId !== null) id="{{ $fieldId }}" aria-labelledby="{{ $fieldId }}-name {{ $fieldId }}-value" @endif
         x-on:click="open = ! open"
         x-bind:aria-expanded="open ? 'true' : 'false'"
         aria-haspopup="dialog"
-        aria-label="{{ $ariaLabel ?? Lang::get('core::components.time.open') }}"
         {{ $passthrough }}
         class="flex w-full items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
     >
-        <span x-text="display || '—'"></span>
+        <span @if ($fieldId !== null) id="{{ $fieldId }}-name" @endif class="sr-only">{{ $fieldLabel }}</span>
+        <span @if ($fieldId !== null) id="{{ $fieldId }}-value" @endif class="sr-only" x-text="display || @js($emptyLabel)">{{ $emptyLabel }}</span>
+        <span aria-hidden="true" x-text="display || '—'">—</span>
         <span aria-hidden="true" class="text-slate-400">◷</span>
     </button>
 

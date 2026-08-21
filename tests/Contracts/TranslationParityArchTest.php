@@ -111,17 +111,28 @@ function translationParityPluralForms(string $locale): int
     return max(array_keys($indexes)) + 1;
 }
 
-/** @return list<string> every supported locale except the English source of truth */
+/** @return list<string> every supported locale, English included — the source mirrors itself */
 function translationParityTargetLocales(): array
 {
-    $locales = [];
-    foreach (Locale::cases() as $case) {
-        if ($case->value !== Locale::DEFAULT) {
-            $locales[] = $case->value;
+    return array_map(static fn (Locale $case): string => $case->value, Locale::cases());
+}
+
+/**
+ * @param  list<string>  $locales
+ * @return array<int, true> segment indexes any of these locales selects for a number other than one
+ */
+function translationParityUnsafeSegments(array $locales): array
+{
+    $selector = new MessageSelector;
+
+    $unsafe = [];
+    foreach ($locales as $locale) {
+        foreach (range(2, 200) as $number) {
+            $unsafe[$selector->getPluralIndex($locale, $number)] = true;
         }
     }
 
-    return $locales;
+    return $unsafe;
 }
 
 /** @return list<string> absolute paths to the English lang files every locale mirrors */
@@ -254,18 +265,15 @@ it('gives every pluralised string as many segments as the locale selects between
 });
 
 it('never hard-codes a numeral into a plural form that also selects other numbers', function (): void {
-    $selector = new MessageSelector;
-
     $problems = [];
     foreach (translationParityTargetLocales() as $locale) {
-        // Which segments this locale reaches for a number other than the one
-        // an English translator would assume. Croatian's first form covers
-        // 21, 31 and 101; Slovenian's covers 101 — so a literal "1" in that
-        // segment renders "1 mjesec" next to the number 21.
-        $unsafe = [];
-        foreach (range(2, 200) as $number) {
-            $unsafe[$selector->getPluralIndex($locale, $number)] = true;
-        }
+        // A locale answers to its own rule table: Croatian's first form covers
+        // 21, 31 and 101, so a literal "1" there renders "1 mjesec" beside 21.
+        // English answers to all of them, because the en line is the shape every
+        // translation is written against and a literal in it gets copied across.
+        $unsafe = $locale === Locale::DEFAULT
+            ? translationParityUnsafeSegments(translationParityTargetLocales())
+            : translationParityUnsafeSegments([$locale]);
 
         foreach (translationParitySourceFiles() as $enFile) {
             $targetFile = str_replace('/lang/en/', '/lang/'.$locale.'/', $enFile);
@@ -294,8 +302,11 @@ it('never hard-codes a numeral into a plural form that also selects other number
                         continue;
                     }
                     if (preg_match('/(?<![:\w])\d+/', translationParityWithoutAmounts($segment)) === 1) {
+                        $reason = $locale === Locale::DEFAULT
+                            ? 'is the line every locale mirrors'
+                            : 'also selects other counts';
                         $problems[] = $rel.' ['.$path.'] '.$locale
-                            .': segment '.$index.' hard-codes a numeral but also selects other counts — "'.trim($segment).'"';
+                            .': segment '.$index.' hard-codes a numeral but '.$reason.' — "'.trim($segment).'"';
                     }
                 }
             }

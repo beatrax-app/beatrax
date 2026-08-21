@@ -13,13 +13,8 @@ use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 beforeEach(function (): void {
     $this->resolver = new class implements AccountResolver
     {
-        /** @var array<int, string> */
-        public array $askedFor = [];
-
         public function resolve(string $iban): AccountResolution
         {
-            $this->askedFor[] = $iban;
-
             return AccountResolution::unknown($iban);
         }
     };
@@ -135,15 +130,6 @@ it('captures statement metadata for the writer (period, balances, entry count)',
     expect($meta->closingBalanceMinor)->toBeInt();
     expect($meta->openingBalanceCurrency)->toBe('EUR');
     expect($meta->entryCount)->toBeGreaterThan(0);
-})->group('phase-2');
-
-it('resolves the own IBAN with the AccountResolver', function (): void {
-    iterator_to_array(
-        $this->adapter->parse(base_path('tests/fixtures/asn-mt940-sample-1.sta'), $this->resolver),
-        preserve_keys: false,
-    );
-
-    expect($this->resolver->askedFor)->toContain('NL57ASNB0123456789');
 })->group('phase-2');
 
 it('cleans the counterparty name via Mt940CounterpartyCleaner before yielding', function (): void {

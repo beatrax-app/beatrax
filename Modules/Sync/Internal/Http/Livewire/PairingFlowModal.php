@@ -28,9 +28,10 @@ use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\QrPayloadBuilder;
 use Modules\Sync\Internal\Pairing\RelayBootstrap;
-use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
+use Modules\Sync\Public\Enums\PairingSide;
+use Modules\Sync\Public\Enums\PairingWizardStep;
 use Modules\Sync\Public\Events\SyncTransportCredentialsAvailable;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\PairingGateway;
@@ -48,7 +49,10 @@ final class PairingFlowModal extends Component
 
     public bool $open = false;
 
-    public string $step = 'choose_direction';
+    // Stays a string on the wire: a public property is rehydrated straight from
+    // the client payload with no enum coercion, so typing it would turn a
+    // crafted step into a 500. currentStep() is the enum every reader uses.
+    public string $step = PairingWizardStep::ChooseDirection->value;
 
     // The pairing_tokens row id for the in-flight handshake ('' when none).
     // #[Locked] — the trust gate MUST NOT let the client retarget which token
@@ -77,8 +81,9 @@ final class PairingFlowModal extends Component
     public bool $fanOutFailed = false;
 
     // #[Locked] — a client must never flip its side and confirm the peer's
-    // column. The authoritative side is re-derived server-side in
-    // PairingTokenService::confirm() from the caller's own device id.
+    // column. A string on the wire because a public property is rehydrated
+    // from the client payload uncoerced; the authoritative side is re-derived
+    // server-side in PairingTokenService::confirm() from the caller's own id.
     #[Locked]
     public string $side = '';
 
@@ -100,6 +105,11 @@ final class PairingFlowModal extends Component
     public function mount(bool $open = false): void
     {
         $this->open = $open;
+    }
+
+    private function currentStep(): PairingWizardStep
+    {
+        return PairingWizardStep::tryFrom($this->step) ?? PairingWizardStep::ChooseDirection;
     }
 
     // Rendered unconditionally so the hosting <flux:modal wire:model="open">
@@ -128,7 +138,7 @@ final class PairingFlowModal extends Component
             $events->dispatch(new SyncTransportCredentialsAvailable($userId));
         }
 
-        $this->step = 'choose_direction';
+        $this->step = PairingWizardStep::ChooseDirection->value;
         $this->pairingTokenId = '';
         $this->wordCode = '';
         $this->qrSvg = '';
@@ -185,17 +195,19 @@ final class PairingFlowModal extends Component
 
         $this->pairingTokenId = (string) $inFlight['id'];
         $this->safetyWords = $inFlight['safety_words'];
-        $this->side = $side;
+        $this->side = $side->value;
         $this->awaitingPeer = $inFlight['state'] !== PairingState::Confirmed->value
-            && ($side === 'initiator' ? $inFlight['initiator_confirmed'] : $inFlight['responder_confirmed']);
+            && ($side === PairingSide::Initiator ? $inFlight['initiator_confirmed'] : $inFlight['responder_confirmed']);
 
         // A confirmed handshake is finished, and re-presenting the trust gate
         // asked for a safety-number confirmation that confirm() then refuses
         // as already given — leaving the modal with no way forward and no way
         // to start again.
-        $this->step = $inFlight['state'] === PairingState::Confirmed->value ? 'success' : 'confirm';
+        $this->step = ($inFlight['state'] === PairingState::Confirmed->value
+            ? PairingWizardStep::Success
+            : PairingWizardStep::Confirm)->value;
 
-        $this->hydrateDeviceNames($gateway, $registry, $userId, $side === 'responder');
+        $this->hydrateDeviceNames($gateway, $registry, $userId, $side);
     }
 
     // Loads the identity, issues a token, builds the QR + word-code, and
@@ -247,10 +259,10 @@ final class PairingFlowModal extends Component
         );
         $this->wordCode = $wordEncoder->encode($token);
         $this->pairingTokenId = (string) $this->tokenRowId($db, $userId, $token);
-        $this->side = 'initiator';
+        $this->side = PairingSide::Initiator->value;
         $this->expiresInSeconds = 600;
         $this->flashMessage = '';
-        $this->step = 'show_code';
+        $this->step = PairingWizardStep::ShowCode->value;
     }
 
     // On a phone this hands off to the camera-first pairing screen instead of
@@ -264,10 +276,10 @@ final class PairingFlowModal extends Component
             return;
         }
 
-        $this->step = 'enter_code';
+        $this->step = PairingWizardStep::EnterCode->value;
         $this->wordCode = '';
         $this->flashMessage = '';
-        $this->side = 'responder';
+        $this->side = PairingSide::Responder->value;
     }
 
     // Decodes the typed word-code and accepts the peer's token, binding this
@@ -278,8 +290,6 @@ final class PairingFlowModal extends Component
         DeviceIdentityLoader $identityLoader,
         PairingTokenService $tokenService,
         WordCodeEncoder $wordEncoder,
-        SafetyNumberDeriver $safetyDeriver,
-        DatabaseManager $db,
         Session $session,
         PairingGateway $gateway,
         DeviceRegistryService $registry,
@@ -316,11 +326,11 @@ final class PairingFlowModal extends Component
         }
 
         $this->pairingTokenId = (string) (is_numeric($accepted->id) ? (int) $accepted->id : 0);
-        $this->side = 'responder';
-        $this->safetyWords = $this->deriveSafetyWords($db, $safetyDeriver, $userId);
-        $this->hydrateDeviceNames($gateway, $registry, $userId, asResponder: true);
+        $this->side = PairingSide::Responder->value;
+        $this->safetyWords = $gateway->safetyWordsFor((int) $this->pairingTokenId, $userId);
+        $this->hydrateDeviceNames($gateway, $registry, $userId, PairingSide::Responder);
         $this->flashMessage = '';
-        $this->step = 'confirm';
+        $this->step = PairingWizardStep::Confirm->value;
     }
 
     // Advances show_code -> confirm when the responder has accepted, and any
@@ -331,7 +341,6 @@ final class PairingFlowModal extends Component
         CurrentUser $currentUser,
         DatabaseManager $db,
         DeviceIdentityLoader $identityLoader,
-        SafetyNumberDeriver $safetyDeriver,
         Session $session,
         EncryptionMigrationService $migrationService,
         PairingGateway $gateway,
@@ -381,16 +390,16 @@ final class PairingFlowModal extends Component
             }
         }
 
-        if ($row->state === PairingState::AwaitingConfirm->value && $this->step === 'show_code') {
-            $this->safetyWords = $this->deriveSafetyWords($db, $safetyDeriver, $userId);
-            $this->hydrateDeviceNames($gateway, $registry, $userId);
-            $this->step = 'confirm';
+        if ($row->state === PairingState::AwaitingConfirm->value && $this->currentStep() === PairingWizardStep::ShowCode) {
+            $this->safetyWords = $gateway->safetyWordsFor((int) $this->pairingTokenId, $userId);
+            $this->hydrateDeviceNames($gateway, $registry, $userId, PairingSide::Initiator);
+            $this->step = PairingWizardStep::Confirm->value;
 
             return;
         }
 
-        if ($row->state === PairingState::Confirmed->value && $this->step !== 'success') {
-            $this->step = 'success';
+        if ($row->state === PairingState::Confirmed->value && $this->currentStep() !== PairingWizardStep::Success) {
+            $this->step = PairingWizardStep::Success->value;
 
             try {
                 $migrationService->migrate($currentUser->user(), $session);
@@ -420,13 +429,16 @@ final class PairingFlowModal extends Component
         PairingGateway $gateway,
         DeviceRegistryService $registry,
         int $userId,
-        bool $asResponder = false,
+        PairingSide $side,
     ): void {
         $names = $gateway->deviceNamesFor((int) $this->pairingTokenId, $userId);
         $fallback = Lang::get('sync::devices.peer_default_name');
 
         $this->selfDeviceName = $registry->localDeviceName($userId) ?? $fallback;
-        $this->peerDeviceName = ($asResponder ? $names['initiator'] : $names['responder']) ?? $fallback;
+        $this->peerDeviceName = match ($side->peer()) {
+            PairingSide::Initiator => $names['initiator'],
+            PairingSide::Responder => $names['responder'],
+        } ?? $fallback;
     }
 
     // Records this side's safety-number confirmation. PairingTokenService::
@@ -445,7 +457,6 @@ final class PairingFlowModal extends Component
         PairingFrameCourier $frameCourier,
         RelayConfig $relayConfig,
         PreSyncHistoryCapture $historyCapture,
-        SafetyNumberDeriver $safetyDeriver,
     ): void {
         if ($this->pairingTokenId === '') {
             return;
@@ -478,7 +489,7 @@ final class PairingFlowModal extends Component
         // stall the ceremony indefinitely without ever being seen.
         if ($state === null) {
             $this->awaitingPeer = false;
-            $this->safetyWords = $this->deriveSafetyWords($db, $safetyDeriver, $userId);
+            $this->safetyWords = $gateway->safetyWordsFor((int) $this->pairingTokenId, $userId);
             $this->flashMessage = Lang::get('sync::pairing.safety_number_changed');
 
             return;
@@ -490,7 +501,7 @@ final class PairingFlowModal extends Component
 
         if ($state === PairingState::Confirmed->value) {
             $this->awaitingPeer = false;
-            $this->step = 'success';
+            $this->step = PairingWizardStep::Success->value;
 
             // Mandatory auto-activation — no decline path. A migration
             // failure never undoes the just-completed pairing; the
@@ -641,7 +652,12 @@ final class PairingFlowModal extends Component
 
     public function render(ViewFactory $views): View
     {
-        return $views->make('sync::livewire.pairing-flow-modal');
+        // Under its own name, not $step: view data cannot shadow a public
+        // property, and the view needs the resolved enum rather than the raw
+        // string the client last put on the wire.
+        return $views->make('sync::livewire.pairing-flow-modal', [
+            'wizardStep' => $this->currentStep(),
+        ]);
     }
 
     // No relay check: the courier tries the LAN, then the relay, then holds the

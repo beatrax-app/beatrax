@@ -22,8 +22,7 @@ return [
 
     'card' => [
         'likely' => 'Troligen: en namnlös handlare.',
-        'seen' => 'Sedd',
-        'time' => 'gång|gånger',
+        'seen_times' => 'Sedd :count gång|Sedd :count gånger',
         'last_seen' => 'Senast sedd :date',
         'suggest' => 'Föreslå ett namn →',
     ],

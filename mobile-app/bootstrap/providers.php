@@ -31,33 +31,8 @@ use Modules\Receipts\Providers\ReceiptsServiceProvider;
 use Modules\Recurring\Providers\RecurringServiceProvider;
 use Modules\Transfers\Providers\TransfersServiceProvider;
 
-/*
- * Mobile-app provider manifest.
- *
- * The desktop root's `bootstrap/providers.php` with exactly one removal and one
- * addition:
- *
- *   - `Modules\Desktop\Providers\DesktopServiceProvider` is NOT registered here.
- *     The Desktop module is not an nwidart-discovered module (it has no
- *     `module.json`); it is wired ONLY through this hardcoded manifest. Dropping
- *     it here is therefore the authoritative lever that keeps `Modules\Desktop`
- *     — and its hard dependency on the `nativephp/desktop` Composer package
- *     (absent from this root's `vendor/`) — out of the mobile shell entirely.
- *   - `App\Providers\NativeServiceProvider` IS registered here and not on the
- *     desktop root: it carries the NativePHP *mobile* plugin list.
- *
- * Anything else diverging is drift, not design. It went unnoticed once already,
- * because the job that would have caught it could not install its dependencies
- * and so never reached its tests.
- *
- * The Mobile module itself is NOT listed here: it ships a `module.json` and is
- * loaded by nwidart's FileActivator from this root's `modules_statuses.json`
- * (Mobile => true), exactly as under the desktop root. The other nwidart-only
- * modules (Sync, Reports, Search, Tax, Migration, Counterparties) likewise load
- * from `modules_statuses.json`.
- *
- * HorizonServiceProvider is guarded: a `--no-dev` mobile bundle carries no
- * laravel/horizon package, so the class_exists() guard drops the entry.
+/**
+ * @link ../../.docs/features/mobile/architecture.md#what-the-provider-manifest-diverges-by
  */
 return array_values(array_filter([
     class_exists(Laravel\Horizon\HorizonServiceProvider::class) ? HorizonServiceProvider::class : null,

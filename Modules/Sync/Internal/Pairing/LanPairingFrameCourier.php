@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Pairing;
 
 use Illuminate\Http\Client\Factory as HttpFactory;
+use Modules\Sync\Internal\Pairing\Concerns\BrowsesLanPeers;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
-use Modules\Sync\Internal\Transport\Discovery\MdnsAdvertiser;
 use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
 use Modules\Sync\Internal\Transport\PairingFrameRequestHandler;
 use Throwable;
@@ -19,15 +19,7 @@ use Throwable;
  */
 final readonly class LanPairingFrameCourier
 {
-    private const float BROWSE_TIMEOUT_SECONDS = 2.0;
-
-    private const int CONNECT_TIMEOUT_SECONDS = 1;
-
-    private const int REQUEST_TIMEOUT_SECONDS = 2;
-
-    // One peer can advertise the same id many times over; bound the work so a
-    // noisy or hostile network cannot turn one delivery into unbounded requests.
-    private const int MAX_PEERS_TRIED = 4;
+    use BrowsesLanPeers;
 
     /** @var list<int> */
     private const array RECEIVED_STATUSES = [202, 204];
@@ -48,19 +40,7 @@ final readonly class LanPairingFrameCourier
             return false;
         }
 
-        $tried = 0;
-
-        foreach ($this->discovery->browse(MdnsAdvertiser::SERVICE_TYPE, self::BROWSE_TIMEOUT_SECONDS) as $peer) {
-            if ($tried >= self::MAX_PEERS_TRIED) {
-                break;
-            }
-
-            if (! $peer->isConnectable() || $peer->deviceId !== $peerDeviceId) {
-                continue;
-            }
-
-            $tried++;
-
+        foreach ($this->eachConnectablePeer(deviceId: $peerDeviceId) as $peer) {
             if ($this->deliverTo($peer, $frame)) {
                 return true;
             }
@@ -69,23 +49,17 @@ final readonly class LanPairingFrameCourier
         return false;
     }
 
-    // Public for the same reason LanPairingOfferFetcher::offerFrom() is: the
-    // browse above reaches a real network, so this is the seam a test can drive
-    // with a peer it chose.
+    // Public because the browse above reaches a real network: this is the seam
+    // a test drives with a peer it chose rather than one it happened to find.
     /**
      * @param  array<string, mixed>  $frame
      */
     public function deliverTo(DiscoveredPeer $peer, array $frame): bool
     {
-        // Plaintext http, exactly as the offer route is served: everything this
-        // carries is either signed or worthless to an eavesdropper, and the
-        // safety-number comparison — not the transport — is the trust gate.
         $url = "http://{$peer->host}:{$peer->port}".PairingFrameRequestHandler::FRAME_PATH;
 
         try {
-            $response = $this->http->createPendingRequest()
-                ->connectTimeout(self::CONNECT_TIMEOUT_SECONDS)
-                ->timeout(self::REQUEST_TIMEOUT_SECONDS)
+            $response = $this->peerRequest()
                 ->asJson()
                 ->post($url, $frame);
         } catch (Throwable) {

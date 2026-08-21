@@ -115,6 +115,11 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Chains/Public/Enums/CardStatementState.php',
         'Modules/Chains/Public/Enums/ChainLinkKind.php',
         'Modules/Chains/Public/Enums/ChainLinkState.php',
+        // The declared type of ChainTreeNode::$confidenceTier. That DTO is
+        // Public and a Public class may not expose an Internal type, so the
+        // enum has to live here even though the tier is derived, rendered and
+        // compared entirely inside Chains.
+        'Modules/Chains/Public/Enums/ConfidenceTier.php',
         'Modules/Community/Public/Dto/MerchantContactDto.php',
         'Modules/Community/Public/Dto/SuggestMappingDto.php',
         'Modules/Community/Public/Events/MysteryMerchantSubmitted.php',
@@ -225,6 +230,11 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Import/Public/Dto/FingerprintDisposition.php',
         'Modules/Import/Public/Dto/NewRowDisposition.php',
         'Modules/Import/Public/Dto/PaymentTypeHint.php',
+        // The declared type of PreviewRowDto::$errorReason and
+        // ImportPreviewResult::$fileFailureReason. Both DTOs are Public and
+        // cross to Onboarding and OpenBanking, so the enum is consumed
+        // through them by value and by ->label() without being named.
+        'Modules/Import/Public/Enums/ImportFailureReason.php',
         'Modules/Import/Public/Services/AccountNamer.php',
         'Modules/Import/Public/Services/AliasMatchPreviewQuery.php',
         'Modules/Import/Public/Services/EloquentAccountResolver.php',
@@ -299,6 +309,11 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Tax/Public/Services/TaxCsvExporter.php',
         'Modules/Tax/Public/Services/TaxPdfRenderer.php',
         'Modules/Tax/Public/Services/TaxYearQuery.php',
+        // Its only consumer outside Transfers was a lint-appeasement stub on
+        // PaypalFundingResolver that read the property solely to satisfy
+        // PHPStan; deleting the stub left the read seam .docs still describes
+        // with no caller. Wire it up or retire it — see the round-3 report.
+        'Modules/Transfers/Public/Services/PairLookup.php',
     ];
 
     $sources = publicSurfaceSources();

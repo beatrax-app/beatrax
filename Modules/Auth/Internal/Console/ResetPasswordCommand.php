@@ -7,14 +7,13 @@ namespace Modules\Auth\Internal\Console;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Database\DatabaseManager;
+use Modules\Auth\Public\Contracts\PasswordPolicy;
 use Modules\Core\Models\User;
 
 // No --password option, and a hard refusal when not interactive: a scripted
 // run on an unattended machine must not be able to rewrite a password.
 class ResetPasswordCommand extends Command
 {
-    private const MINIMUM_PASSWORD_LENGTH = 12;
-
     /** @var string */
     protected $signature = 'beatrax:reset-password {username : Username of the account to reset}';
 
@@ -83,7 +82,7 @@ class ResetPasswordCommand extends Command
             return null;
         }
 
-        if (strlen($password) < self::MINIMUM_PASSWORD_LENGTH) {
+        if (strlen($password) < PasswordPolicy::MINIMUM_LENGTH) {
             $this->error('Use at least 12 characters.');
 
             return null;

@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Generator;
 use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
+use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Migration\Internal\Contracts\ParsesMigrationSource;
 use Modules\Migration\Internal\Dto\MigrationAccountDto;
@@ -360,9 +361,9 @@ final class ActualParser implements ParsesMigrationSource
     private function mapClearedStatus(bool $cleared, bool $reconciled): string
     {
         return match (true) {
-            $reconciled => 'reconciled',
-            $cleared => 'cleared',
-            default => 'uncleared',
+            $reconciled => ClearedStatus::Reconciled->value,
+            $cleared => ClearedStatus::Cleared->value,
+            default => ClearedStatus::Uncleared->value,
         };
     }
 }

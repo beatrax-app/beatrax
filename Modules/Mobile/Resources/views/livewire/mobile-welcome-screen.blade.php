@@ -3,11 +3,7 @@
     <div class="w-full max-w-md mx-auto px-6 space-y-6 text-center">
         <div class="flex justify-center">
             {{-- Brand mark — same surface the desktop welcome screen uses. --}}
-            <img
-                src="{{ Vite::asset('resources/brand/logo.svg') }}"
-                alt="Beatrax"
-                class="h-20 w-20"
-            />
+            <x-core::app-mark :size="false" class="h-20 w-20" :decorative="false" />
         </div>
 
         <header class="space-y-2">

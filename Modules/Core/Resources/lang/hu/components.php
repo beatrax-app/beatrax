@@ -42,12 +42,14 @@ return [
         'next_month' => 'Következő hónap',
         'today' => 'Ma',
         'clear' => 'Törlés',
+        'empty' => 'nincs dátum kiválasztva',
     ],
 
     'time' => [
         'open' => 'Válassz időpontot',
         'hour' => 'Óra',
         'minute' => 'Perc',
+        'empty' => 'nincs időpont kiválasztva',
     ],
 
     'veil_locked' => 'Alkalmazás zárolva',

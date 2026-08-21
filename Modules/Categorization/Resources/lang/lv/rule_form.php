@@ -22,7 +22,6 @@ return [
     'condition_value_from_aria' => 'Nosacījuma :number vērtība (no)',
     'condition_value_to_aria' => 'Nosacījuma :number vērtība (līdz)',
     'to' => 'līdz',
-    'amount_placeholder' => '0,00',
     'text_placeholder' => 'piem. SPOTIFY',
     'remove_condition' => 'Noņemt nosacījumu',
     'add_condition' => '+ Pievienot nosacījumu',

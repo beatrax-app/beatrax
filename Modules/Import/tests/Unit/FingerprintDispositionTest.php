@@ -7,12 +7,13 @@ use Modules\Import\Public\Dto\EnrichedDisposition;
 use Modules\Import\Public\Dto\FingerprintDisposition;
 use Modules\Import\Public\Dto\NewRowDisposition;
 use Modules\Import\Public\Dto\PendingEnrichment;
+use Modules\Import\Public\Enums\PreviewRowStatus;
 
 it('constructs a new-row disposition via the named factory', function (): void {
     $d = FingerprintDisposition::newRow();
 
     expect($d)->toBeInstanceOf(NewRowDisposition::class);
-    expect($d->status())->toBe('new');
+    expect($d->status())->toBe(PreviewRowStatus::NewRow);
     expect($d->isNew())->toBeTrue();
     expect($d->isDuplicate())->toBeFalse();
     expect($d->isEnriched())->toBeFalse();
@@ -22,7 +23,7 @@ it('constructs a duplicate disposition via the named factory', function (): void
     $d = FingerprintDisposition::duplicate();
 
     expect($d)->toBeInstanceOf(DuplicateDisposition::class);
-    expect($d->status())->toBe('duplicate');
+    expect($d->status())->toBe(PreviewRowStatus::Duplicate);
     expect($d->isDuplicate())->toBeTrue();
     expect($d->isNew())->toBeFalse();
     expect($d->isEnriched())->toBeFalse();
@@ -32,7 +33,7 @@ it('constructs an enriched disposition with the named factory and exposes ref fi
     $d = FingerprintDisposition::enriched(existingId: 42, fromSourceRef: null, toSourceRef: 'EREF-XYZ');
 
     expect($d)->toBeInstanceOf(EnrichedDisposition::class);
-    expect($d->status())->toBe('enriched');
+    expect($d->status())->toBe(PreviewRowStatus::Enriched);
     expect($d->isEnriched())->toBeTrue();
     expect($d->isNew())->toBeFalse();
     expect($d->isDuplicate())->toBeFalse();

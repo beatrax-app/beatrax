@@ -38,7 +38,7 @@ return [
         'nothing_notable' => 'Semmi nem igényel figyelmet.',
         'flow' => 'Be: :in, ki: :out, nettó: :net.',
         'over_budget' => 'Eddig :amount túllépés a költségvetésen.',
-        'payments_due' => 'Ebben az időszakban 1 fizetés esedékes.|Ebben az időszakban :count fizetés esedékes.',
+        'payments_due' => 'Ebben az időszakban :count fizetés esedékes.|Ebben az időszakban :count fizetés esedékes.',
         'shortfall' => 'Pénzforgalmi hiány várható.',
     ],
 ];

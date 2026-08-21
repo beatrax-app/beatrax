@@ -22,8 +22,7 @@ return [
 
     'card' => [
         'likely' => 'Muhtemelen: adı olmayan bir işyeri.',
-        'seen' => 'Görülme',
-        'time' => 'kez',
+        'seen_times' => 'Görülme :count kez',
         'last_seen' => 'Son görülme :date',
         'suggest' => 'Bir ad öner →',
     ],

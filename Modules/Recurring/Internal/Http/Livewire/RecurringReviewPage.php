@@ -10,8 +10,10 @@ use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Enums\SnoozeWindow;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
+use Modules\Recurring\Internal\Enums\ReviewTab;
 use Modules\Recurring\Public\Actions\ApproveRecurringSeries;
 use Modules\Recurring\Public\Actions\EditRecurringSeriesName;
 use Modules\Recurring\Public\Actions\RejectRecurringSeries;
@@ -33,15 +35,23 @@ final class RecurringReviewPage extends Component
      */
     public array $selectedIds = [];
 
-    public string $tab = 'pending';
+    public string $tab = ReviewTab::DEFAULT;
 
     public function setTab(string $tab): void
     {
-        if (! in_array($tab, ['pending', 'rejected', 'cadence_changed'], true)) {
+        if (ReviewTab::tryFrom($tab) === null) {
             return;
         }
         $this->tab = $tab;
         $this->cursorId = null;
+    }
+
+    // The wire can send anything, so the queue the reader sees is resolved
+    // from the enum rather than trusted: an unknown tab reads as the default
+    // instead of selecting no query at all.
+    private function activeTab(): ReviewTab
+    {
+        return ReviewTab::tryFrom($this->tab) ?? ReviewTab::Pending;
     }
 
     public function approve(int $seriesId, CurrentUser $currentUser, ApproveRecurringSeries $action): void
@@ -126,24 +136,17 @@ final class RecurringReviewPage extends Component
     ): View {
         $user = $currentUser->user();
 
-        $rows = match ($this->tab) {
-            'rejected' => $query->rejectedForUser($user, $this->cursorId),
-            'cadence_changed' => $query->cadenceChangedForUser($user),
-            default => $query->pendingForUser($user, $this->cursorId),
+        $rows = match ($this->activeTab()) {
+            ReviewTab::Rejected => $query->rejectedForUser($user, $this->cursorId),
+            ReviewTab::CadenceChanged => $query->cadenceChangedForUser($user),
+            ReviewTab::Pending => $query->pendingForUser($user, $this->cursorId),
         };
 
-        // Snooze targets come off the injected clock rather than a Blade-time
-        // now(), which is what keeps CarbonImmutable::setTestNow() deterministic.
-        $now = $clock->now();
-        $snoozeTargets = [
-            '1w' => $now->addWeek()->toIso8601String(),
-            '1m' => $now->addMonth()->toIso8601String(),
-            '3m' => $now->addMonths(3)->toIso8601String(),
-        ];
+        $snoozeTargets = SnoozeWindow::targetsFrom($clock->now());
 
         $view = $views->make('recurring::livewire.recurring-review-page', [
             'rows' => $rows,
-            'tab' => $this->tab,
+            'reviewTab' => $this->activeTab(),
             'snoozeTargets' => $snoozeTargets,
         ]);
 

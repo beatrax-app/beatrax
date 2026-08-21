@@ -38,7 +38,7 @@ return [
         'nothing_notable' => 'Nič nevyžaduje tvoju pozornosť.',
         'flow' => 'Príjmy :in, výdavky :out, netto :net.',
         'over_budget' => 'Doteraz nad rozpočet: :amount.',
-        'payments_due' => '1 platba splatná v tomto období.|:count platby splatné v tomto období.|:count platieb splatných v tomto období.',
+        'payments_due' => ':count platba splatná v tomto období.|:count platby splatné v tomto období.|:count platieb splatných v tomto období.',
         'shortfall' => 'Blíži sa nedostatok hotovosti.',
     ],
 ];

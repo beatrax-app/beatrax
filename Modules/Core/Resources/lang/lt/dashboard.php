@@ -17,8 +17,7 @@ return [
     'net' => 'Grynasis',
 
     'status_tiles_aria' => 'Būsenos plytelės',
-    'email_scan_health' => 'El. pašto nuskaitymo būklė — prijungta: :count',
-    'inbox' => 'pašto dėžutė|pašto dėžutės|pašto dėžučių',
+    'email_scan_health' => 'El. pašto nuskaitymo būklė — prijungta: :count pašto dėžutė|El. pašto nuskaitymo būklė — prijungta: :count pašto dėžutės|El. pašto nuskaitymo būklė — prijungta: :count pašto dėžučių',
 
     'top_spending' => 'Didžiausios išlaidos',
     'no_expenses' => 'Kol kas nėra išlaidų su kategorijomis.',

@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Counterparties\Public\Enums\CounterpartyType')
 {{--
     Counterparty card — the grid item on the `/counterparties` cards
     view. Surfaces the counterparty's name, type chip, headline stat
@@ -25,9 +26,9 @@
     'recent' => [],
 ])
 @php
-    $cpType = is_array($counterparty) ? ($counterparty['type'] ?? 'unknown') : ($counterparty->type ?? 'unknown');
+    $cpType = is_array($counterparty) ? ($counterparty['type'] ?? CounterpartyType::Unknown->value) : ($counterparty->type ?? CounterpartyType::Unknown->value);
     $cpName = is_array($counterparty) ? ($counterparty['name'] ?? '—') : ($counterparty->name ?? '—');
-    $cardClass = $cpType === 'unknown' ? 'cp-card unknown' : 'cp-card';
+    $cardClass = $cpType === CounterpartyType::Unknown->value ? 'cp-card unknown' : 'cp-card';
 @endphp
 <article
     {{ $attributes->merge(['class' => $cardClass]) }}

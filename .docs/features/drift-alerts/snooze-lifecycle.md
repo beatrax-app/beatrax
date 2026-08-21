@@ -59,11 +59,21 @@ without paying for a failed transaction.
 
 ## Setting a snooze
 
-The `/drift` popover offers three durations. The targets are computed
-**server-side** in `DriftPage::render()` off the injected `Clock`
-(`now + 1 week`, `+ 1 month`, `+ 3 months`), so
+The `/drift` popover offers three durations, and they are the three
+cases of `Modules\Core\Public\Enums\SnoozeWindow` — `OneWeek = '1w'`,
+`OneMonth = '1m'`, `ThreeMonths = '3m'`. The targets are computed
+**server-side** in `DriftPage::render()` via
+`SnoozeWindow::targetsFrom($clock->now())`, so
 `CarbonImmutable::setTestNow()` stays authoritative across the suite and
-the browser never supplies a date the server did not choose.
+the browser never supplies a date the server did not choose. The enum
+measures every window from the moment it is handed rather than reading a
+clock of its own, which is what keeps that guarantee.
+
+The same enum serves `/recurring/review` and the anomaly stream, and the
+blades iterate `SnoozeWindow::cases()` rather than writing the three
+buttons out — `anomaly-action-chips`, `drift-alert-row` and
+`recurring-review-page` each render one button per case, keeping their
+own `wire:click` target and their own label keys.
 
 The browser sends the chosen ISO string back, and
 `DriftPage::snoozeAlert()` re-validates it anyway:

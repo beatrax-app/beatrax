@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ledger\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Support\Str;
+use Modules\Core\Public\Support\UniqueSlug;
 
 /**
  * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md
@@ -22,25 +22,15 @@ final readonly class AccountSlugResolver
 
     public function resolveUnique(int $userId, string $name): string
     {
-        $base = self::slugify($name);
-        $slug = $base;
-        $suffix = 2;
-
-        while ($this->isTaken($userId, $slug)) {
-            $slug = $base.'-'.$suffix;
-            $suffix++;
-        }
-
-        return $slug;
+        return UniqueSlug::walk(
+            self::slugify($name),
+            fn (string $slug): bool => ! $this->isTaken($userId, $slug),
+        );
     }
 
-    // A name of nothing but emoji or punctuation clears the length bound and
-    // still slugs to the empty string, which no unique index can carry.
     public static function slugify(string $name): string
     {
-        $slug = Str::slug($name);
-
-        return $slug === '' ? self::FALLBACK : $slug;
+        return UniqueSlug::slugify($name, self::FALLBACK);
     }
 
     private function isTaken(int $userId, string $slug): bool

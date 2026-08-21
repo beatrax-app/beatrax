@@ -55,6 +55,17 @@ though the resolver never actually writes a row of that type. The
 known-counterparty-IBAN rows) so type-aware profile pages render
 without a second lookup.
 
+Two vocabularies describe those six values, and they are not the same
+one. `Public/Enums/CounterpartyType` spells what the column stores.
+`Internal/Enums/CounterpartyTypeFilter` spells what the index page's
+chip row and its `?type=` query parameter accept: it adds a synthetic
+`all` that matches every row rather than any stored value, and it
+shortens `self_account` to `self`. `CounterpartyTypeFilter::toColumnValue()`
+is the single place one becomes the other — it returns `null` for `all`,
+which is how the query knows to apply no `type` predicate at all — and
+`forColumnValue()` is the inverse the per-chip counts are keyed by. A
+`?type=` value that is neither vocabulary reads as no filter.
+
 Cross-user defense in depth: every production read/write carries an
 explicit `where('user_id', ...)` filter through the raw query builder.
 The `BelongsToUser` global scope on the `Counterparty` model is a
@@ -128,12 +139,12 @@ bindings resolve against.
   4. **Personal-IBAN heuristic** — a Dutch IBAN with a personal-looking
      name on a `transfer_*` row resolves to `type='personal'` with
      the privacy default.
-  5. **Government keyword fallback** — descriptions matching
-     `BELASTINGDIENST`, `GEMEENTE`, `RDW`, `CJIB`, `SVB` resolve to
+  5. **Government corpus fallback** — descriptions matching a rule
+     from `resources/corpus/government/<cc>.yaml` resolve to
      `type='government'`.
-  6. **Description-keyword bank-fee fallback** — descriptions matching
-     `KOSTEN KASOPNAME`, `RENTE`, `KOSTEN` resolve to
-     `type='bank'` with `metadata.subcategory='fee'`.
+  6. **Bank-fee corpus fallback** — descriptions matching a rule from
+     `resources/corpus/bank-fees/<cc>.yaml` resolve to `type='bank'`
+     with `metadata.subcategory='fee'`.
   7. **Unresolved** — `type='unknown'`; IBAN preserved for triage.
 
   Step 2's bridge contract returns the user's own `Account` (it was
@@ -144,6 +155,12 @@ bindings resolve against.
   country's BBAN length via `jschaedl/iban-validation`, not just Dutch
   IBANs) paired with a name that fails the small-business marker list
   (`BV`, `NV`, `LTD`, `GMBH`, and similar legal-entity suffixes).
+  Steps 5 and 6 take their rules from `ClassificationRuleProvider`,
+  scoped to the reader's own country, and are skipped outright for a
+  reader who has named none: a merchant can be international, a
+  government body and a bank's fee cannot. `CorpusPatternMatcher`
+  does the matching — a literal pattern as a whole token via
+  `containsToken()`, a `regex:` pattern as a backtrack-bounded PCRE.
 
   Slug strategy: kebab-cased display name with per-user collision
   suffixing (`bol`, `bol-2`, `bol-3`, …). The DB-layer UNIQUE on
@@ -199,6 +216,13 @@ load-bearing scope (`BelongsToUser` only fires under HTTP-bound
 Eloquent surfaces). `CounterpartyIndexRow` carries no `iban` field at
 all — the personal-type privacy default extends to the index DTO shape
 itself, not just a null value.
+
+The row also carries its own `href` and its two formatted amounts,
+derived once in the DTO constructor. The index emits every row up to
+three times — the cards grid, the phone list and the desktop table, the
+last two both rendered and then hidden by `.phone-only`/`.desktop-only`
+— and each copy was formatting the amounts and rebuilding the link from
+the same three fields.
 
 ## Triage keyboard shortcuts
 

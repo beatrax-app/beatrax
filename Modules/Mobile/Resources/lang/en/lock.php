@@ -12,6 +12,7 @@ return [
     'ok' => 'OK',
     'ok_aria' => 'OK — confirm PIN',
     'sign_out' => 'Sign out',
+    'forgot_pin' => 'Forgot your PIN? Sign out — you can sign back in with your account password and set a new PIN. No data is lost.',
 
     'errors' => [
         'pin_length' => 'PIN must be at least 6 digits.',

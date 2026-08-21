@@ -1,9 +1,8 @@
 {{--
     Blocking, resumable, full-screen initial-sync setup gate
-    (15-UI-SPEC.md §2). Naked full-screen safe-area chrome (no top-bar, no
-    drawer) reused verbatim from Modules/Auth/Resources/views/livewire/
-    lock-screen.blade.php lines 1-5; the 48x48 /icon.png app-mark block is
-    the same reuse.
+    (15-UI-SPEC.md §2). Full-screen and chromeless — no top bar, no drawer —
+    so the seam comes from .safe-screen and the app mark from
+    x-core::app-mark, the same two the lock screens use.
 
     The progress bar is x-core::progress-bar, the same component the Sync
     encryption rows use — the ARIA and the track/fill geometry live there.
@@ -15,10 +14,9 @@
     forward — waiting for parity — and no other interactive control.
 --}}
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Mobile\Internal\Sync\SyncPhase')
 <div
-    class="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950
-            pl-[var(--safe-left)] pr-[var(--safe-right)]
-            pt-[var(--safe-top)] pb-[var(--safe-bottom)]
+    class="safe-screen min-h-screen flex items-center justify-center bg-white dark:bg-slate-950
             motion-reduce:transition-none"
     wire:poll.2s="poll"
 >
@@ -26,14 +24,7 @@
 
         {{-- App mark --}}
         <div class="flex justify-center">
-            <img
-                src="{{ Vite::asset('resources/brand/logo.svg') }}"
-                width="48"
-                height="48"
-                alt="Beatrax"
-                class="rounded-xl"
-                aria-hidden="true"
-            />
+            <x-core::app-mark />
         </div>
 
         {{-- Headline — resume copy, never re-shows the
@@ -96,7 +87,7 @@
         {{-- Every stage, so a slow one reads as "3 of 4" rather than a hang. --}}
         <ol class="space-y-2 text-left">
             @foreach ($this->steps() as $entry)
-                @php($done = $entry->isBefore($step) || $phase === 'complete')
+                @php($done = $entry->isBefore($step) || $phase === SyncPhase::Complete)
                 @php($current = ! $done && $entry === $step)
                 <li class="flex items-center gap-3 text-sm">
                     <span

@@ -64,9 +64,14 @@ Modules/DevMode/
 │   │   └── PruneDevAuditCommand.php
 │   ├── Doctor/         (probe extensions)
 │   ├── Enums/
+│   │   ├── ArgType.php
+│   │   ├── AuditEvent.php
+│   │   └── CommandTier.php
 │   ├── Queue/
 │   ├── Registries/
 │   ├── Sql/            (SELECT-only query parser)
+│   ├── Support/
+│   │   └── DevModeSession.php
 │   └── System/         (snapshot helpers)
 ├── Models/
 │   └── DevModeAudit.php
@@ -85,15 +90,23 @@ Modules/DevMode/
 ## Public API
 
 - **Contracts/**
-  - `DevCommandRegistry::find(string $name): ?CommandSpec`,
-    `all(): list<CommandSpec>`, `tier(string $name): ?string`.
+  - `DevCommandRegistry::safe(): list<CommandSpec>`,
+    `destructive(): list<CommandSpec>`,
+    `find(string $name): CommandSpec` (throws on an unregistered
+    name).
   - `NavigationRegistry::entries(): list<NavigationEntry>`.
   - `AppActionRegistry::actions(): list<AppAction>`.
-  - `AuditWriter::write(string $action, array $context): void`.
+  - `AuditWriter::recordCommandRun(CommandRunAudit $run): void`,
+    `finalizeCommandRun(...): bool`,
+    `recordDestructiveQueueAction(...): void`,
+    `recordSelectQuery(...): void`.
 - **DTOs/**
-  - `CommandSpec` — `(name, label, tier, argsSchema, description)`.
+  - `CommandSpec` — `(name, label, tier, argsSchema, description)`,
+    where `tier` is a `CommandTier`.
   - `ArgSpec` — `(name, label, type, rules, placeholder, helpText,
-    options)`.
+    options)`, where `type` is an `ArgType`.
+  - `CommandRunAudit` — the one audit row a run writes, carrying the
+    same `CommandTier`.
   - `NavigationEntry` — `(id, label, hint, icon, url, keywords)`.
   - `AppAction` — `(id, label, hint, icon, handlerEvent, url,
     keywords)`.
@@ -108,14 +121,22 @@ Modules/DevMode/
   hard-coded SAFE + DESTRUCTIVE allow-list (~14 commands).
   NEVER-EXPOSED commands (`migrate`, `migrate:rollback`,
   `db:seed`) are deliberately absent.
-- `Internal/Process/CommandSpawner::spawn(string $name, array
-  $args): string` — the single sanctioned Symfony-`Process`
-  constructor. Throws `InvalidArgumentException` for any
-  unrecognised command.
+- `Internal/Process/CommandSpawner::start(string $command, array
+  $args, int $callerUserId, CommandTier $tier): string` — the single
+  sanctioned Symfony-`Process` constructor. Throws
+  `InvalidArgumentException` for any unrecognised command.
 - `Internal/Process/RunRegistry` — cache-backed per-run state.
 - `Internal/Process/FileTailer::stream(string $path): iterable<string>`
   — yields log lines.
-- `Internal/Audit/SpatieAuditWriter` — concrete `AuditWriter`.
+- `Internal/Audit/SpatieAuditWriter` — concrete `AuditWriter`, bound
+  unconditionally: there is no null-object fallback.
+- `Internal/Enums/CommandTier` — `Safe` / `Destructive`.
+  `reachesThePalette()` is the reachability predicate every spawn
+  path asks; `fromStored()` resolves a persisted tier and falls back
+  to `Safe`.
+- `Internal/Support/DevModeSession` — `ADVANCED_KEY` and
+  `ADVANCED_SEEN_KEY`, the two session keys the triple gate's second
+  lock is held in.
 - `Internal/Audit/RedactionExcerptCap::cap(string $excerpt): string`
   — scrubs OAuth literals and Bearer / JWT patterns.
 - `Internal/Audit/FinalizeRunAudit::handle($run)` — writes the

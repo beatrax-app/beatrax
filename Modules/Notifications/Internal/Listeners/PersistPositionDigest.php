@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Notifications\Internal\Listeners;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
+use Modules\Budgets\Public\Enums\BudgetProgressStatus;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Notifications\Internal\Support\CopyLine;
 use Modules\Notifications\Internal\Support\CopyParam;
@@ -89,7 +90,7 @@ final class PersistPositionDigest
             $currency = 'EUR';
             foreach ($position->budgets as $row) {
                 $currency = $row->currency;
-                if ($row->status === 'over') {
+                if ($row->status === BudgetProgressStatus::Over) {
                     $overBudgetMinor += -$row->remainingMinor();
                 }
             }

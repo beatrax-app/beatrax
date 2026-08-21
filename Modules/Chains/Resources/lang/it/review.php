@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Rivedi le catene',
     'heading' => 'Rivedi le catene',
-    'hint' => 'suggerimento|suggerimenti',
+    'hint' => ':count suggerimento|:count suggerimenti',
     'subtitle' => 'Conferma o rifiuta i collegamenti candidati che il risolutore delle catene non ha potuto confermare automaticamente.',
 
     'empty_heading' => 'Niente da rivedere',

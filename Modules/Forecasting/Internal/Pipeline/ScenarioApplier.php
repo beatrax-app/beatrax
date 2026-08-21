@@ -17,7 +17,9 @@ use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayloa
 use Modules\Forecasting\Public\Enums\ScenarioMutationKind;
 use Modules\Forecasting\Public\Enums\ShiftScope;
 use Modules\Forecasting\Public\Services\ScenarioQuery;
+use Modules\Ledger\Public\Enums\Direction;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
+use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Psr\Log\LoggerInterface;
 
@@ -158,7 +160,7 @@ final readonly class ScenarioApplier
             return $contributions;
         }
 
-        $signed = ($payload->direction === 'income' ? 1 : -1) * abs($payload->amountMinor);
+        $signed = ($payload->direction === Direction::Income->value ? 1 : -1) * abs($payload->amountMinor);
 
         $contributions[] = new ForecastContribution(
             date: $date,
@@ -224,17 +226,20 @@ final readonly class ScenarioApplier
         User $user,
     ): array {
         $start = $this->parsedDate($payload->startDate);
-        $cadence = $payload->cadence;
+        $cadence = SeriesCadence::tryFrom($payload->cadence);
 
-        $usable = $start !== null && in_array($cadence, ['weekly', 'monthly', 'quarterly', 'yearly'], true);
-        $accountId = $usable ? $this->pickAccountIdForOneOff($contributions, $user) : 0;
+        if ($start === null || $cadence === null || ! $cadence->isRegular()) {
+            return $contributions;
+        }
 
-        if ($start === null || ! $usable || $accountId === 0) {
+        $accountId = $this->pickAccountIdForOneOff($contributions, $user);
+
+        if ($accountId === 0) {
             return $contributions;
         }
 
         $magnitude = abs($payload->amountMinor);
-        $sign = $payload->direction === 'income' ? 1 : -1;
+        $sign = $payload->direction === Direction::Income->value ? 1 : -1;
         $point = $sign * $magnitude;
         $lowMag = (int) round($magnitude * self::ONE_OFF_ENVELOPE_LOW_MULTIPLIER);
         $highMag = (int) round($magnitude * self::ONE_OFF_ENVELOPE_HIGH_MULTIPLIER);
@@ -379,14 +384,14 @@ final readonly class ScenarioApplier
         return $result;
     }
 
-    private function advance(CarbonImmutable $cursor, string $cadence): ?CarbonImmutable
+    private function advance(CarbonImmutable $cursor, SeriesCadence $cadence): ?CarbonImmutable
     {
         return match ($cadence) {
-            'weekly' => $cursor->addDays(7),
-            'monthly' => $cursor->addMonthNoOverflow(),
-            'quarterly' => $cursor->addMonthsNoOverflow(3),
-            'yearly' => $cursor->addYearNoOverflow(),
-            default => null,
+            SeriesCadence::Weekly => $cursor->addDays(7),
+            SeriesCadence::Monthly => $cursor->addMonthNoOverflow(),
+            SeriesCadence::Quarterly => $cursor->addMonthsNoOverflow(3),
+            SeriesCadence::Yearly => $cursor->addYearNoOverflow(),
+            SeriesCadence::Irregular => null,
         };
     }
 

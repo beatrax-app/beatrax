@@ -10,6 +10,7 @@ use Modules\Anomaly\Public\Services\AnomalyAlertQuery;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\DerivedRowId;
 use Modules\DriftAlerts\Internal\Http\Livewire\DriftPage;
+use Modules\DriftAlerts\Public\Enums\DriftPageType;
 
 uses(RefreshDatabase::class);
 
@@ -226,7 +227,7 @@ it('acts on the alert the browser named when the id arrives as a string', functi
     $alertId = anomPageAlert($this->db, $userId, '2026-06-13 09:00:00');
 
     Livewire::actingAs($this->user)
-        ->test(DriftPage::class, ['type' => 'anomaly'])
+        ->test(DriftPage::class, ['type' => DriftPageType::Anomaly->value])
         ->call('acknowledgeAnomaly', (string) $alertId)
         ->assertHasNoErrors();
 
@@ -245,7 +246,7 @@ it('pages on the cursor the browser hands back as a string', function (): void {
     $newest = $this->query->openForUser($this->user)[0];
 
     $component = Livewire::actingAs($this->user)
-        ->test(DriftPage::class, ['type' => 'anomaly'])
+        ->test(DriftPage::class, ['type' => DriftPageType::Anomaly->value])
         ->call('loadMoreAnomalies', $newest->detectedAt->toDateTimeString(), (string) $newest->anomalyAlertId);
 
     // Stored as a string so the next round trip does not round it, and still

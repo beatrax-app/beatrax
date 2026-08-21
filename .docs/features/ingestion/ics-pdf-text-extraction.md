@@ -174,7 +174,20 @@ step. A caller that abandons the iterator early leaves it at `null`.
 separator, period is the thousands separator — and requires exactly two
 fractional digits. It strips currency symbols and a closed list of ISO
 alpha-3 codes rather than a general `\b[A-Z]{3}\b`, which would
-over-consume a three-letter token that is not a currency.
+over-consume a three-letter token that is not a currency. The symbols
+come from `Money::SYMBOLS` rather than a list of its own.
+
+Only the **grammar** is local. Once the figure has passed the Dutch
+shape check the string→minor step is
+`MoneyInput::tryToMinor()`, the same seam every other amount boundary
+uses, so the minor-unit arithmetic is written once and the magnitude is
+bounded by `MoneyInput::MAX_MINOR` instead of running off the end of a
+64-bit int. The grammar deliberately does **not** delegate: `tryToMinor()`
+accepts both conventions and treats the rightmost mark as the decimal, so
+a bare `1234` would read as €1234.00 and a `6,06` that lost its comma
+would read as €606.00. On a machine-read statement that is a silent
+hundredfold error where a refused row is a visible one, and the
+statement only ever writes one convention anyway.
 
 `IcsDateParser` accepts two shapes: `dd-mm-yyyy` (used once the adapter
 has resolved a year) and `<day> <Dutch month> <year>` with either the

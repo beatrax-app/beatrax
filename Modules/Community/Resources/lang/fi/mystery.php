@@ -22,8 +22,7 @@ return [
 
     'card' => [
         'likely' => 'Todennäköisesti nimeämätön kauppias.',
-        'seen' => 'Nähty',
-        'time' => 'kerran|kertaa',
+        'seen_times' => 'Nähty :count kerran|Nähty :count kertaa',
         'last_seen' => 'Viimeksi nähty :date',
         'suggest' => 'Ehdota nimeä →',
     ],

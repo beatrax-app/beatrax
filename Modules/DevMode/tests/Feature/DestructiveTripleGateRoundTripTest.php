@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Config\Repository;
 use Modules\Core\Models\User;
+use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Process\RunRegistry;
 
 beforeEach(function (): void {
@@ -114,6 +115,6 @@ it('spawns a destructive command + returns 202 + run_id + pid when all three gat
     $registry = app(RunRegistry::class);
     $record = $registry->find($runId);
     expect($record)->not->toBeNull();
-    expect($record->tier)->toBe('destructive');
+    expect($record->tier)->toBe(CommandTier::Destructive);
     expect($record->command)->toBe('migrate:fresh');
 });

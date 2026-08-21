@@ -38,7 +38,7 @@ return [
         'nothing_notable' => 'Nimic nu îți cere atenția.',
         'flow' => 'Intrări :in, ieșiri :out, net :net.',
         'over_budget' => ':amount peste buget până acum.',
-        'payments_due' => '1 plată scadentă în această perioadă.|:count plăți scadente în această perioadă.|:count de plăți scadente în această perioadă.',
+        'payments_due' => ':count plată scadentă în această perioadă.|:count plăți scadente în această perioadă.|:count de plăți scadente în această perioadă.',
         'shortfall' => 'Urmează un deficit de lichiditate.',
     ],
 ];

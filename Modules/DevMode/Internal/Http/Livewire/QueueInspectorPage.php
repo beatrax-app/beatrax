@@ -18,6 +18,7 @@ use Modules\DevMode\Internal\Logging\RedactSecretsProcessor;
 use Modules\DevMode\Internal\Queue\QueueActions;
 use Modules\DevMode\Internal\Queue\QueueRowLoader;
 use Modules\DevMode\Internal\Services\DevModeFlag;
+use Modules\DevMode\Internal\Support\DevModeSession;
 
 /**
  * @phpstan-import-type QueueRow from QueueRowLoader
@@ -155,7 +156,7 @@ final class QueueInspectorPage extends Component
     {
         return match (true) {
             ! $devMode->isOn() => Lang::get('dev::queue.refusal.dev_mode_off'),
-            $session->get('dev_mode.advanced') !== true => Lang::get('dev::queue.refusal.advanced_off'),
+            $session->get(DevModeSession::ADVANCED_KEY) !== true => Lang::get('dev::queue.refusal.advanced_off'),
             ! hash_equals('Beatrax', $confirmedTyped) => Lang::get('dev::queue.refusal.token_mismatch'),
             default => null,
         };

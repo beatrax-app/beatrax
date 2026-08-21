@@ -13,7 +13,12 @@
       - batchSuggestionDismissed bool
 
     Desktop: anchored popover (Alpine x-data open/close + click-outside dismiss).
-    Phone (<768px): bottom sheet with handle bar + backdrop scrim.
+    Phone (<768px): the shared `.bottom-sheet` and `.bottom-sheet-scrim` classes
+    from app.css, plus a handle bar. The panel's geometry, surface, radius,
+    safe-area padding and z-index all come from that one rule, so this sheet
+    stacks and dims exactly like every other one. Open/close stays local Alpine
+    here — the state is $wire.taxPickerTxId, not an open-sheet dispatch, so
+    x-core::bottom-sheet's event plumbing is the wrong seam for it.
 
     The host component must use HandlesTaxTagging to provide these props.
 --}}
@@ -72,6 +77,7 @@
     >
         {{-- Backdrop scrim --}}
         <div
+            class="bottom-sheet-scrim"
             x-show="open"
             x-transition:enter="transition ease-out duration-200"
             x-transition:enter-start="opacity-0"
@@ -80,12 +86,12 @@
             x-transition:leave-start="opacity-100"
             x-transition:leave-end="opacity-0"
             x-on:click="closeAll()"
-            style="position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 40;"
             aria-hidden="true"
         ></div>
 
         {{-- Sheet panel --}}
         <div
+            class="bottom-sheet"
             x-show="open"
             x-transition:enter="transition ease-out duration-200"
             x-transition:enter-start="transform translate-y-full"
@@ -96,19 +102,6 @@
             role="dialog"
             aria-modal="true"
             aria-label="{{ Lang::get('tax::picker.dialog_aria') }}"
-            style="
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                z-index: 50;
-                background: var(--color-surface-raised, #fff);
-                border-radius: 12px 12px 0 0;
-                max-height: 70vh;
-                overflow-y: auto;
-                padding: var(--space-4, 1rem);
-                padding-bottom: calc(var(--space-4, 1rem) + var(--safe-bottom, 0px));
-            "
         >
             {{-- Handle bar --}}
             <div style="display: flex; justify-content: center; margin-bottom: var(--space-3);">

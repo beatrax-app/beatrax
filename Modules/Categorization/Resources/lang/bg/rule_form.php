@@ -22,7 +22,6 @@ return [
     'condition_value_from_aria' => 'Стойност на условие :number (от)',
     'condition_value_to_aria' => 'Стойност на условие :number (до)',
     'to' => 'до',
-    'amount_placeholder' => '0,00',
     'text_placeholder' => 'напр. SPOTIFY',
     'remove_condition' => 'Премахни условието',
     'add_condition' => '+ Добави условие',

@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
+use Modules\Mobile\Internal\Sync\SyncPhase;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class MobileEnsureImportCompleted
@@ -48,11 +49,6 @@ final readonly class MobileEnsureImportCompleted
     private const EXEMPT_ROUTE_SUFFIXES = [
         'livewire.update',
     ];
-
-    // The terminal phase InitialSyncPuller writes once the bidirectional
-    // catch-up has finished and, for an import device, the delivered
-    // epochs have re-projected the full op-log.
-    private const PHASE_COMPLETE = 'complete';
 
     public function __construct(
         private CurrentUser $currentUser,
@@ -125,7 +121,7 @@ final readonly class MobileEnsureImportCompleted
         return $this->db->connection()
             ->table('mobile_sync_progress')
             ->where('user_id', $userId)
-            ->where('phase', self::PHASE_COMPLETE)
+            ->where('phase', SyncPhase::Complete->value)
             ->exists();
     }
 

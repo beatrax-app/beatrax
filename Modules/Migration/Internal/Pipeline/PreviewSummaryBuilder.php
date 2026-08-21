@@ -14,6 +14,7 @@ use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Migration\Internal\Dto\PreviewSummary;
+use Modules\Migration\Internal\Enums\ConflictResolution;
 use Modules\Migration\Internal\Enums\MigrationEntityType;
 use Modules\Migration\Internal\Enums\MigrationRunStatus;
 use Modules\Migration\Internal\Exceptions\MigrationRunNotParsedException;
@@ -119,7 +120,7 @@ final class PreviewSummaryBuilder
                     'id' => self::toInt($row->id),
                     'label' => self::toString($row->display_label),
                     'reason' => self::toString($row->reason),
-                    'resolution' => 'keep_local',
+                    'resolution' => ConflictResolution::KeepLocal->value,
                 ];
         }
 
@@ -140,14 +141,14 @@ final class PreviewSummaryBuilder
         $fieldName = $row->field_name !== null ? self::toString($row->field_name) : '';
         $sourceExternalId = $row->source_external_id !== null ? self::toString($row->source_external_id) : null;
         $currency = $row->currency !== null ? self::toString($row->currency) : null;
-        $resolution = $row->resolution !== null ? self::toString($row->resolution) : 'keep_local';
+        $resolution = ConflictResolution::tryFrom(self::toString($row->resolution)) ?? ConflictResolution::KeepLocal;
 
         if ($entityType === '' || $fieldName === '') {
             return [
                 'id' => self::toInt($row->id),
                 'label' => self::toString($row->display_label),
                 'reason' => self::toString($row->reason),
-                'resolution' => $resolution,
+                'resolution' => $resolution->value,
             ];
         }
 
@@ -162,7 +163,7 @@ final class PreviewSummaryBuilder
             'id' => self::toInt($row->id),
             'label' => $label,
             'reason' => $this->conflictReason($resolution, $isMoney, $currency, $localRaw, $sourceRaw, $baselineRaw),
-            'resolution' => $resolution,
+            'resolution' => $resolution->value,
         ];
     }
 
@@ -262,9 +263,9 @@ final class PreviewSummaryBuilder
         return is_numeric($value) ? (int) $value : null;
     }
 
-    private function conflictReason(string $resolution, bool $isMoney, ?string $currency, ?string $localRaw, ?string $sourceRaw, ?string $baselineRaw): string
+    private function conflictReason(ConflictResolution $resolution, bool $isMoney, ?string $currency, ?string $localRaw, ?string $sourceRaw, ?string $baselineRaw): string
     {
-        $intro = $resolution === 'take_source'
+        $intro = $resolution === ConflictResolution::TakeSource
             ? "The new export's value will be applied when you confirm — your local value will be replaced."
             : 'Your local value will be kept — the new export\'s value will not be applied.';
 

@@ -14,7 +14,6 @@ use Illuminate\Http\Request;
 use Livewire\Component;
 use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
-use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Auth\Internal\Lock\PinVerificationService;
 use Modules\Auth\Internal\Lock\PlatformDetector;
 use Modules\Auth\Public\Contracts\ColdStartVault;
@@ -66,7 +65,6 @@ final class LockScreen extends Component
         string $pin,
         CurrentUser $currentUser,
         PinVerificationService $verifier,
-        LockStateManager $lockState,
         UrlGenerator $urls,
         Session $session,
         DatabaseManager $db,

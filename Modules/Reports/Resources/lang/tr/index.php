@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'title' => 'Raporlar',
     'page_title' => 'Raporlar · Beatrax',
-    'saved_report' => 'kayıtlı rapor',
+    'saved_report' => ':count kayıtlı rapor',
     'pinned_count' => 'sabitlenmiş',
     'dismiss' => 'Kapat',
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Gjennomgå kjeder',
     'heading' => 'Gjennomgå kjeder',
-    'hint' => 'hint|hint',
+    'hint' => ':count hint|:count hint',
     'subtitle' => 'Bekreft eller avvis kandidatlenker som kjedeløseren ikke kunne bekrefte automatisk.',
 
     'empty_heading' => 'Ingenting å gjennomgå',

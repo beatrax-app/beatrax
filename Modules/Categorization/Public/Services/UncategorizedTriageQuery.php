@@ -33,8 +33,6 @@ final class UncategorizedTriageQuery
             ->leftJoin('counterparties', 'transactions.counterparty_id', '=', 'counterparties.id')
             ->where('transactions.user_id', $user->id)
             ->whereNull('transactions.category_id')
-            ->orderByDesc('transactions.posted_at')
-            ->orderByDesc('transactions.id')
             ->select([
                 'transactions.id',
                 'transactions.posted_at',
@@ -47,6 +45,7 @@ final class UncategorizedTriageQuery
             ])
             ->limit($limit + 1);
 
+        TransactionCursor::orderNewestFirst($query);
         TransactionCursor::apply($query, $cursorPostedAt, $cursorId);
 
         $rows = $query->get();

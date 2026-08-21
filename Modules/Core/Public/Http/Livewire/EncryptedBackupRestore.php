@@ -12,6 +12,7 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Modules\Core\Public\Services\RestoreEncryptedBackup;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SqliteDatabase;
 use RuntimeException;
 
 final class EncryptedBackupRestore extends Component
@@ -83,6 +84,6 @@ final class EncryptedBackupRestore extends Component
         $default = $config->get('database.default');
 
         return is_string($default)
-            && $config->get('database.connections.'.$default.'.driver') === 'sqlite';
+            && $config->get('database.connections.'.$default.'.driver') === SqliteDatabase::DRIVER;
     }
 }

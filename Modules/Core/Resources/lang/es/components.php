@@ -42,12 +42,14 @@ return [
         'next_month' => 'Mes siguiente',
         'today' => 'Hoy',
         'clear' => 'Borrar',
+        'empty' => 'sin fecha seleccionada',
     ],
 
     'time' => [
         'open' => 'Elegir una hora',
         'hour' => 'Hora',
         'minute' => 'Minuto',
+        'empty' => 'sin hora seleccionada',
     ],
 
     'veil_locked' => 'Aplicación bloqueada',

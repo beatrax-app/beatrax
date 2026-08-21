@@ -12,6 +12,7 @@ return [
     'ok' => 'OK',
     'ok_aria' => 'OK — confirmar o PIN',
     'sign_out' => 'Terminar sessão',
+    'forgot_pin' => 'Esqueceste-te do PIN? Termina sessão — podes iniciar sessão de novo com a palavra-passe da conta e definir um novo PIN. Não se perdem dados.',
 
     'errors' => [
         'pin_length' => 'O PIN tem de ter pelo menos 6 dígitos.',

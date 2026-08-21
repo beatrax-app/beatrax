@@ -42,12 +42,14 @@ return [
         'next_month' => 'Nākamais mēnesis',
         'today' => 'Šodien',
         'clear' => 'Notīrīt',
+        'empty' => 'datums nav izvēlēts',
     ],
 
     'time' => [
         'open' => 'Izvēlieties laiku',
         'hour' => 'Stunda',
         'minute' => 'Minūte',
+        'empty' => 'laiks nav izvēlēts',
     ],
 
     'veil_locked' => 'Lietotne bloķēta',

@@ -15,7 +15,7 @@ return [
     'no_counterparty' => '(vastaspooleta)',
     'open_from_row' => 'Ava lähterida',
     'open_to_row' => 'Ava sihtrida',
-    'leg_count' => '1 makse|:count makset',
+    'leg_count' => ':count makse|:count makset',
     'state_aria' => 'Olek: :state',
 
     'kind' => [

@@ -22,8 +22,7 @@ return [
 
     'card' => [
         'likely' => 'Visticamāk: nenosaukts tirgotājs.',
-        'seen' => 'Redzēts',
-        'time' => 'reižu|reizi|reizes',
+        'seen_times' => 'Redzēts :count reižu|Redzēts :count reizi|Redzēts :count reizes',
         'last_seen' => 'Pēdējoreiz :date',
         'suggest' => 'Ieteikt nosaukumu →',
     ],

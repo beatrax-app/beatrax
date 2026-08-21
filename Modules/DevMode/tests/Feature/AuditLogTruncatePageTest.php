@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Http\Livewire\AuditLogPage;
 use Modules\DevMode\Public\Contracts\AuditWriter;
 use Modules\DevMode\Public\Dto\CommandRunAudit;
@@ -26,14 +27,14 @@ it('truncateAll deletes every dev_mode_audit row', function (): void {
     /** @var AuditWriter $writer */
     $writer = $this->app->make(AuditWriter::class);
     $writer->recordCommandRun(new CommandRunAudit(
-        command: 'cache:clear', args: [], tier: 'safe',
+        command: 'cache:clear', args: [], tier: CommandTier::Safe,
         callerUserId: $user->id,
         startedAt: CarbonImmutable::now(),
         finishedAt: CarbonImmutable::now(),
         exitCode: 0, stdoutExcerpt: 'output ok', errorExcerpt: '',
     ));
     $writer->recordCommandRun(new CommandRunAudit(
-        command: 'db:restore', args: ['from' => '/tmp/x'], tier: 'destructive',
+        command: 'db:restore', args: ['from' => '/tmp/x'], tier: CommandTier::Destructive,
         callerUserId: $user->id,
         startedAt: CarbonImmutable::now(),
         finishedAt: CarbonImmutable::now(),
@@ -57,7 +58,7 @@ it('truncateAll resets the cursor and filter state', function (): void {
     /** @var AuditWriter $writer */
     $writer = $this->app->make(AuditWriter::class);
     $writer->recordCommandRun(new CommandRunAudit(
-        command: 'cache:clear', args: [], tier: 'safe',
+        command: 'cache:clear', args: [], tier: CommandTier::Safe,
         callerUserId: $user->id,
         startedAt: CarbonImmutable::now(),
         finishedAt: CarbonImmutable::now(),
@@ -93,7 +94,7 @@ it('renders a per-row Copy button for every audit row with the row payload embed
     /** @var AuditWriter $writer */
     $writer = $this->app->make(AuditWriter::class);
     $writer->recordCommandRun(new CommandRunAudit(
-        command: 'cache:clear', args: [], tier: 'safe',
+        command: 'cache:clear', args: [], tier: CommandTier::Safe,
         callerUserId: $user->id,
         startedAt: CarbonImmutable::now(),
         finishedAt: CarbonImmutable::now(),
@@ -122,7 +123,7 @@ it('renders the stderr block in the Copy payload when error_excerpt is non-empty
     /** @var AuditWriter $writer */
     $writer = $this->app->make(AuditWriter::class);
     $writer->recordCommandRun(new CommandRunAudit(
-        command: 'db:restore', args: ['from' => '/tmp/x'], tier: 'destructive',
+        command: 'db:restore', args: ['from' => '/tmp/x'], tier: CommandTier::Destructive,
         callerUserId: $user->id,
         startedAt: CarbonImmutable::now(),
         finishedAt: CarbonImmutable::now(),

@@ -22,8 +22,7 @@ return [
 
     'card' => [
         'likely' => 'Tõenäoliselt: nimetu kaupmees.',
-        'seen' => 'Nähtud',
-        'time' => 'kord|korda',
+        'seen_times' => 'Nähtud :count kord|Nähtud :count korda',
         'last_seen' => 'Viimati nähtud :date',
         'suggest' => 'Paku nimi →',
     ],

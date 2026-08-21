@@ -12,6 +12,7 @@ use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ChangeSeriesAmountPay
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ScenarioMutationPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayload;
 use Modules\Forecasting\Public\Enums\ShiftScope;
+use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
 trait SummarisesMutations
@@ -41,7 +42,7 @@ trait SummarisesMutations
 
     private function summariseOneOff(AddOneOffPayload $payload): string
     {
-        $sign = $payload->direction === 'income' ? '+' : '−';
+        $sign = $payload->direction === Direction::Income->value ? '+' : '−';
         $amount = MoneyInput::formatAbsMinor($payload->amountMinor);
 
         return Lang::get('forecasting::scenario.summary.one_off', [
@@ -53,7 +54,7 @@ trait SummarisesMutations
 
     private function summariseRecurring(AddRecurringPayload $payload): string
     {
-        $sign = $payload->direction === 'income' ? '+' : '−';
+        $sign = $payload->direction === Direction::Income->value ? '+' : '−';
         $amount = MoneyInput::formatAbsMinor($payload->amountMinor);
 
         return Lang::get('forecasting::scenario.summary.recurring', [

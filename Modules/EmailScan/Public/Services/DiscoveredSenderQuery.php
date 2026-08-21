@@ -76,26 +76,6 @@ final class DiscoveredSenderQuery
         return $out;
     }
 
-    // Same threshold as candidatesForUser, so a non-zero badge always means
-    // at least one row is actually on the panel.
-    public function candidatesCountForUser(
-        User $user,
-        int $minOccurrences = self::MIN_OCCURRENCES,
-        int $withinDays = self::WITHIN_DAYS,
-    ): int {
-        $threshold = $this->clock->now()->modify("-{$withinDays} days")->toDateTimeString();
-
-        return self::toInt(
-            $this->db->connection()
-                ->table('discovered_senders')
-                ->where('user_id', $user->id)
-                ->where('state', 'candidate')
-                ->where('occurrence_count', '>=', $minOccurrences)
-                ->where('last_seen_at', '>=', $threshold)
-                ->count(),
-        );
-    }
-
     private function makeDto(stdClass $row): DiscoveredSenderDto
     {
         $rawSenderName = $row->sender_name ?? null;

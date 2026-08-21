@@ -41,3 +41,27 @@ it('rejects malformed amount strings', function (string $raw): void {
     'internal space inside digit run' => ['1 0.00'],
     'NBSP between sign and digits' => ["+\u{A0}1.23"],
 ]);
+
+// The three shapes MT940 writes that parseMinor() refuses on its own. The
+// normalisation used to live twice, in Mt940Adapter and Mt940Tag61Parser.
+it('normalises the MT940 amount shapes before parsing them', function (string $raw, int $expected): void {
+    expect($this->parser->parseMt940Minor($raw))->toBe($expected);
+})->with([
+    'comma decimal' => ['1000,00', 100000],
+    'comma decimal, one fractional digit' => ['1000,5', 100050],
+    'no decimal at all' => ['1000', 100000],
+    'zero without a decimal' => ['0', 0],
+    'period decimal passes straight through' => ['12.34', 1234],
+    'period decimal, one fractional digit' => ['12.3', 1230],
+    'signed comma decimal' => ['-12,34', -1234],
+]);
+
+it('still refuses an MT940 amount that is not a number', function (string $raw): void {
+    expect(fn (): int => $this->parser->parseMt940Minor($raw))
+        ->toThrow(InvalidAmountException::class);
+})->with([
+    'words' => ['twelve'],
+    'empty string' => [''],
+    'three decimals' => ['12,345'],
+    'two separators' => ['1.234,56'],
+]);

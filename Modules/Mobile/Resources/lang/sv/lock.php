@@ -12,6 +12,7 @@ return [
     'ok' => 'OK',
     'ok_aria' => 'OK — bekräfta PIN-koden',
     'sign_out' => 'Logga ut',
+    'forgot_pin' => 'Glömt din PIN-kod? Logga ut — du kan logga in igen med ditt kontolösenord och välja en ny PIN-kod. Inga data går förlorade.',
 
     'errors' => [
         'pin_length' => 'PIN-koden måste ha minst 6 siffror.',

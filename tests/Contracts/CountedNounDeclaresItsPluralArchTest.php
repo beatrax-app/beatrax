@@ -38,7 +38,7 @@ const COUNTED_NOUN_NOT_PLURAL = [
 
 function countedNounReadsAsPlural(string $word): bool
 {
-    $bare = mb_strtolower(trim($word, ".,;:!?()[]—–-"));
+    $bare = mb_strtolower(trim($word, '.,;:!?()[]—–-'));
 
     if (mb_strlen($bare) < 4 || ! str_ends_with($bare, 's') || str_ends_with($bare, 'ss')) {
         return false;

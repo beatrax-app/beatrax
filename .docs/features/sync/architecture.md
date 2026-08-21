@@ -221,10 +221,14 @@ with the epoch id bound as associated data — the AEAD sibling of
 `Modules\Auth\Internal\Lock\AppLockKeyWrap`, sharing the same
 base64(nonce||ciphertext) framing and "false not garbage" contract. The
 `$associatedData` argument is the epoch-binding channel: callers pass a
-canonical string embedding the epoch id (e.g.
-`"{table}:{pk}:{field}:{epochId}"`) so relabeling the epoch tag on a stored
-ciphertext invalidates the Poly1305 authentication tag — defense in depth
-alongside the Ed25519 signature that already covers the whole op-log entry.
+canonical string embedding the epoch id, so relabeling the epoch tag on a
+stored ciphertext invalidates the Poly1305 authentication tag — defense in
+depth alongside the Ed25519 signature that already covers the whole op-log
+entry. There are two such strings, and they are not interchangeable: op-log
+entries bind their row with `"{table}:{pk}:{field}:{epochId}"`, projection
+columns use the pk-less `"{table}:{field}:{epochId}"` built by
+`SensitiveColumnCodec::associatedData()`. See
+[sensitive columns at rest](sensitive-columns-at-rest.md).
 
 `RewrapGdkOnPassphraseChange` re-wraps the GDK keyring whenever the app-lock
 passphrase changes, consuming only `Modules\Auth`'s Public
@@ -247,9 +251,6 @@ phase): `counterparties.metadata`, `saved_reports.definition`.
 Knowingly-accepted plaintext exceptions, each a reviewed, tracked decision
 rather than an oversight:
 
-- `recurring_series.cluster_counterparty_key` stores a decrypted IBAN/description
-  clustering key verbatim — random-nonce ciphertext cannot be a stable WHERE
-  key; a future hardening would replace it with a keyed HMAC/blind-index.
 - `migration_import_baseline.baseline_value` snapshots a plaintext value for
   `ThreeWayMergeResolver`'s three-way merge compare.
 - `pending_enrichment_conflicts.{stored_value,incoming_value}` hold decrypted
@@ -619,28 +620,32 @@ flow then continues through the unchanged `acceptToken()` ceremony. Neither
 the token nor the offer body is ever logged.
 
 `PairingFrame` defines the two cross-device pairing handshake frame types
-`PairingRelayCourier` carries over the zero-knowledge relay:
+`PairingFrameCourier` carries between devices:
 `PAIR_RESPONDER_ACCEPT` (public identity fields only) and `PAIR_CONFIRM`
 (a device id pair + an Ed25519 signature, never the secret key). Neither
 frame type carries any trust decision — every trust gate lives exclusively
 inside `PairingTokenService`.
 
-`PairingStateMachine` is the pure transition logic: `pending ->
+`PairingState` names the lifecycle a token moves through — `pending ->
 awaiting_confirm -> confirmed`, falling to `expired` at any point its TTL
-elapses. The CONFIRMED transition is the trust gate, only reachable once
-BOTH the initiator and responder have confirmed the safety-number on their
-own screens.
+elapses — and `PairingTokenService` owns every transition between those
+states. `PairingStateMachine` holds the one predicate the CONFIRMED
+transition turns on: the trust gate is reachable only once BOTH the
+initiator and responder have confirmed the safety-number on their own
+screens.
 
 `PairingTokenService` issues and validates single-use, short-expiry pairing
 tokens and owns every trust decision (see the class for the full lifecycle,
 the cross-device `seedFromInitiator()`/`applyResponderAccept()`/
 `applyPeerConfirm()` counterparts, and the both-confirm admission gate).
 
-`PairingRelayCourier` carries `PairingFrame`s over the zero-knowledge relay
-so the both-confirm ceremony can reach a genuinely separate physical
-device. It NEVER decides trust; it dispatches drained frames verbatim to
-`PairingTokenService`'s cross-device apply methods. The relay itself sees
-only routing metadata + opaque blobs.
+`PairingFrameCourier` carries `PairingFrame`s to the peer so the both-confirm
+ceremony can reach a genuinely separate physical device. It tries three roads
+in order: the LAN through `LanPairingFrameCourier`, then the zero-knowledge
+relay, then `PairingPeerOutbox`, which holds the frame for the peer to collect;
+it throws only when all three are shut. It NEVER decides trust; it dispatches
+drained frames verbatim to `PairingTokenService`'s cross-device apply methods.
+The relay itself sees only routing metadata + opaque blobs.
 
 ### Cross-module pairing gateway (`Public\Services\PairingGateway`)
 
@@ -1017,6 +1022,15 @@ The second arm is desktop-only: on a mobile runtime `enterACode()` redirects
 out of the modal to `route('mobile.pair')`, so `enter_code` is never reached
 there. That screen has a camera and this modal has never had one, which made
 the modal's own offer to scan true only over there. Per-method DI throughout.
+
+`Public\Enums\PairingWizardStep` is the one spelling of those step names, shared
+with the phone's own pairing screen. The `$step` property itself stays a
+`string`: it is an unlocked public Livewire property, so it is rehydrated
+straight from the client payload with no enum coercion, and typing it would
+turn a crafted step into a 500 rather than a fallback. Every reader goes
+through a private `currentStep()` that resolves it with `tryFrom()`, and the
+view is handed the resolved enum under a different name (`$wizardStep`),
+because view data cannot shadow a same-named public property.
 
 Trust gate: the safety-number is derived independently on BOTH peers from
 BOTH stored public keys; `device_registry.confirmed_at` is set ONLY after

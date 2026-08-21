@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Str;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Process\RunRecord;
 use Modules\DevMode\Internal\Process\RunRegistry;
 use Symfony\Component\Process\Process;
@@ -53,7 +54,7 @@ it('returns 204 idempotently when the process has already exited', function (): 
         args: [],
         startedAt: CarbonImmutable::now(),
         callerUserId: $user->id,
-        tier: 'safe',
+        tier: CommandTier::Safe,
         status: 'running',
         outPath: $outPath,
     ));
@@ -90,7 +91,7 @@ it('cancels a real long-running child via SIGTERM within the 3s grace', function
         args: [],
         startedAt: CarbonImmutable::now(),
         callerUserId: $user->id,
-        tier: 'safe',
+        tier: CommandTier::Safe,
         status: 'running',
         outPath: $outPath,
     ));
@@ -126,7 +127,7 @@ it('rejects cross-user cancel with 403', function (): void {
         args: [],
         startedAt: CarbonImmutable::now(),
         callerUserId: $owner->id,
-        tier: 'safe',
+        tier: CommandTier::Safe,
         status: 'running',
         outPath: $outPath,
     ));

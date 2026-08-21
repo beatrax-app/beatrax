@@ -42,14 +42,7 @@
          space, so a logo left loose beside it stayed pinned against the
          hamburger and read as part of the menu button. --}}
     <span class="top-bar-brand">
-        <img
-            src="{{ Vite::asset('resources/brand/logo.svg') }}"
-            alt=""
-            width="20"
-            height="20"
-            class="top-bar-logo"
-            aria-hidden="true"
-        />
+        <x-core::app-mark :size="20" alt="" class="top-bar-logo" />
 
         <span class="top-bar-title">{{ $resolvedTitle }}</span>
     </span>

@@ -22,7 +22,6 @@ return [
     'condition_value_from_aria' => 'Condition :number value (from)',
     'condition_value_to_aria' => 'Condition :number value (to)',
     'to' => 'to',
-    'amount_placeholder' => '0,00',
     'text_placeholder' => 'e.g. SPOTIFY',
     'remove_condition' => 'Remove condition',
     'add_condition' => '+ Add condition',

@@ -17,8 +17,7 @@ return [
     'net' => 'Netto',
 
     'status_tiles_aria' => 'Stavové dlaždice',
-    'email_scan_health' => 'Stav prehľadávania e-mailu — pripojené: :count',
-    'inbox' => 'schránka|schránky|schránok',
+    'email_scan_health' => 'Stav prehľadávania e-mailu — pripojené: :count schránka|Stav prehľadávania e-mailu — pripojené: :count schránky|Stav prehľadávania e-mailu — pripojené: :count schránok',
 
     'top_spending' => 'Najväčšie výdavky',
     'no_expenses' => 'Zatiaľ žiadne zaradené výdavky.',

@@ -140,7 +140,8 @@ final class EncryptionMigrationSupport
     }
 
     // Encrypt a single op_log_entries.value under the primed epoch, tagged
-    // with the exact op-log entry AD OpLogWriter itself binds.
+    // with the canonical pk-bearing op-log AD (SensitiveColumnCodec::
+    // opLogAssociatedData) — the same one OpLogWriter binds at write time.
     /**
      * @return array{value: string, epochId: int}
      */
@@ -149,7 +150,7 @@ final class EncryptionMigrationSupport
         [$epochId, $rawKey] = $this->requirePrimedEpoch();
 
         try {
-            $ciphertext = $this->fieldCrypto->encrypt($value, $rawKey, "{$table}:{$pk}:{$field}:{$epochId}");
+            $ciphertext = $this->fieldCrypto->encrypt($value, $rawKey, SensitiveColumnCodec::opLogAssociatedData($table, $pk, $field, $epochId));
         } finally {
             sodium_memzero($rawKey);
         }

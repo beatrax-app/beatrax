@@ -12,6 +12,7 @@ return [
     'ok' => 'OK',
     'ok_aria' => 'OK — confirmă codul PIN',
     'sign_out' => 'Deconectare',
+    'forgot_pin' => 'Ți-ai uitat codul PIN? Deconectează-te — te poți autentifica din nou cu parola contului și poți seta un cod PIN nou. Nu se pierd date.',
 
     'errors' => [
         'pin_length' => 'Codul PIN trebuie să aibă cel puțin 6 cifre.',

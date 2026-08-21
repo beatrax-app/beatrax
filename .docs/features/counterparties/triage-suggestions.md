@@ -144,10 +144,10 @@ Dutch puts the symbol first, `€ -23,45` — so nothing here needs its own
 formatting, only to stop discarding what the row already carries.
 
 `abs()` elsewhere in this module is **correct and must not be swept**:
-`counterparty-index.blade.php:135,220,260` and
-`counterparty-profile.blade.php:56` wrap 12-month totals and per-month
+`CounterpartyIndexRow.php:41-42` and
+`counterparty-profile.blade.php:57` wrap 12-month totals and per-month
 averages, where "total spent with this counterparty" as a magnitude is
-the intended presentation, and `counterparty-index.blade.php:200` sizes
+the intended presentation, and `counterparty-index.blade.php:198` sizes
 a chart bar, which cannot be negative. The rule is the distinction: an
 aggregate may be shown as a magnitude, a single transaction may not.
 

@@ -69,7 +69,7 @@ return [
     'highlights_shortfall_aria' => ':count ενεργό παράθυρο ελλείμματος τις επόμενες :days ημέρες|:count ενεργά παράθυρα ελλείμματος τις επόμενες :days ημέρες',
     'dips_to' => ':name πέφτει στα :amount',
     'on_date_suffix' => ' στις :date',
-    'shortfall_window' => '1 ενεργό παράθυρο ελλείμματος|:count ενεργά παράθυρα ελλείμματος',
+    'shortfall_window' => ':count ενεργό παράθυρο ελλείμματος|:count ενεργά παράθυρα ελλείμματος',
     'lowest_in_30' => 'Χαμηλότερο σε 30 ημέρες: :amount',
     'next_ics' => 'Επόμενος διακανονισμός ICS: :amount στις :date',
 ];

@@ -15,7 +15,7 @@ return [
     'no_counterparty' => '(aucun tiers)',
     'open_from_row' => 'Ouvrir la ligne de départ',
     'open_to_row' => 'Ouvrir la ligne d\'arrivée',
-    'leg_count' => '1 paiement|:count paiements',
+    'leg_count' => ':count paiement|:count paiements',
     'state_aria' => 'État : :state',
 
     'kind' => [

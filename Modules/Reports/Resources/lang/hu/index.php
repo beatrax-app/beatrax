@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'title' => 'Jelentések',
     'page_title' => 'Jelentések · Beatrax',
-    'saved_report' => '{0} mentett jelentés|[1,*] mentett jelentés',
+    'saved_report' => '{0} :count mentett jelentés|[1,*] :count mentett jelentés',
     'pinned_count' => 'rögzítve',
     'dismiss' => 'Elvetés',
 

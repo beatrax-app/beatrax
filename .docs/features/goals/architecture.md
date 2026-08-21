@@ -72,6 +72,13 @@ even if the user's base currency later diverges.
 `fractionComplete` is a plain float ratio of two integer minor-unit amounts
 — never a `Money::toFloat()` call on a monetary value.
 
+`GoalProgressRow` derives the three things every goal surface asks of it:
+`percentComplete()` (floored at 0 and capped at 100, since an attributed spend
+can push the sum negative), `barWidth()` (the same percentage, but a non-zero
+share never drawing less than a 2% sliver) and `isCompleted()`. All three are
+on the row rather than at the call site, because two lists computing the sliver
+rule under two names is how the two lists came to disagree.
+
 ## Projection algorithm
 
 `GoalProjectionService::project()` estimates a finish date from a
@@ -98,6 +105,15 @@ even if the user's base currency later diverges.
    case reads `projection.not_enough_history`.
 5. The projected date is `today + ceil(remaining / dailyRate)`; beyond 90 days
    it is reported as extrapolated / lower-confidence (`beyondHorizon: true`).
+
+The six-branch chain that turns those states into a sentence lives once, in
+`Resources/views/partials/goal-projection-line.blade.php`, and both the phone
+list and the desktop card include it with their own class string. The phone
+list used to carry a second copy of the chain that had lost the
+`projection.projection_note` qualifier on the `beyondHorizon` branch, so the
+same estimate read as a hard date at phone width and as an estimate on the
+desktop. `Resources/views/partials/goal-target-date.blade.php` is the same
+arrangement for the target date the create form refuses to omit.
 
 The trailing-window length and the horizon limit are both 90 days by design.
 Forecasting is not consulted: a `ForecastDto` point is an account's overall

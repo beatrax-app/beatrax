@@ -18,12 +18,15 @@ use Modules\Anomaly\Public\Actions\SnoozeAnomalyAlert;
 use Modules\Anomaly\Public\Services\AnomalyAlertQuery;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Enums\SnoozeWindow;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\DriftAlerts\Public\Actions\AcknowledgeDriftAlert;
 use Modules\DriftAlerts\Public\Actions\DismissDriftAlertAsCancelled;
 use Modules\DriftAlerts\Public\Actions\SnoozeDriftAlert;
 use Modules\DriftAlerts\Public\Dto\CancellationImpactDto;
+use Modules\DriftAlerts\Public\Enums\DriftPageTab;
+use Modules\DriftAlerts\Public\Enums\DriftPageType;
 use Modules\DriftAlerts\Public\Services\CancellationImpactQuery;
 use Modules\DriftAlerts\Public\Services\DriftAlertQuery;
 use Modules\Forecasting\Public\Actions\CreateCancellationScenarioForAlert;
@@ -37,11 +40,14 @@ final class DriftPage extends Component
 
     private const int MAX_UNTIL_MONTHS = 6;
 
-    #[Url(as: 'tab', except: 'open')]
-    public string $tab = 'open';
+    // Both stay strings on the wire: they are #[Url] state, so anyone can put
+    // anything in the query string, and a bookmarked value outside the enum
+    // has to land on the default view rather than fail the request.
+    #[Url(as: 'tab', except: DriftPageTab::DEFAULT)]
+    public string $tab = DriftPageTab::DEFAULT;
 
-    #[Url(as: 'type', except: 'drift')]
-    public string $type = 'drift';
+    #[Url(as: 'type', except: DriftPageType::DEFAULT)]
+    public string $type = DriftPageType::DEFAULT;
 
     public ?int $cursorId = null;
 
@@ -51,7 +57,7 @@ final class DriftPage extends Component
 
     public function setTab(string $tab): void
     {
-        if (! in_array($tab, ['open', 'history', 'dismissed'], true)) {
+        if (DriftPageTab::tryFrom($tab) === null) {
             return;
         }
         $this->tab = $tab;
@@ -60,11 +66,21 @@ final class DriftPage extends Component
 
     public function setType(string $type): void
     {
-        if (! in_array($type, ['drift', 'anomaly'], true)) {
+        if (DriftPageType::tryFrom($type) === null) {
             return;
         }
         $this->type = $type;
         $this->resetCursors();
+    }
+
+    private function activeTab(): DriftPageTab
+    {
+        return DriftPageTab::tryFrom($this->tab) ?? DriftPageTab::Open;
+    }
+
+    private function activeType(): DriftPageType
+    {
+        return DriftPageType::tryFrom($this->type) ?? DriftPageType::Drift;
     }
 
     public function loadMoreAnomalies(string $detectedAt, int|string $alertId): void
@@ -189,31 +205,27 @@ final class DriftPage extends Component
     ): View {
         $user = $currentUser->user();
 
-        $now = $clock->now();
-        $snoozeTargets = [
-            '1w' => $now->addWeek()->toIso8601String(),
-            '1m' => $now->addMonth()->toIso8601String(),
-            '3m' => $now->addMonths(3)->toIso8601String(),
-        ];
+        $snoozeTargets = SnoozeWindow::targetsFrom($clock->now());
 
-        if ($this->type === 'anomaly') {
+        if ($this->activeType() === DriftPageType::Anomaly) {
             $anomalyCursorId = $this->anomalyCursorId === null ? null : self::anomalyId($this->anomalyCursorId);
 
-            $anomalyRows = match ($this->tab) {
-                'history' => $anomalyQuery->historyForUser($user, $this->anomalyCursorDetectedAt, $anomalyCursorId),
-                'dismissed' => $anomalyQuery->dismissedForUser($user, $this->anomalyCursorDetectedAt, $anomalyCursorId),
-                default => $anomalyQuery->openForUser($user, $this->anomalyCursorDetectedAt, $anomalyCursorId),
+            $anomalyRows = match ($this->activeTab()) {
+                DriftPageTab::History => $anomalyQuery->historyForUser($user, $this->anomalyCursorDetectedAt, $anomalyCursorId),
+                DriftPageTab::Dismissed => $anomalyQuery->dismissedForUser($user, $this->anomalyCursorDetectedAt, $anomalyCursorId),
+                DriftPageTab::Open => $anomalyQuery->openForUser($user, $this->anomalyCursorDetectedAt, $anomalyCursorId),
             };
 
             $view = $views->make('drift-alerts::livewire.drift-page', [
-                'type' => 'anomaly',
-                'tab' => $this->tab,
+                'pageType' => DriftPageType::Anomaly,
+                'lifecycleTab' => $this->activeTab(),
                 'anomalyRows' => $anomalyRows,
                 'snoozeTargets' => $snoozeTargets,
                 'rows' => [],
                 'grouped' => [],
                 'seriesStates' => [],
                 'impactBySeriesId' => [],
+                'thresholdBySeriesId' => [],
             ]);
 
             /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
@@ -222,13 +234,13 @@ final class DriftPage extends Component
             return $view;
         }
 
-        $rows = match ($this->tab) {
-            'history' => $query->historyForUser($user, $this->cursorId),
-            'dismissed' => $query->dismissedForUser($user, $this->cursorId),
-            default => $query->openForUser($user, $this->cursorId),
+        $rows = match ($this->activeTab()) {
+            DriftPageTab::History => $query->historyForUser($user, $this->cursorId),
+            DriftPageTab::Dismissed => $query->dismissedForUser($user, $this->cursorId),
+            DriftPageTab::Open => $query->openForUser($user, $this->cursorId),
         };
 
-        $grouped = $this->tab === 'open' ? $query->groupedBySeriesForUser($user) : [];
+        $grouped = $this->activeTab() === DriftPageTab::Open ? $query->groupedBySeriesForUser($user) : [];
 
         $seriesIds = [];
         foreach ($rows as $alert) {
@@ -247,14 +259,23 @@ final class DriftPage extends Component
             ? []
             : $impact->forSeriesIds($uniqueSeriesIds, $user);
 
+        // Only a grouped row carries a threshold editor, so only those ids are
+        // read here — the value travels as a prop so the child mounts without a
+        // query of its own.
+        $groupedSeriesIds = array_keys($grouped);
+        $thresholdBySeriesId = $groupedSeriesIds === []
+            ? []
+            : $query->seriesThresholdsForUser($user, $groupedSeriesIds);
+
         $view = $views->make('drift-alerts::livewire.drift-page', [
-            'type' => 'drift',
+            'pageType' => DriftPageType::Drift,
             'rows' => $rows,
-            'tab' => $this->tab,
+            'lifecycleTab' => $this->activeTab(),
             'grouped' => $grouped,
             'snoozeTargets' => $snoozeTargets,
             'seriesStates' => $seriesStates,
             'impactBySeriesId' => $impactBySeriesId,
+            'thresholdBySeriesId' => $thresholdBySeriesId,
             'anomalyRows' => [],
         ]);
 

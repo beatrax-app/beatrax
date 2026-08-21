@@ -22,8 +22,7 @@ return [
 
     'card' => [
         'likely' => 'Vjerojatno: neimenovani trgovac.',
-        'seen' => 'Viđeno',
-        'time' => 'put|puta|puta',
+        'seen_times' => 'Viđeno :count put|Viđeno :count puta|Viđeno :count puta',
         'last_seen' => 'Posljednji put viđeno :date',
         'suggest' => 'Predloži naziv →',
     ],

@@ -17,8 +17,7 @@ return [
     'net' => 'Neto',
 
     'status_tiles_aria' => 'Tarjetas de estado',
-    'email_scan_health' => 'Estado del análisis de correo — :count',
-    'inbox' => 'bandeja de entrada conectada|bandejas de entrada conectadas',
+    'email_scan_health' => 'Estado del análisis de correo — :count bandeja de entrada conectada|Estado del análisis de correo — :count bandejas de entrada conectadas',
 
     'top_spending' => 'Principales gastos',
     'no_expenses' => 'Aún no hay gastos categorizados.',

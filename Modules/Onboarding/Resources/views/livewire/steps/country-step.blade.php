@@ -2,7 +2,9 @@
 {{--
     Country step (optional) — the same preference the signup screen and
     Settings offer, asked once more here so the per-country deduction
-    categories are seeded before setup finishes.
+    categories are seeded before setup finishes. The same list too: the
+    options come from x-core::country-options, so this step cannot drift into
+    naming the empty one differently, which it had.
     Reuses the wizard chrome (wiz-eyebrow / wiz-h1 / wiz-lede / wiz-actions).
     The select binds `countryCode` live so the additive-seed reassurance
     note appears as soon as a country is chosen; Continue persists through
@@ -24,10 +26,11 @@
             class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
             data-testid="wiz-tax-country-select"
         >
-            <option value="">{{ Lang::get('onboarding::tax_country.select_placeholder') }}</option>
-            @foreach ($countries as $code => $label)
-                <option value="{{ $code }}">{{ $label }}</option>
-            @endforeach
+            {{-- The placeholder stays choosable — Skip and "continue with
+                 nothing chosen" are both real answers — and the stored country
+                 opens selected, which a re-run of the wizard needs: the step
+                 loaded it into countryCode and then drew the placeholder. --}}
+            <x-core::country-options :options="$countries" :selected="$countryCode" />
         </select>
         @if ($countryCode !== '')
             <p class="text-xs text-[var(--color-amber)]">

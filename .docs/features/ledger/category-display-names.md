@@ -44,7 +44,9 @@ directly.
 ```php
 CategoryDisplayName::resolve($storedName, $slug, $nameIsDefault): string
 CategoryDisplayName::columns($table, $alias = 'category'): list<string>
+CategoryDisplayName::bareColumns($table = ''): list<string>
 CategoryDisplayName::fromRow($row, $alias = ''): ?string
+CategoryDisplayName::isDefaultRow($row, $alias = ''): bool
 ```
 
 - **`resolve()`** is the rule itself. A rename or a row with no slug
@@ -56,11 +58,22 @@ CategoryDisplayName::fromRow($row, $alias = ''): ?string
 - **`columns()`** spreads the three columns a join has to select
   (`name`, `slug`, `name_is_default`) with a shared alias prefix, so a
   query selecting two categories in one row — a category and its
-  parent — can keep them apart.
+  parent — can keep them apart. An empty alias is refused rather than
+  emitted: it would select `_name`, which the bare `fromRow($row)`
+  cannot see.
+- **`bareColumns()`** is the same three parts unaliased, for a query
+  selecting straight off `categories` with nothing to disambiguate,
+  and for the `GROUP BY` beside such a select when `$table` is given.
+  It pairs with the default `fromRow($row)`.
 - **`fromRow()`** reads those three back off a `stdClass` and calls
   `resolve()`. It returns `null` when the row carries no name at all,
   which is how a `LEFT JOIN` miss stays distinguishable from a
   category genuinely named the empty string.
+- **`isDefaultRow()`** hands back the flag on its own, for a caller
+  that carries the provenance somewhere else instead of rendering it
+  here — copy resolved in the reader's language rather than the queue
+  worker's. `BudgetProgressQuery` and `DemoNotificationsSeeder` read it
+  to keep a name resolvable at display time.
 
 `Modules\Ledger\Models\Category` exposes the same answer as a
 `displayName` attribute for Eloquent reads.
@@ -108,11 +121,28 @@ which asserts each direction separately: the reader's language
 narrows, the stored English still narrows, and a renamed category
 narrows on its rename rather than on its slug's translation.
 
-Read sites that only *render* a name were converted at the same time
-and are the uninteresting case — `TransactionListQuery`,
-`BudgetProgressQuery`, `CategoryOptionsQuery`, `PotBalanceQuery`,
-`CashBookPage`, `ReportBuilder` and the rest all call `columns()` and
-`fromRow()` and need no further thought.
+Read sites come in two shapes, and which shape a query is decides which
+method it calls. A query joining a category onto another table —
+`TransactionListQuery`, `CategoryOptionsQuery`, `PotBalanceQuery`,
+`CounterpartyProfileQuery`, `BudgetProgressQuery`'s budget join —
+spreads `columns($table, $alias)` and reads it back with the matching
+`fromRow($row, $alias)`. A query selecting straight off `categories` —
+`CashBookPage`, `ReportBuilder`, `EntityNameSearch`, `SearchQuery`,
+`CategorySpendTrendQuery`, `CategoryAncestry`, `TransactionsList` —
+spreads `bareColumns()` and reads it back with the default
+`fromRow($row)`.
+
+`bareColumns()` exists because the seam used to cover only half its own
+read sites: `columns($table, '')` emitted the `_name`, `_slug`,
+`_name_is_default` prefix that `fromRow($row, '')` does not read, so a
+bare select had no seam to call and eleven of them rolled their own —
+including one written as raw SQL in a `selectRaw()`. Both shapes are
+protected now. `aliasedValues()` throws when a column list and the
+reader consuming it drift apart, and
+[`CategoryColumnsRouteThroughTheSeamArchTest`](../../../tests/Contracts/CategoryColumnsRouteThroughTheSeamArchTest.php)
+refuses a hand-written list anywhere in backend source — it derives the
+parts it looks for from `bareColumns()`, so it keeps meaning what it
+says as `PARTS` grows.
 
 ## Migration
 

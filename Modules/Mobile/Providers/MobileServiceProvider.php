@@ -14,18 +14,37 @@ use Livewire\Facades\GenerateSignedUploadUrlFacade;
 use Livewire\LivewireManager;
 use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Auth\Public\Contracts\KeyCustodian;
+use Modules\Auth\Public\Events\AppLockPassphraseChanged;
 use Modules\Core\Public\Contracts\DeviceNameSource;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Mobile\Commands\MobilePullCommand;
 use Modules\Mobile\Commands\PackageAndroidCommand;
+use Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap;
 use Modules\Mobile\Internal\Boot\NativeBuildPatches;
 use Modules\Mobile\Internal\Http\BridgeSignedUploadUrl;
+use Modules\Mobile\Internal\Http\Livewire\ColdStartBiometricSettingsSection;
+use Modules\Mobile\Internal\Http\Livewire\MobileImportBootstrap;
+use Modules\Mobile\Internal\Http\Livewire\MobileLockScreen;
+use Modules\Mobile\Internal\Http\Livewire\MobilePairingScan;
+use Modules\Mobile\Internal\Http\Livewire\MobileWelcomeScreen;
+use Modules\Mobile\Internal\Http\Livewire\SetupProgressScreen;
+use Modules\Mobile\Internal\Http\Livewire\SyncCompleteScreen;
+use Modules\Mobile\Internal\Http\Livewire\SyncScreen;
 use Modules\Mobile\Internal\Http\Middleware\ClientSideRedirect;
 use Modules\Mobile\Internal\Http\Middleware\EncodedUploadTransport;
+use Modules\Mobile\Internal\Identity\BiometricKeyVault;
+use Modules\Mobile\Internal\Identity\BiometricUnlockBridge;
+use Modules\Mobile\Internal\Identity\ClearColdStartVaultOnKeyRotation;
+use Modules\Mobile\Internal\Identity\ColdStartEnrollmentService;
 use Modules\Mobile\Internal\Identity\MobileColdStartVault;
 use Modules\Mobile\Internal\Identity\SecureStorageKeyCustodian;
 use Modules\Mobile\Internal\Native\NativeDeviceName;
+use Modules\Mobile\Internal\Pairing\QrScanBridge;
+use Modules\Mobile\Internal\Sync\InitialSyncPuller;
+use Modules\Mobile\Internal\Sync\LanSyncClient;
+use Modules\Mobile\Internal\Sync\MobileSyncTriggerService;
+use Modules\Mobile\Internal\Sync\NetworkPolicyResolver;
 
 final class MobileServiceProvider extends ServiceProvider
 {
@@ -35,30 +54,23 @@ final class MobileServiceProvider extends ServiceProvider
     {
         // Stateless (wraps the console Kernel migrator), safe as a
         // singleton.
-        $this->singletonIfExists('Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap');
+        $this->app->singleton(MobileFirstLaunchBootstrap::class);
 
-        $syncNamespace = 'Modules\Mobile\Internal\Sync\\';
-        foreach ([
-            'LanSyncClient',
-            'NetworkPolicyResolver',
-            'MobileSyncTriggerService',
-            'InitialSyncPuller',
-        ] as $syncClass) {
-            $this->singletonIfExists($syncNamespace.$syncClass);
-        }
+        $this->app->singleton(LanSyncClient::class);
+        $this->app->singleton(NetworkPolicyResolver::class);
+        $this->app->singleton(MobileSyncTriggerService::class);
+        $this->app->singleton(InitialSyncPuller::class);
 
-        $this->singletonIfExists('Modules\Mobile\Internal\Identity\BiometricUnlockBridge');
-        $this->singletonIfExists('Modules\Mobile\Internal\Identity\BiometricKeyVault');
-        $this->singletonIfExists('Modules\Mobile\Internal\Identity\ColdStartEnrollmentService');
-        $this->singletonIfExists('Modules\Mobile\Internal\Pairing\QrScanBridge');
+        $this->app->singleton(BiometricUnlockBridge::class);
+        $this->app->singleton(BiometricKeyVault::class);
+        $this->app->singleton(ColdStartEnrollmentService::class);
+        $this->app->singleton(QrScanBridge::class);
 
-        // Also registered in boot() via $this->commands([...]) once it
-        // exists. Built explicitly rather than autowired so the session is
-        // passed as a factory: it is configured encrypted, and Artisan
-        // constructs every command just to list them.
-        if (class_exists(MobilePullCommand::class)) {
-            $this->app->singleton(MobilePullCommand::class);
-        }
+        // Also registered in boot() via $this->commands([...]). Built
+        // explicitly rather than autowired so the session is passed as a
+        // factory: it is configured encrypted, and Artisan constructs every
+        // command just to list them.
+        $this->app->singleton(MobilePullCommand::class);
 
         // Routes the unlocked data key through the iOS Keychain/Android
         // Keystore instead of the plaintext session copy, overriding the
@@ -96,14 +108,9 @@ final class MobileServiceProvider extends ServiceProvider
 
     public function boot(Dispatcher $events, Router $router, ViewFactory $views): void
     {
-        // Cold-start biometric: invalidate the enclave blob if the
-        // app-lock data key ever rotates (oldKek !== newKek). Runtime FQCN
-        // strings + class_exists guard keep this provider clean before
-        // the class ships.
-        $clearListener = 'Modules\Mobile\Internal\Identity\ClearColdStartVaultOnKeyRotation';
-        if (class_exists($clearListener)) {
-            $events->listen('Modules\Auth\Public\Events\AppLockPassphraseChanged', [$clearListener, 'handle']);
-        }
+        // Cold-start biometric: invalidate the enclave blob if the app-lock
+        // data key ever rotates (oldKek !== newKek).
+        $events->listen(AppLockPassphraseChanged::class, [ClearColdStartVaultOnKeyRotation::class, 'handle']);
 
         // Re-apply the generated-project patches on every mobile build, not
         // only on composer install: the build tooling regenerates the Android
@@ -127,39 +134,21 @@ final class MobileServiceProvider extends ServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
         }
 
-        // The mobile-only Livewire full-page screens. Registered by
-        // runtime FQCN so this provider stays PHPStan-clean before each
-        // component ships; the moment the class exists it is wired to
-        // the Livewire tag Routes/web.php references by string.
-        if (class_exists(LivewireManager::class)) {
-            /** @var LivewireManager $livewire */
-            $livewire = $this->app->make(LivewireManager::class);
+        // The mobile-only Livewire full-page screens, wired to the tags
+        // Routes/web.php references by string.
+        /** @var LivewireManager $livewire */
+        $livewire = $this->app->make(LivewireManager::class);
 
-            $livewireNamespace = 'Modules\Mobile\Internal\Http\Livewire\\';
-            $components = [
-                'mobile.import-bootstrap' => 'MobileImportBootstrap',
-                'mobile.lock-screen' => 'MobileLockScreen',
-                'mobile.pairing-scan' => 'MobilePairingScan',
-                'mobile.setup-progress-screen' => 'SetupProgressScreen',
-                'mobile.sync-complete-screen' => 'SyncCompleteScreen',
-                'mobile.sync-screen' => 'SyncScreen',
-                'mobile.welcome-screen' => 'MobileWelcomeScreen',
-                'mobile.cold-start-biometric-settings-section' => 'ColdStartBiometricSettingsSection',
-            ];
+        $livewire->component('mobile.import-bootstrap', MobileImportBootstrap::class);
+        $livewire->component('mobile.lock-screen', MobileLockScreen::class);
+        $livewire->component('mobile.pairing-scan', MobilePairingScan::class);
+        $livewire->component('mobile.setup-progress-screen', SetupProgressScreen::class);
+        $livewire->component('mobile.sync-complete-screen', SyncCompleteScreen::class);
+        $livewire->component('mobile.sync-screen', SyncScreen::class);
+        $livewire->component('mobile.welcome-screen', MobileWelcomeScreen::class);
+        $livewire->component('mobile.cold-start-biometric-settings-section', ColdStartBiometricSettingsSection::class);
 
-            foreach ($components as $tag => $class) {
-                $this->registerLivewireComponentIfExists($livewire, $tag, $livewireNamespace.$class);
-            }
-        }
-
-        // class_exists-guarded so the provider stays clean before it
-        // ships.
-        $pullCommand = 'Modules\Mobile\Commands\MobilePullCommand';
-        if (class_exists($pullCommand)) {
-            $this->commands([$pullCommand]);
-        }
-
-        $this->commands([PackageAndroidCommand::class]);
+        $this->commands([MobilePullCommand::class, PackageAndroidCommand::class]);
 
         // Where the runtime cannot carry a multipart body, the client sends the
         // file base64-encoded and this puts a real UploadedFile back before
@@ -186,26 +175,5 @@ final class MobileServiceProvider extends ServiceProvider
         $this->app->booted(function (): void {
             GenerateSignedUploadUrlFacade::swap($this->app->make(BridgeSignedUploadUrl::class));
         });
-    }
-
-    // Registers a singleton for a class that may not exist yet. The class
-    // name arrives as a runtime-built string so PHPStan does not fold the
-    // class_exists() guard to an impossible type.
-    private function singletonIfExists(string $class): void
-    {
-        if (class_exists($class)) {
-            $this->app->singleton($class);
-        }
-    }
-
-    // Routed through this separate method (rather than an inline
-    // class_exists() check in the calling foreach loop) so PHPStan does
-    // not narrow $fqcn to a literal-string union over the loop's array
-    // values and fold the guard to an impossible type.
-    private function registerLivewireComponentIfExists(LivewireManager $livewire, string $tag, string $fqcn): void
-    {
-        if (class_exists($fqcn)) {
-            $livewire->component($tag, $fqcn);
-        }
     }
 }

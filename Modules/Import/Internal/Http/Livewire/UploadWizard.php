@@ -17,6 +17,7 @@ use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\UploadLimits;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
+use Modules\Import\Public\Services\UploadFilename;
 use Modules\Ingestion\Public\Enums\SourceFormat;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -168,7 +169,7 @@ final class UploadWizard extends Component
 
         $user = $currentUser->user();
         $tmp = $this->file->getRealPath();
-        $originalFilename = $this->sanitiseFilename($this->file->getClientOriginalName());
+        $originalFilename = UploadFilename::sanitise($this->file->getClientOriginalName(), UploadFilename::extensionFor($this->sourceFormat));
 
         // Only the two CSV dialects are ambiguous; every other format is
         // self-describing and needs no hint.
@@ -212,26 +213,5 @@ final class UploadWizard extends Component
     public function render(ViewFactory $views): View
     {
         return $views->make('import::livewire.upload-wizard');
-    }
-
-    // Strips path-traversal characters before the name reaches a filesystem
-    // path. The extension follows the declared format, never the name.
-    private function sanitiseFilename(string $original): string
-    {
-        $stem = pathinfo($original, PATHINFO_FILENAME);
-        $safe = preg_replace('/[^A-Za-z0-9_-]+/', '_', $stem);
-        $stemPart = ($safe === null || $safe === '') ? 'upload' : $safe;
-
-        $extension = match ($this->sourceFormat) {
-            SourceFormat::Camt053->value => '.xml',
-            SourceFormat::Mt940->value => '.sta',
-            'ics-pdf' => '.pdf',
-            'paypal-csv' => '.csv',
-            'eml' => '.eml',
-            'mbox' => '.mbox',
-            default => '.csv',
-        };
-
-        return $stemPart.$extension;
     }
 }

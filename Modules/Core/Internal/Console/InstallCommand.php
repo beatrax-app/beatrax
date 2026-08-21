@@ -13,6 +13,7 @@ use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Internal\Enums\OsFamily;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Events\UserInstalled;
+use Modules\Core\Public\Support\SqliteDatabase;
 
 class InstallCommand extends Command
 {
@@ -73,7 +74,7 @@ class InstallCommand extends Command
 
     private function runInstall(): int
     {
-        $dbPathValue = $this->config->get('database.connections.sqlite.database');
+        $dbPathValue = $this->config->get(SqliteDatabase::LIVE_PATH_CONFIG_KEY);
         $dbPath = is_string($dbPathValue) ? $dbPathValue : '';
         $resolvedPath = self::resolveRealPath($dbPath);
 

@@ -188,3 +188,63 @@ it('stacks the message above the actions on a phone, in every severity', functio
 
     expect(substr_count($html, 'flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-4'))->toBe(3);
 });
+
+// The three severity arms carried byte-identical rows under three different
+// wrappers, and the wrapper is the entire accessibility difference: a critical
+// row interrupts the reader, a warning or informational row waits for a pause.
+// Merging the rows is only safe while that distinction is asserted.
+it('announces a critical row assertively and never as a polite live region', function (): void {
+    sabInsert($this->db, [
+        'user_id' => $this->userA->id,
+        'kind' => 'backup_corrupt',
+        'severity' => 'critical',
+        'message' => 'fixture',
+        'metadata' => json_encode([
+            'timestamp' => '2026-05-20 01:00',
+            'suspect_path' => 'storage/app/backups/x.sqlite.suspect',
+        ]),
+    ]);
+
+    $html = (string) Livewire::actingAs($this->userA)->test(SystemAlertsBanner::class)->html();
+
+    expect($html)->toContain('role="alert"')
+        ->and($html)->toContain('border-rose-200')
+        ->and($html)->not->toContain('aria-live=')
+        ->and($html)->not->toContain('aria-atomic=');
+});
+
+it('announces a warning and an informational row politely and never as role=alert', function (): void {
+    foreach ([['wal_mode_missing', 'warning'], ['update_available', 'info']] as [$kind, $severity]) {
+        sabInsert($this->db, [
+            'user_id' => $this->userA->id,
+            'kind' => $kind,
+            'severity' => $severity,
+            'message' => 'fixture',
+            'metadata' => json_encode(['current_mode' => 'delete', 'version' => '1.2.3']),
+        ]);
+    }
+
+    $html = (string) Livewire::actingAs($this->userA)->test(SystemAlertsBanner::class)->html();
+
+    expect(substr_count($html, 'aria-live="polite"'))->toBe(2)
+        ->and(substr_count($html, 'aria-atomic="true"'))->toBe(2)
+        ->and($html)->not->toContain('role="alert"');
+});
+
+it('paints each severity with its own tone rather than one shared class string', function (): void {
+    foreach ([['backup_corrupt', 'critical'], ['wal_mode_missing', 'warning'], ['update_available', 'info']] as [$kind, $severity]) {
+        sabInsert($this->db, [
+            'user_id' => $this->userA->id,
+            'kind' => $kind,
+            'severity' => $severity,
+            'message' => 'fixture',
+            'metadata' => json_encode(['current_mode' => 'delete', 'version' => '1.2.3']),
+        ]);
+    }
+
+    $html = (string) Livewire::actingAs($this->userA)->test(SystemAlertsBanner::class)->html();
+
+    expect($html)->toContain('border-rose-200')
+        ->and($html)->toContain('border-amber-200')
+        ->and($html)->toContain('border-slate-200');
+});

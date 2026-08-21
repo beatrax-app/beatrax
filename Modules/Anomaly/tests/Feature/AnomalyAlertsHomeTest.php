@@ -9,7 +9,10 @@ use Livewire\Livewire;
 use Modules\Anomaly\Models\AnomalyAlert;
 use Modules\Anomaly\Models\AnomalySuppressionRule;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Enums\SnoozeWindow;
+use Modules\Core\Public\Support\Lang;
 use Modules\DriftAlerts\Internal\Http\Livewire\DriftPage;
+use Modules\DriftAlerts\Public\Enums\DriftPageType;
 
 uses(RefreshDatabase::class);
 
@@ -137,7 +140,7 @@ it('acknowledges an anomaly row and dispatches a toast', function (): void {
     $alert = aahAlert($this->user, 'open');
 
     Livewire::actingAs($this->user)
-        ->test(DriftPage::class, ['type' => 'anomaly'])
+        ->test(DriftPage::class, ['type' => DriftPageType::Anomaly->value])
         ->call('acknowledgeAnomaly', $alert->id)
         ->assertDispatched('toast');
 
@@ -150,7 +153,7 @@ it('snoozes an anomaly row to the 1-week target and writes snoozed_until', funct
     $until = CarbonImmutable::parse('2026-06-20 09:00:00')->addWeek();
 
     Livewire::actingAs($this->user)
-        ->test(DriftPage::class, ['type' => 'anomaly'])
+        ->test(DriftPage::class, ['type' => DriftPageType::Anomaly->value])
         ->call('snoozeAnomaly', $alert->id, $until->toIso8601String())
         ->assertDispatched('toast');
 
@@ -163,7 +166,7 @@ it('dismisses an anomaly row without creating a suppression rule', function (): 
     $alert = aahAlert($this->user, 'open');
 
     Livewire::actingAs($this->user)
-        ->test(DriftPage::class, ['type' => 'anomaly'])
+        ->test(DriftPage::class, ['type' => DriftPageType::Anomaly->value])
         ->call('dismissAnomaly', $alert->id)
         ->assertDispatched('toast');
 
@@ -177,7 +180,7 @@ it('marks an anomaly as expected — dismisses it and creates a suppression rule
     $alert = aahAlert($this->user, 'open');
 
     Livewire::actingAs($this->user)
-        ->test(DriftPage::class, ['type' => 'anomaly'])
+        ->test(DriftPage::class, ['type' => DriftPageType::Anomaly->value])
         ->call('markAnomalyExpected', $alert->id)
         ->assertDispatched('toast');
 
@@ -196,7 +199,7 @@ it('undoes a suppression — re-opens the anomaly and deletes the rule', functio
     $alert = aahAlert($this->user, 'open');
 
     $component = Livewire::actingAs($this->user)
-        ->test(DriftPage::class, ['type' => 'anomaly'])
+        ->test(DriftPage::class, ['type' => DriftPageType::Anomaly->value])
         ->call('markAnomalyExpected', $alert->id);
 
     expect(AnomalySuppressionRule::query()->where('source_anomaly_alert_id', $alert->id)->count())->toBe(1);
@@ -206,4 +209,21 @@ it('undoes a suppression — re-opens the anomaly and deletes the rule', functio
     $fresh = AnomalyAlert::query()->findOrFail($alert->id);
     expect($fresh->state)->toBe('open')
         ->and(AnomalySuppressionRule::query()->where('source_anomaly_alert_id', $alert->id)->count())->toBe(0);
+});
+
+// The anomaly chips are the only one of the three snooze menus whose buttons
+// carry role="menuitem" and a quoted string id, so the loop that replaced the
+// hand-written three has to keep both. An open row includes the chips twice —
+// once in the phone disclosure and once inline — so every window appears twice.
+it('draws a snooze menuitem for every window, wired the way the hand-written three were', function (): void {
+    $alert = aahAlert($this->user, 'open');
+
+    $content = (string) $this->actingAs($this->user)->get('/drift?type=anomaly')->getContent();
+
+    foreach (SnoozeWindow::cases() as $window) {
+        expect($content)->toContain(Lang::get($window->labelKey('anomaly::alerts.chips')));
+    }
+
+    expect(substr_count($content, 'role="menuitem" wire:click="snoozeAnomaly(\''.$alert->id."', '"))
+        ->toBe(2 * count(SnoozeWindow::cases()));
 });

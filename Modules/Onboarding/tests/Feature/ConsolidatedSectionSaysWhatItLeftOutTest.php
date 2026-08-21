@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Blade;
 use Modules\Import\Public\Dto\ConsolidatedPreviewSection;
-use Modules\Import\Public\Enums\PreviewSectionStatus;
 use Modules\Import\Public\Dto\PreviewRowDto;
 use Modules\Import\Public\Enums\PreviewRowStatus;
+use Modules\Import\Public\Enums\PreviewSectionStatus;
 
 // A file that stops being readable part-way still yields rows before the stop,
 // so its section is READY. The count under the eyebrow is then simply lower

@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Http\Livewire\ArtisanRunnerPage;
 use Modules\DevMode\Internal\Process\RunRecord;
 use Modules\DevMode\Internal\Process\RunRegistry;
@@ -40,7 +41,7 @@ it('sweep finalizes a pending audit row whose underlying PID has exited', functi
     $writer->recordCommandRun(new CommandRunAudit(
         command: 'cache:clear',
         args: [],
-        tier: 'safe',
+        tier: CommandTier::Safe,
         callerUserId: $user->getKey(),
         startedAt: $clock->now(),
         finishedAt: null,
@@ -59,7 +60,7 @@ it('sweep finalizes a pending audit row whose underlying PID has exited', functi
         args: [],
         startedAt: $clock->now(),
         callerUserId: $user->getKey(),
-        tier: 'safe',
+        tier: CommandTier::Safe,
         status: 'running',
         outPath: sys_get_temp_dir().'/sweep-dead-1.out',
     ));
@@ -96,7 +97,7 @@ it('sweep leaves a pending row alone when the underlying PID is still alive', fu
     $writer->recordCommandRun(new CommandRunAudit(
         command: 'cache:clear',
         args: [],
-        tier: 'safe',
+        tier: CommandTier::Safe,
         callerUserId: $user->getKey(),
         startedAt: $clock->now(),
         finishedAt: null,
@@ -114,7 +115,7 @@ it('sweep leaves a pending row alone when the underlying PID is still alive', fu
         args: [],
         startedAt: $clock->now(),
         callerUserId: $user->getKey(),
-        tier: 'safe',
+        tier: CommandTier::Safe,
         status: 'running',
         outPath: sys_get_temp_dir().'/sweep-live-1.out',
     ));
@@ -146,7 +147,7 @@ it('renders a pending audit row with status=running so the RunCard opens the SSE
     $writer->recordCommandRun(new CommandRunAudit(
         command: 'cache:clear',
         args: [],
-        tier: 'safe',
+        tier: CommandTier::Safe,
         callerUserId: $user->getKey(),
         startedAt: $clock->now(),
         finishedAt: null,
@@ -165,7 +166,7 @@ it('renders a pending audit row with status=running so the RunCard opens the SSE
         args: [],
         startedAt: CarbonImmutable::now(),
         callerUserId: $user->getKey(),
-        tier: 'safe',
+        tier: CommandTier::Safe,
         status: 'running',
         outPath: sys_get_temp_dir().'/render-pending-1.out',
     ));

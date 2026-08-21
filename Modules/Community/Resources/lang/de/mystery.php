@@ -22,8 +22,7 @@ return [
 
     'card' => [
         'likely' => 'Wahrscheinlich: ein Händler ohne Namen.',
-        'seen' => 'Gesehen',
-        'time' => 'Mal|Mal',
+        'seen_times' => 'Gesehen :count Mal|Gesehen :count Mal',
         'last_seen' => 'Zuletzt gesehen :date',
         'suggest' => 'Namen vorschlagen →',
     ],

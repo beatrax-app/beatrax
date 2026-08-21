@@ -6,7 +6,7 @@ treats the pair as a single internal movement, not as two
 independent transactions. It owns the deterministic matcher behind
 `transactions.pair_transaction_id` (the column itself is owned by
 [`Ledger`](../ledger/architecture.md)'s migration) and the read-side
-`PairLookup` query other modules consume.
+`PairLookup` query.
 
 ## What this module is for
 
@@ -106,9 +106,9 @@ signal and the returned value is valid plaintext.
   `pair_transaction_id` columns are written bidirectionally
   inside the same transaction frame.
 - `PairLookup::isPaired($txId, $user)` / `PairLookup::partnerId($txId, $user)`
-  — read-side consumed by `Chains::PaypalFundingResolver` to
-  determine the partner row when computing the ASN-direct funding
-  arm.
+  — the read-side pair query. Nothing outside this module calls it:
+  `Chains::PaypalFundingResolver` computes the ASN-direct funding arm
+  from its own `findPartnerOnAccount()` lookup instead.
 
 The module raises no events; it persists in response to the
 upstream `TransactionImported`.

@@ -6,7 +6,6 @@ namespace Modules\Auth\Public\Actions;
 
 use Illuminate\Auth\AuthManager;
 use Illuminate\Contracts\Auth\StatefulGuard;
-use Illuminate\Contracts\Session\Session;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\SessionFactory;

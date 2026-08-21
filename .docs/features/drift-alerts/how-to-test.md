@@ -38,6 +38,10 @@ isolation.
   - The threshold-editor (per-series + global)
     (`DriftThresholdOverrideEditorTest`,
     `GlobalDriftThresholdSettingTest`).
+  - That `/drift` reads every series threshold in one query however
+    many editors it mounts, shows each series the value its own read
+    would have found, and still lets a standalone mount read its own
+    row (`DriftPageLoadsThresholdsOnceTest`).
   - The snooze-revival job (`SnoozedAlertRevivalTest`).
   - The cancellation-impact display
     (`CancellationImpactDisplayTest`).

@@ -15,7 +15,7 @@ return [
     'no_counterparty' => '(no counterparty)',
     'open_from_row' => 'Open from-row',
     'open_to_row' => 'Open to-row',
-    'leg_count' => '1 payment|:count payments',
+    'leg_count' => ':count payment|:count payments',
     'state_aria' => 'State: :state',
 
     'kind' => [

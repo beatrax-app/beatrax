@@ -7,12 +7,12 @@ namespace Modules\Migration\Internal\Pipeline;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\Duration;
+use Modules\Core\Public\Support\UniqueSlug;
 use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
 use Modules\Goals\Public\Services\GoalWriter;
 use Modules\Ledger\Models\Account;
@@ -20,8 +20,10 @@ use Modules\Ledger\Models\Category;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Ledger\Public\Services\AccountSlugResolver;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Migration\Internal\Enums\MigrationRunStatus;
 use Modules\Migration\Internal\Exceptions\UnresolvedStagedAccountException;
 use Modules\Migration\Internal\Services\SourceMapWriter;
@@ -36,6 +38,8 @@ final class PromoteStagingToDomain
 
     private const CHUNK_SIZE = 500;
 
+    private const CATEGORY_SLUG_FALLBACK = 'item';
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
@@ -48,6 +52,7 @@ final class PromoteStagingToDomain
         private readonly GoalWriter $goalWriter,
         private readonly FingerprintComposer $fingerprints,
         private readonly CounterpartyKey $counterpartyKey,
+        private readonly AccountSlugResolver $accountSlugs,
     ) {}
 
     /**
@@ -126,7 +131,7 @@ final class PromoteStagingToDomain
                     'user_id' => $user->id,
                     'parent_id' => $parentId,
                     'name' => $name,
-                    'slug' => $this->uniqueSlug('categories', $user, $name),
+                    'slug' => $this->uniqueCategorySlug($user, $name),
                     'kind' => $kind,
                     'display_order' => 100,
                 ]);
@@ -232,7 +237,7 @@ final class PromoteStagingToDomain
                 $account = Account::query()->create([
                     'user_id' => $user->id,
                     'name' => $name,
-                    'slug' => $this->uniqueSlug('accounts', $user, $name),
+                    'slug' => $this->accountSlugs->resolveUnique($user->id, $name),
                     'kind' => self::toString($row->kind),
                     'iban' => self::syntheticIban($externalId),
                     'default_currency' => $currency,
@@ -729,7 +734,7 @@ final class PromoteStagingToDomain
             $goal = $this->goalWriter->save(
                 $user,
                 $name,
-                self::minorToDecimalString(self::toInt($row->target_minor)),
+                MoneyInput::toDecimalString(self::toInt($row->target_minor)),
                 $targetDate,
             );
 
@@ -750,36 +755,21 @@ final class PromoteStagingToDomain
         return $created;
     }
 
-    private function uniqueSlug(string $table, User $user, string $name): string
+    private function uniqueCategorySlug(User $user, string $name): string
     {
-        $base = Str::slug($name);
-        if ($base === '') {
-            $base = 'item';
-        }
-
         $connection = $this->db->connection();
-        $slug = $base;
-        $suffix = 2;
 
-        while ($connection->table($table)->where('user_id', $user->id)->where('slug', $slug)->exists()) {
-            $slug = $base.'-'.$suffix;
-            $suffix++;
-        }
-
-        return $slug;
+        return UniqueSlug::walk(
+            UniqueSlug::slugify($name, self::CATEGORY_SLUG_FALLBACK),
+            fn (string $slug): bool => ! $connection->table('categories')
+                ->where('user_id', $user->id)
+                ->where('slug', $slug)
+                ->exists(),
+        );
     }
 
     private static function syntheticIban(string $sourceExternalId): string
     {
         return 'MIG'.strtoupper(hash('crc32b', $sourceExternalId));
-    }
-
-    private static function minorToDecimalString(int $minor): string
-    {
-        $sign = $minor < 0 ? '-' : '';
-        $whole = intdiv(abs($minor), 100);
-        $frac = abs($minor) % 100;
-
-        return sprintf('%s%d.%02d', $sign, $whole, $frac);
     }
 }

@@ -22,7 +22,6 @@ return [
     'condition_value_from_aria' => 'Τιμή συνθήκης :number (από)',
     'condition_value_to_aria' => 'Τιμή συνθήκης :number (έως)',
     'to' => 'έως',
-    'amount_placeholder' => '0,00',
     'text_placeholder' => 'π.χ. SPOTIFY',
     'remove_condition' => 'Αφαίρεση συνθήκης',
     'add_condition' => '+ Προσθήκη συνθήκης',

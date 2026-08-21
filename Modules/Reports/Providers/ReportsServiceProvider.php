@@ -7,69 +7,42 @@ namespace Modules\Reports\Providers;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Support\LoadsModuleResources;
+use Modules\Reports\Internal\Actions\DeleteReport;
+use Modules\Reports\Internal\Actions\SaveReport;
+use Modules\Reports\Internal\Actions\TogglePin;
+use Modules\Reports\Internal\Actions\UpdateReport;
+use Modules\Reports\Internal\Aggregation\ReportAggregator;
+use Modules\Reports\Internal\Aggregation\SpendFilterApplier;
+use Modules\Reports\Internal\Aggregation\TimeBucketGenerator;
+use Modules\Reports\Internal\Http\Livewire\ReportBuilder;
+use Modules\Reports\Internal\Http\Livewire\ReportsIndex;
+use Modules\Reports\Internal\Http\ReportDefinitionRequestFactory;
+use Modules\Reports\Internal\Services\ReportCsvExporter;
+use Modules\Reports\Public\Http\Livewire\PinnedReportsRow;
 
 final class ReportsServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
 
-    private const REPORT_AGGREGATOR_CLASS = 'Modules\Reports\Internal\Aggregation\ReportAggregator';
-
-    private const TIME_BUCKET_GENERATOR_CLASS = 'Modules\Reports\Internal\Aggregation\TimeBucketGenerator';
-
-    private const REPORT_CSV_EXPORTER_CLASS = 'Modules\Reports\Internal\Services\ReportCsvExporter';
-
-    private const SPEND_FILTER_APPLIER_CLASS = 'Modules\Reports\Internal\Aggregation\SpendFilterApplier';
-
-    private const REPORT_DEFINITION_REQUEST_FACTORY_CLASS = 'Modules\Reports\Internal\Http\ReportDefinitionRequestFactory';
-
-    private const SAVE_REPORT_CLASS = 'Modules\Reports\Internal\Actions\SaveReport';
-
-    private const UPDATE_REPORT_CLASS = 'Modules\Reports\Internal\Actions\UpdateReport';
-
-    private const DELETE_REPORT_CLASS = 'Modules\Reports\Internal\Actions\DeleteReport';
-
-    private const TOGGLE_PIN_CLASS = 'Modules\Reports\Internal\Actions\TogglePin';
-
-    private const REPORT_BUILDER_CLASS = 'Modules\Reports\Internal\Http\Livewire\ReportBuilder';
-
-    private const REPORTS_INDEX_CLASS = 'Modules\Reports\Internal\Http\Livewire\ReportsIndex';
-
-    private const PINNED_REPORTS_ROW_CLASS = 'Modules\Reports\Public\Http\Livewire\PinnedReportsRow';
-
     public function register(): void
     {
-        $this->singletonIfExists(self::REPORT_AGGREGATOR_CLASS);
-        $this->singletonIfExists(self::TIME_BUCKET_GENERATOR_CLASS);
-        $this->singletonIfExists(self::REPORT_CSV_EXPORTER_CLASS);
-        $this->singletonIfExists(self::SPEND_FILTER_APPLIER_CLASS);
-        $this->singletonIfExists(self::REPORT_DEFINITION_REQUEST_FACTORY_CLASS);
-        $this->singletonIfExists(self::SAVE_REPORT_CLASS);
-        $this->singletonIfExists(self::UPDATE_REPORT_CLASS);
-        $this->singletonIfExists(self::DELETE_REPORT_CLASS);
-        $this->singletonIfExists(self::TOGGLE_PIN_CLASS);
+        $this->app->singleton(ReportAggregator::class);
+        $this->app->singleton(TimeBucketGenerator::class);
+        $this->app->singleton(ReportCsvExporter::class);
+        $this->app->singleton(SpendFilterApplier::class);
+        $this->app->singleton(ReportDefinitionRequestFactory::class);
+        $this->app->singleton(SaveReport::class);
+        $this->app->singleton(UpdateReport::class);
+        $this->app->singleton(DeleteReport::class);
+        $this->app->singleton(TogglePin::class);
     }
 
     public function boot(LivewireManager $livewire): void
     {
         $this->loadModuleResources('reports');
 
-        if (class_exists(self::REPORT_BUILDER_CLASS)) {
-            $livewire->component('reports.report-builder', self::REPORT_BUILDER_CLASS);
-        }
-        if (class_exists(self::REPORTS_INDEX_CLASS)) {
-            $livewire->component('reports.reports-index', self::REPORTS_INDEX_CLASS);
-        }
-        if (class_exists(self::PINNED_REPORTS_ROW_CLASS)) {
-            $livewire->component('reports.pinned-reports-row', self::PINNED_REPORTS_ROW_CLASS);
-        }
-    }
-
-    // The class name arrives as a runtime-built string so PHPStan does not
-    // fold the class_exists() guard to an impossible type.
-    private function singletonIfExists(string $class): void
-    {
-        if (class_exists($class)) {
-            $this->app->singleton($class);
-        }
+        $livewire->component('reports.report-builder', ReportBuilder::class);
+        $livewire->component('reports.reports-index', ReportsIndex::class);
+        $livewire->component('reports.pinned-reports-row', PinnedReportsRow::class);
     }
 }

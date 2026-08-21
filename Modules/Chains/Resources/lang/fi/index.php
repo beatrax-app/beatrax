@@ -15,7 +15,7 @@ return [
     'no_counterparty' => '(ei vastapuolta)',
     'open_from_row' => 'Avaa lähtörivi',
     'open_to_row' => 'Avaa kohderivi',
-    'leg_count' => '1 maksu|:count maksua',
+    'leg_count' => ':count maksu|:count maksua',
     'state_aria' => 'Tila: :state',
 
     'kind' => [

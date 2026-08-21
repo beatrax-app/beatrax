@@ -6,11 +6,11 @@ namespace Modules\Sync\Internal\Pairing;
 
 use Illuminate\Http\Client\Factory as HttpFactory;
 use InvalidArgumentException;
+use Modules\Sync\Internal\Pairing\Concerns\BrowsesLanPeers;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
-use Modules\Sync\Internal\Transport\Discovery\MdnsAdvertiser;
 use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
-use Modules\Sync\Internal\Transport\PairingOfferRequestHandler;
 use Modules\Sync\Internal\Transport\PairingHttpStatus;
+use Modules\Sync\Internal\Transport\PairingOfferRequestHandler;
 use Modules\Sync\Public\Enums\PairingOfferLookup;
 use Throwable;
 
@@ -20,17 +20,13 @@ use Throwable;
 // comes back is a candidate the safety-number comparison still has to prove.
 final readonly class LanPairingOfferFetcher
 {
-    // Long enough for a desktop on the same subnet to answer, short enough
-    // that a phone with nothing to find says so rather than hanging.
-    private const float BROWSE_TIMEOUT_SECONDS = 2.0;
+    use BrowsesLanPeers;
 
-    private const int CONNECT_TIMEOUT_SECONDS = 1;
-
-    private const int REQUEST_TIMEOUT_SECONDS = 2;
-
-    // Bounds the worst case: a hostile responder can answer a browse many
-    // times over, and each answer would otherwise cost another request.
-    private const int MAX_PEERS_TRIED = 8;
+    // Twice the shared bound, and deliberately so: this browse has no device
+    // id to aim at, because any peer on the network might be the one holding
+    // the typed code. Asking too few asks the wrong ones, which reads to the
+    // person typing as a code that did not work.
+    private const int MAX_PEERS_ASKED_FOR_AN_OFFER = 8;
 
     private const int MAX_DEVICE_ID_BYTES = 128;
 
@@ -64,20 +60,10 @@ final readonly class LanPairingOfferFetcher
             return PairingOfferLookup::CodeNotAccepted;
         }
 
-        $tried = 0;
         $anyPeerAnswered = false;
         $anyPeerLimited = false;
 
-        foreach ($this->discovery->browse(MdnsAdvertiser::SERVICE_TYPE, self::BROWSE_TIMEOUT_SECONDS) as $peer) {
-            if ($tried >= self::MAX_PEERS_TRIED) {
-                break;
-            }
-
-            if (! $peer->isConnectable()) {
-                continue;
-            }
-
-            $tried++;
+        foreach ($this->eachConnectablePeer(self::MAX_PEERS_ASKED_FOR_AN_OFFER) as $peer) {
             $attempt = $this->attempt($peer, $tokenHex);
 
             if (is_array($attempt)) {
@@ -103,8 +89,7 @@ final readonly class LanPairingOfferFetcher
     }
 
     // Keeps WHICH ending happened: a peer that answered at all, even to refuse,
-    // proves the network reached it. Plaintext http as the listener speaks it —
-    // the offer carries public keys only.
+    // proves the network reached it.
     /**
      * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayAuthToken: null, relayPin: null}|PairingOfferLookup
      */
@@ -113,9 +98,7 @@ final readonly class LanPairingOfferFetcher
         $url = "http://{$peer->host}:{$peer->port}".PairingOfferRequestHandler::OFFER_PATH;
 
         try {
-            $response = $this->http->createPendingRequest()
-                ->connectTimeout(self::CONNECT_TIMEOUT_SECONDS)
-                ->timeout(self::REQUEST_TIMEOUT_SECONDS)
+            $response = $this->peerRequest()
                 ->get($url, ['token' => hash('sha256', $tokenHex)]);
         } catch (Throwable) {
             // Refused or timed out. Nothing is logged — the token hash is in

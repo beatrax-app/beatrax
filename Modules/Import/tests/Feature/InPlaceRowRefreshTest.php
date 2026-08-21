@@ -8,6 +8,7 @@ use Modules\Import\Internal\Http\Livewire\PreviewWizard;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Dto\PreviewRowDto;
+use Modules\Import\Public\Enums\PreviewRowStatus;
 use Modules\Ledger\Models\ImportRun;
 
 beforeEach(function (): void {
@@ -30,7 +31,7 @@ function seedPreviewWithThreeRows(int $userId): int
     $rows = [
         new PreviewRowDto(
             rowIndex: 0,
-            status: 'new',
+            status: PreviewRowStatus::NewRow,
             accountId: 1,
             bookedAt: '01-05-2026',
             counterpartyName: null,
@@ -44,7 +45,7 @@ function seedPreviewWithThreeRows(int $userId): int
         ),
         new PreviewRowDto(
             rowIndex: 1,
-            status: 'new',
+            status: PreviewRowStatus::NewRow,
             accountId: 1,
             bookedAt: '02-05-2026',
             counterpartyName: null,
@@ -58,7 +59,7 @@ function seedPreviewWithThreeRows(int $userId): int
         ),
         new PreviewRowDto(
             rowIndex: 2,
-            status: 'new',
+            status: PreviewRowStatus::NewRow,
             accountId: 1,
             bookedAt: '03-05-2026',
             counterpartyName: null,

@@ -14,6 +14,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\DevMode\Internal\Enums\CommandTier;
 
 #[Layout('dev::layouts.dev-shell')]
 final class AuditLogPage extends Component
@@ -176,7 +177,7 @@ final class AuditLogPage extends Component
         return [
             'id' => $row->id,
             'command' => is_string($properties['command'] ?? null) ? $properties['command'] : '',
-            'tier' => is_string($properties['tier'] ?? null) ? $properties['tier'] : 'safe',
+            'tier' => CommandTier::fromStored($properties['tier'] ?? null),
             'exitCode' => is_int($properties['exit_code'] ?? null) ? $properties['exit_code'] : null,
             'args' => is_array($properties['args'] ?? null) ? $properties['args'] : [],
             'stdout' => is_string($properties['stdout_excerpt'] ?? null) ? $properties['stdout_excerpt'] : '',

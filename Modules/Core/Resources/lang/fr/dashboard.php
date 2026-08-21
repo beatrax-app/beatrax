@@ -17,8 +17,7 @@ return [
     'net' => 'Net',
 
     'status_tiles_aria' => 'Tuiles d\'état',
-    'email_scan_health' => 'État de l\'analyse des e-mails — :count',
-    'inbox' => 'boîte de réception connectée|boîtes de réception connectées',
+    'email_scan_health' => 'État de l\'analyse des e-mails — :count boîte de réception connectée|État de l\'analyse des e-mails — :count boîtes de réception connectées',
 
     'top_spending' => 'Principales dépenses',
     'no_expenses' => 'Aucune dépense catégorisée pour l\'instant.',

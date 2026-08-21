@@ -15,7 +15,7 @@ return [
     'no_counterparty' => '(nincs partner)',
     'open_from_row' => 'Forrássor megnyitása',
     'open_to_row' => 'Célsor megnyitása',
-    'leg_count' => '1 fizetés|:count fizetés',
+    'leg_count' => ':count fizetés|:count fizetés',
     'state_aria' => 'Állapot: :state',
 
     'kind' => [

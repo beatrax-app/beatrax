@@ -22,8 +22,7 @@ return [
 
     'card' => [
         'likely' => 'Pravdepodobne: nepomenovaný obchodník.',
-        'seen' => 'Videné',
-        'time' => 'krát|krát|krát',
+        'seen_times' => 'Videné :count krát|Videné :count krát|Videné :count krát',
         'last_seen' => 'Naposledy videné :date',
         'suggest' => 'Navrhnúť názov →',
     ],

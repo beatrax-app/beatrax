@@ -7,6 +7,7 @@ return [
     'native_unlock_failed' => 'Nepodařilo se odemknout. Zadej místo toho PIN.',
     'page_title' => 'Odemknutí · Beatrax',
     'sign_out' => 'Odhlásit se',
+    'forgot_pin' => 'Nepamatuješ si PIN? Odhlas se — znovu se přihlásíš heslem k účtu a nastavíš si nový PIN. O žádná data nepřijdeš.',
 
     'digits_suffix' => 'zadaných číslic',
     'pad_label' => 'Klávesnice PIN',

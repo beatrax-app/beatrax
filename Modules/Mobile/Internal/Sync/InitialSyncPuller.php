@@ -19,10 +19,6 @@ use Psr\Log\LoggerInterface;
  */
 final class InitialSyncPuller
 {
-    // Without a state between "transfer finished" and "history rebuilt" the
-    // rebuild ran inside the finishing tick and the step never rendered.
-    private const string PHASE_REBUILDING = 'rebuilding';
-
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly MobileSyncTriggerService $trigger,
@@ -36,7 +32,7 @@ final class InitialSyncPuller
     ) {}
 
     /**
-     * @return array{records_applied: int, records_expected: ?int, percent: int, phase: string, blocked: ?SyncBlockedReason}
+     * @return array{records_applied: int, records_expected: ?int, percent: int, phase: SyncPhase, blocked: ?SyncBlockedReason}
      */
     public function pull(
         int $userId,
@@ -61,7 +57,7 @@ final class InitialSyncPuller
 
         $cursor = $this->loadOrCreateCursor($userId, $peerDeviceId);
 
-        if ($cursor['phase'] === 'complete') {
+        if ($cursor['phase'] === SyncPhase::Complete) {
             return $this->toProgressArray($cursor);
         }
 
@@ -69,8 +65,8 @@ final class InitialSyncPuller
     }
 
     /**
-     * @param  array{records_applied: int, records_expected: ?int, last_hlc_l: int, last_hlc_c: int, phase: string, reprojected_at: ?string}  $cursor
-     * @return array{records_applied: int, records_expected: ?int, percent: int, phase: string, blocked: ?SyncBlockedReason}
+     * @param  array{records_applied: int, records_expected: ?int, last_hlc_l: int, last_hlc_c: int, phase: SyncPhase, reprojected_at: ?string}  $cursor
+     * @return array{records_applied: int, records_expected: ?int, percent: int, phase: SyncPhase, blocked: ?SyncBlockedReason}
      */
     private function advance(
         int $userId,
@@ -106,7 +102,7 @@ final class InitialSyncPuller
         $announceRebuild = $reprojectedAt === null
             && $keysInstalled
             && $result === true
-            && $cursor['phase'] !== self::PHASE_REBUILDING;
+            && $cursor['phase'] !== SyncPhase::Rebuilding;
 
         if ($announceRebuild) {
             $this->persistCursor($userId, $peerDeviceId, new MobileSyncCursor(
@@ -114,7 +110,7 @@ final class InitialSyncPuller
                 recordsExpected: max($cursor['records_expected'] ?? 0, $recordsApplied),
                 lastHlcL: $lastHlcL,
                 lastHlcC: $lastHlcC,
-                phase: self::PHASE_REBUILDING,
+                phase: SyncPhase::Rebuilding,
                 reprojectedAt: null,
             ));
 
@@ -122,7 +118,7 @@ final class InitialSyncPuller
                 'records_applied' => $recordsApplied,
                 'records_expected' => $recordsApplied,
                 'percent' => 100,
-                'phase' => self::PHASE_REBUILDING,
+                'phase' => SyncPhase::Rebuilding,
                 'blocked' => SyncBlockedReason::Reprojecting,
             ];
         }
@@ -149,7 +145,7 @@ final class InitialSyncPuller
         // dashboard of rows it cannot decrypt.
         $isComplete = $result === true && $keysInstalled && $reprojectedAt !== null;
 
-        $phase = $isComplete ? 'complete' : 'pulling';
+        $phase = $isComplete ? SyncPhase::Complete : SyncPhase::Pulling;
         $recordsExpected = $isComplete
             ? $recordsApplied
             : max($cursor['records_expected'] ?? 0, $recordsApplied);
@@ -206,7 +202,7 @@ final class InitialSyncPuller
     // Reads the durable cursor without driving a step, so a cold-started
     // process paints the true resumed percent instead of flashing 0.
     /**
-     * @return array{records_applied: int, records_expected: ?int, percent: int, phase: string, blocked: ?SyncBlockedReason}
+     * @return array{records_applied: int, records_expected: ?int, percent: int, phase: SyncPhase, blocked: ?SyncBlockedReason}
      */
     public function progress(int $userId): array
     {
@@ -217,12 +213,12 @@ final class InitialSyncPuller
             ->first();
 
         if ($row === null) {
-            return ['records_applied' => 0, 'records_expected' => null, 'percent' => 0, 'phase' => 'pending', 'blocked' => null];
+            return ['records_applied' => 0, 'records_expected' => null, 'percent' => 0, 'phase' => SyncPhase::Pending, 'blocked' => null];
         }
 
         $recordsApplied = is_numeric($row->records_applied) ? (int) $row->records_applied : 0;
         $recordsExpected = is_numeric($row->records_expected) ? (int) $row->records_expected : null;
-        $phase = is_string($row->phase) ? $row->phase : 'pending';
+        $phase = SyncPhase::fromStorage($row->phase);
 
         return [
             'records_applied' => $recordsApplied,
@@ -258,7 +254,7 @@ final class InitialSyncPuller
     }
 
     /**
-     * @return array{records_applied: int, records_expected: ?int, last_hlc_l: int, last_hlc_c: int, phase: string, reprojected_at: ?string}
+     * @return array{records_applied: int, records_expected: ?int, last_hlc_l: int, last_hlc_c: int, phase: SyncPhase, reprojected_at: ?string}
      */
     private function loadOrCreateCursor(int $userId, string $peerDeviceId): array
     {
@@ -274,7 +270,7 @@ final class InitialSyncPuller
                 'records_expected' => is_numeric($row->records_expected) ? (int) $row->records_expected : null,
                 'last_hlc_l' => is_numeric($row->last_hlc_l) ? (int) $row->last_hlc_l : 0,
                 'last_hlc_c' => is_numeric($row->last_hlc_c) ? (int) $row->last_hlc_c : 0,
-                'phase' => is_string($row->phase) ? $row->phase : 'pending',
+                'phase' => SyncPhase::fromStorage($row->phase),
                 'reprojected_at' => is_string($row->reprojected_at ?? null) ? $row->reprojected_at : null,
             ];
         }
@@ -287,7 +283,7 @@ final class InitialSyncPuller
             'records_applied' => 0,
             'last_hlc_l' => 0,
             'last_hlc_c' => 0,
-            'phase' => 'pending',
+            'phase' => SyncPhase::Pending->value,
             'reprojected_at' => null,
             'created_at' => $now,
             'updated_at' => $now,
@@ -298,7 +294,7 @@ final class InitialSyncPuller
             'records_expected' => null,
             'last_hlc_l' => 0,
             'last_hlc_c' => 0,
-            'phase' => 'pending',
+            'phase' => SyncPhase::Pending,
             'reprojected_at' => null,
         ];
     }
@@ -318,7 +314,7 @@ final class InitialSyncPuller
                 'records_expected' => $cursor->recordsExpected,
                 'last_hlc_l' => $cursor->lastHlcL,
                 'last_hlc_c' => $cursor->lastHlcC,
-                'phase' => $cursor->phase,
+                'phase' => $cursor->phase->value,
                 'reprojected_at' => $cursor->reprojectedAt,
                 'updated_at' => $now,
             ]);
@@ -359,8 +355,8 @@ final class InitialSyncPuller
     }
 
     /**
-     * @param  array{records_applied: int, records_expected: ?int, last_hlc_l: int, last_hlc_c: int, phase: string}  $cursor
-     * @return array{records_applied: int, records_expected: ?int, percent: int, phase: string, blocked: ?SyncBlockedReason}
+     * @param  array{records_applied: int, records_expected: ?int, last_hlc_l: int, last_hlc_c: int, phase: SyncPhase}  $cursor
+     * @return array{records_applied: int, records_expected: ?int, percent: int, phase: SyncPhase, blocked: ?SyncBlockedReason}
      */
     private function toProgressArray(array $cursor): array
     {

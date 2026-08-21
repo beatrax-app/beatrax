@@ -38,7 +38,7 @@ return [
         'nothing_notable' => 'Mikään ei vaadi huomiotasi.',
         'flow' => 'Sisään :in, ulos :out, netto :net.',
         'over_budget' => ':amount yli budjetin toistaiseksi.',
-        'payments_due' => '1 maksu erääntyy tällä jaksolla.|:count maksua erääntyy tällä jaksolla.',
+        'payments_due' => ':count maksu erääntyy tällä jaksolla.|:count maksua erääntyy tällä jaksolla.',
         'shortfall' => 'Edessä on kassavaje.',
     ],
 ];

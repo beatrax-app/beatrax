@@ -7,6 +7,7 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Import\Internal\Http\Livewire\RenameCounterpartyPopover;
 use Modules\Import\Public\Dto\PreviewRowDto;
+use Modules\Import\Public\Enums\PreviewRowStatus;
 
 beforeEach(function (): void {
     $this->user = User::create([
@@ -57,7 +58,7 @@ it('renders the italic desc-fallback span when aliasFriendlyName is null and the
     $rows = [
         new PreviewRowDto(
             rowIndex: 0,
-            status: 'new',
+            status: PreviewRowStatus::NewRow,
             accountId: 1,
             bookedAt: '01-05-2026',
             counterpartyName: null,
@@ -71,7 +72,7 @@ it('renders the italic desc-fallback span when aliasFriendlyName is null and the
         ),
         new PreviewRowDto(
             rowIndex: 1,
-            status: 'new',
+            status: PreviewRowStatus::NewRow,
             accountId: 1,
             bookedAt: '02-05-2026',
             counterpartyName: null,

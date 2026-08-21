@@ -20,6 +20,9 @@ final class CorpusPatternMatcher
     // a non-match, still far above any real merchant token's needs.
     private const PCRE_BACKTRACK_BUDGET = 100_000;
 
+    /** @var array<string, string|null> */
+    private array $compiledRegexes = [];
+
     public function __construct(
         private readonly LoggerInterface $logger,
     ) {}
@@ -41,16 +44,23 @@ final class CorpusPatternMatcher
     // unanchored search matched OBI inside "mobiel" and RDW inside "Nordwind".
     public static function containsToken(string $haystack, string $needle): bool
     {
-        if ($needle === '' || $haystack === '') {
-            return false;
-        }
+        $compiled = self::compileToken($needle);
 
+        return $compiled !== null && self::matchesCompiled($compiled, $haystack);
+    }
+
+    // Every decision here reads the needle and nothing else, so a scan holds the
+    // result for the whole corpus rather than repeating it per description. Null
+    // is a needle that can never match any haystack, which is why a caller may
+    // drop the row instead of carrying it into the scan.
+    public static function compileToken(string $needle): ?string
+    {
         // A preg_quote'd literal between two zero-width lookarounds cannot
         // exhaust the backtrack limit, so invalid UTF-8 is the only way the /u
-        // match below can fail — and a byte string that is not text holds no
-        // token to find.
-        if (! mb_check_encoding($haystack, 'UTF-8') || ! mb_check_encoding($needle, 'UTF-8')) {
-            return false;
+        // match can fail — and a byte string that is not text holds no token
+        // to find.
+        if ($needle === '' || ! mb_check_encoding($needle, 'UTF-8')) {
+            return null;
         }
 
         // Both edges are asserted only where the needle's own edge is a word
@@ -58,7 +68,7 @@ final class CorpusPatternMatcher
         // decays to a bare substring search: the pattern `-` would rename
         // every transaction carrying a hyphen.
         if (preg_match('/[\p{L}\p{N}]/u', $needle) !== 1) {
-            return false;
+            return null;
         }
 
         // Each edge is asserted only where the needle's OWN edge is alphanumeric.
@@ -67,7 +77,19 @@ final class CorpusPatternMatcher
         $before = self::isWordEdge(mb_substr($needle, 0, 1)) ? '(?<![\p{L}\p{N}])' : '';
         $after = self::isWordEdge(mb_substr($needle, -1)) ? '(?![\p{L}\p{N}])' : '';
 
-        return preg_match('#'.$before.preg_quote($needle, '#').$after.'#iu', $haystack) === 1;
+        return '#'.$before.preg_quote($needle, '#').$after.'#iu';
+    }
+
+    // The haystack half of containsToken, and the only half a scan repeats.
+    // `$compiled` is what compileToken() returned, which is what leaves invalid
+    // UTF-8 in the haystack as the single remaining way the /u match can fail.
+    public static function matchesCompiled(string $compiled, string $haystack): bool
+    {
+        if ($haystack === '' || ! mb_check_encoding($haystack, 'UTF-8')) {
+            return false;
+        }
+
+        return preg_match($compiled, $haystack) === 1;
     }
 
     // \p{M} counts: an NFD needle ends in a combining mark, and reading that
@@ -85,9 +107,9 @@ final class CorpusPatternMatcher
 
     private function matchesRegex(string $body, string $haystack, string $original): bool
     {
-        $delimited = '#'.str_replace('#', '\#', $body).'#i';
+        $delimited = $this->compiledRegex($body, $original);
 
-        if (! $this->isUsableRegex($body, $delimited, $original)) {
+        if ($delimited === null) {
             return false;
         }
 
@@ -104,6 +126,23 @@ final class CorpusPatternMatcher
         }
 
         return $result === 1;
+    }
+
+    // The length cap and the compile probe read the pattern alone, while a
+    // corpus scan runs it against every description. Keyed by the pattern — a
+    // closed set, the `regex:` rows of the bundled corpus — so each row is
+    // judged, and any warning it earns logged, once per instance.
+    private function compiledRegex(string $body, string $original): ?string
+    {
+        if (array_key_exists($original, $this->compiledRegexes)) {
+            return $this->compiledRegexes[$original];
+        }
+
+        $delimited = '#'.str_replace('#', '\#', $body).'#i';
+
+        return $this->compiledRegexes[$original] = $this->isUsableRegex($body, $delimited, $original)
+            ? $delimited
+            : null;
     }
 
     // Lowers pcre.backtrack_limit for the duration and restores it after, so

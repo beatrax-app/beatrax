@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Pairing;
 
+use Modules\Sync\Public\Enums\PairingSide;
+
 final class PairingRowGuards
 {
     // Re-checks the hash a row was located by, in constant time. The WHERE
@@ -18,7 +20,7 @@ final class PairingRowGuards
     // Which side of the pairing a device id owns, or null when it owns
     // neither. hash_equals rather than === because the ids being compared
     // come from a frame the far side controls.
-    public static function sideOwnedBy(\stdClass $row, string $deviceId): ?string
+    public static function sideOwnedBy(\stdClass $row, string $deviceId): ?PairingSide
     {
         return self::sideOwnedByIds(
             is_string($row->initiator_device_id) ? $row->initiator_device_id : null,
@@ -30,11 +32,11 @@ final class PairingRowGuards
     // The same question asked without a row in hand — a resumed screen holds
     // the two ids but not the record they came from, and deriving the side a
     // second way is how the two derivations drift apart.
-    public static function sideOwnedByIds(?string $initiator, ?string $responder, string $deviceId): ?string
+    public static function sideOwnedByIds(?string $initiator, ?string $responder, string $deviceId): ?PairingSide
     {
         return match (true) {
-            $initiator !== null && hash_equals($initiator, $deviceId) => 'initiator',
-            $responder !== null && hash_equals($responder, $deviceId) => 'responder',
+            $initiator !== null && hash_equals($initiator, $deviceId) => PairingSide::Initiator,
+            $responder !== null && hash_equals($responder, $deviceId) => PairingSide::Responder,
             default => null,
         };
     }

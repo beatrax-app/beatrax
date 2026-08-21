@@ -24,6 +24,67 @@ function safeAreaMarkup(string $contents): string
     return preg_replace('/\{\{--.*?--\}\}/s', '', $contents) ?? '';
 }
 
+/**
+ * @return list<string>
+ */
+function safeAreaClassesIn(string $template): array
+{
+    $classes = [];
+
+    preg_match_all('/class="([^"]*)"/', safeAreaMarkup($template), $attributes);
+
+    foreach ($attributes[1] as $attribute) {
+        foreach (preg_split('/\s+/', trim($attribute)) ?: [] as $class) {
+            if ($class !== '') {
+                $classes[] = $class;
+            }
+        }
+    }
+
+    return $classes;
+}
+
+// A screen wearing a class app.css defines as padding an edge has reserved
+// that seam as surely as one spelling the token inline. Only a lone class
+// selector counts: in `.a .b` neither half pads anything on its own, and
+// crediting both would pass a template that carries just the outer one.
+/**
+ * @return array<string, list<string>>
+ */
+function safeAreaClassEdges(): array
+{
+    $css = (string) preg_replace(
+        '#/\*.*?\*/#s',
+        '',
+        (string) file_get_contents(base_path('resources/css/app.css')),
+    );
+
+    // A body with no brace inside it is an innermost block, so what sits in
+    // front of it is a real selector rather than an @media or @layer head.
+    // Comments go first: they sit between the previous rule and this one, so
+    // they land inside the selector capture and no rule looks like a class.
+    preg_match_all('/([^{}]+)\{([^{}]*)\}/s', $css, $rules, PREG_SET_ORDER);
+
+    $map = [];
+
+    foreach ($rules as [, $selector, $body]) {
+        if (preg_match('/^\s*\.([A-Za-z0-9_-]+)\s*$/', $selector, $name) !== 1) {
+            continue;
+        }
+
+        foreach (['top', 'bottom', 'left', 'right'] as $edge) {
+            if (preg_match('/padding-'.$edge.'\s*:[^;]*var\(--safe-'.$edge.'\)/', $body) === 1) {
+                $map[$name[1]][] = $edge;
+            }
+        }
+    }
+
+    return array_map(
+        static fn (array $edges): array => array_values(array_unique($edges)),
+        $map,
+    );
+}
+
 it('never reads env(safe-area-inset-*) outside the seam that fills it in', function (): void {
     $offenders = [];
 
@@ -117,6 +178,7 @@ it('pads all four edges in every view layouts.lock reserves nothing for', functi
     $unpadded = [];
     $unreadable = [];
     $checked = 0;
+    $classEdges = safeAreaClassEdges();
 
     foreach ($components as $file) {
         $relative = $file->getRelativePathname();
@@ -143,9 +205,20 @@ it('pads all four edges in every view layouts.lock reserves nothing for', functi
 
         $checked++;
 
+        $consumed = [];
+
+        foreach (safeAreaClassesIn($template) as $class) {
+            foreach ($classEdges[$class] ?? [] as $edge) {
+                $consumed[$edge] = true;
+            }
+        }
+
+        $markup = safeAreaMarkup($template);
+
         $edges = array_values(array_filter(
             ['top', 'bottom', 'left', 'right'],
-            static fn (string $edge): bool => ! str_contains($template, 'var(--safe-'.$edge.')'),
+            static fn (string $edge): bool => ! isset($consumed[$edge])
+                && ! str_contains($markup, 'var(--safe-'.$edge.')'),
         ));
 
         if ($edges !== []) {
@@ -164,5 +237,41 @@ it('pads all four edges in every view layouts.lock reserves nothing for', functi
         'It reserves no status bar and no gesture bar, so a view under it that does',
         'not pad var(--safe-top|bottom|left|right) itself puts its own content under',
         'the system bars — on iOS and on Android both, and only on a device.',
+    ]));
+});
+
+// The five screens above were the same four utilities typed out five times,
+// which is how one of them came to be missing an edge. .safe-screen is where
+// that string lives now; this arm is what keeps it from being retyped.
+it('takes all four edges from .safe-screen rather than typing them onto an element', function (): void {
+    $offenders = [];
+
+    foreach (safeAreaTemplates() as $file) {
+        preg_match_all('/class="([^"]*)"/', safeAreaMarkup((string) $file->getContents()), $attributes);
+
+        foreach ($attributes[1] as $attribute) {
+            $inline = array_filter(
+                ['t' => 'top', 'b' => 'bottom', 'l' => 'left', 'r' => 'right'],
+                static fn (string $edge, string $side): bool => str_contains($attribute, 'p'.$side.'-[var(--safe-'.$edge.')]'),
+                ARRAY_FILTER_USE_BOTH,
+            );
+
+            if (count($inline) === 4) {
+                $offenders[] = $file->getRelativePathname();
+
+                break;
+            }
+        }
+    }
+
+    expect($offenders)->toBe([], implode("\n", [
+        'These templates spell all four insets onto one element:',
+        ...$offenders,
+        '',
+        'resources/css/app.css defines .safe-screen as exactly those four',
+        'paddings. Use it. A screen that sits inside layouts.app <main> is a',
+        'different case and must NOT wear it: the .top-bar above it already',
+        'pads var(--safe-top) and stands in the flow, so a top inset there',
+        'reserves the status bar twice.',
     ]));
 });

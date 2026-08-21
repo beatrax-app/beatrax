@@ -22,7 +22,6 @@ return [
     'condition_value_from_aria' => 'Valore della condizione :number (da)',
     'condition_value_to_aria' => 'Valore della condizione :number (a)',
     'to' => 'a',
-    'amount_placeholder' => '0,00',
     'text_placeholder' => 'es. SPOTIFY',
     'remove_condition' => 'Rimuovi condizione',
     'add_condition' => '+ Aggiungi condizione',

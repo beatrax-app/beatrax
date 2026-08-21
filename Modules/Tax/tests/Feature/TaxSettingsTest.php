@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\View\Factory;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserCountry;
@@ -402,7 +403,7 @@ it('shows the chosen country as a value, not as a picker', function (): void {
 // exists to prevent. Resolved through the view finder rather than a path built
 // from __DIR__: the mobile-app composer root has its own base_path().
 it('settings page blade includes the tax settings section livewire tag', function (): void {
-    /** @var Illuminate\View\Factory $views */
+    /** @var Factory $views */
     $views = app('view');
 
     $content = file_get_contents($views->getFinder()->find('shell::livewire.settings-page'));
@@ -413,7 +414,7 @@ it('settings page blade includes the tax settings section livewire tag', functio
 // The tag is only half of it: the section is reached by an in-page anchor, so
 // the target it points at has to exist on the same screen.
 it('settings page carries the #country anchor the signpost links to', function (): void {
-    /** @var Illuminate\View\Factory $views */
+    /** @var Factory $views */
     $views = app('view');
 
     $content = file_get_contents($views->getFinder()->find('shell::livewire.settings-page'));

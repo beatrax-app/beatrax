@@ -14,6 +14,7 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Sync\MobileSyncTriggerService;
 use Modules\Mobile\Internal\Sync\NetworkPolicyResolver;
 use Modules\Mobile\Internal\Sync\PeerLanAddress;
+use Modules\Mobile\Internal\Sync\SyncPhase;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 
 final class SyncScreen extends Component
@@ -114,9 +115,9 @@ final class SyncScreen extends Component
 
         $applied = is_numeric($row->records_applied) ? (int) $row->records_applied : 0;
         $expected = is_numeric($row->records_expected) ? (int) $row->records_expected : null;
-        $phase = is_string($row->phase) ? $row->phase : 'pending';
+        $phase = SyncPhase::fromStorage($row->phase);
 
-        $this->initialSyncInProgress = $phase === 'pulling';
+        $this->initialSyncInProgress = $phase === SyncPhase::Pulling;
         $this->progressApplied = $applied;
         $this->progressExpected = $expected;
         $this->progressPercent = ($expected === null || $expected <= 0)

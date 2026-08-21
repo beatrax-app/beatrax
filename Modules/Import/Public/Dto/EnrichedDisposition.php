@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Import\Public\Dto;
 
+use Modules\Import\Public\Enums\PreviewRowStatus;
+
 /**
  * @see FingerprintDisposition
  */
@@ -19,8 +21,8 @@ final class EnrichedDisposition extends FingerprintDisposition
         public readonly array $conflictingFields = [],
     ) {}
 
-    public function status(): string
+    public function status(): PreviewRowStatus
     {
-        return 'enriched';
+        return PreviewRowStatus::Enriched;
     }
 }

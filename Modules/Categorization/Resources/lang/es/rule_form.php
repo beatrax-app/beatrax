@@ -22,7 +22,6 @@ return [
     'condition_value_from_aria' => 'Valor de la condición :number (desde)',
     'condition_value_to_aria' => 'Valor de la condición :number (hasta)',
     'to' => 'hasta',
-    'amount_placeholder' => '0,00',
     'text_placeholder' => 'p. ej. SPOTIFY',
     'remove_condition' => 'Quitar condición',
     'add_condition' => '+ Añadir condición',

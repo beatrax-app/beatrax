@@ -22,7 +22,6 @@ return [
     'condition_value_from_aria' => 'Koşul :number değeri (başlangıç)',
     'condition_value_to_aria' => 'Koşul :number değeri (bitiş)',
     'to' => 'ile',
-    'amount_placeholder' => '0,00',
     'text_placeholder' => 'ör. SPOTIFY',
     'remove_condition' => 'Koşulu kaldır',
     'add_condition' => '+ Koşul ekle',

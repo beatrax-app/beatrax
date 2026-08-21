@@ -34,7 +34,8 @@ Modules/Import/
 │       ├── BuildConsolidatedPreviewQuery.php
 │       ├── DetectStartingBalancesQuery.php
 │       ├── MerchantNameResolver.php
-│       └── PatternGeneralizer.php
+│       ├── PatternGeneralizer.php
+│       └── UploadFilename.php
 ├── Internal/
 │   ├── Pipeline/
 │   │   ├── ImportPipeline.php

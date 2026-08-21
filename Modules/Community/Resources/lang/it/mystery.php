@@ -22,8 +22,7 @@ return [
 
     'card' => [
         'likely' => 'Probabile: un esercente senza nome.',
-        'seen' => 'Visto',
-        'time' => 'volta|volte',
+        'seen_times' => 'Visto :count volta|Visto :count volte',
         'last_seen' => "Visto l'ultima volta il :date",
         'suggest' => 'Proponi un nome →',
     ],

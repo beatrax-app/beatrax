@@ -120,13 +120,14 @@ answers it by running `seedFromCorpus()`. That listener is why the
 country can be chosen at signup, in Settings and in the setup wizard
 without any of the three knowing a tax corpus exists. Codes outside
 `Modules\Core\Public\Enums\Country` are silently ignored, and an
-unset country is a real state — the classification falls back to
-loading every region.
+unset country is a real state — the merchant corpus then matches every
+region, while government and bank-fee classification is skipped rather
+than widened.
 
 The event is raised **before** the column is written, and both sit in
 one transaction. A corpus that throws half way therefore leaves no
 country behind it: a country set with nothing seeded reads to
-`TaxPage`'s `hasTaxCountry` — and to every other empty-state check —
+`TaxPage`'s `hasCountry` — and to every other empty-state check —
 as an install that has been set up and needs no prompt, which is the
 one state with no way back to the picker. `SignupAction` additionally
 catches a failure here rather than letting it escape, because the user
@@ -245,6 +246,17 @@ reconciled-candidate filter behind the "tagged N more" count.
 **Pitfall guard.** `taxTagStateFor()` issues exactly one query via
 `TaxTagQuery::forTransactionIds()` for the whole batch, never one per
 row.
+
+**Two surfaces, one picker.** `tax-tag-popover.blade.php` renders an
+anchored popover from `md` up and a bottom sheet below it. The sheet is
+the shared `.bottom-sheet` / `.bottom-sheet-scrim` pair from
+`resources/css/app.css`, not a private copy: geometry, surface colour,
+`--sheet-radius`, safe-area padding, the `z-index: 60` the scrim system
+is built around and the reduced-motion suppression all come from that
+one rule. Open/close stays local Alpine watching `$wire.taxPickerTxId`,
+which is why this is the CSS class and not `x-core::bottom-sheet` — the
+component's seam is an `open-sheet` dispatch, and the picker's state is
+a Livewire property.
 
 ## Module boundary
 

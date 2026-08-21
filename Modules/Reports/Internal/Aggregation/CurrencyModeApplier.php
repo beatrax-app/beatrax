@@ -13,6 +13,7 @@ use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Reports\Internal\Dto\ReportResultDto;
 use Modules\Reports\Internal\Dto\ReportResultRow;
+use Modules\Reports\Internal\Enums\ReportCurrencyMode;
 
 final class CurrencyModeApplier
 {
@@ -23,7 +24,6 @@ final class CurrencyModeApplier
 
     /**
      * @param  string  $metric  'spend' | 'income' | 'net'
-     * @param  string  $currencyMode  'base' | 'original'
      * @param  callable(string $currency): list<ReportResultRow>  $queryForCurrency  Re-runs the caller's chosen dimension query, scoped to one settled_currency at a time.
      * @param  SpendQueryFilters  $filters  the same accounts/categories/counterparties filters the dimension query itself applies, threaded into discoverCurrencies() too, so a filtered report only discovers currencies that can actually produce rows
      * @param  array<string, int>  $otherTotalsByCurrency  fees and adjustments per settled currency; carried through the same currency decision the rows get so the figure beside the total is denominated the same way
@@ -40,8 +40,8 @@ final class CurrencyModeApplier
         $currencies = $this->discoverCurrencies($user, $period, $metric, $filters->accountIds, $filters->categoryIds, $filters->counterpartyIds);
 
         return match ($currencyMode) {
-            'base' => $this->applyBase($user, $currencies, $queryForCurrency, $otherTotalsByCurrency),
-            'original' => $this->applyOriginal($user, $currencies, $queryForCurrency, $otherTotalsByCurrency),
+            ReportCurrencyMode::Base->value => $this->applyBase($user, $currencies, $queryForCurrency, $otherTotalsByCurrency),
+            ReportCurrencyMode::Original->value => $this->applyOriginal($user, $currencies, $queryForCurrency, $otherTotalsByCurrency),
             default => throw new InvalidArgumentException("Unknown currency mode: {$currencyMode}"),
         };
     }

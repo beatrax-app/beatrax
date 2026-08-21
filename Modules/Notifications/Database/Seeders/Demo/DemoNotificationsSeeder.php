@@ -419,7 +419,7 @@ final class DemoNotificationsSeeder
             ->whereNull('user_id')
             ->where('kind', CategoryKind::Expense->value)
             ->where('slug', $slug)
-            ->first(['id', 'name', 'slug', 'name_is_default']);
+            ->first(['id', ...CategoryDisplayName::bareColumns()]);
 
         if (! $row instanceof stdClass || ! is_numeric($row->id) || ! is_string($row->name)) {
             return null;

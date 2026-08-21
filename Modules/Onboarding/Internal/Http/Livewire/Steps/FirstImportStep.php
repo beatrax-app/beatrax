@@ -20,6 +20,7 @@ use Modules\Core\Public\Support\SafeTrace;
 use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Import\Public\Dto\ConsolidatedPreviewBatch;
 use Modules\Import\Public\Dto\StartingBalanceCandidate;
+use Modules\Import\Public\Enums\PreviewSectionStatus;
 use Modules\Import\Public\Services\BuildConsolidatedPreviewQuery;
 use Modules\Import\Public\Services\DetectStartingBalancesQuery;
 use Modules\Onboarding\Internal\Enums\WizardStepStatus;
@@ -156,7 +157,7 @@ final class FirstImportStep extends Component
     {
         $runIds = [];
         foreach ($preview->sections as $section) {
-            if ($section->status !== 'ready') {
+            if ($section->status !== PreviewSectionStatus::Ready) {
                 continue;
             }
             foreach ($section->importRunIds as $runId) {

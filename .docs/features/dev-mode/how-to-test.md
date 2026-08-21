@@ -8,7 +8,9 @@ Practical recipes for exercising the `DevMode` module in isolation.
 - **What they test:** the SELECT-only SQL parser; the
   `RedactionExcerptCap` Bearer / JWT scrub patterns; the
   `OAuthScrubSet`'s compiled-pattern shape; the `CommandSpec` +
-  `ArgSpec` value-object equality.
+  `ArgSpec` value-object equality; the `RunRegistry` tier
+  hydration, which pins that a cached run with an absent or
+  unreadable tier comes back as `CommandTier::Safe`.
 - **Common stubs:** the scrub-set tests build the singleton
   manually with an in-memory list of literals to skip the DB
   decryption path; the parser tests are pure-function.
@@ -19,7 +21,7 @@ Practical recipes for exercising the `DevMode` module in isolation.
 - **What they test:**
   - `EnsureDeveloperMode` middleware against developer +
     non-developer users (404 posture).
-  - `CommandSpawner::spawn` whitelisting (unknown command → throw).
+  - `CommandSpawner::start` whitelisting (unknown command → throw).
   - The triple-gate modal end-to-end (Advanced toggle + confirm +
     typed phrase).
   - The audit-row open + close lifecycle for a happy + failed run.
@@ -126,7 +128,7 @@ The behavioural contract for the `DevMode` module.
   `ensureDeveloperMode` middleware is on every route; a non-developer
   caller receives 404. No 403 — the surface stays hidden.
 - **The artisan runner only spawns commands in
-  `DevCommandRegistry`.** `CommandSpawner::spawn()` whitelists the
+  `DevCommandRegistry`.** `CommandSpawner::start()` whitelists the
   command name against the registry before any `Process` is
   constructed; an unknown name raises `InvalidArgumentException`.
 - **NEVER-EXPOSED commands (`migrate`, `migrate:rollback`, `db:seed`)
@@ -138,11 +140,13 @@ The behavioural contract for the `DevMode` module.
   explicit confirm click, (c) a typed phrase matching the command
   label. The runner page mounts with Advanced off; every Login
   resets it (`ResetAdvancedToggleOnLogin`).
-- **Every spawned command writes an opening + closing audit row.**
-  The opening row carries the `command.start` action; the closing
-  row carries `command.complete` or `command.failed` with exit
-  code + duration. `FinalizeRunAudit` is the closing writer.
-- **`AuditWriter::write` is the only sanctioned path to a
+- **Every spawned command leaves exactly one audit row.** The
+  spawner writes it eagerly as `AuditEvent::CommandExecuted` with
+  no outcome; `FinalizeRunAudit` finds it again by `run_id` and
+  fills in the exit code, the excerpts and `finished_at`. A cancel
+  is a `__cancelled` flag merged onto that same row, never a second
+  event.
+- **`AuditWriter` is the only sanctioned path to a
   `dev_mode_audit` row.** Direct INSERTs are blocked by the
   `noUnsanctionedAuditWriter` arch invariant.
 - **Every log line is scrubbed by `RedactSecretsProcessor` before

@@ -7,6 +7,7 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Models\UserPreference;
 use Modules\Counterparties\Internal\Http\Livewire\CounterpartyIndex;
+use Modules\Counterparties\Public\Queries\CounterpartyIndexQuery;
 
 function cpIndexUser(string $username = 'cp-index-fixture'): User
 {
@@ -121,4 +122,41 @@ it('Test 7: unknown card CTA routes to /counterparties/triage with queue_first',
     $html = (string) $component->html();
     expect($html)->toContain('/counterparties/triage?queue_first='.$unknownId);
     $component->assertSee('❋ Label this counterparty', escape: false);
+});
+
+it('renders every counterparty when ?type= carries a column spelling the chip row never offers', function (): void {
+    $user = cpIndexUser('cp-index-url-column-spelling');
+    cpIndexCounterparty($user->id, 'netflix', 'Netflix', 'merchant');
+
+    // `self_account` is the column value, not a filter value: reaching the
+    // #[Url] property it used to become `where type = 'self_account'` and the
+    // merchant row vanished behind the empty state.
+    $response = $this->actingAs($user)->get(route('counterparties.index', ['type' => 'self_account']));
+
+    $response->assertSee('Netflix');
+});
+
+it('shows self_account rows under the self chip and nothing else', function (): void {
+    $user = cpIndexUser('cp-index-self-filter');
+    cpIndexCounterparty($user->id, 'asn-fixture', 'ASN Fixture Account', 'self_account');
+    cpIndexCounterparty($user->id, 'netflix', 'Netflix', 'merchant');
+
+    $component = Livewire::actingAs($user)->test(CounterpartyIndex::class);
+    $component->call('setType', 'self');
+
+    $component->assertSee('ASN Fixture Account');
+    $component->assertDontSee('Netflix');
+});
+
+it('keys the chip counts by the filter vocabulary, not the column vocabulary', function (): void {
+    $user = cpIndexUser('cp-index-chip-counts');
+    cpIndexCounterparty($user->id, 'asn-fixture', 'ASN Fixture Account', 'self_account');
+    cpIndexCounterparty($user->id, 'netflix', 'Netflix', 'merchant');
+
+    $counts = app(CounterpartyIndexQuery::class)->countsByType($user);
+
+    expect($counts['self'])->toBe(1);
+    expect($counts['merchant'])->toBe(1);
+    expect($counts['all'])->toBe(2);
+    expect($counts)->not->toHaveKey('self_account');
 });

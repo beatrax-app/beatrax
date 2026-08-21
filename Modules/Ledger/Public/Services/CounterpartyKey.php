@@ -24,12 +24,12 @@ final class CounterpartyKey
 
     // The logical key, not a table.column: `merchants.normalized_name` is
     // compared against this value, so the two must derive under one domain.
-    public const string DOMAIN = 'counterparty-normalized';
+    public const string DOMAIN = BlindIndexCodec::DOMAIN_COUNTERPARTY_NORMALIZED;
 
     // A separate domain because an IBAN is not a name: the income detector
     // clusters on whichever it has, and one domain would let a merchant whose
     // normalised name happened to equal an IBAN string match that payer.
-    public const string DOMAIN_IBAN = 'counterparty-iban';
+    public const string DOMAIN_IBAN = BlindIndexCodec::DOMAIN_COUNTERPARTY_IBAN;
 
     public function __construct(
         private readonly FingerprintComposer $fingerprints,

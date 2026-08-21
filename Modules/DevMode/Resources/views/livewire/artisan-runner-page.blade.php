@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\DevMode\Internal\Enums\CommandTier')
 {{-- UI-SPEC §19: overflow-x-auto wrapper ensures the artisan runner
      timeline and run cards scroll horizontally at phone width. --}}
 <div class="p-8 space-y-6 overflow-x-auto" data-testid="artisan-runner-page">
@@ -110,7 +111,7 @@
                         type="button"
                         @if ($hasArgs)
                             x-data
-                            x-on:click="$dispatch('command-args:prompt', { name: '{{ $spec->name }}', tier: 'safe', prefill: {} })"
+                            x-on:click="$dispatch('command-args:prompt', { name: '{{ $spec->name }}', tier: '{{ CommandTier::Safe->value }}', prefill: {} })"
                         @else
                             wire:click="spawn('{{ $spec->name }}', [])"
                         @endif
@@ -119,7 +120,7 @@
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
                                 <code class="font-mono text-sm text-slate-900 dark:text-slate-100">{{ $spec->name }}</code>
-                                <x-dev::tier-chip tier="safe" />
+                                <x-dev::tier-chip :tier="CommandTier::Safe" />
                                 @if ($hasArgs)
                                     <span
                                         class="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400"

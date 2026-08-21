@@ -17,8 +17,7 @@ return [
     'net' => 'Neto',
 
     'status_tiles_aria' => 'Statusa elementi',
-    'email_scan_health' => 'E-pasta skenēšanas stāvoklis — pievienotas: :count',
-    'inbox' => 'pastkastu|pastkaste|pastkastes',
+    'email_scan_health' => 'E-pasta skenēšanas stāvoklis — pievienotas: :count pastkastu|E-pasta skenēšanas stāvoklis — pievienotas: :count pastkaste|E-pasta skenēšanas stāvoklis — pievienotas: :count pastkastes',
 
     'top_spending' => 'Lielākie tēriņi',
     'no_expenses' => 'Vēl nav kategorizētu izdevumu.',

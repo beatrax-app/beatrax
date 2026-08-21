@@ -30,13 +30,7 @@
                 style="font-feature-settings: 'tnum'; color: {{ $recentCount > 0 ? '#fca5a5' : '#6ee7b7' }};"
                 data-testid="quarantine-count"
             >
-                {{ $recentCount }}
-                <span
-                    class="text-sm font-normal ml-1"
-                    style="color: #94a3b8;"
-                >
-                    {{ Lang::choice('sync::health.skipped', $recentCount) }}
-                </span>
+                {{ Lang::choice('sync::health.skipped', $recentCount) }}
             </div>
         </div>
     </div>

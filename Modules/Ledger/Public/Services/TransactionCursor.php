@@ -11,6 +11,14 @@ use Illuminate\Database\Query\Builder;
 // the descending sort would otherwise repeat or skip one across the boundary.
 final class TransactionCursor
 {
+    // The other half of the same contract: the sort the row-value comparison
+    // below pages against. A query that orders on posted_at alone, or that
+    // breaks the tie the other way, hands back rows the cursor then skips.
+    public static function orderNewestFirst(Builder $query): void
+    {
+        $query->orderByDesc('transactions.posted_at')->orderByDesc('transactions.id');
+    }
+
     public static function apply(Builder $query, ?string $cursorPostedAt, ?int $cursorId): void
     {
         if ($cursorId === null) {

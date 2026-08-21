@@ -42,12 +42,14 @@ return [
         'next_month' => 'Další měsíc',
         'today' => 'Dnes',
         'clear' => 'Vymazat',
+        'empty' => 'není zvoleno datum',
     ],
 
     'time' => [
         'open' => 'Vyber čas',
         'hour' => 'Hodina',
         'minute' => 'Minuta',
+        'empty' => 'není zvolen čas',
     ],
 
     'veil_locked' => 'Aplikace uzamčena',
