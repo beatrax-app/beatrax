@@ -294,13 +294,15 @@ class InstallCommand extends Command
         return self::SUCCESS;
     }
 
-    // A seam so tests redirect away from the developer's real LaunchAgents dir.
+    // The test subclass overrides both to keep the suite off the real machine.
+    // Narrowing either to private would not error — PHP lets a subclass declare
+    // a same-named private method while the parent keeps calling its own — so
+    // the tests would silently write real LaunchAgents and run launchctl.
     protected function resolveLaunchAgentsDir(string $home): string
     {
         return $home.'/Library/LaunchAgents';
     }
 
-    // A seam so tests capture the bootstrap target without touching launchd.
     protected function bootstrapPlist(int $uid, string $plistPath): int
     {
         $cmd = 'launchctl bootstrap gui/'.$uid.' '.escapeshellarg($plistPath);

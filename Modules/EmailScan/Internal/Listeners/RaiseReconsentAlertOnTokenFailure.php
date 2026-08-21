@@ -65,7 +65,6 @@ final class RaiseReconsentAlertOnTokenFailure
         }
     }
 
-    // Falls back to LIKE on an older SQLite with no JSON1 extension.
     private function alreadyAlerted(int $userId, int $inboxId): bool
     {
         $baseQuery = $this->baseDedupQuery($userId);
@@ -75,8 +74,10 @@ final class RaiseReconsentAlertOnTokenFailure
                 ->whereRaw("json_extract(metadata, '$.inbox_id') = ?", [$inboxId])
                 ->exists();
         } catch (Throwable) {
-            // SQLite LIKE has no character classes, so the trailing boundary
-            // needs separate comma- and brace-terminated needles.
+            // An older SQLite has no JSON1 extension, so json_extract above
+            // throws and this LIKE fallback runs instead. SQLite LIKE has no
+            // character classes, so the trailing boundary needs separate
+            // comma- and brace-terminated needles.
             $withComma = '%"inbox_id":'.$inboxId.',%';
             $withBrace = '%"inbox_id":'.$inboxId.'}%';
 

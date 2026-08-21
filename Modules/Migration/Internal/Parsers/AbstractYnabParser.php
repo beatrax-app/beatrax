@@ -9,6 +9,7 @@ use Generator;
 use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Enums\CategoryKind;
+use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Migration\Internal\Contracts\ParsesMigrationSource;
 use Modules\Migration\Internal\Dto\MigrationAccountDto;
@@ -32,6 +33,8 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
     use ReadsYnabCsvFiles;
 
     private const BUDGET_CURRENCY = 'EUR';
+
+    private const CLEARED_FLAG = 'C';
 
     /** @var list<string> */
     private const BUDGET_MONTH_FORMATS = ['!Y-m', '!M Y', '!m/Y'];
@@ -450,7 +453,8 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
 
     private function mapClearedStatus(string $flag): string
     {
-        // Neither export can express Beatrax's third status, 'reconciled'.
-        return mb_strtoupper($flag) === 'C' ? 'cleared' : 'uncleared';
+        return mb_strtoupper($flag) === self::CLEARED_FLAG
+            ? ClearedStatus::Cleared->value
+            : ClearedStatus::Uncleared->value;
     }
 }

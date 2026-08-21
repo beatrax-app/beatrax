@@ -172,10 +172,10 @@ final class ReportBuilder extends Component
     public function export(ResponseFactory $responses, ReportCsvExporter $exporter, CurrentUser $currentUser): StreamedResponse
     {
         if (! $currentUser->isAuthenticated()) {
-            // The 'auth' middleware already blocks this, so the body is empty.
-            return new StreamedResponse(static function (): void {
-                // No user, no report to stream.
-            });
+            // The route's 'auth' middleware makes this unreachable, but user()
+            // throws on an unauthenticated guard and the signature must return
+            // a StreamedResponse either way.
+            return new StreamedResponse(static function (): void {});
         }
 
         $user = $currentUser->user();
