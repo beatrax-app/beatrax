@@ -237,3 +237,57 @@ it('keeps the suggestionFor() candidate read bounded to the existing per-counter
     expect($source)->not->toBeFalse();
     expect($source)->toContain('->limit(20)');
 });
+
+it('decrypts counterparties.iban and display_name before the triage card renders them', function (): void {
+    $user = cpteUser('cpte-iban-render');
+    $session = $this->enablesEncryptionForUser($user);
+    $unknown = cpteUnknown($user, 'cpte-mystery-iban', 'NL41BANK0000000022');
+
+    /** @var SensitiveColumnCodec $codec */
+    $codec = $this->app->make(SensitiveColumnCodec::class);
+
+    // cpteUnknown() writes through the model, which has no encrypt hook; put
+    // the row into the at-rest shape an encrypted device actually holds.
+    DB::table('counterparties')->where('id', $unknown->id)->update([
+        'iban' => $codec->encryptValue('counterparties', 'iban', 'NL41BANK0000000022', $user->id, $session),
+        'display_name' => $codec->encryptValue('counterparties', 'display_name', 'Cafe Bloem', $user->id, $session),
+    ]);
+
+    $storedIban = DB::table('counterparties')->where('id', $unknown->id)->value('iban');
+    expect($storedIban)->toBeString()->and($storedIban)->not->toBe('NL41BANK0000000022');
+
+    /** @var CounterpartyTriageQueue $queue */
+    $queue = $this->app->make(CounterpartyTriageQueue::class);
+    $this->actingAs($user);
+
+    $items = $queue->forUser($user);
+    expect($items)->toHaveCount(1);
+    expect($items[0]->iban)->toBe('NL41BANK0000000022');
+    expect($items[0]->display_name)->toBe('Cafe Bloem');
+
+    Livewire::actingAs($user)->test(CounterpartyTriage::class)
+        ->assertSee('NL · ·· BANK ···· ···· 22')
+        ->assertDontSee(substr((string) $storedIban, 0, 16));
+});
+
+it('does not write the decrypted iban back as plaintext when markIgnored() saves only metadata', function (): void {
+    $user = cpteUser('cpte-ignore-roundtrip');
+    $session = $this->enablesEncryptionForUser($user);
+    $unknown = cpteUnknown($user, 'cpte-mystery-ignore', 'NL41BANK0000000099');
+
+    /** @var SensitiveColumnCodec $codec */
+    $codec = $this->app->make(SensitiveColumnCodec::class);
+
+    DB::table('counterparties')->where('id', $unknown->id)->update([
+        'iban' => $codec->encryptValue('counterparties', 'iban', 'NL41BANK0000000099', $user->id, $session),
+        'display_name' => $codec->encryptValue('counterparties', 'display_name', 'Nordwind Media BV', $user->id, $session),
+    ]);
+    $before = DB::table('counterparties')->where('id', $unknown->id)->first();
+
+    Livewire::actingAs($user)->test(CounterpartyTriage::class)->call('markIgnored');
+
+    $after = DB::table('counterparties')->where('id', $unknown->id)->first();
+    expect($after->iban)->toBe($before->iban);
+    expect($after->display_name)->toBe($before->display_name);
+    expect($after->iban)->not->toBe('NL41BANK0000000099');
+});
