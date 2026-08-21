@@ -7,6 +7,7 @@ return [
     'heading' => 'Транзакция',
 
     'counterparty' => 'Контрагент',
+    'description' => 'Описание',
     'amount_native' => 'Сума (оригинална валута)',
     'amount_settled' => 'Сума (осчетоводена в EUR)',
     'effective_rate' => 'Ефективен курс',

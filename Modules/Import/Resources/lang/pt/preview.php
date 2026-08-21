@@ -52,7 +52,7 @@ return [
         'pending' => 'Em fila. O resolvedor de cadeias começa dentro de momentos.',
         'running' => 'A ligar cadeias de financiamento e a decompor liquidações de extrato.',
         'failed_prefix' => 'A resolução de cadeias falhou:',
-        'unknown_error' => 'ocorreu um erro desconhecido',
+        'failed_detail' => 'os detalhes estão no registo de tarefas',
         'open_horizon' => 'Abre o Horizon',
         'failed_suffix' => 'para repetir ou inspecionar.',
     ],

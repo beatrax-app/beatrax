@@ -40,6 +40,7 @@ return [
         'badge_error' => 'TREBA PONOVNA OTPREMA',
         'badge_filtered' => 'VEĆ UVEZENO',
         'error_body' => 'Nismo mogli da pročitamo sve datoteke za ovaj izvor. Probaj sa drugom datotekom →',
+        'partial_body' => 'Deo ovog fajla nije bilo moguće pročitati i izostavljen je: :reason',
         'empty_body' => 'Ovaj izvod je prazan.',
         'filtered_body' => 'Ovaj izvod je već uvezen na drugom mestu — izostavili smo ga.',
         'col_date' => 'Datum',

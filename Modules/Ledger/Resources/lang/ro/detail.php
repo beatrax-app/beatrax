@@ -7,6 +7,7 @@ return [
     'heading' => 'Tranzacție',
 
     'counterparty' => 'Contraparte',
+    'description' => 'Descriere',
     'amount_native' => 'Sumă (valuta originală)',
     'amount_settled' => 'Sumă (decontată în EUR)',
     'effective_rate' => 'Curs efectiv',

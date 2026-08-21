@@ -93,6 +93,15 @@
             {{ Lang::get('onboarding::first_import.section.filtered_body') }}
         </p>
     @else
+        {{-- A section reads READY when any row survived, and a file that stopped
+             being readable part-way through still yields rows before the stop.
+             Without this the count under the eyebrow is simply lower than the
+             statement, with nothing on screen saying why. --}}
+        @if ($section->error !== null)
+            <p class="preview-section-error" role="status">
+                {{ Lang::get('onboarding::first_import.section.partial_body', ['reason' => $section->error]) }}
+            </p>
+        @endif
         <table class="preview-section-table">
             <thead>
                 <tr>

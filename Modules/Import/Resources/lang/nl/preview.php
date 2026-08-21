@@ -52,7 +52,7 @@ return [
         'pending' => 'In wachtrij. De keten-oplosser start zo dadelijk.',
         'running' => 'Financieringsketens koppelen en afschriftverrekeningen ontleden.',
         'failed_prefix' => 'Keten oplossen mislukt:',
-        'unknown_error' => 'er is een onbekende fout opgetreden',
+        'failed_detail' => 'de details staan in het joblogboek',
         'open_horizon' => 'Horizon openen',
         'failed_suffix' => 'om opnieuw te proberen of te inspecteren.',
     ],

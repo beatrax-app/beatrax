@@ -52,7 +52,7 @@ return [
         'pending' => 'Jonossa. Ketjujen ratkaisu alkaa pian.',
         'running' => 'Yhdistetään rahoitusketjuja ja puretaan tiliotteen tilityksiä.',
         'failed_prefix' => 'Ketjujen ratkaisu epäonnistui:',
-        'unknown_error' => 'tapahtui tuntematon virhe',
+        'failed_detail' => 'tiedot ovat työlokissa',
         'open_horizon' => 'Avaa Horizon',
         'failed_suffix' => 'ja yritä uudelleen tai tarkastele tilannetta.',
     ],

@@ -316,7 +316,11 @@
                 @elseif ($chainResolutionStatus === 'running')
                     {{ Lang::get('import::preview.chain.running') }}
                 @elseif ($chainResolutionStatus === 'failed')
-                    {{ Lang::get('import::preview.chain.failed_prefix') }} {{ $chainResolutionError ?? Lang::get('import::preview.chain.unknown_error') }}.
+                    {{-- The stored last_error is the failed job's class name and the first
+                         line of its message. That is a developer's sentence, and the crypto
+                         layer's version of it names an internal class and the reader's own
+                         user id. Horizon is one line down for whoever needs it. --}}
+                    {{ Lang::get('import::preview.chain.failed_prefix') }} {{ Lang::get('import::preview.chain.failed_detail') }}.
                     <a href="/horizon/failed" class="font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('import::preview.chain.open_horizon') }}</a>
                     {{ Lang::get('import::preview.chain.failed_suffix') }}
                 @endif

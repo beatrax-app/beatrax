@@ -40,6 +40,7 @@ return [
         'badge_error' => 'WYMAGA PONOWNEGO WGRANIA',
         'badge_filtered' => 'JUŻ ZAIMPORTOWANE',
         'error_body' => 'Nie udało się odczytać wszystkich plików z tego źródła. Spróbuj innego pliku →',
+        'partial_body' => 'Części tego pliku nie udało się odczytać i została pominięta: :reason',
         'empty_body' => 'Ten wyciąg jest pusty.',
         'filtered_body' => 'Ten wyciąg został już zaimportowany gdzie indziej — pominęliśmy go.',
         'col_date' => 'Data',

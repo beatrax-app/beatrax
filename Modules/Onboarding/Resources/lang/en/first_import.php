@@ -40,6 +40,7 @@ return [
         'badge_error' => 'NEEDS RE-UPLOAD',
         'badge_filtered' => 'ALREADY IMPORTED',
         'error_body' => "We couldn't read all of the files for this source. Try a different file →",
+        'partial_body' => 'Some of this file could not be read and was left out: :reason',
         'empty_body' => 'This statement is empty.',
         'filtered_body' => 'This statement was already imported elsewhere — we left it out.',
         'col_date' => 'Date',

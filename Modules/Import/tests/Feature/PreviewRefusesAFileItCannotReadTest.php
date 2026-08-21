@@ -8,6 +8,7 @@ use Modules\Import\Internal\Http\Livewire\PreviewWizard;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
+use Modules\Chains\Models\ChainResolutionRun;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 
@@ -23,7 +24,6 @@ const PREVIEW_PARTIAL_FIXTURE = __DIR__.'/../../../../tests/fixtures/asn-partial
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
-    $this->user = $this->fixtureUser;
 });
 
 function previewOf(User $user, string $fixture): ImportPreviewResult
@@ -50,8 +50,7 @@ function confirmButtonMarkup(int $importRunId): string
 }
 
 it('reports a file it could not read as a failure rather than as one row of dashes', function (): void {
-    $user = $this->user;
-    $preview = previewOf($user, PREVIEW_UNREADABLE_FIXTURE);
+    $preview = previewOf($this->fixtureUser, PREVIEW_UNREADABLE_FIXTURE);
 
     expect($preview->rows)->toBe([]);
     expect($preview->fileFailureReason)->toBe('file_unreadable');
@@ -69,8 +68,7 @@ it('reports a file it could not read as a failure rather than as one row of dash
 });
 
 it('does not offer to confirm an import that would write nothing', function (): void {
-    $user = $this->user;
-    $preview = previewOf($user, PREVIEW_UNREADABLE_FIXTURE);
+    $preview = previewOf($this->fixtureUser, PREVIEW_UNREADABLE_FIXTURE);
 
     expect(confirmButtonMarkup($preview->importRunId))->toContain('wire:click="confirm" disabled');
 
@@ -85,8 +83,7 @@ it('does not offer to confirm an import that would write nothing', function (): 
 });
 
 it('says a file was only read part-way instead of presenting the truncated import as complete', function (): void {
-    $user = $this->user;
-    $preview = previewOf($user, PREVIEW_PARTIAL_FIXTURE);
+    $preview = previewOf($this->fixtureUser, PREVIEW_PARTIAL_FIXTURE);
 
     // Six data rows in the file; the fourth stops the reader, so three arrive
     // and rows five and six are absent rather than present-and-failed.
@@ -103,8 +100,7 @@ it('says a file was only read part-way instead of presenting the truncated impor
 });
 
 it('still offers to confirm the rows a part-read file did yield', function (): void {
-    $user = $this->user;
-    $preview = previewOf($user, PREVIEW_PARTIAL_FIXTURE);
+    $preview = previewOf($this->fixtureUser, PREVIEW_PARTIAL_FIXTURE);
 
     expect(confirmButtonMarkup($preview->importRunId))->not->toContain('wire:click="confirm" disabled');
 
@@ -113,4 +109,26 @@ it('still offers to confirm the rows a part-read file did yield', function (): v
         ->assertRedirect();
 
     expect(Transaction::query()->count())->toBe(3);
+});
+
+// chain_resolution_runs.last_error is written as "<JobClass>: <first line of
+// the message>". That is a developer's sentence wherever it comes from, and
+// the crypto layer's version of it names an internal class and the reader's
+// own user id. The Horizon link beside it is the developer's door.
+it('does not print a failed job class name into the chain-resolution notice', function (): void {
+    $preview = previewOf($this->fixtureUser, PREVIEW_PARTIAL_FIXTURE);
+
+    ChainResolutionRun::query()->create([
+        'user_id' => $this->fixtureUser->id,
+        'status' => 'failed',
+        'last_error' => 'ResolveChainLinksJob: BlindIndexCodec: encryption is enabled for user 1',
+    ]);
+
+    $html = Livewire::test(PreviewWizard::class, ['id' => $preview->importRunId])
+        ->call('refreshChainResolutionStatus')
+        ->assertSee('the details are in the job log')
+        ->html();
+
+    expect($html)->not->toContain('ResolveChainLinksJob')
+        ->and($html)->not->toContain('BlindIndexCodec');
 });

@@ -40,6 +40,7 @@ return [
         'badge_error' => 'REIKIA ĮKELTI IŠ NAUJO',
         'badge_filtered' => 'JAU IMPORTUOTA',
         'error_body' => 'Nepavyko perskaityti visų šio šaltinio failų. Pabandyk kitą failą →',
+        'partial_body' => 'Dalies šio failo nepavyko perskaityti ir ji buvo praleista: :reason',
         'empty_body' => 'Šis išrašas tuščias.',
         'filtered_body' => 'Šis išrašas jau importuotas kitur — jo neįtraukėme.',
         'col_date' => 'Data',

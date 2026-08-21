@@ -52,7 +52,7 @@ return [
         'pending' => 'V čakalni vrsti. Razreševanje verig se bo kmalu začelo.',
         'running' => 'Povezovanje verig financiranja in razstavljanje poravnav z izpiska.',
         'failed_prefix' => 'Razreševanje verig ni uspelo:',
-        'unknown_error' => 'prišlo je do neznane napake',
+        'failed_detail' => 'podrobnosti so v dnevniku opravil',
         'open_horizon' => 'Odpri Horizon',
         'failed_suffix' => 'za ponovni poskus ali pregled.',
     ],

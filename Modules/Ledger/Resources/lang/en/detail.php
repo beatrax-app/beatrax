@@ -7,6 +7,7 @@ return [
     'heading' => 'Transaction',
 
     'counterparty' => 'Counterparty',
+    'description' => 'Description',
     'amount_native' => 'Amount (native)',
     'amount_settled' => 'Amount (settled EUR)',
     'effective_rate' => 'Effective rate',

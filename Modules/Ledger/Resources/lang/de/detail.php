@@ -7,6 +7,7 @@ return [
     'heading' => 'Transaktion',
 
     'counterparty' => 'Zahlungspartner',
+    'description' => 'Beschreibung',
     'amount_native' => 'Betrag (Originalwährung)',
     'amount_settled' => 'Betrag (abgerechnet in EUR)',
     'effective_rate' => 'Effektiver Kurs',

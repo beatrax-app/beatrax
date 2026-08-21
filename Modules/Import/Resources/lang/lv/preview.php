@@ -52,7 +52,7 @@ return [
         'pending' => 'Rindā. Ķēžu atrisinātājs sāks darbu drīzumā.',
         'running' => 'Saista finansējuma ķēdes un sadala konta izraksta norēķinus.',
         'failed_prefix' => 'Ķēžu noteikšana neizdevās:',
-        'unknown_error' => 'radās nezināma kļūda',
+        'failed_detail' => 'sīkāka informācija ir darbu žurnālā',
         'open_horizon' => 'Atveriet Horizon',
         'failed_suffix' => 'lai mēģinātu vēlreiz vai pārbaudītu.',
     ],

@@ -40,6 +40,7 @@ return [
         'badge_error' => 'VUELVE A SUBIRLO',
         'badge_filtered' => 'YA IMPORTADO',
         'error_body' => 'No hemos podido leer todos los archivos de esta fuente. Prueba con otro archivo →',
+        'partial_body' => 'Parte de este archivo no se ha podido leer y se ha omitido: :reason',
         'empty_body' => 'Este extracto está vacío.',
         'filtered_body' => 'Este extracto ya se importó en otro sitio — lo hemos dejado fuera.',
         'col_date' => 'Fecha',

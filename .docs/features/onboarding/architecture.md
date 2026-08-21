@@ -100,15 +100,19 @@ What the module explicitly does NOT do:
 - **Internal/Http/Livewire/Steps/** — nine step SFCs
   (`WelcomeStep`, `ConnectBankStep`, `ConnectPaypalStep`,
   `ConnectCardStep`, `ConnectEmailStep`, `FirstImportStep`,
-  `BudgetsStep`, `TaxCountryStep`, `DoneStep`). `BudgetsStep` and
-  `TaxCountryStep` are optional, skippable steps added after the
+  `BudgetsStep`, `CountryStep`, `DoneStep`). `BudgetsStep` and
+  `CountryStep` are optional, skippable steps added after the
   original six-step design: `BudgetsStep` assigns this month's
   envelope amounts per expense category (via the shared,
   ownership-checked `EnvelopeWriter::setAssigned()` keyed to
   `PeriodQuery::current()` — new users start in the envelope model
   from day one, never the retired `category_budgets` table);
-  `TaxCountryStep` records the user's tax country for the deduction
-  corpus. Both follow the same shape as the connector steps: a
+  `CountryStep` records the user's country preference through
+  `Modules\Core\Public\Services\UserCountry`, which raises
+  `UserCountryChanged`; Tax listens for that event and seeds the
+  deduction corpus, so the wizard never has to know Tax exists. The
+  step key persisted in `wizard_progress` is still `tax-country`,
+  because renaming it would need a data migration for no gain. Both follow the same shape as the connector steps: a
   `continue` action that persists and bubbles `wizard.step.completed`,
   a `skip` action that bubbles `wizard.step.skipped`, with the parent
   `SetupWizard` owning the `wizard_progress` mutation and the advance.

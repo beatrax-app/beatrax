@@ -7,6 +7,7 @@ return [
     'heading' => 'Transazione',
 
     'counterparty' => 'Controparte',
+    'description' => 'Descrizione',
     'amount_native' => 'Importo (valuta originale)',
     'amount_settled' => 'Importo (regolato in EUR)',
     'effective_rate' => 'Tasso effettivo',

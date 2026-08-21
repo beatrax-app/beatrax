@@ -40,6 +40,7 @@ return [
         'badge_error' => 'NECESITĂ REÎNCĂRCARE',
         'badge_filtered' => 'DEJA IMPORTAT',
         'error_body' => 'Nu am putut citi toate fișierele acestei surse. Încearcă alt fișier →',
+        'partial_body' => 'O parte din acest fișier nu a putut fi citită și a fost omisă: :reason',
         'empty_body' => 'Acest extras este gol.',
         'filtered_body' => 'Acest extras a fost deja importat în altă parte — l-am lăsat deoparte.',
         'col_date' => 'Dată',

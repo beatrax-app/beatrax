@@ -184,8 +184,23 @@ The behavioural contract for the `Import` module.
   redirects to `/desktop/file-staging` which routes the file
   into `UploadWizard`.
 - **A user uploading an empty file** — the parser returns an
-  empty canonical-row list; the preview shows "0 transactions";
-  confirm is a no-op.
+  empty canonical-row list; the preview says the file holds no
+  transactions and "Confirm import" is disabled, in the wizard
+  and in `PreviewWizard::confirm()` behind it. There is nothing
+  to confirm, and confirming it used to write a confirmed run
+  reporting zero of everything.
+- **A file the chosen parser cannot read at all** — a failure,
+  not a row. `ImportPreviewResult::$fileFailureReason` carries
+  it and the preview says so, naming the likely cause (a header
+  row that does not match the chosen source) and the parser's
+  own words where the exception declared them free of user
+  data. Reported as a row it rendered as a table row of
+  em-dashes above an enabled confirm button.
+- **A file that reads until one row stops it** — the rows before
+  the stop are present and the rest are absent, not present and
+  failed. The preview says only part of the file was read, gives
+  the count that did arrive, and still offers to confirm those.
+  See `tests/fixtures/asn-partial-failure.csv`.
 - **Two imports racing on the same file** — both produce the
   same v3 fingerprints; the persistence layer's dedup keeps
   exactly one row per fingerprint.

@@ -52,7 +52,7 @@ return [
         'pending' => 'Ve frontě. Řešení řetězců se brzy spustí.',
         'running' => 'Propojují se řetězce financování a rozkládají se vyrovnání z výpisu z účtu.',
         'failed_prefix' => 'Řešení řetězců selhalo:',
-        'unknown_error' => 'došlo k neznámé chybě',
+        'failed_detail' => 'podrobnosti jsou v protokolu úloh',
         'open_horizon' => 'Otevřít Horizon',
         'failed_suffix' => 'a zkus to znovu nebo se podívej, co se stalo.',
     ],

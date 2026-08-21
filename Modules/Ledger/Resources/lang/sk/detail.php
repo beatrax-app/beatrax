@@ -7,6 +7,7 @@ return [
     'heading' => 'Transakcia',
 
     'counterparty' => 'Protistrana',
+    'description' => 'Popis',
     'amount_native' => 'Suma (pôvodná mena)',
     'amount_settled' => 'Suma (zúčtovaná v EUR)',
     'effective_rate' => 'Efektívny kurz',

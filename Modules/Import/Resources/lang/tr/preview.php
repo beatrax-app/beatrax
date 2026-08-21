@@ -52,7 +52,7 @@ return [
         'pending' => 'Kuyruğa alındı. Zincir çözümleyici birazdan başlayacak.',
         'running' => 'Finansman zincirleri bağlanıyor ve ekstre tahsilatları ayrıştırılıyor.',
         'failed_prefix' => 'Zincir çözümleme başarısız oldu:',
-        'unknown_error' => 'bilinmeyen bir hata oluştu',
+        'failed_detail' => 'ayrıntılar iş günlüğünde',
         'open_horizon' => "Horizon'u aç",
         'failed_suffix' => 'yeniden denemek veya incelemek için.',
     ],

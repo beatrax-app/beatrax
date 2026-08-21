@@ -167,6 +167,34 @@ listener that watches the boot probes during the install ceremony.
   `User` or throws `NotAuthenticatedException`; never null.
 - `Clock::now()` — the read-everywhere wall clock. Tests substitute a
   `FrozenClock`; production substitutes `SystemClock`.
+- `UserCountry` — the only reader and writer of `users.country_code`.
+  `current(int $userId): string` returns `''` for an unset preference —
+  a real answer meaning "every region", not a missing one — and
+  `store()` gates the code through the `Country` enum before writing,
+  so an injected value is dropped rather than persisted. `options()`
+  returns the label map both pickers render, sorted through
+  `sortByLabel()`'s ICU collator rather than by ISO code.
+- `Country` — the allow-list, and the one place a country code is
+  modelled. Every seam that accepts one narrows through
+  `Country::tryFrom` before use, including the corpus file path.
+- `UserCountryChanged` — raised by `UserCountry::store()` so a module
+  can react without the writer knowing it exists. Tax listens for it
+  and seeds that country's deduction categories; nothing else in Core
+  knows Tax is there. This is what lets signup, Settings and the
+  onboarding `CountryStep` all set a country through one seam.
+- `LocaleNegotiator` — resolves the active UI locale in precedence
+  order: the user's stored override, a guest's `session('locale')`,
+  the browser's Accept-Language best match, then English. Its `SYSTEM`
+  constant is the value both switchers use to *name* the absence of an
+  override — Settings stores NULL for it, the guest switcher clears the
+  session key — because the translator only ever reports a concrete
+  locale and cannot distinguish "English chosen" from "nothing chosen".
+
+The country is captured at signup beside the language, not inside Tax:
+`SignupPage::$country` is passed to `SignupAction` and stored through
+the same `UserCountry::store()` the other two routes use, so a fresh
+install starts correctly classified. Skipping it is a real answer and
+leaves it unset.
 - `UserDataPathService` — every read of `database_path()`,
   `storage_path()`, `base_path()` outside this class is forbidden by
   the arch invariant `noRawPathHelpersOutsidePathService`. The
@@ -744,6 +772,12 @@ Every property maps to a `users` column and validates via a Livewire
   documented primary entrypoint.
 - `theme` — one of `light`/`dark`/`system` governing the `<html>`
   dark-mode class; instant-apply via `setTheme()`.
+- `locale` — the display language, or NULL for `LocaleNegotiator::SYSTEM`;
+  instant-apply via `setLocale()`, which retargets the application locale
+  in the same request so the page re-renders in the new language.
+- `country` — the reader's country, written through `UserCountry`;
+  instant-apply via `setCountry()`. The placeholder option is `disabled`,
+  because nothing in the app can put the preference back to unset.
 - `isDeveloper` — gates the in-app Developer Console; instant-apply
   via `setDevMode()`, writing `users.is_developer` directly through the
   Eloquent model. Per-user; partner accounts cannot toggle each other's
@@ -755,8 +789,8 @@ Every property maps to a `users` column and validates via a Livewire
   `DispatchFxRatesRefresh` (the FX module's Public action), so this
   Core component never reaches into FX's Internal namespace.
 
-Every instant-apply toggle (`setTheme`, `setDevMode`,
-`toggleAutoImport`, `toggleFxOnline`) writes via the raw query builder
+Every instant-apply toggle (`setTheme`, `setLocale`, `setCountry`,
+`setDevMode`, `toggleAutoImport`, `toggleFxOnline`) writes via the raw query builder
 or Eloquent model directly (single round-trip, no Save button),
 mirroring each other's "no Save button" posture; `save()` batches the
 remaining Save-button-gated fields. Service collaborators arrive as

@@ -7,6 +7,7 @@ return [
     'heading' => 'İşlem',
 
     'counterparty' => 'Karşı taraf',
+    'description' => 'Açıklama',
     'amount_native' => 'Tutar (orijinal para birimi)',
     'amount_settled' => 'Tutar (EUR olarak kesinleşen)',
     'effective_rate' => 'Geçerli kur',

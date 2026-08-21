@@ -472,14 +472,18 @@ final class TransactionDetail extends Component
 
         // Decrypted onto the in-memory attribute only: nothing on the render
         // path saves this model, so the plaintext never reaches the column.
-        if (is_string($transaction->counterparty_name)) {
-            $transaction->counterparty_name = $codec->decryptValue(
-                'transactions',
-                'counterparty_name',
-                $transaction->counterparty_name,
-                $userId,
-                $session,
-            )['value'];
+        // Both columns are in SensitiveFieldRegistry, so a raw read here would
+        // put base64 on the card.
+        foreach (['counterparty_name', 'description'] as $column) {
+            if (is_string($transaction->{$column})) {
+                $transaction->{$column} = $codec->decryptValue(
+                    'transactions',
+                    $column,
+                    $transaction->{$column},
+                    $userId,
+                    $session,
+                )['value'];
+            }
         }
 
         $isSplittable = (TransactionType::tryFrom($transaction->type)?->isSplittable() === true);

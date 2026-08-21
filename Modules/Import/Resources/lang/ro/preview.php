@@ -52,7 +52,7 @@ return [
         'pending' => 'În coadă. Rezolvarea lanțurilor va începe în curând.',
         'running' => 'Se leagă lanțurile de finanțare și se descompun decontările din extras.',
         'failed_prefix' => 'Rezolvarea lanțurilor a eșuat:',
-        'unknown_error' => 'a apărut o eroare necunoscută',
+        'failed_detail' => 'detaliile sunt în jurnalul de sarcini',
         'open_horizon' => 'Deschide Horizon',
         'failed_suffix' => 'pentru a reîncerca sau a inspecta.',
     ],

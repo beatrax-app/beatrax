@@ -7,6 +7,7 @@ return [
     'heading' => 'Tehing',
 
     'counterparty' => 'Vastaspool',
+    'description' => 'Kirjeldus',
     'amount_native' => 'Summa (algne)',
     'amount_settled' => 'Summa (arveldatud EUR)',
     'effective_rate' => 'Tegelik kurss',

@@ -7,6 +7,7 @@ return [
     'heading' => 'Tapahtuma',
 
     'counterparty' => 'Vastapuoli',
+    'description' => 'Kuvaus',
     'amount_native' => 'Summa (alkuperäinen)',
     'amount_settled' => 'Summa (tilitetty EUR)',
     'effective_rate' => 'Toteutunut kurssi',

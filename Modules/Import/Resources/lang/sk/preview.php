@@ -52,7 +52,7 @@ return [
         'pending' => 'Vo fronte. Riešenie reťazcov sa čoskoro spustí.',
         'running' => 'Prepájajú sa reťazce financovania a rozkladajú sa zúčtovania z výpisu z účtu.',
         'failed_prefix' => 'Riešenie reťazcov zlyhalo:',
-        'unknown_error' => 'došlo k neznámej chybe',
+        'failed_detail' => 'podrobnosti sú v protokole úloh',
         'open_horizon' => 'Otvoriť Horizon',
         'failed_suffix' => 'na opakovanie alebo kontrolu.',
     ],

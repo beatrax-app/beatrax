@@ -52,7 +52,7 @@ return [
         'pending' => 'Järjekorras. Ahelate lahendaja alustab peagi.',
         'running' => 'Seon rahastusahelaid ja lahutan väljavõtte arveldusi.',
         'failed_prefix' => 'Ahelate lahendamine ebaõnnestus:',
-        'unknown_error' => 'tekkis tundmatu viga',
+        'failed_detail' => 'üksikasjad on tööde logis',
         'open_horizon' => 'Ava Horizon',
         'failed_suffix' => 'et uuesti proovida või uurida.',
     ],

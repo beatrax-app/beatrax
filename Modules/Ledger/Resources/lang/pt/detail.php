@@ -7,6 +7,7 @@ return [
     'heading' => 'Transação',
 
     'counterparty' => 'Contraparte',
+    'description' => 'Descrição',
     'amount_native' => 'Montante (moeda original)',
     'amount_settled' => 'Montante (liquidado em EUR)',
     'effective_rate' => 'Taxa efetiva',

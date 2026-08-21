@@ -52,7 +52,7 @@ return [
         'pending' => 'I kø. Kædeløseren starter om lidt.',
         'running' => 'Forbinder finansieringskæder og opdeler afregninger fra kontoudtoget.',
         'failed_prefix' => 'Opløsningen af kæder mislykkedes:',
-        'unknown_error' => 'der opstod en ukendt fejl',
+        'failed_detail' => 'detaljerne står i joblogen',
         'open_horizon' => 'Åbn Horizon',
         'failed_suffix' => 'for at prøve igen eller undersøge nærmere.',
     ],

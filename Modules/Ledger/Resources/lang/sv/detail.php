@@ -7,6 +7,7 @@ return [
     'heading' => 'Transaktion',
 
     'counterparty' => 'Motpart',
+    'description' => 'Beskrivning',
     'amount_native' => 'Belopp (ursprungligt)',
     'amount_settled' => 'Belopp (avräknat i EUR)',
     'effective_rate' => 'Effektiv kurs',

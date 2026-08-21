@@ -40,6 +40,7 @@ return [
         'badge_error' => 'MÅSTE LADDAS UPP IGEN',
         'badge_filtered' => 'REDAN IMPORTERAT',
         'error_body' => 'Vi kunde inte läsa alla filer för den här källan. Testa en annan fil →',
+        'partial_body' => 'En del av filen gick inte att läsa och utelämnades: :reason',
         'empty_body' => 'Det här kontoutdraget är tomt.',
         'filtered_body' => 'Det här kontoutdraget har redan importerats någon annanstans — vi utelämnade det.',
         'col_date' => 'Datum',

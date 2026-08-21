@@ -7,6 +7,7 @@ return [
     'heading' => 'Transakcja',
 
     'counterparty' => 'Kontrahent',
+    'description' => 'Opis',
     'amount_native' => 'Kwota (waluta pierwotna)',
     'amount_settled' => 'Kwota (rozliczona w EUR)',
     'effective_rate' => 'Kurs efektywny',

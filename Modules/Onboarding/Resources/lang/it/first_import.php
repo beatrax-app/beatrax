@@ -40,6 +40,7 @@ return [
         'badge_error' => 'DA RICARICARE',
         'badge_filtered' => 'GIÀ IMPORTATO',
         'error_body' => 'Non siamo riusciti a leggere tutti i file di questa fonte. Prova con un altro file →',
+        'partial_body' => 'Una parte di questo file non è stata leggibile ed è stata esclusa: :reason',
         'empty_body' => 'Questo estratto conto è vuoto.',
         'filtered_body' => 'Questo estratto conto è già stato importato altrove — lo abbiamo escluso.',
         'col_date' => 'Data',
