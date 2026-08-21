@@ -33,7 +33,7 @@ final class PeerConfirmVerifier
             ->where('user_id', $userId)
             ->where('token_hash', $tokenHash)
             ->whereIn('state', [PairingState::AwaitingConfirm->value, PairingState::Confirmed->value])
-            ->where('expires_at', '>', $now->toIso8601String())
+            ->where('expires_at', '>', PairingExpiry::stamp($now))
             ->first();
 
         if ($row === null || ! PairingRowGuards::tokenHashMatches($row, $tokenHash)) {

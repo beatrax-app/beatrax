@@ -57,7 +57,7 @@ final class PairingTokenService
             'initiator_ed25519_pub_hex' => $ed25519PubHex,
             'initiator_x25519_pub_hex' => $x25519PubHex,
             'state' => PairingState::Pending->value,
-            'expires_at' => $now->addMinutes(self::TTL_MINUTES)->toIso8601String(),
+            'expires_at' => PairingExpiry::stamp($now->addMinutes(self::TTL_MINUTES)),
             'created_at' => $now->toIso8601String(),
         ]);
 
@@ -111,7 +111,7 @@ final class PairingTokenService
             'initiator_ed25519_pub_hex' => $initiatorEd25519PubHex,
             'initiator_x25519_pub_hex' => $initiatorX25519PubHex,
             'state' => PairingState::Pending->value,
-            'expires_at' => $now->addMinutes(self::TTL_MINUTES)->toIso8601String(),
+            'expires_at' => PairingExpiry::stamp($now->addMinutes(self::TTL_MINUTES)),
             'initiator_seeded_at' => $now->toIso8601String(),
             'initiator_name' => $initiatorName,
             'created_at' => $now->toIso8601String(),
@@ -147,15 +147,11 @@ final class PairingTokenService
         $tokenHash = hash('sha256', $submittedToken);
         $now = $this->clock->now();
 
-        // expires_at is a TEXT column compared LEXICALLY here. This is
-        // correct ONLY because every expires_at is written via
-        // toIso8601String() in UTC — identical fixed-width offset, so
-        // lexical order == chronological order.
         $row = $this->db->connection()->table('pairing_tokens')
             ->where('token_hash', $tokenHash)
             ->where('user_id', $userId)
             ->where('state', PairingState::Pending->value)
-            ->where('expires_at', '>', $now->toIso8601String())
+            ->where('expires_at', '>', PairingExpiry::stamp($now))
             ->first();
 
         if ($row === null || ! PairingRowGuards::tokenHashMatches($row, $tokenHash)) {
@@ -182,7 +178,7 @@ final class PairingTokenService
                 'responder_x25519_pub_hex' => $responderX25519PubHex,
                 'state' => PairingState::AwaitingConfirm->value,
                 'accepted_at' => $acceptedAt,
-                'expires_at' => $newExpiry->toIso8601String(),
+                'expires_at' => PairingExpiry::stamp($newExpiry),
             ]);
 
         $accepted = $this->db->connection()->table('pairing_tokens')
@@ -301,7 +297,7 @@ final class PairingTokenService
         $row = $this->db->connection()->table('pairing_tokens')
             ->where('user_id', $userId)
             ->where('token_hash', $tokenHash)
-            ->where('expires_at', '>', $now->toIso8601String())
+            ->where('expires_at', '>', PairingExpiry::stamp($now))
             ->first();
 
         if ($row === null || ! PairingRowGuards::tokenHashMatches($row, $tokenHash)) {
@@ -423,7 +419,7 @@ final class PairingTokenService
                 'responder_name' => $responderName !== '' ? $responderName : null,
                 'state' => PairingState::AwaitingConfirm->value,
                 'accepted_at' => $now->toIso8601String(),
-                'expires_at' => $newExpiry->toIso8601String(),
+                'expires_at' => PairingExpiry::stamp($newExpiry),
             ]);
 
         $accepted = $this->db->connection()->table('pairing_tokens')
@@ -555,7 +551,7 @@ final class PairingTokenService
         $this->db->connection()->table('pairing_tokens')
             ->where('user_id', $userId)
             ->where(function (QueryBuilder $query) use ($now): void {
-                $query->where('expires_at', '<', $now->toIso8601String())
+                $query->where('expires_at', '<', PairingExpiry::stamp($now))
                     ->orWhereIn('state', [
                         PairingState::Confirmed->value,
                         PairingState::Expired->value,

@@ -53,14 +53,11 @@ final readonly class PairingOfferService
     // caller may be told about.
     private function offerableRow(string $tokenHash, int $userId): ?\stdClass
     {
-        // expires_at is TEXT compared lexically, which is correct only
-        // because every value is written via toIso8601String() in UTC —
-        // identical fixed-width offset, so lexical order is chronological.
         $row = $this->db->connection()->table('pairing_tokens')
             ->where('token_hash', $tokenHash)
             ->where('user_id', $userId)
             ->whereIn('state', self::OFFERABLE_STATES)
-            ->where('expires_at', '>', $this->clock->now()->toIso8601String())
+            ->where('expires_at', '>', PairingExpiry::stamp($this->clock->now()))
             ->first();
 
         if ($row === null || ! PairingRowGuards::tokenHashMatches($row, $tokenHash)) {

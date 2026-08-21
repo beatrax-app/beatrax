@@ -31,10 +31,31 @@ the lookup.
 can never lose trust state. It runs before each mint so stale initiator key material does not
 accumulate.
 
-`expires_at` is a TEXT column compared **lexically** in SQL. That is correct only because
-every value is written through `toIso8601String()` in UTC: identical fixed-width offset, so
-lexical order is chronological order. Writing one of these timestamps in a local offset would
-break every expiry comparison in this class at once.
+### Expiry is compared as text
+
+`expires_at` is a TEXT column compared **lexically** in SQL, by several writers and more
+readers. That is correct only while every value shares one zero-padded **Zulu** format, so
+`PairingExpiry::stamp()` is the single way any of them produces one: it converts to UTC *and*
+asserts the shape, and throws rather than writing a value the comparison cannot order.
+
+The invariant used to be asserted in a comment instead, and the comment was wrong —
+`toIso8601String()` emits the *app timezone's* offset, and every live row read `+02:00`. That
+was self-consistent only because one process wrote and compared them all. It stops being
+self-consistent the moment the two sides of a comparison disagree about the offset: across the
+DST changeover, on a device whose timezone changes between issue and comparison, or between
+the app and its own `sync:serve` daemon, which is a separate process against the same database
+and need not have inherited the same `TZ`. An offset form sorts against a Zulu `now` by its own
+local hour digits, so the failure is quiet in both directions — a good code refused, or a TTL
+that silently stretches by the size of the offset.
+
+The same invariant is enforced the same way, and for the same reason, on `relay_mailbox`
+(`RelayMailbox::assertZulu()`).
+
+Rows written before the guard existed are **deleted**, not rewritten
+(`2026_08_21_000001_drop_pairing_tokens_written_at_a_local_offset`). A mixed-format column
+cannot be compared lexically at all, and this table is transient scratch — the permanent trust
+store is `device_registry`, so nothing is lost. A handshake could not have survived the app
+restart that runs the migration either way.
 
 ## Two ways in, one shape
 
@@ -289,6 +310,34 @@ This is not a new trust boundary. These frames already crossed a channel that
 authenticates nothing, the relay being deliberately zero-knowledge, so every
 guarantee lives inside the frame. Carrying them over the LAN removes a third party
 rather than adding one.
+
+## Opening the pairing screen must not restart the listener
+
+The daemon reads its Noise transport keypair once, from the environment it was
+spawned with, so a daemon started while the app was locked holds none and
+refuses every handshake. The only way to hand it one is to spawn it again:
+`SyncTransportCredentialsAvailable` stops the running `sync:serve` and starts a
+replacement.
+
+`PairingFlowModal::openModal()` used to dispatch that on **every** open, which is
+self-defeating on the open that matters. The ceremony tells the user to come back
+to this screen to compare the six words; coming back tore down the process that
+was serving the handshake, five seconds after the click, and the modal that did it
+then found nothing left to resume.
+
+So the dispatch is conditional on `PairingGateway::hasLiveHandshake()`: no live
+row, and a restart costs nothing — it is the warm-up before a ceremony that has
+not started. A live row, and the running daemon is left alone. `pending` counts as
+live alongside `awaiting_confirm`: a code has been shown and the peer may be
+dialling it at that moment, which is exactly the window the observed failure fell
+into.
+
+One case is left uncovered, deliberately. A daemon that booted keyless while a
+handshake was already live — only reachable by relaunching the app mid-ceremony —
+stays keyless for the rest of that ceremony, which keeps the LAN road shut and
+leaves the relay and the outbox. Cancelling expires the row, and the next open
+credentials the daemon normally. Restarting to rescue that case would mean
+restarting in exactly the state where a restart is destructive.
 
 ## What a confirmation is bound to
 

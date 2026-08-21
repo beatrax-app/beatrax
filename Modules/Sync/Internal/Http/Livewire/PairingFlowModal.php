@@ -100,6 +100,9 @@ final class PairingFlowModal extends Component
     // sees a real false->true transition, which is the only thing Flux shows
     // the dialog on. The flow resets first so a reopened modal never resumes a
     // cancelled handshake; a still-live one is picked back up below.
+    /**
+     * @link ../../../../../.docs/features/sync/pairing-handshake.md#opening-the-pairing-screen-must-not-restart-the-listener
+     */
     #[On('open-pairing-modal')]
     public function openModal(
         CurrentUser $currentUser,
@@ -110,10 +113,14 @@ final class PairingFlowModal extends Component
         Session $session,
         DeviceRegistryService $registry,
     ): void {
-        // A daemon started while the app was locked holds no transport keypair
-        // and rejects every handshake. Opening this modal is an unlocked,
-        // authenticated moment, and exactly when the listener must be ready.
-        $events->dispatch(new SyncTransportCredentialsAvailable($currentUser->user()->id));
+        $userId = $currentUser->user()->id;
+
+        // A daemon started while the app was locked holds no transport keypair,
+        // and it can only be handed one by being replaced — free before a
+        // ceremony starts, fatal to one already running (see @link).
+        if (! $gateway->hasLiveHandshake($userId)) {
+            $events->dispatch(new SyncTransportCredentialsAvailable($userId));
+        }
 
         $this->step = 'choose_direction';
         $this->pairingTokenId = '';
@@ -127,7 +134,7 @@ final class PairingFlowModal extends Component
         $this->safetyWords = [];
         $this->open = true;
 
-        $this->resumeInFlight($currentUser->user()->id, $gateway, $relayCourier, $logger, $session, $registry);
+        $this->resumeInFlight($userId, $gateway, $relayCourier, $logger, $session, $registry);
     }
 
     // Picks up a handshake that is still live. This modal's poll is the only

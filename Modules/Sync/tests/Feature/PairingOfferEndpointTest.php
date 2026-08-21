@@ -14,6 +14,7 @@ use League\Uri\Http as HttpUri;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Sync\Internal\Pairing\PairingExpiry;
 use Modules\Sync\Internal\Pairing\PairingOfferRateLimiter;
 use Modules\Sync\Internal\Pairing\PairingOfferService;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
@@ -197,7 +198,7 @@ it('refuses an expired token', function (): void {
     $db = app(DatabaseManager::class);
     $db->connection()->table('pairing_tokens')
         ->where('token_hash', hash('sha256', $issued['token']))
-        ->update(['expires_at' => CarbonImmutable::now()->subMinute()->toIso8601String()]);
+        ->update(['expires_at' => PairingExpiry::stamp(CarbonImmutable::now()->subMinute())]);
 
     $result = pairingOfferDispatch(
         pairingOfferHandler((int) $user->id),
