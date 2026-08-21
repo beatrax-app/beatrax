@@ -153,7 +153,7 @@ describe('FetchFxRatesJob', function (): void {
         expect(DB::table('exchange_rates')->where('rate_date', now()->toDateString())->exists())->toBeFalse();
     });
 
-    it('skips out-of-range rates (T-02-01 validation)', function (): void {
+    it('skips out-of-range rates while still persisting the valid ones', function (): void {
         $fakeProvider = makeFakeRateProvider('ecb', 200, [
             'date' => '2026-06-05',
             'rates' => [
@@ -173,7 +173,7 @@ describe('FetchFxRatesJob', function (): void {
         expect(DB::table('exchange_rates')->where('quote_currency', 'XYZ')->exists())->toBeFalse();
     });
 
-    it('no-ops without touching any provider when the user has online fetch disabled (D-04 privacy gate)', function (): void {
+    it('no-ops without touching any provider when the user has online fetch disabled', function (): void {
         $disabledUser = User::create([
             'username' => 'fx-disabled-fixture',
             'password' => 'fixture-password-12chars',

@@ -84,7 +84,7 @@ it('configures the endpoint without a token when the relay is deployed token-les
     expect($config->authToken())->toBeNull();
 });
 
-it('MED-01: rejects a non-https endpoint from scanned QR input — never durably breaks relay transport', function (): void {
+it('rejects a non-https endpoint from scanned QR input — never durably breaks relay transport', function (): void {
     $user = relayBootstrapUser('relay-bootstrap-insecure');
     test()->actingAs($user);
 
@@ -98,7 +98,7 @@ it('MED-01: rejects a non-https endpoint from scanned QR input — never durably
     expect($config->isConfigured())->toBeFalse('an http:// endpoint from a scanned QR must never be persisted');
 });
 
-it('MED-01: does not clobber an already-configured relay — fresh-device bootstrap only', function (): void {
+it('does not clobber an already-configured relay — fresh-device bootstrap only', function (): void {
     $user = relayBootstrapUser('relay-bootstrap-noclobber');
     test()->actingAs($user);
 

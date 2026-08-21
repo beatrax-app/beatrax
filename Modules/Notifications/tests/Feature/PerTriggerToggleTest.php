@@ -283,7 +283,7 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-it('disabling payment_reminder fires no OS notification for it while the other three fire, and its row stays in the inbox (Req 8)', function (): void {
+it('disabling payment_reminder fires no OS notification for it while the other three fire, and its row stays in the inbox', function (): void {
     $user = pttUser('ptt-disable-reminder');
     pttPairDevice(app(DatabaseManager::class), (int) $user->id);
     pttSavePrefs($user, [
@@ -301,7 +301,7 @@ it('disabling payment_reminder fires no OS notification for it while the other t
     expect(pttNotificationRowExists((int) $user->id, DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER))->toBeTrue();
 });
 
-it('disabling budget_nudge fires no OS notification for it while the other three fire, and its row stays in the inbox (Req 8)', function (): void {
+it('disabling budget_nudge fires no OS notification for it while the other three fire, and its row stays in the inbox', function (): void {
     $user = pttUser('ptt-disable-budget');
     pttPairDevice(app(DatabaseManager::class), (int) $user->id);
     pttSavePrefs($user, [
@@ -319,7 +319,7 @@ it('disabling budget_nudge fires no OS notification for it while the other three
     expect(pttNotificationRowExists((int) $user->id, DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE))->toBeTrue();
 });
 
-it('disabling position_digest (cadence off) fires no OS notification for it while the other three fire, and its row stays in the inbox (Req 8)', function (): void {
+it('disabling position_digest (cadence off) fires no OS notification for it while the other three fire, and its row stays in the inbox', function (): void {
     $user = pttUser('ptt-disable-digest');
     pttPairDevice(app(DatabaseManager::class), (int) $user->id);
     pttSavePrefs($user, [
@@ -337,7 +337,7 @@ it('disabling position_digest (cadence off) fires no OS notification for it whil
     expect(pttNotificationRowExists((int) $user->id, DeterministicKeyDeriver::TRIGGER_POSITION_DIGEST))->toBeTrue();
 });
 
-it('disabling savings_prompt fires no OS notification for it while the other three fire, and its row stays in the inbox (Req 8)', function (): void {
+it('disabling savings_prompt fires no OS notification for it while the other three fire, and its row stays in the inbox', function (): void {
     $user = pttUser('ptt-disable-savings');
     pttPairDevice(app(DatabaseManager::class), (int) $user->id);
     pttSavePrefs($user, [

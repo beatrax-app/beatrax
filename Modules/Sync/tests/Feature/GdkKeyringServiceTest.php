@@ -58,7 +58,7 @@ it('loads the persisted keyring and returns the same current epoch that was gene
     expect($current->keyHex)->toBe($generated->keyHex);
 });
 
-it('appends a new epoch to the keyring without discarding the old one (D-04 append-only forever)', function (): void {
+it('appends a new epoch to the keyring without discarding the old one', function (): void {
     $user = gdkUser('gdk-append-user');
 
     /** @var GdkKeyringService $service */
@@ -81,7 +81,7 @@ it('appends a new epoch to the keyring without discarding the old one (D-04 appe
     expect($keyring->keyFor($epoch2->epochId))->toBe($epoch2->keyHex);
 });
 
-it('re-wraps every keyring epoch under a new KEK (D-10 passphrase change)', function (): void {
+it('re-wraps every keyring epoch under a new KEK on a passphrase change', function (): void {
     $userId = (int) gdkUser('gdk-rewrap-user')->id;
 
     /** @var Session $session */

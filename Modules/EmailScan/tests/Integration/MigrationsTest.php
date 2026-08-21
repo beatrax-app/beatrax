@@ -11,7 +11,7 @@ beforeEach(function (): void {
     $this->db = $this->app->make(DatabaseManager::class)->connection();
 });
 
-it('creates the five Phase 6 tables on a fresh migrate', function (): void {
+it('creates the inboxes, inbox_scan_state, inbox_messages, known_senders and discovered_senders tables on a fresh migrate', function (): void {
     $schema = $this->db->getSchemaBuilder();
     foreach (['inboxes', 'inbox_scan_state', 'inbox_messages', 'known_senders', 'discovered_senders'] as $table) {
         expect($schema->hasTable($table))->toBeTrue("table {$table} missing");
@@ -53,7 +53,7 @@ it('discovered_senders has the expected columns', function (): void {
     }
 });
 
-it('seeds known_senders with the three original system rows plus the Phase 19 icscards.nl statement-sender row', function (): void {
+it('seeds known_senders with the three original system rows plus the icscards.nl statement-sender row', function (): void {
     $patterns = $this->db
         ->table('known_senders')
         ->where('source', 'system')

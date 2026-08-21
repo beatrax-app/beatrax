@@ -33,7 +33,7 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-it('does not trust a device that confirms both sides from a single device id (CR-01)', function (): void {
+it('does not trust a device that confirms both sides from a single device id', function (): void {
     $user = trustGateUser();
 
     /** @var PairingTokenService $service */
@@ -68,7 +68,7 @@ it('does not trust a device that confirms both sides from a single device id (CR
     expect($device)->toBeNull();
 });
 
-it('rejects a confirm from a device id that owns neither side of the token (CR-01)', function (): void {
+it('rejects a confirm from a device id that owns neither side of the token', function (): void {
     $user = trustGateUser('trust-gate-stranger');
 
     /** @var PairingTokenService $service */

@@ -99,7 +99,7 @@ it('large-above expects exactly the large reason', function (): void {
     expect($fixture['expected']['reasons'])->toBe(['large']);
 });
 
-it('first-time-large carries both large and first_time (D-09)', function (): void {
+it('first-time-large carries both large and first_time', function (): void {
     /** @var array{expected: array{reasons: list<string>}} $fixture */
     $fixture = require __DIR__.'/../fixtures/anomaly-corpus/first-time-large.php';
     expect($fixture['expected']['reasons'])->toContain('large');

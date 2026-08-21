@@ -84,7 +84,7 @@ function overspendTx(int $userId, int $accountId, int $runId, int $settledMinor,
     ]);
 }
 
-it('default reduce_to_budget resets carried_in to zero next period and debits the pool once (Req 4)', function (): void {
+it('default reduce_to_budget resets carried_in to zero next period and debits the pool once', function (): void {
     $current = app(PeriodQuery::class)->current();
     $next = app(PeriodQuery::class)->next($current);
 
@@ -107,7 +107,7 @@ it('default reduce_to_budget resets carried_in to zero next period and debits th
     expect($nextResult['toBudgetMinor'])->toBe($before['toBudgetMinor'] - 3000);
 });
 
-it('carry_negative keeps the negative in the envelope and leaves the pool untouched (Req 4)', function (): void {
+it('carry_negative keeps the negative in the envelope and leaves the pool untouched', function (): void {
     $current = app(PeriodQuery::class)->current();
     $next = app(PeriodQuery::class)->next($current);
 

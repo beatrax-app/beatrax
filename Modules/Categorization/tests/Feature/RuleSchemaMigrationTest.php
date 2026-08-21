@@ -204,7 +204,7 @@ it('losslessly backfills legacy flat rule rows into one condition + one action e
     }
 });
 
-it('migration 000005 down() never deletes user-authored rule_conditions/rule_actions rows (CR-03)', function (): void {
+it('migration 000005 down() never deletes user-authored rule_conditions/rule_actions rows', function (): void {
     $category = Category::create([
         'user_id' => null,
         'name' => 'Rent',

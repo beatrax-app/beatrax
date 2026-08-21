@@ -37,14 +37,14 @@ function confirmYnab4V1(User $user): MigrationRun
     return $run->refresh();
 }
 
-it('MigrationConfirm: category count/names land in Ledger — Req 2', function (): void {
+it('MigrationConfirm: category count/names land in Ledger', function (): void {
     confirmYnab4V1($this->user);
 
     $names = Category::query()->where('user_id', $this->user->id)->pluck('name')->all();
     expect($names)->toContain('Groceries', 'Household', 'Salary');
 });
 
-it('WR-03: a grouped source category is promoted with a non-null parent_id onto a real parent Category', function (): void {
+it('MigrationConfirm: a grouped source category is promoted with a non-null parent_id onto a real parent Category', function (): void {
     confirmYnab4V1($this->user);
 
     $frequent = Category::query()->where('user_id', $this->user->id)->where('name', 'Frequent')->firstOrFail();
@@ -60,7 +60,7 @@ it('WR-03: a grouped source category is promoted with a non-null parent_id onto 
     expect($salary->parent_id)->toBe($income->id);
 });
 
-it('MigrationConfirm: envelope_assignments exact-to-cent per (category, month), compared to stored rows only — Req 3', function (): void {
+it('MigrationConfirm: envelope_assignments exact-to-cent per (category, month), compared to stored rows only', function (): void {
     confirmYnab4V1($this->user);
 
     $groceries = Category::query()->where('user_id', $this->user->id)->where('name', 'Groceries')->firstOrFail();
@@ -83,7 +83,7 @@ it('MigrationConfirm: envelope_assignments exact-to-cent per (category, month), 
     expect((int) $janHousehold)->toBe(10000);
 });
 
-it('MigrationConfirm: split parent + N legs sum to parent, cleared mapping preserved — Req 4', function (): void {
+it('MigrationConfirm: split parent + N legs sum to parent, cleared mapping preserved', function (): void {
     confirmYnab4V1($this->user);
 
     // The Supermarket split: 20.00 Groceries + 10.00 Household = 30.00, found
@@ -107,7 +107,7 @@ it('MigrationConfirm: split parent + N legs sum to parent, cleared mapping prese
     expect($parent->status)->toBe('cleared');
 });
 
-it('MigrationConfirm: transfer pair linked, no orphan — Req 5', function (): void {
+it('MigrationConfirm: transfer pair linked, no orphan', function (): void {
     confirmYnab4V1($this->user);
 
     // The 100.00 transfer leg on each side.
@@ -126,7 +126,7 @@ it('MigrationConfirm: transfer pair linked, no orphan — Req 5', function (): v
     expect($inLeg->pair_transaction_id)->toBe($outLeg->id);
 });
 
-it('MigrationConfirm: a payee on >=2 transactions collapses to exactly one counterparty — Req 6', function (): void {
+it('MigrationConfirm: a payee on >=2 transactions collapses to exactly one counterparty', function (): void {
     confirmYnab4V1($this->user);
 
     $albertHeijnTxs = $this->db->connection()->table('transactions')
@@ -147,7 +147,7 @@ it('MigrationConfirm: a payee on >=2 transactions collapses to exactly one count
     expect($counterpartyCount)->toBe(1);
 });
 
-it('MigrationConfirm: non-base currency stamped in source currency, no fx rate written — Req 7 (Actual fixture)', function (): void {
+it('MigrationConfirm: non-base currency stamped in source currency, no fx rate written (Actual fixture)', function (): void {
     $zipPath = sys_get_temp_dir().'/migration-confirm-actual-'.uniqid('', true).'.zip';
     ActualFixtureBuilder::build($zipPath);
     $extracted = MigrationFixturePaths::extractZip($zipPath);
@@ -169,7 +169,7 @@ it('MigrationConfirm: non-base currency stamped in source currency, no fx rate w
     @unlink($zipPath);
 });
 
-it('MigrationConfirm: a re-run yields identical row counts across every promoted table — Req 9 idempotency', function (): void {
+it('MigrationConfirm: a re-run yields identical row counts across every promoted table', function (): void {
     confirmYnab4V1($this->user);
 
     $countsAfterFirst = [
@@ -201,7 +201,7 @@ it('MigrationConfirm: a re-run yields identical row counts across every promoted
     expect($countsAfterSecond)->toBe($countsAfterFirst);
 });
 
-it('CR-02: two genuinely distinct same-day same-amount same-account transactions both survive promotion', function (): void {
+it('MigrationConfirm: two genuinely distinct same-day same-amount same-account transactions both survive promotion', function (): void {
     $run = app(StartMigrationRun::class)->__invoke(
         $this->user,
         'ynab4',

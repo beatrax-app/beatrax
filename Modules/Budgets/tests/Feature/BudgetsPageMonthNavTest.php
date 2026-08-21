@@ -53,7 +53,7 @@ beforeEach(function (): void {
     ]);
 });
 
-it('shows the previous periods own assignment after navigating back, distinct from the current period (Req 7)', function (): void {
+it('shows the previous periods own assignment after navigating back, distinct from the current period', function (): void {
     $current = app(PeriodQuery::class)->current();
     $previous = app(PeriodQuery::class)->previous($current);
 
@@ -67,7 +67,7 @@ it('shows the previous periods own assignment after navigating back, distinct fr
         ->assertDontSee('400,00');
 });
 
-it('shows income zero for a future period unless a real income transaction exists there (Req 7)', function (): void {
+it('shows income zero for a future period unless a real income transaction exists there', function (): void {
     $current = app(PeriodQuery::class)->current();
     $future = $current;
     for ($i = 0; $i < 2; $i++) {

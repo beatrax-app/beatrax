@@ -90,7 +90,7 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-it('returns a fully-populated DTO for a user with zero data (D-21: nothing notable is still a position)', function (): void {
+it('returns a fully-populated DTO for a user with zero data (nothing notable is still a position)', function (): void {
     $user = pqUser('pq-empty');
     $this->actingAs($user);
 

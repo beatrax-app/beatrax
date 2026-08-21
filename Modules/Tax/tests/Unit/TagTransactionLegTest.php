@@ -273,7 +273,7 @@ it('untagging a leg never deletes a whole-transaction tag on the same transactio
     expect($wholeTagStillExists)->toBeTrue();
 });
 
-it('rejects a cross-user leg id — 404, no tag row created (T-13.1-09)', function (): void {
+it('rejects a cross-user leg id — 404, no tag row created', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
@@ -294,7 +294,7 @@ it('rejects a cross-user leg id — 404, no tag row created (T-13.1-09)', functi
     expect($anyTagRow)->toBeFalse();
 });
 
-it('rejects a leg id that belongs to a different transaction (T-13.1-09)', function (): void {
+it('rejects a leg id that belongs to a different transaction', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 

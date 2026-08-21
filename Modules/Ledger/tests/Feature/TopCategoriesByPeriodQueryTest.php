@@ -62,7 +62,7 @@ it('ranks categories by spend descending, unsplit transactions unchanged', funct
     expect($rows[1]->spend->toMinor())->toBe(1000);
 });
 
-it('counts a split transaction\'s legs individually, never the parent (Req 4)', function (): void {
+it('counts a split transaction\'s legs individually, never the parent', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
 

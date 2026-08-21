@@ -329,7 +329,7 @@ beforeEach(function (): void {
     ]);
 });
 
-it('creates two users — the first Phase 12 test to do so', function (): void {
+it('seeds two distinct users — a developer owner and a non-developer partner', function (): void {
     expect(User::query()->count())->toBe(2);
     expect($this->owner->id)->not->toBe($this->partner->id);
     expect($this->owner->is_developer)->toBeTrue();
@@ -654,7 +654,7 @@ it('does not bleed the owner mystery descriptions into the partner mystery-merch
         ->assertDontSee('OWNER MYSTERY DESCRIPTION XJ91');
 });
 
-it('does not bleed the owner tagged transactions into the partner tax page (T-07-15)', function (): void {
+it('does not bleed the owner tagged transactions into the partner tax page', function (): void {
     $ownerSuffix = bin2hex(random_bytes(4));
     $ownerAccountId = $this->db->connection()->table('accounts')->insertGetId([
         'user_id' => $this->owner->id,
@@ -794,7 +794,7 @@ it('does not bleed the owner tagged transactions into the partner tax page (T-07
         ->assertDontSee('owner-secret-note');
 });
 
-it('does not bleed the owner quarantine rows into a second developer\'s sync-health panel (Pitfall 4, T-11-13)', function (): void {
+it('does not bleed the owner quarantine rows into a second developer\'s sync-health panel', function (): void {
     // The page only surfaces quarantine rows from the last seven days, so the
     // fixture is seeded off the same Clock it reads. A hardcoded date here
     // rotted past the window and silently stopped asserting anything.
@@ -841,7 +841,7 @@ it('does not bleed the owner account into the partner reconcile account picker',
         ->assertDontSee('Owner Secret Reconcile Account');
 });
 
-it('returns 404 (never 403) when the partner requests the owner migration preview (T-13.5-24)', function (): void {
+it('returns 404 (never 403) when the partner requests the owner migration preview', function (): void {
     $runId = xuiMigrationRun($this->db, $this->owner->id, 'Owner Migration Export.zip');
 
     $response = $this->actingAs($this->partner)->get("/migrations/{$runId}/preview");
@@ -850,7 +850,7 @@ it('returns 404 (never 403) when the partner requests the owner migration previe
     expect($response->status())->not->toBe(403);
 });
 
-it('returns 404 (never 403) when the partner requests the owner migration results (T-13.5-24)', function (): void {
+it('returns 404 (never 403) when the partner requests the owner migration results', function (): void {
     $runId = xuiMigrationRun($this->db, $this->owner->id, 'Owner Migration Export.zip');
 
     $response = $this->actingAs($this->partner)->get("/migrations/{$runId}/results");
@@ -868,11 +868,11 @@ it('does not bleed the owner migration run into the partner migrations index', f
         ->assertDontSee('Owner Migration Export.zip', false);
 });
 
-it('renders /migrations/new for any authenticated user — no per-entity id, no data to leak (T-13.5-04 shape)', function (): void {
+it('renders /migrations/new for any authenticated user — no per-entity id, no data to leak', function (): void {
     $this->actingAs($this->partner)->get('/migrations/new')->assertOk();
 });
 
-it('does not bleed the owner peer device id into the partner /sync status surface (Phase 15 Plan 10, T-15-26)', function (): void {
+it('does not bleed the owner peer device id into the partner /sync status surface', function (): void {
     $seedSession = function (int $userId, string $localDeviceId, string $peerDeviceId): void {
         $this->db->connection()->table('sync_sessions')->insert([
             'user_id' => $userId,
@@ -897,7 +897,7 @@ it('does not bleed the owner peer device id into the partner /sync status surfac
         ->assertDontSee('owner-secret-peer-device');
 });
 
-it('does not bleed the owner initial-sync progress cursor into the partner /mobile/setup screen (Phase 15 Plan 08/10)', function (): void {
+it('does not bleed the owner initial-sync progress cursor into the partner /mobile/setup screen', function (): void {
     $seedProgress = function (int $userId, string $peerDeviceId, int $applied, int $expected): void {
         $this->db->connection()->table('mobile_sync_progress')->insert([
             'user_id' => $userId,
@@ -1017,7 +1017,7 @@ it('does not bleed the owner peer device name or record count into the partner /
         ->assertDontSee('4242');
 });
 
-it('does not bleed the owner spend into the partner reports CSV export (999.6-07, T-999.6-20)', function (): void {
+it('does not bleed the owner spend into the partner reports CSV export', function (): void {
     $ownerAccountId = xuiAccount($this->db, $this->owner->id, 'Owner Secret Export Account');
     $partnerAccountId = xuiAccount($this->db, $this->partner->id, 'Partner Visible Export Account');
 
@@ -1072,7 +1072,7 @@ it('does not bleed the owner spend into the partner reports CSV export (999.6-07
     expect($csv)->not->toContain('Owner Secret Export Account');
 });
 
-it('does not bleed the owner saved report into the partner reports library index (999.6-09, Req 9, T-999.6-25)', function (): void {
+it('does not bleed the owner saved report into the partner reports library index', function (): void {
     xuiSavedReport($this->db, $this->owner->id, 'Owner Secret Saved Report');
     xuiSavedReport($this->db, $this->partner->id, 'Partner Visible Saved Report');
 
@@ -1083,7 +1083,7 @@ it('does not bleed the owner saved report into the partner reports library index
         ->assertDontSee('Owner Secret Saved Report');
 });
 
-it('does not restore the owner saved report definition when the partner opens it by id (999.6-09, T-999.6-25)', function (): void {
+it('does not restore the owner saved report definition when the partner opens it by id', function (): void {
     // A foreign id falls back to the empty default rather than 404ing, which
     // would confirm the id exists. The contract is that the owner's report
     // name never renders, not any particular status.
@@ -1095,7 +1095,7 @@ it('does not restore the owner saved report definition when the partner opens it
         ->assertDontSee('Owner Secret Builder Report');
 });
 
-it('does not bleed the owner notification into the partner /notifications inbox (Phase 18, notifications.index)', function (): void {
+it('does not bleed the owner notification into the partner /notifications inbox (notifications.index)', function (): void {
     // The notifications columns are encryption-registered, but no encryption
     // session is active for these fixtures, so a raw insert stores and reads
     // back as plaintext.
@@ -1116,7 +1116,7 @@ it('does not bleed the owner notification into the partner /notifications inbox 
         ->assertDontSee('Owner Secret Notification Title');
 });
 
-it('does not bleed the owner open-banking connection into the partner settings surface (Phase 19, settings.open-banking)', function (): void {
+it('does not bleed the owner open-banking connection into the partner settings surface (settings.open-banking)', function (): void {
     $this->db->connection()->table('open_banking_connections')->insert([
         'user_id' => $this->owner->id,
         'institution_id' => 'ASNBNL21',

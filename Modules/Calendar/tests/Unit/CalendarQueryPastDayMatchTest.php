@@ -231,7 +231,7 @@ it('does not mark a future-day entry as paid or missed', function (): void {
     expect($foundPaidOrMissed)->toBeFalse('Future entries must not be marked isPaid or isMissed');
 });
 
-it('clamps the weekly match window to ±3 days so one payment marks only the nearest entry paid (WR-02)', function (): void {
+it('clamps the weekly match window to ±3 days so one payment marks only the nearest entry paid', function (): void {
     $db = app(DatabaseManager::class);
     $user = cqpdUser('weekly-clamp');
 

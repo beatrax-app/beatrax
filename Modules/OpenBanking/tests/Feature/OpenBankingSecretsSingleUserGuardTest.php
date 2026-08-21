@@ -43,7 +43,7 @@ afterEach(function (): void {
     }
 });
 
-it('WR-08: a save while a SECOND user exists logs the single-user-constraint warning (and still writes)', function (): void {
+it('a save while a SECOND user exists logs the single-user-constraint warning (and still writes)', function (): void {
     obssgUser('obssg-first');
     obssgUser('obssg-second');
 
@@ -62,7 +62,7 @@ it('WR-08: a save while a SECOND user exists logs the single-user-constraint war
             && str_contains($message, 'SINGLE-USER v1'));
 });
 
-it('WR-08: a save with a single user emits no single-user-constraint warning', function (): void {
+it('a save with a single user emits no single-user-constraint warning', function (): void {
     obssgUser('obssg-only');
 
     Log::spy();

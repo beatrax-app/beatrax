@@ -37,7 +37,7 @@ it('YnabTransferMatcher: an unmatched leg (no counterpart signal) is omitted fro
     expect($matcher->pair($legs))->toBe([]);
 });
 
-it('WR-05: two same-sign rows are NEVER paired as a transfer, even with matching date/magnitude/account names', function (): void {
+it('YnabTransferMatcher: two same-sign rows are NEVER paired as a transfer, even with matching date/magnitude/account names', function (): void {
     $matcher = new YnabTransferMatcher;
 
     // Both legs are outflows, satisfying everything the old predicate checked;

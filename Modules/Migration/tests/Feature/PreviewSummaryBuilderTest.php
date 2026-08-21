@@ -23,7 +23,7 @@ beforeEach(function (): void {
     ]);
 });
 
-it('PreviewSummaryBuilder: returns the 5 mapped counts for a staged ynab4 v1 run — Req 11/12', function (): void {
+it('PreviewSummaryBuilder: returns the 5 mapped counts for a staged ynab4 v1 run', function (): void {
     $run = app(StartMigrationRun::class)->__invoke(
         $this->user,
         'ynab4',
@@ -49,7 +49,7 @@ it('PreviewSummaryBuilder: returns the 5 mapped counts for a staged ynab4 v1 run
     expect($summary->unmapped['conflict']['count'])->toBe(0);
 });
 
-it('PreviewSummaryBuilder: the unmapped summary lists >=1 unresolvable payee/extra grouped by type with counts — Req 12', function (): void {
+it('PreviewSummaryBuilder: the unmapped summary lists >=1 unresolvable payee/extra grouped by type with counts', function (): void {
     $zipPath = sys_get_temp_dir().'/preview-summary-actual-'.uniqid('', true).'.zip';
     ActualFixtureBuilder::build($zipPath);
     $extracted = MigrationFixturePaths::extractZip($zipPath);
@@ -67,7 +67,7 @@ it('PreviewSummaryBuilder: the unmapped summary lists >=1 unresolvable payee/ext
     @unlink($zipPath);
 });
 
-it('WR-06: throws MigrationRunNotParsedException for a discarded run (staging deliberately truncated)', function (): void {
+it('PreviewSummaryBuilder: throws MigrationRunNotParsedException for a discarded run (staging deliberately truncated)', function (): void {
     $run = MigrationRun::create([
         'user_id' => $this->user->id,
         'source_product' => 'ynab4',
@@ -79,7 +79,7 @@ it('WR-06: throws MigrationRunNotParsedException for a discarded run (staging de
         ->toThrow(MigrationRunNotParsedException::class);
 });
 
-it('WR-06: a genuinely-empty PARSED run (zero staged rows) does NOT throw — it is a legitimate empty preview', function (): void {
+it('PreviewSummaryBuilder: a genuinely-empty PARSED run (zero staged rows) does NOT throw — it is a legitimate empty preview', function (): void {
     // 'parsed' is only ever set after staging succeeded, so zero staged rows
     // here means an empty source file, not a truncated one.
     $run = MigrationRun::create([
@@ -99,7 +99,7 @@ it('WR-06: a genuinely-empty PARSED run (zero staged rows) does NOT throw — it
     expect($summary->budgetMonthsCount)->toBe(0);
 });
 
-it('PreviewSummaryBuilder: a run belonging to another user resolves to a not-found exception — IDOR (T-13.5-14)', function (): void {
+it('PreviewSummaryBuilder: a run belonging to another user resolves to a not-found exception — IDOR', function (): void {
     $owner = User::create(['username' => 'preview-summary-owner', 'password' => 'opensesame', 'period_start_day' => 1]);
     $run = app(StartMigrationRun::class)->__invoke(
         $owner,

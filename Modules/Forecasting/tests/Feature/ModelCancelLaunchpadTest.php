@@ -188,7 +188,7 @@ it('drift-page renders the Model cancel chip in the alert row', function (): voi
         ->assertSee('Model cancel ↗');
 });
 
-it('Phase 9 DismissDriftAlertAsCancelled flow remains independent of the launchpad', function (): void {
+it('DismissDriftAlertAsCancelled marks the alert dismissed_cancelled without creating a scenario', function (): void {
     $seriesId = mclSeries($this->db, $this->user->id, 'Netflix');
     $alertId = mclAlert($this->db, $this->user->id, $seriesId);
 

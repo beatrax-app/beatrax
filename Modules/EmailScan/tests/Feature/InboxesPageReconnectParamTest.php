@@ -103,7 +103,7 @@ it('OAuthClientWizardModal::open() stores the inbox id when supplied (backward-c
         ->assertSet('reconnectInboxId', $this->inboxAId);
 });
 
-it('OAuthClientWizardModal::open() leaves reconnectInboxId null when no inbox id is supplied (Plan 03b call-site stays working)', function (): void {
+it('OAuthClientWizardModal::open() leaves reconnectInboxId null when no inbox id is supplied', function (): void {
     Livewire::actingAs($this->userA)
         ->test(OAuthClientWizardModal::class)
         ->call('open', 'gmail')

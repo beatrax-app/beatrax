@@ -67,7 +67,7 @@ it('probe does not render the raw key bytes even when unlocked', function (): vo
         ->assertDontSee($rawKey);
 });
 
-it('AppLockKeyProbe consumes AppLockKeyService (same Public contract Phase 14 uses)', function (): void {
+it('resolves AppLockKeyProbe from the container alongside the AppLockKeyService class it consumes', function (): void {
     expect(class_exists(AppLockKeyProbe::class))->toBeTrue();
     expect(class_exists(AppLockKeyService::class))->toBeTrue();
 

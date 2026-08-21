@@ -119,7 +119,7 @@ it('is status-agnostic — a co-matched row already flipped to unmatched by Rece
     expect(isrCaptureDispatched($user))->toHaveCount(1);
 });
 
-it('never imports EmlBlobStore/RecordReceipt — the detector reads only sender_email/subject columns (Req 14)', function (): void {
+it('never imports EmlBlobStore/RecordReceipt — the detector reads only sender_email/subject columns', function (): void {
     $source = (string) file_get_contents(
         base_path('Modules/EmailScan/Internal/Jobs/DetectIcsStatementReadyJob.php'),
     );

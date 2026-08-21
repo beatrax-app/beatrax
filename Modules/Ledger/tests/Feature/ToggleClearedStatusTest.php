@@ -48,7 +48,7 @@ it('flips an uncleared transaction to cleared', function (): void {
     expect(Transaction::query()->find($tx->id)->status)->toBe('cleared');
 });
 
-it('bumps updated_at when it flips the status (IN-02)', function (): void {
+it('bumps updated_at when it flips the status', function (): void {
     $tx = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'cleared']);
 
     // Force a stale updated_at that the raw QB toggle must overwrite.

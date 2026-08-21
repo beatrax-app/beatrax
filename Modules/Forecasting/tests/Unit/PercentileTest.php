@@ -23,7 +23,7 @@ it('interpolates between two values for n=2', function (): void {
     expect($this->percentile->p90([10, 100]))->toBe(91);
 });
 
-it('locks the R-7 canonical snapshot for [10..100]', function (): void {
+it('returns 19, 55 and 91 for the evenly spaced ten-value list [10..100]', function (): void {
     $values = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
     expect($this->percentile->p10($values))->toBe(19);
     expect($this->percentile->p50($values))->toBe(55);

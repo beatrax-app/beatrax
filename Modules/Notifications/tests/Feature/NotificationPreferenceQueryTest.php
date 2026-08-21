@@ -52,7 +52,7 @@ beforeEach(function (): void {
     $this->query = $query;
 });
 
-it('reads exactly the D-16/D-19/D-15 defaults for a device with no row', function (): void {
+it('reads reminders on, weekly digest, savings prompts off and quiet hours off for a device with no row', function (): void {
     $user = prefUser('pref-defaults');
     seedRegistryDevice($this->db, $user->id, 'self-device', isSelf: true);
 

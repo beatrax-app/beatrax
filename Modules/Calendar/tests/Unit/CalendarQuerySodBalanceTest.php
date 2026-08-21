@@ -140,7 +140,7 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow(null);
 });
 
-it('chains today\'s SoD from yesterday\'s actual and marks unknown SoD as null (WR-08, WR-09)', function (): void {
+it('chains today\'s SoD from yesterday\'s actual and marks unknown SoD as null', function (): void {
     $db = app(DatabaseManager::class);
     $user = cqsbUser('anchor');
     $accountId = cqsbAccount($db, $user->id);

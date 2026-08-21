@@ -183,7 +183,7 @@ it('Dto: UnmappedItemDto itemType covers the four documented kinds', function ()
     }
 });
 
-it('Dto: ConflictDto defaults resolution to keep_local (D-14)', function (): void {
+it('Dto: ConflictDto defaults resolution to keep_local', function (): void {
     $conflict = new ConflictDto(
         entityType: 'budget_assignment',
         sourceExternalId: 'cat-1',

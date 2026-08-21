@@ -98,7 +98,7 @@ it('FileOpenIntake canonicalizes a traversal path and rejects it when the realpa
     Event::assertNotDispatched(FileOpenedFromOs::class);
 })->group('phase-15');
 
-it('FileOpenIntake accepts a small .eml file under the per-extension cap (IN-05)', function (): void {
+it('FileOpenIntake accepts a small .eml file under the per-extension cap', function (): void {
     Event::fake([FileOpenedFromOs::class]);
 
     $path = $this->fixturesDir.'/small.eml';
@@ -111,7 +111,7 @@ it('FileOpenIntake accepts a small .eml file under the per-extension cap (IN-05)
     Event::assertDispatched(FileOpenedFromOs::class);
 })->group('phase-15');
 
-it('FileOpenIntake rejects a .eml file above the tighter per-extension eml cap (IN-05)', function (): void {
+it('FileOpenIntake rejects a .eml file above the tighter per-extension eml cap', function (): void {
     // The .eml cap is 5 MB where the general cap is 50 MB, so 6 MB is the size
     // that tells the per-extension override apart from the old single constant.
     Event::fake([FileOpenedFromOs::class]);
@@ -127,7 +127,7 @@ it('FileOpenIntake rejects a .eml file above the tighter per-extension eml cap (
     Event::assertNotDispatched(FileOpenedFromOs::class);
 })->group('phase-15');
 
-it('FileOpenIntake accepts a .csv file up to the broader 50 MB cap (IN-05 regression guard)', function (): void {
+it('FileOpenIntake accepts a .csv file up to the broader 50 MB cap', function (): void {
     // The same 6 MB rejected as an .eml must still pass as a .csv: over-tightening
     // the per-extension override would break legitimate bank-export imports.
     Event::fake([FileOpenedFromOs::class]);

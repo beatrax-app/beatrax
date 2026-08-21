@@ -181,7 +181,7 @@ it('apply() stores plaintext for a non-encrypted user (pass-through parity)', fu
     expect($row->description)->toBe('New description from re-import');
 })->group('MigrationEntityChangeApplierEncryption');
 
-it('T-14.1-14c: applyTransactionAmount() recomputes the SAME fingerprint a plaintext re-import would, for a row carrying ciphertext counterparty_name/iban/description — encrypted user', function (): void {
+it('applyTransactionAmount() recomputes the SAME fingerprint a plaintext re-import would, for a row carrying ciphertext counterparty_name/iban/description — encrypted user', function (): void {
     $user = mecaUser();
     $session = $this->enablesEncryptionForUser($user);
     $account = mecaAccount($user);
@@ -239,7 +239,7 @@ it('T-14.1-14c: applyTransactionAmount() recomputes the SAME fingerprint a plain
         ->toBe($plainName);
 })->group('MigrationEntityChangeApplierEncryption');
 
-it('T-14.1-14c: fingerprint recompute is unaffected by encryption for a non-encrypted user (pass-through parity)', function (): void {
+it('applyTransactionAmount() recomputes the fingerprint unaffected by encryption for a non-encrypted user (pass-through parity)', function (): void {
     $user = mecaUser();
     $account = mecaAccount($user);
     /** @var SensitiveColumnCodec $codec */

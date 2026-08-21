@@ -68,7 +68,7 @@ it('UpdateReport is a no-op when nothing actually changed', function (): void {
     expect($reloaded->updated_at?->equalTo($originalUpdatedAt))->toBeTrue();
 });
 
-it('WR-03: UpdateReport is a no-op when only the filter-array element order changed', function (): void {
+it('UpdateReport is a no-op when only the filter-array element order changed', function (): void {
     $user = srwaUser();
     test()->actingAs($user);
 
@@ -109,7 +109,7 @@ it('WR-03: UpdateReport is a no-op when only the filter-array element order chan
     expect($reloaded->definition['accounts'])->toBe([1, 2, 3]);
 });
 
-it('UpdateReport throws NotFoundHttpException for a foreign report id (T-999.6-17)', function (): void {
+it('UpdateReport throws NotFoundHttpException for a foreign report id', function (): void {
     $owner = srwaUser();
     $other = srwaUser();
     test()->actingAs($owner);
@@ -136,7 +136,7 @@ it('DeleteReport removes the row', function (): void {
     expect(SavedReport::query()->find($saved->id))->toBeNull();
 });
 
-it('DeleteReport throws NotFoundHttpException for a foreign report id and never deletes it (T-999.6-17)', function (): void {
+it('DeleteReport throws NotFoundHttpException for a foreign report id and never deletes it', function (): void {
     $owner = srwaUser();
     $other = srwaUser();
     test()->actingAs($owner);
@@ -155,7 +155,7 @@ it('DeleteReport throws NotFoundHttpException for a missing report id', function
         ->toThrow(NotFoundHttpException::class);
 });
 
-it('WR-02: deleting a pinned report compacts the remaining pin_order values to a dense sequence', function (): void {
+it('deleting a pinned report compacts the remaining pin_order values to a dense sequence', function (): void {
     $user = srwaUser();
     test()->actingAs($user);
 

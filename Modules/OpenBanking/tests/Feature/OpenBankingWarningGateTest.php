@@ -89,7 +89,7 @@ it('confirmWarning without the checkbox checked does nothing', function (): void
     expect(session('open_banking_acknowledged'))->toBeNull();
 });
 
-it('WR-06: confirmWarning WITHOUT a prior requestEnable is a no-op even with a forged acknowledged flag', function (): void {
+it('confirmWarning WITHOUT a prior requestEnable is a no-op even with a forged acknowledged flag', function (): void {
     $user = owgUser('owg-forged-ack-no-request');
     $this->actingAs($user);
 
@@ -104,7 +104,7 @@ it('WR-06: confirmWarning WITHOUT a prior requestEnable is a no-op even with a f
     expect(session('open_banking_acknowledged'))->toBeNull();
 });
 
-it('WR-06: the full requestEnable -> check -> confirmWarning path still works and consumes warningShown', function (): void {
+it('the full requestEnable -> check -> confirmWarning path still works and consumes warningShown', function (): void {
     $user = owgUser('owg-warning-shown-happy');
     $this->actingAs($user);
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-07-19 12:00:00'));
@@ -122,7 +122,7 @@ it('WR-06: the full requestEnable -> check -> confirmWarning path still works an
     CarbonImmutable::setTestNow();
 });
 
-it('WR-06: cancelWarning revokes the warningShown proof', function (): void {
+it('cancelWarning revokes the warningShown proof', function (): void {
     $user = owgUser('owg-cancel-revokes-proof');
     $this->actingAs($user);
 
@@ -158,7 +158,7 @@ it('confirmWarning with the checkbox checked persists a fresh session-ack timest
     CarbonImmutable::setTestNow();
 });
 
-it('a redirect flash WITHOUT acknowledgement leaves OB off (Req 4 server-side proof)', function (): void {
+it('a redirect flash WITHOUT acknowledgement leaves OB off', function (): void {
     $user = owgUser('owg-direct-no-ack');
     $this->actingAs($user);
     $connectionId = owgSeedConnection($user);
@@ -202,7 +202,7 @@ it('the full acknowledged path enables OB', function (): void {
     expect(session('open_banking_acknowledged'))->toBeNull();
 });
 
-it('WR-07: a post-callback mount with a pending connection but a STALE ack sets needsReconfirm and leaves OB off', function (): void {
+it('a post-callback mount with a pending connection but a STALE ack sets needsReconfirm and leaves OB off', function (): void {
     $user = owgUser('owg-reconfirm-stale');
     $this->actingAs($user);
     owgSeedInstitutionSecrets('ASNBNL21');
@@ -225,7 +225,7 @@ it('WR-07: a post-callback mount with a pending connection but a STALE ack sets 
     expect((bool) $enabled)->toBeFalse();
 });
 
-it('WR-07: reconfirmEnable re-mints a fresh ack and completes the enable', function (): void {
+it('reconfirmEnable re-mints a fresh ack and completes the enable', function (): void {
     $user = owgUser('owg-reconfirm-completes');
     $this->actingAs($user);
     owgSeedInstitutionSecrets('ASNBNL21');
@@ -252,7 +252,7 @@ it('WR-07: reconfirmEnable re-mints a fresh ack and completes the enable', funct
     expect(session('open_banking_acknowledged'))->toBeNull();
 });
 
-it('WR-07: a fresh ack within the raised 2-hour TTL still finalizes at mount without needing re-confirm', function (): void {
+it('a fresh ack within the 2-hour TTL still finalizes at mount without needing re-confirm', function (): void {
     $user = owgUser('owg-reconfirm-not-needed');
     $this->actingAs($user);
     owgSeedInstitutionSecrets('ASNBNL21');
@@ -308,7 +308,7 @@ it('mount auto-finalizes the enable when both the redirect flash and the session
 
 // A stale ack passes a naive "is the flag present" check, so an abandoned
 // wizard tab would otherwise leave a live enable token for the whole session.
-it('a STALE session ack (older than the TTL) does not authorize enableOpenBanking (Req 4 hardening)', function (): void {
+it('a STALE session ack (older than the TTL) does not authorize enableOpenBanking', function (): void {
     $user = owgUser('owg-stale-ack');
     $this->actingAs($user);
     owgSeedInstitutionSecrets('ASNBNL21');

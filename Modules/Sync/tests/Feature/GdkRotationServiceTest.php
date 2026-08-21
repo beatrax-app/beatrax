@@ -79,7 +79,7 @@ it('generates a new GDK epoch N+1 and appends it to the acting device keyring on
     expect($current->keyHex)->not->toBe($initial->keyHex);
 });
 
-it('takes Session as a per-method rotateAndRevoke() parameter, not a constructor field (D-11)', function (): void {
+it('takes Session as a per-method rotateAndRevoke() parameter, not a constructor field', function (): void {
     $ctorParams = (new ReflectionClass(GdkRotationService::class))->getConstructor()?->getParameters() ?? [];
     $ctorParamTypes = array_map(
         static fn (ReflectionParameter $param): string => (string) $param->getType(),

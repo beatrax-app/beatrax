@@ -280,7 +280,7 @@ it('a second identical re-apply pass writes zero fields (idempotent)', function 
     expect($secondPassProgress['status'])->toBe('done');
 });
 
-it('completes the job instead of throwing when a rule\'s malformed date condition value crashes matching (WR-03)', function (): void {
+it('completes the job instead of throwing when a rule\'s malformed date condition value crashes matching', function (): void {
     $fixtures = seedReapplyFixtures();
 
     // normalizeCondition() checks a date value is non-empty but never that it

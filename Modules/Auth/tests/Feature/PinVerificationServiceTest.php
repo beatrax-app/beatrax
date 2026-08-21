@@ -132,7 +132,7 @@ it('reaching the backoff threshold sets locked_until and blocks further attempts
     expect($result)->toBeNull('Correct PIN should still return null while locked_until is in the future');
 });
 
-it('successful PIN unlock re-arms disarmed biometric credentials (D-16 / WR-01)', function (): void {
+it('successful PIN unlock re-arms disarmed biometric credentials', function (): void {
     $user = User::query()->create([
         'username' => 'rearm-user',
         'password' => 'whatever-password',

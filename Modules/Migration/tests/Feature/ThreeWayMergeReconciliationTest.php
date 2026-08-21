@@ -27,7 +27,7 @@ beforeEach(function (): void {
     $this->db = app(DatabaseManager::class);
 });
 
-it('ThreeWayMerge: a category changed on BOTH source and local is a conflict (untouched + listed); a category changed only on source applies cleanly — Req 10', function (): void {
+it('ThreeWayMerge: a category changed on BOTH source and local is a conflict (untouched + listed); a category changed only on source applies cleanly', function (): void {
     $firstRun = app(StartMigrationRun::class)->__invoke(
         $this->user,
         'ynab4',
@@ -64,7 +64,7 @@ it('ThreeWayMerge: a category changed on BOTH source and local is a conflict (un
     expect((int) $householdAssigned)->toBe(12000);
 });
 
-it('ThreeWayMerge: the conflict is listed for the user, not silently swallowed — Req 10/12', function (): void {
+it('ThreeWayMerge: the conflict is listed for the user, not silently swallowed', function (): void {
     $firstRun = app(StartMigrationRun::class)->__invoke(
         $this->user,
         'ynab4',
@@ -93,7 +93,7 @@ it('ThreeWayMerge: the conflict is listed for the user, not silently swallowed �
     expect($unmappedConflicts)->not->toBeEmpty();
 });
 
-it('CR-01: confirming a needs_attention reconciliation run does NOT overwrite the kept-local budget-assignment conflict', function (): void {
+it('ThreeWayMerge: confirming a needs_attention reconciliation run does NOT overwrite the kept-local budget-assignment conflict', function (): void {
     $firstRun = app(StartMigrationRun::class)->__invoke(
         $this->user,
         'ynab4',
@@ -137,7 +137,7 @@ it('CR-01: confirming a needs_attention reconciliation run does NOT overwrite th
 // 'row-1' (15.00 -> 18.00); every other row is byte-identical to v1. No public
 // writer can edit a transaction amount, so a local edit is a direct update.
 
-it('ThreeWayMerge: a transaction amount changed only on source applies cleanly; an untouched transaction stays untouched — Req 10', function (): void {
+it('ThreeWayMerge: a transaction amount changed only on source applies cleanly; an untouched transaction stays untouched', function (): void {
     $firstRun = app(StartMigrationRun::class)->__invoke(
         $this->user,
         'ynab4',
@@ -185,7 +185,7 @@ it('ThreeWayMerge: a transaction amount changed only on source applies cleanly; 
     expect($amountConflicts)->toBeEmpty();
 });
 
-it('ThreeWayMerge: a transaction amount changed on BOTH source and local is a conflict (untouched + listed) — Req 10', function (): void {
+it('ThreeWayMerge: a transaction amount changed on BOTH source and local is a conflict (untouched + listed)', function (): void {
     $firstRun = app(StartMigrationRun::class)->__invoke(
         $this->user,
         'ynab4',
@@ -266,7 +266,7 @@ it('a kept-local transaction-amount conflict survives BOTH CheckForUpdates and a
     expect($confirmedRun->status)->toBe('confirmed');
 });
 
-it('WR-03: a genuine fingerprint-uniqueness collision on transaction-amount apply is still handled gracefully (left unchanged, recorded, no exception)', function (): void {
+it('ThreeWayMerge: a genuine fingerprint-uniqueness collision on transaction-amount apply is still handled gracefully (left unchanged, recorded, no exception)', function (): void {
     $firstRun = app(StartMigrationRun::class)->__invoke(
         $this->user,
         'ynab4',
@@ -345,7 +345,7 @@ it('WR-03: a genuine fingerprint-uniqueness collision on transaction-amount appl
 // `resolution` NULL, and `ConfirmMigration` is the only place one is applied.
 // Committing the decision at CheckForUpdates time left the toggle cosmetic.
 
-it('UAT-3c: take_source resolution on a budget-assignment conflict applies the SOURCE value at Confirm', function (): void {
+it('ThreeWayMerge: a take_source resolution on a budget-assignment conflict applies the SOURCE value at Confirm', function (): void {
     $firstRun = app(StartMigrationRun::class)->__invoke(
         $this->user,
         'ynab4',
@@ -396,7 +396,7 @@ it('UAT-3c: take_source resolution on a budget-assignment conflict applies the S
     expect($confirmedRun->status)->toBe('confirmed');
 });
 
-it('UAT-3c: keep_local (default, no toggle interaction) leaves the Beatrax value unchanged at Confirm', function (): void {
+it('ThreeWayMerge: keep_local (default, no toggle interaction) leaves the Beatrax value unchanged at Confirm', function (): void {
     $firstRun = app(StartMigrationRun::class)->__invoke(
         $this->user,
         'ynab4',
@@ -436,7 +436,7 @@ it('UAT-3c: keep_local (default, no toggle interaction) leaves the Beatrax value
     expect((int) $groceriesAssigned)->toBe(30000);
 });
 
-it('UAT-3c: switching the toggle keep_local -> take_source -> keep_local persists the LAST choice, and Confirm honors it', function (): void {
+it('ThreeWayMerge: switching the toggle keep_local -> take_source -> keep_local persists the LAST choice, and Confirm honors it', function (): void {
     $firstRun = app(StartMigrationRun::class)->__invoke(
         $this->user,
         'ynab4',
@@ -485,7 +485,7 @@ it('UAT-3c: switching the toggle keep_local -> take_source -> keep_local persist
     expect((int) $groceriesAssigned)->toBe(30000);
 });
 
-it('UAT-3c: PreviewMigration::resolveConflict() persists the chosen resolution for the correct conflict row', function (): void {
+it('ThreeWayMerge: PreviewMigration::resolveConflict() persists the chosen resolution for the correct conflict row', function (): void {
     $firstRun = app(StartMigrationRun::class)->__invoke(
         $this->user,
         'ynab4',
@@ -523,7 +523,7 @@ it('UAT-3c: PreviewMigration::resolveConflict() persists the chosen resolution f
     expect($resolution)->toBe('take_source');
 });
 
-it('UAT-3a/3b: the conflict row renders formatted currency and a human label, not raw minor units or an internal field name', function (): void {
+it('ThreeWayMerge: the conflict row renders formatted currency and a human label, not raw minor units or an internal field name', function (): void {
     $firstRun = app(StartMigrationRun::class)->__invoke(
         $this->user,
         'ynab4',

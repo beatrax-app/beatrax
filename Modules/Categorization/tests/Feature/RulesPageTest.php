@@ -189,7 +189,7 @@ it('refreshes its row list when rule-form:saved fires', function (): void {
         ->assertSee('Rule saved.');
 });
 
-it('escapes any HTML embedded in a condition value (T-07-06 XSS defence)', function (): void {
+it('escapes any HTML embedded in a condition value (XSS defence)', function (): void {
     seedRulePageRule($this->user, 10, [
         ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => '<script>alert(1)</script>'],
     ], [

@@ -7,7 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-it('transactions carries exactly the four check triggers after the note migration (WR-07)', function (): void {
+it('transactions carries exactly the four check triggers after the note migration', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
@@ -23,7 +23,7 @@ it('transactions carries exactly the four check triggers after the note migratio
     ]);
 });
 
-it('transactions retains all expected indexes after the note column-add (WR-07)', function (): void {
+it('transactions retains all expected indexes after the note column-add', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
@@ -52,7 +52,7 @@ it('transactions retains all expected indexes after the note column-add (WR-07)'
     }
 });
 
-it('FTS sync triggers are NOT on transactions — they live on transaction_search_docs (WR-07)', function (): void {
+it('FTS sync triggers are NOT on transactions — they live on transaction_search_docs', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 

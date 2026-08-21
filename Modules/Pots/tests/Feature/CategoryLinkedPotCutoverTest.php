@@ -34,7 +34,7 @@ beforeEach(function (): void {
     $this->groceries = Category::create(['user_id' => null, 'name' => 'Groceries', 'slug' => 'cutover-groceries-'.bin2hex(random_bytes(3)), 'kind' => 'expense', 'display_order' => 1]);
 });
 
-it('archives every active category-linked pot via the normal release-to-unallocated path, seeding no envelope balance (Req 10)', function (): void {
+it('archives every active category-linked pot via the normal release-to-unallocated path, seeding no envelope balance', function (): void {
     $pot = Pot::factory()->create([
         'user_id' => $this->user->id,
         'account_id' => $this->account->id,
@@ -66,7 +66,7 @@ it('archives every active category-linked pot via the normal release-to-unalloca
     expect($envelopeActivatedAt)->not->toBeNull();
 });
 
-it('leaves goal-linked pots untouched (D-16)', function (): void {
+it('leaves goal-linked pots untouched', function (): void {
     $goalPot = Pot::factory()->create([
         'user_id' => $this->user->id,
         'account_id' => $this->account->id,

@@ -164,7 +164,7 @@ beforeEach(function (): void {
     $this->resolver = $resolver;
 });
 
-it('deterministic match: PayPal Bankstorting → ASN by IBAN-in-memo (D-106)', function (): void {
+it('deterministic match: PayPal Bankstorting → ASN by IBAN-in-memo', function (): void {
     $rawPayload = [
         'format' => 'paypal-csv',
         'language' => 'nl',
@@ -292,7 +292,7 @@ it('signature_hash = sha256(normalized_merchant + | + funding_account_iban) on d
     expect($link->evidence['signature_hash'])->toBe($expected);
 });
 
-it('does NOT mutate transactions rows (D-84 invariant)', function (): void {
+it('does NOT mutate transactions rows', function (): void {
     $rawPayload = [
         'format' => 'paypal-csv',
         'language' => 'nl',

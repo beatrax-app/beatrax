@@ -31,7 +31,7 @@ describe('ExchangeRateService', function (): void {
         $this->service = new ExchangeRateService(app(DatabaseManager::class));
     });
 
-    it('returns passthrough (isPassthrough=true) with zero DB queries when currencies match (D-03)', function (): void {
+    it('returns passthrough (isPassthrough=true) with zero DB queries when currencies match', function (): void {
         $money = Money::ofMinor(10000, 'EUR');
 
         DB::enableQueryLog();

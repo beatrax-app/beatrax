@@ -80,7 +80,7 @@ it('reports no comparison when there is no spend', function (): void {
     expect($trend->movers)->toBe([]);
 });
 
-it('counts a split transaction\'s legs individually, never the parent (Req 4)', function (): void {
+it('counts a split transaction\'s legs individually, never the parent', function (): void {
     $periods = app(PeriodQuery::class);
     $current = $periods->current();
 

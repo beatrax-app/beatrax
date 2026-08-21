@@ -96,7 +96,7 @@ it('admits the initiator (desktop) into the phone-simulated local registry after
     expect($registry->deviceX25519Keys((int) $user->id))->toHaveKey('desktop-initiator');
 });
 
-it('refuses to admit an initiator whose device_id collides with the local self-row (WR-05 symmetric guard)', function (): void {
+it('refuses to admit an initiator whose device_id collides with the local self-row', function (): void {
     $user = crossDeviceUser('cross-device-self-collision');
 
     /** @var PairingTokenService $service */
@@ -169,7 +169,7 @@ it('seedFromInitiator is idempotent for a repeated scan of the same physical cod
     expect($db->connection()->table('pairing_tokens')->where('user_id', $user->id)->count())->toBe(1);
 });
 
-it('rejects malformed initiator key material without seeding a row (WR-01)', function (): void {
+it('rejects malformed initiator key material without seeding a row', function (): void {
     $user = crossDeviceUser('cross-device-malformed-key');
 
     /** @var PairingTokenService $service */

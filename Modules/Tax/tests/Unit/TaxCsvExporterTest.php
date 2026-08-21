@@ -249,7 +249,7 @@ it('a transaction with tax_year_override appears in the override year, not the b
     expect(count($lines2026))->toBe(1); // header only
 });
 
-it('escapes formula-leading cells so the CSV is safe to open in Excel (WR-08)', function (): void {
+it('escapes formula-leading cells so the CSV is safe to open in Excel', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = tceUser($db, 'tce-formula-user');

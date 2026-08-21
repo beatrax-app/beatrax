@@ -35,7 +35,7 @@ function thresholdRowFor(User $user, int $categoryId): ?object
     return $fold['rows'][$categoryId] ?? null;
 }
 
-it('reports the D-20 default of 90 for an envelope with no explicit threshold', function (): void {
+it('reports the default threshold of 90 for an envelope with no explicit threshold', function (): void {
     $row = thresholdRowFor($this->user, $this->groceries->id);
 
     expect($row)->not->toBeNull();

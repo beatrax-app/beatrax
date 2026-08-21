@@ -49,17 +49,17 @@ it('throws InvalidArgumentException when horizonDays is not in the allowed set',
     expect($call)->toThrow(InvalidArgumentException::class);
 });
 
-it('accepts horizonDays=180 without throwing (D-14 Phase 6 extension)', function (): void {
+it('accepts horizonDays=180 without throwing', function (): void {
     $job = new ProjectForecastJob(userId: 5, scenarioId: null, horizonDays: 180);
     expect($job->horizonDays)->toBe(180);
 });
 
-it('accepts horizonDays=365 without throwing (D-14 Phase 6 extension)', function (): void {
+it('accepts horizonDays=365 without throwing', function (): void {
     $job = new ProjectForecastJob(userId: 5, scenarioId: null, horizonDays: 365);
     expect($job->horizonDays)->toBe(365);
 });
 
-it('still throws InvalidArgumentException for an off-list value after the Phase 6 extension', function (): void {
+it('still throws InvalidArgumentException for an off-list horizonDays=200', function (): void {
     $call = fn (): ProjectForecastJob => new ProjectForecastJob(userId: 5, scenarioId: null, horizonDays: 200);
 
     expect($call)->toThrow(InvalidArgumentException::class);

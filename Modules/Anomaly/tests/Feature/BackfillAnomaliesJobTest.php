@@ -81,7 +81,7 @@ it('is idempotent — re-running without resetting the guard never duplicates al
     expect(AnomalyAlert::query()->where('user_id', $user->id)->count())->toBe(1);
 });
 
-it('claims the backfill before the walk so a racing run that already claimed never re-walks (WR-01)', function (): void {
+it('claims the backfill before the walk so a racing run that already claimed never re-walks', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = AnomalyCorpusSeeder::makeUser();
@@ -99,7 +99,7 @@ it('claims the backfill before the walk so a racing run that already claimed nev
     expect(AnomalyAlert::query()->where('user_id', $user->id)->count())->toBe(0);
 });
 
-it('only evaluates the owning user (cross-user isolation, T-09-16)', function (): void {
+it('only evaluates the owning user (cross-user isolation)', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 

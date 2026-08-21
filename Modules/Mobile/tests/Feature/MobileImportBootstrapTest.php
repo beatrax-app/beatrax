@@ -88,7 +88,7 @@ it('continueToPairing() forgets the recovery-codes session key and redirects int
 // public properties are emptied by then, and provisioning from those would mint a
 // KEK from an empty passphrase.
 
-it('retryProvisioning() without a pending-credentials session copy never provisions and returns to collect_pin (HIGH-02)', function (): void {
+it('retryProvisioning() without a pending-credentials session copy never provisions and returns to collect_pin', function (): void {
     $this->withoutMiddleware(EnsureDatabaseReady::class);
 
     // A provisioning_failed device whose session-stashed credentials are gone: the
@@ -111,7 +111,7 @@ it('retryProvisioning() without a pending-credentials session copy never provisi
     expect($provisioner->isEnabled((int) $user->id))->toBeFalse('a retry with no recoverable credentials must never provision anything — never a silent empty-passphrase KEK');
 });
 
-it('retryProvisioning() succeeds with the ORIGINALLY submitted credentials after a simulated provisioning failure (HIGH-02)', function (): void {
+it('retryProvisioning() succeeds with the ORIGINALLY submitted credentials after a simulated provisioning failure', function (): void {
     $this->withoutMiddleware(EnsureDatabaseReady::class);
 
     $user = User::query()->create([

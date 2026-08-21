@@ -99,7 +99,7 @@ it('DiscardMigrationRun: refuses to discard an already-confirmed run', function 
     expect($run->refresh()->status)->toBe('confirmed');
 });
 
-it('WR-02: ConfirmMigration refuses to confirm an already-discarded run', function (): void {
+it('ConfirmMigration: refuses to confirm an already-discarded run', function (): void {
     $run = app(StartMigrationRun::class)->__invoke(
         $this->user,
         'ynab4',

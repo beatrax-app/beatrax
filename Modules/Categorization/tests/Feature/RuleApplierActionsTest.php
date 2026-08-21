@@ -341,7 +341,7 @@ it('skips a dangling category id but still applies the other action', function (
     expect($tx->counterparty_id)->toBe($counterparty->id);
 });
 
-it('preserves an existing user-typed tax note when a rule-driven re-apply changes the deduction category (CR-02)', function (): void {
+it('preserves an existing user-typed tax note when a rule-driven re-apply changes the deduction category', function (): void {
     Event::fake([TransactionMutated::class]);
 
     ['user' => $user, 'account' => $account, 'run' => $run] = seedRuleApplierFixtures();

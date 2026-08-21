@@ -139,7 +139,7 @@ function dupReminderGenerateOnDevice(
     return [$pk, $ops];
 }
 
-it('two independent devices generating the same reminder converge to exactly one notification row (Req 12)', function (): void {
+it('two independent devices generating the same reminder converge to exactly one notification row', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
@@ -173,7 +173,7 @@ it('two independent devices generating the same reminder converge to exactly one
     expect($db->connection()->table('op_log_quarantine')->where('user_id', $this->user->id)->count())->toBe(0);
 });
 
-it('two different due dates for the same series produce two distinct notification rows (D-06)', function (): void {
+it('two different due dates for the same series produce two distinct notification rows', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 

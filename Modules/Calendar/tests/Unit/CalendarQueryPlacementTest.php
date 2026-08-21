@@ -128,7 +128,7 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow(null);
 });
 
-it('places no entries in history months before the series existed (WR-03)', function (): void {
+it('places no entries in history months before the series existed', function (): void {
     $user = cqplUser('inception-history');
 
     // Created "today", with no occurrences at all.
@@ -143,7 +143,7 @@ it('places no entries in history months before the series existed (WR-03)', func
     expect(cqplEntryDates($days, 'New-Subscription'))->toBe([]);
 });
 
-it('uses the first observed occurrence as the inception floor (WR-03)', function (): void {
+it('uses the first observed occurrence as the inception floor', function (): void {
     $db = app(DatabaseManager::class);
     $user = cqplUser('inception-occurrence');
 
@@ -160,7 +160,7 @@ it('uses the first observed occurrence as the inception floor (WR-03)', function
     expect(cqplEntryDates($february, 'April-Born'))->toBe([]);
 });
 
-it('preserves an end-of-month anchor across short months (WR-04 drift)', function (): void {
+it('preserves an end-of-month anchor across short months', function (): void {
     $db = app(DatabaseManager::class);
     $user = cqplUser('eom-anchor');
 
@@ -184,7 +184,7 @@ it('preserves an end-of-month anchor across short months (WR-04 drift)', functio
     expect(cqplEntryDates($may, 'EndOfMonth-Bill'))->toBe(['2026-05-31']);
 });
 
-it('places the anchor month itself on the anchor day (WR-04 invertibility)', function (): void {
+it('places the anchor month itself on the anchor day', function (): void {
     $db = app(DatabaseManager::class);
     $user = cqplUser('eom-invert');
 
@@ -199,7 +199,7 @@ it('places the anchor month itself on the anchor day (WR-04 invertibility)', fun
     expect(cqplEntryDates($july, 'July-Anchor'))->toBe(['2026-07-31']);
 });
 
-it('steps a quarterly series by three-month index from the anchor (WR-04)', function (): void {
+it('steps a quarterly series by three-month index from the anchor', function (): void {
     $db = app(DatabaseManager::class);
     $user = cqplUser('quarterly-step');
 
@@ -215,7 +215,7 @@ it('steps a quarterly series by three-month index from the anchor (WR-04)', func
     expect(cqplEntryDates($calendarQuery->forMonth($user, 2026, 7), 'Quarterly-Bill'))->toBe(['2026-07-15']);
 });
 
-it('steps a yearly series by one-year index from the anchor (WR-04)', function (): void {
+it('steps a yearly series by one-year index from the anchor', function (): void {
     $db = app(DatabaseManager::class);
     $user = cqplUser('yearly-step');
 
@@ -231,7 +231,7 @@ it('steps a yearly series by one-year index from the anchor (WR-04)', function (
     expect(cqplEntryDates($calendarQuery->forMonth($user, 2026, 7), 'Yearly-Bill'))->toBe(['2026-07-15']);
 });
 
-it('keeps an entry expected slightly before its first observed payment (WR-03 slack)', function (): void {
+it('keeps an entry expected slightly before its first observed payment', function (): void {
     $db = app(DatabaseManager::class);
     $user = cqplUser('inception-slack');
 

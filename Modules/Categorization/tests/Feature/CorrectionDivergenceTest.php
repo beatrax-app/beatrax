@@ -235,7 +235,7 @@ it('CorrectionDivergenceToast renders Update the rule? when handleDiverged fires
         ->assertSee('Update the rule?');
 });
 
-it('CorrectionDivergenceToast guards against cross-user events (T-07-09)', function (): void {
+it('CorrectionDivergenceToast guards against cross-user events', function (): void {
     $ruleId = seedDivergenceRule($this->user, $this->streaming->id);
     $foreignUserId = 9999;
 

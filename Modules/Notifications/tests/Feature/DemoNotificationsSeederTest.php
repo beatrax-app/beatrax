@@ -292,7 +292,7 @@ function dnsHasDeadLink(User $user): bool
     return false;
 }
 
-it('produces rows covering all 8 trigger types (D-41)', function (): void {
+it('produces rows covering all 8 trigger types', function (): void {
     $users = dnsSeedFixtures();
     $user = $users['demo-1@beatrax.local'];
 
@@ -311,7 +311,7 @@ it('produces rows covering all 8 trigger types (D-41)', function (): void {
     ]);
 });
 
-it('produces every interesting state: unread, read, dismissed, resolved, and a dead link (D-41)', function (): void {
+it('produces every interesting state: unread, read, dismissed, resolved, and a dead link', function (): void {
     $users = dnsSeedFixtures();
     $user = $users['demo-1@beatrax.local'];
 
@@ -339,7 +339,7 @@ it('keeps the unread count strictly between 0 and the total, so the nav badge sh
     expect($unread)->toBeLessThan($total);
 });
 
-it('fires ZERO OS notifications during the seed run (D-43)', function (): void {
+it('fires ZERO OS notifications during the seed run', function (): void {
     $users = dnsSeedFixtures();
 
     Http::fake();
@@ -348,7 +348,7 @@ it('fires ZERO OS notifications during the seed run (D-43)', function (): void {
     Http::assertNothingSent();
 });
 
-it('is idempotent: running the seeder twice yields the same row count (D-05)', function (): void {
+it('is idempotent: running the seeder twice yields the same row count', function (): void {
     $users = dnsSeedFixtures();
     $user = $users['demo-1@beatrax.local'];
 
@@ -363,7 +363,7 @@ it('is idempotent: running the seeder twice yields the same row count (D-05)', f
     Http::assertNothingSent();
 });
 
-it('reaches 50+ rows when the volume knob is used (Req 2)', function (): void {
+it('reaches 50+ rows when the volume knob is used', function (): void {
     $users = dnsSeedFixtures();
     $user = $users['demo-1@beatrax.local'];
 

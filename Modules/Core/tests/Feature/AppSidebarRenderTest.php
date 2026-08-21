@@ -63,7 +63,7 @@ it('renders the plain "local" account caption for a non-developer', function ():
     expect($html)->not->toContain('developer · local');
 });
 
-it('renders the brand row literal "beatrax" (post-rename lock per D-10)', function (): void {
+it('renders the brand row literal "beatrax"', function (): void {
     $user = asbUser(true, 'asb-brand');
 
     $component = Livewire::actingAs($user)->test(AppSidebar::class);

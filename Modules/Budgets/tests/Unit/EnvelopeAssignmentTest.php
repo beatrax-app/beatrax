@@ -27,7 +27,7 @@ beforeEach(function (): void {
     $this->periodB = app(PeriodQuery::class)->next($this->periodA);
 });
 
-it('stores a different assigned amount for the same category in two different months (Req 1)', function (): void {
+it('stores a different assigned amount for the same category in two different months', function (): void {
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->periodA->start, 20000);
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->periodB->start, 30000);
 
@@ -59,7 +59,7 @@ it('upserts rather than duplicating when the same (category, period) is set twic
     $this->assertDatabaseHas('envelope_assignments', ['id' => $firstId, 'assigned_minor' => 25000]);
 });
 
-it('tombstones the row when assigned is set back to zero (D-06 absence == 0), not a stored zero row', function (): void {
+it('tombstones the row when assigned is set back to zero (absence == 0), not a stored zero row', function (): void {
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->periodA->start, 20000);
     $this->assertDatabaseHas('envelope_assignments', ['category_id' => $this->groceries->id]);
 
@@ -78,7 +78,7 @@ it('rejects a category the user does not own and that is not global (IDOR)', fun
     $this->assertDatabaseMissing('envelope_assignments', ['category_id' => $foreign->id]);
 });
 
-it('stores period_start as a bare Y-m-d (no 00:00:00 trap) even when written through the model (WR-05)', function (): void {
+it('stores period_start as a bare Y-m-d (no 00:00:00 trap) even when written through the model', function (): void {
     // Writing through the Eloquent model (a factory, a future call site) must
     // agree with EnvelopeWriter's raw storage format, or the fold's exact
     // string match silently zeroes the envelope.
@@ -103,13 +103,13 @@ it('stores period_start as a bare Y-m-d (no 00:00:00 trap) even when written thr
     expect($assignment->fresh()?->period_start)->toBeInstanceOf(CarbonImmutable::class);
 });
 
-it('never treats category_budgets as an authoritative write target for envelope assignment (Req 1)', function (): void {
+it('never treats category_budgets as an authoritative write target for envelope assignment', function (): void {
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->periodA->start, 20000);
 
     $this->assertDatabaseMissing('category_budgets', ['category_id' => $this->groceries->id]);
 });
 
-it('stores period_start written as a CarbonImmutable instance as a bare Y-m-d string (WR-05)', function (): void {
+it('stores period_start written as a CarbonImmutable instance as a bare Y-m-d string', function (): void {
     $assignment = EnvelopeAssignment::create([
         'user_id' => $this->user->id,
         'category_id' => $this->groceries->id,

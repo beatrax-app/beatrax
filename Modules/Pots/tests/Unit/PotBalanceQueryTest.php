@@ -142,7 +142,7 @@ it('unallocatedMinor goes negative and isOverAllocated true when real balance < 
     expect($rec->isOverAllocated)->toBeTrue();
 });
 
-it('reconciliation excludes archived pots from allocated (D-09)', function (): void {
+it('reconciliation excludes archived pots from allocated', function (): void {
     potAccountTx($this->user->id, $this->account->id, $this->run->id, 50000);
 
     $activePot = Pot::factory()->create([
@@ -166,7 +166,7 @@ it('reconciliation excludes archived pots from allocated (D-09)', function (): v
     expect($rec->unallocatedMinor)->toBe(40000);  // 500 - 100 = 400
 });
 
-it('unallocated is derived and never read from a stored column (D-01)', function (): void {
+it('unallocated is derived and never read from a stored column', function (): void {
     potAccountTx($this->user->id, $this->account->id, $this->run->id, 50000);
 
     $pot = Pot::factory()->create([

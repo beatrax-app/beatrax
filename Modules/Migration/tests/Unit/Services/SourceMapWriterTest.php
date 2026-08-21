@@ -44,7 +44,7 @@ it('record() called twice for the same key yields exactly one migration_source_m
     expect($count)->toBe(1);
 });
 
-it('natural-key fallback resolves an entity whose source id is null (D-10)', function (): void {
+it('natural-key fallback resolves an entity whose source id is null', function (): void {
     $this->writer->record($this->user, new SourceMapKey('nynab', 'payee', null, 'albert heijn'), 'counterparty', 7);
 
     expect($this->writer->resolve($this->user, new SourceMapKey('nynab', 'payee', null, 'albert heijn')))->toBe(7);
@@ -67,7 +67,7 @@ it('record() called twice with a null source_external_id (natural key path) yiel
     expect($count)->toBe(1);
 });
 
-it('baseline rows capture the source field values at import time (D-11)', function (): void {
+it('baseline rows capture the source field values at import time', function (): void {
     $this->writer->record($this->user, new SourceMapKey('ynab4', 'category', 'grocery-key'), 'category', 42, [
         'name' => 'Groceries',
         'kind' => 'expense',

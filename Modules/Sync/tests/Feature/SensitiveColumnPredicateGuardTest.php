@@ -98,7 +98,7 @@ function sensitiveColumnGuardAllowlist(): array
     return $allowlist;
 }
 
-it('has zero uncoded sensitive-column predicate/read/write offenders across production Modules/**/*.php (D-09)', function (): void {
+it('has zero uncoded sensitive-column predicate/read/write offenders across production Modules/**/*.php', function (): void {
     $columns = sensitiveColumnGuardBareColumns();
     $markers = sensitiveColumnGuardCodecMarkers();
     $allowlist = sensitiveColumnGuardAllowlist();

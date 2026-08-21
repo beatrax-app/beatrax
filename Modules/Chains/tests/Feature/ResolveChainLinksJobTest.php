@@ -234,7 +234,7 @@ it('ConfirmImport dispatches via DispatchesChainResolution contract (not via int
     expect($confirmImport)->not->toContain('Modules\\Chains\\Internal\\Jobs\\');
 });
 
-it('ConfirmImport dispatch happens AFTER the transaction closure (D-103, Pitfall 3)', function (): void {
+it('ConfirmImport dispatch happens AFTER the transaction closure', function (): void {
     // The dispatch site must sit below the close of the transaction() block;
     // asserted by line-number arithmetic on the canonical method.
     $source = (string) file_get_contents(base_path('Modules/Import/Public/Actions/ConfirmImport.php'));

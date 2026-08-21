@@ -321,7 +321,7 @@ it('a malformed relay blob is drained and deleted (terminal-invalid) — never r
     expect($pending)->toBe([]);
 });
 
-it('drainPairingFrames() never throws when no local self-identity exists yet (LOW-02 posture)', function (): void {
+it('drainPairingFrames() never throws when no local self-identity exists yet', function (): void {
     $this->crossDevicePairingSetUp();
 
     // User 999999 has no device_registry row and no identity file.

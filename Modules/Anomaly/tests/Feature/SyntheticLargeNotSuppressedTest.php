@@ -20,7 +20,7 @@ beforeEach(function (): void {
 
 afterEach(fn () => CarbonImmutable::setTestNow());
 
-it('does not let a per-merchant large band mute a first-time merchant synthetic large (CR-02)', function (): void {
+it('does not let a per-merchant large band mute a first-time merchant synthetic large', function (): void {
     $user = AnomalyCorpusSeeder::makeUser();
 
     // first-time-large: a €185.00 charge to a never-before-seen merchant.
@@ -54,7 +54,7 @@ it('does not let a per-merchant large band mute a first-time merchant synthetic 
         ->and($alert->reasons)->toContain('first_time');
 });
 
-it('still mutes a genuine merchant-baseline large via the merchant band (CR-02 leaves real bands working)', function (): void {
+it('still mutes a genuine merchant-baseline large via the merchant band', function (): void {
     $user = AnomalyCorpusSeeder::makeUser();
 
     // large-above: 5 stable €9.99 Spotify baselines plus one €23.49 outlier,

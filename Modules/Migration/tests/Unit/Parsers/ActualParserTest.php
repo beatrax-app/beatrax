@@ -36,7 +36,7 @@ it('ActualParser: format() returns actual', function (): void {
     expect($parser->format())->toBe('actual');
 });
 
-it('ActualParser: parses the golden fixture into a populated MigrationBatch — Req 1/2/3/4/5/7', function (): void {
+it('ActualParser: parses the golden fixture into a populated MigrationBatch', function (): void {
     $parser = app(ActualParser::class);
 
     $batch = $parser->parse($this->extracted, $this->user, 1);
@@ -81,7 +81,7 @@ it('ActualParser: parses the golden fixture into a populated MigrationBatch — 
     expect($transferLegs)->toHaveCount(2);
 });
 
-it('ActualParser: a FLAT goal_def maps to exactly one MigrationGoalDto — Req 8', function (): void {
+it('ActualParser: a FLAT goal_def maps to exactly one MigrationGoalDto', function (): void {
     $parser = app(ActualParser::class);
     $batch = $parser->parse($this->extracted, $this->user, 1);
 
@@ -89,7 +89,7 @@ it('ActualParser: a FLAT goal_def maps to exactly one MigrationGoalDto — Req 8
     expect($batch->goals->first()->categorySourceExternalId)->toBe('cat-groceries');
 });
 
-it('ActualParser: a NON-FLAT (template) goal_def becomes an UnmappedItemDto, never a lossy flat goal — Req 8', function (): void {
+it('ActualParser: a NON-FLAT (template) goal_def becomes an UnmappedItemDto, never a lossy flat goal', function (): void {
     $parser = app(ActualParser::class);
     $batch = $parser->parse($this->extracted, $this->user, 1);
 
@@ -102,7 +102,7 @@ it('ActualParser: a NON-FLAT (template) goal_def becomes an UnmappedItemDto, nev
     expect($unmappedGoal)->not->toBeNull();
 });
 
-it('ActualParser: the saved-report (custom_reports) row becomes an UnmappedItemDto, never silently dropped — Req 8', function (): void {
+it('ActualParser: the saved-report (custom_reports) row becomes an UnmappedItemDto, never silently dropped', function (): void {
     $parser = app(ActualParser::class);
     $batch = $parser->parse($this->extracted, $this->user, 1);
 
@@ -112,7 +112,7 @@ it('ActualParser: the saved-report (custom_reports) row becomes an UnmappedItemD
     expect($unmappedReport)->not->toBeNull();
 });
 
-it('ActualParser: a schedules row becomes an UnmappedItemDto AND a preserved note (Open Q4 note-only descope) — Req 8', function (): void {
+it('ActualParser: a schedules row becomes an UnmappedItemDto AND a preserved note, never an imported schedule', function (): void {
     $parser = app(ActualParser::class);
     $batch = $parser->parse($this->extracted, $this->user, 1);
 
@@ -127,7 +127,7 @@ it('ActualParser: a schedules row becomes an UnmappedItemDto AND a preserved not
     expect($unmappedSchedule)->not->toBeNull();
 });
 
-it('ActualParser: BOTH the non-flat goal and the saved-report extra appear in the unmapped set — neither is silently dropped (Req 8)', function (): void {
+it('ActualParser: BOTH the non-flat goal and the saved-report extra appear in the unmapped set — neither is silently dropped', function (): void {
     $parser = app(ActualParser::class);
     $batch = $parser->parse($this->extracted, $this->user, 1);
 
@@ -135,7 +135,7 @@ it('ActualParser: BOTH the non-flat goal and the saved-report extra appear in th
     expect($unmappedIds)->toContain('cat-emergency-fund', 'report-1', 'sched-1');
 });
 
-it('ActualParser: rejects the corrupt fixture with UnrecognizedMigrationFileException — Req 1 reject-not-partial', function (): void {
+it('ActualParser: rejects the corrupt fixture with UnrecognizedMigrationFileException, importing nothing partially', function (): void {
     $parser = app(ActualParser::class);
     $extracted = MigrationFixturePaths::extractZip(MigrationFixturePaths::corruptZip());
 

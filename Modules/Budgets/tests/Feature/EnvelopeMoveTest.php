@@ -35,7 +35,7 @@ beforeEach(function (): void {
     ]);
 });
 
-it('moves €20 A→B: A available drops €20, B available rises €20, to-budget is unchanged (Req 5)', function (): void {
+it('moves €20 A→B: A available drops €20, B available rises €20, to-budget is unchanged', function (): void {
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->period->start, 50000);
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->dining->id, $this->period->start, 10000);
 
@@ -74,7 +74,7 @@ it('undoes a move, restoring both envelopes to their pre-move values', function 
     expect(DB::table('envelope_moves')->where('category_id', $this->groceries->id)->where('counterpart_category_id', $this->dining->id)->count())->toBe(0);
 });
 
-it('permits a move that leaves the source envelope negative -- never balance-blocked (Req 8 / Pitfall 1)', function (): void {
+it('permits a move that leaves the source envelope negative -- never balance-blocked', function (): void {
     // No assignment at all: Groceries available is 0 before the move.
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->dining->id, $this->period->start, 10000);
 
@@ -85,7 +85,7 @@ it('permits a move that leaves the source envelope negative -- never balance-blo
     expect($after['rows'][$this->groceries->id]->availableMinor)->toBe(-2000);
 });
 
-it('undoes the exact paired rows via move_group_id when two identical moves share a wall-clock second (WR-04)', function (): void {
+it('undoes the exact paired rows via move_group_id when two identical moves share a wall-clock second', function (): void {
     // Freeze the clock so both moves get an identical second-precision
     // created_at — the ambiguity that previously let undoMove() delete the
     // wrong counterpart.

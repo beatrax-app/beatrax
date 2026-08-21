@@ -163,7 +163,7 @@ it('rejects a leg whose category is not visible to the user', function (): void 
     expect(TransactionSplit::query()->where('transaction_id', $tx->id)->count())->toBe(0);
 });
 
-it('canonicalises an empty-string note to null on write (WR-04)', function (): void {
+it('canonicalises an empty-string note to null on write', function (): void {
     $tx = splitTx($this->user->id, $this->account->id, $this->run->id, -8000);
 
     app(SaveTransactionSplit::class)->save($this->user, $tx->id, [
@@ -177,7 +177,7 @@ it('canonicalises an empty-string note to null on write (WR-04)', function (): v
     }
 });
 
-it('does not churn a note op when the stored value is empty string and the incoming value is null (WR-04)', function (): void {
+it('does not churn a note op when the stored value is empty string and the incoming value is null', function (): void {
     $tx = splitTx($this->user->id, $this->account->id, $this->run->id, -8000);
 
     app(SaveTransactionSplit::class)->save($this->user, $tx->id, [

@@ -88,7 +88,7 @@ beforeEach(function (): void {
     ]);
 });
 
-it('renders the next ICS settlement amount when one is upcoming (Phase 5 → Phase 10 ported)', function (): void {
+it('renders the next ICS settlement amount when one is upcoming', function (): void {
     CardStatement::query()->create([
         'user_id' => $this->user->id,
         'account_id' => $this->ics->id,
@@ -107,7 +107,7 @@ it('renders the next ICS settlement amount when one is upcoming (Phase 5 → Pha
         ->assertSeeText('Next ICS settlement');
 });
 
-it('hides the Forecast highlights tile when no settlement is upcoming AND no projection exists (Phase 5 → Phase 10 ported)', function (): void {
+it('hides the Forecast highlights tile when no settlement is upcoming AND no projection exists', function (): void {
     $this->actingAs($this->user)
         ->get('/')
         ->assertOk()
@@ -245,7 +245,7 @@ it('pluralises the active-shortfall-count line correctly (singular vs plural)', 
         ->assertSeeText('1 active shortfall window');
 });
 
-it('links to /forecast (replaces the non-link Phase 5 tile)', function (): void {
+it('links the Forecast highlights tile to /forecast', function (): void {
     CardStatement::query()->create([
         'user_id' => $this->user->id,
         'account_id' => $this->ics->id,

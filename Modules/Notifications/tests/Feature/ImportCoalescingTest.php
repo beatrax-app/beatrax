@@ -67,7 +67,7 @@ function icNotificationBody(int $userId, string $triggerType): ?string
     return $body;
 }
 
-it('produces EXACTLY 1 import_finished row for a 500-row batch, not 500 (Req 10)', function (): void {
+it('produces EXACTLY 1 import_finished row for a 500-row batch, not 500', function (): void {
     $user = icImportUser('ic-500-row');
 
     icDispatchBatch($user, 500, ['csv']);

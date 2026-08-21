@@ -71,21 +71,6 @@ parameters:
             - app/Providers/NativeAppServiceProvider.php
     reportUnmatchedIgnoredErrors: true
     ignoreErrors:
-        # Money::format() catches the failure brick/money's own formatter can
-        # raise. `formatToLocale()` declares no throws, so PHPStan calls the
-        # catch dead — but the throw happens one level down, inside the
-        # `new NumberFormatter` that MoneyLocaleFormatter constructs, which it
-        # cannot see through. It is not hypothetical: the mobile PHP build's
-        # ext-intl cannot build a formatter for nl_NL, and every rendered
-        # amount funnels through this method, so an uncaught one is a 500 on
-        # any page showing money. MoneyFormatTest pins both the throwing path
-        # and the fallback output, so the branch is covered, not assumed.
-        -
-            message: '#Dead catch - (IntlException|ValueError) is never thrown in the try block\.#'
-            path: Modules/Ledger/Public/ValueObjects/Money.php
-        -
-            message: '#Method Modules\\Ledger\\Public\\ValueObjects\\Money::formatWithoutIcu\(\) is unused\.#'
-            path: Modules/Ledger/Public/ValueObjects/Money.php
         # Single permitted facade + config() use in module code: the
         # Cache::store() call and the config('cache.locks_store') read inside
         # LockStore::forUniqueJobs(). Laravel's queue infrastructure invokes

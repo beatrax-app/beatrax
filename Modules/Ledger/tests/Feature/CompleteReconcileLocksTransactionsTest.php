@@ -53,7 +53,7 @@ it('is scoped by user_id — never transitions another user\'s transactions', fu
     expect(DB::table('transactions')->where('id', $otherTx->id)->value('status'))->toBe('cleared');
 });
 
-it('dispatches a reconciled event only for rows the update actually transitioned (WR-02)', function (): void {
+it('dispatches a reconciled event only for rows the update actually transitioned', function (): void {
     Event::fake([TransactionMutated::class]);
 
     $inWindowA = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'cleared', 'posted_at' => '2026-06-10']);

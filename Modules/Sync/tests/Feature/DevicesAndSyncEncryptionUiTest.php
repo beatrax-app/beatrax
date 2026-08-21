@@ -56,7 +56,7 @@ it('(b) single-device (sync off), app-lock set, encryption off: shows the blue o
         ->assertSee('Enable at-rest encryption');
 });
 
-it('(b2) synced, encryption off: shows the transient mandatory "Securing your data…" state with NO CTA and NO decline (D-07)', function (): void {
+it('(b2) synced, encryption off: shows the transient mandatory "Securing your data…" state with NO CTA and NO decline', function (): void {
     $user = encryptionUiUser('encryption-ui-mandatory');
     $this->actingAs($user);
 
@@ -105,7 +105,7 @@ it('the enable-encryption confirm step discloses amounts + search-index plaintex
         ->assertDontSee('your data is now safe from that device');
 });
 
-it('(d) startRemove opens the revocation modal for a non-self device with the honest D-06 copy', function (): void {
+it('(d) startRemove opens the revocation modal for a non-self device with copy that promises key rotation, never a remote wipe', function (): void {
     $user = encryptionUiUser('encryption-ui-remove-open');
     $this->actingAs($user);
 

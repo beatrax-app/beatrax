@@ -76,7 +76,7 @@ it('deep-links to the guided ICS import anchor and carries no transaction data i
     expect((string) $row->body)->not->toContain('€');
 });
 
-it('WR-12: dedups a same-DAY re-dispatch but fires a second nudge for a different-day statement in the same month (Pitfall 4)', function (): void {
+it('dedups a same-DAY re-dispatch but fires a second nudge for a different-day statement in the same month', function (): void {
     $user = isrtUser('isrt-day-dedup');
 
     isrtFire($user, CarbonImmutable::parse('2026-07-15'), messageId: 1);

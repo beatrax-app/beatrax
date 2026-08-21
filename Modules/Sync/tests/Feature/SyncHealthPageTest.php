@@ -45,7 +45,7 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-it('renders /dev/sync-health for a developer and shows only the acting user\'s quarantine rows (Pitfall 4 isolation, T-11-13)', function (): void {
+it('renders /dev/sync-health for a developer and shows only the acting user\'s quarantine rows', function (): void {
     $u1 = syncHealthUser('sync-health-u1');
     $u2 = syncHealthUser('sync-health-u2');
 
@@ -126,7 +126,7 @@ it('renders the calm empty state when the acting user has zero quarantine rows',
     );
 });
 
-it('table honours the same 7-day window as the header — old rows do not render and copy stays truthful (WR-03)', function (): void {
+it('table honours the same 7-day window as the header — old rows do not render and copy stays truthful', function (): void {
     $u1 = syncHealthUser('sync-health-window');
 
     /** @var DatabaseManager $db */
@@ -152,7 +152,7 @@ it('table honours the same 7-day window as the header — old rows do not render
     expect(preg_match('#data-testid="quarantine-count"[^>]*>\s*0\s*<#s', $html))->toBe(1);
 });
 
-it('returns 404 from /dev/sync-health for a non-developer (EnsureDeveloperMode gate, T-11-14)', function (): void {
+it('returns 404 from /dev/sync-health for a non-developer (EnsureDeveloperMode gate)', function (): void {
     syncHealthUser('sync-health-seed');
     $nonDev = syncHealthUser('sync-health-nondev', false);
 

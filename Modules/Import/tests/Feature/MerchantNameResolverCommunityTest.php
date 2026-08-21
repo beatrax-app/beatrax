@@ -64,7 +64,7 @@ it('returns the community-generalized name when only the generalized pattern mat
     expect($resolver->resolve('BCK*SHELL PIETER NIEUW *0123', $this->user->id))->toBe('Shell — Pieter (generalized)');
 });
 
-it('lets a user-exact alias win over a matching community row (D-11 + D-15 precedence)', function (): void {
+it('lets a user-exact alias win over a matching community row', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
 

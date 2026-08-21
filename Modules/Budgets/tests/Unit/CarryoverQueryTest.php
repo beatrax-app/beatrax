@@ -86,7 +86,7 @@ function carryoverTx(int $userId, int $accountId, int $runId, int $settledMinor,
     ]);
 }
 
-it('computes to-budget as income plus carryover minus assigned, to the cent, and moves symmetrically on assign/unassign (Req 2)', function (): void {
+it('computes to-budget as income plus carryover minus assigned, to the cent, and moves symmetrically on assign/unassign', function (): void {
     $period = app(PeriodQuery::class)->current();
 
     carryoverTx($this->user->id, $this->account->id, $this->run->id, 100000, null, $period->start);
@@ -116,7 +116,7 @@ it('computes to-budget as income plus carryover minus assigned, to the cent, and
     expect($result['toBudgetMinor'])->toBe(100000);
 });
 
-it('permits assigning more than available, showing a negative to-budget without throwing (Req 8)', function (): void {
+it('permits assigning more than available, showing a negative to-budget without throwing', function (): void {
     $period = app(PeriodQuery::class)->current();
 
     // No income this period at all.
@@ -134,7 +134,7 @@ it('permits assigning more than available, showing a negative to-budget without 
     expect($result['toBudgetMinor'])->not->toBeFloat();
 });
 
-it('carries a positive leftover pool forward into the next period (D-10 sticky money)', function (): void {
+it('carries a positive leftover pool forward into the next period', function (): void {
     $current = app(PeriodQuery::class)->current();
     $next = app(PeriodQuery::class)->next($current);
 
@@ -155,7 +155,7 @@ it('carries a positive leftover pool forward into the next period (D-10 sticky m
     expect($result['toBudgetMinor'])->toBe(80000);
 });
 
-it('starts the genesis period with zero pool carry and zero carried-in (D-12b)', function (): void {
+it('starts the genesis period with zero pool carry and zero carried-in', function (): void {
     $period = app(PeriodQuery::class)->current();
 
     // Negative on purpose: SpendByCategoryQuery counts spend by amount sign,
@@ -179,7 +179,7 @@ it('starts the genesis period with zero pool carry and zero carried-in (D-12b)',
     expect($row->availableMinor)->toBe(60000 - 50000);
 });
 
-it('surfaces non-EUR settled spend via nonEurSpentMinor without altering availableMinor or overspentCount (CR-01)', function (): void {
+it('surfaces non-EUR settled spend via nonEurSpentMinor without altering availableMinor or overspentCount', function (): void {
     $period = app(PeriodQuery::class)->current();
 
     // SpendByCategoryQuery keys spend by settled_currency, so this USD charge
@@ -227,7 +227,7 @@ it('surfaces non-EUR settled spend via nonEurSpentMinor without altering availab
     expect($row->nonEurSpentMinor)->toBe(999);
 });
 
-it('shows income zero for a future period unless real income transactions exist there (Req 7/Req 9 edge)', function (): void {
+it('shows income zero for a future period unless real income transactions exist there', function (): void {
     $current = app(PeriodQuery::class)->current();
     $future = $current;
     for ($i = 0; $i < 3; $i++) {

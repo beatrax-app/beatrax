@@ -55,7 +55,7 @@ it('correct PIN via Livewire component unlocks the session and redirects to dash
     expect($lockState->isLocked($session))->toBeFalse();
 });
 
-it('correct PIN during an active backoff window shows backoff copy, not "Incorrect PIN" (WR-05)', function (): void {
+it('correct PIN during an active backoff window shows backoff copy, not "Incorrect PIN"', function (): void {
     $user = User::query()->create([
         'username' => 'backoff-dora',
         'password' => 'whatever-password',
@@ -110,7 +110,7 @@ it('wrong PIN via Livewire component sets flash message and leaves the session l
         ->assertSee('Incorrect PIN');
 });
 
-it('the rendered lock screen never contains a bound pin property in the snapshot (WR-10)', function (): void {
+it('the rendered lock screen never contains a bound pin property in the snapshot', function (): void {
     $user = User::query()->create([
         'username' => 'snapshot-erin',
         'password' => 'whatever-password',

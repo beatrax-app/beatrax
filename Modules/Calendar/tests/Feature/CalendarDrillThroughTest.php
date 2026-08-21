@@ -64,7 +64,7 @@ it('renders a link to /recurring/series/{seriesId} for each day-panel entry', fu
         ->assertSee('/recurring/series/'.$series->id, false);
 });
 
-it('ignores an impossible tampered selectDay date instead of throwing (WR-06)', function (): void {
+it('ignores an impossible tampered selectDay date instead of throwing', function (): void {
     $user = cdtUser('cdt-tamper-date');
     cdtSeries($user, 'Tamper Series');
 

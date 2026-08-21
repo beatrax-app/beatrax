@@ -126,7 +126,7 @@ it('marks a past-day entry as paid when a matching occurrence exists within the 
         ->assertSee('paid', false);
 });
 
-it('renders past-day balance cells from actual transactions, not the computing em-dash (WR-09, D-07)', function (): void {
+it('renders past-day balance cells from actual transactions, not the computing em-dash', function (): void {
     $db = app(DatabaseManager::class);
     $user = cppdsUser('cppds-actuals');
     $series = cppdsSeries($user, 'Actuals Series', CarbonImmutable::parse('2026-06-05'));

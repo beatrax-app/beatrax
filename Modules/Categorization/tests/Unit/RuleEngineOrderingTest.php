@@ -86,7 +86,7 @@ it('tiebreaks equal-priority matching rules by id ascending', function (): void 
         ->toBe([$first->id, $second->id]);
 });
 
-it('tiebreaks same-position rule_actions by id ascending (WR-02)', function (): void {
+it('tiebreaks same-position rule_actions by id ascending', function (): void {
     $rule = makeOrderingRule($this->user->id, 10, 'spotify');
     // makeOrderingRule() already seeds one position=0 category action —
     // capture its id before adding two more rows at the SAME position.

@@ -234,5 +234,5 @@ it('loopback session transfers a plaintext OpLogEntry payload end-to-end', funct
         ->first();
 
     expect($persisted)->not->toBeNull('Op payload must be persisted to op_log_entries after receiveOps()');
-    expect($persisted->signature)->toBe($realSig, 'Persisted signature must match original Ed25519 sig (Pitfall 7 guard)');
+    expect($persisted->signature)->toBe($realSig, 'Persisted signature must match original Ed25519 sig');
 });

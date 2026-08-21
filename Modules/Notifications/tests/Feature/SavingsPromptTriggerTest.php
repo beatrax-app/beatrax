@@ -101,7 +101,7 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-it('emits exactly one prompt for a seeded savings insight (Req 7)', function (): void {
+it('emits exactly one prompt for a seeded savings insight', function (): void {
     $user = sptUser('spt-seeded-insight');
     sptChain(app(DatabaseManager::class), $user->id, 'Spotify', 999);
 
@@ -110,7 +110,7 @@ it('emits exactly one prompt for a seeded savings insight (Req 7)', function ():
     expect(sptPromptCount($user->id))->toBe(1);
 });
 
-it('emits nothing for an insight already dismissed in savings_insight_dismissals (Req 7)', function (): void {
+it('emits nothing for an insight already dismissed in savings_insight_dismissals', function (): void {
     $user = sptUser('spt-dismissed-insight');
     $seriesId = sptChain(app(DatabaseManager::class), $user->id, 'Spotify', 999);
 
@@ -123,7 +123,7 @@ it('emits nothing for an insight already dismissed in savings_insight_dismissals
     expect(sptPromptCount($user->id))->toBe(0);
 });
 
-it('produces still exactly one row when the job runs a second time (D-06 stable insight key)', function (): void {
+it('produces still exactly one row when the job runs a second time (stable insight key)', function (): void {
     $user = sptUser('spt-idempotent');
     sptChain(app(DatabaseManager::class), $user->id, 'Spotify', 999);
 
@@ -133,7 +133,7 @@ it('produces still exactly one row when the job runs a second time (D-06 stable 
     expect(sptPromptCount($user->id))->toBe(1);
 });
 
-it('still lands the inbox row with the shipped OFF default, but suppresses delivery with reason trigger_disabled (D-16/D-08)', function (): void {
+it('still lands the inbox row with the shipped OFF default, but suppresses delivery with reason trigger_disabled', function (): void {
     $user = sptUser('spt-off-by-default');
     sptChain(app(DatabaseManager::class), $user->id, 'Spotify', 999);
 

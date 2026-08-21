@@ -58,7 +58,7 @@ beforeEach(function (): void {
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->period->start, 40000);
 });
 
-it('leaves every envelope balance identical when the fold is recomputed over unchanged data (Req 9)', function (): void {
+it('leaves every envelope balance identical when the fold is recomputed over unchanged data', function (): void {
     $this->tx = Transaction::create([
         'user_id' => $this->user->id,
         'account_id' => $this->account->id,

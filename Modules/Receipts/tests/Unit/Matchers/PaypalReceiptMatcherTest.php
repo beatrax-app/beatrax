@@ -38,7 +38,7 @@ it('claims @paypal.com senders via exact domain match', function (): void {
     expect($matcher->canHandle(paypalInbox('service@paypal.com')))->toBeTrue();
 });
 
-it('rejects look-alike paypal.com.attacker.example domains (spoofing defence T-07-04)', function (): void {
+it('rejects look-alike paypal.com.attacker.example domains (spoofing defence)', function (): void {
     $matcher = paypalMatcher();
     expect($matcher->canHandle(paypalInbox('service@paypal.com.attacker.example')))->toBeFalse();
 });

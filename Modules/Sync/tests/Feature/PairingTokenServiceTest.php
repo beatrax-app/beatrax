@@ -61,7 +61,7 @@ it('it_rejects_already_used_token', function (): void {
     expect($second)->toBeFalse();
 });
 
-it('does not shorten the token TTL when the responder accepts early (CR-02)', function (): void {
+it('does not shorten the token TTL when the responder accepts early', function (): void {
     $user = tokenUser('token-early-accept');
 
     /** @var PairingTokenService $service */
@@ -87,7 +87,7 @@ it('does not shorten the token TTL when the responder accepts early (CR-02)', fu
     expect($newExpiry->greaterThanOrEqualTo($originalExpiry))->toBeTrue();
 });
 
-it('extends the token TTL when the responder accepts near the original expiry (CR-02)', function (): void {
+it('extends the token TTL when the responder accepts near the original expiry', function (): void {
     $user = tokenUser('token-late-accept');
 
     /** @var PairingTokenService $service */
@@ -112,7 +112,7 @@ it('extends the token TTL when the responder accepts near the original expiry (C
     expect($newExpiry->greaterThan($originalExpiry))->toBeTrue();
 });
 
-it('rejects an accept whose responder public key is not valid 64-char hex (WR-01)', function (): void {
+it('rejects an accept whose responder public key is not valid 64-char hex', function (): void {
     $user = tokenUser('token-bad-key');
 
     /** @var PairingTokenService $service */
@@ -127,7 +127,7 @@ it('rejects an accept whose responder public key is not valid 64-char hex (WR-01
     expect($result)->toBeFalse();
 });
 
-it('prunes expired and terminal token rows on the next issue (WR-04)', function (): void {
+it('prunes expired and terminal token rows on the next issue', function (): void {
     $user = tokenUser('token-prune');
 
     /** @var PairingTokenService $service */

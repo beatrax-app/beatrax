@@ -121,7 +121,7 @@ it('defaults balance to spendable-kind accounts when balanceAccountIds is null (
     unset($asnId, $icsId);
 });
 
-it('returns no entries for an explicit empty visibleAccountIds array (deselect-all, CR-01)', function (): void {
+it('returns no entries for an explicit empty visibleAccountIds array (deselect-all)', function (): void {
     $db = app(DatabaseManager::class);
     $user = cqapUser('deselect-all');
 
@@ -141,7 +141,7 @@ it('returns no entries for an explicit empty visibleAccountIds array (deselect-a
     expect($totalEntries)->toBe(0);
 });
 
-it('drops a foreign account id from visibleAccountIds (T-06-02)', function (): void {
+it('drops a foreign account id from visibleAccountIds', function (): void {
     $db = app(DatabaseManager::class);
     $owner = cqapUser('foreign-visible-owner');
     $other = cqapUser('foreign-visible-other');
@@ -164,7 +164,7 @@ it('drops a foreign account id from visibleAccountIds (T-06-02)', function (): v
     expect($totalEntries)->toBe(0);
 });
 
-it('drops a foreign account id from balanceAccountIds (T-06-02)', function (): void {
+it('drops a foreign account id from balanceAccountIds', function (): void {
     $db = app(DatabaseManager::class);
     $owner = cqapUser('foreign-balance-owner');
     $other = cqapUser('foreign-balance-other');

@@ -30,7 +30,7 @@ it('mounts with a 200 status for an authenticated user', function (): void {
         ->assertStatus(200);
 });
 
-it('blocks enable-sync with the app-lock gate copy when no app-lock is configured (D-02)', function (): void {
+it('blocks enable-sync with the app-lock gate copy when no app-lock is configured', function (): void {
     $user = devicesSyncSettingsUser('devices-nolock');
     $this->actingAs($user);
 
@@ -73,7 +73,7 @@ it('it_can_rename_a_device', function (): void {
     expect($name)->toBe('New Name');
 });
 
-it('refreshes the enable-sync gate live when an app-lock-configured event arrives (D-02)', function (): void {
+it('refreshes the enable-sync gate live when an app-lock-configured event arrives', function (): void {
     // mount() computes the app-lock flag once, so without the listener the
     // "set an app lock first" gate stayed up until a manual page reload even
     // after the sibling section had just configured one.
@@ -102,7 +102,7 @@ it('refreshes the enable-sync gate live when an app-lock-configured event arrive
         ->assertSet('flashMessage', '');
 });
 
-it('opens the hosted pairing modal when the open-pairing-modal event is dispatched (D-11)', function (): void {
+it('opens the hosted pairing modal when the open-pairing-modal event is dispatched', function (): void {
     // The modal renders unconditionally and opens on an event, so Flux sees a
     // real false-to-true transition. Mounted already-open behind a conditional
     // it never fired, and the pairing button appeared to do nothing.
@@ -116,7 +116,7 @@ it('opens the hosted pairing modal when the open-pairing-modal event is dispatch
         ->assertSet('step', 'choose_direction');
 });
 
-it('flags an http:// relay endpoint as insecure and renders the warning, https:// as secure (T-13-08)', function (): void {
+it('flags an http:// relay endpoint as insecure and renders the warning, https:// as secure', function (): void {
     $user = devicesSyncSettingsUser('devices-relay-insecure');
     $this->actingAs($user);
 
@@ -154,7 +154,7 @@ it('flags an http:// relay endpoint as insecure and renders the warning, https:/
     }
 });
 
-it('blocks a relay-endpoint save behind the app-lock gate (T-13-18)', function (): void {
+it('blocks a relay-endpoint save behind the app-lock gate', function (): void {
     $user = devicesSyncSettingsUser('devices-relay-gate');
     $this->actingAs($user);
 

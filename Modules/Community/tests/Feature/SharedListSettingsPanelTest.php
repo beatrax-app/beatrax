@@ -10,7 +10,7 @@ beforeEach(function (): void {
     $this->actingAs($this->user);
 });
 
-it('renders all three toggles with Toggle 3 disabled and a version-agnostic inline note (B-5)', function (): void {
+it('renders all three toggles with Toggle 3 disabled and a version-agnostic inline note', function (): void {
     $component = Livewire::test(SharedListSettingsPanel::class);
 
     $html = $component->html();

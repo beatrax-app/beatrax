@@ -44,7 +44,7 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow(null);
 });
 
-it('materializes defaults on first load: entries all ON, balance = spendable set (CR-01)', function (): void {
+it('materializes defaults on first load: entries all ON, balance = spendable set', function (): void {
     $db = app(DatabaseManager::class);
     $user = capUser('cap-defaults');
     $asnId = capAccount($db, $user->id, 'ASN Checking', 'bank');
@@ -58,7 +58,7 @@ it('materializes defaults on first load: entries all ON, balance = spendable set
         ->assertSet('balanceAccountIds', [$asnId]);
 });
 
-it('unchecking one account from the default all-on state hides only that account (CR-01 inversion regression)', function (): void {
+it('unchecking one account from the default all-on state hides only that account', function (): void {
     $db = app(DatabaseManager::class);
     $user = capUser('cap-uncheck-one');
     $asnId = capAccount($db, $user->id, 'ASN Checking', 'bank');
@@ -71,7 +71,7 @@ it('unchecking one account from the default all-on state hides only that account
         ->assertSet('visibleAccountIds', [$paypalId]);
 });
 
-it('persists the explicit everything-off state and a reload keeps every checkbox off (CR-01)', function (): void {
+it('persists the explicit everything-off state and a reload keeps every checkbox off', function (): void {
     $db = app(DatabaseManager::class);
     $user = capUser('cap-all-off');
     $aid = capAccount($db, $user->id, 'ASN Checking', 'bank');
@@ -147,7 +147,7 @@ it('persistAccountPrefs saves choices to user_preferences and a reload reflects 
         ->assertSet('balanceAccountIds', [$aid]);
 });
 
-it('persistAccountPrefs strips foreign account ids before writing to user_preferences (WR-07)', function (): void {
+it('persistAccountPrefs strips foreign account ids before writing to user_preferences', function (): void {
     $db = app(DatabaseManager::class);
     $user = capUser('cap-sanitize');
     $otherUser = capUser('cap-sanitize-owner');

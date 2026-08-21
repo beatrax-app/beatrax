@@ -114,7 +114,7 @@ it('prunes only the dispatching user\'s old rows, leaving another user\'s old ro
     expect(pnjExists($bOldId))->toBeTrue();
 });
 
-it('prunes with no KEK available (locked/headless device) — D-37\'s whole reason for existing', function (): void {
+it('prunes with no KEK available (locked/headless device)', function (): void {
     $user = pnjUser('pnj-kek-less');
     $session = $this->enablesEncryptionForUser($user);
 

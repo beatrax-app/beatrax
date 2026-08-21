@@ -82,7 +82,7 @@ it('after password re-auth a new PIN re-wraps the data key and the same key is r
     sodium_memzero($recoveredDataKey);
 });
 
-it('settings Forgot PIN flow resets the PIN via the account password (WR-02)', function (): void {
+it('settings Forgot PIN flow resets the PIN via the account password', function (): void {
     $user = User::query()->create([
         'username' => 'forgot-ui-user',
         'password' => bcrypt('forgot-ui-pass'),
@@ -219,7 +219,7 @@ it('disable requires the correct PIN and clears all lock material on success', f
     expect((int) $row->failed_attempts)->toBe(0);
 });
 
-it('disable() and re-enable() both delete stale biometric credentials (WR-06)', function (): void {
+it('disable() and re-enable() both delete stale biometric credentials', function (): void {
     $user = User::query()->create([
         'username' => 'stale-cred-user',
         'password' => bcrypt('stale-pass'),

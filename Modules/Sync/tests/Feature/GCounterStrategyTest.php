@@ -70,7 +70,7 @@ it('GCounterStrategy resolves to sum of per-device max values (3 + 5 = 8)', func
     expect($result)->toBe(8);
 });
 
-it('re-replaying the same GCounter ops still yields 8 (no double-count — Pitfall 5)', function (): void {
+it('re-replaying the same GCounter ops still yields 8, with no double-count', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 

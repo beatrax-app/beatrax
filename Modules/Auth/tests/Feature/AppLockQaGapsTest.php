@@ -87,7 +87,7 @@ it('AppLockSettingsSection setPin stores the data key in the session after enabl
 // Defence in depth: enable() must never mint a KEK from an empty PIN or
 // password, whatever the caller did or did not validate first.
 
-it('enable() rejects an empty PIN — never mints a weak/empty-derived KEK (HIGH-02)', function (): void {
+it('enable() rejects an empty PIN — never mints a weak/empty-derived KEK', function (): void {
     $user = User::query()->create([
         'username' => 'high-02-empty-pin-user',
         'password' => bcrypt('a-real-password'),
@@ -104,7 +104,7 @@ it('enable() rejects an empty PIN — never mints a weak/empty-derived KEK (HIGH
     expect($provisioner->isEnabled($user->id))->toBeFalse('a rejected empty-PIN call must never leave a config row behind');
 });
 
-it('enable() rejects an empty account password — never mints a weak/empty-derived KEK (HIGH-02)', function (): void {
+it('enable() rejects an empty account password — never mints a weak/empty-derived KEK', function (): void {
     $user = User::query()->create([
         'username' => 'high-02-empty-password-user',
         'password' => bcrypt('a-real-password'),
@@ -178,7 +178,7 @@ it('idle not elapsed passes through and refreshes last_activity_at', function ()
     expect($isRedirectToLock)->toBeFalse('Session should not be idle-locked when activity was recent');
 });
 
-it('Livewire update requests do NOT refresh last_activity_at (WR-04)', function (): void {
+it('Livewire update requests do NOT refresh last_activity_at', function (): void {
     $user = User::query()->create([
         'username' => 'poll-user',
         'password' => bcrypt('poll-pass'),
@@ -214,7 +214,7 @@ it('Livewire update requests do NOT refresh last_activity_at (WR-04)', function 
     expect((string) $row->last_activity_at)->toBe($staleActivity);
 });
 
-it('POST /lock/activity heartbeat refreshes last_activity_at and returns 204 (WR-04)', function (): void {
+it('POST /lock/activity heartbeat refreshes last_activity_at and returns 204', function (): void {
     $user = User::query()->create([
         'username' => 'heartbeat-user',
         'password' => bcrypt('heartbeat-pass'),

@@ -97,7 +97,7 @@ function donMobileForecastDeliverable(int $userId): NotificationDeliverable
     );
 }
 
-it('fires nothing when SuppressionEvaluator suppresses delivery (D-38 invariant 4)', function (): void {
+it('fires nothing when SuppressionEvaluator suppresses delivery', function (): void {
     $user = donMobileUser('don-mobile-suppressed');
 
     /** @var RecordingDispatchMobileNotification $listener */
@@ -128,7 +128,7 @@ it('reaches the guarded fire path with a deliverable decision (no focus-gate, un
         ->and($listener->fired[0]['deepLinkRoute'])->toBe($deliverable->deepLinkRoute);
 });
 
-it('substitutes the detail-free body when the device hide-details preference is on (D-24)', function (): void {
+it('substitutes the detail-free body when the device hide-details preference is on', function (): void {
     $user = donMobileUser('don-mobile-hide-details');
 
     /** @var DatabaseManager $db */

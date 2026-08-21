@@ -47,7 +47,7 @@ it('MobileLockScreen class exists and is Livewire-registered', function (): void
     expect(class_exists(MobileLockScreen::class))->toBeTrue();
 });
 
-it('biometric success releases the LOCK-04 key and redirects to the intended URL (T-15-14)', function (): void {
+it('biometric success releases the app-lock key and redirects to the dashboard', function (): void {
     $user = mobileBiometricTestUser('mobile-bio-success');
     test()->actingAs($user);
 
@@ -85,7 +85,7 @@ it('biometric success releases the LOCK-04 key and redirects to the intended URL
     expect($keyService->release($session))->not->toBeNull();
 });
 
-it('biometric abort never releases the key — data stays encrypted, PIN pad remains the fallback (T-15-15)', function (): void {
+it('biometric abort never releases the key — data stays encrypted, PIN pad remains the fallback', function (): void {
     $user = mobileBiometricTestUser('mobile-bio-abort');
     test()->actingAs($user);
     test()->session([AppLockTestHarness::LOCKED_SESSION_KEY => true]);

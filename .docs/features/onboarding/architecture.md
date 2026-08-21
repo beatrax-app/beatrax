@@ -8,13 +8,17 @@ The `Onboarding` module hosts the first-run setup wizard at
 from the right step on every subsequent visit until completion.
 
 `WizardStepRegistry` is the single source of truth for this order and
-for which steps are skippable: the four connector steps
-(`connect-bank`, `connect-paypal`, `connect-card`, `connect-email`)
-plus `budgets` and `tax-country` are skippable; the bookend steps
-(`welcome`, `done`) and `first-import` are not — a `skip` call on a
-non-skippable step is a no-op at the `SetupWizard` layer. The resume
-resolver, the parent `SetupWizard`'s next/skip navigation, and the
-progress-dots UI all walk this one registry.
+for which steps are skippable: the bookend steps (`welcome`, `done`)
+are the only ones that are not — a `skip` call on a non-skippable step
+is a no-op at the `SetupWizard` layer. Every other step is skippable,
+`first-import` included: its commit button is disabled whenever nothing
+is staged, which is the ordinary state for someone who skipped all four
+connectors, so skip is that step's only enabled way forward. The button
+and the registry entry are two halves of one feature — first-import once
+shipped with the button but no entry, and the click round-tripped 200 OK
+and went nowhere. The resume resolver, the parent `SetupWizard`'s
+next/skip navigation, and the progress-dots UI all walk this one
+registry.
 
 ## What this module is for
 

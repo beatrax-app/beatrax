@@ -57,7 +57,7 @@ it('seeds a categorization rule when the optional category hint is set', functio
     expect((int) $payload['category_id'])->toBe($this->category->id);
 });
 
-it('saves the alias and closes calmly when categoryHint is a foreign/tampered category id (WR-04)', function (): void {
+it('saves the alias and closes calmly when categoryHint is a foreign/tampered category id', function (): void {
     $other = User::create([
         'username' => 'rename-popover-foreign-owner',
         'password' => 'opensesame',

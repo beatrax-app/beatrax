@@ -118,7 +118,7 @@ it('is idempotent when re-snoozing to the exact same target timestamp', function
     expect(AnomalyAlertTransition::query()->where('anomaly_alert_id', $alert->id)->count())->toBe(0);
 });
 
-it('is idempotent when re-snoozing with a non-app source offset that round-trips to the same wall-clock (WR-06)', function (): void {
+it('is idempotent when re-snoozing with a non-app source offset that round-trips to the same wall-clock', function (): void {
     Event::fake([AnomalyAlertSnoozed::class]);
     $action = $this->app->make(SnoozeAnomalyAlert::class);
 

@@ -123,7 +123,7 @@ function rebuildSignedEntry(
     );
 }
 
-it('rebuild() preserves an imported row and reproduces its SET edits — rebuilt == incremental (CR-04)', function (): void {
+it('rebuild() preserves an imported row and reproduces its SET edits — rebuilt == incremental', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->db;
     [$userId, $accountId, $runId] = rebuildSeedBase($db, 'imp');
@@ -157,7 +157,7 @@ it('rebuild() preserves an imported row and reproduces its SET edits — rebuilt
     expect($rebuilt->type)->toBe($incremental->type); // unchanged base column preserved
 });
 
-it('rebuild() recreates an op-log-CREATED row from CreateRow ops (CR-04)', function (): void {
+it('rebuild() recreates an op-log-CREATED row from CreateRow ops', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->db;
     [$userId] = rebuildSeedBase($db, 'cr');
@@ -188,7 +188,7 @@ it('rebuild() recreates an op-log-CREATED row from CreateRow ops (CR-04)', funct
     expect($afterCount)->toBe(1);
 });
 
-it('rebuild() restores triggers after the maintenance window (CR-04)', function (): void {
+it('rebuild() restores triggers after the maintenance window', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->db;
     [$userId, $accountId, $runId] = rebuildSeedBase($db, 'trig');
@@ -208,7 +208,7 @@ it('rebuild() restores triggers after the maintenance window (CR-04)', function 
     expect($names)->toContain('transactions_payment_type_check_update');
 });
 
-it('pair-link cascade reclassification survives a full rebuild (CR-03)', function (): void {
+it('pair-link cascade reclassification survives a full rebuild', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->db;
     [$userId, $accountId, $runId] = rebuildSeedBase($db, 'cascade');
@@ -251,7 +251,7 @@ it('pair-link cascade reclassification survives a full rebuild (CR-03)', functio
     expect($badQuarantine)->toBe(0);
 });
 
-it('confines DROP TRIGGER to the rebuilder and trigger-owning migrations (IN-01 grep-guard)', function (): void {
+it('confines DROP TRIGGER to the rebuilder and trigger-owning migrations', function (): void {
     $root = dirname(__DIR__, 4); // .../<repo root>
     $syncSrc = $root.'/Modules/Sync/Internal';
 

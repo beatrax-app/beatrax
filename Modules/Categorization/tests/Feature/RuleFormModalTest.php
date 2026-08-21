@@ -203,7 +203,7 @@ it('saves when a category action id arrives as a string, as Livewire binds a <se
     expect(json_decode((string) $action->payload, true))->toBe(['category_id' => $this->streaming->id]);
 });
 
-it('scales a human-entered Dutch-decimal amount condition to minor units and matches only the correct transaction (CR-01)', function (): void {
+it('scales a human-entered Dutch-decimal amount condition to minor units and matches only the correct transaction', function (): void {
     Livewire::test(RuleFormModal::class)
         ->call('open', ruleId: null)
         ->set('conditions.0.field', 'amount')
@@ -243,7 +243,7 @@ it('scales a human-entered Dutch-decimal amount condition to minor units and mat
     expect($engine->match($wrongAmountInput, $this->user))->toHaveCount(0);
 });
 
-it('scales a human-entered dot-decimal amount condition to minor units and matches only the correct transaction (CR-01)', function (): void {
+it('scales a human-entered dot-decimal amount condition to minor units and matches only the correct transaction', function (): void {
     Livewire::test(RuleFormModal::class)
         ->call('open', ruleId: null)
         ->set('conditions.0.field', 'amount')
@@ -282,7 +282,7 @@ it('scales a human-entered dot-decimal amount condition to minor units and match
     expect($engine->match($wrongAmountInput, $this->user))->toHaveCount(0);
 });
 
-it('rejects saving an unparsable amount condition value instead of silently matching zero (CR-01)', function (): void {
+it('rejects saving an unparsable amount condition value instead of silently matching zero', function (): void {
     Livewire::test(RuleFormModal::class)
         ->call('open', ruleId: null)
         ->set('conditions.0.field', 'amount')
@@ -516,7 +516,7 @@ it('grep guard: RuleFormModal never references ReapplyRulesJob', function (): vo
     expect(mb_strtolower($contents))->not->toContain('reapply');
 });
 
-it('escapes HTML payloads in rendered condition value (T-07-06)', function (): void {
+it('escapes HTML payloads in rendered condition value', function (): void {
     seedFormRule($this->user, 10, 'all', [
         ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => '<script>alert(1)</script>'],
     ], [

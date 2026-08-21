@@ -44,7 +44,7 @@ function settingsSeedRegistryDevice(DatabaseManager $db, int $userId, string $de
     ]);
 }
 
-it('mounts showing exactly the D-16/D-19/D-15/D-24 defaults for a device with no preference row', function (): void {
+it('mounts with reminders on, weekly digest, savings prompts off and quiet hours off for a device with no preference row', function (): void {
     $user = notificationsSettingsUser('settings-defaults');
     settingsSeedRegistryDevice($this->app->make(DatabaseManager::class), $user->id, 'self-device', isSelf: true);
     $this->actingAs($user);
@@ -111,7 +111,7 @@ it('persists a valid save and sets $saved, and a re-mount reads the saved values
         ->assertSet('hideDetails', true);
 });
 
-it('rejects an invalid digest cadence, sets $saveError, persists nothing (T-18-06)', function (): void {
+it('rejects an invalid digest cadence, sets $saveError, persists nothing', function (): void {
     $user = notificationsSettingsUser('settings-bad-cadence');
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -127,7 +127,7 @@ it('rejects an invalid digest cadence, sets $saveError, persists nothing (T-18-0
     expect($db->connection()->table('notification_preferences')->count())->toBe(0);
 });
 
-it('rejects a reminder lead time of 0, sets $saveError, persists nothing (T-18-06)', function (): void {
+it('rejects a reminder lead time of 0, sets $saveError, persists nothing', function (): void {
     $user = notificationsSettingsUser('settings-lead-0');
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -143,7 +143,7 @@ it('rejects a reminder lead time of 0, sets $saveError, persists nothing (T-18-0
     expect($db->connection()->table('notification_preferences')->count())->toBe(0);
 });
 
-it('rejects a reminder lead time of 31, sets $saveError, persists nothing (T-18-06)', function (): void {
+it('rejects a reminder lead time of 31, sets $saveError, persists nothing', function (): void {
     $user = notificationsSettingsUser('settings-lead-31');
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -159,7 +159,7 @@ it('rejects a reminder lead time of 31, sets $saveError, persists nothing (T-18-
     expect($db->connection()->table('notification_preferences')->count())->toBe(0);
 });
 
-it('rejects a malformed quiet-hours time, sets $saveError, persists nothing (T-18-06)', function (): void {
+it('rejects a malformed quiet-hours time, sets $saveError, persists nothing', function (): void {
     $user = notificationsSettingsUser('settings-bad-time');
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -175,7 +175,7 @@ it('rejects a malformed quiet-hours time, sets $saveError, persists nothing (T-1
     expect($db->connection()->table('notification_preferences')->count())->toBe(0);
 });
 
-it('dispatches exactly one NotificationPreferenceMutated on a valid save (D-34)', function (): void {
+it('dispatches exactly one NotificationPreferenceMutated on a valid save', function (): void {
     Event::fake([NotificationPreferenceMutated::class]);
 
     $user = notificationsSettingsUser('settings-event');
@@ -191,7 +191,7 @@ it('dispatches exactly one NotificationPreferenceMutated on a valid save (D-34)'
     Event::assertDispatchedTimes(NotificationPreferenceMutated::class, 1);
 });
 
-it('lists a second paired device in the other-devices panel and excludes the self row (D-35)', function (): void {
+it('lists a second paired device in the other-devices panel and excludes the self row', function (): void {
     $user = notificationsSettingsUser('settings-other-devices');
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -232,7 +232,7 @@ it('renders the empty-state string when no other devices are paired', function (
         ->assertSee('No other devices paired yet.');
 });
 
-it('never changes the other device row when saving locally (D-07/D-35)', function (): void {
+it('never changes the other device row when saving locally', function (): void {
     $user = notificationsSettingsUser('settings-other-untouched');
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);

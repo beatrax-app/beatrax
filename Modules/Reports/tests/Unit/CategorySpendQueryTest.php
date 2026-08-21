@@ -175,7 +175,7 @@ it('attributes split legs to their own categories, excluding the split parent ro
     expect(array_sum($byLabel))->toBe(10_000);
 });
 
-it('falls back to the parent category when split legs do not sum to the parent (WR-03 broken split)', function (): void {
+it('falls back to the parent category when split legs do not sum to the parent (broken split)', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = csqUser();

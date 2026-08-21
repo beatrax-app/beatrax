@@ -212,7 +212,7 @@ it('saving a report persists the current builder composition under the given nam
     expect(SavedReport::query()->where('name', 'My income report')->exists())->toBeTrue();
 });
 
-it('CR-01: editing a loaded report updates the same row (no duplicate); a fresh save still creates a new one', function (): void {
+it('editing a loaded report updates the same row (no duplicate); a fresh save still creates a new one', function (): void {
     $user = rbUser();
     test()->actingAs($user);
 

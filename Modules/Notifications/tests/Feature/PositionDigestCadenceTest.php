@@ -118,7 +118,7 @@ it('off cadence never emits a digest row nor a PositionDigestDue event, across a
     Event::assertNotDispatched(PositionDigestDue::class);
 });
 
-it('D-21: a user with no notable activity still receives their digest on cadence, with a non-empty body', function (): void {
+it('gives a user with no notable activity their digest on cadence anyway, with a non-empty body', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = pdcUser('pdc-nothing-notable');

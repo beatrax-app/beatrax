@@ -44,6 +44,13 @@ Two tags, never mixed:
 Identifiers belong in the commit trailer and the pull-request body, where the
 governance gate reads them.
 
+That holds for **Pest test names** too, and the arch test scans the `it()`,
+`test()` and `describe()` literals as well as the comments. A test name is read
+at a failure, where what broke is the useful thing to know and which requirement
+row it traces to is not. Standards names share the shape an identifier has, so
+`SHA-256` and its neighbours sit in a named allow-list in that test — extend the
+list rather than working around the pattern.
+
 ## Related
 
 - [Architecture](../architecture/00-index.md) — the system's shape

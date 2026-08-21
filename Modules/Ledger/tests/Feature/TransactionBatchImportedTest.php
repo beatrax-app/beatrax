@@ -85,7 +85,7 @@ beforeEach(function () use (&$recordedBatches, &$recordedRows): void {
     };
 });
 
-it('dispatches exactly ONE batch event for a 500-row single-format import, plus 500 per-row events (Req 10)', function () use (&$recordedBatches, &$recordedRows): void {
+it('dispatches exactly ONE batch event for a 500-row single-format import, plus 500 per-row events', function () use (&$recordedBatches, &$recordedRows): void {
     $action = $this->app->make(RecordTransactions::class);
     $rows = ($this->distinctBatch)(500, 'csv');
 
@@ -130,7 +130,7 @@ it('reports both formats sorted for a mixed csv + eml batch, in a single event',
     expect($recordedBatches[0]->insertedCount)->toBe(5);
 });
 
-it('dispatches the per-row and batch events outside any open DB transaction (D-28 / WR-06)', function (): void {
+it('dispatches the per-row and batch events outside any open DB transaction', function (): void {
     // RefreshDatabase already holds an outer transaction, so `=== 0` would prove
     // nothing. Both events must land back at that baseline: the per-row one used
     // to fire inside persistChunk's own transaction, so a rollback left Search,

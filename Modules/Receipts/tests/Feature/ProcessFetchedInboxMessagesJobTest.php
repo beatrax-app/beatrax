@@ -118,7 +118,7 @@ it('transitions one PayPal receipt to parsed, one login notice to skipped, one u
     expect(Transaction::query()->where('user_id', $this->fixtureUser->id)->count())->toBe(1);
 });
 
-it('does not touch rows whose userId mismatches the job target (T-07-09 cross-user defence)', function (): void {
+it('does not touch rows whose userId mismatches the job target (cross-user defence)', function (): void {
     DB::table('inboxes')->insert([
         'user_id' => $this->fixtureUser->id,
         'provider' => 'gmail',

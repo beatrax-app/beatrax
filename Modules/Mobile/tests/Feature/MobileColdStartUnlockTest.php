@@ -98,7 +98,7 @@ it('enrolled + floor-fresh + RECOVERED admits the key and redirects', function (
     expect(released())->toBe($key);
 });
 
-it('enrolled + floor-fresh + CANCELED does not admit (T-15-14)', function (): void {
+it('enrolled + floor-fresh + CANCELED does not admit', function (): void {
     lockedColdStartUser('cs-canceled');
     bindVaultRecover(BiometricRecoverResult::canceled());
 

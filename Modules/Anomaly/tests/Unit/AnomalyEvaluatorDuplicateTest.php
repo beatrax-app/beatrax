@@ -47,7 +47,7 @@ it('does NOT fire when both charges are on the same approved recurring series', 
     expect($detector->fires($txn, $user, $user->anomaly_min_amount_minor))->toBeFalse();
 });
 
-it('fires on the later charge but not its earlier sibling — one alert per real duplicate (WR-02)', function (): void {
+it('fires on the later charge but not its earlier sibling — one alert per real duplicate', function (): void {
     $user = AnomalyCorpusSeeder::makeUser();
     $fixture = AnomalyCorpusSeeder::load('duplicate-in-window');
     $laterId = AnomalyCorpusSeeder::seed($this->db, $user, $fixture);

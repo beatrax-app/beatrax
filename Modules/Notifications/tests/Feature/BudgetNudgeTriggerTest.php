@@ -153,7 +153,7 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-it('nudges exactly once for an envelope past its threshold and not at all for one under it (Req 6)', function (): void {
+it('nudges exactly once for an envelope past its threshold and not at all for one under it', function (): void {
     $user = bntUser('bnt-over-under');
     bntActivate($user);
     $account = bntAccount($user);
@@ -174,7 +174,7 @@ it('nudges exactly once for an envelope past its threshold and not at all for on
     expect(bntNudgeCount($user->id, 'Fuel'))->toBe(0);
 });
 
-it('does not re-fire when the job runs again in the SAME period after further spend (Req 6, D-06)', function (): void {
+it('does not re-fire when the job runs again in the SAME period after further spend', function (): void {
     $user = bntUser('bnt-same-period');
     bntActivate($user);
     $account = bntAccount($user);
@@ -195,7 +195,7 @@ it('does not re-fire when the job runs again in the SAME period after further sp
     expect(bntNudgeCount($user->id))->toBe(1);
 });
 
-it('re-fires in the NEXT period when the budget is still over (Req 6, D-06)', function (): void {
+it('re-fires in the NEXT period when the budget is still over', function (): void {
     $user = bntUser('bnt-next-period');
     bntActivate($user);
     $account = bntAccount($user);
@@ -219,7 +219,7 @@ it('re-fires in the NEXT period when the budget is still over (Req 6, D-06)', fu
     expect(bntNudgeCount($user->id))->toBe(2);
 });
 
-it('honours each envelope\'s own threshold: 50% explicit fires at 55% used, 90% default does not (D-20)', function (): void {
+it('honours each envelope\'s own threshold: 50% explicit fires at 55% used, 90% default does not', function (): void {
     $user = bntUser('bnt-per-budget-threshold');
     bntActivate($user);
     $account = bntAccount($user);

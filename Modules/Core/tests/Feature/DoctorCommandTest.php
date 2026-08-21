@@ -45,7 +45,7 @@ it('reports installed versions and probe rows on a healthy environment', functio
     }
 });
 
-it('prints lines for each Phase 11 probe (WAL / synchronous / backup freshness)', function (): void {
+it('prints lines for each probe (WAL / synchronous / backup freshness)', function (): void {
     // The probes report against the default connection, which in the harness is
     // sqlite_testing :memory: where journal_mode is `memory` — meaningless for
     // the WAL/sync probes, but the labels still print.

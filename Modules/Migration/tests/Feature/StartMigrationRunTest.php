@@ -22,7 +22,7 @@ beforeEach(function (): void {
     $this->db = app(DatabaseManager::class);
 });
 
-it('StartMigrationRun: stages the ynab4 v1 fixture and returns a parsed run — Req 1/11', function (): void {
+it('StartMigrationRun: stages the ynab4 v1 fixture and returns a parsed run', function (): void {
     $run = app(StartMigrationRun::class)->__invoke(
         $this->user,
         'ynab4',
@@ -55,7 +55,7 @@ it('StartMigrationRun: an unknown declared format is rejected with a typed excep
     expect(MigrationRun::query()->where('user_id', $this->user->id)->count())->toBe(0);
 });
 
-it('StartMigrationRun: a corrupt fixture is rejected leaving zero staging AND zero migration_runs rows — Req 1 reject-not-partial', function (): void {
+it('StartMigrationRun: a corrupt fixture is rejected leaving zero staging AND zero migration_runs rows', function (): void {
     $extracted = MigrationFixturePaths::extractZip(MigrationFixturePaths::corruptZip());
 
     expect(fn () => app(StartMigrationRun::class)->__invoke(

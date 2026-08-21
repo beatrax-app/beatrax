@@ -431,7 +431,7 @@ final class PairingFlowModal extends Component
         // relay — safe regardless of $state, since the frame is only ever
         // consumable once the peer's own local side has confirmed too.
         // No-op when no relay is configured — never dead-ends that path.
-        $this->sendConfirmOverRelay($db, $relayCourier, $relayConfig, $identity, $logger);
+        $this->sendConfirmOverRelay($db, $relayCourier, $relayConfig, $identity, $logger, $userId);
 
         if ($state === PairingState::Confirmed->value) {
             $this->awaitingPeer = false;
@@ -599,13 +599,19 @@ final class PairingFlowModal extends Component
         RelayConfig $relayConfig,
         DeviceIdentityDto $identity,
         LoggerInterface $logger,
+        int $userId,
     ): void {
         if (! $relayConfig->isConfigured()) {
             return;
         }
 
+        // Scoped even though $pairingTokenId is #[Locked] and every writer is
+        // user-scoped, so no reachable state makes this cross-user. A read of
+        // a user-owned table that does not say whose it is reads as an
+        // oversight to the next person, and its twin in Mobile carries it.
         $row = $db->connection()->table('pairing_tokens')
             ->where('id', (int) $this->pairingTokenId)
+            ->where('user_id', $userId)
             ->first(['token_hash', 'initiator_device_id', 'responder_device_id']);
 
         if ($row === null) {

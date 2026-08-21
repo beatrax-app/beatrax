@@ -198,7 +198,7 @@ it('keeps anonymised personal-identifier rows uncategorised', function (): void 
     }
 });
 
-it('a migrated single-condition rule assigns the exact category the old engine would have (Req 5 parity)', function (): void {
+it('a migrated single-condition rule assigns the exact category the old engine would have', function (): void {
     // The Netflix seed rule was forward-migrated from a flat
     // field/match/value row into parent + condition + action; driving it
     // through the real stage proves it still lands the same category.

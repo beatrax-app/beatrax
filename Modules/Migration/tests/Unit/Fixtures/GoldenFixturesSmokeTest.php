@@ -217,7 +217,7 @@ it('Fixture: ActualFixtureBuilder output opens read-only and v_transactions retu
     }
 });
 
-it('Fixture: ActualFixtureBuilder carries exactly one FLAT goal_def, one NON-FLAT goal_def, one saved-report row, and >=1 schedule (Req 8)', function (): void {
+it('Fixture: ActualFixtureBuilder carries exactly one FLAT goal_def, one NON-FLAT goal_def, one saved-report row, and >=1 schedule', function (): void {
     $zipPath = sys_get_temp_dir().'/actual-fixture-smoke-'.uniqid('', true).'.zip';
     $extractDir = sys_get_temp_dir().'/actual-fixture-extract-'.uniqid('', true);
 

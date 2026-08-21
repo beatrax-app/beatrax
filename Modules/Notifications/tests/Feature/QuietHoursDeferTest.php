@@ -128,7 +128,7 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-it('fires no OS notification inside the quiet window AND persists exactly one inbox row (Req 9)', function (): void {
+it('fires no OS notification inside the quiet window AND persists exactly one inbox row', function (): void {
     $user = qhdUser('qhd-inside-window');
     qhdPairDevice(app(DatabaseManager::class), (int) $user->id);
     qhdSavePrefs($user, quietHoursEnabled: true);
@@ -142,7 +142,7 @@ it('fires no OS notification inside the quiet window AND persists exactly one in
     expect(qhdInboxRowCount((int) $user->id))->toBe(1);
 });
 
-it('the deferred row is still present and unread the next morning (defer, never drop — Req 9)', function (): void {
+it('the deferred row is still present and unread the next morning (defer, never drop)', function (): void {
     $user = qhdUser('qhd-survives-morning');
     qhdPairDevice(app(DatabaseManager::class), (int) $user->id);
     qhdSavePrefs($user, quietHoursEnabled: true);
@@ -175,7 +175,7 @@ it('fires the OS notification at midday with quiet hours enabled (outside the wi
     expect(qhdInboxRowCount((int) $user->id))->toBe(1);
 });
 
-it('fires the OS notification at 23:30 when quiet hours are disabled (D-19: the window only applies when enabled)', function (): void {
+it('fires the OS notification at 23:30 when quiet hours are disabled (the window only applies when enabled)', function (): void {
     $user = qhdUser('qhd-disabled-at-2330');
     qhdPairDevice(app(DatabaseManager::class), (int) $user->id);
     qhdSavePrefs($user, quietHoursEnabled: false);

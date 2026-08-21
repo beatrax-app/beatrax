@@ -77,7 +77,7 @@ it('encrypts description/counterparty_name/counterparty_iban at rest and decrypt
     expect($decrypted['counterparty_iban'])->toBe('NL91ABNA0417164300');
 });
 
-it('leaves amount_minor/settled_amount_minor plaintext (D-02a) while the content columns route through the Sync codec', function (): void {
+it('leaves amount_minor/settled_amount_minor plaintext while the content columns route through the Sync codec', function (): void {
     $action = $this->app->make(RecordTransactions::class);
 
     $row = $this->canonical([

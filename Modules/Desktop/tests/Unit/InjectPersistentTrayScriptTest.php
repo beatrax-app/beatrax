@@ -53,7 +53,7 @@ it('emits a Tray construction that flags the loaded image as a macOS template im
     expect($patched)->toContain('new Tray(image)');
 });
 
-it('builds the verbatim D-09 three-row context menu — Open Beatrax / Scan email now / Quit', function (): void {
+it('builds the verbatim three-row context menu — Open Beatrax / Scan email now / Quit', function (): void {
     $upstream = "import { app } from 'electron';\nNativePHP.bootstrap(app);\n";
 
     [$patched] = injectPersistentTray($upstream);

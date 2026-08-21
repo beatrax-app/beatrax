@@ -37,7 +37,7 @@ it('renders the envelope grid with the ready-to-assign header', function (): voi
         ->assertSee('Groceries');
 });
 
-it('assigns an amount inline and live-updates that rows available and the to-budget header (Req 3)', function (): void {
+it('assigns an amount inline and live-updates that rows available and the to-budget header', function (): void {
     $component = Livewire::test(BudgetsPage::class)
         ->set("assignedInputs.{$this->groceries->id}", '50.00')
         ->call('setAssigned', $this->groceries->id);
@@ -54,7 +54,7 @@ it('assigns an amount inline and live-updates that rows available and the to-bud
     ]);
 });
 
-it('permits over-assignment: to-budget goes negative and the write is never rejected (Req 8)', function (): void {
+it('permits over-assignment: to-budget goes negative and the write is never rejected', function (): void {
     $component = Livewire::test(BudgetsPage::class)
         ->set("assignedInputs.{$this->groceries->id}", '900.00')
         ->call('setAssigned', $this->groceries->id);
@@ -66,7 +66,7 @@ it('permits over-assignment: to-budget goes negative and the write is never reje
     ]);
 });
 
-it('clears an envelopes assigned amount back to zero (tombstone, D-06)', function (): void {
+it('clears an envelopes assigned amount back to zero, tombstoning the row', function (): void {
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, app(PeriodQuery::class)->current()->start, 5000);
 
     Livewire::test(BudgetsPage::class)
@@ -95,7 +95,7 @@ it('toggles the overspend mode for an envelope', function (): void {
     expect($rows[$this->groceries->id]->overspendMode)->toBe('carry_negative');
 });
 
-it('copies last months assignments only when the selected month has none and the prior month has some (Req 6)', function (): void {
+it('copies last months assignments only when the selected month has none and the prior month has some', function (): void {
     $current = app(PeriodQuery::class)->current();
     $previous = app(PeriodQuery::class)->previous($current);
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $previous->start, 12000);

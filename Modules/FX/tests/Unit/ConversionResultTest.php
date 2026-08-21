@@ -28,7 +28,7 @@ it('passthrough() yields null rate, source, asOf and isStale=false', function ()
     expect($result->isStale)->toBeFalse();
 });
 
-it('fully-constructed result exposes rate, source, asOf, and isStale for FX-04 disclosure', function (): void {
+it('fully-constructed result exposes rate, source, asOf, and isStale for disclosure', function (): void {
     $original = Money::ofMinor(10000, 'USD');
     $converted = Money::ofMinor(9200, 'EUR');
     $asOf = CarbonImmutable::parse('2026-06-06');
@@ -70,7 +70,7 @@ it('fully-constructed stale result sets isStale=true', function (): void {
     expect($result->source)->toBe('bundled');
 });
 
-it('rate property is typed ?string and never float (Pitfall 1 guard)', function (): void {
+it('rate property is typed ?string and never float', function (): void {
     $reflection = new ReflectionClass(ConversionResult::class);
     $rateParam = null;
 

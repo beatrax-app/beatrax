@@ -187,7 +187,7 @@ it('never disables a dashboard-target digest', function (): void {
     expect($response->getContent() ?: '')->not->toContain('aria-disabled="true"');
 });
 
-it('degrades a cross-user target with the SAME generic copy as a genuinely deleted target (no information disclosure, T-18-49)', function (): void {
+it('degrades a cross-user target with the SAME generic copy as a genuinely deleted target (no information disclosure)', function (): void {
     $owner = dldUser('dld-cross-user-owner');
     $attacker = dldUser('dld-cross-user-attacker');
 

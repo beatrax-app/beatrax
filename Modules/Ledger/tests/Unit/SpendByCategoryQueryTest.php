@@ -156,7 +156,7 @@ it('keys forUserAndPeriodByCurrency by "categoryId|currency" across currencies',
     expect($result[$this->groceries->id.'|USD'])->toBe(1500);
 });
 
-it('falls back to the parent category when legs do not sum to the parent (WR-03 read-time guard)', function (): void {
+it('falls back to the parent category when legs do not sum to the parent', function (): void {
     // The legs sum to −6000 against a −8000 parent. A per-leg LWW replay where
     // one leg's delete op won leaves exactly this shape.
     $tx = spendCatTx($this->user->id, $this->account->id, $this->run->id, -8000, $this->groceries->id);
@@ -170,7 +170,7 @@ it('falls back to the parent category when legs do not sum to the parent (WR-03 
     expect(array_sum($result))->toBe(8000);
 });
 
-it('falls back to the parent category for a non-summing split in forUserAndPeriodByCurrency too (WR-03)', function (): void {
+it('falls back to the parent category for a non-summing split in forUserAndPeriodByCurrency too', function (): void {
     $tx = spendCatTx($this->user->id, $this->account->id, $this->run->id, -8000, $this->groceries->id);
     spendCatLeg($tx, $this->household->id, -6000);
 

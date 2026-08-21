@@ -348,7 +348,7 @@ it('funder resolution picks the most-recent chain_link when multiple historical 
     expect($dto?->accountId)->toBe($asnNew->id);
 });
 
-it('the new method does not modify Phase 5\'s existing openForAccount behaviour', function (): void {
+it('openForAccount still returns the open statement for the account it is given', function (): void {
     $user = nsmUser('nsm-open-for-account');
     nsmAsnAccount($user, 'nsm-asn-ofa', 'NL11ASNB1234567009');
     $ics = nsmIcsAccount($user, 'nsm-ics-ofa');

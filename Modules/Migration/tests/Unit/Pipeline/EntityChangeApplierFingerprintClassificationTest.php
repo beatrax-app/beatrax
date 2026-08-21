@@ -26,19 +26,19 @@ function migrationInvokeIsFingerprintUniqueViolation(QueryException $e): bool
     return $result;
 }
 
-it('WR-03: a genuine SQLite fingerprint-column unique violation IS classified as a collision', function (): void {
+it('classifies a genuine SQLite fingerprint-column unique violation as a collision', function (): void {
     $e = migrationBuildQueryException('23000', 'SQLSTATE[23000]: Integrity constraint violation: 19 UNIQUE constraint failed: transactions.user_id, transactions.fingerprint');
 
     expect(migrationInvokeIsFingerprintUniqueViolation($e))->toBeTrue();
 });
 
-it('WR-03: a genuine SQLite composite (amount_minor) unique violation IS classified as a collision', function (): void {
+it('classifies a genuine SQLite composite (amount_minor) unique violation as a collision', function (): void {
     $e = migrationBuildQueryException('23000', 'SQLSTATE[23000]: Integrity constraint violation: 19 UNIQUE constraint failed: transactions.user_id, transactions.account_id, transactions.posted_at, transactions.amount_minor, transactions.currency, transactions.counterparty_normalized, transactions.source_ref');
 
     expect(migrationInvokeIsFingerprintUniqueViolation($e))->toBeTrue();
 });
 
-it('WR-03: a 23000 violation against an UNRELATED constraint is NOT classified as a collision (must be re-thrown by the caller)', function (): void {
+it('does NOT classify a 23000 violation against an UNRELATED constraint as a collision (the caller must re-throw it)', function (): void {
     // The same SQLSTATE a NOT NULL / CHECK / other-unique violation reports,
     // but naming columns this UPDATE never touches: the unrelated failure that
     // used to be reclassified as a benign collision.
@@ -47,7 +47,7 @@ it('WR-03: a 23000 violation against an UNRELATED constraint is NOT classified a
     expect(migrationInvokeIsFingerprintUniqueViolation($e))->toBeFalse();
 });
 
-it('WR-03: a non-23000 QueryException (e.g. a transient connection failure) is NOT classified as a collision', function (): void {
+it('does NOT classify a non-23000 QueryException (e.g. a transient connection failure) as a collision', function (): void {
     $e = migrationBuildQueryException('HY000', 'SQLSTATE[HY000]: General error: 10 disk I/O error');
 
     expect(migrationInvokeIsFingerprintUniqueViolation($e))->toBeFalse();

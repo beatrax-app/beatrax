@@ -39,7 +39,7 @@ it('passes a plain-string payload through to the intake verbatim', function (): 
     );
 })->group('phase-15');
 
-it('prefers the array `path` key over sibling string values (WR-03 regression guard)', function (): void {
+it('prefers the array `path` key over sibling string values', function (): void {
     // An associative payload used to have the iteration fallback pick
     // 'open-file' — insertion order, first non-empty string — silently
     // dropping the legitimate file.

@@ -66,7 +66,7 @@ it('completes issue -> accept -> both-confirm: state becomes confirmed and a con
     expect($device->ed25519_public_key_hex)->toBe($responderEd);
 });
 
-it('refuses to admit a responder whose device_id collides with the local self-row, leaving self keys intact (WR-05)', function (): void {
+it('refuses to admit a responder whose device_id collides with the local self-row, leaving self keys intact', function (): void {
     $user = flowUser('flow-collision');
 
     /** @var PairingTokenService $service */

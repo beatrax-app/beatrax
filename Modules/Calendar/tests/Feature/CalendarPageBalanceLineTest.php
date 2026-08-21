@@ -120,7 +120,7 @@ it('renders the day-end balance from summed forecast points for balance-included
         ->assertSee('750');
 });
 
-it('FX-converts a USD account\'s forecast points to the base currency instead of adding raw minor units (CR-02)', function (): void {
+it('FX-converts a USD account\'s forecast points to the base currency instead of adding raw minor units', function (): void {
     $db = app(DatabaseManager::class);
     $user = cpblUser('cpbl-fx');
     $eurAccount = cpblAccount($db, $user->id, 'ASN Checking', 'EUR');

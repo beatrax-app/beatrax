@@ -157,7 +157,7 @@ it('still allows two leg-scoped tag rows for the same transaction (non-NULL tran
     expect(DB::table('tax_transaction_tags')->where('transaction_id', $txId)->count())->toBe(2);
 });
 
-it('TagTransaction survives a lost select-then-insert race for a whole-tx tag — exactly one row remains (IN-06)', function (): void {
+it('TagTransaction survives a lost select-then-insert race for a whole-tx tag — exactly one row remains', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 

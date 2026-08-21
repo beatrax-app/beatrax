@@ -127,7 +127,7 @@ it('promotes a single candidate to confirmed (no auto-promotion below threshold)
     expect($link->resolver)->toBe('auto');
 });
 
-it('auto-promotes other same-signature candidates at the 3rd confirmation (D-87/D-88)', function (): void {
+it('auto-promotes other same-signature candidates at the 3rd confirmation', function (): void {
     $signature = 'sig-auto-promote';
 
     // Two already-confirmed rows + this confirm = the 3-confirm threshold.

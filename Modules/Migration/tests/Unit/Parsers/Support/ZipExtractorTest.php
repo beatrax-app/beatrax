@@ -39,7 +39,7 @@ it('ZipExtractor: extracts a well-formed archive under storage/app, never a publ
     }
 });
 
-it('ZipExtractor: rejects an entry-count cap violation before extracting a single byte (T-13.5-05)', function (): void {
+it('ZipExtractor: rejects an entry-count cap violation before extracting a single byte', function (): void {
     $zipPath = migrationBuildZip(['a.txt' => 'a', 'b.txt' => 'b', 'c.txt' => 'c']);
     $extractor = new ZipExtractor(maxEntries: 2);
 
@@ -48,7 +48,7 @@ it('ZipExtractor: rejects an entry-count cap violation before extracting a singl
     @unlink($zipPath);
 });
 
-it('ZipExtractor: rejects a total-uncompressed-size cap violation (zip-bomb guard, T-13.5-05)', function (): void {
+it('ZipExtractor: rejects a total-uncompressed-size cap violation (zip-bomb guard)', function (): void {
     $zipPath = migrationBuildZip(['big.txt' => str_repeat('x', 1000)]);
     $extractor = new ZipExtractor(maxTotalUncompressedBytes: 10);
 
@@ -57,7 +57,7 @@ it('ZipExtractor: rejects a total-uncompressed-size cap violation (zip-bomb guar
     @unlink($zipPath);
 });
 
-it('ZipExtractor: rejects a path-traversal entry (zip-slip guard, T-13.5-06)', function (): void {
+it('ZipExtractor: rejects a path-traversal entry (zip-slip guard)', function (): void {
     $zipPath = migrationBuildZip(['../../etc/evil.txt' => 'malicious']);
     $extractor = new ZipExtractor;
 
@@ -66,7 +66,7 @@ it('ZipExtractor: rejects a path-traversal entry (zip-slip guard, T-13.5-06)', f
     @unlink($zipPath);
 });
 
-it('ZipExtractor: rejects an absolute-path entry (zip-slip guard, T-13.5-06)', function (): void {
+it('ZipExtractor: rejects an absolute-path entry (zip-slip guard)', function (): void {
     $zipPath = migrationBuildZip(['/etc/evil.txt' => 'malicious']);
     $extractor = new ZipExtractor;
 
@@ -82,7 +82,7 @@ it('ZipExtractor: throws when the archive cannot be opened at all', function ():
         ->toThrow(UnrecognizedMigrationFileException::class);
 });
 
-it('WR-01: cleanup() removes the partially-extracted directory when extractTo() fails partway', function (): void {
+it('ZipExtractor: cleanup() removes the partially-extracted directory when extractTo() fails partway', function (): void {
     // extractTo() cannot create "foo/bar.txt" once "foo" exists as a plain file,
     // which reproduces a mid-extraction failure without a disk-full or a
     // permission error to simulate.
@@ -112,7 +112,7 @@ it('WR-01: cleanup() removes the partially-extracted directory when extractTo() 
     @unlink($zipPath);
 });
 
-it('ZipExtractor: rejects an archive containing a symlink entry (WR-04/T-13.5-06)', function (): void {
+it('ZipExtractor: rejects an archive containing a symlink entry', function (): void {
     // A malicious export could plant a symlink named e.g. "db.sqlite" whose
     // target the name-based zip-slip check cannot see; extractTo() would
     // materialize a real symlink that a later is_file()/fopen() follows.

@@ -91,7 +91,7 @@ function donDriftDeliverable(int $userId): NotificationDeliverable
 // The `Notification` facade has no v2 fake, so a fired notification is observed
 // as an outbound POST on the NativePHP HTTP client. Payload detail — the exact
 // title and click event — cannot be intercepted, so it stays a todo below.
-it('notification suppressed when focused (D-13 — does not fire when the window is focused)', function (): void {
+it('suppresses the OS notification when the window is focused', function (): void {
     Http::fake();
     $user = donUser('don-focused-forecast');
 
@@ -107,7 +107,7 @@ it('notification suppressed when focused (D-13 — does not fire when the window
     Http::assertNothingSent();
 });
 
-it('fires an OS notification when the window is unfocused (D-13 unfocused branch)', function (): void {
+it('fires an OS notification when the window is unfocused', function (): void {
     Http::fake();
     $user = donUser('don-unfocused-forecast');
 
@@ -143,7 +143,7 @@ it('fires a drift-alert OS notification when unfocused', function (): void {
     Http::assertSent(fn ($request) => str_ends_with((string) $request->url(), '/notification'));
 });
 
-it('does not fire even when unfocused when SuppressionEvaluator suppresses delivery (D-38 invariant 4)', function (): void {
+it('does not fire even when unfocused when SuppressionEvaluator suppresses delivery', function (): void {
     Http::fake();
     $user = donUser('don-suppressed');
     app(WindowFocusState::class)->markBlurred();
@@ -162,7 +162,7 @@ it('does not fire even when unfocused when SuppressionEvaluator suppresses deliv
     Http::assertNothingSent();
 });
 
-it('substitutes a non-empty detail-free body when the device hide-details preference is on (D-24)', function (): void {
+it('substitutes a non-empty detail-free body when the device hide-details preference is on', function (): void {
     Http::fake();
     $user = donUser('don-hide-details');
     app(WindowFocusState::class)->markBlurred();

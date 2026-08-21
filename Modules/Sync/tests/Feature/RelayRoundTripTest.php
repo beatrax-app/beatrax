@@ -63,7 +63,7 @@ afterEach(function (): void {
     }
 });
 
-it('round-trips deliver -> drain -> confirm against the real relay handler (CR-01..CR-04)', function (): void {
+it('round-trips deliver -> drain -> confirm against the real relay handler', function (): void {
     $senderDid = 'device-sender';
     $recipientDid = 'device-recipient';
     $blob = random_bytes(96);
@@ -99,7 +99,7 @@ it('round-trips deliver -> drain -> confirm against the real relay handler (CR-0
     expect($confirmed->delivered_at)->not->toBeNull('confirm() must mark the row delivered');
 });
 
-it('rejects a drain from a different device once the owner has TOFU-registered its secret (M1/CR-04)', function (): void {
+it('rejects a drain from a different device once the owner has TOFU-registered its secret', function (): void {
     $recipientDid = 'device-victim';
     $this->relayClient->deliver('device-sender', $recipientDid, random_bytes(48));
 
@@ -119,7 +119,7 @@ it('rejects a drain from a different device once the owner has TOFU-registered i
         ->toThrow(RuntimeException::class);
 });
 
-it('confirm honours the same per-device auth — a different device is rejected, the owner is not (M1/CR-04)', function (): void {
+it('confirm honours the same per-device auth — a different device is rejected, the owner is not', function (): void {
     $recipientDid = 'device-victim-2';
     $this->relayClient->deliver('device-sender', $recipientDid, random_bytes(48));
 

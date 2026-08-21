@@ -108,7 +108,7 @@ it('does NOT insert a duplicate row when an un-acknowledged worker.crashed alert
     expect(SystemAlert::query()->where('kind', 'worker.crashed')->count())->toBe(1);
 });
 
-it('fires the OS notification when the window is UNFOCUSED at crash-loop time (D-13 unfocused branch)', function (): void {
+it('fires the OS notification when the window is UNFOCUSED at crash-loop time', function (): void {
     Http::fake();
 
     $clock = freezableClockAt('2026-05-23T12:00:00Z');
@@ -128,7 +128,7 @@ it('fires the OS notification when the window is UNFOCUSED at crash-loop time (D
     Http::assertSent(fn ($request) => str_ends_with((string) $request->url(), '/notification'));
 });
 
-it('suppresses the OS notification when the window is FOCUSED at crash-loop time (D-13 focused branch)', function (): void {
+it('suppresses the OS notification when the window is FOCUSED at crash-loop time', function (): void {
     Http::fake();
 
     $clock = freezableClockAt('2026-05-23T12:00:00Z');
@@ -150,7 +150,7 @@ it('suppresses the OS notification when the window is FOCUSED at crash-loop time
     Http::assertNothingSent();
 });
 
-it('suppresses the OS notification on a SECOND unfocused crash-loop while the prior alert is still un-acknowledged (WR-06)', function (): void {
+it('suppresses the OS notification on a SECOND unfocused crash-loop while the prior alert is still un-acknowledged', function (): void {
     // The de-dup guard used to skip only the system_alerts insert, leaving the
     // OS-notification path to fire on every escalation and spam duplicate toasts
     // at a partner who had already seen the first. It is now gated on
@@ -180,7 +180,7 @@ it('suppresses the OS notification on a SECOND unfocused crash-loop while the pr
     expect(SystemAlert::query()->where('kind', 'worker.crashed')->count())->toBe(1);
 });
 
-it('re-fires the OS notification on a fresh crash-loop after the prior alert is acknowledged (regression of WR-06 over-correction)', function (): void {
+it('re-fires the OS notification on a fresh crash-loop after the prior alert is acknowledged', function (): void {
     // The de-dup fix could over-correct and silence legitimate crash-loops after
     // the user acknowledged the previous one, so this pins the re-fire.
     Http::fake();

@@ -27,7 +27,7 @@ beforeEach(function (): void {
     $this->selected = app(PeriodQuery::class)->next($this->prior);
 });
 
-it('reproduces the prior periods assigned amount for every envelope that had one (Req 6)', function (): void {
+it('reproduces the prior periods assigned amount for every envelope that had one', function (): void {
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->prior->start, 40000);
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->dining->id, $this->prior->start, 15000);
     // Fuel is never assigned in the prior period.
@@ -60,7 +60,7 @@ it('leaves an envelope with no prior assignment unassigned after copy', function
     ]);
 });
 
-it('never overwrites an existing target assignment when copying into a partially-assigned month (IN-04)', function (): void {
+it('never overwrites an existing target assignment when copying into a partially-assigned month', function (): void {
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->prior->start, 40000);
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->dining->id, $this->prior->start, 15000);
 

@@ -104,7 +104,7 @@ function tcefTag(DatabaseManager $db, int $userId, int $txId, ?int $catId = null
     ], $overrides));
 }
 
-it('CSV header is the exact 16 D-15 columns in documented order', function (): void {
+it('CSV header is the exact 16 columns in documented order', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = tcefUser($db, 'tcef-header-user');

@@ -133,7 +133,7 @@ it('MobilePairingScan class exists and is Livewire-registered', function (): voi
     expect(class_exists(MobilePairingScan::class))->toBeTrue();
 });
 
-it('lands on the enter_code fallback with the amber notice when the camera is unavailable (D-02, never a dead end)', function (): void {
+it('lands on the enter_code fallback with the amber notice when the camera is unavailable (never a dead end)', function (): void {
     $user = pairingScanTestUser('mobile-pair-no-camera');
     test()->actingAs($user);
 
@@ -161,7 +161,7 @@ it('cameraDenied() falls through to the enter_code step with the amber notice', 
         ->assertSet('cameraUnavailableNotice', true);
 });
 
-it('a decoded QR string auto-advances to the confirm step (D-01) — no new confirmation screen', function (): void {
+it('a decoded QR string auto-advances to the confirm step — no new confirmation screen', function (): void {
     $user = pairingScanTestUser('mobile-pair-qr-ok');
     test()->actingAs($user);
 
@@ -190,7 +190,7 @@ it('an invalid decoded QR string surfaces the same invalid-or-expired flash as a
         ->assertSee('This code is invalid or has expired.');
 });
 
-it('the typed word-code fallback also auto-advances to the confirm step (D-02)', function (): void {
+it('the typed word-code fallback also auto-advances to the confirm step', function (): void {
     $user = pairingScanTestUser('mobile-pair-wordcode-ok');
     test()->actingAs($user);
 
@@ -398,7 +398,7 @@ it('import mode defers self-mint on both-confirm — sync_encryption_state stays
     expect($initiatorRow->confirmed_at)->not->toBeNull();
 });
 
-it('MEDIUM-01: a re-entry to /mobile/pair WITHOUT ?mode=import still defers self-mint once the durable import-intent marker was set on an earlier visit', function (): void {
+it('a re-entry to /mobile/pair WITHOUT ?mode=import still defers self-mint once the durable import-intent marker was set on an earlier visit', function (): void {
     $user = pairingScanTestUser('mobile-pair-import-durable-reentry');
     test()->actingAs($user);
 

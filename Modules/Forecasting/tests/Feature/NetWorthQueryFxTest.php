@@ -52,7 +52,7 @@ it('includes a non-EUR account in the total after FX conversion', function (): v
     expect($netWorth->accountsWithoutRate)->toBe(0);
 });
 
-it('preserves the original currency on each account balance line (D-02)', function (): void {
+it('preserves the original currency on each account balance line', function (): void {
     nwAccount($this->db, $this->user->id, 'USD wallet', 'paypal', 10_000, 'USD');
     fxRate($this->db, 'USD', '1.08');
 
@@ -146,7 +146,7 @@ it('leaves FX fields null on a base-currency (passthrough) line', function (): v
     expect($eurLine->hasNoRate('EUR'))->toBeFalse();
 });
 
-it('keeps a no-rate non-base account visible but without a base equivalent (D-07)', function (): void {
+it('keeps a no-rate non-base account visible but without a base equivalent', function (): void {
     nwAccount($this->db, $this->user->id, 'JPY wallet', 'paypal', 5_000_000, 'JPY'); // no JPY rate seeded
 
     $netWorth = app(NetWorthQuery::class)->forUser($this->user);
@@ -158,7 +158,7 @@ it('keeps a no-rate non-base account visible but without a base equivalent (D-07
     expect($jpyLine->hasNoRate('EUR'))->toBeTrue();
 });
 
-it('flags per-account staleness when the rate is older than the freshness threshold (D-12)', function (): void {
+it('flags per-account staleness when the rate is older than the freshness threshold', function (): void {
     $this->travelTo('2026-06-07'); // freeze clock so the 2026-05-20 rate is deterministically stale
     nwAccount($this->db, $this->user->id, 'USD wallet', 'paypal', 10_000, 'USD');
     fxRate($this->db, 'USD', '1.08', '2026-05-20', 'bundled'); // well past the 3-day threshold

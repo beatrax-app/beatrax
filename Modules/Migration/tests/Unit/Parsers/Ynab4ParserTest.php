@@ -27,7 +27,7 @@ it('Ynab4Parser: format() returns ynab4', function (): void {
     expect($parser->format())->toBe('ynab4');
 });
 
-it('Ynab4Parser: parses the v1 golden fixture into a populated MigrationBatch — Req 1/2/3/4/5/6/7', function (): void {
+it('Ynab4Parser: parses the v1 golden fixture into a populated MigrationBatch', function (): void {
     $parser = app(Ynab4Parser::class);
 
     $batch = $parser->parse(MigrationFixturePaths::ynab4Dir('v1'), $this->user, 1);
@@ -76,7 +76,7 @@ it('Ynab4Parser: parses the v1 golden fixture into a populated MigrationBatch �
     expect($clearedCounts['reconciled'] ?? 0)->toBe(0);
 });
 
-it('Ynab4Parser: rejects the corrupt fixture with UnrecognizedMigrationFileException — Req 1 reject-not-partial', function (): void {
+it('Ynab4Parser: rejects the corrupt fixture with UnrecognizedMigrationFileException, importing nothing partially', function (): void {
     $parser = app(Ynab4Parser::class);
     $extracted = MigrationFixturePaths::extractZip(MigrationFixturePaths::corruptZip());
 
@@ -84,7 +84,7 @@ it('Ynab4Parser: rejects the corrupt fixture with UnrecognizedMigrationFileExcep
         ->toThrow(UnrecognizedMigrationFileException::class);
 });
 
-it('WR-07: a negative Budgeted value is preserved, NOT silently coerced to zero', function (): void {
+it('Ynab4Parser: a negative Budgeted value is preserved, NOT silently coerced to zero', function (): void {
     $dir = sys_get_temp_dir().'/ynab4-negative-budgeted-'.uniqid('', true);
     mkdir($dir, 0755, true);
 
@@ -111,7 +111,7 @@ it('WR-07: a negative Budgeted value is preserved, NOT silently coerced to zero'
     @rmdir($dir);
 });
 
-it('CR-01: a category group literally named "Group" does not collide with an unrelated group named "Rent" — 13.5-REVIEW-DEEP.md exact example', function (): void {
+it('Ynab4Parser: a category group literally named "Group" does not collide with an unrelated group named "Rent"', function (): void {
     $dir = sys_get_temp_dir().'/ynab4-group-key-collision-'.uniqid('', true);
     mkdir($dir, 0755, true);
 

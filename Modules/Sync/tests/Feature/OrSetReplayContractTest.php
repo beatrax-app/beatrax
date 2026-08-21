@@ -121,7 +121,7 @@ it('persists an OR-Set merge result as JSON into the merged_from column via repl
     expect($decoded[0]['tag'])->toBe('t2');
 });
 
-it('a bad OR-Set value is quarantined without rolling back a sibling LWW edit in the same batch (CR-02)', function (): void {
+it('a bad OR-Set value is quarantined without rolling back a sibling LWW edit in the same batch', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 

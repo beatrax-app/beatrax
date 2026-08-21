@@ -200,7 +200,7 @@ it('prefer_first_write policy: keeps stored values; no event; no pending row; so
     expect(DB::table('pending_enrichment_conflicts')->count())->toBe(0);
 });
 
-it('cross-user T-07-09: pending_enrichment_conflicts for another user is NEVER touched', function (): void {
+it('cross-user: pending_enrichment_conflicts for another user is NEVER touched', function (): void {
     $other = User::create([
         'username' => 'other-conflict',
         'password' => 'opensesame',

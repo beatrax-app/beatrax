@@ -111,7 +111,7 @@ it('runs ReapplyRulesJob synchronously to completion, in-process, for an encrypt
 // writes them at import: against a plaintext fixture the decrypt-before-match
 // assertion would pass vacuously.
 
-it('decrypts counterparty_name/description before matching so a rule fires against an encrypted user\'s stored ciphertext (CR-04)', function (): void {
+it('decrypts counterparty_name/description before matching so a rule fires against an encrypted user\'s stored ciphertext', function (): void {
     $user = rrjeUser();
     $session = $this->enablesEncryptionForUser($user);
     $this->actingAs($user);

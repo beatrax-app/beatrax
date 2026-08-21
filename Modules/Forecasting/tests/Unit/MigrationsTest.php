@@ -355,7 +355,7 @@ it('registers the documented indexes on the four new tables', function (): void 
     expect(collect($runs)->first(static fn (string $name): bool => str_contains($name, 'started_at')))->not->toBeNull();
 });
 
-it('forbids facade imports inside the five Phase 10 migrations', function (): void {
+it('forbids facade imports inside every Forecasting migration', function (): void {
     $migrations = glob(__DIR__.'/../../Database/Migrations/*.php');
     expect($migrations)->not->toBeEmpty();
 

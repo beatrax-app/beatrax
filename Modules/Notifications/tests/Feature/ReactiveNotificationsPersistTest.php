@@ -64,7 +64,7 @@ function rnpCount(int $userId, string $triggerType): int
         ->count();
 }
 
-it('produces one inbox row with the locked "Import finished" title for a csv TransactionBatchImported (Req 3)', function (): void {
+it('produces one inbox row with the locked "Import finished" title for a csv TransactionBatchImported', function (): void {
     $user = rnpUser('rnp-import-finished');
 
     rnpDispatch(new TransactionBatchImported(
@@ -77,7 +77,7 @@ it('produces one inbox row with the locked "Import finished" title for a csv Tra
     expect(rnpTitlesFor($user->id, DeterministicKeyDeriver::TRIGGER_IMPORT_FINISHED))->toBe(['Import finished']);
 });
 
-it('produces one inbox row with the locked "New receipts found" title for an eml TransactionBatchImported (Req 3)', function (): void {
+it('produces one inbox row with the locked "New receipts found" title for an eml TransactionBatchImported', function (): void {
     $user = rnpUser('rnp-receipts-found');
 
     rnpDispatch(new TransactionBatchImported(
@@ -90,7 +90,7 @@ it('produces one inbox row with the locked "New receipts found" title for an eml
     expect(rnpTitlesFor($user->id, DeterministicKeyDeriver::TRIGGER_RECEIPTS_FOUND))->toBe(['New receipts found']);
 });
 
-it('produces one inbox row with the locked "A recurring charge changed" title for DriftAlertOpened (Req 3)', function (): void {
+it('produces one inbox row with the locked "A recurring charge changed" title for DriftAlertOpened', function (): void {
     $user = rnpUser('rnp-drift-changed');
 
     rnpDispatch(new DriftAlertOpened(
@@ -107,7 +107,7 @@ it('produces one inbox row with the locked "A recurring charge changed" title fo
     expect(rnpTitlesFor($user->id, DeterministicKeyDeriver::TRIGGER_DRIFT_CHANGED))->toBe(['A recurring charge changed']);
 });
 
-it('produces one inbox row with the locked "Cash-flow shortfall ahead" title for ForecastShortfallDetected (Req 3)', function (): void {
+it('produces one inbox row with the locked "Cash-flow shortfall ahead" title for ForecastShortfallDetected', function (): void {
     $user = rnpUser('rnp-forecast-shortfall');
 
     rnpDispatch(new ForecastShortfallDetected(
@@ -125,7 +125,7 @@ it('produces one inbox row with the locked "Cash-flow shortfall ahead" title for
     expect(rnpTitlesFor($user->id, DeterministicKeyDeriver::TRIGGER_FORECAST_SHORTFALL))->toBe(['Cash-flow shortfall ahead']);
 });
 
-it('re-dispatching the SAME drift alert still yields exactly one row (D-05 deterministic-id convergence)', function (): void {
+it('re-dispatching the SAME drift alert still yields exactly one row (deterministic-id convergence)', function (): void {
     $user = rnpUser('rnp-drift-idempotent');
 
     $alert = new DriftAlertOpened(

@@ -258,7 +258,7 @@ describe('TransactionsList tax badge', function (): void {
         $component->assertSee('data-testid="tax-badge-tagged-'.$txId.'"', false);
     });
 
-    it('loads tax state for a batch of rows with a single whereIn (Pitfall 1)', function (): void {
+    it('loads tax state for a batch of rows with a single whereIn', function (): void {
         $user = badgeUser('tx-list-batch-user');
         $db = app(DatabaseManager::class);
         $ids = [];
@@ -314,7 +314,7 @@ describe('TransactionsList tax badge', function (): void {
         expect($component->get('batchSuggestionDismissed'))->toBeTrue();
     });
 
-    it('applyBatchTag applies the SAME category and note as the saved trigger tag (D-03)', function (): void {
+    it('applyBatchTag applies the SAME category and note as the saved trigger tag', function (): void {
         $user = badgeUser('tx-list-batch-cat-user');
         $db = app(DatabaseManager::class);
 
@@ -362,7 +362,7 @@ describe('TransactionsList tax badge', function (): void {
         }
     });
 
-    it('keeps tax state on previously-accumulated phone rows after loadMore (CR-03 regression)', function (): void {
+    it('keeps tax state on previously-accumulated phone rows after loadMore', function (): void {
         $user = badgeUser('tx-list-loadmore-user');
         $db = app(DatabaseManager::class);
 
@@ -384,7 +384,7 @@ describe('TransactionsList tax badge', function (): void {
         $component->assertDontSee('data-testid="tax-badge-untagged-'.$page1TxId.'"', false);
     });
 
-    it('renders the year-override row when the booked year differs from the tax year, and persists the override (CR-02 / D-10)', function (): void {
+    it('renders the year-override row when the booked year differs from the tax year, and persists the override', function (): void {
         $user = badgeUser('tx-list-year-override-user');
         $db = app(DatabaseManager::class);
 
@@ -431,7 +431,7 @@ describe('TransactionsList tax badge', function (): void {
         $component->assertDontSee('Assign to tax year');
     });
 
-    it('applyBatchTag honours a snapshotted "No category" — it never falls through to live picker state from another row (WR-03)', function (): void {
+    it('applyBatchTag honours a snapshotted "No category" — it never falls through to live picker state from another row', function (): void {
         $user = badgeUser('tx-list-batch-nullcat-user');
         $db = app(DatabaseManager::class);
         $cpId = badgeCp($db, $user->id, 'Batch NoCat Gym');
@@ -477,7 +477,7 @@ describe('TransactionsList tax badge', function (): void {
         }
     });
 
-    it('batch suggestion is keyed to the trigger transaction\'s booked year, not the seasonal current year (WR-05)', function (): void {
+    it('batch suggestion is keyed to the trigger transaction\'s booked year, not the seasonal current year', function (): void {
         $user = badgeUser('tx-list-batch-year-user');
         $db = app(DatabaseManager::class);
 
@@ -515,7 +515,7 @@ describe('TransactionsList tax badge', function (): void {
             ->exists())->toBeFalse();
     });
 
-    it('opening the picker for another row resets note/category/year-override — no state bleed (WR-04)', function (): void {
+    it('opening the picker for another row resets note/category/year-override — no state bleed', function (): void {
         $user = badgeUser('tx-list-state-bleed-user');
         $db = app(DatabaseManager::class);
         $txA = badgeTx($db, $user->id);

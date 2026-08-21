@@ -45,7 +45,7 @@ it('drop zone is interactive when MT940 is selected', function (): void {
         ->assertDontSeeHtml('aria-disabled="true"');
 });
 
-it('drop zone is disabled when CSV is selected without a bank chip (Pitfall 5 Layer A UX surface)', function (): void {
+it('drop zone is disabled when CSV is selected without a bank chip', function (): void {
     Livewire::test(ConnectBankStep::class)
         ->set('selectedFormat', 'asn-csv')
         ->set('selectedBankFormatHint', null)

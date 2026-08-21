@@ -64,7 +64,7 @@ it('returns a DTO whose monthlySavings absolute amount equals the series monthly
     expect($dto->currency)->toBe('EUR');
 });
 
-it('preserves USD currency on USD series (Pitfall 1: monthly_equivalent_minor is NOT hard-EUR)', function (): void {
+it('preserves USD currency on USD series, because monthly_equivalent_minor is not hard-EUR', function (): void {
     $user = ciqUser('ciq-usd');
     $seriesId = ciqSeries($user, [
         'monthly_equivalent_minor' => -1199,

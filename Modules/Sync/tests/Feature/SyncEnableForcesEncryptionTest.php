@@ -62,7 +62,7 @@ it('auto-runs the encryption migration and turns encryption ON when enableSync s
     expect(class_exists(EncryptionMigrationService::class))->toBeTrue();
 });
 
-it('auto-runs the encryption migration when a pairing both-confirm admits a peer — no decline path (D-07)', function (): void {
+it('auto-runs the encryption migration when a pairing both-confirm admits a peer — no decline path', function (): void {
     // This device plays the initiator so its own real, loadable identity is the
     // initiator; the responder is accepted straight through PairingTokenService
     // with an independent device id, because admitResponderDevice() refuses a

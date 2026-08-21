@@ -41,7 +41,7 @@ it('opens the move modal for a row and exposes the destination + recent-moves vi
         ->assertViewHas('moveDestinations', fn ($rows) => array_key_exists($this->dining->id, $rows) && ! array_key_exists($this->groceries->id, $rows));
 });
 
-it('moves money between two envelopes, updating both rows live with the to-budget unchanged (Req 5)', function (): void {
+it('moves money between two envelopes, updating both rows live with the to-budget unchanged', function (): void {
     $component = Livewire::test(BudgetsPage::class)
         ->call('openMove', $this->groceries->id)
         ->set('moveToCategoryId', (string) $this->dining->id)

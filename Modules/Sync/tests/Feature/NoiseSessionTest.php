@@ -97,7 +97,7 @@ it('session is bidirectional: responder can also encrypt and initiator decrypts'
     expect($decrypted)->toBe($plaintext);
 });
 
-it('nonce overflow guard rekeys before reaching PHP_INT_MAX (Pitfall 1 protection)', function (): void {
+it('nonce overflow guard rekeys before reaching PHP_INT_MAX', function (): void {
     // Reaching the boundary honestly would take 2^63 messages, so the counter
     // is driven to it by reflection instead.
     $key = random_bytes(SODIUM_CRYPTO_AEAD_CHACHA20POLY1305_IETF_KEYBYTES);

@@ -558,7 +558,7 @@ it('ends the GDK receive loop on a well-formed but non-wrap control frame', func
     expect($keyring->loadKeyring($userId, $session)->epochs())->toBe([], 'a non-wrap control frame must never append anything to the keyring');
 });
 
-it('LanSyncException::peerFailedConfirmedDeviceGate carries the T-13-13 confirmed-device-gate rejection message', function (): void {
+it('LanSyncException::peerFailedConfirmedDeviceGate carries the confirmed-device-gate rejection message', function (): void {
     // syncOnce() throws this the moment a peer completes the Noise handshake
     // yet fails SyncSession::authenticate() (a security-relevant rejection,
     // never a retryable transient). The live-dial throw site is Manual-Only,

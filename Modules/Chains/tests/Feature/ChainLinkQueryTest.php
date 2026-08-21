@@ -226,7 +226,7 @@ it('hasChainForTransaction ignores rejected chain_links', function (): void {
     expect($this->query->hasChainForTransaction((int) $paypalExpense->id, $this->user))->toBeFalse();
 });
 
-it('forTransaction maps confidence tiers per D-91', function (): void {
+it('forTransaction labels each node Deterministic, Confirmed or Candidate from its link state and confidence', function (): void {
     $paypalExpense = clqTx($this->user, $this->paypal, $this->run, -2500, 'expense', 'Spotify', 'spotify', '2026-05-10', 'b1', 1);
     $asnA = clqTx($this->user, $this->asn, $this->run, 2500, 'transfer_in', 'A', 'a', '2026-05-10', 'b2', 2);
     $asnB = clqTx($this->user, $this->asn, $this->run, 2500, 'transfer_in', 'B', 'b', '2026-05-11', 'b3', 3);

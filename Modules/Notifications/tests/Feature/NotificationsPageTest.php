@@ -87,7 +87,7 @@ it('renders without error with 50+ notifications and exercises Load more', funct
         ->assertSeeText('Load more');
 });
 
-it('resolves notifications.index and inboxes.index as distinct, independently-resolving routes (D-01)', function (): void {
+it('resolves notifications.index and inboxes.index as distinct, independently-resolving routes', function (): void {
     $notificationsUrl = Route::has('notifications.index') ? route('notifications.index') : null;
     $inboxesUrl = Route::has('inboxes.index') ? route('inboxes.index') : null;
 
@@ -100,7 +100,7 @@ it('resolves notifications.index and inboxes.index as distinct, independently-re
     $this->actingAs($user)->get($inboxesUrl)->assertOk();
 });
 
-it('renders the D-44 empty-state heading for each tab', function (): void {
+it('renders a distinct empty-state heading for each of the unread, all and dismissed tabs', function (): void {
     $user = npUser('np-empty-states');
 
     $this->actingAs($user)->get('/notifications?tab=unread')
@@ -140,7 +140,7 @@ it('flips read state via markRead and persists it across a fresh component mount
     expect($this->db->connection()->table('notifications')->where('id', $id)->value('read_at'))->not->toBeNull();
 });
 
-it('moves a row out of Unread/All into Dismissed via dismiss, and back via undoDismiss (D-10)', function (): void {
+it('moves a row out of Unread/All into Dismissed via dismiss, and back via undoDismiss', function (): void {
     $user = npUser('np-dismiss-roundtrip');
     $id = str_repeat('3', 64);
     npInsertNotification($this->db, $user->id, $id);

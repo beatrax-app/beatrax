@@ -70,7 +70,7 @@ it('exempts the signup route so the welcome to create-account chain does not loo
         ->assertOk();
 });
 
-it('exempts routes named exactly "mobile.import" via prefix matching (Phase 15 import-join)', function (): void {
+it('exempts routes named exactly "mobile.import" via prefix matching', function (): void {
     $this->withoutMiddleware(EnsureDatabaseReady::class);
 
     $this->app['router']

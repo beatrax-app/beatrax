@@ -271,7 +271,7 @@ it('increments the matched rule hits_count on every rule-fire (Wave 4 deferral c
     expect($hits)->toBe(3);
 });
 
-it('rolls back an earlier rule\'s hits_count bump when a later matched rule fails mid-loop (WR-01)', function (): void {
+it('rolls back an earlier rule\'s hits_count bump when a later matched rule fails mid-loop', function (): void {
     $firstRuleId = seedAutoRule($this->user->id, $this->streamingId);
     // A second rule matching the SAME transaction (same merchant), so both
     // fire in the same apply() call and both attempt a hits_count bump.

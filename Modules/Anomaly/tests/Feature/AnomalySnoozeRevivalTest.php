@@ -145,7 +145,7 @@ it('does NOT flip snoozed alerts whose snoozed_until is in the future', function
     expect(AnomalyAlertTransition::query()->where('anomaly_alert_id', $alert->id)->count())->toBe(0);
 });
 
-it('revives every expired snooze across users in one chunked sweep (WR-03)', function (): void {
+it('revives every expired snooze across users in one chunked sweep', function (): void {
     $userA = asrUser('asr-chunk-a');
     $userB = asrUser('asr-chunk-b');
 

@@ -102,7 +102,7 @@ it('changing the idle timeout preset persists without requiring PIN confirmation
     expect((int) $row->idle_timeout_minutes)->toBe(15);
 });
 
-it('de-enrolling biometric keeps the lock enabled and both wrapped keys intact (CR-01)', function (): void {
+it('de-enrolling biometric keeps the lock enabled and both wrapped keys intact', function (): void {
     $user = appLockSettingsUser('deenroll-user');
     $this->actingAs($user);
 

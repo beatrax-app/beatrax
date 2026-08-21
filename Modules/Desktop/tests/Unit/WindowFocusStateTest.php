@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Modules\Desktop\Internal\Native\WindowFocusState;
 
-it('defaults to focused on construction (D-13 conservative default)', function (): void {
+it('defaults to focused on construction (the conservative default)', function (): void {
     // A freshly launched window opens in front of the user, so "focused" is the
     // conservative default until the first blur arrives. Defaulting to unfocused
     // would let every notification fired during the boot-up race pop an OS toast

@@ -145,7 +145,7 @@ it('renders the "Chain not yet resolved" empty state when transactionId is null 
         ->assertSee('Chain not yet resolved');
 });
 
-it('renders the three-tier confidence chips (Deterministic / Confirmed / Candidate) per D-91', function (): void {
+it('renders the three-tier confidence chips (Deterministic / Confirmed / Candidate)', function (): void {
     $tx0 = cdrTx($this->user, $this->paypal, $this->run, -2500, 'expense', 'Spotify', '2026-05-10', 'c0', 1);
     $tx1 = cdrTx($this->user, $this->asn, $this->run, 2500, 'transfer_in', 'PayPal', '2026-05-10', 'c1', 2);
     $tx2 = cdrTx($this->user, $this->asn, $this->run, 2500, 'transfer_in', 'A', '2026-05-11', 'c2', 3);
@@ -183,7 +183,7 @@ it('Confirm chip from the drawer promotes a candidate to confirmed', function ()
     expect($link->state)->toBe('confirmed');
 });
 
-it('Reject chip from the drawer marks a candidate as rejected (per-pair only, D-89)', function (): void {
+it('Reject chip from the drawer marks a candidate as rejected (per-pair only)', function (): void {
     $tx0 = cdrTx($this->user, $this->paypal, $this->run, -2500, 'expense', 'Spotify', '2026-05-10', 'e0', 1);
     $tx1 = cdrTx($this->user, $this->asn, $this->run, 2500, 'transfer_in', 'PayPal', '2026-05-10', 'e1', 2);
 
@@ -200,7 +200,7 @@ it('Reject chip from the drawer marks a candidate as rejected (per-pair only, D-
     expect($link->state)->toBe('rejected');
 });
 
-it('fan-out paginates ICS bulk-settle children at 10 rows per click (D-93)', function (): void {
+it('fan-out paginates ICS bulk-settle children at 10 rows per click', function (): void {
     // The ASN settlement leg is the fan-out parent; its children are the
     // covered ICS charges.
     $icsCharge = cdrTx($this->user, $this->ics, $this->run, -1200, 'expense', 'Apple', '2026-05-10', 'f0', 1);

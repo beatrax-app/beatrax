@@ -112,7 +112,7 @@ it('RelayClient class exists (Wave 4 implementation landed)', function (): void 
     );
 });
 
-it('RelayMailbox writers produce zero-padded UTC Zulu timestamps (WR-03 GC invariant)', function (): void {
+it('RelayMailbox writers produce zero-padded UTC Zulu timestamps, so the GC compares expiries lexically', function (): void {
     // The GC compares expires_at lexically, which is only safe while every
     // timestamp is written in the same zero-padded Zulu form.
     $mailbox = new RelayMailbox(

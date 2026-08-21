@@ -27,7 +27,7 @@ it('NynabParser: format() returns nynab', function (): void {
     expect($parser->format())->toBe('nynab');
 });
 
-it('NynabParser: parses the v1 golden ZIP fixture into a populated MigrationBatch — Req 1/2/3/4/5/6/7', function (): void {
+it('NynabParser: parses the v1 golden ZIP fixture into a populated MigrationBatch', function (): void {
     $parser = app(NynabParser::class);
     $extracted = MigrationFixturePaths::extractZip(MigrationFixturePaths::nynabZip('v1'));
 
@@ -69,7 +69,7 @@ it('NynabParser: parses the v1 golden ZIP fixture into a populated MigrationBatc
     expect($clearedCounts['reconciled'] ?? 0)->toBe(0);
 });
 
-it('NynabParser: rejects the corrupt fixture with UnrecognizedMigrationFileException — Req 1 reject-not-partial', function (): void {
+it('NynabParser: rejects the corrupt fixture with UnrecognizedMigrationFileException, importing nothing partially', function (): void {
     $parser = app(NynabParser::class);
     $extracted = MigrationFixturePaths::extractZip(MigrationFixturePaths::corruptZip());
 

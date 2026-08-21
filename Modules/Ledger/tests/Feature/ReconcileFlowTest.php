@@ -48,7 +48,7 @@ it('completing a reconcile with zero discrepancy locks the cleared rows and crea
     expect(DB::table('transactions')->where('id', $tx->id)->value('status'))->toBe('reconciled');
 });
 
-it('computes the difference on the in-window cleared balance only, so a statement that balances for its window is reconcilable without a fabricated number (CR-01)', function (): void {
+it('computes the difference on the in-window cleared balance only, so a statement that balances for its window is reconcilable without a fabricated number', function (): void {
     // Unbounded, the cleared balance is -80,00; in-window it is -50,00, which
     // is what the statement's closing balance reflects.
     $inWindow = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'cleared', 'amount_minor' => -5000, 'posted_at' => '2026-06-10']);
@@ -68,7 +68,7 @@ it('computes the difference on the in-window cleared balance only, so a statemen
     expect(DB::table('transactions')->where('user_id', $this->user->id)->count())->toBe(2);
 });
 
-it('reports an honest toast when a matched statement locks zero in-window rows (WR-04)', function (): void {
+it('reports an honest toast when a matched statement locks zero in-window rows', function (): void {
     // Only a post-date cleared row exists, so the in-window cleared balance is
     // 0 and a 0,00 target matches — but there is nothing to lock.
     $afterWindow = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'cleared', 'amount_minor' => -3000, 'posted_at' => '2026-06-20']);

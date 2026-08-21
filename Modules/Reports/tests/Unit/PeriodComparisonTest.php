@@ -128,7 +128,7 @@ function pctMarchPeriod(): Period
     );
 }
 
-it('previousPeriod() steps back by calendar months for a month-aligned period, not a raw day-count shift (CR-01)', function (): void {
+it('previousPeriod() steps back by calendar months for a month-aligned period, not a raw day-count shift', function (): void {
     $comparison = new PeriodComparison;
     $current = pctMarchPeriod(); // March 2026: 2026-03-01 -> 2026-04-01 (31 days)
 
@@ -140,7 +140,7 @@ it('previousPeriod() steps back by calendar months for a month-aligned period, n
     expect($previous->endExclusive->toDateString())->toBe('2026-03-01');
 });
 
-it('previousPeriod() Feb->Jan and Mar->Feb transitions land on the correct calendar month, never a day-count shift (CR-01)', function (): void {
+it('previousPeriod() Feb->Jan and Mar->Feb transitions land on the correct calendar month, never a day-count shift', function (): void {
     $comparison = new PeriodComparison;
 
     $feb = new Period(
@@ -259,7 +259,7 @@ it('comparison honors currencyMode=base — a previous-period unconvertible-curr
     expect($row->deltaMinor)->toBe(2_000);
 });
 
-it('CR-03: compare() keeps BOTH currencies for a group present in EUR and USD under currencyMode=original, never overwriting one with the other', function (): void {
+it('compare() keeps BOTH currencies for a group present in EUR and USD under currencyMode=original, never overwriting one with the other', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = pctUser();
@@ -310,7 +310,7 @@ it('CR-03: compare() keeps BOTH currencies for a group present in EUR and USD un
     expect($byCurrency['USD']->amountMinor)->toBe(3_000);
 });
 
-it('WR-04: hasExcludedAccounts/accountsWithoutRate surface an unconvertible currency that ONLY existed in the previous period', function (): void {
+it('hasExcludedAccounts/accountsWithoutRate surface an unconvertible currency that ONLY existed in the previous period', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = pctUser();

@@ -65,7 +65,7 @@ it('seedFromCorpus is idempotent: seeding the same country twice returns 0 the s
     expect($totalRows)->toBe($first);
 });
 
-it('seedFromCorpus never overwrites a renamed corpus-key row (Pitfall-4 / T-07-14)', function (): void {
+it('seedFromCorpus never overwrites a renamed corpus-key row', function (): void {
     $user = taxSettingsUser('tax-seed-03');
 
     /** @var TaxCategoryWriter $writer */
@@ -96,7 +96,7 @@ it('seedFromCorpus never overwrites a renamed corpus-key row (Pitfall-4 / T-07-1
     expect($after)->toBe($renamedName);
 });
 
-it('seedFromCorpus skips a corpus entry whose name collides with a user-created category (WR-01)', function (): void {
+it('seedFromCorpus skips a corpus entry whose name collides with a user-created category', function (): void {
     $user = taxSettingsUser('tax-seed-name-collision');
 
     /** @var TaxCategoryWriter $writer */
@@ -196,7 +196,7 @@ it('rename updates the category name for the owning user', function (): void {
     expect($name)->toBe('Updated Name');
 });
 
-it('rename throws NotFoundHttpException on a cross-user category id (T-07-13)', function (): void {
+it('rename throws NotFoundHttpException on a cross-user category id', function (): void {
     $owner = taxSettingsUser('tax-rename-owner');
     $intruder = taxSettingsUser('tax-rename-intruder');
 
@@ -209,7 +209,7 @@ it('rename throws NotFoundHttpException on a cross-user category id (T-07-13)', 
         ->toThrow(NotFoundHttpException::class);
 });
 
-it('seeding a second country appends after the first country\'s sort_order block — no interleave (IN-04)', function (): void {
+it('seeding a second country appends after the first country\'s sort_order block — no interleave', function (): void {
     $user = taxSettingsUser('tax-seed-sort-order');
 
     /** @var TaxCategoryWriter $writer */
@@ -234,7 +234,7 @@ it('seeding a second country appends after the first country\'s sort_order block
         ->and($minDe)->toBeGreaterThan($maxNl);
 });
 
-it('rename to an existing name throws a friendly RuntimeException instead of a QueryException (WR-11)', function (): void {
+it('rename to an existing name throws a friendly RuntimeException instead of a QueryException', function (): void {
     $user = taxSettingsUser('tax-rename-dup');
 
     /** @var TaxCategoryWriter $writer */
@@ -247,7 +247,7 @@ it('rename to an existing name throws a friendly RuntimeException instead of a Q
         ->toThrow(RuntimeException::class, 'A category with this name already exists.');
 });
 
-it('rename to the SAME name is a no-op, not a duplicate error (WR-11)', function (): void {
+it('rename to the SAME name is a no-op, not a duplicate error', function (): void {
     $user = taxSettingsUser('tax-rename-same');
 
     /** @var TaxCategoryWriter $writer */
@@ -263,7 +263,7 @@ it('rename to the SAME name is a no-op, not a duplicate error (WR-11)', function
         ->where('id', $catId)->value('name'))->toBe('Stable Name');
 });
 
-it('renameCategory surfaces empty/duplicate-name errors inline instead of 500ing (WR-11)', function (): void {
+it('renameCategory surfaces empty/duplicate-name errors inline instead of 500ing', function (): void {
     $user = taxSettingsUser('tax-rename-ui');
 
     /** @var TaxCategoryWriter $writer */
@@ -288,7 +288,7 @@ it('renameCategory surfaces empty/duplicate-name errors inline instead of 500ing
         ->where('id', $catId)->value('name'))->toBe('Renamed OK');
 });
 
-it('unarchive restores an archived category to active (WR-11)', function (): void {
+it('unarchive restores an archived category to active', function (): void {
     $user = taxSettingsUser('tax-unarchive');
 
     /** @var TaxCategoryWriter $writer */
@@ -307,7 +307,7 @@ it('unarchive restores an archived category to active (WR-11)', function (): voi
         ->where('id', $catId)->value('status'))->toBe('active');
 });
 
-it('unarchive throws NotFoundHttpException on a cross-user category id (T-07-13)', function (): void {
+it('unarchive throws NotFoundHttpException on a cross-user category id', function (): void {
     $owner = taxSettingsUser('tax-unarchive-owner');
     $intruder = taxSettingsUser('tax-unarchive-intruder');
 
@@ -320,7 +320,7 @@ it('unarchive throws NotFoundHttpException on a cross-user category id (T-07-13)
         ->toThrow(NotFoundHttpException::class);
 });
 
-it('unarchiveCategory restores via the settings component (WR-11)', function (): void {
+it('unarchiveCategory restores via the settings component', function (): void {
     $user = taxSettingsUser('tax-unarchive-ui');
 
     /** @var TaxCategoryWriter $writer */
@@ -352,7 +352,7 @@ it('archive sets status to archived for the owning user', function (): void {
     expect($status)->toBe('archived');
 });
 
-it('archive throws NotFoundHttpException on a cross-user category id (T-07-13)', function (): void {
+it('archive throws NotFoundHttpException on a cross-user category id', function (): void {
     $owner = taxSettingsUser('tax-archive-owner');
     $intruder = taxSettingsUser('tax-archive-intruder');
 

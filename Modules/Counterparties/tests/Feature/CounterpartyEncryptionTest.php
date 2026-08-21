@@ -164,7 +164,7 @@ it('CounterpartyIndexQuery::forUser decrypts display_name', function (): void {
     expect($rows->pluck('displayName')->all())->toContain('Netflix');
 });
 
-it('CounterpartyIndexQuery::forUser stays correctly name-sorted (PHP usort) despite orderBy(\'id\') over ciphertext (D-12)', function (): void {
+it('CounterpartyIndexQuery::forUser stays correctly name-sorted (PHP usort) despite orderBy(\'id\') over ciphertext', function (): void {
     // No transaction rows, so all three totals tie at zero and the name
     // tie-break alone decides the order. They are resolved Zebra, Alpha,
     // Middle so the auto-increment ids do not accidentally match the

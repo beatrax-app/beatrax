@@ -180,7 +180,7 @@ it('produces the identical spend/income/net grand total across category/counterp
     expect($netTotal)->toBe(56_000);
 });
 
-it('WR-01: a genuinely-unsplit $0.00 transaction is captured by CategorySpendQuery, matching the other three dimensions coverage', function (): void {
+it('captures a genuinely-unsplit $0.00 transaction in CategorySpendQuery, matching the other three dimensions coverage', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = xdcUser();

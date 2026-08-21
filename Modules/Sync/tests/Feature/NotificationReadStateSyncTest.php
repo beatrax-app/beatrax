@@ -111,7 +111,7 @@ function notifSyncSeedRow(DatabaseManager $db, int $userId, string $id): void
     ]);
 }
 
-it('device A marks a notification read and device B replays to the same read_at (Req 11)', function (): void {
+it('device A marks a notification read and device B replays to the same read_at', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
@@ -149,7 +149,7 @@ it('device A marks a notification read and device B replays to the same read_at 
     expect($db->connection()->table('op_log_quarantine')->where('user_id', $this->user->id)->count())->toBe(0);
 });
 
-it('two devices concurrently marking the SAME notification read converge deterministically regardless of replay order (Req 11)', function (): void {
+it('two devices concurrently marking the SAME notification read converge deterministically regardless of replay order', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
@@ -205,7 +205,7 @@ it('two devices concurrently marking the SAME notification read converge determi
     expect($db->connection()->table('op_log_quarantine')->where('user_id', $this->user->id)->count())->toBe(0);
 });
 
-it('device B undoing a dismiss LATER converges to the reopened state under LWW (D-10)', function (): void {
+it('device B undoing a dismiss LATER converges to the reopened state under LWW', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 

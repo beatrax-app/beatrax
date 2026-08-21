@@ -84,12 +84,12 @@ it('OpLogEntry Ed25519 signature survives Noise encrypt/decrypt round-trip', fun
         sigHex: $received->signature,
         publicKeyBin: $publicKey,
     );
-    expect($verifies)->toBeTrue('Ed25519 signature must survive Noise encrypt/decrypt round-trip (Pitfall 7)');
+    expect($verifies)->toBeTrue('Ed25519 signature must survive Noise encrypt/decrypt round-trip');
 
     expect(class_exists(SyncSession::class))->toBeTrue('SyncSession must exist in Wave 3');
 });
 
-it('tampered OpLogEntry fails DeviceKeySigner::verify() after Noise decrypt (Pitfall 7 guard)', function (): void {
+it('tampered OpLogEntry fails DeviceKeySigner::verify() after Noise decrypt', function (): void {
     $signer = new DeviceKeySigner;
     $kp = sodium_crypto_sign_keypair();
     $secretKey = sodium_crypto_sign_secretkey($kp);

@@ -216,7 +216,7 @@ it('exempts the setup route itself from the gate', function (): void {
         ->assertOk();
 });
 
-it('exempts every desktop.setup.* route via name-prefix matching (IN-01)', function (): void {
+it('exempts every desktop.setup.* route via name-prefix matching', function (): void {
     // A hypothetical error variant of the setup screen: the prefix match is
     // meant to cover it without re-editing the middleware's exempt list.
     $this->app['router']
@@ -252,7 +252,7 @@ it('renders the welcome screen on a fresh install with no users', function (): v
         ->assertSee('Get started');
 });
 
-it('redirects a fresh-install gated request to the welcome screen when migrations are done but no user exists (UAT-1 regression)', function (): void {
+it('redirects a fresh-install gated request to the welcome screen when migrations are done but no user exists', function (): void {
     // After NativePHP::boot() the migrations have run but no user exists yet.
     // The gate used to pass this state through to /login, leaving the welcome
     // screen unreachable; the fresh-install signal now routes through the gate.
@@ -301,7 +301,7 @@ it('exempts the signup route so the welcome → signup chain does not loop back'
         ->assertOk();
 });
 
-it('exempts the Livewire AJAX update endpoint so the signup submit POST is not bounced (UAT-4 regression)', function (): void {
+it('exempts the Livewire AJAX update endpoint so the signup submit POST is not bounced', function (): void {
     // The signup submit posts to Livewire's AJAX endpoint, not to /signup, and
     // that route sits on the `web` group. Without an exemption a fresh-install
     // POST is bounced to /welcome with a 302 before SignupAction runs, so no

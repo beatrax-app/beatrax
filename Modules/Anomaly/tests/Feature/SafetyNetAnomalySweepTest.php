@@ -67,7 +67,7 @@ it('does not duplicate an alert for an already-alerted transaction', function ()
     expect(AnomalyAlert::query()->where('user_id', $user->id)->count())->toBe(1);
 });
 
-it('only sweeps the owning user (cross-user isolation, T-09-16)', function (): void {
+it('only sweeps the owning user (cross-user isolation)', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $userA = AnomalyCorpusSeeder::makeUser();

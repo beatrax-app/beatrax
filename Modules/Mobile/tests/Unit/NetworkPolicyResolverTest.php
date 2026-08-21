@@ -21,7 +21,7 @@ afterEach(function (): void {
     @unlink(networkPolicyFilePath());
 });
 
-it('defaults to pause-on-cellular OFF and syncs on any network (D-09) when no policy file exists', function (): void {
+it('defaults to pause-on-cellular OFF and syncs on any network when no policy file exists', function (): void {
     expect(file_exists(networkPolicyFilePath()))->toBeFalse();
 
     $resolver = new NetworkPolicyResolver;
@@ -49,7 +49,7 @@ it('persists the pause-on-cellular toggle to mobile/network-policy.json, never .
     }
 });
 
-it('setPauseOnCellular(false) reverts to the D-09 default (sync everywhere)', function (): void {
+it('setPauseOnCellular(false) reverts to the default (sync everywhere)', function (): void {
     $resolver = new NetworkPolicyResolver;
 
     $resolver->setPauseOnCellular(true);

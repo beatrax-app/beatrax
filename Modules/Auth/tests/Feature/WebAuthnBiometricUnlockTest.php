@@ -112,7 +112,7 @@ it('verifyAndRelease returns false when no challenge is in the session', functio
     expect($result)->toBeFalse();
 });
 
-it('verifyAndRelease returns false when the credential is disarmed (D-16)', function (): void {
+it('verifyAndRelease returns false when the credential is disarmed', function (): void {
     $user = User::query()->create([
         'username' => 'wa-dave',
         'password' => 'whatever-password',
@@ -146,7 +146,7 @@ it('verifyAndRelease returns false when the credential is disarmed (D-16)', func
     expect($result)->toBeFalse();
 });
 
-it('verifyAndRelease increments biometric_failed_count when validation throws on a base64url rawId (CR-04)', function (): void {
+it('verifyAndRelease increments biometric_failed_count when validation throws on a base64url rawId', function (): void {
     $user = User::query()->create([
         'username' => 'wa-frank',
         'password' => 'whatever-password',

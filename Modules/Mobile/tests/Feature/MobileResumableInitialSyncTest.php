@@ -338,7 +338,7 @@ it('re-delivering an already-installed (stale) epoch wrap through the receive ga
     expect($countOfEpochOne)->toBe(1, 'epoch 1 must not be duplicated in the keyring');
 });
 
-it('does not report complete while the GDK keyring is empty — an import awaiting the desktop epochs stays blocking (LOW-01)', function (): void {
+it('does not report complete while the GDK keyring is empty — an import awaiting the desktop epochs stays blocking', function (): void {
     $user = mobileResumeUser('mobile-low01-'.bin2hex(random_bytes(4)));
 
     /** @var Session $session */

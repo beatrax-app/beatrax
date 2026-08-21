@@ -64,7 +64,7 @@ beforeEach(function (): void {
     ]);
 });
 
-it('failed-job toast renders when chain_resolution_runs.status=failed for the user (16-06 D-37 — retargeted to /dev/queue/failed for developers)', function (): void {
+it('failed-job toast renders when chain_resolution_runs.status=failed for the user, linking to the Queue Inspector', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     $now = CarbonImmutable::now()->toDateTimeString();

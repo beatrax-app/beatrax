@@ -103,7 +103,7 @@ function cpteTx(User $user, Account $account, Counterparty $counterparty, Import
     ]);
 }
 
-it('encrypts display_name/merchant_name at rest when acceptSuggestion() promotes an unknown counterparty (CRYPT-01 write fix)', function (): void {
+it('encrypts display_name/merchant_name at rest when acceptSuggestion() promotes an unknown counterparty', function (): void {
     $user = cpteUser('cpte-accept');
     $session = $this->enablesEncryptionForUser($user);
     $account = cpteAccount($user);
@@ -141,7 +141,7 @@ it('encrypts display_name/merchant_name at rest when acceptSuggestion() promotes
     expect($cp->type)->toBe('merchant');
 });
 
-it('encrypts display_name/merchant_name at rest when manualLabel() labels an unknown counterparty as a merchant (CRYPT-01 write fix)', function (): void {
+it('encrypts display_name/merchant_name at rest when manualLabel() labels an unknown counterparty as a merchant', function (): void {
     $user = cpteUser('cpte-manual-merchant');
     $session = $this->enablesEncryptionForUser($user);
     cpteUnknown($user, 'cpte-mystery-manual-1');
@@ -161,7 +161,7 @@ it('encrypts display_name/merchant_name at rest when manualLabel() labels an unk
     expect($codec->decryptValue('counterparties', 'merchant_name', $rawRow->merchant_name, $user->id, $session)['value'])->toBe('Corner Bakery');
 });
 
-it('encrypts display_name (merchant_name left null) when manualLabel() labels an unknown counterparty as personal (CRYPT-01 write fix)', function (): void {
+it('encrypts display_name (merchant_name left null) when manualLabel() labels an unknown counterparty as personal', function (): void {
     $user = cpteUser('cpte-manual-personal');
     $session = $this->enablesEncryptionForUser($user);
     cpteUnknown($user, 'cpte-mystery-manual-2');
@@ -180,7 +180,7 @@ it('encrypts display_name (merchant_name left null) when manualLabel() labels an
     expect($codec->decryptValue('counterparties', 'display_name', $rawRow->display_name, $user->id, $session)['value'])->toBe('Jane Doe');
 });
 
-it('leaves display_name/merchant_name as plaintext for a non-encrypted user (CRYPT-01 pass-through)', function (): void {
+it('leaves display_name/merchant_name as plaintext for a non-encrypted user', function (): void {
     $user = cpteUser('cpte-plaintext');
     cpteUnknown($user, 'cpte-mystery-plaintext');
 
@@ -192,7 +192,7 @@ it('leaves display_name/merchant_name as plaintext for a non-encrypted user (CRY
     expect($rawRow->merchant_name)->toBe('Plain Corp');
 });
 
-it('decrypts each candidate description before matching so suggestionFor() returns a real suggestion under encryption (CRYPT-01 match fix)', function (): void {
+it('decrypts each candidate description before matching so suggestionFor() returns a real suggestion under encryption', function (): void {
     $user = cpteUser('cpte-suggest');
     $session = $this->enablesEncryptionForUser($user);
     $account = cpteAccount($user);

@@ -136,7 +136,7 @@ it('boot-time receive() from hlc_clock_state prevents clock rewind after restart
 // Two devices of one user each keep their own clock row. The schema used to
 // pin it to a single row, so the second device's upsert collided inside the
 // op-write transaction and every one of its op-log writes failed silently.
-it('two devices for one user each persist an independent hlc_clock_state row (CR-01)', function (): void {
+it('two devices for one user each persist an independent hlc_clock_state row', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 

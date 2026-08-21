@@ -48,7 +48,7 @@ it('computes a high percentile of a category sample', function (): void {
     expect($p95)->toBeLessThanOrEqual(3400.0);
 });
 
-it('treats a charge tying the percentile as exceeding it (WR-04 tie-inclusive boundary)', function (): void {
+it('treats a charge tying the percentile as exceeding it (tie-inclusive boundary)', function (): void {
     // At small n p95 collapses onto the max, so a strict `>` would let a
     // repeat of the largest-ever charge pass as a false negative.
     $sample = [1000, 1000, 1000, 1000, 1000];
@@ -60,7 +60,7 @@ it('treats a charge tying the percentile as exceeding it (WR-04 tie-inclusive bo
     expect(RobustStatistics::exceedsPercentile(999, $sample, 95.0))->toBeFalse();
 });
 
-it('exceedsPercentile fires on a charge equal to the historical max for a thin sample (WR-04)', function (): void {
+it('exceedsPercentile fires on a charge equal to the historical max for a thin sample', function (): void {
     $sample = [2750, 2890, 3100, 3400, 2600];
     $p95 = RobustStatistics::percentile($sample, 95.0);
 

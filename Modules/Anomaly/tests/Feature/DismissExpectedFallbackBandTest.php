@@ -23,7 +23,7 @@ beforeEach(function (): void {
 
 afterEach(fn () => CarbonImmutable::setTestNow());
 
-it('writes a fallback band for a duplicate-only alert and returns true (CR-01)', function (): void {
+it('writes a fallback band for a duplicate-only alert and returns true', function (): void {
     $user = AnomalyCorpusSeeder::makeUser();
     $fixture = AnomalyCorpusSeeder::load('duplicate-in-window');
     $txnId = AnomalyCorpusSeeder::seed($this->db, $user, $fixture);
@@ -54,7 +54,7 @@ it('writes a fallback band for a duplicate-only alert and returns true (CR-01)',
         ->and((int) $rule->source_anomaly_alert_id)->toBe((int) $alert->id);
 });
 
-it('suppresses the next identical duplicate after a duplicate-only dismissal (CR-01 closes the D-17 gap)', function (): void {
+it('suppresses the next identical duplicate after a duplicate-only dismissal', function (): void {
     $user = AnomalyCorpusSeeder::makeUser();
     $fixture = AnomalyCorpusSeeder::load('duplicate-in-window');
     $txnId = AnomalyCorpusSeeder::seed($this->db, $user, $fixture);

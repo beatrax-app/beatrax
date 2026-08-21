@@ -118,7 +118,7 @@ it('creates a ±15% suppression rule per reason with provenance, then skips in-b
         ->and($aboveAlert->reasons)->toContain('large');
 });
 
-it('does not accumulate a duplicate rule when an identical natural-key rule already exists (WR-07)', function (): void {
+it('does not accumulate a duplicate rule when an identical natural-key rule already exists', function (): void {
     $largeTxn = supTxn($this->db, (int) $this->user->id, $this->s, -2349, '2026-06-15');
     /** @var AnomalyEvaluator $evaluator */
     $evaluator = $this->app->make(AnomalyEvaluator::class);

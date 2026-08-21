@@ -101,7 +101,7 @@ it('pin_cap_enforced: unpinning one of 3 pinned reports frees a slot for a 4th',
     expect(SavedReport::query()->where('pinned', true)->count())->toBe(3);
 });
 
-it('pin_cap_enforced: WR-01 the pinned-count cap check runs inside the write transaction, not before it opens', function (): void {
+it('pin_cap_enforced: the pinned-count cap check runs inside the write transaction, not before it opens', function (): void {
     $user = pctPinUser();
     test()->actingAs($user);
 

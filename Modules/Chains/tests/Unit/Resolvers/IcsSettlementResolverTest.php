@@ -171,7 +171,7 @@ dataset('bulk_settle_variants', [
     'exceed_50.00' => ['settledMinor' => 89732, 'expectedState' => 'open',              'expectedChainState' => 'candidate', 'expectedCreditRows' => 0, 'expectedToleranceUsed' => 'exceeded'],
 ]);
 
-it('decomposes ICS bulk-iDEAL settlement per D-97 tolerance arms', function (
+it('decomposes an ICS bulk-iDEAL settlement across the amount-tolerance and exceeded arms', function (
     int $settledMinor,
     string $expectedState,
     string $expectedChainState,
@@ -263,7 +263,7 @@ it('keeps rejected pairs rejected on re-run (pair-uniqueness pre-insert guard)',
     expect(ChainLink::query()->where('user_id', $this->user->id)->count())->toBe(23);
 });
 
-it('does NOT mutate transactions rows (D-84 invariant)', function (): void {
+it('does NOT mutate transactions rows', function (): void {
     $transfer = seedTransferIn($this->user, $this->bankAccount, $this->asnRun, 84732);
 
     $transferUpdatedBefore = $transfer->fresh()->updated_at;
@@ -323,7 +323,7 @@ it('isolates the resolver by user — other users are untouched', function (): v
     expect(ChainLink::query()->where('user_id', $otherUser->id)->count())->toBe(0);
 });
 
-it('handles refund-after-close per D-98', function (): void {
+it('links a refund arriving after the statement closed back to its original charge and credits the next open statement', function (): void {
     // Not EUR: a writer that omitted the credit's currency would still land EUR
     // from the column default, which would prove nothing about the credit.
     CardStatement::query()->whereKey($this->statementId)->update(['currency' => 'USD']);

@@ -21,7 +21,7 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-it('fires for a large charge to a never-seen merchant (D-09)', function (): void {
+it('fires for a large charge to a never-seen merchant', function (): void {
     $user = AnomalyCorpusSeeder::makeUser();
     $fixture = AnomalyCorpusSeeder::load('first-time-large');
     $txnId = AnomalyCorpusSeeder::seed($this->db, $user, $fixture);

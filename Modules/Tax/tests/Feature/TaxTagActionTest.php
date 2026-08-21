@@ -134,7 +134,7 @@ it('idempotently re-tags without duplicating the row', function (): void {
         ->and($tag->note)->toBe('Updated note');
 });
 
-it('re-tagging never rewrites created_at — the "first tagged" audit signal survives edits (WR-02)', function (): void {
+it('re-tagging never rewrites created_at — the "first tagged" audit signal survives edits', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
@@ -162,7 +162,7 @@ it('re-tagging never rewrites created_at — the "first tagged" audit signal sur
         ->and($tag->note)->toBe('edited');
 });
 
-it('a bare re-tag (all-null payload) preserves the existing category, note, and year override (CR-03)', function (): void {
+it('a bare re-tag (all-null payload) preserves the existing category, note, and year override', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
@@ -249,7 +249,7 @@ it('accepts a tax_year_override within now±10 years', function (): void {
     expect($tag->tax_year_override)->toBe($validYear);
 });
 
-it('the ±10-year override window follows the injected Clock, not the wall clock (IN-06)', function (): void {
+it('the ±10-year override window follows the injected Clock, not the wall clock', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 

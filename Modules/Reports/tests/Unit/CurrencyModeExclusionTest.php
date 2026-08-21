@@ -155,7 +155,7 @@ it('currencyMode=original never triggers exclusion — each currency reports its
     expect($spend->accountsWithoutRate)->toBe(0);
 });
 
-it('CR-02: currencyMode=original with an account filter reports the correct currency/total, never $0.00 next to non-empty rows', function (): void {
+it('currencyMode=original with an account filter reports the correct currency/total, never $0.00 next to non-empty rows', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = cmeUser();

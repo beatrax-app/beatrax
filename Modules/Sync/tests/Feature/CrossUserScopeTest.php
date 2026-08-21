@@ -123,7 +123,7 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-it('replay($entries, u1->id) updates u1 row and leaves u2 row byte-for-byte unchanged (T-10-02)', function (): void {
+it('replay($entries, u1->id) updates u1 row and leaves u2 row byte-for-byte unchanged', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
@@ -186,7 +186,7 @@ it('replay($entries, u1->id) updates u1 row and leaves u2 row byte-for-byte unch
     expect($logCount)->toBeGreaterThanOrEqual(1);
 });
 
-it('hostile cross-user entry (userId=u2 in replay($entries, u1->id)) does NOT mutate u2 row (T-10-02 defense-in-depth)', function (): void {
+it('hostile cross-user entry (userId=u2 in replay($entries, u1->id)) does NOT mutate u2 row', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
@@ -252,7 +252,7 @@ it('hostile cross-user entry (userId=u2 in replay($entries, u1->id)) does NOT mu
 // carries no authority: the device must be a confirmed peer OF THIS USER.
 // deviceKeys comes from DeviceRegistryService::deviceKeys($userId), which is
 // confirmed-only and user-scoped, so another user's device is simply absent.
-it('rejects an entry from a device that is not a confirmed peer of the replaying user (T-10-02)', function (): void {
+it('rejects an entry from a device that is not a confirmed peer of the replaying user', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
@@ -311,7 +311,7 @@ it('rejects an entry from a device that is not a confirmed peer of the replaying
     expect($quarantined)->toBeGreaterThanOrEqual(1);
 });
 
-it('cross-user scope holds even when entry references u2 pk but uses u1 userId in entry (WHERE user_id guard — T-10-02 I2)', function (): void {
+it('cross-user scope holds even when entry references u2 pk but uses u1 userId in entry (WHERE user_id guard)', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 

@@ -215,7 +215,7 @@ it('summaryForUser returns totalMinor and count for the year', function (): void
         ->and($summary->totalMinor)->toBe(3000);
 });
 
-it('summaryForUser totalMinor counts deductions only — tagged income is excluded from the total but not the count (IN-08)', function (): void {
+it('summaryForUser totalMinor counts deductions only — tagged income is excluded from the total but not the count', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
@@ -310,7 +310,7 @@ it('NavCountsService.compute includes a tax_tagged integer key', function (): vo
         ->and($counts['tax_tagged'])->toBe(2);
 });
 
-it('tagging a transaction invalidates the cached nav counts (WR-06)', function (): void {
+it('tagging a transaction invalidates the cached nav counts', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
@@ -329,7 +329,7 @@ it('tagging a transaction invalidates the cached nav counts (WR-06)', function (
     expect($service->forUser($userId)['tax_tagged'])->toBe(1);
 });
 
-it('untagging a transaction invalidates the cached nav counts (WR-06)', function (): void {
+it('untagging a transaction invalidates the cached nav counts', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 

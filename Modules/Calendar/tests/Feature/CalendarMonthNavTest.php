@@ -66,7 +66,7 @@ it('nextMonth is a no-op when the next month exceeds the 12-month forecast horiz
         ->assertSet('year', 2027);
 });
 
-it('clamps a tampered ?year=&month= beyond the 12-month horizon to the ceiling month (WR-05)', function (): void {
+it('clamps a tampered ?year=&month= beyond the 12-month horizon to the ceiling month', function (): void {
     $user = cmnUser('cmn-url-ceiling');
 
     // today = 2026-06-12 → ceiling month = 2027-06. A direct URL for 2099-12

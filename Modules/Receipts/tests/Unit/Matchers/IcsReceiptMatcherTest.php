@@ -41,7 +41,7 @@ it('claims transacties@icscards.nl senders via exact domain match', function ():
     expect($matcher->canHandle(icsInbox('transacties@icscards.nl')))->toBeTrue();
 });
 
-it('rejects look-alike ics.nl.attacker.example domains (spoofing defence T-07-04)', function (): void {
+it('rejects look-alike ics.nl.attacker.example domains (spoofing defence)', function (): void {
     $matcher = icsMatcher();
     expect($matcher->canHandle(icsInbox('noreply@ics.nl.attacker.example')))->toBeFalse();
 });

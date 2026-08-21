@@ -111,7 +111,7 @@ it('StagingWriter: transfer pair carries mutual transfer_counterpart_source_exte
     }
 });
 
-it('StagingWriter: writes ONLY staging tables — zero domain-table writes (Req 11)', function (): void {
+it('StagingWriter: writes ONLY staging tables — zero domain-table writes', function (): void {
     stageYnab4V1($this->user, $this->run->id);
 
     expect(Category::query()->where('user_id', $this->user->id)->count())->toBe(0);
@@ -121,7 +121,7 @@ it('StagingWriter: writes ONLY staging tables — zero domain-table writes (Req 
     expect($this->db->connection()->table('counterparties')->where('user_id', $this->user->id)->count())->toBe(0);
 });
 
-it('StagingWriter: lands the ONE flat goal_def as a migration_staging_goals row (Plan 06 Rule 2 fix)', function (): void {
+it('StagingWriter: lands the ONE flat goal_def as a migration_staging_goals row', function (): void {
     $zipPath = sys_get_temp_dir().'/staging-writer-actual-'.uniqid('', true).'.zip';
     ActualFixtureBuilder::build($zipPath);
     $extracted = MigrationFixturePaths::extractZip($zipPath);

@@ -43,7 +43,7 @@ it('MigrationWizard: NewMigration requires a source-product selection', function
         ->assertHasErrors(['sourceProduct']);
 });
 
-it('MigrationWizard: preview renders the 5 mapped counts + a grouped unmapped summary — Req 11/12', function (): void {
+it('MigrationWizard: preview renders the 5 mapped counts + a grouped unmapped summary', function (): void {
     $run = app(StartMigrationRun::class)->__invoke(
         $this->user,
         'ynab4',
@@ -59,7 +59,7 @@ it('MigrationWizard: preview renders the 5 mapped counts + a grouped unmapped su
     $response->assertSee('Transactions', false);
 });
 
-it('MigrationWizard: NO domain writes occur before confirm — Req 11 (staging only)', function (): void {
+it('MigrationWizard: NO domain writes occur before confirm (staging only)', function (): void {
     app(StartMigrationRun::class)->__invoke(
         $this->user,
         'ynab4',
@@ -77,7 +77,7 @@ it('MigrationWizard: NO domain writes occur before confirm — Req 11 (staging o
     expect($this->db->connection()->table('envelope_assignments')->where('user_id', $this->user->id)->count())->toBe(0);
 });
 
-it('MigrationWizard: discarding a run leaves domain tables unchanged and truncates staging — Req 11', function (): void {
+it('MigrationWizard: discarding a run leaves domain tables unchanged and truncates staging', function (): void {
     $run = app(StartMigrationRun::class)->__invoke(
         $this->user,
         'ynab4',
@@ -91,7 +91,7 @@ it('MigrationWizard: discarding a run leaves domain tables unchanged and truncat
     expect(Category::query()->where('user_id', $this->user->id)->count())->toBe(0);
 });
 
-it('MigrationWizard: partner receives 404 (never 403) requesting the owner\'s migration preview — T-13.5-04', function (): void {
+it('MigrationWizard: partner receives 404 (never 403) requesting the owner\'s migration preview', function (): void {
     $partner = User::create(['username' => 'migration-wizard-partner', 'password' => 'opensesame', 'period_start_day' => 1]);
 
     $ownerRun = app(StartMigrationRun::class)->__invoke(
@@ -107,7 +107,7 @@ it('MigrationWizard: partner receives 404 (never 403) requesting the owner\'s mi
     expect($response->status())->not->toBe(403);
 });
 
-it('MigrationWizard: partner receives 404 (never 403) requesting the owner\'s migration results — T-13.5-04', function (): void {
+it('MigrationWizard: partner receives 404 (never 403) requesting the owner\'s migration results', function (): void {
     $partner = User::create(['username' => 'migration-wizard-partner-2', 'password' => 'opensesame', 'period_start_day' => 1]);
 
     $ownerRun = app(StartMigrationRun::class)->__invoke(
@@ -123,7 +123,7 @@ it('MigrationWizard: partner receives 404 (never 403) requesting the owner\'s mi
     expect($response->status())->not->toBe(403);
 });
 
-it('MigrationWizard: the owner\'s migration run never bleeds into the partner\'s /migrations index — T-13.5-04', function (): void {
+it('MigrationWizard: the owner\'s migration run never bleeds into the partner\'s /migrations index', function (): void {
     $partner = User::create(['username' => 'migration-wizard-partner-3', 'password' => 'opensesame', 'period_start_day' => 1]);
 
     app(StartMigrationRun::class)->__invoke(
@@ -139,13 +139,13 @@ it('MigrationWizard: the owner\'s migration run never bleeds into the partner\'s
     $response->assertDontSee('Beatrax Test Budget.zip', false);
 });
 
-it('MigrationWizard: GET /migrations/new is reachable by any authenticated user — T-13.5-04 (no per-entity id, no data to leak)', function (): void {
+it('MigrationWizard: GET /migrations/new is reachable by any authenticated user (no per-entity id, no data to leak)', function (): void {
     $partner = User::create(['username' => 'migration-wizard-partner-4', 'password' => 'opensesame', 'period_start_day' => 1]);
 
     $this->actingAs($partner)->get('/migrations/new')->assertOk();
 });
 
-it('IN-01: NewMigration::rules() rejects a non-ZIP file renamed to a .zip extension via real content sniffing', function (): void {
+it('MigrationWizard: NewMigration::rules() rejects a non-ZIP file renamed to a .zip extension via real content sniffing', function (): void {
     // UploadedFile::fake() derives its mime type from the filename and never
     // sniffs, so it cannot exercise the finfo check; a real UploadedFile falls
     // through to Symfony's File::getMimeType(), which does.
@@ -161,7 +161,7 @@ it('IN-01: NewMigration::rules() rejects a non-ZIP file renamed to a .zip extens
     @unlink($tmpPath);
 });
 
-it('IN-01: a genuine ZIP file passes the mimes:zip content-sniffing rule (defense-in-depth does not reject legitimate exports)', function (): void {
+it('MigrationWizard: a genuine ZIP file passes the mimes:zip content-sniffing rule (defense-in-depth does not reject legitimate exports)', function (): void {
     $zipPath = sys_get_temp_dir().'/migration-wizard-mimes-test-'.uniqid('', true).'.zip';
     $zip = new ZipArchive;
     $zip->open($zipPath, ZipArchive::CREATE);
