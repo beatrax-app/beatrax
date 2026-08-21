@@ -47,30 +47,47 @@ final class CarryoverQuery
         private readonly LoggerInterface $log,
     ) {}
 
+    // Nothing is budgeted, carried or moved before the first assignment — but
+    // there IS spending, and reporting it as zero told a reader looking at a
+    // month of transactions that they had spent nothing. Assigned/carried/moved
+    // are genuinely nought, so the fold's arithmetic collapses to -spent.
     /**
-     * @return array<int, EnvelopeRow>
+     * @return array{overspentCount: int, rows: array<int, EnvelopeRow>}
      */
-    private function unstartedRows(User $user): array
+    private function unstartedRows(User $user, Period $target): array
     {
         $settings = $this->envelopeSettings($user);
+        $spentByKey = $this->spendByCategory->forUserAndPeriodByCurrency($user->id, $target);
+
         $rows = [];
+        $overspentCount = 0;
 
         foreach ($this->budgetProgress->expenseCategories($user) as $categoryId => $categoryName) {
+            $spent = $spentByKey["{$categoryId}|".self::CURRENCY] ?? 0;
+            $available = Money::ofMinor(0, self::CURRENCY)
+                ->minus(Money::ofMinor($spent, self::CURRENCY))
+                ->toMinor();
+
+            if ($available < 0) {
+                $overspentCount++;
+            }
+
             $rows[$categoryId] = new EnvelopeRow(
                 categoryId: $categoryId,
                 categoryName: $categoryName,
                 assignedMinor: 0,
-                spentMinor: 0,
+                spentMinor: $spent,
                 carriedInMinor: 0,
                 netMovedMinor: 0,
-                availableMinor: 0,
+                availableMinor: $available,
                 overspendMode: $settings['modes'][$categoryId] ?? self::DEFAULT_OVERSPEND_MODE,
                 currency: self::CURRENCY,
+                nonEurSpentMinor: $this->sumNonEurSpent($spentByKey, $categoryId),
                 notifyThresholdPercent: $settings['thresholds'][$categoryId] ?? self::DEFAULT_NOTIFY_THRESHOLD_PERCENT,
             );
         }
 
-        return $rows;
+        return ['overspentCount' => $overspentCount, 'rows' => $rows];
     }
 
     /**
@@ -85,10 +102,12 @@ final class CarryoverQuery
             // assigned are both nought, so income is what it would answer. Zero
             // told a reader with a month's pay banked they had nothing to assign;
             // [] rendered "you have no expense categories" at 24 of them.
+            $unstarted = $this->unstartedRows($user, $target);
+
             return [
                 'toBudgetMinor' => $this->glance->incomeForPeriod($user, $target, self::CURRENCY),
-                'overspentCount' => 0,
-                'rows' => $this->unstartedRows($user),
+                'overspentCount' => $unstarted['overspentCount'],
+                'rows' => $unstarted['rows'],
             ];
         }
 

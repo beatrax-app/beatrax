@@ -43,14 +43,9 @@ final class TaxCountrySetup
         return $countries;
     }
 
-    // The reader scans the NAMES, so the names decide the order. It was the
-    // enum's, which is ISO code order — Switzerland between Canada and Cyprus,
-    // Germany before Denmark, the United Kingdom under G — and with no search
-    // box, scanning is the only way through a list of thirty-three.
-    //
-    // Collated, not sorted: a plain comparison puts every accented name after
-    // Z, which would simply mis-order the Czech, Greek and Nordic lists instead
-    // of the English one.
+    // The reader scans the NAMES, so the names decide the order; it was the
+    // enum's ISO-code order, with no search box to recover with. Collated rather
+    // than compared, or every accented name sorts after Z.
     /**
      * @param  array<string, string>  $countries
      */
