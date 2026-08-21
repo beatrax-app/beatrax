@@ -11,6 +11,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Community\Public\Dto\ClassificationRule;
 use Modules\Community\Public\Services\ClassificationRuleProvider;
 use Modules\Community\Public\Services\CorpusPatternMatcher;
+use Modules\Tax\Public\Services\TaxCountrySetup;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Counterparties\Models\Counterparty;
@@ -67,7 +68,11 @@ final class CounterpartyResolverService implements CounterpartyResolver
         // and Artisan constructs this class merely to list a console command.
         private readonly SessionFactory $session,
         private readonly CounterpartySlugResolver $slugResolver,
+        private readonly TaxCountrySetup $countries,
     ) {}
+
+    /** @var array<int, string> */
+    private array $regionByUser = [];
 
     public function resolve(CanonicalTransaction $tx, User $user): ?CounterpartyResolutionDto
     {
@@ -217,12 +222,20 @@ final class CounterpartyResolverService implements CounterpartyResolver
             && $this->looksLikePersonalName($name);
     }
 
+    // Empty when the reader has named no country, which loads every region as
+    // before rather than classifying nothing. Memoised: this runs per
+    // transaction and the answer cannot change inside one import.
+    private function regionFor(int $userId): string
+    {
+        return $this->regionByUser[$userId] ??= $this->countries->currentCountry($userId);
+    }
+
     private function resolveGovernment(CanonicalTransaction $tx, int $userId): ?CounterpartyResolutionDto
     {
         return $this->resolveByRules(
             $tx,
             $userId,
-            $this->ruleProvider->governmentRules(),
+            $this->ruleProvider->governmentRules($this->regionFor($userId)),
             CounterpartyType::Government->value,
             fn (ClassificationRule $rule): array => [
                 $this->governmentDisplayName($rule, $tx),
@@ -236,7 +249,7 @@ final class CounterpartyResolverService implements CounterpartyResolver
         return $this->resolveByRules(
             $tx,
             $userId,
-            $this->ruleProvider->bankFeeRules(),
+            $this->ruleProvider->bankFeeRules($this->regionFor($userId)),
             CounterpartyType::Bank->value,
             fn (ClassificationRule $rule): array => [
                 $rule->name ?? 'Bank fee',
