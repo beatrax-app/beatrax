@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Lang;
 use Modules\Core\Models\User;
 use Modules\Desktop\Internal\Listeners\DispatchOsNotification;
 use Modules\Desktop\Internal\Native\WindowFocusState;
@@ -70,7 +71,7 @@ function donForecastDeliverable(int $userId): NotificationDeliverable
         notificationId: hash('sha256', 'don-forecast-'.$userId),
         userId: $userId,
         triggerType: DeterministicKeyDeriver::TRIGGER_FORECAST_SHORTFALL,
-        title: 'Cash-flow shortfall ahead',
+        title: (string) Lang::get('notifications::copy.title.forecast'),
         body: 'Your projected balance dips below zero within the next 30 days.',
         deepLinkRoute: '/forecast',
     );
@@ -82,15 +83,59 @@ function donDriftDeliverable(int $userId): NotificationDeliverable
         notificationId: hash('sha256', 'don-drift-'.$userId),
         userId: $userId,
         triggerType: DeterministicKeyDeriver::TRIGGER_DRIFT_CHANGED,
-        title: 'A recurring charge changed',
+        title: (string) Lang::get('notifications::copy.title.drift'),
         body: 'A recurring charge moved up by 2.50 EUR.',
         deepLinkRoute: '/drift',
     );
 }
 
+function donImportDeliverable(int $userId): NotificationDeliverable
+{
+    return new NotificationDeliverable(
+        notificationId: hash('sha256', 'don-import-'.$userId),
+        userId: $userId,
+        triggerType: DeterministicKeyDeriver::TRIGGER_IMPORT_FINISHED,
+        title: (string) Lang::get('notifications::copy.title.import_finished'),
+        body: 'Beatrax imported 124 transactions.',
+        deepLinkRoute: '/imports',
+    );
+}
+
+function donReceiptsDeliverable(int $userId): NotificationDeliverable
+{
+    return new NotificationDeliverable(
+        notificationId: hash('sha256', 'don-receipts-'.$userId),
+        userId: $userId,
+        triggerType: DeterministicKeyDeriver::TRIGGER_RECEIPTS_FOUND,
+        title: (string) Lang::get('notifications::copy.title.receipts'),
+        body: 'Beatrax found 3 receipts in your inbox.',
+        deepLinkRoute: '/receipts',
+    );
+}
+
+/**
+ * @param  callable(NotificationDeliverable): void  $fire
+ */
+function donAssertPayload(callable $fire, NotificationDeliverable $deliverable, string $key, string $expected): void
+{
+    Http::fake();
+    app(WindowFocusState::class)->markBlurred();
+
+    $fire($deliverable);
+
+    Http::assertSent(function ($request) use ($key, $expected): bool {
+        /** @var array<string, mixed> $payload */
+        $payload = $request->data();
+
+        return str_ends_with((string) $request->url(), '/notification')
+            && ($payload[$key] ?? null) === $expected;
+    });
+}
+
 // The `Notification` facade has no v2 fake, so a fired notification is observed
-// as an outbound POST on the NativePHP HTTP client. Payload detail — the exact
-// title and click event — cannot be intercepted, so it stays a todo below.
+// as an outbound POST on the NativePHP HTTP client. The whole payload rides on
+// that request, so the title, the click event and its reference are all
+// assertable from here.
 it('suppresses the OS notification when the window is focused', function (): void {
     Http::fake();
     $user = donUser('don-focused-forecast');
@@ -187,15 +232,73 @@ it('substitutes a non-empty detail-free body when the device hide-details prefer
     });
 });
 
-it('uses the UI-SPEC verbatim title "Cash-flow shortfall ahead" for the forecast notification — payload-detail deferred to manual UAT (no v2 fake for Notification)')->todo();
+it('shows the forecast notification under its published title', function (): void {
+    $user = donUser('don-title-forecast');
 
-it('uses the UI-SPEC verbatim title "A recurring charge changed" for the drift-alert notification — payload-detail deferred to manual UAT (no v2 fake for Notification)')->todo();
+    donAssertPayload(
+        static fn ($deliverable) => app(DispatchOsNotification::class)->handleNotificationDeliverable($deliverable),
+        donForecastDeliverable($user->id),
+        'title',
+        'Cash-flow shortfall ahead',
+    );
+});
 
-it('uses the UI-SPEC verbatim title "Import finished" for the import-finished notification — payload-detail deferred to manual UAT (no v2 fake for Notification)')->todo();
+it('shows the drift-alert notification under its published title', function (): void {
+    $user = donUser('don-title-drift');
 
-it('uses the UI-SPEC verbatim title "New receipts found" for the receipts notification — payload-detail deferred to manual UAT (no v2 fake for Notification)')->todo();
+    donAssertPayload(
+        static fn ($deliverable) => app(DispatchOsNotification::class)->handleNotificationDeliverable($deliverable),
+        donDriftDeliverable($user->id),
+        'title',
+        'A recurring charge changed',
+    );
+});
 
-it('attaches a NotificationDeepLink click event with a screen-route reference — payload-detail deferred to manual UAT (no v2 fake for Notification)')->todo();
+it('shows the import-finished notification under its published title', function (): void {
+    $user = donUser('don-title-import');
+
+    donAssertPayload(
+        static fn ($deliverable) => app(DispatchOsNotification::class)->handleNotificationDeliverable($deliverable),
+        donImportDeliverable($user->id),
+        'title',
+        'Import finished',
+    );
+});
+
+it('shows the receipts notification under its published title', function (): void {
+    $user = donUser('don-title-receipts');
+
+    donAssertPayload(
+        static fn ($deliverable) => app(DispatchOsNotification::class)->handleNotificationDeliverable($deliverable),
+        donReceiptsDeliverable($user->id),
+        'title',
+        'New receipts found',
+    );
+});
+
+// Clicking the notification is the only way back to the screen it is about, so
+// the event class and the route it carries are the whole feature.
+it('attaches the deep-link click event to the OS notification', function (): void {
+    $user = donUser('don-deeplink-event');
+
+    donAssertPayload(
+        static fn ($deliverable) => app(DispatchOsNotification::class)->handleNotificationDeliverable($deliverable),
+        donForecastDeliverable($user->id),
+        'event',
+        NotificationDeepLink::class,
+    );
+});
+
+it('attaches the screen route the deep-link click should open', function (): void {
+    $user = donUser('don-deeplink-route');
+
+    donAssertPayload(
+        static fn ($deliverable) => app(DispatchOsNotification::class)->handleNotificationDeliverable($deliverable),
+        donForecastDeliverable($user->id),
+        'reference',
+        '/forecast',
+    );
+});
 
 it('exposes NotificationDeepLink as a final readonly class with a string screenRoute', function (): void {
     $reflection = new ReflectionClass(NotificationDeepLink::class);
