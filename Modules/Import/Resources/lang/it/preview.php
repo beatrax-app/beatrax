@@ -52,7 +52,7 @@ return [
         'pending' => 'In coda. Il risolutore delle catene partirà a breve.',
         'running' => 'Collegamento delle catene di finanziamento e scomposizione dei regolamenti di estratto conto.',
         'failed_prefix' => 'Risoluzione delle catene non riuscita:',
-        'unknown_error' => 'si è verificato un errore sconosciuto',
+        'failed_detail' => 'i dettagli sono nel log dei job',
         'open_horizon' => 'Apri Horizon',
         'failed_suffix' => 'per riprovare o ispezionare.',
     ],

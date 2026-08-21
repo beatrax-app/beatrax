@@ -52,7 +52,7 @@ return [
         'pending' => 'En cola. El resolutor de cadenas empezará en breve.',
         'running' => 'Enlazando cadenas de financiación y descomponiendo liquidaciones del extracto.',
         'failed_prefix' => 'La resolución de cadenas ha fallado:',
-        'unknown_error' => 'se ha producido un error desconocido',
+        'failed_detail' => 'los detalles están en el registro de trabajos',
         'open_horizon' => 'Abre Horizon',
         'failed_suffix' => 'para reintentarlo o revisarlo.',
     ],

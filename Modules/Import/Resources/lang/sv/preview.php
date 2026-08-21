@@ -52,7 +52,7 @@ return [
         'pending' => 'I kö. Kedjelösaren startar snart.',
         'running' => 'Länkar finansieringskedjor och delar upp avräkningar från kontoutdraget.',
         'failed_prefix' => 'Kedjeupplösningen misslyckades:',
-        'unknown_error' => 'ett okänt fel uppstod',
+        'failed_detail' => 'detaljerna finns i jobbloggen',
         'open_horizon' => 'Öppna Horizon',
         'failed_suffix' => 'för att försöka igen eller undersöka närmare.',
     ],

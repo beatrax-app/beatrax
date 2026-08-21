@@ -40,6 +40,7 @@ return [
         'badge_error' => 'VAATII UUDELLEENLÄHETYKSEN',
         'badge_filtered' => 'JO TUOTU',
         'error_body' => 'Emme pystyneet lukemaan kaikkia tämän lähteen tiedostoja. Kokeile toista tiedostoa →',
+        'partial_body' => 'Osaa tästä tiedostosta ei voitu lukea, ja se jätettiin pois: :reason',
         'empty_body' => 'Tämä tiliote on tyhjä.',
         'filtered_body' => 'Tämä tiliote on jo tuotu muualla — jätimme sen pois.',
         'col_date' => 'Päivä',

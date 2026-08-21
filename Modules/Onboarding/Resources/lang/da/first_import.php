@@ -40,6 +40,7 @@ return [
         'badge_error' => 'SKAL UPLOADES IGEN',
         'badge_filtered' => 'ALLEREDE IMPORTERET',
         'error_body' => 'Vi kunne ikke læse alle filerne fra denne kilde. Prøv en anden fil →',
+        'partial_body' => 'En del af filen kunne ikke læses og blev udeladt: :reason',
         'empty_body' => 'Dette kontoudtog er tomt.',
         'filtered_body' => 'Dette kontoudtog er allerede importeret et andet sted — vi har udeladt det.',
         'col_date' => 'Dato',

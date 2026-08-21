@@ -52,7 +52,7 @@ return [
         'pending' => 'I kø. Kjedeløseren starter snart.',
         'running' => 'Kobler sammen finansieringskjeder og deler opp oppgjør fra kontoutskriften.',
         'failed_prefix' => 'Oppløsningen av kjeder mislyktes:',
-        'unknown_error' => 'det oppsto en ukjent feil',
+        'failed_detail' => 'detaljene står i jobbloggen',
         'open_horizon' => 'Åpne Horizon',
         'failed_suffix' => 'for å prøve igjen eller undersøke nærmere.',
     ],

@@ -52,7 +52,7 @@ return [
         'pending' => 'Várólistán. A láncfeloldó hamarosan elindul.',
         'running' => 'Finanszírozási láncok összekapcsolása és a kivonatelszámolások felbontása.',
         'failed_prefix' => 'A láncfeloldás sikertelen:',
-        'unknown_error' => 'ismeretlen hiba történt',
+        'failed_detail' => 'a részletek a feladatnaplóban vannak',
         'open_horizon' => 'Horizon megnyitása',
         'failed_suffix' => 'az újrapróbáláshoz vagy a megtekintéshez.',
     ],

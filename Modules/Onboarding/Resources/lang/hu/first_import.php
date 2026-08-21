@@ -40,6 +40,7 @@ return [
         'badge_error' => 'ÚJRA FEL KELL TÖLTENI',
         'badge_filtered' => 'MÁR IMPORTÁLVA',
         'error_body' => 'Nem sikerült beolvasni a forrás összes fájlját. Próbálj másik fájlt →',
+        'partial_body' => 'A fájl egy részét nem sikerült beolvasni, ezért kimaradt: :reason',
         'empty_body' => 'Ez a kivonat üres.',
         'filtered_body' => 'Ezt a kivonatot már máshol importáltuk — kihagytuk.',
         'col_date' => 'Dátum',

@@ -295,8 +295,9 @@ final class PreviewWizard extends Component
         }
 
         // Nothing importable means nothing to confirm, and confirming it wrote
-        // a confirmed run whose own summary reported zero of everything.
-        if (self::importableRowCount($preview) === 0) {
+        // a confirmed run whose own summary reported zero of everything. A
+        // missing preview is a different case and keeps its expired path.
+        if ($preview !== null && self::importableRowCount($preview) === 0) {
             return;
         }
 

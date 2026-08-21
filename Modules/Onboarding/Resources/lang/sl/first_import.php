@@ -40,6 +40,7 @@ return [
         'badge_error' => 'POTREBEN PONOVEN NALOG',
         'badge_filtered' => 'ŽE UVOŽENO',
         'error_body' => 'Nismo mogli prebrati vseh datotek za ta vir. Poskusi z drugo datoteko →',
+        'partial_body' => 'Dela te datoteke ni bilo mogoče prebrati in je bil izpuščen: :reason',
         'empty_body' => 'Ta izpisek je prazen.',
         'filtered_body' => 'Ta izpisek je bil že uvožen drugje — izpustili smo ga.',
         'col_date' => 'Datum',

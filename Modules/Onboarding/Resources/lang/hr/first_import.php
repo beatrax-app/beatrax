@@ -40,6 +40,7 @@ return [
         'badge_error' => 'TREBA PONOVNI PRIJENOS',
         'badge_filtered' => 'VEĆ UVEZENO',
         'error_body' => 'Nismo mogli pročitati sve datoteke za ovaj izvor. Pokušaj s drugom datotekom →',
+        'partial_body' => 'Dio ove datoteke nije bilo moguće pročitati i izostavljen je: :reason',
         'empty_body' => 'Ovaj izvod je prazan.',
         'filtered_body' => 'Ovaj izvod je već uvezen na drugom mjestu — izostavili smo ga.',
         'col_date' => 'Datum',

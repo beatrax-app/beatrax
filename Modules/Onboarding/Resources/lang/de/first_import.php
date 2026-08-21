@@ -40,6 +40,7 @@ return [
         'badge_error' => 'MUSS NEU HOCHGELADEN WERDEN',
         'badge_filtered' => 'BEREITS IMPORTIERT',
         'error_body' => 'Wir konnten nicht alle Dateien dieser Quelle lesen. Versuch eine andere Datei →',
+        'partial_body' => 'Ein Teil dieser Datei konnte nicht gelesen werden und wurde weggelassen: :reason',
         'empty_body' => 'Dieser Kontoauszug ist leer.',
         'filtered_body' => 'Dieser Kontoauszug wurde bereits an anderer Stelle importiert — wir haben ihn ausgelassen.',
         'col_date' => 'Datum',

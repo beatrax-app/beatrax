@@ -7,6 +7,7 @@ return [
     'heading' => 'Transaktion',
 
     'counterparty' => 'Modpart',
+    'description' => 'Beskrivelse',
     'amount_native' => 'Beløb (oprindeligt)',
     'amount_settled' => 'Beløb (afregnet i EUR)',
     'effective_rate' => 'Effektiv kurs',

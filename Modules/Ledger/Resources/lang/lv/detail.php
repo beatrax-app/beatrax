@@ -7,6 +7,7 @@ return [
     'heading' => 'Darījums',
 
     'counterparty' => 'Darījuma partneris',
+    'description' => 'Apraksts',
     'amount_native' => 'Summa (sākotnējā valūtā)',
     'amount_settled' => 'Summa (norēķinu EUR)',
     'effective_rate' => 'Faktiskais kurss',

@@ -52,7 +52,7 @@ return [
         'pending' => 'In der Warteschlange. Der Ketten-Resolver startet gleich.',
         'running' => 'Finanzierungsketten werden verknüpft und Kontoauszugsabrechnungen zerlegt.',
         'failed_prefix' => 'Auflösen der Ketten fehlgeschlagen:',
-        'unknown_error' => 'ein unbekannter Fehler ist aufgetreten',
+        'failed_detail' => 'die Details stehen im Job-Log',
         'open_horizon' => 'Horizon öffnen',
         'failed_suffix' => 'zum erneuten Versuch oder zur Prüfung.',
     ],

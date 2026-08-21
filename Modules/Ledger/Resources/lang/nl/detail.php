@@ -7,6 +7,7 @@ return [
     'heading' => 'Transactie',
 
     'counterparty' => 'Tegenpartij',
+    'description' => 'Omschrijving',
     'amount_native' => 'Bedrag (oorspronkelijk)',
     'amount_settled' => 'Bedrag (verrekend in EUR)',
     'effective_rate' => 'Effectieve koers',

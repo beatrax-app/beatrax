@@ -12,7 +12,6 @@
             default => $kind,
         };
     };
-    $locale = ($user ?? null)?->locale ?? 'nl_NL';
     $fmt = static fn ($money) => $money->format();
 @endphp
 

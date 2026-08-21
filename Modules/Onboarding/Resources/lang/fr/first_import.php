@@ -40,6 +40,7 @@ return [
         'badge_error' => 'À RENVOYER',
         'badge_filtered' => 'DÉJÀ IMPORTÉ',
         'error_body' => 'Nous n\'avons pas pu lire tous les fichiers de cette source. Essaie un autre fichier →',
+        'partial_body' => 'Une partie de ce fichier n\'a pas pu être lue et a été laissée de côté : :reason',
         'empty_body' => 'Ce relevé est vide.',
         'filtered_body' => 'Ce relevé a déjà été importé ailleurs — nous l\'avons laissé de côté.',
         'col_date' => 'Date',

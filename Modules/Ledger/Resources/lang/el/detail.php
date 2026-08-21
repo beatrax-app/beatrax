@@ -7,6 +7,7 @@ return [
     'heading' => 'Συναλλαγή',
 
     'counterparty' => 'Αντισυμβαλλόμενος',
+    'description' => 'Περιγραφή',
     'amount_native' => 'Ποσό (αρχικό νόμισμα)',
     'amount_settled' => 'Ποσό (διακανονισμένο σε EUR)',
     'effective_rate' => 'Πραγματική ισοτιμία',

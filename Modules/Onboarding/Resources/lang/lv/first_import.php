@@ -40,6 +40,7 @@ return [
         'badge_error' => 'JĀAUGŠUPIELĀDĒ VĒLREIZ',
         'badge_filtered' => 'JAU IMPORTĒTS',
         'error_body' => 'Neizdevās nolasīt visus šī avota failus. Izmēģiniet citu failu →',
+        'partial_body' => 'Daļu no šā faila neizdevās nolasīt, un tā tika izlaista: :reason',
         'empty_body' => 'Šis konta izraksts ir tukšs.',
         'filtered_body' => 'Šis konta izraksts jau ir importēts citur — mēs to izlaidām.',
         'col_date' => 'Datums',

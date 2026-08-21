@@ -39,6 +39,18 @@
                 </p>
             </header>
 
+            {{-- The bank's own narrative for the line, and the string the
+                 counterparty above was RESOLVED from. Search matches on it and
+                 the list renders a snippet of it, so a reader could find a
+                 transaction by words this page then refused to show. Full
+                 width and above the grid: it is free text and wraps. --}}
+            @if (($transaction->description ?? '') !== '')
+                <dl class="space-y-1">
+                    <dt class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('ledger::detail.description') }}</dt>
+                    <dd class="break-words text-sm text-slate-900 dark:text-slate-100" data-testid="tx-detail-description">{{ $transaction->description }}</dd>
+                </dl>
+            @endif
+
             <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <dl class="space-y-1">
                     <dt class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('ledger::detail.counterparty') }}</dt>

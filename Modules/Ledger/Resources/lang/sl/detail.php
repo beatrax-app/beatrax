@@ -7,6 +7,7 @@ return [
     'heading' => 'Transakcija',
 
     'counterparty' => 'Nasprotna stranka',
+    'description' => 'Opis',
     'amount_native' => 'Znesek (izvirna valuta)',
     'amount_settled' => 'Znesek (obračunano v EUR)',
     'effective_rate' => 'Efektivni tečaj',

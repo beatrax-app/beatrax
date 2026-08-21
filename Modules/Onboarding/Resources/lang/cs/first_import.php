@@ -40,6 +40,7 @@ return [
         'badge_error' => 'NUTNO NAHRÁT ZNOVU',
         'badge_filtered' => 'UŽ NAIMPORTOVÁNO',
         'error_body' => 'Nepodařilo se přečíst všechny soubory z tohoto zdroje. Zkus jiný soubor →',
+        'partial_body' => 'Část tohoto souboru se nepodařilo načíst a byla vynechána: :reason',
         'empty_body' => 'Tenhle výpis je prázdný.',
         'filtered_body' => 'Tenhle výpis už byl naimportován jinde — vynechali jsme ho.',
         'col_date' => 'Datum',

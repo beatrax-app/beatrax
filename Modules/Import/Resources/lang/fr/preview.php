@@ -52,7 +52,7 @@ return [
         'pending' => 'En file d\'attente. Le résolveur de chaînes va démarrer sous peu.',
         'running' => 'Liaison des chaînes de financement et décomposition des règlements du relevé.',
         'failed_prefix' => 'La résolution des chaînes a échoué :',
-        'unknown_error' => 'une erreur inconnue est survenue',
+        'failed_detail' => 'les détails sont dans le journal des tâches',
         'open_horizon' => 'Ouvre Horizon',
         'failed_suffix' => 'pour réessayer ou inspecter.',
     ],

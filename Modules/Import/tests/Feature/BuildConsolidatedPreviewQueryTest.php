@@ -310,9 +310,11 @@ it('ignores non-positive overrides and falls back to the default 5-row cap', fun
     expect($negativeBatch->sections[0]->sampleRows)->toHaveCount(5);
 })->group('phase-16.1.2');
 
-// A failed parse contributes one error row, counting as neither committable
-// nor duplicate — so the section used to come back `ready` with a total of
-// zero and the wizard drew "0 rows · ✓ READY" over a commit button.
+// A failed parse used to arrive as a single error row, counting as neither
+// committable nor duplicate — so the section came back `ready` with a total of
+// zero and the wizard drew "0 rows · ✓ READY" over a commit button. It is now
+// a file-level failure with no rows at all, because the parse stopped and the
+// rows it never reached are absent rather than present-and-failed.
 function seedFailedParse(int $importRunId, string $reason): void
 {
     /** @var PreviewCache $cache */
@@ -321,20 +323,10 @@ function seedFailedParse(int $importRunId, string $reason): void
         $importRunId,
         new ImportPreviewResult(
             importRunId: $importRunId,
-            rows: [new PreviewRowDto(
-                rowIndex: 0,
-                status: 'error',
-                accountId: null,
-                bookedAt: null,
-                counterpartyName: null,
-                counterpartyIban: null,
-                description: null,
-                categoryName: null,
-                amountMinor: null,
-                currency: null,
-                error: $reason,
-            )],
+            rows: [],
             accountsToName: [],
+            fileFailureReason: 'file_unreadable',
+            fileFailureDetail: $reason,
         ),
         canonical: [],
         enrichments: [],
@@ -360,6 +352,70 @@ it('carries the parser reason so the screen can say more than "something went wr
 
     expect($section->error)->toBe('Re-download the CAMT.053 statement from the ASN portal.');
 });
+
+// The sample is the reader's only look at what committing writes, and the
+// section table has no status column. A failed row shown among the others
+// there reads as one more transaction that is about to be imported.
+it('keeps failed rows out of the sample, which stands for what committing writes', function (): void {
+    $runId = seedConsolidatedRun($this->userA->id, 'asn-csv');
+    seedConsolidatedPreview($runId, ['new', 'error', 'new']);
+
+    $section = $this->app->make(BuildConsolidatedPreviewQuery::class)->build([$runId], $this->userA)->sections[0];
+
+    expect($section->sampleRows)->toHaveCount(2)
+        ->and($section->totalRows)->toBe(2);
+    foreach ($section->sampleRows as $row) {
+        expect($row->status)->not->toBe('error');
+    }
+});
+
+// A file that stopped being readable part-way still yields rows before the
+// stop, so the section is ready and the reason has to travel with it.
+it('marks a part-read file ready and still carries why the rest is missing', function (): void {
+    $runId = seedConsolidatedRun($this->userA->id, 'asn-csv');
+    seedPartiallyReadFile($runId, 'Row 3: A two digit day could not be found.');
+
+    $section = $this->app->make(BuildConsolidatedPreviewQuery::class)->build([$runId], $this->userA)->sections[0];
+
+    expect($section->status)->toBe('ready')
+        ->and($section->totalRows)->toBe(2)
+        ->and($section->error)->toBe('Row 3: A two digit day could not be found.');
+});
+
+function seedPartiallyReadFile(int $importRunId, string $reason): void
+{
+    $rows = [];
+    foreach ([0, 1] as $index) {
+        $rows[] = new PreviewRowDto(
+            rowIndex: $index,
+            status: 'new',
+            accountId: 1,
+            bookedAt: '2026-05-10',
+            counterpartyName: 'Fixture '.$index,
+            counterpartyIban: null,
+            description: 'fixture-row-'.$index,
+            categoryName: null,
+            amountMinor: -1000 - $index,
+            currency: 'EUR',
+            error: null,
+        );
+    }
+
+    /** @var PreviewCache $cache */
+    $cache = app(PreviewCache::class);
+    $cache->put(
+        $importRunId,
+        new ImportPreviewResult(
+            importRunId: $importRunId,
+            rows: $rows,
+            accountsToName: [],
+            fileFailureReason: 'file_unreadable',
+            fileFailureDetail: $reason,
+        ),
+        canonical: [],
+        enrichments: [],
+    );
+}
 
 it('still reads a genuinely empty statement as empty, not as a failure', function (): void {
     $runId = seedConsolidatedRun($this->userA->id, 'asn-csv');

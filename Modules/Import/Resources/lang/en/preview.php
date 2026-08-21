@@ -52,7 +52,7 @@ return [
         'pending' => 'Queued. The chain resolver will start shortly.',
         'running' => 'Linking funding chains and decomposing statement settlements.',
         'failed_prefix' => 'Chain resolution failed:',
-        'unknown_error' => 'an unknown error occurred',
+        'failed_detail' => 'the details are in the job log',
         'open_horizon' => 'Open Horizon',
         'failed_suffix' => 'to retry or inspect.',
     ],

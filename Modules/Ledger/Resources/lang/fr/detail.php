@@ -7,6 +7,7 @@ return [
     'heading' => 'Transaction',
 
     'counterparty' => 'Tiers',
+    'description' => 'Description',
     'amount_native' => 'Montant (devise d\'origine)',
     'amount_settled' => 'Montant (réglé en EUR)',
     'effective_rate' => 'Taux effectif',

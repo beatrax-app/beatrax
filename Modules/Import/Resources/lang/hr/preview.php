@@ -52,7 +52,7 @@ return [
         'pending' => 'U redu čekanja. Rješavanje lanaca uskoro počinje.',
         'running' => 'Povezivanje lanaca financiranja i razlaganje namira s izvoda.',
         'failed_prefix' => 'Rješavanje lanaca nije uspjelo:',
-        'unknown_error' => 'došlo je do nepoznate pogreške',
+        'failed_detail' => 'detalji su u zapisniku poslova',
         'open_horizon' => 'Otvori Horizon',
         'failed_suffix' => 'za ponovni pokušaj ili pregled.',
     ],

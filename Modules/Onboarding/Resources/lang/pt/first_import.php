@@ -40,6 +40,7 @@ return [
         'badge_error' => 'CARREGAR DE NOVO',
         'badge_filtered' => 'JÁ IMPORTADO',
         'error_body' => 'Não conseguimos ler todos os ficheiros desta origem. Experimenta outro ficheiro →',
+        'partial_body' => 'Parte deste ficheiro não pôde ser lida e foi deixada de fora: :reason',
         'empty_body' => 'Este extrato está vazio.',
         'filtered_body' => 'Este extrato já foi importado noutro sítio — deixámo-lo de fora.',
         'col_date' => 'Data',

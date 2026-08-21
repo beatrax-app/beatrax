@@ -52,7 +52,7 @@ return [
         'pending' => 'W kolejce. Rozwiązywanie łańcuchów wkrótce się rozpocznie.',
         'running' => 'Trwa łączenie łańcuchów finansowania i rozkładanie rozliczeń z wyciągu.',
         'failed_prefix' => 'Rozwiązywanie łańcuchów nie powiodło się:',
-        'unknown_error' => 'wystąpił nieznany błąd',
+        'failed_detail' => 'szczegóły są w dzienniku zadań',
         'open_horizon' => 'Otwórz Horizon',
         'failed_suffix' => 'aby ponowić lub sprawdzić.',
     ],

@@ -40,6 +40,7 @@ return [
         'badge_error' => 'MÅ LASTES OPP PÅ NYTT',
         'badge_filtered' => 'ALLEREDE IMPORTERT',
         'error_body' => 'Vi kunne ikke lese alle filene fra denne kilden. Prøv en annen fil →',
+        'partial_body' => 'En del av filen kunne ikke leses og ble utelatt: :reason',
         'empty_body' => 'Denne kontoutskriften er tom.',
         'filtered_body' => 'Denne kontoutskriften er allerede importert et annet sted — vi utelot den.',
         'col_date' => 'Dato',

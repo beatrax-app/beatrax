@@ -40,6 +40,7 @@ return [
         'badge_error' => 'YENİDEN YÜKLENMELİ',
         'badge_filtered' => 'ZATEN İÇE AKTARILDI',
         'error_body' => 'Bu kaynaktaki dosyaların tamamını okuyamadık. Başka bir dosya dene →',
+        'partial_body' => 'Bu dosyanın bir kısmı okunamadı ve dışarıda bırakıldı: :reason',
         'empty_body' => 'Bu hesap ekstresi boş.',
         'filtered_body' => 'Bu hesap ekstresi başka bir yerde zaten içe aktarılmış — dışarıda bıraktık.',
         'col_date' => 'Tarih',

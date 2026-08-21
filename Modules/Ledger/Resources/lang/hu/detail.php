@@ -7,6 +7,7 @@ return [
     'heading' => 'Tranzakció',
 
     'counterparty' => 'Partner',
+    'description' => 'Leírás',
     'amount_native' => 'Összeg (eredeti deviza)',
     'amount_settled' => 'Összeg (elszámolt EUR)',
     'effective_rate' => 'Tényleges árfolyam',

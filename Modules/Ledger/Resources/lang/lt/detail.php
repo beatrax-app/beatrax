@@ -7,6 +7,7 @@ return [
     'heading' => 'Operacija',
 
     'counterparty' => 'Kita šalis',
+    'description' => 'Aprašymas',
     'amount_native' => 'Suma (originali valiuta)',
     'amount_settled' => 'Suma (atsiskaityta, EUR)',
     'effective_rate' => 'Faktinis kursas',

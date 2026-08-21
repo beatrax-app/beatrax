@@ -52,7 +52,7 @@ return [
         'pending' => 'Eilėje. Grandinių nustatymas netrukus prasidės.',
         'running' => 'Siejamos lėšų grandinės ir skaidomi išrašo atsiskaitymai.',
         'failed_prefix' => 'Grandinių nustatyti nepavyko:',
-        'unknown_error' => 'įvyko nežinoma klaida',
+        'failed_detail' => 'išsamesnė informacija yra užduočių žurnale',
         'open_horizon' => 'Atidaryti Horizon',
         'failed_suffix' => 'ir pakartok arba patikrink.',
     ],
