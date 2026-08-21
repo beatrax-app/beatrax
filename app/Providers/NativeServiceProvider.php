@@ -14,23 +14,14 @@ use Native\Mobile\UI\NativeUIServiceProvider;
 use NativePHP\BackgroundTasks\BackgroundTasksServiceProvider;
 use NativePHP\LocalNotifications\LocalNotificationsServiceProvider;
 
-// NativePHP treats plugin registration as an explicit opt-in security
-// boundary: only providers listed in plugins() compile into a native
-// build. Loaded only from mobile-app/bootstrap/providers.php — the
-// desktop build uses nativephp/desktop's own plugin surface instead.
+// Only providers listed in plugins() compile into a native build, and only
+// mobile-app/bootstrap/providers.php loads this; the desktop build has
+// nativephp/desktop's own plugin surface.
 class NativeServiceProvider extends ServiceProvider
 {
-    public function register(): void
-    {
-        // No container bindings: this provider's only surface is plugins(),
-        // consumed by mobile-app/bootstrap/providers.php at native build time.
-    }
+    public function register(): void {}
 
-    public function boot(): void
-    {
-        // Nothing to boot: native plugin registration happens through
-        // plugins(), never via the framework's boot lifecycle.
-    }
+    public function boot(): void {}
 
     /**
      * @return array<int, class-string<ServiceProvider>>
@@ -42,23 +33,16 @@ class NativeServiceProvider extends ServiceProvider
             ScannerServiceProvider::class,
             BackgroundTasksServiceProvider::class,
             NetworkServiceProvider::class,
-            // SecureStorage (nativephp/mobile-secure-storage) — backs
-            // Modules\Mobile\Internal\Identity\SecureStorageKeyCustodian.
+            // Backs Mobile\Internal\Identity\SecureStorageKeyCustodian.
             SecureStorageServiceProvider::class,
-            // LocalNotifications (nativephp/mobile-local-notifications) backs
-            // Modules\Mobile\Internal\Listeners\DispatchMobileNotification.
-            // Without this entry the plugin's native (Swift/Kotlin) code
-            // never compiles into the device build.
+            // Backs Mobile\Internal\Listeners\DispatchMobileNotification.
             LocalNotificationsServiceProvider::class,
-            // BiometricVault (beatrax/mobile-biometric-vault, a first-party
-            // path-repo plugin) backs Modules\Mobile\Internal\Identity\
-            // BiometricKeyVault. Its guards resolve through the facade's
-            // class_exists(), so an unregistered plugin degrades silently.
+            // Backs Mobile\Internal\Identity\BiometricKeyVault, whose guards
+            // run through the facade's class_exists(), so omitting this
+            // degrades silently rather than failing.
             BiometricVaultServiceProvider::class,
-            // The EDGE component library. nativephp/mobile's core registers
-            // only layout, content and navigation chrome — button, the text
-            // inputs, toggle and webview are deliberately left for a UI
-            // plugin to own, and without this none of them resolve.
+            // The core registers only layout, content and navigation chrome;
+            // button, the inputs, toggle and webview resolve only through this.
             NativeUIServiceProvider::class,
         ];
     }

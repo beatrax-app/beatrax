@@ -5,14 +5,12 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Config;
 
 /**
- * @link ../../../../.docs/features/sync/architecture.md
+ * @link ../../../../.docs/features/sync/merge-registry-authoring.md
  */
 final class MergeRulesRegistry
 {
-    // Memoized: strategyFor()/requiredCreateColumns() are called once per
-    // (pk, field) in the replayer's CREATE and SET loops, so re-allocating the
-    // full literal array on every call wastes work in a merge of thousands of
-    // ops. Built once, then reused.
+    // Memoized: strategyFor()/requiredCreateColumns() run once per (pk, field)
+    // in the replayer's CREATE and SET loops, over thousands of ops.
     /** @var array<string, array<string, mixed>>|null */
     private ?array $rules = null;
 
@@ -33,6 +31,9 @@ final class MergeRulesRegistry
             $this->envelopeRules(),
             $this->migrationRules(),
             $this->reportingAndNotificationRules(),
+            $this->recurringAndChainRules(),
+            $this->alertRules(),
+            $this->preferenceAndScenarioRules(),
         );
     }
 
@@ -184,6 +185,17 @@ final class MergeRulesRegistry
                 'currency' => ['strategy' => 'lww', 'nullable' => false],
                 '_delete_wins' => true,
                 '_create_required' => ['name', 'currency'],
+            ],
+            // AFTER pots, whose id it names. Append-only allocation ledger
+            // mirroring envelope_moves: a movement is inserted and never
+            // edited, so there is no LWW-mutable field, only create and
+            // delete. Uncovered, every pot balance summed to zero on a peer.
+            'pot_movements' => [
+                '_delete_wins' => true,
+                // `user_id` is nullable per the multi-user convention and
+                // `counterpart_pot_id` is null for fund/withdraw, so neither
+                // belongs in the required set.
+                '_create_required' => ['pot_id', 'amount_minor', 'currency', 'kind'],
             ],
             // Money column is `target_minor` (not `target_amount_minor`) and the
             // deadline is `target_date`. `target_currency` defaults to 'EUR' in
@@ -353,9 +365,9 @@ final class MergeRulesRegistry
                 '_create_required' => ['name', 'definition'],
             ],
             // `state` is deliberately absent — it is locally derived, never
-            // synced. `id` IS in `_create_required`: notifications.id is a
-            // non-autoincrement sha256 string PK (see @link), so CREATE_ROW
-            // must carry it explicitly or `insertOrIgnore` drops the row.
+            // synced. `id` stays listed for the record that this PK is a
+            // sha256 string rather than an autoincrement, but the applier
+            // seeds it from the op's own pk and never needs it as a field.
             'notifications' => [
                 'read_at' => ['strategy' => 'lww', 'nullable' => true],
                 'dismissed_at' => ['strategy' => 'lww', 'nullable' => true],
@@ -380,6 +392,187 @@ final class MergeRulesRegistry
                 'hide_details' => ['strategy' => 'lww', 'nullable' => false],
                 '_delete_wins' => true,
                 '_create_required' => ['user_id', 'device_id'],
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private function recurringAndChainRules(): array
+    {
+        return [
+            // AFTER transactions — both endpoints are foreign keys into it —
+            // and BEFORE recurring_series, which names a funding link. Only
+            // `state` and `resolver` move after insert (confirm/reject and the
+            // auto-promote sweep); the resolvers insert rather than rewrite.
+            'chain_links' => [
+                'state' => ['strategy' => 'lww', 'nullable' => false],
+                'resolver' => ['strategy' => 'lww', 'nullable' => false],
+                'to_transaction_id' => ['strategy' => 'lww', 'nullable' => true],
+                'confidence' => ['strategy' => 'lww', 'nullable' => false],
+                'evidence' => ['strategy' => 'lww', 'nullable' => false],
+                '_delete_wins' => true,
+                // `to_transaction_id` is deliberately absent: it is NULL by
+                // design on hint and exceeded-tolerance candidate rows, which
+                // a trigger pair on the table enforces.
+                '_create_required' => ['from_transaction_id', 'kind', 'state', 'confidence', 'resolver', 'evidence'],
+            ],
+            // The detector rewrites the latest_*/next_expected_* metrics on
+            // every sweep and the user owns state, name and thresholds — both
+            // are per-field last-writer-wins. `cluster_key`/`direction` are the
+            // identity half of the UNIQUE and are never rewritten.
+            'recurring_series' => [
+                'state' => ['strategy' => 'lww', 'nullable' => false],
+                'cadence' => ['strategy' => 'lww', 'nullable' => false],
+                'detected_name' => ['strategy' => 'lww', 'nullable' => false],
+                'display_name_override' => ['strategy' => 'lww', 'nullable' => true],
+                'latest_amount_minor' => ['strategy' => 'lww', 'nullable' => false],
+                'latest_currency' => ['strategy' => 'lww', 'nullable' => false],
+                'latest_fx_rate_used' => ['strategy' => 'lww', 'nullable' => true],
+                'monthly_equivalent_minor' => ['strategy' => 'lww', 'nullable' => true],
+                'variance_tolerance_percent' => ['strategy' => 'lww', 'nullable' => false],
+                'drift_threshold_percent' => ['strategy' => 'lww', 'nullable' => true],
+                'latest_funding_chain_link_id' => ['strategy' => 'lww', 'nullable' => true],
+                'snoozed_until' => ['strategy' => 'lww', 'nullable' => true],
+                'next_expected_at' => ['strategy' => 'lww', 'nullable' => true],
+                'next_expected_confidence_low' => ['strategy' => 'lww', 'nullable' => false],
+                'cluster_counterparty_key' => ['strategy' => 'lww', 'nullable' => true],
+                '_delete_wins' => true,
+                // state, cadence, variance_tolerance_percent and
+                // next_expected_confidence_low all carry DB defaults, so none
+                // of them belongs in the required set.
+                '_create_required' => ['direction', 'detected_name', 'latest_amount_minor', 'latest_currency', 'cluster_key'],
+            ],
+            // AFTER recurring_series. Append-only detector output, written with
+            // insertOrIgnore and never updated, so it declares no mergeable
+            // field: the (series, transaction) UNIQUE is the same idempotency
+            // seam on the peer that it is on the device that detected it.
+            'recurring_series_occurrences' => [
+                '_delete_wins' => true,
+                '_create_required' => [
+                    'recurring_series_id',
+                    'transaction_id',
+                    'observed_at',
+                    'observed_amount_minor',
+                    'observed_currency',
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private function alertRules(): array
+    {
+        return [
+            // AFTER recurring_series and its occurrences, both of which it
+            // names. The alert body is written once by the detector and frozen
+            // — only the review columns move afterwards, each through the
+            // state machine, so whoever acted on the alert last wins.
+            'drift_alerts' => [
+                'state' => ['strategy' => 'lww', 'nullable' => false],
+                'snoozed_until' => ['strategy' => 'lww', 'nullable' => true],
+                'actioned_at' => ['strategy' => 'lww', 'nullable' => true],
+                '_delete_wins' => true,
+                // `state` carries a DB default('open') so it stays out; every
+                // other column here is NOT NULL without one, including the
+                // frozen threshold pair that records what the alert was judged on.
+                '_create_required' => [
+                    'recurring_series_id',
+                    'direction',
+                    'baseline_amount_minor',
+                    'latest_amount_minor',
+                    'currency',
+                    'delta_minor',
+                    'annualized_impact_minor',
+                    'threshold_percent_used',
+                    'threshold_source',
+                    'latest_occurrence_id',
+                    'detected_at',
+                ],
+            ],
+            // Same review shape as drift_alerts but keyed per transaction.
+            // `dismissed_as` rides along with the dismissal transition, so it
+            // merges the same way the state it explains does.
+
+            // Unlike the tables around it this one's `id` is DERIVED, from the
+            // (user_id, transaction_id) its own UNIQUE names, so both devices
+            // compute the same number for the same charge. It stays out of
+            // `_create_required`: the applier seeds it from the op's own pk.
+            'anomaly_alerts' => [
+                'state' => ['strategy' => 'lww', 'nullable' => false],
+                'dismissed_as' => ['strategy' => 'lww', 'nullable' => true],
+                'snoozed_until' => ['strategy' => 'lww', 'nullable' => true],
+                'actioned_at' => ['strategy' => 'lww', 'nullable' => true],
+                '_delete_wins' => true,
+                // `state` has a DB default('open'); the amount baselines and
+                // the currency are all nullable because a first-time-merchant
+                // flag has no prior amount to compare against.
+                '_create_required' => ['transaction_id', 'direction', 'reasons'],
+            ],
+            // Acknowledging stamps `acknowledged_at` rather than deleting, so
+            // that is the one column that moves. Rows with a NULL user_id are
+            // system-wide and belong to no one: the backfill scopes on user_id
+            // and never captures them, which is the intent — they are local.
+            'system_alerts' => [
+                'acknowledged_at' => ['strategy' => 'lww', 'nullable' => true],
+                '_delete_wins' => true,
+                // `created_at` defaults to CURRENT_TIMESTAMP and there is no
+                // `updated_at` column at all on this table.
+                '_create_required' => ['kind', 'severity', 'message'],
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private function preferenceAndScenarioRules(): array
+    {
+        return [
+            // One row per user (UNIQUE user_id), so every column is a plain
+            // per-user setting and last-writer-wins is the whole story. A
+            // device does NOT get its own view mode — that is the cost of the
+            // row being per-user rather than per-device.
+            'user_preferences' => [
+                'counterparty_index_view' => ['strategy' => 'lww', 'nullable' => false],
+                'reports_index_view' => ['strategy' => 'lww', 'nullable' => false],
+                // A grow-only list of skipped versions, but stored as a plain
+                // JSON array of strings rather than the {v, tag} shape or_set
+                // requires, so it merges as lww: two devices skipping
+                // different versions concurrently keeps only the later one.
+                'skipped_update_versions' => ['strategy' => 'lww', 'nullable' => false],
+                'calendar_entries_accounts' => ['strategy' => 'lww', 'nullable' => true],
+                'calendar_balance_accounts' => ['strategy' => 'lww', 'nullable' => true],
+                '_delete_wins' => true,
+                // Both *_index_view columns and skipped_update_versions carry
+                // DB defaults, leaving user_id as the only required column.
+                '_create_required' => ['user_id'],
+            ],
+            // Named what-if containers the user writes by hand; both columns
+            // are theirs to rename, so both are last-writer-wins. `user_id` is
+            // NOT NULL here (unlike the nullable multi-user convention
+            // elsewhere), which is why it is a required create column.
+            'forecast_scenarios' => [
+                'name' => ['strategy' => 'lww', 'nullable' => false],
+                'description' => ['strategy' => 'lww', 'nullable' => true],
+                '_delete_wins' => true,
+                '_create_required' => ['user_id', 'name'],
+            ],
+            // AFTER forecast_scenarios, whose id it names. This is the
+            // scenario's CONTENT: covered only by the container before, a
+            // synced scenario arrived as an empty named box. `kind` is frozen
+            // after insert — changing one is a remove plus a re-add.
+            'forecast_scenario_mutations' => [
+                'payload' => ['strategy' => 'lww', 'nullable' => false],
+                'target_series_id' => ['strategy' => 'lww', 'nullable' => true],
+                '_delete_wins' => true,
+                // `id` is seeded from the op's own pk and must never be
+                // listed; `target_series_id` is null for the two kinds that
+                // name no series, and the timestamps are nullable.
+                '_create_required' => ['user_id', 'forecast_scenario_id', 'kind', 'payload'],
             ],
         ];
     }

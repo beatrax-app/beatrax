@@ -1,6 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    /calendar page — Phase 6 Plan 03 full UI-SPEC implementation.
+    /calendar page — the full month-grid surface.
 
     Renders:
       - Month summary strip (§6.2) — rose text when risk days exist; computing spinner
@@ -24,7 +24,7 @@
 
     {{-- §6.2 Month summary strip (hidden when no risk days, unless computing) --}}
     @php
-        // IN-05: count only days OF the display month — the Mon–Sun grid
+        // Count only days OF the display month — the Mon–Sun grid
         // carries lead-in/lead-out cells from adjacent months, and a June
         // view must not headline "dips below €0 on Jul 1".
         $riskDays = array_filter($days, fn ($d) => $d->isRisk && $d->date->month === $displayMonth);
@@ -35,10 +35,7 @@
         <div class="cal-summary-strip" aria-live="polite" id="summary-strip">
             @if ($isComputingAny)
                 <span style="color: var(--color-text-faint);">
-                    <svg wire:loading class="inline-block h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                    </svg>
+                    <x-core::spinner wire:loading />
                     {{ Lang::get('calendar::messages.summary.computing') }}
                 </span>
             @else
@@ -85,7 +82,7 @@
             <div
                 x-show="popoverOpen"
                 @click.outside="popoverOpen = false; $wire.persistAccountPrefs()"
-                {{-- IN-08: guard on popoverOpen — a window-scoped Escape (e.g. closing
+                {{-- Guard on popoverOpen — a window-scoped Escape (e.g. closing
                      the day panel) must not fire a persistence round-trip --}}
                 @keydown.escape.window="if (popoverOpen) { popoverOpen = false; $wire.persistAccountPrefs() }"
                 class="absolute right-0 z-30 mt-1 rounded-lg border bg-white py-2 shadow-lg dark:bg-slate-900"
@@ -133,19 +130,22 @@
 
     {{-- §7.1 Empty state --}}
     @if (!$hasEntries)
-        <div class="mb-6 rounded-lg border p-8" style="border-color: var(--color-border); background: var(--color-surface);">
-            <p class="font-semibold" style="color: var(--color-text);">{{ Lang::get('calendar::messages.empty.heading') }}</p>
-            <p class="mt-1 text-sm" style="color: var(--color-text-muted);">
-                {{ Lang::get('calendar::messages.empty.body') }}
-            </p>
+        <x-core::empty-state
+            class="mb-6"
+            :heading="Lang::get('calendar::messages.empty.heading')"
+            :body="Lang::get('calendar::messages.empty.body')"
+        >
+            {{-- The 44px floor in app.css covers <button> and <summary>, and
+                 the one way out of an empty calendar is a link — 20px tall on
+                 a phone. Spelled inline, as the month arrows above are. --}}
             <a
-                href="/recurring/review"
-                class="mt-3 inline-flex items-center text-sm underline hover:no-underline"
-                style="color: var(--color-text);"
+                href="{{ route('recurring.review') }}"
+                class="inline-flex items-center text-sm font-medium underline-offset-2 hover:underline"
+                style="color: var(--color-text); min-height: 44px;"
             >
                 {{ Lang::get('calendar::messages.empty.review') }}
             </a>
-        </div>
+        </x-core::empty-state>
     @endif
 
     {{-- §5 Calendar grid + §6.4 desktop right-rail day panel wrapper --}}
@@ -208,20 +208,22 @@
                             $visibleEntries = array_slice($day->entries, 0, $maxDesktop);
                             $overflow     = $entryCount - $maxDesktop;
 
+                            // Today is marked on the day number itself, not with
+                            // .cal-cell--today: an inset ring on a cell that already
+                            // has four borders read as a stray box, not as a state.
                             $cellClasses  = 'cal-cell';
-                            if ($day->isToday)    $cellClasses .= ' cal-cell--today';
                             if ($day->isRisk)     $cellClasses .= ' cal-cell--risk';
                             if ($day->date->month !== $displayMonth) $cellClasses .= ' cal-cell--other-month';
                             elseif ($day->isPast && !$day->isToday) $cellClasses .= ' cal-cell--past';
 
-                            // IN-06: cells render whole euros (half-up) as a deliberate density
-                            // trade-off — sub-euro balances can read "−€0"/"€1" while the day
+                            // Cells render whole units (half-up) as a deliberate density
+                            // trade-off — sub-euro balances can read "€ -0"/"€ 1" while the day
                             // panel shows two decimals. The panel is the precise surface; the
                             // grid corner is a glanceable magnitude, and the rose risk tint
                             // (driven by the exact minor-unit sign, not this string) stays correct.
                             $balanceStr = $day->isComputing
                                 ? '—'
-                                : (($day->eodBalanceMinor < 0 ? '−' : '') . '€' . number_format(abs($day->eodBalanceMinor / Money::MINOR_UNITS_PER_MAJOR), 0, ',', '.'));
+                                : Money::ofMinor($day->eodBalanceMinor, $day->currency)->formatWholeUnits();
                             $balanceColor = ($day->isComputing || $day->eodBalanceMinor >= 0)
                                 ? 'var(--color-text-muted)'
                                 : 'var(--color-rose)';
@@ -233,8 +235,8 @@
                                 'entries' => $entriesWord,
                             ]);
                             if (!$day->isComputing) {
-                                // WR-10: announce the sign — a screen reader on a −€450 risk day must not hear "€450"
-                                $balanceAmount = number_format(abs($day->eodBalanceMinor / Money::MINOR_UNITS_PER_MAJOR), 0, ',', '.');
+                                // Announce the sign — a screen reader on a −€450 risk day must not hear "€450"
+                                $balanceAmount = Money::ofMinor(abs($day->eodBalanceMinor), $day->currency)->formatWholeUnits();
                                 $ariaLabel .= $day->eodBalanceMinor < 0
                                     ? Lang::get('calendar::messages.cell.aria_balance_negative', ['amount' => $balanceAmount])
                                     : Lang::get('calendar::messages.cell.aria_balance_positive', ['amount' => $balanceAmount]);
@@ -246,17 +248,17 @@
                             @keydown.enter.prevent="$wire.selectDay('{{ $dateStr }}')"
                             @keydown.space.prevent="$wire.selectDay('{{ $dateStr }}')"
                             @keydown.escape.prevent="panelOpen = false; $wire.set('selectedDay', null)"
-                            class="{{ $cellClasses }}"
+                            class="{{ $cellClasses }} align-middle text-center sm:align-top sm:text-left"
                             data-date="{{ $dateStr }}"
                             aria-label="{{ $ariaLabel }}"
                             @if ($day->isRisk && $riskCount > 0) aria-describedby="summary-strip" @endif
                         >
-                            {{-- Day number (top-left) + balance corner (top-right) --}}
-                            <div class="flex items-start justify-between">
+                            {{-- Day number (centred on phone, top-left beside the
+                                 balance corner once the entry rows appear) --}}
+                            <div class="flex items-center justify-center sm:justify-between">
                                 <span class="cal-day-num
-                                    {{ $day->isToday ? 'text-blue-600 dark:text-blue-400' : '' }}
-                                    {{ $day->date->month !== $displayMonth ? 'text-opacity-40' : '' }}"
-                                    style="{{ $day->date->month !== $displayMonth ? 'color: var(--color-text-faint);' : ($day->isToday ? '' : 'color: var(--color-text);') }}"
+                                    {{ $day->isToday ? 'inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-white dark:bg-blue-500' : '' }}"
+                                    style="{{ $day->isToday ? '' : ($day->date->month !== $displayMonth ? 'color: var(--color-text-faint);' : 'color: var(--color-text);') }}"
                                 >
                                     {{ $day->date->day }}
                                 </span>
@@ -277,16 +279,19 @@
                                         if ($entry->isMissed)               $entryClass .= ' cal-entry--missed';
 
                                         $amountSign   = $entry->direction === 'income' ? '+' : '−';
-                                        $amountStr    = $amountSign . '€' . number_format(abs($entry->amountMinor / Money::MINOR_UNITS_PER_MAJOR), 0, ',', '.');
+                                        $amountStr    = $amountSign . Money::ofMinor(abs($entry->amountMinor), $entry->currency)->formatWholeUnits();
                                     @endphp
                                     <div class="{{ $entryClass }}">
                                         <span class="min-w-0 flex-1 truncate">
                                             @if ($entry->isApproximate)<span aria-hidden="true" class="text-xs" style="color: var(--color-text-faint);">~</span>@endif{{ $entry->name }}
                                         </span>
+                                        {{-- The ✓ / ! markers below carry no aria-label: this span is
+                                             aria-hidden, so nothing inside it reaches a screen reader.
+                                             Per-entry paid/missed is announced in the day panel. --}}
                                         <span class="flex-shrink-0 tabular-nums text-xs" aria-hidden="true">
                                             {{ $amountStr }}
-                                            @if ($entry->isPaid)<span class="ml-0.5" style="color: var(--color-emerald);" aria-label="{{ Lang::get('calendar::messages.cell.paid') }}">✓</span>@endif
-                                            @if ($entry->isMissed)<span class="ml-0.5" style="color: var(--color-amber);" aria-label="{{ Lang::get('calendar::messages.cell.missed') }}">!</span>@endif
+                                            @if ($entry->isPaid)<span class="ml-0.5" style="color: var(--color-emerald);">✓</span>@endif
+                                            @if ($entry->isMissed)<span class="ml-0.5" style="color: var(--color-amber);">!</span>@endif
                                         </span>
                                     </div>
                                 @endforeach

@@ -14,21 +14,6 @@ use Modules\Counterparties\Internal\Jobs\CounterpartyGarbageCollectorJob;
 
 uses(RefreshDatabase::class);
 
-/*
- * Pins the daily garbage-collector job that prunes orphaned
- * Counterparty rows: a row is orphaned when no transaction within
- * the last 365 days carries its FK AND no merchant_alias row links
- * back via friendly_name → counterparty.merchant_name. Three of the
- * five test cases drive the job directly via the DI container; the
- * remaining two assert the queue-uniqueness contract (#4) and the
- * scheduler registration shape (#5).
- *
- * SQLite date arithmetic uses `datetime('now', '-365 days')` — the
- * portable form the job's WHERE clause emits — so the test fixtures
- * stamp explicit `created_at` values on both the counterparty rows
- * and the synthetic transaction rows that pin them.
- */
-
 function makeGcUser(string $username): User
 {
     return User::query()->create([
@@ -38,12 +23,6 @@ function makeGcUser(string $username): User
     ]);
 }
 
-/**
- * Insert a counterparties row with explicit timestamps. The job's
- * pruning predicate is age-blind on counterparty rows themselves; it
- * only checks recent transactions + alias presence. Returns the
- * inserted row's id.
- */
 function makeGcCounterparty(int $userId, string $slug, string $displayName, ?string $merchantName = null, string $type = 'merchant'): int
 {
     $now = now()->toDateTimeString();
@@ -66,7 +45,6 @@ it('Test 1 — prunes a Counterparty with zero recent transactions AND zero merc
     $user = makeGcUser('gc-test-1');
     $orphanId = makeGcCounterparty($user->id, 'stale-merchant', 'Stale Merchant');
 
-    // Sanity: row exists pre-prune.
     expect(DB::table('counterparties')->where('id', $orphanId)->count())->toBe(1);
 
     $job = new CounterpartyGarbageCollectorJob($user->id);
@@ -79,9 +57,8 @@ it('Test 2 — does NOT prune a Counterparty with a transaction in the last 365 
     $user = makeGcUser('gc-test-2');
     $aliveId = makeGcCounterparty($user->id, 'active-merchant', 'Active Merchant');
 
-    // Seed an account + an import_run + a recent transaction that
-    // pins the counterparty. The import_runs FK is `constrained()` so
-    // a non-existent run id fails the insert; seed one explicitly.
+    // transactions.import_run_id is `constrained()`, so the run has to exist
+    // before the transaction that pins the counterparty can be inserted.
     $accountId = DB::table('accounts')->insertGetId([
         'user_id' => $user->id,
         'name' => 'gc-test-2-account',
@@ -151,9 +128,7 @@ it('Test 3 — does NOT prune a Counterparty whose merchant_name is referenced b
         merchantName: 'Spotify',
     );
 
-    // Insert a merchant_alias row whose friendly_name matches the
-    // counterparty's merchant_name; the GC join keys on this column
-    // pair (within the user's row set).
+    // The GC join keys friendly_name against merchant_name, within one user.
     DB::table('merchant_aliases')->insert([
         'user_id' => $user->id,
         'pattern' => 'SPOTIFY AB',

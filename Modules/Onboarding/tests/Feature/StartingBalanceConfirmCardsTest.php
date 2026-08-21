@@ -7,25 +7,6 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Onboarding\Internal\Http\Livewire\StartingBalanceCard;
 
-/*
- * Verifies the StartingBalanceCard child component renders correctly
- * for the two seed cases the wizard surfaces inside the first-import
- * step's starting-balance section:
- *
- *  1. Detected — one detector fired with a non-zero value: the card
- *     mounts in the `detected` state, pre-filling the numeric value
- *     and the ISO date from the supplied detector candidate.
- *  2. Manual-entry — no detector fired for the account (the PayPal
- *     case): the card mounts in the `manual-entry` state with empty
- *     inputs and renders the manual-entry lede so the user knows the
- *     wizard couldn't auto-detect.
- *
- * Both behaviours are owned by the card itself — the wizard's first-
- * import step just decides which state to mount each card in based on
- * whether DetectStartingBalancesQuery returned a candidate for the
- * account.
- */
-
 beforeEach(function (): void {
     $this->user = User::query()->create([
         'username' => 'sbc-confirm',

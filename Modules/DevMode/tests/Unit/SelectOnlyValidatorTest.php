@@ -5,20 +5,6 @@ declare(strict_types=1);
 use Illuminate\Validation\ValidationException;
 use Modules\DevMode\Internal\Sql\SelectOnlyValidator;
 
-/*
- * SelectOnlyValidator unit invariants.
- *
- * Covers:
- *   - Reject every non-SELECT first-token variant (INSERT / UPDATE
- *     / DELETE / DROP / WITH-write / semicolon-stack /
- *     comment-only-prefix). Each case throws ValidationException
- *     with the documented `sql=<reason>` shape.
- *   - Accept plain SELECT + SELECT with leading line + block
- *     comments + WHERE clauses + a CTE that READS.
- *   - Empty / whitespace-only input rejected with
- *     `sql=empty_statement`.
- */
-
 it('rejects INSERT INTO statements', function (): void {
     expect(fn () => (new SelectOnlyValidator)->validate('INSERT INTO t VALUES (1)'))
         ->toThrow(ValidationException::class);
@@ -85,15 +71,9 @@ it('accepts SELECT with leading block comment', function (): void {
 });
 
 it('rejects a CTE that reads (first-token rule is uniform — WITH is always rejected)', function (): void {
-    // The plan calls for accepting "WITH x AS (SELECT 1) SELECT * FROM x"
-    // in principle, but the parse-time guard uses a uniform first-token
-    // rule that rejects ANY non-SELECT first token (including WITH).
-    // The trade-off is documented in SelectOnlyValidator's PHPDoc:
-    // strict-uniformity wins over feature-parity-with-WITH because the
-    // safety property — never let a write through — is stronger when
-    // the first-token rule has no carve-outs. Users can rewrite a CTE
-    // as a subquery; the rare CTE-read case is sacrificed for a
-    // simpler validator + uniformly-locked contract test.
+    // A read-only CTE is rejected on purpose: a first-token rule with no
+    // carve-outs cannot be talked past, and the operator can rewrite the CTE
+    // as a subquery.
     expect(fn () => (new SelectOnlyValidator)->validate('WITH x AS (SELECT 1) SELECT * FROM x'))
         ->toThrow(ValidationException::class);
 });

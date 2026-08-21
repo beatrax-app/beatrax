@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Brick\Money\Exception\MoneyMismatchException;
+use Modules\Ledger\Public\Exceptions\CurrencyMismatchException;
 use Modules\Ledger\Public\ValueObjects\Money;
 
 it('round-trips an integer minor amount', function (): void {
@@ -26,7 +26,7 @@ it('subtracts two same-currency Moneys', function (): void {
 
 it('throws when adding mixed currencies', function (): void {
     expect(fn () => Money::ofMinor(100, 'EUR')->plus(Money::ofMinor(50, 'USD')))
-        ->toThrow(MoneyMismatchException::class);
+        ->toThrow(CurrencyMismatchException::class);
 });
 
 it('reports negative amounts as negative', function (): void {

@@ -26,9 +26,6 @@ use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\ArgSpec;
 
-/**
- * @link ../../../../../.docs/features/dev-mode/architecture.md
- */
 #[Layout('dev::layouts.dev-shell')]
 final class ArtisanRunnerPage extends Component
 {
@@ -44,18 +41,15 @@ final class ArtisanRunnerPage extends Component
         DevCommandRegistry $registry,
         ?string $spawn = null,
     ): void {
-        // Belt-and-braces reset: ResetAdvancedToggleOnLogin clears the
-        // toggle on Login, but session-resume (no Login refire) can
-        // carry a stale Advanced=true across requests. This closes
-        // that gap on the first /dev/* navigation per session.
+        // Session resume never refires Login, so a stale Advanced=true would
+        // survive the listener that is supposed to clear it.
         if (! $session->has('dev_mode.advanced_session_seen')) {
             $session->forget('dev_mode.advanced');
             $session->put('dev_mode.advanced_session_seen', true);
         }
 
-        // Carry across a palette-picked spawn: ?spawn=<name> fires the
-        // same spawn() guard immediately so a pick made off-page
-        // produces the same outcome as one made on /dev/artisan.
+        // A palette pick made off-page arrives here as ?spawn=, and must
+        // clear the same guard as one made on the page.
         if (is_string($spawn) && $spawn !== '') {
             $this->spawn($spawn, [], $spawner, $user, $registry);
         }
@@ -69,10 +63,8 @@ final class ArtisanRunnerPage extends Component
         $this->filter = $filter;
     }
 
-    // Looks the command up in the registry, routes DESTRUCTIVE rows to
-    // the triple-gate (defense-in-depth — a hostile client could still
-    // POST a destructive name even though the fallback modal excludes
-    // them), and otherwise spawns the SAFE command directly.
+    // The fallback modal excludes destructive rows, but a hostile client can
+    // still name one, so the tier check lives here rather than in the view.
     /**
      * @param  array<string, mixed>  $args
      */
@@ -97,10 +89,9 @@ final class ArtisanRunnerPage extends Component
             return;
         }
 
-        // Some SAFE-tier registry entries declare REQUIRED args (e.g.
-        // `config:show {config}`); a palette pick dispatches `args: []`,
-        // so without this guard Symfony Console aborts with no surface
-        // visible to the operator. Refuse + toast the missing key(s).
+        // A palette pick dispatches `args: []`, so a SAFE command with a
+        // required arg would abort inside Symfony Console with nothing
+        // surfaced to the operator.
         $missing = $this->missingRequiredArgs($spec->argsSchema, $args);
         if ($missing !== []) {
             $this->toast(
@@ -141,10 +132,6 @@ final class ArtisanRunnerPage extends Component
         return $missing;
     }
 
-    // Browser-event sink for palette-driven spawns while already on
-    // /dev/artisan (the off-page path routes through mount()'s
-    // ?spawn=<name> instead). Routes through spawn() so the
-    // SAFE-vs-DESTRUCTIVE registry check stays in one place.
     /**
      * @param  array<string, mixed>  $args
      */
@@ -157,19 +144,15 @@ final class ArtisanRunnerPage extends Component
         CurrentUser $user,
         DevCommandRegistry $registry,
     ): void {
-        // `$tier` is informational only — the authoritative tier
-        // lookup happens inside spawn() via the registry, so a
-        // hostile dispatch that claims `tier: 'safe'` for a
-        // destructive command still routes through the triple-gate.
+        // `$tier` is caller-supplied and deliberately ignored; spawn()
+        // re-reads the authoritative tier from the registry.
         unset($tier);
 
         $this->spawn($name, $args, $spawner, $user, $registry);
     }
 
-    // A destructive re-run pops the triple-gate carrying the original
-    // command + args; a safe re-run spawns immediately. Unknown/expired
-    // records (24h cache TTL) silently no-op — the row stays visible as
-    // history but the cache no longer has the spawn payload.
+    // Past the RunRegistry's 24h TTL the audit row survives but its spawn
+    // payload does not, so an old row is visible history and nothing more.
     public function rerun(
         string $runId,
         RunRegistry $registry,
@@ -210,16 +193,12 @@ final class ArtisanRunnerPage extends Component
     ): View {
         $userId = $user->id();
 
-        // Every spawn writes an eager audit row with exit_code=null;
-        // the SSE done branch updates it in place, but a row stays
-        // "running" forever if the operator never opens the stream.
-        // Sweep once per render and finalize any PID that already exited.
+        // The SSE done branch is what finalizes the eager audit row, so a run
+        // whose stream the operator never opened stays "running" forever.
         $this->sweepPendingRuns($db, $userId, $runRegistry, $liveness, $finalize);
 
-        // Raw query builder via DatabaseManager sidesteps the
-        // Eloquent\Builder __call forwarding that triggers
-        // larastan-strict staticMethod.dynamicCall on limit()/whereIn();
-        // same dev_mode_audit table the custom Activity model targets.
+        // The query builder rather than Eloquent: Builder's __call forwarding
+        // trips larastan-strict staticMethod.dynamicCall on limit()/whereIn().
         $audit = $db->connection()->table('dev_mode_audit')
             ->where('log_name', 'dev_mode')
             ->where('causer_id', $userId)
@@ -229,9 +208,6 @@ final class ArtisanRunnerPage extends Component
 
         $runs = $audit->map(fn (object $row): array => $this->mapAuditRow($row));
 
-        // Apply the filter chip. `running` now genuinely matches in-flight
-        // rows (the eager audit write plus the per-render sweep keep them
-        // current); `failed` keeps only non-zero exit codes.
         $filtered = match ($this->filter) {
             'running' => $runs->where('status', 'running')->values(),
             'failed' => $runs->filter(fn (array $r): bool => is_int($r['exitCode'] ?? null) && $r['exitCode'] !== 0)->values(),
@@ -284,9 +260,6 @@ final class ArtisanRunnerPage extends Component
         return is_array($decoded) ? $decoded : [];
     }
 
-    // Pending eager-write (no exit, no finish) → 'running' so the RunCard
-    // opens the SSE live tail; a cancel marker wins outright, and anything
-    // else carrying a finish marker → 'done'.
     private function runStatus(bool $cancelled, ?int $exitCode, ?string $finishedAt): string
     {
         return match (true) {
@@ -296,9 +269,8 @@ final class ArtisanRunnerPage extends Component
         };
     }
 
-    // Prefer the spawn-time UUID so data-run-id matches the SSE route
-    // argument; fall back to the audit row id for pre-eager-write rows
-    // (already finalized, excerpt inline).
+    // The spawn-time UUID wins because data-run-id has to match the SSE
+    // route argument; the audit row id is only a pre-eager-write fallback.
     /**
      * @param  array<array-key, mixed>  $properties
      * @param  array<array-key, mixed>  $vars
@@ -319,8 +291,6 @@ final class ArtisanRunnerPage extends Component
         };
     }
 
-    // startedAt prefers the spawn-time clock value baked into properties;
-    // falls back to row->created_at when the eager write predates it.
     /**
      * @param  array<array-key, mixed>  $properties
      * @param  array<array-key, mixed>  $vars
@@ -348,10 +318,8 @@ final class ArtisanRunnerPage extends Component
             && $heartbeatTs > ($clock->now()->getTimestamp() - WriteWorkerHeartbeat::TTL_SECONDS);
     }
 
-    // Caps at 25 rows per render. A row whose RunRegistry entry has
-    // TTL'd (>24h) stays pending in the timeline — the sweep cannot
-    // finalize what it has no PID for, so it degenerates gracefully
-    // into "running" UI rather than writing an unjustified finish marker.
+    // A row whose RunRegistry entry has TTL'd has no PID to probe, so it is
+    // left pending rather than given an invented finish marker.
     private function sweepPendingRuns(
         DatabaseManager $db,
         int $userId,
@@ -391,10 +359,8 @@ final class ArtisanRunnerPage extends Component
                 continue;
             }
 
-            // PID is dead — finalize on the operator's behalf so the
-            // row stops being a forever-running phantom. Pass
-            // exitCode=null because the bash detach lost it; the
-            // run-card renders "exit ?" for that case.
+            // exitCode is null because the bash detach lost it; the run card
+            // renders "exit ?" rather than claiming a code it never saw.
             ($finalize)($runIdRaw, null, false);
         }
     }

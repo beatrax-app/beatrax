@@ -32,7 +32,7 @@
     lang="{{ $chrome->locale }}"
     data-base-currency="{{ $chartCurrency }}"
     data-chart-labels="{{ $chartLabels }}"
-    class="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 {{ $chrome->isDark ? 'dark' : '' }}"
+    class="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 {{ $chrome->isDark ? 'dark' : 'light' }}"
     {{-- Only when the server already KNOWS the theme. An inline style beats
          every stylesheet rule, so emitting it while the pre-paint script is
          authoritative pinned a dark-OS phone to a white <html> and the page
@@ -65,7 +65,7 @@
         x-data="{
             onKey(e) {
                 /*
-                 * Global command-palette keybind handler (D-42, 16-08).
+                 * Global command-palette keybind handler.
                  *
                  *   - Cmd+K / Ctrl+K → dispatch 'palette:open' (the
                  *     CommandPaletteModal Livewire component listens
@@ -74,7 +74,7 @@
                  *     Console; non-developers receive 404 from
                  *     EnsureDeveloperMode).
                  *
-                 * I-7 fix: do NOT steal keystrokes when focus is inside
+                 * Do NOT steal keystrokes when focus is inside
                  * a text field. Without this carve-out a developer
                  * typing 'k' inside a search input while holding Cmd
                  * (e.g. Cmd+Left / Cmd+Right to navigate words on macOS, then a
@@ -84,7 +84,7 @@
                  *
                  * Raw U+2318 glyphs are banned from this template: x-data
                  * comments render into the HTML attribute and trip
-                 * AppSidebarKbdTest's not-contains-glyph assertion (D-04).
+                 * AppSidebarKbdTest's not-contains-glyph assertion.
                  */
                 const t = document.activeElement;
                 if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) {
@@ -112,15 +112,15 @@
                  out of flow at phone width, so column order is top-bar → main). --}}
             <div class="flex max-lg:flex-col min-h-screen">
                 {{--
-                    Drawer wrapper (D-01/D-03, Phase 4 Plan 03).
+                    Drawer wrapper.
                     The sidebar is mounted exactly ONCE inside the drawer component.
                     At >=1024px: .drawer-container is position:static — desktop static sidebar.
                     At <1024px: slides in as a focus-trapped overlay from the left.
-                    The original @livewire('core.app-sidebar') call is now inside <x-core::drawer>.
+                    The original @livewire('core.app-sidebar') call is now inside <x-shell::drawer>.
                 --}}
-                <x-core::drawer />
+                <x-shell::drawer />
                 {{--
-                    Mobile top bar (D-01/D-02/D-05, Phase 4 Plan 03).
+                    Mobile top bar.
                     CSS-hidden at >=1024px — desktop layout is unchanged.
                     Inserts before <main> so it stacks above the main content column on mobile.
                 --}}
@@ -136,7 +136,7 @@
                 </main>
             </div>
             {{--
-                Global command-palette modal (16-08, DEVUI-09). Mounted
+                Global command-palette modal. Mounted
                 once for the entire authenticated session; the body-level
                 Alpine keybind handler above dispatches `palette:open`
                 which the modal listens to. Server-side JSON registry
@@ -148,7 +148,7 @@
             {{-- Search palette endpoint — provides server-backed transaction + entity
                  hits to the ⌘K palette via $wire.search(q) from palette.js.
                  Mounted alongside the palette modal so the JS can reach $wire on
-                 every authenticated page (Plan 08-05, SRCH-02). --}}
+                 every authenticated page. --}}
             @livewire('search.palette-search-endpoint')
             {{-- Arg-prompt modal for SAFE-tier commands with args
                  (config:show, Beatrax:reset-password, etc.). The
@@ -161,10 +161,10 @@
 
             <x-core::toast-host />
             {{--
-                Idle-timeout injection (plan 05-03, D-17, T-05-13).
+                Idle-timeout injection.
                 Emits window.beatraxIdleMs (milliseconds) ONLY when the app lock
                 is enabled for the current user, using their configured
-                idle_timeout_minutes preset (1/5/15/30 — plan 05-04). lock.js
+                idle_timeout_minutes preset (1/5/15/30). lock.js
                 reads this value to calibrate the idle watcher; when the
                 variable is absent, lock.js no-ops the idle tracker and never
                 shows the veil — users without a lock must not be idle-locked
@@ -198,10 +198,10 @@
         @fluxScripts
         @auth
             {{--
-                PWA service-worker registration (D-17/D-18/D-19, PWA-03).
+                PWA service-worker registration.
                 Registered on every authenticated page load — one code path
-                for both the web browser and the NativePHP desktop shell
-                (D-19). The feature check (`'serviceWorker' in navigator`)
+                for both the web browser and the NativePHP desktop shell.
+                The feature check (`'serviceWorker' in navigator`)
                 guards against environments that do not implement the SW API
                 (legacy browsers, certain WebView contexts). Deferring to the
                 `load` event ensures the SW registration does not block the
@@ -225,7 +225,7 @@
             @endunless
             @if (Route::has('desktop.close-action'))
                 {{--
-                    D-08 close-window JS glue (plan 15-04). The
+                    Close-window JS glue. The
                     CloseWindowPrompt Livewire component dispatches
                     `close-window-choice` (`choice: 'quit' | 'tray'`) after
                     the user picks an action. This hook listens for the
@@ -236,8 +236,7 @@
                     facades only have any effect when NativePHP is
                     running.
 
-                    `Route::has()`-guarded (15-11-PLAN.md Task 2 fix-forward,
-                    T-15-34): the Mobile module's own `mobile-app/` root does
+                    `Route::has()`-guarded: the Mobile module's own `mobile-app/` root does
                     not load `Modules\Desktop` (15-TOPOLOGY-SPIKE-FINDINGS.md
                     — Desktop has no `module.json` and is dropped from the
                     mobile shell's `bootstrap/providers.php` manifest), so
@@ -282,7 +281,7 @@
              portal to the body root — painted straight over it and the QR
              stayed readable through the privacy veil. --}}
         {{--
-            Privacy veil (plan 05-03, D-07, T-05-11).
+            Privacy veil.
             Drops synchronously on window background/blur (lock.js) to hide
             financial data before OS screenshots. Starts opacity-0 /
             pointer-events-none; lock.js flips classes on visibilitychange or

@@ -11,17 +11,14 @@ use Illuminate\Routing\Redirector;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Exceptions\OpenBankingCallbackException;
 use Modules\OpenBanking\Internal\OAuth\InvalidStateException;
 use Modules\OpenBanking\Internal\OAuth\OpenBankingStateRepository;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Exceptions\OpenBankingCallbackException;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
-use Modules\OpenBanking\Public\Services\SecretsWriteFailed;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Services\SecretsWriteFailed;
 use RuntimeException;
 
-/**
- * @link ../../../../../.docs/features/open-banking/architecture.md
- */
 final class OpenBankingCallbackController
 {
     // Kept in sync with the identically-named constant on
@@ -60,10 +57,8 @@ final class OpenBankingCallbackController
         try {
             $connectionId = $this->completeConsent($request, $userId);
         } catch (RuntimeException $e) {
-            // OpenBankingCallbackException, SecretsWriteFailed (after its
-            // compensating rollback) and the Enable Banking client's own
-            // failures all subclass RuntimeException and carry a user-facing
-            // reason — one flash handles every post-state refusal.
+            // Every post-state refusal subclasses RuntimeException and carries
+            // a user-facing reason, so one flash handles all of them.
             return $this->redirector
                 ->route('settings.open-banking')
                 ->with('open_banking_failed', $e->getMessage());
@@ -106,9 +101,8 @@ final class OpenBankingCallbackController
             throw OpenBankingCallbackException::noSessionId();
         }
 
-        // Not gated (unlike sessionId above): a missing accounts[] entry does
-        // not invalidate the completed consent — a later fetch attempt reports
-        // its own explicit error instead.
+        // Not gated like sessionId: a missing accounts[] entry does not
+        // invalidate a completed consent, and a later fetch reports it itself.
         $accountUid = $this->client->accountUidFrom($session);
 
         $institutionId = $credentials->institutionId;
@@ -119,10 +113,8 @@ final class OpenBankingCallbackController
 
         $upsert = $this->upsertConnectionRow($userId, $institutionId, $accountUid, $nowString, $consentExpiresAtString);
 
-        // The chmod-600 JSON write happens after the DB commit: a failure here
-        // needs an explicit compensating rollback of the row just written,
-        // otherwise the user ends up with a connection row pointing at no
-        // session material.
+        // The secrets write happens after the DB commit, so a failure here needs
+        // a compensating rollback or the row points at no session material.
         try {
             $this->secrets->save(new OpenBankingCredentials(
                 applicationId: $credentials->applicationId,
@@ -157,9 +149,8 @@ final class OpenBankingCallbackController
             ->first(['id', 'consent_expires_at', 'account_uid']);
         $existingId = ($existingRow !== null && is_numeric($existingRow->id)) ? (int) $existingRow->id : null;
 
-        // Snapshot the pre-update values so the re-link (update) path can
-        // restore them if the secrets write later fails — otherwise the row
-        // would advertise a fresh consent the secrets file cannot back.
+        // Snapshot the pre-update values so the re-link path can restore them if
+        // the secrets write fails, rather than advertise a consent it cannot back.
         $priorConsentExpiresAt = ($existingRow !== null && is_string($existingRow->consent_expires_at))
             ? $existingRow->consent_expires_at
             : null;
@@ -179,10 +170,8 @@ final class OpenBankingCallbackController
                     ->where('user_id', $userId)
                     ->update([
                         'consent_expires_at' => $consentExpiresAtString,
-                        // Re-link may surface a different account_uid than the
-                        // original consent (or resolve one for the first time
-                        // if it was null before) — always refresh it from THIS
-                        // session's response.
+                        // A re-link may surface a different account_uid, or the
+                        // first one, so always take THIS session's.
                         'account_uid' => $accountUid,
                         'updated_at' => $nowString,
                     ]);
@@ -231,9 +220,7 @@ final class OpenBankingCallbackController
                 return;
             }
 
-            // Re-link path — roll the row back to its pre-update
-            // consent_expires_at/account_uid so it never advertises a fresh
-            // consent the secrets file cannot back.
+            // Re-link path: restore the pre-update consent_expires_at/account_uid.
             $connection->table('open_banking_connections')
                 ->where('id', $upsert['id'])
                 ->where('user_id', $userId)

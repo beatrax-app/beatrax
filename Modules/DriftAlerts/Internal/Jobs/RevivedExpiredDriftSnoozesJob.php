@@ -18,9 +18,6 @@ use Modules\DriftAlerts\Models\DriftAlert;
 use Modules\DriftAlerts\Public\Enums\DriftAlertState;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/drift-alerts/architecture.md
- */
 final class RevivedExpiredDriftSnoozesJob implements ShouldQueue
 {
     use Dispatchable;
@@ -62,10 +59,9 @@ final class RevivedExpiredDriftSnoozesJob implements ShouldQueue
                     ['snoozed_until' => null],
                 );
             } catch (InvalidStateTransitionException) {
-                // A concurrent user action moved the row off 'snoozed'
-                // between the candidate scan and the state-machine row
-                // lock. The transition guard correctly refused the
-                // revival; skip this row and continue the sweep.
+                // A concurrent user action moved the row off 'snoozed' between
+                // the candidate scan and the row lock, so the guard was right
+                // to refuse; the sweep carries on.
                 continue;
             }
         }

@@ -4,48 +4,27 @@ declare(strict_types=1);
 
 namespace Tests\Helpers;
 
-/**
- * A stream wrapper that serves real bytes and then refuses.
- *
- * Some failure branches only open when a read or a write fails partway
- * through a file that is otherwise well-formed — a disk giving up mid-copy,
- * a full filesystem. PHP will not produce those on demand from a real file,
- * so the path is handed to a wrapper instead: `beatraxfail://anything` reaches
- * this class, which replays `$data` until `$failAfter` bytes have gone by and
- * then returns false from fread, or returns 0 from fwrite when `$failWrites`
- * is set.
- *
- * Deliberately configured through statics rather than a stream context.
- * fopen() is called deep inside the code under test, which has no reason to
- * offer a seam for one, and the alternative is a constructor argument the
- * wrapper protocol does not have.
- */
+// A `beatraxfail://` path serves real bytes and then refuses, so tests can
+// reach failure branches PHP will not produce from a real file. Configured
+// through statics because fopen() is called deep inside the code under test
+// and the wrapper protocol has no constructor to pass a context to.
 final class FailingStream
 {
-    /** Bytes served to readers before the failure point. */
     public static string $data = '';
 
-    /**
-     * The 1-based read on which fread reports failure. A byte offset would be
-     * the obvious knob and is the wrong one: PHP buffers userland stream reads
-     * in 8 KiB chunks, so an offset lands mid-buffer and surfaces as a short
-     * read — which the AEAD rejects as corruption, a different branch
-     * entirely. Counting reads puts the false at the start of one.
-     */
+    // Counts reads, not bytes: PHP buffers userland stream reads in 8 KiB
+    // chunks, so a byte offset lands mid-buffer and surfaces as a short read,
+    // which the AEAD rejects as corruption — a different branch entirely.
     public static int $failOnRead = PHP_INT_MAX;
 
-    /**
-     * Caps each read to this many bytes. Needed to empty PHP's buffer at a
-     * chosen point: with the default 8 KiB fill, a reader that has consumed
-     * only a header still has thousands of buffered bytes left, so the next
-     * fread is served from the buffer and never reaches the wrapper.
-     */
+    // Empties PHP's read buffer at a chosen point. With the default 8 KiB
+    // fill, a reader that has consumed only a header still has thousands of
+    // buffered bytes left and its next fread never reaches the wrapper.
     public static int $chunkSize = PHP_INT_MAX;
 
-    /** When true, every fwrite reports zero bytes written. */
     public static bool $failWrites = false;
 
-    /** Required by the wrapper protocol; PHP assigns the stream context here. */
+    // Required by the wrapper protocol; PHP assigns the stream context here.
     public mixed $context = null;
 
     private int $position = 0;

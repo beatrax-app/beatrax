@@ -10,23 +10,10 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
 
 uses(RefreshDatabase::class);
 
-/*
- * NoisePeerAuthTest — XPORT-01: confirmed-device authentication gate.
- *
- * After a Noise IK or XX handshake completes, the responder's revealed
- * static X25519 public key MUST be compared against
- * DeviceRegistryService::deviceX25519Keys() (confirmed-only, user-scoped).
- * An unconfirmed device (safety-number not yet verified) MUST NOT be admitted
- * to a Noise session — even if the handshake cryptography succeeds.
- *
- * Trust anchor: Phase 12 device_registry with confirmed_at IS NOT NULL (T-13-01).
- * This is the Noise-level analog of the op-log's deviceKeys() replayer gate.
- *
- * Two invariants:
- *   I-AUTH-1: A confirmed peer's X25519 static key is admitted (happy path).
- *   I-AUTH-2: An unconfirmed peer's X25519 static key is rejected, session
- *             closed (T-13-01 / RESEARCH Pattern 2 / Pitfall 2 guard).
- */
+// Handshake cryptography succeeding proves only that the peer holds a key, not
+// that this user ever confirmed it. The revealed static key is checked against
+// the confirmed, user-scoped registry afterwards — the transport-level analog
+// of the replayer's own device-key gate.
 
 function authTestUser(string $username): User
 {
@@ -51,7 +38,6 @@ it('admits a Noise session whose static key matches a confirmed device_registry 
     $respStaticPublic = sodium_crypto_kx_publickey($respKp);
     sodium_memzero($respKp);
 
-    // Insert a CONFIRMED device entry with a known X25519 public key
     $deviceId = 'auth-test-device-'.bin2hex(random_bytes(4));
     DB::table('device_registry')->insert([
         'user_id' => $user->id,
@@ -67,7 +53,6 @@ it('admits a Noise session whose static key matches a confirmed device_registry 
         'updated_at' => now()->toIso8601String(),
     ]);
 
-    // Do IK handshake (responder learns initiator's static key from msg1)
     $initHs = NoiseHandshakeState::initIkInitiator($initStaticSecret, $initStaticPublic, $respStaticPublic);
     $respHs = NoiseHandshakeState::initIkResponder($respStaticSecret, $respStaticPublic);
     $msg1 = $initHs->writeMessage('');
@@ -77,11 +62,9 @@ it('admits a Noise session whose static key matches a confirmed device_registry 
 
     [, , $peerStaticFromResp] = $respHs->split();
 
-    // The auth gate: check the revealed static key against DeviceRegistryService::deviceX25519Keys()
     $registryService = app(DeviceRegistryService::class);
     $confirmedKeys = $registryService->deviceX25519Keys($user->id);
 
-    // Peer static key is in device_registry (confirmed) → session should be admitted
     $peerKeyHex = sodium_bin2hex($peerStaticFromResp);
     expect(in_array($peerKeyHex, $confirmedKeys, true))->toBeTrue(
         'Confirmed device X25519 key must be in deviceX25519Keys() → session admitted'
@@ -91,7 +74,6 @@ it('admits a Noise session whose static key matches a confirmed device_registry 
 it('rejects a Noise session whose static key is not in device_registry (unconfirmed device)', function (): void {
     $user = authTestUser('auth-user-2');
 
-    // Generate a keypair that is NOT in device_registry
     $unknownKp = sodium_crypto_kx_keypair();
     $unknownSecret = sodium_crypto_kx_secretkey($unknownKp);
     $unknownPublic = sodium_crypto_kx_publickey($unknownKp);
@@ -111,7 +93,6 @@ it('rejects a Noise session whose static key is not in device_registry (unconfir
 
     [, , $peerStaticFromResp] = $respHs->split();
 
-    // The auth gate check
     $registryService = app(DeviceRegistryService::class);
     $confirmedKeys = $registryService->deviceX25519Keys($user->id);
 
@@ -130,7 +111,6 @@ it('rejects a Noise session whose static key belongs to a different user (cross-
     $initStaticPublic = sodium_crypto_kx_publickey($initKp);
     sodium_memzero($initKp);
 
-    // Register the initiator's key under user B (NOT user A)
     DB::table('device_registry')->insert([
         'user_id' => $userB->id,
         'device_id' => 'cross-user-device-b',
@@ -145,7 +125,6 @@ it('rejects a Noise session whose static key belongs to a different user (cross-
         'updated_at' => now()->toIso8601String(),
     ]);
 
-    // When user A performs the auth gate check, user B's key must NOT appear
     $registryService = app(DeviceRegistryService::class);
     $confirmedKeysForUserA = $registryService->deviceX25519Keys($userA->id);
 
@@ -154,7 +133,6 @@ it('rejects a Noise session whose static key belongs to a different user (cross-
         'Cross-user: user B device key must not appear in user A deviceX25519Keys() (T-13-01 user scope)'
     );
 
-    // But it IS in user B's registry
     $confirmedKeysForUserB = $registryService->deviceX25519Keys($userB->id);
     expect(in_array($peerKeyHex, $confirmedKeysForUserB, true))->toBeTrue(
         'User B device key must appear in user B deviceX25519Keys()'
@@ -187,14 +165,11 @@ it('rejects a Noise session after static key is removed from device_registry (re
     $registryService = app(DeviceRegistryService::class);
     $peerKeyHex = sodium_bin2hex($initStaticPublic);
 
-    // Before revocation: key is present
     $beforeKeys = $registryService->deviceX25519Keys($user->id);
     expect(in_array($peerKeyHex, $beforeKeys, true))->toBeTrue('Key must be present before revocation');
 
-    // Revoke: remove from device_registry (Phase 14 will add a softer revocation path)
     DB::table('device_registry')->where('device_id', $deviceId)->delete();
 
-    // After revocation: key is gone → new sessions from this device must be rejected
     $afterKeys = $registryService->deviceX25519Keys($user->id);
     expect(in_array($peerKeyHex, $afterKeys, true))->toBeFalse(
         'After revocation, device key must not appear in deviceX25519Keys() → new sessions rejected'

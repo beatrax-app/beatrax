@@ -6,13 +6,8 @@ namespace Modules\OpenBanking\Internal\Tls;
 
 use RuntimeException;
 
-// The loopback HTTPS listener has no certificate to present, so the consent
-// redirect cannot be received at all. Internal because it never leaves the
-// module: the serve command is the only caller, and it reports the failure to
-// the console rather than handing it to another module.
-/**
- * @link ../../../../.docs/features/open-banking/architecture.md
- */
+// The loopback listener has no certificate to present, so the consent redirect
+// cannot be received. Internal: the serve command is the only caller.
 final class LoopbackTlsException extends RuntimeException
 {
     public static function couldNotWriteCertificate(string $directory): self
@@ -30,9 +25,8 @@ final class LoopbackTlsException extends RuntimeException
         return new self('Unable to create a temporary OpenSSL config file.');
     }
 
-    // Names the primitive that failed rather than describing the failure,
-    // because openssl's own error queue supplies the description and the four
-    // call sites otherwise differ only in which function they called.
+    // Names the primitive rather than the failure: openssl's error queue
+    // supplies the description, and the call sites differ only in which.
     public static function opensslFailed(string $operation, string $error): self
     {
         return new self("{$operation} failed: {$error}");

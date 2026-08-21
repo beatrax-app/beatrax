@@ -9,13 +9,6 @@ use Modules\DriftAlerts\Public\Services\CancellationImpactQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * CancellationImpactQuery unit-style tests. The Public service exposes
- * exactly one `forSeries` entry point that reads through
- * RecurringSeriesQuery, preserves the series's original currency, and
- * returns null on cross-user / missing series invocations.
- */
-
 function ciqUser(string $username): User
 {
     return User::query()->create([
@@ -27,10 +20,6 @@ function ciqUser(string $username): User
 }
 
 /**
- * Seeds a single approved recurring_series row owned by $user. The
- * caller supplies the columns the test cares about; defaults match the
- * shape of a stable EUR monthly subscription.
- *
  * @param  array<string, mixed>  $overrides
  */
 function ciqSeries(User $user, array $overrides = []): int
@@ -75,7 +64,7 @@ it('returns a DTO whose monthlySavings absolute amount equals the series monthly
     expect($dto->currency)->toBe('EUR');
 });
 
-it('preserves USD currency on USD series (Pitfall 1: monthly_equivalent_minor is NOT hard-EUR)', function (): void {
+it('preserves USD currency on USD series, because monthly_equivalent_minor is not hard-EUR', function (): void {
     $user = ciqUser('ciq-usd');
     $seriesId = ciqSeries($user, [
         'monthly_equivalent_minor' => -1199,

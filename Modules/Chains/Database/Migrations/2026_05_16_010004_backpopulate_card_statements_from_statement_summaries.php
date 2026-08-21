@@ -6,29 +6,10 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Migrations\Migration;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * One-shot back-population from existing Phase 3 `statement_summaries`
- * rows into the new `card_statements` table.
- *
- * For every statement_summary whose owning account has kind `ics_card`,
- * insert a corresponding card_statements row in state `open`. The
- * insert is idempotent via `insertOrIgnore` against the UNIQUE
- * (user_id, account_id, period_start, period_end) constraint, so a
- * re-run (in dev or after a fresh migrate:refresh) produces zero new
- * rows.
- *
- * Sign convention: Phase 3's IcsPdfAdapter writes `closing_balance_minor`
- * as a NEGATIVE value (the amount the user owes). `total_amount_minor`
- * on card_statements preserves that sign verbatim; `open_balance_minor`
- * is the absolute value (positive amount remaining to settle). Tests in
- * Wave 1 lock this convention by asserting both columns against a known
- * seeded statement_summary row.
- *
- * Forward-only by design: the `down()` method is intentionally a no-op
- * because re-running `up()` is already a no-op via insertOrIgnore. To
- * fully roll back, drop the card_statements table via the create
- * migration's `down()`.
- */
+// Back-populates card_statements from every ics_card statement_summary.
+// insertOrIgnore against UNIQUE (user_id, account_id, period_start,
+// period_end) makes a re-run a no-op. The negative closing_balance_minor
+// sign is preserved verbatim; open_balance_minor is its absolute value.
 return new class extends ModuleMigration
 {
     public function up(): void
@@ -56,11 +37,8 @@ return new class extends ModuleMigration
         $now = CarbonImmutable::now()->toDateTimeString();
 
         foreach ($rows as $row) {
-            // statement_summaries.period_start/period_end may be NULL for
-            // sources that didn't carry the period in their statement
-            // metadata. Skip those — card_statements UNIQUE requires both
-            // boundaries, and the dashboard tile needs them for the due-
-            // date forecast.
+            // Sources that carried no period metadata leave these NULL, and
+            // the card_statements UNIQUE needs both boundaries.
             if ($row->period_start === null || $row->period_end === null) {
                 continue;
             }
@@ -84,8 +62,7 @@ return new class extends ModuleMigration
 
     public function down(): void
     {
-        // Forward-only — re-running up() is idempotent. To fully roll
-        // back, drop the card_statements table via the create migration's
-        // down().
+        // Forward-only: up() is idempotent, and the create migration's
+        // down() drops the table.
     }
 };

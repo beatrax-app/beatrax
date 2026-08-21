@@ -19,9 +19,6 @@ use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 
-/**
- * @link ../../../.docs/features/ingestion/architecture.md
- */
 final class IngestionServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
@@ -42,8 +39,6 @@ final class IngestionServiceProvider extends ServiceProvider
                     'paypal-csv' => $app->make(PaypalCsvAdapter::class),
                 ];
 
-                // One GenericCsvAdapter per bundled CSV preset (N26, Revolut,
-                // ING-NL, …) — each is its own ingestion format.
                 $presets = $app->make(CsvPresetRegistry::class);
                 $amounts = $app->make(GenericCsvAmountParser::class);
                 $sniffer = $app->make(HeaderSniffer::class);

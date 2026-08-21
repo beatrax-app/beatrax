@@ -9,10 +9,9 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Category;
 
-// merchant_memories.merchant_id is FK-constrained to merchants, so this
-// first upserts a per-user merchants row keyed on (user_id,
-// normalized_name), then attaches a memory row. Both tables are accessed
-// via the raw query builder — neither has an Eloquent model in the project.
+// merchant_memories.merchant_id is FK-constrained to merchants, so a per-user
+// merchants row is upserted first. Neither table has an Eloquent model, hence
+// the raw query builder.
 final class DemoMerchantMemorySeeder
 {
     /**

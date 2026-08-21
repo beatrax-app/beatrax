@@ -28,7 +28,11 @@ return [
     'recovery_download' => 'Download as .txt',
     'recovery_copy' => 'Copy codes',
     'recovery_copied' => 'Copied',
+    'recovery_copy_failed' => 'Could not copy. Write the codes down instead.',
     'recovery_saved' => 'Saved to your downloads.',
+    'recovery_share_title' => 'Beatrax recovery codes',
+    'recovery_share_message' => 'Keep these somewhere safe.',
+    'recovery_save_failed' => 'Could not save the file. Write the codes down instead.',
     'recovery_confirm' => 'I have saved these codes somewhere safe.',
     'continue_to_pairing' => 'Continue to pairing',
 

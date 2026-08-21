@@ -9,19 +9,10 @@ use Modules\Sync\Public\Services\SyncStatusService;
 
 uses(RefreshDatabase::class);
 
-/*
- * "All devices up to date" was read off the session state alone: a closed
- * session meant finished. A change made after that session closed had been
- * nowhere, and the panel still said everything was up to date — measured on a
- * phone holding 7 op-log entries of its own and a goal the desktop had never
- * seen.
- *
- * The two tables write time differently, and these fixtures keep that: a
- * session records ISO8601 with an offset ("2026-08-19T00:36:58+02:00"), the op
- * log records "2026-08-19 00:42:56". Compared as strings ' ' sorts before 'T',
- * so every local op looked older than the session it came after and the check
- * never fired. Verified against the device's own database.
- */
+// "All devices up to date" was read off the session state alone, so a change made
+// after the session closed had been nowhere and the panel still said up to date.
+// The fixtures keep the two formats the tables really write — sessions ISO8601
+// with an offset, the op log a space — because ' ' sorts before 'T' as a string.
 
 const SSP_SELF = 'self-device-id';
 

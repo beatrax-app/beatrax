@@ -2,20 +2,9 @@
 
 declare(strict_types=1);
 
-// Plan 05-05 — BiometricDeviceStore enrollment (GREEN)
-
 use Illuminate\Database\DatabaseManager;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Core\Models\User;
-
-/*
- * Feature coverage for biometric enrollment — BiometricDeviceStore CRUD.
- *
- * Tests that store(), findForUser(), incrementFailureCount(), resetFailureCount(),
- * and isArmed() work correctly against the real SQLite test DB.
- *
- * These tests go GREEN when plan 05-05 ships BiometricDeviceStore.
- */
 
 it('BiometricDeviceStore class exists (RED until 05-05)', function (): void {
     expect(class_exists(BiometricDeviceStore::class))->toBeTrue();
@@ -75,7 +64,6 @@ it('findForUser returns all enrolled credentials scoped to the user', function (
     $credentials = $store->findForUser($user->id);
     expect($credentials)->toHaveCount(2);
 
-    // Another user's credentials should be isolated.
     $other = User::query()->create([
         'username' => 'carol',
         'password' => 'whatever-password',
@@ -139,7 +127,6 @@ it('isArmed returns false when failure count exceeds the disable threshold', fun
     /** @var stdClass $disarmed */
     expect($store->isArmed($disarmed))->toBeFalse();
 
-    // resetAllForUser re-arms all credentials.
     $store->resetAllForUser($user->id);
 
     $rearmed = $store->findByCredentialId($user->id, 'cred-eve');

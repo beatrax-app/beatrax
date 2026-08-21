@@ -9,24 +9,25 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Auth\Public\Actions\LoginAction;
+use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
 
 final class LoginPage extends Component
 {
+    use HoldsFlashMessage;
+
     public string $username = '';
 
     public string $password = '';
 
     public bool $rememberMe = true;
 
-    public string $flashMessage = '';
-
     public function submit(LoginAction $login, UrlGenerator $urls): void
     {
         $succeeded = $login($this->username, $this->password, $this->rememberMe);
 
         // Cleared unconditionally so the plaintext never re-enters the
-        // component snapshot, on success or failure.
+        // component snapshot on a failed attempt.
         $this->password = '';
 
         if (! $succeeded) {

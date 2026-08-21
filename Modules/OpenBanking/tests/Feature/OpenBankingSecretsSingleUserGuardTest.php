@@ -6,19 +6,12 @@ use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
 use Modules\Core\Models\User;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 
 uses(RefreshDatabase::class);
 
-/*
- * WR-08: the on-disk secrets file is a single GLOBAL blob with no per-user
- * keying (SINGLE-USER v1). save() carries a defensive guard that logs
- * loudly — but never throws — if it is ever asked to write while more than
- * one user account exists, so the missing per-user isolation is auditable
- * without breaking the (single-user) green suites.
- */
-
+/** @link ../../../../.docs/features/open-banking/secrets-at-rest.md#single-user-caveat */
 function obssgUser(string $username): User
 {
     return User::query()->create([
@@ -50,7 +43,7 @@ afterEach(function (): void {
     }
 });
 
-it('WR-08: a save while a SECOND user exists logs the single-user-constraint warning (and still writes)', function (): void {
+it('a save while a SECOND user exists logs the single-user-constraint warning (and still writes)', function (): void {
     obssgUser('obssg-first');
     obssgUser('obssg-second');
 
@@ -60,17 +53,16 @@ it('WR-08: a save while a SECOND user exists logs the single-user-constraint war
     $repo = app(OpenBankingSecretsRepository::class);
     $repo->save(obssgCredentials());
 
-    // The guard logs but never blocks the write (SINGLE-USER v1 is a
-    // documented-and-audited constraint, not a hard failure).
+    // The guard logs but never blocks the write.
     expect($repo->load())->not->toBeNull();
 
     Log::shouldHaveReceived('warning')
         ->once()
-        ->withArgs(fn (string $message): bool => str_contains($message, 'WR-08')
-            && str_contains($message, 'SINGLE-USER v1'));
+        ->withArgs(fn (string $message): bool => str_contains($message, 'no per-user isolation')
+            && str_contains($message, 'single global secrets file'));
 });
 
-it('WR-08: a save with a single user emits no single-user-constraint warning', function (): void {
+it('a save with a single user emits no single-user-constraint warning', function (): void {
     obssgUser('obssg-only');
 
     Log::spy();

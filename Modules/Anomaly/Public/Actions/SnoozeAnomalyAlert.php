@@ -15,10 +15,8 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-// The snooze target is bounded SERVER-SIDE to (now, now+6mo]: a tampered
-// Livewire payload widening the window or pointing at the past is
-// rejected before any state change. This bound lives in the action (not
-// the Livewire layer) so every caller is protected.
+// The (now, now+6mo] bound lives in the action rather than the Livewire
+// layer, so a tampered payload is rejected for every caller.
 final class SnoozeAnomalyAlert
 {
     private const MAX_SNOOZE_MONTHS = 6;
@@ -53,10 +51,9 @@ final class SnoozeAnomalyAlert
 
         $untilString = $until->toDateTimeString();
 
-        // Compare through the same toDateTimeString() round-trip the
-        // stored value uses (it drops sub-second precision and the source
-        // offset), so a raw getTimestamp() comparison against the
-        // caller's $until could spuriously differ on a genuine re-snooze.
+        // Compare through the same toDateTimeString() round-trip the stored
+        // value took: it drops sub-second precision and the source offset, so
+        // a raw timestamp comparison would miss an identical re-snooze.
         if (
             $alert->state === AnomalyAlertState::Snoozed->value
             && $alert->snoozed_until !== null

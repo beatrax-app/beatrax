@@ -5,14 +5,10 @@ declare(strict_types=1);
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
 
-/*
- * user_id is a per-device autoincrement, so an entry accepted from a peer is
- * re-scoped onto the local user before it is stored. A v1 signature COVERS
- * user_id, so that re-scope used to make the entry unverifiable ever after:
- * live sync passed (it verifies before re-scoping), then the rebuild that
- * re-projection runs re-verified the same rows and quarantined all 6,160 as
- * forged — leaving the device with a full op-log and an empty app.
- */
+// user_id is a per-device autoincrement, so an entry accepted from a peer is
+// re-scoped onto the local user before it is stored — and a v1 signature covers
+// user_id. Live sync verifies before re-scoping and passed; the rebuild then
+// re-verified the stored rows and quarantined every one of them as forged.
 
 function rescopedSignedEntry(int $originUserId, string $secretKey): OpLogEntry
 {
@@ -50,7 +46,6 @@ it('keeps a legacy-signed entry verifiable after it is re-scoped onto the local 
     $secret = sodium_crypto_sign_secretkey($keypair);
     $public = sodium_crypto_sign_publickey($keypair);
 
-    // Signed by a device whose own user id is 3.
     $received = rescopedSignedEntry(3, $secret);
 
     $verifies = static fn (OpLogEntry $entry): bool => array_reduce(
@@ -65,8 +60,8 @@ it('keeps a legacy-signed entry verifiable after it is re-scoped onto the local 
 
     expect($verifies($received))->toBeTrue('the entry must verify as received');
 
-    // This is what the verifier persists: the same entry, re-scoped onto the
-    // local user (1) so local queries can find it.
+    // What the verifier persists: the same entry re-scoped onto the local user
+    // so local queries can find it.
     $stored = $received->withUserId(1);
 
     expect($stored->userId)->toBe(1, 'the row is scoped locally')

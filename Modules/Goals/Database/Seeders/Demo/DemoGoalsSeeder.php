@@ -13,16 +13,13 @@ use Modules\Goals\Models\Goal;
 use Modules\Goals\Public\Services\GoalContributionWriter;
 use Modules\Goals\Public\Services\GoalWriter;
 
-// Savings goals for the demo install. Three draw their progress from a demo
-// pot (DemoPotsSeeder runs after this one and resolves goals by name); the
-// fourth has no pot and shows the other source — the demo credits the user
-// explicitly attributed to it.
+// Three goals draw progress from a demo pot; the fourth deliberately has none,
+// so the demo also shows the other source, explicitly attributed credits.
 final class DemoGoalsSeeder
 {
-    // monthsOut drives target_date relative to the seed run so the demo never
-    // ships a goal whose deadline has already passed, and `complete` exercises
-    // the finished-goal rendering path. `fundedBy` picks the attributed credits
-    // by (type, amount) — description is ciphertext at rest under encryption.
+    // monthsOut is relative to the seed run, so a demo install never ships a goal
+    // whose deadline has already passed. fundedBy matches credits on (type,
+    // amount) because description is ciphertext at rest.
     /** @var list<array{nameKey: string, amount: string, monthsOut: int, startedDaysAgo: int, complete: bool, fundedBy: ?array{type: string, amountMinor: int}}> */
     private const GOALS = [
         ['nameKey' => 'goal_emergency_fund', 'amount' => '5000,00', 'monthsOut' => 18, 'startedDaysAgo' => 80, 'complete' => false, 'fundedBy' => null],
@@ -59,13 +56,10 @@ final class DemoGoalsSeeder
      */
     private function upsertGoal(User $user, array $row): void
     {
-        // Demo content is the first thing a new install shows, so it is named
-        // in the interface language rather than in English.
         $name = Lang::get('core::demo.'.$row['nameKey']);
 
-        // Matched against every locale's rendering, not just today's: the
-        // dedupe key is a translated string, so a re-seed under a different
-        // APP_LOCALE otherwise made a second copy of every goal.
+        // Every locale's rendering, not just today's: the dedupe key is a
+        // translated string, so a re-seed under another APP_LOCALE duplicated it.
         $existing = Goal::query()
             ->where('user_id', $user->id)
             ->whereIn('name', DemoNames::everyRendering($row['nameKey']))
@@ -82,10 +76,8 @@ final class DemoGoalsSeeder
             CarbonImmutable::today()->addMonths($row['monthsOut'])->toDateString(),
         );
 
-        // The writer stamps start_date as today, which leaves every seeded
-        // goal inside the projector's minimum observation window and stuck
-        // on "building a projection". Backdating gives the run-rate a real
-        // window of demo contributions to measure.
+        // The writer stamps start_date as today, which parks every seeded goal
+        // inside the projector's minimum observation window.
         $goal->start_date = CarbonImmutable::today()->subDays($row['startedDaysAgo']);
         $goal->save();
 

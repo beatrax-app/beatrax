@@ -1,6 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    Tax Settings Section — Country + Category Management (D-07/D-08)
+    Tax Settings Section — Country + Category Management
     UI-SPEC § 12: .settings-section primitive (280px meta-side + body grid)
     Livewire component: tax.settings-section
 --}}
@@ -8,11 +8,11 @@
 <div class="space-y-4">
 {{-- ===== Tax country row ===== --}}
 <div class="settings-section" data-testid="tax-country-row">
-    <div class="settings-section__meta">
-        <span class="settings-section__label">{{ Lang::get('tax::settings.country_label') }}</span>
-        <p class="settings-section__desc">{{ Lang::get('tax::settings.country_desc') }}</p>
+    <div class="meta-side">
+        <span class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ Lang::get('tax::settings.country_label') }}</span>
+        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('tax::settings.country_desc') }}</p>
     </div>
-    <div class="settings-section__body space-y-2">
+    <div class="body-side space-y-2">
         <select
             wire:change="setTaxCountry($event.target.value)"
             class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
@@ -42,11 +42,11 @@
 
 {{-- ===== Deduction categories row ===== --}}
 <div class="settings-section mt-4" data-testid="tax-categories-row">
-    <div class="settings-section__meta">
-        <span class="settings-section__label">{{ Lang::get('tax::settings.categories_label') }}</span>
-        <p class="settings-section__desc">{{ Lang::get('tax::settings.categories_desc') }}</p>
+    <div class="meta-side">
+        <span class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ Lang::get('tax::settings.categories_label') }}</span>
+        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('tax::settings.categories_desc') }}</p>
     </div>
-    <div class="settings-section__body">
+    <div class="body-side">
         @php
             /** @var list<\stdClass> $categories */
             $active   = array_filter((array) $categories, fn ($c) => ($c->status ?? '') === 'active');
@@ -58,7 +58,9 @@
                 {{ Lang::get('tax::settings.categories_empty') }}
             </p>
         @else
-            <ul class="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800" role="list">
+            {{-- No inner scroller: the settings page already scrolls, and a
+                 nested 320px viewport hid categories behind a second scrollbar. --}}
+            <ul class="divide-y divide-slate-100 dark:divide-slate-800" role="list">
                 @foreach ($active as $cat)
                     <li
                         class="toggle-row group"
@@ -71,7 +73,6 @@
                                 {{ $cat->name }}
                             </span>
                         </template>
-                        {{-- Inline rename input (WR-11) --}}
                         <template x-if="editing">
                             <input
                                 type="text"
@@ -84,7 +85,7 @@
                             />
                         </template>
                         @if ($cat->corpus_key !== null)
-                            <span class="text-xs text-[var(--color-text-faint)] mr-2" aria-label="{{ Lang::get('tax::settings.from_corpus') }}">{{ Lang::get('tax::settings.from_corpus') }}</span>
+                            <span class="text-xs text-[var(--color-text-faint)] mr-2">{{ Lang::get('tax::settings.from_corpus') }}</span>
                         @endif
                         <template x-if="! editing">
                             <button
@@ -159,7 +160,7 @@
                     @foreach ($archived as $cat)
                         <li class="toggle-row group py-1">
                             <span class="flex-1 text-sm text-[var(--color-text-muted)]">{{ $cat->name }}</span>
-                            {{-- WR-11: archiving is reversible. --}}
+                            {{-- Archiving is reversible. --}}
                             <button
                                 type="button"
                                 wire:click="unarchiveCategory({{ $cat->id }})"

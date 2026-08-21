@@ -24,10 +24,12 @@ return [
     'source_txn' => 'txn',
     'source_counterparty' => 'контрагент',
     'source_category' => 'категорія',
+    'results_aria' => 'Результати',
     'no_results' => 'Немає результатів.',
     'foot_navigate' => 'навігація',
     'foot_select' => 'вибір',
     'foot_close' => 'закрити',
+    'close_aria' => 'Закрити пошук',
     'foot_try' => 'Спробуй',
     'results_suffix' => ' результатів',
 ];

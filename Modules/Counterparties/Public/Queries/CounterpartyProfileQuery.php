@@ -14,9 +14,6 @@ use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/counterparties/architecture.md
- */
 final readonly class CounterpartyProfileQuery
 {
     public function __construct(
@@ -59,9 +56,6 @@ final readonly class CounterpartyProfileQuery
         $firstSeen = $lifetimeTotals !== null ? ($lifetimeTotals->first_seen ?? null) : null;
         $lastSeen = $lifetimeTotals !== null ? ($lifetimeTotals->last_seen ?? null) : null;
 
-        // Read-side decrypt: decryptRow tries every keyring epoch
-        // (rotation-safe) and is a pass-through no-op when encryption is
-        // not enabled for the user.
         $decrypted = $this->codec->decryptRow('counterparties', [
             'display_name' => $cp->display_name,
             'merchant_name' => $cp->merchant_name,
@@ -86,8 +80,6 @@ final readonly class CounterpartyProfileQuery
         );
     }
 
-    // Lets another surface (e.g. the recurring series detail page)
-    // deep-link to a profile without loading the full profile DTO.
     /**
      * @return array{slug: string, displayName: string, type: string}|null
      */
@@ -111,10 +103,8 @@ final readonly class CounterpartyProfileQuery
         ];
     }
 
-    // Batched variant of identityForId resolved in a single query; missing
-    // or cross-user ids are silently absent from the result map, letting
-    // list surfaces (the calendar's entry map) hydrate deep-links without
-    // N per-id lookups.
+    // Missing and cross-user ids are silently absent from the result map
+    // rather than an error — callers must handle a short map.
     /**
      * @param  list<int>  $ids
      * @return array<int, array{slug: string, displayName: string, type: string}>
@@ -126,10 +116,9 @@ final readonly class CounterpartyProfileQuery
             return [];
         }
 
-        // Raw query builder via DatabaseManager — sidesteps the
-        // Eloquent\Builder __call → Query\Builder forwarding that triggers
-        // larastan-strict `staticMethod.dynamicCall` on `whereIn()`. The
-        // explicit user_id filter is the primary cross-user scope here.
+        // Raw builder: the Eloquent\Builder __call → Query\Builder forwarding
+        // on whereIn() trips larastan-strict `staticMethod.dynamicCall`. The
+        // explicit user_id filter is the only cross-user scope on this path.
         $rows = $this->db->connection()->table('counterparties')
             ->where('user_id', $user->id)
             ->whereIn('id', $clean)
@@ -155,10 +144,9 @@ final readonly class CounterpartyProfileQuery
         return $map;
     }
 
-    // Batched existence check behind the calendar's cluster-key fallback
-    // (a series with no occurrence-linked counterparty may still match a
-    // counterparty by cluster_counterparty_key == slug). Unknown or
-    // cross-user slugs are silently absent from the result map.
+    // Backs the calendar's cluster-key fallback: a recurring series with no
+    // occurrence-linked counterparty can still match one by
+    // cluster_counterparty_key == slug.
     /**
      * @param  list<string>  $slugs
      * @return array<string, int>
@@ -170,8 +158,7 @@ final readonly class CounterpartyProfileQuery
             return [];
         }
 
-        // Raw query builder via DatabaseManager — same
-        // `staticMethod.dynamicCall` sidestep as identitiesForIds above.
+        // Raw builder for the same `staticMethod.dynamicCall` reason as above.
         $rows = $this->db->connection()->table('counterparties')
             ->where('user_id', $user->id)
             ->whereIn('slug', $clean)
@@ -189,8 +176,6 @@ final readonly class CounterpartyProfileQuery
         return $map;
     }
 
-    // Rows feed both the Overview Recent-activity strip and the
-    // Transactions tab body.
     /**
      * @return Collection<int, stdClass>
      */
@@ -206,8 +191,6 @@ final readonly class CounterpartyProfileQuery
             ->limit($limit)
             ->get(['id', 'posted_at', 'description', 'amount_minor', 'currency']);
 
-        // Read-side decrypt; a pass-through no-op when encryption is not
-        // enabled for the user.
         $decrypted = $rows->map(function (stdClass $row) use ($userId): stdClass {
             if (is_string($row->description)) {
                 $row->description = $this->codec->decryptValue('transactions', 'description', $row->description, $userId, $this->session)['value'];
@@ -239,9 +222,8 @@ final readonly class CounterpartyProfileQuery
         return new Collection($rows->all());
     }
 
-    // Returns null when metadata.funding_chain is absent/empty (the
-    // cross-module Chains lookup that writes this key is a follow-up
-    // plan); the merchant Overview body then renders its empty-state copy.
+    // Nothing writes metadata.funding_chain yet, so this returns null in
+    // practice and the merchant Overview renders its empty state.
     public function fundingChainSummary(Counterparty $cp): ?ChainSummary
     {
         $metadata = is_array($cp->metadata) ? $cp->metadata : [];

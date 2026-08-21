@@ -13,15 +13,6 @@ use Modules\Core\Public\Contracts\Clock;
 
 uses(RefreshDatabase::class);
 
-/*
- * Feature coverage for the full-history BackfillAnomaliesJob: it
- * enumerates the user's whole transaction history via lazyById, lands
- * alerts in Open through the shared AnomalyEvaluator::evaluate() path, is
- * idempotent on UNIQUE(transaction_id), claims the backfill BEFORE the walk
- * (WR-01) so a concurrent dispatch cannot double-walk history, and no-ops
- * once users.anomaly_backfilled_at is set (D-13/D-14, T-09-15).
- */
-
 function backfillRunJob(int $userId): void
 {
     /** @var BackfillAnomaliesJob $job */
@@ -38,8 +29,7 @@ it('backfills the full history, lands the anomalous charge in Open, and sets ano
     $db = app(DatabaseManager::class);
     $user = AnomalyCorpusSeeder::makeUser();
 
-    // The large-above fixture seeds 5 stable Spotify baselines + one
-    // €23.49 outlier. Only the outlier is anomalous.
+    // large-above seeds 5 stable Spotify baselines plus one €23.49 outlier.
     AnomalyCorpusSeeder::seed($db, $user, AnomalyCorpusSeeder::load('large-above'));
 
     expect(AnomalyAlert::query()->where('user_id', $user->id)->count())->toBe(0);
@@ -65,17 +55,15 @@ it('is a no-op on a second run once anomaly_backfilled_at is set', function (): 
     $firstRunCount = AnomalyAlert::query()->where('user_id', $user->id)->count();
     expect($firstRunCount)->toBe(1);
 
-    // The guard is now set. Seed a SECOND anomalous fixture as a fresh
-    // user to mint a brand-new anomalous transaction, then re-parent that
-    // transaction onto our backfilled user. A second dispatch must skip
-    // it wholesale (re-activation is an explicit Plan 05 concern).
+    // Minting the new anomalous transaction under a fresh user and
+    // re-parenting it is the only way to add unevaluated history to a user
+    // whose backfill guard is already stamped.
     $otherUser = AnomalyCorpusSeeder::makeUser();
     $newTxnId = AnomalyCorpusSeeder::seed($db, $otherUser, AnomalyCorpusSeeder::load('large-above'));
     $db->connection()->table('transactions')->where('id', $newTxnId)->update(['user_id' => $user->id]);
 
     backfillRunJob($user->id);
 
-    // Guard short-circuited: the new anomalous row was never evaluated.
     expect(AnomalyAlert::query()->where('user_id', $user->id)->count())->toBe($firstRunCount);
     expect(AnomalyAlert::query()->where('transaction_id', $newTxnId)->count())->toBe(0);
 });
@@ -90,34 +78,28 @@ it('is idempotent — re-running without resetting the guard never duplicates al
     backfillRunJob($user->id);
     backfillRunJob($user->id);
 
-    // UNIQUE(transaction_id) + the anomaly_backfilled_at guard together
-    // keep the alert count at exactly one across repeated runs.
     expect(AnomalyAlert::query()->where('user_id', $user->id)->count())->toBe(1);
 });
 
-it('claims the backfill before the walk so a racing run that already claimed never re-walks (WR-01)', function (): void {
+it('claims the backfill before the walk so a racing run that already claimed never re-walks', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = AnomalyCorpusSeeder::makeUser();
     AnomalyCorpusSeeder::seed($db, $user, AnomalyCorpusSeeder::load('large-above'));
 
-    // Simulate worker A having ALREADY claimed the backfill (stamped the
-    // guard) but not yet finished walking — the conditional whereNull claim
-    // is the mutex. The User model loaded inside handle() still reads the
-    // stamped value, so the early D-13 guard short-circuits; even if it did
-    // not, the claim update would affect 0 rows and bail. Either way worker
-    // B must NOT walk history.
+    // Stamping the guard by hand simulates worker A having claimed the
+    // backfill but not yet finished walking; the conditional whereNull claim
+    // is the mutex worker B must lose.
     $db->connection()->table('users')
         ->where('id', $user->id)
         ->update(['anomaly_backfilled_at' => '2026-06-13 00:00:00']);
 
     backfillRunJob($user->id);
 
-    // No alerts: worker B never walked the (anomalous) history.
     expect(AnomalyAlert::query()->where('user_id', $user->id)->count())->toBe(0);
 });
 
-it('only evaluates the owning user (cross-user isolation, T-09-16)', function (): void {
+it('only evaluates the owning user (cross-user isolation)', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
@@ -129,7 +111,6 @@ it('only evaluates the owning user (cross-user isolation, T-09-16)', function ()
     backfillRunJob($userA->id);
 
     expect(AnomalyAlert::query()->where('user_id', $userA->id)->count())->toBe(1);
-    // User B's history was never touched: no alerts, guard still null.
     expect(AnomalyAlert::query()->where('user_id', $userB->id)->count())->toBe(0);
     expect(User::query()->findOrFail($userB->id)->anomaly_backfilled_at)->toBeNull();
 });

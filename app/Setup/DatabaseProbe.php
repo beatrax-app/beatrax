@@ -6,17 +6,14 @@ namespace App\Setup;
 
 use PDO;
 
-// Opens a connection to a server the operator has just described, purely to
-// find out whether it answers and which server it is. Separate from the
-// setup command so the command holds no PDO handle of its own, and not
-// final so a test can stand in for the one thing here that needs a server.
+// Split out of the setup command so that command holds no PDO handle, and
+// left non-final so a test can substitute the one part needing a server.
 class DatabaseProbe
 {
     private const CONNECT_TIMEOUT_SECONDS = 5;
 
-    // Reachability alone cannot tell an operator they reached the instance
-    // they meant, so the answer is the server's own version string rather
-    // than a bare yes.
+    // Returns the server's own version string, not a bare yes: reachability
+    // alone cannot tell an operator they reached the instance they meant.
     /**
      * @throws \PDOException when the server is absent, refuses the
      *                       credentials, or does not answer in time

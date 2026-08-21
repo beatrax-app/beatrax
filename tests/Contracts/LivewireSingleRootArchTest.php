@@ -2,20 +2,8 @@
 
 declare(strict_types=1);
 
-/*
- * Livewire binds wire:id to the FIRST top-level element of a component view.
- * A second root is not a layout quirk — it silently unbinds everything after
- * it.
- *
- * /pots had a <style> block beside its wrapper div, so <style> became the
- * component. Measured on a Galaxy: button.closest('[wire:id]') returned null,
- * zero requests to /livewire/update across a whole deposit flow, and the
- * component still read {"potId":0,"amt":""} after typing. Every write on the
- * page did nothing, with no error — while the sheets still opened, because
- * $dispatch is a plain window event and needs no binding.
- *
- * That shape is indistinguishable from a working page until you check the
- * database, which is why it survived a device pass that "used" the feature.
+/**
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-second-root-element-in-a-livewire-view
  */
 
 /** @return list<string> */

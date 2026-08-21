@@ -1,7 +1,7 @@
 @use('Modules\Core\Public\Support\Lang')
 @php
     /**
-     * D-01 / D-02 file-staging page. Shown after the OS hands Beatrax
+     * File-staging page. Shown after the OS hands Beatrax
      * a `.csv` / `.eml` file path; the page reads the pending intent
      * and either:
      *
@@ -25,7 +25,7 @@
 <div class="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
     <div class="w-full max-w-md mx-auto px-6 space-y-6 text-center">
         <div class="flex justify-center">
-            {{-- Brand mark — same surface the welcome / login screens use (D-18). --}}
+            {{-- Brand mark — same surface the welcome / login screens use. --}}
             <img
                 src="{{ asset('icon.png') }}"
                 alt="Beatrax"
@@ -45,13 +45,9 @@
                 </p>
             </header>
 
-            <button
-                type="button"
-                wire:click="startImport"
-                class="inline-block w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
-            >
+            <x-core::primary-button type="button" wire:click="startImport">
                 {{ $buttonLabel }}
-            </button>
+            </x-core::primary-button>
         @else
             <header class="space-y-2">
                 <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">
@@ -62,12 +58,9 @@
                 </p>
             </header>
 
-            <a
-                href="{{ route('imports.new') }}"
-                class="inline-block w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
-            >
+            <x-core::primary-button href="{{ route('imports.new') }}">
                 {{ Lang::get('desktop::screens.staging.open_imports') }}
-            </a>
+            </x-core::primary-button>
         @endif
     </div>
 </div>

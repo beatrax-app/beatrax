@@ -11,19 +11,6 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Pots\Internal\Http\Livewire\PotsPage;
 use Modules\Pots\Models\Pot;
 
-/**
- * Wave 0 RED stubs for POTS-01 and POTS-02.
- *
- * These tests reference PotsPage (Plan 03) and PotWriter (Plan 02). They
- * will error with "class not found" until Plans 02 and 03 land — that is
- * correct Wave 0 RED behaviour.
- *
- * Covers:
- *   POTS-01: createPot writes a pots row; blank name rejected; cross-user cannot
- *            create pot for another user's account
- *   POTS-02: fundPot inserts a fund movement; fundPot rejects amount > unallocated
- *            (InsufficientUnallocated path)
- */
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'wessel',
@@ -50,10 +37,6 @@ beforeEach(function (): void {
         'status' => 'previewed',
     ]);
 });
-
-// ---------------------------------------------------------------------------
-// POTS-01: Create pot
-// ---------------------------------------------------------------------------
 
 it('renders the pots page', function (): void {
     Livewire::test(PotsPage::class)
@@ -102,7 +85,6 @@ it('cross-user pot cannot be created for another users account', function (): vo
         'default_currency' => 'EUR',
     ]);
 
-    // Wessel (actingAs) attempts to create a pot on Mallory's account — should be rejected.
     Livewire::test(PotsPage::class)
         ->set('name', 'Mallory steal')
         ->set('accountId', (string) $malloryAccount->id)
@@ -114,10 +96,6 @@ it('cross-user pot cannot be created for another users account', function (): vo
     ]);
 });
 
-// ---------------------------------------------------------------------------
-// POTS-02: Fund a pot
-// ---------------------------------------------------------------------------
-
 it('fundPot inserts a fund movement and the pot balance reflects it', function (): void {
     $pot = Pot::factory()->create([
         'user_id' => $this->user->id,
@@ -125,7 +103,6 @@ it('fundPot inserts a fund movement and the pot balance reflects it', function (
         'name' => 'Holiday',
     ]);
 
-    // Seed account balance so there is unallocated to fund with
     DB::table('transactions')->insert([
         'user_id' => $this->user->id,
         'account_id' => $this->account->id,
@@ -169,7 +146,7 @@ it('fundPot rejects an amount exceeding unallocated with an inline error and no 
         'name' => 'Emergency',
     ]);
 
-    // No account transactions — unallocated = 0; funding 100.00 should fail.
+    // No account transactions at all, so unallocated is 0.
     Livewire::test(PotsPage::class)
         ->set('operationPotId', $pot->id)
         ->set('operationAmount', '100.00')
@@ -181,12 +158,9 @@ it('fundPot rejects an amount exceeding unallocated with an inline error and no 
     ]);
 });
 
-/*
- * The i18n conversion reached the unauthenticated guard branch of render()
- * and stopped there, so the branch every signed-in reader takes kept a
- * literal 'Pots · Beatrax'. The lang key already existed in all 26 locales;
- * only the call site was missing.
- */
+// The i18n conversion stopped at render()'s unauthenticated guard branch, so the
+// branch every signed-in reader takes kept a literal 'Pots · Beatrax'. The lang
+// key already existed in all 26 locales; only the call site was missing.
 it('localizes the browser tab title on the branch a signed-in reader takes', function (): void {
     // A full page request, not Livewire::test: the title is set through
     // $view->extends(), which only reaches the document on a real render.

@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-// Coverage for the PIN-unlock key-integrity branches extracted into
-// PinVerificationService::unwrapDataKey() and currentFailedAttempts() during
-// the Auth Sonar refactor: a correct PIN whose stored wrap material is
-// missing or corrupt must fail closed (return null) AND raise a critical
-// SystemAlert, rather than releasing a garbage data key.
+// A correct PIN over missing or corrupt wrap material must fail closed and
+// alert, never release a garbage data key.
 
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Support\Facades\DB;
@@ -32,8 +29,8 @@ it('verify returns null and alerts when the PIN wrap material is missing', funct
     $provisioner = $this->app->make(AppLockProvisioner::class);
     $provisioner->enable($user->id, '123456', 'whatever-password');
 
-    // Wipe the wrap material while keeping the (valid) PIN hash, so the PIN
-    // verifies but unwrapDataKey() finds no key blob to unwrap.
+    // The PIN hash stays valid, so the PIN verifies and the unwrap is what
+    // finds nothing to work with.
     DB::connection()->table('user_app_lock_configs')
         ->where('user_id', $user->id)
         ->update(['kdf_salt' => null, 'pin_wrapped_key' => null]);
@@ -64,13 +61,11 @@ it('verify returns null and alerts when the wrapped key blob is corrupt', functi
     $provisioner = $this->app->make(AppLockProvisioner::class);
     $provisioner->enable($user->id, '123456', 'whatever-password');
 
-    // Keep a plausible (string) salt + wrapped key, but the wrapped bytes are
-    // garbage, so keyWrap->unwrap() returns false past the type guard.
     DB::connection()->table('user_app_lock_configs')
         ->where('user_id', $user->id)
         ->update([
-            // A correctly-sized KDF salt so deriveWrapKey() succeeds, but the
-            // wrapped-key bytes are garbage, so keyWrap->unwrap() returns false.
+            // A correctly sized salt, so the derivation succeeds and it is the
+            // unwrap of the garbage bytes that fails.
             'kdf_salt' => random_bytes(SODIUM_CRYPTO_PWHASH_SALTBYTES),
             'pin_wrapped_key' => base64_encode(random_bytes(60)),
         ]);

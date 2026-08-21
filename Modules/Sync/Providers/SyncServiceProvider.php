@@ -40,6 +40,8 @@ use Modules\Sync\Internal\Merge\Strategies\LwwPerFieldStrategy;
 use Modules\Sync\Internal\Merge\Strategies\OrSetStrategy;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
 use Modules\Sync\Internal\Pairing\Bip39WordList;
+use Modules\Sync\Internal\Pairing\PairingOfferRateLimiter;
+use Modules\Sync\Internal\Pairing\PairingOfferService;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
@@ -67,9 +69,6 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Sync\Public\Services\SyncDaemonIdentity;
 use Psr\Log\LoggerInterface;
 
-/**
- * @link ../../../.docs/features/sync/architecture.md
- */
 final class SyncServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
@@ -328,7 +327,6 @@ final class SyncServiceProvider extends ServiceProvider
         // runtime-built FQCN strings so PHPStan stays clean before the
         // classes exist. This provider is the single owner.
         $transportNamespace = 'Modules\Sync\Internal\Transport\\';
-        $discoveryNamespace = $transportNamespace.'Discovery\\';
         $relayNamespace = $transportNamespace.'Relay\\';
 
         // Noise state machine classes are NOT singletons — they hold
@@ -347,10 +345,6 @@ final class SyncServiceProvider extends ServiceProvider
 
         $this->singletonIfExists($relayNamespace.'RelayClient');
         $this->singletonIfExists($relayNamespace.'RelayConfig');
-
-        // Wraps a long-lived dns-sd/avahi process — singleton so the
-        // container reuses the same process handle across resolutions.
-        $this->singletonIfExists($discoveryNamespace.'MdnsBrowser');
 
         $this->registerWebSocketHandler();
     }
@@ -414,6 +408,8 @@ final class SyncServiceProvider extends ServiceProvider
                 handler: fn () => $this->app->make(SyncWebSocketHandler::class),
                 advertiser: $this->app->make(MdnsAdvertiser::class),
                 shutdown: $this->app->make(DaemonShutdownSignal::class),
+                offers: $this->app->make(PairingOfferService::class),
+                offerRateLimiter: $this->app->make(PairingOfferRateLimiter::class),
             ));
         }
 
@@ -511,11 +507,12 @@ final class SyncServiceProvider extends ServiceProvider
         // status surface. Referenced by runtime-built FQCN (not `use`
         // imports / `::class`) so this provider stays PHPStan-clean before
         // they exist; they register the moment they exist on disk.
-        $livewireNamespace = 'Modules\Sync\Internal\Http\Livewire\\';
+        $internal = 'Modules\Sync\Internal\Http\Livewire\\';
+        $public = 'Modules\Sync\Public\Http\Livewire\\';
         $components = [
-            'sync.devices-and-sync-settings-section' => $livewireNamespace.'DevicesAndSyncSettingsSection',
-            'sync.pairing-flow-modal' => $livewireNamespace.'PairingFlowModal',
-            'sync.sync-status-section' => $livewireNamespace.'SyncStatusSection',
+            'sync.devices-and-sync-settings-section' => $public.'DevicesAndSyncSettingsSection',
+            'sync.pairing-flow-modal' => $internal.'PairingFlowModal',
+            'sync.sync-status-section' => $public.'SyncStatusSection',
         ];
 
         foreach ($components as $alias => $componentClass) {

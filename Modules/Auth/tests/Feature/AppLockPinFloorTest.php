@@ -9,15 +9,9 @@ use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Models\User;
 
-/*
- * The 6-digit app-lock PIN floor (spec F3-R36) is enforced CENTRALLY in the
- * provisioner, so it holds for every caller — the desktop UI, the mobile
- * gateway, or a future direct caller — not merely the UI-layer validators. A
- * short PIN's low entropy is the whole finding: it is offline-brute-forceable
- * from a stolen database. These tests fail if the central assertPinMeetsFloor()
- * guard is removed — without it the provisioner would mint a data key from a
- * five-digit PIN.
- */
+// The six-digit floor is enforced in the provisioner rather than the UI
+// validators, so it holds for every caller: a short PIN's entropy is low enough
+// to brute-force offline from a stolen database.
 
 function pinFloorUser(string $username): User
 {
@@ -46,7 +40,7 @@ it('enable() refuses a PIN shorter than six digits and mints no key', function (
     expect(fn () => $provisioner->enable($user->id, '12345', 'account-password'))
         ->toThrow(ValidationException::class);
 
-    // The guard runs before any write, so no config row (and no data key) exists.
+    // The guard runs before any write, so no config row and no key exist.
     expect(pinFloorConfigExists($user->id))->toBeFalse();
 });
 

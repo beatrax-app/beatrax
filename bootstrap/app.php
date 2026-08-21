@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Container\Container;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -13,7 +14,9 @@ use Modules\Core\Internal\Http\Middleware\NoStoreFinancialData;
 use Modules\Core\Internal\Http\Middleware\SetLocale;
 use Modules\Core\Internal\Http\Middleware\TrustedHostGuard;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Desktop\Internal\Http\Middleware\EnsureDatabaseReady;
+use Psr\Log\LoggerInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -21,75 +24,36 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
-    // Auto-discover artisan commands living at the project root under
-    // `app/Console/Commands/`. Module-local commands are still
-    // registered from each module's ServiceProvider via `$this->commands()`;
-    // this entry only covers commands that span multiple modules and
-    // therefore have no natural module owner (e.g. `demo:seed`).
+    // Only for commands spanning several modules and so owned by none —
+    // a module's own commands register in its ServiceProvider.
     ->withCommands([
         __DIR__.'/../app/Console/Commands',
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(LoopbackOnly::class);
-        // Paired with LoopbackOnly, and prepended so it runs before any route
-        // resolves. LoopbackOnly gates the interface the connection landed on;
-        // this gates the Host the client asked for, which is the half a
-        // DNS-rebinding site defeats — its rebound request is genuinely
-        // loopback but carries an attacker-controlled Host.
+        // The other half of the loopback boundary: LoopbackOnly gates the
+        // interface, this gates the Host — the half DNS rebinding defeats.
         $middleware->prepend(TrustedHostGuard::class);
-        // Global append (not group-scoped) so the no-store header lands on
-        // every response the app emits — including non-web routes such as
-        // the /up health endpoint and any future API or CLI HTTP handler.
+        // Global, not group-scoped, so the header also covers non-web
+        // responses such as /up.
         $middleware->append(NoStoreFinancialData::class);
-        // First-launch DB gate (D-21 / D-22). Appended to the `web` group
-        // so every pre-auth request that resolves a web route is funneled
-        // through the first-launch surfaces: pending migrations bounce
-        // to `desktop.setup`; once migrations are done a zero-user state
-        // bounces to `desktop.welcome` (the only reliable post-migration
-        // signal that no account has been created on this device). The
-        // middleware itself exempts setup / welcome / signup so the
-        // redirect cannot loop. Once a user exists it is a pass-through.
+        // `web`, not global: both read StartSession and the auth guard.
+        // SetLocale goes first because EnsureDatabaseReady redirects a device
+        // with no account, which left every pre-signup screen in English.
         $middleware->web(append: [
-            // Appended to `web` (not global) so it runs after StartSession
-            // and the auth guard are available — both are signals it reads.
-            // Resolves the per-request UI language (user override → session
-            // → Accept-Language → English) onto the translator before any
-            // route renders.
-            //
-            // BEFORE EnsureDatabaseReady, deliberately. That gate redirects a
-            // device with no account yet, and a redirect short-circuits the
-            // rest of the stack — so with SetLocale behind it, every screen a
-            // fresh install sees before signing up rendered in English no
-            // matter which language was picked on the welcome page. The
-            // redirect TARGET is a screen the user reads, so the language has
-            // to be resolved before the gate can send them there.
             SetLocale::class,
             EnsureDatabaseReady::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        // AuthenticationException fires every time a guest hits a
-        // protected route — the redirect-to-login that follows is the
-        // intended UX, not an error condition. Laravel's default
-        // handler logs every fire as `production.ERROR`, which on a
-        // NativePHP cold boot floods the log with one entry per
-        // protected route the browser auto-loads before the session
-        // cookie lands. Stop reporting it; the redirect itself is
-        // still surfaced to the user.
+        // The intended redirect, not an error: reported, a NativePHP cold boot
+        // logs one production.ERROR per route loaded before the cookie lands.
         $exceptions->dontReport([
             AuthenticationException::class,
         ]);
 
-        // Attach the request method + path to every reported exception.
-        // Laravel's default handler logs framework exceptions — notably
-        // the NativePHP `PreventRegularBrowserAccess` 403 — as a bare
-        // stack trace with no request context, which is exactly what made
-        // the first Windows 403 flood impossible to attribute to a route.
-        // Method + path ONLY: never the query string or request body, so
-        // no financial data reaches the log (the NoStoreFinancialData
-        // invariant). The request is resolved through the container
-        // statically rather than the `request()` global helper to satisfy
-        // the larastan strict no-global-function rule.
+        // Method and path ONLY: the query string and body carry financial data
+        // here. With no context at all a 403 logs as an unattributable trace.
         $exceptions->context(function (): array {
             $request = Container::getInstance()->make(Request::class);
 
@@ -98,27 +62,24 @@ return Application::configure(basePath: dirname(__DIR__))
                 'path' => '/'.ltrim($request->path(), '/'),
             ];
         });
+
+        // A QueryException's message carries its bindings, which here ARE the
+        // financial data the context callback above withholds.
+        $exceptions->reportable(function (QueryException $e): bool {
+            Container::getInstance()->make(LoggerInterface::class)->error(
+                'Database query failed.',
+                SafeExceptionContext::describe($e),
+            );
+
+            return false;
+        });
     })
     ->booting(function (): void {
-        // Ensure the SQLite file exists BEFORE any provider opens the
-        // connection. Laravel's SQLite connector THROWS "Database file …
-        // does not exist" rather than creating the file, and
-        // SqliteOptimizationsProvider applies `PRAGMA journal_mode = WAL`
-        // on the first ConnectionEstablished during provider boot — so the
-        // empty file must already be on disk. This fires on EVERY boot and
-        // is the desktop counterpart of mobile-app/bootstrap/app.php's
-        // ->booting hook. Two distinct callers depend on it:
-        //   • the `native:build` desktop packaging step runs
-        //     `composer install` → `package:discover`, which boots the app
-        //     in the copied build tree where `database/*.sqlite` was
-        //     stripped by cleanup_exclude_files — without this the build
-        //     aborts before electron-builder ever signs.
-        //   • a genuine fresh install resolves databaseFile() to the
-        //     writable NATIVEPHP_STORAGE_PATH root where no file exists yet;
-        //     FirstLaunchBootstrap then migrates into it.
-        // Harmless everywhere else: in local dev the file already exists so
-        // both branches no-op. NEVER seeds or migrates here — this only
-        // guarantees an empty file the migrator can populate.
+        /**
+         * @link ../.docs/architecture/sqlite-file-precreation.md
+         */
+        // The empty file must exist before provider boot opens the connection,
+        // and must NEVER be seeded or migrated here.
         $dbFile = UserDataPathService::databaseFile();
         $dbDir = dirname($dbFile);
         if (! is_dir($dbDir)) {
@@ -126,10 +87,8 @@ return Application::configure(basePath: dirname(__DIR__))
         }
         if (! file_exists($dbFile)) {
             @touch($dbFile);
-            // The database holds every transaction, balance and account number
-            // in plaintext, so restrict it to the owner the moment it exists —
-            // before the migrator writes anything — rather than leaving it at
-            // the process umask default (commonly 0644, world-readable).
+            // Owner-only before the migrator writes anything: the usual 0644
+            // umask would expose every balance and account number in plaintext.
             @chmod($dbFile, 0600);
         }
     })

@@ -5,40 +5,12 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
-use Modules\Chains\Internal\Http\Livewire\ChainDrawer;
 use Modules\Chains\Models\ChainLink;
+use Modules\Chains\Public\Http\Livewire\ChainDrawer;
 use Modules\Core\Models\User;
-use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
-
-/*
- * Chain drawer (UI-02 / CHN-04) Livewire SFC + Flux flyout integration
- * tests. Exercises:
- *
- *  - #[On('chain-drawer:open')] listener mounts the chain tree
- *    via ChainLinkQuery::forTransaction.
- *  - Three-tier confidence chip mapping (D-91) renders the right
- *    chip labels for Deterministic / Confirmed / Candidate legs.
- *  - Inline Confirm + Reject chips on candidate legs invoke the
- *    same Public actions as the /chains/review page.
- *  - ICS bulk-settle fan-out renders the covered ICS charges with
- *    "Show 10 more · X of N" pagination at 10 rows per click (D-93).
- *  - Empty fan-out edge case ("No ICS charges in this settlement"
- *    per UI-SPEC § Copywriting) renders when an ics_bulk_settle
- *    node has zero covered charges.
- *  - Drawer empty states ("Chain not yet resolved" / "No funding
- *    chain found") render when the tree is null or has only the
- *    root node.
- *  - The TransactionDetail page renders the "View chain" button
- *    that wires the wire:click="$dispatch('chain-drawer:open', ...)"
- *    contract.
- *  - The chain-node partial declares explicit @props
- *    (['node', 'fanoutPage']) per issue #13 fix (verifiable via
- *    file-content grep so a future regression that drops the
- *    declaration trips the test immediately).
- */
 
 function cdrUser(string $username): User
 {
@@ -173,19 +145,16 @@ it('renders the "Chain not yet resolved" empty state when transactionId is null 
         ->assertSee('Chain not yet resolved');
 });
 
-it('renders the three-tier confidence chips (Deterministic / Confirmed / Candidate) per D-91', function (): void {
+it('renders the three-tier confidence chips (Deterministic / Confirmed / Candidate)', function (): void {
     $tx0 = cdrTx($this->user, $this->paypal, $this->run, -2500, 'expense', 'Spotify', '2026-05-10', 'c0', 1);
     $tx1 = cdrTx($this->user, $this->asn, $this->run, 2500, 'transfer_in', 'PayPal', '2026-05-10', 'c1', 2);
     $tx2 = cdrTx($this->user, $this->asn, $this->run, 2500, 'transfer_in', 'A', '2026-05-11', 'c2', 3);
     $tx3 = cdrTx($this->user, $this->asn, $this->run, 2500, 'transfer_in', 'B', '2026-05-12', 'c3', 4);
 
-    // Deterministic — state=confirmed AND resolver=auto AND confidence=1.0.
     cdrLink($this->db, $this->user, (int) $tx0->id, (int) $tx1->id,
         'paypal_funding', 'confirmed', '1.000', 'auto', ['signature_hash' => 'h1']);
-    // Confirmed (rule-promoted; confidence < 1.0).
     cdrLink($this->db, $this->user, (int) $tx1->id, (int) $tx2->id,
         'paypal_funding', 'confirmed', '0.850', 'rule', ['signature_hash' => 'h2']);
-    // Candidate.
     cdrLink($this->db, $this->user, (int) $tx2->id, (int) $tx3->id,
         'paypal_funding', 'candidate', '0.750', 'auto', ['signature_hash' => 'h3']);
 
@@ -214,7 +183,7 @@ it('Confirm chip from the drawer promotes a candidate to confirmed', function ()
     expect($link->state)->toBe('confirmed');
 });
 
-it('Reject chip from the drawer marks a candidate as rejected (per-pair only, D-89)', function (): void {
+it('Reject chip from the drawer marks a candidate as rejected (per-pair only)', function (): void {
     $tx0 = cdrTx($this->user, $this->paypal, $this->run, -2500, 'expense', 'Spotify', '2026-05-10', 'e0', 1);
     $tx1 = cdrTx($this->user, $this->asn, $this->run, 2500, 'transfer_in', 'PayPal', '2026-05-10', 'e1', 2);
 
@@ -231,18 +200,15 @@ it('Reject chip from the drawer marks a candidate as rejected (per-pair only, D-
     expect($link->state)->toBe('rejected');
 });
 
-it('fan-out paginates ICS bulk-settle children at 10 rows per click (D-93)', function (): void {
-    // Root = an ICS charge whose statement was bulk-settled. The
-    // settlement leg (transfer_in on ASN) is the fan-out parent that
-    // carries the N covered ICS charges as its children list.
+it('fan-out paginates ICS bulk-settle children at 10 rows per click', function (): void {
+    // The ASN settlement leg is the fan-out parent; its children are the
+    // covered ICS charges.
     $icsCharge = cdrTx($this->user, $this->ics, $this->run, -1200, 'expense', 'Apple', '2026-05-10', 'f0', 1);
     $asnSettle = cdrTx($this->user, $this->asn, $this->run, -84732, 'transfer_out', 'ICS bulk settle', '2026-05-20', 'f1', 2);
     cdrLink($this->db, $this->user, (int) $icsCharge->id, (int) $asnSettle->id,
         'ics_bulk_settle', 'confirmed', '1.000', 'auto', ['signature_hash' => 'f-sig']);
 
-    // Seed 23 ICS charges that the settlement legs back to (children
-    // of the asnSettle node). Each child node hangs off the
-    // asnSettle leg via additional chain_links of kind=ics_bulk_settle.
+    // 23 children — two full pages of 10 plus a partial third.
     $children = [];
     for ($i = 1; $i <= 23; $i++) {
         $child = cdrTx($this->user, $this->ics, $this->run, -100 * $i, 'expense', sprintf('Charge%02d', $i), '2026-05-'.str_pad((string) min(28, $i), 2, '0', STR_PAD_LEFT), 'f2'.$i, 10 + $i);
@@ -263,22 +229,15 @@ it('fan-out paginates ICS bulk-settle children at 10 rows per click (D-93)', fun
         ->assertSee('Show 3 more · 20 of 23');
 
     $component->call('showMoreFanout');
-    // After the third page, every child is visible — no "show more" button.
     $component->assertDontSee('Show 10 more')
         ->assertDontSee('Show 3 more');
 });
 
 it('renders the empty-fan-out edge-case copy when an ICS bulk-settle leg covers zero ICS charges', function (): void {
-    // Root = an ASN bulk settle leg with NO outgoing ics_bulk_settle
-    // children. The "No ICS charges in this settlement" copy lives in
-    // the partial; the empty fan-out fires only when the node itself
-    // is kind=ics_bulk_settle AND has no children.
     $rootCharge = cdrTx($this->user, $this->ics, $this->run, -1500, 'expense', 'Empty', '2026-05-10', 'g0', 1);
     $asnSettle = cdrTx($this->user, $this->asn, $this->run, -500, 'transfer_out', 'Empty bulk settle', '2026-05-20', 'g1', 2);
     cdrLink($this->db, $this->user, (int) $rootCharge->id, (int) $asnSettle->id,
         'ics_bulk_settle', 'confirmed', '1.000', 'auto', ['signature_hash' => 'g-sig']);
-    // No child ics_bulk_settle links beneath asnSettle → the empty
-    // fan-out copy triggers.
 
     Livewire::actingAs($this->user)
         ->test(ChainDrawer::class)
@@ -296,13 +255,8 @@ it('renders the Flux modal flyout markup (first project use)', function (): void
 });
 
 it('TransactionDetail page renders the "View chain" button that dispatches chain-drawer:open', function (): void {
-    // Seed a chain_link so hasChainForTransaction() returns true and
-    // the gate exposes the "View chain" button. The earlier draft
-    // rendered the button unconditionally — a real bug surfaced by
-    // user testing: every row showed "View chain" even when the
-    // drawer would just say "No funding chain found". The gate now
-    // hides the button when no chain exists; the test seeds a real
-    // link so the asserted markup actually renders.
+    // The button is gated on hasChainForTransaction(), so seed a real link.
+    // An earlier draft rendered it on every row, leading into an empty drawer.
     $tx = cdrTx($this->user, $this->paypal, $this->run, -1500, 'expense', 'Netflix', '2026-05-10', 'i1', 1);
     $funder = cdrTx($this->user, $this->asn, $this->run, -1500, 'transfer_out', 'PayPal SARL', '2026-05-10', 'i2', 2);
     cdrLink($this->db, $this->user, (int) $tx->id, (int) $funder->id,
@@ -312,18 +266,10 @@ it('TransactionDetail page renders the "View chain" button that dispatches chain
 
     $response->assertOk();
     $response->assertSee('View chain', false);
-    // The Livewire $dispatch-flavoured wire:click contract is the
-    // contract between TransactionDetail and ChainDrawer — grep it
-    // verbatim so a future refactor that drops the event name trips
-    // immediately.
     $response->assertSee('chain-drawer:open', false);
 });
 
 it('TransactionDetail page hides the "View chain" button when the transaction has no chain_link', function (): void {
-    // Symmetric coverage of the gate: a row with zero chain coverage
-    // must NOT show the button. Previously the button rendered for
-    // every transaction; this test locks the gate so a regression
-    // brings the noisy "No funding chain found" empty drawer back.
     $tx = cdrTx($this->user, $this->paypal, $this->run, -1500, 'expense', 'Solo', '2026-05-10', 'j1', 1);
 
     $response = $this->actingAs($this->user)->get(route('transactions.show', $tx->id));
@@ -333,7 +279,7 @@ it('TransactionDetail page hides the "View chain" button when the transaction ha
     $response->assertDontSee('chain-drawer:open', false);
 });
 
-it('chain-node.blade.php partial declares explicit @props([\'node\', \'fanoutPage\']) (issue #13 fix)', function (): void {
+it('chain-node.blade.php partial declares explicit @props([\'node\', \'fanoutPage\'])', function (): void {
     $partialPath = base_path('Modules/Chains/Resources/views/livewire/partials/chain-node.blade.php');
     expect(file_exists($partialPath))->toBeTrue();
     $contents = file_get_contents($partialPath);
@@ -341,7 +287,7 @@ it('chain-node.blade.php partial declares explicit @props([\'node\', \'fanoutPag
     expect($contents)->toContain("@props(['node', 'fanoutPage'])");
 });
 
-it('chain-drawer.blade.php passes $fanoutPage explicitly to the chain-node partial (issue #13 fix)', function (): void {
+it('chain-drawer.blade.php passes $fanoutPage explicitly to the chain-node partial', function (): void {
     $drawerPath = base_path('Modules/Chains/Resources/views/livewire/chain-drawer.blade.php');
     expect(file_exists($drawerPath))->toBeTrue();
     $contents = file_get_contents($drawerPath);

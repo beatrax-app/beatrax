@@ -14,12 +14,7 @@ use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use Modules\Recurring\Public\Events\RecurringSeriesCadenceFlipped;
 use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 
-// Writes a fresh detection onto an existing series. Both detectors did this
-// identically apart from the direction they report, which is the one thing
-// that genuinely differs between an expense series and an income one.
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
+// Shared by both detectors; only the direction they report differs.
 final readonly class SeriesRefresher
 {
     public function __construct(
@@ -70,10 +65,8 @@ final readonly class SeriesRefresher
         ));
     }
 
-    // Re-loads the row so the state machine sees the post-refresh metric
-    // values; the busy_timeout lock serialises the write either way. The
-    // second state read is not redundant: the transition is only legal from
-    // approved, and the row may have moved since the caller read it.
+    // The second state read is not redundant: the transition is only legal
+    // from approved, and the row may have moved since the caller read it.
     private function flipCadence(RecurringSeries $series, DetectedSeries $detected, User $user, string $previousCadence): void
     {
         if (! in_array($series->state, [RecurringSeriesState::Approved->value, RecurringSeriesState::CadenceChanged->value], true)) {

@@ -10,24 +10,6 @@ use Modules\DevMode\Internal\Http\Livewire\AuditLogPage;
 use Modules\DevMode\Public\Contracts\AuditWriter;
 use Modules\DevMode\Public\Dto\CommandRunAudit;
 
-/*
- * /dev/audit "Clear all" + per-row Copy affordances.
- *
- *  - truncateAll() deletes every dev_mode_audit row and resets the
- *    cursor + filter state so the next render shows the empty-state
- *    copy instead of a stale "Older" pager link pointing at a now-
- *    missing id.
- *
- *  - The page renders the "Clear all" button (assertion by data-testid)
- *    and a per-row Copy button (assertion by data-testid) when at least
- *    one audit row exists.
- *
- *  - The Copy button's payload includes the command name, exit code,
- *    and stdout / stderr excerpt — the developer pastes one blob into
- *    a chat / issue / scratchpad without manually re-assembling fields
- *    from the row.
- */
-
 function altpDeveloper(string $username): User
 {
     return User::query()->create([
@@ -123,19 +105,14 @@ it('renders a per-row Copy button for every audit row with the row payload embed
 
     $html = (string) $response->getContent();
 
-    // The Copy button itself renders.
     expect($html)->toContain('data-testid="audit-row-copy-button"');
     expect($html)->toContain('aria-label="Copy row');
 
-    // The serialised clipboard payload embeds the row's fields so the
-    // pasted blob carries every captured value without round-tripping
-    // through the DB. Use loose containment because the @js helper
-    // emits a JSON-escaped string with embedded \n sequences.
+    // Loose containment throughout: @js emits a JSON-escaped string, so the
+    // payload arrives with \n sequences and escaped colons.
     expect($html)->toContain('command: cache:clear');
     expect($html)->toContain('tier: safe');
     expect($html)->toContain('exit_code: 0');
-    // stdout excerpt is preserved (@js escapes embedded ":" so look
-    // for an unambiguous substring fragment).
     expect($html)->toContain('rows deleted');
 });
 

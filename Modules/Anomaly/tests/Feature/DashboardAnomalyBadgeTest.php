@@ -6,17 +6,11 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
-use Modules\Anomaly\Internal\Http\Livewire\DashboardAnomalyBadge;
 use Modules\Anomaly\Models\AnomalyAlert;
+use Modules\Anomaly\Public\Http\Livewire\DashboardAnomalyBadge;
 use Modules\Core\Models\User;
 
 uses(RefreshDatabase::class);
-
-/*
- * Dashboard "Unusual charges" tile (D-03). Shows the open count + the
- * per-detector breakdown when there are open anomalies; renders no chrome
- * when openCount === 0 so the dashboard collapses on a quiet day.
- */
 
 function dabUser(string $username): User
 {

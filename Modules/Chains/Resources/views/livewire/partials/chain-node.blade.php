@@ -1,6 +1,6 @@
-{{-- Chain-node leg card (D-90 / D-91 / D-92 / D-93, UI-02).
+{{-- Chain-node leg card.
 
-     Issue #13 fix: explicit @props declaration. Both $node and
+     Explicit @props declaration. Both $node and
      $fanoutPage are required props — the parent passes them via
      `@include('chains::livewire.partials.chain-node', ['node' => ...,
      'fanoutPage' => ...])`. This makes the contract obvious at both
@@ -13,16 +13,10 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    $fmt = static fn (Money $money): string => $money->currency() === 'EUR'
-        ? $money->format('nl_NL')
-        : $money->format('en_US');
+    $fmt = static fn (Money $money): string => $money->format();
 
-    // D-91 confidence-tier mapping → chip text + chip chrome.
-    // No hue encoding — UI-SPEC § Color forbids semantic-colour-by-
-    // confidence. The Candidate parent card also carries `opacity-60`
-    // for the calm "dimmed" treatment. Dark companions track the
-    // Phase 15 D-15 token table: page-surface chip on `slate-950`,
-    // card-surface chip on `slate-900`, slate-400 caption on dark.
+    // No hue encoding: confidence is signalled by surface and text weight
+    // only, never by a semantic colour.
     $tierClasses = match ($node->confidenceTier) {
         'Deterministic' => 'bg-white text-slate-900 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-100 dark:ring-slate-700',
         'Confirmed'     => 'bg-slate-50 text-slate-900 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-100 dark:ring-slate-700',
@@ -73,6 +67,7 @@
                 {{ $fmt($node->amount) }}
             </p>
             <span
+                role="img"
                 aria-label="{{ $tierAria }}"
                 class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $tierClasses }}"
             >{{ $node->confidenceTier }}</span>
@@ -100,7 +95,7 @@
     @endif
 
     @if ($childTotal > 0)
-        {{-- ICS bulk-settle fan-out (D-93). Renders the N covered ICS
+        {{-- ICS bulk-settle fan-out. Renders the N covered ICS
              charges paginated at 10 per click. Pagination is forward-
              only — clicking the "Show 10 more · X of N" button
              increments the drawer's $fanoutPage cursor. --}}
@@ -134,7 +129,7 @@
             @endif
         </div>
     @elseif ($node->kind === \Modules\Chains\Public\Enums\ChainLinkKind::IcsBulkSettle->value)
-        {{-- Empty fan-out edge case (D-93 discretion) — a refund-only
+        {{-- Empty fan-out edge case — a refund-only
              month leaves a bulk-settle node covering zero ICS charges. --}}
         <div class="mt-md rounded-md border border-slate-200 bg-slate-50 p-3 dark:bg-slate-900 dark:border-slate-700">
             <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('chains::drawer.no_ics_charges') }}</p>

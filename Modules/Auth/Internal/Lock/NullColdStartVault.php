@@ -6,12 +6,8 @@ namespace Modules\Auth\Internal\Lock;
 
 use Modules\Auth\Public\Contracts\ColdStartVault;
 
-// The default on web, CI, and any desktop build without a biometric gate.
-// Bound so the lock screen can always inject the contract rather than
-// branching on whether a platform implementation happens to be registered.
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
+// The default on web, CI and any desktop build without a biometric gate, so
+// the lock screen injects the contract rather than branching on its absence.
 final class NullColdStartVault implements ColdStartVault
 {
     public function isAvailable(): bool
@@ -36,9 +32,7 @@ final class NullColdStartVault implements ColdStartVault
 
     public function forget(int $userId): void
     {
-        // Nothing was ever stored, so there is nothing to clear. Disabling
-        // cold-start unlock calls this on every platform, and a throw here
-        // would turn "the feature is absent" into an error the settings
-        // screen has to handle.
+        // Disabling cold-start unlock calls this on every platform, so a throw
+        // would make "the feature is absent" an error settings must handle.
     }
 }

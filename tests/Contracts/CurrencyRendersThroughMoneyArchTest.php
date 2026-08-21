@@ -2,18 +2,9 @@
 
 declare(strict_types=1);
 
-/*
- * Illuminate\Support\Number::currency() builds an intl NumberFormatter for the
- * locale it is handed, and throws when the runtime has no data for it. The
- * mobile PHP build ships ICU with English-only locale data, so every one of
- * these calls — all of them passing 'nl' — was a 500 on device while the same
- * page rendered fine on desktop.
- *
- * Money::format() is the seam that survives both runtimes: it asks ICU first
- * and renders the same string from marks the repo carries itself when ICU
- * cannot answer. Currency belongs there, not in a view.
+/**
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#numbercurrency-on-the-mobile-icu-build
  */
-
 it('renders no currency through the framework number helper', function (): void {
     $offenders = [];
 

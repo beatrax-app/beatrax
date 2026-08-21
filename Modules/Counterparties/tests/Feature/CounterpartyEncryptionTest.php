@@ -6,7 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\DB;
-use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Counterparties\Internal\Resolver\CounterpartyResolverService;
 use Modules\Counterparties\Public\Queries\CounterpartyIndexQuery;
@@ -15,16 +15,9 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 
-/*
- * CounterpartyEncryptionTest — CRYPT-01 (14-04 Task 2): the
- * CounterpartyResolverService creation-time direct write encrypts
- * display_name/merchant_name/iban, every read site enumerated in
- * 14-04-SUMMARY.md decrypts transparently, AND re-resolving the SAME
- * transaction twice stays idempotent (the [Rule 1] resolveSlugForUpsert
- * fix — comparing a plaintext displayName against a ciphertext stored
- * value must decrypt before comparing, or every re-resolution would
- * fragment one merchant into "bol", "bol-2", "bol-3", … forever).
- */
+// The slug resolver compares a plaintext displayName against the stored value,
+// so it has to decrypt first: without that, every re-resolution of one merchant
+// fragments into "bol", "bol-2", "bol-3", … forever.
 
 function ceUser(string $username): User
 {
@@ -88,11 +81,10 @@ beforeEach(function (): void {
         'updated_at' => now()->toDateTimeString(),
     ]);
 
-    // Prime the session with an unlocked dummy app-lock KEK (mirrors
-    // Modules/Sync/tests/TestCase.php) and turn encryption on for the user.
+    // A dummy app-lock KEK, primed the way Modules/Sync/tests/TestCase.php does.
     /** @var Session $session */
     $session = $this->app->make(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
 
     /** @var GdkKeyringService $keyring */
     $keyring = $this->app->make(GdkKeyringService::class);
@@ -114,10 +106,9 @@ it('encrypts counterparties.display_name/merchant_name at the resolver creation 
     $db = $this->app->make(DatabaseManager::class);
     $stored = $db->connection()->table('counterparties')->where('id', $dto->counterpartyId)->first();
 
-    // Ciphertext at rest — the plaintext must NOT be readable directly off disk.
     expect($stored->display_name)->not->toBe('Netflix');
     expect($stored->merchant_name)->not->toBe('Netflix');
-    // Matching/routing keys stay plaintext (D-02b).
+    // The slug is a matching and routing key, so it stays plaintext.
     expect($stored->slug)->toBe('netflix');
 });
 
@@ -173,15 +164,11 @@ it('CounterpartyIndexQuery::forUser decrypts display_name', function (): void {
     expect($rows->pluck('displayName')->all())->toContain('Netflix');
 });
 
-it('CounterpartyIndexQuery::forUser stays correctly name-sorted (PHP usort) despite orderBy(\'id\') over ciphertext (D-12)', function (): void {
-    // Three merchants with zero 12-month transaction total each (only the
-    // resolver's creation write runs — no transaction rows are inserted),
-    // so the row order is decided ENTIRELY by the tie-break: name asc. Seed
-    // + resolve them in a deliberately non-alphabetical order so their
-    // auto-increment ids do NOT already happen to match the alphabetical
-    // order — if forUser() still ORDER BY'd the (now-ciphertext)
-    // display_name column, this would prove nothing either way; the point
-    // is that decrypt-then-usort is what actually produces the order.
+it('CounterpartyIndexQuery::forUser stays correctly name-sorted (PHP usort) despite orderBy(\'id\') over ciphertext', function (): void {
+    // No transaction rows, so all three totals tie at zero and the name
+    // tie-break alone decides the order. They are resolved Zebra, Alpha,
+    // Middle so the auto-increment ids do not accidentally match the
+    // alphabetical order the assertion expects.
     DB::table('merchant_aliases')->insert([
         ['user_id' => $this->user->id, 'pattern' => 'ZEBRA STORE AMSTERDAM', 'generalized_pattern' => 'zebra', 'friendly_name' => 'Zebra', 'merged_from' => null, 'created_at' => now()->toDateTimeString(), 'updated_at' => now()->toDateTimeString()],
         ['user_id' => $this->user->id, 'pattern' => 'ALPHA SHOP AMSTERDAM', 'generalized_pattern' => 'alpha', 'friendly_name' => 'Alpha', 'merged_from' => null, 'created_at' => now()->toDateTimeString(), 'updated_at' => now()->toDateTimeString()],
@@ -190,8 +177,6 @@ it('CounterpartyIndexQuery::forUser stays correctly name-sorted (PHP usort) desp
 
     /** @var CounterpartyResolverService $resolver */
     $resolver = $this->app->make(CounterpartyResolverService::class);
-    // Resolved in Zebra, Alpha, Middle order — ids are assigned in THIS
-    // order, not alphabetical order.
     $resolver->resolve(ceTx($this->bank->id, (int) $this->user->id, 'ZEBRA STORE AMSTERDAM'), $this->user);
     $resolver->resolve(ceTx($this->bank->id, (int) $this->user->id, 'ALPHA SHOP AMSTERDAM'), $this->user);
     $resolver->resolve(ceTx($this->bank->id, (int) $this->user->id, 'MIDDLE GOODS AMSTERDAM'), $this->user);

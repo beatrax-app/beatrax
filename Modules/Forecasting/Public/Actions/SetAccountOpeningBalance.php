@@ -11,8 +11,8 @@ use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Lang;
+use Modules\Forecasting\Internal\Exceptions\OpeningBalanceDivergenceWarning;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
-use Modules\Forecasting\Public\Exceptions\OpeningBalanceDivergenceWarning;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -20,9 +20,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final class SetAccountOpeningBalance
 {
-    // 50_000 minor units = €500 — the diff threshold above which this
-    // Action raises OpeningBalanceDivergenceWarning instead of silently
-    // committing the user-entered opening balance.
     public const DIVERGENCE_WARNING_THRESHOLD_MINOR = 50_000;
 
     public function __construct(
@@ -110,8 +107,8 @@ final class SetAccountOpeningBalance
         }
     }
 
-    // Exposed publicly so OpeningBalanceEditor can populate the "Use
-    // Beatrax's number" chip without re-invoking the full Action.
+    // Public so OpeningBalanceEditor can fill its suggestion chip without
+    // re-invoking the whole Action.
     public function sumOfTransactionsForAccount(int $accountId, User $user, string $asOfDate): int
     {
         return (int) $this->db->connection()->table('transactions')

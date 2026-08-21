@@ -17,17 +17,6 @@ use Modules\Recurring\Models\RecurringSeriesOccurrence;
 
 uses(RefreshDatabase::class);
 
-/*
- * Feature coverage for the `viewByFunder=true` collapse semantics that
- * the ChainAwareForecastRouter applies as a final aggregation step.
- *
- * The collapse runs AFTER chain rewriting + ICS bulk-iDEAL synthesis,
- * so all contributions are already on their funder account by the time
- * the aggregation starts. The aggregator groups by `(accountId, date)`
- * and sums signed point/low/high values; the resulting list has at
- * most one entry per (account, day) pair.
- */
-
 function vbftClock(): Clock
 {
     return new class implements Clock
@@ -92,8 +81,6 @@ it('returns per-series contributions unchanged when viewByFunder is false', func
 
     $routed = $this->router->route([$a, $b], $this->user, viewByFunder: false);
 
-    // No chain link + no next settlement → both contributions land on the same
-    // account untouched; the per-series identity is preserved.
     expect($routed)->toHaveCount(2);
     expect($routed[0]->seriesId)->toBe(101);
     expect($routed[1]->seriesId)->toBe(202);
@@ -254,9 +241,6 @@ it('collapses chain-resolved per-series contributions onto the funder ASN accoun
         'evidence' => json_encode(['signature_hash' => 'paypal-netflix']),
     ]);
 
-    // A second PayPal-funded series with the same chain target ASN
-    // funder + same charge date — these two should collapse into one
-    // aggregate entry on the ASN funder after viewByFunder=true.
     $contribA = new ForecastContribution(
         date: CarbonImmutable::parse('2026-05-15'),
         pointMinor: -12000,
@@ -270,9 +254,8 @@ it('collapses chain-resolved per-series contributions onto the funder ASN accoun
 
     $routed = $this->router->route([$contribA], $this->user, viewByFunder: true);
 
-    // The router rewrites the PayPal contribution onto the ASN funder
-    // first (step 1), then the collapse pass produces one aggregated
-    // entry on the funder for that day.
+    // The collapse runs after the chain rewrite, so the entry it produces is
+    // already on the ASN funder rather than on PayPal.
     expect($routed)->toHaveCount(1);
     expect($routed[0]->accountId)->toBe($asn->id);
     expect($routed[0]->seriesId)->toBe(0);

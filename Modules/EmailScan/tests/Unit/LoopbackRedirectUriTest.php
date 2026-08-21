@@ -47,9 +47,8 @@ it('falls back to app.url port when host is localhost and port is present', func
 });
 
 it('ignores app.url host/scheme and uses port 8000 when app.url is a .test domain', function (): void {
-    // The .test case from WR-01: app.url is https://beatrax.test, but the
-    // OAuth callback MUST land on the loopback IP (both providers reject
-    // .test redirects). Default to 8000 unless OAUTH_LOOPBACK_PORT is set.
+    // Both providers reject a .test redirect, so the callback has to land on
+    // the loopback IP; 8000 unless OAUTH_LOOPBACK_PORT says otherwise.
     $config = new Repository([
         'email-scan' => ['oauth_loopback_port' => null],
         'app' => ['url' => 'https://beatrax.test'],

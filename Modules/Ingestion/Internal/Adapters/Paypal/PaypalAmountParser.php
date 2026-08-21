@@ -4,18 +4,13 @@ declare(strict_types=1);
 
 namespace Modules\Ingestion\Internal\Adapters\Paypal;
 
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 use Modules\Ledger\Public\ValueObjects\Money;
 
-/**
- * @link ../../../../../.docs/features/ingestion/architecture.md
- */
 final class PaypalAmountParser
 {
-    // Integer-only by construction, mirroring BankAmountParser — no float
-    // cast, so "0,29" returns exactly 29 rather than a silent floating-point
-    // rounding error. US-locale period-decimal is rejected on purpose
-    // rather than blanket-accepting both separator conventions.
+    // Integer-only, mirroring BankAmountParser: no float cast, so "0,29" returns exactly 29.
+    // US-locale period-decimal is rejected rather than accepting both separator conventions.
     public function parseMinor(string $raw): int
     {
         $normalized = trim($raw);

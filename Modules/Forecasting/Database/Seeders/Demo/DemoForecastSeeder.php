@@ -59,9 +59,8 @@ final class DemoForecastSeeder
             ->count();
     }
 
-    // On a real install ProjectForecastJob is dispatched by the import and
-    // scenario listeners. The demo seeder writes its rows straight to the DB
-    // and fires no events, so without projecting here forecast_runs stays
+    // Seeded rows are written straight to the DB and fire no events, so nothing
+    // dispatches ProjectForecastJob; without projecting here forecast_runs stays
     // empty and every forecast surface renders its computing sentinel.
     private function projectAllHorizons(User $user): void
     {
@@ -97,9 +96,6 @@ final class DemoForecastSeeder
 
     private function upsertWhatIfMutation(User $user, ForecastScenario $whatIf): void
     {
-        // The cast enforces `payload.kind() === row.kind` at write time, so
-        // the assignment order below matters: `kind` must be set on the
-        // model before `payload`.
         $existing = ForecastScenarioMutation::query()
             ->where('user_id', $user->id)
             ->where('forecast_scenario_id', $whatIf->id)
@@ -119,6 +115,8 @@ final class DemoForecastSeeder
             note: 'Hypothetical summer holiday charge',
         );
 
+        // The cast checks `payload.kind() === row.kind` at write time, so `kind`
+        // has to be assigned before `payload`.
         $mutation = new ForecastScenarioMutation;
         $mutation->user_id = $user->id;
         $mutation->forecast_scenario_id = $whatIf->id;

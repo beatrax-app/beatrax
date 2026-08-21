@@ -16,9 +16,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 // the same row-locked transaction and audit row — the row is never
 // observed in a "future snooze date, original state" intermediate.
 
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
 final class SnoozeRecurringSeries
 {
     public function __construct(

@@ -6,15 +6,13 @@ namespace Modules\Sync\Internal\OpLog;
 
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Database\DatabaseManager;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
 // Runs the op-log backfill at the two moments it can matter: switching sync
 // on, and a peer joining. Signing needs the unlocked key, so this only ever
 // works from inside an unlocked session — never from a headless daemon.
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class PreSyncHistoryCapture
 {
     public function __construct(
@@ -71,7 +69,7 @@ final readonly class PreSyncHistoryCapture
         } catch (Throwable $e) {
             $this->log->error('PreSyncHistoryCapture: capture failed.', [
                 'user_id' => $userId,
-                'exception' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
             ]);
 
             return 0;

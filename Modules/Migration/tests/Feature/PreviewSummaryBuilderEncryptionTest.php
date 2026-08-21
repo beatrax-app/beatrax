@@ -15,21 +15,6 @@ use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
 
 uses(RefreshDatabase::class, EnablesEncryptionForUser::class);
 
-/*
- * 14.1-16 Task 1 (gap-closure / CRYPT-01, T-14.1-16) —
- * PreviewSummaryBuilder::transactionLabel() must decrypt the stored
- * transactions.counterparty_name/description before composing the
- * migration-preview wizard's conflict-row display label. Pre-fix, the raw
- * (ciphertext) column value was interpolated directly into the label, so an
- * encrypted user's /migrations/{id}/preview page rendered a base64-ish blob
- * instead of a merchant name — the last residual instance of the
- * cosmetic ciphertext-display leak class this phase closes (same class as
- * Cluster 1 / plan 10's UncategorizedTriageQuery/ChainLinkQuery fixes).
- *
- * Tests run against a REAL encrypted user via EnablesEncryptionForUser so a
- * decrypt-of-plaintext no-op can never mask a still-broken read.
- */
-
 function psbUser(): User
 {
     return User::query()->create([
@@ -52,11 +37,6 @@ function psbAccount(User $user): Account
 }
 
 /**
- * Seeds a migration run with a single 'conflict' unmapped item pointing at a
- * real `transactions` row whose `counterparty_name`/`description` are stored
- * as GENUINE CIPHERTEXT (via `SensitiveColumnCodec::encryptValue`, mirroring
- * what a real import/op-log write leaves at rest).
- *
  * @return array{runId: int}
  */
 function psbSeedConflict(

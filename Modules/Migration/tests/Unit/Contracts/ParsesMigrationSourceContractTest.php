@@ -3,15 +3,8 @@
 declare(strict_types=1);
 
 use Modules\Core\Models\User;
-use Modules\Migration\Public\Contracts\ParsesMigrationSource;
-use Modules\Migration\Public\Dto\MigrationBatch;
-
-/*
- * Wave 0 contract-pinning test for the parser swap seam (13.5-02 Task 1).
- * Pins `format(): string` + `parse(string, User, int): MigrationBatch` so
- * Plans 03/04's Ynab4Parser/NynabParser/ActualParser implement against a
- * fixed signature rather than exploring one.
- */
+use Modules\Migration\Internal\Contracts\ParsesMigrationSource;
+use Modules\Migration\Internal\Dto\MigrationBatch;
 
 it('Contract: ParsesMigrationSource declares format(): string', function (): void {
     $reflection = new ReflectionClass(ParsesMigrationSource::class);

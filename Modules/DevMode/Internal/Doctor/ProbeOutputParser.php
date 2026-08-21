@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Internal\Doctor;
 
-// Pure parser for `beatrax:doctor`'s stdout: one line per probe in
-// sprintf('%-24s %-8s %s', $label, $severity, $message) format, mapping
-// severity ok/warning/critical/info to pass/warn/fail/info. Skips the
-// banner, divider, blank, and summary lines.
 /**
  * @phpstan-type ProbeRow array{status: 'pass'|'warn'|'fail'|'info', label: string, detail: string}
  */
@@ -47,9 +43,8 @@ final class ProbeOutputParser
             return null;
         }
 
-        // The DoctorCommand format is `%-24s %-8s %s`. Each row has a
-        // 24-char label column, a severity token, and the remaining
-        // message. Use a regex that tolerates trailing padding.
+        // DoctorCommand prints rows as `%-24s %-8s %s`, so the label arrives
+        // padded out to 24 chars and the regex has to tolerate the padding.
         if (preg_match('/^(.{1,24}?)\s{2,}(ok|warning|critical|info)\s+(.+)$/i', $line, $matches) !== 1) {
             return null;
         }
@@ -65,8 +60,6 @@ final class ProbeOutputParser
         ];
     }
 
-    // Everything DoctorCommand prints that is not a probe row: blank lines,
-    // the banner, rule separators, and the closing tally.
     private function isChrome(string $trimmed): bool
     {
         return $trimmed === ''

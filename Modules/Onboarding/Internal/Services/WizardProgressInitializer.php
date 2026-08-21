@@ -7,11 +7,8 @@ namespace Modules\Onboarding\Internal\Services;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Onboarding\Public\Enums\WizardStepStatus;
+use Modules\Onboarding\Internal\Enums\WizardStepStatus;
 
-/**
- * @link ../../../../.docs/features/onboarding/architecture.md
- */
 final readonly class WizardProgressInitializer
 {
     public function __construct(
@@ -32,8 +29,8 @@ final readonly class WizardProgressInitializer
     {
         [$existing, $hasPending] = $this->existingState($connection, $userId);
 
-        // See architecture.md for why a newly-registered step seeds as
-        // skipped (not pending) for an already-finished user.
+        // A step added after a user finished the wizard seeds as skipped, not
+        // pending, so shipping a new step does not re-open a closed wizard.
         $seedStatus = ($existing !== [] && ! $hasPending) ? WizardStepStatus::Skipped->value : WizardStepStatus::Pending->value;
 
         foreach ($this->registry->steps() as $stepKey) {

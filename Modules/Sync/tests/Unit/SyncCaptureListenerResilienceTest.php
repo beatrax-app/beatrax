@@ -16,20 +16,10 @@ use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
 use Psr\Log\LoggerInterface;
 
-/**
- * What SyncCaptureListener does when it cannot capture.
- *
- * The listener runs inside the request that saved the transaction. If it let
- * an exception escape, a device that is not paired — or one whose sync setup
- * is half-finished — would fail the user's edit rather than simply not
- * replicating it. Capture is best-effort by design, and these tests pin that:
- * every failure has to end in a log line, never a throw.
- *
- * They also pin WHICH line. "Sync is off" is the resting state of most
- * installs, not a fault, and reporting it at error level once per mutation is
- * what filled a real user's log with 120k entries and hid the failures that
- * did matter.
- */
+// The listener runs inside the request that saved the transaction, so letting an
+// exception escape would fail the user's edit on a device that is merely unpaired.
+// Which line it logs matters too: "sync is off" is the resting state of most
+// installs, and at error level it once filled a real log with 120k entries.
 function capturingLogger(array &$calls): LoggerInterface
 {
     return new class($calls) implements LoggerInterface
@@ -154,14 +144,10 @@ it('still reports a genuine capture failure at error level', function (): void {
         ->and($calls[0]['message'])->toContain('capture failed');
 });
 
-// Reaching the unknown-mutationType arm needs container->make(OpLogWriter)
-// to succeed, and that class is final with twelve constructor dependencies.
-// Building a real one would make this a test of the writer's wiring rather
-// than of the listener's routing — so the container hands back a placeholder
-// instead. That is sound precisely because the default arm is the one arm
-// that never touches the writer: it only logs. If someone later routes the
-// writer through it, the placeholder raises a TypeError, the catch turns it
-// into an 'error' line, and the level assertion below fails loudly.
+// Reaching the unknown-mutationType arm needs make(OpLogWriter) to succeed, and
+// that class is final with twelve dependencies, so the container hands back a
+// placeholder. Sound only because that arm never touches the writer: route the
+// writer through it and the TypeError becomes an error line the level test fails on.
 function placeholderWriterContainer(): Container
 {
     $container = new IlluminateContainer;

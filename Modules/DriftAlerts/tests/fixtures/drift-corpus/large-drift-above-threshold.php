@@ -2,13 +2,6 @@
 
 declare(strict_types=1);
 
-// Spotify €9.99 → €11.49 (+15.0% month-over-month, well
-// above the default ±5% threshold). The detector fires exactly one
-// alert. Math:
-//   delta_minor = -1149 - (-999) = -150 (signed expense)
-//   annualized_impact_minor = -150 × 12 = -1800 (×12 monthly multiplier)
-// threshold_source='global' because no per-series override exists.
-
 $transactions = [];
 $amounts = [-999, -999, -999, -1149, -1149, -1149];
 for ($i = 0; $i < 6; $i++) {

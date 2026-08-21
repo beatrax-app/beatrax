@@ -17,9 +17,6 @@ use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final readonly class ForecastQuery
 {
     // The two non-terminal run states. 'complete' and 'failed' are answers;
@@ -28,10 +25,8 @@ final readonly class ForecastQuery
 
     use CoercesScalars;
 
-    // A series' forecast confidence follows its band ratio — the full band
-    // width as a percentage of the point, i.e. twice the variance tolerance.
-    // A band no wider than this reads as high confidence; up to the medium
-    // bound, medium; anything wider, low.
+    // Bounds on the band ratio: full band width as a percentage of the point,
+    // which is twice the series' variance tolerance.
     private const int HIGH_CONFIDENCE_MAX_BAND_RATIO = 10;
 
     private const int MEDIUM_CONFIDENCE_MAX_BAND_RATIO = 25;
@@ -73,10 +68,9 @@ final readonly class ForecastQuery
 
         $decoded = $this->decodeCompletedRun($row);
         if ($decoded === null) {
-            // Only a run that is actually in flight may say "updating". A
-            // device that has never computed one, or whose last one is
-            // unreadable, has nothing pending — saying otherwise left the
-            // calendar promising a projection that was never coming.
+            // Only a run actually in flight may say "updating". A device that
+            // never computed one has nothing pending, and claiming otherwise
+            // left the calendar promising a projection that never arrived.
             return $this->isRunInFlight($row)
                 ? $this->computingSentinel($accountId, $accountName, $defaultCurrency, $horizonDays, $scenarioId, $asOf)
                 : $this->flatLineFallback($accountId, $accountName, $defaultCurrency, $horizonDays, $scenarioId, $asOf, $user);
@@ -104,8 +98,6 @@ final readonly class ForecastQuery
         );
     }
 
-    // In flight means a row exists and has not finished. No row at all, or a
-    // terminal status, is not something the user is waiting on.
     private function isRunInFlight(mixed $row): bool
     {
         if (! $row instanceof stdClass) {
@@ -134,8 +126,6 @@ final readonly class ForecastQuery
     }
 
     /**
-     * @link ../../../../.docs/features/forecasting/architecture.md
-     *
      * @return list<SeriesConfidenceDto>
      */
     private function resolveSeriesConfidenceForAccount(int $accountId, User $user): array

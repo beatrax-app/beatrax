@@ -5,28 +5,6 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Creates the file_imports table — the lightweight DB index over the
- * raw .eml blobs that arrived via file drop rather than the
- * EmailScan API fetcher.
- *
- * Mirrors the inbox_messages table shape so the matcher consumer can
- * unify both tables behind a single MatcherInputDto stream:
- *
- *   - One row per dropped .eml or per message inside a .mbox archive.
- *   - The pair (user_id, provider_message_id) is UNIQUE so re-dropping
- *     the same file is a no-op via insertOrIgnore.
- *   - Headerless messages get a synthetic provider_message_id = the
- *     sha256 of the raw bytes; same bytes therefore round-trip to the
- *     same idempotency key.
- *   - The deterministic eml_path is derived from sha256(bytes); the
- *     user-supplied source_filename is stored verbatim for audit only,
- *     never used to construct the on-disk path.
- *   - The `status` enum follows the same lifecycle as inbox_messages
- *     (fetched → parsed | skipped | unmatched), enforced via paired
- *     BEFORE INSERT / BEFORE UPDATE triggers. A second paired trigger
- *     validates the source_kind enum (eml | mbox).
- */
 return new class extends ModuleMigration
 {
     public function up(): void

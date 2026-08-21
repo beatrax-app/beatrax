@@ -10,7 +10,4 @@ use InvalidArgumentException;
 // whose target is interpolated literally rather than bound. Extends
 // InvalidArgumentException rather than RuntimeException because nothing
 // failed: the path was refused before anything was attempted.
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class UnsafeBackupPathException extends InvalidArgumentException {}

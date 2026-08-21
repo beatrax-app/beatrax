@@ -10,16 +10,6 @@ use Modules\EmailScan\Internal\Clients\GraphErrorMapper;
 use Modules\EmailScan\Internal\Clients\RateLimitedException;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
-/*
- * GraphErrorMapper unit coverage.
- *
- * The mapper owns the Graph error surface split out of GraphApiClient:
- * translating a non-2xx response into the module's typed sentinels,
- * parsing Retry-After against the injected clock, and capping provider
- * error text. Each arm is driven directly here so the collaborator's
- * branches are exercised independently of the HTTP client.
- */
-
 beforeEach(function (): void {
     $this->clock = new class implements Clock
     {

@@ -10,13 +10,11 @@ use Modules\Community\Internal\Corpus\CorpusLoader;
 use Modules\Community\Public\Dto\CorpusEntryDto;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Events\UserInstalled;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Psr\Log\LoggerInterface;
 use stdClass;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/community/architecture.md
- */
 final class SeedCommunityCorpus
 {
     public function __construct(
@@ -26,10 +24,8 @@ final class SeedCommunityCorpus
         private readonly Clock $clock,
     ) {}
 
-    // Chunked so a first install writes the bundled corpus in a bounded number
-    // of statements. At one INSERT per row the corpus costs as many implicit
-    // transactions as it has entries — thousands of fsyncs, and the slowest
-    // thing that happens during signup.
+    // One INSERT per row costs one implicit transaction per entry — thousands
+    // of fsyncs, and the slowest thing that happens during signup.
     private const INSERT_CHUNK = 500;
 
     public function handle(UserInstalled $event): void
@@ -39,9 +35,8 @@ final class SeedCommunityCorpus
         $now = $this->clock->now()->toDateTimeString();
         $connection = $this->db->connection();
 
-        // One query for the whole existing global tier rather than a lookup per
-        // entry: the id map answers the same "insert or update?" question the
-        // per-row SELECT did, and it is what lets the inserts batch at all.
+        // One query for the whole global tier: this id map answers the same
+        // "insert or update?" question, and is what lets the inserts batch.
         $existing = $this->existingIds($connection);
 
         $pending = [];
@@ -53,9 +48,8 @@ final class SeedCommunityCorpus
                 continue;
             }
 
-            // Guards the UNIQUE index against a corpus that ships the same
-            // pattern twice: the second copy would otherwise poison the whole
-            // chunk it lands in rather than just itself.
+            // A corpus shipping the same pattern twice would otherwise poison
+            // the whole chunk it lands in, not just itself.
             if (isset($pending[$entry->pattern])) {
                 continue;
             }
@@ -78,10 +72,9 @@ final class SeedCommunityCorpus
      */
     private function existingIds(Connection $connection): array
     {
-        // `id` is read through is_numeric rather than is_int because only
-        // SQLite hands back a native int here; the MySQL and Postgres PDO
-        // drivers return the same value as a string, and a strict check would
-        // silently empty this map and re-insert the entire corpus.
+        // is_numeric, not is_int: only SQLite hands back a native int here, and
+        // a strict check would silently empty this map on the other drivers
+        // and re-insert the entire corpus.
         /** @var iterable<stdClass> $rows */
         $rows = $connection->table('community_merchant_mappings')->whereNull('user_id')->get(['id', 'pattern']);
 
@@ -103,13 +96,9 @@ final class SeedCommunityCorpus
         try {
             $connection->table('community_merchant_mappings')->insert($chunk);
         } catch (Throwable $e) {
-            // A chunk fails as a unit, so fall back to row-at-a-time to keep
-            // the original guarantee: one malformed entry is skipped and
-            // logged, it never costs the other 499 their seed.
-            $this->logger->warning('SeedCommunityCorpus: batch insert failed, retrying row by row.', [
-                'exception_class' => $e::class,
-                'exception_message' => $e->getMessage(),
-            ]);
+            // A chunk fails as a unit, so retry row-at-a-time: one malformed
+            // entry must not cost the other 499 their seed.
+            $this->logger->warning('SeedCommunityCorpus: batch insert failed, retrying row by row.', SafeExceptionContext::describe($e));
 
             foreach ($chunk as $row) {
                 $this->insertRow($connection, $row);
@@ -127,8 +116,7 @@ final class SeedCommunityCorpus
         } catch (Throwable $e) {
             $this->logger->warning('SeedCommunityCorpus: skipped malformed entry.', [
                 'pattern' => $row['pattern'] ?? null,
-                'exception_class' => $e::class,
-                'exception_message' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
             ]);
         }
     }
@@ -138,9 +126,8 @@ final class SeedCommunityCorpus
         // created_at is deliberately absent, preserving the original-seed
         // timestamp across a re-dispatch of this idempotent listener.
 
-        // The contact columns ARE written, nulls included, so a field a
-        // contributor removes from the YAML is cleared rather than lingering
-        // as a stale cancellation link.
+        // Contact columns are written nulls included, so a field a contributor
+        // removes from the YAML is cleared, not left as a stale cancel link.
         try {
             $connection->table('community_merchant_mappings')
                 ->where('id', $id)
@@ -148,8 +135,7 @@ final class SeedCommunityCorpus
         } catch (Throwable $e) {
             $this->logger->warning('SeedCommunityCorpus: skipped malformed entry.', [
                 'pattern' => $entry->pattern,
-                'exception_class' => $e::class,
-                'exception_message' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
             ]);
         }
     }

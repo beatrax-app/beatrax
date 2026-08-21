@@ -8,18 +8,6 @@ use Modules\Import\Internal\Detectors\Mt940StartingBalanceDetector;
 use Modules\Import\Internal\Detectors\PaypalCsvStartingBalanceDetector;
 use Modules\Import\Public\Contracts\DetectsStartingBalance;
 
-/*
- * Container-tag registry inventory test for the
- * `starting-balance.detector` tag.
- *
- * Locks the registered detector count, contract conformance, and
- * the documented registration-order invariant used by the
- * aggregator's tie-break rule. Adding a new detector requires:
- *   1. Append the class FQN to ImportServiceProvider::STARTING_BALANCE_DETECTOR_FQNS
- *   2. Update the expected count + ordered class-list in this test
- * — keeping every shipping detector visible from one inventory location.
- */
-
 it('binds exactly four DetectsStartingBalance implementations under the starting-balance.detector container tag', function (): void {
     /** @var iterable<DetectsStartingBalance> $tagged */
     $tagged = $this->app->tagged('starting-balance.detector');

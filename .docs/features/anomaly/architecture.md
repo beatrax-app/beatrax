@@ -27,9 +27,10 @@ no-op, event dispatch, cross-module read discipline) is cloned from
    checked BEFORE insert; if no reason survives, return without inserting.
 5. Insert exactly one `anomaly_alerts` row carrying `reasons[]`, the
    large-vs-typical baseline trio, `sensitivity_percent_used`, and
-   direction; a `UNIQUE(transaction_id)` collision is caught at the
-   `QueryException` boundary and treated as a silent no-op.
-6. Dispatch `AnomalyAlertOpened` on a successful insert.
+   direction, under a DERIVED id (below); a `UNIQUE(transaction_id)` or
+   primary-key collision is caught at the `QueryException` boundary and
+   treated as a silent no-op.
+6. Dispatch `AnomalyAlertOpened` and `EntityMutated` on a successful insert.
 
 Every raw query carries an explicit `where('user_id', ...)` — the
 `BelongsToUser` global scope does not fire under queue/console, where this
@@ -134,7 +135,39 @@ All four jobs route through the shared `AnomalyEvaluator::evaluate()` path
 - **`ReviveExpiredAnomalySnoozesJob`** — flips `snoozed` rows back to
   `open` once `snoozed_until` passes.
 
+## The id is derived, not minted
+
+`anomaly_alerts.id` is not an autoincrement. It is
+`Core\Public\Support\DerivedRowId::for('anomaly_alerts', [user_id,
+transaction_id])` — the sha256 of the columns `anomaly_alerts_uniq` already
+names, folded into a positive 63-bit integer (63 and not 64 because SQLite's
+`INTEGER` and PHP's `int` are both signed).
+
+The reason is sync. The detector runs on every paired device, so both of them
+open an alert for the same charge; an autoincrement gave each its own id, the
+UNIQUE dropped whichever create arrived second, and the losing device's later
+acknowledge named a row its peer had never held. Neither half of the tuple ever
+moves — an alert is opened against one charge and stays against it, and the
+transaction's id is device-stable because transactions sync pk-preserved — so
+both devices compute the same number and the duplicate create collides
+harmlessly.
+
+`AUTOINCREMENT` was removed with it. Explicit ids are legal alongside it, but it
+records the highest id ever used in `sqlite_sequence`, and one derived id near
+2^63 would leave any later insert that omitted the column allocating past the
+ceiling.
+
+Capture rides on the same two writers: `AnomalyEvaluator` emits the create, and
+`AnomalyAlertStateMachine` — the sole legal mutator of `state` — emits the edit
+for every acknowledge, snooze, dismissal and revival.
+
 ## Read surfaces
+
+A derived id does not ascend with insertion, so `AnomalyAlertQuery` cannot order
+or page on it. The list orders `detected_at DESC` with the id breaking ties
+only, backed by the existing `(user_id, state, detected_at)` index, and its
+cursor carries both halves — `DriftPage` keeps a separate cursor for this tab
+because drift ids are still autoincrement and page on the id alone.
 
 `AnomalyAlertQuery` resolves merchant display names via Counterparties'
 Public `identitiesForIds` (the table carries no `counterparty_id` column

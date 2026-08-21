@@ -9,14 +9,6 @@ use Modules\Goals\Models\Goal;
 
 uses(RefreshDatabase::class);
 
-/**
- * Smoke tests for the Goal model — exercises the model factory, casts, and
- * the BelongsToUser global-scope isolation.
- *
- * These tests are GREEN immediately in Wave 0 because the model and migration
- * exist. They prove the test harness resolves correctly (namespace, factory,
- * DB schema) before Plans 02–04 land.
- */
 it('creates and retrieves a goal via the factory', function (): void {
     $user = User::create([
         'username' => 'wessel',
@@ -55,7 +47,6 @@ it('hides another users goals via the BelongsToUser global scope', function (): 
     Goal::factory()->create(['user_id' => $alice->id, 'name' => 'Alices goal']);
     Goal::factory()->create(['user_id' => $bob->id, 'name' => 'Bobs goal']);
 
-    // Act as Alice — the UserScope filters out Bob's goal.
     $this->actingAs($alice);
 
     $visible = Goal::query()->get();

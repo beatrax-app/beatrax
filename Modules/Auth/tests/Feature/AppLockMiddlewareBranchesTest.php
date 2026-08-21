@@ -2,11 +2,6 @@
 
 declare(strict_types=1);
 
-// Coverage for the guard flows flattened out of AppLockMiddleware during the
-// Auth Sonar refactor: the exempt-route pass-through for a locked session,
-// the null-last-activity idle short-circuit, and the idle-expiry lock that
-// still passes through when the current route is itself exempt.
-
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Modules\Auth\Internal\Lock\LockStateManager;
@@ -41,8 +36,8 @@ it('passes a locked session through an exempt route when the lock is enabled', f
     $user = appLockConfigUser('locked-exempt');
     $this->actingAs($user);
 
-    // Enabled lock + locked session + exempt route (auth.lock) -> pass through
-    // (not the null-config release path, and not a redirect).
+    // A real config row, so this is the exempt-route pass-through rather than
+    // the null-config release path.
     insertAppLockConfig($user->id);
 
     $this->withSession([LockStateManager::SESSION_KEY => true])
@@ -54,8 +49,6 @@ it('does not lock an unlocked session whose last activity is null', function ():
     $user = appLockConfigUser('unlocked-null-activity');
     $this->actingAs($user);
 
-    // last_activity_at null -> isIdleExpired() short-circuits to false, so the
-    // request is never locked for idleness.
     insertAppLockConfig($user->id, ['last_activity_at' => null]);
 
     $response = $this->withSession([LockStateManager::SESSION_KEY => false])
@@ -71,9 +64,8 @@ it('locks an idle-expired session but still passes through when the route is exe
     $user = appLockConfigUser('idle-exempt');
     $this->actingAs($user);
 
-    // Unlocked but long-idle: isIdleExpired() is true, so lockForIdle() locks
-    // the session; the exempt auth.lock route then still renders rather than
-    // redirecting into a loop.
+    // Unlocked but long idle, on the exempt route: the session must lock and
+    // still render, rather than redirect into a loop.
     insertAppLockConfig($user->id, [
         'idle_timeout_minutes' => 1,
         'last_activity_at' => CarbonImmutable::now()->subHours(2)->toDateTimeString(),
@@ -82,6 +74,5 @@ it('locks an idle-expired session but still passes through when the route is exe
     $this->withSession([LockStateManager::SESSION_KEY => false])
         ->get(route('auth.lock'))
         ->assertOk()
-        // lockForIdle() must have flipped the session into the locked state.
         ->assertSessionHas(LockStateManager::SESSION_KEY, true);
 });

@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Eemalda kategooria',
         'keep_category' => 'Jäta see kategooria alles',
         'restore_single' => 'Kas taastada ühe kategooriaga?',
+        'survivor_legend' => 'Kategooria, mis jääb alles',
         'confirm_unsplit' => 'Jah, tühista jaotus',
         'keep_split' => 'Jäta jaotus alles',
     ],
@@ -51,6 +52,16 @@ return [
         'choose_aria' => 'Vali tehingu uus tüüp',
         'choose_option' => 'Vali tüüp…',
         'save' => 'Salvesta',
+    ],
+
+    'type_label' => [
+        'expense' => 'Kulu',
+        'income' => 'Tulu',
+        'transfer_out' => 'Väljaminev ülekanne',
+        'transfer_in' => 'Sissetulev ülekanne',
+        'fee' => 'Teenustasu',
+        'refund' => 'Tagasimakse',
+        'adjustment' => 'Korrigeerimine',
     ],
 
     'note' => [

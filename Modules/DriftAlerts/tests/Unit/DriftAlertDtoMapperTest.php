@@ -4,14 +4,9 @@ declare(strict_types=1);
 
 use Modules\DriftAlerts\Internal\Mapping\DriftAlertDtoMapper;
 
-/*
- * Defensive guards on DriftAlertDtoMapper::hydrate. The mapper turns a
- * raw `drift_alerts` row (stdClass) into a DriftAlertDto. The schema
- * guarantees `detected_at` is non-null on every persisted row, but a
- * corrupted source row must raise a typed exception with the row id
- * rather than fall through to a bare CarbonImmutable::parse('')
- * InvalidFormatException.
- */
+// The schema guarantees detected_at is non-null, so these rows can only come
+// from corruption; the mapper must name the row id rather than let
+// CarbonImmutable::parse('') raise an anonymous InvalidFormatException.
 
 function damtRow(array $overrides = []): stdClass
 {

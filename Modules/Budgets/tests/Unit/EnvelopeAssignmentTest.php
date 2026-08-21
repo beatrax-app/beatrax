@@ -13,13 +13,6 @@ use Modules\Ledger\Public\Services\PeriodQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * Wave 0 RED stub for Req 1 (13.2-VALIDATION.md): month-keyed assignment
- * lifecycle (upsert / tombstone-on-zero / cross-user IDOR). EnvelopeWriter
- * (Plan 04) and EnvelopeAssignment (Plan 02) do not exist yet -- expected to
- * fail on the missing class, never a parse error.
- */
-
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'assignment-'.bin2hex(random_bytes(4)),
@@ -34,7 +27,7 @@ beforeEach(function (): void {
     $this->periodB = app(PeriodQuery::class)->next($this->periodA);
 });
 
-it('stores a different assigned amount for the same category in two different months (Req 1)', function (): void {
+it('stores a different assigned amount for the same category in two different months', function (): void {
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->periodA->start, 20000);
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->periodB->start, 30000);
 
@@ -60,13 +53,13 @@ it('upserts rather than duplicating when the same (category, period) is set twic
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->periodA->start, 25000);
     $secondId = EnvelopeAssignment::query()->where('category_id', $this->groceries->id)->sole()->id;
 
-    // PK preservation (STATE.md 13.1 lesson) -- editing must never delete-and-reinsert,
-    // or per-(table,pk,field) LWW convergence breaks.
+    // Editing must never delete-and-reinsert: per-(table, pk, field) LWW sync
+    // convergence depends on the primary key surviving.
     expect($secondId)->toBe($firstId);
     $this->assertDatabaseHas('envelope_assignments', ['id' => $firstId, 'assigned_minor' => 25000]);
 });
 
-it('tombstones the row when assigned is set back to zero (D-06 absence == 0), not a stored zero row', function (): void {
+it('tombstones the row when assigned is set back to zero (absence == 0), not a stored zero row', function (): void {
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->periodA->start, 20000);
     $this->assertDatabaseHas('envelope_assignments', ['category_id' => $this->groceries->id]);
 
@@ -85,7 +78,7 @@ it('rejects a category the user does not own and that is not global (IDOR)', fun
     $this->assertDatabaseMissing('envelope_assignments', ['category_id' => $foreign->id]);
 });
 
-it('stores period_start as a bare Y-m-d (no 00:00:00 trap) even when written through the model (WR-05)', function (): void {
+it('stores period_start as a bare Y-m-d (no 00:00:00 trap) even when written through the model', function (): void {
     // Writing through the Eloquent model (a factory, a future call site) must
     // agree with EnvelopeWriter's raw storage format, or the fold's exact
     // string match silently zeroes the envelope.
@@ -97,29 +90,26 @@ it('stores period_start as a bare Y-m-d (no 00:00:00 trap) even when written thr
         'currency' => 'EUR',
     ]);
 
-    // Stored value is a plain date string — the raw DB read carries no time.
     $raw = DB::table('envelope_assignments')
         ->where('id', $assignment->id)
         ->value('period_start');
     expect($raw)->toBe($this->periodA->start->toDateString());
 
-    // The fold's exact-equality predicate matches it.
     $this->assertDatabaseHas('envelope_assignments', [
         'id' => $assignment->id,
         'period_start' => $this->periodA->start->toDateString(),
     ]);
 
-    // ...and it still reads back as a CarbonImmutable date accessor.
     expect($assignment->fresh()?->period_start)->toBeInstanceOf(CarbonImmutable::class);
 });
 
-it('never treats category_budgets as an authoritative write target for envelope assignment (Req 1)', function (): void {
+it('never treats category_budgets as an authoritative write target for envelope assignment', function (): void {
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->periodA->start, 20000);
 
     $this->assertDatabaseMissing('category_budgets', ['category_id' => $this->groceries->id]);
 });
 
-it('stores period_start written as a CarbonImmutable instance as a bare Y-m-d string (WR-05)', function (): void {
+it('stores period_start written as a CarbonImmutable instance as a bare Y-m-d string', function (): void {
     $assignment = EnvelopeAssignment::create([
         'user_id' => $this->user->id,
         'category_id' => $this->groceries->id,

@@ -56,10 +56,9 @@ final class FingerprintStage
         $existingRef = is_string($existing->source_ref) ? $existing->source_ref : null;
         $incomingRef = $tx->sourceRef;
 
-        // Statement-vs-statement collisions drop as duplicates without
-        // upgrading source_ref; enrichment applies only when one side is a
-        // receipt format and the incoming ref both exists and outranks the
-        // stored one.
+        // Two statements colliding drop as duplicates with no source_ref
+        // upgrade. Enrichment needs a receipt on one side and an incoming
+        // ref that both exists and outranks the stored one.
         $oneSideReceipt = $this->ranker->isReceiptFormat($tx->sourceFormat)
             || $this->ranker->isReceiptFormat($existingFormat);
 
@@ -91,8 +90,8 @@ final class FingerprintStage
         );
     }
 
-    // Decrypts the stored ciphertext before comparing so a re-encrypted
-    // but semantically-identical value is never flagged as a conflict.
+    // Compared as plaintext: re-encrypting the same value yields different
+    // ciphertext, which would read as a conflict.
     /**
      * @return array<string, array{stored: mixed, incoming: mixed}>
      */

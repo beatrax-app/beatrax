@@ -9,25 +9,22 @@ use Generator;
 use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Migration\Internal\Contracts\ParsesMigrationSource;
+use Modules\Migration\Internal\Dto\MigrationAccountDto;
+use Modules\Migration\Internal\Dto\MigrationBatch;
+use Modules\Migration\Internal\Dto\MigrationBudgetAssignmentDto;
+use Modules\Migration\Internal\Dto\MigrationCategoryDto;
+use Modules\Migration\Internal\Dto\MigrationGoalDto;
+use Modules\Migration\Internal\Dto\MigrationPayeeDto;
+use Modules\Migration\Internal\Dto\MigrationScheduleDto;
+use Modules\Migration\Internal\Dto\MigrationTransactionDto;
+use Modules\Migration\Internal\Dto\UnmappedItemDto;
+use Modules\Migration\Internal\Enums\MigrationSourceProduct;
+use Modules\Migration\Internal\Exceptions\UnrecognizedMigrationFileException;
 use Modules\Migration\Internal\Parsers\Support\ActualGoalDefInterpreter;
 use Modules\Migration\Internal\Services\ActualSqliteReader;
-use Modules\Migration\Public\Contracts\ParsesMigrationSource;
-use Modules\Migration\Public\Dto\MigrationAccountDto;
-use Modules\Migration\Public\Dto\MigrationBatch;
-use Modules\Migration\Public\Dto\MigrationBudgetAssignmentDto;
-use Modules\Migration\Public\Dto\MigrationCategoryDto;
-use Modules\Migration\Public\Dto\MigrationGoalDto;
-use Modules\Migration\Public\Dto\MigrationPayeeDto;
-use Modules\Migration\Public\Dto\MigrationScheduleDto;
-use Modules\Migration\Public\Dto\MigrationTransactionDto;
-use Modules\Migration\Public\Dto\UnmappedItemDto;
-use Modules\Migration\Public\Enums\MigrationSourceProduct;
-use Modules\Migration\Public\Exceptions\UnrecognizedMigrationFileException;
 use PDOException;
 
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 final class ActualParser implements ParsesMigrationSource
 {
     public function __construct(
@@ -173,10 +170,6 @@ final class ActualParser implements ParsesMigrationSource
         /** @var Collection<int, MigrationCategoryDto> $categories */
         $categories = new Collection;
 
-        // Materializes each Category Group as a real parent Category BEFORE
-        // any of its member categories (promoteCategories() processes staged
-        // rows in insertion order) — Actual's group id is a stable UUID,
-        // reused verbatim as the parent's sourceExternalId.
         foreach ($reader->categoryGroups() as $group) {
             $categories->push(new MigrationCategoryDto(
                 sourceExternalId: $group['id'],
@@ -279,10 +272,6 @@ final class ActualParser implements ParsesMigrationSource
      */
     private function buildTransactionsGenerator(array $rows, string $currency, array $payeeIsTransfer): Generator
     {
-        // Groups is_child rows under their is_parent sibling (Actual's
-        // explicit parent/child columns) and yields each non-child row
-        // lazily — this method's own return value is the genuine Generator
-        // the caller streams, never iterator_to_array()'d by this parser.
         /** @var array<string, list<int>> $childrenByParent */
         $childrenByParent = [];
         foreach ($rows as $i => $row) {

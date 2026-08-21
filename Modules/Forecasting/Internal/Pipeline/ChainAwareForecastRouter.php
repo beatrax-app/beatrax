@@ -10,9 +10,6 @@ use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final readonly class ChainAwareForecastRouter
 {
     public function __construct(
@@ -27,18 +24,11 @@ final readonly class ChainAwareForecastRouter
      */
     public function route(array $contributions, User $user, bool $viewByFunder = false): array
     {
-        // Step 1 — rewrite per-occurrence contributions onto the funder
-        // account when the series has a confirmed-or-deterministic chain
-        // link. Memoise the per-series lookup so a series with N
-        // contributions only triggers one DB read.
+        // Memoised so a series with N contributions costs one DB read.
         /** @var array<int, int|null> $funderBySeries — null marks "no chain". */
         $funderBySeries = [];
 
         $routed = [];
-        // Set of seriesId values rewritten onto a funder account below;
-        // the dedup step scopes to these so a recurring series with no
-        // chain link that happens to land on the settlement date is
-        // preserved rather than deduplicated away.
         /** @var array<int, true> $chainRoutedSeriesIds */
         $chainRoutedSeriesIds = [];
         foreach ($contributions as $contribution) {
@@ -67,8 +57,7 @@ final readonly class ChainAwareForecastRouter
             );
         }
 
-        // Step 2/3 — synthesise the next ICS bulk-iDEAL settlement onto
-        // the ASN funder account (the DTO's `accountId` is the funder).
+        // The settlement DTO's accountId is the funder, not the card account.
         $routed = $this->appendSettlement($routed, $user, $chainRoutedSeriesIds);
 
         if ($viewByFunder) {
@@ -93,8 +82,7 @@ final readonly class ChainAwareForecastRouter
         $now = $this->clock->now()->startOfDay();
         $dueDate = CarbonImmutable::parse($nextSettlement->dueDate->toIso8601String())->startOfDay();
 
-        // Drop on the floor when the settlement is in the past — the
-        // projection horizon only extends forward.
+        // The projection horizon only extends forward.
         if ($dueDate->lessThan($now)) {
             return $routed;
         }
@@ -121,10 +109,8 @@ final readonly class ChainAwareForecastRouter
      */
     private function dedupForSettlement(array $routed, ForecastContribution $synth, array $chainRoutedSeriesIds): array
     {
-        // Scoped dedup: drop ONLY the contributions chain-routed onto the
-        // funder above that now collide with the synthesised settlement's
-        // (account, date) tuple. Any OTHER contribution sharing that tuple
-        // survives untouched.
+        // Scoped to the chain-routed ids so an unchained series that merely
+        // happens to land on the settlement date is not deduplicated away.
         $dueKey = $synth->accountId.'|'.$synth->date->toDateString();
         $dedup = [];
         foreach ($routed as $c) {
@@ -139,10 +125,8 @@ final readonly class ChainAwareForecastRouter
         return $dedup;
     }
 
-    // Assumes contributions sharing a (accountId, date) tuple are already
-    // in the funder account's default currency; no conversion happens
-    // here, that stays at the daily-fold boundary. `fxRateUsed`/`seriesId`
-    // are set to null/0 on the merged entry to mark it as an aggregate.
+    // Assumes contributions sharing an (accountId, date) tuple are already in
+    // the funder's default currency; conversion stays at the daily-fold.
     /**
      * @param  list<ForecastContribution>  $contributions
      * @return list<ForecastContribution>
@@ -201,10 +185,8 @@ final readonly class ChainAwareForecastRouter
 
         $links = $this->chainQuery->confirmedAndDeterministicForSeries($seriesId, $user);
 
-        // Prefer the most-recently-confirmed link: the dataset is already
-        // user-scoped + state/resolver-filtered, so the first returned row
-        // is the canonical funder. No links means the series has no chain,
-        // memoised as null.
+        // The query is already user-scoped and state-filtered, so the first row
+        // is the canonical funder.
         $cache[$seriesId] = $links === [] ? null : $links[0]->funderAccountId;
 
         return $cache[$seriesId];

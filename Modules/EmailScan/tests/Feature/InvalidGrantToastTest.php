@@ -5,20 +5,9 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
-use Modules\Core\Internal\Http\Livewire\Dashboard;
 use Modules\Core\Models\User;
 use Modules\EmailScan\Internal\InboxScanStateMachine;
-
-/*
- * Reauth-detected toast invariants (UI-SPEC § Reauth-detected toast).
- *
- *  - Renders when at least one inbox is in needs_reauth state.
- *  - Dismiss writes a session-scoped timestamp; the toast hides for
- *    the rest of the session.
- *  - Once every needs_reauth inbox returns to a non-reauth state, the
- *    toast hides on the next render even without an explicit dismiss
- *    (the @if guard short-circuits on reauthInboxCount = 0).
- */
+use Modules\Shell\Internal\Http\Livewire\Dashboard;
 
 function igtUser(string $username): User
 {
@@ -69,10 +58,8 @@ it('renders the reauth toast when an inbox is in needs_reauth', function (): voi
     $this->actingAs($user);
     igtSeedReauthInbox($user);
 
-    // assertSee defaults to escape=true which HTML-encodes the apostrophe
-    // ("can't" → "can&#039;t"); pass escape=false to compare against the
-    // literal source string. (Livewire test rig strips initial-data JSON
-    // and matches against the rendered fragment.)
+    // escape: false because the default HTML-encodes the apostrophe
+    // ("can't" → "can&#039;t") and the copy would never match.
     Livewire::test(Dashboard::class)
         ->assertSee('An inbox needs reconnecting.')
         ->assertSee('One or more inboxes were signed out', escape: false)
@@ -99,9 +86,7 @@ it('hides the reauth toast automatically when every inbox returns to a non-reaut
     Livewire::test(Dashboard::class)
         ->assertSee('An inbox needs reconnecting.');
 
-    // Flip the inbox back to idle via the state machine (the only
-    // legal mutator of inbox_scan_state.status). The toast hides on
-    // next render even without an explicit dismiss.
+    // The state machine is the only legal mutator of the status column.
     /** @var InboxScanStateMachine $sm */
     $sm = $this->app->make(InboxScanStateMachine::class);
     $sm->applyStatus($inboxId, 'idle');
@@ -113,7 +98,6 @@ it('hides the reauth toast automatically when every inbox returns to a non-reaut
 it('does NOT render the reauth toast when no inbox is in needs_reauth', function (): void {
     $user = igtUser('clean@example.com');
     $this->actingAs($user);
-    // Seed one inbox in idle state.
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $now = CarbonImmutable::now()->toDateTimeString();

@@ -6,7 +6,6 @@ namespace Modules\Categorization\Public\Actions\Concerns;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
-use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use JsonException;
@@ -19,23 +18,14 @@ use Modules\Categorization\Public\Enums\RuleCombinator;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
 
-/**
- * @link ../../../../../.docs/features/categorization/architecture.md
- */
 trait NormalisesRuleInput
 {
     // The one vocabulary that is not an enum: `field` names a transaction
     // attribute, not a closed rule-domain concept, so it stays a plain list.
     private const VALID_CONDITION_FIELDS = ['merchant', 'description', 'counterparty'];
 
-    // Rejects a caller that skips the Euro-decimal -> minor-unit scaling
-    // RuleFormModal::conditionPayload() normally performs, instead of
-    // silently truncating a raw decimal Euro string at match time.
     private const AMOUNT_VALUE_PATTERN = '/^-?\d+$/';
 
-    // Validates the combinator and rejects an empty rule, then normalises every
-    // condition and action element-by-element. Conditions carry a nullable id
-    // (present only on an existing row an update re-targets; create ignores it).
     /**
      * @return array{conditions: list<array{id: ?int, field: string, op: string, value_type: string, value: string, value2: ?string}>, actions: list<array{id: ?int, position: int, type: string, payload: array<string, mixed>}>}
      */
@@ -148,8 +138,8 @@ trait NormalisesRuleInput
         return is_numeric($value) ? (int) $value : null;
     }
 
-    // A blank value2 collapses to null so an absent upper bound and an empty
-    // one are the same thing — a `between` op without it is rejected upstream.
+    // A blank value2 collapses to null; a `between` op missing it is rejected
+    // upstream rather than here.
     /**
      * @param  array<string, mixed>  $condition
      */
@@ -164,9 +154,9 @@ trait NormalisesRuleInput
         return $trimmed === '' ? null : $trimmed;
     }
 
-    // Both bounds must already be integer minor-unit strings — the caller is
-    // responsible for the Euro-decimal -> minor-unit scaling, so a raw decimal
-    // Euro string is rejected here rather than silently truncated at match time.
+    // The Euro-decimal -> minor-unit scaling is the caller's job (see
+    // MapsRuleRows::conditionPayload), so a raw decimal Euro string is rejected
+    // here rather than silently truncated at match time.
     private static function assertAmountMinorUnits(string $value, ?string $value2): void
     {
         if (preg_match(self::AMOUNT_VALUE_PATTERN, $value) !== 1) {
@@ -216,8 +206,6 @@ trait NormalisesRuleInput
         ];
     }
 
-    // Discards the value entirely (empty array) unless it already is a
-    // string-keyed array — never partially trusts a mixed-keyed array.
     /**
      * @return array<string, mixed>
      */
@@ -316,33 +304,15 @@ trait NormalisesRuleInput
         }
     }
 
-    // User-facing copy for the unique-rule collision surfaced on the create/
-    // edit form (via the ValidationException 'value' key). A method, not a
-    // const, so it can read the translation seam at call time.
+    // A method, not a const, so the translation is read at call time.
     private static function duplicateMessage(): string
     {
         return Lang::get('categorization::rule_form.error_duplicate');
     }
 
-    private static function isUniqueViolation(QueryException $e): bool
-    {
-        // SQLite reports UNIQUE violations with SQLSTATE 23000 and a message
-        // containing "UNIQUE constraint failed". MySQL + Postgres also surface
-        // 23000 for unique-constraint violations.
-        $sqlState = (string) $e->getCode();
-        if ($sqlState === '23000') {
-            return true;
-        }
-        $message = $e->getMessage();
-
-        return str_contains($message, 'UNIQUE constraint failed')
-            || str_contains($message, 'Duplicate entry')
-            || str_contains($message, 'duplicate key value');
-    }
-
-    // The IDOR seam for an action payload's embedded referent id. Categories
-    // carry global (null-user_id) rows a user may reference; counterparties and
-    // deduction categories are user-scoped only, so $allowGlobal draws the line.
+    // Categories carry global (null-user_id) rows a user may reference;
+    // counterparties and deduction categories are user-scoped only, so
+    // $allowGlobal is where the IDOR line falls.
     private static function assertReferentVisible(
         DatabaseManager $db,
         string $table,

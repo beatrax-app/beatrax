@@ -12,7 +12,6 @@ use Livewire\LivewireManager;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Notifications\Internal\Http\Livewire\NotificationsPage;
-use Modules\Notifications\Internal\Http\Livewire\NotificationsSettingsSection;
 use Modules\Notifications\Internal\StateMachines\NotificationStateMachine;
 use Modules\Notifications\Internal\Support\DeepLinkResolver;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
@@ -21,13 +20,11 @@ use Modules\Notifications\Internal\Support\NotificationWriter;
 use Modules\Notifications\Public\Actions\DismissNotification;
 use Modules\Notifications\Public\Actions\MarkNotificationRead;
 use Modules\Notifications\Public\Actions\UndoDismissNotification;
+use Modules\Notifications\Public\Http\Livewire\NotificationsSettingsSection;
 use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
 use Modules\Notifications\Public\Services\NotificationQuery;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
-/**
- * @link ../../../.docs/features/notifications/architecture.md
- */
 final class NotificationsServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
@@ -81,8 +78,6 @@ final class NotificationsServiceProvider extends ServiceProvider
         $this->app->singleton(DismissNotification::class);
         $this->app->singleton(UndoDismissNotification::class);
 
-        // The /notifications inbox's render-time deep-link existence
-        // check.
         $this->app->singleton(DeepLinkResolver::class);
     }
 
@@ -98,10 +93,8 @@ final class NotificationsServiceProvider extends ServiceProvider
         $this->registerTriggerListeners($events);
     }
 
-    // Injects the unread count into the sidebar nav as
-    // navCounts['notifications'] via the View Factory contract. A
-    // boot-scoped per-user memo array collapses repeated renders to one
-    // COUNT query; the unauthenticated branch zeroes the count first.
+    // A boot-scoped per-user memo collapses repeated renders down to one
+    // COUNT query.
     private function registerNavBadgeComposer(): void
     {
         $app = $this->app;
@@ -110,7 +103,7 @@ final class NotificationsServiceProvider extends ServiceProvider
         /** @var array<int, int> $cache */
         $cache = [];
 
-        $factory->composer('core::livewire.app-sidebar', static function (View $compose) use ($app, &$cache): void {
+        $factory->composer('shell::livewire.app-sidebar', static function (View $compose) use ($app, &$cache): void {
             $currentUser = $app->make(CurrentUser::class);
 
             /** @var array<string, int> $navCounts */
@@ -135,9 +128,8 @@ final class NotificationsServiceProvider extends ServiceProvider
         });
     }
 
-    // Not every listener class or trigger event class necessarily
-    // exists yet - an unguarded reference would fatal the boot, so every
-    // pair is checked with class_exists() before Dispatcher::listen() runs.
+    // A listener or trigger event class may be absent, and an unguarded
+    // reference would fatal the boot.
     private function registerTriggerListeners(Dispatcher $events): void
     {
         foreach (self::triggerBindings() as [$event, $listener]) {

@@ -8,26 +8,12 @@ use Illuminate\Database\QueryException;
 use Modules\Ledger\Models\Currency;
 use Tests\TestCase as RootTestCase;
 
-/**
- * Core module-local TestCase. Extends the root TestCase; module-specific
- * test bootstrap (factories, container bindings) attach here when needed.
- */
 abstract class TestCase extends RootTestCase
 {
-    /**
-     * Seed the global ISO-4217 currency reference rows that Core feature
-     * tests require. The SettingsPage validates `baseCurrency` against
-     * `exists:currencies,code`; without at least EUR present, every
-     * `save()` call in a test that has not explicitly seeded currencies
-     * fails validation. Currencies are a global reference table (not
-     * per-user data) and are always present in production — this setUp()
-     * mirrors that invariant for the test harness.
-     *
-     * The currencies table only exists when migrations have run (Feature
-     * tests with RefreshDatabase). Unit tests skip this seeding — the
-     * try-catch around the QueryException avoids a "no such table" crash in
-     * non-migrated test harnesses.
-     */
+    // Any form validating a currency against `exists:currencies,code` fails in
+    // an unseeded test, so the three the fixtures use are always present. The
+    // table only exists once migrations have run, hence the QueryException
+    // catch for Unit tests.
     protected function setUp(): void
     {
         parent::setUp();
@@ -46,7 +32,7 @@ abstract class TestCase extends RootTestCase
                 ['name' => 'Pound Sterling', 'minor_unit' => 2],
             );
         } catch (QueryException) {
-            // currencies table does not exist (Unit tests without RefreshDatabase) — skip.
+            // No currencies table (Unit tests without RefreshDatabase).
         }
     }
 }

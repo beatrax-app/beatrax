@@ -10,16 +10,6 @@ use Modules\Auth\Public\Actions\RegenerateRecoveryCodesAction;
 use Modules\Core\Models\User;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/*
- * Feature coverage for the owner-resets-partner surface: the
- * RegenerateRecoveryCodesAction (invalidate-then-reissue) and the
- * developer-gated /settings/users/{username} manage page that lets the
- * owner set a new partner password and regenerate the partner's codes.
- */
-
-/**
- * Creates a developer (owner) user.
- */
 function manageOwner(): User
 {
     return User::query()->create([
@@ -30,9 +20,6 @@ function manageOwner(): User
     ]);
 }
 
-/**
- * Creates a non-developer partner user.
- */
 function managePartner(): User
 {
     return User::query()->create([
@@ -47,7 +34,6 @@ it('regenerates partner codes: stamps old unused codes used and inserts ten fres
     $owner = manageOwner();
     $partner = managePartner();
 
-    // Seed ten unused codes for the partner.
     for ($i = 0; $i < 10; $i++) {
         UserRecoveryCode::query()->create([
             'user_id' => $partner->id,
@@ -146,9 +132,8 @@ it('regenerates the partner codes from the manage page and displays them inline'
     $codes = $component->get('regeneratedCodes');
     expect($codes)->toHaveCount(10);
 
-    // The acting user is the owner; the partner's codes fall outside the
-    // BelongsToUser global scope, so the assertion drops the scope to
-    // read the partner's rows directly.
+    // The acting user is the owner, so the partner's codes fall outside the
+    // BelongsToUser global scope and the assertion has to drop it.
     $unused = UserRecoveryCode::withoutGlobalScopes()
         ->where('user_id', $partner->id)
         ->whereNull('used_at')

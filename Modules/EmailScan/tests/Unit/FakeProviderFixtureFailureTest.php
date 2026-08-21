@@ -7,15 +7,9 @@ use Modules\EmailScan\Internal\Clients\FakeGmailApiClient;
 use Modules\EmailScan\Internal\Clients\FakeGraphApiClient;
 use Modules\EmailScan\Internal\Clients\FixtureUnusableException;
 
-/*
- * What the fake provider clients do when the bundled fixtures are not there.
- *
- * These clients back demo mode, so a missing fixture is a packaging fault
- * rather than anything about a user's mailbox — no live provider is involved
- * and no retry helps. Worth separating from the real clients' failures for
- * exactly that reason: a demo that cannot find its own .eml must not read as
- * a provider outage in the logs.
- */
+// These clients back demo mode, so a missing fixture is a packaging fault: no
+// live provider is involved and no retry helps. A demo that cannot find its
+// own .eml must not read as a provider outage in the logs.
 
 it('says the fixture root is missing rather than reporting a provider problem', function (): void {
     $client = new FakeGraphApiClient(new Filesystem, '/nonexistent/fixture/root');
@@ -37,12 +31,6 @@ it('names the slug it has no .eml for', function (): void {
 it('reports a fixture fault as a type distinct from a provider transport failure', function (): void {
     expect(is_subclass_of(FixtureUnusableException::class, RuntimeException::class))->toBeTrue();
 });
-
-/*
- * The Gmail fake reads its raw messages from a per-slug fixture file, so both
- * of its failures are about that file rather than about a mailbox: the field
- * is absent, or the payload under it is not the base64url Gmail would send.
- */
 
 function fakeGmailFixtureRoot(array $files): string
 {

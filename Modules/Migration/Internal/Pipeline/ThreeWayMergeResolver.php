@@ -4,20 +4,16 @@ declare(strict_types=1);
 
 namespace Modules\Migration\Internal\Pipeline;
 
-use Brick\Money\Exception\MoneyMismatchException;
-use Brick\Money\Money;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
-use Modules\Migration\Public\Dto\ConflictDto;
-use Modules\Migration\Public\Enums\MigrationEntityType;
+use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Migration\Internal\Dto\ConflictDto;
+use Modules\Migration\Internal\Enums\MigrationEntityType;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 final class ThreeWayMergeResolver
 {
     use CoercesScalars;
@@ -81,8 +77,8 @@ final class ThreeWayMergeResolver
                 continue;
             }
 
-            // Fresh read of the CURRENT beatrax value (absence == 0, mirroring
-            // PromoteStagingToDomain's own zero-minor convention).
+            // Absence == 0, mirroring PromoteStagingToDomain's zero-minor
+            // convention: a deleted assignment is "assigned nothing", not "unknown".
             $currentValue = $connection->table('envelope_assignments')
                 ->where('user_id', $user->id)
                 ->where('category_id', $categoryId)
@@ -260,9 +256,8 @@ final class ThreeWayMergeResolver
             $transactionId = self::toInt($map->beatrax_id);
             $sNew = $row->description !== null ? self::toString($row->description) : '';
             $currentRaw = $connection->table('transactions')->where('id', $transactionId)->where('user_id', $user->id)->value('description');
-            // Decrypt-before-compare: the LIVE value is ciphertext under an
-            // encrypted user, so comparing it raw against the plaintext
-            // $baseline would register a spurious conflict on every re-run.
+            // The live value is ciphertext for an encrypted user; comparing it
+            // raw against the plaintext baseline conflicts on every re-run.
             $current = is_string($currentRaw)
                 ? $this->codec->decryptValue('transactions', 'description', $currentRaw, $user->id, ($this->session)())['value']
                 : self::toString($currentRaw);
@@ -342,9 +337,8 @@ final class ThreeWayMergeResolver
                 continue;
             }
 
-            // The baseline leg is tagged with the currency the LIVE
-            // transaction is recorded under, not $sourceCurrency, which
-            // otherwise made moneyEquals() spuriously flag a conflict.
+            // Both legs carry the LIVE currency, not $sourceCurrency: a
+            // mismatched pair makes moneyEquals() report a false conflict.
             if (self::moneyEquals($currentMinor, $currentCurrency, $baselineMinor, $currentCurrency)) {
                 $applies[] = [
                     'entityType' => MigrationEntityType::Transaction->value,
@@ -399,10 +393,6 @@ final class ThreeWayMergeResolver
 
     private static function moneyEquals(int $aMinor, string $aCurrency, int $bMinor, string $bCurrency): bool
     {
-        try {
-            return Money::ofMinor($aMinor, $aCurrency)->isEqualTo(Money::ofMinor($bMinor, $bCurrency));
-        } catch (MoneyMismatchException) {
-            return false;
-        }
+        return Money::ofMinor($aMinor, $aCurrency)->equals(Money::ofMinor($bMinor, $bCurrency));
     }
 }

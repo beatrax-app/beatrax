@@ -10,6 +10,7 @@ return [
         'reprojecting' => 'Bygger om din historik…',
         'retrying' => 'Återansluter till den andra enheten…',
         'locked' => 'Lås upp appen för att fortsätta konfigurationen.',
+        'revoked' => 'Den här enheten har tagits bort från din andra enhet. Parkoppla igen för att fortsätta synkronisera.',
     ],
     'step' => [
         'connect' => 'Ansluter till din andra enhet',

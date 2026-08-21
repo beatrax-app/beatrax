@@ -1,5 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
-{{-- Chain drill-down drawer (UI-02 / CHN-04, D-90 / D-91 / D-92 / D-93).
+{{-- Chain drill-down drawer.
 
      Project's first Flux flyout. The Livewire SFC dispatches
      `chain-drawer:open` (from the TransactionDetail "View chain"
@@ -8,14 +8,14 @@
 
      The view receives:
        - $tree: ?ChainTree   (null = pre-mount / not yet resolved)
-       - $fanoutPage: int    (explicit context — issue #13 fix; the
+       - $fanoutPage: int    (explicit context; the
                               child partial declares matching @props
                               so the binding contract is visible at
                               both ends).
 
      The sticky header carries `sticky top-0 bg-white z-10` per
      UI-SPEC § Interaction Contracts; the drawer body itself never
-     scrolls (D-93). Long ICS bulk-settle fan-outs paginate INSIDE
+     scrolls. Long ICS bulk-settle fan-outs paginate INSIDE
      each fan-out container via the "Show 10 more · X of N" affordance
      rendered in the chain-node partial. --}}
 
@@ -42,19 +42,19 @@
         </flux:heading>
 
         @if ($tree === null)
-            <div class="px-6 pt-md">
-                <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('chains::drawer.unresolved_heading') }}</h3>
-                <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                    {{ Lang::get('chains::drawer.unresolved_body') }}
-                </p>
-            </div>
+            <x-core::empty-state
+                level="h3"
+                class="mx-6 mt-md"
+                :heading="Lang::get('chains::drawer.unresolved_heading')"
+                :body="Lang::get('chains::drawer.unresolved_body')"
+            />
         @elseif (count($tree->nodes) === 0)
-            <div class="px-6 pt-md">
-                <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('chains::drawer.none_heading') }}</h3>
-                <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                    {{ Lang::get('chains::drawer.none_body') }}
-                </p>
-            </div>
+            <x-core::empty-state
+                level="h3"
+                class="mx-6 mt-md"
+                :heading="Lang::get('chains::drawer.none_heading')"
+                :body="Lang::get('chains::drawer.none_body')"
+            />
         @elseif (count($tree->nodes) === 1)
             {{-- Only the root node walked back — no funder leg followed. --}}
             {{-- overflow-x-scroll-wrapper ensures chain-node inner content scrolls horizontally at phone width --}}
@@ -68,11 +68,10 @@
             {{-- overflow-x-scroll-wrapper ensures multi-leg chain content scrolls horizontally at phone width --}}
             <div class="overflow-x-scroll-wrapper px-6 py-md space-y-md" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
                 @foreach ($tree->nodes as $node)
-                    {{-- Issue #13 fix: pass $fanoutPage explicitly to the
-                         partial. The partial declares
-                         @props(['node', 'fanoutPage']) at its top so the
-                         binding contract is portable and obvious — no
-                         implicit parent-scope inheritance. --}}
+                    {{-- $fanoutPage is passed explicitly: the partial
+                         declares @props(['node', 'fanoutPage']) at its
+                         top so the binding contract is portable and
+                         obvious — no implicit parent-scope inheritance. --}}
                     @include('chains::livewire.partials.chain-node', ['node' => $node, 'fanoutPage' => $fanoutPage])
                 @endforeach
             </div>

@@ -15,23 +15,23 @@ use Modules\Auth\Public\Actions\SignupAction;
 use Modules\Auth\Public\Recovery\RecoveryCodeFormatter;
 use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\ValidationMessages;
 use Modules\Mobile\Internal\Identity\MobileProvisioningCredentials;
+use Modules\Mobile\Internal\Identity\RecoveryCodesExportBridge;
 use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
 use Modules\Sync\Public\Services\PairingGateway;
 use Throwable;
 
-/**
- * @link ../../../../../.docs/features/mobile/architecture.md
- */
 final class MobileImportBootstrap extends Component
 {
+    use HoldsFlashMessage;
+
     private const RECOVERY_CODES_SESSION_KEY = 'auth.signup.recovery_codes_plain';
 
-    // Session key the originally submitted PIN/password are stashed
-    // under for the lifetime of the provisioning_failed retry window -
-    // server-side only, never sent to the client. Forgotten the moment
-    // provisionDeviceLocally() actually succeeds.
+    // Server-side only, for the lifetime of the provisioning_failed retry
+    // window, and forgotten the moment provisioning succeeds.
     private const PENDING_CREDENTIALS_SESSION_KEY = 'mobile.import.pending_credentials';
 
     private const MINIMUM_PASSWORD_LENGTH = 12;
@@ -42,10 +42,9 @@ final class MobileImportBootstrap extends Component
     // an offer the user cannot take, so the view points at pairing instead.
     public bool $alreadyProvisioned = false;
 
-    // Resumes the ceremony instead of restarting it. The step is a public
-    // property, so any fresh mount — a back navigation, or the reload that
-    // follows an expired page — dropped an already-registered user back on
-    // the signup form with no way forward.
+    // `step` is a public property, so any fresh mount — a back navigation, or
+    // the reload after an expired page — dropped an already-registered user
+    // back on the signup form with no way forward.
     public function mount(CurrentUser $currentUser, Session $session): void
     {
         if (! $currentUser->isAuthenticated()) {
@@ -60,9 +59,9 @@ final class MobileImportBootstrap extends Component
             return;
         }
 
-        // Otherwise the account exists. Flag it rather than redirecting: a
-        // failed provisioning leaves an authenticated user with no codes too,
-        // and that retry screen must stay reachable.
+        // Flagged rather than redirected: a failed provisioning also leaves an
+        // authenticated user with no codes, and its retry screen must stay
+        // reachable.
         $this->alreadyProvisioned = true;
     }
 
@@ -76,11 +75,6 @@ final class MobileImportBootstrap extends Component
 
     public string $confirmPin = '';
 
-    public string $flashMessage = '';
-
-    // Collects the first-user credentials + PIN, provisions the account
-    // + app-lock + sync identity (no epoch mint), and advances to the
-    // recovery-codes ceremony.
     public function submit(
         SignupAction $signup,
         MobileLockGateway $lockGateway,
@@ -104,22 +98,20 @@ final class MobileImportBootstrap extends Component
         }
 
         try {
-            // This screen exists to JOIN a desktop's account: its starter
-            // rules arrive over sync, and seeding a local set first would
-            // collide id-for-id with the ones about to be delivered.
+            // This screen JOINS a desktop's account: its starter rules arrive
+            // over sync, and a local set would collide id-for-id with them.
             $userId = $signup->__invoke($this->username, $this->password, seedsStarterData: false)['user']->id;
         } catch (ValidationException $e) {
-            $this->flashMessage = self::firstErrorMessage($e);
+            $this->flashMessage = ValidationMessages::first($e, 'mobile::import.errors.account_failed');
             $this->password = '';
             $this->passwordConfirmation = '';
 
             return;
         }
 
-        // The plaintext PIN/password must never linger in the component's
-        // public wire snapshot once used - a public Livewire property
-        // survives re-renders inside the serialized wire:snapshot payload
-        // sent to the browser on every subsequent request.
+        // A public Livewire property survives re-renders inside the serialized
+        // wire:snapshot sent to the browser on every subsequent request, so
+        // the plaintext PIN and password must not linger in one.
         $credentials = new MobileProvisioningCredentials($userId, $this->pin, $this->password);
         $this->pin = '';
         $this->confirmPin = '';
@@ -219,6 +211,7 @@ final class MobileImportBootstrap extends Component
         UrlGenerator $urls,
         CurrentUser $currentUser,
         RecoveryCodeFormatter $formatter,
+        RecoveryCodesExportBridge $exportBridge,
     ): View {
         // Only the recovery step has an authenticated user: every earlier step
         // renders before signup completes, so resolving the user up front
@@ -234,6 +227,11 @@ final class MobileImportBootstrap extends Component
                 ? $formatter->filenameFor($currentUser->user()->username)
                 : '',
             'pairingUrl' => $urls->route('mobile.pair', ['mode' => 'import']),
+            // The Android webview drops a blob download without a word, so on
+            // a phone the file goes out through the OS share sheet instead —
+            // and the screen only claims to have saved it when that answers.
+            'nativeExport' => $showingCodes && $exportBridge->isAvailable(),
+            'exportUrl' => $urls->route('mobile.recovery-codes.export'),
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
@@ -292,25 +290,5 @@ final class MobileImportBootstrap extends Component
         $codes = $session->get(self::RECOVERY_CODES_SESSION_KEY);
 
         return $codes ?? [];
-    }
-
-    private static function firstErrorMessage(ValidationException $exception): string
-    {
-        /** @var array<string, mixed> $errors */
-        $errors = $exception->errors();
-
-        foreach ($errors as $messages) {
-            if (! is_array($messages)) {
-                continue;
-            }
-
-            foreach ($messages as $message) {
-                if (is_string($message) && $message !== '') {
-                    return $message;
-                }
-            }
-        }
-
-        return Lang::get('mobile::import.errors.account_failed');
     }
 }

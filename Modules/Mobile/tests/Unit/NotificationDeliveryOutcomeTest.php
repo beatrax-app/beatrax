@@ -7,17 +7,10 @@ use Modules\Mobile\Internal\Listeners\DispatchMobileNotification;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 use Psr\Log\LoggerInterface;
 
-/*
- * The bridge's answer is the only evidence a notification went anywhere.
- *
- * showRaw() returns null when the native bridge function is absent, and that
- * return used to be discarded on purpose — so a notification that was never
- * delivered and one that was looked identical from PHP. On a Galaxy the row
- * was stored, the in-app list showed it, and no OS notification was ever
- * posted, with nothing in any log to say so.
- */
-
-/** Exposes the protected seam, which is all this test is about. */
+// showRaw() returns null when the native bridge function is absent, and that
+// return used to be discarded on purpose, so a notification that was never
+// delivered and one that was looked identical from PHP. On a Galaxy the row was
+// stored and the in-app list showed it while no OS notification was ever posted.
 final class OutcomeRecordingListener extends DispatchMobileNotification
 {
     public function record(string $id, mixed $result): void

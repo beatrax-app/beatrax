@@ -16,15 +16,11 @@ use Modules\Tax\Public\Services\TaxCategoryWriter;
 use Modules\Tax\Public\Services\TaxTagQuery;
 
 /**
- * @link ../../../../../../.docs/features/tax/architecture.md
+ * @link ../../../../../../.docs/features/tax/batch-tag-suggestion.md
  */
 trait HandlesTaxTagging
 {
     use DispatchesToast;
-
-    // Mirrors the Ledger-side guarded mutators (TransactionDetail) so the two
-    // cross-module lock surfaces speak with one voice; read through Lang::get
-    // (tax::messages.reconciled_lock) so it translates alongside the views.
 
     public ?int $taxPickerTxId = null;
 
@@ -32,9 +28,7 @@ trait HandlesTaxTagging
 
     public ?int $pickerCategoryId = null;
 
-    // Manual year override for this tag; null derives from booked_at.
-    // pickerBookedYear/pickerTaxYear feed the year-assignment row (rendered
-    // only when the two differ).
+    // null derives the tag's year from the transaction's booked_at.
     public ?int $pickerYearOverride = null;
 
     public ?int $pickerBookedYear = null;
@@ -45,8 +39,7 @@ trait HandlesTaxTagging
 
     public bool $pickerIsNewCatOpen = false;
 
-    // Stored as a plain string-keyed array so Livewire can dehydrate it;
-    // see the batch-suggestion snapshot contract at the @link above.
+    // A plain string-keyed array, because Livewire cannot dehydrate the DTO.
     /**
      * @var array{counterpartyId: int, counterpartyName: string, untaggedCount: int, taxYear?: int, categoryId?: int|null, note?: string|null}|null
      */
@@ -59,8 +52,7 @@ trait HandlesTaxTagging
      */
     public array $pickerCategories = [];
 
-    // Dispatched by x-tax::tax-badge when the ghost "Tag" button is
-    // clicked.
+    // Dispatched by x-tax::tax-badge's ghost "Tag" button.
     #[On('tax-tag')]
     public function tagTransaction(
         int $id,
@@ -73,9 +65,7 @@ trait HandlesTaxTagging
     ): void {
         $user = $u->user();
 
-        // Warn-first, no write — checked before writing or opening the
-        // picker so a locked row stays untouched (see the reconciled-lock
-        // note at the @link above).
+        // Ahead of both the write and the picker, so a locked row stays untouched.
         if ($status->isReconciled($user->id, $id)) {
             $this->toast(Lang::get('tax::messages.reconciled_lock'));
 
@@ -87,9 +77,8 @@ trait HandlesTaxTagging
         $this->openPickerFor($id, $c, $writer, $u, $q);
 
         if (! $this->batchSuggestionDismissed) {
-            // Keyed to the TRIGGER transaction's booked year (just resolved
-            // by openPickerFor), not the seasonal current tax year — see
-            // the year-keying note at the @link above.
+            // Keyed to the trigger row's booked year, not the seasonal current
+            // one: the banner must count and apply against the same year.
             $taxYear = $this->pickerBookedYear ?? $this->resolveCurrentTaxYear($c);
             $suggestion = $q->untaggedCountForCounterparty($user->id, $id, $taxYear);
 
@@ -106,8 +95,7 @@ trait HandlesTaxTagging
         }
     }
 
-    // Dispatched by x-tax::tax-badge when the emerald pill is
-    // clicked.
+    // Dispatched by x-tax::tax-badge's emerald pill.
     #[On('tax-edit-tag')]
     public function editTaxTag(
         int $id,
@@ -118,9 +106,8 @@ trait HandlesTaxTagging
     ): void {
         $user = $u->user();
 
-        // Open first (resets row-specific picker fields), then pre-fill
-        // from the existing tag, so a tag-lookup miss leaves clean fields
-        // rather than another row's stale values.
+        // Open (which resets the row fields) before pre-filling, so a tag-lookup
+        // miss leaves clean fields rather than another row's stale values.
         $this->openPickerFor($id, $c, $writer, $u, $q);
 
         $tags = $q->forTransactionIds($user->id, [$id]);
@@ -155,8 +142,7 @@ trait HandlesTaxTagging
             $this->pickerYearOverride,
         );
 
-        // Snapshot the saved category/note onto the pending batch suggestion
-        // before closePicker() wipes the picker state (see @link above).
+        // Snapshot the saved category and note before closePicker() wipes them.
         if ($this->batchSuggestion !== null) {
             $this->batchSuggestion['categoryId'] = $this->pickerCategoryId;
             $this->batchSuggestion['note'] = $this->pickerNote !== '' ? $this->pickerNote : null;
@@ -220,25 +206,22 @@ trait HandlesTaxTagging
 
         $user = $u->user();
         $cpId = $this->batchSuggestion['counterpartyId'];
-        // Reuse the year snapshotted when the suggestion was computed, so
-        // the banner can never apply to a different year than it counted —
-        // the seasonal year is only a fallback for a stale snapshot.
+        // The year the suggestion counted against, so the banner cannot apply to
+        // a different one. The seasonal year only covers a pre-snapshot state.
         $taxYear = $this->batchSuggestion['taxYear'] ?? $this->resolveCurrentTaxYear($c);
 
         $ids = $q->untaggedIdsForCounterparty($user->id, $cpId, $taxYear);
 
-        // Filter reconciled ids out in one query before tagging, so the
-        // banner only ever tags editable rows and the success count below
-        // honestly reflects only the rows actually written.
+        // One query, before tagging: the banner only writes editable rows and the
+        // count below only reports rows actually written.
         $reconciledIds = $status->reconciledIdsAmong($user->id, $ids);
         if ($reconciledIds !== []) {
             $ids = array_values(array_diff($ids, $reconciledIds));
         }
 
-        // Prefer the trigger-tag snapshot; fall back to the live picker
-        // state only when no snapshot was taken. array_key_exists (not ??)
-        // because a snapshotted null means "saved with no category/note,"
-        // which must not fall through to an unrelated row's picker state.
+        // array_key_exists, not ??: a snapshotted null means "saved with no
+        // category/note", and ?? would fall through to whatever picker state an
+        // unrelated row left behind.
         $categoryId = array_key_exists('categoryId', $this->batchSuggestion)
             ? $this->batchSuggestion['categoryId']
             : $this->pickerCategoryId;
@@ -261,8 +244,7 @@ trait HandlesTaxTagging
         $this->batchSuggestion = null;
         $this->batchSuggestionDismissed = true;
 
-        // If every candidate was reconciled, nothing was tagged — say so
-        // rather than claiming "Tagged 0 more transactions."
+        // Every candidate reconciled: say so, not "Tagged 0 more transactions."
         if ($count === 0) {
             $this->toast(Lang::get('tax::messages.batch_none_reconciled'));
 
@@ -326,17 +308,15 @@ trait HandlesTaxTagging
         $this->pickerIsNewCatOpen = false;
         $this->pickerInlineNewName = '';
 
-        // Reset row-specific fields so state never bleeds between rows when
-        // the picker is re-opened without an intermediate closePicker();
-        // editTaxTag() prefills these after this call.
+        // Re-opening without an intermediate closePicker() would otherwise bleed
+        // one row's state into the next. editTaxTag() prefills after this call.
         $this->pickerNote = '';
         $this->pickerCategoryId = null;
         $this->pickerYearOverride = null;
 
         $this->pickerCategories = $writer->listForUser($u->user()->id);
 
-        // Booked year + current tax year feed the year-assignment row,
-        // rendered only when the two differ.
+        // The blade renders the year-assignment row only when these two differ.
         $this->pickerTaxYear = $this->resolveCurrentTaxYear($c);
         $this->pickerBookedYear = $q->bookedYearFor($u->user()->id, $id);
     }

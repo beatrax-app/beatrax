@@ -8,15 +8,12 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Actions\SaveTransactionSplit;
 
-// Splits a couple of demo charges across categories so the split badge,
-// the expandable legs on the list surfaces, and the no-double-count
-// behaviour in category roll-ups all have something real behind them.
-// Written through the sole mutator, which enforces the sum-to-parent rule.
+// Written through the sole mutator, so the demo splits obey the same
+// sum-to-parent rule the app enforces.
 final class DemoTransactionSplitsSeeder
 {
-    // Legs are fractions of the parent's settled amount expressed in minor
-    // units, and must sum to it exactly — the mutator rejects any drift.
-    // descriptionMatch picks the parent by its seeded description.
+    // Legs are minor units of the parent's settled amount and must sum to it
+    // exactly; the mutator rejects any drift.
     /** @var list<array{descriptionMatch: string, legs: list<array{categoryPath: list<string>, minor: int, note: ?string}>}> */
     private const SPLITS = [
         [

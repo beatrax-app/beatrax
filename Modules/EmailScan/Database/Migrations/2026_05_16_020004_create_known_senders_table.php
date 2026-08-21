@@ -3,30 +3,13 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Creates the known_senders table — the curated list of sender
- * patterns the primary scan filter narrows the per-inbox fetch to.
- *
- * The `user_id` column is nullable on purpose: rows seeded by the
- * application (PayPal, ICS Cards, Google Play) carry user_id = NULL
- * and source = 'system'; users may add or promote per-account rows
- * which carry user_id = $user->id and source = 'user'. The runtime
- * query reads `WHERE user_id = $userId OR user_id IS NULL` so each
- * user sees the system seeds plus their own additions.
- *
- * The `source` column is an enum-shaped string ('system' or 'user')
- * enforced via paired BEFORE INSERT / BEFORE UPDATE triggers.
- *
- * Three system rows are inserted at the end of up() so that a clean
- * migrate:fresh always lands the canonical seed set. The seed insert
- * runs after the trigger pair is in place to confirm the trigger
- * accepts the 'system' value, exercising the schema invariant during
- * the migration itself.
- */
+// `user_id` is nullable on purpose: a NULL row is an application seed every
+// user sees, read back as `WHERE user_id = ? OR user_id IS NULL`.
+// The seeds are inserted after the trigger pair so migrating itself proves the
+// trigger accepts 'system'.
 return new class extends ModuleMigration
 {
     public function up(): void
@@ -42,14 +25,9 @@ return new class extends ModuleMigration
 
             $table->index(['user_id']);
             $table->index(['source']);
-            // UNIQUE on (user_id, email_pattern) prevents a user from
-            // promoting an already-known sender twice — the discovered-
-            // sender promotion path is idempotent at the action layer,
-            // but a future seeder or import path could trip the
-            // invariant otherwise. Note: NULL != NULL in SQL UNIQUE
-            // semantics, so the system seeds (user_id = NULL) coexist
-            // with a per-user (user_id = N, email_pattern = same) row
-            // without conflict — exactly the desired behaviour.
+            // Blocks promoting the same sender twice. NULL != NULL under SQL
+            // UNIQUE, so the system seeds (user_id = NULL) still coexist with a
+            // per-user row carrying the same pattern.
             $table->unique(['user_id', 'email_pattern']);
         });
 
@@ -69,11 +47,6 @@ return new class extends ModuleMigration
             $allowedSources,
         ));
 
-        // Canonical system seeds — the three sender patterns the
-        // primary scan filter starts with on a fresh install. Each
-        // row carries user_id = NULL so every user sees these rows in
-        // the union read; the source = 'system' marker keeps them
-        // distinguishable from per-user additions in the UI.
         $now = CarbonImmutable::now()->toDateTimeString();
         $connection->table('known_senders')->insert([
             [

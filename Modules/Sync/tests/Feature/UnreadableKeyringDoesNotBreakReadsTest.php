@@ -4,24 +4,17 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 uses(RefreshDatabase::class);
 
-/*
- * A held key that cannot open the keyring file raises
- * BackupDecryptionException, which extends RuntimeException — and
- * tryLoadKeyring() caught only LogicException, while its sibling
- * tryCurrentEpoch() already caught both. So one wrong key in the session took
- * down every screen that reads an encrypted column, including the dashboard,
- * with a raw 500 and no route back to the lock screen that would replace it.
- *
- * Reached in the wild by a biometric unlock recovering a key enrolled against
- * a different keyring; unreadable is precisely the case this method absorbs.
- */
+// A key that cannot open the keyring raises BackupDecryptionException, which
+// extends RuntimeException — and tryLoadKeyring() caught only LogicException
+// where its sibling tryCurrentEpoch() caught both. One wrong key in the session
+// then 500'd every screen reading an encrypted column, the dashboard included.
 
 it('renders an unreadable column rather than failing the whole request', function (): void {
     /** @var Session $session */
@@ -43,7 +36,7 @@ it('renders an unreadable column rather than failing the whole request', functio
 
     // Swap the session's data key for a different one, exactly as a stale
     // enrolment does: structurally valid, and it opens nothing.
-    (new LockStateManager)->unlock($session, str_repeat("\x7f", 32));
+    AppLockTestHarness::unlock($session, str_repeat("\x7f", 32));
     $this->app->forgetInstance(GdkKeyringService::class);
     $this->app->forgetInstance(SensitiveColumnCodec::class);
 

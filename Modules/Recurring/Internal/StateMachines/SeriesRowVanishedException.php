@@ -6,10 +6,8 @@ namespace Modules\Recurring\Internal\StateMachines;
 
 use RuntimeException;
 
-// Thrown when transition() holds a write lock on a row that is no longer
-// there. InvalidStateTransitionException names the other half of the pair
-// so a caller can tell the two apart; this half arrived as a bare
-// RuntimeException until now, identifiable only by its message.
+// Thrown when transition() holds a write lock on a row that has since vanished;
+// InvalidStateTransitionException is the other half of the pair.
 final class SeriesRowVanishedException extends RuntimeException
 {
     public static function forSeries(int $seriesId): self

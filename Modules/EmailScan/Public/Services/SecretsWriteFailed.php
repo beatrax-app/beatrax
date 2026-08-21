@@ -6,8 +6,6 @@ namespace Modules\EmailScan\Public\Services;
 
 use RuntimeException;
 
-// Thrown when OAuthSecretsRepository fails to write the on-disk JSON
-// file. The message never carries the JSON payload — only the
-// absolute path and a generic failure description — so credential
-// material can never leak into Laravel's exception log surface.
+// The message carries the path and nothing else: the JSON payload it failed to
+// write is credential material and must not reach the exception log.
 final class SecretsWriteFailed extends RuntimeException {}

@@ -10,6 +10,7 @@ return [
         'reprojecting' => 'Atjauno jūsu vēsturi…',
         'retrying' => 'Atkārtoti savienojas ar otru ierīci…',
         'locked' => 'Atbloķējiet lietotni, lai turpinātu iestatīšanu.',
+        'revoked' => 'Šī ierīce tika noņemta jūsu otrā ierīcē. Savienojiet pārī vēlreiz, lai turpinātu sinhronizāciju.',
     ],
     'step' => [
         'connect' => 'Savienojas ar otru ierīci',

@@ -4,18 +4,16 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Internal\Navigation;
 
-// Single source of truth for the dev-shell sidebar nav-item list. The
-// layout still gates `nav-disabled` on Router::has('dev.{slug}') at
-// render time — `enabled` is informational only, so drift between it
-// and the live router surfaces config drift rather than masking it.
+// `enabled` is informational only: the layout gates nav-disabled on
+// Router::has() at render time, so drift from this list shows up rather than
+// being masked.
 /**
  * @phpstan-type DevSidebarItem array{slug: string, label: string, icon: string, route: string, enabled: bool|string}
  */
 final class DevSidebarItems
 {
-    // `enabled`: true = route registered; false = not yet registered
-    // (placeholder); 'conditional' = enabled only when the named route
-    // resolves at render time (e.g. the require-dev-gated Horizon iframe).
+    // true = route registered; false = placeholder; 'conditional' = only when
+    // the named route resolves at render time.
     /**
      * @var list<DevSidebarItem>
      */
@@ -29,9 +27,8 @@ final class DevSidebarItems
         ['slug' => 'sql',      'label' => 'SQL',      'icon' => '⌕',  'route' => 'dev.sql', 'enabled' => true],
         ['slug' => 'horizon',  'label' => 'Horizon',  'icon' => '↗',  'route' => 'dev.horizon', 'enabled' => 'conditional'],
         ['slug' => 'system',   'label' => 'System',   'icon' => '◇',  'route' => 'dev.system', 'enabled' => true],
-        // The sync-health route lives in the Sync module; gated here via
-        // Router::has('dev.sync-health') at render time, so a build that
-        // ships without the Sync module degrades to nav-disabled.
+        // Registered by the Sync module, so a build shipped without Sync
+        // degrades to nav-disabled at render time.
         ['slug' => 'sync-health', 'label' => 'Sync Health', 'icon' => '⇄', 'route' => 'dev.sync-health', 'enabled' => true],
     ];
 

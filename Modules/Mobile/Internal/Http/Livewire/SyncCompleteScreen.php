@@ -14,9 +14,6 @@ use Modules\Mobile\Internal\Sync\InitialSyncPuller;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\RelayEndpointHost;
 
-/**
- * @link ../../../../../.docs/features/mobile/architecture.md
- */
 final class SyncCompleteScreen extends Component
 {
     public int $recordsApplied = 0;

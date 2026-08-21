@@ -19,30 +19,10 @@ use Modules\Sync\Internal\OpLog\OpType;
 
 uses(RefreshDatabase::class);
 
-/*
- * 13.1-03 Task 3 (D-09 / D-12, Req 4 / Req 10): the genuine CONCURRENT-writer
- * convergence proof that TransactionSplitMutatedTest (sequential single-device
- * edit→replay) does not cover. transaction_splits is the project's FIRST
- * editable child table — no prior sync test exercised two devices
- * field-merging the SAME logical child row.
- *
- * Scenario: one split (2 legs, stable PKs) is seeded once, so both "device A"
- * and "device B" hold IDENTICAL leg primary keys (the precondition Plan 01's
- * PK-preserving edit diff guarantees). Offline (no cross-sync yet):
- *   - device A rebalances: groceries -6000 → -5000, household -2000 → -3000
- *     (sum still -8000 — a genuine settled_amount_minor edit on BOTH legs).
- *   - device B (unaware of A's edit) tags the household leg with a note only
- *     — its own local copy still shows the ORIGINAL amounts, so its dirty
- *     diff (Task 3's Rule-1 fix in SaveTransactionSplit) shows ONLY the note
- *     as changed, not the amounts.
- *
- * Both devices' real, captured op-log entries are merged and replayed in a
- * single pass (bidirectional catch-up). After convergence: exactly 2 legs,
- * same leg PKs as the origin (no duplicate/lost/re-numbered leg), A's amount
- * edit AND B's note edit are BOTH present on the SAME household leg (proving
- * per-(table,pk,field) LWW — not whole-row-last-writer-wins), and
- * SUM(legs.settled_amount_minor) === parent.settled_amount_minor exactly.
- */
+// transaction_splits is the first editable child table, so this is the first
+// place two devices can field-merge the same logical child row. Both hold
+// identical leg PKs, edit different fields offline, and the merged replay has to
+// land both edits on the same leg — per-field LWW, not whole-row.
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-07-04 11:00:00');
@@ -80,7 +60,6 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-/** Persist a splittable parent transaction. */
 function concurrentSplitTx(int $userId, int $accountId, int $runId, int $settledMinor): Transaction
 {
     static $i = 950000;
@@ -112,11 +91,7 @@ function concurrentSplitTx(int $userId, int $accountId, int $runId, int $settled
     return $tx;
 }
 
-/**
- * Constructs a fresh OpLogWriter for the given device, binds it into the
- * container (so SyncCaptureListener's lazy resolution picks it up), and
- * returns its hex-encoded public key for the replayer's device-key map.
- */
+// Bound into the container because SyncCaptureListener resolves its writer lazily.
 function bindDeviceWriter(int $userId, string $deviceId): string
 {
     $keypair = sodium_crypto_sign_keypair();
@@ -176,9 +151,8 @@ it('two devices concurrently editing the SAME split converge under per-field LWW
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
-    // Origin device seeds the split — this is the state BOTH device A and
-    // device B are assumed to already hold identically (same leg PKs), per
-    // Plan 01's PK-preserving edit diff precondition.
+    // The origin seeds the split: the state both devices are assumed to already
+    // hold identically, down to the leg PKs.
     bindDeviceWriter((int) $this->user->id, 'device-origin');
     $tx = concurrentSplitTx((int) $this->user->id, (int) $this->account->id, (int) $this->run->id, -8000);
 
@@ -197,7 +171,6 @@ it('two devices concurrently editing the SAME split converge under per-field LWW
     $originalLegIds = [$groceriesLegId, $householdLegId];
     sort($originalLegIds);
 
-    // --- Device A (offline): rebalances both legs' amounts. ---
     $pkA = bindDeviceWriter((int) $this->user->id, 'device-a');
     $watermarkA = concurrentMaxOpLogId($db);
 
@@ -208,15 +181,13 @@ it('two devices concurrently editing the SAME split converge under per-field LWW
 
     $aOps = concurrentSplitOpsAfter($db, (int) $this->user->id, $watermarkA);
 
-    // Rule 1 fix (T-13.1-09): A never touched note/category_id/sort_order,
-    // so only the two settled_amount_minor ops must be captured.
+    // A never touched note, category_id or sort_order, so only the two
+    // settled_amount_minor ops may be captured.
     expect(collect($aOps)->pluck('field')->unique()->sort()->values()->all())->toBe(['settled_amount_minor']);
     expect(collect($aOps))->toHaveCount(2);
 
-    // Restore the live rows to their ORIGINAL (pre-A-edit) values — device B
-    // is offline and has NOT seen A's rebalance. This is scratch-state
-    // manipulation only, to correctly compute B's OWN diff below; the final
-    // converged state is entirely determined by replaying the merged ops.
+    // Back to the pre-A values: device B is offline and has not seen the
+    // rebalance, so this is only how B's own diff comes out right below.
     foreach ($originalLegs as $row) {
         $db->connection()->table('transaction_splits')->where('id', $row['id'])->update([
             'settled_amount_minor' => $row['settled_amount_minor'],
@@ -224,7 +195,6 @@ it('two devices concurrently editing the SAME split converge under per-field LWW
         ]);
     }
 
-    // --- Device B (offline, independently): notes the household leg only. ---
     $pkB = bindDeviceWriter((int) $this->user->id, 'device-b');
     $watermarkB = concurrentMaxOpLogId($db);
 
@@ -235,44 +205,37 @@ it('two devices concurrently editing the SAME split converge under per-field LWW
 
     $bOps = concurrentSplitOpsAfter($db, (int) $this->user->id, $watermarkB);
 
-    // Rule 1 fix: B never touched settled_amount_minor/category_id/sort_order
-    // — only the household leg's note.
+    // B never touched the amounts, only the household leg's note.
     expect(collect($bOps)->pluck('field')->unique()->all())->toBe(['note']);
     expect(collect($bOps))->toHaveCount(1);
     expect((int) $bOps[0]->pk)->toBe($householdLegId);
 
-    // --- Bidirectional replay: apply BOTH devices' ops in a single merge pass. ---
     $deviceKeys = ['device-a' => $pkA, 'device-b' => $pkB];
     $replayer = new OpLogReplayer($db, $deviceKeys, new MergeRulesRegistry);
     $replayer->replay([...$aOps, ...$bOps], (int) $this->user->id);
 
-    // Exactly 2 legs — no duplicate, no lost leg.
     $converged = $db->connection()->table('transaction_splits')->where('transaction_id', $tx->id)->get();
     expect($converged)->toHaveCount(2);
 
-    // Same leg PKs as the origin — no re-numbering.
     $convergedIds = $converged->pluck('id')->map(static fn (mixed $id): int => (int) $id)->sort()->values()->all();
     expect($convergedIds)->toBe($originalLegIds);
 
     $groceriesAfter = $converged->first(fn (object $row): bool => (int) $row->id === $groceriesLegId);
     $householdAfter = $converged->first(fn (object $row): bool => (int) $row->id === $householdLegId);
 
-    // A's amount edit survives on BOTH legs.
     expect((int) $groceriesAfter->settled_amount_minor)->toBe(-5000);
     expect((int) $householdAfter->settled_amount_minor)->toBe(-3000);
 
-    // B's note edit survives on the SAME household leg — proving per-field
-    // (not per-row) merge: A's amount write did not clobber B's note write,
-    // and vice versa.
+    // B's note survives on the same leg A rewrote, which is what makes the merge
+    // per-field rather than per-row.
     expect($householdAfter->note)->toBe('flagged by partner');
     expect($groceriesAfter->note)->toBeNull();
 
-    // SUM(legs) === parent exactly (Req 4 double-count/drift cannot re-emerge).
     $parentMinor = (int) $db->connection()->table('transactions')->where('id', $tx->id)->value('settled_amount_minor');
     expect((int) $converged->sum('settled_amount_minor'))->toBe($parentMinor);
     expect($parentMinor)->toBe(-8000);
 
-    // No quarantine — both devices' keys were known, signatures verified,
-    // and every _create_required/strategy path resolved cleanly.
+    // Anything in quarantine would mean an unknown device key, a signature that
+    // did not verify, or a strategy that did not resolve.
     expect($db->connection()->table('op_log_quarantine')->where('user_id', $this->user->id)->count())->toBe(0);
 });

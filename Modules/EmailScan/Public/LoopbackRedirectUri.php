@@ -6,9 +6,6 @@ namespace Modules\EmailScan\Public;
 
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 
-/**
- * @link ../../../.docs/features/email-scan/architecture.md
- */
 final class LoopbackRedirectUri
 {
     private const DEFAULT_PORT = 8000;

@@ -5,16 +5,9 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Creates the user_recovery_codes table — one row per single-use
- * account-recovery code issued to a user at signup.
- *
- * Each code is stored as a one-way hash; consuming a code stamps
- * `used_at` rather than deleting the row, so the full set of issued
- * and consumed codes survives as an audit chain. The table therefore
- * carries `created_at` but deliberately omits `updated_at`: the only
- * post-insert mutation is the `used_at` stamp.
- */
+// A consumed code is stamped, not deleted, so issued and spent both survive as
+// an audit chain. That stamp is the only post-insert mutation, hence no
+// `updated_at`.
 return new class extends ModuleMigration
 {
     public function up(): void

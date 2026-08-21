@@ -6,9 +6,6 @@ namespace Modules\Ingestion\Internal\Adapters\Banking;
 
 use Modules\Ingestion\Public\Enums\SourceFormat;
 
-/**
- * @link ../../../../../.docs/features/ingestion/architecture.md
- */
 final class Mt940HeaderProfile
 {
     public const FORMAT = SourceFormat::Mt940->value;
@@ -16,13 +13,11 @@ final class Mt940HeaderProfile
     /** @var list<string> */
     public const FILE_EXTENSIONS = ['sta', 'mt940', '940', 'txt'];
 
-    // Matches the SWIFT block-4 envelope content; the `-}` terminator may be
-    // whitespace-separated since some exporters emit the EOM `-` marker on
-    // its own line before closing the envelope on the next.
+    // SWIFT block-4 envelope. The `-}` terminator tolerates whitespace: some
+    // exporters put the EOM `-` on its own line and `}` on the next.
     public const SWIFT_ENVELOPE_REGEX = '/\{4:\s*([\s\S]+?)\s*-\s*\}/';
 
-    // Matches the :20: Transaction Reference Number tag — the first tag of
-    // every statement.
+    // :20: is the Transaction Reference Number, the first tag of a statement.
     public const SIGNATURE_REGEX = '/(?:^|[\r\n])\s*:20:/';
 
     public const SOURCE_ENCODING = 'UTF-8';

@@ -11,13 +11,6 @@ use Modules\DriftAlerts\Models\DriftAlert;
 
 uses(RefreshDatabase::class);
 
-/*
- * Edge-case coverage for DriftEvaluator: divide-by-zero guards
- * (prior_amount = 0, fewer than two occurrences), cadence='irregular'
- * (multiplier=0 → no alert), and state filters that exclude
- * pending/rejected/snoozed/irregular-state series from evaluation.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -93,7 +86,6 @@ it('does not insert a drift alert for series in excluded states', function (stri
 it('returns silently when the series id is unknown / cross-user', function (): void {
     $user = devecUser('cross-user');
 
-    // No series with id=999999 in the database.
     $this->app->make(DriftEvaluator::class)->evaluateForSeries(999999, $user);
 
     expect(DriftAlert::query()->count())->toBe(0);

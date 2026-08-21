@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-// Plan 05-03 — LockScreen Livewire page
-
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
@@ -12,15 +10,6 @@ use Modules\Auth\Internal\Http\Livewire\LockScreen;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Core\Models\User;
-
-/*
- * Feature coverage for the LockScreen Livewire page:
- *   - A locked authenticated user GET /lock sees 200 with the PIN pad and "Sign out".
- *   - Submitting the correct PIN unlocks the session and redirects to dashboard.
- *   - Submitting a wrong PIN clears the entry, sets flash, and the session stays locked.
- *
- * These tests go GREEN when plan 05-03 creates LockScreen.php and its blade.
- */
 
 it('LockScreen class exists', function (): void {
     expect(class_exists(LockScreen::class))->toBeTrue();
@@ -49,18 +38,15 @@ it('correct PIN via Livewire component unlocks the session and redirects to dash
     $this->actingAs($user);
     $this->session([LockStateManager::SESSION_KEY => true]);
 
-    // Enable app lock so the provisioner writes the PIN hash + wrapped key.
     /** @var AppLockProvisioner $provisioner */
     $provisioner = $this->app->make(AppLockProvisioner::class);
     $provisioner->enable($user->id, '123456', 'whatever-password');
 
-    // Use Livewire testing helper to submit the correct PIN. The PIN travels
-    // as a method argument (WR-10) — never as a bound public property.
+    // The PIN travels as a method argument, never as a bound public property.
     Livewire::test(LockScreen::class)
         ->call('submit', '123456')
         ->assertRedirect(route('dashboard'));
 
-    // Session must now be unlocked.
     /** @var Session $session */
     $session = $this->app->make(Session::class);
 
@@ -69,7 +55,7 @@ it('correct PIN via Livewire component unlocks the session and redirects to dash
     expect($lockState->isLocked($session))->toBeFalse();
 });
 
-it('correct PIN during an active backoff window shows backoff copy, not "Incorrect PIN" (WR-05)', function (): void {
+it('correct PIN during an active backoff window shows backoff copy, not "Incorrect PIN"', function (): void {
     $user = User::query()->create([
         'username' => 'backoff-dora',
         'password' => 'whatever-password',
@@ -82,7 +68,7 @@ it('correct PIN during an active backoff window shows backoff copy, not "Incorre
     $provisioner = $this->app->make(AppLockProvisioner::class);
     $provisioner->enable($user->id, '123456', 'whatever-password');
 
-    // Simulate an active backoff window (5 failures, locked_until in the future).
+    // An active backoff window: at the threshold, with locked_until ahead.
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     $db->connection()->table('user_app_lock_configs')
@@ -98,7 +84,6 @@ it('correct PIN during an active backoff window shows backoff copy, not "Incorre
         ->assertSee('Too many attempts')
         ->assertDontSee('Incorrect PIN');
 
-    // The session must remain locked during the backoff window.
     /** @var Session $session */
     $session = $this->app->make(Session::class);
     /** @var LockStateManager $lockState */
@@ -125,7 +110,7 @@ it('wrong PIN via Livewire component sets flash message and leaves the session l
         ->assertSee('Incorrect PIN');
 });
 
-it('the rendered lock screen never contains a bound pin property in the snapshot (WR-10)', function (): void {
+it('the rendered lock screen never contains a bound pin property in the snapshot', function (): void {
     $user = User::query()->create([
         'username' => 'snapshot-erin',
         'password' => 'whatever-password',
@@ -138,7 +123,7 @@ it('the rendered lock screen never contains a bound pin property in the snapshot
     $provisioner = $this->app->make(AppLockProvisioner::class);
     $provisioner->enable($user->id, '123456', 'whatever-password');
 
-    // The component must not expose a public $pin property at all — the PIN
-    // accumulates client-side and crosses the wire only as a submit() argument.
+    // No public $pin property at all: the PIN accumulates client-side and
+    // crosses the wire only as a submit() argument.
     expect(property_exists(LockScreen::class, 'pin'))->toBeFalse();
 });

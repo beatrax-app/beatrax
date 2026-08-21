@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Ukloni kategoriju',
         'keep_category' => 'Zadrži ovu kategoriju',
         'restore_single' => 'Vratiti na jednu kategoriju?',
+        'survivor_legend' => 'Kategorija koja ostaje',
         'confirm_unsplit' => 'Da, poništi podjelu',
         'keep_split' => 'Zadrži podjelu',
     ],
@@ -51,6 +52,16 @@ return [
         'choose_aria' => 'Odaberi novu vrstu transakcije',
         'choose_option' => 'Odaberi vrstu…',
         'save' => 'Spremi',
+    ],
+
+    'type_label' => [
+        'expense' => 'Trošak',
+        'income' => 'Prihod',
+        'transfer_out' => 'Odlazni prijenos',
+        'transfer_in' => 'Dolazni prijenos',
+        'fee' => 'Naknada',
+        'refund' => 'Povrat',
+        'adjustment' => 'Ispravak',
     ],
 
     'note' => [

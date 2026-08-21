@@ -7,9 +7,8 @@ namespace Modules\Ledger\Public\Dto;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Spatie\LaravelData\Data;
 
-// isFirstRun is true exactly when the user has zero transactions
-// across all periods — the dashboard route uses it to redirect to
-// /imports/new before the dashboard ever renders.
+// isFirstRun means zero transactions in any period; the route redirects to
+// /imports/new on it rather than rendering an empty dashboard.
 final class DashboardSummary extends Data
 {
     /**

@@ -9,17 +9,14 @@ use Generator;
 use League\Csv\CharsetConverter;
 use League\Csv\Reader;
 use Modules\Ingestion\Internal\Adapters\Banking\BankAmountParser;
+use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Contracts\SourceAdapter;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
 use Modules\Ledger\Public\Dto\StatementSummaryData;
 use Throwable;
 
-/**
- * @link ../../../../../.docs/features/ingestion/architecture.md
- */
 final class AsnCsvAdapter implements SourceAdapter
 {
     public function __construct(
@@ -42,8 +39,6 @@ final class AsnCsvAdapter implements SourceAdapter
 
     public function parse(string $localPath, AccountResolver $accounts): Generator
     {
-        // Sniff first — throws SniffMismatchException with a user-facing
-        // message if the file doesn't match the ASN CSV signature.
         $this->sniffer->sniff($localPath, AsnCsvHeaderProfile::FORMAT);
 
         $reader = Reader::from($localPath, 'r');
@@ -69,10 +64,8 @@ final class AsnCsvAdapter implements SourceAdapter
             }
 
             $ownIban = $row[AsnCsvColumnMap::OWN_IBAN];
-            // Resolve so the upload wizard can branch on Unknown before the
-            // user confirms the import. The adapter does not use the
-            // resolution itself — IBAN → account_id mapping is the
-            // Normalize stage's job.
+            // Result discarded: the call is here so the wizard's UnknownAccount
+            // branch still fires; NormalizeStage owns IBAN → account_id.
             $accounts->resolve($ownIban);
 
             $currency = $row[AsnCsvColumnMap::MUTATION_CURRENCY];
@@ -99,8 +92,7 @@ final class AsnCsvAdapter implements SourceAdapter
         }
     }
 
-    // league/csv 9.x yields strings or null only per row; anything else is a
-    // precondition violation, rejected loudly rather than coerced silently.
+    // league/csv 9.x yields only strings or null per row; anything else is a precondition violation.
     /**
      * @return array<int, string>
      */

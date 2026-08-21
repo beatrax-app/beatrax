@@ -48,7 +48,6 @@ it('returns a first-run DashboardSummary when the user has zero transactions', f
 });
 
 it('aggregates inflow / outflow / net for the current period', function (): void {
-    // 5 income (+) rows in the current period
     foreach ([10000, 20000, 15000, 5000, 12500] as $amount) {
         $this->makeTransaction($this->user, $this->account, $this->run, [
             'amount_minor' => $amount,
@@ -56,7 +55,6 @@ it('aggregates inflow / outflow / net for the current period', function (): void
             'booked_at' => '2026-05-05 12:00:00',
         ]);
     }
-    // 5 expense (-) rows in the current period
     foreach ([-1299, -2500, -7300, -1100, -2000] as $amount) {
         $this->makeTransaction($this->user, $this->account, $this->run, [
             'amount_minor' => $amount,
@@ -73,17 +71,16 @@ it('aggregates inflow / outflow / net for the current period', function (): void
     expect($summary->outflow->toMinor())->toBe(1299 + 2500 + 7300 + 1100 + 2000);
     expect($summary->net->toMinor())->toBe(($summary->inflow->toMinor()) - ($summary->outflow->toMinor()));
     expect($summary->recentTransactions)->toHaveCount(10);
-    expect($summary->topCategories)->toBe([]); // none categorized
+    expect($summary->topCategories)->toBe([]);
 });
 
 it('ignores transactions outside the current period window', function (): void {
-    // In-period row
     $this->makeTransaction($this->user, $this->account, $this->run, [
         'amount_minor' => -1299,
         'posted_at' => '2026-05-08',
         'booked_at' => '2026-05-08 12:00:00',
     ]);
-    // Out-of-period row (60 days ago, before period_start_day=1 of May)
+    // Before the period start (day 1 of May).
     $this->makeTransaction($this->user, $this->account, $this->run, [
         'amount_minor' => -9999,
         'posted_at' => '2026-03-15',
@@ -113,14 +110,12 @@ it('scopes totals to the queried user only (no cross-user leakage)', function ()
     ]);
     $otherRun = $this->makeImportRun($other, sha: '1111111111111111111111111111111111111111111111111111111111111111');
 
-    // Seed other user
     $this->makeTransaction($other, $otherAccount, $otherRun, [
         'amount_minor' => -50000,
         'posted_at' => '2026-05-08',
         'booked_at' => '2026-05-08 12:00:00',
     ]);
 
-    // Seed current fixture user
     $this->makeTransaction($this->user, $this->account, $this->run, [
         'amount_minor' => -1299,
         'posted_at' => '2026-05-08',
@@ -143,14 +138,12 @@ it('counts uncategorized transactions across all periods', function (): void {
         'display_order' => 1,
     ]);
 
-    // Categorized
     $this->makeTransaction($this->user, $this->account, $this->run, [
         'amount_minor' => -1299,
         'posted_at' => '2026-05-05',
         'booked_at' => '2026-05-05 12:00:00',
         'category_id' => $groceries->id,
     ]);
-    // Uncategorized x 3
     $this->makeTransaction($this->user, $this->account, $this->run, [
         'amount_minor' => -2000,
         'posted_at' => '2026-05-06',
@@ -199,7 +192,6 @@ it('returns top categories sorted by spend descending with percentageOfTotal sum
         'display_order' => 3,
     ]);
 
-    // Groceries: -50,00 + -30,00 = -80,00
     $this->makeTransaction($this->user, $this->account, $this->run, [
         'amount_minor' => -5000,
         'posted_at' => '2026-05-05',
@@ -212,14 +204,12 @@ it('returns top categories sorted by spend descending with percentageOfTotal sum
         'booked_at' => '2026-05-06 12:00:00',
         'category_id' => $groceries->id,
     ]);
-    // Subscriptions: -20,00
     $this->makeTransaction($this->user, $this->account, $this->run, [
         'amount_minor' => -2000,
         'posted_at' => '2026-05-07',
         'booked_at' => '2026-05-07 12:00:00',
         'category_id' => $subs->id,
     ]);
-    // Transport: -10,00
     $this->makeTransaction($this->user, $this->account, $this->run, [
         'amount_minor' => -1000,
         'posted_at' => '2026-05-08',
@@ -243,7 +233,6 @@ it('returns top categories sorted by spend descending with percentageOfTotal sum
 });
 
 it('does not surface a foreign user\'s parent name in the breadcrumb', function (): void {
-    // Foreign user owns a parent category named "Foreign Parent".
     /** @var User $foreignUser */
     $foreignUser = User::create([
         'username' => 'foreign',
@@ -259,8 +248,6 @@ it('does not surface a foreign user\'s parent name in the breadcrumb', function 
         'display_order' => 1,
     ]);
 
-    // Current user has a leaf whose parent_id (accidentally / via future
-    // cross-user share / manual edit) points at the foreign parent.
     /** @var Category $localLeaf */
     $localLeaf = Category::create([
         'user_id' => $this->user->id,
@@ -282,8 +269,6 @@ it('does not surface a foreign user\'s parent name in the breadcrumb', function 
     $summary = $this->query->for($this->user, $period);
 
     expect($summary->topCategories)->toHaveCount(1);
-    // Walk terminates at the filtered-out foreign parent; only the leaf
-    // name appears in the breadcrumb.
     expect($summary->topCategories[0]->name)->toBe('Local Leaf');
 });
 
@@ -294,9 +279,6 @@ it('does not probe categories beyond a filtered-out parent in the walk', functio
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);
-    // Three-level chain: local leaf → foreign mid → (would-be) global root.
-    // The foreign mid is filtered out by the visibility predicate; the
-    // global root is unreachable through it.
     /** @var Category $globalRoot */
     $globalRoot = Category::create([
         'user_id' => null,
@@ -345,9 +327,8 @@ it('does not probe categories beyond a filtered-out parent in the walk', functio
         static fn (array $entry): bool => str_contains(strtolower((string) $entry['query']), 'from "categories"'),
     ));
 
-    // Exactly 2 batches: the leaf (returns 1 row), then the foreign mid
-    // (returns 0 rows). The global root is never enqueued because the
-    // foreign mid was attempted-but-filtered.
+    // Two batches: the leaf, then the foreign mid (0 rows). The global root
+    // behind the filtered-out mid is never enqueued.
     expect($categoriesQueries)->toHaveCount(2);
     expect($summary->topCategories)->toHaveCount(1);
     expect($summary->topCategories[0]->name)->toBe('Local Leaf');

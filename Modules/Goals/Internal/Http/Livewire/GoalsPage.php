@@ -22,9 +22,6 @@ use Modules\Pots\Public\Exceptions\PotNotFoundException;
 use Modules\Pots\Public\Services\PotBalanceQuery;
 use Modules\Pots\Public\Services\PotWriter;
 
-/**
- * @link ../../../../../.docs/features/goals/architecture.md
- */
 final class GoalsPage extends Component
 {
     use DispatchesToast;
@@ -51,10 +48,6 @@ final class GoalsPage extends Component
 
     public bool $showArchived = false;
 
-    // -----------------------------------------------------------------------
-    // Create goal
-    // -----------------------------------------------------------------------
-
     public function createGoal(CurrentUser $currentUser, GoalWriter $writer, DatabaseManager $db, PotWriter $potWriter): void
     {
         $this->clearErrors();
@@ -63,10 +56,8 @@ final class GoalsPage extends Component
             return;
         }
 
-        // Goal save + optional pot link run in one transaction so a failed
-        // link rolls back the goal — no orphan goal, no duplicate on resubmit.
-        // The success dispatch stays inside the try so a thrown write never
-        // reaches it.
+        // One transaction so a failed pot link rolls back the goal: no orphan
+        // goal, no duplicate on resubmit.
         try {
             $db->connection()->transaction(function () use ($currentUser, $writer, $db, $potWriter): void {
                 $goal = $writer->save(
@@ -89,10 +80,6 @@ final class GoalsPage extends Component
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Edit / update goal
-    // -----------------------------------------------------------------------
-
     public function openEdit(int $goalId, GoalProgressQuery $query, CurrentUser $currentUser, PotBalanceQuery $potBalance): void
     {
         if (! $currentUser->isAuthenticated()) {
@@ -104,20 +91,17 @@ final class GoalsPage extends Component
             if ($row->id === $goalId) {
                 $this->editGoalId = $goalId;
                 $this->name = $row->name;
-                // MoneyInput::formatMinor, not a hand-rolled sprintf: it emits
-                // the comma-decimal form the placeholder shows and tryToMinor()
-                // parses back, on integer minor units with no float division.
+                // The shared formatter emits the comma-decimal form the
+                // placeholder shows and tryToMinor() parses back.
                 $this->targetAmount = MoneyInput::formatMinor($row->targetMinor);
                 $this->targetDate = $row->targetDate;
                 $linkedPotId = $potBalance->linkedPotIdForGoal($goalId, $currentUser->user());
                 $this->linkedPotId = $linkedPotId !== null ? (string) $linkedPotId : '';
                 $this->clearErrors();
 
-                // Deliberately does NOT dispatch `modal-show`: which surface
-                // this opens in is a viewport decision both Edit buttons
-                // already make, and announcing it from the server stacked the
-                // desktop modal on top of the phone's bottom sheet.
-
+                // No `modal-show` dispatch: the surface is a viewport decision
+                // both Edit buttons already make, and announcing it server-side
+                // stacked the desktop modal on the phone's bottom sheet.
                 return;
             }
         }
@@ -134,9 +118,8 @@ final class GoalsPage extends Component
         $newPotId = $this->linkedPotId !== '' ? (int) $this->linkedPotId : null;
         $prevPotId = $potBalance->linkedPotIdForGoal($this->editGoalId, $currentUser->user());
 
-        // The goal update and the clear + relink sequence run in one
-        // transaction so a failed relink rolls back both — the existing
-        // goal<->pot link is never silently lost.
+        // One transaction so a failed relink rolls the update back with it, and
+        // the existing goal-pot link is never silently lost.
         try {
             $db->connection()->transaction(function () use ($currentUser, $writer, $db, $potWriter, $newPotId, $prevPotId): void {
                 $writer->update(
@@ -157,10 +140,6 @@ final class GoalsPage extends Component
             $this->applyWriteFailure($e);
         }
     }
-
-    // -----------------------------------------------------------------------
-    // Lifecycle actions
-    // -----------------------------------------------------------------------
 
     public function markComplete(CurrentUser $currentUser, GoalWriter $writer, int $goalId): void
     {
@@ -217,19 +196,14 @@ final class GoalsPage extends Component
         $this->dispatch('modal-close', name: 'goal-form');
     }
 
-    // -----------------------------------------------------------------------
-    // Render
-    // -----------------------------------------------------------------------
-
     public function render(
         CurrentUser $currentUser,
         GoalProgressQuery $query,
         DatabaseManager $db,
         ViewFactory $views,
     ): View {
-        // Defence-in-depth: the auth route middleware makes this unreachable,
-        // but guard anyway so an unauthenticated render degrades to the empty
-        // page instead of throwing.
+        // Unreachable behind the auth middleware; kept so an unauthenticated
+        // render degrades to the empty page instead of throwing.
         if (! $currentUser->isAuthenticated()) {
             $view = $views->make('goals::livewire.goals-page', [
                 'rows' => [],
@@ -248,10 +222,8 @@ final class GoalsPage extends Component
         $rows = $query->forUser($user);
         $archived = $query->archivedForUser($user);
 
-        // Pot options for the linked-pot picker: only active pots owned by this
-        // user that are fully unlinked (neither goal- nor category-linked), or
-        // already linked to the goal being edited so the current link stays in
-        // the list. One base query so the two branches cannot drift apart.
+        // Fully unlinked pots, plus the edited goal's own pot so its current link
+        // stays selectable. One base query, so the two branches cannot drift.
         $basePotsQuery = static function () use ($db, $user): Builder {
             return $db->connection()
                 ->table('pots')
@@ -290,10 +262,6 @@ final class GoalsPage extends Component
         return $view;
     }
 
-    // -----------------------------------------------------------------------
-    // Helpers
-    // -----------------------------------------------------------------------
-
     private function clearErrors(): void
     {
         $this->errorName = '';
@@ -329,9 +297,6 @@ final class GoalsPage extends Component
         return true;
     }
 
-    // Maps a write failure to inline form feedback: a vanished goal resets the
-    // form, an invalid amount flags the amount field, and any other ownership
-    // or pot-link violation surfaces its own message on the linked-pot field.
     private function applyWriteFailure(\InvalidArgumentException $e): void
     {
         if ($e instanceof GoalNotFoundException) {
@@ -349,9 +314,6 @@ final class GoalsPage extends Component
         $this->errorLinkedPot = $e->getMessage();
     }
 
-    // Reconciles the goal's pot link inside the update transaction: switching
-    // pots clears the previous link before creating the new one, and clearing
-    // the picker removes the existing link. Both paths are mutually exclusive.
     private function applyPotRelink(
         CurrentUser $currentUser,
         DatabaseManager $db,
@@ -393,9 +355,8 @@ final class GoalsPage extends Component
             ->where('id', $potId)
             ->first(['name', 'category_id']);
 
-        // PotWriter::update would otherwise null out category_id and
-        // silently destroy the user's category link; the picker already
-        // excludes these, this guards against stale/tampered ids.
+        // PotWriter::update would null out category_id and destroy the user's
+        // category link. The picker excludes these; a stale id would not.
         if ($row !== null && $row->category_id !== null) {
             throw new \InvalidArgumentException(
                 Lang::get('goals::messages.errors.pot_linked_category')
@@ -425,10 +386,5 @@ final class GoalsPage extends Component
 
         $name = ($row !== null && is_string($row->name)) ? $row->name : '';
         $potWriter->update($user, $potId, $name, null, null);
-    }
-
-    private function toast(string $message): void
-    {
-        $this->toastWithUndo($message, undoAction: '', undoPayload: null);
     }
 }

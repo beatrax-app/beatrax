@@ -15,30 +15,10 @@ use Modules\EmailScan\Internal\Jobs\DiscoveryScanJob;
 
 uses(RefreshDatabase::class);
 
-/*
- * DiscoveryScanJob NO-.eml-blobs invariant + sender exclusion +
- * occurrence-count increment + dismissed-sender exclusion.
- *
- * Plan 09 D-121: the daily discovery job must populate
- * discovered_senders rows from a broad-keyword subject query WITHOUT
- * ever persisting a `.eml` body. The Gmail client fetches headers
- * only (format=metadata, metadataHeaders=['From','Date']); the Graph
- * client uses $search with $select=id,from,subject,receivedDateTime.
- *
- * Test flow:
- *  1. Seed user + Gmail inbox + Microsoft inbox + the three system
- *     known_senders rows (paypal.com / @ics.nl / googleplay-noreply@google.com).
- *  2. Queue Fake discovery responses including known senders (which
- *     should be filtered) + new candidate senders (which should land).
- *  3. Assert storage/app/inbox/ is empty before the run.
- *  4. Run DiscoveryScanJob.
- *  5. Assert discovered_senders ONLY carries the new candidate rows;
- *     paypal / ics / googleplay are NOT present.
- *  6. Assert storage/app/inbox/ is STILL empty after the run.
- *  7. Re-run; assert occurrence_count increments for repeating senders.
- *  8. Flip one row to state='dismissed'; re-run; assert that row's
- *     count does NOT increment.
- */
+// The discovery job populates discovered_senders from a subject query without
+// ever persisting a .eml body: Gmail is asked for headers only, Graph for
+// $select=id,from,subject,receivedDateTime. Every pass here re-asserts that
+// storage/app/inbox stays empty.
 
 beforeEach(function (): void {
     $this->inboxRoot = storage_path('app/inbox');
@@ -84,9 +64,8 @@ it('walks Gmail + Microsoft inboxes, populates discovered_senders with NEW sende
         'updated_at' => $now,
     ]);
 
-    // Queue Gmail responses — page 1 mixes new + already-known senders;
-    // the already-known PayPal one MUST be filtered out before the
-    // upsert lands a row.
+    // Page 1 mixes new senders with PayPal, which the known-senders exclude
+    // list has to drop before the upsert.
     $fakeGmail = new FakeGmailApiClient($this->app->make(Filesystem::class));
     $fakeGmail->queueDiscoveryResponse([
         ['id' => 'msg-bol-1', 'fromAddress' => 'orders@bol.com', 'fromName' => 'Bol.com', 'internalDate' => '2026-05-14T08:12:00Z'],
@@ -95,9 +74,8 @@ it('walks Gmail + Microsoft inboxes, populates discovered_senders with NEW sende
     ]);
     $this->app->instance(GmailApiClientContract::class, $fakeGmail);
 
-    // Queue Microsoft responses — same shape: one new sender + one
-    // known. Graph payload shape mirrors what the real
-    // GraphApiClient::listDiscoveryCandidatesPaged returns.
+    // Same shape on the Graph side, in the payload the real
+    // listDiscoveryCandidatesPaged returns.
     $fakeGraph = new FakeGraphApiClient($this->app->make(Filesystem::class));
     $fakeGraph->queueDiscoveryResponse([
         ['id' => 'graph-ah-1', 'from' => ['emailAddress' => ['address' => 'noreply@ah.nl', 'name' => 'Albert Heijn']], 'receivedDateTime' => '2026-05-14T07:00:00Z', 'subject' => 'Je bestelling is bevestigd'],
@@ -105,17 +83,14 @@ it('walks Gmail + Microsoft inboxes, populates discovered_senders with NEW sende
     ]);
     $this->app->instance(GraphApiClientContract::class, $fakeGraph);
 
-    // Pre-condition: the inbox root is empty (the discovery loop must
-    // not create it).
     expect(countFilesRecursive_TestHelper($this->inboxRoot))->toBe(0);
 
     /** @var DiscoveryScanJob $job */
     $job = $this->app->make(DiscoveryScanJob::class, ['userId' => $user->id]);
     $this->app->call([$job, 'handle']);
 
-    // Assert: 3 NEW candidate rows landed (Bol.com + Coolblue from
-    // Gmail + Albert Heijn from Graph). PayPal + Google Play were
-    // filtered out by the known-senders exclude list.
+    // Bol.com, Coolblue and Albert Heijn land; PayPal and Google Play were
+    // excluded as known senders.
     $candidates = $db->connection()
         ->table('discovered_senders')
         ->where('user_id', $user->id)
@@ -131,11 +106,8 @@ it('walks Gmail + Microsoft inboxes, populates discovered_senders with NEW sende
         expect((int) $row->occurrence_count)->toBe(1);
     }
 
-    // CRITICAL INVARIANT: the storage/app/inbox tree must still be
-    // empty — the discovery loop NEVER persists .eml blobs.
     expect(countFilesRecursive_TestHelper($this->inboxRoot))->toBe(0);
 
-    // Re-run with the same queued payload + a re-queued response.
     $fakeGmail2 = new FakeGmailApiClient($this->app->make(Filesystem::class));
     $fakeGmail2->queueDiscoveryResponse([
         ['id' => 'msg-bol-2', 'fromAddress' => 'orders@bol.com', 'fromName' => 'Bol.com', 'internalDate' => '2026-05-15T08:12:00Z'],
@@ -152,8 +124,8 @@ it('walks Gmail + Microsoft inboxes, populates discovered_senders with NEW sende
     $job2 = $this->app->make(DiscoveryScanJob::class, ['userId' => $user->id]);
     $this->app->call([$job2, 'handle']);
 
-    // Bol.com + Albert Heijn occurrence_count both bump to 2; Coolblue
-    // stays at 1 (it was not in the second-run payload).
+    // Coolblue is absent from the second payload, so only Bol.com and Albert
+    // Heijn bump.
     $bol = $db->connection()->table('discovered_senders')
         ->where('user_id', $user->id)->where('sender_email', 'orders@bol.com')->first();
     expect($bol)->not->toBeNull();
@@ -169,12 +141,10 @@ it('walks Gmail + Microsoft inboxes, populates discovered_senders with NEW sende
     expect($coolblue)->not->toBeNull();
     expect((int) $coolblue->occurrence_count)->toBe(1);
 
-    // Still no .eml blobs on disk.
     expect(countFilesRecursive_TestHelper($this->inboxRoot))->toBe(0);
 
-    // Flip Coolblue to state='dismissed' + re-run with a payload that
-    // includes Coolblue + a fresh new sender. The dismissed row must
-    // NOT have its count bumped; the new sender lands as a fresh row.
+    // Coolblue is dismissed but still in the next payload: its count must not
+    // bump, while the sender alongside it still lands.
     $db->connection()->table('discovered_senders')
         ->where('id', $coolblue->id)
         ->update(['state' => 'dismissed', 'updated_at' => $now]);
@@ -194,8 +164,6 @@ it('walks Gmail + Microsoft inboxes, populates discovered_senders with NEW sende
     $job3 = $this->app->make(DiscoveryScanJob::class, ['userId' => $user->id]);
     $this->app->call([$job3, 'handle']);
 
-    // Coolblue's count remains at 1 + state stays 'dismissed'. Picnic
-    // lands as a fresh 'candidate' row.
     $coolblueAfter = $db->connection()->table('discovered_senders')
         ->where('user_id', $user->id)->where('sender_email', 'noreply@coolblue.nl')->first();
     expect($coolblueAfter)->not->toBeNull();
@@ -208,14 +176,10 @@ it('walks Gmail + Microsoft inboxes, populates discovered_senders with NEW sende
     expect($picnic->state)->toBe('candidate');
     expect((int) $picnic->occurrence_count)->toBe(1);
 
-    // Final invariant assertion — no .eml blobs ever materialised
-    // during the three discovery passes.
     expect(countFilesRecursive_TestHelper($this->inboxRoot))->toBe(0);
 
-    // Defensive grep over the Gmail Fake's call log: discovery MUST
-    // NOT call getRawMessage. If a regression slipped a body-fetch into
-    // the discovery path, the call log would contain a getRawMessage
-    // entry.
+    // An empty inbox tree would also hold if a body fetch were made and
+    // discarded, so the call log is checked for getRawMessage directly.
     $allCalls = array_merge(
         $fakeGmail->getRequestedCalls(),
         $fakeGmail2->getRequestedCalls(),
@@ -231,11 +195,8 @@ it('walks Gmail + Microsoft inboxes, populates discovered_senders with NEW sende
     expect($rawCalls)->toBe([]);
 });
 
-/**
- * Count files (not directories) under the given root, recursively. Returns
- * 0 when the root does not exist. Used to assert the .eml-blob invariant —
- * the discovery loop must never write into storage/app/inbox/.
- */
+// Returns 0 for a root that does not exist, which is the state the discovery
+// loop is supposed to leave storage/app/inbox in.
 function countFilesRecursive_TestHelper(string $root): int
 {
     if (! is_dir($root)) {

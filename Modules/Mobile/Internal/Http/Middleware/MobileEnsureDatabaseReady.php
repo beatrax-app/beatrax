@@ -11,9 +11,6 @@ use Illuminate\Http\Request;
 use Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * @link ../../../../../.docs/features/mobile/architecture.md
- */
 final class MobileEnsureDatabaseReady
 {
     // Every route here runs before any user account exists on this

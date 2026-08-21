@@ -5,14 +5,6 @@ declare(strict_types=1);
 use Modules\Sync\Internal\Pairing\Bip39WordList;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 
-/*
- * SafetyNumberDeriverTest — D-07/D-08 determinism + order-independence.
- *
- * RED until Plan 02 ships SafetyNumberDeriver. References the planned FQCN
- * Modules\Sync\Internal\Pairing\SafetyNumberDeriver (the Bip39WordList it
- * consumes already exists from Wave 0). Failure is "class not found".
- */
-
 function safetyDeriver(): SafetyNumberDeriver
 {
     return new SafetyNumberDeriver(Bip39WordList::WORDS);

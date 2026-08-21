@@ -22,9 +22,6 @@ use PDO;
 use PDOException;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class BackupDatabaseCommand extends Command
 {
     private const BACKUP_CORRUPT_MESSAGE = 'Backup corrupt — see system_alerts.';
@@ -55,25 +52,19 @@ final class BackupDatabaseCommand extends Command
         try {
             return $this->produceBackup($livePath, $backupsDir, $startedAt);
         } catch (BackupCorruptException) {
-            // Every corrupt phase already recorded its critical system_alerts
-            // row and printed its console error before throwing; the throw
-            // exists only to collapse those six failure returns into one.
+            // Each corrupt phase records its system_alerts row and prints its
+            // error before throwing; this catch only maps that to one exit code.
             return self::FAILURE;
         }
     }
 
-    // The verified-backup pipeline: data_version read, VACUUM INTO, chmod,
-    // integrity check, sidecar write, retention prune. Any phase that fails
-    // records its alert, prints its error, then throws BackupCorruptException.
     private function produceBackup(string $livePath, string $backupsDir, CarbonImmutable $startedAt): int
     {
         try {
             $liveDataVersion = $this->readDataVersion($livePath);
         } catch (PDOException $e) {
-            // Corrupt source detected before VACUUM INTO even runs — no
-            // backup or .suspect file exists yet, so the alert's suspect
-            // path is null and the message says "aborted before any file
-            // was produced" rather than pointing at a nonexistent file.
+            // Corrupt source, caught before VACUUM INTO runs: no file exists
+            // yet, so the alert carries a null suspect path.
             $destinationForAlert = $backupsDir.DIRECTORY_SEPARATOR.'beatrax-'.$startedAt->format('Y-m-d-His').'.sqlite';
             $this->failCorrupt($destinationForAlert, null, [
                 'pdo_exception' => $e->getMessage(),
@@ -104,24 +95,20 @@ final class BackupDatabaseCommand extends Command
     private function vacuumInto(string $destination): void
     {
         try {
-            // VACUUM INTO's target string is a parse-time constant with no
-            // bound parameters, so the destination is interpolated literally.
-            // Reject shell/SQL-hostile bytes first so a future directory-
-            // composition change cannot smuggle a NUL, newline, or quote in.
+            // VACUUM INTO's target is a parse-time constant with no bound
+            // parameters, so the path is interpolated literally. Reject
+            // NUL/newline first so a later path change cannot smuggle one in.
             if (preg_match('/[\x00\n\r]/', $destination) === 1) {
                 throw new UnsafeBackupPathException('Backup destination path contains an unsafe byte (NUL / newline).');
             }
             $escaped = str_replace("'", "''", $destination);
-            // VACUUM INTO must NOT run inside a transaction (SQLite refuses)
-            // and the destination path must not already exist. The basename
-            // includes seconds resolution, so a re-invocation within the same
-            // second is the one ambiguous case — acceptable for v1.
+            // SQLite refuses VACUUM INTO inside a transaction, and refuses an
+            // existing destination. The basename is second-resolution, so two
+            // runs inside the same second is the one ambiguous case — accepted.
             $this->db->connection('sqlite')->statement(sprintf("VACUUM INTO '%s'", $escaped));
         } catch (PDOException $e) {
-            // Corrupt-source bridge: VACUUM INTO refused the source DB
-            // (truncated, malformed header, etc). If an output file exists,
-            // rename it to .suspect for inspection, then surface the failure
-            // via the same system_alerts row the integrity-check branch uses.
+            // VACUUM INTO refused the source; keep any partial output as
+            // .suspect so the operator can inspect it.
             $suspect = $destination.'.suspect';
             if ($this->files->exists($destination)) {
                 $this->files->move($destination, $suspect);
@@ -136,10 +123,6 @@ final class BackupDatabaseCommand extends Command
     private function assertOutputExists(string $destination): void
     {
         if (! $this->files->exists($destination)) {
-            // VACUUM INTO returned without throwing but produced no
-            // output. No file landed on disk, so the alert carries a
-            // null suspect path — same shape as the PDOException catch
-            // arm above.
             $this->failCorrupt($destination, null, [
                 'phase' => 'vacuum_into',
                 'reason' => 'no output file produced',
@@ -149,15 +132,11 @@ final class BackupDatabaseCommand extends Command
 
     private function hardenBackupFile(string $destination): void
     {
-        // Immediately chmod 0600 since VACUUM INTO bypassed PHP's umask
-        // narrowing (SQLite created the file via open(2)). Filesystem::chmod
-        // returns mixed (bool on write, string-octal on read), so the check
-        // below compares against the explicit `false` failure sentinel.
+        // SQLite created the file via open(2), bypassing PHP's umask narrowing.
+        // Filesystem::chmod returns mixed (bool on write, string-octal on read),
+        // hence the explicit `=== false` sentinel below.
         if ($this->files->chmod($destination, 0o600) === false) {
-            // Chmod failure makes the file unsafe to retain (group/world
-            // readability cannot be ruled out), so it is deleted immediately.
-            // The alert's suspect path is null since the file no longer
-            // exists by the time recordCorruptAlert() runs.
+            // Group/world readability cannot be ruled out, so the file goes.
             $this->files->delete($destination);
             $this->failCorrupt($destination, null, [
                 'phase' => 'chmod',
@@ -186,10 +165,9 @@ final class BackupDatabaseCommand extends Command
         try {
             $this->writeSidecar($destination, $liveDataVersion, $startedAt->toIso8601String(), $completedAt->toIso8601String());
         } catch (BackupIoException $e) {
-            // Sidecar I/O failure leaves the backup on disk without a
-            // .meta.json, which would make the next db:backup misread "no
-            // recent backup exists" via smart-skip and silently re-write.
-            // Surface it via the same critical system_alerts row instead.
+            // A backup without its .meta.json makes the next run's smart-skip
+            // read "no recent backup" and silently re-write, so the I/O failure
+            // is surfaced as a critical alert rather than swallowed.
             $this->failCorrupt($destination, null, [
                 'phase' => 'sidecar_write',
                 'reason' => $e->getMessage(),
@@ -197,8 +175,6 @@ final class BackupDatabaseCommand extends Command
         }
     }
 
-    // Records the critical alert, prints the console error, then throws so the
-    // caller's single catch turns it into a FAILURE exit code.
     /**
      * @param  array<string, mixed>  $metadata
      *
@@ -241,8 +217,8 @@ final class BackupDatabaseCommand extends Command
         return $backupsPath;
     }
 
-    // Uses a fresh PDO connection so the value is not muddied by the
-    // Laravel pool's per-connection cache.
+    // PRAGMA data_version is connection-local, so a fresh PDO is needed to
+    // dodge the Laravel pool's cached, stale value.
     private function readDataVersion(string $sqlitePath): int
     {
         $pdo = new PDO('sqlite:'.$sqlitePath, options: [
@@ -257,8 +233,7 @@ final class BackupDatabaseCommand extends Command
         return is_numeric($value) ? (int) $value : 0;
     }
 
-    // Uses a freshly-opened PDO against the destination file. On success
-    // the list is exactly ['ok']; on failure it holds diagnostic strings.
+    // Exactly ['ok'] on success; diagnostic strings on failure.
     /**
      * @return list<string>
      */
@@ -281,10 +256,8 @@ final class BackupDatabaseCommand extends Command
         }
     }
 
-    // Smart-skip predicate: true when the most-recent sidecar carries the
-    // same data_version as the live DB. Missing/unreadable sidecars fall
-    // through to "not skippable" — the explicit `=== false` guard on glob()
-    // is load-bearing: a wrong skip would silently write no backup at all.
+    // Missing or unreadable sidecars must fall through to "not skippable":
+    // a wrong skip silently writes no backup at all.
     private function isSkippable(string $backupsDir, int $liveDataVersion): bool
     {
         $newest = $this->newestSidecarPath($backupsDir);
@@ -298,10 +271,9 @@ final class BackupDatabaseCommand extends Command
         return is_int($stored) && $stored === $liveDataVersion;
     }
 
-    // The most-recent existing sidecar by parsed-timestamp basename, or null
-    // when none exist. Sorting basenames (not full paths) means directory-
-    // shape changes cannot flip the winner: the fixed `beatrax-` + zero-padded
-    // timestamp + `.sqlite.meta.json` shape makes strcmp DESC == newest-first.
+    // Sorts basenames, not full paths, so a directory-shape change cannot flip
+    // the winner: the fixed `beatrax-` + zero-padded timestamp + suffix makes
+    // strcmp DESC equal newest-first.
     private function newestSidecarPath(string $backupsDir): ?string
     {
         $candidates = glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite.meta.json');
@@ -315,10 +287,9 @@ final class BackupDatabaseCommand extends Command
         return is_file($newest) ? $newest : null;
     }
 
-    // Atomic write: umask + tmp + rename + chmod mirrors
-    // OAuthSecretsRepository::writeAtomic. Every I/O step's return value is
-    // checked, so a disk-full/permission/cross-device failure raises instead
-    // of silently leaving a half-written or group/world-readable sidecar.
+    // umask + tmp + rename + chmod, mirroring OAuthSecretsRepository::writeAtomic.
+    // Every I/O return is checked so a disk-full or cross-device failure raises
+    // instead of leaving a half-written or world-readable sidecar.
     private function writeSidecar(string $destination, int $dataVersion, string $startedAt, string $completedAt): void
     {
         $sidecar = $destination.'.meta.json';
@@ -333,10 +304,9 @@ final class BackupDatabaseCommand extends Command
 
         $prevUmask = umask(0o077);
         try {
-            // Suppressed so the `=== false` checks decide. Unsuppressed,
-            // each raises E_WARNING, which Laravel's handler turns into an
-            // ErrorException before the comparison runs — and that is not a
-            // RuntimeException, so the caller's catch missed it too.
+            // @-suppressed so the `=== false` checks decide: unsuppressed,
+            // Laravel's handler turns each E_WARNING into an ErrorException
+            // before the comparison runs, which the caller's catch misses.
             if (@file_put_contents($tmp, $payload) === false) {
                 throw new BackupIoException('Failed to write backup sidecar tmp file at '.$tmp);
             }
@@ -346,10 +316,8 @@ final class BackupDatabaseCommand extends Command
             if (@rename($tmp, $sidecar) === false) {
                 throw new BackupIoException('Failed to rename sidecar tmp file to '.$sidecar.'.');
             }
-            // Belt-and-braces chmod: rename() preserves the tmp file's mode
-            // on every common filesystem, so failure here is non-fatal — the
-            // @-suppression only guards against a filesystem that rejects
-            // fchmod after the rename.
+            // rename() preserves the tmp file's mode on every common filesystem,
+            // so this re-chmod is belt-and-braces and its failure is non-fatal.
             @chmod($sidecar, 0o600);
         } finally {
             umask($prevUmask);
@@ -359,9 +327,8 @@ final class BackupDatabaseCommand extends Command
         }
     }
 
-    // Deletes matching daily .sqlite files the retention policy did NOT
-    // keep; .suspect/pre-restore-*/.meta.json pass through untouched. The
-    // sidecar of a pruned daily is deleted alongside it for consistency.
+    // .suspect / pre-restore-* / .meta.json pass through untouched; a pruned
+    // daily takes its sidecar with it.
     private function pruneRetention(string $backupsDir): void
     {
         $entries = $this->files->files($backupsDir);
@@ -377,10 +344,6 @@ final class BackupDatabaseCommand extends Command
             if (isset($keeperSet[$name])) {
                 continue;
             }
-            // The retention policy never marks a non-matching basename
-            // (.suspect, pre-restore-*, .meta.json) as "to-be-pruned" — only
-            // matching daily basenames the policy omitted from the keep set
-            // reach this branch.
             $this->files->delete($backupsDir.DIRECTORY_SEPARATOR.$name);
 
             $sidecar = $backupsDir.DIRECTORY_SEPARATOR.$name.'.meta.json';
@@ -390,10 +353,8 @@ final class BackupDatabaseCommand extends Command
         }
     }
 
-    // Inserts a critical, system-wide (user_id NULL) system_alerts row.
-    // $suspectPath is nullable: only the post-VACUUM integrity-check branch
-    // produces an on-disk .suspect file; other corrupt-path branches pass
-    // null since no file exists for the operator to look at.
+    // Only the post-VACUUM integrity-check branch leaves an on-disk .suspect
+    // file; every other corrupt branch passes null.
     /**
      * @param  array<string, mixed>  $metadata
      */

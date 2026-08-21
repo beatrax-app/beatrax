@@ -1,13 +1,13 @@
-{{-- /chains/review page (D-86 / D-87, CHN-03).
+{{-- /chains/review page.
 
      Renders the user's open `state='candidate'` chain_links as a calm
      list of rows, sorted by confidence DESC then id DESC. Each row
      shows the from / to counterparties, the kind label ("PayPal
      funding" / "Bulk iDEAL settlement"), and Confirm + Reject buttons
      that delegate to the same Public action classes the chain drawer
-     uses (D-86 dual-surface).
+     uses.
 
-     Auto-promotion hint (D-87): the "One more confirm…" inline copy
+     Auto-promotion hint: the "One more confirm…" inline copy
      renders only on rows where `confirmsRemaining === 1` — the only
      proactive nudge about the learning loop.
 
@@ -16,15 +16,13 @@
      anywhere.
 
      Copy is locked verbatim against 05-UI-SPEC.md § Copywriting
-     Contract → "/chains/review page (D-86 / D-87)". --}}
+     Contract → "/chains/review page". --}}
 
 @use('Modules\Core\Public\Support\Lang')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    $fmt = static fn (Money $money): string => $money->currency() === 'EUR'
-        ? $money->format('nl_NL')
-        : $money->format('en_US');
+    $fmt = static fn (Money $money): string => $money->format();
 
     $kindLabel = static function (string $kind): string {
         if ($kind === \Modules\Chains\Public\Enums\ChainLinkKind::PaypalFunding->value) {
@@ -55,24 +53,23 @@
     </header>
 
     @if ($actionError)
-        <div
-            class="mb-6 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:bg-rose-950 dark:border-rose-800 dark:text-rose-200"
+        <x-core::alert
+            tone="danger"
+            class="mb-6"
             aria-live="polite" aria-atomic="true"
             data-testid="chain-review-action-error"
         >
             {{ $actionError }}
-        </div>
+        </x-core::alert>
     @endif
 
     @if (count($candidates) === 0)
-        <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('chains::review.empty_heading') }}</h2>
-            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                {{ Lang::get('chains::review.empty_body') }}
-            </p>
-        </div>
+        <x-core::empty-state
+            :heading="Lang::get('chains::review.empty_heading')"
+            :body="Lang::get('chains::review.empty_body')"
+        />
     @else
-        {{-- overflow-x: auto wrapper so dense chain rows scroll horizontally at phone width (D-06 power split) --}}
+        {{-- overflow-x: auto wrapper so dense chain rows scroll horizontally at phone width --}}
         <div class="overflow-x-scroll-wrapper" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
         <ul class="space-y-4" style="min-width: 480px;">
             @foreach ($candidates as $row)
@@ -146,11 +143,7 @@
             @endphp
             @if ($last !== null)
                 <div class="mt-6 flex justify-center">
-                    <button
-                        type="button"
-                        wire:click="loadMore({{ $last->chainLinkId }}, '{{ number_format($last->confidence, 3, '.', '') }}')"
-                        class="inline-flex items-center rounded-md border border-slate-200 px-4 py-2 text-sm text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
-                    >{{ Lang::get('chains::review.show_more') }}</button>
+                    <x-core::secondary-button wire:click="loadMore({{ $last->chainLinkId }}, '{{ number_format($last->confidence, 3, '.', '') }}')">{{ Lang::get('chains::review.show_more') }}</x-core::secondary-button>
                 </div>
             @endif
         @endif

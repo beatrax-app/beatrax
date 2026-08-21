@@ -7,24 +7,8 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\DevMode\Internal\Http\Livewire\LogTailerPage;
 
-/*
- * /dev/logs page rendering invariants.
- *
- * Covers:
- *   - GET /dev/logs renders the page with severity chips + channel
- *     filter + contains filter + pause button + 10k-line scrollback
- *     for a developer.
- *   - GET /dev/logs returns 404 for a non-developer
- *     (EnsureDeveloperMode).
- *   - The dev-shell sidebar's Logs nav entry renders WITHOUT the
- *     nav-disabled class once the dev.logs route is registered.
- *   - The page is wired to the SSE stream URL + the context URL.
- *
- * The actual EventSource consumer + Alpine ring-buffer behaviour
- * is client-side JS the server tests cannot exercise; that is
- * covered manually.
- */
-
+// The polling consumer and the Alpine ring buffer are client-side, so nothing
+// here can reach them — these assertions stop at the rendered markup.
 function logTailerUser(string $username, bool $isDeveloper = true): User
 {
     return User::query()->create([
@@ -44,7 +28,6 @@ it('returns 200 from GET /dev/logs for an authenticated developer with the page 
     $response->assertOk();
     $response->assertSee('Logs', escape: false);
     $response->assertSee('Live tail of the current day', escape: false);
-    // Pause button + scrollback testid markers.
     $response->assertSee('data-testid="log-pause-button"', escape: false);
     $response->assertSee('data-testid="log-scrollback"', escape: false);
     $response->assertSee('data-testid="log-channel-input"', escape: false);
@@ -91,10 +74,8 @@ it('renders the Logs sidebar item WITHOUT the nav-disabled class once dev.logs i
     $response->assertOk();
     $html = (string) $response->getContent();
 
-    // Locate the Logs sidebar anchor — the dev-shell renders each
-    // nav item as `<a href="..." class="side-item{disabled}"> <span
-    // class="ic" ...>{icon}</span> Logs</a>`. We match the anchor
-    // that closes with the literal "Logs</a>" and capture its class.
+    // The nav item wraps its icon in a nested span, so the anchor is only
+    // identifiable by the label text right before its closing tag.
     $matches = [];
     $found = preg_match('/<a[^>]*class="([^"]*)"[^>]*>[\s\S]*?Logs\s*<\/a>/', $html, $matches) === 1;
     expect($found)->toBeTrue('Could not locate the Logs sidebar anchor in /dev/logs HTML');
@@ -127,7 +108,8 @@ it('renders the truncate button, totals strip, and stats URL on /dev/logs', func
 });
 
 it('truncate() empties today\'s log file and dispatches the logs:truncated reset event', function (): void {
-    // Sandbox the log path so we don't smash the dev's real log file.
+    // Sandbox the log path: truncate() would otherwise empty the developer's
+    // own local log.
     $sandboxRoot = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-truncate-'.bin2hex(random_bytes(6));
     putenv('NATIVEPHP_STORAGE_PATH='.$sandboxRoot);
 

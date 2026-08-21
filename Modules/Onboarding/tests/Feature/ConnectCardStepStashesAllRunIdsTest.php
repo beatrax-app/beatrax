@@ -12,24 +12,6 @@ use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 use Modules\Onboarding\Models\WizardProgress;
 use Tests\Helpers\UploadIsolation;
 
-/*
- * Verifies the multi-file submit path stashes every successful
- * ImportRun id into `wizard_progress.data['card_import_run_ids']` as a
- * deduplicated array — the foundation the consolidated preview screen
- * later reads back to combine multiple ICS PDFs into one preview.
- *
- * Two behaviours under test:
- *
- *  1. A successful three-file submit stashes a three-element array of
- *     ImportRun ids in insertion order; the array matches the rows
- *     that landed in `import_runs` for this user and source format.
- *
- *  2. Re-running the submit after pre-seeding an existing
- *     `card_import_run_ids` entry merges the new ids with the old —
- *     the array stays unique (no duplicate ids) and the pre-seeded id
- *     is preserved at the front.
- */
-
 beforeEach(function (): void {
     UploadIsolation::isolate();
 
@@ -89,8 +71,7 @@ it('stashes card_import_run_ids in wizard_progress.data after submit with multip
 });
 
 it('appends to an existing card_import_run_ids array on re-run (idempotent merge)', function (): void {
-    // Pre-seed an existing id (42) in the stash so the next submit
-    // must merge — never replace — the array.
+    // A pre-existing id the next submit must merge with, never replace.
     DB::table('wizard_progress')
         ->where('user_id', $this->user->id)
         ->where('step_key', 'connect-card')

@@ -1,6 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    Report builder `bar` viz partial (Req 8). Clones the Alpine x-init +
+    Report builder `bar` viz partial. Clones the Alpine x-init +
     data-options ApexCharts mount block verbatim from
     Modules/Forecasting/Resources/views/livewire/partials/aggregate-line-chart.blade.php
     (this codebase's ONLY charting mechanism) — only `chart.type` and the
@@ -8,8 +8,8 @@
 
     Variables in scope:
       $chartElementId : string
-      $rows           : list<Modules\Reports\Public\Dto\ReportResultRow>
-      $drilldownUrls  : list<string>  — parallel to $rows, one URL per bar (Req 12)
+      $rows           : list<Modules\Reports\Internal\Dto\ReportResultRow>
+      $drilldownUrls  : list<string>  — parallel to $rows, one URL per bar
       $metricLabel    : string
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
@@ -45,9 +45,9 @@
         'grid' => ['borderColor' => '#E2E8F0'],
         'legend' => ['show' => false],
         'tooltip' => ['shared' => false, 'intersect' => true],
-        // Parallel array of drill-down URLs, one per bar/category index
-        // (Req 12/D-03) — read by the dataPointSelection handler below,
-        // never a hardcoded '/search' navigation (Pitfall 3).
+        // Parallel array of drill-down URLs, one per bar/category index —
+        // read by the dataPointSelection handler below, never a hardcoded
+        // '/search' navigation.
         'beatraxDrilldownUrls' => $drilldownUrls,
         'responsive' => [
             [
@@ -68,7 +68,7 @@
 @endphp
 
 {{--
-    CR-03: `buildOptions()` re-reads `data-options` (and re-attaches the
+    `buildOptions()` re-reads `data-options` (and re-attaches the
     dataPointSelection drilldown handler off the FRESH `beatraxDrilldownUrls`
     array) every time it's called — used both at `x-init` mount and again on
     every `report-updated` browser event (dispatched by

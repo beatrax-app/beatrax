@@ -6,9 +6,6 @@ namespace Modules\DevMode\Internal\Audit;
 
 use Modules\DevMode\Internal\Services\OAuthScrubSet;
 
-/**
- * @link ../../../../.docs/features/dev-mode/architecture.md
- */
 final readonly class RedactionExcerptCap
 {
     public const DEFAULT_MAX_BYTES = 8192;
@@ -21,8 +18,8 @@ final readonly class RedactionExcerptCap
         private ?OAuthScrubSet $scrubSet = null,
     ) {}
 
-    // Redact OAuth scrub-set + Bearer + JWT tokens from $text, then cap
-    // to $maxBytes (see the linked architecture doc for the fixed order).
+    // Scrub-set first: a real token that is also JWT-shaped must come out as
+    // [REDACTED], not [JWT_REDACTED]. Capping happens last, after redaction.
     public function apply(string $text, int $maxBytes = self::DEFAULT_MAX_BYTES): string
     {
         $scrubbed = $text;
@@ -44,10 +41,8 @@ final readonly class RedactionExcerptCap
             return $scrubbed;
         }
 
-        // Byte-cap (not mb_substr) keeps the 8 KiB invariant exact on
-        // the underlying TEXT column, tolerating a trailing partial
-        // multi-byte glyph rather than the unpredictable byte sizes a
-        // character-boundary substr would produce.
+        // A byte cap, not mb_substr: the column's limit is in bytes, so a
+        // trailing partial glyph beats an unpredictable byte length.
         return substr($scrubbed, 0, $maxBytes);
     }
 }

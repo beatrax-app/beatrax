@@ -10,13 +10,6 @@ use Modules\Core\Models\User;
 
 final class DemoRecoveryCodesSeeder
 {
-    // Hashes derive from hash('sha256', 'demo-'.$seedKey), so reseeding is
-    // idempotent via updateOrCreate on the UNIQUE code_hash column. The
-    // plaintext code is never persisted, only its hash, matching the
-    // production invariant that recovery codes are always stored hashed.
-
-    // usedAgeHours of null keeps the row unused; any integer stamps
-    // used_at at that many hours before now.
     /**
      * @var list<array{seedKey: string, usedAgeHours: ?int}>
      */

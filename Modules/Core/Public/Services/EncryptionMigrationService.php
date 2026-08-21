@@ -17,13 +17,8 @@ use Modules\Core\Public\Exceptions\StrandedEncryptionEpochException;
 use Modules\Sync\Public\Services\EncryptionMigrationSupport;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 class EncryptionMigrationService
 {
-    // Mirrors the CHUNK_SIZE idiom already established by
-    // RecordTransactions/ReapplyRulesJob.
     private const CHUNK_SIZE = 500;
 
     private const PROGRESS_CACHE_PREFIX = 'encryption-migration-progress:';
@@ -39,9 +34,7 @@ class EncryptionMigrationService
         private readonly CacheRepository $cache,
     ) {}
 
-    // Idempotent no-op when encryption is already fully enabled
-    // (`current_epoch` already set). See architecture.md for the
-    // app-lock-locked and atomicity/rollback behavior.
+    // Idempotent no-op once `current_epoch` is set.
     public function migrate(User $user, Session $session): void
     {
         $userId = $user->id;
@@ -50,18 +43,16 @@ class EncryptionMigrationService
         $state = $this->loadState($connection, $userId);
         $currentEpochId = $this->currentEpochId($state);
 
-        // The raw KEK is only needed by this method for the BackupEncryptor
-        // snapshot (mirrors GdkKeyringService's own "raw KEK bytes as the
-        // passphrase" idiom); GDK epoch key material never reaches this
-        // class at all — EncryptionMigrationSupport owns that.
+        // This method needs the raw KEK only as the snapshot passphrase; GDK
+        // epoch key material never reaches this class — Sync owns that.
         $kek = $this->appLockKeyService->release($session);
 
         try {
             if ($currentEpochId !== null) {
-                // `current_epoch` set does NOT prove the keyring holds a
-                // usable key — a crash in the commit-then-finalize window
-                // can strand it, silently disabling sensitive writes. Verify
-                // when unlocked; when locked, defer rather than false-alarm.
+                // `current_epoch` set does not prove the keyring holds a usable
+                // key: a crash in the commit-then-finalize window strands it and
+                // silently disables sensitive writes. When locked, defer instead
+                // of raising a false alarm.
                 if ($kek !== null) {
                     /** @var EncryptionMigrationSupport $support */
                     $support = $this->container->make(EncryptionMigrationSupport::class);
@@ -92,16 +83,14 @@ class EncryptionMigrationService
         }
     }
 
-    // Read-only helper for callers (e.g. the Devices & Sync UI) that need
-    // the boolean state without reaching into Modules\Sync\Internal\*.
+    // Lets callers read the flag without reaching into Modules\Sync\Internal.
     public function isEnabled(int $userId): bool
     {
         return $this->currentEpochId($this->loadState($this->db->connection(), $userId)) !== null;
     }
 
-    // Resumable-idempotent progress signal for the UI to poll: 0-99 while a
-    // pass is running (cache-backed, mirrors ReapplyRulesJob's precedent —
-    // no new synced table), 100 once sync_encryption_state confirms commit.
+    // 0-99 while a pass runs (cache-backed, so no new synced table), 100 once
+    // sync_encryption_state confirms the commit.
     public function progress(int $userId): int
     {
         $state = $this->loadState($this->db->connection(), $userId);
@@ -118,22 +107,16 @@ class EncryptionMigrationService
     {
         $this->cache->put(self::PROGRESS_CACHE_PREFIX.$userId, 0, self::PROGRESS_TTL_SECONDS);
 
-        // Backup-first: snapshot the pre-migration plaintext BEFORE
-        // the transaction even opens — before the GDK epoch exists, before
-        // any row is touched.
+        // Snapshot the plaintext before the transaction opens — before the GDK
+        // epoch exists and before any row is touched.
         $snapshotPath = $this->snapshot->takeSnapshot($userId, $connection, $kek);
 
-        // $support is constructed OUTSIDE the transaction closure so the SAME
-        // instance is reachable both inside (to stage + encrypt) and after it
-        // returns (to finalize the staged keyring file, only once the SQL
-        // transaction has actually committed).
+        // Built outside the closure so the SAME instance is reachable inside it
+        // (stage + encrypt) and after it returns (finalize the staged keyring,
+        // only once the SQL transaction has actually committed).
         /** @var EncryptionMigrationSupport $support */
         $support = $this->container->make(EncryptionMigrationSupport::class);
 
-        // First: the encrypt pass + `current_epoch` write, all inside one
-        // SQL transaction. A throw HERE means the transaction rolled back every
-        // DB write — plaintext is intact, no epoch was committed — so the
-        // snapshot restore + staged-file discard are the correct response.
         try {
             $connection->transaction(function () use ($userId, $session, $connection, $support): void {
                 $this->setMigrationInProgress($connection, $userId, true);
@@ -154,10 +137,9 @@ class EncryptionMigrationService
                 $this->finalizeMigration($connection, $userId);
             });
         } catch (Throwable $e) {
-            // In-transaction failure: transaction() already rolled back every
-            // DB write (including `current_epoch`). Discard the un-finalized
-            // staged `.tmp` and restore plaintext — only reached for genuine
-            // rollbacks, never post-commit (which would corrupt the epoch).
+            // The rollback already reverted every DB write, `current_epoch`
+            // included. Reached only for genuine rollbacks, never post-commit —
+            // restoring plaintext after a commit would corrupt the epoch.
             $support->discardStagedEpoch();
             $this->snapshot->restoreFromSnapshot($snapshotPath, $kek, $connection);
             $this->cache->put(self::PROGRESS_CACHE_PREFIX.$userId, 0, self::PROGRESS_TTL_SECONDS);
@@ -165,10 +147,9 @@ class EncryptionMigrationService
             throw $e;
         }
 
-        // Now: the SQL transaction has COMMITTED, so a failure here must NOT
-        // restore plaintext (that would leave a committed epoch over
-        // plaintext rows). Finalize the staged epoch-1 keyring file instead;
-        // on failure a re-entry via migrate() can recover.
+        // Past the commit: a failure here must NOT restore plaintext, which
+        // would leave a committed epoch sitting over plaintext rows. Finalize
+        // the staged keyring instead; a re-entry via migrate() can recover.
         try {
             $support->finalizeStagedEpoch();
         } catch (Throwable $e) {
@@ -184,19 +165,16 @@ class EncryptionMigrationService
             );
         }
 
-        // On success the pre-migration plaintext snapshot (a full KEK-wrapped
-        // copy of every sensitive value in the clear) is no longer needed —
-        // delete it so it does not survive on disk indefinitely (it is
-        // wrapped only under the migration-time KEK, not a later passphrase rewrap).
+        // The snapshot holds every sensitive value in the clear, wrapped only
+        // under the migration-time KEK and never rewrapped, so it must not
+        // survive on disk past a successful migration.
         @unlink($snapshotPath);
 
         $this->cache->put(self::PROGRESS_CACHE_PREFIX.$userId, 100, self::PROGRESS_TTL_SECONDS);
     }
 
-    // Test-only extension seam, called once after each bounded chunk INSIDE
-    // the outer migration transaction. A test subclass overrides this to
-    // throw after a chosen number of rows, proving the whole-pass rollback
-    // leaves zero half-encrypted rows. Production behavior is a no-op.
+    // Extension seam: a test subclass throws here after N rows to prove the
+    // whole-pass rollback leaves zero half-encrypted rows. No-op in production.
     protected function afterChunkProcessed(int $userId, int $rowsProcessedSoFar): void {}
 
     private function encryptOpLogEntries(
@@ -226,8 +204,7 @@ class EncryptionMigrationService
                     }
 
                     if ($support->isSensitive($rawTable, $rawField)) {
-                        // `op_log_entries.pk` is a VARCHAR column (always a
-                        // string on read) — see the create-table migration.
+                        // `op_log_entries.pk` is VARCHAR — always a string on read.
                         /** @var mixed $rawPk */
                         $rawPk = $row->pk;
                         $pk = is_string($rawPk) ? $rawPk : '';
@@ -282,9 +259,8 @@ class EncryptionMigrationService
             }, 'id');
     }
 
-    // Row-level idempotency: a value that ALREADY AEAD-verifies under the
-    // current epoch is ciphertext from a resumed/retried pass — skip it so a
-    // re-run never double-encrypts. Blank and non-string columns pass through.
+    // A value that already AEAD-verifies under the current epoch is ciphertext
+    // from a retried pass; skipping it stops a re-run double-encrypting.
     /**
      * @param  list<string>  $columns
      * @return array<string, string>

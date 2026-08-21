@@ -18,9 +18,6 @@ use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
-/**
- * @link ../../../../.docs/features/drift-alerts/architecture.md
- */
 final class SavingsInsightsQuery
 {
     private const REVIEW_FLOOR = 500;
@@ -37,8 +34,8 @@ final class SavingsInsightsQuery
     ) {}
 
     /**
-     * @return list<SavingsInsight> cached per user (see the class @link) — invalidated on
-     *                              dismiss() and expires within CACHE_TTL
+     * @return list<SavingsInsight> cached per user — invalidated on dismiss() and
+     *                              expires within CACHE_TTL
      */
     public function forUser(User $user): array
     {
@@ -124,7 +121,7 @@ final class SavingsInsightsQuery
         SupportResource $resource,
         bool $hasOpenAlert,
     ): ?SavingsInsight {
-        $monthly = Money::ofMinor($monthlyMinor, $currency)->format($currency === 'EUR' ? 'nl_NL' : 'en_US');
+        $monthly = Money::ofMinor($monthlyMinor, $currency)->format();
 
         // The review floor is a EUR threshold; the arm applies it only to EUR
         // series so a foreign-currency minor amount is never compared with it.

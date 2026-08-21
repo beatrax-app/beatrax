@@ -14,13 +14,6 @@ use Modules\Ledger\Models\StatementSummary;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for Camt053StartingBalanceDetector. Verifies the
- * detector returns one candidate per detected account, scoped to
- * the supplied user, with the earliest opening_balance_date per
- * account winning when multiple CAMT.053 statements are present.
- */
-
 it('returns the supports() flag only for the camt053 source format', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -197,7 +190,6 @@ it('ignores import-runs that belong to a different user (user-scoping guard)', f
     $db = $this->app->make(DatabaseManager::class);
     $detector = new Camt053StartingBalanceDetector($db);
 
-    // User A passes user B's import-run id — must see nothing.
     expect($detector->detect([$runB->id], $userA))->toBe([]);
 })->group('phase-16.1.1');
 

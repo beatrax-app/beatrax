@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Onboarding\Internal\Services;
 
-/**
- * @link ../../../../.docs/features/onboarding/architecture.md
- */
 final class WizardStepRegistry
 {
     /** @var list<string> */
@@ -22,10 +19,8 @@ final class WizardStepRegistry
         'done',
     ];
 
-    // Which steps may be passed without doing them. This list is the gate
-    // SetupWizard::skip() checks first, so a step that renders a skip button
-    // and dispatches wizard.step.skipped goes nowhere unless its key is here —
-    // which is exactly how first-import had a button attached to a no-op.
+    // SetupWizard::skip() gates on this list, so a missing key gives a skip button
+    // that dispatches and goes nowhere — how first-import shipped once.
     /** @var list<string> */
     private const SKIPPABLE = [
         'connect-bank',

@@ -15,24 +15,7 @@ use Modules\Ledger\Models\Category;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 
-/*
- * Wave-0 smoke test for the 13.4-01 rules-engine schema redesign (Req 5):
- *
- *  (a) the enum-trigger rejections installed by Task 1 (transactions'
- *      reinstalled triggers + the two new child-table triggers),
- *  (b) parent/child count parity — both via the rewritten seeder (Task 3)
- *      and by directly exercising the forward legacy-rule backfill
- *      migration against manufactured legacy data (Task 2),
- *  (c) MergeRulesRegistry describes the new schema, not the dropped one
- *      (Task 3).
- */
-
 /**
- * Builds the column tuple a raw DB::table('transactions')->insert needs.
- * Mirrors Modules/Import/tests/Feature/PaymentTypeColumnMigrationTest.php's
- * fixture builder so the SQLite trigger (not a PHP enum cast) is the
- * layer asserted under test.
- *
  * @return array<string, mixed>
  */
 function ruleSchemaTransactionFixture(int $accountId, int $importRunId, int $rowIndex): array
@@ -98,8 +81,6 @@ beforeEach(function (): void {
     ]);
 });
 
-// --- (a) enum-trigger rejections (Task 1) ---
-
 it('rejects an invalid transactions.type value at the DB layer (trigger reinstalled after the field_provenance column-add)', function (): void {
     expect(fn () => DB::table('transactions')->insert([
         ...ruleSchemaTransactionFixture($this->account->id, $this->importRun->id, 1),
@@ -144,8 +125,6 @@ it('rejects an invalid rule_actions.type value at the DB layer', function (): vo
     ]))->toThrow(QueryException::class, 'Invalid rule_actions.type value');
 });
 
-// --- (b) parent/child count parity via the seeder (Task 3) ---
-
 it('gives every seeded default rule exactly one condition and one category action', function (): void {
     app(DefaultCategoryTreeSeeder::class)->run();
     $user = User::create([
@@ -169,13 +148,10 @@ it('gives every seeded default rule exactly one condition and one category actio
         expect($action->payload['category_id'])->toBeInt();
     }
 
-    // Idempotency: re-running must not create duplicate rows.
     $countBefore = $rules->count();
     app(DefaultCategorizationRuleSeeder::class)->run($user);
     expect(CategorizationRule::withoutGlobalScopes()->where('user_id', $user->id)->count())->toBe($countBefore);
 });
-
-// --- (b, continued) forward legacy-rule backfill parity (Task 2, Req 5) ---
 
 it('losslessly backfills legacy flat rule rows into one condition + one action each', function (): void {
     $category = Category::create([
@@ -185,9 +161,8 @@ it('losslessly backfills legacy flat rule rows into one condition + one action e
         'kind' => 'expense',
     ]);
 
-    // Reverse the 13.4-01 redesign back to the original flat shape so a
-    // legacy-style row can be inserted directly, exactly as it would have
-    // existed on a pre-13.4 database.
+    // Reverse the redesign to the flat shape so a legacy row can be inserted
+    // exactly as it would have existed on a pre-redesign database.
     redesignCategorizationRulesMigration()->down();
 
     $legacyIds = [];
@@ -209,8 +184,7 @@ it('losslessly backfills legacy flat rule rows into one condition + one action e
         ]);
     }
 
-    // Re-apply the redesign (stashes the legacy rows, then drops the flat
-    // columns) followed by the forward backfill migration.
+    // Re-apply the redesign, which stashes the legacy rows, then the backfill.
     redesignCategorizationRulesMigration()->up();
     migrateLegacyRulesMigration()->up();
 
@@ -230,9 +204,7 @@ it('losslessly backfills legacy flat rule rows into one condition + one action e
     }
 });
 
-// --- (b, continued) migration 000005's down() must be a safe no-op (CR-03) ---
-
-it('migration 000005 down() never deletes user-authored rule_conditions/rule_actions rows (CR-03)', function (): void {
+it('migration 000005 down() never deletes user-authored rule_conditions/rule_actions rows', function (): void {
     $category = Category::create([
         'user_id' => null,
         'name' => 'Rent',
@@ -245,10 +217,8 @@ it('migration 000005 down() never deletes user-authored rule_conditions/rule_act
         'period_start_day' => 1,
     ]);
 
-    // A rule authored AFTER the 000005 backfill ran (e.g. through /rules)
-    // — indistinguishable, at the schema level, from a row 000005 itself
-    // backfilled. This is exactly the row a naive unscoped down() would
-    // have destroyed.
+    // A rule authored after the backfill ran, indistinguishable at the schema
+    // level from one 000005 wrote — the row a naive down() would destroy.
     $rule = CategorizationRule::withoutGlobalScopes()->create([
         'user_id' => $user->id,
         'priority' => 10,
@@ -270,10 +240,7 @@ it('migration 000005 down() never deletes user-authored rule_conditions/rule_act
         'payload' => ['category_id' => $category->id],
     ]);
 
-    // Simulate migrate:rollback reaching migration 000005 in the field
-    // (recovery from a later bad migration, a dev-environment reset, or
-    // future rollback tooling) — down() must be a safe no-op, not a
-    // destructive unscoped delete/reset.
+    // migrate:rollback reaching 000005 in the field must be a safe no-op.
     migrateLegacyRulesMigration()->down();
 
     $survivingRule = DB::table('categorization_rules')->where('id', $rule->id)->first();
@@ -289,19 +256,15 @@ it('migration 000005 down() never deletes user-authored rule_conditions/rule_act
     expect($condition->value)->toBe('LANDLORD');
 });
 
-// --- (c) MergeRulesRegistry describes the new schema (Task 3) ---
-
 it('MergeRulesRegistry describes the new categorization_rules/rule_conditions/rule_actions schema, not the dropped flat columns', function (): void {
     $rules = app(MergeRulesRegistry::class)->rules();
 
     expect($rules)->toHaveKey('categorization_rules');
     expect($rules['categorization_rules'])->toHaveKeys(['priority', 'combinator']);
     expect($rules['categorization_rules'])->not->toHaveKeys(['field', 'match', 'value', 'category_id']);
-    // Empty, and correctly so: _create_required lists the columns a CreateRow
-    // must carry because the schema would otherwise reject the insert. All four
-    // of priority, combinator, active and hits_count are declared with a DB
-    // default in the redesign migration, so a replayed create needs none of
-    // them. The child tables below are the contrasting case.
+    // Empty and correctly so: _create_required lists the columns a replayed
+    // CreateRow must carry, and priority, combinator, active and hits_count
+    // all have DB defaults. The child tables below are the contrasting case.
     expect($rules['categorization_rules']['_create_required'])->toBe([]);
 
     expect($rules)->toHaveKey('rule_conditions');

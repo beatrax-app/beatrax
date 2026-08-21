@@ -10,13 +10,8 @@ use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Enums\Locale;
 
-// Renders a notification's copy in the RECIPIENT's language, not the request's:
-// digests and reminders fire from jobs with no request locale, and the copy
-// belongs to whoever the notification is for. The draft is built inside a scope
-// where the translator speaks the user's stored locale, then it is restored.
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
+// Renders copy in the RECIPIENT's language, not the request's: digests and
+// reminders fire from jobs that have no request locale at all.
 final class NotificationCopyRenderer
 {
     public function __construct(
@@ -35,9 +30,8 @@ final class NotificationCopyRenderer
         $previous = $this->translator->getLocale();
         $locale = $this->localeFor($userId);
         $this->translator->setLocale($locale);
-        // Dates in the copy (a reminder's day, a digest window) go through
-        // Carbon, which carries its own locale — scope it to the recipient too
-        // so a job-built notification's dates match its language.
+        // Carbon carries its own locale, so it has to be scoped too or a
+        // job-built notification's dates won't match its language.
         CarbonImmutable::setLocale($locale);
 
         try {

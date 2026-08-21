@@ -4,10 +4,10 @@
      * @var array<string,mixed> $transaction  Row array with keys: id, status
      *      (one of Modules\Ledger\Models\Transaction::STATUSES).
      *
-     * Status -> visual mapping (SC-1, D-01/D-11, component-library.md):
+     * Status -> visual mapping (component-library.md):
      *   cleared    -> .status-pill.ok    (emerald), interactive toggle
      *   reconciled -> .status-pill.ok    (emerald) + lock glyph, NON-interactive
-     *                 (D-08 — editing a reconciled row requires an explicit
+     *                 (editing a reconciled row requires an explicit
      *                 un-reconcile first; the badge itself never mutates it)
      *   uncleared  -> .status-pill.muted (slate), interactive toggle
      *

@@ -9,17 +9,14 @@ use Modules\Ingestion\Internal\Adapters\Banking\Camt053HeaderProfile;
 use Modules\Ingestion\Internal\Adapters\Banking\Mt940HeaderProfile;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsPdfHeaderProfile;
 use Modules\Ingestion\Internal\Adapters\Paypal\PaypalCsvLanguageProfile;
+use Modules\Ingestion\Internal\Exceptions\SniffMismatchException;
+use Modules\Ingestion\Internal\Exceptions\UnsupportedPaypalCsvLanguageException;
+use Modules\Ingestion\Internal\Exceptions\UnsupportedPaypalCsvShapeException;
 use Modules\Ingestion\Public\Dto\CsvPreset;
 use Modules\Ingestion\Public\Dto\SniffResult;
-use Modules\Ingestion\Public\Exceptions\SniffMismatchException;
-use Modules\Ingestion\Public\Exceptions\UnsupportedPaypalCsvLanguageException;
-use Modules\Ingestion\Public\Exceptions\UnsupportedPaypalCsvShapeException;
 use Modules\Receipts\Public\Pipeline\EmlHeaderProfile;
 use Modules\Receipts\Public\Pipeline\MboxHeaderProfile;
 
-/**
- * @link ../../../../.docs/features/ingestion/architecture.md
- */
 final class HeaderSniffer
 {
     private const EMPTY_FILE_MESSAGE = 'The file is empty.';
@@ -30,9 +27,8 @@ final class HeaderSniffer
 
     private const UTF8_BOM = "\xEF\xBB\xBF";
 
-    // The default arg exists only so a manually-constructed sniffer (tests,
-    // ad-hoc scripts) still resolves presets without the container; presets
-    // are static, so a fresh instance behaves identically to the singleton.
+    // The default arg lets a hand-constructed sniffer resolve presets without the
+    // container; presets are static, so it behaves identically to the singleton.
     public function __construct(
         private readonly CsvPresetRegistry $presets = new CsvPresetRegistry,
     ) {}
@@ -80,8 +76,7 @@ final class HeaderSniffer
         return $this->sniffPresetCsv($preset, $localPath, $head);
     }
 
-    // Header-signature check is order-independent, so a bank reordering
-    // optional columns still sniffs.
+    // The header-signature check is order-independent, so a reordered export still sniffs.
     private function sniffPresetCsv(CsvPreset $preset, string $path, string $head): SniffResult
     {
         if (preg_match(self::CSV_EXTENSION_REGEX, $path) !== 1) {
@@ -97,8 +92,6 @@ final class HeaderSniffer
         }
 
         $columns = str_getcsv($firstLine, $preset->delimiter, '"', '');
-        // Compare on the normalised header form so a bank's minor spelling
-        // variations (spacing/case) still sniff — see CsvPreset::normaliseHeader.
         $present = array_map(static fn (?string $c): string => CsvPreset::normaliseHeader((string) $c), $columns);
 
         foreach ($preset->headerSignature as $expected) {
@@ -120,8 +113,7 @@ final class HeaderSniffer
         );
     }
 
-    // The header-anchor check rejects a renamed .eml upload of an unrelated
-    // text file before the zbateson parser is invoked.
+    // The header-anchor check rejects a renamed .eml before the zbateson parser is invoked.
     private function sniffEml(string $path, string $head): SniffResult
     {
         if (preg_match('/\.eml$/i', $path) !== 1) {
@@ -145,8 +137,7 @@ final class HeaderSniffer
         );
     }
 
-    // The literal "From " envelope-prefix check rejects a renamed .mbox
-    // upload of a single-message .eml before MboxIterator is invoked.
+    // The literal "From " envelope prefix rejects a single-message .eml renamed to .mbox.
     private function sniffMbox(string $path, string $head): SniffResult
     {
         if (preg_match('/\.mbox$/i', $path) !== 1) {
@@ -170,10 +161,8 @@ final class HeaderSniffer
         );
     }
 
-    // Unlike sniffAsnCsv(), no fixed column count is enforced since PayPal
-    // varies column count across language/format revisions; two typed
-    // exceptions (Saldorapport-shape, unmatched-language) let the wizard
-    // render a specific message.
+    // No fixed column count, unlike sniffAsnCsv(): PayPal varies it across language
+    // and format revisions.
     private function sniffPaypalCsv(string $path, string $head): SniffResult
     {
         if (preg_match(self::CSV_EXTENSION_REGEX, $path) !== 1) {
@@ -189,10 +178,8 @@ final class HeaderSniffer
 
         $columns = str_getcsv($firstLine, PaypalCsvLanguageProfile::DELIMITER, '"', '');
 
-        // Reject the Saldorapport export before the language-profile check:
-        // its RH/RD/RF record-type prefixes never appear as a column name
-        // in Rapport Transactiegegevens, so detecting them yields a precise
-        // "download the right export" hint instead of a confusing fallback.
+        // Checked before the language profile: an RH/RD/RF record-type prefix never appears
+        // as a column name in Rapport Transactiegegevens, so the wrong-export hint is precise.
         $firstCell = trim($columns[0] ?? '');
         if (in_array($firstCell, ['RH', 'RD', 'RF'], strict: true)) {
             throw new UnsupportedPaypalCsvShapeException(
@@ -201,9 +188,7 @@ final class HeaderSniffer
                 .'open the custom statements view, switch to the Betalingen tab, and pick Rapport Transactiegegevens.'
             );
         }
-        // Trim stray whitespace before comparison — the NL export ships
-        // some headers with a trailing space inside the quoted cell, and
-        // the language signature tolerates either shape.
+        // The NL export ships some headers with a trailing space inside the quoted cell.
         $columns = array_map(static fn (?string $c): string => trim($c ?? ''), $columns);
 
         $profile = PaypalCsvLanguageProfile::detect($columns);
@@ -224,8 +209,7 @@ final class HeaderSniffer
         );
     }
 
-    // The magic-byte check rejects a renamed .pdf upload of a completely
-    // different file type before pdftotext is invoked.
+    // The magic-byte check rejects a renamed .pdf before pdftotext is invoked.
     private function sniffIcsPdf(string $path, string $head): SniffResult
     {
         if (preg_match('/\.pdf$/i', $path) !== 1) {
@@ -283,9 +267,8 @@ final class HeaderSniffer
         return $head;
     }
 
-    // The CAMT.052/054 sister families fail loudly here so the user gets a
-    // clear "wrong family" message rather than a cryptic parser error deep
-    // into the file.
+    // The CAMT.052/054 sister families fail here with a "wrong family" message rather
+    // than a cryptic parser error deep into the file.
     private function sniffCamt053(string $path, string $head): SniffResult
     {
         if (preg_match('/\.xml$/i', $path) !== 1) {
@@ -328,10 +311,6 @@ final class HeaderSniffer
         $columns = str_getcsv($firstLine, $delim, '"', '');
 
         if (! in_array(count($columns), AsnCsvHeaderProfile::ACCEPTED_COLUMN_COUNTS, strict: true)) {
-            // ASN ships two CSV shapes: 20 columns (with trailing
-            // `Categorie`) and 19 columns (without). Both are valid;
-            // the adapter only reads columns 0..17. Anything else is
-            // a different bank's export or a malformed file.
             throw new SniffMismatchException(sprintf(
                 'Expected %s columns, got %d. This file does not match the ASN CSV layout.',
                 implode(' or ', AsnCsvHeaderProfile::ACCEPTED_COLUMN_COUNTS),

@@ -25,6 +25,8 @@ return [
         'tax_years' => 'Porezne godine',
     ],
 
+    'tablist_aria' => 'Odjeljci protustranke',
+
     'tab_note_personal' => '— nema lanaca financiranja za osobne kontakte',
     'tab_note_bank' => '— protustranka za bankovne naknade ne stvara lance financiranja',
     'tab_note_government' => '— nema lanaca financiranja za državne ustanove',

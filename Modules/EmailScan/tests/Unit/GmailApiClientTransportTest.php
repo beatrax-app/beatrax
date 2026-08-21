@@ -17,14 +17,8 @@ use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Public\Dto\InboxCredentials;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
-/**
- * GmailApiClient driven through a mocked transport.
- *
- * Unlike the Graph client this one talks through the Google SDK, so the seam
- * is the SDK's own HTTP client rather than a Guzzle instance the class builds
- * itself. Injecting one still reaches the same place: the query this codebase
- * composes, and the decoding it does on the way back.
- */
+// Unlike the Graph client this one talks through the Google SDK, so the seam
+// is the SDK's own HTTP client rather than a Guzzle instance.
 beforeEach(function (): void {
     $this->secrets = new class extends OAuthSecretsRepository
     {
@@ -115,10 +109,8 @@ it('decodes the base64url body Gmail returns into RFC 822 bytes', function (): v
     expect($client->getRawMessage(1, 'm1'))->toBe($raw);
 });
 
-// A raw field carrying characters outside the base64url alphabet cannot
-// be decoded into RFC 822 bytes; the malformed payload is refused with a
-// dedicated exception rather than a generic runtime error, so the scan
-// pipeline can tell a corrupt-source fetch apart from a transport fault.
+// A dedicated exception rather than a generic one, so the scan pipeline can
+// tell a corrupt-source fetch apart from a transport fault.
 it('raises a dedicated decode failure when Gmail returns a non-base64url raw payload', function (): void {
     $client = ($this->makeClient)([
         gmailJson(['id' => 'm1', 'raw' => '@@not-base64url@@']),
@@ -128,10 +120,8 @@ it('raises a dedicated decode failure when Gmail returns a non-base64url raw pay
         ->toThrow(GmailRawDecodeException::class, 'failed to base64url-decode');
 });
 
-// Discovery walks the subject-keyword list, then fetches headers-only
-// metadata per hit (NO body byte) and folds each into a candidate row;
-// a hit with no parseable From header is dropped since it could never
-// promote to a known sender anyway.
+// Headers only, never a body byte. A hit with no parseable From header is
+// dropped because it could never promote to a known sender.
 it('walks discovery candidates, fetching headers-only metadata and dropping senderless hits', function (): void {
     $client = ($this->makeClient)([
         gmailJson([
@@ -177,9 +167,6 @@ it('walks discovery candidates, fetching headers-only metadata and dropping send
         ->and($page['nextPageToken'])->toBeNull();
 });
 
-// The exclude-sender clause is omitted entirely when the caller passes
-// no excludes, and a non-empty nextPageToken from the list response is
-// carried forward so the discovery scan can resume on the next page.
 it('builds a discovery query with no exclude clause and carries the page token forward', function (): void {
     $client = ($this->makeClient)([
         gmailJson([
@@ -201,9 +188,8 @@ it('builds a discovery query with no exclude clause and carries the page token f
         ->and($page['nextPageToken'])->toBe('disc-page-2');
 });
 
-// A throttled per-message metadata fetch must not abort the discovery
-// walk silently: the Google exception is mapped to the module's typed
-// rate-limit sentinel so the caller honours the backoff envelope.
+// The Google exception has to become the module's typed sentinel, or the
+// caller never honours the backoff envelope.
 it('surfaces a rate-limit sentinel when a discovery metadata fetch is throttled', function (): void {
     $client = ($this->makeClient)([
         gmailJson([
@@ -223,10 +209,8 @@ it('surfaces a rate-limit sentinel when a discovery metadata fetch is throttled'
         ->toThrow(RateLimitedException::class);
 });
 
-// An inbox row whose OAuth credentials were never persisted, or were revoked
-// and cleared. Reaching Google with no token would come back as a 401 the
-// caller could mistake for an expired grant, so it is refused before the
-// service is built.
+// Reaching Google with no token comes back as a 401 the caller would mistake
+// for an expired grant, so it is refused before the service is built.
 it('refuses to act on an inbox with no persisted credentials', function (): void {
     $secrets = new class extends OAuthSecretsRepository
     {

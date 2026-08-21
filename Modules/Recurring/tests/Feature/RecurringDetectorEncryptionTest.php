@@ -27,29 +27,7 @@ use Psr\Log\LoggerInterface;
 
 uses(RefreshDatabase::class, EnablesEncryptionForUser::class);
 
-/*
- * 14.1-08 (CRYPT-01, D-06) — IncomeSeriesDetector (via
- * DetectRecurringSeriesJob) clusters income series on
- * `transactions.counterparty_iban`, a SensitiveFieldRegistry-listed
- * column. At rest under an encrypted user this is random-nonce
- * ciphertext that differs per row even for the SAME logical IBAN, so
- * clustering the raw stored value scatters every row into its own
- * one-row, sub-threshold group and silently detects nothing.
- *
- * This suite proves the two-dispatch-origin fix end to end:
- *
- *  1. The in-request `RecurringPage::reDetect()` origin (dispatchSync,
- *     14.1-04) always has the KEK — the detector must decrypt each
- *     row's ciphertext IBAN BEFORE it participates in cluster-key
- *     derivation, so same-IBAN rows cluster into ONE series.
- *  2. The scheduled `routes/console.php` daemon origin never has a
- *     KEK — the job must SKIP the iban-dependent detection entirely
- *     and log a warning naming the user, never silently produce an
- *     empty result.
- *  3. A non-encrypted user's scheduled sweep is entirely unaffected
- *     (the codec's decrypt call is a documented no-op pass-through).
- */
-
+/** @link ../../../../.docs/features/recurring/detection-encryption-posture.md */
 function rdeUser(string $username): User
 {
     $user = User::query()->create([
@@ -58,9 +36,7 @@ function rdeUser(string $username): User
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
     ]);
-    // Widen the window so the 12-monthly-occurrence fixtures below
-    // (starting 2025-04-25) all sit inside the look-back relative to
-    // the frozen 2026-05-17 test clock.
+    // Wide enough to reach the fixtures' first 2025-04-25 occurrence.
     $user->recurring_detection_window_months = 36;
     $user->save();
 
@@ -150,10 +126,8 @@ it('decrypts counterparty_iban before clustering so same-IBAN income rows cluste
     $start = CarbonImmutable::parse('2025-04-25');
     for ($i = 0; $i < 12; $i++) {
         $date = $start->addMonths($i)->toDateString();
-        // Re-encrypting the SAME plaintext IBAN on every call yields a
-        // genuinely DIFFERENT ciphertext per row (random nonce) — the
-        // exact "ciphertext differs per row" failure mode this plan
-        // exists to close.
+        // Re-encrypting the SAME plaintext IBAN yields a different ciphertext per
+        // row (random nonce) — the failure mode this suite exists to close.
         $encryptedIban = $codec->encryptValue('transactions', 'counterparty_iban', 'NL91RDE0123456789', $user->id, $session);
         expect($encryptedIban)->not->toBe('NL91RDE0123456789');
         rdeSeedIncomeTx($db, $user, $account, $run, $date, $encryptedIban, $i + 1, 'rde-kp-'.$i);
@@ -191,10 +165,9 @@ it('logs a warning and skips the iban-dependent income detection when the KEK is
         rdeSeedIncomeTx($db, $user, $account, $run, $date, $encryptedIban, $i + 1, 'rde-ka-'.$i);
     }
 
-    // Simulate a locked/KEK-less run: withhold the session's data key
-    // AFTER the ciphertext fixture was written but BEFORE the job runs —
-    // mirrors ReapplyRulesJobEncryptionTest's defensive-guard precedent
-    // for the exact same "queue worker never unlocked a Session" shape.
+    // A locked, KEK-less run: the session's data key is withheld AFTER the
+    // ciphertext fixture was written but BEFORE the job runs, which is the shape
+    // a queue worker that never unlocked a Session arrives in.
     $this->app->make(AppLockKeyService::class)->withhold($session);
 
     /** @var LoggerInterface&MockInterface $logger */

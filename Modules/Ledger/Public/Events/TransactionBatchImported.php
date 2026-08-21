@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Public\Events;
 
-/**
- * @link ../../../../.docs/features/ledger/architecture.md
- */
 final readonly class TransactionBatchImported
 {
     /**

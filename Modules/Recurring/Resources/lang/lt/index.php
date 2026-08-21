@@ -16,6 +16,7 @@ return [
     'empty' => [
         'heading' => 'Pasikartojančios veiklos dar nėra',
         'before_link' => 'Patvirtink aptiktus pasiūlymus puslapyje',
+        'link' => 'Peržiūrėti pasikartojančius',
         'after_link' => 'ir jie atsiras čia.',
     ],
 

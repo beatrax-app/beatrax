@@ -7,17 +7,11 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingSettingsPage;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 
 uses(RefreshDatabase::class);
-
-/*
- * 19-11 Task 2: the always-visible transparency panel (Req 6) + the
- * disconnect action shared by BOTH entry points (the ON->OFF toggle click
- * and the panel's own "Disconnect" button).
- */
 
 function otpUser(string $username): User
 {
@@ -103,9 +97,8 @@ it('shows the last-successful-sync EVEN when the last attempt failed, and never 
     $user = otpUser('otp-panel-failed-attempt');
     $this->actingAs($user);
     otpSeedSecrets();
-    // Captured once, then both seeded and asserted against. Recomputing
-    // `now()` for the assertion raced the render: a clock tick between the two
-    // calls yielded timestamps a second or two apart and failed the run.
+    // Captured once and used for both the seed and the assertion: recomputing
+    // now() for the assertion raced the render by a clock tick and failed.
     $lastSuccessfulSync = CarbonImmutable::now()->subDays(2);
 
     otpSeedConnection($user, [
@@ -119,8 +112,7 @@ it('shows the last-successful-sync EVEN when the last attempt failed, and never 
         ->assertSeeHtml('data-testid="ob-last-attempt"')
         ->assertSee('failed (consent expired)');
 
-    // The freshness signal itself must reflect the OLD successful sync,
-    // never advanced by the failed attempt (Req 7).
+    // The freshness signal reflects the OLD successful sync, never the failed attempt.
     expect($component->get('lastSuccessfulSyncAtIso'))
         ->toBe($lastSuccessfulSync->toIso8601String());
 });
@@ -182,22 +174,9 @@ it('the ON->OFF toggle click and the panel Disconnect button reach the SAME conf
     expect((bool) $enabled)->toBeFalse();
 });
 
-/*
- * D-16 Wave 3 review-and-fix gate (19-14): single-live-session vs
- * multi-row-connections honesty (19-10 deferred-items.md). The secrets
- * file holds exactly ONE live Enable Banking session at a time, while
- * `open_banking_connections` has no unique constraint stopping a user
- * from accumulating one enabled row per institution (e.g. linking a
- * second bank without ever disconnecting the first) — the orphaned first
- * row stays enabled=true with a still-valid consent_expires_at, invisible
- * to OpenBankingConnectionQuery (which only ever resolves the ONE row
- * matching the secrets file's active institution). disconnect() must
- * flip EVERY one of the user's rows to enabled=false, not just the one
- * currently displayed, so the confirm-modal's unconditional "Automatic
- * syncing stops immediately" promise is actually true — otherwise the
- * orphaned row would still be picked up by the open-banking.daily-sync
- * scheduler after the user believes they fully disconnected.
- */
+// open_banking_connections has no unique constraint, so a second bank linked
+// without disconnecting the first leaves an enabled row the connection query
+// never shows but daily-sync still picks up. disconnect() must flip every row.
 it('disconnect() disables ALL of the user\'s connections, not just the one currently displayed', function (): void {
     $user = otpUser('otp-disconnect-all-rows');
     $this->actingAs($user);

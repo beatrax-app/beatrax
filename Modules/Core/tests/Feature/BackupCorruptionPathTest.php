@@ -7,22 +7,6 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\SystemAlert;
 use Tests\Helpers\RealSqliteFixture;
 
-/*
- * Drives the corrupt-source / corrupt-VACUUM-output paths of `db:backup`:
- * the command must exit non-zero, write a `system_alerts` row with
- * kind=`backup_corrupt` and severity=`critical`, and either rename a
- * produced VACUUM INTO output to `.suspect` (if the integrity check
- * tripped) or surface the failure exclusively through `system_alerts`
- * (if VACUUM INTO itself threw an SQLSTATE exception against the
- * malformed source).
- *
- * Corruption recipe: open RealSqliteFixture, then truncate the source
- * .sqlite to 100 bytes — the first sqlite_master page is gone, so
- * VACUUM INTO either fails outright or produces an output that fails
- * `PRAGMA integrity_check`. Both branches MUST converge on the same
- * user-visible failure surface (system_alerts row + non-zero exit).
- */
-
 beforeEach(function (): void {
     $this->sourcePath = RealSqliteFixture::create('backup-corrupt-source');
 
@@ -85,11 +69,9 @@ it('preserves a produced VACUUM INTO output under a .suspect suffix when integri
     /** @var string $backupsDir */
     $backupsDir = $this->backupsDir;
     if (! is_dir($backupsDir)) {
-        // VACUUM INTO refused the malformed source outright via PDOException.
-        // The exception bridge in the command turns that into the same
-        // system_alerts surface without leaving a file behind, which is
-        // an acceptable corrupt-path outcome — the alert is the load-
-        // bearing user-visible signal.
+        // VACUUM INTO refused the malformed source outright via PDOException;
+        // the command's bridge turns that into the same system_alerts surface
+        // without leaving a file behind.
         $alert = SystemAlert::query()->where('kind', 'backup_corrupt')->firstOrFail();
         expect($alert->severity)->toBe('critical');
 
@@ -109,9 +91,8 @@ it('preserves a produced VACUUM INTO output under a .suspect suffix when integri
         expect($metadata)->toBeArray();
         expect((string) ($metadata['suspect_path'] ?? ''))->toBe((string) $suspect[0]);
     } else {
-        // Exception-bridge corrupt path: no .suspect file produced because
-        // VACUUM INTO threw before any output was written. Still must have
-        // recorded the system_alerts row.
+        // No .suspect file: VACUUM INTO threw before any output was written.
+        // The system_alerts row must still be there.
         $alert = SystemAlert::query()->where('kind', 'backup_corrupt')->firstOrFail();
         expect($alert->severity)->toBe('critical');
     }

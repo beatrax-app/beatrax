@@ -68,6 +68,7 @@
             <directory>Modules/Calendar/tests/Feature</directory>
             <directory>Modules/Tax/tests/Feature</directory>
             <directory>Modules/Search/tests/Feature</directory>
+            <directory>Modules/Shell/tests/Feature</directory>
             <directory>Modules/Notifications/tests/Feature</directory>
             <directory>Modules/Position/tests/Feature</directory>
         </testsuite>
@@ -131,17 +132,11 @@
         <testsuite name="ReceiptsContracts">
             <directory suffix="Test.php">./Modules/Receipts/tests/Contracts</directory>
         </testsuite>
-        <testsuite name="CounterpartiesArch">
-            <directory suffix="Test.php">./Modules/Counterparties/tests/Arch</directory>
-        </testsuite>
         <testsuite name="FXUnit">
             <directory suffix="Test.php">./Modules/FX/tests/Unit</directory>
         </testsuite>
         <testsuite name="FXFeature">
             <directory suffix="Test.php">./Modules/FX/tests/Feature</directory>
-        </testsuite>
-        <testsuite name="TaxArch">
-            <directory suffix="Test.php">./Modules/Tax/tests/Arch</directory>
         </testsuite>
         <testsuite name="Sync">
             <directory suffix="Test.php">./Modules/Sync/tests/Arch</directory>

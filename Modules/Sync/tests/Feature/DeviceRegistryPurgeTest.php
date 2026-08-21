@@ -8,11 +8,9 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
 
 uses(RefreshDatabase::class);
 
-/*
- * Revoking a device only cleared confirmed_at, so every other table still
- * held it: the sync-status section lists sync_sessions by peer device id, and
- * a removed device kept appearing there under its own UUID.
- */
+// Revoking a device only cleared confirmed_at, so every other table still held
+// it. The status section lists sync_sessions by peer device id, and a removed
+// device went on appearing there under its own UUID.
 
 function purgeFixture(DatabaseManager $db): array
 {

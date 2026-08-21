@@ -19,9 +19,6 @@ use Modules\Core\Public\Support\Lang;
 use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
 use Modules\DevMode\Internal\Logging\RecentLogEntriesReader;
 
-/**
- * @link ../../../../../.docs/features/dev-mode/architecture.md
- */
 #[Layout('dev::layouts.dev-shell')]
 final class DevOverviewPage extends Component
 {
@@ -89,8 +86,7 @@ final class DevOverviewPage extends Component
         ];
     }
 
-    // Latest dev_mode_audit row (any user) — surfaces the "last command"
-    // cell of the console-pane head.
+    // Deliberately unscoped by user: this tile is system-wide.
     private function resolveLastCommand(DatabaseManager $db): ?string
     {
         $row = $db->connection()->table('dev_mode_audit')
@@ -131,8 +127,6 @@ final class DevOverviewPage extends Component
         return $normalised;
     }
 
-    // The rendered link href encodes ?command=<urlencoded> so clicks
-    // navigate to /dev/audit pre-scoped.
     /**
      * @return list<array{command: string, tier: string, exitCode: ?int, createdAt: ?string, href: string}>
      */

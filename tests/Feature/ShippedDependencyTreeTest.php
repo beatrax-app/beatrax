@@ -4,20 +4,11 @@ declare(strict_types=1);
 
 uses()->group('Phase14');
 
-/*
- * SC4 — proves the shipped dependency tree is Redis-free. laravel/horizon
- * and predis/predis must live in composer.json's require-dev section, never
- * in require, so a `composer install --no-dev` install carries no Horizon
- * dashboard or Redis client packages.
- *
- * This greps the composer.json manifest directly, keeping the assertion
- * fast and deterministic; the `composer install --no-dev --dry-run` shell
- * check remains the integration-level proof.
- */
+// Reads the composer.json manifest rather than resolving the tree, so the
+// assertion stays fast and offline; `composer install --no-dev --dry-run` is
+// the integration-level proof.
 
 /**
- * Decodes the project composer.json into an associative array.
- *
  * @return array<string, mixed>
  */
 function composerManifest(): array

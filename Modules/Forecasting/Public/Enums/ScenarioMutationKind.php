@@ -15,9 +15,6 @@ use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayloa
 // its DTOs and the payload cast stay string-keyed; this enum is the one
 // canonical spelling callers map through, and it owns the kind -> payload
 // class projection the polymorphic cast reads back through.
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 enum ScenarioMutationKind: string
 {
     case CancelSeries = 'cancel_series';

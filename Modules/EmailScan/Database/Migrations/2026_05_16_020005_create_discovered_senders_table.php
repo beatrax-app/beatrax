@@ -5,25 +5,10 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Creates the discovered_senders table — the candidate queue the
- * discovery-scan job appends to whenever it observes a sender the
- * user has not yet curated into known_senders.
- *
- * One row per (user_id, inbox_id, sender_email) triple — the UNIQUE
- * key keeps re-runs of the discovery scan idempotent. Each row tracks
- * how often the sender has been seen and when, plus a soft FK to a
- * sample message so the UI can show a single representative subject.
- * The sample is nullOnDelete so purging the linked inbox_messages row
- * does not drop the discovered candidate.
- *
- * The `state` column is an enum-shaped string ('candidate' / 'added'
- * / 'dismissed') enforced via paired BEFORE INSERT / BEFORE UPDATE
- * triggers; the discovery scan only ever writes 'candidate'. The
- * promotion / dismissal UI flips the row to 'added' or 'dismissed';
- * the discovery scan's WHERE clause then suppresses those rows on
- * subsequent runs.
- */
+// UNIQUE (user_id, inbox_id, sender_email) is what keeps a re-run of the
+// discovery scan idempotent. The scan only ever writes 'candidate'; the
+// promotion / dismissal UI flips the row, and the scan's WHERE clause then
+// suppresses it on later runs.
 return new class extends ModuleMigration
 {
     public function up(): void
@@ -36,9 +21,8 @@ return new class extends ModuleMigration
             $table->string('sender_name', 320)->nullable();
             $table->unsignedInteger('occurrence_count')->default(1);
             $table->timestamp('last_seen_at');
-            // Soft FK — deleting the sample message must not drop the
-            // discovered-sender row; the candidate is still actionable
-            // even after the representative .eml is gone.
+            // nullOnDelete, not cascade: the candidate is still actionable once
+            // the representative .eml has been purged.
             $table->foreignId('sample_message_id')->nullable()->constrained('inbox_messages')->nullOnDelete();
             $table->string('state', 16)->default('candidate');
             $table->timestamps();

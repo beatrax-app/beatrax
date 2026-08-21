@@ -7,10 +7,8 @@ namespace Modules\Import\Internal\Listeners;
 use Modules\Desktop\Public\Contracts\RemembersPendingFileIntent;
 use Modules\Desktop\Public\Events\FileOpenedFromOs;
 
-// .csv FileOpenedFromOs intents land here (Import), not in Ingestion —
-// filters by extension and persists the validated path into the
-// Desktop pending-intent store via the Public RemembersPendingFileIntent
-// contract; a re-fired event overwrites the intent (session-scoped, idempotent).
+// .csv FileOpenedFromOs intents land here, not in Ingestion. A re-fired
+// event overwrites the stored intent, which is session-scoped.
 final class HandleFileOpenedFromOs
 {
     public function __construct(

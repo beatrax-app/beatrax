@@ -9,14 +9,6 @@ use Modules\Core\Models\User;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for the anomaly_alerts migration — locks the column
- * shape, the UNIQUE(transaction_id) idempotency seam, the two read
- * indexes, and the schema-level state trigger pair that rejects
- * out-of-band INSERT / UPDATE statements with a state value outside the
- * allowed enum.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -171,12 +163,6 @@ it('accepts every documented anomaly_alerts.state enum value', function (string 
     'dismissed',
 ]);
 
-/**
- * Seeds a transactions row sufficient to satisfy the foreign-key
- * constraint on anomaly_alerts.transaction_id without requiring the
- * full Ingestion fixture stack. The $salt keeps the account slug +
- * transaction fingerprint unique across repeated calls.
- */
 function seedAnomalyAlertTransaction(DatabaseManager $db, int $userId, string $salt): int
 {
     $accountId = $db->connection()->table('accounts')->insertGetId([

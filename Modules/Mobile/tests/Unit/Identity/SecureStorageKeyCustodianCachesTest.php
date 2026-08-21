@@ -5,19 +5,6 @@ declare(strict_types=1);
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Mobile\Internal\Identity\SecureStorageKeyCustodian;
 
-/*
- * SensitiveColumnCodec resolves the KEK once per decrypted VALUE: it reaches
- * AppLockKeyService::release() before GdkKeyringService can consult its own
- * memo, because that memo is keyed on a fingerprint OF the KEK. Off device
- * that is a session array read and costs nothing. Here every one of them was
- * a Keystore round trip through JNI, so a page of ~140 rows made a few
- * hundred and took 1.2–3.4s to render on a real phone (measured via the
- * runtime's own PerfTiming log).
- */
-
-/**
- * In-memory stand-in for the native store that counts how often it is asked.
- */
 class CountingSecureStorageCustodian extends SecureStorageKeyCustodian
 {
     /** @var array<string, string> */
@@ -57,6 +44,11 @@ function countingCustodianUser(int $id): CurrentUser
 
     return $user;
 }
+
+// SensitiveColumnCodec resolves the KEK once per decrypted value, reaching
+// AppLockKeyService::release() before GdkKeyringService can consult its own memo,
+// which is keyed on a fingerprint of the KEK. On device each one is a Keystore
+// round trip through JNI, so a page of ~140 rows took 1.2-3.4s to render.
 
 it('asks the native store once however many values are decrypted', function (): void {
     $custodian = new CountingSecureStorageCustodian(countingCustodianUser(1));

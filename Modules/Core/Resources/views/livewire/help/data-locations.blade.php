@@ -24,11 +24,11 @@
 
     CSS classes `.help-locations`, `.path-row`, `.path-mono`,
     `.copy-path-btn` live in resources/css/app.css's @layer
-    components block (added in Plan 17-06a) so the styling is
-    centralised and theme-token-driven.
+    components block, so the styling is centralised and
+    theme-token-driven.
 
     The copy-to-clipboard buttons live as a per-row Alpine island so
-    no round-trip is needed; the `navigator.clipboard.writeText`
+    no round-trip is needed; the `window.beatraxCopy()`
     promise is best-effort (some browsers gate it on https + user
     activation, both of which the local dev environment + a button
     click satisfy).
@@ -53,7 +53,7 @@
                 type="button"
                 aria-label="{{ Lang::get('core::help.copy_sqlite_aria') }}"
                 class="copy-path-btn"
-                x-on:click="navigator.clipboard.writeText('{{ $sqlitePath }}').then(() => { copied = true; setTimeout(() => copied = false, 1500); }).catch(() => {})"
+                x-on:click="window.beatraxCopy('{{ $sqlitePath }}').then((ok) => { copied = ok; setTimeout(() => copied = false, 1500); })"
                 x-text="copied ? {{ Js::from(Lang::get('core::help.copied')) }} : {{ Js::from(Lang::get('core::help.copy')) }}"
             >{{ Lang::get('core::help.copy') }}</button>
         </div>
@@ -65,7 +65,7 @@
                 type="button"
                 aria-label="{{ Lang::get('core::help.copy_secrets_aria') }}"
                 class="copy-path-btn"
-                x-on:click="navigator.clipboard.writeText('{{ $secretsPath }}').then(() => { copied = true; setTimeout(() => copied = false, 1500); }).catch(() => {})"
+                x-on:click="window.beatraxCopy('{{ $secretsPath }}').then((ok) => { copied = ok; setTimeout(() => copied = false, 1500); })"
                 x-text="copied ? {{ Js::from(Lang::get('core::help.copied')) }} : {{ Js::from(Lang::get('core::help.copy')) }}"
             >{{ Lang::get('core::help.copy') }}</button>
         </div>
@@ -77,7 +77,7 @@
                 type="button"
                 aria-label="{{ Lang::get('core::help.copy_caches_aria') }}"
                 class="copy-path-btn"
-                x-on:click="navigator.clipboard.writeText('{{ $cachesPath }}').then(() => { copied = true; setTimeout(() => copied = false, 1500); }).catch(() => {})"
+                x-on:click="window.beatraxCopy('{{ $cachesPath }}').then((ok) => { copied = ok; setTimeout(() => copied = false, 1500); })"
                 x-text="copied ? {{ Js::from(Lang::get('core::help.copied')) }} : {{ Js::from(Lang::get('core::help.copy')) }}"
             >{{ Lang::get('core::help.copy') }}</button>
         </div>
@@ -96,23 +96,21 @@
                  until that route ships, the button is rendered as a
                  disabled stub so the page contract holds and the
                  verifier can catch when the wiring goes live. --}}
-            <button
-                type="button"
-                class="inline-flex items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+            <x-core::neutral-button
                 data-testid="export-everything-cta"
                 disabled
                 aria-disabled="true"
                 title="{{ Lang::get('core::help.export_title_attr') }}"
-            >{{ Lang::get('core::help.export_cta') }}</button>
+            >{{ Lang::get('core::help.export_cta') }}</x-core::neutral-button>
         @else
-            <div class="rounded-md border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-700">
+            <x-core::alert tone="neutral">
                 <p class="font-medium">{{ Lang::get('core::help.dev_off') }}</p>
                 <p class="mt-1">{{ Lang::get('core::help.to_export') }}</p>
                 <ol class="mt-2 list-decimal pl-5 space-y-1">
                     <li>{!! Lang::get('core::help.enable_dev_html') !!}</li>
                     <li>{{ Lang::get('core::help.manual_copy') }}</li>
                 </ol>
-            </div>
+            </x-core::alert>
         @endif
     </section>
 

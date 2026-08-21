@@ -7,6 +7,10 @@ return [
 
     'subtitle_html' => 'Vide, izpildlaiks un faktiskā konfigurācija. Sensitīvās atslēgas (galotnes <code class="font-mono text-xs">*password*</code>, <code class="font-mono text-xs">*secret*</code>, <code class="font-mono text-xs">*key</code>, <code class="font-mono text-xs">*token*</code>) tiek maskētas.',
     'php' => 'PHP',
+    'php_version' => 'versija',
+    'php_sapi' => 'sapi',
+    'php_ini_path' => 'ini ceļš',
+    'php_extensions' => 'paplašinājumi',
     'laravel' => 'Laravel',
     'sqlite' => 'SQLite',
     'sqlite_file' => 'fails',

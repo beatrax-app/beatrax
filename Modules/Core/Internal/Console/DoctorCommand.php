@@ -17,9 +17,6 @@ use Modules\Core\Internal\Console\Probes\SynchronousModeProbe;
 use Modules\Core\Internal\Console\Probes\WalModeProbe;
 use Modules\Search\Public\Services\FtsHealthCheck;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class DoctorCommand extends Command
 {
     private const ROW_FORMAT = '%-24s %-8s %s';

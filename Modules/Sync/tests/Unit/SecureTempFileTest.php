@@ -5,12 +5,8 @@ declare(strict_types=1);
 use Modules\Sync\Internal\Exceptions\SecretFileException;
 use Modules\Sync\Internal\Identity\SecureTempFile;
 
-/*
- * SecureTempFileTest — the "stage plaintext secret material at 0600" helper
- * used at the device identity key-file's encrypt/decrypt boundary (security
- * fix: plaintext Ed25519/X25519 secret keys were staged in
- * sys_get_temp_dir() with default, world-readable permissions).
- */
+// Plaintext Ed25519/X25519 secret keys were staged in sys_get_temp_dir() at
+// default, world-readable permissions; this helper stages them at 0600.
 
 function secureTempFilePath(string $suffix = ''): string
 {
@@ -49,11 +45,10 @@ it('locks an existing file (created at default permissions) down to 0600', funct
     @unlink($path);
 });
 
-// The write is suppressed so its own `=== false` check decides. It used to be
-// unsuppressed, and this test said so — it accepted "either our own exception
-// or an ErrorException", because Laravel's handler converted the E_WARNING
-// before the guard could run. The guard never fired. It does now, so the test
-// can name the type it expects.
+// The write is suppressed so its own `=== false` check decides. Unsuppressed,
+// Laravel's handler converted the E_WARNING before the guard could run and this
+// test accepted "either our exception or an ErrorException"; it can name the type
+// it expects now.
 it('throws and never leaves the file behind when write() cannot stage content', function (): void {
     $dir = sys_get_temp_dir().'/beatrax_secure_temp_file_test_missing_'.bin2hex(random_bytes(8));
     $path = $dir.'/secret.tmp';

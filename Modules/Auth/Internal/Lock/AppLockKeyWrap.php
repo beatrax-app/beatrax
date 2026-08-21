@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Internal\Lock;
 
-// Wraps and unwraps a data key using XSalsa20-Poly1305 secretbox. The
-// wrapped blob is base64(nonce || ciphertext) -- self-contained, so it can
-// be stored in pin_wrapped_key or password_wrapped_key without a separate
-// nonce column.
+// The wrapped blob is base64(nonce || ciphertext) — self-contained, so the
+// wrapped-key columns need no companion nonce column.
 final class AppLockKeyWrap
 {
     /**
@@ -22,9 +20,8 @@ final class AppLockKeyWrap
         return base64_encode($nonce.$ciphertext);
     }
 
-    // Returns false rather than throwing or returning corrupted bytes on
-    // any failure (wrong key, tampered ciphertext, truncated blob, bad
-    // base64) -- callers must treat a false return as "do not use this key".
+    // Every failure returns false and never partial bytes, so a caller must
+    // read false as "do not use this key".
     public function unwrap(string $stored, string $wrapKey): string|false
     {
         $decoded = base64_decode($stored, strict: true);

@@ -19,7 +19,7 @@ use Modules\Tax\Public\Events\TransactionTagged;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * @link ../../../../.docs/features/tax/architecture.md
+ * @link ../../../../.docs/features/tax/tag-write-contract.md
  */
 final class TagTransaction
 {
@@ -29,19 +29,16 @@ final class TagTransaction
         private readonly Clock $clock,
         private readonly FieldProvenanceWriter $provenance,
         private readonly SensitiveColumnCodec $codec,
-        // A factory, not the session itself: resolving a session builds the
-        // encrypter, and this class is reachable from a console command that
-        // Artisan constructs merely to list it.
+        // A factory, not the session: resolving a session builds the encrypter,
+        // and Artisan constructs this class merely to list a console command.
         private readonly SessionFactory $session,
         private readonly ?SearchIndexWriterContract $searchIndex = null,
     ) {}
 
     /**
-     * @param  string  $provenanceSource  field_provenance source stamped onto
-     *                                    `tax_tag` after a successful write. Defaults to
-     *                                    `'manual'` (every existing caller); the rule
-     *                                    engine passes `'rule'` so a rule-applied tax
-     *                                    tag is distinguishable from a user-set one.
+     * @param  string  $provenanceSource  `field_provenance` source stamped onto
+     *                                    `tax_tag`: `'manual'`, or `'rule'` from the
+     *                                    rule engine.
      */
     public function execute(
         int $userId,
@@ -52,8 +49,7 @@ final class TagTransaction
         ?int $transactionSplitId = null,
         string $provenanceSource = 'manual',
     ): void {
-        // 404-not-403 to avoid existence leakage across users; ownership
-        // is checked before any write below.
+        // 404-not-403: a 403 would confirm the transaction exists for someone.
         $txExists = $this->db->connection()
             ->table('transactions')
             ->where('id', $transactionId)
@@ -81,8 +77,7 @@ final class TagTransaction
             }
         }
 
-        // Cross-user category is a 404, not a silent fallback to
-        // uncategorised.
+        // Cross-user category is a 404, never a silent fallback to uncategorised.
         if ($deductionCategoryId !== null) {
             $catExists = $this->db->connection()
                 ->table('tax_deduction_categories')
@@ -95,8 +90,6 @@ final class TagTransaction
             }
         }
 
-        // Time arrives via the injected Clock so the +/-10-year window is
-        // testable with the standard clock fake.
         if ($taxYearOverride !== null) {
             $currentYear = $this->clock->now()->year;
             if ($taxYearOverride < $currentYear - 10 || $taxYearOverride > $currentYear + 10) {
@@ -106,10 +99,8 @@ final class TagTransaction
             }
         }
 
-        // Idempotent upsert keyed on (user_id, transaction_id,
-        // transaction_split_id). A bare equality-to-null where() clause
-        // does not reliably compile to IS NULL, so whereNull()/
-        // whereNotNull() are used explicitly below.
+        // A bare where('transaction_split_id', null) does not reliably compile
+        // to IS NULL, so the whole-transaction branch uses whereNull().
         $now = $this->clock->now()->toDateTimeString();
         $connection = $this->db->connection();
 
@@ -141,9 +132,8 @@ final class TagTransaction
                         'updated_at' => $now,
                     ]);
             } catch (UniqueConstraintViolationException) {
-                // Lost the select-then-insert race against a concurrent
-                // request — the row exists now; retry as the guarded
-                // update instead of surfacing a 500.
+                // Lost the select-then-insert race; the row exists now, so
+                // retry as the guarded update rather than surfacing a 500.
                 $this->updateExisting($userId, $transactionId, $deductionCategoryId, $note, $taxYearOverride, $now, $transactionSplitId);
             }
         }
@@ -160,16 +150,11 @@ final class TagTransaction
 
         $this->captureTag($userId, $transactionId, $transactionSplitId, $deductionCategoryId, $taxYearOverride);
 
-        // Optional nullable injection — a no-op when the Search module is
-        // absent. The writer re-verifies ownership from the passed actor
-        // id, so a forged transaction id can never reach another user's
-        // index doc.
+        // The index writer re-verifies ownership from the actor id.
         $this->searchIndex?->upsertForTransaction($transactionId, $userId);
     }
 
-    // Tax tags had no capture at all, so a transaction tagged on one device
-    // stayed untagged everywhere else. The row's identity is composite, so
-    // the pk is read back after the write rather than guessed.
+    // The row's identity is composite, so the pk is read back, not derived.
     private function captureTag(
         int $userId,
         int $transactionId,
@@ -207,9 +192,8 @@ final class TagTransaction
         ));
     }
 
-    // See the full-payload upsert contract at the class @link: a bare
-    // re-tag (all-null payload) never wipes an existing tag, but any
-    // non-null field rewrites all three payload columns together.
+    // Whole-payload upsert: a bare all-null re-tag leaves the row alone, but
+    // any non-null field rewrites all three payload columns together.
     private function updateExisting(
         int $userId,
         int $transactionId,

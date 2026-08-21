@@ -6,9 +6,7 @@ namespace Modules\Chains\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-// $rootTransactionId is the transaction the user clicked into; $nodes is
-// the ordered waterfall (root -> funder) with each node carrying its own
-// children for ICS bulk-settle fan-out blocks.
+// $nodes is the waterfall ordered root -> funder.
 final class ChainTree extends Data
 {
     /**

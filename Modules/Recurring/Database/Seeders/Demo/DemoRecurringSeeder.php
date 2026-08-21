@@ -12,16 +12,13 @@ use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Models\RecurringSeriesTransition;
 use Modules\Recurring\Public\Enums\RecurringSeriesState;
 
-// updateOrCreate() reuses the existing row on a second seed run.
-// Transitions bypass RecurringSeriesStateMachine since the demo data
-// models a pre-established user's file, not a fresh detector surface —
-// the boundary arch test only blocks a direct state update.
+// Transitions bypass RecurringSeriesStateMachine: the demo data models a file
+// that is already established, not one transitioning into that shape.
 final class DemoRecurringSeeder
 {
-    // clusterKey values are hand-picked to avoid colliding with any future
-    // real detector output. recurring_series requires Currency values
-    // present in the currencies table — the demo command seeds EUR via
-    // CurrenciesSeeder before reaching this step, so the FK target holds.
+    // clusterKey values are hand-picked so they cannot collide with real detector
+    // output. recurring_series needs its currency present in the currencies table,
+    // which the demo command seeds via CurrenciesSeeder before reaching this step.
     /** @var list<array{detectedName: string, displayName: string, latestAmountMinor: int, cadence: string, dayOfMonth: int, clusterKey: string, state: string}> */
     private const SERIES = [
         [
@@ -80,8 +77,7 @@ final class DemoRecurringSeeder
         ],
     ];
 
-    // Each row targets a series by its cluster_key so the seeder stays
-    // decoupled from auto-incremented primary keys.
+    // Keyed on cluster_key so the seeder never depends on autoincrement ids.
     /** @var list<array{clusterKey: string, fromState: string, toState: string, reason: string, actor: string, ageDays: int, notes: ?string}> */
     private const TRANSITIONS = [
         [
@@ -135,10 +131,9 @@ final class DemoRecurringSeeder
             ->count();
     }
 
-    // The append-only schema has no DB-level UNIQUE on transitions, so
-    // this keys on (recurring_series_id, transition_reason) in application
-    // code — sufficient since the demo set carries one transition per
-    // (series, reason) tuple by design.
+    // The append-only schema has no DB-level UNIQUE on transitions, so this keys
+    // on (recurring_series_id, transition_reason) in application code — enough,
+    // since the demo set carries one transition per (series, reason) by design.
     private function upsertTransitionsForUser(User $user): void
     {
         $today = CarbonImmutable::today();
@@ -181,17 +176,14 @@ final class DemoRecurringSeeder
      */
     private function upsertSeries(User $user, array $row): void
     {
-        // Compute the next-expected date by walking the cadence
-        // forward from today; the demo data shows the user as having
-        // already paid this month's instalment, so the next-expected
-        // sits at the same day-of-month next month.
+        // The demo file shows this month's instalment as already paid, so the
+        // next expected date sits on the same day-of-month next month.
         $today = CarbonImmutable::today();
         $nextMonth = $today->addMonthNoOverflow()->startOfMonth();
         $nextExpected = $nextMonth->setDay(min($row['dayOfMonth'], $nextMonth->daysInMonth));
 
-        // Snoozed rows carry an explicit `snoozed_until` so the resume
-        // logic on /recurring shows the wake-up date. Rejected rows
-        // never re-fire so the timestamp stays null.
+        // A snoozed row carries an explicit snoozed_until so /recurring can show
+        // the wake-up date; a rejected row never re-fires, so it stays null.
         $snoozedUntil = $row['state'] === RecurringSeriesState::Snoozed->value
             ? $today->addDays(30)->setTime(0, 0)
             : null;

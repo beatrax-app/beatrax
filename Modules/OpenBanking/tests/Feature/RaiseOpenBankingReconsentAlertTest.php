@@ -8,20 +8,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
+use Modules\OpenBanking\Internal\Events\OpenBankingConsentFailed;
 use Modules\OpenBanking\Internal\Listeners\RaiseOpenBankingReconsentAlert;
-use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
 
 uses(RefreshDatabase::class);
-
-/*
- * RaiseOpenBankingReconsentAlert (19-06 Task 2, D-09): writes a deduped
- * system_alerts row of kind 'open_banking_reconsent_required' whenever
- * an OpenBankingConsentFailed event fires. At most one un-acknowledged
- * row exists per (user_id, connection_id) at a time — once
- * acknowledged, a subsequent failure re-raises a fresh row (the dedup
- * window is "active alert", not time-based). The listener never throws
- * upward even if alert persistence itself fails (T-19-06-03).
- */
 
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
@@ -134,10 +124,9 @@ it('does not confuse connection_id=1 with connection_id=10/11 under the LIKE ded
     /** @var RaiseOpenBankingReconsentAlert $listener */
     $listener = $this->app->make(RaiseOpenBankingReconsentAlert::class);
 
-    // Simulate the two-digit connection ids directly via raw inserts so
-    // the dedup query is exercised against realistic multi-digit
-    // metadata payloads regardless of which code path (json_extract or
-    // LIKE fallback) the local SQLite build takes.
+    // Multi-digit connection ids on purpose: without the trailing-boundary
+    // anchors on the LIKE fallback (used when json_extract is unavailable),
+    // connection_id 1 would match connection_id 12.
     $now = CarbonImmutable::parse('2026-07-19 09:00:00');
     SystemAlert::query()->create([
         'user_id' => $this->userA->id,
@@ -176,9 +165,8 @@ it('re-raises a fresh alert when the previous one for the same connection is ack
 
     $listener->handle($event);
 
-    // Acknowledge the row out-of-band via a direct stamp — the dedup
-    // window is "active alert", so the next handle() must create a
-    // fresh row rather than no-op.
+    // The dedup window is "active alert", so acknowledging out-of-band must let
+    // the next handle() raise a fresh row rather than no-op.
     SystemAlert::query()
         ->where('user_id', $this->userA->id)
         ->where('kind', 'open_banking_reconsent_required')
@@ -219,12 +207,8 @@ it('never throws upward even when the system_alerts insert itself fails', functi
     /** @var RaiseOpenBankingReconsentAlert $listener */
     $listener = $this->app->make(RaiseOpenBankingReconsentAlert::class);
 
-    // Force a real persistence failure inside the try/catch (not the
-    // pre-check query): system_alerts.user_id is a foreign key against
-    // users (foreign_key_constraints=true on the testing connection),
-    // so a nonexistent user id trips a genuine constraint-violation
-    // QueryException at INSERT time — the defence-in-depth path this
-    // listener exists to swallow.
+    // The testing connection enforces foreign keys, so a nonexistent user id
+    // fails at INSERT — inside the try/catch, not in the pre-check query.
     $nonexistentUserId = 999_999;
 
     $listener->handle(new OpenBankingConsentFailed(

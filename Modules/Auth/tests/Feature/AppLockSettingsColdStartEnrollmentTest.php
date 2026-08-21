@@ -5,28 +5,14 @@ declare(strict_types=1);
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Livewire\Livewire;
 use Mockery\MockInterface;
-use Modules\Auth\Internal\Http\Livewire\AppLockSettingsSection;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Public\Contracts\ColdStartVault;
+use Modules\Auth\Public\Http\Livewire\AppLockSettingsSection;
 use Modules\Core\Models\User;
 
-/*
- * Enrolling biometric unlock where the OS owns the biometric.
- *
- * WebAuthn is a browser API, and the desktop shell has no platform
- * authenticator behind it — navigator.credentials.create() resolved to nothing
- * and the button read as broken. So when a cold-start vault reports itself
- * available, the section enrolls against the OS directly and never dispatches
- * the browser event.
- *
- * Enrolling stores the LIVE data key under the OS gate, which is why it only
- * works while unlocked, and why every refusal below has to say something
- * specific: a user staring at a dead button cannot tell "locked" from "your
- * device said no".
- *
- * The vault is a mock rather than a platform implementation: the contract is
- * the seam, and the real ones are exercised in their own module tests.
- */
+// navigator.credentials.create() resolves to nothing behind the desktop shell,
+// which read as a dead button. Where a cold-start vault reports itself
+// available, the section enrols against the OS instead.
 
 function coldStartSettingsUser(string $username): User
 {
@@ -86,8 +72,8 @@ it('enrolls against the OS instead of dispatching the WebAuthn event', function 
         ->assertSet('flashMessage', '');
 });
 
-// The key is only in the session while the app is unlocked. Enrolling from a
-// locked session has nothing to store, and has to say which of the two it is.
+// The key is only in the session while unlocked, and a user staring at a dead
+// button cannot tell "locked" from "your device said no".
 it('says the app is locked when there is no live key to store', function (): void {
     $user = coldStartSettingsUser('cold-locked');
     $this->actingAs($user);
@@ -115,8 +101,8 @@ it('reports a device that declines to store the key', function (): void {
         ->assertSee('Your device declined to store the key.');
 });
 
-// Inside the desktop shell with no OS gate, dispatching the browser event
-// resolves to nothing — so say it is unsupported rather than appear to hang.
+// In the shell with no OS gate the browser event resolves to nothing, so this
+// says unsupported rather than appearing to hang.
 it('refuses in the desktop shell rather than dispatching into nothing', function (): void {
     $user = coldStartSettingsUser('cold-shell');
     $this->actingAs($user);
@@ -153,8 +139,8 @@ it('will not enroll before a PIN lock exists', function (): void {
         ->assertSee('Enable the PIN lock first before enrolling biometrics.');
 });
 
-// De-enrolling has to clear the OS entry too, or the key stays recoverable
-// under a biometric the settings screen now says is off.
+// De-enrolling must clear the OS entry too, or the key stays recoverable under
+// a biometric the settings screen says is off.
 it('clears the OS entry when de-enrolling with the correct PIN', function (): void {
     $user = coldStartSettingsUser('cold-deenrolls');
     $this->actingAs($user);

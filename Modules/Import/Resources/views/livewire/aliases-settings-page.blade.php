@@ -23,15 +23,12 @@
     </header>
 
     @if ($flashMessage !== '')
-        <div
-            wire:transition.duration.3000ms
+        <x-core::alert tone="positive" class="px-4 py-2" wire:transition.duration.3000ms
             aria-atomic="true"
-            aria-live="polite"
-            class="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-200"
-        >
+            aria-live="polite">
             {{ $flashMessage }}
             <button type="button" wire:click="clearFlash" class="ml-3 text-xs underline">{{ Lang::get('import::aliases.dismiss') }}</button>
-        </div>
+        </x-core::alert>
     @endif
 
     {{-- Two-column shape: left rail = aliases table; right rail =
@@ -49,21 +46,19 @@
                 <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     {{ Lang::get('import::aliases.selected_count', ['count' => count($selectedIds)]) }}
                 </p>
-                <button
-                    type="button"
+                <x-core::neutral-button
+                    size="sm"
+                    class="disabled:opacity-50 disabled:cursor-not-allowed"
+                    :disabled="count($selectedIds) < 2"
                     wire:click="openMergeModal"
-                    @disabled(count($selectedIds) < 2)
-                    class="inline-flex items-center rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
-                >{{ Lang::get('import::aliases.merge_selected') }}</button>
+                >{{ Lang::get('import::aliases.merge_selected') }}</x-core::neutral-button>
             </div>
 
             @if (count($aliases) === 0)
-                <div class="rounded-lg border border-slate-200 bg-slate-50 p-6 text-center dark:bg-slate-900 dark:border-slate-700">
-                    <h2 class="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('import::aliases.empty_heading') }}</h2>
-                    <p class="mx-auto mt-2 max-w-md text-sm text-slate-500 dark:text-slate-400">
-                        {{ Lang::get('import::aliases.empty_body') }}
-                    </p>
-                </div>
+                <x-core::empty-state
+                    :heading="Lang::get('import::aliases.empty_heading')"
+                    :body="Lang::get('import::aliases.empty_body')"
+                />
             @else
                 <table class="aliases-table">
                     <thead>
@@ -139,11 +134,10 @@
                 <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('import::aliases.backup_transfer') }}</h2>
 
                 <div class="flex flex-wrap items-center gap-3">
-                    <button
-                        type="button"
+                    <x-core::secondary-button
+                        size="sm"
                         wire:click="exportYaml"
-                        class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-                    >{{ Lang::get('import::aliases.export_yaml') }}</button>
+                    >{{ Lang::get('import::aliases.export_yaml') }}</x-core::secondary-button>
                     <p class="text-xs text-slate-500 dark:text-slate-400">
                         {!! Lang::get('import::aliases.export_help_html') !!}
                     </p>
@@ -160,12 +154,12 @@
                         <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
                     @enderror
                     <div class="flex items-center gap-2">
-                        <button
-                            type="button"
+                        <x-core::neutral-button
+                            size="sm"
+                            class="disabled:opacity-50 disabled:cursor-not-allowed"
+                            :disabled="$importFile === null"
                             wire:click="parseUpload"
-                            @disabled($importFile === null)
-                            class="inline-flex items-center rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-slate-100 dark:text-slate-900"
-                        >{{ Lang::get('import::aliases.parse_preview') }}</button>
+                        >{{ Lang::get('import::aliases.parse_preview') }}</x-core::neutral-button>
                         @if ($importDiff !== [])
                             <button
                                 type="button"
@@ -175,9 +169,9 @@
                         @endif
                     </div>
                     @if ($importError !== '')
-                        <div class="rounded-md border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700 dark:bg-rose-950 dark:border-rose-800 dark:text-rose-200">
+                        <x-core::alert tone="danger" class="px-4 py-2">
                             {{ $importError }}
-                        </div>
+                        </x-core::alert>
                     @endif
 
                     @if ($importDiff !== [])
@@ -277,22 +271,19 @@
                 <p class="text-sm text-slate-500 dark:text-slate-400">
                     {!! Lang::get('import::aliases.merge_modal_help_html') !!}
                 </p>
-                <div class="space-y-2">
-                    <label for="merge-friendly-name" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('import::aliases.friendly_name_label') }}</label>
-                    <input
-                        type="text"
-                        id="merge-friendly-name"
-                        wire:model="mergeFriendlyName"
-                        class="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-                    />
-                </div>
-                <div class="space-y-2">
-                    <label for="merge-generalized-pattern" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('import::aliases.generalized_pattern_label') }}</label>
-                    <input
-                        type="text"
-                        id="merge-generalized-pattern"
+                <x-core::form-field
+                    field-id="merge-friendly-name"
+                    name="mergeFriendlyName"
+                    :label="Lang::get('import::aliases.friendly_name_label')"
+                    wire:model="mergeFriendlyName"
+                />
+                <div class="space-y-1">
+                    <x-core::form-field
+                        field-id="merge-generalized-pattern"
+                        name="mergeGeneralizedPattern"
+                        :label="Lang::get('import::aliases.generalized_pattern_label')"
                         wire:model="mergeGeneralizedPattern"
-                        class="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-mono dark:border-slate-700 dark:bg-slate-900"
+                        class="font-mono"
                     />
                     @if ($mergeGeneralizedPattern === '')
                         <p class="text-xs text-amber-600 dark:text-amber-400">

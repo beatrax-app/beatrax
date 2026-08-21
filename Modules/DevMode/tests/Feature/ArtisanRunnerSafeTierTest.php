@@ -14,25 +14,6 @@ use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Public\Contracts\AuditWriter;
 use Modules\DevMode\Public\Dto\CommandRunAudit;
 
-/*
- * ArtisanRunnerPage + AuditLogPage + fallback SAFE-only modal +
- * sidebar enable invariants.
- *
- * Headline regression guards:
- *   - GET /dev/artisan renders the header + filter chips + worker
- *     pre-flight pill + empty timeline for a fresh developer.
- *   - Worker pre-flight pill flips to "RUNNING" when the heartbeat
- *     key is fresh, "NOT RUNNING" otherwise.
- *   - The fallback Flux modal exposes SAFE-tier commands ONLY —
- *     DESTRUCTIVE commands never appear in this surface.
- *   - GET /dev/audit lists prior runs with tier coloring +
- *     non-zero exit-code styling.
- *   - Filtering /dev/audit?tier=destructive returns only
- *     destructive rows.
- *   - The dev-shell sidebar's Artisan + Audit nav entries render
- *     WITHOUT the `nav-disabled` class.
- */
-
 function runnerDeveloper(string $username): User
 {
     return User::query()->create([
@@ -52,12 +33,10 @@ it('renders GET /dev/artisan for a developer with the runner-page header + filte
     $response->assertStatus(200);
     $response->assertSee('Artisan runner');
     $response->assertSee('Run a command');
-    // Filter chips
     $response->assertSee('All');
     $response->assertSee('Running');
     $response->assertSee('Failed');
     $response->assertSee('Destructive');
-    // Empty timeline message
     $response->assertSee('No runs yet');
 });
 
@@ -89,7 +68,6 @@ it('exposes SAFE-tier commands ONLY in the fallback modal (DESTRUCTIVE never app
     $response = $this->actingAs($user)->get('/dev/artisan');
     $html = (string) $response->getContent();
 
-    // Every SAFE command name must appear in the fallback modal.
     $safeNames = [
         'cache:clear',
         'route:list',
@@ -103,10 +81,9 @@ it('exposes SAFE-tier commands ONLY in the fallback modal (DESTRUCTIVE never app
         expect(str_contains($html, $name))->toBeTrue("Expected SAFE command {$name} in fallback modal");
     }
 
-    // No DESTRUCTIVE command name may appear in the page HTML when
-    // there are no runs yet (rendered audit rows could legitimately
-    // mention destructive names later; this test asserts the
-    // fallback-modal scope is clean by exercising the empty timeline).
+    // The empty timeline is what makes the whole-page search sound: with runs
+    // present, a rendered audit row could legitimately name a destructive
+    // command and the assertion would no longer isolate the modal.
     $destructiveNames = [
         'db:restore',
         'migrate:fresh',
@@ -159,7 +136,6 @@ it('shows prior runs on /dev/audit with the tier chip + non-zero exit-code highl
     $response->assertSee('DESTRUCTIVE');
     $response->assertSee('SAFE');
 
-    // Non-zero exit code styled with rose color class.
     $html = (string) $response->getContent();
     expect($html)->toContain('text-rose-600');
 });
@@ -184,21 +160,17 @@ it('filters /dev/audit?tier=destructive to only destructive rows', function (): 
         exitCode: 0, stdoutExcerpt: '', errorExcerpt: '',
     ));
 
-    // Sanity: both rows are present without filter
     expect(DB::table('dev_mode_audit')->count())->toBe(2);
 
     $response = $this->actingAs($user)->get('/dev/audit?tier=destructive');
     $response->assertStatus(200);
     $response->assertSee('migrate:fresh');
 
-    // The palette modal embeds the SAFE-tier roster in its JSON
-    // registry below the audit page; isolate the assertion to the
-    // audit-page <main> region so the palette's "Run cache:clear"
-    // dev row does not falsely satisfy the assertion.
+    // The palette modal embeds the whole SAFE roster as JSON further down the
+    // page, so its "cache:clear" row would satisfy a whole-document search.
     $html = (string) $response->getContent();
     $auditRegion = explode('@livewire(\'dev.command-palette-modal\')', $html)[0];
-    // Belt + braces: also slice at the literal palette mount, since
-    // the @livewire directive is stripped by Blade compile.
+    // Second cut on the bare name: Blade compiles the @livewire directive away.
     $auditRegion = explode('command-palette-modal', $auditRegion)[0];
     expect($auditRegion)->not->toContain('cache:clear');
 });
@@ -218,31 +190,20 @@ it('spawn() on the runner page invokes the spawner and registers a run record fo
         ->call('spawn', 'cache:clear', [])
         ->assertDispatched('toast');
 
-    // Walk every UUID-shaped cache key the spawner could have written
-    // and confirm at least one belongs to cache:clear for this user.
-    // RunRegistry::find() is only callable by runId; the spawn fires
-    // a 'toast' with the run id embedded — the simpler assertion is
-    // that *some* cache:clear record exists, which we verify by
-    // scanning the cache repository directly is not exposed, so we
-    // assert the toast dispatch carried the run id token instead.
+    // RunRegistry::find() is keyed by runId and the run id is only ever
+    // surfaced inside the toast, so the dispatch is the reachable assertion.
     $messages = collect(Livewire::actingAs($user)
         ->test(ArtisanRunnerPage::class)
         ->call('spawn', 'cache:clear', [])
         ->effects['dispatches'] ?? []);
 
-    // The action method always emits exactly one toast with the run id.
     expect($messages)->not->toBeEmpty();
 });
 
 it('spawn() refuses to spawn a SAFE-tier command whose required args are missing and surfaces a clear toast', function (): void {
-    // Pre-spawn required-arg guard. Locks the fix for the silent-
-    // failure user report — picking config:show from the palette
-    // used to fire `php artisan config:show` with no args; Symfony
-    // Console aborted with "Not enough arguments (missing:
-    // \"config\")" and the only surface for the failure was the
-    // production log. The guard now refuses to spawn and toasts
-    // the missing arg name, so the operator knows immediately
-    // what's wrong.
+    // Regression: picking config:show from the palette used to spawn with no
+    // args, and Symfony Console's "Not enough arguments" landed in the log
+    // with nothing shown to the operator.
     $user = runnerDeveloper('runner-required-arg-guard');
 
     Livewire::actingAs($user)
@@ -276,11 +237,9 @@ it('spawn() proceeds when every required arg has a value', function (): void {
 });
 
 it('onSpawnCommand() listener routes a palette-dispatched spawn through the same SAFE-tier path as spawn()', function (): void {
-    // Locks the bug fix for "executing an artisan command does nothing,
-    // just quits the modal". The palette's client-side `palette()`
-    // factory dispatches `spawn-command` when the operator picks a
-    // 'dev' row while ON /dev/artisan. Before this listener existed,
-    // the event had no sink and the spawn was silently dropped.
+    // Regression: "executing an artisan command does nothing, just quits the
+    // modal" — the palette dispatched `spawn-command` and no listener existed,
+    // so the event had no sink and the spawn was dropped silently.
     $user = runnerDeveloper('runner-palette-listener-safe');
 
     Livewire::actingAs($user)
@@ -290,12 +249,9 @@ it('onSpawnCommand() listener routes a palette-dispatched spawn through the same
 });
 
 it('onSpawnCommand() listener routes a DESTRUCTIVE name to the triple-gate (defence-in-depth — claimed tier is ignored)', function (): void {
-    // The client-side dispatcher attaches `tier: 'safe'` to every
-    // palette pick because the JSON registry only ever exposes
-    // safe-tier rows. A hostile client could still inject a
-    // destructive command name with `tier: 'safe'`; the listener
-    // routes through spawn(), which authoritatively re-checks the
-    // registry and opens the triple-gate.
+    // The client stamps `tier: 'safe'` on every palette pick, so a hostile one
+    // can claim it for a destructive name. spawn() re-reads the registry
+    // rather than trusting the claim.
     $user = runnerDeveloper('runner-palette-listener-destructive');
 
     Livewire::actingAs($user)
@@ -353,11 +309,8 @@ it('enables the Artisan + Audit sidebar nav items (drops nav-disabled when dev.a
     $response = $this->actingAs($user)->get('/dev/artisan');
     $html = (string) $response->getContent();
 
-    // Find the Artisan nav entry — it has the icon `›_` and label "Artisan".
-    // Per dev-shell.blade.php, the entry renders nav-disabled when the
-    // matching route is missing. With dev.artisan + dev.audit now
-    // registered, those entries should NOT carry the disabled class.
-    // Use a tight regex that picks up only the nav-entry <a> tags.
+    // dev-shell.blade.php stamps nav-disabled on an entry whose route is not
+    // registered, so its absence is the assertion.
     preg_match_all('#<a\s+href="[^"]*"\s+class="side-item([^"]*)"[^>]*>.*?(Artisan|Audit).*?</a>#s', $html, $matches);
 
     expect($matches[0])->not->toBeEmpty();

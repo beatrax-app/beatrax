@@ -6,8 +6,8 @@ use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
-use Modules\Goals\Internal\Http\Livewire\GoalsSummaryCard;
 use Modules\Goals\Models\Goal;
+use Modules\Goals\Public\Http\Livewire\GoalsSummaryCard;
 use Modules\Goals\Public\Services\GoalContributionWriter;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
@@ -42,7 +42,6 @@ beforeEach(function (): void {
     ]);
 });
 
-/** A credit the summary-card test can attribute to a goal. */
 function summaryCardCredit(User $user, int $accountId, int $amountMinor): Transaction
 {
     return Transaction::create([
@@ -68,9 +67,8 @@ function summaryCardCredit(User $user, int $accountId, int $amountMinor): Transa
 }
 
 it('renders the summary card and sorts goals without a projection last', function (): void {
-    // Two goals exercise the null-last comparator: a funded goal that can
-    // carry a projection and an untouched goal whose projection is always
-    // null and must therefore sort behind it.
+    // Two goals exercise the null-last comparator: only the funded one can carry
+    // a projection, so the untouched goal's null has to sort behind it.
     $funded = Goal::factory()->create([
         'user_id' => $this->user->id,
         'name' => 'Funded goal',

@@ -15,10 +15,6 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Concerns\CoercesScalars;
 
-// Lists the most recent dev_mode_audit rows filtered by tier/caller/
-// command, with ?before=<id> cursor pagination. Table columns: command
-// (mono), tier chip, caller username, started_at, exit_code (rose if
-// non-zero); hover expands to show stdout/stderr excerpts + args JSON.
 #[Layout('dev::layouts.dev-shell')]
 final class AuditLogPage extends Component
 {
@@ -33,9 +29,6 @@ final class AuditLogPage extends Component
     #[Url(as: 'command', except: '')]
     public string $commandFilter = '';
 
-    // When non-null, render() constrains rows to id strictly less than
-    // this value, so successive Older clicks walk backward through the
-    // full audit history without skipping rows arriving between requests.
     #[Url(as: 'before', except: null)]
     public ?int $before = null;
 
@@ -49,10 +42,8 @@ final class AuditLogPage extends Component
         $this->before = null;
     }
 
-    // Wired to the "Clear all" button, whose Alpine confirm() gate is
-    // the user-facing speed bump; this handler unconditionally truncates
-    // every developer's rows (dev_mode_audit is shared across all of
-    // them), matching the "Clear all" copy's stated intent.
+    // dev_mode_audit is shared across developers, so this wipes everyone's
+    // rows. The only speed bump is the Alpine confirm() on the button.
     public function truncateAll(DatabaseManager $db): void
     {
         $db->connection()->table('dev_mode_audit')->delete();
@@ -63,9 +54,6 @@ final class AuditLogPage extends Component
         $this->before = null;
     }
 
-    // Pins the cursor to the smallest id on the currently-rendered page;
-    // each click emits a fresh ?before=<id> URL so the back button walks
-    // the operator forward through the timeline.
     public function older(int $oldestRenderedId): void
     {
         if ($oldestRenderedId > 0) {
@@ -73,8 +61,6 @@ final class AuditLogPage extends Component
         }
     }
 
-    // Drops the cursor entirely so render() returns the live
-    // top-of-history slice.
     public function newer(): void
     {
         $this->before = null;
@@ -82,18 +68,15 @@ final class AuditLogPage extends Component
 
     public function render(ViewFactory $views, DatabaseManager $db): View
     {
-        // Raw query builder via DatabaseManager sidesteps the
-        // Eloquent\Builder __call forwarding that triggers
+        // Raw query builder, not Eloquent: __call forwarding trips
         // larastan-strict staticMethod.dynamicCall on limit()/whereIn().
         $audit = $db->connection()->table('dev_mode_audit')
             ->where('log_name', 'dev_mode');
 
         $this->applyFilters($audit, $db);
 
-        // id < ?before walks back without skipping rows that arrive
-        // between requests: rows are append-only with a monotonically
-        // increasing id, so ordering by id desc matches created_at
-        // desc but stays stable against sub-second timestamp ties.
+        // Paging on id, not created_at: the table is append-only with a
+        // monotonic id, so the order matches and sub-second ties stay stable.
         if ($this->before !== null && $this->before > 0) {
             $audit->where('id', '<', $this->before);
         }
@@ -103,10 +86,8 @@ final class AuditLogPage extends Component
         $usernames = $this->resolveUsernames($rows, $db);
         $rendered = $rows->map(fn (\stdClass $row): array => $this->mapRow($row, $usernames));
 
-        // Cursor metadata for the Older/Newer pager. The raw query
-        // builder returns rows as stdClass; the id column resolves
-        // to int on the SQLite + spatie/activitylog schema. Narrow
-        // defensively so larastan-strict is happy.
+        // The raw builder hands back stdClass, so the id needs narrowing
+        // before larastan-strict will accept it as the cursor.
         $lastRow = $rows->last();
         $lastIdRaw = $lastRow !== null ? $lastRow->id ?? 0 : 0;
         $oldestId = self::toInt($lastIdRaw);
@@ -120,9 +101,6 @@ final class AuditLogPage extends Component
         ]);
     }
 
-    // Applies the tier / command / caller-username filters in place. An
-    // unknown username forces an empty result set with a self-
-    // contradictory predicate rather than whereRaw('1 = 0').
     private function applyFilters(Builder $audit, DatabaseManager $db): void
     {
         if ($this->tierFilter !== '') {
@@ -137,22 +115,20 @@ final class AuditLogPage extends Component
             return;
         }
 
-        // The JSON shape stores causer_id (int), not username, so resolve
-        // the operator-facing username filter to an id via a scalar
-        // ->value() lookup rather than hydrating a User.
+        // The audit row stores causer_id, not username, so the
+        // operator-facing filter has to be resolved to an id first.
         $callerId = $db->connection()->table('users')
             ->where('username', $this->callerFilter)
             ->value('id');
         if ($callerId !== null) {
             $audit->where('causer_id', $callerId);
         } else {
+            // Self-contradictory predicate: an unknown username must yield
+            // nothing, and whereRaw('1 = 0') would need a raw expression.
             $audit->whereNull('id')->whereNotNull('id');
         }
     }
 
-    // Hydrates a causer-id → username map for the rendered page. Null /
-    // zero causer ids (system writes) are dropped; their rendered
-    // username falls back to the empty string in mapRow().
     /**
      * @param  Collection<int, \stdClass>  $rows
      * @return array<int, string>

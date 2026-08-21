@@ -7,16 +7,12 @@ namespace Modules\Auth\Internal\Account;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Public\Services\UserDataPathService;
 
-// Erases the parts of an account that never lived in the database: the sync
-// identity and group keyring, and the raw mail this device downloaded.
+// The parts of an account that never lived in the database: the sync identity
+// and group keyring, and the raw mail this device downloaded.
 
-// Two tiers, because a household shares one device. Anything named for the
-// account goes whenever that account goes. Anything the device holds once for
-// everyone — the relay credentials, the backups, the staged secrets — only
-// goes when the account being deleted is the last one on the device.
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
+// Two tiers, because a household shares one device. What is named for the
+// account goes with it; what the device holds once for everyone goes only
+// when the account being deleted is the last one on it.
 final readonly class UserScopedFilePurge
 {
     private const OWNED = [

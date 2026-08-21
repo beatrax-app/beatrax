@@ -4,24 +4,14 @@ declare(strict_types=1);
 
 use Modules\EmailScan\Internal\MimeHeaderParser;
 
-/*
- * MimeHeaderParser unit tests — exercises the zbateson facade
- * against the three Wave 0 .eml fixtures.
- *
- * The PayPal fixture carries a Q-encoded subject so the test
- * verifies zbateson decodes underscore-to-space + UTF-8 byte
- * sequences correctly. The ICS + Google Play fixtures carry plain
- * Subject headers; they round-trip verbatim. A fourth case asserts
- * the fallback date is used when the parsed Date header is missing
- * or unparseable.
- */
+// Only the PayPal fixture carries a Q-encoded subject; ICS and Google Play
+// have plain Subject headers that round-trip verbatim.
 
 beforeEach(function (): void {
     $this->parser = new MimeHeaderParser;
     $this->fixtureRoot = __DIR__.'/../fixtures/eml';
-    // Stable epoch-style fallback so any test that drops it onto an
-    // entry would surface as an obviously-distinct date in the
-    // assertion message.
+    // A date no fixture could produce, so a fallback leaking into an entry
+    // stands out in the assertion message.
     $this->fallback = new DateTimeImmutable('2000-01-01 00:00:00+00:00');
 });
 

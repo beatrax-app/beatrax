@@ -9,23 +9,20 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Forecasting\Internal\Support\ScenarioSeriesResolver;
 use Modules\Forecasting\Models\ForecastScenarioMutation;
-use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\CancelSeriesPayload;
-use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ChangeSeriesAmountPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ScenarioMutationPayload;
-use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayload;
 use Modules\Forecasting\Public\Events\ScenarioMutated;
+use Modules\Sync\Public\Events\EntityMutated;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final class AddScenarioMutation
 {
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
         private readonly Dispatcher $events,
+        private readonly ScenarioSeriesResolver $seriesResolver,
     ) {}
 
     public function __invoke(int $scenarioId, User $user, string $kind, ScenarioMutationPayload $payload): int
@@ -44,14 +41,14 @@ final class AddScenarioMutation
             throw new NotFoundHttpException('Scenario not found.');
         }
 
-        $targetSeriesId = $this->targetSeriesIdFor($payload);
+        $targetSeriesId = $this->seriesResolver->targetSeriesIdFor($payload);
         if ($targetSeriesId !== null) {
-            $this->assertSeriesOwnedByUser($targetSeriesId, $user);
+            $this->seriesResolver->assertSeriesOwnedByUser($targetSeriesId, $user);
         }
 
         $now = $this->clock->now();
 
-        $newId = $this->db->connection()->transaction(function () use ($scenarioId, $user, $kind, $payload, $targetSeriesId, $now): int {
+        $mutation = $this->db->connection()->transaction(function () use ($scenarioId, $user, $kind, $payload, $targetSeriesId, $now): ForecastScenarioMutation {
             $mutation = new ForecastScenarioMutation;
             $mutation->user_id = $user->id;
             $mutation->forecast_scenario_id = $scenarioId;
@@ -67,10 +64,31 @@ final class AddScenarioMutation
                 ->where('user_id', $user->id)
                 ->update(['updated_at' => $now->toDateTimeString()]);
 
-            $id = $mutation->getAttribute('id');
-
-            return is_numeric($id) ? (int) $id : 0;
+            return $mutation;
         });
+
+        $id = $mutation->getAttribute('id');
+        $newId = is_numeric($id) ? (int) $id : 0;
+
+        // The scenario container synced without its contents, so a peer
+        // showed an empty named what-if. `payload` travels as the STORED
+        // JSON text — the typed cast is a read-side concern, and re-encoding
+        // the DTO here would be a second copy of that encoding to keep true.
+        $this->events->dispatch(new EntityMutated(
+            table: 'forecast_scenario_mutations',
+            pk: $newId,
+            userId: $user->id,
+            mutationType: 'create',
+            dirtyFields: [
+                'user_id' => $user->id,
+                'forecast_scenario_id' => $scenarioId,
+                'kind' => $kind,
+                'target_series_id' => $targetSeriesId,
+                'payload' => $mutation->getAttributes()['payload'] ?? null,
+                'created_at' => $now->toDateTimeString(),
+                'updated_at' => $now->toDateTimeString(),
+            ],
+        ));
 
         $this->events->dispatch(new ScenarioMutated(
             userId: $user->id,
@@ -80,26 +98,5 @@ final class AddScenarioMutation
         ));
 
         return $newId;
-    }
-
-    private function targetSeriesIdFor(ScenarioMutationPayload $payload): ?int
-    {
-        return match (true) {
-            $payload instanceof CancelSeriesPayload => $payload->seriesId,
-            $payload instanceof ChangeSeriesAmountPayload => $payload->seriesId,
-            $payload instanceof ShiftSeriesDatePayload => $payload->seriesId,
-            default => null,
-        };
-    }
-
-    private function assertSeriesOwnedByUser(int $seriesId, User $user): void
-    {
-        $owns = $this->db->connection()->table('recurring_series')
-            ->where('id', $seriesId)
-            ->where('user_id', $user->id)
-            ->exists();
-        if (! $owns) {
-            throw new NotFoundHttpException('Recurring series not found.');
-        }
     }
 }

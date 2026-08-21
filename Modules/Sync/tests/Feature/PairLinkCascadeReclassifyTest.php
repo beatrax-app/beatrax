@@ -12,25 +12,10 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
 uses(RefreshDatabase::class);
 
-/*
- * SYNC-03 / D-08 / OQ-B: Pair-link cascade reclassification.
- *
- * When a tombstone deletes one side of a paired transfer, the ON DELETE SET NULL
- * FK cascade on pair_transaction_id orphans the partner. The production engine
- * must:
- *   1. Detect the orphaned partner after the tombstone DELETE.
- *   2. Reclassify it (transfer_in → income, transfer_out → expense) via a
- *      compensating Set op appended to op_log_entries.
- *   3. Apply the compensating op so the partner row's type column is updated.
- *
- * Two symmetric cases:
- *   Case A — tombstone transfer_out (A): partner transfer_in (B) → income
- *   Case B — tombstone transfer_in (B): partner transfer_out (A) → expense
- *
- * RED: Modules\Sync\Internal\Merge\OpLogReplayer (production namespace) does
- * not exist yet. Fails with "Class not found" until Plan 11-02 implements the
- * productionized replayer with pair-link cascade detection.
- */
+// A tombstone on one side of a paired transfer orphans the partner through the
+// ON DELETE SET NULL cascade on pair_transaction_id, so the replayer has to
+// reclassify the survivor and append a compensating Set op — the reclassification
+// is a change of its own and peers only learn of it through the op log.
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-06-15 10:00:00');
@@ -41,9 +26,6 @@ afterEach(function (): void {
 });
 
 /**
- * Seeds account + import_run + two paired transfer transactions.
- * Returns [txnAId (transfer_out), txnBId (transfer_in)].
- *
  * @return array{0: int, 1: int}
  */
 function pairLinkTxns(DatabaseManager $db, int $userId, string $suffix): array
@@ -69,7 +51,8 @@ function pairLinkTxns(DatabaseManager $db, int $userId, string $suffix): array
         'updated_at' => '2026-06-15 00:00:00',
     ]);
 
-    // Insert without pair links first.
+    // Insert unpaired first: each side's pair_transaction_id points at a row
+    // that does not exist yet.
     $txnAId = $db->connection()->table('transactions')->insertGetId([
         'user_id' => $userId,
         'account_id' => $accountId,
@@ -118,7 +101,6 @@ function pairLinkTxns(DatabaseManager $db, int $userId, string $suffix): array
         'updated_at' => '2026-06-15 00:00:00',
     ]);
 
-    // Wire the pair.
     $db->connection()->table('transactions')
         ->where('id', $txnAId)
         ->update(['pair_transaction_id' => $txnBId]);
@@ -148,7 +130,6 @@ it('tombstone on transfer_out (A) reclassifies partner transfer_in (B) to income
     $pkHex = bin2hex($pk);
     $signer = new DeviceKeySigner;
 
-    // Build tombstone op for transfer_out (A).
     $stub = new OpLogEntry(
         table: 'transactions',
         pk: $txnAId,
@@ -175,24 +156,19 @@ it('tombstone on transfer_out (A) reclassifies partner transfer_in (B) to income
         userId: $userId,
     );
 
-    // RED: production replayer does not exist.
     $replayer = new OpLogReplayer($db, ['device-pair' => $pkHex]);
     $replayer->replay([$tombEntry], $userId);
 
-    // A is deleted (tombstone wins).
     expect(
         $db->connection()->table('transactions')->where('id', $txnAId)->exists()
     )->toBeFalse();
 
-    // B survives with pair_transaction_id=NULL.
     $rowB = $db->connection()->table('transactions')->where('id', $txnBId)->first();
     expect($rowB)->not->toBeNull();
     expect($rowB->pair_transaction_id)->toBeNull();
 
-    // B.type is reclassified to 'income' (OQ-B: transfer_in orphaned → income).
     expect($rowB->type)->toBe('income');
 
-    // A compensating Set op for (transactions, B.id, type, '"income"') was appended.
     $compensatingOp = $db->connection()
         ->table('op_log_entries')
         ->where('user_id', $userId)
@@ -225,7 +201,6 @@ it('tombstone on transfer_in (B) reclassifies partner transfer_out (A) to expens
     $pkHex = bin2hex($pk);
     $signer = new DeviceKeySigner;
 
-    // Build tombstone op for transfer_in (B).
     $stub = new OpLogEntry(
         table: 'transactions',
         pk: $txnBId,
@@ -252,24 +227,19 @@ it('tombstone on transfer_in (B) reclassifies partner transfer_out (A) to expens
         userId: $userId,
     );
 
-    // RED: production replayer does not exist.
     $replayer = new OpLogReplayer($db, ['device-pair' => $pkHex]);
     $replayer->replay([$tombEntry], $userId);
 
-    // B is deleted.
     expect(
         $db->connection()->table('transactions')->where('id', $txnBId)->exists()
     )->toBeFalse();
 
-    // A survives with pair_transaction_id=NULL.
     $rowA = $db->connection()->table('transactions')->where('id', $txnAId)->first();
     expect($rowA)->not->toBeNull();
     expect($rowA->pair_transaction_id)->toBeNull();
 
-    // A.type is reclassified to 'expense' (OQ-B: transfer_out orphaned → expense).
     expect($rowA->type)->toBe('expense');
 
-    // A compensating Set op for (transactions, A.id, type, '"expense"') was appended.
     $compensatingOp = $db->connection()
         ->table('op_log_entries')
         ->where('user_id', $userId)

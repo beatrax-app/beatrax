@@ -14,23 +14,6 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/*
- * Wave 3 Public read-API tests. ChainLinkQuery powers four UI seams:
- *
- *   - forTransaction(): chain-drawer tree assembly, top-down ordered,
- *     bounded at MAX_DEPTH=5, rejected links filtered out, NULL-to
- *     legs skipped per issue #10.
- *   - openCandidateCount(): top-nav badge integer.
- *   - candidatesForReview(): cursor-paginated review-queue rows with
- *     confirmsRemaining derived from same-signature_hash confirmed
- *     counts.
- *
- * Confidence-tier mapping per D-91:
- *   - state=confirmed AND resolver=auto AND confidence=1.0 → Deterministic
- *   - state=confirmed otherwise → Confirmed
- *   - state=candidate → Candidate
- */
-
 function clqUser(string $username): User
 {
     return User::query()->create([
@@ -168,12 +151,8 @@ it('forTransaction assembles top-down chain tree (root → funder)', function ()
 });
 
 it('forTransaction walks BOTH directions — rooting on the funder side surfaces the funded transaction', function (): void {
-    // Locks the bidirectional-walker fix. The chain_link's `from` is
-    // the PayPal expense and `to` is the ASN funder. Pre-fix, rooting
-    // the walker on the ASN side (the `to`) returned only the root
-    // node because the walker only followed forward edges. Post-fix,
-    // the walker also follows reverse edges and surfaces the PayPal
-    // expense as the partner node.
+    // The walker once followed forward edges only, so rooting on the link's
+    // `to` side returned the root node alone.
     $paypalExpense = clqTx($this->user, $this->paypal, $this->run, -2500, 'expense', 'Spotify', 'spotify', '2026-05-10', 'bd1', 1);
     $asnTransfer = clqTx($this->user, $this->asn, $this->run, -2500, 'transfer_out', 'PayPal SARL', 'paypal-sarl', '2026-05-10', 'bd2', 2);
     clqSeedLink(
@@ -181,7 +160,6 @@ it('forTransaction walks BOTH directions — rooting on the funder side surfaces
         'paypal_funding', 'confirmed', '1.000', 'auto', ['signature_hash' => 'bd-h1'],
     );
 
-    // Root on the ASN side (the link's `to`).
     $tree = $this->query->forTransaction((int) $asnTransfer->id, $this->user);
 
     expect($tree->nodes)->toHaveCount(2);
@@ -191,16 +169,14 @@ it('forTransaction walks BOTH directions — rooting on the funder side surfaces
 });
 
 it('allChainsForUser returns every non-rejected chain_link with both endpoints hydrated, sorted by recency', function (): void {
-    // Newest first — order by created_at DESC.
     $f1 = clqTx($this->user, $this->paypal, $this->run, -1000, 'expense', 'Older', 'older', '2026-05-10', 'all1', 1);
     $t1 = clqTx($this->user, $this->asn, $this->run, -1000, 'transfer_out', 'PayPal SARL', 'p-sarl-1', '2026-05-10', 'all2', 2);
     $f2 = clqTx($this->user, $this->paypal, $this->run, -1500, 'expense', 'Newer', 'newer', '2026-05-11', 'all3', 3);
     $t2 = clqTx($this->user, $this->asn, $this->run, -1500, 'transfer_out', 'PayPal SARL', 'p-sarl-2', '2026-05-11', 'all4', 4);
 
     clqSeedLink($this->db, $this->user, (int) $f1->id, (int) $t1->id, 'paypal_funding', 'confirmed', '1.000', 'auto', ['signature_hash' => 'all-sig-1']);
-    // Sleep wouldn't help — created_at is set per insert. Force the
-    // ordering by explicitly bumping the second link's timestamps in
-    // a follow-up update to guarantee deterministic ordering.
+    // Both inserts land in the same second, so created_at is set explicitly
+    // to make the ordering deterministic.
     clqSeedLink($this->db, $this->user, (int) $f2->id, (int) $t2->id, 'paypal_funding', 'candidate', '0.900', 'auto', ['signature_hash' => 'all-sig-2']);
     $this->db->connection()->table('chain_links')
         ->whereJsonContains('evidence->signature_hash', 'all-sig-2')
@@ -209,7 +185,6 @@ it('allChainsForUser returns every non-rejected chain_link with both endpoints h
         ->whereJsonContains('evidence->signature_hash', 'all-sig-1')
         ->update(['created_at' => '2026-05-15 12:00:00']);
 
-    // A rejected link must NOT appear.
     $f3 = clqTx($this->user, $this->paypal, $this->run, -800, 'expense', 'Rejected', 'r', '2026-05-09', 'all5', 5);
     $t3 = clqTx($this->user, $this->asn, $this->run, -800, 'transfer_out', 'PayPal SARL', 'p-sarl-3', '2026-05-09', 'all6', 6);
     clqSeedLink($this->db, $this->user, (int) $f3->id, (int) $t3->id, 'paypal_funding', 'rejected', '1.000', 'auto', ['signature_hash' => 'all-sig-rej']);
@@ -221,7 +196,6 @@ it('allChainsForUser returns every non-rejected chain_link with both endpoints h
     $rows = $this->query->allChainsForUser($this->user);
 
     expect($rows)->toHaveCount(2);
-    // Newest first.
     expect($rows[0]->fromCounterparty)->toBe('Newer');
     expect($rows[0]->state)->toBe('candidate');
     expect($rows[0]->fromTransactionId)->toBe((int) $f2->id);
@@ -252,19 +226,16 @@ it('hasChainForTransaction ignores rejected chain_links', function (): void {
     expect($this->query->hasChainForTransaction((int) $paypalExpense->id, $this->user))->toBeFalse();
 });
 
-it('forTransaction maps confidence tiers per D-91', function (): void {
+it('forTransaction labels each node Deterministic, Confirmed or Candidate from its link state and confidence', function (): void {
     $paypalExpense = clqTx($this->user, $this->paypal, $this->run, -2500, 'expense', 'Spotify', 'spotify', '2026-05-10', 'b1', 1);
     $asnA = clqTx($this->user, $this->asn, $this->run, 2500, 'transfer_in', 'A', 'a', '2026-05-10', 'b2', 2);
     $asnB = clqTx($this->user, $this->asn, $this->run, 2500, 'transfer_in', 'B', 'b', '2026-05-11', 'b3', 3);
     $asnC = clqTx($this->user, $this->asn, $this->run, 2500, 'transfer_in', 'C', 'c', '2026-05-12', 'b4', 4);
 
-    // Deterministic — confirmed + auto + 1.000.
     clqSeedLink($this->db, $this->user, (int) $paypalExpense->id, (int) $asnA->id,
         'paypal_funding', 'confirmed', '1.000', 'auto', ['signature_hash' => 'h1']);
-    // Confirmed-but-not-deterministic — confirmed + rule + 0.850.
     clqSeedLink($this->db, $this->user, (int) $asnA->id, (int) $asnB->id,
         'paypal_funding', 'confirmed', '0.850', 'rule', ['signature_hash' => 'h2']);
-    // Candidate.
     clqSeedLink($this->db, $this->user, (int) $asnB->id, (int) $asnC->id,
         'paypal_funding', 'candidate', '0.750', 'auto', ['signature_hash' => 'h3']);
 
@@ -285,19 +256,16 @@ it('forTransaction filters rejected chain_links out of the walk', function (): v
 
     $tree = $this->query->forTransaction((int) $paypalExpense->id, $this->user);
 
-    // Only the root node — the rejected leg is excluded from the walk.
     expect($tree->nodes)->toHaveCount(1);
     expect($tree->nodes[0]->kind)->toBe('root');
 });
 
-it('forTransaction handles NULL to_transaction_id gracefully (issue #10 — exceeded tolerance)', function (): void {
+it('forTransaction handles NULL to_transaction_id gracefully', function (): void {
     $asnTransfer = clqTx($this->user, $this->asn, $this->run, 2500, 'transfer_in', 'ASN bulk', 'asn-bulk', '2026-05-10', 'e1', 1);
 
-    // Exceeded-tolerance ICS bulk-settle candidate has to_transaction_id=NULL.
     clqSeedLink($this->db, $this->user, (int) $asnTransfer->id, null,
         'ics_bulk_settle', 'candidate', '0.700', 'auto', ['signature_hash' => 'h-x']);
 
-    // No exception thrown — walker simply skips the NULL leg.
     $tree = $this->query->forTransaction((int) $asnTransfer->id, $this->user);
 
     expect($tree->nodes)->toHaveCount(1);
@@ -332,8 +300,7 @@ it('forTransaction bounds walk depth at 5 levels', function (): void {
 
     $tree = $this->query->forTransaction((int) $tx0->id, $this->user);
 
-    // 1 root + 5 levels = 6 nodes max. The 6th-level child (tx6) is not
-    // included because the walker stops at depth=5.
+    // 1 root + 5 levels = 6 nodes; tx6 sits past the depth bound.
     expect(count($tree->nodes))->toBeLessThanOrEqual(6);
     $visitedIds = array_map(fn (ChainTreeNode $n) => $n->transactionId, $tree->nodes);
     expect($visitedIds)->not->toContain((int) $tx6->id);
@@ -373,8 +340,6 @@ it('hintsForReview returns only NULL-endpoint candidates with parsed evidence li
     expect($hints)->toHaveCount(1);
     expect($hints[0]->kind)->toBe('ics_bulk_settle');
     expect($hints[0]->fromTransactionId)->toBe($txHint->id);
-    // Evidence is summarised into bullet-line strings the blade view
-    // renders verbatim — order matches the per-kind formatter.
     expect($hints[0]->evidenceLines)->toContain('Tolerance: exceeded');
     expect($hints[0]->evidenceLines)->toContain('Covered transactions: 54');
     expect($hints[0]->evidenceLines)->toContain('Card statement #1');
@@ -401,10 +366,8 @@ it('candidatesForReview excludes hint rows whose to_transaction_id is NULL', fun
     $tx2 = clqTx($this->user, $this->asn, $this->run, 1000, 'transfer_in', 'B', 'b', '2026-05-10', 'h2', 2);
     clqSeedLink($this->db, $this->user, (int) $tx1->id, (int) $tx2->id, 'paypal_funding', 'candidate', '0.900', 'auto', ['signature_hash' => 'sig-actionable']);
 
-    // Hint row — exceeded-tolerance ics_bulk_settle with NULL endpoint.
-    // The schema's NULL-endpoint trigger permits this row to live in
-    // candidate state, but its Confirm / Reject buttons would crash
-    // the SQL trigger. candidatesForReview must filter it out.
+    // The schema permits a NULL endpoint in candidate state, but Confirm /
+    // Reject on such a row would trip the trigger, so it is filtered out.
     $tx3 = clqTx($this->user, $this->paypal, $this->run, -500, 'expense', 'C', 'c', '2026-05-11', 'h3', 3);
     clqSeedLink($this->db, $this->user, (int) $tx3->id, null, 'ics_bulk_settle', 'candidate', '0.950', 'auto', ['tolerance_used' => 'exceeded', 'signature_hash' => 'sig-hint']);
 
@@ -442,7 +405,6 @@ it('candidatesForReview computes confirmsRemaining via same-signature confirmed 
         clqSeedLink($this->db, $this->user, (int) $f->id, (int) $t->id, 'paypal_funding', 'confirmed', '1.000', 'auto', ['signature_hash' => $signature]);
     }
 
-    // One new candidate with the same signature_hash.
     $f3 = clqTx($this->user, $this->paypal, $this->run, -3000, 'expense', 'A3', 'a3', '2026-05-03', 'j3a', 9);
     $t3 = clqTx($this->user, $this->asn, $this->run, 3000, 'transfer_in', 'B3', 'b3', '2026-05-03', 'j3b', 10);
     clqSeedLink($this->db, $this->user, (int) $f3->id, (int) $t3->id, 'paypal_funding', 'candidate', '0.700', 'auto', ['signature_hash' => $signature]);
@@ -462,7 +424,6 @@ it('candidatesForReview is cursor-paginated', function (): void {
 
     $first = $this->query->candidatesForReview($this->user, limit: 2);
     expect($first)->toHaveCount(2);
-    // Highest confidence first.
     expect($first[0]->confidence)->toBeGreaterThanOrEqual($first[1]->confidence);
 
     $cursorId = $first[1]->chainLinkId;
@@ -470,7 +431,6 @@ it('candidatesForReview is cursor-paginated', function (): void {
     $second = $this->query->candidatesForReview($this->user, $cursorId, $cursorConfidence, limit: 2);
 
     expect($second)->toHaveCount(2);
-    // Second page does not repeat the cursor row.
     $firstIds = array_map(fn (ChainLinkRow $r) => $r->chainLinkId, $first);
     $secondIds = array_map(fn (ChainLinkRow $r) => $r->chainLinkId, $second);
     expect(array_intersect($firstIds, $secondIds))->toBe([]);

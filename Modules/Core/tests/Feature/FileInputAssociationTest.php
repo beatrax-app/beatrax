@@ -4,19 +4,10 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Blade;
 
-/*
- * The file field's label contract.
- *
- * `x-core::file-input` hides the real `<input type="file">` inside a <label>,
- * because the engine's own chrome ("Choose File / No file chosen") renders in
- * the SYSTEM locale and no attribute or stylesheet can reach it. Wrapping keeps
- * the native click-to-open behaviour and the screen-reader semantics.
- *
- * The wrap alone is a valid implicit association, and every caller passes an
- * `id` — but that id reached the input through `$attributes`, so nothing
- * reading the template could see either half. The accessibility scanner called
- * the input orphaned, and it was right that the source did not say otherwise.
- */
+// The real <input type="file"> hides inside the <label> because the engine's own
+// "Choose File" chrome renders in the system locale and no attribute or
+// stylesheet reaches it. The wrap alone is a valid implicit association, but the
+// id arrived through $attributes, so the template never said either half aloud.
 
 it('associates the label with the input explicitly, both halves in the markup', function (): void {
     $html = Blade::render('<x-core::file-input id="import-file" accept=".csv" />');

@@ -8,9 +8,6 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 
-/**
- * @link ../../../../../../.docs/features/sync/architecture.md
- */
 trait ManagesDeviceRenaming
 {
     public function startRename(int $deviceId): void

@@ -6,23 +6,6 @@ use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
 use Modules\Import\Public\Services\MerchantNameResolver;
 
-/*
- * MerchantNameResolver covers the 5-step precedence walk for resolving
- * a raw bank-statement description to a user-chosen friendly name:
- *
- *   (a) user-exact alias  → return friendly_name
- *   (b) user-generalized  → return friendly_name (mb_strpos in PHP)
- *   (c) community-exact   → extension point, returns null in this slot
- *   (d) community-fuzzy   → extension point, returns null in this slot
- *   (e) raw description fallback → return null
- *
- * Every query carries an explicit `where('user_id', $userId)` clause
- * even though the MerchantAlias model already wears the BelongsToUser
- * global scope — the resolver may be called from a queue worker where
- * the global scope is not bound, so per-user safety is enforced at the
- * query level too.
- */
-
 function makeResolverUser(string $username): User
 {
     return User::create([

@@ -52,7 +52,6 @@ beforeEach(function (): void {
     ]);
 });
 
-/** Persist a transaction in the current period (dated today) for $user. */
 function budgetTx(int $userId, int $accountId, int $runId, int $settledMinor, ?int $categoryId): void
 {
     static $i = 0;
@@ -130,7 +129,7 @@ it('returns an empty list when the user has no budgets', function (): void {
     expect(app(BudgetProgressQuery::class)->forCurrentPeriod($this->user))->toBe([]);
 });
 
-it('counts a split transaction\'s legs against their own budgets, never the parent (Req 4)', function (): void {
+it('counts a split transaction\'s legs against their own budgets, never the parent', function (): void {
     $household = Category::create(['user_id' => null, 'name' => 'Household', 'slug' => 'household', 'kind' => 'expense', 'display_order' => 2]);
 
     CategoryBudget::create(['user_id' => $this->user->id, 'category_id' => $this->groceries->id, 'budget_minor' => 40000, 'currency' => 'EUR', 'period_type' => 'monthly']);

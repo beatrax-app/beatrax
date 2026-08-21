@@ -28,7 +28,11 @@ return [
     'recovery_download' => 'Stáhnout jako .txt',
     'recovery_copy' => 'Kopírovat kódy',
     'recovery_copied' => 'Zkopírováno',
+    'recovery_copy_failed' => 'Kopírování se nezdařilo. Kódy si raději opište.',
     'recovery_saved' => 'Uloženo mezi stažené soubory.',
+    'recovery_share_title' => 'Obnovovací kódy Beatrax',
+    'recovery_share_message' => 'Uschovejte je na bezpečném místě.',
+    'recovery_save_failed' => 'Soubor se nepodařilo uložit. Kódy si raději opište.',
     'recovery_confirm' => 'Kódy mám uložené na bezpečném místě.',
     'continue_to_pairing' => 'Pokračovat k párování',
 

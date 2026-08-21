@@ -19,7 +19,6 @@ use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
 use Modules\EmailScan\Internal\Clients\GraphErrorMapper;
 use Modules\EmailScan\Internal\Http\Livewire\BackfillWindowModal;
 use Modules\EmailScan\Internal\Http\Livewire\InboxesPage;
-use Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal;
 use Modules\EmailScan\Internal\InboxScanStateMachine;
 use Modules\EmailScan\Internal\Jobs\DetectIcsStatementReadyJob;
 use Modules\EmailScan\Internal\Jobs\DiscoveryScanJob;
@@ -34,6 +33,7 @@ use Modules\EmailScan\Internal\OAuth\OAuthStateRepository;
 use Modules\EmailScan\Public\Actions\DismissDiscoveredSender;
 use Modules\EmailScan\Public\Actions\PromoteDiscoveredSender;
 use Modules\EmailScan\Public\Events\InboxTokenFailed;
+use Modules\EmailScan\Public\Http\Livewire\OAuthClientWizardModal;
 use Modules\EmailScan\Public\LoopbackRedirectUri;
 use Modules\EmailScan\Public\Services\DiscoveredSenderQuery;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
@@ -43,9 +43,6 @@ use Modules\EmailScan\Public\Services\InboxQuery;
 use Modules\EmailScan\Public\Services\KnownSenderQuery;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
-/**
- * @link ../../../.docs/features/email-scan/architecture.md
- */
 final class EmailScanServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
@@ -66,22 +63,15 @@ final class EmailScanServiceProvider extends ServiceProvider
         $this->app->singleton(PromoteDiscoveredSender::class);
         $this->app->singleton(DismissDiscoveredSender::class);
 
-        // Internal fetch + persistence collaborators consumed by the
-        // backfill / incremental-scan job pipeline.
         $this->app->singleton(EmlBlobStore::class);
         $this->app->singleton(MimeHeaderParser::class);
-        // Cohesive collaborators the scan clients/jobs delegate to: Graph
-        // error-envelope mapping and provider message-payload parsing.
         $this->app->singleton(GraphErrorMapper::class);
         $this->app->singleton(ScanMessageMapper::class);
         $this->app->singleton(GmailApiClient::class);
-        // Tests rebind the contract to FakeGmailApiClient via
-        // $this->app->instance(GmailApiClientContract::class, ...).
+        // The contracts exist so tests can rebind them to the Fake clients
+        // via $this->app->instance(...).
         $this->app->singleton(GmailApiClientContract::class, GmailApiClient::class);
         $this->app->singleton(GraphApiClient::class);
-        // Same Fake/real swap pattern for the Graph contract — tests
-        // rebind GraphApiClientContract to FakeGraphApiClient via
-        // $this->app->instance(...).
         $this->app->singleton(GraphApiClientContract::class, GraphApiClient::class);
         $this->app->singleton(InboxScanStateMachine::class);
         $this->app->singleton(IncrementalScanJob::class);
@@ -95,17 +85,13 @@ final class EmailScanServiceProvider extends ServiceProvider
 
     public function boot(LivewireManager $livewire, EventsDispatcher $events): void
     {
-        // A refreshed-token failure raises InboxTokenFailed, which
-        // RaiseReconsentAlertOnTokenFailure picks up to write a single
-        // de-duped system_alerts row the SystemAlertsBanner renders
+        // Ends in a de-duped system_alerts row the SystemAlertsBanner renders
         // with a Reconnect link back through /inboxes?reconnect={id}.
         $events->listen(InboxTokenFailed::class, RaiseReconsentAlertOnTokenFailure::class);
 
         $this->loadModuleResources('email-scan');
 
-        // /inboxes page Livewire SFC + the OAuth-client wizard modal
-        // SFC (single component, branches on the $provider property
-        // to render the Gmail or Microsoft 365 variant).
+        // One wizard component for both providers; it branches on $provider.
         $livewire->component('email-scan.inboxes-page', InboxesPage::class);
         $livewire->component('email-scan.oauth-client-wizard-modal', OAuthClientWizardModal::class);
         $livewire->component('email-scan.backfill-window-modal', BackfillWindowModal::class);
@@ -113,10 +99,7 @@ final class EmailScanServiceProvider extends ServiceProvider
         $this->registerTopNavBadgeComposer();
     }
 
-    // Injects the top-nav "Inboxes" badge integer into
-    // core::livewire.top-nav via the View Factory contract (mirrors
-    // ChainsServiceProvider's equivalent composer) and also runs the
-    // EmitOAuthReauthRequiredAlert listener on the same per-request hook.
+    // Also runs EmitOAuthReauthRequiredAlert on the same per-request hook.
     private function registerTopNavBadgeComposer(): void
     {
         $app = $this->app;

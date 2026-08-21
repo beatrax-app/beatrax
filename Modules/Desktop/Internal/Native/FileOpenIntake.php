@@ -7,15 +7,12 @@ namespace Modules\Desktop\Internal\Native;
 use Illuminate\Contracts\Events\Dispatcher;
 use Modules\Desktop\Public\Events\FileOpenedFromOs;
 
-// The one validation boundary for an OS-supplied file path:
-// canonicalise via realpath(), require a real file, allow-list the
-// extension, cap the size, and never exec()/shell_exec() the path.
-// Only a path that passes every check emits FileOpenedFromOs.
+// The one validation boundary every OS-supplied file path converges on. The
+// path is only ever read, never handed to exec()/shell_exec().
 final class FileOpenIntake
 {
-    // Lower-cased, no leading dot — matches the macOS
-    // CFBundleDocumentTypes and Linux MimeType= entries the published
-    // Electron project registers.
+    // Lower-cased, no leading dot — matches the macOS CFBundleDocumentTypes and
+    // Linux MimeType= entries the published Electron project registers.
     public const SUPPORTED_EXTENSIONS = ['csv', 'eml'];
 
     /**
@@ -60,9 +57,6 @@ final class FileOpenIntake
             : null;
     }
 
-    // $extension is constrained to SUPPORTED_EXTENSIONS before the
-    // MAX_BYTES lookup, and every supported extension has a matching
-    // MAX_BYTES entry, so the cap access can never miss.
     private function withinCap(string $canonical, string $extension): bool
     {
         if (! in_array($extension, self::SUPPORTED_EXTENSIONS, true)) {

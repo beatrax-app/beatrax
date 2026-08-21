@@ -5,12 +5,9 @@ declare(strict_types=1);
 namespace Modules\Reports\Internal\Aggregation;
 
 use Modules\Ledger\Public\Dto\Period;
-use Modules\Reports\Public\Dto\ReportResultDto;
-use Modules\Reports\Public\Dto\ReportResultRow;
+use Modules\Reports\Internal\Dto\ReportResultDto;
+use Modules\Reports\Internal\Dto\ReportResultRow;
 
-/**
- * @link ../../../../.docs/features/reports/architecture.md
- */
 final class PeriodComparison
 {
     /**
@@ -72,17 +69,12 @@ final class PeriodComparison
         ];
     }
 
-    // A plain day-count shift is only correct for an arbitrary-length
-    // custom range. Every month-anchored preset instead steps back the
-    // same number of calendar months, avoiding "borrowed" days across a
-    // shorter/longer adjacent month (e.g. Feb's 28 days vs Mar's 31).
+    // A day-count shift is only correct for an arbitrary custom range: a
+    // month-anchored preset would borrow days across Feb's 28 versus Mar's 31.
     public function previousPeriod(Period $period): Period
     {
         $monthsSpan = (int) $period->start->diffInMonths($period->endExclusive);
 
-        // Month-aligned span: stepping the start forward by its own month
-        // count lands exactly on endExclusive -> step back by the same
-        // number of calendar months instead of a raw day-count shift.
         if ($monthsSpan > 0 && $period->start->addMonthsNoOverflow($monthsSpan)->equalTo($period->endExclusive)) {
             $previousStart = $period->start->subMonthsNoOverflow($monthsSpan);
 
@@ -93,10 +85,8 @@ final class PeriodComparison
             );
         }
 
-        // True arbitrary-length custom range: a plain day-count shift is
-        // correct here. diffInDays() already returns a whole number for
-        // these start-of-day period boundaries, so only the (int) cast is
-        // needed (its return type is float, not int).
+        // An arbitrary custom range, where a day-count shift is correct.
+        // diffInDays() is whole here; the cast is only for its float return type.
         $days = (int) $period->start->diffInDays($period->endExclusive);
 
         return new Period(
@@ -106,10 +96,9 @@ final class PeriodComparison
         );
     }
 
-    // Keyed by (group, currency), never group alone: under 'original' mode
-    // CurrencyModeApplier intentionally returns one row per currency for a
-    // group present in more than one currency, and keying by group alone
-    // would let a second currency's row silently overwrite the first.
+    // Keyed by (group, currency): under 'original' mode CurrencyModeApplier
+    // returns one row per currency, and keying on group alone would let the
+    // second currency's row overwrite the first.
     private static function keyFor(ReportResultRow $row): string
     {
         $group = $row->groupKey === null ? 'null:'.$row->groupLabel : (string) $row->groupKey;

@@ -21,10 +21,9 @@ final class BudgetWriter
             return false;
         }
 
-        // Bypasses the current-user global scope so the explicit $user is
-        // authoritative: with the scope active, an upsert for any other
-        // user would mismatch and fall through to an INSERT that trips
-        // the (user_id, category_id) unique constraint.
+        // With the global scope active, an upsert for any other user would
+        // mismatch and fall through to an INSERT that trips the
+        // (user_id, category_id) unique constraint.
         CategoryBudget::query()->withoutGlobalScope(UserScope::class)->updateOrCreate(
             ['user_id' => $user->id, 'category_id' => $categoryId],
             ['budget_minor' => $minor, 'currency' => 'EUR', 'period_type' => 'monthly'],
@@ -42,9 +41,6 @@ final class BudgetWriter
             ->delete();
     }
 
-    // Parses a user-entered positive amount to integer minor units — the
-    // shared MoneyInput handles the Dutch/plain decimal forms — or null for a
-    // blank, malformed, zero or negative entry.
     public function parseAmount(string $value): ?int
     {
         return MoneyInput::tryToPositiveMinor($value);

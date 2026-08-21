@@ -1,6 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    No-results state (D-21, UI-SPEC Component Inventory #10).
+    No-results state (UI-SPEC Component Inventory #10).
 
     Renders when a query + filters produce zero matches.
     - "Nothing matches" heading

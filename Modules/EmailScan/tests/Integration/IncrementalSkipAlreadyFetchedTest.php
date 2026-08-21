@@ -14,16 +14,9 @@ use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
 
 uses(RefreshDatabase::class);
 
-/*
- * IncrementalScanJob WR-06 quota-saving invariant.
- *
- * When the Gmail history walk re-surfaces a provider_message_id we
- * already have on disk + indexed (e.g. the message landed during a
- * prior backfill before the incremental cursor was established),
- * the job MUST NOT issue a second getRawMessage call for it. The
- * insertOrIgnore protected the DB invariant; this test pins the
- * "don't burn provider quota on a re-fetch" behaviour.
- */
+// insertOrIgnore already protected the DB invariant; what is pinned here is
+// the provider quota. A history walk re-surfacing a message a prior backfill
+// landed must not spend a second getRawMessage call on it.
 
 beforeEach(function (): void {
     Sleep::fake();
@@ -72,9 +65,7 @@ it('Gmail incremental: does not call getRawMessage for ids already present in in
         'updated_at' => $now,
     ]);
 
-    // Pre-seed inbox_messages with the message id the upcoming
-    // history walk will surface. This simulates the "prior backfill
-    // already landed this message" case the WR-06 fix addresses.
+    // Stands in for a prior backfill having already landed this message id.
     $db->connection()->table('inbox_messages')->insert([
         'user_id' => $user->id,
         'inbox_id' => $inboxId,
@@ -89,9 +80,7 @@ it('Gmail incremental: does not call getRawMessage for ids already present in in
         'updated_at' => $now,
     ]);
 
-    // Queue a history response that re-surfaces the already-fetched
-    // id plus one NEW id. The new id should be fetched; the
-    // already-present id should be skipped.
+    // The already-fetched id plus one new one.
     $fake = new FakeGmailApiClient($this->app->make(Filesystem::class));
     $fake->queueHistoryResponse(['paypal-sample-receipt', 'ics-sample-statement-notice'], '12400');
     $this->app->instance(GmailApiClientContract::class, $fake);
@@ -106,7 +95,6 @@ it('Gmail incremental: does not call getRawMessage for ids already present in in
         static fn (array $c): bool => $c['method'] === 'getRawMessage',
     ));
 
-    // Exactly one getRawMessage call — for the new id only.
     expect($rawCalls)->toHaveCount(1);
     expect($rawCalls[0]['args']['providerMessageId'])->toBe('ics-sample-statement-notice');
 });

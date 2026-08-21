@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-// suppressed-skip: a €23.49 Spotify charge that WOULD fire the
-// large-vs-typical detector, but a matching user suppression rule (merchant
-// + amount band + detector + direction, D-17) exists. The evaluator skips
-// inserting an alert — `suppressed` is true and reasons is empty. The band
-// (€18.79 .. €28.19) brackets the €23.49 charge.
+// A €23.49 Spotify charge that would fire `large`, muted by a suppression
+// rule whose €18.79..€28.19 band brackets it: no alert row is inserted.
 
 return [
     'settings' => [

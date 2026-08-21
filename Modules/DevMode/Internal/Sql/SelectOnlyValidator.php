@@ -9,9 +9,6 @@ use Doctrine\SqlFormatter\Tokenizer;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/dev-mode/architecture.md
- */
 final class SelectOnlyValidator
 {
     /**
@@ -28,10 +25,8 @@ final class SelectOnlyValidator
      */
     public function validate(string $sql): void
     {
-        // Reject semicolon-stacked statements BEFORE invoking the
-        // tokenizer — a `SELECT 1; INSERT …` tokenizes as a SELECT
-        // first-token + a boundary semicolon + an INSERT word; the
-        // first-token check would let it through.
+        // Ahead of the tokenizer: `SELECT 1; INSERT …` presents a SELECT as
+        // its first token, so the first-token check alone would pass it.
         if (preg_match('/;\s*\S/', $sql) === 1) {
             throw ValidationException::withMessages(['sql' => 'semicolon_followed_by_statement']);
         }
@@ -42,10 +37,7 @@ final class SelectOnlyValidator
             throw ValidationException::withMessages(['sql' => 'tokenizer_error:'.$e->getMessage()]);
         }
 
-        // Walk past whitespace / comment tokens until we find the
-        // first significant token. The Cursor::next() helper accepts
-        // an `$exceptTokenType` int to skip — call it once per
-        // skipped type until we land on a non-skip token.
+        // Cursor::next() skips one token type per call, hence the loop.
         do {
             $token = $cursor->next();
             if ($token === null) {

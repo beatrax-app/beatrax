@@ -7,11 +7,6 @@ use Illuminate\Session\Store;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Auth\Public\Services\AppLockKeyService;
 
-/*
- * Unit tests for AppLockKeyService — the public LOCK-04 boundary.
- * Uses an in-memory session store backed by ArraySessionHandler.
- */
-
 function makeKeyServiceSession(): Store
 {
     return new Store('beatrax_test', new ArraySessionHandler(120));
@@ -66,8 +61,8 @@ it('release() returns null before any unlock() call', function (): void {
     $service = new AppLockKeyService($manager);
     $session = makeKeyServiceSession();
 
-    // Session is neither locked nor unlocked — isLocked defaults to false
-    // but no key is stored, so release() returns null (the stored value).
+    // Neither locked nor unlocked: isLocked defaults false, but with no key
+    // stored release() still has nothing to hand back.
     expect($service->release($session))->toBeNull();
 });
 

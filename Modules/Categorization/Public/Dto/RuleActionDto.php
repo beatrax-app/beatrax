@@ -6,9 +6,6 @@ namespace Modules\Categorization\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/categorization/architecture.md
- */
 final class RuleActionDto extends Data
 {
     /**

@@ -17,26 +17,6 @@ use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
 
 uses(RefreshDatabase::class, EnablesEncryptionForUser::class);
 
-/*
- * 14.1-14 Task 2 (Cluster 4 / CRYPT-01):
- *
- *  - T-14.1-14b: EntityChangeApplier::apply() must encrypt
- *    counterparty_name/description in $fields before the raw ->update() —
- *    mirrors TagTransaction's encrypt-before-write.
- *  - T-14.1-14c (the flagged lower-confidence sub-issue): proves the
- *    applyTransactionAmount() fingerprint-recompute path preserves
- *    transactions_fingerprint_uq idempotency under encryption. Investigation
- *    (documented on EntityChangeApplier::applyTransactionAmount()'s own
- *    docblock) found FingerprintComposer::compose() does NOT consume
- *    counterparty_name/counterparty_iban/description bytes at all — only
- *    counterparty_normalized, which is never a SensitiveFieldRegistry column
- *    (always plaintext). This test proves that finding empirically rather
- *    than leaving it as an assumption: the fingerprint recomputed from a row
- *    carrying CIPHERTEXT counterparty_name/counterparty_iban/description is
- *    byte-for-byte identical to the fingerprint a fresh plaintext re-import
- *    of the same logical row would produce.
- */
-
 function mecaUser(): User
 {
     return User::query()->create([
@@ -58,16 +38,9 @@ function mecaAccount(User $user): Account
     ]);
 }
 
-/**
- * Seeds a real `transactions` row with `counterparty_name`/
- * `counterparty_iban`/`description` stored as GENUINE CIPHERTEXT (mirrors
- * what a real encrypted-user import writes at rest). `counterparty_normalized`
- * is stored plaintext (never encrypted, D-02b) and is IDENTICAL to what a
- * fresh plaintext re-import of the same logical row would compute, so the
- * two CanonicalTransaction DTOs built later in the test (one from this raw
- * ciphertext-carrying row, one from known plaintext) hash to the same
- * fingerprint tuple.
- */
+// counterparty_normalized stays plaintext and is the only merchant column
+// FingerprintComposer consumes, so a row whose name/iban/description are
+// ciphertext still hashes to what a plaintext re-import would produce.
 function mecaSeedTransaction(
     User $user,
     Account $account,
@@ -208,7 +181,7 @@ it('apply() stores plaintext for a non-encrypted user (pass-through parity)', fu
     expect($row->description)->toBe('New description from re-import');
 })->group('MigrationEntityChangeApplierEncryption');
 
-it('T-14.1-14c: applyTransactionAmount() recomputes the SAME fingerprint a plaintext re-import would, for a row carrying ciphertext counterparty_name/iban/description — encrypted user', function (): void {
+it('applyTransactionAmount() recomputes the SAME fingerprint a plaintext re-import would, for a row carrying ciphertext counterparty_name/iban/description — encrypted user', function (): void {
     $user = mecaUser();
     $session = $this->enablesEncryptionForUser($user);
     $account = mecaAccount($user);
@@ -225,10 +198,8 @@ it('T-14.1-14c: applyTransactionAmount() recomputes the SAME fingerprint a plain
     $row = app(DatabaseManager::class)->connection()->table('transactions')->where('id', $transactionId)->first();
     $normalized = (string) $row->counterparty_normalized;
 
-    // Independently compute what a FRESH PLAINTEXT re-import of this exact
-    // logical row (same account/dates/currency/normalized-merchant, new
-    // amount) would hash to — the ground truth this test proves the
-    // encrypted-row recompute matches.
+    // Ground truth: what a fresh plaintext re-import of this same logical row,
+    // with the new amount, would hash to.
     $expectedCanonical = new CanonicalTransaction(
         userId: $user->id,
         accountId: $account->id,
@@ -260,20 +231,15 @@ it('T-14.1-14c: applyTransactionAmount() recomputes the SAME fingerprint a plain
     $updatedRow = app(DatabaseManager::class)->connection()->table('transactions')->where('id', $transactionId)->first();
 
     expect((int) $updatedRow->amount_minor)->toBe($newAmountMinor);
-    // The core idempotency proof: the recomputed fingerprint (produced from
-    // a row whose counterparty_name/counterparty_iban/description are
-    // CIPHERTEXT at read time) is byte-for-byte identical to the plaintext
-    // ground truth above.
     expect((string) $updatedRow->fingerprint)->toBe($expectedFingerprint);
 
-    // The sensitive columns this method never writes stay untouched
-    // ciphertext (applyTransactionAmount only writes amount_minor/fingerprint).
+    // applyTransactionAmount writes only amount_minor/fingerprint.
     expect($updatedRow->counterparty_name)->not->toBe($plainName);
     expect($codec->decryptValue('transactions', 'counterparty_name', $updatedRow->counterparty_name, $user->id, $session)['value'])
         ->toBe($plainName);
 })->group('MigrationEntityChangeApplierEncryption');
 
-it('T-14.1-14c: fingerprint recompute is unaffected by encryption for a non-encrypted user (pass-through parity)', function (): void {
+it('applyTransactionAmount() recomputes the fingerprint unaffected by encryption for a non-encrypted user (pass-through parity)', function (): void {
     $user = mecaUser();
     $account = mecaAccount($user);
     /** @var SensitiveColumnCodec $codec */

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Public\Recovery;
 
-// Filename is derived from the owning username, lowercased so it stays
-// stable regardless of how the username was originally typed.
 final class RecoveryCodeFormatter
 {
     /**

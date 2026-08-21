@@ -10,14 +10,6 @@ use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 use Modules\Ledger\Public\Dto\StatementSummaryData;
 
-/*
- * Coverage for the PayPal CSV adapter — the composite class that wires
- * the rollup walker + locale-specific parsers + language profile +
- * event-type map into the SourceAdapter contract every ingestion
- * pipeline consumes. Tests run against the redacted fixture at
- * Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv.
- */
-
 beforeEach(function (): void {
     $this->resolver = new class implements AccountResolver
     {
@@ -108,9 +100,9 @@ it('exposes a populated StatementSummaryData via statementMetadata() after parse
     expect($extras)->toHaveKey('skippedHoldCount');
     expect($extras['skippedHoldCount'])->toBe(0);
     expect($extras)->toHaveKey('orphanChildCount');
-    // No reconciliation gate is published for PayPal — the format has no
-    // explicit opening/closing balance rows, so the walker counters are
-    // the only audit signal.
+    // The export carries no opening or closing balance row, so there is
+    // nothing to reconcile against and the walker counters are the only
+    // audit signal.
     expect($extras)->not->toHaveKey('reconciliationStatus');
     expect($extras)->not->toHaveKey('reconciliationGap');
 })->group('phase-4');

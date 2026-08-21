@@ -13,9 +13,6 @@ use Modules\Sync\Internal\Merge\Strategies\MergeStrategyInterface;
 use Modules\Sync\Internal\Merge\Strategies\OrSetStrategy;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class OpLogValueProjector
 {
     private const string DEFAULT_STRATEGY = 'lww';

@@ -9,9 +9,6 @@ use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class NavCountsService
 {
     private const CACHE_TTL = 300;

@@ -1,19 +1,17 @@
 {{--
-    Blocking, resumable, full-screen initial-sync setup gate (D-03/D-04,
-    15-UI-SPEC.md §2). Naked full-screen safe-area chrome (no top-bar, no
+    Blocking, resumable, full-screen initial-sync setup gate
+    (15-UI-SPEC.md §2). Naked full-screen safe-area chrome (no top-bar, no
     drawer) reused verbatim from Modules/Auth/Resources/views/livewire/
     lock-screen.blade.php lines 1-5; the 48x48 /icon.png app-mark block is
     the same reuse.
 
-    The progress-bar ARIA markup below (aria-valuenow/min/max + h-2
-    rounded-full bg-slate-200/bg-slate-900 fill) is reused verbatim from
-    Modules/Sync/Resources/views/livewire/devices-and-sync-settings-section
-    .blade.php's encryption-status-row (lines 106-121, PATTERNS.md Analog B).
+    The progress bar is x-core::progress-bar, the same component the Sync
+    encryption rows use — the ARIA and the track/fill geometry live there.
 
     aria-live="polite" sits on the HEADING only — never on the ticking
     N-of-M number — to avoid AT spam (UI-SPEC Copywriting).
 
-    This screen is genuinely blocking (D-03): it offers exactly one path
+    This screen is genuinely blocking: it offers exactly one path
     forward — waiting for parity — and no other interactive control.
 --}}
 @use('Modules\Core\Public\Support\Lang')
@@ -38,7 +36,7 @@
             />
         </div>
 
-        {{-- Headline (D-03/D-04) — resume copy, never re-shows the
+        {{-- Headline — resume copy, never re-shows the
              fresh-start line once this render already reflects progress. --}}
         <p aria-live="polite" class="text-lg font-semibold text-slate-900 dark:text-slate-100">
             @if ($isResuming)
@@ -51,24 +49,38 @@
         {{-- Progress bar. Indeterminate while the running step has nothing
              countable: a fixed full bar through a long rebuild read as a
              finished sync that had stalled. --}}
-        <div
-            class="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"
-            role="progressbar"
+        <x-core::progress-bar
+            :value="$percent"
+            :indeterminate="$percent === 0"
+            :label="Lang::get('mobile::setup.progress_aria')"
             {{-- Always names the running step, so an indeterminate bar still
                  announces what it is waiting on; the number is added only
-                 when the step actually has one. --}}
+                 when the step actually has one. The component drops
+                 aria-valuenow while indeterminate, which is what makes the
+                 valuetext the whole announcement rather than a "0%" beside it. --}}
             aria-valuetext="{{ Lang::get('mobile::setup.step.'.$step->value) }}"
-            aria-valuenow="{{ $percent }}"
-            aria-valuemin="0"
-            aria-valuemax="100"
-            aria-label="{{ Lang::get('mobile::setup.progress_aria') }}"
-        >
-            @if ($percent > 0)
-                <div class="h-2 rounded-full bg-slate-900 transition-[width] duration-300 dark:bg-slate-100" style="width: {{ $percent }}%"></div>
-            @else
-                <div class="beatrax-indeterminate h-2 w-1/3 rounded-full bg-slate-900 dark:bg-slate-100"></div>
-            @endif
-        </div>
+        />
+
+        {{-- What the poll is waiting on. Every one of these reasons has copy
+             in twenty-six languages and none of it was ever rendered, so a
+             stalled setup showed a turning bar and nothing else — including
+             the one state that cannot resolve on its own. --}}
+        @if ($blocked !== null)
+            <p aria-live="polite" class="text-sm text-slate-500 dark:text-slate-400" data-testid="setup-blocked-reason">
+                {{ Lang::get('mobile::setup.blocked.'.$blocked->value) }}
+            </p>
+        @endif
+
+        {{-- Revoked is terminal: the other device no longer knows this one, so
+             polling can never clear it. This is the only way out of a screen
+             that otherwise holds the app hostage. --}}
+        @if ($blocked === \Modules\Mobile\Internal\Sync\SyncBlockedReason::Revoked)
+            <a
+                href="{{ route('mobile.pair', ['mode' => 'import']) }}"
+                class="inline-block text-sm font-medium text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-400"
+                data-testid="setup-repair-link"
+            >{{ Lang::get('mobile::setup.step.connect') }}</a>
+        @endif
 
         {{-- The count only. The step list already says WHICH stage is
              running, and the cursor's expected figure only ever equals what

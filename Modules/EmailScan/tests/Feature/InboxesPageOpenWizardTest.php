@@ -5,27 +5,13 @@ declare(strict_types=1);
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\EmailScan\Internal\Http\Livewire\InboxesPage;
-use Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal;
+use Modules\EmailScan\Public\Http\Livewire\OAuthClientWizardModal;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
-/*
- * /inboxes Connect button wiring.
- *
- *  - openWizard('gmail') / openWizard('microsoft') dispatches the
- *    `oauth-client-wizard:open` event with the chosen provider so the
- *    OAuthClientWizardModal listener picks it up, sets $provider,
- *    re-renders the body branch, and itself dispatches `modal-show`
- *    against the now-correct provider-suffixed name.
- *
- *  - Previously openWizard dispatched `modal-show` directly. The
- *    rendered modal name is computed from $provider, which is null on
- *    first mount, so a `modal-show` targeting `oauth-client-wizard-
- *    microsoft` matched nothing in the DOM — the Connect Microsoft 365
- *    button silently no-op'd. This test locks the corrected handshake.
- *
- *  - openWizard returns a Redirect when the user already has a saved
- *    provider client (skipping the wizard entirely).
- */
+// openWizard dispatches `oauth-client-wizard:open`, not `modal-show`: the
+// modal's name is computed from $provider, null on first mount, so a direct
+// `modal-show` for `oauth-client-wizard-microsoft` matched nothing in the DOM
+// and the Connect Microsoft 365 button silently no-op'd.
 
 function ipowUser(string $username): User
 {

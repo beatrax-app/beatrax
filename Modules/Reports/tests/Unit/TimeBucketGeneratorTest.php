@@ -5,22 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Internal\Aggregation\TimeBucketGenerator;
-use Modules\Reports\Public\Enums\ReportGranularity;
-
-/*
- * Wave 0 RED stub (999.6-03 Task 2, Req 6/7).
- *
- * Pins Modules\Reports\Internal\Aggregation\TimeBucketGenerator::generate(
- * Period $period, ReportGranularity $granularity): list<Period> — each generated
- * bucket is itself a half-open Period (mirrors PeriodQuery's
- * CarbonImmutable::addMonthNoOverflow() month-stepping idiom), with the
- * last bucket's endExclusive clamped to the overall range's endExclusive
- * (never overshoot).
- *
- * RED as intended: TimeBucketGenerator does not exist yet — every test
- * below fails on `app(TimeBucketGenerator::class)` (missing class), not on
- * the (already-existing) Period DTO it's built from.
- */
+use Modules\Reports\Internal\Enums\ReportGranularity;
 
 it('generates 12 half-open monthly buckets for a 12-month span', function (): void {
     $period = new Period(
@@ -49,9 +34,8 @@ it('generates weekly buckets for a 6-week span', function (): void {
 
     expect($buckets)->toHaveCount(6);
     foreach ($buckets as $bucket) {
-        // CarbonInterface::diffInDays() always returns float (never int) in
-        // the installed Carbon version — Rule 1 fix, pre-existing Wave 0
-        // stub asserted a strict int 7 which can never equal float 7.0.
+        // diffInDays() returns float in this Carbon version, so a strict int 7
+        // can never match.
         expect($bucket->start->diffInDays($bucket->endExclusive))->toBe(7.0);
     }
 });
@@ -79,24 +63,21 @@ it('caps the point count for a multi-year monthly range so charts stay renderabl
 
     $buckets = app(TimeBucketGenerator::class)->generate($period, ReportGranularity::Monthly);
 
-    // 132 uncapped monthly buckets (11 years x 12) must be capped to a
-    // renderable ceiling — the exact cap is a later-wave decision, this
-    // stub only pins that SOME cap applies.
+    // 11 years x 12 = 132 uncapped monthly buckets; only that SOME cap applies
+    // is pinned here, not its exact value.
     expect(count($buckets))->toBeLessThan(132);
     expect($buckets)->not->toBeEmpty();
 });
 
-it('WR-03: caps a multi-year weekly range to stay under MAX_BUCKET_POINTS by widening (never producing hundreds of raw weekly buckets)', function (): void {
+it('caps a multi-year weekly range to stay under MAX_BUCKET_POINTS by widening (never producing hundreds of raw weekly buckets)', function (): void {
     $period = new Period(
         start: CarbonImmutable::parse('2015-01-01'),
         endExclusive: CarbonImmutable::parse('2026-01-01'),
         label: '11 years',
     );
 
-    // ~573 uncapped weekly points for an 11-year range — previously the
-    // 'weekly' branch called stepBuckets() directly with no cap check at
-    // all, unlike 'monthly'. Must widen (e.g. to monthly/quarterly)
-    // instead, while still fully covering the requested range.
+    // ~573 uncapped weekly points: unlike 'monthly', the 'weekly' branch used to
+    // call stepBuckets() with no cap check, so it must widen instead.
     $buckets = app(TimeBucketGenerator::class)->generate($period, ReportGranularity::Weekly);
 
     expect(count($buckets))->toBeLessThanOrEqual(TimeBucketGenerator::MAX_BUCKET_POINTS);

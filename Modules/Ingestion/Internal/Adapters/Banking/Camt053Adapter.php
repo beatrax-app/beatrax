@@ -20,18 +20,15 @@ use Genkgo\Camt\DTO\RelatedParty;
 use Genkgo\Camt\DTO\UltimateCreditor;
 use Genkgo\Camt\DTO\UltimateDebtor;
 use Genkgo\Camt\Reader;
+use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Contracts\SourceAdapter;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
 use Modules\Ledger\Public\Dto\StatementSummaryData;
 use Money\Money;
 use Throwable;
 
-/**
- * @link ../../../../../.docs/features/ingestion/architecture.md
- */
 final class Camt053Adapter implements SourceAdapter
 {
     private ?StatementSummaryData $lastStatementMetadata = null;
@@ -92,10 +89,7 @@ final class Camt053Adapter implements SourceAdapter
                 $entryCount++;
             }
 
-            // Each CAMT.053 export typically carries a single <Stmt>; if a
-            // future file carries more, the LAST statement wins for the
-            // metadata snapshot because that is what the user would expect
-            // to see when looking at "the statement they just imported".
+            // A multi-<Stmt> file keeps the LAST statement's metadata — the one just imported.
             $this->lastStatementMetadata = $this->buildStatementMetadata($record, $ownIban, $entryCount);
         }
     }
@@ -121,9 +115,7 @@ final class Camt053Adapter implements SourceAdapter
             entryCount: $entryCount,
             extras: [
                 'statementId' => $stmt->getId(),
-                // Normalise to UTC so the same logical statement produces
-                // identical extras JSON regardless of the export host's
-                // local timezone or DST offset.
+                // UTC so the same statement yields identical extras JSON on any export host.
                 'createdOn' => $stmt->getCreatedOn()
                     ->setTimezone(new DateTimeZone('UTC'))
                     ->format('Y-m-d\TH:i:s\Z'),
@@ -142,25 +134,17 @@ final class Camt053Adapter implements SourceAdapter
         return null;
     }
 
-    // Hardens libxml before delegating the unmarshal to genkgo/camt; a
-    // library parse error is re-thrown as InvalidAmountException so the
-    // upload pipeline surfaces it as a single per-file ERROR preview row.
     private function readMessage(string $localPath): Message
     {
-        // XXE mitigation: deny ALL external entities — with XSD validation
-        // disabled nothing legitimate needs to resolve, so any entity (file,
-        // scheme-less, or any network/wrapper scheme) is hostile and the loader
-        // returns null unconditionally. Full rationale in the linked doc.
+        // XXE: deny every external entity — with XSD validation disabled below, nothing legitimate resolves.
         libxml_set_external_entity_loader(
             static fn (?string $publicId, ?string $systemId, array $context): ?string => null
         );
 
         $previousErrorState = libxml_use_internal_errors(true);
         try {
-            // XSD validation disabled deliberately — genkgo/camt's XSDs are
-            // pedantic and would reject unforeseen optional elements; the
-            // sniffer + downstream IBAN/amount validators enforce structure,
-            // and the entity loader above enforces XXE safety.
+            // genkgo/camt's XSDs would reject unforeseen optional elements; the
+            // sniffer plus the IBAN/amount validators enforce structure instead.
             $config = Config::getDefault();
             $config->disableXsdValidation();
             $reader = new Reader($config);
@@ -176,8 +160,7 @@ final class Camt053Adapter implements SourceAdapter
             }
         } finally {
             libxml_use_internal_errors($previousErrorState);
-            // Restore the default libxml entity loader so a subsequent caller
-            // is not constrained by our hardening rules.
+            // The hardening is scoped to this parse, not to the process.
             libxml_set_external_entity_loader(null);
         }
     }
@@ -190,17 +173,15 @@ final class Camt053Adapter implements SourceAdapter
         ?string $msgId,
         bool $isBatch,
     ): SourceTransactionDto {
-        // Money: per-TxDtls amount on a batch entry, else the entry-level total.
-        // genkgo/camt's Decoder already negates the Money for entries flagged
-        // DBIT, so the value returned here is signed; no second flip needed.
+        // genkgo/camt's Decoder already negates the entry-level Money for a
+        // DBIT entry, so this value arrives signed; no second flip needed.
         $money = $isBatch && $txDtls?->getAmountDetails() !== null
             ? $txDtls->getAmountDetails()
             : $entry->getAmount();
         $signed = $this->moneyToMinor($money);
         if ($isBatch && $txDtls?->getAmountDetails() !== null) {
-            // The per-TxDtls AmtDtls/InstdAmt is NOT auto-signed by genkgo/camt
-            // (only the entry-level Amt is); apply the CreditDebitIndicator
-            // explicitly so batch splits agree in sign with the entry total.
+            // AmtDtls/InstdAmt is not auto-signed the way the entry-level Amt is, so
+            // applying the indicator by hand keeps a batch split's sign matching its entry total.
             $cdi = $txDtls->getCreditDebitIndicator() ?? $entry->getCreditDebitIndicator();
             if ($cdi === 'DBIT' && $signed > 0) {
                 $signed = -$signed;
@@ -227,8 +208,7 @@ final class Camt053Adapter implements SourceAdapter
         }
         $value = $entry->getValueDate() ?? $booking;
 
-        // Force 00:00:00 so this agrees with the CSV adapter's zeroed time
-        // (matching fingerprint hashes) even if BookgDt ever gains precision.
+        // Zeroed to match the CSV adapter's startOfDay() so both formats fingerprint identically.
         $bookedAt = CarbonImmutable::instance($booking)->startOfDay();
 
         return new SourceTransactionDto(
@@ -247,8 +227,7 @@ final class Camt053Adapter implements SourceAdapter
         );
     }
 
-    // moneyphp/money returns the minor count as a numeric string ("399" for
-    // €3.99); the cast is exact for any value under PHP_INT_MAX.
+    // moneyphp/money returns minor units as a numeric string ("399" for €3.99).
     private function moneyToMinor(Money $money): int
     {
         return (int) $money->getAmount();
@@ -264,9 +243,7 @@ final class Camt053Adapter implements SourceAdapter
         return $account->getIdentification();
     }
 
-    // Outbound DBIT -> counterparty is the Creditor; inbound CRDT ->
-    // counterparty is the Debtor; falls back to the first related party of
-    // any type when the directional match is absent.
+    // An inbound CRDT entry's counterparty is the Debtor; an outbound DBIT entry's is the Creditor.
     /**
      * @return array{0: ?string, 1: ?string} [counterparty name, counterparty IBAN]
      */
@@ -317,10 +294,8 @@ final class Camt053Adapter implements SourceAdapter
         return null;
     }
 
-    // Only the canonical unstructured-blocks API is consulted (never the
-    // deprecated getMessage() fallback, which would stringify structured
-    // <Strd> remittance and mask "no remittance" vs "structured-only" from
-    // downstream resolution). A structured-only TxDtls yields null.
+    // Deliberately not the deprecated getMessage() fallback: that stringifies structured
+    // <Strd> remittance, hiding "no remittance" behind "structured-only".
     private function extractRemittance(?EntryTransactionDetail $txDtls): ?string
     {
         $rmt = $txDtls?->getRemittanceInformation();

@@ -7,21 +7,14 @@ namespace Modules\DevMode\Internal\Logging;
 use Modules\Core\Public\Services\UserDataPathService;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/dev-mode/architecture.md
- */
 final readonly class RecentLogEntriesReader
 {
-    // The href carries the untruncated start of the message so the
-    // deep-link's `contains` filter still matches the source line even
-    // after the visible excerpt is truncated to this length.
     private const int EXCERPT_MAX = 160;
 
     private const int HREF_CONTAINS_MAX = 80;
 
-    // Caps the raw-line read so a malformed daily log file (single 50 MB
-    // line) can't stall the dashboard render; the widget only needs the
-    // tail, and 200 lines is generous headroom for folding stack traces.
+    // The widget only needs the tail; 200 lines leaves headroom for folding
+    // a stack trace back into the entry that owns it.
     private const int LINE_READ_CAP = 200;
 
     public function __construct(
@@ -39,9 +32,8 @@ final readonly class RecentLogEntriesReader
         foreach ($tail as $raw) {
             $parsed = $this->parseLine($raw);
             if ($parsed === null) {
-                // Continuation line — fold into the preceding entry's
-                // message so a stack trace's first line is searchable
-                // from the dashboard row's deep-link.
+                // Folded into the preceding entry so a stack trace's first
+                // line stays searchable from that row's deep link.
                 if ($entries !== []) {
                     $tailEntry = $entries[array_key_last($entries)];
                     $tailEntry['message'] = $tailEntry['message']."\n".$raw;
@@ -59,10 +51,8 @@ final readonly class RecentLogEntriesReader
         foreach ($recent as $entry) {
             $scrubbed = $this->scrubber->scrub($entry['message']);
             $excerpt = $this->truncate($scrubbed, self::EXCERPT_MAX, appendEllipsis: true);
-            // The href's `contains` filter is a literal substring match
-            // against the source log line at /dev/logs, so it must NOT
-            // append '…' the way the user-facing excerpt does — the
-            // ellipsis never appears in the source data.
+            // /dev/logs matches `contains` literally against the source line,
+            // where no ellipsis exists — hence no ellipsis here either.
             $hrefContains = $this->truncate($scrubbed, self::HREF_CONTAINS_MAX, appendEllipsis: false);
             $out[] = [
                 'timestamp' => $entry['timestamp'],
@@ -77,9 +67,6 @@ final readonly class RecentLogEntriesReader
         return $out;
     }
 
-    // Reads today's daily log defensively — a missing file, a read
-    // throwable, or a non-array result all collapse to an empty list so
-    // the dashboard widget renders rather than erroring on a bad file.
     /**
      * @return list<string>
      */
@@ -99,8 +86,7 @@ final readonly class RecentLogEntriesReader
         return is_array($all) ? $all : [];
     }
 
-    // Returns null when the line does not match the standard format —
-    // the caller treats those as continuation lines.
+    // null means "not a log-header line"; the caller folds those forward.
     /**
      * @return ?array{timestamp: string, severity: string, channel: string, message: string}
      */
@@ -119,15 +105,8 @@ final readonly class RecentLogEntriesReader
     }
 
     /**
-     * @param  bool  $appendEllipsis  When true, replace the final
-     *                                character on truncation with
-     *                                '…' so the user-facing excerpt
-     *                                signals "more here". When false,
-     *                                the truncated prefix is returned
-     *                                verbatim — required for the
-     *                                deep-link href whose `contains`
-     *                                filter is a literal substring
-     *                                match against the source line.
+     * @param  bool  $appendEllipsis  false returns the prefix verbatim, as a
+     *                                literal substring of the source line.
      */
     private function truncate(string $value, int $max, bool $appendEllipsis): string
     {

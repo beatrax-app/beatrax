@@ -6,9 +6,6 @@ namespace Modules\Import\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/import/architecture.md#starting-balance-detection
- */
 final class StartingBalanceCandidate extends Data
 {
     public function __construct(

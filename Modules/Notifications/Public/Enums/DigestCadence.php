@@ -4,13 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Notifications\Public\Enums;
 
-// How often a user wants the position digest, or that they do not want it.
-// Distinct from the recurring series cadence in C2 despite sharing the word
-// and the value weekly: a series is never off, and a digest is never
-// quarterly. C8-R22 requires the two never share a type.
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
+// Deliberately a separate type from the recurring-series cadence despite both
+// carrying "weekly": a series is never off, and a digest is never quarterly.
 enum DigestCadence: string
 {
     case Daily = 'daily';

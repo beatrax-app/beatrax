@@ -9,18 +9,9 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Internal\Aggregation\NetWorthSeriesQuery;
-use Modules\Reports\Public\Enums\ReportGranularity;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
-
-/*
- * Covers 999.6-05 Task 1 (Req 2/5/7): NetWorthSeriesQuery samples a
- * base-currency net-worth total once per TimeBucketGenerator bucket — a
- * time series (no group-by dimension) built by repeating NetWorthQuery's
- * exclude+count algorithm at each bucket's sample date via
- * AccountBalanceQuery::clearedBalanceAsOf() (Pattern 3). Fixture helpers
- * prefixed nws_ to avoid cross-file global-function collisions.
- */
 
 function nwsUser(): User
 {
@@ -101,9 +92,8 @@ it('renders one point per monthly bucket over a 12-month span — a time series,
     $user = nwsUser();
     $account = nwsAccount($user);
 
-    // €500.00 posted in the first bucket month; €300.00 more posted in
-    // November — the running cleared balance is point-in-time, so early
-    // buckets must NOT see the November deposit.
+    // The cleared balance is point-in-time, so the buckets before November
+    // must not see the second deposit.
     nwsTransaction($db, $user, $account, ['amount_minor' => 50_000, 'posted_at' => '2025-07-10', 'booked_at' => '2025-07-10 10:00:00', 'value_date' => '2025-07-10']);
     nwsTransaction($db, $user, $account, ['amount_minor' => 30_000, 'posted_at' => '2025-11-10', 'booked_at' => '2025-11-10 10:00:00', 'value_date' => '2025-11-10']);
 
@@ -117,17 +107,12 @@ it('renders one point per monthly bucket over a 12-month span — a time series,
 
     expect($points)->toHaveCount(12);
 
-    // Time-series shape: strictly increasing sample dates, one per bucket —
-    // never a group-by key.
     for ($i = 1; $i < count($points); $i++) {
         expect($points[$i]->date->greaterThan($points[$i - 1]->date))->toBeTrue();
     }
 
-    // Jul 2025's sample date (end of month) only sees the July deposit.
     expect($points[0]->totalMinor)->toBe(50_000);
-    // Nov 2025 (index 4) sees both deposits.
     expect($points[4]->totalMinor)->toBe(80_000);
-    // Jun 2026 (last point) still reflects both deposits.
     expect($points[11]->totalMinor)->toBe(80_000);
 
     foreach ($points as $point) {
@@ -144,7 +129,6 @@ it('excludes paypal_funding accounts from every point, matching NetWorthQuery pa
     $funding = nwsAccount($user, 'paypal_funding');
 
     nwsTransaction($db, $user, $account, ['amount_minor' => 20_000]);
-    // Large balance on the excluded-kind account — must never contribute.
     nwsTransaction($db, $user, $funding, ['amount_minor' => 999_000]);
 
     $period = new Period(

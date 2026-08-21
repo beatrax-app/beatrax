@@ -5,39 +5,10 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Creates the recurring_series table — the unified detector output for
- * both expense and income recurring patterns.
- *
- * One row models one detected pattern for one user. The `direction`
- * enum keeps the expense and income detector code paths sharing a
- * single table so downstream queries, projections, and the review
- * surface read against one shape rather than two parallel tables.
- *
- * The `state` column is an enum-shaped string enforced via a BEFORE
- * INSERT / BEFORE UPDATE trigger pair targeting the `state` column
- * specifically. The single legal mutator is
- * `Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine`;
- * a BoundaryArchTest invariant blocks any other write path.
- * Allowed states: pending / approved / rejected / snoozed /
- * cadence_changed.
- *
- * The UNIQUE constraint on `(user_id, direction, cluster_key,
- * latest_currency)` is the detector's idempotency seam — re-running the
- * sweep job for the same user cannot insert a duplicate row for the
- * same logical cluster.
- *
- * Two read indexes support the hot paths the projection layer uses:
- *   - `(user_id, state)` — top-nav pending-count badge query.
- *   - `(user_id, state, next_expected_at)` — "This month only" toggle
- *     on the fixed-payments view; the index lets the optimiser walk
- *     the date filter without a table scan.
- *
- * Money columns follow the project-wide BIGINT signed minor-units
- * convention; `latest_fx_rate_used` is captured as a free-form string
- * so the original EUR/USD rate audit trail survives without a lossy
- * decimal cast.
- */
+// UNIQUE(user_id, direction, cluster_key, latest_currency) is the detector's
+// idempotency seam: re-running the sweep cannot duplicate a cluster. The state
+// trigger pair keeps RecurringSeriesStateMachine the only legal mutator, and
+// latest_fx_rate_used stays a string so the rate survives without a lossy cast.
 return new class extends ModuleMigration
 {
     public function up(): void

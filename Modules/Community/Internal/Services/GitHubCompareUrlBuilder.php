@@ -7,9 +7,6 @@ namespace Modules\Community\Internal\Services;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Modules\Community\Public\Dto\SuggestMappingDto;
 
-/**
- * @link ../../../../.docs/features/community/architecture.md
- */
 final class GitHubCompareUrlBuilder
 {
     public function __construct(private readonly ConfigRepository $config) {}
@@ -43,10 +40,8 @@ final class GitHubCompareUrlBuilder
 
     private function quoteYaml(string $value): string
     {
-        // YAML 1.2 double-quoted strings recognise the C-style escapes below;
-        // a raw description with a stray newline/tab must be encoded as the
-        // escape sequence rather than included verbatim, or GitHub's PR
-        // composer rejects the YAML on submit.
+        // A stray newline or tab has to go out as a C-style escape, not
+        // verbatim, or GitHub's PR composer rejects the YAML on submit.
         $escaped = strtr($value, [
             '\\' => '\\\\',
             '"' => '\\"',

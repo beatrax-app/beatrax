@@ -25,18 +25,6 @@ use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
 
-/*
- * 13.4-07 Task 2 (Req 4): ReapplyRulesJob idempotency + guards.
- *
- * Proves the user-triggered re-apply-to-history path end-to-end:
- *  (a) a manually-edited field survives re-apply while a rule-owned,
- *      untouched field on the same row still gets set (D-04);
- *  (b) a reconciled transaction is left completely untouched (T-13.4-22);
- *  (c) a split transaction's legs are never touched (T-13.4-23);
- *  (d) a second identical pass writes zero fields (idempotency, Req 4);
- *  (e) all four action types apply together to a plain eligible row.
- */
-
 function reapplyRunJob(int $userId): void
 {
     /** @var ReapplyRulesJob $job */
@@ -140,10 +128,6 @@ function seedReapplyFixtures(): array
     ];
 }
 
-/**
- * A single rule that matches counterparty "Spotify AB" and carries all
- * four action types (category/counterparty/note/tax_tag).
- */
 function makeReapplyRule(int $userId, int $categoryId, int $counterpartyId, int $deductionCategoryId): CategorizationRule
 {
     $rule = CategorizationRule::query()->create([
@@ -296,23 +280,13 @@ it('a second identical re-apply pass writes zero fields (idempotent)', function 
     expect($secondPassProgress['status'])->toBe('done');
 });
 
-it('completes the job instead of throwing when a rule\'s malformed date condition value crashes matching (WR-03)', function (): void {
+it('completes the job instead of throwing when a rule\'s malformed date condition value crashes matching', function (): void {
     $fixtures = seedReapplyFixtures();
 
-    // A date-type condition whose stored `value` is not a well-formed
-    // date string — neither CreateCategorizationRule's nor
-    // UpdateCategorizationRule's normalizeCondition() validates the
-    // date FORMAT of a date value_type (only non-empty), so this is
-    // reachable via any non-`<input type=date>` caller, or residual bad
-    // data. RuleEngine::matchDate() calls CarbonImmutable::parse() on
-    // it, which throws — and because RuleEngine::match() evaluates
-    // every active rule against every row with no per-condition
-    // short-circuit, this ONE broken rule poisons match() for every
-    // transaction in the walk, not just one row. Before the fix, that
-    // exception propagated uncaught out of the chunk closure, failing
-    // the whole queued job (tries exhausted, progress stuck at
-    // 'running' forever). After the fix, each row is caught and
-    // skipped individually and the job still reaches 'done'.
+    // normalizeCondition() checks a date value is non-empty but never that it
+    // parses, so a stored value CarbonImmutable::parse() rejects is reachable.
+    // match() runs every rule against every row, so one broken rule threw for
+    // the whole walk; rows are now caught and skipped one at a time.
     $brokenRule = CategorizationRule::query()->create([
         'user_id' => $fixtures['user']->id,
         'priority' => 0,
@@ -332,9 +306,7 @@ it('completes the job instead of throwing when a rule\'s malformed date conditio
 
     $tx = makeReapplyTx($fixtures['user'], $fixtures['account'], $fixtures['run'], 6);
 
-    // The call itself must not throw — pre-fix, this line would raise
-    // an uncaught Carbon\Exceptions\InvalidFormatException, failing this
-    // test (and, in production, the whole queued job).
+    // Pre-fix this raised an uncaught InvalidFormatException out of the job.
     reapplyRunJob($fixtures['user']->id);
 
     $progress = reapplyProgress($fixtures['user']->id);

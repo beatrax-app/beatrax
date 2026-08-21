@@ -10,14 +10,10 @@ use Modules\Sync\Internal\OpLog\OpLogWriter;
 
 uses(RefreshDatabase::class);
 
-/*
- * Rules are authored per device and stay there. They kept merge rules from an
- * earlier "forward-prepared" state, which meant the pairing snapshot carried
- * them: a freshly paired phone arrived holding the desktop's rules and then
- * diverged from them silently, because nothing ever dispatched an update.
- *
- * Either they sync properly or they do not travel at all. They do not travel.
- */
+// Rules are authored per device and stay there. Merge rules kept from an earlier
+// forward-prepared state put them in the pairing snapshot, so a freshly paired
+// phone arrived holding the desktop's rules and then diverged from them silently,
+// because nothing ever dispatched an update. Either they sync, or they stay put.
 
 function rulesLocalUser(): User
 {

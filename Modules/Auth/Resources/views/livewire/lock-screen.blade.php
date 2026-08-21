@@ -5,7 +5,7 @@
             pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
             motion-reduce:transition-none"
     {{--
-        WR-10 / T-05-12: PIN digits accumulate in this transient Alpine state,
+        PIN digits accumulate in this transient Alpine state,
         never in a Livewire property — no per-keypress round-trips, and the
         PIN never enters the wire:snapshot attribute or update responses. The
         full PIN crosses the wire exactly once as $wire.submit(pin); the local
@@ -86,8 +86,8 @@
             </button>
         @endif
 
-        {{-- Sign out (D-03). Forgot-PIN recovery (D-11/D-21): sign out →
-             password login (primes the session, WR-03) → Settings →
+        {{-- Sign out. Forgot-PIN recovery: sign out →
+             password login (primes the session) → Settings →
              "Forgot your PIN?" resets it via the password recovery wrap. --}}
         <form method="POST" action="{{ route('logout') }}" x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
             @csrf

@@ -1,13 +1,12 @@
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Core\Public\Support\Fmt')
-{{-- /inboxes page (D-124 / D-127).
+{{-- /inboxes page.
 
      Renders the empty-state hero when no inboxes are connected and
      the connected-inboxes table-driven layout once at least one
-     inbox exists. Plan 03 ships the hero + minimal table + Add-
-     inbox card pair + Connect buttons; Plan 05 adds the backfill-
-     window modal; Plan 07 adds the row actions + discovered-senders
-     panel.
+     inbox exists: the table, the Add-inbox card pair and Connect
+     buttons, the backfill-window modal, the per-row actions, and
+     the discovered-senders panel.
 
      All copy is locked verbatim against 06-UI-SPEC.md § Copywriting
      Contract. --}}
@@ -25,15 +24,15 @@
          global helper. The DI-only invariant applies to Blade views
          too. --}}
     @if ($oauthCanceledMessage !== null)
-        <div aria-live="polite" aria-atomic="true" class="mb-6 rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-600 dark:bg-rose-950 dark:border-rose-800 dark:text-rose-200">
+        <x-core::alert tone="danger" class="mb-6" aria-live="polite" aria-atomic="true">
             {{ Lang::get('email-scan::inboxes.connection_canceled') }} {{ $oauthCanceledMessage }}
-        </div>
+        </x-core::alert>
     @endif
 
     @if ($oauthFailedMessage !== null)
-        <div aria-live="polite" aria-atomic="true" class="mb-6 rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-600 dark:bg-rose-950 dark:border-rose-800 dark:text-rose-200">
+        <x-core::alert tone="danger" class="mb-6" aria-live="polite" aria-atomic="true">
             {{ Lang::get('email-scan::inboxes.connection_failed') }} {{ $oauthFailedMessage }}
-        </div>
+        </x-core::alert>
     @endif
 
     @php
@@ -175,27 +174,25 @@
                         @if ($inbox->status === \Modules\EmailScan\Public\Enums\InboxScanStatus::NeedsReauth->value)
                             <a
                                 href="{{ route('oauth.connect', ['provider' => $inbox->provider]) }}?inbox_id={{ $inbox->inboxId }}"
-                                class="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2.5 py-1 text-sm font-medium text-rose-600 hover:bg-rose-100 focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 dark:bg-rose-950 dark:text-rose-500 dark:hover:bg-rose-900"
+                                class="tap-chip inline-flex items-center gap-1 rounded-md bg-rose-50 px-2.5 py-1 text-sm font-medium text-rose-600 hover:bg-rose-100 focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 dark:bg-rose-950 dark:text-rose-500 dark:hover:bg-rose-900"
                             >{{ Lang::get('email-scan::inboxes.reconnect') }}</a>
                         @endif
 
-                        <button
-                            type="button"
-                            @if ($scanDisabled)
-                                disabled
-                                aria-disabled="true"
-                                title="{{ Lang::get('email-scan::inboxes.scan_in_progress_title') }}"
-                            @endif
+                        <x-core::secondary-button
+                            size="sm"
+                            class="gap-1 {{ $scanDisabled ? 'cursor-not-allowed opacity-60' : '' }}"
+                            :disabled="$scanDisabled"
+                            :aria-disabled="$scanDisabled ? 'true' : null"
+                            :title="$scanDisabled ? Lang::get('email-scan::inboxes.scan_in_progress_title') : null"
                             wire:click="scanNow({{ $inbox->inboxId }})"
-                            class="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2.5 py-1 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900 {{ $scanDisabled ? 'cursor-not-allowed opacity-60' : '' }}"
-                        >{{ Lang::get('email-scan::inboxes.scan_now') }}</button>
-                        <button
-                            type="button"
+                        >{{ Lang::get('email-scan::inboxes.scan_now') }}</x-core::secondary-button>
+                        <x-core::secondary-button
+                            size="sm"
+                            class="gap-1"
                             wire:click="disconnect({{ $inbox->inboxId }})"
                             wire:confirm="{{ Lang::get('email-scan::inboxes.disconnect') }}"
                             data-testid="disconnect-inbox-{{ $inbox->inboxId }}"
-                            class="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2.5 py-1 text-sm font-medium text-slate-600 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-900"
-                        >{{ Lang::get('email-scan::inboxes.disconnect') }}</button>
+                        >{{ Lang::get('email-scan::inboxes.disconnect') }}</x-core::secondary-button>
                     </div>
                 </li>
             @endforeach

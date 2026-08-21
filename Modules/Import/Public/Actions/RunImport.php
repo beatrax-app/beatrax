@@ -9,14 +9,14 @@ use Illuminate\Contracts\Filesystem\Factory as StorageFactory;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Import\Internal\Exceptions\RacedImportRunVanishedException;
+use Modules\Import\Internal\Exceptions\UploadStagingException;
 use Modules\Import\Internal\Pipeline\ImportPipeline;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Dto\ImportConfirmResult;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
-use Modules\Import\Public\Exceptions\RacedImportRunVanishedException;
-use Modules\Import\Public\Exceptions\UploadStagingException;
 use Modules\Import\Public\Services\EloquentAccountResolver;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Enums\SourceFormat;
@@ -54,9 +54,8 @@ final class RunImport implements RunsImports
             ->first();
 
         if ($existing !== null && $existing->status === ImportRunStatus::Confirmed->value) {
-            // File-layer idempotency: the SHA256 was already imported and
-            // landed. Skip the (expensive, identical) re-parse and signal to
-            // the wizard that nothing remains to do for this upload.
+            // This SHA256 already imported and landed, so the re-parse would
+            // be identical and expensive.
             return new ImportPreviewResult(
                 importRunId: $existing->id,
                 rows: [],
@@ -67,10 +66,8 @@ final class RunImport implements RunsImports
         $stablePath = $this->copyToStableLocation($localPath, $user, $sha, $sourceFormat);
 
         if ($existing !== null) {
-            // Reused for a fresh preview (prior status was 'previewed' or
-            // 'discarded'). Reset the audit fields so the wizard's status
-            // and counters match the new attempt — otherwise a discarded
-            // run would silently retain stale status/counts.
+            // Reset the audit fields, or a reused 'discarded' run keeps its
+            // stale status and counters through the new attempt.
             $importRun = $this->resetPreviewedRun($existing, $sourceFormat, $stablePath);
         } else {
             try {
@@ -84,9 +81,7 @@ final class RunImport implements RunsImports
                 ]);
             } catch (UniqueConstraintViolationException) {
                 // A concurrent preview for the same (user_id, sha256)
-                // committed between our SELECT and this INSERT. Re-read
-                // the winner's row and fall through to the same
-                // confirmed-short-circuit / reuse-reset semantics.
+                // committed between the SELECT and this INSERT.
                 $raced = $this->reReadAfterRace($user, $sha);
                 if ($raced->status === ImportRunStatus::Confirmed->value) {
                     return new ImportPreviewResult(
@@ -121,10 +116,9 @@ final class RunImport implements RunsImports
         return $previewResult;
     }
 
-    // The same file uploaded twice resolves to the same on-disk path — the
-    // name is the content hash, so a second upload publishes identical bytes.
-    // The extension matches the declared source format so the stored copy
-    // round-trips through the format-specific HeaderSniffer on re-read.
+    // The name is the content hash, so a second upload of the same file
+    // publishes identical bytes to the same path. The extension follows the
+    // declared format so HeaderSniffer still recognises the stored copy.
     private function copyToStableLocation(string $sourcePath, User $user, string $sha, string $sourceFormat): string
     {
         $disk = $this->storage->disk(self::STORAGE_DISK);
@@ -143,10 +137,9 @@ final class RunImport implements RunsImports
             throw UploadStagingException::sourceUnreadable($sourcePath);
         }
 
-        // Staged beside the destination and renamed over it: put() TRUNCATES
-        // the destination first, and the caller hands that path to the parser
-        // moments later. rename() is atomic, and since the name is the content
-        // hash, a reader sees the same bytes whichever copy it gets.
+        // put() truncates the destination first, and the caller hands that
+        // path to the parser moments later. rename() is atomic, and the name
+        // is the content hash, so either copy holds the same bytes.
         $staged = $relative.'.'.bin2hex(random_bytes(8)).'.part';
 
         if (! $disk->put($staged, $contents)) {
@@ -192,9 +185,8 @@ final class RunImport implements RunsImports
             ->first();
 
         if ($existing !== null && $existing->status === ImportRunStatus::Confirmed->value) {
-            // Same short-circuit as runFromUpload(): the window was
-            // already fetched and landed, so there is nothing left to
-            // preview for this exact idempotency key.
+            // Same short-circuit as runFromUpload(): this window already
+            // fetched and landed.
             return new ImportPreviewResult(
                 importRunId: $existing->id,
                 rows: [],
@@ -203,10 +195,8 @@ final class RunImport implements RunsImports
         }
 
         if ($existing !== null) {
-            // Reused row from a prior 'previewed'/'discarded' attempt —
-            // reset audit fields like runFromUpload()'s reuse branch so
-            // stale counters/status never leak. `raw_file_path` keeps
-            // its deterministic synthetic marker (passed null, untouched).
+            // As in runFromUpload()'s reuse branch, minus raw_file_path: the
+            // synthetic marker is passed null and left alone.
             $importRun = $this->resetPreviewedRun($existing, $sourceFormat, null);
         } else {
             try {
@@ -219,9 +209,8 @@ final class RunImport implements RunsImports
                     'status' => ImportRunStatus::Previewed->value,
                 ]);
             } catch (UniqueConstraintViolationException) {
-                // Same-key concurrent preview won the insert race;
-                // re-read and fall through to the reuse/confirmed semantics
-                // rather than 500-ing the loser.
+                // A same-key concurrent preview won the insert race; the
+                // loser re-reads rather than 500-ing.
                 $raced = $this->reReadAfterRace($user, $idempotencyKey);
                 if ($raced->status === ImportRunStatus::Confirmed->value) {
                     return new ImportPreviewResult(
@@ -256,17 +245,14 @@ final class RunImport implements RunsImports
         return $previewResult;
     }
 
-    // Deterministic (same key -> same marker) and unambiguously not a
-    // real filesystem path — raw_file_path is a required, non-nullable
-    // plain audit string with no FK to storage.
+    // raw_file_path is a required audit string with no FK to storage, so the
+    // remote-fetch path needs a deterministic, obviously-not-a-path marker.
     private function syntheticRawFilePath(string $idempotencyKey): string
     {
         return sprintf('open-banking://%s', $idempotencyKey);
     }
 
-    // $stablePath is null for the remote-fetch path (its synthetic
-    // raw_file_path marker is left unchanged); non-null for the upload
-    // path.
+    // Null on the remote-fetch path, which leaves its synthetic marker alone.
     private function resetPreviewedRun(ImportRun $run, string $sourceFormat, ?string $stablePath): ImportRun
     {
         $attributes = [
@@ -288,9 +274,8 @@ final class RunImport implements RunsImports
         return $run;
     }
 
-    // The row must exist — the UniqueConstraintViolationException that
-    // led here proves it was committed — so a null result is a genuine,
-    // unexpected invariant break.
+    // The UniqueConstraintViolationException that led here proves the row
+    // committed, so a null read is a real invariant break.
     private function reReadAfterRace(User $user, string $sha256): ImportRun
     {
         /** @var ImportRun|null $raced */

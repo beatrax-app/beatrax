@@ -2,10 +2,8 @@
 
 declare(strict_types=1);
 
-/*
- * Two phone constraints that are cheap to satisfy and expensive to notice
- * having lost: the iOS auto-zoom threshold, and a dialog whose accessible
- * name is a second copy of its own heading.
+/**
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#two-phone-constraints-and-three-dialog-naming-failures
  */
 
 /**
@@ -49,10 +47,38 @@ function phoneUiCoarsePointerBlocks(): array
     return $matches[0];
 }
 
+/**
+ * @return list<string> the class attribute of every element the coarse-pointer
+ *                      44px floor selects, across all Blade views
+ */
+function phoneUiButtonClassLists(): array
+{
+    $views = [];
+    foreach (['Modules', 'resources'] as $root) {
+        $directory = new RecursiveDirectoryIterator(base_path($root), FilesystemIterator::SKIP_DOTS);
+        foreach (new RecursiveIteratorIterator($directory) as $file) {
+            if (str_ends_with((string) $file, '.blade.php')) {
+                $views[] = (string) $file;
+            }
+        }
+    }
+
+    $lists = [];
+    foreach ($views as $view) {
+        preg_match_all('/<(button|summary)\b([^>]*)>/s', (string) file_get_contents($view), $tags, PREG_SET_ORDER);
+        foreach ($tags as $tag) {
+            if (preg_match('/class="([^"]*)"/', $tag[2], $class) === 1) {
+                $lists[] = $class[1];
+            }
+        }
+    }
+
+    return $lists;
+}
+
 it('keeps every touch form control at or above the iOS auto-zoom threshold', function (): void {
-    // iOS zooms the page in when a focused control renders below 16px and does
-    // not zoom back out. The viewport deliberately allows zoom, so raising the
-    // control is the only remedy that does not break pinch-zoom for everyone.
+    // The viewport deliberately allows zoom, so raising the control is the only
+    // remedy for iOS auto-zoom that does not break pinch-zoom for everyone.
     $covering = array_filter(
         phoneUiCoarsePointerBlocks(),
         static fn (string $block): bool => str_contains($block, 'font-size: 16px')
@@ -67,8 +93,7 @@ it('keeps every touch form control at or above the iOS auto-zoom threshold', fun
 });
 
 it('gives every touch button a 44px hit area', function (): void {
-    // 29 of 30 routes measured under Apple's minimum before this rule. It has
-    // to be unlayered or `h-10` outranks it.
+    // Unlayered, or `h-10` outranks it.
     $covering = array_filter(
         phoneUiCoarsePointerBlocks(),
         static fn (string $block): bool => str_contains($block, 'min-height: 44px')
@@ -85,9 +110,8 @@ it('names the bottom sheet dialog by its heading rather than by a second copy of
     $sheet = file_get_contents(base_path('Modules/Core/Resources/views/components/bottom-sheet.blade.php'));
     expect($sheet)->toBeString();
 
-    // The same sheet is both "create" and "edit". A duplicated string went
-    // stale on the Livewire round-trip that updated the heading, so the
-    // dialog announced "create" while the form was editing.
+    // The same sheet is both "create" and "edit", and a duplicated name went
+    // stale on the round-trip that updated the heading.
     expect($sheet)->toContain('aria-labelledby=')
         ->and($sheet)->not->toContain('aria-label="{{ $title }}"');
 });
@@ -95,9 +119,8 @@ it('names the bottom sheet dialog by its heading rather than by a second copy of
 it('never leaves the sheet dialog without an accessible name', function (): void {
     $sheet = (string) file_get_contents(base_path('Modules/Core/Resources/views/components/bottom-sheet.blade.php'));
 
-    // A title can be conditional at the call site — the calendar's evaluates
-    // to '' before a day is picked — so the empty branch has to name the
-    // dialog too, or role="dialog" ships anonymous.
+    // A title can be conditional at the call site — the calendar's is '' before
+    // a day is picked — so the empty branch has to name the dialog too.
     expect($sheet)->toContain('@else')
         ->and($sheet)->toContain("aria-label=\"{{ Lang::get('core::components.sheet_untitled') }}\"");
 });
@@ -119,10 +142,8 @@ it('backs every open-sheet dispatch with a sheet that answers to that name', fun
 
     expect($files)->not->toBeEmpty();
 
-    // A phone row's Withdraw button dispatched open-sheet {name:'pot-withdraw'}
-    // when the only thing carrying that name was a flux:modal, which the phone
-    // never opens. The button was inert and the page looked complete, so money
-    // could go into a pot and not come out.
+    // A dispatched sheet name that only a flux:modal carries is inert on a
+    // phone, and the page still looks complete.
     $orphans = [];
     foreach ($files as $path) {
         $blade = (string) file_get_contents($path);
@@ -138,4 +159,51 @@ it('backs every open-sheet dispatch with a sheet that answers to that name', fun
     }
 
     expect($orphans)->toBe([], 'open-sheet dispatched at a name no bottom sheet answers to: '.implode(', ', $orphans));
+});
+
+it('keeps the 44px floor from deforming controls the design draws smaller', function (): void {
+    // The floor inflates the border box, so a fixed-size pill-radius control
+    // becomes a circle and its positioned children strand. Anything it would
+    // deform opts out and takes its touch reach from a pseudo-element.
+    $css = phoneUiUnlayeredCss();
+
+    $drawnSmall = [];
+    preg_match_all('/(?<selector>[^{}]+)\{(?<body>[^{}]*)\}/', $css, $rules, PREG_SET_ORDER);
+    foreach ($rules as $rule) {
+        $selector = trim($rule['selector']);
+        if (! preg_match('/^\.([a-zA-Z0-9_-]+)$/', $selector, $name)) {
+            continue;
+        }
+
+        preg_match('/(?<![a-z-])width:\s*(\d+)px/', $rule['body'], $width);
+        preg_match('/(?<![a-z-])height:\s*(\d+)px/', $rule['body'], $height);
+
+        $sizes = array_map(intval(...), array_column([$width, $height], 1));
+        if ($sizes !== [] && min($sizes) < 44) {
+            $drawnSmall[$name[1]] = true;
+        }
+    }
+
+    $onButtons = [];
+    foreach (phoneUiButtonClassLists() as $classList) {
+        foreach (preg_split('/\s+/', $classList) ?: [] as $class) {
+            if (isset($drawnSmall[$class])) {
+                $onButtons[$class] = true;
+            }
+        }
+    }
+
+    $unprotected = array_keys(array_filter(
+        $onButtons,
+        static fn (bool $_, string $class): bool => preg_match(
+            '/\.'.preg_quote($class, '/').'(::after)?\s*[,{]/',
+            implode('', phoneUiCoarsePointerBlocks())
+        ) !== 1,
+        ARRAY_FILTER_USE_BOTH
+    ));
+
+    expect($unprotected)->toBe([], sprintf(
+        '%s sit on a <button> at a fixed size below 44px and the coarse-pointer floor will deform them',
+        implode(', ', array_map(static fn (string $c): string => '.'.$c, $unprotected))
+    ));
 });

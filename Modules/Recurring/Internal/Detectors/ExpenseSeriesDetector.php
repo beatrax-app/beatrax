@@ -21,9 +21,6 @@ use Modules\Recurring\Public\Events\RecurringSeriesDetected;
 use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
 final class ExpenseSeriesDetector implements SeriesDetector
 {
     use CoercesScalars;
@@ -112,9 +109,8 @@ final class ExpenseSeriesDetector implements SeriesDetector
             $cadenceResult['cadence']->value,
         );
 
-        // cluster_key already encodes cadence + currency, so it's the
-        // natural dedupe seam; a cadence flip on an approved row resolves
-        // here since the cluster_key tokens carry the new cadence class.
+        // cluster_key encodes cadence + currency, so this only matches a series
+        // whose cadence has not moved. A flip falls through to the query below.
         /** @var RecurringSeries|null $existingBySameCluster */
         $existingBySameCluster = RecurringSeries::query()
             ->where('user_id', $user->id)
@@ -123,10 +119,8 @@ final class ExpenseSeriesDetector implements SeriesDetector
             ->where('latest_currency', $currency)
             ->first();
 
-        // Also matches on the persisted cluster_counterparty_key so a
-        // cadence-flip is detected on the existing row rather than
-        // inserting a new one, symmetric with the income detector and
-        // unaffected if detected_name is ever decorated separately.
+        // cluster_counterparty_key carries no cadence, so a flipped series is
+        // found here and refreshed instead of inserted as a duplicate.
         /** @var RecurringSeries|null $existingByCounterparty */
         $existingByCounterparty = RecurringSeries::query()
             ->where('user_id', $user->id)
@@ -148,10 +142,9 @@ final class ExpenseSeriesDetector implements SeriesDetector
             return;
         }
 
-        // Both states mean leave this row alone. Rejection covers the whole
-        // (counterparty, currency) pair across every cadence variant; a
-        // snoozed row would surface a different amount than the one the user
-        // paused on, and the next sweep's expiry pass unpauses it first.
+        // Rejection covers the whole (counterparty, currency) pair across every
+        // cadence variant. Refreshing a snoozed row would change the amount the
+        // user paused on; the next sweep's expiry pass unpauses it first.
         if (in_array($existing->state, [RecurringSeriesState::Rejected->value, RecurringSeriesState::Snoozed->value], true)) {
             return;
         }
@@ -159,9 +152,8 @@ final class ExpenseSeriesDetector implements SeriesDetector
         $this->refresher->refresh($existing, $counterparty, $detected, $user, Direction::Expense->value);
     }
 
-    // A cluster qualifies once it still has enough occurrences after the
-    // variance filter and the intervals resolve to a real cadence. Null
-    // means one of those three tests failed and there is nothing to record.
+    // Null means the cluster failed one of the qualifying tests and there is
+    // nothing to record.
     /**
      * @param  list<stdClass>  $rows
      * @return array{0: list<stdClass>, 1: array{cadence: SeriesCadence, median_interval_days: float, next_expected_at: ?CarbonImmutable, confidence_low: bool, missed_count: int}}|null

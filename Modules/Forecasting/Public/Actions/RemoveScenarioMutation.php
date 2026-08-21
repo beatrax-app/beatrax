@@ -9,12 +9,10 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Public\Events\ScenarioMutated;
+use Modules\Sync\Public\Events\EntityMutated;
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final class RemoveScenarioMutation
 {
     public function __construct(
@@ -53,6 +51,16 @@ final class RemoveScenarioMutation
                     ->update(['updated_at' => $now]);
             }
         });
+
+        // A removed mutation changes what the scenario projects, so leaving
+        // the tombstone uncaptured left the peer forecasting against a
+        // what-if the user had already taken back.
+        $this->events->dispatch(new EntityMutated(
+            table: 'forecast_scenario_mutations',
+            pk: $mutationId,
+            userId: $user->id,
+            mutationType: 'delete',
+        ));
 
         $this->events->dispatch(new ScenarioMutated(
             userId: $user->id,

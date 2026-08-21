@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Modules\Import\Internal\Exceptions\ImportAlreadyConfirmedException;
 use Modules\Import\Public\Actions\DiscardImport;
-use Modules\Import\Public\Exceptions\ImportAlreadyConfirmedException;
 use Modules\Ledger\Models\ImportRun;
 
 beforeEach(function (): void {
@@ -48,6 +48,5 @@ it('refuses to discard an already-confirmed import run', function (): void {
     expect(fn () => $action($run->id, $this->fixtureUser))
         ->toThrow(ImportAlreadyConfirmedException::class);
 
-    // Audit row is untouched.
     expect(ImportRun::query()->find($run->id)?->status)->toBe('confirmed');
 });

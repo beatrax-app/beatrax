@@ -25,8 +25,6 @@ require_once __DIR__.'/nativephp_scaffold_root.php';
  *
  * Same discipline as its siblings: idempotent, marker-guarded, and a missing
  * anchor is a hard failure rather than a silent skip.
- *
- * Spec: E5-R23
  */
 
 $root = beatraxScaffoldPath('android/app/src/main') ?? '';

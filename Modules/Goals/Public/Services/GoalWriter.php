@@ -15,9 +15,6 @@ use Modules\Goals\Public\Exceptions\InvalidGoalAmountException;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Sync\Public\Events\GoalMutated;
 
-/**
- * @link ../../../../.docs/features/goals/architecture.md
- */
 final class GoalWriter
 {
     public function __construct(private readonly Dispatcher $events) {}
@@ -36,10 +33,9 @@ final class GoalWriter
             throw new InvalidGoalAmountException('Invalid or non-positive target amount.');
         }
 
-        // Always create a fresh goal — an updateOrCreate keyed on (user_id,
-        // name, start_date) would silently overwrite an existing same-name
-        // same-day goal (e.g. two "Holiday" goals). Bypass the global scope
-        // so the authed $user stays authoritative regardless of guard state.
+        // Always a fresh row: an updateOrCreate keyed on (user_id, name,
+        // start_date) would silently overwrite a second "Holiday" goal made the
+        // same day. The global scope is bypassed so $user stays authoritative.
         $attributes = [
             'user_id' => $user->id,
             'name' => $name,
@@ -131,9 +127,8 @@ final class GoalWriter
         $this->capture($goal, $user, 'edit', ['status' => $goal->status]);
     }
 
-    // Every write here goes through one place so a new mutation cannot ship
-    // uncaptured — goals were absent from the capture wiring entirely, so a
-    // goal created on a phone stayed on that phone forever.
+    // Goals were absent from the capture wiring, so a goal created on a phone
+    // stayed there forever. Sole path, so a new write cannot ship uncaptured.
     /**
      * @param  array<string, mixed>  $fields
      */
@@ -147,18 +142,13 @@ final class GoalWriter
         ));
     }
 
-    // Parses a user-entered positive amount to integer minor units — the
-    // shared MoneyInput handles the Dutch/plain decimal forms — or null for a
-    // blank, malformed, zero or negative entry.
     public function parseAmount(string $value): ?int
     {
         return MoneyInput::tryToPositiveMinor($value);
     }
 
-    // Bypasses the global scope and re-asserts user_id explicitly so
-    // ownership is independent of guard state — relying on the ambient
-    // scope alone is a no-op (and a latent IDOR) in an unauthenticated
-    // context. Returns null for a missing or cross-user id.
+    // The ambient scope is a no-op outside an authenticated context, so leaning
+    // on it alone would be a latent IDOR: user_id is re-asserted explicitly.
     private function findOwnedGoal(User $user, int $goalId): ?Goal
     {
         return Goal::query()

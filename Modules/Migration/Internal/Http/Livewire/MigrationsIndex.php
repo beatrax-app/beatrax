@@ -10,21 +10,17 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
-use Modules\Migration\Public\Enums\MigrationRunStatus;
+use Modules\Migration\Internal\Enums\MigrationRunStatus;
 
-/**
- * @link ../../../../../.docs/features/migration/architecture.md
- */
 final class MigrationsIndex extends Component
 {
     public function render(ViewFactory $views, CurrentUser $currentUser, DatabaseManager $db): View
     {
         $userId = $currentUser->user()->id;
 
-        // Raw DatabaseManager read (never a chained dynamic Eloquent
-        // ->orderByDesc() call) — mirrors PreviewSummaryBuilder/
-        // GoalProgressQuery's established discipline against
-        // phpstan-strict-rules' staticMethod.dynamicCall false positive.
+        // A raw DatabaseManager read rather than a chained Eloquent
+        // ->orderByDesc(), which trips phpstan-strict-rules'
+        // staticMethod.dynamicCall false positive.
         $runs = $db->connection()->table('migration_runs')
             ->where('user_id', $userId)
             ->where('status', '!=', MigrationRunStatus::Discarded->value)

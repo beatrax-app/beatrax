@@ -9,19 +9,12 @@ use Modules\Anomaly\Internal\AnomalyEvaluator;
 use Modules\Anomaly\Internal\Jobs\SafetyNetAnomalySweepJob;
 use Modules\Anomaly\Models\AnomalyAlert;
 use Modules\Anomaly\Tests\Support\AnomalyCorpusSeeder;
-use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 
 uses(RefreshDatabase::class);
 
-/*
- * Feature coverage for the SafetyNetAnomalySweepJob: it re-evaluates a
- * user's recently-imported-but-unalerted transactions through the shared
- * AnomalyEvaluator::evaluate() path, catching anything the reactive
- * import listener missed. UNIQUE(transaction_id) makes re-evaluation of
- * an already-alerted row a no-op (D-12 safety net).
- */
-
+// Re-evaluation of an already-alerted row is a no-op because of
+// UNIQUE(transaction_id), not because the sweep filters it out.
 function snsRunSweep(int $userId): void
 {
     /** @var SafetyNetAnomalySweepJob $job */
@@ -74,7 +67,7 @@ it('does not duplicate an alert for an already-alerted transaction', function ()
     expect(AnomalyAlert::query()->where('user_id', $user->id)->count())->toBe(1);
 });
 
-it('only sweeps the owning user (cross-user isolation, T-09-16)', function (): void {
+it('only sweeps the owning user (cross-user isolation)', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $userA = AnomalyCorpusSeeder::makeUser();
@@ -94,7 +87,6 @@ it('ignores transactions imported outside the recent sweep window', function ():
     $user = AnomalyCorpusSeeder::makeUser();
     $txnId = AnomalyCorpusSeeder::seed($db, $user, AnomalyCorpusSeeder::load('large-above'));
 
-    // Age the anomalous charge well past the recent window.
     $db->connection()->table('transactions')
         ->where('id', $txnId)
         ->update(['created_at' => '2025-01-01 00:00:00']);

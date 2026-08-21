@@ -9,20 +9,8 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Transfers\Public\Services\PairLookup;
 
-/*
- * Coverage for the Transfers public-API PairLookup read service.
- *
- *   - isPaired($txId, $user) returns true when the transaction has a
- *     non-null pair_transaction_id AND belongs to $user.
- *   - partnerId($txId, $user) returns the partner row's id when paired,
- *     null when unpaired, null when the txId belongs to a different
- *     user (cross-user isolation).
- *
- * The lookup is read-only — every query filters on user_id first so a
- * downstream consumer (e.g. the Chains module's resolver) cannot leak
- * partner ids across users even if it accidentally hands the wrong
- * User object in.
- */
+// Every PairLookup query filters on user_id first, so a downstream consumer that
+// hands in the wrong User object still cannot leak partner ids across users.
 
 beforeEach(function (): void {
     $this->primaryUser = User::query()->create([
@@ -95,9 +83,8 @@ function pairLookupTx(
         'posted_at' => '2026-05-15',
         'booked_at' => '2026-05-15 12:00:00',
         'value_date' => '2026-05-15',
-        // Vary amount per row so the (user_id, account_id, posted_at,
-        // booked_at, amount_minor, currency, counterparty_normalized)
-        // uniqueness constraint never collides across fixture rows.
+        // Varied per row so fixture rows never collide on the (user, account,
+        // posted_at, booked_at, amount, currency, counterparty) uniqueness tuple.
         'amount_minor' => -1500 - $rowIndex,
         'currency' => 'EUR',
         'settled_amount_minor' => -1500 - $rowIndex,
@@ -145,37 +132,29 @@ it('returns null from partnerId() when the row is unpaired', function (): void {
 });
 
 it('isolates cross-user access — partnerId returns null when the txId belongs to another user', function (): void {
-    // Primary user has a paired pair.
     $primaryA = pairLookupTx($this->primaryUser, $this->primaryAccount, $this->primaryRun);
     $primaryB = pairLookupTx($this->primaryUser, $this->primaryAccount, $this->primaryRun);
     $primaryA->pair_transaction_id = $primaryB->id;
     $primaryA->save();
 
-    // The OTHER user asks about primary's transaction id. PairLookup must
-    // NOT leak the partner id from another user's row — the query is
-    // user_id-scoped first.
     expect($this->lookup->isPaired($primaryA->id, $this->otherUser))->toBeFalse();
     expect($this->lookup->partnerId($primaryA->id, $this->otherUser))->toBeNull();
 });
 
 it('isolates cross-user access — isPaired returns false even when the other user also has a paired row of their own', function (): void {
-    // Primary user has a paired pair.
     $primaryA = pairLookupTx($this->primaryUser, $this->primaryAccount, $this->primaryRun);
     $primaryB = pairLookupTx($this->primaryUser, $this->primaryAccount, $this->primaryRun);
     $primaryA->pair_transaction_id = $primaryB->id;
     $primaryA->save();
 
-    // Other user also has their own paired pair (independent of primary).
     $otherA = pairLookupTx($this->otherUser, $this->otherAccount, $this->otherRun);
     $otherB = pairLookupTx($this->otherUser, $this->otherAccount, $this->otherRun);
     $otherA->pair_transaction_id = $otherB->id;
     $otherA->save();
 
-    // Other user asking about primary's row still gets null.
     expect($this->lookup->isPaired($primaryA->id, $this->otherUser))->toBeFalse();
     expect($this->lookup->partnerId($primaryA->id, $this->otherUser))->toBeNull();
 
-    // Own-user queries still work normally.
     expect($this->lookup->isPaired($otherA->id, $this->otherUser))->toBeTrue();
     expect($this->lookup->partnerId($otherA->id, $this->otherUser))->toBe($otherB->id);
 });

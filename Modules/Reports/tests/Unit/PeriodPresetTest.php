@@ -9,15 +9,6 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Reports\Internal\Aggregation\PeriodPresetResolver;
 
-/*
- * Covers 999.6-04 Task 1 / Req 6: PeriodPresetResolver::resolve() for the
- * six presets + custom range. Mirrors PeriodQueryTest's fakeClock/
- * fakeCurrentUser pattern (pure unit test, no DB) — helper functions are
- * prefixed pprt_ to avoid cross-file global-function collisions with
- * Modules/Ledger/tests/Unit/PeriodQueryTest.php's identically-named
- * fakeClock()/fakeCurrentUser() helpers.
- */
-
 function pprtFakeClock(string $instant): Clock
 {
     return new class($instant) implements Clock
@@ -128,8 +119,7 @@ it('resolves custom with an inclusive user-picked end date converted to endExclu
     $period = $resolver->resolve('custom', '2026-03-01', '2026-03-15');
 
     expect($period->start->toDateString())->toBe('2026-03-01');
-    // Pitfall 2(a): the 15th itself must still be included, so
-    // endExclusive is the 16th, not the 15th.
+    // The 15th itself is included, so endExclusive is the 16th.
     expect($period->endExclusive->toDateString())->toBe('2026-03-16');
 });
 
@@ -145,19 +135,19 @@ it('throws for an unknown preset', function (): void {
     expect(fn () => $resolver->resolve('decade'))->toThrow(InvalidArgumentException::class);
 });
 
-it('WR-02: throws when customTo is before customFrom instead of silently resolving a zero/negative-length window', function (): void {
+it('throws when customTo is before customFrom instead of silently resolving a zero/negative-length window', function (): void {
     $resolver = pprtResolver('2026-05-15T10:00:00Z');
 
     expect(fn () => $resolver->resolve('custom', '2026-03-15', '2026-03-01'))->toThrow(InvalidArgumentException::class);
 });
 
-it('INFO-03: throws for a malformed/non-Y-m-d customFrom instead of lenient-parsing it', function (): void {
+it('throws for a malformed/non-Y-m-d customFrom instead of lenient-parsing it', function (): void {
     $resolver = pprtResolver('2026-05-15T10:00:00Z');
 
     expect(fn () => $resolver->resolve('custom', 'next thursday', '2026-03-15'))->toThrow(InvalidArgumentException::class);
 });
 
-it('INFO-03: throws for an out-of-range calendar day instead of silently normalizing it (2026-02-30 -> 2026-03-02)', function (): void {
+it('throws for an out-of-range calendar day instead of silently normalizing it (2026-02-30 -> 2026-03-02)', function (): void {
     $resolver = pprtResolver('2026-05-15T10:00:00Z');
 
     expect(fn () => $resolver->resolve('custom', '2026-02-01', '2026-02-30'))->toThrow(InvalidArgumentException::class);

@@ -27,10 +27,10 @@ this page describes the module's surface.
 
 What the module explicitly does NOT do:
 
-- It never mutates `transactions` directly. The `transactions` table is
-  the canonical store; chain rows reference it via FKs but the resolver
-  is read-mostly over `transactions`. (The arch invariant
-  `noResolverWritesTransactions` is the standing guard.)
+- It is read-mostly over `transactions`. The `transactions` table is
+  the canonical store; chain rows reference it via FKs. The one write
+  Chains makes — `RetypeByAliasResolver` retyping `transactions.type` —
+  is pinned by file and line by `crossModuleRawTableWrites`.
 - It never decides the same chain twice. Every resolver run is keyed
   on the deterministic `signature_hash` of the evidence; a re-run
   observes the existing chain_link row and skips it.
@@ -307,7 +307,7 @@ The confidence-tier mapping the tree and the review queue share:
 
 ## ChainDrawer — the chain drill-down side-drawer
 
-`Internal/Http/Livewire/ChainDrawer.php` mounts inside
+`Public/Http/Livewire/ChainDrawer.php` mounts inside
 `/transactions/{id}` and renders when the "View chain" button
 dispatches a `chain-drawer:open` event carrying the transaction id.
 Its Blade view is the project's first Flux flyout — it uses

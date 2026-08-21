@@ -13,9 +13,6 @@ use Modules\Core\Public\Exceptions\BackupFormatException;
 use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Exceptions\BackupNotSupportedException;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class RestoreEncryptedBackup
 {
     public function __construct(
@@ -115,8 +112,16 @@ final class RestoreEncryptedBackup
         }
     }
 
+    // A 0700 directory under app storage, NEVER sys_get_temp_dir(): /tmp is
+    // world-traversable at 1777, the encryptor writes through a plain fopen
+    // with no chmod, and this file is the ENTIRE database in clear — it was
+    // landing there at 0644 for as long as a restore took.
     private function tempPath(string $tag): string
     {
-        return sys_get_temp_dir().'/beatrax-restore-'.$tag.'-'.bin2hex(random_bytes(6)).'.sqlite';
+        $dir = rtrim(UserDataPathService::appPath('tmp-restore'), '/');
+        $this->files->ensureDirectoryExists($dir, 0700);
+        @chmod($dir, 0700);
+
+        return $dir.'/beatrax-restore-'.$tag.'-'.bin2hex(random_bytes(6)).'.sqlite';
     }
 }

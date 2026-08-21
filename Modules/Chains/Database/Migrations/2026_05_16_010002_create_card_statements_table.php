@@ -2,38 +2,10 @@
 
 declare(strict_types=1);
 
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Creates the card_statements table — the first-class statement lifecycle
- * ledger for ICS-kind accounts.
- *
- * Each row models one statement period: the total amount owed
- * (negative), the open balance still to settle (positive remaining),
- * and the state machine that transitions open → partially_settled →
- * settled / overpaid as ics_bulk_settle chain_links accumulate.
- *
- * Modelling the statement as a real row (rather than deriving from
- * `statement_summaries` joins on the fly) is the load-bearing data
- * design: partial settlement, overpayment carry-forward, and refund-
- * after-close behaviour all require a persistent open_balance the
- * resolver mutates atomically — boolean is_settled is structurally
- * insufficient.
- *
- * The `state` column is enforced via a BEFORE INSERT/UPDATE trigger
- * pair (same idiom Phase 1's `transactions.type` uses). The single
- * legal mutator is `Modules\Chains\Internal\CardStatementStateMachine`
- * — an architectural invariant enforced by BoundaryArchTest.
- *
- * `import_run_id` is nullable + nullOnDelete because back-populated
- * rows may outlive their original import_run; ongoing imports refresh
- * the row without losing it on import_run delete.
- *
- * UNIQUE `(user_id, account_id, period_start, period_end)` makes the
- * back-population migration's `insertOrIgnore` re-runs a no-op.
- */
+/** @link ../../../../.docs/features/chains/card-statement-lifecycle.md */
 return new class extends ModuleMigration
 {
     public function up(): void

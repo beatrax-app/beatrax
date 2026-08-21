@@ -15,12 +15,8 @@ use Modules\Ledger\Public\Services\FingerprintComposer;
 
 uses(RefreshDatabase::class);
 
-/**
- * Builds a CanonicalTransaction whose v3 fingerprint matches any other
- * row built with `canonicalForUser($user, $accountId)`. Keep the date,
- * amount, counterparty fields stable across calls so the SHA-256 hash
- * is invariant.
- */
+// Everything in the v3 fingerprint tuple is hard-coded here, so two calls for
+// one user and account always hash alike.
 function canonicalForUser(User $user, int $accountId, string $sourceFormat, ?string $sourceRef): CanonicalTransaction
 {
     return new CanonicalTransaction(
@@ -48,12 +44,8 @@ function canonicalForUser(User $user, int $accountId, string $sourceFormat, ?str
     );
 }
 
-/**
- * Persists an existing transactions row whose v3 fingerprint matches the
- * canonical produced by `canonicalForUser`. The DB row carries the
- * (sourceFormat, sourceRef) pair under test; the fingerprint itself is
- * independent of those fields (v3 drops source_ref from the tuple).
- */
+// The (sourceFormat, sourceRef) pair varies per test without disturbing the
+// fingerprint, because v3 drops source_ref from the tuple.
 function seedTransactionMatchingCanonical(
     User $user,
     int $accountId,
@@ -128,13 +120,9 @@ it('returns duplicate when fingerprint matches and incoming source_ref is NULL',
 })->group('phase-2');
 
 it('returns duplicate when fingerprint matches across statement formats (CSV → CAMT) — receipt-format gate not satisfied', function (): void {
-    // Phase 16 UAT batch 7 policy change: statement-vs-statement
-    // collisions drop as DUPLICATE regardless of source_ref rank. The
-    // prior phase-2 behaviour returned ENRICHED here because the
-    // incoming CAMT source_ref outranked the stored CSV NULL ref; the
-    // user's UAT report locked the simpler "same transaction → drop"
-    // policy because the audit chain shouldn't grow a second
-    // source_format on a re-import.
+    // The incoming CAMT ref outranks the stored NULL, which used to make this
+    // ENRICHED. Statement-vs-statement now drops regardless of rank, so a
+    // re-import cannot grow a second source_format onto the audit chain.
     seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'asn-csv', null, $this->composer);
     $tx = canonicalForUser($this->fixtureUser, $this->account->id, 'camt053', 'EREF-A');
 
@@ -162,10 +150,8 @@ it('returns duplicate when fingerprint matches across statement formats (CSV →
 })->group('phase-2');
 
 it('returns enriched when fingerprint matches and the incoming side is a receipt format (paypal-receipt > paypal-csv)', function (): void {
-    // Receipt-driven enrichment is preserved: a receipt may carry a
-    // clean merchant name / line items the bank-statement export
-    // lacks, so the rank-based upgrade still fires when at least one
-    // side is a receipt format.
+    // A receipt can carry a clean merchant name and line items no statement
+    // export has, so the rank-based upgrade survives on that path.
     $existing = seedTransactionMatchingCanonical($this->fixtureUser, $this->account->id, 'paypal-csv', 'O-00000000000000001', $this->composer);
     $tx = canonicalForUser($this->fixtureUser, $this->account->id, 'paypal-receipt', 'PAYID-CANONICAL');
 

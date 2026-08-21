@@ -12,9 +12,6 @@ use Modules\Forecasting\Internal\Exceptions\ForecastRunNotFoundException;
 use Modules\Forecasting\Internal\Exceptions\InvalidForecastRunTransitionException;
 use Modules\Forecasting\Models\ForecastRun;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final readonly class ForecastRunStateMachine
 {
     use CoercesScalars;

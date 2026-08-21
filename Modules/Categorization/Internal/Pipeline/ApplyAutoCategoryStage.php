@@ -15,13 +15,11 @@ use Modules\Categorization\Public\Contracts\AppliesAutoCategory;
 use Modules\Categorization\Public\Dto\AutoCategorizationOutcomeDto;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/categorization/architecture.md
- */
 final class ApplyAutoCategoryStage implements AppliesAutoCategory
 {
     use CoercesScalars;
@@ -34,9 +32,8 @@ final class ApplyAutoCategoryStage implements AppliesAutoCategory
         private readonly DatabaseManager $db,
     ) {}
 
-    // The catch is the whole reason this is two methods: categorisation is a
-    // convenience, so any failure inside it must degrade to manual rather
-    // than abort an import the user asked for.
+    // Two methods only so this catch exists: categorisation is a convenience,
+    // so a failure inside it degrades to manual, never aborts the import.
     public function apply(CanonicalTransaction $tx, User $user): AutoCategorizationOutcomeDto
     {
         try {
@@ -48,8 +45,7 @@ final class ApplyAutoCategoryStage implements AppliesAutoCategory
                     'user_id' => $user->id,
                     'source_format' => $tx->sourceFormat,
                     'source_row_index' => $tx->sourceRowIndex,
-                    'exception' => $e::class,
-                    'message' => $e->getMessage(),
+                    ...SafeExceptionContext::describe($e),
                 ],
             );
 
@@ -63,10 +59,9 @@ final class ApplyAutoCategoryStage implements AppliesAutoCategory
         $matched = $this->ruleEngine->match(RuleMatchInput::fromCanonical($tx), $user);
         $folded = $this->ruleApplier->applyAtImport($matched, $tx);
 
-        // Wrap the hits_count bump loop in a single DB transaction so
-        // a mid-loop exception rolls back every increment for this
-        // row, rather than leaving earlier rules permanently bumped
-        // even though the outer catch discards the categorization.
+        // One transaction over the whole bump loop, so a mid-loop exception
+        // rolls back every increment for this row rather than leaving earlier
+        // rules bumped while the outer catch discards the categorization.
         $categoryRuleId = null;
         $this->db->connection()->transaction(function () use ($matched, $user, &$categoryRuleId): void {
             foreach ($matched as $rule) {
@@ -77,8 +72,8 @@ final class ApplyAutoCategoryStage implements AppliesAutoCategory
                     ->update(['hits_count' => new Expression('hits_count + 1')]);
 
                 foreach ($rule->actions as $action) {
-                    // Last-writer-wins, mirroring
-                    // RuleApplier::applyAtImport's own fold order.
+                    // Deliberately no break: the LAST category action wins,
+                    // matching RuleApplier::applyAtImport's own fold order.
                     if ($action->type === 'category') {
                         $categoryRuleId = $rule->ruleId;
                     }
@@ -102,8 +97,8 @@ final class ApplyAutoCategoryStage implements AppliesAutoCategory
             );
         }
 
-        // No fired rule carried a category action — fall through to
-        // merchant_memories.
+        // Merchant memory is a fallback only: it never overrides a category
+        // a fired rule set.
         $memory = $this->evaluator->lookupMemory($tx, $user->id);
         if ($memory === null) {
             return AutoCategorizationOutcomeDto::manual($folded);

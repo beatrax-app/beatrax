@@ -6,10 +6,8 @@ namespace Modules\EmailScan\Internal\OAuth;
 
 use DateTimeImmutable;
 
-// Immutable carrier for the access-token + refresh-token + identifying
-// email returned by the OAuth provider after an authorisation-code
-// exchange or a refresh-token rotation. refreshToken is null when the
-// provider's response omitted one (typically a refresh-only rotation).
+// $refreshToken is null when the provider's response omitted one, which is the
+// normal shape of a refresh-only rotation.
 final readonly class AccessTokenWithEmail
 {
     public function __construct(

@@ -17,13 +17,6 @@ use Modules\Ledger\Models\Category;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/*
- * Feature coverage for the first-user signup action and its route gate:
- * atomic User + recovery-code creation, the race-protected
- * User::count() === 0 re-check, password-length validation, auto-login,
- * and the FirstUserOnlyMiddleware 404 once a user already exists.
- */
-
 it('creates the first user with ten recovery codes and logs them in', function (): void {
     /** @var SignupAction $signup */
     $signup = $this->app->make(SignupAction::class);
@@ -179,9 +172,8 @@ it('throws a 404 from FirstUserOnlyMiddleware once a user exists', function (): 
 });
 
 it('seeds the default category tree by dispatching UserInstalled after the user is created', function (): void {
-    // Guard the precondition: a fresh test database carries no users and no
-    // shared default-tree categories. The signup ceremony is the sole
-    // mechanism populating both on the bundled-app first-launch GUI path.
+    // The precondition, guarded: signup is the only thing that populates either
+    // of these on a first launch.
     expect(User::query()->count())->toBe(0);
     expect(Category::withoutGlobalScopes()->whereNull('user_id')->count())->toBe(0);
 
@@ -192,11 +184,8 @@ it('seeds the default category tree by dispatching UserInstalled after the user 
 
     expect($result['user'])->toBeInstanceOf(User::class);
 
-    // 13 top-level entries in DefaultCategoryTreeSeeder::TREE plus 17 leaves
-    // — assert the lower bound on parents to stay resilient if leaves are
-    // tweaked, and assert a representative slug exists end-to-end so a
-    // partial seeder no-op (event fired but listener short-circuited) would
-    // still fail the test.
+    // A lower bound so tweaking a leaf does not break this, plus one slug so a
+    // listener that short-circuits after the event still fails.
     $sharedCategories = Category::withoutGlobalScopes()->whereNull('user_id');
     expect($sharedCategories->count())->toBeGreaterThanOrEqual(13);
     expect($sharedCategories->where('slug', 'subscriptions-streaming')->exists())->toBeTrue();
@@ -206,9 +195,8 @@ it('dispatches UserInstalled exactly once with the new users id', function (): v
     /** @var list<int> $captured */
     $captured = [];
 
-    // Attach a probe listener BEFORE invoking SignupAction so the dispatch
-    // is observed live. Event::fake() would shadow the real listener and
-    // mask the end-to-end seeding wiring the other test relies on.
+    // A live listener rather than Event::fake(), which would shadow the real
+    // one and mask the seeding wiring the test above depends on.
     $this->app->make(Dispatcher::class)->listen(
         UserInstalled::class,
         function (UserInstalled $event) use (&$captured): void {

@@ -10,9 +10,6 @@ use Modules\DriftAlerts\Models\DriftAlert;
 use Modules\DriftAlerts\Public\Enums\DriftAlertState;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/drift-alerts/architecture.md
- */
 final class DriftAlertStateMachine extends GuardedStateMachine
 {
     use CoercesScalars;

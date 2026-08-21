@@ -25,6 +25,8 @@ return [
     'no_entries' => 'Käsitsi lisatud kirjeid veel pole.',
     'delete_entry' => 'Kustuta kirje',
     'delete' => 'Kustuta',
+    'delete_confirm' => 'Kas kustutada see kirje?',
+    'delete_keep' => 'Säilita',
 
     'errors' => [
         'amount_positive' => 'Sisesta nullist suurem summa.',

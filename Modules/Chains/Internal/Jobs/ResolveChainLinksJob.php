@@ -23,9 +23,6 @@ use Modules\Core\Public\Enums\JobRunStatus;
 use Modules\Core\Public\Support\LockStore;
 use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 
-/**
- * @link ../../../../.docs/features/chains/architecture.md
- */
 final class ResolveChainLinksJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Dispatchable;
@@ -33,9 +30,6 @@ final class ResolveChainLinksJob implements ShouldBeUniqueUntilProcessing, Shoul
     use Queueable;
     use SerializesModels;
     use TunedQueueJob;
-
-    // Backoff delays in seconds between the three retry attempts above:
-    // 1 minute, 5 minutes, 15 minutes.
 
     public function __construct(public readonly int $userId) {}
 
@@ -46,9 +40,8 @@ final class ResolveChainLinksJob implements ShouldBeUniqueUntilProcessing, Shoul
 
     public function uniqueFor(): int
     {
-        // 10-minute lock ceiling — long enough for any resolver pass
-        // to finish, short enough that a worker crash unblocks the
-        // next dispatch promptly.
+        // Long enough for any resolver pass, short enough that a crashed
+        // worker unblocks the next dispatch.
         return 600;
     }
 
@@ -86,8 +79,9 @@ final class ResolveChainLinksJob implements ShouldBeUniqueUntilProcessing, Shoul
             ->where('user_id', $this->userId)
             ->count();
 
-        // Healing passes run before the chain resolvers — see architecture.md
-        // § Healing passes for why each one has to precede resolution.
+        // The three healing passes precede the resolvers because each one
+        // produces rows — statements, retyped transfers, paired legs — that
+        // the resolvers then iterate.
         $cardStatementUpserter->upsertForUser($user);
         $retypeResolver->resolveForUser($user);
         $pairer->pairOrphansForUser($user);

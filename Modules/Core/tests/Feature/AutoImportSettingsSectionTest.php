@@ -3,15 +3,8 @@
 declare(strict_types=1);
 
 use Livewire\Livewire;
-use Modules\Core\Internal\Http\Livewire\AutoImportSettingsSection;
 use Modules\Core\Models\User;
-
-/*
- * The watched-folder toggle (D-704 / D-718), extracted out of SettingsPage so
- * it could move to Data & Devices whole: it describes where statements enter
- * this install, which is the same question as bank connections and backups,
- * not a preference like theme or currency. These tests moved with it.
- */
+use Modules\Core\Public\Http\Livewire\AutoImportSettingsSection;
 
 beforeEach(function (): void {
     $this->user = User::create([
@@ -38,9 +31,8 @@ it('renders the Auto-import section with the locked UI-SPEC copy', function (): 
 })->group('phase-7');
 
 it('persists the toggle to users.auto_import_drop_folder (instant-apply)', function (): void {
-    // The handler flips the property explicitly so the Blade checkbox only
-    // needs `wire:change`, not `wire:model.live`. One call -> property flips
-    // false -> true and the new value is persisted to the users row.
+    // The handler flips the property itself, so the Blade switch needs only
+    // wire:click and no wire:model.live.
     Livewire::test(AutoImportSettingsSection::class)
         ->assertSet('enabled', false)
         ->call('toggle')

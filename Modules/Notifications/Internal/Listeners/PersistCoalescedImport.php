@@ -7,6 +7,7 @@ namespace Modules\Notifications\Internal\Listeners;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Ledger\Public\Events\TransactionBatchImported;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Internal\Support\NotificationCopyRenderer;
@@ -15,9 +16,6 @@ use Modules\Notifications\Internal\Support\NotificationWriter;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final class PersistCoalescedImport
 {
     // Wire-format keys the batch event carries when every row
@@ -71,7 +69,7 @@ final class PersistCoalescedImport
             // Swallow - a failed persist must never break the
             // originating import.
             $this->log->error('PersistCoalescedImport: failed to persist import notification', [
-                'exception' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
                 'userId' => $event->userId,
                 'insertedCount' => $event->insertedCount,
                 'sourceFormats' => $event->sourceFormats,

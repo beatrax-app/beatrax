@@ -2,12 +2,6 @@
 
 declare(strict_types=1);
 
-/**
- * Feature tests proving the global LoopbackOnly middleware refuses any
- * request whose `SERVER_ADDR` is not a loopback address while letting
- * actual loopback (including the IPv4-mapped IPv6 dual-stack form) and
- * CLI/test fixtures with no SERVER_ADDR through.
- */
 it('refuses a non-loopback SERVER_ADDR with 404', function (): void {
     $this->withServerVariables(['SERVER_ADDR' => '192.168.1.10'])
         ->get('/login')

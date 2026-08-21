@@ -10,10 +10,6 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Public\Enums\DiscoveredSenderState;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-// Dismisses a discovered_senders candidate so DiscoveryScanJob
-// excludes it going forward and the /inboxes panel hides it. Mirrors
-// PromoteDiscoveredSender's cross-user 404, idempotency, and
-// busy_timeout-fenced transaction invariants.
 final class DismissDiscoveredSender
 {
     public function __construct(

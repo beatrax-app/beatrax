@@ -8,16 +8,6 @@ use Modules\Core\Models\User;
 use Modules\Mobile\Internal\Http\Middleware\MobileEnsureImportCompleted;
 use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
 
-/*
- * A device that ran the "Import from another device" bootstrap creates its
- * account before it ever pairs. `isFreshInstall()` is false from that moment
- * on, so nothing routed the device back into the ceremony it abandoned:
- * quitting the app mid-import and relaunching landed on an empty dashboard
- * with no way back. MobileEnsureImportCompleted is the gate that closes it,
- * reading the durable MobileImportIntentGate marker rather than the
- * `?mode=import` query param, which does not survive a relaunch.
- */
-
 function mobileImportGateUser(): User
 {
     return User::query()->create([
@@ -57,6 +47,11 @@ function mobileImportGateRoute(string $uri = '/__test/import-gated'): void
         ->name('dashboard-ish');
 }
 
+// A device that ran the import bootstrap creates its account before it ever
+// pairs, so isFreshInstall() is false from then on and nothing routed it back
+// into the ceremony it abandoned. The gate reads the durable intent marker
+// instead of the ?mode=import query param, which does not survive a relaunch.
+
 it('lets a device that never imported straight through', function (): void {
     $user = mobileImportGateUser();
     mobileImportGateRoute();
@@ -81,9 +76,8 @@ it('sends a paired-but-still-pulling import device to the blocking setup gate', 
     $user = mobileImportGateUser();
     app(MobileImportIntentGate::class)->markImporting($user->id);
 
-    // Epoch installed (the desktop delivered it) but the op-log pull has
-    // not finished, which is exactly the half-populated state the setup
-    // screen exists to hide.
+    // The desktop delivered the epoch but the op-log pull has not finished, which
+    // is the half-populated state the setup screen exists to hide.
     mobileImportGateState($user->id, 'pulling');
 
     mobileImportGateRoute();

@@ -4,26 +4,16 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Reports\Internal\Actions\DeleteReport;
+use Modules\Reports\Internal\Actions\SaveReport;
+use Modules\Reports\Internal\Actions\TogglePin;
+use Modules\Reports\Internal\Actions\UpdateReport;
+use Modules\Reports\Internal\Dto\ReportDefinition;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 use Modules\Reports\Models\SavedReport;
-use Modules\Reports\Public\Actions\DeleteReport;
-use Modules\Reports\Public\Actions\SaveReport;
-use Modules\Reports\Public\Actions\TogglePin;
-use Modules\Reports\Public\Actions\UpdateReport;
-use Modules\Reports\Public\Dto\ReportDefinition;
-use Modules\Reports\Public\Enums\ReportGranularity;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 uses(RefreshDatabase::class);
-
-/*
- * Companion coverage (Rule 2, following the 999.6-06 SUMMARY precedent of
- * adding tests the plan's own acceptance criteria require but its named
- * <verify> command does not directly exercise): SavedReportRoundTripTest
- * pins SaveReport's round-trip contract; this file pins UpdateReport's
- * dirty-field-only emit + NotFoundHttpException, DeleteReport's
- * NotFoundHttpException + row removal, and cross-user isolation for both —
- * every claim in Task 1's acceptance_criteria beyond the save round trip.
- */
 
 function srwaUser(): User
 {
@@ -78,7 +68,7 @@ it('UpdateReport is a no-op when nothing actually changed', function (): void {
     expect($reloaded->updated_at?->equalTo($originalUpdatedAt))->toBeTrue();
 });
 
-it('WR-03: UpdateReport is a no-op when only the filter-array element order changed', function (): void {
+it('UpdateReport is a no-op when only the filter-array element order changed', function (): void {
     $user = srwaUser();
     test()->actingAs($user);
 
@@ -115,12 +105,11 @@ it('WR-03: UpdateReport is a no-op when only the filter-array element order chan
     /** @var SavedReport $reloaded */
     $reloaded = SavedReport::query()->findOrFail($saved->id);
     expect($reloaded->updated_at?->equalTo($originalUpdatedAt))->toBeTrue();
-    // The stored order is untouched — normalization only affects the
-    // comparison, never the persisted value.
+    // Normalisation affects the dirty comparison only, never the stored value.
     expect($reloaded->definition['accounts'])->toBe([1, 2, 3]);
 });
 
-it('UpdateReport throws NotFoundHttpException for a foreign report id (T-999.6-17)', function (): void {
+it('UpdateReport throws NotFoundHttpException for a foreign report id', function (): void {
     $owner = srwaUser();
     $other = srwaUser();
     test()->actingAs($owner);
@@ -147,7 +136,7 @@ it('DeleteReport removes the row', function (): void {
     expect(SavedReport::query()->find($saved->id))->toBeNull();
 });
 
-it('DeleteReport throws NotFoundHttpException for a foreign report id and never deletes it (T-999.6-17)', function (): void {
+it('DeleteReport throws NotFoundHttpException for a foreign report id and never deletes it', function (): void {
     $owner = srwaUser();
     $other = srwaUser();
     test()->actingAs($owner);
@@ -166,7 +155,7 @@ it('DeleteReport throws NotFoundHttpException for a missing report id', function
         ->toThrow(NotFoundHttpException::class);
 });
 
-it('WR-02: deleting a pinned report compacts the remaining pin_order values to a dense sequence', function (): void {
+it('deleting a pinned report compacts the remaining pin_order values to a dense sequence', function (): void {
     $user = srwaUser();
     test()->actingAs($user);
 
@@ -176,8 +165,7 @@ it('WR-02: deleting a pinned report compacts the remaining pin_order values to a
         app(TogglePin::class)->toggle($user, $reports[$i - 1]->id);
     }
 
-    // Reports are pinned in order 1, 2, 3. Delete the middle (pin_order = 2)
-    // pinned report directly — not via TogglePin's unpin path.
+    // Deleted directly rather than through TogglePin's unpin path.
     app(DeleteReport::class)->delete($user, $reports[1]->id);
 
     /** @var SavedReport $first */

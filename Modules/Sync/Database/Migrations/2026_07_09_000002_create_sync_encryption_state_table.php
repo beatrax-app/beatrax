@@ -6,47 +6,21 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Creates the sync_encryption_state table — per-user, DEVICE-LOCAL at-rest
- * encryption state for Phase 14 (CRYPT-01/CRYPT-02, D-09).
- *
- * Column notes:
- *   - `user_id` UNIQUE — one row per user on THIS device. Not an FK/cascade,
- *     consistent with the rest of the v1 single-user schema precedent
- *     (op_log_entries, device_registry).
- *   - `current_epoch` NULLABLE INTEGER — the GDK keyring epoch id new op-log
- *     writes and new direct-write (import) rows should tag/encrypt under.
- *     NULL means encryption is not yet enabled for this user on this device.
- *   - `migration_in_progress` BOOLEAN, default false — set true for the
- *     duration of the D-09 backup-first atomic encryption pass; gates
- *     read-trust so a crashed/partial migration is never silently trusted
- *     as complete (Plan 06).
- *   - `enabled_at` NULLABLE TIMESTAMP — when encryption was turned on for
- *     this user on this device; NULL until the migration completes.
- *
- * CRITICAL invariant (T-14-01, mirrors device_registry's documented "no
- * secret-key column" rule, STRIDE T-12-02): this table NEVER holds any GDK
- * key material — only the epoch id (a plain integer) and boolean/timestamp
- * state. Secret keys live exclusively in the encrypted GDK keyring file on
- * disk, written/read by Plan 02's GdkKeyringService, wrapped under the
- * app-lock KEK via AppLockKeyWrap (Modules\Auth\Internal\Lock).
- *
- * This table is DEVICE-LOCAL and must NEVER sync: it is deliberately absent
- * from Modules\Sync\Internal\Config\MergeRulesRegistry. Each device's own
- * current_epoch/migration_in_progress reflects that device's own encryption
- * rollout state — replicating it via the op-log would conflate independent
- * per-device migration progress and epoch bookkeeping across peers, which
- * is incoherent (a device catching up mid-rotation must resolve its own
- * epoch from the keyring it receives, not from a synced row).
- */
 return new class extends ModuleMigration
 {
     public function up(): void
     {
+        // Device-local, and deliberately absent from MergeRulesRegistry so it
+        // never syncs: each device's encryption rollout is its own: a peer
+        // catching up mid-rotation must resolve its epoch from the keyring it
+        // receives, not from a replicated row about someone else's progress.
         $this->schema()->create('sync_encryption_state', static function (Blueprint $table): void {
             $table->id();
             $table->unsignedInteger('user_id');
+            // The epoch id alone — this table never holds key material.
             $table->integer('current_epoch')->nullable();
+            // True for the duration of the backup-first migration pass, so a
+            // crash mid-pass is never mistaken for a completed one.
             $table->boolean('migration_in_progress')->default(false);
             $table->timestamp('enabled_at')->nullable();
             $table->timestamps();

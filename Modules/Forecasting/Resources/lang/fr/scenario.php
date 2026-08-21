@@ -11,6 +11,7 @@ return [
     'rename' => 'Renommer',
     'confirm_delete' => 'Confirmer la suppression',
     'delete_scenario' => 'Supprimer le scénario',
+    'delete_confirm' => 'Supprimer ce scénario ?',
 
     'mutations_count' => 'Modifications (:count)',
     'no_mutations' => 'Pas encore de modifications. Ajoutes-en une ci-dessous pour voir comment ce scénario se compare à ta référence.',
@@ -67,6 +68,7 @@ return [
         'new_amount' => 'Nouveau montant',
         'new_next_date' => 'Prochaine date',
         'scope' => 'Portée',
+        'scope_legend' => 'Quelles occurrences décaler',
         'scope_next' => 'Seulement la prochaine occurrence',
         'scope_all' => 'Toutes les occurrences suivantes',
     ],
@@ -80,6 +82,8 @@ return [
         'current_amount' => 'Montant actuel',
         'new_amount' => 'Nouveau montant',
     ],
+
+    'series_name_fallback' => 'série',
 
     'summary' => [
         'cancel' => 'Annuler :name',

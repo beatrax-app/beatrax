@@ -20,8 +20,6 @@ final class RetypeByAliasResolver
 {
     use CoercesScalars;
 
-    // Bounds the size of any single WHERE id IN (...) statement regardless
-    // of how many rows the decrypt-then-match pass queues.
     private const UPDATE_BATCH_SIZE = 500;
 
     private const CANDIDATE_CHUNK_SIZE = 500;
@@ -41,8 +39,7 @@ final class RetypeByAliasResolver
         $connection = $this->db->connection();
         $now = $this->clock->now()->toDateTimeString();
 
-        // No aliases at all means this pass can never retype anything —
-        // return before decrypting a single row.
+        // Returning here is what keeps the no-alias case from decrypting a row.
         $aliasKindByIban = $this->loadAliasMap($connection, $user);
         if ($aliasKindByIban === []) {
             return 0;
@@ -55,9 +52,6 @@ final class RetypeByAliasResolver
         /** @var list<int> $transferInIds */
         $transferInIds = [];
 
-        // Narrows on the same cheap plaintext dims as the original SQL,
-        // chunking the scan and decrypt-then-matching each candidate
-        // against the in-PHP maps built above.
         $connection
             ->table('transactions')
             ->select(['id', 'account_id', 'amount_minor', 'counterparty_iban'])
@@ -127,9 +121,6 @@ final class RetypeByAliasResolver
             return;
         }
 
-        // Retyping needs somewhere else to point at: an alias whose only
-        // account is the row's own account describes a transfer to itself,
-        // which is not a transfer.
         $rowId = self::toInt($row->id ?? null);
         $ownAccountId = self::toInt($row->account_id ?? null);
         if ($rowId === 0 || ! self::hasAccountOtherThan($accountIdsByKind[$targetKind] ?? [], $ownAccountId)) {
@@ -221,17 +212,5 @@ final class RetypeByAliasResolver
         }
 
         return $touched;
-    }
-
-    private static function toStringOrNull(mixed $value): ?string
-    {
-        if ($value === null) {
-            return null;
-        }
-        if (is_string($value)) {
-            return $value;
-        }
-
-        return is_scalar($value) ? (string) $value : null;
     }
 }

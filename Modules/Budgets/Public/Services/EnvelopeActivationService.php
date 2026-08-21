@@ -9,9 +9,6 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Pots\Public\Services\PotWriter;
 
-/**
- * @link ../../../../.docs/features/budgets/architecture.md
- */
 final class EnvelopeActivationService
 {
     public function __construct(
@@ -53,8 +50,9 @@ final class EnvelopeActivationService
             return;
         }
 
-        // Deliberately not wrapped in a spanning transaction -- see
-        // architecture.md for why, and the unclaim-on-failure recovery below.
+        // No spanning transaction: PotWriter::archive() dispatches its events
+        // after its own inner commit, and an outer one would defer them. A walk
+        // that throws part-way unclaims the user instead, below.
         try {
             /** @var User|null $user */
             $user = User::query()->where('id', $userId)->first();

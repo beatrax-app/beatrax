@@ -7,9 +7,6 @@ namespace Modules\Ingestion\Public\Paypal;
 use Modules\Ingestion\Public\Exceptions\MissingPaypalTransactionTypeMapException;
 use Modules\Ingestion\Public\Exceptions\UnknownPaypalEventTypeException;
 
-/**
- * @link ../../../../.docs/features/ingestion/architecture.md
- */
 final class PaypalCsvEventTypeMap
 {
     /**
@@ -23,9 +20,8 @@ final class PaypalCsvEventTypeMap
             'Algemene kaartstorting' => 'child-fee',
             'Algemene valutaomrekening' => 'child-fx',
 
-            // Funding-leg parents: standalone top-up ASN->PayPal events,
-            // distinct from the child-fee entry above; PayPal ships these
-            // three strings un-localised, sharing vocabulary with
+            // Standalone ASN->PayPal top-up parents. PayPal ships these three
+            // un-localised, and they must stay in step with
             // PaypalFundingResolver::FUNDING_EVENT_TYPES.
             'Bankstorting' => 'parent',
             'General Withdrawal' => 'parent',
@@ -51,10 +47,8 @@ final class PaypalCsvEventTypeMap
             'Vooraf goedgekeurde betaling – rekening betaald door gebruiker' => 'expense',
             'Express Checkout-betaling' => 'expense',
 
-            // Funding-leg parents map to 'transfer_in' so the PayPal
-            // side of an ASN→PayPal top-up surfaces as the transfer leg
-            // `PairTransferCandidates` matches against the ASN-side
-            // `transfer_out`.
+            // 'transfer_in' so PairTransferCandidates can match the PayPal
+            // side of a top-up against the ASN-side 'transfer_out'.
             'Bankstorting' => 'transfer_in',
             'General Withdrawal' => 'transfer_in',
             'Transfer to bank' => 'transfer_in',

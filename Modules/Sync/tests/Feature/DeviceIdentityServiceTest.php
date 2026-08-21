@@ -12,15 +12,6 @@ use Modules\Sync\Internal\Identity\DeviceIdentityService;
 
 uses(RefreshDatabase::class);
 
-/*
- * DeviceIdentityServiceTest — PAIR-01 key lifecycle + app-lock gate (D-01/D-02).
- *
- * RED until Plan 02 ships DeviceIdentityService. These tests reference the
- * planned production FQCN Modules\Sync\Internal\Identity\DeviceIdentityService,
- * which does not yet exist — the failure is "class not found", the correct
- * Wave 0 RED state.
- */
-
 function identityUser(string $username = 'identity-user'): User
 {
     return User::query()->create([
@@ -42,16 +33,13 @@ it('generates an Ed25519 + X25519 identity and writes an encrypted key-file unde
 
     $dto = $service->generateAndPersist((int) $user->id, $session);
 
-    // The DTO carries both keypairs in hex.
     expect($dto->ed25519PublicKeyHex)->toHaveLength(64);
     expect($dto->x25519PublicKeyHex)->toHaveLength(64);
     expect($dto->userId)->toBe((int) $user->id);
 
-    // Key-file lands under the sanctioned UserDataPathService path, encrypted.
     $encPath = UserDataPathService::appPath("sync/identity/{$user->id}.enc");
     expect(file_exists($encPath))->toBeTrue();
 
-    // The on-disk blob is NOT plaintext JSON (BackupEncryptor-encrypted).
     $blob = (string) file_get_contents($encPath);
     expect($blob)->not->toContain($dto->ed25519SecretKeyHex);
 });
@@ -93,15 +81,12 @@ it('never stages the plaintext key-file in sys_get_temp_dir(), and cleans it up 
 
     $service->generateAndPersist((int) $user->id, $session);
 
-    // Security fix (plaintext-key-in-sys_get_temp_dir finding): the staged
-    // key-file must never appear under the system temp directory, before or
-    // after the call — it is staged and cleaned up entirely inside the
-    // sanctioned identity directory.
+    // The staged key-file must never appear under the system temp directory,
+    // before or after the call: staging and cleanup both happen inside the
+    // identity directory, which is the only place with the right mode.
     $after = (array) glob(sys_get_temp_dir().'/beatrax_identity_*');
     expect($after)->toBe($before, 'No beatrax_identity_* files should ever appear in sys_get_temp_dir().');
 
-    // The identity directory itself carries no leftover .tmp staging files —
-    // the finally-unlink ran.
     $encPath = UserDataPathService::appPath("sync/identity/{$user->id}.enc");
     $identityDir = dirname($encPath);
     $leftoverTmp = (array) glob($identityDir.'/*.tmp');
@@ -128,7 +113,6 @@ it('creates the identity directory at 0700 (not world-traversable)', function ()
 it('it_throws_without_app_lock_kek', function (): void {
     $user = identityUser('identity-nokek');
 
-    // A fake AppLockKeyService whose release() returns null (locked / no app-lock).
     $this->app->bind(AppLockKeyService::class, fn () => new class extends AppLockKeyService
     {
         public function __construct() {}
@@ -147,4 +131,40 @@ it('it_throws_without_app_lock_kek', function (): void {
 
     expect(fn () => $service->generateAndPersist((int) $user->id, $session))
         ->toThrow(LogicException::class);
+});
+
+it('keeps the same identity when sync is switched on a second time', function (): void {
+    $user = identityUser('identity-continuity');
+
+    /** @var DeviceIdentityService $service */
+    $service = $this->app->make(DeviceIdentityService::class);
+
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+
+    $first = $service->generateAndPersist((int) $user->id, $session);
+
+    // Turning sync off clears the registry, and turning it back on used to mint
+    // a fresh identity over the key file. Every op this device had signed was
+    // then authored by a device no registry held, so a desktop handed a new
+    // phone thousands of entries and it applied none of them.
+    $this->app->make(DatabaseManager::class)->connection()
+        ->table('device_registry')
+        ->where('user_id', $user->id)
+        ->delete();
+
+    $second = $service->generateAndPersist((int) $user->id, $session);
+
+    expect($second->deviceId)->toBe($first->deviceId)
+        ->and($second->ed25519PublicKeyHex)->toBe($first->ed25519PublicKeyHex);
+
+    $selfRow = $this->app->make(DatabaseManager::class)->connection()
+        ->table('device_registry')
+        ->where('user_id', $user->id)
+        ->where('is_self', 1)
+        ->first();
+
+    expect($selfRow)->not->toBeNull('re-enabling sync left the device with no self-row');
+    expect($selfRow->device_id)->toBe($first->deviceId);
+    expect($selfRow->confirmed_at)->not->toBeNull('an unconfirmed self-row keeps this device out of deviceKeys()');
 });

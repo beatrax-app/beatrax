@@ -15,9 +15,6 @@ use Throwable;
 // transactions sit in the first group and the accounts they reference in the
 // third, so a peer received a transaction before the account existed and
 // SQLite rejected the insert, aborting the catch-up.
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class CoveredTableOrder
 {
     public function __construct(

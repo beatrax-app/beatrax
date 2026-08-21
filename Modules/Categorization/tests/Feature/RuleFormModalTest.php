@@ -10,19 +10,10 @@ use Modules\Categorization\Internal\Http\Livewire\RuleFormModal;
 use Modules\Categorization\Internal\Services\RuleEngine;
 use Modules\Categorization\Internal\Services\RuleMatchInput;
 use Modules\Categorization\Public\Actions\CreateCategorizationRule;
-use Modules\Categorization\Public\Actions\UpdateCategorizationRule;
 use Modules\Categorization\Public\Dto\RuleInput;
 use Modules\Core\Models\User;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Ledger\Models\Category;
-
-/*
- * 13.4-08 Task 1: RuleFormModal grown from a single-condition sentence
- * form into a multi-condition/multi-action builder per
- * 13.4-UI-SPEC.md's Component Contract. Saves through the Plan 03
- * Create/UpdateCategorizationRule actions (priority/combinator/
- * conditions[]/actions[]).
- */
 
 beforeEach(function (): void {
     $this->user = User::create([
@@ -72,9 +63,8 @@ it('opens in create mode when rule-form:open fires without a ruleId', function (
         ->assertSet('combinator', 'all')
         ->assertCount('conditions', 1)
         ->assertCount('actions', 1)
-        // Regression (UAT): open() must surface the Flux modal, not just
-        // hydrate state — without this the rule-builder is unreachable from
-        // the "New rule" / "Create your first rule" buttons.
+        // open() must surface the Flux modal, not merely hydrate state, or
+        // the builder is unreachable from the "New rule" buttons.
         ->assertDispatched('modal-show', name: 'rule-form');
 });
 
@@ -126,8 +116,8 @@ it('hydrates the nested conditions/actions arrays in edit mode', function (): vo
     expect($component->get('conditions')[0]['field'])->toBe('counterparty');
     expect($component->get('conditions')[0]['value'])->toBe('SPOTIFY');
     expect($component->get('conditions')[1]['field'])->toBe('amount');
-    // Stored minor units (-5000 = -50.00 EUR) round-trip to the Dutch-decimal
-    // display convention (CR-01) rather than the raw minor-unit string.
+    // Stored minor units round-trip to the Dutch-decimal display convention,
+    // not to the raw minor-unit string.
     expect($component->get('conditions')[1]['value'])->toBe('-50,00');
 
     expect($component->get('actions')[0]['type'])->toBe('category');
@@ -182,8 +172,7 @@ it('saves a 2-condition/2-action rule with a priority', function (): void {
     expect(DB::table('rule_conditions')->where('rule_id', $ruleId)->count())->toBe(2);
     expect(DB::table('rule_actions')->where('rule_id', $ruleId)->count())->toBe(2);
 
-    // Human-entered Euro decimals scale into signed integer minor units
-    // (CR-01): "-50,00" -> -5000, "-1,00" -> -100.
+    // Human-entered Euro decimals scale into signed minor units.
     $betweenCondition = DB::table('rule_conditions')->where('rule_id', $ruleId)->where('op', 'between')->first();
     expect($betweenCondition)->not->toBeNull();
     expect($betweenCondition->value)->toBe('-5000');
@@ -191,11 +180,10 @@ it('saves a 2-condition/2-action rule with a priority', function (): void {
 });
 
 it('saves when a category action id arrives as a string, as Livewire binds a <select> (UAT)', function (): void {
-    // Browser regression: <select> wire:model delivers the option value as a
-    // STRING ("20"), not an int. The action payload contract is ?int, so the
-    // raw string previously blew up actionRowError()->isEmptyId(?int) with a
-    // 500 TypeError — no rule could be saved with a category/counterparty/
-    // tax-tag action through the real UI. Note the string casts below.
+    // A <select> wire:model delivers the option value as a string ("20"), not
+    // an int, and the ?int payload contract used to 500 on it — no rule with a
+    // category, counterparty or tax-tag action could be saved from the real
+    // UI. Hence the string casts below.
     Livewire::test(RuleFormModal::class)
         ->call('open', ruleId: null)
         ->set('conditions.0.field', 'merchant')
@@ -215,7 +203,7 @@ it('saves when a category action id arrives as a string, as Livewire binds a <se
     expect(json_decode((string) $action->payload, true))->toBe(['category_id' => $this->streaming->id]);
 });
 
-it('scales a human-entered Dutch-decimal amount condition to minor units and matches only the correct transaction (CR-01)', function (): void {
+it('scales a human-entered Dutch-decimal amount condition to minor units and matches only the correct transaction', function (): void {
     Livewire::test(RuleFormModal::class)
         ->call('open', ruleId: null)
         ->set('conditions.0.field', 'amount')
@@ -255,7 +243,7 @@ it('scales a human-entered Dutch-decimal amount condition to minor units and mat
     expect($engine->match($wrongAmountInput, $this->user))->toHaveCount(0);
 });
 
-it('scales a human-entered dot-decimal amount condition to minor units and matches only the correct transaction (CR-01)', function (): void {
+it('scales a human-entered dot-decimal amount condition to minor units and matches only the correct transaction', function (): void {
     Livewire::test(RuleFormModal::class)
         ->call('open', ruleId: null)
         ->set('conditions.0.field', 'amount')
@@ -294,7 +282,7 @@ it('scales a human-entered dot-decimal amount condition to minor units and match
     expect($engine->match($wrongAmountInput, $this->user))->toHaveCount(0);
 });
 
-it('rejects saving an unparsable amount condition value instead of silently matching zero (CR-01)', function (): void {
+it('rejects saving an unparsable amount condition value instead of silently matching zero', function (): void {
     Livewire::test(RuleFormModal::class)
         ->call('open', ruleId: null)
         ->set('conditions.0.field', 'amount')
@@ -528,7 +516,7 @@ it('grep guard: RuleFormModal never references ReapplyRulesJob', function (): vo
     expect(mb_strtolower($contents))->not->toContain('reapply');
 });
 
-it('escapes HTML payloads in rendered condition value (T-07-06)', function (): void {
+it('escapes HTML payloads in rendered condition value', function (): void {
     seedFormRule($this->user, 10, 'all', [
         ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => '<script>alert(1)</script>'],
     ], [

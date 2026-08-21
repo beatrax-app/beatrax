@@ -8,18 +8,8 @@ use Modules\Sync\Internal\Config\MergeRulesRegistry;
 
 uses(RefreshDatabase::class);
 
-/*
- * D-40 contract test for the `notification_preferences` table (D-34, 18-04),
- * mirroring SavedReportsRegistryColumnsTest's shape.
- *
- * Asserts requiredCreateColumns('notification_preferences') is a SUBSET of
- * the migration's actual NOT-NULL-without-default columns (excluding the
- * auto-increment primary key), and pins the exact expected set: user_id,
- * device_id. Every other column carries a DB-level default (booleans,
- * digest_cadence, reminder_lead_days, quiet_hours_from/to) so is deliberately
- * excluded even though several are NOT NULL — same pattern as
- * saved_reports.pinned / envelope_settings.overspend_mode.
- */
+// Every column but user_id and device_id carries a DB-level default, so each is
+// deliberately excluded even though several of them are NOT NULL.
 
 it('MergeRulesRegistry notification_preferences _create_required is a subset of the real NOT-NULL-without-default columns', function (): void {
     $connection = app(DatabaseManager::class)->connection();

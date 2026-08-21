@@ -13,21 +13,6 @@ use Modules\Ledger\Public\ValueObjects\Money;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for the two Spatie Data DTOs that ship as the
- * DriftAlerts module's Public read-side contract.
- *
- * The shape is validated through three paths:
- *   - Direct constructor scenarios (EUR + USD) that prove every
- *     readonly property round-trips the value passed in and that
- *     eurEquivalent is null for an EUR-denominated alert.
- *   - Eloquent-factory hydration that proves the casts on the
- *     DriftAlert model line up with the constructor argument types
- *     (immutable_datetime + integer + string).
- *   - A readonly-write attempt that must throw \Error to lock the
- *     immutability invariant.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -244,11 +229,6 @@ it('exposes the three DriftAlert relations as BelongsTo and HasMany', function (
     expect((new DriftAlert)->getTable())->toBe('drift_alerts');
 });
 
-/**
- * Seeds a transactions row sufficient to satisfy the FK constraint on
- * recurring_series_occurrences.transaction_id without pulling in the
- * full Ingestion fixture stack.
- */
 function seedDriftAlertDtoTransaction(DatabaseManager $db, int $userId): int
 {
     $accountId = $db->connection()->table('accounts')->insertGetId([

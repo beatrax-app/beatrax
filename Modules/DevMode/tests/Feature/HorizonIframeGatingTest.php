@@ -11,27 +11,8 @@ use Modules\Core\Models\User;
 use Modules\DevMode\Internal\Http\Livewire\HorizonFramePage;
 use Modules\DevMode\Internal\Http\Middleware\HorizonFrameAncestors;
 
-/*
- * Horizon iframe gating (two-signal conditional registration).
- *
- * The /dev/horizon route is registered only when BOTH:
- *   1. config('app.dev_mode') === true (env-pinned), AND
- *   2. class_exists(\Laravel\Horizon\HorizonServiceProvider::class)
- *      (Horizon is require-dev; the class is present on the
- *      developer's local dev box but absent from a shipped
- *      `composer install --no-dev` bundle).
- *
- * When either signal is false the route is absent from the route
- * table; an attempted GET returns 404 even for a developer (the
- * EnsureDeveloperMode middleware sits on top, but the route simply
- * doesn't exist — the 404 comes from the router itself).
- *
- * Route registration runs once at boot. Tests that need to flip
- * the config('app.dev_mode') signal at runtime use
- * horizonGatingReloadRoutes() to reset the router and re-apply the
- * conditional registration.
- */
-
+// Horizon is require-dev, so the class signal is absent from a shipped
+// `composer install --no-dev` bundle and the route never registers there.
 function horizonGatingUser(string $username, bool $isDeveloper = true): User
 {
     return User::query()->create([
@@ -50,36 +31,20 @@ function horizonGatingSetDevModeFlag(bool $on): void
     $config->set('app.dev_mode', $on);
 }
 
-/**
- * The DevModeServiceProvider's `loadRoutesFrom()` fires once at boot
- * — before any test flips `config('app.dev_mode')`. To exercise the
- * two-signal conditional registration at the test layer, the test
- * resets the router's route collection, re-includes the routes file
- * directly, AND re-applies the provider's conditional Horizon-route
- * registration. Laravel's RouteCollection keeps a separate name
- * lookup table (`refreshNameLookups()`) — `Route::has()` reads that
- * table, NOT the live route list — so the re-include MUST be
- * followed by a refresh.
- */
+// loadRoutesFrom() fires once at boot, before any test can flip
+// config('app.dev_mode'), so the conditional registration has to be replayed
+// by hand for the flag change to mean anything.
 function horizonGatingReloadRoutes(): void
 {
     /** @var Router $router */
     $router = app(Router::class);
 
-    // Drop every existing /dev/* route so the re-include lands a clean
-    // re-registration of the entire group. Building a new
-    // RouteCollection is the canonical Laravel route-reset.
     Route::setRoutes(new RouteCollection);
 
-    // Re-evaluate the routes file body. The base group registers every
-    // /dev/* route except the Horizon iframe — that route is
-    // conditionally registered by the ServiceProvider's boot() because
-    // the dev_mode flag is read through an injected Config\Repository
-    // rather than the config() helper.
+    // The routes file registers every /dev/* route except the Horizon iframe,
+    // which lives in the provider's boot().
     require base_path('Modules/DevMode/Routes/web.php');
 
-    // Mirror the provider's conditional Horizon registration so a
-    // post-config-flip route reload picks up the new flag value.
     /** @var Repository $config */
     $config = app(Repository::class);
     if ($config->get('app.dev_mode') === true && class_exists(HorizonServiceProvider::class)) {
@@ -96,19 +61,14 @@ function horizonGatingReloadRoutes(): void
         );
     }
 
-    // Refresh the router's named-route lookup; without this,
-    // `Route::has('dev.horizon')` reads stale state regardless of
-    // whether the route was just registered.
+    // Route::has() reads RouteCollection's separate name-lookup table, not the
+    // live route list, so without this it answers from stale state.
     $router->getRoutes()->refreshNameLookups();
 }
 
 it('asserts that the Horizon package class IS present in the test environment (precondition for the gating tests below)', function (): void {
-    // The full gate is a two-signal check; the class signal is
-    // platform-driven (Horizon is require-dev). On the developer's
-    // local dev box AND in CI it should be present, so the tests below
-    // can exercise the env-flag side of the gate. If this
-    // assertion fails the test environment is broken — the rest of
-    // the gating tests then exercise only the env-flag side.
+    // Every test below varies only the env flag, which is meaningless unless
+    // the class signal is already satisfied here.
     expect(class_exists(HorizonServiceProvider::class))
         ->toBeTrue('Horizon package is expected to be installed in the dev/test environment.');
 });
@@ -116,10 +76,6 @@ it('asserts that the Horizon package class IS present in the test environment (p
 it('does NOT register the dev.horizon route when config("app.dev_mode") is null (the shipped-build default)', function (): void {
     horizonGatingSetDevModeFlag(false);
 
-    // Reset routes so the conditional registration code is re-evaluated.
-    // Reload the routes file directly; the conditional registration runs
-    // once per boot, and the boot already happened against the test app's
-    // current config snapshot.
     horizonGatingReloadRoutes();
 
     expect(Route::has('dev.horizon'))->toBeFalse();
@@ -179,10 +135,8 @@ it('drops the Horizon sidebar nav item DOM-absent when the dev.horizon route is 
     $response->assertOk();
     $html = (string) $response->getContent();
 
-    // The conditional Horizon item is DOM-absent (not
-    // nav-disabled) when the route is not registered. No
-    // `>Horizon<` anchor text and no dev.horizon route stub should
-    // appear in the rendered HTML.
+    // DOM-absent rather than nav-disabled: the other sidebar entries degrade
+    // to disabled, this one disappears.
     expect(str_contains($html, '>Horizon<'))
         ->toBeFalse('Horizon nav item should be DOM-absent when dev.horizon is not registered.');
     expect(str_contains($html, 'href="/dev/horizon"'))
@@ -224,8 +178,6 @@ it('renders the Horizon sidebar nav item WITHOUT nav-disabled when the dev.horiz
     $response->assertOk();
     $html = (string) $response->getContent();
 
-    // The Horizon item should now be present in the sidebar. Use a
-    // tight regex to capture only the matching <a> tag.
     preg_match_all('#<a\s+href="[^"]*"\s+class="side-item([^"]*)"[^>]*>[\s\S]*?Horizon[\s\S]*?</a>#', $html, $matches);
 
     expect($matches[0])->not->toBeEmpty('Horizon sidebar entry should render when dev.horizon is registered');

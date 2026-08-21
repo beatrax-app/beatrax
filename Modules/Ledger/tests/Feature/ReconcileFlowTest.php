@@ -8,17 +8,6 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Internal\Http\Livewire\ReconcilePage;
 use Modules\Ledger\Models\Account;
 
-/*
- * Wave 0 RED stub (SC-2, GREEN in 13.3-06).
- * `Modules/Ledger/Internal/Http/Livewire/ReconcilePage.php` does not exist
- * yet — the standalone `/reconcile` surface per Open Question 1's
- * resolution (no account-detail page exists in the app today). This pins
- * the render contract: the cleared balance vs the entered/pre-filled
- * statement target, a discrepancy flag when they don't match, and that the
- * flow NEVER fabricates a balancing/adjustment transaction row (D-07,
- * flag-only, read-only).
- */
-
 beforeEach(function (): void {
     $this->user = User::create(['username' => 'reconcile-flow-fixture', 'password' => 'fixture-password', 'period_start_day' => 1]);
     $this->account = Account::create([
@@ -42,7 +31,7 @@ it('renders the cleared balance and flags a non-zero discrepancy against the ent
         ->call('checkDiscrepancy')
         ->assertSee('discrepancy', false);
 
-    // D-07: never fabricates a balancing/adjustment row.
+    // The flow never fabricates a balancing row.
     expect(DB::table('transactions')->where('user_id', $this->user->id)->count())->toBe(2);
 });
 
@@ -59,11 +48,9 @@ it('completing a reconcile with zero discrepancy locks the cleared rows and crea
     expect(DB::table('transactions')->where('id', $tx->id)->value('status'))->toBe('reconciled');
 });
 
-it('computes the difference on the in-window cleared balance only, so a statement that balances for its window is reconcilable without a fabricated number (CR-01)', function (): void {
-    // A cleared row inside the statement window and another cleared row
-    // posted AFTER the (past) statement date. The un-bounded balance would
-    // be -80,00; the in-window balance is -50,00, which is what the
-    // statement's closing balance actually reflects.
+it('computes the difference on the in-window cleared balance only, so a statement that balances for its window is reconcilable without a fabricated number', function (): void {
+    // Unbounded, the cleared balance is -80,00; in-window it is -50,00, which
+    // is what the statement's closing balance reflects.
     $inWindow = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'cleared', 'amount_minor' => -5000, 'posted_at' => '2026-06-10']);
     $afterWindow = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'cleared', 'amount_minor' => -3000, 'posted_at' => '2026-06-20']);
 
@@ -71,21 +58,17 @@ it('computes the difference on the in-window cleared balance only, so a statemen
         ->test(ReconcilePage::class, ['accountId' => $this->account->id])
         ->set('statementDate', '2026-06-15')
         ->set('statementBalance', '-50,00')
-        // The difference/isMatched gate is computed on the in-window balance,
-        // NOT the un-bounded -80,00 total — so the true statement value matches.
         ->assertViewHas('differenceMinor', 0)
         ->assertViewHas('isMatched', true)
         ->call('confirmReconcile')
         ->assertDispatched('toast');
 
-    // The in-window row is locked; the post-date row stays cleared; no
-    // fabricated balancing row is created.
     expect(DB::table('transactions')->where('id', $inWindow->id)->value('status'))->toBe('reconciled');
     expect(DB::table('transactions')->where('id', $afterWindow->id)->value('status'))->toBe('cleared');
     expect(DB::table('transactions')->where('user_id', $this->user->id)->count())->toBe(2);
 });
 
-it('reports an honest toast when a matched statement locks zero in-window rows (WR-04)', function (): void {
+it('reports an honest toast when a matched statement locks zero in-window rows', function (): void {
     // Only a post-date cleared row exists, so the in-window cleared balance is
     // 0 and a 0,00 target matches — but there is nothing to lock.
     $afterWindow = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'cleared', 'amount_minor' => -3000, 'posted_at' => '2026-06-20']);
@@ -122,6 +105,5 @@ it('refuses to reconcile on a balance or date it cannot read', function (): void
         ->call('confirmReconcile')
         ->assertSet('error', 'Enter a valid statement balance and date.');
 
-    // Nothing is locked by a refused reconcile.
     expect(DB::table('transactions')->where('status', 'reconciled')->count())->toBe(0);
 });

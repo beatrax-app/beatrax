@@ -6,20 +6,7 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Sync\PeerLanAddress;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Public\Services\RelayEndpointHost;
-
-/*
- * Where the phone dials the desktop directly.
- *
- * The puller only attempts the LAN leg when it is given a host AND a port, and
- * every caller passed neither — so the leg never ran, the relay fallback
- * drained the mailbox without applying rows, and the device sat at "0 of 0
- * records". The address comes from the relay endpoint the QR carried, which
- * names the desktop that issued it; that is the only address this device is
- * ever told.
- *
- * The real RelayConfig is used rather than a double: it is final, and the
- * host has to survive the same on-disk round-trip the device performs.
- */
+use Modules\Sync\Public\Services\SyncPorts;
 
 beforeEach(function (): void {
     $this->storageRoot = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-peer-'.bin2hex(random_bytes(6)).DIRECTORY_SEPARATOR.'storage';
@@ -30,6 +17,8 @@ afterEach(function (): void {
     putenv('NATIVEPHP_STORAGE_PATH');
 });
 
+// The real RelayConfig rather than a double: it is final, and the host has to
+// survive the same on-disk round-trip the device performs.
 function peerLanAddress(?string $endpoint): PeerLanAddress
 {
     $config = app(RelayConfig::class);
@@ -39,8 +28,13 @@ function peerLanAddress(?string $endpoint): PeerLanAddress
         $config->setEndpointUrl($endpoint);
     }
 
-    return new PeerLanAddress(new RelayEndpointHost($config));
+    return new PeerLanAddress(new RelayEndpointHost($config), app(SyncPorts::class));
 }
+
+// The puller only attempts the LAN leg when given a host and a port, and every
+// caller passed neither, so the relay fallback drained the mailbox without applying
+// rows and the device sat at "0 of 0 records". The address comes from the relay
+// endpoint the QR carried, which is the only one this device is ever told.
 
 it('reads the desktop host out of the relay endpoint', function (): void {
     expect(peerLanAddress('https://desk.local:8443/ws')->host())->toBe('desk.local');
@@ -61,6 +55,15 @@ it('has no host when the stored endpoint carries none', function (): void {
 it('dials the sync port rather than the relay endpoint port', function (): void {
     $address = peerLanAddress('https://desk.local:8443/ws');
 
-    expect($address->port())->toBe(PeerLanAddress::SYNC_PORT)
+    expect($address->port())->toBe(SyncPorts::DEFAULT_PORT)
         ->and($address->port())->toBe(51337);
+});
+
+// The desktop honouring SYNC_PORT while the phone dials a compiled-in 51337
+// leaves the LAN leg calling a closed port, which presents as the relay-only
+// "0 of 0 records" this class was written to fix.
+it('dials the configured sync port rather than the compiled-in default', function (): void {
+    config(['sync.port' => 51999]);
+
+    expect(peerLanAddress('https://desk.local:8443/ws')->port())->toBe(51999);
 });

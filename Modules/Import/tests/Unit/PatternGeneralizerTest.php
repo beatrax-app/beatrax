@@ -4,18 +4,6 @@ declare(strict_types=1);
 
 use Modules\Import\Public\Services\PatternGeneralizer;
 
-/*
- * PatternGeneralizer pure-function unit tests. The generalizer strips
- * volatile tokens (terminal IDs, PIN tails, SEPA noise prefixes,
- * amounts, date fragments) from raw bank-statement descriptions so the
- * surviving lowercased substring is safe to use as a fuzzy match
- * target for the user's merchant-alias precedence walk.
- *
- * The dataset rows below are the canonical fixtures pinned by sketch
- * session 004 and the phase 16.1 research log; every classifier branch
- * in the algorithm has at least one row exercising it.
- */
-
 it('returns the generalized pattern for the given raw description', function (string $raw, string $expected): void {
     $generalizer = new PatternGeneralizer;
 

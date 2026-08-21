@@ -14,6 +14,7 @@ use Modules\Auth\Models\UserRecoveryCode;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\QueryFailure;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 // The route that reaches this action is itself developer-gated; the
@@ -59,7 +60,7 @@ final class AddUserAction
                     'force_password_change_at_next_login' => true,
                 ]);
             } catch (QueryException $e) {
-                if (self::isUniqueViolation($e)) {
+                if (QueryFailure::isUniqueViolation($e)) {
                     throw ValidationException::withMessages([
                         'username' => Lang::get('auth::add_user.error_duplicate'),
                     ]);
@@ -91,21 +92,5 @@ final class AddUserAction
         });
 
         return $partner;
-    }
-
-    private static function isUniqueViolation(QueryException $e): bool
-    {
-        // SQLite reports UNIQUE violations with SQLSTATE 23000 and a
-        // message containing "UNIQUE constraint failed". MySQL + Postgres
-        // also surface 23000 for unique-constraint violations.
-        if ((string) $e->getCode() === '23000') {
-            return true;
-        }
-
-        $message = $e->getMessage();
-
-        return str_contains($message, 'UNIQUE constraint failed')
-            || str_contains($message, 'Duplicate entry')
-            || str_contains($message, 'duplicate key value');
     }
 }

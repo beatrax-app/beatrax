@@ -32,7 +32,7 @@
     }
 @endphp
 
-{{-- D-11: width:100% ensures the chart fills the container column at all
+{{-- width:100% ensures the chart fills the container column at all
      viewport widths including phone. The responsive[] breakpoints in the
      server-rendered data-options handle tick/label tuning at <768px. --}}
 <div
@@ -61,7 +61,7 @@
             The wire:poll element is CONDITIONALLY rendered so that
             when the projection status flips from pending/running to
             complete the next Livewire diff unmounts this node and
-            polling halts automatically (RESEARCH Pitfall 3 mitigation).
+            polling halts automatically.
         --}}
         <div wire:poll.2s="refreshProjectionStatus" class="absolute right-2 top-2 z-10">
             <p class="text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ Lang::get('forecasting::forecast.updating') }}&hellip;</p>

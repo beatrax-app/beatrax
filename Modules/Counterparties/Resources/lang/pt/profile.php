@@ -25,6 +25,8 @@ return [
         'tax_years' => 'Anos fiscais',
     ],
 
+    'tablist_aria' => 'Secções da contraparte',
+
     'tab_note_personal' => '— não há cadeias de financiamento para contactos pessoais',
     'tab_note_bank' => '— uma contraparte de comissões bancárias não gera cadeias de financiamento',
     'tab_note_government' => '— não há cadeias de financiamento para contrapartes do Estado',

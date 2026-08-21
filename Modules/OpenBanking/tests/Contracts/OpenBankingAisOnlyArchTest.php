@@ -5,33 +5,8 @@ declare(strict_types=1);
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingAccessScope;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 
-/*
- * Req 11 falsifiable AIS-only guard (19-13 Task 1). Enable Banking's API
- * exposes payment-initiation (PIS) via a wholly separate `POST /payments`
- * endpoint family [CITED: RESEARCH.md Pattern 5] — this module must never
- * reference it, and the typed `EnableBankingAccessScope` DTO the `/auth`
- * request body is built from must be structurally incapable of carrying a
- * `payments` key.
- *
- * Three falsifiable invariants:
- *   (a) a content grep over Modules/OpenBanking (excluding tests/ and
- *       comment lines) finds zero `/payments` or PIS/payment-initiation
- *       references;
- *   (b) `EnableBankingAccessScope::toArray()` can only ever emit a key set
- *       that is a strict subset of {balances, transactions, accounts} —
- *       proven both by reflection (no other property exists on the DTO)
- *       and by exhaustive boolean-combination enumeration;
- *   (c) the `/auth` request body construction path in
- *       `EnableBankingHttpClient::initiateAuth()` populates its `access`
- *       object ONLY from `$scope->toArray()` — never a free-form array
- *       literal that could smuggle in an extra key.
- *
- * Function names here are deliberately prefixed `aisOnlyGuard*` (distinct
- * from `OpenBankingSecretsFileGuardTest`'s `openBankingGuard*` helpers) —
- * both files load as global functions in the same `OpenBankingContracts`
- * PHP process, and a shared name would fatal with "cannot redeclare
- * function".
- */
+// Prefixed `aisOnlyGuard*` because OpenBankingSecretsFileGuardTest's helpers
+// load as globals in the same process and a shared name fatals on redeclare.
 
 function aisOnlyGuardStripComments(string $contents): string
 {
@@ -67,22 +42,9 @@ function aisOnlyGuardPhpFiles(string $relativeDir): array
     return $files;
 }
 
-/**
- * The single pattern applied both to the production tree AND to the
- * in-test falsifiability sample below — a `payments` endpoint path
- * literal (with or without a leading slash, since every real call site
- * in this module passes bare relative paths like `'aspsps'`, not
- * `'/aspsps'`), a bare `PIS` token, or a `payment-initiation`/
- * `payment_initiation` phrase (case-insensitive, word-boundaried so it
- * doesn't accidentally flag unrelated words like "payments_processed").
- *
- * The `u` flag is load-bearing, not decoration: without it `\b` matches on
- * BYTE boundaries, so the multibyte `ý` in the Czech and Slovak word "výpis"
- * (bank statement) reads as a word break and `\bPIS\b` fires on ordinary
- * translated copy. It cost two false offenders the day those locales landed.
- * Verified it still catches a real bare `PIS`, a quoted `/payments` path and
- * `payment-initiation`.
- */
+// The `u` flag is load-bearing: without it `\b` matches on byte boundaries, so
+// the `ý` in the Czech/Slovak "výpis" reads as a word break and `\bPIS\b` fires
+// on ordinary copy. That produced two false offenders when those locales landed.
 const AIS_ONLY_FORBIDDEN_PATTERN = '#[\'"]/?payments[\'"]|\bPIS\b|payment[-_]initiation#iu';
 
 it('never references a PIS/payments endpoint or scope anywhere in Modules/OpenBanking outside tests/comments', function (): void {
@@ -100,10 +62,8 @@ it('never references a PIS/payments endpoint or scope anywhere in Modules/OpenBa
         ."PIS, or payment-initiation. Offenders:\n  ".implode("\n  ", $hits),
     );
 
-    // Falsifiability proof: the SAME pattern applied to a literal sample
-    // representing exactly the violation this guard exists to catch —
-    // proves the regex is not vacuously true just because no such
-    // reference exists in the tree today.
+    // Fire the same pattern at samples of the exact violation, so a clean grep
+    // over the tree is never mistaken for a vacuously-true one.
     $violatingSample = <<<'PHP'
         // A hypothetical future call site:
         $this->postJson('payments', $body);
@@ -116,7 +76,6 @@ it('never references a PIS/payments endpoint or scope anywhere in Modules/OpenBa
     $violatingInitiationSample = 'Add payment-initiation support behind a future flag.';
     expect(preg_match(AIS_ONLY_FORBIDDEN_PATTERN, $violatingInitiationSample))->toBe(1);
 
-    // Negative control: a benign string must NOT trip the pattern.
     $safeSample = 'GET /accounts/{uid}/transactions and /accounts/{uid}/balances only.';
     expect(preg_match(AIS_ONLY_FORBIDDEN_PATTERN, $safeSample))->toBe(0);
 });
@@ -124,18 +83,14 @@ it('never references a PIS/payments endpoint or scope anywhere in Modules/OpenBa
 it('emits only a strict subset of {balances, transactions, accounts} from EnableBankingAccessScope::toArray()', function (): void {
     $allowedKeys = ['balances', 'transactions', 'accounts'];
 
-    // Reflection proof: no property named `payments` (or anything else)
-    // exists on the DTO at all — a `payments` key is structurally
-    // unreachable, not merely absent by convention.
+    // The DTO has no `payments` property, so the key is structurally
+    // unreachable rather than merely absent by convention.
     $properties = array_map(
         static fn (ReflectionProperty $property): string => $property->getName(),
         (new ReflectionClass(EnableBankingAccessScope::class))->getProperties(),
     );
     expect($properties)->toEqual($allowedKeys);
 
-    // Exhaustive boolean-combination enumeration: every one of the 8
-    // possible constructions emits a key set that is a subset of the
-    // allow-list — never anything extra.
     foreach ([false, true] as $balances) {
         foreach ([false, true] as $transactions) {
             foreach ([false, true] as $accounts) {
@@ -170,9 +125,7 @@ it('builds the /auth access body only from EnableBankingAccessScope::toArray(), 
 
     expect($body)->toContain("'access' => array_merge(\$scope->toArray()");
 
-    // Falsifiability proof: a free-form array literal containing a
-    // hardcoded scope key set (the exact anti-pattern this guard exists
-    // to reject) must NOT satisfy the assertion above.
+    // The free-form array literal this rejects must fail the assertion above.
     $violatingBody = "'access' => ['balances' => true, 'payments' => true],";
     expect($violatingBody)->not->toContain("'access' => array_merge(\$scope->toArray()");
 });

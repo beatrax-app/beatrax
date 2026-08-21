@@ -10,6 +10,7 @@ return [
         'reprojecting' => 'Odtwarzanie historii…',
         'retrying' => 'Ponowne łączenie z drugim urządzeniem…',
         'locked' => 'Odblokuj aplikację, aby kontynuować konfigurację.',
+        'revoked' => 'To urządzenie zostało usunięte na drugim urządzeniu. Sparuj ponownie, aby wznowić synchronizację.',
     ],
     'step' => [
         'connect' => 'Łączenie z drugim urządzeniem',

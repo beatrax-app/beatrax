@@ -11,6 +11,7 @@ return [
     'rename' => 'Renombrar',
     'confirm_delete' => 'Confirmar eliminación',
     'delete_scenario' => 'Eliminar escenario',
+    'delete_confirm' => '¿Eliminar este escenario?',
 
     'mutations_count' => 'Modificaciones (:count)',
     'no_mutations' => 'Aún no hay modificaciones. Añade una abajo para ver cómo se compara este escenario con tu referencia.',
@@ -67,6 +68,7 @@ return [
         'new_amount' => 'Importe nuevo',
         'new_next_date' => 'Nueva fecha siguiente',
         'scope' => 'Alcance',
+        'scope_legend' => 'Qué ocurrencias desplazar',
         'scope_next' => 'Solo la siguiente ocurrencia',
         'scope_all' => 'Todas las ocurrencias posteriores',
     ],
@@ -80,6 +82,8 @@ return [
         'current_amount' => 'Importe actual',
         'new_amount' => 'Importe nuevo',
     ],
+
+    'series_name_fallback' => 'serie',
 
     'summary' => [
         'cancel' => 'Cancelar :name',

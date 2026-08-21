@@ -8,19 +8,10 @@ use Modules\Sync\Public\Services\PairingGateway;
 
 uses(RefreshDatabase::class);
 
-/*
- * What a scanned QR is allowed to change about this device's relay.
- *
- * The QR is an out-of-band channel — the same code hands over the initiator's
- * identity keys — so it is trusted enough to point a phone at a LAN relay.
- * It is not trusted enough to redirect somebody's self-hosted one.
- *
- * The bug this pins: bailing out whenever ANY endpoint was already stored.
- * A phone that scanned a first, broken QR held the endpoint forever after,
- * and no later scan could hand it the token and pin that endpoint needs — so
- * every retry of the ceremony failed in the same place, for a reason nothing
- * on screen could explain.
- */
+// The QR is an out-of-band channel that already hands over the initiator's
+// identity keys, so it may point a phone at a LAN relay but never redirect a
+// self-hosted one. Bailing out whenever any endpoint was already stored left a
+// phone that scanned a first, broken QR unable to ever receive its token and pin.
 beforeEach(function (): void {
     $this->storageRoot = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-qr-relay-'.bin2hex(random_bytes(6)).DIRECTORY_SEPARATOR.'storage';
     putenv('NATIVEPHP_STORAGE_PATH='.$this->storageRoot);

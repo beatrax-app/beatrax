@@ -11,6 +11,7 @@ return [
     'rename' => 'Umbenennen',
     'confirm_delete' => 'Löschen bestätigen',
     'delete_scenario' => 'Szenario löschen',
+    'delete_confirm' => 'Dieses Szenario löschen?',
 
     'mutations_count' => 'Anpassungen (:count)',
     'no_mutations' => 'Noch keine Anpassungen. Füge unten eine hinzu, um zu sehen, wie sich dieses Szenario zu deiner Basislinie verhält.',
@@ -67,6 +68,7 @@ return [
         'new_amount' => 'Neuer Betrag',
         'new_next_date' => 'Neues nächstes Datum',
         'scope' => 'Umfang',
+        'scope_legend' => 'Welche Vorkommen verschoben werden',
         'scope_next' => 'Nur das nächste Vorkommen',
         'scope_all' => 'Alle folgenden Vorkommen',
     ],
@@ -80,6 +82,8 @@ return [
         'current_amount' => 'Aktueller Betrag',
         'new_amount' => 'Neuer Betrag',
     ],
+
+    'series_name_fallback' => 'Reihe',
 
     'summary' => [
         'cancel' => ':name kündigen',

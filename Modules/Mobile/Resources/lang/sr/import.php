@@ -28,7 +28,11 @@ return [
     'recovery_download' => 'Preuzmi kao .txt',
     'recovery_copy' => 'Kopiraj kodove',
     'recovery_copied' => 'Kopirano',
+    'recovery_copy_failed' => 'Копирање није успело. Запишите кодове.',
     'recovery_saved' => 'Sačuvano u fasciklu Preuzimanja.',
+    'recovery_share_title' => 'Beatrax кодови за опоравак',
+    'recovery_share_message' => 'Чувајте их на сигурном месту.',
+    'recovery_save_failed' => 'Датотеку није било могуће сачувати. Запишите кодове.',
     'recovery_confirm' => 'Ovi kodovi su sačuvani na bezbednom mestu.',
     'continue_to_pairing' => 'Nastavi na uparivanje',
 

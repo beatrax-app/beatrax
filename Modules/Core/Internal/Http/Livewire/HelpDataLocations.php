@@ -10,9 +10,6 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\UserDataPathService;
 
-/**
- * @link ../../../../../.docs/features/core/architecture.md
- */
 final class HelpDataLocations extends Component
 {
     public function render(

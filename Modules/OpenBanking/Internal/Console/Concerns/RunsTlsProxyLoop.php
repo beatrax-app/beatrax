@@ -6,13 +6,7 @@ namespace Modules\OpenBanking\Internal\Console\Concerns;
 
 use Symfony\Component\Process\Process;
 
-// The single-threaded select/accept/relay pump that tunnels the TLS front
-// to the plain-HTTP backend. It lives beside the command rather than inside
-// it because it is a self-contained event loop with its own byte-buffer
-// bookkeeping, answering a socket-plumbing question of its own.
-/**
- * @link ../../../../../.docs/features/open-banking/architecture.md
- */
+// Single-threaded: one select/accept/relay pump serves every connection.
 trait RunsTlsProxyLoop
 {
     private const READ_CHUNK = 65536;
@@ -22,8 +16,7 @@ trait RunsTlsProxyLoop
      */
     private function runProxyLoop($server, int $backendPort, ?Process $backend): int
     {
-        // Keyed by (int) resource id. Each entry points at its peer's id and
-        // carries the bytes waiting to be written *to this socket*.
+        // Keyed by resource id; wbuf is what is waiting to be written TO it.
         /** @var array<int, array{sock: resource, peer: int, wbuf: string}> $conns */
         $conns = [];
 
@@ -150,8 +143,7 @@ trait RunsTlsProxyLoop
      */
     private function accept($server, int $backendPort, array &$conns): void
     {
-        // A short handshake timeout keeps a stalled client from blocking the
-        // single-threaded loop; local UAT traffic completes far inside it.
+        // A stalled handshake would block the whole single-threaded loop.
         $client = @stream_socket_accept($server, 5);
         if ($client === false) {
             return;

@@ -16,6 +16,7 @@ return [
     'empty' => [
         'heading' => 'Ponavljajoče se dejavnosti še ni',
         'before_link' => 'Odobri zaznane predloge na',
+        'link' => 'Pregled ponavljajočih se',
         'after_link' => 'da jih vidiš tukaj.',
     ],
 

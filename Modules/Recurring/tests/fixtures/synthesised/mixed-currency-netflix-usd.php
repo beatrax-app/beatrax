@@ -2,11 +2,9 @@
 
 declare(strict_types=1);
 
-// USD Netflix subscription settled to EUR — 12 monthly occurrences at
-// −$11.99 USD with the settled-EUR amount varying ±3% due to FX rate
-// drift. Detector clusters on original currency + amount, so a single
-// USD series is produced regardless of EUR settlement drift.
-// Expectation: ONE expense series, monthly cadence, currency=USD.
+// A USD subscription settled to EUR, the settled amount varying ±3% on FX drift.
+// Clustering keys on the original currency and amount, so the EUR-side drift
+// must not split it.
 
 $transactions = [];
 $start = new DateTimeImmutable('2025-04-08');

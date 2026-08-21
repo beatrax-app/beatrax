@@ -15,28 +15,7 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 uses(RefreshDatabase::class);
 
-/*
- * End-to-end coverage for the cross-account-hop chain:
- *
- *   ASN expense row (counterparty = real institution IBAN)
- *     -> ClassifyTransactionType (alias bridge -> transfer_out)
- *     -> RecordTransactions (insert + TransactionImported event)
- *     -> PairTransferCandidates (alias-bridge fallback finds partner)
- *     -> bidirectional pair_transaction_id on both legs
- *
- *   plus the PayPal-side Bankstorting -> transfer_in path delivered
- *   by Plan 02 (PayPalCsvEventTypeMap).
- *
- * The test proves that Plans 02 + 03 + 04 close the PayPal funding
- * chain detection end-to-end through the real classifier and the
- * real recorder, not just isolated stages.
- */
-
 /**
- * Build a user with bank + paypal + ics_card accounts and optionally
- * run the alias seeder. Mirrors the helper shape used by the resolver
- * + classifier alias-bridge tests.
- *
  * @return array{user: User, bank: Account, paypal: Account, icsCard: Account, importRun: ImportRun}
  */
 function endToEndSeedUserWithAccounts(string $username, bool $runAliasSeeder = true): array
@@ -89,9 +68,6 @@ function endToEndSeedUserWithAccounts(string $username, bool $runAliasSeeder = t
 }
 
 /**
- * Build a CanonicalTransaction the recorder will accept. Caller
- * overrides only the keys the test exercises.
- *
  * @param  array<string, mixed>  $overrides
  */
 function endToEndCanonical(array $overrides = []): CanonicalTransaction
@@ -161,7 +137,7 @@ it('ASN bank row pointing at PayPal SARL Luxembourg becomes transfer_out; PayPal
     /** @var RecordsTransactions $recorder */
     $recorder = app(RecordsTransactions::class);
 
-    // ASN-side: -5000 EUR going to PayPal SARL Luxembourg's real IBAN.
+    // LU89751000135104200E is PayPal SARL Luxembourg's real institutional IBAN.
     $asnRaw = endToEndCanonical([
         'userId' => $world['user']->id,
         'accountId' => $world['bank']->id,
@@ -174,11 +150,8 @@ it('ASN bank row pointing at PayPal SARL Luxembourg becomes transfer_out; PayPal
         'importRunId' => $world['importRun']->id,
     ]);
 
-    // PayPal-side Bankstorting: parent rolled-up event whose
-    // PaypalCsvEventTypeMap (Plan 02) classifies as transfer_in. The
-    // PayPal CSV does NOT set a per-row counterparty IBAN — the
-    // funding source IBAN flows through child events, not the parent
-    // row itself.
+    // The empty counterparty IBAN is faithful: a PayPal CSV carries the funding
+    // source on the child events, never on the rolled-up parent row.
     $paypalRaw = endToEndCanonical([
         'userId' => $world['user']->id,
         'accountId' => $world['paypal']->id,
@@ -196,18 +169,15 @@ it('ASN bank row pointing at PayPal SARL Luxembourg becomes transfer_out; PayPal
         ],
     ]);
 
-    // Drive both through the classifier first to confirm typing.
     $asnTyped = $classifier->run($asnRaw, $world['user']);
     $paypalTyped = $classifier->run($paypalRaw, $world['user']);
     expect($asnTyped->type)->toBe('transfer_out');
     expect($paypalTyped->type)->toBe('transfer_in');
 
-    // Persist via the recorder. Each row's persistence fires
-    // TransactionImported synchronously, which invokes
-    // PairTransferCandidates::handle(). Persist the PayPal side first
-    // — its empty counterparty_iban makes the listener short-circuit
-    // (no work). Then persist the ASN side; its alias-bridge fallback
-    // resolves the PayPal partner account and pairs both legs.
+    // Order matters: each insert fires TransactionImported synchronously into
+    // PairTransferCandidates. The PayPal leg goes first because its empty
+    // counterparty_iban short-circuits the listener; the ASN leg then resolves
+    // the partner through the alias bridge and pairs both.
     $recorder([$paypalTyped], $world['user']);
     $recorder([$asnTyped], $world['user']);
 
@@ -260,9 +230,7 @@ it('ASN bank row pointing at ICS at ABN AMRO becomes transfer_out (asymmetric le
         ->firstOrFail();
 
     expect($asnPersisted->type)->toBe('transfer_out');
-    // No ICS-side counterpart exists — the ICS leg is statement-level
-    // via card_statements (Plan 05 will wire IcsSettlementResolver to
-    // consume this transfer_out directly).
+    // The ICS leg lives in card_statements, so there is no row to pair against.
     expect($asnPersisted->pair_transaction_id)->toBeNull();
 });
 
@@ -301,7 +269,6 @@ it('without the alias seeder the same ASN row stays expense (regression guard fo
 });
 
 it('alias bridge does not retype rows belonging to a different user even when the same IBAN appears in their row', function (): void {
-    // Alice has alias rows seeded; Bob does not.
     endToEndSeedUserWithAccounts('e2e-scope-alice', runAliasSeeder: true);
     $bob = endToEndSeedUserWithAccounts('e2e-scope-bob', runAliasSeeder: false);
 

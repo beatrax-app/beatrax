@@ -12,9 +12,6 @@ use Modules\Transfers\Internal\Services\TransferPairer;
 use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 use Modules\Transfers\Public\Services\PairLookup;
 
-/**
- * @link ../../../.docs/features/transfers/architecture.md
- */
 final class TransfersServiceProvider extends ServiceProvider
 {
     public function register(): void

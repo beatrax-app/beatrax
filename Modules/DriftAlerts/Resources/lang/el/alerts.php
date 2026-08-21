@@ -57,6 +57,7 @@ return [
         'meta_eur_equiv' => '(≈ :amount/έτος)',
         'cancel_impact' => 'Ακύρωσέ το → εξοικονόμησε :amount/έτος',
         'cadence_flipped' => 'Ο ρυθμός άλλαξε — εμφανίζεται επίσης στο',
+        'cadence_flipped_link' => 'Έλεγχος επαναλαμβανόμενων',
         'acknowledge' => 'Επιβεβαίωση',
         'acknowledge_aria' => 'Επιβεβαίωση της ειδοποίησης απόκλισης :id',
         'snooze' => 'Αναβολή ▾',

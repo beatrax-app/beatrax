@@ -68,16 +68,14 @@ it('keeps a national service number in the notation the merchant publishes', fun
     'e164' => '+31 20 123 4567',
     'parenthesised area code' => '(020) 123-4567',
     'dotted' => '088.121.2812',
-    // A national short code is the number those customers actually dial, and
-    // has no E.164 form to normalise to. The reader exists to carry exactly
-    // these through; a six-digit floor used to reject them.
+    // A national short code has no E.164 form to normalise to, and a six-digit
+    // floor used to reject the numbers those customers actually dial.
     'icelandic short code' => '1414',
     'norwegian short code' => '02024',
     'pan-european emergency-style triple' => '112',
-    // Real values from the Austrian and German corpus files. The slash splits
-    // area code from subscriber number throughout the German-speaking web, and
-    // the SOS-Kinderdorf number is typeset with an en dash rather than a
-    // hyphen. All three were being dropped.
+    // Real values from the Austrian and German corpus files: the slash splits
+    // area code from subscriber number, and the SOS-Kinderdorf number is typeset
+    // with an en dash rather than a hyphen. All three were being dropped.
     'austrian slash notation' => '0732/3400-4000',
     'german slash with spaces' => '0800 / 3746 095',
     'en dash before the extension' => '089/12 606 – 0',

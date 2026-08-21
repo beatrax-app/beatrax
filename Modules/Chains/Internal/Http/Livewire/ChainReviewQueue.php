@@ -7,16 +7,13 @@ namespace Modules\Chains\Internal\Http\Livewire;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
+use Modules\Chains\Internal\Exceptions\ChainLinkRequiresConcretePartnerException;
 use Modules\Chains\Public\Actions\ConfirmChainLink;
 use Modules\Chains\Public\Actions\RejectChainLink;
-use Modules\Chains\Public\Exceptions\ChainLinkRequiresConcretePartnerException;
 use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
 
-/**
- * @link ../../../../../.docs/features/chains/architecture.md
- */
 final class ChainReviewQueue extends Component
 {
     // Cursor pair: previous page's tail chain_link.id + confidence
@@ -69,9 +66,8 @@ final class ChainReviewQueue extends Component
             cursorConfidence: $this->cursorConfidence,
             limit: 26,
         );
-        // Cheap pre-render badge — surfaces the link to /chains/hints
-        // only when the user actually has hints to triage. Avoids
-        // polluting the queue header with a dead link.
+        // Gates the /chains/hints link in the queue header, so it is never a dead
+        // link to an empty page.
         $hintCount = $query->hintCount($user);
 
         $view = $views->make('chains::livewire.chain-review-queue', [

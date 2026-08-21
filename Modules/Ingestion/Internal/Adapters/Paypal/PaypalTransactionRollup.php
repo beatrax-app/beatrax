@@ -4,14 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Ingestion\Internal\Adapters\Paypal;
 
+use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Internal\Exceptions\InvalidDateException;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
-use Modules\Ingestion\Public\Exceptions\InvalidDateException;
 use Modules\Ingestion\Public\Paypal\PaypalCsvEventTypeMap;
 
-/**
- * @link ../../../../../.docs/features/ingestion/architecture.md
- */
 final class PaypalTransactionRollup
 {
     private int $skippedHoldCount = 0;
@@ -40,8 +37,7 @@ final class PaypalTransactionRollup
         $surviving = $this->filterSurviving($rawRows, $language);
         [$parents, $childrenByParent] = $this->partitionParents($surviving, $language);
 
-        // Pass 3: fold each parent + its children into one DTO. A malformed
-        // parent amount drops the whole logical-payment group and bumps
+        // A malformed parent amount drops the whole logical-payment group and bumps
         // the malformed-row counter instead of raising.
         /** @var list<SourceTransactionDto> $rolledUp */
         $rolledUp = [];
@@ -70,8 +66,6 @@ final class PaypalTransactionRollup
      */
     private function filterSurviving(array $rawRows, string $language): array
     {
-        // Pass 1: drop skipped event types and record each surviving row's
-        // classification so the later passes don't re-call classify().
         $surviving = [];
 
         foreach ($rawRows as $row) {
@@ -111,10 +105,6 @@ final class PaypalTransactionRollup
             }
         }
 
-        // Pass 2: a row is a child only when classified 'child-fee' or
-        // 'child-fx' AND its Reference Txn ID points at another row in this
-        // file; an orphan child (RefId points outside the file) is promoted
-        // to a standalone parent and counted via orphanChildCount().
         /** @var array<string, list<array<string, string>>> $childrenByParent */
         $childrenByParent = [];
         /** @var list<array<string, string>> $parents */
@@ -134,8 +124,7 @@ final class PaypalTransactionRollup
             }
 
             if ($isChildAction) {
-                // Orphan child: parent absent from this report window.
-                // Promote to standalone parent so the row is not lost.
+                // Parent absent from this report window; promoted so the row is not lost.
                 $this->orphanChildCount++;
             }
 
@@ -174,10 +163,8 @@ final class PaypalTransactionRollup
         $settledAmountMinor = null;
         $settledCurrency = null;
 
-        // FX-direction safety net: identify the foreign leg by Currency !=
-        // 'EUR', never by row order — the walker tolerates both the
-        // typical (parent native + child EUR settled) and swapped
-        // orientation defensively.
+        // The foreign leg is identified by Currency != 'EUR', never by row order: both
+        // legs of a conversion pair share an event type and a Reference Txn ID.
         foreach ($children as $childRow) {
             $childEventType = $this->columns->value('type', $language, $childRow) ?? '';
             $childAction = $this->events->classify($childEventType, $language);
@@ -191,30 +178,24 @@ final class PaypalTransactionRollup
             try {
                 $childAmountMinor = $this->amounts->parseMinor($childGross);
             } catch (InvalidAmountException) {
-                // A malformed child amount cell drops just the FX child —
-                // the parent still emits a canonical DTO without the FX
-                // pair filled in. Counted via skippedMalformedRowCount so
-                // the audit signal stays visible.
+                // A malformed child amount drops only the FX child; the parent still
+                // emits a DTO, with no FX pair filled in.
                 $this->skippedMalformedRowCount++;
 
                 continue;
             }
 
             if ($childCurrency === 'EUR' && $nativeCurrency !== 'EUR') {
-                // child = EUR settled leg; parent already holds the
-                // foreign-currency native amount.
                 $settledAmountMinor = $childAmountMinor;
                 $settledCurrency = $childCurrency;
             } elseif ($childCurrency !== 'EUR' && $nativeCurrency === 'EUR') {
-                // Swap: parent's Gross is actually the EUR settled leg;
-                // child holds the foreign native leg.
+                // Swapped orientation: the parent's Gross is the EUR settled leg.
                 $settledAmountMinor = $nativeAmountMinor;
                 $settledCurrency = $nativeCurrency;
                 $nativeAmountMinor = $childAmountMinor;
                 $nativeCurrency = $childCurrency;
             }
-            // A same-currency pair is degenerate for FX purposes and is
-            // left as-is (no settled leg populated).
+            // A same-currency pair is degenerate for FX and leaves the settled leg null.
         }
 
         $bookedAt = $this->dates->parse($this->columns->value('date', $language, $parentRow) ?? '');

@@ -8,20 +8,6 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\DevMode\Internal\Http\Livewire\TripleGateModal;
 
-/*
- * TripleGateModal invariants.
- *
- * Server-side enforcement of three locks:
- *   Gate 1 — DevModeFlag->isOn() (config('app.dev_mode') === true)
- *   Gate 2 — session('dev_mode.advanced') === true
- *   Gate 3 — hash_equals('beatrax', typed)
- *
- * Each gate has its own rejection path; all three pass dispatches
- * `triple-gate:confirmed` so the runner-page listener can POST to
- * DestructiveSpawnController (which re-validates the gates a
- * second time as defense-in-depth).
- */
-
 function tripleGateUser(string $username): User
 {
     return User::query()->create([

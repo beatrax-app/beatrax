@@ -7,10 +7,8 @@ namespace Modules\Categorization\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-// `field` is meaningful only when `value_type = 'string'`; `amount`/`date`
-// value_types compare against the transaction's canonical settled-amount
-// / posted-date property. `op`, `field`, and `value_type` are all
-// DB-trigger-enforced against an allow-list.
+// `field` is meaningful only when `value_type = 'string'`; amount and date
+// conditions compare the canonical settled amount and posted date instead.
 /**
  * @property int $id
  * @property int $rule_id

@@ -8,8 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
 /**
- * @link ../../../.docs/features/reports/architecture.md
- *
  * @property int $id
  * @property int|null $user_id
  * @property string $name

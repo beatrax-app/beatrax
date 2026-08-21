@@ -14,17 +14,10 @@ use Modules\Sync\Internal\Exceptions\RelayUnavailableException;
 use Modules\Sync\Internal\Exceptions\SecretFileException;
 use Modules\Sync\Internal\Exceptions\SessionNotAuthenticatedException;
 
-/*
- * The messages these exceptions carry, pinned.
- *
- * Sync's failure types build their message from a named constructor rather
- * than at the throw site, so the identifiers a maintainer needs — which user,
- * which epoch, which path — live in one place instead of being interpolated
- * into a string at each of sixteen sites. That only helps if the identifiers
- * actually reach the message, which is what these assert. Several of the throw
- * sites themselves are unreachable from a test (a libsodium primitive
- * misbehaving), so without this the formatting would go unchecked entirely.
- */
+// Sync's failure types build their message in a named constructor rather than at
+// the throw site, so the identifiers a maintainer needs — which user, which epoch,
+// which path — live in one place. Several throw sites are themselves unreachable
+// from a test, so without this the formatting would go unchecked entirely.
 
 it('names the operation that failed', function (): void {
     $e = CryptoOperationFailedException::during('GDK keyring generation');
@@ -81,12 +74,9 @@ it('keeps every failure catchable as a RuntimeException', function (string $clas
     RebuildInProgressException::class,
 ]);
 
-/*
- * The transport failures, which is where most of these identifiers matter:
- * the relay hop, the Noise session and the op-log rebuild lock all fail on a
- * user's device with no operator watching, so the message is the whole of
- * what a maintainer gets.
- */
+// The relay hop, the Noise session and the op-log rebuild lock all fail on a
+// user's device with no operator watching, so the message is the whole of what a
+// maintainer ever gets.
 
 // The relay is a store-and-forward hop holding ciphertext it cannot read, so
 // which call failed and against which endpoint is the only context there is —

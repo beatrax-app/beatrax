@@ -14,15 +14,9 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
 uses(RefreshDatabase::class);
 
-/*
- * GdkRotationServiceTest — CRYPT-02: rotateAndRevoke generates epoch N+1,
- * appends it to the acting device's keyring, and produces one sealed-box
- * wrap per remaining trusted device. 14-VALIDATION.md CRYPT-02 row 1.
- *
- * 14.1-03 (D-11): rotateAndRevoke() takes Session as a per-method parameter
- * (not a constructor field) — GdkRotationService is bound as a singleton, so
- * a constructor-captured Session would go stale across requests.
- */
+// The rotation takes its Session per call rather than through the constructor:
+// the service is a container singleton, so a captured Session goes stale across
+// requests and the rotation would sign against a session nobody is in.
 
 function rotationUser(string $username): User
 {
@@ -66,9 +60,8 @@ it('generates a new GDK epoch N+1 and appends it to the acting device keyring on
 
     $initial = $keyring->generateAndPersist((int) $user->id, $session);
 
-    // rotateAndRevoke() now loads the acting device's on-disk identity to SIGN
-    // each fan-out wrap, so the self device needs a real DeviceIdentityService
-    // identity (a bare device_registry row has no key-file to load).
+    // The rotation signs each fan-out wrap, so the acting device needs a real
+    // on-disk identity — a bare registry row has no key file to load.
     /** @var DeviceIdentityService $identityService */
     $identityService = $this->app->make(DeviceIdentityService::class);
     $identityService->generateAndPersist((int) $user->id, $session);
@@ -79,11 +72,14 @@ it('generates a new GDK epoch N+1 and appends it to the acting device keyring on
 
     $rotation->rotateAndRevoke((int) $user->id, $removedDeviceId, $session);
 
+    // A rotation must produce a DIFFERENT key, not a higher number: ids are
+    // minted so two devices rotating apart can never name the same key.
     $current = $keyring->currentEpoch((int) $user->id, $session);
-    expect($current->epochId)->toBeGreaterThan($initial->epochId);
+    expect($current->epochId)->not->toBe($initial->epochId);
+    expect($current->keyHex)->not->toBe($initial->keyHex);
 });
 
-it('takes Session as a per-method rotateAndRevoke() parameter, not a constructor field (D-11)', function (): void {
+it('takes Session as a per-method rotateAndRevoke() parameter, not a constructor field', function (): void {
     $ctorParams = (new ReflectionClass(GdkRotationService::class))->getConstructor()?->getParameters() ?? [];
     $ctorParamTypes = array_map(
         static fn (ReflectionParameter $param): string => (string) $param->getType(),
@@ -111,9 +107,8 @@ it('builds one sealed-box GDK epoch wrap per remaining trusted device', function
     $recipientPub = sodium_crypto_box_publickey($recipientKeypair);
     $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
 
-    // The sender's Ed25519 identity signs the wrap so a recipient can
-    // authenticate its provenance (F1). The public half is what the receiver
-    // holds in its device_registry; assert the detached signature verifies.
+    // The sender signs the wrap so a recipient can authenticate where it came
+    // from, against the public half its own registry already holds.
     $senderSigKp = sodium_crypto_sign_keypair();
     $senderSecretHex = sodium_bin2hex(sodium_crypto_sign_secretkey($senderSigKp));
 

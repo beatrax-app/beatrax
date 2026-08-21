@@ -14,9 +14,6 @@ use Modules\Import\Public\Enums\PaymentType;
 use Modules\Import\Public\Services\MerchantNameResolver;
 use stdClass;
 
-/**
- * @link ../../../../../.docs/features/community/architecture.md
- */
 final class MysteryMerchantsPage extends Component
 {
     private const CARD_LIMIT = 24;

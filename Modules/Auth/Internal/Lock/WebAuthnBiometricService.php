@@ -31,13 +31,8 @@ use Webauthn\PublicKeyCredentialRpEntity;
 use Webauthn\PublicKeyCredentialUserEntity;
 use Webauthn\TrustPath\EmptyTrustPath;
 
-// rpId is 'localhost' in dev (the host portion of APP_URL). The full
-// origin (http://localhost:8000) is validated separately -- rpId vs.
-// origin must BOTH be validated, or a same-rpId, different-origin
-// attacker page could pass.
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
+// rpId is the host portion of APP_URL, and the full origin is validated
+// separately: both must be, or a same-rpId attacker page passes.
 final class WebAuthnBiometricService
 {
     private const LOCALHOST_ORIGIN = 'http://localhost';
@@ -54,10 +49,6 @@ final class WebAuthnBiometricService
         private readonly SecretShield $shield,
     ) {}
 
-    // -------------------------------------------------------------------------
-    // Enrollment — navigator.credentials.create()
-    // -------------------------------------------------------------------------
-
     /**
      * @return array<string, mixed>
      */
@@ -66,9 +57,8 @@ final class WebAuthnBiometricService
         $rpId = $this->rpId();
         $challenge = random_bytes(32);
 
-        // Lists already-enrolled credential IDs as excludeCredentials so
-        // re-enrolling the same authenticator is rejected by the browser
-        // instead of creating a duplicate row.
+        // excludeCredentials makes the browser reject a re-enrol of the same
+        // authenticator rather than creating a duplicate row.
         /** @var list<PublicKeyCredentialDescriptor> $excludeCredentials */
         $excludeCredentials = [];
         foreach ($this->store->findForUser($userId) as $cred) {
@@ -100,10 +90,9 @@ final class WebAuthnBiometricService
                 PublicKeyCredentialParameters::createPk(-7),   // ES256
                 PublicKeyCredentialParameters::createPk(-257), // RS256
             ],
-            // residentKey defaults to null, which serialises as an explicit
-            // null the browser API rejects ("Ignoring unknown
-            // publicKey.authenticatorSelection.residentKey value"). This
-            // credential always accompanies a known account.
+            // A null residentKey serialises as an explicit null the browser
+            // rejects ("Ignoring unknown publicKey.authenticatorSelection
+            // .residentKey value"); the account is always known here anyway.
             authenticatorSelection: new AuthenticatorSelectionCriteria(
                 authenticatorAttachment: 'platform',
                 userVerification: 'required',
@@ -193,9 +182,8 @@ final class WebAuthnBiometricService
         $storedBlob = $secret.$wrappedKeyBytes;
         sodium_memzero($secret);
 
-        // Shield the blob in the OS keychain on the desktop bundle (identity
-        // on web / mobile) so the persisted secret||wrapped-key bytes are
-        // machine-bound ciphertext, not recoverable from the raw DB row.
+        // Shielded in the OS keychain on desktop (identity elsewhere) so the
+        // persisted bytes are machine-bound, not readable from the DB row.
         $shieldedBlob = $this->shield->protect($storedBlob);
 
         $this->store->store(
@@ -207,10 +195,6 @@ final class WebAuthnBiometricService
             $platform,
         );
     }
-
-    // -------------------------------------------------------------------------
-    // Assertion — navigator.credentials.get()
-    // -------------------------------------------------------------------------
 
     /**
      * @return array<string, mixed>
@@ -266,10 +250,9 @@ final class WebAuthnBiometricService
             return false;
         }
 
-        // Pre-identify the credential for the failure counter in the catch.
-        // lock.js serialises rawId as base64url without padding, while the
-        // store keeps credential_id in standard base64 -- normalise before
-        // lookup, or the failure throttle never engages on a wrong match.
+        // lock.js sends rawId as unpadded base64url and the store keeps
+        // standard base64, so without normalising here the catch below never
+        // finds the row and the failure throttle never engages.
         $fallbackCredentialId = $this->normaliseAssertionRawId($assertion['rawId'] ?? null);
 
         try {
@@ -331,9 +314,8 @@ final class WebAuthnBiometricService
         return [$credRow, $credential, $assertionResponse];
     }
 
-    // A missing or non-scalar public key / counter is treated as a failed
-    // attempt (increment the throttle) rather than a silent no-op, mirroring
-    // the wrong-credential path.
+    // A malformed public key or counter counts as a failed attempt, not a
+    // silent no-op, mirroring the wrong-credential path.
     private function buildCredentialRecord(\stdClass $credRow, PublicKeyCredential $credential, int $userId): ?CredentialRecord
     {
         $publicKeyCbor = $credRow->public_key_cbor;
@@ -392,8 +374,7 @@ final class WebAuthnBiometricService
             return false;
         }
 
-        // Update the counter (replay protection) and reset the failure
-        // count now that the assertion has verified successfully.
+        // Counter bump is replay protection.
         $this->store->updateCounter((int) $credRowId, $updatedRecord->counter);
         $this->store->resetFailureCount((int) $credRowId);
 
@@ -402,18 +383,16 @@ final class WebAuthnBiometricService
             return false;
         }
 
-        // The memzero is best-effort: the session now shares the buffer,
-        // so only the local reference is affected -- the session copy
-        // persists by design until lock().
+        // Best-effort: the session shares this buffer and its copy persists
+        // by design until lock().
         $this->lockState->unlock($session, $dataKey);
         sodium_memzero($dataKey);
 
         return true;
     }
 
-    // Reveal the stored per-device blob from the OS keychain first -- a no-op
-    // on web/mobile, or on desktop rows written before shielding was
-    // introduced -- then unwrap the data key from it.
+    // The keychain reveal is a no-op on web/mobile and on desktop rows
+    // written before shielding existed.
     private function unwrapStoredDataKey(\stdClass $credRow): ?string
     {
         $storedBlob = $credRow->biometric_wrap_secret;
@@ -441,10 +420,6 @@ final class WebAuthnBiometricService
 
         return '';
     }
-
-    // -------------------------------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------------------------------
 
     private function rpId(): string
     {

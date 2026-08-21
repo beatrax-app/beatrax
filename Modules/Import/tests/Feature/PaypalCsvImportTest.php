@@ -8,18 +8,6 @@ use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Transaction;
 
-/*
- * Wire-level coverage for the PayPal CSV import path:
- *  - end-to-end import of the redacted fixture — 41 canonical rows
- *    persist with the right native + settled pair shapes and
- *    source_format = 'paypal-csv'
- *  - idempotency on re-import (the IdempotencyContractTest dataset
- *    covers the contract; this test exists alongside it to anchor the
- *    PayPal-specific narrative)
- *  - "name your PayPal account" wizard branch fires when no PayPal
- *    Account exists for the user, hides once one is named
- */
-
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
@@ -94,10 +82,8 @@ it('returns zero new rows when re-importing the same PayPal CSV (idempotency)', 
 })->group('phase-4');
 
 it('prompts the user to name the PayPal Account on the first PayPal upload', function (): void {
-    // Remove the seeded PayPal Account so this run is the user's first
-    // PayPal upload (the seedFixtureUserAndAccount() helper seeds a
-    // PayPal account by default; the wizard-naming branch requires the
-    // row to be absent).
+    // seedFixtureUserAndAccount() ships a PayPal account; the naming branch
+    // only fires when the row is absent.
     Account::query()
         ->where('user_id', $this->fixtureUser->id)
         ->where('kind', 'paypal')
@@ -115,19 +101,15 @@ it('prompts the user to name the PayPal Account on the first PayPal upload', fun
         ->assertSee('Name your PayPal account.', false)
         ->assertSee("first time you've imported PayPal data", false)
         ->assertSee('Save name', false)
-        // The Confirm button lives in the page header and is always rendered;
-        // the naming-step gate is enforced by the `disabled` attribute (UI)
-        // and the server-side guard in PreviewWizard::confirm() (defense).
+        // Confirm always renders in the page header; the gate is the `disabled`
+        // attribute plus the server-side guard in PreviewWizard::confirm().
         ->assertSee('Confirm import', false)
         ->assertSeeHtmlInOrder(['wire:click="confirm"', 'disabled', 'Confirm import']);
 })->group('phase-4');
 
 it('refuses to confirm a PayPal preview while the account name is unset (server-side guard)', function (): void {
-    // Mirror the first-upload setup: no PayPal Account exists, so
-    // needsPaypalAccountName() returns true. A devtools-stripped
-    // disabled attribute on the always-rendered Confirm button must
-    // still no-op server-side, otherwise rows insert against a missing
-    // account mapping.
+    // Stripping the `disabled` attribute in devtools has to leave confirm a
+    // no-op, or rows insert against a missing account mapping.
     Account::query()
         ->where('user_id', $this->fixtureUser->id)
         ->where('kind', 'paypal')

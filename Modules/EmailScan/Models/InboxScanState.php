@@ -9,10 +9,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
-// One row per (inbox_id, folder) pair. last_history_id carries the
-// Gmail-style cursor; last_delta_link carries the Microsoft Graph
-// delta-link URL. status drives the per-inbox health badge and may
-// only be mutated by InboxScanStateMachine.
+// One row per (inbox_id, folder). status drives the per-inbox health badge and
+// may only be mutated through InboxScanStateMachine.
 /**
  * @property int $id
  * @property int|null $user_id

@@ -9,9 +9,6 @@ use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Public\Contracts\AuditWriter;
 use Modules\DevMode\Public\Dto\CommandRunAudit;
 
-/**
- * @link ../../../../.docs/features/dev-mode/architecture.md
- */
 final readonly class FinalizeRunAudit
 {
     // Read up to 32 KiB so the 8 KiB cap has headroom after redaction —
@@ -40,19 +37,15 @@ final readonly class FinalizeRunAudit
 
         $finishedAt = $record->finishedAt ?? $this->clock->now();
 
-        // Cancelled runs surface via `properties.cancelled=true` (and
-        // a negative exit_code when none was recorded), keeping one
-        // canonical audit row per run. The audit description stays
-        // AuditEvent::CommandExecuted regardless of cancel status.
+        // A cancel is a property on the same row, not a second event, so a
+        // run has exactly one canonical audit row either way.
         $effectiveExit = $exitCode;
         if ($cancelled && $effectiveExit === null) {
             $effectiveExit = self::CANCELLED_SIGTERM_EXIT_CODE;
         }
 
-        // CommandSpawner writes an eager audit row with exit_code=null
-        // at spawn time; finalize merges properties onto that row via
-        // run_id. Falls through to the legacy append-only path when no
-        // eager row exists, so the fact-of-run is never silently lost.
+        // Merges onto the spawner's eager row via run_id, falling back to an
+        // append-only write so the fact of the run is never lost.
         $updated = $this->audit->finalizeCommandRun(
             runId: $runId,
             finishedAt: $finishedAt,
@@ -80,9 +73,8 @@ final readonly class FinalizeRunAudit
         ));
     }
 
-    // Returns empty string if the file vanished between spawn and
-    // finalize — the audit row still goes out so the fact-of-run
-    // is captured regardless.
+    // A vanished file yields '' rather than an error: the audit row goes out
+    // either way.
     private function readExcerpt(string $path): string
     {
         if (! is_file($path) || ! is_readable($path)) {

@@ -7,9 +7,6 @@ namespace Modules\DevMode\Internal\Sql;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 
-/**
- * @link ../../../../.docs/features/dev-mode/architecture.md
- */
 final readonly class ReadOnlySqliteConnection
 {
     public const int TIMEOUT_SECONDS = 5;
@@ -37,15 +34,12 @@ final readonly class ReadOnlySqliteConnection
             $rows = $connection->select($sql);
             $duration = (int) ((hrtime(true) - $start) / 1_000_000);
         } finally {
-            // Reset PRAGMA so subsequent writes on the same PDO (e.g. the
-            // testing path where default + readonly share one in-memory
-            // connection) can proceed; every execute() re-arms PRAGMA
-            // query_only = 1 before reading, so this is a no-op in prod.
+            // In tests the default and readonly connections share one PDO, so
+            // leaving query_only armed would block every later write. Each
+            // execute() re-arms it, so releasing it here is safe.
             $pdo->exec('PRAGMA query_only = 0');
-            // Restore the previous max-execution-time so the wall-clock
-            // cap stays scoped to this read rather than persisting for
-            // the rest of the request; 0 means "no prior limit" (CLI
-            // default), which makes the process unlimited again.
+            // The wall-clock cap stays scoped to this read; 0 is the CLI
+            // default meaning "no prior limit".
             $this->wallClock->apply($previousLimit);
         }
 
@@ -55,10 +49,8 @@ final readonly class ReadOnlySqliteConnection
         ];
     }
 
-    // Under tests, where the default connection is sqlite_testing
-    // (in-memory), a separate readonly_select connection instance would
-    // resolve to a SEPARATE :memory: database with an empty schema — fall
-    // back to the default connection to keep the testing path coherent.
+    // A second readonly_select connection would open its own empty :memory:
+    // database under tests, so the default connection is reused instead.
     private function resolveConnection(): Connection
     {
         $default = $this->db->getDefaultConnection();

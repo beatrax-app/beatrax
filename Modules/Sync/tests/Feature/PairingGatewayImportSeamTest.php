@@ -12,17 +12,10 @@ use Modules\Sync\Public\Services\PairingGateway;
 
 uses(RefreshDatabase::class);
 
-/*
- * PairingGatewayImportSeamTest — Task 1 (Phase 15 import-join): the narrow
- * Public seams the mobile fresh-device import bootstrap drives, added
- * WITHOUT touching any existing PairingGateway method's behavior.
- *
- * enableSyncIdentityWithoutEpoch() is the B2 fix's foundation: it creates
- * the device's sync identity (self device_registry row + encrypted
- * identity key-file) WITHOUT self-minting a GDK epoch, so the phone's
- * keyring stays genuinely empty until the desktop's real epochs are
- * delivered post-pairing.
- */
+// A joining device gets its sync identity without minting an epoch of its own,
+// so its keyring stays genuinely empty until the peer's real epochs arrive. A
+// self-minted epoch 1 collides with the delivered one and strands the imported
+// history in quarantine permanently.
 
 function importSeamUser(string $username): User
 {
@@ -56,29 +49,23 @@ it('enableSyncIdentityWithoutEpoch creates a self device_registry row and does N
     expect($selfRow)->not->toBeNull('a self device_registry row must exist after identity bootstrap');
     expect($selfRow->confirmed_at)->not->toBeNull();
 
-    // B2: no sync_encryption_state row (no epoch minted) — the keyring stays
-    // empty so a subsequently-delivered desktop epoch 1 does not collide
-    // with GdkEpochControlHandler's idempotency guard.
+    // No epoch row at all, so a delivered epoch 1 cannot collide with a
+    // self-minted one and be dropped by the idempotency guard.
     $encryptionState = $db->connection()->table('sync_encryption_state')
         ->where('user_id', $user->id)
         ->first();
 
     expect($encryptionState)->toBeNull('enableSyncIdentityWithoutEpoch must never create a sync_encryption_state row');
 
-    // The device identity is usable — currentDeviceId() resolves it (the
-    // EXISTING PairingGateway::currentDeviceId() method, unchanged).
     expect($gateway->currentDeviceId((int) $user->id, $session))->toBe($selfRow->device_id);
 });
 
 it('does not create the on-disk GDK keyring file (B2)', function (): void {
     $user = importSeamUser('import-seam-keyring-file');
 
-    // A prior, unrelated test process may have left a keyring file on disk
-    // for this same numeric user id (SQLite rowids can be reused across
-    // RefreshDatabase transaction rollbacks — GdkEpochDeliveryTest's own
-    // documented cross-test filesystem-isolation gap). Start from a known
-    // state so this assertion is not a false failure against stale fixture
-    // data encrypted under a different KEK.
+    // SQLite rowids are reused across the per-test rollback, so an earlier test
+    // can have left a keyring on disk under this same numeric user id — one
+    // encrypted under a different key, which would fail this assertion falsely.
     @unlink(UserDataPathService::appPath('sync/gdk/'.$user->id.'.enc'));
 
     /** @var Session $session */

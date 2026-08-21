@@ -5,14 +5,9 @@ declare(strict_types=1);
 use Modules\Anomaly\Internal\Detectors\LargeVsTypicalDetector;
 use Modules\Anomaly\Internal\Support\RobustStatistics;
 
-/*
- * WR-05: madFloorFor must compute the 1%-of-median context floor in float
- * and cast to int only at the final denominator. For sub-€50 medians the
- * floor deliberately collapses to the hard MAD_FLOOR_MINOR (50); above a
- * €50 median it scales with the merchant value. This pins both regimes so
- * a later refactor cannot silently flip the boundary.
- */
-
+// madFloorFor computes the 1%-of-median floor in float and casts to int
+// only at the end; both regimes are pinned so a refactor cannot flip the
+// €50 break-even by truncating early.
 /**
  * @param  list<int>  $sample
  */
@@ -27,7 +22,6 @@ function callMadFloorFor(array $sample): int
 }
 
 it('collapses to the hard MAD_FLOOR_MINOR for sub-€50-median merchants', function (int $medianMinor): void {
-    // A constant sample at the given median magnitude.
     $sample = array_fill(0, 5, -$medianMinor);
 
     expect(callMadFloorFor($sample))->toBe(RobustStatistics::MAD_FLOOR_MINOR);

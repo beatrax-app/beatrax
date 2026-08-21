@@ -24,19 +24,17 @@ afterEach(function (): void {
 });
 
 it('defaults to the recent window (90 days) and excludes older rows', function (): void {
-    // In-window: 30 days ago
     $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
         'amount_minor' => -1299,
         'posted_at' => '2026-04-15',
         'booked_at' => '2026-04-15 12:00:00',
     ]);
-    // In-window: 80 days ago
     $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
         'amount_minor' => -2000,
         'posted_at' => '2026-02-25',
         'booked_at' => '2026-02-25 12:00:00',
     ]);
-    // Out-of-window: 100 days ago
+    // Just outside the 90-day window.
     $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
         'amount_minor' => -9999,
         'posted_at' => '2026-02-05',
@@ -50,7 +48,6 @@ it('defaults to the recent window (90 days) and excludes older rows', function (
 });
 
 it('paginates with cursors when there are more rows than the page limit', function (): void {
-    // Seed 15 rows in the current window
     for ($i = 0; $i < 15; $i++) {
         $day = sprintf('%02d', $i + 1);
         $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
@@ -74,13 +71,11 @@ it('paginates with cursors when there are more rows than the page limit', functi
 });
 
 it('fullHistory returns every row regardless of date', function (): void {
-    // In-window
     $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
         'amount_minor' => -1299,
         'posted_at' => '2026-04-15',
         'booked_at' => '2026-04-15 12:00:00',
     ]);
-    // Out-of-window (1 year ago)
     $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
         'amount_minor' => -2500,
         'posted_at' => '2025-05-15',
@@ -152,7 +147,6 @@ it('renders the /transactions page with rows in newest-first order', function ()
 });
 
 it('renders the settled pair when a currency filter is supplied', function (): void {
-    // Native EUR / settled EUR — both views show EUR.
     $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
         'amount_minor' => -1299,
         'currency' => 'EUR',
@@ -161,7 +155,7 @@ it('renders the settled pair when a currency filter is supplied', function (): v
         'posted_at' => '2026-05-08',
         'booked_at' => '2026-05-08 12:00:00',
     ]);
-    // Native USD / settled EUR — only the settled half appears in a EUR view.
+    // Native USD, settled EUR: a EUR view shows only the settled half.
     $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
         'amount_minor' => -1000,
         'currency' => 'USD',
@@ -177,7 +171,7 @@ it('renders the settled pair when a currency filter is supplied', function (): v
     foreach ($page->rows as $row) {
         expect($row->amount->currency())->toBe('EUR');
     }
-    // Order is posted_at DESC: USD-native/EUR-settled row first.
+    // posted_at DESC, so the USD-native row comes first.
     expect($page->rows[0]->amount->toMinor())->toBe(-920);
     expect($page->rows[1]->amount->toMinor())->toBe(-1299);
 });
@@ -200,7 +194,6 @@ it('renders the native pair when no currency filter is supplied', function (): v
 });
 
 it('renders the empty-state copy when no transactions match the window', function (): void {
-    // Older than 90 days
     $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
         'amount_minor' => -1299,
         'posted_at' => '2025-01-01',

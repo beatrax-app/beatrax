@@ -4,20 +4,15 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Internal\System;
 
-// Recursively flattens a config tree into a dot-keyed array AND masks
-// secret-suffix-matching values with [REDACTED]. The denylist
-// (*password*, *secret*, *token*, *key/*keys suffix) is case-insensitive and
-// applies to env keys, so BEATRAX_DEV_MODE renders plainly while BEATRAX_OAUTH_SECRET masks.
+// Redaction here is key-name-driven and therefore a denylist: a secret whose
+// key matches none of the markers below renders in the clear on /dev/system.
 final class ConfigFlattener
 {
-    // Substrings that make a config key sensitive wherever in the key they
-    // appear, as one list rather than a chain of str_contains calls.
     private const SENSITIVE_SUBSTRINGS = ['password', 'passphrase', 'secret', 'token', 'credential'];
 
-    // Suffixes that make a config key sensitive. `keys` is not decoration on
-    // `key`: str_ends_with('app.previous_keys', 'key') is false, so without
-    // it Laravel's retired-APP_KEY list — which still decrypts data at rest —
-    // renders in the clear on /dev/system.
+    // `keys` is not decoration on `key`: str_ends_with('app.previous_keys',
+    // 'key') is false, so dropping it would expose Laravel's retired-APP_KEY
+    // list, which still decrypts data at rest.
     private const SENSITIVE_SUFFIXES = ['key', 'keys'];
 
     public const string REDACTED_MARKER = '[REDACTED]';
@@ -38,9 +33,7 @@ final class ConfigFlattener
 
             if (is_array($value)) {
                 if ($this->isScalarList($value)) {
-                    // Integer-keyed list of scalars — JSON-encode for
-                    // compact display. Associative arrays always
-                    // recurse into dot-keyed shape.
+                    // A scalar list reads better inline than as N dotted rows.
                     $flat[$key] = json_encode($value);
 
                     continue;
@@ -82,10 +75,8 @@ final class ConfigFlattener
             }
         }
 
-        // Trailing `key`/`keys` covers app.key, APP_KEY, auth.key and
-        // app.previous_keys while rejecting benign names like app.kind. No
-        // '_key' clause is needed — the needle is already lowercased, so
-        // anything ending '_key' ends 'key'.
+        // Suffix, not substring, so benign names like app.kind survive. No
+        // separate '_key' clause: anything ending '_key' already ends 'key'.
         foreach (self::SENSITIVE_SUFFIXES as $suffix) {
             if (str_ends_with($needle, $suffix)) {
                 return true;

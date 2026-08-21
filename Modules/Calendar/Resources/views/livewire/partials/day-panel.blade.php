@@ -8,33 +8,32 @@
 
     $dayDto: CalendarDayDto
 
-    Renders: SOD balance, entry rows with series + counterparty drill links (CAL-03),
-    approximate note (D-15), paid/missed state, EOD balance.
+    Renders: SOD balance, entry rows with series + counterparty drill links,
+    approximate note, paid/missed state, EOD balance.
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
 <div class="cal-panel-header">
     <span class="font-semibold" style="font-size: var(--text-md, 1rem); color: var(--color-text);">
         {{ $dayDto->date->translatedFormat('j M Y') }}
     </span>
-    <button
+    <x-core::emoji-action
+        :label="Lang::get('calendar::messages.panel.close')"
+        class="ml-auto"
         wire:click="$set('selectedDay', null)"
-        @click="panelOpen = false"
-        class="ml-auto flex h-8 w-8 items-center justify-center rounded hover:bg-slate-100 dark:hover:bg-slate-800"
-        style="color: var(--color-text-muted);"
-        aria-label="{{ Lang::get('calendar::messages.panel.close') }}"
-    >×</button>
+        x-on:click="panelOpen = false"
+    >✖️</x-core::emoji-action>
 </div>
 
-{{-- SOD balance — "—" when computing OR when no honest SoD exists (WR-08:
+{{-- SOD balance — "—" when computing OR when no honest SoD exists:
      null sodBalanceMinor means the prior day carried no computed balance;
-     rendering €0,00 there would state a fake figure) --}}
+     rendering €0,00 there would state a fake figure --}}
 <div class="cal-panel-bal-row">
     <span style="color: var(--color-text-muted); font-size: var(--text-sm, 0.8125rem);">{{ Lang::get('calendar::messages.panel.start_of_day') }}</span>
     <span class="tabular-nums font-semibold" style="font-size: var(--text-sm, 0.8125rem); color: var(--color-text);">
         @if ($dayDto->isComputing || $dayDto->sodBalanceMinor === null)
             —
         @else
-            {{ $dayDto->sodBalanceMinor < 0 ? '−' : '' }}€{{ number_format(abs($dayDto->sodBalanceMinor / Money::MINOR_UNITS_PER_MAJOR), 2, ',', '.') }}
+            {{ Money::ofMinor($dayDto->sodBalanceMinor, $dayDto->currency)->format() }}
         @endif
     </span>
 </div>
@@ -47,7 +46,7 @@
         @foreach ($dayDto->entries as $entry)
             @php
                 $amountSign = $entry->direction === 'income' ? '+' : '−';
-                $amountStr  = $amountSign . '€' . number_format(abs($entry->amountMinor / Money::MINOR_UNITS_PER_MAJOR), 2, ',', '.');
+                $amountStr  = $amountSign . Money::ofMinor(abs($entry->amountMinor), $entry->currency)->format();
                 $amountColor = $entry->direction === 'income' ? 'var(--color-emerald)' : 'var(--color-text)';
             @endphp
             <div class="cal-panel-entry">
@@ -61,9 +60,9 @@
                                 {{ $entry->name }}
                             </span>
                             @if ($entry->isPaid)
-                                <span style="color: var(--color-emerald);" aria-label="{{ Lang::get('calendar::messages.cell.paid') }}">✓</span>
+                                <span role="img" style="color: var(--color-emerald);" aria-label="{{ Lang::get('calendar::messages.cell.paid') }}">✓</span>
                             @elseif ($entry->isMissed)
-                                <span style="color: var(--color-amber);" aria-label="{{ Lang::get('calendar::messages.cell.missed') }}">!</span>
+                                <span role="img" style="color: var(--color-amber);" aria-label="{{ Lang::get('calendar::messages.cell.missed') }}">!</span>
                             @endif
                         </div>
                         <div class="mt-0.5 text-xs" style="color: var(--color-text-faint);">
@@ -74,18 +73,20 @@
                                 {{ Lang::get('calendar::messages.panel.date_approximate') }}
                             </div>
                         @endif
-                        {{-- Drill-through links (CAL-03) --}}
+                        {{-- Drill-through links. route(), not a path
+                             built by hand: it encodes the slug, which arrived
+                             here as stored data. --}}
                         <div class="mt-1 flex flex-wrap gap-2 text-xs" style="color: var(--color-text-muted);">
                             <a
-                                href="/recurring/series/{{ $entry->seriesId }}"
-                                class="underline hover:no-underline"
+                                href="{{ route('recurring.series.show', ['seriesId' => $entry->seriesId]) }}"
+                                class="font-medium underline-offset-2 hover:underline"
                                 style="color: var(--color-text-muted);"
                                 wire:navigate
                             >{{ Lang::get('calendar::messages.panel.series') }}</a>
                             @if ($entry->counterpartySlug !== null)
                                 <a
-                                    href="/counterparties/{{ $entry->counterpartySlug }}"
-                                    class="underline hover:no-underline"
+                                    href="{{ route('counterparties.profile', ['slug' => $entry->counterpartySlug]) }}"
+                                    class="font-medium underline-offset-2 hover:underline"
                                     style="color: var(--color-text-muted);"
                                     wire:navigate
                                 >{{ Lang::get('calendar::messages.panel.counterparty') }}</a>
@@ -108,7 +109,7 @@
         @if ($dayDto->isComputing)
             —
         @else
-            {{ $dayDto->eodBalanceMinor < 0 ? '−' : '' }}€{{ number_format(abs($dayDto->eodBalanceMinor / Money::MINOR_UNITS_PER_MAJOR), 2, ',', '.') }}
+            {{ Money::ofMinor($dayDto->eodBalanceMinor, $dayDto->currency)->format() }}
         @endif
     </span>
 </div>

@@ -8,20 +8,9 @@ use Modules\Mobile\Commands\PackageAndroidCommand;
 use Modules\Mobile\Internal\Boot\NativeBuildPatches;
 use Psr\Log\NullLogger;
 
-/*
- * This command is the only thing standing between a broken Android build and a
- * release that reports success anyway: `native:package` returns 0 on every
- * failure path it has, including with no project to build. So every refusal
- * here is load-bearing, and each one is asserted rather than assumed.
- *
- * The base path is moved to an empty directory for the duration: the command
- * must answer about a mobile root, not about this repository, and pointing it
- * at a real one would have it run the patch scripts for real. The Filesystem
- * is a double for the same reason, and `native:install` / `native:package` are
- * stubs because the packages defining them live only in mobile-app's Composer
- * root.
- */
-
+// The base path moves to an empty directory for the duration: the command must
+// answer about a mobile root, not about this repository, and pointing it at a real
+// one would have it run the patch scripts for real.
 function packageAndroidRoot(): string
 {
     $root = sys_get_temp_dir().'/beatrax-package-android';
@@ -57,9 +46,8 @@ function packageAndroid(
     }
 
     if ($withGradleWrapper === true) {
-        // A stand-in for gradlew: the point of the diagnosis path is that
-        // whatever the wrapper says reaches the operator, and a real Gradle
-        // run cannot be asked for in a unit test.
+        // A stand-in for gradlew: whatever the wrapper says has to reach the
+        // operator, and a real Gradle run cannot be asked for here.
         @mkdir($base.'/nativephp/android', 0o777, true);
         file_put_contents(
             $base.'/nativephp/android/gradlew',
@@ -142,11 +130,16 @@ afterEach(function (): void {
 beforeEach(function (): void {
     $this->originalBasePath = app()->basePath();
 
-    // Both return 0 whatever happens, which is the property the command exists
-    // to compensate for — so the stubs behave the same way.
+    // native:install and native:package are stubbed because the packages defining
+    // them live only in mobile-app's Composer root. They return 0 whatever happens,
+    // exactly as the real ones do.
     Artisan::command('native:package {platform} {--build-type=}', fn (): int => 0);
     Artisan::command('native:install {platform} {--with-icu}', fn (): int => 0);
 });
+
+// native:package returns 0 on every failure path it has, including with no
+// project to build at all. Every refusal this command makes is therefore
+// load-bearing, and each one is asserted rather than assumed.
 
 it('packages when every gate is satisfied', function (): void {
     expect(packageAndroid())->toBe(0);
@@ -203,9 +196,8 @@ it('leaves an explicitly set version code alone', function (): void {
 });
 
 it('recovers when native:install does create the project', function (): void {
-    // The B1 path: a `composer install` checkout has no Android project,
-    // because native:install runs only from post-update-cmd. The command
-    // generates it and carries on rather than refusing.
+    // A `composer install` checkout has no Android project, because native:install
+    // runs only from post-update-cmd. The command generates one and carries on.
     expect(packageAndroid(files: ['isDirectory' => false]))->toBe(0);
 });
 
@@ -265,12 +257,10 @@ it('uses the artifact when Gradle succeeds where native:package did not', functi
     $root = packageAndroidRoot();
     $apk = $root.'/nativephp/android/app/build/outputs/apk/release/app-release.apk';
 
-    // Absent when native:package is asked, present once Gradle has run — which
-    // is the sequence observed on a runner.
     @unlink($apk);
 
-    // Absent when native:package is asked, written by the Gradle run — which
-    // is the sequence observed on a runner.
+    // Absent when native:package is asked, written by the Gradle run, which is the
+    // sequence observed on a runner.
     expect(packageAndroid(
         files: [
             'isFile' => [

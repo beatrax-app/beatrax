@@ -17,9 +17,6 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
 use Psr\Log\LoggerInterface;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final readonly class NotificationPreferenceQuery
 {
     use CoercesScalars;
@@ -32,8 +29,8 @@ final readonly class NotificationPreferenceQuery
         private LoggerInterface $logger,
     ) {}
 
-    // This device's preferences, or the locked defaults when the device
-    // has no row or is unpaired. Never throws, never returns null.
+    // Falls back to the locked defaults when the device has no row or is
+    // unpaired; never throws, never returns null.
     public function forCurrentDevice(User $user): NotificationPreferencesDto
     {
         $deviceId = $this->devices->localDeviceId($user->id);
@@ -54,9 +51,8 @@ final readonly class NotificationPreferenceQuery
         return self::hydrate($row, $deviceId, '');
     }
 
-    // Every other device's preferences, read-only. Named via
-    // DeviceRegistryService::otherDeviceNames(); a device with a
-    // registry row but no preference row is omitted (nothing to show yet).
+    // A device with a registry row but no preference row is omitted —
+    // there is nothing to show for it yet.
     /**
      * @return array<int, NotificationPreferencesDto>
      */
@@ -80,10 +76,8 @@ final readonly class NotificationPreferenceQuery
         return $result;
     }
 
-    // Writes THIS device's preferences. Validates server-side -
-    // out-of-range input throws, never clamps. Dispatches
-    // NotificationPreferenceMutated after the write commits. A no-op
-    // when the device is unpaired - logged, never thrown.
+    // Out-of-range input throws rather than clamping, and an unpaired
+    // device is a logged no-op rather than a throw.
     public function saveForCurrentDevice(User $user, NotificationPreferencesDto $prefs): void
     {
         self::validate($prefs);
@@ -182,14 +176,5 @@ final readonly class NotificationPreferenceQuery
     private static function toBool(mixed $value): bool
     {
         return (bool) (is_numeric($value) ? (int) $value : $value);
-    }
-
-    private static function toStringOrNull(mixed $value): ?string
-    {
-        if ($value === null) {
-            return null;
-        }
-
-        return self::toString($value);
     }
 }

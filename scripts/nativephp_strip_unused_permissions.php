@@ -143,6 +143,14 @@ $rewritten = (string) preg_replace(
     $rewritten,
 );
 
+// The commented decoys go with them, or a second run keeps the old ones and
+// adds a fresh set, and no two builds produce the same bytes.
+$rewritten = (string) preg_replace(
+    '#[ \t]*<!-- <uses-permission\s+android:name="[^"]+"\s*/> kept here only[^>]*-->[ \t]*\r?\n?#',
+    '',
+    $rewritten,
+);
+
 // Element-wise rather than line-wise on purpose: the generated manifest puts
 // FLASHLIGHT and USE_BIOMETRIC on the SAME line, so dropping the line that
 // carries one silently drops biometric unlock with it.
@@ -159,7 +167,18 @@ $block = '    <!-- Unused permissions removed by '.MARKER." — see that file.\n
     ."         rewrites this manifest, and two of them are contributed by a library\n"
     ."         manifest where there is no line to delete at all. -->\n";
 
+// Each removal is paired with the plain declaration, commented out. The plugin
+// compiler decides what to append with
+// `str_contains($manifest, '<uses-permission android:name="X" />')` — an exact
+// substring — and the tools:node="remove" form does not contain it, so it
+// re-added all three on the next build and the device shipped them. The
+// commented copy satisfies that check; the merger ignores comments and honours
+// only the removal. Measured on an SM-S928B: SCHEDULE_EXACT_ALARM,
+// USE_EXACT_ALARM and RECEIVE_BOOT_COMPLETED were granted before this.
 foreach (array_merge(REMOVE_FROM_SOURCE, REMOVE_FROM_MERGE) as $permission) {
+    $plain = '<uses-permission android:name="'.$permission.'" />';
+
+    $block .= '    <!-- '.$plain." kept here only so the plugin compiler sees it -->\n";
     $block .= '    <uses-permission android:name="'.$permission."\" tools:node=\"remove\" />\n";
 }
 
@@ -188,6 +207,11 @@ if ($reparsed === false) {
 // ones that must stay have to still be there. Read back off disk, because the
 // question is what the merger will see and not what this script intended.
 $verified = (string) file_get_contents($manifest);
+
+// Comments first: the merger ignores them, and one of them deliberately holds
+// a plain declaration to satisfy the plugin compiler's substring check. Asking
+// "what will the merger see" of the raw text answered yes to that comment.
+$verified = (string) preg_replace('/<!--.*?-->/s', '', $verified);
 
 foreach (array_merge(REMOVE_FROM_SOURCE, REMOVE_FROM_MERGE) as $permission) {
     $pattern = '#<uses-permission\s+android:name="'.preg_quote($permission, '#').'"(?![^>]*tools:node="remove")#';

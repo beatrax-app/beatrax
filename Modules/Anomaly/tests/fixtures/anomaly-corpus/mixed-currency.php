@@ -2,12 +2,9 @@
 
 declare(strict_types=1);
 
-// mixed-currency: a Google Play charge billed in USD whose settled-EUR
-// amount lands within the typical band. The detector compares the
-// settled-currency amount (the real cash impact) against the settled-EUR
-// baseline, NOT the raw USD figure — so a routine USD charge does NOT
-// produce a spurious `large` flag just because the nominal currency
-// differs. Mirrors the drift module's FX-exclusion invariant.
+// A Google Play charge billed in USD whose settled-EUR amount lands inside
+// the typical band: nothing fires, so the nominal currency alone cannot
+// manufacture a `large`.
 
 return [
     'settings' => [

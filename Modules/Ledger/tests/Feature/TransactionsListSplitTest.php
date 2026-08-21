@@ -12,19 +12,6 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Actions\SaveTransactionSplit;
 use Modules\Ledger\Public\ValueObjects\Money;
 
-/*
- * Feature tests for the split-row expand/collapse display on the
- * /transactions list (Phase 13.1 Plan 06, Req 2). Proves:
- *  - a split transaction renders as exactly ONE top-level row bearing
- *    "Split · N" and the parent total (D-01);
- *  - both leg sub-rows are present server-side (read-only; visibility
- *    toggling is client-side and out of scope for a server test);
- *  - an unsplit transaction still renders its InlineCategoryPicker
- *    (no regression);
- *  - the legs batch-load issues a single bounded query regardless of how
- *    many split transactions are on the page (N+1 guard).
- */
-
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
@@ -38,9 +25,8 @@ beforeEach(function (): void {
     $this->groceries = Category::create(['user_id' => null, 'name' => 'Groceries', 'slug' => 'groceries-tlst', 'kind' => 'expense', 'display_order' => 1]);
     $this->household = Category::create(['user_id' => null, 'name' => 'Household', 'slug' => 'household-tlst', 'kind' => 'expense', 'display_order' => 2]);
 
-    // Seed a split €80 -> €60 Groceries / €20 Household transaction for the
-    // fixture user. A closure (not a global function) so it can reach the
-    // protected TestCase::makeTransaction() helper via $this-binding.
+    // A closure, not a global function: it needs $this-binding to reach the
+    // protected makeTransaction() helper.
     $this->seedSplitTransaction = function (string $postedAt): Transaction {
         $tx = $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
             'amount_minor' => -8000,
@@ -70,20 +56,16 @@ it('renders a split transaction as exactly one row bearing "Split · 2" and the 
     $component = Livewire::test(TransactionsList::class);
     $html = $component->html();
 
-    // Exactly one top-level row for the split parent (the row link marker
-    // is only ever rendered once per transaction, on the parent row).
+    // The row-link marker renders once per transaction, on the parent row
+    // only, so counting it counts top-level rows.
     expect(substr_count($html, 'data-testid="tx-row-link-'.$tx->id.'"'))->toBe(1);
 
-    // The split badge shows the leg count and the desktop table's Category
-    // <td> no longer renders the InlineCategoryPicker for this row.
     expect(substr_count($html, 'data-testid="split-badge-'.$tx->id.'"'))->toBe(1);
     $component->assertSee('Split · 2');
 
-    // Amount column shows the PARENT total, never a client-recomputed sum.
-    // Money::format('nl_NL') uses a NON-BREAKING space (U+00A0) between the
-    // symbol and the figure — build the expected string the same way rather
-    // than hardcoding a regular space, which would never match.
-    $component->assertSeeHtml(Money::ofMinor(-8000, 'EUR')->format('nl_NL'));
+    // Money::format() puts a non-breaking space between symbol and figure, so
+    // the expectation is built through it rather than hardcoded.
+    $component->assertSeeHtml(Money::ofMinor(-8000, 'EUR')->format());
 })->group('phase-13.1');
 
 it('renders both leg sub-rows server-side (read-only) for a split transaction', function (): void {
@@ -91,13 +73,11 @@ it('renders both leg sub-rows server-side (read-only) for a split transaction', 
 
     $component = Livewire::test(TransactionsList::class);
 
-    // Both leg category names + amounts + the leg note are present in the
-    // rendered DOM — server-rendered always, regardless of client-side
-    // expand/collapse state (Alpine x-show only hides them visually).
+    // Legs are always server-rendered: Alpine's x-show only hides them.
     $component->assertSee('Groceries');
     $component->assertSee('Household');
-    $component->assertSeeHtml(Money::ofMinor(-6000, 'EUR')->format('nl_NL'));
-    $component->assertSeeHtml(Money::ofMinor(-2000, 'EUR')->format('nl_NL'));
+    $component->assertSeeHtml(Money::ofMinor(-6000, 'EUR')->format());
+    $component->assertSeeHtml(Money::ofMinor(-2000, 'EUR')->format());
     $component->assertSee('Weekly shop');
 
     $html = $component->html();
@@ -117,16 +97,13 @@ it('still renders the InlineCategoryPicker (no split badge) for an unsplit trans
     $html = $component->html();
 
     expect($html)->not->toContain('data-testid="split-badge-'.$unsplitTx->id.'"');
-    // The InlineCategoryPicker child component renders its category <select>
-    // for this row (keyed uniquely per transaction id).
+    // `cat-picker-<id>` is the InlineCategoryPicker child's per-row key.
     expect($html)->toContain('cat-picker-'.$unsplitTx->id);
 })->group('phase-13.1');
 
 it('batch-loads split legs in a single bounded query regardless of page size (no N+1)', function (): void {
-    // Two independent split transactions on the same page.
     ($this->seedSplitTransaction)('2026-07-01');
     ($this->seedSplitTransaction)('2026-07-02');
-    // Plus an unsplit row.
     $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
         'amount_minor' => -500,
         'posted_at' => '2026-07-03',
@@ -146,8 +123,6 @@ it('batch-loads split legs in a single bounded query regardless of page size (no
         static fn (array $entry): bool => str_contains(strtolower((string) $entry['query']), 'from "transaction_splits"'),
     ));
 
-    // Exactly ONE query loads legs for the whole page batch, no matter how
-    // many split transactions are present (Pitfall 1 / N+1 guard).
     expect($splitQueries)->toHaveCount(1);
 
     $connection->disableQueryLog();

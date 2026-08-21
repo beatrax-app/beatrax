@@ -11,10 +11,9 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
-// Static-only: no constructor dependencies, no DB access. A null
-// baseline/latest amount hydrates to a zero-amount Money in the settled
-// currency (a first-time-merchant flag has no per-merchant baseline) so
-// call sites never branch on null.
+// A null baseline/latest amount hydrates to a zero-amount Money rather than
+// null (a first-time-only alert carries no per-merchant baseline), so call
+// sites never branch on null.
 final class AnomalyAlertDtoMapper
 {
     use CoercesScalars;
@@ -30,10 +29,9 @@ final class AnomalyAlertDtoMapper
         $baselineAmount = Money::ofMinor(self::toInt($row->baseline_amount_minor ?? null), $currency);
         $latestAmount = Money::ofMinor(self::toInt($row->latest_amount_minor ?? null), $currency);
 
-        // The schema marks `detected_at` non-null, but a corrupted row
-        // could surface here as null or non-string. Fail loud with an
-        // identifying message rather than letting Carbon raise a bare
-        // InvalidFormatException out of an unscoped parse('').
+        // The schema marks `detected_at` non-null; a corrupted row that is not
+        // fails loud with the row id, rather than as a bare
+        // InvalidFormatException from parse('').
         $rawDetected = $row->detected_at ?? null;
         if (! is_string($rawDetected) || $rawDetected === '') {
             $rowId = isset($row->id) && is_numeric($row->id) ? (string) $row->id : '?';
@@ -54,15 +52,13 @@ final class AnomalyAlertDtoMapper
             latestAmount: $latestAmount,
             currency: $currency,
             sensitivityPercentUsed: self::toInt($row->sensitivity_percent_used ?? null),
-            dismissedAs: self::toStringOrNull($row->dismissed_as ?? null),
+            dismissedAs: self::toNonEmptyStringOrNull($row->dismissed_as ?? null),
             detectedAt: $detectedAt,
             actionedAt: self::toDateOrNull($row->actioned_at ?? null),
             snoozedUntil: self::toDateOrNull($row->snoozed_until ?? null),
         );
     }
 
-    // A malformed or non-array payload degrades to an empty list rather
-    // than throwing — the renderer simply shows no reason chips.
     /**
      * @return list<string>
      */
@@ -97,7 +93,9 @@ final class AnomalyAlertDtoMapper
         return is_string($value) && $value !== '' ? $value : 'EUR';
     }
 
-    private static function toStringOrNull(mixed $value): ?string
+    // Not CoercesScalars::toStringOrNull(): an empty `dismissed_as` means the
+    // alert was never dismissed, so it has to read as null rather than ''.
+    private static function toNonEmptyStringOrNull(mixed $value): ?string
     {
         if (is_string($value) && $value !== '') {
             return $value;

@@ -6,13 +6,8 @@ namespace Modules\OpenBanking\Internal\Http\Livewire\Concerns;
 
 use Carbon\CarbonImmutable;
 
-// The read-side presentation of the connection's freshness signals: turning
-// the ISO timestamps the settings page holds into the relative + absolute
-// strings the transparency panel and consent banner render. Behaviour, not
-// state — every method reads the component's own iso properties.
-/**
- * @link ../../../../../../.docs/features/open-banking/architecture.md
- */
+// Behaviour, not state: every method reads the component's own iso properties
+// rather than declaring any of its own.
 trait FormatsConnectionTimestamps
 {
     public function lastSuccessfulSyncRelative(): ?string
@@ -34,9 +29,8 @@ trait FormatsConnectionTimestamps
         return self::relativeAndAbsolute($this->lastAttemptAtIso);
     }
 
-    // Renders only when the last attempt did not succeed —
-    // last_attempt_status is 'ok' on success, 'consent_failed'/'error' on
-    // failure, never null once at least one attempt has run.
+    // last_attempt_status is 'ok' on success and never null once an attempt
+    // has run, so anything else is a failure.
     public function lastAttemptFailed(): bool
     {
         return $this->lastAttemptStatus !== null && $this->lastAttemptStatus !== 'ok';

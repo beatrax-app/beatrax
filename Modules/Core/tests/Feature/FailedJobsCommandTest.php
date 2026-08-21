@@ -6,18 +6,6 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 
-/*
- * Drives `php artisan beatrax:failed-jobs prune` against a seeded
- * failed_jobs table:
- *  - --dry-run on a 5-row fixture spread across 7/14/31/45/60 days ago,
- *    cutoff 30d → 3 rows reported but no row removed.
- *  - Live run on the same fixture → 3 rows deleted, 2 remain.
- *  - Invalid --older-than token (30m) → exit 1 + error mentioning the
- *    regex grammar.
- *  - Unknown action (whatever) → exit 1 + error naming the unsupported
- *    action.
- */
-
 beforeEach(function (): void {
     // Freeze the clock so the duration-cutoff arithmetic is deterministic.
     $this->frozenNow = CarbonImmutable::parse('2026-05-20 09:00:00');
@@ -65,7 +53,7 @@ it('deletes failed_jobs rows older than the cutoff on live run', function (): vo
     $remaining = $this->db->connection()->table('failed_jobs')->count();
     expect($remaining)->toBe(2);
 
-    // Confirm the rows kept are the most-recent two (queues q-7 and q-14).
+    // Each queue name carries its row's age, so the survivors name themselves.
     $queues = $this->db->connection()->table('failed_jobs')->orderBy('queue')->pluck('queue')->all();
     expect($queues)->toBe(['q-14', 'q-7']);
 });

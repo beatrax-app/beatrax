@@ -14,15 +14,11 @@ use Modules\Auth\Internal\Lock\PinVerificationService;
 use Modules\Auth\Internal\Lock\PlatformDetector;
 use Modules\Core\Public\Contracts\Clock;
 
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 final class MobileLockGateway
 {
-    // Where an unlocked session resumes, in precedence order. Two tiers because
-    // a lock arrives by two routes: a middleware redirect leaves `url.intended`,
-    // a client-engaged lock leaves only the last page. Published here because
-    // the mobile lock screen is in another module and AppLockMiddleware is Internal.
+    // Two tiers because a lock arrives two ways: a middleware redirect leaves
+    // `url.intended`, a client-engaged one leaves only the last page.
+    // Published here because AppLockMiddleware is Internal to this module.
     public const SESSION_INTENDED_URL = 'url.intended';
 
     public const SESSION_LAST_PAGE = AppLockMiddleware::SESSION_LAST_PAGE;
@@ -46,8 +42,7 @@ final class MobileLockGateway
             ->update(['last_activity_at' => $this->clock->now()]);
     }
 
-    // Stored as a plain flag so the lock screen / settings can check
-    // enrollment without triggering a biometric prompt just to read it.
+    // A plain flag, so reading enrolment never triggers a biometric prompt.
     public function markColdStartEnrolled(int $userId, bool $enrolled): void
     {
         $this->db->connection()->table('user_app_lock_configs')
@@ -74,8 +69,7 @@ final class MobileLockGateway
 
         $lastRaw = $row?->last_pin_unlock_at;
         if (! is_string($lastRaw)) {
-            // Never unlocked, or unparseable -- fail safe by requiring the
-            // PIN rather than trusting an unknown state.
+            // Never unlocked or unparseable: require the PIN.
             return true;
         }
 
@@ -84,10 +78,9 @@ final class MobileLockGateway
         return $this->clock->now()->diffInDays($last, absolute: true) >= $floorDays;
     }
 
-    // No new trust decision: $accountPassword is the SAME plaintext
-    // password the caller just used to create the account in this same
-    // request, so no separate re-verification is performed here -- the
-    // caller is responsible for having authenticated it beforehand.
+    // No new trust decision: $accountPassword is the same plaintext the caller
+    // just created the account with in this request, and authenticating it
+    // remains the caller's job.
     public function enableAppLock(int $userId, string $pin, string $accountPassword, Session $session): void
     {
         $this->provisioner->enable($userId, $pin, $accountPassword, $session);
@@ -114,8 +107,8 @@ final class MobileLockGateway
         return $this->verifier->lockedUntil($userId);
     }
 
-    // Relocated here (mirroring LockScreen::remainingAttempts()) so a
-    // second module never needs its own raw read of user_app_lock_configs.
+    // Here, mirroring LockScreen::remainingAttempts(), so no second module
+    // needs its own raw read of user_app_lock_configs.
     public function remainingPinAttempts(int $userId): ?int
     {
         $row = $this->db->connection()->table('user_app_lock_configs')

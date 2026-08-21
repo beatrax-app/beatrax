@@ -12,20 +12,6 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 uses(RefreshDatabase::class);
 
-/**
- * Pins the privacy defaults for `personal` counterparties:
- *
- *   - the slug is derived from the display name only and NEVER
- *     carries the personal IBAN as a suffix or substring.
- *   - the iban column IS populated (the data must exist for the
- *     "Show IBAN" toggle on the profile page to render anything),
- *     but it lives only on the iban column and never leaks into
- *     the slug.
- *
- * Sibling tests (CounterpartyResolverTest Test 4) cover the happy
- * path that produces a `personal` row in the first place; this file
- * focuses on the privacy invariants the row carries after upsert.
- */
 function makePrivacyUser(string $username): User
 {
     return User::query()->create([

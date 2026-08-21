@@ -18,10 +18,8 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
-// Rules are pulled `priority asc, id asc` — the same deterministic order
-// RuleEngine::match() executes them in, so the /rules table visually IS
-// the execution order. DTOs are constructed only here, at the Public read
-// boundary — never inside RuleEngine's per-transaction hot loop.
+// Rules are read `priority asc, id asc` — the same order RuleEngine::match()
+// executes them in, so the /rules table visually is the execution order.
 final readonly class CategorizationRuleQuery
 {
     use CoercesScalars;
@@ -134,10 +132,8 @@ final readonly class CategorizationRuleQuery
         return $byRule;
     }
 
-    // Two passes over the same rows: the first collects the category and
-    // counterparty ids so each set of display strings resolves in one query,
-    // the second builds the DTOs with those strings attached — label work the
-    // read boundary owns and the hot per-transaction RuleEngine never pays.
+    // Two passes over the rows: the first collects the ids so the display
+    // strings resolve in one query each rather than one per action.
     /**
      * @param  iterable<int, stdClass>  $actionRows
      * @return array<int, list<RuleActionDto>>
@@ -180,8 +176,6 @@ final readonly class CategorizationRuleQuery
         return $byRule;
     }
 
-    // The category id a `category` action names, or null for any other action
-    // type or a payload missing a numeric id.
     /**
      * @param  array<string, mixed>  $payload
      */
@@ -269,8 +263,6 @@ final readonly class CategorizationRuleQuery
         $out = [];
         foreach ($rows as $row) {
             $stored = is_string($row->display_name ?? null) ? $row->display_name : '';
-            // Read-side decrypt — pass-through no-op when encryption is
-            // not enabled for this user.
             $out[self::toInt($row->id)] = $stored === ''
                 ? ''
                 : $this->codec->decryptValue('counterparties', 'display_name', $stored, $userId, $this->session)['value'];
@@ -287,10 +279,8 @@ final readonly class CategorizationRuleQuery
     {
         $createdAtRaw = is_string($row->created_at) ? $row->created_at : null;
         if ($createdAtRaw === null || $createdAtRaw === '') {
-            // Defensive fallback: missing created_at falls back to the
-            // injected Clock so the read-side test can pin time
-            // deterministically. The DB column is NOT NULL on insert
-            // so this branch is unreachable in normal operation.
+            // Unreachable in practice — created_at is NOT NULL; the Clock
+            // fallback keeps hydration total rather than throwing.
             $createdAt = $this->clock->now()->toDateTimeImmutable();
         } else {
             try {
@@ -328,8 +318,6 @@ final readonly class CategorizationRuleQuery
         return self::toStringKeyedArray($raw);
     }
 
-    // Discards the value entirely (empty array) unless it already is a
-    // string-keyed array — never partially trusts a mixed-keyed array.
     /**
      * @return array<string, mixed>
      */

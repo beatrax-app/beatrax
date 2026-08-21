@@ -9,15 +9,13 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Enums\AccountKind;
 
-// Without this synthetic-IBAN account, every imported PayPal row would
-// be an unknown-IBAN error and the statement_summaries writer would
-// never fire, blocking the starting-balance detector downstream.
-// Returns true on INSERT, false when the account already existed.
+// Without this synthetic-IBAN account every imported PayPal row is an
+// unknown-IBAN error, the statement_summaries writer never fires, and the
+// starting-balance detector downstream has nothing to read.
 final readonly class EnsurePaypalAccountAction
 {
-    // Mirrors PreviewWizard::PAYPAL_OWN_IBAN — both call sites must use
-    // the same literal so AccountResolver lookups by (iban, user_id)
-    // resolve consistently.
+    // Mirrors PreviewWizard::PAYPAL_OWN_IBAN; AccountResolver looks up by
+    // (iban, user_id), so the two must agree.
     public const string PAYPAL_OWN_IBAN = 'PAYPAL';
 
     public function __construct(private DatabaseManager $db) {}
@@ -27,9 +25,8 @@ final readonly class EnsurePaypalAccountAction
         ?string $nameOverride = null,
         ?string $slugBodyOverride = null,
     ): bool {
-        // Raw Query Builder used instead of Account::query()->exists() to
-        // satisfy PHPStan strict-rules staticMethod.dynamicCall — same
-        // pattern as TransactionDetail and UpdateTransactionCategory.
+        // Raw builder rather than Account::query()->exists(), which trips
+        // PHPStan strict-rules staticMethod.dynamicCall.
         $exists = $this->db->connection()
             ->table('accounts')
             ->where('user_id', $user->id)

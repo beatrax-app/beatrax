@@ -7,12 +7,6 @@ use Modules\Auth\Internal\Http\Livewire\SignupPage;
 use Modules\Auth\Models\UserRecoveryCode;
 use Modules\Core\Models\User;
 
-/*
- * Feature coverage for the first-user signup page: the route render and
- * its 404 gate, the Livewire submit happy path, and the inline error
- * copy for mismatched and too-short passwords.
- */
-
 it('renders the signup page on a fresh database', function (): void {
     $this->get('/signup')
         ->assertOk()
@@ -24,17 +18,15 @@ it('renders the signup page on a fresh database', function (): void {
 it('shows field requirement hints and a live password requirement checklist', function (): void {
     $response = $this->get('/signup')->assertOk();
 
-    // Static field guidance.
     $response->assertSeeText('Saved in lowercase. This becomes the owner account.');
     $response->assertSeeText('Use a passphrase you can remember — there is no password reset, only recovery codes.');
 
-    // The live (Alpine-driven) requirement checklist: the labels live in the
-    // x-for data and the list carries an accessible label + aria-describedby.
+    // The Alpine checklist: its labels live in the x-for data, so they are in
+    // the markup even though the state is computed client-side.
     $response->assertSee('Password requirements', escape: false);
     $response->assertSee('At least 12 characters', escape: false);
     $response->assertSee('Both passwords match', escape: false);
     $response->assertSee('aria-describedby="password-requirements"', escape: false);
-    // The requirement state is computed client-side from the typed values.
     $response->assertSee('lengthOk', escape: false);
     $response->assertSee('matchOk', escape: false);
 });
@@ -50,8 +42,8 @@ it('returns 404 when a user already exists', function (): void {
 });
 
 it('signs up the first user successfully and redirects to the recovery codes', function (): void {
-    // Not to the wizard: the codes are shown first, and that screen hands off
-    // to /setup. See Onboarding's SignupRoutesToSetupTest for the full chain.
+    // Not to the wizard: the codes come first, and that screen hands off to
+    // /setup afterwards.
     Livewire::test(SignupPage::class)
         ->set('username', 'alice')
         ->set('password', 'a-long-password-12chars')

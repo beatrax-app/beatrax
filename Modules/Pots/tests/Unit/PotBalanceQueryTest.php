@@ -14,19 +14,6 @@ use Modules\Pots\Public\Services\PotBalanceQuery;
 
 uses(RefreshDatabase::class);
 
-/**
- * Wave 0 RED stubs for POTS-02 (movement math) and POTS-03 (reconciliation).
- *
- * These tests reference PotBalanceQuery (Plan 02). They will error with
- * "class not found" until Plan 02 lands — that is correct Wave 0 RED behaviour.
- *
- * Covers:
- *   POTS-02: signed SUM of pot_movements is the pot balance; movement math correct
- *   POTS-03: reconciliationForAccount real = allocated + unallocated; over-allocation
- *            produces negative unallocated + isOverAllocated=true; archived pots excluded
- *   D-01:    unallocated is derived (real − allocated), never stored
- *   D-09:    archived pots excluded from allocated
- */
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'wessel',
@@ -54,10 +41,6 @@ beforeEach(function (): void {
     ]);
 });
 
-/**
- * Insert a pot_movements row for a pot.
- * Helper mirrors goalTx() pattern from GoalProgressQueryTest.
- */
 function potMovement(int $potId, int $userId, int $amountMinor, string $kind, ?int $counterpartPotId = null): void
 {
     static $i = 0;
@@ -76,10 +59,6 @@ function potMovement(int $potId, int $userId, int $amountMinor, string $kind, ?i
     ]);
 }
 
-/**
- * Insert a transaction for $user's account (used to set up real balance for
- * reconciliation tests).
- */
 function potAccountTx(int $userId, int $accountId, int $runId, int $amountMinor): void
 {
     static $i = 0;
@@ -108,34 +87,25 @@ function potAccountTx(int $userId, int $accountId, int $runId, int $amountMinor)
     ]);
 }
 
-// ---------------------------------------------------------------------------
-// POTS-02: signed balance = SUM of pot_movements
-// ---------------------------------------------------------------------------
-
 it('balanceForPot returns the signed SUM of its movements', function (): void {
     $pot = Pot::factory()->create([
         'user_id' => $this->user->id,
         'account_id' => $this->account->id,
     ]);
 
-    potMovement($pot->id, $this->user->id, 30000, 'fund');  // fund 300.00
-    potMovement($pot->id, $this->user->id, 90000, 'fund');  // fund 900.00
-    potMovement($pot->id, $this->user->id, -10000, 'withdraw');  // withdraw 100.00
-    // Expected: 300 + 900 - 100 = 1100 (in minor: 110000)
+    potMovement($pot->id, $this->user->id, 30000, 'fund');
+    potMovement($pot->id, $this->user->id, 90000, 'fund');
+    potMovement($pot->id, $this->user->id, -10000, 'withdraw');
+    // 300 + 900 - 100 = 1100.
 
     $query = app(PotBalanceQuery::class);
-    // Access via forUser rows — balanceMinor should be 110000
     $rows = $query->forUser($this->user);
     expect($rows)->toHaveCount(1);
     expect($rows[0]->balanceMinor)->toBe(110000);
 });
 
-// ---------------------------------------------------------------------------
-// POTS-03: reconciliationForAccount
-// ---------------------------------------------------------------------------
-
 it('reconciliationForAccount returns real = allocated + unallocated', function (): void {
-    // Real balance: 500.00 EUR in transactions
+    // Real balance: 500.00 EUR.
     potAccountTx($this->user->id, $this->account->id, $this->run->id, 50000);
 
     $pot = Pot::factory()->create([
@@ -154,7 +124,7 @@ it('reconciliationForAccount returns real = allocated + unallocated', function (
 });
 
 it('unallocatedMinor goes negative and isOverAllocated true when real balance < allocated', function (): void {
-    // Real balance: 100.00 EUR (simulate real-world spending by recording fewer credits)
+    // Real balance: 100.00 EUR.
     potAccountTx($this->user->id, $this->account->id, $this->run->id, 10000);
 
     $pot = Pot::factory()->create([
@@ -172,7 +142,7 @@ it('unallocatedMinor goes negative and isOverAllocated true when real balance < 
     expect($rec->isOverAllocated)->toBeTrue();
 });
 
-it('reconciliation excludes archived pots from allocated (D-09)', function (): void {
+it('reconciliation excludes archived pots from allocated', function (): void {
     potAccountTx($this->user->id, $this->account->id, $this->run->id, 50000);
 
     $activePot = Pot::factory()->create([
@@ -187,18 +157,16 @@ it('reconciliation excludes archived pots from allocated (D-09)', function (): v
     ]);
 
     potMovement($activePot->id, $this->user->id, 10000, 'fund');
-    potMovement($archivedPot->id, $this->user->id, 20000, 'fund');  // should NOT count
+    potMovement($archivedPot->id, $this->user->id, 20000, 'fund');
 
     $query = app(PotBalanceQuery::class);
     $rec = $query->reconciliationForAccount($this->account->id, $this->user);
 
-    // Only the active pot's 10000 should count toward allocated
     expect($rec->allocatedMinor)->toBe(10000);
     expect($rec->unallocatedMinor)->toBe(40000);  // 500 - 100 = 400
 });
 
-it('unallocated is derived and never read from a stored column (D-01)', function (): void {
-    // This test verifies no unallocated column exists on the pots table.
+it('unallocated is derived and never read from a stored column', function (): void {
     potAccountTx($this->user->id, $this->account->id, $this->run->id, 50000);
 
     $pot = Pot::factory()->create([
@@ -207,17 +175,11 @@ it('unallocated is derived and never read from a stored column (D-01)', function
     ]);
     potMovement($pot->id, $this->user->id, 15000, 'fund');
 
-    // If unallocated were a stored column, this would read stale data.
-    // ReconciliationRow.unallocatedMinor must equal real - allocated.
     $query = app(PotBalanceQuery::class);
     $rec = $query->reconciliationForAccount($this->account->id, $this->user);
 
     expect($rec->unallocatedMinor)->toBe($rec->realBalanceMinor - $rec->allocatedMinor);
 });
-
-// ---------------------------------------------------------------------------
-// Goal-linked lookups
-// ---------------------------------------------------------------------------
 
 it('reports the balance and currency of every goal-linked pot', function (): void {
     $goal = DB::table('goals')->insertGetId([

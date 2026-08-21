@@ -6,9 +6,6 @@ namespace Modules\Sync\Internal\Crypto;
 
 use Illuminate\Database\DatabaseManager;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class GdkEpochUsageProbe
 {
     public function __construct(private DatabaseManager $db) {}

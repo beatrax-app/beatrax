@@ -25,6 +25,8 @@ return [
     'no_entries' => 'Vēl nav neviena manuāla ieraksta.',
     'delete_entry' => 'Dzēst ierakstu',
     'delete' => 'Dzēst',
+    'delete_confirm' => 'Dzēst šo ierakstu?',
+    'delete_keep' => 'Paturēt',
 
     'errors' => [
         'amount_positive' => 'Ievadiet summu, kas lielāka par nulli.',

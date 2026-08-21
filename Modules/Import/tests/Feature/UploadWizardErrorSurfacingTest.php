@@ -10,27 +10,6 @@ use Modules\Import\Internal\Http\Livewire\UploadWizard;
 use Modules\Ledger\Models\ImportRun;
 use Tests\Helpers\UploadIsolation;
 
-/*
- * UploadWizard parse-time error surfacing + log capture.
- *
- *  - When the import pipeline raises a parse failure (sniff mismatch,
- *    unsupported PayPal CSV language, etc.) it now logs the failure
- *    via the injected PSR LoggerInterface so the entry surfaces on
- *    /dev/logs. The pipeline still converts the exception into an
- *    ERROR preview row so the wizard's preview screen renders the
- *    user-facing message; the log entry adds the stack trace + class
- *    that the row body intentionally omits.
- *
- *  - The wizard-layer catch-all in UploadWizard::submit() handles
- *    failures that bubble OUT of runFromUpload — file-system errors,
- *    hash failures, ImportRun insert clashes — that the pipeline's
- *    own try/catch cannot wrap. Those populate `uploadError` so the
- *    wizard renders an inline error banner instead of stranding the
- *    user on a blank Livewire toast.
- *
- *  - The happy path leaves uploadError null and redirects.
- */
-
 beforeEach(function (): void {
     UploadIsolation::isolate();
 
@@ -39,11 +18,9 @@ beforeEach(function (): void {
 });
 
 it('logs ImportPipeline parse failures via the injected logger when the PayPal language is unsupported', function (): void {
-    // PayPal CSV with header row that lacks the discriminator tokens
-    // ("Transactiereferentie", "Reference Txn ID") — sniffer routes
-    // through the PayPal arm, language detect returns null, sniffer
-    // raises UnsupportedPaypalCsvLanguageException which the pipeline
-    // catches into an ERROR row.
+    // The header lacks both language discriminators ("Transactiereferentie",
+    // "Reference Txn ID"), so the sniffer takes the PayPal arm and then fails
+    // language detection.
     $csv = "Datum,Tijd,Tijdzone,Omschrijving,Valuta\n2026-05-01,10:00:00,Europe/Berlin,Foo,EUR\n";
     $file = UploadedFile::fake()->createWithContent('paypal-unknown-lang.csv', $csv);
 
@@ -94,10 +71,8 @@ it('logs ImportPipeline parse failures via the injected logger when an ASN CSV h
 });
 
 it('persists the ImportRun in previewed state even when the pipeline produced only ERROR rows', function (): void {
-    // Confirms the failure case still produces a navigable preview
-    // page: the wizard redirects to /imports/{id}/preview where the
-    // ERROR row is visible. Without the ImportRun the redirect target
-    // would 404.
+    // Without the row the redirect target /imports/{id}/preview 404s and the
+    // user never sees the ERROR row explaining the failure.
     $csv = "Datum,Tijd,Tijdzone,Omschrijving,Valuta\n2026-05-01,10:00:00,Europe/Berlin,Foo,EUR\n";
     $file = UploadedFile::fake()->createWithContent('paypal-unknown-lang.csv', $csv);
 
@@ -125,10 +100,8 @@ it('leaves uploadError null on the happy path and redirects to the preview scree
 });
 
 it('renders the upload-error banner stub when uploadError is set', function (): void {
-    // Direct set() bypasses the runFromUpload guard so the test asserts
-    // the wizard view actually renders the inline error surface when
-    // a wizard-layer failure populates the property. This locks the
-    // Blade @if branch's visibility.
+    // Setting the property directly skips runFromUpload, leaving only the
+    // Blade @if branch under test.
     Livewire::test(UploadWizard::class)
         ->set('uploadError', 'Could not process this file (RuntimeException). The full error is in /dev/logs.')
         ->assertSee('data-testid="upload-error-banner"', false)

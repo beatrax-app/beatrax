@@ -29,7 +29,7 @@ use Modules\DriftAlerts\Public\Services\DriftAlertQuery;
 use Modules\Forecasting\Public\Actions\CreateCancellationScenarioForAlert;
 
 /**
- * @link ../../../../../.docs/features/drift-alerts/architecture.md
+ * @link ../../../../../.docs/features/drift-alerts/snooze-lifecycle.md
  */
 final class DriftPage extends Component
 {
@@ -37,17 +37,17 @@ final class DriftPage extends Component
 
     private const int MAX_UNTIL_MONTHS = 6;
 
-    // open (default) / history / dismissed, persisted via #[Url] so
-    // back-button and bookmarks behave.
     #[Url(as: 'tab', except: 'open')]
     public string $tab = 'open';
 
-    // drift (default, preserves existing bookmarks) or anomaly, persisted
-    // via #[Url] so ?type=anomaly deep-links the Unusual charges view.
     #[Url(as: 'type', except: 'drift')]
     public string $type = 'drift';
 
     public ?int $cursorId = null;
+
+    public ?string $anomalyCursorDetectedAt = null;
+
+    public ?string $anomalyCursorId = null;
 
     public function setTab(string $tab): void
     {
@@ -55,7 +55,7 @@ final class DriftPage extends Component
             return;
         }
         $this->tab = $tab;
-        $this->cursorId = null;
+        $this->resetCursors();
     }
 
     public function setType(string $type): void
@@ -64,47 +64,65 @@ final class DriftPage extends Component
             return;
         }
         $this->type = $type;
+        $this->resetCursors();
+    }
+
+    public function loadMoreAnomalies(string $detectedAt, int|string $alertId): void
+    {
+        $this->anomalyCursorDetectedAt = $detectedAt;
+        $this->anomalyCursorId = (string) $alertId;
+    }
+
+    // A derived anomaly id is a 63-bit integer, and every value crossing this
+    // boundary goes through JSON, whose numbers are IEEE doubles — anything
+    // past 2^53 comes back from the browser silently rounded. So the id
+    // travels as a STRING and is only an int again on this side of the wire.
+    private static function anomalyId(int|string $alertId): int
+    {
+        return is_numeric($alertId) ? (int) $alertId : 0;
+    }
+
+    private function resetCursors(): void
+    {
         $this->cursorId = null;
+        $this->anomalyCursorDetectedAt = null;
+        $this->anomalyCursorId = null;
     }
 
-    public function acknowledgeAnomaly(int $alertId, CurrentUser $currentUser, AcknowledgeAnomalyAlert $action): void
+    public function acknowledgeAnomaly(int|string $alertId, CurrentUser $currentUser, AcknowledgeAnomalyAlert $action): void
     {
-        $this->acknowledgeAlert($alertId, $currentUser, $action);
+        $this->acknowledgeAlert(self::anomalyId($alertId), $currentUser, $action);
     }
 
-    public function snoozeAnomaly(int $alertId, string $untilIso, CurrentUser $currentUser, SnoozeAnomalyAlert $action, Clock $clock): void
+    public function snoozeAnomaly(int|string $alertId, string $untilIso, CurrentUser $currentUser, SnoozeAnomalyAlert $action, Clock $clock): void
     {
-        $this->snoozeAlert($alertId, $untilIso, $currentUser, $action, $clock);
+        $this->snoozeAlert(self::anomalyId($alertId), $untilIso, $currentUser, $action, $clock);
     }
 
-    public function dismissAnomaly(int $alertId, CurrentUser $currentUser, DismissAnomalyAlert $action): void
+    public function dismissAnomaly(int|string $alertId, CurrentUser $currentUser, DismissAnomalyAlert $action): void
     {
-        ($action)($alertId, $currentUser->user());
+        ($action)(self::anomalyId($alertId), $currentUser->user());
         $this->toast(Lang::get('drift-alerts::alerts.toasts.dismissed'));
     }
 
-    public function markAnomalyExpected(int $alertId, CurrentUser $currentUser, DismissAnomalyAlertAsExpected $action): void
+    public function markAnomalyExpected(int|string $alertId, CurrentUser $currentUser, DismissAnomalyAlertAsExpected $action): void
     {
-        $ruleWritten = ($action)($alertId, $currentUser->user());
+        $ruleWritten = ($action)(self::anomalyId($alertId), $currentUser->user());
 
         if ($ruleWritten) {
-            // The "Undo" affordance re-opens the anomaly and deletes the
-            // suppression rule the dismissal just created.
-            $this->dispatch('toast', message: Lang::get('drift-alerts::alerts.toasts.suppression_added'), undo: 'undoAnomalySuppression', undoArg: $alertId);
+            $this->dispatch('toast', message: Lang::get('drift-alerts::alerts.toasts.suppression_added'), undo: 'undoAnomalySuppression', undoArg: (string) $alertId);
 
             return;
         }
 
-        // No suppression rule could be written (the charge amount is
-        // unresolvable, e.g. its transaction was deleted). The dismissal
-        // still stands — surface that honestly rather than promising a
-        // mute + an Undo that would delete nothing.
+        // No rule could be written (unresolvable charge amount), so this toast
+        // promises no mute and offers no Undo that would delete nothing.
         $this->toast(Lang::get('drift-alerts::alerts.toasts.dismissed_expected'));
     }
 
-    public function undoAnomalySuppression(int $alertId, CurrentUser $currentUser, RemoveAnomalySuppressionRule $action): void
+    public function undoAnomalySuppression(int|string $alertId, CurrentUser $currentUser, RemoveAnomalySuppressionRule $action): void
     {
-        $action->undoSuppression($alertId, $currentUser->user());
+        $action->undoSuppression(self::anomalyId($alertId), $currentUser->user());
         $this->toast(Lang::get('drift-alerts::alerts.toasts.reopened'));
     }
 
@@ -118,18 +136,15 @@ final class DriftPage extends Component
         $this->snoozeAlert($alertId, $untilIso, $currentUser, $action, $clock);
     }
 
-    // Shared by the drift and anomaly streams: both acknowledge an alert by
-    // invoking their own action collaborator, then surface the same toast.
     private function acknowledgeAlert(int $alertId, CurrentUser $currentUser, callable $action): void
     {
         $action($alertId, $currentUser->user());
         $this->toast(Lang::get('drift-alerts::alerts.toasts.acknowledged'));
     }
 
-    // Bounds the accepted range here (see the class @link) so a tampered
-    // Livewire payload with a past or unbounded-future timestamp never
-    // reaches the action — defence in depth on top of the action's own
-    // server-side bound. Shared by both streams.
+    // Bounds the accepted range to (now, now+6mo] so a tampered Livewire
+    // payload cannot snooze an alert away with no audit trail. Shared by both
+    // streams; SnoozeAnomalyAlert repeats the bound, SnoozeDriftAlert does not.
     private function snoozeAlert(int $alertId, string $untilIso, CurrentUser $currentUser, callable $action, Clock $clock): void
     {
         try {
@@ -174,9 +189,6 @@ final class DriftPage extends Component
     ): View {
         $user = $currentUser->user();
 
-        // Snooze targets are domain timestamps computed server-side off
-        // the injected clock so `CarbonImmutable::setTestNow()` stays
-        // deterministic across the test suite. Shared by both streams.
         $now = $clock->now();
         $snoozeTargets = [
             '1w' => $now->addWeek()->toIso8601String(),
@@ -185,10 +197,12 @@ final class DriftPage extends Component
         ];
 
         if ($this->type === 'anomaly') {
+            $anomalyCursorId = $this->anomalyCursorId === null ? null : self::anomalyId($this->anomalyCursorId);
+
             $anomalyRows = match ($this->tab) {
-                'history' => $anomalyQuery->historyForUser($user, $this->cursorId),
-                'dismissed' => $anomalyQuery->dismissedForUser($user, $this->cursorId),
-                default => $anomalyQuery->openForUser($user, $this->cursorId),
+                'history' => $anomalyQuery->historyForUser($user, $this->anomalyCursorDetectedAt, $anomalyCursorId),
+                'dismissed' => $anomalyQuery->dismissedForUser($user, $this->anomalyCursorDetectedAt, $anomalyCursorId),
+                default => $anomalyQuery->openForUser($user, $this->anomalyCursorDetectedAt, $anomalyCursorId),
             };
 
             $view = $views->make('drift-alerts::livewire.drift-page', [
@@ -216,9 +230,6 @@ final class DriftPage extends Component
 
         $grouped = $this->tab === 'open' ? $query->groupedBySeriesForUser($user) : [];
 
-        // Series states are surfaced to the renderer so the
-        // "Cadence flipped" cross-reference hint fires on rows whose
-        // underlying series is in state='cadence_changed'.
         $seriesIds = [];
         foreach ($rows as $alert) {
             $seriesIds[] = $alert->recurringSeriesId;
@@ -230,10 +241,7 @@ final class DriftPage extends Component
         }
         $seriesStates = $seriesIds === [] ? [] : $query->seriesStatesForUser($user, $seriesIds);
 
-        // One CancellationImpactDto per distinct series id, keyed on
-        // recurringSeriesId so the partial pulls the projection inline
-        // without a per-row query — the batched forSeriesIds() call
-        // collapses what would otherwise be N separate SELECTs into one.
+        // Batched: forSeriesIds() collapses what would be one SELECT per row.
         $uniqueSeriesIds = array_values(array_unique($seriesIds));
         /** @var array<int, CancellationImpactDto> $impactBySeriesId */
         $impactBySeriesId = $uniqueSeriesIds === []

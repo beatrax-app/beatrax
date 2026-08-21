@@ -7,25 +7,12 @@ use Modules\Desktop\Internal\Native\OsThemeProbe;
 use Modules\Desktop\Providers\DesktopServiceProvider;
 use Modules\Desktop\Public\Contracts\OsThemeSignal;
 
-/*
- * `OsThemeProbe` wraps `Native\Desktop\Facades\System::theme()` so the
- * dark-theme layout can read the OS appearance preference without
- * importing any `Native\Desktop\*` symbol. The probe is the SOLE
- * place the OS theme is read; the layout consumes it through the
- * `OsThemeSignal` contract.
- *
- * The `System` facade has no v2 fake (see NATIVEPHP-FAKES.md), so the
- * test asserts the structural contract — the binding lights up only
- * inside the NativePHP bundle (`nativephp-internal.running === true`),
- * the concrete probe implements the interface, and the contract
- * surface returns a string. The live `System::theme()` call is
- * verified manually in HUMAN-UAT.
- */
-
+// The probe is the only place `Native\Desktop` is touched for the OS theme, so
+// the layout can stay free of those symbols. The `System` facade has no v2 fake,
+// so only the structural contract is asserted here.
 it('binds OsThemeProbe to the OsThemeSignal contract when running inside the NativePHP bundle', function (): void {
-    // Simulate the bundle-runtime signal. The provider re-runs
-    // `register()` to pick up the new config value and register the
-    // contract binding.
+    // The binding is decided in register(), so the provider has to be re-run
+    // after flipping the config flag.
     $config = app(ConfigRepository::class);
     $config->set('nativephp-internal.running', true);
 
@@ -38,20 +25,16 @@ it('binds OsThemeProbe to the OsThemeSignal contract when running inside the Nat
 it('does NOT bind OsThemeSignal under local dev / in tests by default', function (): void {
     $config = app(ConfigRepository::class);
 
-    // The default test environment leaves `nativephp-internal.running`
-    // unset / false — the layout's `app()->bound(...)` check should
-    // return false, leaving the client-side `prefers-color-scheme`
-    // pre-paint script as the sole OS-theme signal.
+    // Off-bundle the binding is absent, which leaves the client-side
+    // `prefers-color-scheme` pre-paint script as the only OS-theme signal.
     expect($config->get('nativephp-internal.running'))->not->toBeTrue();
     expect(app()->bound(OsThemeSignal::class))->toBeFalse();
 });
 
 it('exposes a nullable currentOsTheme() from the contract surface', function (): void {
-    // Phase 15 WR-05: the contract returns `?string` so the layout can
-    // distinguish an explicit OS preference from a no-signal SYSTEM
-    // case. The pre-paint `prefers-color-scheme` script runs only for
-    // null returns — eliminating the silent "SYSTEM-OS-no-explicit-
-    // preference" → light fallback the original probe collapsed into.
+    // `?string` lets the layout tell an explicit OS preference apart from no
+    // signal at all; the pre-paint script runs only on null. Collapsing the two
+    // is what gave the original probe its silent light fallback.
     expect(method_exists(OsThemeProbe::class, 'currentOsTheme'))->toBeTrue();
 
     $reflection = new ReflectionMethod(OsThemeProbe::class, 'currentOsTheme');

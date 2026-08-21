@@ -6,12 +6,9 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Sync\SetupStep;
 use Modules\Mobile\Internal\Sync\SyncBlockedReason;
 
-/*
- * The setup screen renders the reason by key. A case without copy would print
- * the raw key at the user — on the one screen whose whole job is to explain
- * what the device is waiting for. Walking cases() rather than a hand-kept
- * list is the point: the list silently missed a case added beside it.
- */
+// The setup screen renders the reason by key, so a case without copy prints the
+// raw key at the user. cases() is walked rather than a hand-kept list because the
+// list silently missed a case added right beside it.
 
 it('has copy for every blocked reason in both languages', function (): void {
     $missing = [];

@@ -2,17 +2,11 @@
 
 declare(strict_types=1);
 
+use Modules\OpenBanking\Internal\Contracts\RemoteSourceAdapter;
+use Modules\OpenBanking\Internal\Dto\FetchWindow;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Events\OpenBankingConsentFailed;
 use Modules\OpenBanking\Providers\OpenBankingServiceProvider;
-use Modules\OpenBanking\Public\Contracts\RemoteSourceAdapter;
-use Modules\OpenBanking\Public\Dto\FetchWindow;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
-
-/*
- * Wave 0 acceptance gate: the OpenBanking module actually boots (closes the
- * Phase 10 modules_statuses.json landmine) and its four Wave 0 Public types
- * autoload cleanly (interface-first blueprints for downstream waves).
- */
 
 it('registers OpenBankingServiceProvider with the application', function (): void {
     expect(app()->getProviders(OpenBankingServiceProvider::class))->not->toBeEmpty();

@@ -4,14 +4,8 @@ declare(strict_types=1);
 
 use Modules\Recurring\Internal\Detection\ClusterKeyComposer;
 
-/*
- * Deterministic cluster-key composition. The composer normalises
- * direction / counterparty / currency / cadence into a single double-
- * colon-separated lowercase token used as the (user_id, direction,
- * cluster_key, latest_currency) UNIQUE constraint payload on
- * recurring_series.
- */
-
+// The composed key is the payload of the UNIQUE(user_id, direction, cluster_key,
+// latest_currency) constraint on recurring_series, so its shape has to be stable.
 it('composes a canonical lowercase double-colon-separated key', function (): void {
     $composer = new ClusterKeyComposer;
 

@@ -8,16 +8,9 @@ use Modules\Import\Internal\Detectors\PaypalCsvStartingBalanceDetector;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for PaypalCsvStartingBalanceDetector. The PayPal
- * Activity CSV carries no usable opening-balance signal — the
- * detector ALWAYS returns an empty list so the wizard surfaces the
- * PayPal account's card in manual-entry state.
- *
- * The "never returns a zero candidate" invariant is the safety net
- * preventing a `€0.00 starting balance` confirm card from quietly
- * persisting and losing the user's actual opening balance.
- */
+// The PayPal Activity CSV carries no opening-balance signal, so the detector
+// always declines and the wizard falls back to manual entry. A zero candidate
+// instead would quietly persist €0.00 over the user's real opening balance.
 
 it('returns the supports() flag only for the paypal-csv source format', function (): void {
     $detector = new PaypalCsvStartingBalanceDetector;

@@ -12,10 +12,8 @@ use Modules\Auth\Models\UserRecoveryCode;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 
-// Runs inside a database transaction so a partial failure never leaves
-// the user with no usable recovery path. The plaintext codes are
-// printed to the console exactly once -- the operator must record
-// them on the spot, or re-run the command.
+// The transaction is what stops a partial failure leaving the user with the
+// old sheet burned and no fresh codes issued.
 class RegenerateRecoveryCodesCommand extends Command
 {
     private const RECOVERY_CODE_COUNT = 10;
@@ -37,10 +35,8 @@ class RegenerateRecoveryCodesCommand extends Command
 
     public function handle(): int
     {
-        // The required `username` argument is narrowed to a string by
-        // Larastan against the typed signature (mirrors the
-        // ResetPasswordCommand carve-out), so no is_string() guard
-        // is needed here.
+        // Larastan narrows the required `username` argument to string from the
+        // typed signature, so no is_string() guard is needed.
         $username = strtolower(trim($this->argument('username')));
         if ($username === '') {
             $this->error('Username is required.');
@@ -60,16 +56,13 @@ class RegenerateRecoveryCodesCommand extends Command
         $codesPlain = $this->db->connection()->transaction(function () use ($user): array {
             $now = $this->clock->now();
 
-            // Burn every outstanding (unused) code so the old printed
-            // sheet stops working. We stamp `used_at` rather than
-            // deleting so the audit chain is preserved.
+            // Burning the old sheet stamps `used_at` rather than deleting, so
+            // the audit chain of issued codes survives a rotation.
             $this->db->connection()->table('user_recovery_codes')
                 ->where('user_id', $user->id)
                 ->whereNull('used_at')
                 ->update(['used_at' => $now]);
 
-            // Generate the fresh batch — distinct codes only, mirror
-            // the SignupAction collision guard.
             $codesPlain = [];
             while (count($codesPlain) < self::RECOVERY_CODE_COUNT) {
                 $code = $this->codeGenerator->generate();

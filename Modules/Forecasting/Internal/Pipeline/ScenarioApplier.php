@@ -7,6 +7,7 @@ namespace Modules\Forecasting\Internal\Pipeline;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\Forecasting\Public\Dto\ScenarioMutationDto;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\AddOneOffPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\AddRecurringPayload;
@@ -20,14 +21,10 @@ use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Psr\Log\LoggerInterface;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final readonly class ScenarioApplier
 {
-    // A one-off scenario amount has no variance-tolerance field on the
-    // add_recurring form, so its band is a fixed, deliberately calm ±5%
-    // around the entered magnitude rather than a series-derived width.
+    // The add_recurring form has no variance-tolerance field, so its band is a
+    // fixed ±5% rather than a series-derived width.
     private const float ONE_OFF_ENVELOPE_LOW_MULTIPLIER = 0.95;
 
     private const float ONE_OFF_ENVELOPE_HIGH_MULTIPLIER = 1.05;
@@ -77,13 +74,11 @@ final readonly class ScenarioApplier
         CarbonImmutable $horizonEnd,
         int $horizonDays,
     ): array {
-        // $horizonDays is accepted for symmetry with the per-kind helper
-        // signatures; no kind needs it.
+        // Accepted so this mirrors apply()'s signature; no kind needs it.
         unset($horizonDays);
 
-        // The default arm is unreachable in practice — the typed cast already
-        // raises on an unknown kind at read time — and leaves the
-        // contributions untouched rather than guessing at one.
+        // The default arm is unreachable — the typed cast raises on an unknown
+        // kind at read time — so it no-ops rather than guessing.
         return match (true) {
             $mutation->payload instanceof CancelSeriesPayload => $this->applyCancelSeries($contributions, $mutation->payload),
             $mutation->payload instanceof AddOneOffPayload => $this->applyAddOneOff($contributions, $mutation->payload, $asOf, $horizonEnd, $user),
@@ -94,9 +89,8 @@ final readonly class ScenarioApplier
         };
     }
 
-    // The index of the earliest contribution for a series, or null when the
-    // baseline holds none — a shift with nothing to shift. The index rather
-    // than the date because a 'first_only' scope shifts exactly that entry.
+    // An index rather than a date: a ShiftScope::Next shift moves exactly that
+    // one entry, so the caller has to identify it positionally.
     /**
      * @param  list<ForecastContribution>  $contributions
      */
@@ -115,21 +109,14 @@ final readonly class ScenarioApplier
         return $earliestIndex;
     }
 
-    // A payload date parsed to a day boundary, or null when it will not parse.
-    // The recurring start is allowed to precede asOf — the occurrence walk
-    // skips those — so it is bounded by the caller rather than here.
+    // Unbounded on purpose: a recurring start may precede asOf (the occurrence
+    // walk skips those), so the horizon check belongs to the caller.
     private function parsedDate(string $raw): ?CarbonImmutable
     {
-        try {
-            return CarbonImmutable::parse($raw)->startOfDay();
-        } catch (\Throwable) {
-            return null;
-        }
+        return SafeDate::parseOrNull($raw)?->startOfDay();
     }
 
-    // A payload date parsed and bounded to the projection window, or null when
-    // it is unparseable or falls outside it — both meaning the mutation has
-    // nothing to contribute rather than that something went wrong.
+    // null means the mutation has nothing to contribute, not that it failed.
     private function dateWithinHorizon(string $raw, CarbonImmutable $asOf, CarbonImmutable $horizonEnd): ?CarbonImmutable
     {
         $date = $this->parsedDate($raw);
@@ -167,8 +154,7 @@ final readonly class ScenarioApplier
     ): array {
         $date = $this->dateWithinHorizon($payload->date, $asOf, $horizonEnd);
 
-        // pickAccountIdForOneOff answers 0 when there is no account to land on
-        // — an empty baseline AND no owned account — and has already logged.
+        // 0 means there was no account to land on; it has already logged.
         $accountId = $date === null ? 0 : $this->pickAccountIdForOneOff($contributions, $user);
 
         if ($date === null || $accountId === 0) {
@@ -192,8 +178,6 @@ final readonly class ScenarioApplier
     }
 
     /**
-     * @link ../../../../.docs/features/forecasting/architecture.md
-     *
      * @param  list<ForecastContribution>  $contributions
      */
     private function pickAccountIdForOneOff(array $contributions, User $user): int
@@ -203,8 +187,6 @@ final readonly class ScenarioApplier
             $counts[$c->accountId] = ($counts[$c->accountId] ?? 0) + 1;
         }
         if ($counts !== []) {
-            // Sort by count DESC, then by accountId ASC for a
-            // deterministic tie-break.
             uksort($counts, static function (int $a, int $b) use ($counts): int {
                 $byCount = $counts[$b] <=> $counts[$a];
                 if ($byCount !== 0) {
@@ -217,8 +199,6 @@ final readonly class ScenarioApplier
             return array_key_first($counts);
         }
 
-        // Empty baseline — pick the user's lowest-id account as the
-        // landing pad.
         $accountId = $this->db->connection()->table('accounts')
             ->where('user_id', $user->id)
             ->orderBy('id')
@@ -249,8 +229,7 @@ final readonly class ScenarioApplier
         $start = $this->parsedDate($payload->startDate);
         $cadence = $payload->cadence;
 
-        // pickAccountIdForOneOff is only asked once the payload is known to be
-        // usable, so an unusable one never reaches its logging.
+        // Gated on $usable so an unusable payload never trips its warning log.
         $usable = $start !== null && in_array($cadence, ['weekly', 'monthly', 'quarterly', 'yearly'], true);
         $accountId = $usable ? $this->pickAccountIdForOneOff($contributions, $user) : 0;
 
@@ -261,8 +240,6 @@ final readonly class ScenarioApplier
         $magnitude = abs($payload->amountMinor);
         $sign = $payload->direction === 'income' ? 1 : -1;
         $point = $sign * $magnitude;
-        // ±5% calmest-default envelope — the add_recurring form has no
-        // variance-tolerance field, so a fixed conservative band is used.
         $lowMag = (int) round($magnitude * self::ONE_OFF_ENVELOPE_LOW_MULTIPLIER);
         $highMag = (int) round($magnitude * self::ONE_OFF_ENVELOPE_HIGH_MULTIPLIER);
         [$lowMinor, $highMinor] = $sign < 0 ? [-$highMag, -$lowMag] : [$lowMag, $highMag];
@@ -323,10 +300,8 @@ final readonly class ScenarioApplier
         int $tol,
         RecurringSeriesDto $series,
     ): ForecastContribution {
-        // Preserve the sign of the underlying series; the user enters a
-        // magnitude in the form. If the existing contribution is signed
-        // negative (expense) and the user enters a positive newAmountMinor,
-        // re-apply the negative sign to keep the convention consistent.
+        // The form collects a magnitude, so the sign comes from the series:
+        // a positive entry against an expense stays an expense.
         $magnitude = abs($newAmountMinor);
         $originalPoint = $series->latestAmount->toMinor();
         $sign = $originalPoint < 0 ? -1 : 1;
@@ -366,9 +341,7 @@ final readonly class ScenarioApplier
         $firstIndex = $this->earliestIndexForSeries($contributions, $payload->seriesId);
         $firstDate = $firstIndex === null ? null : $contributions[$firstIndex]->date;
 
-        // diffInDays returns float in Carbon 3; round to integer days for the
-        // addDays() shift below. A zero delta means the series already starts
-        // where the mutation asks it to.
+        // diffInDays returns a float in Carbon 3; addDays() needs whole days.
         $deltaDays = $newDate === null || $firstDate === null
             ? 0
             : (int) round($firstDate->diffInDays($newDate, false));
@@ -422,9 +395,6 @@ final readonly class ScenarioApplier
         };
     }
 
-    /**
-     * @link ../../../../.docs/features/forecasting/architecture.md
-     */
     private function logCrossUserMismatchIfAny(string $mutationKind, int $seriesId, User $user): void
     {
         $exists = $this->db->connection()->table('recurring_series')

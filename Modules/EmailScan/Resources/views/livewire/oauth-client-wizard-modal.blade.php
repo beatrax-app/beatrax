@@ -33,7 +33,7 @@
          so a later modal-show with the new name silently misses the
          registered modal. Re-mounting forces fluxModal('...') to
          re-init with the new name. --}}
-    <flux:modal wire:key="oauth-modal-{{ $provider }}" name="oauth-client-wizard-{{ $provider }}" class="md:max-w-2xl" dismissible="false">
+    <flux:modal wire:key="oauth-modal-{{ $provider }}" name="oauth-client-wizard-{{ $provider }}" class="md:max-w-2xl" :dismissible="false">
         <div class="space-y-6">
             <header>
                 @if ($provider === \Modules\EmailScan\Public\Enums\MailProvider::Gmail->value)
@@ -49,21 +49,22 @@
             @if ($provider === \Modules\EmailScan\Public\Enums\MailProvider::Gmail->value)
                 <ol class="space-y-6">
                     <li class="flex items-start gap-4">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-900">1</span>
+                        <x-email-scan::step-number lead>1</x-email-scan::step-number>
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.gmail.step1_title') }}</p>
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.gmail.step1_body') }}</p>
-                            <a
+                            <x-core::secondary-button
                                 href="https://console.cloud.google.com/"
+                                size="sm"
+                                class="gap-1"
                                 target="_blank"
                                 rel="noopener"
-                                class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
-                            >{{ Lang::get('email-scan::wizard.gmail.step1_link') }}</a>
+                            >{{ Lang::get('email-scan::wizard.gmail.step1_link') }}</x-core::secondary-button>
                         </div>
                     </li>
 
                     <li class="flex items-start gap-4">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">2</span>
+                        <x-email-scan::step-number>2</x-email-scan::step-number>
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.gmail.step2_title') }}</p>
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.gmail.step2_body') }}</p>
@@ -71,7 +72,7 @@
                     </li>
 
                     <li class="flex items-start gap-4">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">3</span>
+                        <x-email-scan::step-number>3</x-email-scan::step-number>
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.gmail.step3_title') }}</p>
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.gmail.step3_body') }}</p>
@@ -79,61 +80,53 @@
                     </li>
 
                     <li class="flex items-start gap-4">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">4</span>
+                        <x-email-scan::step-number>4</x-email-scan::step-number>
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.gmail.step4_title') }}</p>
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.gmail.step4_body') }}</p>
-                            <label class="flex items-center gap-2 pt-1">
-                                <input
-                                    type="checkbox"
-                                    wire:model.live="publishedConfirmed"
-                                    class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600 dark:border-slate-700 dark:bg-slate-900 dark:text-emerald-500"
-                                >
-                                <span class="text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.gmail.step4_checkbox') }}</span>
-                            </label>
+                            <x-core::checkbox-field
+                                class="pt-1"
+                                :label="Lang::get('email-scan::wizard.gmail.step4_checkbox')"
+                                wire:model.live="publishedConfirmed"
+                            />
                         </div>
                     </li>
 
                     <li class="flex items-start gap-4">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">5</span>
+                        <x-email-scan::step-number>5</x-email-scan::step-number>
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.gmail.step5_title') }}</p>
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.gmail.step5_body') }}</p>
-                            <button
-                                type="button"
+                            <x-core::secondary-button
+                                size="sm"
+                                class="gap-1 font-mono"
                                 x-data
-                                x-on:click="navigator.clipboard.writeText($el.querySelector('span').textContent); $el.querySelector('span').textContent = '{{ Lang::get('email-scan::wizard.copied') }}'; setTimeout(() => $el.querySelector('span').textContent = '{{ $redirectUri }}', 2000);"
-                                class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-mono text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
-                            ><span>{{ $redirectUri }}</span></button>
+                                x-on:click="(async () => { const label = $el.querySelector('span'); const was = label.textContent; if (await window.beatraxCopy(was)) { label.textContent = '{{ Lang::get('email-scan::wizard.copied') }}'; setTimeout(() => label.textContent = '{{ $redirectUri }}', 2000); } })()"
+                            ><span>{{ $redirectUri }}</span></x-core::secondary-button>
                         </div>
                     </li>
 
                     <li class="flex items-start gap-4">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">6</span>
+                        <x-email-scan::step-number>6</x-email-scan::step-number>
                         <div class="space-y-3 flex-1">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.gmail.step6_title') }}</p>
                             <div class="space-y-3">
-                                <div>
-                                    <label for="gmail-client-id" class="block text-xs font-medium text-slate-500 mb-1 dark:text-slate-400">{{ Lang::get('email-scan::wizard.gmail.client_id_label') }}</label>
-                                    <input
-                                        id="gmail-client-id"
-                                        type="text"
-                                        wire:model.live="clientId"
-                                        placeholder="123456789-abcdef.apps.googleusercontent.com"
-                                        class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
-                                    >
-                                </div>
-                                <div>
-                                    <label for="gmail-client-secret" class="block text-xs font-medium text-slate-500 mb-1 dark:text-slate-400">{{ Lang::get('email-scan::wizard.gmail.client_secret_label') }}</label>
-                                    <input
-                                        id="gmail-client-secret"
-                                        type="password"
-                                        wire:model.blur="clientSecret"
-                                        placeholder="GOCSPX-..."
-                                        class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
-                                    >
-                                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.secret_help') }}</p>
-                                </div>
+                                <x-core::form-field
+                                    field-id="gmail-client-id"
+                                    name="clientId"
+                                    :label="Lang::get('email-scan::wizard.gmail.client_id_label')"
+                                    wire:model.live="clientId"
+                                    placeholder="123456789-abcdef.apps.googleusercontent.com"
+                                />
+                                <x-core::form-field
+                                    field-id="gmail-client-secret"
+                                    name="clientSecret"
+                                    type="password"
+                                    :label="Lang::get('email-scan::wizard.gmail.client_secret_label')"
+                                    :hint="Lang::get('email-scan::wizard.secret_help')"
+                                    wire:model.blur="clientSecret"
+                                    placeholder="GOCSPX-..."
+                                />
                             </div>
                         </div>
                     </li>
@@ -141,21 +134,22 @@
             @elseif ($provider === \Modules\EmailScan\Public\Enums\MailProvider::Microsoft->value)
                 <ol class="space-y-6">
                     <li class="flex items-start gap-4">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-900">1</span>
+                        <x-email-scan::step-number lead>1</x-email-scan::step-number>
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.microsoft.step1_title') }}</p>
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.microsoft.step1_body') }}</p>
-                            <a
+                            <x-core::secondary-button
                                 href="https://entra.microsoft.com/"
+                                size="sm"
+                                class="gap-1"
                                 target="_blank"
                                 rel="noopener"
-                                class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
-                            >{{ Lang::get('email-scan::wizard.microsoft.step1_link') }}</a>
+                            >{{ Lang::get('email-scan::wizard.microsoft.step1_link') }}</x-core::secondary-button>
                         </div>
                     </li>
 
                     <li class="flex items-start gap-4">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">2</span>
+                        <x-email-scan::step-number>2</x-email-scan::step-number>
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.microsoft.step2_title') }}</p>
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.microsoft.step2_body') }}</p>
@@ -163,21 +157,21 @@
                     </li>
 
                     <li class="flex items-start gap-4">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">3</span>
+                        <x-email-scan::step-number>3</x-email-scan::step-number>
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.microsoft.step3_title') }}</p>
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.microsoft.step3_body') }}</p>
-                            <button
-                                type="button"
+                            <x-core::secondary-button
+                                size="sm"
+                                class="gap-1 font-mono"
                                 x-data
-                                x-on:click="navigator.clipboard.writeText($el.querySelector('span').textContent); $el.querySelector('span').textContent = '{{ Lang::get('email-scan::wizard.copied') }}'; setTimeout(() => $el.querySelector('span').textContent = '{{ $redirectUri }}', 2000);"
-                                class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-mono text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
-                            ><span>{{ $redirectUri }}</span></button>
+                                x-on:click="(async () => { const label = $el.querySelector('span'); const was = label.textContent; if (await window.beatraxCopy(was)) { label.textContent = '{{ Lang::get('email-scan::wizard.copied') }}'; setTimeout(() => label.textContent = '{{ $redirectUri }}', 2000); } })()"
+                            ><span>{{ $redirectUri }}</span></x-core::secondary-button>
                         </div>
                     </li>
 
                     <li class="flex items-start gap-4">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">4</span>
+                        <x-email-scan::step-number>4</x-email-scan::step-number>
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.microsoft.step4_title') }}</p>
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.microsoft.step4_body') }}</p>
@@ -185,7 +179,7 @@
                     </li>
 
                     <li class="flex items-start gap-4">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">5</span>
+                        <x-email-scan::step-number>5</x-email-scan::step-number>
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.microsoft.step5_title') }}</p>
                             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.microsoft.step5_body') }}</p>
@@ -193,31 +187,26 @@
                     </li>
 
                     <li class="flex items-start gap-4">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">6</span>
+                        <x-email-scan::step-number>6</x-email-scan::step-number>
                         <div class="space-y-3 flex-1">
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::wizard.microsoft.step6_title') }}</p>
                             <div class="space-y-3">
-                                <div>
-                                    <label for="microsoft-client-id" class="block text-xs font-medium text-slate-500 mb-1 dark:text-slate-400">{{ Lang::get('email-scan::wizard.microsoft.client_id_label') }}</label>
-                                    <input
-                                        id="microsoft-client-id"
-                                        type="text"
-                                        wire:model.live="clientId"
-                                        placeholder="12345678-1234-1234-1234-123456789abc"
-                                        class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
-                                    >
-                                </div>
-                                <div>
-                                    <label for="microsoft-client-secret" class="block text-xs font-medium text-slate-500 mb-1 dark:text-slate-400">{{ Lang::get('email-scan::wizard.microsoft.client_secret_label') }}</label>
-                                    <input
-                                        id="microsoft-client-secret"
-                                        type="password"
-                                        wire:model.blur="clientSecret"
-                                        placeholder="..."
-                                        class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
-                                    >
-                                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::wizard.secret_help') }}</p>
-                                </div>
+                                <x-core::form-field
+                                    field-id="microsoft-client-id"
+                                    name="clientId"
+                                    :label="Lang::get('email-scan::wizard.microsoft.client_id_label')"
+                                    wire:model.live="clientId"
+                                    placeholder="12345678-1234-1234-1234-123456789abc"
+                                />
+                                <x-core::form-field
+                                    field-id="microsoft-client-secret"
+                                    name="clientSecret"
+                                    type="password"
+                                    :label="Lang::get('email-scan::wizard.microsoft.client_secret_label')"
+                                    :hint="Lang::get('email-scan::wizard.secret_help')"
+                                    wire:model.blur="clientSecret"
+                                    placeholder="..."
+                                />
                             </div>
                         </div>
                     </li>
@@ -229,11 +218,7 @@
             @endif
 
             <footer class="flex items-center justify-end gap-3">
-                <button
-                    type="button"
-                    wire:click="cancel"
-                    class="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
-                >{{ Lang::get('email-scan::wizard.cancel') }}</button>
+                <x-core::secondary-button wire:click="cancel">{{ Lang::get('email-scan::wizard.cancel') }}</x-core::secondary-button>
                 <button
                     type="button"
                     wire:click="submit"

@@ -12,12 +12,11 @@ use Modules\Ledger\Public\Enums\Direction;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
 /**
- * @link ../../../../.docs/features/drift-alerts/architecture.md
+ * @link ../../../../.docs/features/drift-alerts/drift-detection.md
  */
 final class SubscriptionDriftWatchQuery
 {
-    // Covers any realistic subscription lifetime (50 years monthly / 11
-    // years weekly) — see the class @link for why the full history is read.
+    // Covers any realistic subscription lifetime: 50 years monthly, 11 weekly.
     private const FULL_HISTORY_POINTS = 600;
 
     public function __construct(
@@ -44,8 +43,7 @@ final class SubscriptionDriftWatchQuery
                 continue;
             }
 
-            // Expense amounts are negative; compare the ABSOLUTE price so a
-            // more-expensive charge reads as a positive (upward) drift.
+            // Expense amounts are negative; magnitudes make a rise read upward.
             $baseline = abs($points[0]['amount_minor']);
             $latest = abs($points[count($points) - 1]['amount_minor']);
             $delta = $latest - $baseline;

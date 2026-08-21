@@ -6,11 +6,6 @@ namespace Modules\EmailScan\Internal\Clients;
 
 use RuntimeException;
 
-// The Google SDK's Gmail service was built without one of the REST
-// resources this client drives (users.messages / users.history). That
-// is an SDK-shape invariant breaking, not a mailbox condition, so no
-// token refresh or retry can recover it.
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
+// The Google SDK's Gmail service was built without users.messages or
+// users.history. An SDK-shape break, so no refresh or retry recovers it.
 final class GmailResourceUnavailableException extends RuntimeException {}

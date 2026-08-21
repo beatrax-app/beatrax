@@ -10,19 +10,10 @@ use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 
 uses(RefreshDatabase::class);
 
-/*
- * RelayConfig refuses to report success when it could not write.
- *
- * The endpoint and the auth token decide where this device syncs and what it
- * proves itself with, so a write that silently did nothing would leave the
- * device pointing at whatever the previous value was while the caller believes
- * it was reconfigured.
- *
- * The guards are `=== false` checks on file_put_contents(), which only decide
- * anything because the call is suppressed — unsuppressed, Laravel's error
- * handler converts the E_WARNING to an ErrorException first and the guard
- * never runs.
- */
+// The endpoint and the auth token decide where this device syncs and what it
+// proves itself with, so a write that silently did nothing would leave the device
+// on its old value while the caller believes it was reconfigured. The `=== false`
+// guards only decide anything because the write is suppressed.
 beforeEach(function (): void {
     $this->storageRoot = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-relay-'.bin2hex(random_bytes(6)).DIRECTORY_SEPARATOR.'storage';
     putenv('NATIVEPHP_STORAGE_PATH='.$this->storageRoot);
@@ -64,12 +55,9 @@ it('refuses when the config directory cannot be created', function (): void {
     @unlink($dir);
 });
 
-/*
- * The auth token is key material, so its failures are SecretFileException
- * rather than the config type — the recovery differs. A half-written or
- * world-readable token is a secret on disk in a state the caller has to
- * reason about, which a failed endpoint write never is.
- */
+// The auth token is key material, so its failures raise SecretFileException
+// rather than the config type: a half-written or world-readable token is a secret
+// on disk in a state the caller has to reason about, which an endpoint never is.
 
 it('refuses when the secrets directory cannot be created', function (): void {
     $dir = UserDataPathService::secretsPath();

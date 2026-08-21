@@ -2,37 +2,21 @@
 
 declare(strict_types=1);
 
-// Plan 05-05 — BiometricDeviceStore + PlatformDetector (GREEN)
-
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Auth\Internal\Lock\PlatformDetector;
 
-/*
- * Unit coverage for BiometricDeviceStore and PlatformDetector.
- *
- * The DB-backed BiometricDeviceStore tests (store/findForUser/increment/reset/isArmed)
- * live in BiometricEnrollmentTest (Feature suite, RefreshDatabase) because they
- * need the full DB stack.
- *
- * This Unit test covers:
- *   - BiometricDeviceStore class exists and singletons resolve.
- *   - isArmed() pure logic (using a synthetic stdClass with biometric_failed_count).
- *   - PlatformDetector platform-aware labels (pure string logic, no DB).
- *   - method_exists checks for incrementFailureCount and resetFailureCount (Wave 0 contract).
- */
+// Pure logic only. The DB-backed store behaviour lives in
+// BiometricEnrollmentTest, which has RefreshDatabase behind it.
 
 it('BiometricDeviceStore class exists (RED until 05-05)', function (): void {
     expect(class_exists(BiometricDeviceStore::class))->toBeTrue();
 });
 
-it('exposes incrementFailureCount on the Wave 0 contract (DB behavior covered in BiometricEnrollmentTest)', function (): void {
-    // IN-10: this Unit suite has no DB; the behavioral increment/reset
-    // assertions live in BiometricEnrollmentTest (Feature, RefreshDatabase).
-    // This test only pins the Wave 0 method contract — titled accordingly.
+it('exposes incrementFailureCount (DB behavior covered in BiometricEnrollmentTest)', function (): void {
     expect(method_exists(BiometricDeviceStore::class, 'incrementFailureCount'))->toBeTrue();
 });
 
-it('exposes resetFailureCount on the Wave 0 contract (DB behavior covered in BiometricEnrollmentTest)', function (): void {
+it('exposes resetFailureCount (DB behavior covered in BiometricEnrollmentTest)', function (): void {
     expect(method_exists(BiometricDeviceStore::class, 'resetFailureCount'))->toBeTrue();
 });
 

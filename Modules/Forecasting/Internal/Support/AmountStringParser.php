@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace Modules\Forecasting\Internal\Support;
 
 use InvalidArgumentException;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final class AmountStringParser
 {
     /**
@@ -25,73 +23,20 @@ final class AmountStringParser
             throw new InvalidArgumentException('Amount is required.');
         }
 
-        $negative = false;
-        $trimmed = self::stripSign($trimmed, $negative);
+        // MoneyInput knows only the '-' a keyboard produces; a typed '+' is
+        // a sign this form accepts and the value object never sees.
+        $minor = MoneyInput::tryToMinor(str_starts_with($trimmed, '+') ? ltrim(substr($trimmed, 1)) : $trimmed);
 
-        $normalised = self::normaliseDecimalSeparators(str_replace([' '], '', $trimmed));
-
-        if (! is_numeric($normalised)) {
-            throw new InvalidArgumentException('Amount must be a number.');
+        if ($minor === null) {
+            throw new InvalidArgumentException('Amount must be a number with at most two decimals.');
         }
-
-        // Reject a stripped leading '-' if the caller has banned negatives.
-        // (The float value at this point is unsigned because the sign was
-        // peeled off before `str_starts_with('-')` above.)
-        if (! $allowNegative && $negative) {
+        if (! $allowNegative && $minor < 0) {
             throw new InvalidArgumentException('Amount must be zero or positive.');
-        }
-
-        $float = (float) $normalised;
-        if (! $allowNegative && $float < 0) {
-            throw new InvalidArgumentException('Amount must be zero or positive.');
-        }
-
-        $minor = (int) round($float * 100);
-        if ($negative) {
-            $minor = -$minor;
         }
         if ($requireNonZero && $minor === 0) {
             throw new InvalidArgumentException('Amount must be non-zero.');
         }
 
         return $minor;
-    }
-
-    /**
-     * @param  bool  $negative  set to true when a leading '-' is stripped
-     */
-    private static function stripSign(string $trimmed, bool &$negative): string
-    {
-        if (str_starts_with($trimmed, '-')) {
-            $negative = true;
-
-            return ltrim(substr($trimmed, 1));
-        }
-        if (str_starts_with($trimmed, '+')) {
-            return ltrim(substr($trimmed, 1));
-        }
-
-        return $trimmed;
-    }
-
-    private static function normaliseDecimalSeparators(string $normalised): string
-    {
-        $commaPos = strrpos($normalised, ',');
-        $dotPos = strrpos($normalised, '.');
-        if ($commaPos !== false && $dotPos !== false) {
-            // Both present — the LAST separator is the decimal mark; the
-            // earlier-occurring one (or copies of it) is a thousands
-            // separator and is stripped.
-            return $commaPos > $dotPos
-                ? str_replace(',', '.', str_replace('.', '', $normalised))
-                : str_replace(',', '', $normalised);
-        }
-        if ($commaPos !== false) {
-            return str_replace(',', '.', $normalised);
-        }
-
-        // Else: only dots (or none). Leave dots in place so "12.50"
-        // parses as 12.50 (not 1250).
-        return $normalised;
     }
 }

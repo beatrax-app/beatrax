@@ -13,14 +13,6 @@ use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Transaction;
 
-/*
- * Wire-level coverage for the ICS PDF import path: idempotency on
- * re-import (both SHA-identical and SHA-different-but-content-identical
- * shapes), persistence of native + settled + fx_rate_used for foreign-
- * currency rows, raw_payload preservation with card-number scrubbing,
- * and the first-time "name your ICS card account" wizard branch.
- */
-
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
@@ -29,10 +21,8 @@ beforeEach(function (): void {
 });
 
 it('imports every parsed row from the redacted .txt fixture on the first run via the test-double extractor', function (): void {
-    // Wire-level: uses the tiny synthetic .pdf so the real pdftotext +
-    // HeaderSniffer + SourceAdapterRegistry path is exercised end-to-end.
-    // The redacted-text fixture is exercised at the unit-test layer (see
-    // Modules/Ingestion/tests/Unit/Adapters/Ics/IcsPdfAdapterTest.php).
+    // The tiny synthetic .pdf drives real pdftotext + HeaderSniffer; the
+    // redacted-text fixture is covered in Ingestion's IcsPdfAdapterTest.
     $result = $this->importer->runAndConfirm($this->tinyPdf, 'ics-pdf', $this->fixtureUser);
 
     expect($result->inserted)->toBeGreaterThan(0);
@@ -49,18 +39,14 @@ it('returns zero new rows when re-importing the same SHA-256 tiny PDF', function
 })->group('phase-3');
 
 it('returns zero new rows when re-importing a different SHA but identical content', function (): void {
-    // Copy the tiny PDF to a temp path and flip a single byte inside
-    // its xref table so the SHA-256 differs but the extracted text is
-    // identical. Tier-2 fingerprint-v3 dedup catches it.
     $bytes = file_get_contents($this->tinyPdf);
     if ($bytes === false) {
         throw new RuntimeException('Could not read tiny PDF fixture.');
     }
 
-    // Mutate one byte in the xref padding zeros — won't affect pdftotext
-    // extraction but will change the SHA. The xref section's leading
-    // `0000000000` placeholder for object 0 is safe to bump to '0000000001'
-    // because pdftotext doesn't dereference it.
+    // Bumping the xref placeholder for object 0 changes the SHA-256 without
+    // touching the extracted text — pdftotext never dereferences it — so what
+    // catches the re-import is fingerprint-v3 dedup, not the file hash.
     $needle = '0000000000 65535 f';
     $mutated = str_replace($needle, '0000000001 65535 f', $bytes);
     if ($mutated === $bytes) {
@@ -71,9 +57,6 @@ it('returns zero new rows when re-importing a different SHA but identical conten
     file_put_contents($tmp, $mutated);
 
     try {
-        // First import the original; then the SHA-different copy. The
-        // second run inserts zero rows because fingerprint-v3 dedup
-        // identifies the same logical transaction.
         $first = $this->importer->runAndConfirm($this->tinyPdf, 'ics-pdf', $this->fixtureUser);
         $second = $this->importer->runAndConfirm($tmp, 'ics-pdf', $this->fixtureUser);
 
@@ -99,14 +82,9 @@ it('persists settled_amount_minor and settled_currency for an EUR-native row', f
 })->group('phase-3');
 
 it('persists native + settled + fx_rate_used for a foreign-currency row', function (): void {
-    // The tiny synthetic PDF carries one EUR-native row. To exercise
-    // the FX-row persistence path at the wire level we substitute the
-    // PdfTextExtractor + SourceAdapterRegistry singletons with versions
-    // bound to a test-double extractor returning the redacted-text
-    // fixture verbatim. The redacted .txt fixture carries three real
-    // FX rows (Augment Code USD/EUR, Audible UK GBP/EUR, Vitrus USD/EUR);
-    // we assert the Augment Code row persists with both legs + derived
-    // fx_rate_used.
+    // The tiny synthetic PDF has only an EUR-native row, so the extractor is
+    // doubled out for the redacted .txt fixture, which carries three real FX
+    // rows (Augment Code USD/EUR, Audible UK GBP/EUR, Vitrus USD/EUR).
     $fixtureTxt = base_path('Modules/Ingestion/tests/fixtures/ics/ics-sample-1.txt');
     $extractorDouble = new class($fixtureTxt) extends PdfTextExtractor
     {
@@ -126,11 +104,9 @@ it('persists native + settled + fx_rate_used for a foreign-currency row', functi
         }
     };
     $this->app->instance(PdfTextExtractor::class, $extractorDouble);
-    // Several singletons in the container hold the original IcsPdfAdapter
-    // through transitive constructor wiring (SourceAdapterRegistry holds
-    // it; ImportPipeline holds the registry; ParseStage holds the
-    // registry). Forget them so the next resolution chain wires the
-    // doubled extractor through to the adapter.
+    // The adapter is reachable transitively from three other singletons
+    // (registry -> pipeline, registry -> parse stage), so all of them have to
+    // go before the doubled extractor can reach it.
     $this->app->forgetInstance(SourceAdapterRegistry::class);
     $this->app->forgetInstance(IcsPdfAdapter::class);
     $this->app->forgetInstance(ImportPipeline::class);
@@ -148,10 +124,8 @@ it('persists native + settled + fx_rate_used for a foreign-currency row', functi
     expect($augment->amount_minor)->toBe(-5000);
     expect($augment->settled_amount_minor)->toBe(-4371);
     expect($augment->settled_currency)->toBe('EUR');
-    // 4371 / 5000 = 0.8742 (with the sign-balanced absolute ratio of
-    // -4371 / -5000). BigDecimal at scale 8 with HALF_UP rounding writes
-    // '0.87420000' into the decimal(18,8) column; SQLite normalises the
-    // stored text by trimming trailing zeros after the decimal point.
+    // The column holds '0.87420000' at scale 8; SQLite trims the trailing
+    // zeros back out when reading the stored text.
     expect((string) $augment->fx_rate_used)->toBe('0.8742');
 })->group('phase-3');
 
@@ -182,18 +156,14 @@ it('never persists card-number text into transactions.raw_payload', function ():
         $extracted = $payload['extractedText'] ?? '';
         expect($extracted)->toBeString();
         /** @var string $extracted */
-        // Canonical masked-card placeholder and any 12+ contiguous digit
-        // run are scrubbed at the adapter boundary.
         expect((bool) preg_match('/\*{4}-\*{4}-\*{4}-/u', $extracted))->toBeFalse();
         expect((bool) preg_match('/\d{12,}/', $extracted))->toBeFalse();
     }
 })->group('phase-3');
 
 it('prompts the user to name the ICS Account on the first ICS upload', function (): void {
-    // Remove the seeded ICS Account so this run is the user's first
-    // ICS upload (the seedFixtureUserAndAccount() helper provides an
-    // ICS account for the wire-level tests above; the wizard-naming
-    // path requires the row to be absent).
+    // seedFixtureUserAndAccount() ships an ICS account; the naming branch only
+    // fires when the row is absent.
     Account::query()
         ->where('user_id', $this->fixtureUser->id)
         ->where('kind', 'ics_card')
@@ -211,18 +181,13 @@ it('prompts the user to name the ICS Account on the first ICS upload', function 
         ->assertSee('Name your ICS card account.', false)
         ->assertSee("first time you've imported ICS data", false)
         ->assertSee('Save name', false)
-        // The Confirm button lives in the page header and is always rendered;
-        // the naming-step gate is enforced by the `disabled` attribute (UI)
-        // and the server-side guard in PreviewWizard::confirm() (defense).
+        // Confirm always renders in the page header; the gate is the `disabled`
+        // attribute plus the server-side guard in PreviewWizard::confirm().
         ->assertSee('Confirm import', false)
         ->assertSeeHtmlInOrder(['wire:click="confirm"', 'disabled', 'Confirm import']);
 })->group('phase-3');
 
 it('skips the name-your-account step on subsequent ICS uploads', function (): void {
-    // The seedFixtureUserAndAccount() helper already provided an ICS
-    // Account for the user, so this run mirrors the second-and-later
-    // ICS upload behaviour: the rows preview renders straight away,
-    // no naming prompt.
     expect(
         Account::query()
             ->where('user_id', $this->fixtureUser->id)

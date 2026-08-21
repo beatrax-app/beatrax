@@ -5,22 +5,9 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Reshapes the `users` table so the authentication identity is a
- * `username` rather than an email address.
- *
- *  - Drops the `email` column.
- *  - Adds `username` (string, unique) as the login identifier.
- *
- * The unique index on `email` is dropped before the column, then the
- * drop and add run in two separate ALTER TABLE callbacks: SQLite
- * rebuilds the table for each structural change and cannot drop a
- * uniquely-indexed column or add a uniquely-indexed column in a single
- * pass. The `unique()` index on `username` gives case-sensitive
- * uniqueness; case-insensitive uniqueness is enforced at the
- * application layer, which lowercases every username before it reaches
- * a write path.
- */
+// Three ALTER TABLE passes: SQLite rebuilds the table for each structural
+// change and cannot drop and add a uniquely-indexed column in one. `unique()`
+// is case-sensitive; the application lowercases every username before a write.
 return new class extends ModuleMigration
 {
     public function up(): void

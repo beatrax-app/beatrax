@@ -12,32 +12,28 @@ use Illuminate\Contracts\Events\Dispatcher as EventsDispatcher;
 use Illuminate\Database\DatabaseManager;
 use JsonException;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\EmailScan\Internal\Exceptions\InboxNotConfiguredException;
+use Modules\EmailScan\Internal\Exceptions\ProviderTransportException;
+use Modules\EmailScan\Internal\Exceptions\UnsafeProviderRequestException;
 use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\ReconsentRequiredException;
 use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Events\InboxTokenFailed;
-use Modules\EmailScan\Public\Exceptions\InboxNotConfiguredException;
-use Modules\EmailScan\Public\Exceptions\ProviderTransportException;
-use Modules\EmailScan\Public\Exceptions\UnsafeProviderRequestException;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
 /**
- * @link ../../../../.docs/features/email-scan/architecture.md
+ * @link ../../../../.docs/features/email-scan/provider-transport-hardening.md
  */
 final class GraphApiClient implements GraphApiClientContract
 {
     private const GRAPH_BASE_URI = 'https://graph.microsoft.com/v1.0/';
 
-    // SSRF host allow-list: every URL the client sends a bearer token
-    // against must resolve to one of these hosts over HTTPS. Regional
-    // clouds (graph.microsoft.de, graph.microsoft.us) are deliberately
-    // excluded — adding one is a reviewed config change, not silent.
+    // Regional clouds (graph.microsoft.de, graph.microsoft.us) are
+    // deliberately excluded — adding one is a reviewed config change.
     /** @var list<string> */
     private const ALLOWED_HOSTS = ['graph.microsoft.com'];
 
-    // Allow-list for the providerMessageId path segment in
-    // /messages/{id}/$value.
     private const MESSAGE_ID_PATTERN = '/^[A-Za-z0-9._%=+\-]{1,512}$/';
 
     public function __construct(
@@ -50,10 +46,6 @@ final class GraphApiClient implements GraphApiClientContract
         private readonly ?GuzzleClient $httpClient = null,
     ) {}
 
-    // Backfill walk over /me/messages with an OData $filter
-    // constraining the result set to known-sender addresses + a
-    // receivedDateTime lower bound; subsequent pages follow
-    // @odata.nextLink verbatim.
     /**
      * @param  list<string>  $senderPatterns
      * @return array{messages: list<array<string, mixed>>, nextLink: ?string}
@@ -72,10 +64,8 @@ final class GraphApiClient implements GraphApiClientContract
         $client = $this->makeHttpClient();
 
         if ($nextLink !== null && $nextLink !== '') {
-            // Follow the prior page's @odata.nextLink URL verbatim —
-            // Graph embeds the skip token + the original filter inside
-            // the URL, so reconstructing the query parameters would be
-            // wrong (and lossy on the skip token's opaque value).
+            // Graph bakes the skip token and the original filter into
+            // nextLink; rebuilding the query would lose the opaque token.
             $url = $nextLink;
             $body = $this->getJson($client, $accessToken, $url);
         } else {
@@ -98,10 +88,8 @@ final class GraphApiClient implements GraphApiClientContract
         ];
     }
 
-    // Fetches the raw RFC 822 byte stream via /messages/{id}/$value
-    // (Graph returns the bytes directly, no base64/JSON envelope); the
-    // path segment is allow-list validated before interpolation to
-    // defend against a crafted id carrying path-traversal payloads.
+    // /messages/{id}/$value returns raw RFC 822 bytes directly — no
+    // base64/JSON envelope, unlike Gmail's users.messages.get.
     public function getRawMessage(int $inboxId, string $providerMessageId): string
     {
         if (preg_match(self::MESSAGE_ID_PATTERN, $providerMessageId) !== 1) {
@@ -112,9 +100,8 @@ final class GraphApiClient implements GraphApiClientContract
 
         $url = self::GRAPH_BASE_URI.'me/messages/'.$providerMessageId.'/$value';
 
-        // Defence-in-depth: assert the URL matches the SSRF allow-list
-        // before any bearer token is attached, even though this URL is
-        // constructed from a constant base + a regex-validated id.
+        // Redundant by construction (constant base + regex-validated
+        // id), kept so every bearer-attaching path clears the same gate.
         $this->assertAllowedUrl($url);
 
         $accessToken = $this->ensureFreshAccessToken($inboxId);
@@ -139,10 +126,6 @@ final class GraphApiClient implements GraphApiClientContract
         return (string) $response->getBody();
     }
 
-    // Establishes or walks the /me/mailFolders/inbox/messages/delta
-    // cursor: a null $deltaLink issues the baseline call with a
-    // $filter=receivedDateTime ge {now} predicate; a non-null
-    // $deltaLink is followed verbatim (Graph embeds the cursor in it).
     /**
      * @return array{messages: list<array<string, mixed>>, deltaLink: ?string, nextLink: ?string}
      */
@@ -152,15 +135,13 @@ final class GraphApiClient implements GraphApiClientContract
         $client = $this->makeHttpClient();
 
         if ($deltaLink !== null && $deltaLink !== '') {
-            // The delta cursor URL has its filter baked in; the
-            // $sinceOverride is ignored on the walk branch.
+            // $sinceOverride is ignored here: the delta cursor URL
+            // already has its receivedDateTime filter baked in.
             $url = $deltaLink;
             $body = $this->getJson($client, $accessToken, $url, [], expectsDelta: true);
         } else {
-            // Baseline establish: prefer the caller's pinned anchor so
-            // a multi-hour backfill captures the lower bound before the
-            // walk begins, closing the race window where messages
-            // arriving mid-walk would otherwise slip past both filters.
+            // The caller's pinned anchor wins: without one, messages arriving
+            // during a multi-hour backfill slip past both filters.
             $sinceIso = ($sinceOverride ?? $this->clock->now()->toDateTimeImmutable())
                 ->format('Y-m-d\TH:i:s\Z');
             $body = $this->getJson(
@@ -183,10 +164,9 @@ final class GraphApiClient implements GraphApiClientContract
         ];
     }
 
-    // Daily-discovery query: walks /me/messages?$search="subject:(...)"
-    // (Graph rejects $filter contains(subject, ...) for the messages
-    // collection, so $search is the only supported keyword match, and
-    // $orderby is omitted since Graph rejects it alongside $search).
+    // Graph rejects $filter contains(subject, ...) on the messages
+    // collection, so $search is the only keyword match available — and
+    // Graph rejects $orderby alongside $search, hence neither is sent.
     /**
      * @param  list<string>  $keywords
      * @param  list<string>  $excludeSenders
@@ -206,19 +186,14 @@ final class GraphApiClient implements GraphApiClientContract
         $client = $this->makeHttpClient();
 
         if ($nextLink !== null && $nextLink !== '') {
-            // Follow the prior page's @odata.nextLink verbatim — the
-            // search token and original $search payload are embedded
-            // in the URL by Graph.
             $body = $this->getJson($client, $accessToken, $nextLink);
         } else {
             $quotedKeywords = array_map(
                 static fn (string $k): string => '"'.str_replace('"', '\\"', $k).'"',
                 $keywords,
             );
-            // The $search payload uses Graph's KQL-style syntax:
-            // subject:(<quoted OR-list>) matches any keyword against
-            // the subject field, wrapped in outer double quotes per
-            // the Graph $search contract; Guzzle URL-encodes the value.
+            // Graph's $search contract wants the whole KQL expression
+            // wrapped in its own outer pair of double quotes.
             $searchClause = '"subject:('.implode(' OR ', $quotedKeywords).')"';
 
             $body = $this->getJson(
@@ -235,9 +210,8 @@ final class GraphApiClient implements GraphApiClientContract
 
         $messages = $this->collectMessages($body);
 
-        // Client-side exclude-sender filter, applied after the server
-        // response since Graph rejects a "not from/..." predicate
-        // alongside $search.
+        // Graph rejects a "not from/..." predicate alongside $search,
+        // so the exclude list can only be applied client-side.
         if ($excludeSenders !== []) {
             $messages = self::applyExcludeSenders($messages, $excludeSenders);
         }
@@ -251,10 +225,8 @@ final class GraphApiClient implements GraphApiClientContract
         ];
     }
 
-    // Drops any message whose from-address matches an exclude pattern:
-    // a pattern starting with '@' matches by domain suffix, otherwise by
-    // substring. A message with no readable from-address is kept, since
-    // the exclude list can only ever remove a known sender.
+    // A message with no readable from-address is kept: the exclude
+    // list can only ever remove an already-known sender.
     /**
      * @param  list<array<string, mixed>>  $messages
      * @param  list<string>  $excludeSenders
@@ -304,10 +276,8 @@ final class GraphApiClient implements GraphApiClientContract
         return false;
     }
 
-    // Builds the OData $filter clause constraining a backfill page to
-    // the sender allow-list plus the receivedDateTime lower bound;
-    // OData escapes single quotes inside a string literal by doubling
-    // them, so the helper applies that rule before interpolating.
+    // OData escapes a single quote inside a string literal by doubling
+    // it, so o'brien has to go out as o''brien.
     /**
      * @param  list<string>  $senderPatterns
      */
@@ -322,8 +292,6 @@ final class GraphApiClient implements GraphApiClientContract
             .$windowStart->format('Y-m-d\TH:i:s\Z');
     }
 
-    // Issues a GET and returns the JSON-decoded response body,
-    // mapping Graph's error envelope to the project's typed sentinels.
     /**
      * @param  array<string, string>  $query
      * @return array<string, mixed>
@@ -335,10 +303,8 @@ final class GraphApiClient implements GraphApiClientContract
         array $query = [],
         bool $expectsDelta = false,
     ): array {
-        // SSRF guard: refuse to forward the bearer token to any host
-        // outside the Graph allow-list. The check sits at the HTTP
-        // boundary because a malformed @odata.nextLink/@odata.deltaLink
-        // in any single response could otherwise exfiltrate the token.
+        // The guard sits at the HTTP boundary, not the parse site: a malformed
+        // @odata.nextLink/@odata.deltaLink is followed verbatim.
         $this->assertAllowedUrl($url);
 
         try {
@@ -371,9 +337,8 @@ final class GraphApiClient implements GraphApiClientContract
             return [];
         }
 
-        // Narrow array<mixed, mixed> -> array<string, mixed> — the top-
-        // level Graph response is always a JSON object, but PHPStan's
-        // strict mode cannot infer key shape from json_decode.
+        // json_decode yields array<mixed, mixed>; the key cast is what lets
+        // PHPStan narrow it to array<string, mixed>.
         $out = [];
         foreach ($decoded as $key => $value) {
             $out[(string) $key] = $value;
@@ -382,10 +347,6 @@ final class GraphApiClient implements GraphApiClientContract
         return $out;
     }
 
-    // SSRF defence: refuses to attach a bearer token to any URL whose
-    // scheme isn't https or whose host isn't on the allow-list. Fires
-    // for both the first-page URL and the nextLink/deltaLink
-    // pagination URLs Graph returns verbatim (the load-bearing case).
     private function assertAllowedUrl(string $url): void
     {
         $scheme = parse_url($url, PHP_URL_SCHEME);
@@ -404,9 +365,6 @@ final class GraphApiClient implements GraphApiClientContract
         }
     }
 
-    // Walks the value array of a Graph response body, narrowing each
-    // entry to array<string, mixed> and passing it through
-    // normaliseMessageMeta; non-array entries are skipped.
     /**
      * @param  array<string, mixed>  $body
      * @return list<array<string, mixed>>
@@ -433,9 +391,8 @@ final class GraphApiClient implements GraphApiClientContract
         return $messages;
     }
 
-    // Normalises a Graph message object into the shape BackfillInboxJob
-    // consumes; FakeGraphApiClient already returns this exact shape,
-    // so the two paths stay type-identical at the call site.
+    // FakeGraphApiClient returns this exact shape, so the live and
+    // fixture paths stay type-identical at the call site.
     /**
      * @param  array<string, mixed>  $raw
      * @return array<string, mixed>
@@ -466,10 +423,8 @@ final class GraphApiClient implements GraphApiClientContract
         ];
     }
 
-    // Returns a non-expired access token, refreshing via the OAuth
-    // provider when the cached token is missing or within 60 seconds
-    // of its stamped expiry; Microsoft rotates refresh tokens
-    // single-use, so the fresh one is persisted on every refresh.
+    // Microsoft rotates refresh tokens single-use, so the returned one must
+    // be persisted on every refresh or the next refresh is rejected.
     private function ensureFreshAccessToken(int $inboxId): string
     {
         $creds = $this->secrets->loadInbox($inboxId);
@@ -492,15 +447,8 @@ final class GraphApiClient implements GraphApiClientContract
             try {
                 $fresh = $this->oauth->refreshAccessToken($creds->refreshToken);
             } catch (InvalidGrantException $e) {
-                // MicrosoftOAuthProvider maps invalid_grant/consent_required
-                // responses into this typed sentinel before the league
-                // client's raw exception reaches us, so non-OAuth
-                // failures keep their original exception class.
                 throw $this->raiseReconsentRequired($inboxId, $e);
             }
-            // Persists the rotated pair via the repository's atomic
-            // rotateRefreshToken hook — the underlying writeAtomic
-            // makes the rotation crash-safe.
             $this->secrets->rotateRefreshToken(
                 $inboxId,
                 $fresh->refreshToken ?? $creds->refreshToken,
@@ -514,9 +462,6 @@ final class GraphApiClient implements GraphApiClientContract
         return $cachedAccessToken;
     }
 
-    // Dispatches InboxTokenFailed so the SystemAlertsBanner can surface
-    // a re-consent prompt, then returns a typed
-    // ReconsentRequiredException for the caller to throw.
     private function raiseReconsentRequired(int $inboxId, InvalidGrantException $cause): ReconsentRequiredException
     {
         $userId = $this->lookupInboxUserId($inboxId);
@@ -534,10 +479,8 @@ final class GraphApiClient implements GraphApiClientContract
         );
     }
 
-    // Resolves the owning user_id for an inbox row. Returns 0 when
-    // the row is missing or the column is non-integer, so the
-    // caller's error-recovery path survives even if the inbox record
-    // was deleted between the scan kick-off and the failed refresh.
+    // Returns 0 rather than throwing: the inbox can be deleted between scan
+    // kick-off and a failed refresh, and recovery still has to complete.
     private function lookupInboxUserId(int $inboxId): int
     {
         $value = $this->db->connection()
@@ -548,19 +491,13 @@ final class GraphApiClient implements GraphApiClientContract
         return is_numeric($value) ? (int) $value : 0;
     }
 
-    // This called itself a seam "a future test subclass could override", but
-    // the class is final, so that subclass could never exist and the boundary
-    // stayed untestable. Injected instead: null builds the production client,
-    // a test passes one backed by a mock handler.
     private function makeHttpClient(): GuzzleClient
     {
         return $this->httpClient ?? new GuzzleClient([
             'timeout' => 30,
             'connect_timeout' => 10,
-            // No redirect-following: the host allow-list is enforced per request
-            // before the bearer is attached, so a redirect to another host would
-            // slip past it. Graph never legitimately 3xx-redirects these calls;
-            // mirrors the EnableBanking client.
+            // assertAllowedUrl runs before the bearer is attached, so a
+            // followed 3xx would carry the token to another host past it.
             'allow_redirects' => false,
         ]);
     }

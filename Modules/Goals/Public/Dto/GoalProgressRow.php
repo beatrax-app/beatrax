@@ -6,9 +6,6 @@ namespace Modules\Goals\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/goals/architecture.md
- */
 final class GoalProgressRow extends Data
 {
     public function __construct(
@@ -25,10 +22,9 @@ final class GoalProgressRow extends Data
         public readonly bool $projectionBeyondHorizon,
     ) {}
 
-    // Floors at zero as well as capping at 100: an attributed spend is a
-    // withdrawal, so the sum can go below zero, and a progressbar declaring
-    // aria-valuemin="0" may not then report -4. The money line carries the
-    // negative; a bar has no way to draw one.
+    // Floored as well as capped: an attributed spend is a withdrawal, so the sum
+    // can go negative, and a progressbar declaring aria-valuemin="0" may not then
+    // report -4. The money line carries the negative instead.
     public function percentComplete(): int
     {
         if ($this->targetMinor <= 0) {

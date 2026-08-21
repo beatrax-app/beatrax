@@ -18,27 +18,10 @@ use Modules\Sync\Tests\Support\CrossDevicePairingHarness;
 uses(RefreshDatabase::class);
 uses(CrossDevicePairingHarness::class);
 
-/*
- * PairingRelayCourierTest — Phase 15 HIGH-01 (Task 2, the transport half):
- * PairingRelayCourier carrying PAIR_RESPONDER_ACCEPT/PAIR_CONFIRM frames over
- * the ZK relay between TWO GENUINELY SEPARATE databases, through the full
- * PairingGateway public seam (sendResponderAccept/sendConfirm/
- * drainPairingFrames) — the exact surface the desktop/phone Livewire wiring
- * will call. CrossDevicePairingConfirmTest already proves the TRUST
- * decisions in isolation (PairingTokenService's apply methods); this file
- * proves the courier correctly dispatches/deletes/defers real relay rows.
- *
- * Each simulated device uses its OWN user id (PRC_DESKTOP_USER_ID /
- * PRC_PHONE_USER_ID) — DeviceIdentityLoader's key-file storage is keyed only
- * by user id on the shared test-process filesystem (UserDataPathService),
- * independent of which DatabaseManager connection is active; two distinct
- * ids keep the two "devices'" identity files from colliding. This also
- * mirrors production more faithfully: on two REAL separate machines, each
- * device's own local `users` table autoincrements independently, so the
- * SAME real end user can legitimately hold a different local user_id on
- * each device (CLAUDE.md's single-user-v1 schema posture).
- */
-
+// The two simulated devices need different user ids: DeviceIdentityLoader keys its
+// key files by user id alone on the shared test filesystem, so one id would collide.
+// Production behaves the same way — each device's local users table autoincrements
+// independently, so one real person holds a different user_id on each device.
 const PRC_DESKTOP_USER_ID = 6001;
 
 const PRC_PHONE_USER_ID = 6002;
@@ -81,8 +64,7 @@ it('sendResponderAccept() + drainPairingFrames() propagates the responder identi
     ));
     $tokenHash = hash('sha256', $issuedToken);
 
-    // PHONE: seed + accept (mirrors submitCode()'s import branch), then
-    // deliver PAIR_RESPONDER_ACCEPT over the (faked) relay transport.
+    // Seed + accept mirrors submitCode()'s import branch.
     $this->asDevice('phone', function () use ($desktopIdentity, $phoneIdentity, $issuedToken, $tokenHash): void {
         $service = app(PairingTokenService::class);
         $service->seedFromInitiator(PRC_PHONE_USER_ID, $desktopIdentity->deviceId, $desktopIdentity->ed25519PublicKeyHex, $desktopIdentity->x25519PublicKeyHex, $issuedToken);
@@ -93,7 +75,6 @@ it('sendResponderAccept() + drainPairingFrames() propagates the responder identi
         app(PairingGateway::class)->sendResponderAccept(PRC_PHONE_USER_ID, $tokenHash, $desktopIdentity->deviceId, $session);
     });
 
-    // DESKTOP drains its own mailbox — applies the responder-accept.
     $this->asDevice('desktop', function (): void {
         /** @var Session $session */
         $session = app(Session::class);
@@ -137,7 +118,6 @@ it('the full both-confirm handshake propagates over the relay and admits the pee
         app(PairingGateway::class)->drainPairingFrames(PRC_DESKTOP_USER_ID);
     });
 
-    // PHONE confirms first, sends its signed PAIR_CONFIRM.
     $this->asDevice('phone', function () use ($tokenHash, $phoneIdentity, $desktopIdentity): void {
         $row = prcTokenRow($tokenHash);
         $state = app(PairingTokenService::class)->confirm((int) $row->id, PRC_PHONE_USER_ID, $phoneIdentity->deviceId);
@@ -148,9 +128,7 @@ it('the full both-confirm handshake propagates over the relay and admits the pee
         app(PairingGateway::class)->sendConfirm(PRC_PHONE_USER_ID, (int) $row->id, $desktopIdentity->deviceId, $session);
     });
 
-    // DESKTOP drains — the peer confirm arrives before the local human has
-    // confirmed, so it must defer (leave the relay row pending) rather than
-    // admit anything yet.
+    // The peer confirm arrives before the local human's, so the drain must defer it.
     $this->asDevice('desktop', function (): void {
         /** @var Session $session */
         $session = app(Session::class);
@@ -161,7 +139,6 @@ it('the full both-confirm handshake propagates over the relay and admits the pee
         expect($row->responder_confirmed_at)->toBeNull('a relayed confirm must never admit anything before the local human confirms');
     });
 
-    // DESKTOP's human now confirms and sends its own signed PAIR_CONFIRM.
     $this->asDevice('desktop', function () use ($tokenHash, $desktopIdentity, $phoneIdentity): void {
         $row = prcTokenRow($tokenHash);
         app(PairingTokenService::class)->confirm((int) $row->id, PRC_DESKTOP_USER_ID, $desktopIdentity->deviceId);
@@ -171,8 +148,7 @@ it('the full both-confirm handshake propagates over the relay and admits the pee
         app(PairingGateway::class)->sendConfirm(PRC_DESKTOP_USER_ID, (int) $row->id, $phoneIdentity->deviceId, $session);
     });
 
-    // DESKTOP drains AGAIN — the courier's undeleted, still-pending
-    // PAIR_CONFIRM from the phone is redelivered and now applies.
+    // Draining again redelivers the phone's still-undeleted confirm, which now applies.
     $this->asDevice('desktop', function (): void {
         /** @var Session $session */
         $session = app(Session::class);
@@ -184,7 +160,6 @@ it('the full both-confirm handshake propagates over the relay and admits the pee
         expect($row->state)->toBe(PairingState::Confirmed->value);
     });
 
-    // PHONE drains — applies the desktop's signed PAIR_CONFIRM.
     $this->asDevice('phone', function (): void {
         /** @var Session $session */
         $session = app(Session::class);
@@ -196,7 +171,7 @@ it('the full both-confirm handshake propagates over the relay and admits the pee
         expect($row->state)->toBe(PairingState::Confirmed->value);
     });
 
-    // Each device admits the PEER it does not own, on its OWN database.
+    // Each device admits the peer it does not own, on its own database.
     $this->asDevice('desktop', function () use ($phoneIdentity): void {
         expect(app(DeviceRegistryService::class)->deviceKeys(PRC_DESKTOP_USER_ID))->toHaveKey($phoneIdentity->deviceId);
     });
@@ -229,7 +204,6 @@ it('an applied frame is DELETED from the relay mailbox — redraining returns no
         app(PairingGateway::class)->sendResponderAccept(PRC_PHONE_USER_ID, $tokenHash, $desktopIdentity->deviceId, $session);
     });
 
-    // First drain applies the frame.
     $this->asDevice('desktop', function (): void {
         /** @var Session $session */
         $session = app(Session::class);
@@ -239,8 +213,6 @@ it('an applied frame is DELETED from the relay mailbox — redraining returns no
         expect(prcTokenRow($tokenHash)->state)->toBe(PairingState::AwaitingConfirm->value);
     });
 
-    // Directly inspect the relay's own mailbox (drain via RelayClient) —
-    // the row must be GONE (deleted, not merely re-appliable no-op-idle).
     $desktopRelayToken = app(RelayConfig::class)->deviceDrainSecret();
     expect($desktopRelayToken)->not->toBeNull();
 
@@ -289,9 +261,7 @@ it('a valid-but-deferred PAIR_CONFIRM stays in the relay mailbox across MULTIPLE
         app(PairingGateway::class)->sendConfirm(PRC_PHONE_USER_ID, (int) $row->id, $desktopIdentity->deviceId, $session);
     });
 
-    // Drain THREE times on the desktop — the desktop's own local human
-    // still has not confirmed, so every drain must defer (never delete)
-    // the SAME pending frame.
+    // With no local confirm yet, every one of these drains must defer the same frame.
     for ($i = 0; $i < 3; $i++) {
         $this->asDevice('desktop', function (): void {
             /** @var Session $session */
@@ -306,8 +276,6 @@ it('a valid-but-deferred PAIR_CONFIRM stays in the relay mailbox across MULTIPLE
         expect($row->state)->toBe(PairingState::AwaitingConfirm->value);
     });
 
-    // NOW the desktop's local human confirms — the NEXT drain finally
-    // applies the still-pending frame.
     $this->asDevice('desktop', function () use ($tokenHash, $desktopIdentity): void {
         $row = prcTokenRow($tokenHash);
         app(PairingTokenService::class)->confirm((int) $row->id, PRC_DESKTOP_USER_ID, $desktopIdentity->deviceId);
@@ -329,8 +297,7 @@ it('a malformed relay blob is drained and deleted (terminal-invalid) — never r
 
     $desktopIdentity = $this->asDevice('desktop', fn () => prcSetUpIdentity(PRC_DESKTOP_USER_ID));
 
-    // An attacker (or a corrupted delivery) drops a non-JSON blob directly
-    // into the desktop's mailbox — bypassing PairingFrame entirely.
+    // Delivered straight to the mailbox, bypassing PairingFrame entirely.
     /** @var RelayClient $relayClient */
     $relayClient = app(RelayClient::class);
     $relayClient->deliver('some-attacker-did', $desktopIdentity->deviceId, 'this-is-not-json-at-all');
@@ -338,30 +305,26 @@ it('a malformed relay blob is drained and deleted (terminal-invalid) — never r
     $this->asDevice('desktop', function (): void {
         /** @var Session $session */
         $session = app(Session::class);
-        // Must not throw (LOW-02 posture) despite the garbage payload.
+        // A garbage payload must not throw out of the drain.
         app(PairingGateway::class)->drainPairingFrames(PRC_DESKTOP_USER_ID);
     });
 
-    // No pairing_tokens row was ever touched.
     $this->asDevice('desktop', function (): void {
         /** @var DatabaseManager $db */
         $db = app(DatabaseManager::class);
         expect($db->connection()->table('pairing_tokens')->count())->toBe(0);
     });
 
-    // The malformed row is GONE from the mailbox (terminally deleted, not
-    // left pending forever).
     $desktopRelayToken = app(RelayConfig::class)->deviceDrainSecret();
     expect($desktopRelayToken)->not->toBeNull();
     $pending = $relayClient->drain($desktopIdentity->deviceId, $desktopRelayToken);
     expect($pending)->toBe([]);
 });
 
-it('drainPairingFrames() never throws when no local self-identity exists yet (LOW-02 posture)', function (): void {
+it('drainPairingFrames() never throws when no local self-identity exists yet', function (): void {
     $this->crossDevicePairingSetUp();
 
-    // No self device_registry row and no identity file created for this
-    // user on the desktop connection at all.
+    // User 999999 has no device_registry row and no identity file.
     $this->asDevice('desktop', function (): void {
         /** @var Session $session */
         $session = app(Session::class);
@@ -375,9 +338,9 @@ it('leaves a foreign frame type in the mailbox for its own transport', function 
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
-    // GDK epoch wraps queue in this same mailbox and are carried by the
-    // authenticated sync session. The pairing poll used to confirm — and so
-    // DELETE — every type it did not recognise, destroying the peer's key.
+    // GDK epoch wraps queue in this same mailbox but travel on the authenticated
+    // sync session. The pairing poll used to confirm — and so DELETE — every type
+    // it did not recognise, which destroyed the peer's key.
     $userId = (int) $db->connection()->table('users')->insertGetId([
         'username' => 'courier-foreign-'.bin2hex(random_bytes(4)),
         'password' => 'fixture',

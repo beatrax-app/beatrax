@@ -11,21 +11,6 @@ use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Models\RecurringSeriesOccurrence;
 use Modules\Recurring\Public\Services\FixedPaymentsViewQuery;
 
-/*
- * Public read API over the approved recurring_series rows that drive
- * the /recurring page sections and the dashboard fixed-payments tile.
- *
- * Every method is user-scoped; cross-user reads return empty
- * containers. The N+1 budget is enforced via a `DB::listen` query-count
- * assertion: viewForUser MUST execute in ≤ 3 queries regardless of N.
- *
- * Chain-fallback semantics: when the series'
- * latest_funding_chain_link_id points at a chain_link in state
- * `unresolved`/`null`, fall back to the prior occurrence's chain.
- * The `transfers` section ships empty as documented structure;
- * transfers themselves are not detected as series here.
- */
-
 function fpvUser(string $username): User
 {
     return User::query()->create([
@@ -117,9 +102,8 @@ it('returns grouped sections (expenses + income + transfers) for an approved ser
     expect($sections['income'])->toHaveCount(1);
     expect($sections['transfers'])->toBe([]);
 
-    // expense rows sorted DESC by monthly_equivalent — for negative
-    // amounts the row with the larger absolute monthly equivalent
-    // (-1499) comes first.
+    // Expenses sort DESC by monthly_equivalent, and for negative amounts that
+    // puts the larger absolute equivalent (-1499) first.
     expect($sections['expenses'][0]->detectedName)->toBe('netflix');
     expect($sections['expenses'][1]->detectedName)->toBe('spotify');
 })->group('view-for-user-returns-grouped-sections');
@@ -173,10 +157,9 @@ it('runs viewForUser in ≤ 3 queries for N=12 series (N+1 budget)', function ()
 })->group('n-plus-one-budget');
 
 it('sums monthly_equivalent_minor by direction in monthlyEquivalentTotals', function (): void {
-    // monthly_equivalent_minor is what the detector wrote — the query
-    // sums that column. The detector encodes the cadence multiplier
-    // at write time (weekly × 52/12, monthly × 1, quarterly ÷ 3,
-    // yearly ÷ 12).
+    // The query sums monthly_equivalent_minor as the detector wrote it; the
+    // cadence multiplier is applied at write time (weekly × 52/12, monthly × 1,
+    // quarterly ÷ 3, yearly ÷ 12).
     fpvSeries($this->user, 'expense', 'weekly-thing', [
         'cadence' => 'weekly',
         'monthly_equivalent_minor' => -4333,
@@ -207,12 +190,8 @@ it('sums monthly_equivalent_minor by direction in monthlyEquivalentTotals', func
 })->group('monthly-equivalent-multiplier');
 
 it('topByMonthlyEquivalent applies the month-window filter BEFORE the limit so this-month-only returns matching rows even when the unfiltered top-N falls outside the window', function (): void {
-    // Seed 10 series with increasing magnitudes. The top 6 by absolute
-    // equivalent all fall in June 2026 (outside May). One smaller May
-    // 2026 row survives the date filter. Without the in-query filter
-    // the card would clip to the top 6 first, all of which are outside
-    // May, and the user would see the "no recurring series" empty
-    // state — even though a May row exists.
+    // The top 6 by absolute equivalent all sit in June, with one smaller May
+    // row behind them. Clip-then-filter would show the empty state for May.
     for ($i = 0; $i < 6; $i++) {
         fpvSeries($this->user, 'expense', 'jun-'.$i, [
             'monthly_equivalent_minor' => -2000 - ($i * 100),
@@ -255,21 +234,14 @@ it('topByMonthlyEquivalent limits to 6 by default and orders DESC by absolute mo
     $top = $query->topByMonthlyEquivalent($this->user);
 
     expect($top)->toHaveCount(6);
-    // The most-negative row (-1900) is "largest" by absolute monthly
-    // equivalent — the projection surfaces the biggest fixed cost
-    // first.
+    // Most negative == largest fixed cost, so it sorts first.
     expect($top[0]->monthlyEquivalent->toMinor())->toBe(-1900);
 })->group('top-by-monthly-equivalent-limits-to-6');
 
 it('falls back to a prior occurrence chain link when the latest chain is null', function (): void {
-    // A full chain_links + transactions setup is needed to fully test
-    // the fallback walk. The simpler form here pins the observable
-    // behaviour: a series with `latest_funding_chain_link_id` null
-    // carries `latestFundingChainLinkId` null in the DTO, AND the
-    // query path is set up so a future per-row fallback lookup can
-    // override. The fuller fallback walk is exercised by the
-    // RecurringPage feature test against a seeded chain_link + prior
-    // occurrence row pair.
+    // A series with latest_funding_chain_link_id null carries a null
+    // latestFundingChainLinkId. The fuller fallback walk is exercised by the
+    // RecurringPage feature test against a seeded chain_link + occurrence pair.
     fpvSeries($this->user, 'expense', 'no-chain-merchant', [
         'latest_funding_chain_link_id' => null,
     ]);
@@ -283,11 +255,7 @@ it('falls back to a prior occurrence chain link when the latest chain is null', 
 })->group('chain-fallback');
 
 it('exposes the chain id on the DTO when latest_funding_chain_link_id is set on the series', function (): void {
-    // Build a real chain_link so the FK can satisfy the migration. The
-    // chain_links row holds (from_transaction_id, to_transaction_id) so
-    // the query layer can walk to it cleanly. The series row's
-    // `latest_funding_chain_link_id` points at it; the DTO carries the
-    // id forward.
+    // A real chain_links row, so the FK holds.
     $db = $this->db->connection();
     $account = fpvAccount($this->user, 'fpv-asn');
     $run = fpvImportRun($this->user, str_repeat('c', 64));
@@ -362,9 +330,6 @@ it('exposes the chain id on the DTO when latest_funding_chain_link_id is set on 
 })->group('chain-link-id-on-dto');
 
 it('walks prior occurrences for a chain link when the latest is null but a previous occurrence carries a confirmed chain', function (): void {
-    // Set up: one series with NULL latest_funding_chain_link_id but a
-    // prior occurrence row whose linked transaction has a confirmed
-    // chain — the fallback walker must find it.
     $db = $this->db->connection();
     $account = fpvAccount($this->user, 'fpv-fallback');
     $run = fpvImportRun($this->user, str_repeat('f', 64));

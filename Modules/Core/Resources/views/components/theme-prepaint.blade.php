@@ -22,15 +22,23 @@
          The root tag is spelled out rather than written literally: the HTML
          analyser does not parse Blade comments, and read a mention of it here
          as a real, doctype-less document. --}}
+    {{-- Guarded the way the veil rule in app.css already is. Unguarded, this
+         wins over the bg-white utility whenever the OS is dark, so a reader on
+         a dark device who chose Light got a black page with white cards on it
+         — the heading was near-black text on a near-black background. --}}
     <style>
         @media (prefers-color-scheme: dark) {
-            html, body, .beatrax-shell { background-color: #020617; }
+            html:not(.light), html:not(.light) body, html:not(.light) .beatrax-shell {
+                background-color: #020617;
+            }
         }
     </style>
     <script nonce="{{ Vite::cspNonce() }}">
         (function () {
             try {
-                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                if (document.documentElement.classList.contains('light')) {
+                    document.documentElement.classList.remove('dark');
+                } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
                     document.documentElement.classList.add('dark');
                 } else {
                     document.documentElement.classList.remove('dark');

@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-// Drifting monthly Spotify — 12 occurrences at €9.99 followed by 6 at
-// €11.49 (price bump mid-window). The 15% drift sits inside the default
-// ±25% variance tolerance so detector expectation is ONE expense series,
-// monthly cadence, latest_amount reflects the post-bump price.
+// A price bump mid-window: 12 occurrences at €9.99, then 6 at €11.49. The 15%
+// drift sits inside the default ±25% variance tolerance, so this must stay one
+// series rather than fragment into two.
 
 $transactions = [];
 $amounts = array_merge(

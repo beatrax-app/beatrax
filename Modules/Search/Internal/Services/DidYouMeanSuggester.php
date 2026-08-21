@@ -14,9 +14,6 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 // Suggests one "did you mean" word (levenshtein <= 2, no spellfix1 in
 // this SQLite build) for a zero-result query >= 4 chars, built from a
 // decrypt-then-tally corpus over a bounded most-recent window.
-/**
- * @link ../../../../.docs/features/search/architecture.md
- */
 final class DidYouMeanSuggester
 {
     // Bounds the number of raw rows decrypted to build the corpus so a

@@ -11,9 +11,6 @@ use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\SessionFactory;
 
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
 final class LoginAction
 {
     public function __construct(
@@ -31,10 +28,8 @@ final class LoginAction
         $user = User::query()->where('username', $normalized)->first();
 
         if (! $user instanceof User) {
-            // Burn one hash on the account-not-found path so a missing username
-            // takes the same time as a wrong password — no enumeration oracle.
-            // make() runs the same bcrypt work as the check() below and the
-            // result is discarded; nothing is hardcoded.
+            // Burns one hash so a missing username costs the same as a wrong
+            // password. make() does the same bcrypt work as check() below.
             $this->hasher->make($password);
 
             return false;
@@ -48,8 +43,7 @@ final class LoginAction
         $guard = $this->auth->guard();
         $guard->login($user, $rememberMe);
 
-        // Establishes coherent lock state while the plaintext password is
-        // still in hand (no-op when the lock is not enabled).
+        // While the plaintext password is still in hand.
         $this->provisioner->primeSessionAfterLogin($user->id, $password, ($this->session)());
 
         return true;

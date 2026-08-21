@@ -9,20 +9,9 @@ use Modules\Auth\Public\Actions\SignupAction;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
 
-/*
- * Feature coverage for RecoveryCodeAuthenticator — the shared
- * verification core: it matches a typed username + recovery code against
- * the unused user_recovery_codes rows under a row lock, stamps used_at on
- * the matching row (single-use), normalises case + formatting, returns
- * null without throwing on an unknown username, and writes a system_alerts
- * audit row for every attempt.
- */
-
+// The real SignupAction, so the stored hashes are exactly what a redemption
+// attempt gets compared against.
 /**
- * Signs up an owner via the real SignupAction so the stored recovery-code
- * hashes match exactly what a redemption attempt will be compared against,
- * then returns the user together with its ten plaintext codes.
- *
  * @return array{user: User, codes: list<string>}
  */
 function signUpWithCodes(string $username = 'owner'): array
@@ -127,9 +116,8 @@ it('writes a critical system_alerts row on a failed redemption', function (): vo
 });
 
 it('hashes the recovery code as the formatted five-group string', function (): void {
-    // Round-trip guard: the authenticator must re-format the normalised
-    // input into the exact hyphenated shape SignupAction hashed. A
-    // hash-shape regression would make every redemption fail silently.
+    // The authenticator has to re-format normalised input into the exact
+    // hyphenated shape that was hashed, or every redemption fails silently.
     ['user' => $user, 'codes' => $codes] = signUpWithCodes();
 
     /** @var Hasher $hasher */

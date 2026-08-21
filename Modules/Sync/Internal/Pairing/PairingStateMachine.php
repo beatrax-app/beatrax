@@ -6,9 +6,6 @@ namespace Modules\Sync\Internal\Pairing;
 
 use Carbon\CarbonImmutable;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class PairingStateMachine
 {
     // A pairing token moves through pending -> awaiting_confirm -> confirmed,

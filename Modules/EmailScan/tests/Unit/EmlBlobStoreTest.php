@@ -20,7 +20,7 @@ it('accepts the short hex shape Gmail returns', function (): void {
 
 it('accepts realistic Microsoft Graph immutable ids with base64 padding and slashes', function (): void {
     $store = ebsStore();
-    // Realistic ImmutableId-style Graph id: long base64 with `=` padding.
+    // ImmutableId shape: long base64 with `=` padding and slashes.
     $graphId = 'AAMkADYwYTYwOWY3LWQxMjEtNDNiYi05ZWI4LTM1OTcxZTllZGMwOQBGAAAAAACGiYUxK2KCT_lvL6dQ4d5XBwBOptVwhUONRpW8AAA=';
     $path = $store->pathFor(1, 2, new DateTimeImmutable('2026-05-17T12:00:00Z'), $graphId);
     expect($path)->toContain('app/inbox/1/2/2026/05/');
@@ -62,15 +62,13 @@ it('two distinct ids never produce the same on-disk slug (collision guard)', fun
 });
 
 it('case-only variations resolve to distinct paths even on case-insensitive FS', function (): void {
-    // Different ids (only case differs) MUST hash to different slugs
-    // so a case-insensitive filesystem cannot silently collide them
-    // onto the same .eml.
+    // Hashing, not the raw id, is what stops a case-insensitive filesystem
+    // silently collapsing two ids onto the same .eml.
     $store = ebsStore();
     $date = new DateTimeImmutable('2026-05-17T12:00:00Z');
     $lower = $store->pathFor(1, 2, $date, 'abcdef123');
     $upper = $store->pathFor(1, 2, $date, 'ABCDEF123');
     $lowerBasename = basename($lower);
     $upperBasename = basename($upper);
-    // The two basenames differ in the 32-hex hash prefix specifically.
     expect(substr($lowerBasename, 0, 32))->not->toBe(substr($upperBasename, 0, 32));
 });

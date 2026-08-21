@@ -27,31 +27,6 @@ use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
 
-/*
- * 13.1-03 Task 2 (Req 10 / D-11): documentary proof that auto-categorization
- * and manual reclassification never overwrite a split transaction's legs.
- *
- * Per 13.1-RESEARCH.md's Idempotency finding, ApplyAutoCategoryStage only
- * ever operates on a CanonicalTransaction DTO BEFORE persistence — it has no
- * code path that touches an already-persisted (and therefore possibly
- * already-split) row. This is proven structurally here: even when a rule
- * DOES fire for the transaction's data, the persisted transaction_splits
- * rows stay byte-identical. AssignCategory (manual reclassify) is also
- * proven to only ever write the parent's vestigial category_id — never
- * transaction_splits.
- *
- * Per the plan: expect NO new guard code. If either assertion below fails
- * (i.e., legs get clobbered), that is a genuine contradiction to surface,
- * not to silently work around.
- *
- * 13.4-07 Task 3 (Req 4/D-11 extension) adds a THIRD scenario: a full
- * ReapplyRulesJob pass over a user with a split transaction must never
- * touch that transaction's legs (or the parent's rule-owned fields) at
- * all — the job's whereNotExists(transaction_splits) filter excludes the
- * split row from the walk entirely, so RuleEngine/RuleApplier never even
- * see it (T-13.4-23).
- */
-
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-07-04 09:00:00');
 
@@ -131,9 +106,8 @@ it('ApplyAutoCategoryStage leaves a split transaction\'s legs byte-identical eve
         ['id' => null, 'category_id' => $this->household->id, 'settled_amount_minor' => -2000, 'note' => null],
     ]);
 
-    // A rule that WOULD fire for this exact counterparty, mapping to a
-    // THIRD category the split never used — proving the rule engine is
-    // live, not merely absent.
+    // A rule that would fire for this counterparty, onto a third category the
+    // split never used — so a clobbered leg would be visible.
     $rule = CategorizationRule::query()->create([
         'user_id' => $this->user->id,
         'priority' => 0,
@@ -187,18 +161,16 @@ it('ApplyAutoCategoryStage leaves a split transaction\'s legs byte-identical eve
     $stage = app(ApplyAutoCategoryStage::class);
     $outcome = $stage->apply($canonical, $this->user);
 
-    // The rule DOES fire on the DTO — proving auto-cat is live, not disabled.
     expect($outcome->provenance)->toBe('rule');
     expect($outcome->ruleId)->toBe($ruleId);
     expect($outcome->canonical->categoryId)->toBe($this->streaming->id);
 
-    // ...but the PERSISTED split legs are byte-identical — ApplyAutoCategoryStage
-    // has no code path that touches an already-persisted row (D-11, Req 10).
+    // The persisted legs stay byte-identical even though the rule fired: the
+    // stage only ever sees a pre-persistence DTO.
     $after = snapshotSplitLegs($db, $tx->id);
     expect($after)->toBe($before);
 
-    // The persisted parent's category_id is also untouched — the stage
-    // never writes DB rows except the matched rule's hits_count.
+    // The stage writes no row of its own except the matched rule's hits_count.
     $parentCategoryId = $db->connection()->table('transactions')->where('id', $tx->id)->value('category_id');
     expect($parentCategoryId)->toBeNull();
 });
@@ -279,9 +251,8 @@ it('a full ReapplyRulesJob pass leaves a split transaction\'s legs byte-identica
         ['id' => null, 'category_id' => $this->household->id, 'settled_amount_minor' => -2000, 'note' => null],
     ]);
 
-    // A rule that WOULD fire for this transaction's counterparty — proving
-    // ReapplyRulesJob's exclusion is structural (never even walked), not a
-    // no-fire coincidence.
+    // A rule that would fire for this counterparty, so the job skipping the
+    // split row is structural rather than a no-fire coincidence.
     $rule = CategorizationRule::query()->create([
         'user_id' => $this->user->id,
         'priority' => 0,

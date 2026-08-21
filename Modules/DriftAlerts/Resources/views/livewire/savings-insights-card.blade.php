@@ -1,7 +1,7 @@
 @use('Modules\Core\Public\Support\Lang')
 <div>
     @if (count($insights) > 0)
-        <section class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-950" aria-label="{{ Lang::get('drift-alerts::savings.aria') }}">
+        <x-core::card tag="section" aria-label="{{ Lang::get('drift-alerts::savings.aria') }}">
             <div class="flex items-baseline justify-between gap-4">
                 <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('drift-alerts::savings.heading') }}</h2>
                 <a href="{{ route('drift.watch') }}" class="text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">{{ Lang::get('drift-alerts::savings.subscriptions_link') }}</a>
@@ -23,23 +23,22 @@
                                 $safe = str_starts_with($href, 'https://') || str_starts_with($href, 'http://');
                             @endphp
                             @if ($safe)
-                                <a
-                                    href="{{ $href }}"
+                                <x-core::secondary-button
+                                    :href="$href"
+                                    size="sm"
+                                    class="gap-1"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-                                >{{ $insight->actionLabel }} <span aria-hidden="true" style="opacity:.6;">↗</span></a>
+                                >{{ $insight->actionLabel }} <span aria-hidden="true" style="opacity:.6;">↗</span></x-core::secondary-button>
                             @endif
-                            <button
-                                type="button"
+                            <x-core::emoji-action
+                                :label="Lang::get('drift-alerts::savings.dismiss_aria')"
                                 wire:click="dismiss('{{ $insight->key }}')"
-                                aria-label="{{ Lang::get('drift-alerts::savings.dismiss_aria') }}"
-                                class="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-                            >×</button>
+                            >✖️</x-core::emoji-action>
                         </div>
                     </li>
                 @endforeach
             </ul>
-        </section>
+        </x-core::card>
     @endif
 </div>

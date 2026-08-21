@@ -6,49 +6,11 @@ use Illuminate\Support\Str;
 
 return [
 
-    /*
-    |--------------------------------------------------------------------------
-    | Default Cache Store
-    |--------------------------------------------------------------------------
-    |
-    | This option controls the default cache store that will be used by the
-    | framework. This connection is utilized if another isn't explicitly
-    | specified when running a cache operation inside the application.
-    |
-    */
-
     'default' => env('CACHE_STORE', 'database'),
 
-    /*
-    |--------------------------------------------------------------------------
-    | Queue-Uniqueness Lock Store
-    |--------------------------------------------------------------------------
-    |
-    | This is a project-defined key, NOT a Laravel framework key. The framework
-    | does not auto-route cache locks based on it. It names the cache store the
-    | shared lock-store helper passes to Cache::store() when resolving the lock
-    | repository for ShouldBeUnique* queue jobs. The 'database' default keeps
-    | job-uniqueness locks on the SQLite cache_locks table; setting
-    | CACHE_LOCK_STORE=redis routes those locks through Redis instead.
-    |
-    */
-
+    // A project key, not a framework one: the shared lock-store helper passes
+    // it to Cache::store() for ShouldBeUnique* jobs.
     'locks_store' => env('CACHE_LOCK_STORE', 'database'),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Cache Stores
-    |--------------------------------------------------------------------------
-    |
-    | Here you may define all of the cache "stores" for your application as
-    | well as their drivers. You may even define multiple stores for the
-    | same cache driver to group types of items stored in your caches.
-    |
-    | Supported drivers: "array", "database", "file", "memcached",
-    |                    "redis", "dynamodb", "octane", "session",
-    |                    "failover", "null"
-    |
-    */
 
     'stores' => [
 
@@ -78,7 +40,7 @@ return [
                 env('MEMCACHED_PASSWORD'),
             ],
             'options' => [
-                // Memcached::OPT_CONNECT_TIMEOUT => 2000,
+
             ],
             'servers' => [
                 [
@@ -117,17 +79,6 @@ return [
         ],
 
     ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Cache Key Prefix
-    |--------------------------------------------------------------------------
-    |
-    | When utilizing the APC, database, memcached, Redis, and DynamoDB cache
-    | stores, there might be other applications using the same cache. For
-    | that reason, you may prefix every cache key to avoid collisions.
-    |
-    */
 
     'prefix' => env('CACHE_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')).'-cache-'),
 

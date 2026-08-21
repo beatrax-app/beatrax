@@ -7,6 +7,10 @@ return [
 
     'subtitle_html' => 'Okruženje + izvođenje + primijenjena konfiguracija. Osjetljivi ključevi (nastavci <code class="font-mono text-xs">*password*</code>, <code class="font-mono text-xs">*secret*</code>, <code class="font-mono text-xs">*key</code>, <code class="font-mono text-xs">*token*</code>) su maskirani.',
     'php' => 'PHP',
+    'php_version' => 'verzija',
+    'php_sapi' => 'sapi',
+    'php_ini_path' => 'ini putanja',
+    'php_extensions' => 'proširenja',
     'laravel' => 'Laravel',
     'sqlite' => 'SQLite',
     'sqlite_file' => 'datoteka',

@@ -1,3 +1,4 @@
+@use('Modules\Ledger\Public\Services\BaseCurrency')
 @use('Modules\Ledger\Public\ValueObjects\Money')
 @use('Modules\Core\Public\Support\Lang')
 @inject('container', \Illuminate\Contracts\Container\Container::class)
@@ -145,9 +146,9 @@
         </tr>
         <tr>
             <th scope="row" class="summary-label">{{ Lang::get('tax::pdf.total_deductions_label') }}</th>
-            <td>&euro; {{ number_format($data->deductionsTotalMinor / Money::MINOR_UNITS_PER_MAJOR, 2, '.', ',') }}</td>
+            <td>{{ Money::ofMinor($data->deductionsTotalMinor, BaseCurrency::value())->format() }}</td>
             <th scope="row" class="summary-label">{{ Lang::get('tax::pdf.total_income_label') }}</th>
-            <td>&euro; {{ number_format($data->incomeTotalMinor / Money::MINOR_UNITS_PER_MAJOR, 2, '.', ',') }}</td>
+            <td>{{ Money::ofMinor($data->incomeTotalMinor, BaseCurrency::value())->format() }}</td>
         </tr>
     </table>
 </div>
@@ -166,7 +167,7 @@
         @endphp
 
         <div @class(['no-cat-section' => $isNoCategory])>
-            {{-- {{ }} already escapes — an extra e() double-encodes & < ' (WR-10). --}}
+            {{-- {{ }} already escapes — an extra e() double-encodes & < '. --}}
             <h2>{{ $isNoCategory ? Lang::get('tax::pdf.uncategorised') : $catName }}</h2>
 
             <table class="tx-table">
@@ -188,19 +189,19 @@
                             $description = is_string($row['description'] ?? null) ? $row['description'] : '';
                             $note = is_string($row['note'] ?? null) ? $row['note'] : '';
                             $settledMinor = is_numeric($row['settledAmountMinor'] ?? 0) ? (int) $row['settledAmountMinor'] : 0;
-                            $amountStr = number_format(abs($settledMinor) / Money::MINOR_UNITS_PER_MAJOR, 2, '.', ',');
+                            $amountStr = Money::ofMinor(abs($settledMinor), BaseCurrency::value())->format();
                         @endphp
                         <tr>
                             <td>{{ $bookedAt }}</td>
                             <td>{{ $counterparty }}</td>
                             <td>{{ $description }}</td>
                             <td>{{ $note }}</td>
-                            <td class="amount">&euro; {{ $amountStr }}</td>
+                            <td class="amount">{{ $amountStr }}</td>
                         </tr>
                     @endforeach
                     <tr class="subtotal-row">
                         <td colspan="4">{{ Lang::get('tax::pdf.subtotal') }}</td>
-                        <td class="amount">&euro; {{ number_format(abs($subtotalMinor) / Money::MINOR_UNITS_PER_MAJOR, 2, '.', ',') }}</td>
+                        <td class="amount">{{ Money::ofMinor(abs($subtotalMinor), BaseCurrency::value())->format() }}</td>
                     </tr>
                 </tbody>
             </table>

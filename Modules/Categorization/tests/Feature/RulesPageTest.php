@@ -17,13 +17,6 @@ use Modules\Core\Models\User;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Ledger\Models\Category;
 
-/*
- * 13.4-08 Task 2: RulesPage redesigned to a Priority/Conditions/
- * Actions table (execution order = priority asc, id asc) plus a
- * ghost "Re-apply rules to history" trigger with a wire:poll.2s
- * progress strip and completion summary (Req 4 / 13.4-UI-SPEC.md).
- */
-
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'rules-page',
@@ -104,9 +97,8 @@ it('renders a multi-condition rule with the combinator badge + N-more chip and p
         ['type' => 'counterparty', 'payload' => ['counterparty_id' => $this->counterparty->id]],
     ]);
 
-    // Priority-asc execution order: the priority=5 rule ("SECOND")
-    // renders BEFORE the priority=50 rule ("FIRST") — the table
-    // visually *is* the engine's execution order.
+    // The priority=5 rule ("SECOND") renders before the priority=50 rule
+    // ("FIRST"): the table is the engine's execution order.
     Livewire::test(RulesPage::class)
         ->assertSee('ALL')
         ->assertSee('+1 more')
@@ -197,7 +189,7 @@ it('refreshes its row list when rule-form:saved fires', function (): void {
         ->assertSee('Rule saved.');
 });
 
-it('escapes any HTML embedded in a condition value (T-07-06 XSS defence)', function (): void {
+it('escapes any HTML embedded in a condition value (XSS defence)', function (): void {
     seedRulePageRule($this->user, 10, [
         ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => '<script>alert(1)</script>'],
     ], [
@@ -228,10 +220,8 @@ it('triggerReapply dispatches ReapplyRulesJob for the CURRENT user only, never a
         fn (ReapplyRulesJob $job): bool => $job->userId === $this->user->id,
     );
 
-    // triggerReapply takes no client-suppliable user id parameter at
-    // all (T-13.4-26) — the dispatched job's userId can only ever be
-    // CurrentUser's own id, never anything a tampered wire payload
-    // could smuggle in.
+    // triggerReapply takes no client-suppliable user id, so the job's userId
+    // can only ever be CurrentUser's own.
     $reflection = new ReflectionMethod(RulesPage::class, 'triggerReapply');
     foreach ($reflection->getParameters() as $parameter) {
         expect($parameter->getType())->not->toBeNull();

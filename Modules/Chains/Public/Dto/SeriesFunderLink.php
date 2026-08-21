@@ -6,9 +6,8 @@ namespace Modules\Chains\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-// funderAccountId is the account whose balance dips on the funder's
-// actual debit date — the ASN (or ICS) account underwriting the
-// downstream charge.
+// funderAccountId is the underwriting account, not the account carrying
+// the downstream charge.
 final class SeriesFunderLink extends Data
 {
     public function __construct(

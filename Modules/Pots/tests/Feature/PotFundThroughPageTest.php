@@ -13,14 +13,10 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Pots\Internal\Http\Livewire\PotsPage;
 use Modules\Pots\Models\Pot;
 
-/*
- * Funding a pot through the page the way the button does it: set
- * operationPotId + operationKind (what the Storten button's $wire.set pair
- * does), then the amount, then fundPot().
- *
- * Driven on a phone with EUR 3.754,64 unallocated on the account, a EUR 50,00
- * deposit left pot_movements empty and the pot reading EUR 0,00.
- */
+// Funds a pot the way the Storten button does: the $wire.set pair for
+// operationPotId and operationKind, then the amount, then fundPot(). On a phone
+// with EUR 3.754,64 unallocated, a EUR 50,00 deposit left pot_movements empty
+// and the pot reading EUR 0,00.
 
 beforeEach(function (): void {
     $this->user = User::create([

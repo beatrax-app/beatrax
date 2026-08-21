@@ -11,30 +11,9 @@ use Modules\Core\Internal\Providers\HealthCheckServiceProvider;
 use Modules\Core\Models\SystemAlert;
 use Tests\Helpers\RealSqliteFixture;
 
-/*
- * Drives the HealthCheckServiceProvider's ConnectionEstablished listener:
- *  (a) Clean state (WAL active + synchronous = 1) → no system_alerts
- *      rows written.
- *  (b) PRAGMA drift (journal_mode = DELETE) → exactly one
- *      system_alerts(wal_mode_missing, warning) row written.
- *  (c) Re-firing the listener within the same process (BootProbeState
- *      singleton intact) → still exactly one row.
- *  (d) Resetting BootProbeState + re-firing → another row is permitted.
- *
- * The cross-process recency guard (1-hour suppression via
- * SystemAlert::query) is exercised by re-firing with the singleton
- * reset but the previous row still present.
- */
-
 beforeEach(function (): void {
-    // Build an on-disk SQLite fixture so the listener has a real
-    // journal_mode to read. The fixture writes `PRAGMA journal_mode =
-    // WAL` against the file before any framework connection opens —
-    // overrides happen per test below.
-    //
-    // The fixture's system_alerts schema is extended so the
-    // wal_mode_missing alert insert lands with a sensible default for
-    // `created_at` (matching the prod migration's useCurrent()).
+    // On disk so the listener has a real journal_mode to read; system_alerts is
+    // spelled out for the created_at default the prod migration gives useCurrent().
     $this->sourcePath = RealSqliteFixture::create('boothealth-source', [
         'CREATE TABLE transactions (
             id INTEGER PRIMARY KEY,
@@ -64,17 +43,14 @@ beforeEach(function (): void {
     $db = $this->app->make(DatabaseManager::class);
     $db->purge('sqlite');
 
-    // Reset the BootProbeState singleton between tests so the in-process
-    // dedupe gate starts fresh.
+    // Reset the in-process dedupe gate between tests.
     $this->app->instance(BootProbeState::class, new BootProbeState);
 });
 
 afterEach(function (): void {
-    // Restore the framework default to sqlite_testing BEFORE removing
-    // the fixture file so RefreshDatabase's rollback inside Laravel's
-    // teardown does not try to re-open the on-disk connection (which
-    // would fire SqliteOptimizationsProvider's PRAGMA against a path
-    // that no longer exists).
+    // Restore the default BEFORE deleting the fixture: RefreshDatabase's
+    // teardown rollback would re-open the on-disk connection and fire
+    // SqliteOptimizationsProvider's PRAGMA against a path that is gone.
     /** @var Repository $config */
     $config = $this->app->make(Repository::class);
     $config->set('database.default', 'sqlite_testing');
@@ -92,8 +68,6 @@ it('BootProbeState is bound as a container singleton', function (): void {
     $a = $this->app->make(BootProbeState::class);
     $b = $this->app->make(BootProbeState::class);
     expect($a)->toBe($b);
-
-    // Default booted flag is false.
     expect($a->booted)->toBeFalse();
 });
 
@@ -103,8 +77,6 @@ it('writes no system_alerts row on a clean boot (WAL active + synchronous NORMAL
     /** @var Dispatcher $events */
     $events = $this->app->make(Dispatcher::class);
 
-    // Force the on-disk fixture into the documented healthy state via
-    // raw PDO so the listener observes the canonical happy path.
     $pdo = new PDO('sqlite:'.$this->sourcePath);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->exec('PRAGMA journal_mode = WAL');
@@ -113,8 +85,7 @@ it('writes no system_alerts row on a clean boot (WAL active + synchronous NORMAL
 
     $db->purge('sqlite');
 
-    // Fire the listener manually so we do not depend on Laravel's boot
-    // sequence opening a connection during artisan dispatch.
+    // Fire manually rather than lean on Laravel's boot sequence to connect.
     $events->dispatch(new ConnectionEstablished($db->connection('sqlite')));
 
     expect(SystemAlert::query()->whereIn('kind', ['wal_mode_missing', 'synchronous_misconfigured'])->count())->toBe(0);
@@ -126,31 +97,24 @@ it('writes exactly one wal_mode_missing alert on PRAGMA drift', function (): voi
     /** @var Dispatcher $events */
     $events = $this->app->make(Dispatcher::class);
 
-    // Force the fixture into journal_mode = DELETE via raw PDO BEFORE
-    // any framework connection opens.
+    // Drift journal_mode before any framework connection opens.
     $pdo = new PDO('sqlite:'.$this->sourcePath);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->exec('PRAGMA journal_mode = DELETE');
     $pdo->exec('PRAGMA synchronous = NORMAL');
     unset($pdo);
 
-    // Deregister the SqliteOptimizationsProvider's ConnectionEstablished
-    // listener so the HealthCheckServiceProvider's listener observes the
-    // drifted journal_mode rather than the re-applied WAL value the
-    // optimisation provider would otherwise overwrite immediately. The
-    // re-registration after this test happens automatically on the next
-    // test's fresh app boot.
+    // SqliteOptimizationsProvider's listener re-applies WAL the moment a
+    // connection opens, so drop every listener and re-register only
+    // HealthCheck below.
     $events->forget(ConnectionEstablished::class);
 
-    // Also disable Laravel's own SQLiteConnector PRAGMA application
-    // (driven by the connection config keys) — otherwise the connector
-    // re-applies journal_mode = WAL on the next open even though no
-    // listener is registered.
+    // Laravel's SQLiteConnector also re-applies journal_mode from the
+    // connection config on open, listener or no listener.
     /** @var Repository $config */
     $config = $this->app->make(Repository::class);
     $config->set('database.connections.sqlite.journal_mode', null);
 
-    // Re-register ONLY the HealthCheckServiceProvider listener.
     (new HealthCheckServiceProvider($this->app))
         ->boot($events);
 
@@ -177,8 +141,7 @@ it('re-fires the listener in-process without writing duplicate rows (BootProbeSt
     $pdo->exec('PRAGMA synchronous = NORMAL');
     unset($pdo);
 
-    // Deregister both providers' listeners and disable the SQLiteConnector
-    // journal_mode auto-apply so only HealthCheck sees the drift.
+    // Only HealthCheck may see the drift: listeners and connector PRAGMA off.
     $events->forget(ConnectionEstablished::class);
     /** @var Repository $config */
     $config = $this->app->make(Repository::class);
@@ -189,8 +152,7 @@ it('re-fires the listener in-process without writing duplicate rows (BootProbeSt
 
     $db->purge('sqlite');
 
-    // Fire twice in the same process. The BootProbeState singleton's
-    // booted flag prevents the second invocation from doing any work.
+    // Twice in one process — BootProbeState's booted flag stops the second.
     $events->dispatch(new ConnectionEstablished($db->connection('sqlite')));
     $events->dispatch(new ConnectionEstablished($db->connection('sqlite')));
 
@@ -209,8 +171,8 @@ it('does not write a duplicate within an hour even if BootProbeState is reset (c
     $pdo->exec('PRAGMA synchronous = NORMAL');
     unset($pdo);
 
-    // Deregister both providers' listeners, disable the SQLiteConnector
-    // journal_mode auto-apply, and re-register only HealthCheck.
+    // Only HealthCheck may see the drift: listeners and connector PRAGMA off,
+    // then re-register HealthCheck alone.
     $events->forget(ConnectionEstablished::class);
     /** @var Repository $config */
     $config = $this->app->make(Repository::class);
@@ -223,9 +185,8 @@ it('does not write a duplicate within an hour even if BootProbeState is reset (c
 
     $events->dispatch(new ConnectionEstablished($db->connection('sqlite')));
 
-    // Simulate a new process by resetting the BootProbeState singleton.
-    // The recency query against system_alerts should still suppress
-    // the duplicate write because the previous row is < 1h old.
+    // A fresh singleton stands in for a new process; the recency query still
+    // suppresses the write because the previous row is under an hour old.
     $this->app->instance(BootProbeState::class, new BootProbeState);
 
     $events->dispatch(new ConnectionEstablished($db->connection('sqlite')));

@@ -13,23 +13,12 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 uses(RefreshDatabase::class);
 
-/*
- * Coverage for the alias-bridge arm of ClassifyTransactionType::run()
- * step 2. The alias arm sits BEFORE the literal own-account-IBAN
- * equality check; it consults Modules\Import\Public\Contracts\
- * ResolvesKnownCounterpartyIban so a real institution IBAN appearing
- * on the ASN side of a cross-account hop (PayPal Luxembourg,
- * ICS at ABN AMRO) is retyped to transfer_out / transfer_in even
- * though the counterparty IBAN does not literally equal the user's
- * synthetic-IBAN account's iban value.
- */
+// The alias arm runs before the literal own-account-IBAN equality check, so a
+// real institution IBAN on the ASN side of a cross-account hop (PayPal
+// Luxembourg, ICS at ABN AMRO) retypes without ever matching an account's own
+// synthetic IBAN.
 
 /**
- * Build a user with bank + paypal + ics_card accounts and optionally
- * run the alias seeder. Mirrors the helper shape used by the resolver
- * tests so the canonical fixtures stay consistent across the alias
- * surface.
- *
  * @return array{user: User, bank: Account, paypal: Account, icsCard: Account}
  */
 function classifyAliasSeedUser(string $username, bool $runAliasSeeder = true): array
@@ -73,9 +62,6 @@ function classifyAliasSeedUser(string $username, bool $runAliasSeeder = true): a
 }
 
 /**
- * Construct a minimal valid CanonicalTransaction. Tests override only
- * the keys they exercise; the rest stay at fixture-safe defaults.
- *
  * @param  array<string, mixed>  $overrides
  */
 function classifyAliasTx(array $overrides = []): CanonicalTransaction
@@ -208,11 +194,9 @@ it('returns unchanged when alias exists but user has no account of the target ki
 });
 
 it('alias arm takes precedence over the literal-equality fallback', function (): void {
-    // Two bank accounts whose IBANs literally match each other's
-    // counterparty. ALSO an alias mapping bankA's IBAN to the user's
-    // paypal account. The alias arm must fire FIRST — even if the
-    // literal-equality arm would have succeeded — so deleting bankA
-    // after constructing the CT still produces a transfer_out.
+    // Both arms can succeed here: bankA's IBAN is the counterparty AND is
+    // aliased to the user's paypal account. Removing bankA later is what
+    // isolates the alias arm.
     $user = User::query()->create([
         'username' => 'alias-precedence',
         'password' => 'fixture-password',
@@ -259,15 +243,12 @@ it('alias arm takes precedence over the literal-equality fallback', function ():
     /** @var ClassifyTransactionType $stage */
     $stage = app(ClassifyTransactionType::class);
 
-    // Sanity: with the literal arm available, type is transfer_out
-    // (could be from either arm).
+    // Either arm could have produced this one.
     $result = $stage->run($tx, $user);
     expect($result->type)->toBe('transfer_out');
 
-    // The crucial check — delete BANKA so the literal-equality arm
-    // CANNOT fire. The alias arm has no dependency on BANKA being
-    // present; it resolves NL00BANKA -> paypal -> the user's paypal
-    // account. Result must still be transfer_out.
+    // With BANKA gone the literal arm cannot fire, and the alias arm still
+    // resolves NL00BANKA -> paypal -> the user's paypal account.
     $bankA->delete();
 
     $resultAfter = $stage->run($tx, $user);

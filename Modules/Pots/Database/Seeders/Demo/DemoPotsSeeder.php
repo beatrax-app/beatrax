@@ -13,16 +13,10 @@ use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Pots\Models\Pot;
 use Modules\Pots\Public\Services\PotWriter;
 
-// Virtual pots carving up the demo ASN balance, three of them linked to a
-// demo savings goal so the goals surface shows real contributed-vs-target
-// progress. Runs after DemoGoalsSeeder, which it resolves goals from by
-// name, and leaves headroom so the account still reconciles.
+// Runs after DemoGoalsSeeder — it resolves goals by name — and keeps the pot
+// amounts under the seeded account balance so unallocated never goes negative.
 final class DemoPotsSeeder
 {
-    // goalKey links the pot to a demo goal; null leaves it free-standing.
-    // Amounts stay under the seeded ASN balance so unallocated never goes
-    // negative. Both keys resolve through core::demo, so the pot finds the
-    // goal under the same string DemoGoalsSeeder wrote it under.
     /** @var list<array{nameKey: string, amount: string, goalKey: ?string}> */
     private const POTS = [
         ['nameKey' => 'pot_emergency_fund', 'amount' => '1250,00', 'goalKey' => 'goal_emergency_fund'],
@@ -76,8 +70,8 @@ final class DemoPotsSeeder
 
         $goalId = null;
         if ($row['goalKey'] !== null) {
-            // The goal may have been seeded in another language; resolving
-            // by today's rendering alone left the pot unlinked.
+            // The goal may have been seeded in another language; resolving by
+            // today's rendering alone left the pot unlinked.
             $goalId = Goal::query()
                 ->where('user_id', $user->id)
                 ->whereIn('name', DemoNames::everyRendering($row['goalKey']))

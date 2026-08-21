@@ -11,6 +11,7 @@ return [
     'rename' => 'Nimeä uudelleen',
     'confirm_delete' => 'Vahvista poisto',
     'delete_scenario' => 'Poista skenaario',
+    'delete_confirm' => 'Poistetaanko tämä skenaario?',
 
     'mutations_count' => 'Muutokset (:count)',
     'no_mutations' => 'Ei vielä muutoksia. Lisää yksi alta, niin näet miten tämä skenaario vertautuu perustasoosi.',
@@ -67,6 +68,7 @@ return [
         'new_amount' => 'Uusi summa',
         'new_next_date' => 'Uusi seuraava päivä',
         'scope' => 'Laajuus',
+        'scope_legend' => 'Mitkä esiintymät siirretään',
         'scope_next' => 'Vain seuraava esiintymä',
         'scope_all' => 'Kaikki myöhemmät esiintymät',
     ],
@@ -80,6 +82,8 @@ return [
         'current_amount' => 'Nykyinen summa',
         'new_amount' => 'Uusi summa',
     ],
+
+    'series_name_fallback' => 'sarja',
 
     'summary' => [
         'cancel' => 'Irtisano :name',

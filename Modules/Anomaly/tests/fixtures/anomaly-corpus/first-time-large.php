@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-// first-time-large: a €185.00 charge to a never-before-seen merchant. Per
-// D-09 the first-time detector fires ONLY when the charge is also large vs
-// the user's overall spending — so this case carries BOTH the `first_time`
-// and `large` reasons. The empty per-merchant history forces the
-// per-category / overall-spending fallback path (D-06).
+// A €185.00 charge to a never-before-seen merchant, large against the user's
+// overall spend: carries both `first_time` and a synthetic `large`.
 
 return [
     'settings' => [

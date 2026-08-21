@@ -17,9 +17,6 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class SyncSession
 {
     // NOT a singleton — mutable crypto state per peer, so each connection
@@ -204,13 +201,17 @@ final class SyncSession
         $entries = $this->framer->decode($frame);
 
         $verified = [];
+
+        // Counted per author and reported once. A line per entry is why this
+        // went unread: a peer whose history was signed by a retired identity
+        // wrote the same warning six thousand times, and the run still looked
+        // like an ordinary sync from every surface above it.
+        $unknownAuthors = [];
+
         foreach ($entries as $entry) {
             $pubKeyHex = $deviceKeys[$entry->deviceId] ?? null;
             if ($pubKeyHex === null) {
-                $this->logger?->warning('SyncSession: dropped entry with unknown device key.', [
-                    'device_id' => $entry->deviceId,
-                    'reason' => 'missing_device_key',
-                ]);
+                $unknownAuthors[$entry->deviceId] = ($unknownAuthors[$entry->deviceId] ?? 0) + 1;
 
                 continue;
             }
@@ -226,6 +227,18 @@ final class SyncSession
             }
 
             $verified[] = $entry;
+        }
+
+        if ($unknownAuthors !== []) {
+            // Error, not warning: nothing downstream reports this, so an
+            // exchange that delivered thousands of entries and applied none
+            // of them otherwise reads as a clean sync.
+            $this->logger?->error('SyncSession: dropped entries no device key can verify.', [
+                'reason' => 'missing_device_key',
+                'dropped' => array_sum($unknownAuthors),
+                'received' => count($entries),
+                'device_ids' => array_keys($unknownAuthors),
+            ]);
         }
 
         if ($verified === []) {

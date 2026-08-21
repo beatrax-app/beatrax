@@ -12,14 +12,10 @@ use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
 
-/*
- * IDOR regression. The mount() ownership gate alone was bypassable: $importRunId
- * was a plain (client-mutable) Livewire property, so an attacker could mount
- * their own run, retarget the id to another user's, and re-render — reading that
- * user's in-flight import preview (counterparty/IBAN/amount rows), because the
- * PreviewCache key is not user-scoped. These tests fail if #[Locked] or the
- * per-request ownership re-check in render()/applyRenameInPlace() is removed.
- */
+// IDOR regression: the mount() gate alone was bypassable, because $importRunId
+// was a client-mutable Livewire property and the PreviewCache key is not
+// user-scoped. These fail if #[Locked] or the per-request ownership re-check in
+// render()/applyRenameInPlace() is removed.
 
 function idorUser(string $username): User
 {
@@ -71,9 +67,8 @@ it('re-verifies ownership on applyRenameInPlace even for a foreign id (defence i
     $attacker = idorUser('idor-attacker-2');
     test()->actingAs($attacker);
 
-    // Bypass the Livewire #[Locked] guard at the PHP level to prove the
-    // per-request ownership re-check is itself load-bearing (would fire if a
-    // future change dropped #[Locked]).
+    // Constructed directly to step around #[Locked], so what is under test is
+    // the ownership re-check alone.
     $component = new PreviewWizard;
     $component->importRunId = $victimRunId;
 

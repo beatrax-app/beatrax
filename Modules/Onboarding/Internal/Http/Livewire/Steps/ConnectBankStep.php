@@ -15,6 +15,7 @@ use Livewire\WithFileUploads;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\SafeTrace;
 use Modules\Core\Public\Support\UploadLimits;
 use Modules\Import\Public\Contracts\RunsImports;
@@ -28,15 +29,12 @@ use Modules\Onboarding\Models\WizardProgress;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../../../.docs/features/onboarding/architecture.md
- */
 final class ConnectBankStep extends Component
 {
     use WithFileUploads;
 
-    // Only the CSV variants need a follow-on bank-format pick; CAMT.053
-    // and MT940 are self-describing.
+    // Only the CSV variants need a follow-on bank pick; CAMT.053 and MT940
+    // are self-describing.
     /** @var list<string> */
     private const SUPPORTED_FORMATS = ['camt053', 'mt940', 'asn-csv', 'ing-csv'];
 
@@ -45,14 +43,10 @@ final class ConnectBankStep extends Component
 
     public ?TemporaryUploadedFile $file = null;
 
-    // Cleared on every fresh submit so a retry does not keep a stale
-    // message.
     public ?string $uploadError = null;
 
     public string $selectedFormat = 'camt053';
 
-    // Stays null until the user picks a CSV bank; submit() refuses to
-    // proceed while null and selectedFormat is a CSV variant.
     public ?string $selectedBankFormatHint = null;
 
     /**
@@ -92,16 +86,12 @@ final class ConnectBankStep extends Component
         }
     }
 
-    // True only on the CSV branch with no bank-format pick yet — the UX
-    // surface of the server-side guard below.
     public function isDropZoneGated(): bool
     {
         return $this->isCsvFormat($this->selectedFormat) && $this->selectedBankFormatHint === null;
     }
 
-    // Mirrors UploadWizard::submit() (validator shape, Throwable
-    // catch-all, logger payload); on success stashes the ImportRun id
-    // into wizard_progress.data and dispatches wizard.step.completed.
+    // Mirrors UploadWizard::submit(); the two must not drift apart.
     public function submit(
         RunsImports $importer,
         CurrentUser $currentUser,
@@ -116,9 +106,8 @@ final class ConnectBankStep extends Component
             return;
         }
 
-        // Load-bearing check: the validator's in: rule alone can permit a
-        // (CSV, null) combination, so this catches a tampered request
-        // before any pipeline call.
+        // The validator's in: rule still admits a (CSV, null) pair, so a
+        // tampered request is caught here rather than inside the pipeline.
         if ($this->isCsvFormat($this->selectedFormat) && $this->selectedBankFormatHint === null) {
             $this->addError('selectedBankFormatHint', Lang::get('onboarding::connect_bank.errors.pick_bank'));
 
@@ -154,8 +143,7 @@ final class ConnectBankStep extends Component
             $logger->error('ConnectBankStep: import preview failed.', [
                 'source_format' => $this->selectedFormat,
                 'filename' => $originalFilename,
-                'exception_class' => $e::class,
-                'exception_message' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
                 'exception_trace' => SafeTrace::cap($e, $app->basePath()),
             ]);
             $this->uploadError = Lang::get('onboarding::connect_bank.errors.unreadable');
@@ -164,8 +152,6 @@ final class ConnectBankStep extends Component
         }
     }
 
-    // Auto-creates accounts for any unknown IBAN and re-previews once at least
-    // one was created — see architecture.md for why this is necessary.
     private function ensureBankAccounts(ImportPreviewResult $result, User $user, DatabaseManager $db, RunsImports $importer, ?BankCsvFormatHint $formatHint, LoggerInterface $logger, Application $app): void
     {
         $bankLabel = $this->bankLabelFor($this->selectedFormat, $this->selectedBankFormatHint);
@@ -205,9 +191,8 @@ final class ConnectBankStep extends Component
         return true;
     }
 
-    // Re-previews the run from its stable stored path so the preview cache
-    // reflects the now-resolvable account and statement_summaries is populated
-    // for the starting-balance detector on step 5.
+    // Also repopulates statement_summaries, which the first-import step's
+    // starting-balance detector reads.
     private function repreview(int $importRunId, User $user, RunsImports $importer, ?BankCsvFormatHint $formatHint, LoggerInterface $logger, Application $app): void
     {
         /** @var ImportRun|null $run */
@@ -230,8 +215,7 @@ final class ConnectBankStep extends Component
         } catch (Throwable $e) {
             $logger->warning('ConnectBankStep: re-preview after bank account creation failed.', [
                 'import_run_id' => $importRunId,
-                'exception_class' => $e::class,
-                'exception_message' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
                 'exception_trace' => SafeTrace::cap($e, $app->basePath()),
             ]);
         }
@@ -254,9 +238,8 @@ final class ConnectBankStep extends Component
 
     private function bankLabelFor(string $sourceFormat, ?string $bankFormatHint): string
     {
-        // Concatenated later into "We detected your {label} account
-        // started at" — keep "bank"/"ASN"/"ING" only, never the literal
-        // word "account", to avoid duplication.
+        // Concatenated into "We detected your {label} account started at",
+        // so the label must never itself contain the word "account".
         return match ($sourceFormat) {
             'camt053', 'mt940', 'asn-csv' => 'ASN bank',
             'ing-csv' => 'ING bank',
@@ -268,8 +251,8 @@ final class ConnectBankStep extends Component
         };
     }
 
-    // Adding the IBAN tail keeps multiple bank accounts under one user
-    // from colliding on the unique(user_id, slug) constraint.
+    // The IBAN tail keeps two bank accounts under one user off the same
+    // unique(user_id, slug) row.
     private function slugFor(string $label, string $iban): string
     {
         $tail = strtolower(substr($iban, -6));
@@ -287,10 +270,9 @@ final class ConnectBankStep extends Component
         return $views->make('onboarding::livewire.steps.connect-bank-step');
     }
 
-    // Strips path-traversal characters before the filename touches any
-    // filesystem path; the extension follows the declared source format
-    // so the stored copy round-trips through the format-specific
-    // HeaderSniffer on re-read.
+    // Path-traversal characters go before the name reaches a filesystem path; the
+    // extension follows the declared format so the stored copy still sniffs
+    // correctly when repreview() re-reads it.
     private function sanitiseFilename(string $original): string
     {
         $stem = pathinfo($original, PATHINFO_FILENAME);

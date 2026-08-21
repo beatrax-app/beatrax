@@ -2,12 +2,7 @@
 
 declare(strict_types=1);
 
-// Variable utility: same ASN account + an Electricity series with
-// variance_tolerance_percent=45 (≥40% percentile-tier trigger) and
-// 8 historical occurrences ranging from €60 to €220. The expected
-// 30-day projection shows a WIDE band on the occurrence date —
-// P10/P90 spread reflects the natural variance. No shortfalls at
-// the documented opening balance.
+/** @link ../../../../../.docs/features/forecasting/forecast-corpus.md#variable-utility */
 
 return [
     'accounts' => [

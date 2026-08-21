@@ -5,19 +5,6 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Modules\Tax\Public\Services\TaxYearQuery;
 
-/*
- * Feature tests for Phase 13.1 D-06a: leg-aware TaxYearQuery amount
- * resolution + whole-tx-tag supersession.
- *
- * Tests cover:
- *  - A €80 split (€60 Groceries tagged deductible / €20 Household untagged)
- *    reports €60 deductible for the year — not €80, not €0.
- *  - A whole-transaction tag on an UNSPLIT transaction still reports the
- *    full transaction amount (regression).
- *  - Supersession: a stale whole-tx tag on a NOW-split transaction is
- *    excluded once a leg tag exists for that same transaction.
- */
-
 function tylaUser(DatabaseManager $db, string $username): int
 {
     return $db->connection()->table('users')->insertGetId([
@@ -120,10 +107,6 @@ function tylaDeductionCategory(DatabaseManager $db, int $userId, string $name = 
     ]);
 }
 
-/**
- * Inserts a tax_transaction_tags row (optionally leg-scoped) and returns
- * its id.
- */
 function tylaTag(DatabaseManager $db, int $userId, int $txId, ?int $catId, ?int $transactionSplitId = null): int
 {
     return $db->connection()->table('tax_transaction_tags')->insertGetId([
@@ -137,8 +120,6 @@ function tylaTag(DatabaseManager $db, int $userId, int $txId, ?int $catId, ?int 
         'updated_at' => now(),
     ]);
 }
-
-// -----------------------------------------------------------------------
 
 it('reports the LEG amount for a leg-scoped tag on a split — not the whole parent (€60, not €80 or €0)', function (): void {
     /** @var DatabaseManager $db */
@@ -196,16 +177,14 @@ it('excludes a stale whole-tx tag once the same transaction has a leg tag (super
 
     // Stale whole-tx tag predates the split.
     tylaTag($db, $userId, $txId, $deductionCat, null);
-    // The transaction is now split and one leg carries its own tag.
     tylaTag($db, $userId, $txId, $deductionCat, $groceriesLeg);
 
     /** @var TaxYearQuery $query */
     $query = app(TaxYearQuery::class);
     $result = $query->forUser($userId, 2026);
 
-    // Only the leg row surfaces — the whole-tx row is superseded, so the
-    // total is €60 (the leg), not €140 (€80 whole + €60 leg double-count)
-    // and not €80.
+    // Only the leg row surfaces: 60 (the leg), not 140 (80 whole + 60 leg
+    // double-counted) and not 80.
     expect($result->itemCount)->toBe(1)
         ->and($result->deductionsTotalMinor)->toBe(6000);
 });

@@ -25,6 +25,8 @@ return [
         'tax_years' => 'Indkomstår',
     ],
 
+    'tablist_aria' => 'Modpartens sektioner',
+
     'tab_note_personal' => '— ingen finansieringskæder for private kontakter',
     'tab_note_bank' => '— en modpart for bankgebyrer genererer ikke finansieringskæder',
     'tab_note_government' => '— ingen finansieringskæder for offentlige modparter',

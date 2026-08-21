@@ -3,21 +3,10 @@
 declare(strict_types=1);
 
 use Modules\Ingestion\Internal\Adapters\Paypal\PaypalAmountParser;
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 
-/*
- * Coverage for the NL-locale PayPal amount parser.
- *
- * The user's PayPal account renders amounts in NL locale (comma
- * decimal, no visible thousands separator in observed single-month
- * exports). See the redacted fixture at
- * Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv for
- * representative values.
- *
- * Integer-only arithmetic invariant: NO (float), NO floatval(), NO
- * round(). Same NoFloatMoneyArchTest gate every other amount parser
- * honours.
- */
+// PayPal renders amounts in NL locale — comma decimal, and no visible
+// thousands separator in any single-month export observed so far.
 
 beforeEach(function (): void {
     $this->parser = new PaypalAmountParser;

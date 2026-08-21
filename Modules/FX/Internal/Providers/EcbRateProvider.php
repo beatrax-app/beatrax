@@ -9,21 +9,13 @@ use Modules\FX\Public\Contracts\RateProvider;
 use Modules\FX\Public\Exceptions\RateFetchException;
 use SimpleXMLElement;
 
-/**
- * @link ../../../../.docs/features/fx/architecture.md
- */
 final class EcbRateProvider implements RateProvider
 {
-    // ECB daily reference feed, published ~16:00 CET on each business
-    // day (Mon-Fri, not public holidays). Priority 200 - tried first in
-    // the registry chain.
+    // Published ~16:00 CET each business day, public holidays excepted.
     private const string URL = 'https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml';
 
     private const string NS = 'http://www.ecb.int/vocabulary/2002-08-01/eurofxref';
 
-    // Http\Factory is constructor-injected, never the Http facade, so
-    // this class satisfies the arch test forbidding Illuminate facades
-    // inside Modules\.
     public function __construct(private readonly HttpFactory $http) {}
 
     public function key(): string
@@ -64,10 +56,9 @@ final class EcbRateProvider implements RateProvider
     private function parse(string $body): array
     {
         try {
-            // LIBXML_NONET | LIBXML_NOCDATA: the feed needs no external
-            // resource to parse, so any entity reaching out over the network
-            // is hostile. Matches the entity hardening Camt053Adapter applies
-            // to the other XML the app ingests.
+            // The feed needs no external resource to parse, so an entity that
+            // reaches out over the network is hostile. Same hardening as
+            // Camt053Adapter applies to the other XML this app ingests.
             $xml = new SimpleXMLElement($body, LIBXML_NONET | LIBXML_NOCDATA);
         } catch (\Throwable $e) {
             throw new RateFetchException('ECB XML parse failed: '.$e->getMessage(), 0, $e);

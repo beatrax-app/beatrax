@@ -11,7 +11,8 @@ A topic in this subtree answers "how does X work across the codebase?" rather th
 
 | Topic | What it covers |
 | --- | --- |
-| [Module boundaries](module-boundaries.md) | The thirty-four bounded modules, the `Public/Internal/Models/` split, and the twenty-nine arch invariants that hold the lines |
+| [Module boundaries](module-boundaries.md) | The thirty-five bounded modules, the `Public/Internal/Models/` split, and the arch invariants that hold the lines |
+| [Table ownership](table-ownership.md) | Which module owns which table, derived from the migrations, and the pinned cross-module raw-table writes and schema alterations |
 | [Ingestion pipeline](ingestion-pipeline.md) | The end-to-end flow from raw source file (CSV / CAMT / MT940 / PDF / `.eml`) to canonical `Transaction` row, including the idempotency contract |
 | [Chain resolution](chain-resolution.md) | PayPal funding chains, ICS bulk-iDEAL settlement chains, the `pair_transaction_id` linkage, and the known-counterparty-IBAN alias bridge |
 | [Categorization](categorization.md) | The two-layer rule-and-memory categorizer, the ≥40% confidence gate, and the receipt-vs-statement enrichment conflict resolver |

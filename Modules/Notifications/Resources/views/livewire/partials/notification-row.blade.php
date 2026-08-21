@@ -1,21 +1,21 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    Notification row (D-45/D-46, 18-UI-SPEC.md § 2). Markup is a verbatim
+    Notification row (18-UI-SPEC.md § 2). Markup is a verbatim
     clone of the UI-SPEC contract; the ONLY addition is the `x-on:click`
     below, which fires `markRead` in the background without intercepting
     the anchor's own navigation (Alpine's `$wire.call()` never calls
     `preventDefault()`) — the whole row stays the SINGLE click target
-    (D-45), this just wires Req 2's "marking read flips state" behavior
+    and this just wires the "marking read flips state" behavior
     to the one target that already exists.
 
     Renders all five states correctly: unread (blue dot + font-semibold),
     read (no dot, font-normal), resolved (muted "Resolved" status-pill
     appended after the title), dead-link (aria-disabled, no hover
     background, cursor-default, quiet rose explanation line), and
-    dismissed-tab (identical — no strikethrough, no extra muting, D-10).
+    dismissed-tab (identical — no strikethrough, no extra muting).
 
-    No day-grouping headers, no per-type chip color (D-46) — `.type-chip`
-    is the one new CSS class this phase adds.
+    No day-grouping headers, no per-type chip color — `.type-chip`
+    is the one new CSS class this row introduces.
 --}}
 <a
     href="{{ $notification->deepLinkUrl ?? '#' }}"

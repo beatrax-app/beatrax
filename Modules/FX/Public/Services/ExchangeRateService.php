@@ -4,24 +4,13 @@ declare(strict_types=1);
 
 namespace Modules\FX\Public\Services;
 
-use Brick\Math\Exception\MathException;
-use Brick\Math\RoundingMode;
-use Brick\Money\Context\DefaultContext;
-use Brick\Money\Currency;
-use Brick\Money\CurrencyConverter;
-use Brick\Money\Exception\ExchangeRateNotFoundException;
-use Brick\Money\ExchangeRateProvider\BaseCurrencyProvider;
-use Brick\Money\ExchangeRateProvider\Configurable\ConfigurableProviderBuilder;
-use Brick\Money\Money as BrickMoney;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
 use Modules\FX\Public\Dto\ConversionResult;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Ledger\Public\ValueObjects\RateTable;
 
-/**
- * @link ../../../../.docs/features/fx/architecture.md
- */
 final class ExchangeRateService
 {
     private const int STALE_DAYS_THRESHOLD = 3;
@@ -30,8 +19,6 @@ final class ExchangeRateService
 
     public function __construct(private readonly DatabaseManager $db) {}
 
-    // Converts at the latest available rate; zero-overhead passthrough
-    // when currencies match.
     public function convertToBase(Money $money, string $targetCurrency): ConversionResult
     {
         if ($money->currency() === $targetCurrency) {
@@ -68,17 +55,11 @@ final class ExchangeRateService
         return $this->convertWithRows($money, $targetCurrency, $rows);
     }
 
-    // -------------------------------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------------------------------
-
     /**
      * @return Collection<int, \stdClass>
      */
     private function fetchLatestRates(): Collection
     {
-        // Select the most-recent row per (base, quote) pair using a subquery
-        // so we always get the freshest rate regardless of source.
         return $this->db->connection()
             ->table('exchange_rates as er')
             ->select([
@@ -108,35 +89,22 @@ final class ExchangeRateService
             ->get(['base_currency', 'quote_currency', 'rate', 'rate_date', 'source']);
     }
 
-    // Converts using a known rate string from a transaction's
-    // fx_rate_used column; source is 'transaction' and staleness is
-    // always false since the recorded rate is canonical.
     private function convertWithKnownRate(
         Money $money,
         string $targetCurrency,
         string $knownRate,
         string $date,
     ): ConversionResult {
-        // For a direct pair (source→target), tx.fx_rate_used stores the rate in the
-        // direction the transaction needed. Use it as-is via ConfigurableProvider.
-        // brick/money 0.14 made ConfigurableProvider immutable: rates go in
-        // through a builder, and the provider is built once.
-        $configProvider = (new ConfigurableProviderBuilder)
-            ->addExchangeRate($money->currency(), $targetCurrency, $knownRate)
-            ->build();
+        // tx.fx_rate_used is already stored in the direction this conversion needs.
+        $converted = RateTable::direct()
+            ->withRate($money->currency(), $targetCurrency, $knownRate)
+            ->convert($money, $targetCurrency);
 
-        try {
-            $converter = new CurrencyConverter($configProvider);
-            $brickSource = BrickMoney::ofMinor($money->toMinor(), $money->currency());
-            $brickResult = $converter->convert($brickSource, $targetCurrency, context: new DefaultContext, roundingMode: RoundingMode::HalfUp);
-            $convertedMinor = $brickResult->getMinorAmount()->toInt();
-        } catch (ExchangeRateNotFoundException|MathException) {
-            // Direct rate insufficient (cross-rate needed) or the result overflows
-            // the platform integer range — fall back to the dated DB rows.
+        if ($converted === null) {
+            // null means the direct rate was insufficient (a cross-rate is needed)
+            // or the result overflows the platform integer range.
             return $this->convertWithRows($money, $targetCurrency, $this->fetchRatesForDate($date));
         }
-
-        $converted = Money::ofMinor($convertedMinor, $targetCurrency);
 
         return new ConversionResult(
             original: $money,
@@ -158,11 +126,7 @@ final class ExchangeRateService
             return ConversionResult::passthrough($money);
         }
 
-        // Track the freshest date + source PER quote currency below so the
-        // result metadata reflects the pair(s) actually used in this
-        // conversion, not just the globally newest row (which could
-        // mis-report a genuinely stale pair as fresh).
-        $providerBuilder = new ConfigurableProviderBuilder;
+        $table = RateTable::crossedThrough(self::BASE_CURRENCY);
 
         /** @var array<string, array{date: string, source: ?string}> $rateMeta */
         $rateMeta = [];
@@ -182,7 +146,7 @@ final class ExchangeRateService
                 continue;
             }
 
-            $providerBuilder->addExchangeRate($baseC, $quoteC, $rateStr);
+            $table = $table->withRate($baseC, $quoteC, $rateStr);
 
             $rowDate = self::toString($row->rate_date ?? null);
 
@@ -191,29 +155,16 @@ final class ExchangeRateService
             }
         }
 
-        // BaseCurrencyProvider derives cross-rates automatically from
-        // EUR-based pairs (e.g. USD->GBP from two EUR-based rows).
-        $basedProvider = new BaseCurrencyProvider($providerBuilder->build(), self::BASE_CURRENCY);
+        $converted = $table->convert($money, $targetCurrency);
 
-        try {
-            $converter = new CurrencyConverter($basedProvider);
-            $brickSource = BrickMoney::ofMinor($money->toMinor(), $money->currency());
-            $brickResult = $converter->convert($brickSource, $targetCurrency, context: new DefaultContext, roundingMode: RoundingMode::HalfUp);
-            $convertedMinor = $brickResult->getMinorAmount()->toInt();
-        } catch (ExchangeRateNotFoundException|MathException) {
-            // Rate pair unavailable, or the converted amount overflows the
-            // platform integer range — fall back to passthrough rather
-            // than crashing the caller (e.g. the whole net-worth render).
+        if ($converted === null) {
+            // An unavailable pair or an integer-range overflow degrades to
+            // passthrough rather than crashing the whole net-worth render.
             return ConversionResult::passthrough($money);
         }
 
-        $converted = Money::ofMinor($convertedMinor, $targetCurrency);
+        $rate = $table->rateFor($money->currency(), $targetCurrency);
 
-        $rateStr = $this->deriveRateString($money->currency(), $targetCurrency, $basedProvider);
-
-        // As-of / source / staleness reflect the OLDEST rate actually involved
-        // in this conversion (the non-base legs), so any stale leg flags the
-        // whole figure as stale.
         [$asOf, $source] = $this->resolveRateMetadata($money->currency(), $targetCurrency, $rateMeta);
         $isStale = $asOf !== null && $asOf->diffInDays(CarbonImmutable::now()->startOfDay()) > self::STALE_DAYS_THRESHOLD;
 
@@ -221,7 +172,7 @@ final class ExchangeRateService
             original: $money,
             converted: $converted,
             isPassthrough: false,
-            rate: $rateStr,
+            rate: $rate === null ? null : (string) $rate,
             source: $source,
             asOf: $asOf,
             isStale: $isStale,
@@ -238,8 +189,8 @@ final class ExchangeRateService
         $source = null;
 
         foreach ([$fromCurrency, $toCurrency] as $currency) {
-            // The base currency (EUR) has no row of its own — that leg
-            // is trivially fresh, so only non-base legs are considered.
+            // The base currency has no exchange_rates row of its own, so that
+            // leg is trivially fresh and only non-base legs decide staleness.
             if ($currency === self::BASE_CURRENCY || ! isset($rateMeta[$currency])) {
                 continue;
             }
@@ -256,22 +207,6 @@ final class ExchangeRateService
             $oldestDate !== null ? CarbonImmutable::parse($oldestDate) : null,
             $source,
         ];
-    }
-
-    // Derives the effective rate string for the given pair; returns null
-    // when not derivable (e.g. an unexpected exception).
-    private function deriveRateString(string $fromCurrency, string $toCurrency, BaseCurrencyProvider $provider): ?string
-    {
-        try {
-            $rate = $provider->getExchangeRate(
-                Currency::of($fromCurrency),
-                Currency::of($toCurrency),
-            );
-
-            return (string) $rate;
-        } catch (\Throwable) {
-            return null;
-        }
     }
 
     private static function toString(mixed $value): ?string

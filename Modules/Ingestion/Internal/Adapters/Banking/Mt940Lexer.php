@@ -5,21 +5,16 @@ declare(strict_types=1);
 namespace Modules\Ingestion\Internal\Adapters\Banking;
 
 use Generator;
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 
-/**
- * @link ../../../../../.docs/features/ingestion/architecture.md
- */
 final class Mt940Lexer
 {
-    // Defensive against pathological inputs: bounds total line count against
-    // a file whose every byte is a newline (UploadLimits bounds bytes, not
-    // lines, so a small-but-degenerate file still needs its own cap).
+    // UploadLimits bounds bytes, not lines, so a small but degenerate file —
+    // every byte a newline — still needs its own cap.
     private const MAX_LINE_COUNT = 100_000;
 
-    // Caps a single tag buffer; real :86: narratives never exceed a few
-    // hundred bytes. Also used as the stream_get_line length cap so one
-    // pathologically long line can't allocate before this check fires.
+    // Real :86: narratives never exceed a few hundred bytes. Doubles as the
+    // stream_get_line cap so one huge line cannot allocate before the check.
     private const MAX_BUFFER_BYTES = 16_384;
 
     private const TAG_LINE_REGEX = '/^:(\d{2}[A-Z]?):(.*)$/';

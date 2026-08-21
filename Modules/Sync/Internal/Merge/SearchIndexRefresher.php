@@ -12,9 +12,6 @@ use Modules\Sync\Internal\OpLog\QuarantineReason;
 // different subsystem from the applier: that one merges op-log entries into
 // their tables, this re-derives an index from the result. Nothing here can
 // fail the replay — a stale index recovers, a half-applied replay does not.
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class SearchIndexRefresher
 {
     private const string SYSTEM_FTS_DEVICE_ID = 'system-fts';

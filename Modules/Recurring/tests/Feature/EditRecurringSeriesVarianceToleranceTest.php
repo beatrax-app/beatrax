@@ -21,15 +21,6 @@ use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Public\Actions\EditRecurringSeriesVarianceTolerance;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/*
- * EditRecurringSeriesVarianceTolerance — per-series variance tolerance
- * editor. Metric-style write: no state transition, no event, idempotent
- * no-op on same-value, cross-user 404. Allowed values: 10, 25, 50.
- *
- * The next detector sweep must honour the persisted value so a widened
- * tolerance does not fragment a previously-approved cluster.
- */
-
 function ervtUser(string $username): User
 {
     return User::query()->create([
@@ -145,7 +136,6 @@ it('rejects a non-whitelisted tolerance value (rejects-invalid-percent)', functi
         ervtAction()->__invoke($series->id, $this->user, 7);
         $this->fail('Expected InvalidArgumentException');
     } catch (InvalidArgumentException) {
-        // Row unchanged.
         $fresh = RecurringSeries::query()->findOrFail($series->id);
         expect($fresh->variance_tolerance_percent)->toBe(25);
     }
@@ -175,10 +165,9 @@ it('honours the new tolerance on the next detector sweep so a wider amount band 
     $db = app(DatabaseManager::class);
     $connection = $db->connection();
 
-    // Seed 6 monthly transactions with amounts ranging from -€80 to -€140
-    // — a ±30% band around the -€100 median. Default 25% tolerance would
-    // drop the -€140 outlier (and possibly -€80) reducing the cluster
-    // below the 2-occurrence minimum; 50% tolerance keeps them all.
+    // Amounts from -€80 to -€140, a ±30% band around the -€100 median. The
+    // default 25% tolerance would drop the -€140 outlier and take the cluster
+    // below the two-occurrence minimum; 50% keeps them all.
     $amounts = [-10000, -9000, -11000, -8000, -14000, -12000];
     for ($i = 0; $i < count($amounts); $i++) {
         $year = 2025 + intdiv(10 + $i, 12);
@@ -208,8 +197,7 @@ it('honours the new tolerance on the next detector sweep so a wider amount band 
         ]);
     }
 
-    // Pre-seed a series with tolerance=50 so the detector picks it up
-    // when refreshing.
+    // Pre-seeded at tolerance=50 so the refreshing detector picks that up.
     ervtSeries($this->user, [
         'variance_tolerance_percent' => 50,
         'cluster_key' => 'expense::volatile-bill::EUR::monthly',
@@ -230,12 +218,9 @@ it('honours the new tolerance on the next detector sweep so a wider amount band 
         ->where('user_id', $this->user->id)
         ->where('detected_name', 'volatile-bill')
         ->count();
-    // One series — the cluster did NOT fragment under 50% tolerance.
     expect($count)->toBe(1);
 
-    // Quench the unused-container linter — Container::getInstance()
-    // is referenced in the helper's Use list for the per-fixture
-    // dispatch shape even when this slice does not need it directly.
+    // These two exist only so the imports above are not flagged unused.
     expect(Container::getInstance())->not->toBeNull();
     expect(Dispatcher::class)->toBeString();
 })->group('detector-honours-new-tolerance');

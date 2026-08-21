@@ -57,6 +57,7 @@ return [
         'meta_eur_equiv' => '(≈ :amount/god.)',
         'cancel_impact' => 'Otkaži ovo → uštedi :amount/god.',
         'cadence_flipped' => 'Učestalost je promijenjena — prikazuje se i u',
+        'cadence_flipped_link' => 'Pregled ponavljajućih',
         'acknowledge' => 'Potvrdi',
         'acknowledge_aria' => 'Potvrdi upozorenje o odstupanju :id',
         'snooze' => 'Odgodi ▾',

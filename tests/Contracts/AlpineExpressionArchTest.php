@@ -2,22 +2,8 @@
 
 declare(strict_types=1);
 
-/*
- * An Alpine attribute value must not open with a `//` line comment.
- *
- * Alpine compiles the attribute as an EXPRESSION. A leading `//` pushes the
- * real code onto the next line, so a statement there — `if`, `let`, `for` —
- * raises "Alpine Expression Error: Unexpected token 'if'" and the directive
- * never runs.
- *
- * It fails quietly in the place it hurts: the biometric-capability probe on
- * the app-lock screen threw on every render, so the capability was never
- * reported and the biometric option stayed hidden on hardware that supports
- * it. Nothing failed server-side and no test noticed.
- *
- * Only the LEADING position is rejected. Comments inside a nested function
- * body (`x-data="{ init() { // ... } }"`) compile fine and are common in
- * these views, so flagging every `//` would be wrong.
+/**
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a--comment-leading-an-alpine-expression
  */
 
 /** @return list<string> */

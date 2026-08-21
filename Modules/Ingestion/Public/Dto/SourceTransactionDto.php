@@ -7,9 +7,6 @@ namespace Modules\Ingestion\Public\Dto;
 use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/ingestion/architecture.md
- */
 final class SourceTransactionDto extends Data
 {
     /**

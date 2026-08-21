@@ -98,15 +98,13 @@
         {{-- Flux's primary variant paints its own accent, which is not the
              slate this app uses for every other primary action — on the last
              screen of onboarding that read as a stray button from another app. --}}
-        <button
-            type="button"
+        <x-core::neutral-button
+            block="full"
+            class="min-h-[44px]"
             wire:click="continueToApp"
-            class="w-full min-h-[44px] rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white
-                   hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                   dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
         >
             {{ Lang::get('mobile::sync_complete.continue') }}
-        </button>
+        </x-core::neutral-button>
 
     </div>
 </div>

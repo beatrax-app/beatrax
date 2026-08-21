@@ -23,13 +23,8 @@ use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
-// counterparty_iban is a SensitiveFieldRegistry-listed column: under an
-// encrypted user it is random-nonce ciphertext that differs per row for
-// the same logical IBAN, so clustering on the raw value would scatter
-// every income row and silently detect nothing — see the class @link.
-
 /**
- * @link ../../../../.docs/features/recurring/architecture.md
+ * @link ../../../../.docs/features/recurring/detection-encryption-posture.md
  */
 final class IncomeSeriesDetector implements SeriesDetector
 {
@@ -53,16 +48,6 @@ final class IncomeSeriesDetector implements SeriesDetector
         private readonly MerchantDisplayName $merchantNames,
     ) {}
 
-    /**
-     * @param  Session|null  $session  when non-null, `counterparty_iban` is
-     *                                 decrypted (codec no-op for a
-     *                                 plaintext/non-encrypted value) before
-     *                                 clustering. Null (the default) skips
-     *                                 the decrypt call entirely — used by
-     *                                 the generic `SeriesDetector` interface
-     *                                 call shape and by any caller with no
-     *                                 session context.
-     */
     public function detectForUser(User $user, ?Session $session = null): void
     {
         $windowMonths = $user->recurring_detection_window_months;
@@ -101,9 +86,8 @@ final class IncomeSeriesDetector implements SeriesDetector
             $counterparty = self::toString($row->counterparty_normalized);
             $iban = self::toString($row->counterparty_iban);
             if ($iban !== '' && $session !== null) {
-                // Decrypt BEFORE the value becomes the cluster key — a
-                // no-op pass-through when the value is already plaintext
-                // (not encrypted / no epoch verifies).
+                // Decrypt BEFORE the value becomes a grouping key; a no-op
+                // pass-through when the stored value is not encrypted.
                 $iban = $this->codec->decryptValue('transactions', 'counterparty_iban', $iban, $user->id, $session)['value'];
             }
             $currency = self::toString($row->currency);
@@ -111,10 +95,9 @@ final class IncomeSeriesDetector implements SeriesDetector
                 continue;
             }
 
-            // IBAN-primary cluster key, normalized-description fallback: an
-            // IBAN identifies the upstream payer more stably than the
-            // free-form description (banks rewrite it; the SEPA IBAN is
-            // constant). See the class @link for the plaintext-derivative note.
+            // IBAN first: banks rewrite the free-form description, the SEPA
+            // IBAN is constant. The class docblock's page covers what deriving
+            // a grouping key from plaintext costs.
             $counterpartyKey = $iban !== '' ? $iban : $counterparty;
             if ($counterpartyKey === '') {
                 continue;
@@ -171,9 +154,8 @@ final class IncomeSeriesDetector implements SeriesDetector
             ->where('latest_currency', $currency)
             ->first();
 
-        // Cadence-flip fallback keyed on the counterparty identifier (not
-        // detected_name) — keeps two payroll providers that share a
-        // normalized display string from collapsing into one another.
+        // Keyed on the counterparty identifier, not detected_name: two payroll
+        // providers can normalise to the same display string.
         /** @var RecurringSeries|null $existingByCounterparty */
         $existingByCounterparty = RecurringSeries::query()
             ->where('user_id', $user->id)
@@ -195,10 +177,9 @@ final class IncomeSeriesDetector implements SeriesDetector
             return;
         }
 
-        // Both states mean leave this row alone. Rejection covers the whole
-        // (counterparty, currency) pair across every cadence variant; a
-        // snoozed row would surface a different amount than the one the user
-        // paused on, and the next sweep's expiry pass unpauses it first.
+        // Rejection covers the whole (counterparty, currency) pair across every
+        // cadence variant. Refreshing a snoozed row would change the amount the
+        // user paused on; the next sweep's expiry pass unpauses it first.
         if (in_array($existing->state, [RecurringSeriesState::Rejected->value, RecurringSeriesState::Snoozed->value], true)) {
             return;
         }
@@ -206,10 +187,8 @@ final class IncomeSeriesDetector implements SeriesDetector
         $this->refresher->refresh($existing, $counterpartyKey, $detected, $user, Direction::Income->value);
     }
 
-    // A cluster qualifies once it has enough occurrences and the intervals
-    // resolve to a real cadence. Null means one of those two tests failed
-    // and there is nothing to record. Income skips the variance filter that
-    // expense applies, so the row list is not narrowed here.
+    // Unlike the expense detector this applies no variance filter, so it
+    // returns only the cadence result and never a narrowed row list.
     /**
      * @param  list<stdClass>  $rows
      * @return array{cadence: SeriesCadence, median_interval_days: float, next_expected_at: ?CarbonImmutable, confidence_low: bool, missed_count: int}|null

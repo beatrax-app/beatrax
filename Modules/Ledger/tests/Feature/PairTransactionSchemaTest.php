@@ -11,23 +11,6 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Tests\TestCase;
 
-/*
- * Schema-shape + DTO gate for the pair-transaction backbone:
- *
- *   1. transactions.pair_transaction_id self-FK exists with ON DELETE SET NULL
- *   2. pair_transaction_id defaults to NULL
- *   3. Deleting a partner row sets the survivor's pair_transaction_id back to
- *      NULL (the SQLite FK action wired by the migration)
- *   4. The transactions_unpaired_transfer_idx partial index exists with the
- *      expected columns
- *   5. Transaction model exposes a pair() BelongsTo relation
- *   6. CanonicalTransaction exposes a withType() clone-with-override DTO
- *      helper (immutable; preserves every other field)
- *
- * All introspection runs through constructor-injected DatabaseManager so the
- * DI-only rule stays honest (no DB facade).
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -178,7 +161,7 @@ it('returns a NEW CanonicalTransaction instance from withType() preserving every
     expect($flipped)->not->toBe($tx);
     expect($flipped)->toBeInstanceOf(CanonicalTransaction::class);
     expect($flipped->type)->toBe('transfer_out');
-    expect($tx->type)->toBe('expense'); // original unchanged
+    expect($tx->type)->toBe('expense');
     expect($flipped->userId)->toBe(1);
     expect($flipped->accountId)->toBe(2);
     expect($flipped->amountMinor)->toBe(-1299);

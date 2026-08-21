@@ -10,14 +10,10 @@ use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Services\UserDataPathService;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final readonly class PreMigrationSnapshot
 {
-    // See architecture.md for the tax_transaction_tags/transaction_splits
-    // backfill rationale — the same sensitive-column map the migration's
-    // projection re-encrypt pass consumes.
+    // The same sensitive-column map the migration's projection re-encrypt pass
+    // consumes; the op-log pass uses the field registry as its own source.
     public const PROJECTION_COLUMNS = [
         'transactions' => ['note', 'description', 'counterparty_name', 'counterparty_iban', 'raw_payload'],
         'counterparties' => ['display_name', 'merchant_name', 'iban'],
@@ -30,9 +26,8 @@ final readonly class PreMigrationSnapshot
         private Clock $clock,
     ) {}
 
-    // See architecture.md for why this is a targeted sensitive-column
-    // snapshot (mirrors GdkKeyringService's encrypted-file idiom) rather
-    // than a whole-file SQLite copy.
+    // A targeted sensitive-column snapshot, not a whole-file SQLite copy: only
+    // the values the migration is about to rewrite need a safety net.
     public function takeSnapshot(int $userId, ConnectionInterface $connection, string $kek): string
     {
         $payload = [
@@ -45,8 +40,7 @@ final readonly class PreMigrationSnapshot
                 ->all(),
             'transactions' => $this->captureRows($connection, 'transactions', $userId),
             'counterparties' => $this->captureRows($connection, 'counterparties', $userId),
-            // These backfill-sweep tables must be in the pre-migration
-            // snapshot too so a restore after a forced failure covers them.
+            // Backfill-sweep tables, so a restore after a forced failure covers them.
             'tax_transaction_tags' => $this->captureRows($connection, 'tax_transaction_tags', $userId),
             'transaction_splits' => $this->captureRows($connection, 'transaction_splits', $userId),
         ];
@@ -104,18 +98,16 @@ final readonly class PreMigrationSnapshot
     {
         $payload = $this->decodeSnapshotPayload($snapshotPath, $kek);
 
-        // The snapshot itself could not be restored — the transaction
-        // rollback already reverted every DB write this pass made, so there
-        // is nothing left to repair. Do not throw: the ORIGINAL failure is
-        // what the caller must see (re-thrown by the caller).
+        // Unreadable snapshot: the rollback already reverted every DB write, so
+        // there is nothing to repair. Do not throw — the ORIGINAL failure is what
+        // the caller must surface.
         if ($payload === null) {
             return;
         }
 
-        // Wrap every restore write in ONE transaction so the restore is
-        // all-or-nothing — without it, a throw partway (DB error / one bad
-        // row) would leave a partially-restored mixed state. This method is
-        // only invoked on a genuine rollback, so it never contradicts a commit.
+        // One transaction so the restore is all-or-nothing; a throw partway would
+        // otherwise leave a half-restored mix of plaintext and ciphertext. Only
+        // ever invoked on a genuine rollback, so it never contradicts a commit.
         $connection->transaction(function () use ($connection, $payload): void {
             /** @var list<array<string, mixed>> $opLogRows */
             $opLogRows = is_array($payload['op_log_entries'] ?? null) ? $payload['op_log_entries'] : [];

@@ -12,14 +12,8 @@ use Modules\Anomaly\Tests\Support\AnomalyCorpusSeeder;
 
 uses(RefreshDatabase::class);
 
-/*
- * CR-01: a duplicate-only (or first-time-only) alert carries no
- * per-merchant latest_amount_minor, yet dismissing it "as expected" must
- * still write a suppression rule (falling back to the transaction's own
- * settled amount) so the next identical charge is muted — D-17 must not be
- * silently defeated for those detectors.
- */
-
+// A duplicate-only alert carries no latest_amount_minor, so the band has to
+// fall back to the transaction's own settled amount.
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -29,7 +23,7 @@ beforeEach(function (): void {
 
 afterEach(fn () => CarbonImmutable::setTestNow());
 
-it('writes a fallback band for a duplicate-only alert and returns true (CR-01)', function (): void {
+it('writes a fallback band for a duplicate-only alert and returns true', function (): void {
     $user = AnomalyCorpusSeeder::makeUser();
     $fixture = AnomalyCorpusSeeder::load('duplicate-in-window');
     $txnId = AnomalyCorpusSeeder::seed($this->db, $user, $fixture);
@@ -48,7 +42,6 @@ it('writes a fallback band for a duplicate-only alert and returns true (CR-01)',
 
     expect($ruleWritten)->toBeTrue();
 
-    // A duplicate suppression rule with a ±15% band around the -4999 charge.
     $rule = $this->db->connection()->table('anomaly_suppression_rules')
         ->where('user_id', $user->id)
         ->where('detector', 'duplicate')
@@ -61,7 +54,7 @@ it('writes a fallback band for a duplicate-only alert and returns true (CR-01)',
         ->and((int) $rule->source_anomaly_alert_id)->toBe((int) $alert->id);
 });
 
-it('suppresses the next identical duplicate after a duplicate-only dismissal (CR-01 closes the D-17 gap)', function (): void {
+it('suppresses the next identical duplicate after a duplicate-only dismissal', function (): void {
     $user = AnomalyCorpusSeeder::makeUser();
     $fixture = AnomalyCorpusSeeder::load('duplicate-in-window');
     $txnId = AnomalyCorpusSeeder::seed($this->db, $user, $fixture);
@@ -75,8 +68,8 @@ it('suppresses the next identical duplicate after a duplicate-only dismissal (CR
     $dismiss = $this->app->make(DismissAnomalyAlertAsExpected::class);
     ($dismiss)($alert->id, $user);
 
-    // A third identical coolblue €49.99 charge within the window. Before
-    // CR-01 no rule existed so this re-fired; now it is suppressed.
+    // A third identical charge inside the window: without the fallback band
+    // there would be no rule and this would re-fire.
     $cpId = (int) $this->db->connection()->table('transactions')->where('id', $txnId)->value('counterparty_id');
     $accountId = (int) $this->db->connection()->table('transactions')->where('id', $txnId)->value('account_id');
     $runId = (int) $this->db->connection()->table('transactions')->where('id', $txnId)->value('import_run_id');

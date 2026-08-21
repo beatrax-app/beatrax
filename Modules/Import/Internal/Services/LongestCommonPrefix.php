@@ -32,9 +32,8 @@ final class LongestCommonPrefix
         return mb_strlen($prefix) < self::MIN_PREFIX_LENGTH ? '' : $prefix;
     }
 
-    // An empty member (or a first entry) collapses the shared length to
-    // zero, so the loop breaks early and yields an empty prefix without a
-    // dedicated return per bail-out.
+    // An empty member collapses the shared length to zero, so the loop
+    // breaks out rather than needing a return per bail-out.
     /**
      * @param  list<string>  $patterns
      */

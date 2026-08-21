@@ -8,13 +8,9 @@ use Modules\Core\Models\User;
 use Modules\Import\Public\Contracts\CapturesImportForSync;
 use Modules\Ledger\Models\ImportRun;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class NullImportSyncCapture implements CapturesImportForSync
 {
-    // The default when the Sync module is not loaded. An import on a device
-    // that cannot sync is still a complete import; there is simply nowhere to
-    // record it for a peer.
+    // The default when Sync is not loaded: an import on a device that cannot
+    // sync is still a complete import.
     public function capture(ImportRun $importRun, User $user): void {}
 }

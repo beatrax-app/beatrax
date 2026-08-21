@@ -57,6 +57,7 @@ return [
         'meta_eur_equiv' => '(≈ :amount/Jahr)',
         'cancel_impact' => 'Das kündigen → :amount/Jahr sparen',
         'cadence_flipped' => 'Rhythmus geändert — erscheint auch in',
+        'cadence_flipped_link' => 'Wiederkehrendes prüfen',
         'acknowledge' => 'Bestätigen',
         'acknowledge_aria' => 'Abweichungswarnung :id bestätigen',
         'snooze' => 'Zurückstellen ▾',

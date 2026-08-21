@@ -65,9 +65,9 @@ Practical recipes for exercising the `Chains` module in isolation.
 - `tests/Contracts/ChainResolutionIdempotencyTest.php` — re-running
   the resolver against the same data produces zero new
   `chain_links` rows.
-- The repo-wide `noResolverWritesTransactions` arch invariant — no
-  class under `Modules\Chains\` may import
-  `Modules\Ledger\Models\Transaction` for write.
+- The repo-wide `crossModuleRawTableWrites` arch invariant — every
+  raw-table write `Modules/Chains/` makes against a table it does not
+  own is pinned by file, line, and table.
 - The repo-wide `noCardStatementStateWritesOutsideMachine` arch
   invariant — only `Internal\CardStatementStateMachine` may write
   `card_statements.state`.
@@ -139,10 +139,10 @@ The behavioural contract for the `Chains` module.
 
 ## Behavioral contracts
 
-- **The resolver pass is read-only over `transactions`.** No code in
-  `Modules\Chains\` writes the `transactions` table; enforced by the
-  `noResolverWritesTransactions` arch invariant. The resolver expresses
-  its conclusions as `chain_links` rows.
+- **The resolver pass is read-mostly over `transactions`.** The
+  resolver expresses its conclusions as `chain_links` rows; the single
+  exception, `RetypeByAliasResolver` retyping `transactions.type`, is
+  pinned by `crossModuleRawTableWrites`.
 - **The state machine is the sole mutator of
   `card_statements.state`.** No write outside
   `Internal\CardStatementStateMachine` may change that column;

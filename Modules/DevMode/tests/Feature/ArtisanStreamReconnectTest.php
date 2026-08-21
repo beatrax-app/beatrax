@@ -15,24 +15,6 @@ use Modules\DevMode\Internal\Process\RunRegistry;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Process\Process;
 
-/*
- * SAFE spawn + SSE reconnect contract tests.
- *
- * The headline test is "page refresh during a running command
- * reconnects to the live stream". The test spawns a real SAFE-tier
- * command end-to-end, opens an SSE handle, kills the parent
- * connection mid-stream, opens a second handle with a `?from=`
- * offset matching the first handle's last byte, and asserts the
- * second handle observes ONLY lines emitted after the reconnect
- * point.
- *
- * Cross-user inspection rejection is also covered (a non-spawner
- * developer hitting /dev/artisan/stream/{runId} receives 403).
- *
- * Skipped on Windows — posix_kill is POSIX-only and the project's
- * local-only constraint is macOS / Linux.
- */
-
 beforeEach(function (): void {
     if (! extension_loaded('posix')) {
         $this->markTestSkipped('posix extension required');
@@ -57,15 +39,9 @@ function devUser(string $username = 'dev-fixture'): User
     ]);
 }
 
+// A hand-built child on a known tick interval, so the tail loop is
+// deterministic without the spawner's shell wrapper in the way.
 /**
- * Inject a fake RunRecord pointing at a tmp file we control + a
- * sleep-spawned bash child that emits 1 line every 200ms for ~3s.
- * Returns the runId + the pid + the tmp file path.
- *
- * Lets the SSE controller tests exercise the tail loop deterministically
- * without going through the spawner's shell wrapper (covered by
- * CommandSpawnerTest).
- *
  * @return array{runId: string, pid: int, outPath: string}
  */
 function spawnTickingChild(int $callerUserId, int $ticks = 6, int $intervalMs = 200): array
@@ -107,9 +83,6 @@ function spawnTickingChild(int $callerUserId, int $ticks = 6, int $intervalMs = 
 }
 
 /**
- * Render the SSE controller's StreamedResponse body, breaking out
- * after `$readDeadlineSeconds` even if the loop is still running.
- *
  * @return array{body: string, completed: bool, lastEventId: int}
  */
 function captureSseStream(string $runId, int $userId, int $fromOffset = 0, float $readDeadlineSeconds = 1.0): array
@@ -117,14 +90,12 @@ function captureSseStream(string $runId, int $userId, int $fromOffset = 0, float
     /** @var ArtisanStreamController $controller */
     $controller = app(ArtisanStreamController::class);
 
-    // Build a Request with optional ?from= query.
     $request = Request::create(
         uri: '/dev/artisan/stream/'.$runId,
         method: 'GET',
         parameters: $fromOffset > 0 ? ['from' => (string) $fromOffset] : [],
     );
 
-    // Stub the CurrentUser binding for this call.
     $previous = app()->getBindings()[CurrentUser::class] ?? null;
     $stub = new class($userId) implements CurrentUser
     {
@@ -162,12 +133,9 @@ function captureSseStream(string $runId, int $userId, int $fromOffset = 0, float
         $body = '';
         $completed = false;
 
-        // Wrap the response callback with an output buffer that
-        // INTERCEPTS the controller's ob_flush()/flush() calls (which
-        // would otherwise emit to PHP's default output handler and
-        // leak the SSE bytes into PHPUnit's terminal output). The
-        // capture callback runs once per ob_flush; we accumulate its
-        // payload into $body and return '' so nothing leaks upstream.
+        // The buffer intercepts the controller's ob_flush()/flush(); without
+        // it the SSE bytes reach PHP's default output handler and spray
+        // across PHPUnit's terminal. Returning '' is what stops them.
         ob_start(function (string $chunk) use (&$body): string {
             $body .= $chunk;
 
@@ -177,10 +145,6 @@ function captureSseStream(string $runId, int $userId, int $fromOffset = 0, float
             $response->sendContent();
             $completed = true;
         } finally {
-            // Final flush captures anything echo'd after the last
-            // ob_flush inside the closure (the terminal `event: done`
-            // is followed by `@ob_flush(); @flush();` so this is
-            // usually empty, but it's safe to call).
             @ob_end_flush();
         }
         unset($readDeadlineSeconds);
@@ -190,7 +154,6 @@ function captureSseStream(string $runId, int $userId, int $fromOffset = 0, float
         }
     }
 
-    // Extract last `id:` value from the body.
     $lastEventId = 0;
     if (preg_match_all('/^id:\s*(\d+)/m', $body, $matches) > 0) {
         $lastIds = $matches[1];
@@ -251,51 +214,37 @@ it('streams text/event-stream from /dev/artisan/stream/{run_id} with data + done
 it('honors ?from= for page-refresh-reconnect — second handle observes only later lines', function (): void {
     $user = devUser('reconnect-user');
 
-    // Long-enough run that we can split it into two SSE captures.
+    // 6 ticks at 250 ms leaves room to cut the run in two.
     $spawn = spawnTickingChild($user->id, ticks: 6, intervalMs: 250);
 
-    // Wait ~600 ms for the first 2 lines to be emitted, then capture
-    // the WHOLE first handle (it runs until the child exits). Read
-    // the body to extract the offset of the second line, then open
-    // a second handle with ?from=<later-offset> via captureSseStream.
-    usleep(700_000); // 700 ms; lines 1 + 2 should be present.
+    usleep(700_000); // Past ticks 1 and 2, short of tick 3.
 
-    // Snapshot the file size at the cut-point: this is where the
-    // "reconnect" handle starts reading from.
+    // The cut offset stands in for where a first handle stopped reading.
     clearstatcache(true, $spawn['outPath']);
     $cutOffset = filesize($spawn['outPath']);
     expect($cutOffset)->toBeGreaterThan(0);
 
-    // Now read what's been written so far so the test knows what
-    // the "first handle" would have seen.
     $firstHandleBytes = (string) file_get_contents($spawn['outPath']);
     expect($firstHandleBytes)->toContain('line-1');
 
-    // Wait for the child to finish so the SSE controller's liveness
-    // check fires and the controller emits its terminal done event.
+    // The controller only emits its terminal done event once the liveness
+    // check sees the child gone.
     $deadline = microtime(true) + 5.0;
     while (microtime(true) < $deadline && posix_kill($spawn['pid'], 0)) {
         usleep(100_000);
     }
     expect(posix_kill($spawn['pid'], 0))->toBeFalse();
 
-    // Reconnect: open a SECOND SSE handle starting from cutOffset.
-    // The body should NOT contain any line-N that was already in
-    // the first handle's snapshot.
     $secondCapture = captureSseStream($spawn['runId'], $user->id, fromOffset: $cutOffset);
 
     expect($secondCapture['body'])->toContain('event: done');
 
-    // The reconnect must NOT replay lines already delivered before
-    // the cut. We extract the data-line payloads and check.
     $lines = [];
     if (preg_match_all('/data:\s*\{"line":"(line-\d+)/m', $secondCapture['body'], $m) > 0) {
         $lines = $m[1];
     }
-    // Whichever lines were in firstHandleBytes pre-cut must be ABSENT
-    // from secondCapture's lines.
     foreach (['line-1', 'line-2'] as $alreadySeen) {
-        // We only assert when the cut actually contained that line.
+        // Timing-tolerant: only assert on a line the cut actually contained.
         if (str_contains($firstHandleBytes, $alreadySeen.\PHP_EOL)) {
             expect($lines)->not->toContain($alreadySeen,
                 "Reconnect must not replay {$alreadySeen} (line was present in the first handle's snapshot at offset {$cutOffset})");
@@ -324,13 +273,12 @@ it('rejects cross-user inspection on /dev/artisan/stream/{run_id} with 403', fun
     $spawner = devUser('cross-user-spawner');
     $intruder = devUser('cross-user-intruder');
 
-    // Use the actual CommandSpawner to create a real run.
     /** @var CommandSpawner $sp */
     $sp = app(CommandSpawner::class);
     $runId = $sp->start('cache:clear', [], $spawner->id, 'safe');
 
-    // The intruder (a different developer) MUST NOT be able to read
-    // the stream even though they pass EnsureDeveloperMode.
+    // The intruder is a developer and clears EnsureDeveloperMode; the
+    // per-run owner check is the only thing stopping them.
     $response = $this->actingAs($intruder)
         ->get("/dev/artisan/stream/{$runId}");
 

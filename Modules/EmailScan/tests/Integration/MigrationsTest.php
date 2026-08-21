@@ -11,7 +11,7 @@ beforeEach(function (): void {
     $this->db = $this->app->make(DatabaseManager::class)->connection();
 });
 
-it('creates the five Phase 6 tables on a fresh migrate', function (): void {
+it('creates the inboxes, inbox_scan_state, inbox_messages, known_senders and discovered_senders tables on a fresh migrate', function (): void {
     $schema = $this->db->getSchemaBuilder();
     foreach (['inboxes', 'inbox_scan_state', 'inbox_messages', 'known_senders', 'discovered_senders'] as $table) {
         expect($schema->hasTable($table))->toBeTrue("table {$table} missing");
@@ -53,25 +53,22 @@ it('discovered_senders has the expected columns', function (): void {
     }
 });
 
-it('seeds known_senders with the three original system rows plus the Phase 19 icscards.nl statement-sender row', function (): void {
+it('seeds known_senders with the three original system rows plus the icscards.nl statement-sender row', function (): void {
     $patterns = $this->db
         ->table('known_senders')
         ->where('source', 'system')
         ->pluck('email_pattern')
         ->toArray();
     expect($patterns)->toContain('paypal.com', '@ics.nl', 'googleplay-noreply@google.com');
-    // Phase 19 (Req 14, D-14/D-15): IcsStatementSenderSeeder's companion
-    // data migration lands '@icscards.nl' — the second ICS domain
-    // IcsReceiptMatcher already claims but this table did not yet know
-    // about — so DetectIcsStatementReadyJob's statement-ready email is
-    // actually fetched in the first place.
+    // '@icscards.nl' is the second ICS domain IcsReceiptMatcher already
+    // claims; without the seed row, the statement-ready email is never fetched
+    // for it to match.
     expect($patterns)->toContain('@icscards.nl');
     expect(count($patterns))->toBe(4);
 });
 
 it('enforces UNIQUE on inbox_messages (inbox_id, provider_message_id)', function (): void {
-    // sqlite_master is the canonical introspection for indexes when
-    // Schema::getIndexes isn't available in this Laravel version.
+    // Schema::getIndexes is unavailable on this Laravel version.
     $indexes = $this->db
         ->table('sqlite_master')
         ->where('type', 'index')
@@ -124,11 +121,8 @@ it('enforces UNIQUE on known_senders (user_id, email_pattern)', function (): voi
 });
 
 it('UNIQUE on known_senders permits (NULL, "paypal.com") to coexist with (1, "paypal.com")', function (): void {
-    // SQL UNIQUE semantics treat NULL != NULL, so system-seeded rows
-    // (user_id = NULL) can coexist with per-user rows
-    // (user_id = N, same email_pattern). This is the intended shape:
-    // the discovery loop promotes a sender into a user-scoped row
-    // alongside the system seed without colliding.
+    // NULL != NULL is what lets the discovery loop promote a sender into a
+    // user-scoped row alongside the system seed.
     $now = '2026-05-17 00:00:00';
 
     // The 'paypal.com' system seed is already present from the migration.
@@ -139,7 +133,6 @@ it('UNIQUE on known_senders permits (NULL, "paypal.com") to coexist with (1, "pa
         'updated_at' => $now,
     ]);
 
-    // Insert a per-user row with the same email_pattern — must NOT raise.
     $this->db->table('known_senders')->insert([
         'user_id' => $userId,
         'email_pattern' => 'paypal.com',

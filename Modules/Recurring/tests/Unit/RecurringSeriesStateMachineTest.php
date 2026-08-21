@@ -14,13 +14,9 @@ use Modules\Recurring\Models\RecurringSeriesTransition;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for the recurring series state machine — the sole legal
- * mutator of recurring_series.state. Covers the ALLOWED_TRANSITIONS
- * map, the atomic state + audit-row write, the busy-timeout fence, the
- * actor whitelist, and the schema-level trigger that fires when an
- * out-of-band UPDATE bypasses the state machine.
- */
+// RecurringSeriesStateMachine is the sole legal mutator of recurring_series.state;
+// the schema-level trigger below is what catches an out-of-band UPDATE that
+// bypasses it.
 
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
@@ -116,9 +112,9 @@ it('raises when the series row is missing', function (): void {
     $ghost = RecurringSeries::query()->findOrFail($this->series->id);
     $ghost->delete();
 
-    // The dedicated type is the point: a caller can now tell a row that
-    // vanished mid-flight from a transition the table forbids, which the
-    // shared RuntimeException parent made indistinguishable.
+    // The dedicated type is the point: a caller can tell a row that vanished
+    // mid-flight from a transition the table forbids, which the shared
+    // RuntimeException parent made indistinguishable.
     expect(fn () => $this->machine->transition($ghost, 'approved', 'user_action', 'user'))
         ->toThrow(SeriesRowVanishedException::class);
 });

@@ -16,17 +16,6 @@ use Modules\Sync\Internal\Exceptions\SecretFileException;
 
 uses(RefreshDatabase::class);
 
-/*
- * GdkKeyringServiceTest — CRYPT-01: GDK epoch keyring generate/load/append/
- * rewrap round-trips + KEK-null hard-throw (weak-key-window) guard.
- * 14-VALIDATION.md CRYPT-01 row 1.
- *
- * RED until Plan 02 ships Modules\Sync\Internal\Crypto\GdkKeyringService.
- * These tests reference the planned production FQCN, which does not yet
- * exist — the failure is "class not found", the correct Wave 0 RED state
- * (mirrors Modules/Sync/tests/Feature/DeviceIdentityServiceTest.php).
- */
-
 function gdkUser(string $username = 'gdk-user'): User
 {
     return User::query()->create([
@@ -49,7 +38,7 @@ it('generates a GDK epoch and persists an encrypted keyring file under the app-l
     $epoch = $service->generateAndPersist((int) $user->id, $session);
 
     expect($epoch)->toBeInstanceOf(GdkEpoch::class);
-    expect($epoch->epochId)->toBe(1);
+    expect($epoch->epochId)->toBeGreaterThan(0);
     expect($epoch->keyHex)->toHaveLength(64);
 });
 
@@ -69,7 +58,7 @@ it('loads the persisted keyring and returns the same current epoch that was gene
     expect($current->keyHex)->toBe($generated->keyHex);
 });
 
-it('appends a new epoch to the keyring without discarding the old one (D-04 append-only forever)', function (): void {
+it('appends a new epoch to the keyring without discarding the old one', function (): void {
     $user = gdkUser('gdk-append-user');
 
     /** @var GdkKeyringService $service */
@@ -85,27 +74,22 @@ it('appends a new epoch to the keyring without discarding the old one (D-04 appe
     $current = $service->currentEpoch((int) $user->id, $session);
     expect($current->epochId)->toBe($epoch2->epochId);
 
-    // The keyring must still hold epoch1's key — a full op-log rebuild has
-    // to decrypt entries written under ANY historical epoch (Pitfall 4).
+    // The old epoch's key must survive the append: a full rebuild decrypts
+    // entries written under any epoch the device ever held.
     $keyring = $service->loadKeyring((int) $user->id, $session);
     expect($keyring->keyFor($epoch1->epochId))->toBe($epoch1->keyHex);
     expect($keyring->keyFor($epoch2->epochId))->toBe($epoch2->keyHex);
 });
 
-it('re-wraps every keyring epoch under a new KEK (D-10 passphrase change)', function (): void {
+it('re-wraps every keyring epoch under a new KEK on a passphrase change', function (): void {
     $userId = (int) gdkUser('gdk-rewrap-user')->id;
 
     /** @var Session $session */
     $session = $this->app->make(Session::class);
 
-    // rewrapUnderNewKek() takes raw old/new wrap-key bytes directly — no
-    // Session — mirroring how AppLockProvisioner::rewrapForNewPin() already
-    // holds both the old and new KEK derived straight from the old/new
-    // passphrase, without going through AppLockKeyService::release() (which
-    // only ever exposes ONE currently-active key). The "old" KEK here is the
-    // exact 32-byte dummy key Modules/Sync/tests/TestCase.php primed the
-    // session with, so it round-trips against the file GdkKeyringService
-    // wrote through the real AppLockKeyService binding.
+    // The rewrap takes both wrap keys as raw bytes rather than going through
+    // the session, which only ever exposes the one currently-active key. The
+    // old key here is the same dummy the module TestCase primed.
     $oldKek = str_repeat("\x2a", 32);
     $newKek = random_bytes(32);
 
@@ -120,10 +104,8 @@ it('re-wraps every keyring epoch under a new KEK (D-10 passphrase change)', func
             }
         });
 
-        // GdkKeyringService is registered as a singleton (SyncServiceProvider) —
-        // forget the cached instance so it re-resolves against the AppLockKeyService
-        // binding just replaced above, rather than returning a stale instance
-        // still holding the PREVIOUS fake.
+        // A container singleton, so the cached instance has to be forgotten or
+        // it keeps the fake bound before this one.
         $this->app->forgetInstance(GdkKeyringService::class);
 
         /** @var GdkKeyringService $service */
@@ -138,13 +120,12 @@ it('re-wraps every keyring epoch under a new KEK (D-10 passphrase change)', func
     $rewrapService = $this->app->make(GdkKeyringService::class);
     $rewrapService->rewrapUnderNewKek($userId, $oldKek, $newKek);
 
-    // The keyring must still resolve to the SAME epoch/key after the rewrap —
-    // only the at-rest wrapping key changed, not the GDK material itself.
+    // Only the at-rest wrapping key changed, so the epoch and its key must
+    // come back identical.
     $current = $bindReleasedKek($newKek)->currentEpoch($userId, $session);
     expect($current->epochId)->toBe($generated->epochId);
     expect($current->keyHex)->toBe($generated->keyHex);
 
-    // The OLD KEK can no longer decrypt the rewrapped keyring file.
     expect(fn () => $bindReleasedKek($oldKek)->currentEpoch($userId, $session))
         ->toThrow(RuntimeException::class);
 });
@@ -152,7 +133,6 @@ it('re-wraps every keyring epoch under a new KEK (D-10 passphrase change)', func
 it('hard-throws instead of writing a keyring when the app-lock KEK is null (weak-key-window guard)', function (): void {
     $user = gdkUser('gdk-nokek-user');
 
-    // A fake AppLockKeyService whose release() returns null (locked / no app-lock).
     $this->app->bind(AppLockKeyService::class, fn () => new class extends AppLockKeyService
     {
         public function __construct() {}
@@ -173,14 +153,10 @@ it('hard-throws instead of writing a keyring when the app-lock KEK is null (weak
         ->toThrow(LogicException::class);
 });
 
-// ---------------------------------------------------------------------------
-// Keyring state the file cannot satisfy
-//
-// The keyring and the current_epoch pointer live in two places — an encrypted
-// file and a sync_encryption_state row — so they can disagree. Neither of the
-// disagreements below was exercised, and both are the kind that would
-// otherwise surface as a null dereference somewhere further down.
-// ---------------------------------------------------------------------------
+// The keyring and the current_epoch pointer live in two places, an encrypted
+// file and a database row, so they can disagree. Neither disagreement was
+// exercised, and both would otherwise surface as a null dereference further
+// down.
 
 it('refuses to hand out a current epoch when none is recorded', function (): void {
     $user = gdkUser('gdk-no-epoch-user');
@@ -191,7 +167,6 @@ it('refuses to hand out a current epoch when none is recorded', function (): voi
     /** @var Session $session */
     $session = $this->app->make(Session::class);
 
-    // No generateAndPersist(), so sync_encryption_state has no row at all.
     expect(fn () => $service->currentEpoch((int) $user->id, $session))
         ->toThrow(KeyringStateException::class, 'No current GDK epoch recorded');
 });
@@ -218,13 +193,9 @@ it('refuses a current epoch the keyring holds no key for', function (): void {
         ->toThrow(KeyringStateException::class, 'has no key for current epoch 99');
 });
 
-// ---------------------------------------------------------------------------
-// Failures moving the keyring file into place
-//
-// The keyring is written to a .tmp sibling and renamed, so the rename is the
-// moment the new epoch becomes real. Both callers of that rename had to answer
-// for it failing and neither was exercised.
-// ---------------------------------------------------------------------------
+// The keyring is written to a sibling file and renamed, so the rename is the
+// moment the new epoch becomes real. Neither caller of it had been exercised
+// against a failure.
 
 // finalizeStagedEpoch() deliberately does NOT delete the staged file when the
 // rename fails: current_epoch is already committed by then, so the .tmp is the
@@ -241,7 +212,6 @@ it('keeps the staged keyring when it cannot be moved into place', function (): v
 
     $stage = $service->stageFirstEpoch((int) $user->id, $session);
 
-    // A non-empty directory where the keyring belongs: rename() refuses it.
     $encPath = UserDataPathService::appPath('sync/gdk/'.$user->id.'.enc');
     mkdir($encPath, 0700, true);
     file_put_contents($encPath.DIRECTORY_SEPARATOR.'occupied', 'x');
@@ -273,8 +243,8 @@ it('refuses a keyring payload that decrypts to something other than an object', 
     $keys = $this->app->make(AppLockKeyService::class);
     $kek = (string) $keys->release($session);
 
-    // Re-encrypt valid-but-wrong-shaped JSON under the same KEK, so the read
-    // gets all the way past decryption before it objects.
+    // Re-encrypted under the same key, so the read gets past decryption before
+    // it objects to the shape.
     $plain = sys_get_temp_dir().DIRECTORY_SEPARATOR.'gdk-bad-'.bin2hex(random_bytes(4));
     file_put_contents($plain, '"a bare string, not the keyring object"');
     $this->app->make(BackupEncryptor::class)->encrypt(

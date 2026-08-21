@@ -6,10 +6,8 @@ namespace Modules\Tax\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-// Per-tag DTO consumed by badge surfaces and TaxPage, produced by
-// TaxTagQuery and written by TagTransaction. transactionSplitId is null
-// for a whole-transaction tag (every forTransactionIds() caller); set to
-// the leg's id for a leg-scoped tag from forTransactionIdsWithLegs().
+// transactionSplitId is null for a whole-transaction tag and carries the leg's
+// id for a leg-scoped one.
 final class TaxTagData extends Data
 {
     public function __construct(

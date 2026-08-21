@@ -21,16 +21,6 @@ use Modules\Onboarding\Models\WizardProgress;
 
 uses(RefreshDatabase::class);
 
-/*
- * Regression lock for FirstImportStep::commit() — proves that when one
- * ConfirmsImports invocation throws mid-commit, the outer transaction
- * rolls back every earlier write: no transactions land, no
- * starting_balance_minor is set on any account, wizard_progress for
- * 'first-import' stays 'pending', and the Livewire component surfaces
- * the user-facing error band via commitError. wizard.step.completed is
- * NOT dispatched.
- */
-
 beforeEach(function (): void {
     $this->frozenNow = CarbonImmutable::parse('2026-05-15 12:00:00');
     Carbon::setTestNow($this->frozenNow);
@@ -99,11 +89,8 @@ it('rolls back all writes when ConfirmsImports throws mid-commit', function (): 
         ->where('step_key', 'connect-card')
         ->update(['data' => json_encode(['card_import_run_ids' => [$cardRunId]])]);
 
-    // Throwing double — succeeds on the first __invoke, raises on the
-    // second. The throw lands AFTER the first ConfirmsImports call has
-    // returned, so the outer transaction must roll back the first
-    // confirm AND any starting-balance update + wizard_progress flip
-    // that would otherwise have followed.
+    // Raises on the second call, so the first confirm has already returned:
+    // the rollback has to undo work that succeeded.
     $this->app->instance(ConfirmsImports::class, new class implements ConfirmsImports
     {
         private int $calls = 0;
@@ -134,11 +121,8 @@ it('rolls back all writes when ConfirmsImports throws mid-commit', function (): 
 
     $component->assertNotDispatched('wizard.step.completed');
 
-    // Nothing landed in the transactions table — the failed second
-    // ConfirmsImports call rolled the outer transaction back.
     expect(DB::table('transactions')->where('user_id', $this->user->id)->count())->toBe(0);
 
-    // Neither account's starting_balance_minor was applied.
     /** @var Account $bankAfter */
     $bankAfter = Account::query()->findOrFail($bankAccount->id);
     expect($bankAfter->starting_balance_minor)->toBeNull();
@@ -147,8 +131,6 @@ it('rolls back all writes when ConfirmsImports throws mid-commit', function (): 
     $cardAfter = Account::query()->findOrFail($cardAccount->id);
     expect($cardAfter->starting_balance_minor)->toBeNull();
 
-    // Wizard step stays on 'pending' — the 'done' UPDATE inside the
-    // transaction was rolled back with the rest of the writes.
     /** @var WizardProgress|null $progress */
     $progress = WizardProgress::query()
         ->where('user_id', $this->user->id)
@@ -157,6 +139,5 @@ it('rolls back all writes when ConfirmsImports throws mid-commit', function (): 
     expect($progress)->not->toBeNull();
     expect($progress->status)->toBe('pending');
 
-    // User-facing inline error band is populated.
     expect($component->get('commitError'))->not->toBe('');
 });

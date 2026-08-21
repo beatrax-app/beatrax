@@ -11,6 +11,7 @@ return [
     'rename' => 'Pervadinti',
     'confirm_delete' => 'Patvirtinti trynimą',
     'delete_scenario' => 'Ištrinti scenarijų',
+    'delete_confirm' => 'Ištrinti šį scenarijų?',
 
     'mutations_count' => 'Pakeitimai (:count)',
     'no_mutations' => 'Kol kas pakeitimų nėra. Pridėk vieną žemiau ir pamatysi, kaip šis scenarijus atrodo palyginti su baziniu.',
@@ -67,6 +68,7 @@ return [
         'new_amount' => 'Nauja suma',
         'new_next_date' => 'Nauja kita data',
         'scope' => 'Apimtis',
+        'scope_legend' => 'Kuriuos įvykius perkelti',
         'scope_next' => 'Tik kitas įvykis',
         'scope_all' => 'Visi tolesni įvykiai',
     ],
@@ -80,6 +82,8 @@ return [
         'current_amount' => 'Dabartinė suma',
         'new_amount' => 'Nauja suma',
     ],
+
+    'series_name_fallback' => 'serija',
 
     'summary' => [
         'cancel' => 'Nutraukti :name',

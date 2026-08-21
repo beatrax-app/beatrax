@@ -10,6 +10,7 @@ return [
         'reprojecting' => 'Dein Verlauf wird neu aufgebaut…',
         'retrying' => 'Verbindung zum anderen Gerät wird wiederhergestellt…',
         'locked' => 'Entsperre die App, um die Einrichtung fortzusetzen.',
+        'revoked' => 'Dieses Gerät wurde auf Ihrem anderen Gerät entfernt. Koppeln Sie es erneut, um weiter zu synchronisieren.',
     ],
     'step' => [
         'connect' => 'Mit deinem anderen Gerät verbinden',

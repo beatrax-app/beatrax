@@ -13,28 +13,10 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
 uses(RefreshDatabase::class);
 
-/*
- * CreateRowUserIdOverwriteTest — SECURITY finding proof.
- *
- * OpLogReplayer's CREATE_ROW path seeds $payload = ['user_id' => $userId]
- * (the scope argument passed to replay()) but then lets the per-field
- * assembly loop overwrite it with whatever value the op-log carries for a
- * 'user_id' field. Several tables (envelope_assignments, envelope_settings)
- * legitimately list 'user_id' in their _create_required set, so CREATE_ROW
- * ops for those tables DO carry a 'user_id' field entry.
- *
- * The attack: a malicious device belonging to user A crafts a CREATE_ROW
- * op set with entry->userId = A (satisfies the I1 cross_user gate, since
- * replay() is invoked as replay($entries, A->id)) but
- * dirtyFields['user_id'] = B. insertOrIgnore has no WHERE clause, so I2's
- * "WHERE user_id = $userId on every write" invariant does not protect
- * CREATE — the assembled row is inserted with user_id = B, planting data
- * inside user B's namespace from a replay call scoped to user A.
- *
- * These tests prove: (1) a mismatched user_id field never results in a row
- * being created under the other user's id, and (2) a matching (or absent)
- * user_id field still creates the row correctly under $userId.
- */
+// Several tables legitimately name user_id in their create-required set, so a
+// create op carries one on the wire. The field-assembly loop used to let that
+// value overwrite the replay scope, and insertOrIgnore has no WHERE clause to
+// catch it — a device of one user could plant a row in another's namespace.
 
 function cruoUser(string $username): User
 {
@@ -76,9 +58,6 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-/**
- * Builds a signed CREATE_ROW field entry for envelope_settings.
- */
 function cruoCreateEntry(object $test, string $field, string $value, int|string $pk, int $entryUserId): OpLogEntry
 {
     $stub = new OpLogEntry(

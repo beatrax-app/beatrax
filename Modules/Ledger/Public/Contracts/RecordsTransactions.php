@@ -8,9 +8,6 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Dto\RecordResult;
 
-/**
- * @link ../../../../.docs/features/ledger/architecture.md
- */
 interface RecordsTransactions
 {
     // Duplicates (fingerprint already exists) are silently skipped and

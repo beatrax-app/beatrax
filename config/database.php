@@ -4,40 +4,18 @@ declare(strict_types=1);
 
 use Modules\Core\Public\Services\UserDataPathService;
 
-// Loopback default shared by every server-connection host that falls
-// back when its DB_* / REDIS_* env var is unset — a self-hosted server
-// overrides these explicitly.
+// Fallback host for every server connection whose DB_* / REDIS_* var is
+// unset; a self-hosted server overrides them explicitly.
 $loopbackHost = '127.0.0.1';
 
 return [
 
-    /*
-    |--------------------------------------------------------------------------
-    | Default Database Connection Name
-    |--------------------------------------------------------------------------
-    */
-
     'default' => env('DB_CONNECTION', 'sqlite'),
 
-    /*
-    |--------------------------------------------------------------------------
-    | Database Connections
-    |--------------------------------------------------------------------------
-    |
-    | The on-disk `sqlite` connection is the production-shaped local store
-    | and enables WAL with `synchronous=NORMAL` so a long-running background
-    | worker can read while the foreground request writes. The
-    | `sqlite_testing` connection runs against an in-memory database for
-    | parallel test runs; WAL is not applicable to `:memory:` so the pragma
-    | keys are omitted.
-    */
+    // WAL with `synchronous=NORMAL` lets a background worker read during a
+    // foreground write. `sqlite_testing` omits it: WAL is moot in `:memory:`.
 
-    /*
-     * The on-disk `sqlite` shape is reused for the `readonly_select`
-     * sibling — pulled into a local variable so both entries below
-     * point at the same database file and PRAGMA defaults without a
-     * config() lookup during config-load time.
-     */
+    // A local, not config(): this runs during config load.
     'connections' => (static function () use ($loopbackHost): array {
         $sqlite = [
             'driver' => 'sqlite',
@@ -45,11 +23,9 @@ return [
             'database' => env('DB_DATABASE', UserDataPathService::databaseFile()),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
-            // A catch-up applies thousands of ops inside one write
-            // transaction while the queue worker and both sync daemons write
-            // to the same file. Five seconds was shorter than that
-            // transaction, so job reservation failed with "database is
-            // locked" instead of simply waiting its turn.
+            // A sync catch-up holds a write transaction past the old 5s, so
+            // job reservation failed with "database is locked" instead of
+            // waiting its turn.
             'busy_timeout' => 30000,
             'journal_mode' => 'WAL',
             'synchronous' => 'NORMAL',
@@ -65,34 +41,18 @@ return [
                 'foreign_key_constraints' => true,
             ],
 
-            /*
-             * Read-only SELECT-only sibling connection for the Dev
-             * Console SQL panel. Cloned from the on-disk `sqlite`
-             * connection so the database file, foreign-key
-             * behaviour, and busy-timeout match; the consumer is
-             * responsible for opening the underlying PDO with
-             * PRAGMA query_only = 1 so any DDL/DML attempt is
-             * rejected at the SQLite layer rather than relying on
-             * application-level filtering alone. The
-             * ReadOnlySqliteConnection service enforces that PRAGMA
-             * per-PDO; this entry only carves out the named slot.
-             * Under the testing environment
-             * (DB_CONNECTION=sqlite_testing + in-memory :memory:
-             * database) the service routes the SELECT through the
-             * default in-memory connection (separate connections to
-             * :memory: are isolated); the PRAGMA is armed + reset
-             * per-execute so writes on the same PDO proceed after
-             * the read.
+            /**
+             * @link ../.docs/features/dev-mode/architecture.md#livewire-page-notes
              */
+            // This entry only carves out the named slot. The read-only part is
+            // ReadOnlySqliteConnection's per-PDO `PRAGMA query_only = 1`,
+            // which rejects DDL/DML in SQLite rather than in application code.
             'readonly_select' => array_merge($sqlite, [
                 'name' => 'readonly_select',
             ]),
 
-            /*
-             * Server-deployment connections. SQLite stays the default for the
-             * single-user desktop build; a self-hosted server sets
-             * DB_CONNECTION=pgsql (or mysql / mariadb) plus the DB_* vars to
-             * point at a real database. See the deployment docs.
+            /**
+             * @link ../.docs/deployment.md
              */
             'pgsql' => [
                 'driver' => 'pgsql',
@@ -145,28 +105,13 @@ return [
         ];
     })(),
 
-    /*
-    |--------------------------------------------------------------------------
-    | Migration Repository Table
-    |--------------------------------------------------------------------------
-    */
-
     'migrations' => [
         'table' => 'migrations',
         'update_date_on_publish' => true,
     ],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Redis Databases
-    |--------------------------------------------------------------------------
-    |
-    | Redis backs the queue and cache stores. The project pins the pure-PHP
-    | `predis/predis` client — no PECL `phpredis` build dependency. The
-    | container runs locally and is bound to `127.0.0.1` only; the
-    | password stays null because the listener is not reachable beyond
-    | loopback.
-    */
+    // Pure-PHP predis is pinned so no PECL `phpredis` build dependency enters
+    // the tree. The password is null: the listener is loopback-only.
 
     'redis' => [
         'client' => env('REDIS_CLIENT', 'predis'),

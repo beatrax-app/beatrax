@@ -11,9 +11,6 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Public\Events\ForecastShortfallDetected;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final readonly class ShortfallDetector
 {
     public function __construct(
@@ -61,10 +58,6 @@ final readonly class ShortfallDetector
      */
     private function buildWindows(array $dailyPoints, int $buffer): array
     {
-        // Walk the points with a simple state machine. Track the start of
-        // the current shortfall (if any) plus the lowest point so far.
-        // Emit a window when the balance recovers above the buffer or at
-        // end-of-horizon.
         $windows = [];
         $startsAt = null;
         $lowestBalance = 0;
@@ -86,8 +79,8 @@ final readonly class ShortfallDetector
                 continue;
             }
 
-            // Balance >= buffer — close any open window the day BEFORE
-            // this one (the recovery day is not itself in shortfall).
+            // Closes on the previous day: the recovery day itself is not in
+            // shortfall, so including it would overstate the window by one.
             if ($startsAt !== null) {
                 $windows[] = [
                     'starts_at' => $startsAt,
@@ -100,8 +93,6 @@ final readonly class ShortfallDetector
             $previousDate = $date;
         }
 
-        // End-of-horizon: emit any still-open window with ends_at = last
-        // observed day.
         if ($startsAt !== null && $previousDate !== null) {
             $windows[] = [
                 'starts_at' => $startsAt,
@@ -119,9 +110,8 @@ final readonly class ShortfallDetector
      */
     private function persistWindows(array $windows, int $accountId, ?int $scenarioId, int $buffer, string $currency, User $user): array
     {
-        // Persist + emit events inside a single transaction. Pre-write
-        // cleanup is the canonical "the shortfall picture is fully
-        // replaced on each projection run" semantic.
+        // Delete-then-write inside one transaction: each projection run fully
+        // replaces the shortfall picture rather than appending to it.
         $written = [];
         $this->db->connection()->transaction(function () use (
             $user,

@@ -7,9 +7,10 @@ namespace Modules\Tax\Internal\Services;
 use League\Csv\EscapeFormula;
 use League\Csv\Writer;
 use Modules\Core\Models\User;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
 /**
- * @link ../../../../.docs/features/tax/architecture.md
+ * @link ../../../../.docs/features/tax/tax-year-resolution.md
  */
 final class TaxCsvExporter
 {
@@ -17,15 +18,16 @@ final class TaxCsvExporter
         private readonly TaxYearQuery $query,
     ) {}
 
-    // Returns a header-only CSV when no tagged transactions exist for the
-    // given year (safe, non-error behaviour). See the @link above for the
-    // formula-injection mitigation and the column-order contract.
     public function export(User $user, int $year): string
     {
         $writer = Writer::createFromString();
 
+        // Descriptions, counterparty names and notes are free text, and a
+        // leading =/+/-/@ is a live formula in a spreadsheet.
         $writer->addFormatter(new EscapeFormula);
 
+        // Header first, so a year with no tags still exports a valid CSV
+        // rather than an empty file.
         $writer->insertOne([
             'tax_year',
             'booked_date',
@@ -84,8 +86,8 @@ final class TaxCsvExporter
         $rawOriginal = $row['amountMinor'] ?? 0;
         $originalMinor = is_numeric($rawOriginal) ? (int) $rawOriginal : 0;
 
-        $settledEurAmount = number_format(abs($settledMinor) / 100, 2, '.', '');
-        $originalAmount = number_format(abs($originalMinor) / 100, 2, '.', '');
+        $settledEurAmount = MoneyInput::toDecimalString(abs($settledMinor));
+        $originalAmount = MoneyInput::toDecimalString(abs($originalMinor));
 
         return [
             (string) $taxYear,

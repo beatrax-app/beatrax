@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Reports\Internal\Support;
 
-// Tolerates malformed/non-JSON input by returning an empty array rather
-// than throwing — a corrupt row must never break a read-side listing.
-// Shared by PinnedReportsQuery and SavedReportsQuery.
+// Returns an empty array rather than throwing: a corrupt row must never break
+// a read-side listing.
 final class DefinitionJsonDecoder
 {
     /**

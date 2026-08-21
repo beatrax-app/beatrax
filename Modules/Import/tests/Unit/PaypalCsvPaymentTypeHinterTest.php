@@ -7,17 +7,9 @@ use Modules\Import\Internal\Parsers\Paypal\PaypalCsvPaymentTypeHinter;
 use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
-/*
- * Unit coverage for PaypalCsvPaymentTypeHinter. The hinter keys off
- * the first event-type in the PayPal manifest the adapter persists at
- * `rawPayload['events'][0]['type']` — these tests build a minimal
- * rawPayload by hand and assert each branch of the event-type map.
- */
-
+// The hinter reads only `rawPayload['events'][0]['type']`, so the manifest is
+// built by hand here rather than parsed from a fixture.
 /**
- * Build a CanonicalTransaction whose rawPayload carries the supplied
- * PayPal event-type literal in the first event slot.
- *
  * @param  array<int|string, mixed>|null  $rawPayload
  */
 function paypalPtypeRow(?string $eventType, ?array $rawPayload = null, string $sourceFormat = 'paypal-csv'): CanonicalTransaction
@@ -105,7 +97,6 @@ it('returns null when the source format is not paypal-csv', function (): void {
 it('returns null when the rawPayload events manifest is empty or missing', function (): void {
     $hinter = new PaypalCsvPaymentTypeHinter;
 
-    // No rawPayload at all.
     expect($hinter->hint(paypalPtypeRow(null), 'paypal-csv'))->toBeNull();
 });
 

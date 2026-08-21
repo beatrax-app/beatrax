@@ -183,7 +183,7 @@
                 {{ Lang::get('tax::picker.assign_year') }}
             </p>
             <div style="display: flex; gap: var(--space-2);">
-                {{-- Booked-year button (override = null): never amber — amber marks the override (IN-01). --}}
+                {{-- Booked-year button (override = null): never amber — amber marks the override. --}}
                 <button
                     type="button"
                     wire:click="$set('pickerYearOverride', null)"

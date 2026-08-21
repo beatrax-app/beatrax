@@ -7,9 +7,6 @@ namespace Modules\EmailScan\Internal\OAuth;
 use RuntimeException;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/email-scan/architecture.md
- */
 final class ReconsentRequiredException extends RuntimeException
 {
     public function __construct(

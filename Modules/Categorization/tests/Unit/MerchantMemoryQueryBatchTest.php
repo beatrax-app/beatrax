@@ -12,11 +12,6 @@ use Modules\Ledger\Models\Category;
 
 uses(RefreshDatabase::class);
 
-/**
- * Inserts a merchants + merchant_memories row pair scoped to $user with
- * the given normalized counterparty name + category. Returns the
- * `merchant_memories.id` so test assertions can pin it.
- */
 function seedBatchMemory(User $user, Category $category, string $normalized, int $occurrenceCount, ?string $lastSeen): int
 {
     $db = app(DatabaseManager::class);

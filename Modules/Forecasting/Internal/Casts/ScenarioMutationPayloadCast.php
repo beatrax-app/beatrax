@@ -61,10 +61,8 @@ final class ScenarioMutationPayloadCast implements CastsAttributes
             );
         }
 
-        // The about-to-be-set kind lives in $attributes (Laravel passes the
-        // full pending-attribute set, INCLUDING freshly assigned values, to
-        // set()). The caller must therefore set the kind column before the
-        // payload column, or this throws below.
+        // $attributes carries freshly assigned values too, so `kind` is visible
+        // here only when the caller assigned it before the payload.
         $kind = $attributes['kind'] ?? null;
         if (! is_string($kind) || $kind === '') {
             throw new InvalidArgumentException(

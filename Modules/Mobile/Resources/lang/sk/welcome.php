@@ -8,4 +8,5 @@ return [
     'subtitle' => 'Nastav toto zariadenie a maj svoje financie na jednom mieste.',
     'create_account' => 'Vytvoriť účet',
     'import' => 'Importovať z iného zariadenia',
+    'create_account_note' => 'Funguje to aj samostatne, ale nastavenie na počítači a synchronizácia sem je jednoduchšia.',
 ];

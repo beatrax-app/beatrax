@@ -5,15 +5,13 @@ declare(strict_types=1);
 namespace Modules\Core\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final readonly class SystemAlertQuery
 {
     public function __construct(
@@ -40,6 +38,24 @@ final readonly class SystemAlertQuery
         }
 
         return SystemAlert::hydrate($arrayRows);
+    }
+
+    // The row a user is allowed to act on: their own, or a system-wide one
+    // addressed to everybody. Every handler that takes an alert id off the
+    // wire reads it through here, so an id alone never reaches a foreign row.
+    public function visibleTo(int $alertId, User $user): ?SystemAlert
+    {
+        $userId = $user->id;
+
+        /** @var SystemAlert|null $alert */
+        $alert = SystemAlert::withoutGlobalScopes()
+            ->where('id', $alertId)
+            ->where(function (EloquentBuilder $owned) use ($userId): void {
+                $owned->where('user_id', $userId)->orWhere('user_id', null);
+            })
+            ->first();
+
+        return $alert;
     }
 
     public function count(?User $user): int

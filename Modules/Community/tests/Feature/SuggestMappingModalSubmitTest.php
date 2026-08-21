@@ -31,7 +31,7 @@ it('opens with a prefilled pattern, submits, launches the system browser, and di
         ->assertSet('pattern', 'SHELL*PIETER*')
         ->set('name', 'Shell Pieter')
         ->call('submit')
-        ->assertDispatched('toast.show')
+        ->assertDispatched('toast')
         ->assertDispatched('modal-close');
 
     expect($this->shell->openExternalCalls)->not->toBeEmpty();

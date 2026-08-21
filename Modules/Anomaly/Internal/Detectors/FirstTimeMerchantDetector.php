@@ -14,15 +14,12 @@ use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\BaseCurrency;
 
 /**
- * @link ../../../../.docs/features/anomaly/architecture.md
+ * @link ../../../../.docs/features/anomaly/detector-maths.md
  */
 final readonly class FirstTimeMerchantDetector
 {
     use CoercesScalars;
 
-    // Lower than the per-merchant thin-history cutoff: the overall
-    // distribution is the user's whole spend, so a handful of points
-    // already establishes a typical band. Below this the detector abstains.
     private const OVERALL_HISTORY_MIN = 3;
 
     public function __construct(
@@ -43,7 +40,7 @@ final readonly class FirstTimeMerchantDetector
             return false;
         }
 
-        $counterpartyId = self::toIntOrNull($txn['counterparty_id'] ?? null);
+        $counterpartyId = self::toPositiveIntOrNull($txn['counterparty_id'] ?? null);
         if ($counterpartyId === null) {
             return false;
         }
@@ -91,24 +88,9 @@ final readonly class FirstTimeMerchantDetector
         }
 
         if (count($sample) < self::OVERALL_HISTORY_MIN) {
-            // Not enough overall history to call anything "large vs
-            // overall" — abstain rather than guess.
             return false;
         }
 
-        // Tie-inclusive boundary: a charge whose magnitude EQUALS the
-        // overall p95 fires (the percentile collapses toward the sample
-        // max for thin overall history). {@see RobustStatistics::exceedsPercentile}
         return RobustStatistics::exceedsPercentile($absMinor, $sample, RobustStatistics::CATEGORY_PERCENTILE);
-    }
-
-    private static function toIntOrNull(mixed $value): ?int
-    {
-        if (! is_numeric($value)) {
-            return null;
-        }
-        $int = (int) $value;
-
-        return $int > 0 ? $int : null;
     }
 }

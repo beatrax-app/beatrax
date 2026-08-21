@@ -6,10 +6,8 @@ namespace Modules\DevMode\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-// SAFE-tier commands are eligible for the command palette AND the
-// artisan runner; DESTRUCTIVE-tier commands are runner-only and must
-// pass through the triple-gate modal. argsSchema describes each
-// positional/option argument the runner UI renders an input for.
+// `tier` decides reachability: 'safe' reaches the palette and the runner,
+// 'destructive' is runner-only and behind the triple-gate modal.
 final class CommandSpec extends Data
 {
     /**

@@ -1,12 +1,12 @@
 {{--
-    Dedicated `/sync` status surface (D-05/D-06, 15-UI-SPEC.md §3).
+    Dedicated `/sync` status surface (15-UI-SPEC.md §3).
     Composition top-to-bottom: page title (Display role) -> "Your devices"
     section (Heading role) embedding the EXISTING per-peer status
     component UNCHANGED below (reuse, not rebuild; overall banner +
     per-device list) + this screen's own initial-sync "{n} of {m} records"
     progress line -> "Sync now" primary CTA (accent-ink, min-h-44px) ->
     "Network" section (Heading role) with the "Pause sync on cellular"
-    toggle (D-10, `.switch`/`.switch--on` markup reused verbatim from
+    toggle (`.switch`/`.switch--on` markup reused verbatim from
     devices-and-sync-settings-section.blade.php).
 
     No `font-bold` anywhere (project caps at semibold/600, UI-SPEC
@@ -38,21 +38,15 @@
                 <p class="text-sm text-slate-600 dark:text-slate-400" aria-live="polite">
                     {{ Lang::get('mobile::sync.syncing_progress', ['count' => $progressApplied]) }}
                 </p>
-                <div
-                    class="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700"
-                    role="progressbar"
-                    aria-valuenow="{{ $progressPercent }}"
-                    aria-valuemin="0"
-                    aria-valuemax="100"
-                    aria-label="{{ Lang::get('mobile::sync.initial_sync_aria') }}"
-                >
-                    <div class="h-2 rounded-full bg-slate-900 dark:bg-slate-100" style="width: {{ $progressPercent }}%"></div>
-                </div>
+                <x-core::progress-bar
+                    :value="$progressPercent"
+                    :label="Lang::get('mobile::sync.initial_sync_aria')"
+                />
             </div>
         @endif
     </section>
 
-    {{-- ===== "Sync now" primary CTA (D-08) — accent-ink, min-h-44px ===== --}}
+    {{-- ===== "Sync now" primary CTA — accent-ink, min-h-44px ===== --}}
     {{-- Inert until a peer exists. With no confirmed device the burst dials
          nobody and returns cleanly, so an enabled button reported success on a
          device that had never been paired. --}}
@@ -99,31 +93,22 @@
     <section class="space-y-3">
         <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::sync.network') }}</h2>
 
-        {{-- ===== "Pause sync on cellular" toggle (D-10) ===== --}}
-        <div class="flex items-start justify-between gap-4">
-            <div class="flex-1 min-w-0">
-                <p class="text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::sync.pause_cellular') }}</p>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    {{ Lang::get('mobile::sync.pause_cellular_help') }}
-                </p>
-            </div>
-            {{-- The visual `.switch` track is 36x20px (existing component, reused
-                 verbatim); the wrapping min-w/min-h-[44px] flex box below is the
-                 D-14/WCAG 2.5.5 tap-target padding this mobile surface requires
-                 (same "small visual, 44px hit target" idiom as Goals/Pots pages'
-                 `min-w-[44px] min-h-[44px] flex items-center justify-center`). --}}
+        {{-- ===== "Pause sync on cellular" toggle ===== --}}
+        <x-core::setting-row
+            :label="Lang::get('mobile::sync.pause_cellular')"
+            :description="Lang::get('mobile::sync.pause_cellular_help')"
+        >
+            {{-- The .switch track is 44x26px and app.css only grows it to a
+                 44px target under @media (pointer: coarse). This wrapper is what
+                 holds WCAG 2.5.5 on a mouse-driven build of the same screen. --}}
             <div class="min-w-[44px] min-h-[44px] flex items-center justify-center">
-                <button
-                    type="button"
+                <x-core::switch
+                    :on="$pauseOnCellular"
+                    :label="Lang::get('mobile::sync.pause_cellular')"
                     wire:click="toggleCellularPause"
-                    @class(['switch', 'switch--on' => $pauseOnCellular])
-                    aria-pressed="{{ $pauseOnCellular ? 'true' : 'false' }}"
-                    aria-label="{{ Lang::get('mobile::sync.pause_cellular') }}"
-                >
-                    <span class="switch__thumb"></span>
-                </button>
+                />
             </div>
-        </div>
+        </x-core::setting-row>
     </section>
 
     {{-- The three sections below moved off Settings. They answer the same

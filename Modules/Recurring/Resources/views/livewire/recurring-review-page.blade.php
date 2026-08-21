@@ -15,9 +15,7 @@
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
-    $fmt = static fn (Money $money): string => $money->currency() === 'EUR'
-        ? $money->format('nl_NL')
-        : $money->format('en_US');
+    $fmt = static fn (Money $money): string => $money->format();
 
     $tabs = [
         'pending' => Lang::get('recurring::review.tabs.pending'),
@@ -68,20 +66,19 @@
     @endif
 
     @if (count($rows) === 0)
-        <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('recurring::review.empty.heading') }}</h2>
-            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                @if ($tab === 'pending')
-                    {{ Lang::get('recurring::review.empty.pending') }}
-                @elseif ($tab === 'rejected')
-                    {{ Lang::get('recurring::review.empty.rejected') }}
-                @else
-                    {{ Lang::get('recurring::review.empty.cadence_changed') }}
-                @endif
-            </p>
-        </div>
+        @php
+            $emptyBody = match ($tab) {
+                'pending' => Lang::get('recurring::review.empty.pending'),
+                'rejected' => Lang::get('recurring::review.empty.rejected'),
+                default => Lang::get('recurring::review.empty.cadence_changed'),
+            };
+        @endphp
+        <x-core::empty-state
+            :heading="Lang::get('recurring::review.empty.heading')"
+            :body="$emptyBody"
+        />
     @else
-        {{-- D-06 power-surface fallback: wrap in overflow-x:auto at phone width.
+        {{-- Power-surface fallback: wrap in overflow-x:auto at phone width.
              The multi-action row (Approve/Reject/Snooze/Edit-name) cannot be
              cleanly mapped to a card at <768px without significant redesign —
              the overflow-x scroller ensures all columns remain reachable. --}}
@@ -183,11 +180,11 @@
                                             x-model="newName"
                                             class="block w-full rounded-md border border-slate-200 px-2 py-1 text-xs dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
                                         />
-                                        <button
-                                            type="button"
+                                        <x-core::neutral-button
+                                            size="sm"
+                                            class="mt-2 gap-1"
                                             x-on:click="$wire.editName({{ $row->seriesId }}, newName); editing = false"
-                                            class="mt-2 inline-flex items-center gap-1 rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-300"
-                                        >{{ Lang::get('recurring::review.save') }}</button>
+                                        >{{ Lang::get('recurring::review.save') }}</x-core::neutral-button>
                                     </div>
                                 </div>
                             @endif

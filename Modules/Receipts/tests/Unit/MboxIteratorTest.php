@@ -15,18 +15,14 @@ it('streams exactly 5 messages from the small.mbox fixture', function (): void {
 
     expect($messages)->toHaveCount(5);
 
-    // Each yielded entry exposes the canonical shape: raw .eml
-    // bytes, byte offset (monotonically increasing), zero-based
-    // index.
     expect($messages[0])->toHaveKeys(['eml', 'byteOffset', 'index']);
     expect($messages[0]['index'])->toBe(0);
     expect($messages[4]['index'])->toBe(4);
 
-    // Each yielded body contains the matching Subject header line.
     expect($messages[0]['eml'])->toContain('Synthetic mbox message 1');
     expect($messages[4]['eml'])->toContain('Synthetic mbox message 5');
 
-    // Separator lines must NOT leak into message bodies.
+    // The "From " separator line must not leak into the body it precedes.
     expect($messages[0]['eml'])->not->toStartWith('From sender1@example.test');
 });
 
@@ -36,12 +32,11 @@ it('strips a single leading > from >From lines in the body', function (): void {
 
     $messages = iterator_to_array($iterator->iterate($fixturePath), false);
 
-    // Message 2: body line was '>From the perspective of...' — the
-    // iterator strips ONE '>' leaving 'From the perspective of...'.
+    // The fixture's second message body starts '>From the perspective of…';
+    // exactly one '>' comes off.
     expect($messages[1]['eml'])->toContain("\nFrom the perspective of the iterator");
 
-    // Message 3: body line was '>>From here the iterator strips...'
-    // — one '>' stripped leaves '>From here ...'.
+    // The third starts '>>From here…', so stripping one leaves the other behind.
     expect($messages[2]['eml'])->toContain("\n>From here the iterator strips one '>'");
 });
 
@@ -51,9 +46,8 @@ it('streams a synthetic 50 MB mbox under 64 MB peak memory', function (): void {
         @unlink($tmpPath);
     });
 
-    // Generate ~50 MB of mboxrd content. Each synthetic message is
-    // ~8 KB body + ~150 bytes headers + separator; repeat ~6400
-    // times to clear the 50 MB threshold.
+    // Roughly 8 KB of body plus headers per message, repeated enough times to
+    // clear the 50 MB threshold the assertion below depends on.
     $fh = fopen($tmpPath, 'wb');
     if ($fh === false) {
         throw new RuntimeException("Could not open temp mbox at {$tmpPath}.");
@@ -74,8 +68,8 @@ it('streams a synthetic 50 MB mbox under 64 MB peak memory', function (): void {
     $sizeBytes = filesize($tmpPath);
     expect($sizeBytes)->toBeGreaterThan(50 * 1024 * 1024);
 
-    // Reset peak-memory tracking so prior PHP runtime allocations
-    // do not contaminate the budget assertion.
+    // Reset peak tracking so allocations from earlier in the run do not
+    // contaminate the budget assertion.
     if (function_exists('memory_reset_peak_usage')) {
         memory_reset_peak_usage();
     }
@@ -85,9 +79,8 @@ it('streams a synthetic 50 MB mbox under 64 MB peak memory', function (): void {
     $count = 0;
     foreach ($iterator->iterate($tmpPath) as $entry) {
         $count++;
-        // Touch the yielded bytes lightly so the generator's value
-        // is observed — but immediately discard so the iterator
-        // never accumulates more than one message worth of bytes.
+        // Touch the yielded bytes so the generator's value is observed, then
+        // drop them — holding on would defeat what is being measured.
         if ($entry['eml'] === '') {
             throw new RuntimeException('iterator yielded empty .eml');
         }
@@ -100,16 +93,10 @@ it('streams a synthetic 50 MB mbox under 64 MB peak memory', function (): void {
 
     expect($count)->toBe($messageCount);
 
-    // Streaming-correctness assertion: the iterator MUST NOT scale
-    // memory with file size. The delta between baseline (after the
-    // mbox is written but before iteration starts) and the peak after
-    // iteration must stay well under the file size — a non-streaming
-    // implementation that called file_get_contents() would blow past
-    // the file size by a factor of ~2-3x. We allow up to 16 MB of
-    // delta to absorb fgets() line-buffering and zbateson-free
-    // generator overhead while still catching the regression that
-    // motivated Pitfall 6 (a buffer-the-whole-file mistake would
-    // surface a delta on the order of fileMb here).
+    // The iterator must not scale memory with file size: a buffer-the-whole-file
+    // implementation would push the delta up to the order of the file itself.
+    // The 16 MB budget leaves room for fgets() line buffering and generator
+    // overhead while still catching that regression.
     expect($deltaMb)
         ->toBeLessThan(16.0, sprintf(
             'Iterator added %.1f MB to peak memory while streaming a %.1f MB mbox — '

@@ -11,10 +11,8 @@ use Illuminate\Database\Eloquent\Model;
 use Modules\Core\Public\Concerns\BelongsToUser;
 use Modules\EmailScan\Database\Factories\OAuthSecretFactory;
 
-// A user holds at most one credential row per provider, guarded by
-// the (user_id, provider) unique index. client_secret and tokens_blob
-// are encrypted at rest (aes256-cbc) via Laravel's encrypted cast
-// keyed on APP_KEY; plaintext exists only in this model's attribute layer.
+// At most one credential row per (user_id, provider), guarded by a unique
+// index. Plaintext exists only in this model's attribute layer.
 /**
  * @property int $id
  * @property int|null $user_id

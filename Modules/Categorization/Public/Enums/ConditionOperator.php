@@ -6,11 +6,8 @@ namespace Modules\Categorization\Public\Enums;
 
 use Modules\Core\Public\Support\Lang;
 
-// The comparison a condition applies. Which operators are valid depends on
-// the condition's value type — see ConditionValueType::operators().
-/**
- * @link ../../../../.docs/features/categorization/architecture.md
- */
+// Which operators are valid depends on the condition's value type — see
+// ConditionValueType::operators().
 enum ConditionOperator: string
 {
     case Contains = 'contains';
@@ -29,10 +26,8 @@ enum ConditionOperator: string
 
     case After = 'after';
 
-    // How the operator is written in the rule form's operator dropdown. The
-    // case maps to a stable translation key here — the '>' / '<' backing
-    // values can't be keys — and the copy itself lives in the operators lang
-    // file so the dropdown localises with the rest of the UI.
+    // The case maps to a stable translation key because the '>' / '<' backing
+    // values cannot be lang-file keys.
     public function label(): string
     {
         $key = match ($this) {

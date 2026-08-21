@@ -6,9 +6,6 @@ namespace Modules\Sync\Internal\Identity;
 
 use Modules\Core\Public\Contracts\DeviceNameSource;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class DeviceNameDetector
 {
     // Unbound on platforms with nothing better to offer, in which case the

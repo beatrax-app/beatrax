@@ -28,7 +28,11 @@ return [
     'recovery_download' => 'Laadi alla .txt-failina',
     'recovery_copy' => 'Kopeeri koodid',
     'recovery_copied' => 'Kopeeritud',
+    'recovery_copy_failed' => 'Kopeerimine ebaõnnestus. Kirjutage koodid üles.',
     'recovery_saved' => 'Salvestatud sinu allalaadimiste kausta.',
+    'recovery_share_title' => 'Beatraxi taastekoodid',
+    'recovery_share_message' => 'Hoidke neid turvalises kohas.',
+    'recovery_save_failed' => 'Faili ei õnnestunud salvestada. Kirjutage koodid üles.',
     'recovery_confirm' => 'Olen need koodid kindlasse kohta salvestanud.',
     'continue_to_pairing' => 'Jätka sidumisega',
 

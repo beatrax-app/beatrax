@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Kategorie entfernen',
         'keep_category' => 'Diese Kategorie behalten',
         'restore_single' => 'Als einzelne Kategorie wiederherstellen?',
+        'survivor_legend' => 'Zu behaltende Kategorie',
         'confirm_unsplit' => 'Ja, Aufteilung aufheben',
         'keep_split' => 'Aufteilung behalten',
     ],
@@ -51,6 +52,16 @@ return [
         'choose_aria' => 'Neuen Transaktionstyp wählen',
         'choose_option' => 'Wähle einen Typ…',
         'save' => 'Speichern',
+    ],
+
+    'type_label' => [
+        'expense' => 'Ausgabe',
+        'income' => 'Einnahme',
+        'transfer_out' => 'Ausgehende Überweisung',
+        'transfer_in' => 'Eingehende Überweisung',
+        'fee' => 'Gebühr',
+        'refund' => 'Erstattung',
+        'adjustment' => 'Korrektur',
     ],
 
     'note' => [

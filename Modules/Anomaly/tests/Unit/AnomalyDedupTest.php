@@ -13,13 +13,8 @@ use Modules\Anomaly\Tests\Support\AnomalyCorpusSeeder;
 
 uses(RefreshDatabase::class);
 
-/*
- * Idempotency (D-16): evaluate() twice on the same transaction yields
- * exactly one anomaly_alerts row — the UNIQUE(transaction_id) collision is
- * caught at the QueryException boundary and treated as a silent no-op. The
- * AnomalyAlertOpened event fires only on the successful first insert.
- */
-
+// Idempotency here is the UNIQUE(transaction_id) collision being caught at
+// the QueryException boundary, not a pre-insert existence check.
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);

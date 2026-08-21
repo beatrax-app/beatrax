@@ -14,23 +14,6 @@ use Modules\Import\Tests\Support\PreviewSeedHelper;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\FirstImportStep;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 
-/*
- * Confirms FirstImportStep reads the stashed ImportRun ids out of the
- * `wizard_progress.data` JSON column on mount and feeds them into the
- * shared BuildConsolidatedPreviewQuery — the read-side surface Plan 07
- * shipped — so the consolidated preview renders one section per
- * source format with the locked eyebrow copy.
- *
- * Two behaviours:
- *
- *  1. On mount the step reads `bank_import_run_id` + `card_import_run_ids[]`
- *     out of WizardProgress and the resulting consolidated preview
- *     section count matches the source-format groups in the stash.
- *  2. The rendered HTML carries the per-source eyebrow copy locked
- *     by UI-SPEC G7 ("FROM YOUR BANK STATEMENT" / "FROM YOUR ICS
- *     CARD STATEMENTS").
- */
-
 beforeEach(function (): void {
     // Freeze the clock so the 14-day stale window inside
     // BuildConsolidatedPreviewQuery is deterministic.
@@ -89,7 +72,6 @@ it('loads stashed bank_import_run_id and card_import_run_ids from wizard_progres
     $instance = $component->instance();
     $preview = $instance->currentPreview();
 
-    // Two sections — one CAMT bank source, one ICS card source.
     expect($preview->sections)->toHaveCount(2);
     expect($preview->dedupedTotalCount)->toBe(6); // 3 + 2 + 1
 });

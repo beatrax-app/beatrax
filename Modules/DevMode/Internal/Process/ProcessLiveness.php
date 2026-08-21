@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Internal\Process;
 
-// Prefers posix_kill($pid, 0) (a kernel-level liveness probe that never
-// sends a signal) when the posix extension is loaded; falls back to
-// `kill -0` via shell_exec on runtimes that omit ext-posix (e.g. the
-// shipped NativePHP Mac PHP binary), at ~1ms per check instead of ~us.
+// The shell fallback exists because the shipped NativePHP Mac PHP binary omits
+// ext-posix. It costs ~1ms per check against microseconds for posix_kill.
 final class ProcessLiveness
 {
     public function isAlive(int $pid): bool

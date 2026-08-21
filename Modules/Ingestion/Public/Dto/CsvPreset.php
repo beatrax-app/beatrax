@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Ingestion\Public\Dto;
 
-/**
- * @link ../../../../.docs/features/ingestion/architecture.md
- */
 final class CsvPreset
 {
     public const SIGNED = 'signed';
@@ -52,9 +49,7 @@ final class CsvPreset
         public readonly array $acceptedStates = [],
     ) {}
 
-    // Lower-cased and stripped of all whitespace, so minor spelling
-    // differences between banks compare equal ("Naam / Omschrijving" ==
-    // "Naam/Omschrijving").
+    // So a bank's spelling variations compare equal: "Naam / Omschrijving" == "Naam/Omschrijving".
     public static function normaliseHeader(string $header): string
     {
         $lowered = mb_strtolower(trim($header));

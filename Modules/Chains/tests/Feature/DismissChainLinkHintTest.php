@@ -4,31 +4,14 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Modules\Chains\Internal\Exceptions\ChainLinkNotDismissableException;
 use Modules\Chains\Models\ChainLink;
 use Modules\Chains\Public\Actions\DismissChainLinkHint;
-use Modules\Chains\Public\Exceptions\ChainLinkNotDismissableException;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
-
-/*
- * DismissChainLinkHint — hard-deletes a hint-shaped chain_link
- * (`to_transaction_id IS NULL`) after verifying the row belongs to
- * the calling user and is a hint, not a concrete candidate.
- *
- * Coverage:
- *
- *   1. Hard-deletes a canonical hint row (kind=ics_bulk_settle,
- *      tolerance_used=exceeded).
- *   2. Refuses a row with a concrete to_transaction_id — a regular
- *      candidate must route through Confirm / Reject, not Dismiss.
- *   3. Raises NotFoundHttpException on cross-user invocation (404).
- *   4. Raises NotFoundHttpException for a non-existent id.
- *   5. Hard-deletes a funded_by_card_hint shape too (per-kind
- *      symmetry).
- */
 
 function dchUser(string $username): User
 {
@@ -161,7 +144,6 @@ it('refuses to dismiss a row with a concrete to_transaction_id (use confirm/reje
     expect(fn () => ($this->dismiss)($linkId, $this->user))
         ->toThrow(ChainLinkNotDismissableException::class);
 
-    // Row must NOT be deleted by the failed guard.
     expect(ChainLink::query()->where('id', $linkId)->exists())->toBeTrue();
 });
 

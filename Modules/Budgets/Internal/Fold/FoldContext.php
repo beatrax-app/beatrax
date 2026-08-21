@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Budgets\Internal\Fold;
 
-/**
- * @link ../../../../.docs/features/budgets/architecture.md
- */
 final class FoldContext
 {
     /**

@@ -11,6 +11,7 @@ return [
     'rename' => 'Pārdēvēt',
     'confirm_delete' => 'Apstiprināt dzēšanu',
     'delete_scenario' => 'Dzēst scenāriju',
+    'delete_confirm' => 'Dzēst šo scenāriju?',
 
     'mutations_count' => 'Korekcijas (:count)',
     'no_mutations' => 'Vēl nav nevienas korekcijas. Pievienojiet vienu zemāk, lai redzētu, kā šis scenārijs izskatās salīdzinājumā ar bāzes līniju.',
@@ -67,6 +68,7 @@ return [
         'new_amount' => 'Jaunā summa',
         'new_next_date' => 'Jaunais nākamais datums',
         'scope' => 'Tvērums',
+        'scope_legend' => 'Kuras reizes pārcelt',
         'scope_next' => 'Tikai nākamo reizi',
         'scope_all' => 'Visas turpmākās reizes',
     ],
@@ -80,6 +82,8 @@ return [
         'current_amount' => 'Pašreizējā summa',
         'new_amount' => 'Jaunā summa',
     ],
+
+    'series_name_fallback' => 'sērija',
 
     'summary' => [
         'cancel' => 'Atcelt :name',

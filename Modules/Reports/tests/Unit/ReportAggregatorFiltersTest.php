@@ -8,24 +8,14 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
 use Modules\Reports\Internal\Aggregation\ReportAggregator;
-use Modules\Reports\Public\Dto\ReportDefinition;
-use Modules\Reports\Public\Enums\ReportGranularity;
+use Modules\Reports\Internal\Dto\ReportDefinition;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 
-/*
- * Plan 06 Task 1 companion coverage (T-999.6-06/T-999.6-14) — not a Wave 0
- * stub. Task 1's own acceptance criteria states "Filter ids are
- * re-validated at the query layer (ownership), not trusted from
- * ReportDefinition", but no Wave 0 stub exercises it directly; this file
- * pins that behavior (Rule 2 auto-add, see SUMMARY.md Deviations).
- *
- * Every Plan 04 dimension query's `whereIn('account_id'/'category_id'/
- * 'counterparty_id', ...)` filter predicate sits ALONGSIDE the query's own
- * pre-existing `where('user_id', $user->id)` guard, so a foreign id can
- * only ever narrow (or zero) the calling user's own already-scoped result
- * — never widen it to another user's rows.
- */
+// Filter ids are re-validated at the query layer rather than trusted from the
+// stored ReportDefinition: each whereIn sits alongside the query's own
+// where('user_id'), so a foreign id can only narrow the caller's own rows.
 
 function raftUser(string $prefix = 'raft'): User
 {
@@ -155,10 +145,6 @@ it('a foreign account id never leaks another user\'s spend — it only narrows t
     raftTransaction($db, $user, $account, ['settled_amount_minor' => -5_000]);
     raftTransaction($db, $otherUser, $otherAccount, ['settled_amount_minor' => -99_000]);
 
-    // A persisted definition carrying a foreign account id (belonging to
-    // $otherUser, not $user) must never surface $otherUser's spend — the
-    // combined `user_id = $user->id AND account_id IN (foreign_id)`
-    // predicate matches zero of $user's own rows.
     $result = app(ReportAggregator::class)->run($user, raftDefinition('account', accounts: [$otherAccount->id]));
 
     expect($result->totalMinor)->toBe(0);
@@ -200,11 +186,10 @@ it('AMOUNT FILTER: amountMin + amountDirection=in ("In > EUR 500") changes the t
         'user_id' => null, 'name' => 'Groceries', 'slug' => 'groceries-af-'.bin2hex(random_bytes(3)), 'kind' => 'expense', 'display_order' => 1,
     ]);
 
-    // Below the EUR 500 threshold — excluded by amountMin regardless of direction.
     raftTransaction($db, $user, $account, ['type' => 'income', 'settled_amount_minor' => 20_000, 'category_id' => $groceries->id]);
-    // Above the threshold AND incoming — the only row that should survive both predicates.
+    // The only row that clears both amountMin and amountDirection=in.
     raftTransaction($db, $user, $account, ['type' => 'income', 'settled_amount_minor' => 80_000, 'category_id' => $groceries->id]);
-    // Above the threshold in absolute value, but OUTGOING — excluded by amountDirection=in.
+    // Over the threshold in absolute value, but outgoing.
     raftTransaction($db, $user, $account, ['type' => 'expense', 'settled_amount_minor' => -90_000, 'category_id' => $groceries->id]);
 
     $unfiltered = new ReportDefinition(
@@ -234,8 +219,5 @@ it('AMOUNT FILTER: amountMin + amountDirection=in ("In > EUR 500") changes the t
     );
     $filteredResult = app(ReportAggregator::class)->run($user, $filtered);
 
-    // Amount filter is now wired into every dimension query — the total
-    // reflects ONLY the >= EUR 500, incoming row (80_000), never the whole
-    // unfiltered net total.
     expect($filteredResult->totalMinor)->toBe(80_000);
 });

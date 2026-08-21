@@ -5,14 +5,6 @@ declare(strict_types=1);
 use Modules\Migration\Tests\Support\ActualFixtureBuilder;
 use Pdo\Sqlite;
 
-/*
- * Wave 0 Fixture smoke tests (13.5-02 Task 2). Confirms every golden
- * fixture round-trips through its real extraction path (ZipArchive /
- * PDO Sqlite read-only open) and carries the exact shape Task 3's parser
- * RED stubs assert against — GREEN now, since Task 2 authors real fixture
- * FILES (unlike Task 3's parser-behavior RED stubs).
- */
-
 function migrationFixturesRoot(): string
 {
     return __DIR__.'/../../Fixtures';
@@ -46,7 +38,7 @@ it('Fixture: the ynab4 v1 Register.csv carries a plain expense, income, split pa
     expect($files)->not->toBeFalse();
     /** @var list<string> $files */
     $rows = array_map('str_getcsv', file($files[0]));
-    array_shift($rows); // header
+    array_shift($rows);
 
     expect($rows)->toHaveCount(7);
 
@@ -207,7 +199,6 @@ it('Fixture: ActualFixtureBuilder output opens read-only and v_transactions retu
         expect($rows)->toHaveCount(7);
         expect(in_array('tx-6-tombstoned', $rows, true))->toBeFalse();
 
-        // Structurally prove the connection is genuinely read-only.
         $threwOnWrite = false;
         try {
             $readOnly->exec("INSERT INTO accounts (id, name) VALUES ('should-fail', 'x')");
@@ -226,7 +217,7 @@ it('Fixture: ActualFixtureBuilder output opens read-only and v_transactions retu
     }
 });
 
-it('Fixture: ActualFixtureBuilder carries exactly one FLAT goal_def, one NON-FLAT goal_def, one saved-report row, and >=1 schedule (Req 8)', function (): void {
+it('Fixture: ActualFixtureBuilder carries exactly one FLAT goal_def, one NON-FLAT goal_def, one saved-report row, and >=1 schedule', function (): void {
     $zipPath = sys_get_temp_dir().'/actual-fixture-smoke-'.uniqid('', true).'.zip';
     $extractDir = sys_get_temp_dir().'/actual-fixture-extract-'.uniqid('', true);
 

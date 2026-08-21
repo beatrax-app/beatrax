@@ -9,19 +9,10 @@ use Modules\Budgets\Internal\Http\Livewire\BudgetsPage;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Category;
 
-/*
- * `users.envelope_activated_at` is written by the cutover migration and the
- * demo seeder, and by nothing in the running app. It is also absent from
- * MergeRulesRegistry. So a device that joined a household by pairing has it
- * null forever — and CarryoverQuery treated null as "never started" and
- * returned hardcoded zeros without reading envelope_assignments at all.
- *
- * Measured on a paired iPhone: 12 assignments totalling EUR 2.520,00, every one
- * of them for the month on screen, 11 of them synced from the Mac. The page
- * said "Nog niets toegewezen" and EUR 0,00 for all 24 categories, while the
- * sidebar badge — reading the same table — said "Budgetten 12".
- */
-
+// `users.envelope_activated_at` is written only by the cutover migration and
+// the demo seeder, and is absent from MergeRulesRegistry — so a device that
+// joined a household by pairing has it null forever, and CarryoverQuery used
+// to read null as "never started" and return zeros over real assignments.
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-08-19 12:00:00');
 
@@ -73,6 +64,26 @@ it('does not report zero over money that is really there', function (): void {
     Livewire::test(BudgetsPage::class)
         ->assertOk()
         ->assertDontSee('Nothing assigned yet');
+});
+
+it('can navigate back to a month that only exists because it synced in', function (): void {
+    DB::table('envelope_assignments')->insert([
+        'user_id' => $this->user->id,
+        'category_id' => $this->groceries->id,
+        'period_start' => '2026-06-01',
+        'assigned_minor' => 25000,
+        'currency' => 'EUR',
+        'created_at' => '2026-08-19 10:00:00',
+        'updated_at' => '2026-08-19 10:00:00',
+    ]);
+
+    $component = Livewire::test(BudgetsPage::class);
+
+    expect($component->viewData('canGoPrevious'))->toBeTrue();
+
+    $component->call('prevPeriod');
+
+    expect($component->viewData('period')->start->toDateString())->toBe('2026-07-01');
 });
 
 it('still offers a clickable zero grid for a user who genuinely has nothing', function (): void {

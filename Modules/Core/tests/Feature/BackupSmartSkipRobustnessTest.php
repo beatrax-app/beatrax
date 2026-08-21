@@ -7,16 +7,10 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Tests\Helpers\RealSqliteFixture;
 
-/*
- * What the smart-skip lookup does with a backups directory it cannot read
- * sense from.
- *
- * Without --force the command decides whether to back up by reading the newest
- * sidecar's data_version. Every way that read can go wrong has to mean "do not
- * skip" — taking an unnecessary backup costs disk, whereas skipping on a
- * sidecar it failed to parse means believing a backup exists when none does.
- * That is the same silent-gap failure the sidecar alert guards against.
- */
+// Without --force the command decides whether to back up by reading the newest
+// sidecar's data_version. Every way that read can go wrong has to mean "do not
+// skip": an unnecessary backup costs disk, whereas skipping on a sidecar it
+// failed to parse means believing a backup exists when none does.
 beforeEach(function (): void {
     $this->sourcePath = RealSqliteFixture::create('backup-skip-source');
 

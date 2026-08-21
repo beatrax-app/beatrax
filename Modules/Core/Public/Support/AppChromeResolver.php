@@ -16,9 +16,6 @@ use Throwable;
 // tag and head. Guests and unset columns fall to Theme::DEFAULT; "system"
 // consults the desktop OsThemeSignal when bound and otherwise defers to the
 // pre-paint script. Replaces the @php block the four layouts hand-rolled.
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class AppChromeResolver
 {
     // Written by the client from matchMedia and read here on the next

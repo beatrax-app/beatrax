@@ -4,17 +4,14 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Internal\Http\Livewire;
 
-use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\DevMode\Internal\Doctor\ProbeOutputParser;
 
-/**
- * @link ../../../../../.docs/features/dev-mode/architecture.md
- */
 #[Layout('dev::layouts.dev-shell')]
 final class DoctorPanelPage extends Component
 {
@@ -69,8 +66,7 @@ final class DoctorPanelPage extends Component
         return is_array($decoded) ? $decoded : [];
     }
 
-    // Falls back to the raw created_at string when Carbon cannot parse
-    // it, so a malformed timestamp still renders something rather than
+    // A malformed timestamp still renders as its raw string rather than
     // blanking the "last run" line.
     private function parseFinishedAt(mixed $createdAtRaw): ?string
     {
@@ -78,10 +74,6 @@ final class DoctorPanelPage extends Component
             return null;
         }
 
-        try {
-            return CarbonImmutable::parse($createdAtRaw)->toIso8601String();
-        } catch (\Throwable) {
-            return $createdAtRaw;
-        }
+        return SafeDate::parseOrNull($createdAtRaw)?->toIso8601String() ?? $createdAtRaw;
     }
 }

@@ -13,15 +13,6 @@ use Modules\Tax\Public\Actions\TagTransaction;
 use Modules\Tax\Public\Actions\UntagTransaction;
 use Modules\Tax\Public\Services\TaxTagQuery;
 
-/*
- * Phase 13.3 Finding A regression: a tag scoped to one LEG of a split must
- * never light up the PARENT transaction's whole-transaction badge — leg
- * rows carry the parent transaction_id, so TaxTagQuery::forTransactionIds()
- * must filter to transaction_split_id IS NULL or a leg-only tag leaks into
- * badge/picker/untag state keyed by transaction_id (silent "Tax tag
- * removed" no-op when the user clicks the falsely-lit badge).
- */
-
 function lsbUser(string $username): User
 {
     return User::query()->create([
@@ -41,9 +32,9 @@ function lsbTx(DatabaseManager $db, int $userId, int $accountId, int $runId): in
         'account_id' => $accountId,
         'import_run_id' => $runId,
         'fingerprint' => hash('sha256', 'lsb-tx-'.$seq.'-'.bin2hex(random_bytes(4))),
-        // Recent date: TransactionsList's default (non-search) render calls
-        // TransactionListQuery::recent($user, daysBack: 90) — anything older
-        // silently drops off the page 1 result the badge assertions check.
+        // TransactionsList renders TransactionListQuery::recent(daysBack: 90), so
+        // an older date would silently drop off the page the badge assertions
+        // read.
         'posted_at' => '2026-06-15',
         'booked_at' => '2026-06-15 00:00:00',
         'value_date' => '2026-06-15',
@@ -146,12 +137,9 @@ it('forTransactionIds does not surface a leg-only tag as a whole-transaction tag
 });
 
 it('a leg-only-tagged transaction renders the untagged whole-tx badge on the row list, not the tagged pill', function (): void {
-    // TransactionsList (not TransactionDetail — that page fully suppresses
-    // the whole-tx badge section once a split is persisted, D-06) renders
-    // the parent row's `<x-tax::tax-badge>` unconditionally, keyed off
-    // TaxTagQuery::forTransactionIds via taxTagStateFor(). This is the
-    // actual surface the bug report describes: the PARENT ROW badge on
-    // /transactions must reflect only whole-tx tags, never a leg tag.
+    // TransactionsList, not TransactionDetail: the detail page suppresses the
+    // whole-tx badge section entirely once a split exists, so the row list is
+    // the surface where a leg tag could falsely light the parent badge.
     $db = app(DatabaseManager::class);
 
     $txId = lsbTx($db, $this->user->id, $this->account->id, $this->run->id);
@@ -179,9 +167,8 @@ it('untag() on a leg-only-tagged transaction deletes zero rows and leaves the le
 
     app(TagTransaction::class)->execute($this->user->id, $txId, $catId, null, null, $legId);
 
-    // Whole-transaction untag (transactionSplitId=null) — this is the path
-    // the parent-row "Remove tag" action would take. It must be a true
-    // no-op: it matches zero rows because no whole-tx row exists.
+    // The path the parent row's "Remove tag" takes; it must match zero rows,
+    // because no whole-transaction row exists.
     app(UntagTransaction::class)->execute($this->user->id, $txId);
 
     $legTagStillExists = DB::table('tax_transaction_tags')

@@ -16,9 +16,6 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\ValueObjects\Money;
 
-/**
- * @link ../../../../.docs/features/chains/architecture.md
- */
 final class CardStatementQuery
 {
     use CoercesScalars;
@@ -43,14 +40,11 @@ final class CardStatementQuery
             return null;
         }
 
-        // The user-scope filter above is the cross-user safety boundary;
-        // this where('id', ...)->first() trusts the id it returns.
+        // The raw read above is the cross-user boundary; this lookup trusts the
+        // id it returned.
         return CardStatement::query()->where('id', $row->id)->first();
     }
 
-    // Resolves the funder as the ASN account behind the most-recent
-    // confirmed ics_bulk_settle chain_link, falling back to the user's
-    // first ASN account when no history exists; null with zero ASN accounts.
     public function nextSettlementForUser(User $user): ?NextSettlementDto
     {
         $row = $this->db->connection()->table('card_statements')
@@ -64,6 +58,7 @@ final class CardStatementQuery
                 'card_statements.id as statement_id',
                 'card_statements.account_id as card_account_id',
                 'card_statements.open_balance_minor as open_balance_minor',
+                'card_statements.currency as currency',
                 'card_statements.period_end as period_end',
                 'card_statements.state as state',
             )
@@ -102,7 +97,7 @@ final class CardStatementQuery
 
         return new NextSettlementDto(
             accountId: self::toInt($historicalFunder),
-            amount: Money::ofMinor(self::toInt($row->open_balance_minor), 'EUR'),
+            amount: Money::ofMinor(self::toInt($row->open_balance_minor), self::toString($row->currency)),
             dueDate: $periodEnd->addDays(self::STATEMENT_DUE_GRACE_DAYS)->startOfDay(),
             statementId: self::toInt($row->statement_id),
             state: self::toString($row->state),

@@ -15,24 +15,26 @@ use Amp\Socket\Certificate;
 use Amp\Socket\InternetAddress;
 use Amp\Socket\ServerTlsContext;
 use Illuminate\Console\Command;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
-use Modules\Sync\Internal\Transport\Relay\RelayDeliverRateLimiter;
 use Modules\Sync\Internal\Transport\Relay\RelayDrainRegistry;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
+use Modules\Sync\Internal\Transport\Relay\RelayRateLimiter;
 use Modules\Sync\Internal\Transport\Relay\RelayTlsMaterial;
+use Modules\Sync\Public\Services\SyncPorts;
 use Psr\Log\LoggerInterface;
 
 /**
- * @link ../../../.docs/features/sync/architecture.md
  * @see SyncServiceProvider
+ * @link ../../../.docs/features/sync/relay-endpoint-authorization.md
  */
 final class RelayServeCommand extends Command
 {
     private const JSON_CONTENT_TYPE = 'application/json';
 
     /** @var string */
-    protected $signature = 'relay:serve {--port=51338 : Relay HTTP listen port}';
+    protected $signature = 'relay:serve {--port= : Relay HTTP listen port; defaults to SYNC_RELAY_PORT}';
 
     /** @var string */
     protected $description = 'Start the ZK relay HTTP endpoint daemon (POST /relay/deliver, GET /relay/drain, DELETE /relay/drain/{id}).';
@@ -59,14 +61,14 @@ final class RelayServeCommand extends Command
         private readonly LoggerInterface $logger,
         private readonly RelayMailbox $mailbox,
         private readonly RelayDrainRegistry $drainRegistry,
-        private readonly RelayDeliverRateLimiter $rateLimiter,
+        private readonly RelayRateLimiter $rateLimiter,
         private readonly RelayTlsMaterial $tls,
         private readonly DaemonShutdownSignal $shutdown,
     ) {
         parent::__construct();
     }
 
-    public function handle(): int
+    public function handle(SyncPorts $ports): int
     {
         // The desktop bundle starts PHP with -d max_execution_time=120, and
         // a listener is by definition longer-lived than any request: the loop
@@ -74,7 +76,8 @@ final class RelayServeCommand extends Command
         // dialling during that gap got a refused connection.
         set_time_limit(0);
 
-        $port = (int) $this->option('port');
+        $requested = $this->option('port');
+        $port = is_string($requested) && $requested !== '' ? (int) $requested : $ports->relay();
         if ($port <= 0 || $port > 65535) {
             $this->error("relay:serve: invalid port {$port}.");
 
@@ -111,8 +114,8 @@ final class RelayServeCommand extends Command
 
             $httpServer->stop();
         } catch (\Throwable $e) {
-            $this->logger->error('relay:serve: fatal error.', ['error' => $e->getMessage()]);
-            $this->error("relay:serve: fatal — {$e->getMessage()}");
+            $this->logger->error('relay:serve: fatal error.', SafeExceptionContext::describe($e));
+            $this->error('relay:serve: fatal — '.$e::class);
 
             return self::FAILURE;
         }
@@ -128,6 +131,14 @@ final class RelayServeCommand extends Command
         $method = $request->getMethod();
         $path = $request->getUri()->getPath();
         $confirmId = $this->confirmIdFrom($method, $path);
+
+        // Ahead of the routing, so a flood is refused before ANY work. Drain
+        // and confirm each resolve a row from the database inside their own
+        // authorization check, so an unauthenticated request cost a query;
+        // only deliver was throttled, and it is the one needing it least.
+        if (! $this->rateLimiter->allow($this->clientKey($request))) {
+            return $this->jsonError(HttpStatus::TOO_MANY_REQUESTS, 'rate_limited');
+        }
 
         return match (true) {
             $method === 'POST' && $path === '/relay/deliver' => $this->handleDeliver($request),
@@ -157,12 +168,6 @@ final class RelayServeCommand extends Command
     // endpoint is intentionally unauthenticated (see class @link).
     private function handleDeliver(Request $request): Response
     {
-        // Per-source-IP throttle first, so a flood is refused before any JSON
-        // parse or DB work — the cheapest possible rejection path.
-        if (! $this->rateLimiter->allow($this->clientKey($request))) {
-            return $this->jsonError(HttpStatus::TOO_MANY_REQUESTS, 'rate_limited');
-        }
-
         $body = json_decode($request->getBody()->buffer(), true, 512, 0);
         $senderDid = $this->stringField($body, 'sender_did');
         $recipientDid = $this->stringField($body, 'recipient_did');
@@ -183,7 +188,7 @@ final class RelayServeCommand extends Command
                 self::MAX_PENDING_PER_RECIPIENT,
             );
         } catch (\Throwable $e) {
-            $this->logger->error('relay:serve: deliver failed.', ['error' => $e->getMessage()]);
+            $this->logger->error('relay:serve: deliver failed.', SafeExceptionContext::describe($e));
 
             return $this->jsonError(HttpStatus::INTERNAL_SERVER_ERROR, 'deliver_failed');
         }
@@ -249,7 +254,7 @@ final class RelayServeCommand extends Command
         try {
             $rows = $this->mailbox->drain($did, self::DRAIN_PAGE_SIZE);
         } catch (\Throwable $e) {
-            $this->logger->error('relay:serve: drain failed.', ['error' => $e->getMessage()]);
+            $this->logger->error('relay:serve: drain failed.', SafeExceptionContext::describe($e));
 
             return $this->jsonError(HttpStatus::INTERNAL_SERVER_ERROR, 'drain_failed');
         }
@@ -280,6 +285,7 @@ final class RelayServeCommand extends Command
     {
         return match (true) {
             $did === '' => $this->jsonError(HttpStatus::BAD_REQUEST, 'missing_did'),
+            ! $this->isValidDid($did) => $this->jsonError(HttpStatus::BAD_REQUEST, 'malformed_did'),
             ! $this->isAuthorized($request, $did) => $this->jsonError(HttpStatus::UNAUTHORIZED, 'unauthorized'),
             default => null,
         };
@@ -305,10 +311,7 @@ final class RelayServeCommand extends Command
         try {
             $this->mailbox->confirm($id);
         } catch (\Throwable $e) {
-            $this->logger->error('relay:serve: confirm failed.', [
-                'id' => $id,
-                'error' => $e->getMessage(),
-            ]);
+            $this->logger->error('relay:serve: confirm failed.', ['id' => $id, ...SafeExceptionContext::describe($e)]);
 
             return $this->jsonError(HttpStatus::INTERNAL_SERVER_ERROR, 'confirm_failed');
         }

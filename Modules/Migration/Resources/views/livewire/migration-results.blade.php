@@ -25,13 +25,10 @@
         </h1>
     </header>
 
-    <aside
-        aria-live="polite" aria-atomic="true"
-        class="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-200"
-        data-testid="migration-success-banner"
-    >
+    <x-core::alert tone="positive" aria-live="polite" aria-atomic="true"
+        data-testid="migration-success-banner">
         {{ $summaryLine }}
-    </aside>
+    </x-core::alert>
 
     <section class="grid grid-cols-2 gap-4 sm:grid-cols-5" style="font-feature-settings: 'tnum';">
         @foreach ($stats as $stat)
@@ -71,11 +68,8 @@
     </div>
 
     <div>
-        <a
-            href="{{ route('migrations.index') }}"
-            class="inline-flex items-center rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-900 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
-        >
+        <x-core::secondary-button :href="route('migrations.index')">
             {{ Lang::get('migration::results.back') }}
-        </a>
+        </x-core::secondary-button>
     </div>
 </div>

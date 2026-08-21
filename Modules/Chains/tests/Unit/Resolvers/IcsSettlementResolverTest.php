@@ -17,24 +17,7 @@ use Modules\Ledger\Models\Transaction;
 
 uses(RefreshDatabase::class);
 
-/*
- * Wave 2 coverage for the IcsSettlementResolver — the bulk-iDEAL
- * decomposition algorithm. Each dataset row exercises one tolerance
- * arm of D-97 / RESEARCH Pattern 4:
- *
- *   clean       (delta = €0.00)  → confirmed N rows + settled
- *   overpaid    (delta = +€1.53) → confirmed N rows + overpaid + 1 credit
- *   underpaid   (delta = −€2.18) → confirmed N rows + partially_settled
- *   exceeded    (delta = +€50.00) → 1 candidate row + state unchanged
- *
- * Plus idempotency, cross-user isolation, the D-84 invariant
- * (transactions row never mutated), and the D-98 refund-after-close
- * carry-forward.
- */
-
 /**
- * Seed N synthetic ICS expense rows that sum to STATEMENT_TOTAL.
- *
  * @return array{0: list<int>, 1: int} List of inserted transaction ids
  *                                     AND the actual computed sum (matches the constant).
  */
@@ -77,14 +60,9 @@ function seedIcsExpenses(User $user, Account $icsAccount, ImportRun $run, int $c
     return [$ids, $sum];
 }
 
-/**
- * Seed an ASN-side `transfer_out` row whose counterparty IBAN is the
- * ICS institution IBAN (alias-bridged to the user's ics_card account
- * by `DefaultKnownCounterpartyIbansSeeder`). settled_amount_minor is
- * negative (money leaving the bank); the resolver inverts the sign at
- * the algorithm boundary so the rest of the math runs in the positive
- * ICS-side convention.
- */
+// The ASN-side transfer_out's settled_amount_minor is negative (money leaving
+// the bank); the resolver inverts the sign at the algorithm boundary so the
+// rest of the maths runs in the positive ICS-side convention.
 function seedTransferIn(User $user, Account $bank, ImportRun $run, int $settledMinor, string $postedAt = '2026-05-29'): Transaction
 {
     return Transaction::query()->create([
@@ -131,9 +109,8 @@ beforeEach(function (): void {
         'default_currency' => 'EUR',
     ]);
 
-    // ASN bank account where the bulk-iDEAL transfer_out actually
-    // posts. The resolver's candidate-iteration is the ASN side now;
-    // the ICS settlement only appears on this account in the ledger.
+    // The resolver iterates the ASN side: the bulk-iDEAL transfer_out posts
+    // here, not on the ICS account.
     $this->bankAccount = Account::query()->create([
         'user_id' => $this->user->id,
         'name' => 'ASN bank fixture',
@@ -143,9 +120,8 @@ beforeEach(function (): void {
         'default_currency' => 'EUR',
     ]);
 
-    // Seed the canonical alias rows (LU…E → paypal, NL08ABNA… →
-    // ics_card). The resolver consults this bridge to map the ASN
-    // transfer_out's counterparty IBAN to the user's ics_card account.
+    // The canonical alias rows (LU…E → paypal, NL08ABNA… → ics_card) are the
+    // bridge from the transfer_out's counterparty IBAN to the ics_card account.
     app(DefaultKnownCounterpartyIbansSeeder::class)->run($this->user);
 
     $this->run = ImportRun::query()->create([
@@ -169,7 +145,7 @@ beforeEach(function (): void {
     // Seed 23 expense rows summing to €847.32 (84732 minor cents).
     [$expenseIds, $sum] = seedIcsExpenses($this->user, $this->icsAccount, $this->run, 23, 84732);
     $this->expenseIds = $expenseIds;
-    expect($sum)->toBe(84732); // sanity — fixture is wired correctly
+    expect($sum)->toBe(84732);
 
     $statement = CardStatement::query()->create([
         'user_id' => $this->user->id,
@@ -195,7 +171,7 @@ dataset('bulk_settle_variants', [
     'exceed_50.00' => ['settledMinor' => 89732, 'expectedState' => 'open',              'expectedChainState' => 'candidate', 'expectedCreditRows' => 0, 'expectedToleranceUsed' => 'exceeded'],
 ]);
 
-it('decomposes ICS bulk-iDEAL settlement per D-97 tolerance arms', function (
+it('decomposes an ICS bulk-iDEAL settlement across the amount-tolerance and exceeded arms', function (
     int $settledMinor,
     string $expectedState,
     string $expectedChainState,
@@ -240,8 +216,7 @@ it('decomposes ICS bulk-iDEAL settlement per D-97 tolerance arms', function (
         expect($credit->to_statement_id)->toBeNull();
     }
 
-    // Evidence JSON shape — all 6 documented keys present on at least
-    // one chain_link row (every row carries the same evidence shape).
+    // Every chain_link carries the same evidence shape, so one sample suffices.
     /** @var ChainLink $sample */
     $sample = $chainLinks->first();
     $evidence = $sample->evidence;
@@ -273,25 +248,22 @@ it('keeps rejected pairs rejected on re-run (pair-uniqueness pre-insert guard)',
 
     $this->resolver->resolveForUser($this->user);
 
-    // Flip ONE chain_link to rejected to simulate user judgment.
     $first = ChainLink::query()->where('user_id', $this->user->id)->first();
     expect($first)->not->toBeNull();
     $first->state = 'rejected';
     $first->save();
 
-    // Re-run the resolver — the pre-insert pair-uniqueness guard
-    // refuses to write a fresh row for the same (from, to, kind, user)
-    // tuple regardless of the existing row's state.
+    // The pre-insert pair-uniqueness guard checks every state, so no fresh row
+    // is written for an already-rejected pair.
     $this->resolver->resolveForUser($this->user);
 
     $stillRejected = ChainLink::query()->where('id', $first->id)->first();
     expect($stillRejected->state)->toBe('rejected');
 
-    // Total chain_links count unchanged (23 — no duplicate created).
     expect(ChainLink::query()->where('user_id', $this->user->id)->count())->toBe(23);
 });
 
-it('does NOT mutate transactions rows (D-84 invariant)', function (): void {
+it('does NOT mutate transactions rows', function (): void {
     $transfer = seedTransferIn($this->user, $this->bankAccount, $this->asnRun, 84732);
 
     $transferUpdatedBefore = $transfer->fresh()->updated_at;
@@ -351,8 +323,11 @@ it('isolates the resolver by user — other users are untouched', function (): v
     expect(ChainLink::query()->where('user_id', $otherUser->id)->count())->toBe(0);
 });
 
-it('handles refund-after-close per D-98', function (): void {
-    // Stage 1: settle the May statement cleanly.
+it('links a refund arriving after the statement closed back to its original charge and credits the next open statement', function (): void {
+    // Not EUR: a writer that omitted the credit's currency would still land EUR
+    // from the column default, which would prove nothing about the credit.
+    CardStatement::query()->whereKey($this->statementId)->update(['currency' => 'USD']);
+
     seedTransferIn($this->user, $this->bankAccount, $this->asnRun, 84732);
     $this->resolver->resolveForUser($this->user);
 
@@ -373,11 +348,9 @@ it('handles refund-after-close per D-98', function (): void {
         'state' => 'open',
     ]);
 
-    // Stage 3: insert a refund row inside May's period whose
-    // counterparty_normalized + amount matches one of the seeded
-    // expenses. Pick the first expense (it carries
-    // counterparty_normalized='merchant-1' and -3684 minor — quotient
-    // of 84732/23 rounded down).
+    // The refund must match a seeded expense on counterparty_normalized +
+    // amount; every seeded row carries -3684 minor (84732/23) and the first
+    // is `merchant-1`.
     /** @var Transaction $original */
     $original = Transaction::query()->find($this->expenseIds[0]);
     $refund = Transaction::query()->create([
@@ -387,7 +360,7 @@ it('handles refund-after-close per D-98', function (): void {
         'posted_at' => '2026-05-20',
         'booked_at' => '2026-05-20 12:00:00',
         'value_date' => '2026-05-20',
-        'amount_minor' => -$original->settled_amount_minor,   // positive
+        'amount_minor' => -$original->settled_amount_minor,
         'currency' => 'EUR',
         'settled_amount_minor' => -$original->settled_amount_minor,
         'settled_currency' => 'EUR',
@@ -401,9 +374,6 @@ it('handles refund-after-close per D-98', function (): void {
         'fingerprint_version' => 3,
     ]);
 
-    // Stage 4: run the resolver again — the refund-after-close pass
-    // should chain the refund back to the original AND emit a
-    // credit row pointing at the June statement.
     $this->resolver->resolveForUser($this->user);
 
     /** @var ChainLink|null $refundLink */
@@ -427,4 +397,5 @@ it('handles refund-after-close per D-98', function (): void {
     expect($credit->from_statement_id)->toBe($this->statementId);
     expect($credit->to_statement_id)->toBe((int) $june->id);
     expect((int) $credit->amount_minor)->toBe(abs((int) $refund->settled_amount_minor));
+    expect($credit->currency)->toBe('USD');
 });

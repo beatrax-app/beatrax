@@ -1,5 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
-{{-- D-20 / UI-SPEC §19: overflow-x-auto wrapper ensures the dense log pane
+{{-- UI-SPEC §19: overflow-x-auto wrapper ensures the dense log pane
      scrolls horizontally at phone width without breaking the page layout. --}}
 <div class="p-8 space-y-4 overflow-x-auto" data-testid="log-tailer-page">
     <header class="flex items-start justify-between gap-4">
@@ -140,8 +140,14 @@
                         <span class="text-[10.5px] text-slate-500 shrink-0 w-[60px] tabular-nums" x-text="shortTime(line.timestamp)"></span>
                         <span class="text-[10px] font-semibold uppercase tracking-wide shrink-0 w-[64px]" x-bind:class="severityColor(line.severity)" x-text="line.severity"></span>
                         <span class="text-[10.5px] text-slate-400 shrink-0 w-[72px] truncate" x-text="line.channel || '—'" x-bind:title="line.channel"></span>
+                        {{-- A floor, not min-w-0. Every other cell in the row is
+                             shrink-0, so the message was the only thing that could
+                             give: at phone width (the dev shell keeps its 220px
+                             sidebar, leaving ~127px of pane) it was squeezed to zero
+                             and every row rendered blank. It holds its width now and
+                             the pane scrolls sideways, as the wrapper intends. --}}
                         <span
-                            class="text-slate-100 flex-1 min-w-0"
+                            class="text-slate-100 flex-1 min-w-60"
                             x-bind:class="line.expanded ? 'whitespace-pre-wrap break-words' : 'truncate'"
                             x-text="line.message || line.raw"
                         ></span>
@@ -497,22 +503,14 @@
                     async copyLine(line) {
                         const text = this.renderLineForClipboard(line);
                         try {
-                            if (navigator.clipboard && navigator.clipboard.writeText) {
-                                await navigator.clipboard.writeText(text);
-                            } else {
-                                // Fallback for old Electron / non-secure contexts:
-                                // a temporary textarea + execCommand('copy').
-                                // The packaged app runs file:// in some webview
-                                // contexts where navigator.clipboard is gated.
-                                const ta = document.createElement('textarea');
-                                ta.value = text;
-                                ta.style.position = 'fixed';
-                                ta.style.opacity = '0';
-                                document.body.appendChild(ta);
-                                ta.focus();
-                                ta.select();
-                                try { document.execCommand('copy'); } finally { document.body.removeChild(ta); }
+                            // This fallback used to live here alone; it is now
+                            // window.beatraxCopy(), because every other copy
+                            // button in the app needed the same thing and had
+                            // a bare navigator.clipboard guard instead.
+                            if (! await window.beatraxCopy(text)) {
+                                throw new Error('clipboard unavailable');
                             }
+
                             line.copiedAt = Date.now();
                             // Revert the ✓ label after the user has had time
                             // to register it. Captured `line` reference is the

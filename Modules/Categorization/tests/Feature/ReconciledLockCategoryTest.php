@@ -6,10 +6,10 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
-use Modules\Categorization\Internal\Http\Livewire\InlineCategoryPicker;
 use Modules\Categorization\Public\Actions\AssignCategory;
 use Modules\Categorization\Public\Contracts\AssignsCategory;
 use Modules\Categorization\Public\Events\TransactionCategorized;
+use Modules\Categorization\Public\Http\Livewire\InlineCategoryPicker;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
@@ -17,16 +17,10 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Sync\Public\Events\TransactionMutated;
 
-/*
- * D-08 reconciled lock gap: the AssignCategory -> UpdateTransactionCategory
- * path used by InlineCategoryPicker on the /transactions list had NO status
- * check, so a reconciled transaction's category could still be changed from
- * the list (and the write propagated into the sync op-log via
- * TransactionMutated). Every sibling mutator (TransactionDetail's
- * reclassifyCategory, SaveTransactionSplit, HandlesTaxTagging) already
- * enforces this warn-first "un-reconcile first" contract (WR-01 / U-1); this
- * closes the last gap.
- */
+// The AssignCategory path used by InlineCategoryPicker on the /transactions
+// list had no reconciled-status check, so a reconciled transaction's category
+// could still be changed there, and the write propagated into the sync op-log.
+// Every sibling mutator already enforces the warn-first contract.
 
 beforeEach(function (): void {
     $this->user = User::create([

@@ -6,9 +6,6 @@ namespace Modules\Sync\Internal\Merge\Strategies;
 
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 interface MergeStrategyInterface
 {
     /**

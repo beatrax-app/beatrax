@@ -14,20 +14,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 uses(RefreshDatabase::class);
 
-/*
- * Phase 9 drift-alert "Model cancel ↗" chip launchpad coverage.
- *
- *   - The chip is in the drift-page rendered HTML.
- *   - Clicking the chip invokes CreateCancellationScenarioForAlert.
- *   - The new scenario has the right name + exactly one cancel_series
- *     mutation seeded.
- *   - Cross-user 404 prevents user A from launchpad-targeting user B's
- *     drift alert.
- *   - The DismissDriftAlertAsCancelled flow remains untouched.
- *   - Atomicity: a failure inside AddScenarioMutation rolls back the
- *     prior CreateScenario insert.
- */
-
 function mclUser(string $username = 'mcl'): User
 {
     return User::query()->create([
@@ -177,20 +163,18 @@ it('CreateCancellationScenarioForAlert returns 404 for another user\'s alert', f
 });
 
 it('CreateCancellationScenarioForAlert atomic rollback when AddScenarioMutation fails', function (): void {
-    // Build an alert with a series the user does NOT own anymore (simulate a deleted series).
+    // An alert left pointing at a series that has since been deleted is what
+    // makes AddScenarioMutation fail partway through the launchpad.
     $seriesId = mclSeries($this->db, $this->user->id, 'Netflix-soon-to-vanish');
     $alertId = mclAlert($this->db, $this->user->id, $seriesId);
-    // Delete the recurring_series row but leave the alert.
     $this->db->connection()->table('recurring_series')->where('id', $seriesId)->delete();
 
     /** @var CreateCancellationScenarioForAlert $action */
     $action = $this->app->make(CreateCancellationScenarioForAlert::class);
 
     expect(fn () => ($action)($alertId, $this->user))->toThrow(NotFoundHttpException::class);
-    // No scenario row should have persisted — the launchpad's outer
-    // db->transaction() wraps CreateScenario + AddScenarioMutation, so
-    // the deleted series triggers the rollback before any scenario row
-    // commits.
+    // The launchpad's outer transaction wraps CreateScenario as well, so the
+    // scenario insert must not survive the failed mutation.
     expect($this->db->connection()->table('forecast_scenarios')->where('user_id', $this->user->id)->count())->toBe(0);
 });
 
@@ -204,7 +188,7 @@ it('drift-page renders the Model cancel chip in the alert row', function (): voi
         ->assertSee('Model cancel ↗');
 });
 
-it('Phase 9 DismissDriftAlertAsCancelled flow remains independent of the launchpad', function (): void {
+it('DismissDriftAlertAsCancelled marks the alert dismissed_cancelled without creating a scenario', function (): void {
     $seriesId = mclSeries($this->db, $this->user->id, 'Netflix');
     $alertId = mclAlert($this->db, $this->user->id, $seriesId);
 
@@ -212,9 +196,7 @@ it('Phase 9 DismissDriftAlertAsCancelled flow remains independent of the launchp
     $dismiss = $this->app->make(DismissDriftAlertAsCancelled::class);
     ($dismiss)($alertId, $this->user);
 
-    // No scenario was created — dismissal is a different code path.
     expect($this->db->connection()->table('forecast_scenarios')->where('user_id', $this->user->id)->count())->toBe(0);
-    // Alert state flipped to dismissed_cancelled.
     expect($this->db->connection()->table('drift_alerts')->where('id', $alertId)->value('state'))->toBe('dismissed_cancelled');
 });
 
@@ -233,10 +215,8 @@ it('the launchpad uses display_name_override when present', function (): void {
 });
 
 it('AddScenarioMutation injection inside the launchpad is the same singleton bound by the ServiceProvider', function (): void {
-    // Regression guard: the launchpad must compose CreateScenario +
-    // AddScenarioMutation via the container so any future change to
-    // the Public Actions' behaviour (e.g. tightening series-belongs-to-user
-    // validation) is automatically picked up.
+    // The launchpad has to reach the Actions through the container, or a later
+    // tightening of their validation would not reach it.
     $a = $this->app->make(AddScenarioMutation::class);
     $b = $this->app->make(AddScenarioMutation::class);
     expect($a)->toBe($b);

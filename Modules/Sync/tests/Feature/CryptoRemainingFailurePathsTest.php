@@ -18,14 +18,10 @@ use Modules\Sync\Internal\Identity\DeviceIdentityService;
 
 uses(RefreshDatabase::class);
 
-/*
- * The crypto failure paths the seam in #96 left uncovered.
- *
- * Rotation translates a libsodium failure the same way the keyring and identity
- * paths do, and neither of its two catches was reached. The keyring's other
- * rename — the one inside writeKeyringFile() rather than finalizeStagedEpoch()
- * — was not either, and nor was the identity read-back.
- */
+// Rotation translates a libsodium failure the way the keyring and identity
+// paths do, but neither of its catches had ever been reached. Nor had the
+// keyring's second rename, the one inside writeKeyringFile() rather than
+// finalizeStagedEpoch(), nor the identity read-back.
 function remainingUser(string $username): User
 {
     return User::query()->create([
@@ -71,10 +67,9 @@ it('translates a libsodium failure while rotating after a device removal', funct
     $session = $this->app->make(Session::class);
     $keyring->generateAndPersist((int) $user->id, $session);
 
-    // Give the acting device a REAL on-disk identity (with real sodium, BEFORE
-    // the failing primitive is swapped in) so rotateAndRevoke() gets past the
-    // new requireIdentity() gate and reaches the epoch-key hex conversion that
-    // the failing sodium throws on.
+    // A real on-disk identity, minted before the failing primitive is swapped
+    // in, so the call gets past requireIdentity() and reaches the conversion
+    // the broken sodium actually throws on.
     /** @var DeviceIdentityService $identityService */
     $identityService = $this->app->make(DeviceIdentityService::class);
     $identityService->generateAndPersist((int) $user->id, $session);
@@ -85,10 +80,10 @@ it('translates a libsodium failure while rotating after a device removal', funct
     /** @var GdkRotationService $rotation */
     $rotation = $this->app->make(GdkRotationService::class);
 
-    // A non-existent registry id: the removal is a no-op, but the rotation
-    // (epoch append) still runs, and that is where the swapped-in failing
-    // sodium throws. (Id 1 is now the real self device; revoking it would trip
-    // the self-revocation guard instead of exercising the crypto failure path.)
+    // A registry id nobody holds: the removal is a no-op but the epoch append
+    // still runs, which is where the broken sodium throws. Id 1 is the real
+    // self device now, and revoking it would trip the self-revocation guard
+    // instead.
     expect(fn () => $rotation->rotateAndRevoke((int) $user->id, 999, $session))
         ->toThrow(CryptoOperationFailedException::class, 'GDK rotation');
 });
@@ -106,9 +101,8 @@ it('translates a libsodium failure while fanning out epochs to a new device', fu
     $session = $this->app->make(Session::class);
     $keyring->generateAndPersist((int) $user->id, $session);
 
-    // The acting device needs a REAL on-disk identity (real sodium, BEFORE the
-    // swap) so fanOutAllEpochsToDevice() gets past requireIdentity() and reaches
-    // the recipient-key hex conversion that the failing sodium throws on.
+    // Again a real identity minted before the swap, so the call reaches the
+    // recipient-key conversion rather than stopping at requireIdentity().
     /** @var DeviceIdentityService $identityService */
     $identityService = $this->app->make(DeviceIdentityService::class);
     $identityService->generateAndPersist((int) $user->id, $session);
@@ -163,10 +157,6 @@ it('reports a keyring it cannot rename into place on first write', function (): 
     @rmdir($encPath);
 });
 
-/**
- * Sets up a device identity, then swaps in an encryptor whose decrypt does
- * whatever $decrypt does, and returns a loader wired to it.
- */
 function loaderWithDecrypt(mixed $app, User $user, Session $session, Closure $decrypt): DeviceIdentityLoader
 {
     /** @var DeviceIdentityService $identity */
@@ -214,10 +204,7 @@ it('refuses to read an identity key-file it could not lock down', function (): v
         ->toThrow(SecretFileException::class, 'Cannot chmod secret material');
 });
 
-// One guard in this area stays uncovered, for a reason no test can work
-// around:
-//
-//   - the read-back guard in DeviceIdentityLoader. Reaching it needs a
-//     plaintext file that survives the lock-down chmod and then fails to read.
-//     A directory satisfies the chmod but yields an empty read rather than
-//     false, so the JSON decode objects first.
+// The loader's read-back guard stays uncovered: reaching it needs a plaintext
+// file that survives the lock-down chmod and then fails to read. A directory
+// satisfies the chmod but yields an empty read rather than false, so the JSON
+// decode objects first.

@@ -11,7 +11,6 @@ use Modules\Core\Public\Services\UserDataPathService;
 
 /**
  * @link ../../../../.docs/design/cold-start-biometric-unlock.md
- * @link ../../../../.docs/features/mobile/architecture.md
  */
 class BiometricKeyVault
 {

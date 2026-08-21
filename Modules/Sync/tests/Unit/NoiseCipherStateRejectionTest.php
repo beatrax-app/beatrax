@@ -5,14 +5,10 @@ declare(strict_types=1);
 use Modules\Sync\Internal\Exceptions\NoiseDecryptionFailedException;
 use Modules\Sync\Internal\Transport\Noise\NoiseCipherState;
 
-/*
- * What the transport cipher does with a message it cannot authenticate.
- *
- * A decryption failure here is a statement about the peer, not about this
- * build: the ciphertext was altered in flight, replayed, or sent under a
- * different key. That is why it is not the same type an encryption failure
- * raises — one is a security event and the other is a bug report.
- */
+// A decryption failure here is a statement about the peer, not about this build:
+// the ciphertext was altered in flight, replayed, or sealed under another key.
+// That is why it is not the type an encryption failure raises — one is a security
+// event and the other is a bug report.
 
 function noiseKey(): string
 {

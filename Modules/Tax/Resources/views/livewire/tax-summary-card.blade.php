@@ -1,6 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    Dashboard tax summary card (D-18, UI-SPEC Section 10).
+    Dashboard tax summary card (UI-SPEC Section 10).
 
     $total: int|null  — tagged total in minor EUR (null = no data)
     $count: int       — number of tagged items

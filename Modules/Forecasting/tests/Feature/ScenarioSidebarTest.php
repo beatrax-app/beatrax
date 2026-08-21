@@ -14,17 +14,6 @@ use Modules\Forecasting\Public\Services\ScenarioQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * Feature coverage for ScenarioEditorSidebar Livewire SFC.
- *
- *   - Mounts with cross-user 404 guard at the Public Service layer.
- *   - Lists existing mutations + empty-state body.
- *   - Each kind's inline form submits the right Public Action with the
- *     right typed payload.
- *   - Edit + Remove + Rename + Delete flows dispatch toast events.
- *   - Kind/payload mismatch surfaces inline.
- */
-
 function ssbUser(string $username = 'ssb'): User
 {
     return User::query()->create([
@@ -72,8 +61,6 @@ it('Public Service rejects cross-user mount via ScenarioQuery::find returning nu
     /** @var ScenarioQuery $sq */
     $sq = $this->app->make(ScenarioQuery::class);
     expect($sq->find($otherScenario->id, $this->user))->toBeNull();
-    // The mount() call from Livewire would NotFoundHttpException in the same condition; assert
-    // the underlying read returns null which the mount guards on.
 });
 
 it('mounts with empty mutation list and renders the empty-state body', function (): void {
@@ -251,13 +238,9 @@ it('Delete scenario flow dispatches scenario-deleted and removes the row', funct
 });
 
 it('ScenarioEditorSidebar cross-user contract is locked at the ScenarioQuery::find layer', function (): void {
-    // Mirrors the Plan 10-04 AccountBufferEditor pattern: Livewire's
-    // `Livewire::test()` does not propagate NotFoundHttpException from
-    // mount() synchronously in this project's Livewire 4 setup. The
-    // canonical lock for the cross-user contract therefore lives on the
-    // Public Service `ScenarioQuery::find` — the sidebar's mount() will
-    // raise NotFoundHttpException whenever `find` returns null, which
-    // is exactly what `find` does for another user's scenario id.
+    // Livewire::test() does not propagate mount()'s NotFoundHttpException under
+    // Livewire 4 here, so the lock sits on ScenarioQuery::find instead — the
+    // null it returns is the exact condition mount() raises on.
     $other = ssbUser('m-other');
     /** @var ForecastScenario $otherScenario */
     $otherScenario = ForecastScenario::query()->create([
@@ -267,9 +250,6 @@ it('ScenarioEditorSidebar cross-user contract is locked at the ScenarioQuery::fi
     /** @var ScenarioQuery $sq */
     $sq = $this->app->make(ScenarioQuery::class);
     expect($sq->find($otherScenario->id, $this->user))->toBeNull();
-    // Same call as the sidebar's mount() guard — proven null for a
-    // cross-user id, which is the conditional that triggers
-    // NotFoundHttpException.
 });
 
 it('kind/payload mismatch surfaces a form error inline (defensive contract)', function (): void {
@@ -283,7 +263,7 @@ it('kind/payload mismatch surfaces a form error inline (defensive contract)', fu
     Livewire::test(ScenarioEditorSidebar::class, ['scenarioId' => $scenario->id])
         ->call('startAddMutation')
         ->call('selectKind', 'cancel_series')
-        // Don't set form.seriesId — empty field triggers form validation error.
+        // form.seriesId is deliberately left unset.
         ->call('saveAddMutation')
         ->assertSet('formError', 'Field \'seriesId\' is required.');
 });

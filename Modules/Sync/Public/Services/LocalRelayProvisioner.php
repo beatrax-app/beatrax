@@ -10,9 +10,6 @@ use Modules\Sync\Internal\Transport\Relay\RelayTlsMaterial;
 // Points this device at its own `relay:serve` when nothing else is configured.
 // Pairing frames travel only over the relay courier, so with no endpoint the
 // handshake had nowhere to deliver and the phone polled forever.
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class LocalRelayProvisioner
 {
     public function __construct(

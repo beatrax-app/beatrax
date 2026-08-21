@@ -28,7 +28,11 @@ return [
     'recovery_download' => 'Descarcă drept .txt',
     'recovery_copy' => 'Copiază codurile',
     'recovery_copied' => 'Copiat',
+    'recovery_copy_failed' => 'Copierea nu a reușit. Notați codurile.',
     'recovery_saved' => 'Salvat în descărcările tale.',
+    'recovery_share_title' => 'Coduri de recuperare Beatrax',
+    'recovery_share_message' => 'Păstrați-le într-un loc sigur.',
+    'recovery_save_failed' => 'Fișierul nu a putut fi salvat. Notați codurile.',
     'recovery_confirm' => 'Am salvat aceste coduri într-un loc sigur.',
     'continue_to_pairing' => 'Continuă spre împerechere',
 

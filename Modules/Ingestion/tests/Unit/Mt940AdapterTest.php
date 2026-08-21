@@ -3,11 +3,11 @@
 declare(strict_types=1);
 
 use Modules\Ingestion\Internal\Adapters\Banking\Mt940Adapter;
+use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Internal\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\AccountResolution;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
-use Modules\Ingestion\Public\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 
 beforeEach(function (): void {
@@ -176,8 +176,8 @@ it('flags multi-statement files in statementMetadata extras', function (): void 
 })->group('phase-2');
 
 it('pins entryCount to the first statement on multi-statement files', function (): void {
-    // Statement A carries TWO :61: lines, statement B carries ONE. The
-    // metadata snapshot pins to statement A, so entry_count must report 2.
+    // Three entries across two statements, but the metadata snapshot pins to
+    // statement A, which has two of them.
     $body = ":20:STMT-A\n:25:NL57ASNB0123456789\n:60F:C260401EUR1000,00\n"
         .":61:2604010401C100,00NTRFA-1\n:86:100?32X\n"
         .":61:2604020402D50,00NTRFA-2\n:86:100?32Y\n"
@@ -196,8 +196,8 @@ it('pins entryCount to the first statement on multi-statement files', function (
 })->group('phase-2');
 
 it('rejects a :61: that arrives before :25: (own IBAN missing)', function (): void {
-    // :60F: comes first so the currency check would pass; the test pins the
-    // missing-IBAN failure mode in isolation.
+    // :60F: comes first so the currency check passes and only the missing IBAN
+    // can be what fails.
     $body = ":20:STMT-NO-IBAN\n:60F:C260401EUR1000,00\n"
         .":61:2604010401C100,00NTRFINV-001\n:86:100?32X\n"
         .":62F:C260430EUR1100,00\n-\n";
@@ -212,8 +212,8 @@ it('rejects a :61: that arrives before :25: (own IBAN missing)', function (): vo
 })->group('phase-2');
 
 it('rejects a :61: that arrives before any balance tag has set a currency', function (): void {
-    // :25: comes first so the IBAN check would pass; this pins the
-    // missing-currency failure mode in isolation.
+    // :25: comes first so the IBAN check passes and only the missing currency
+    // can be what fails.
     $body = ":20:STMT-NO-CCY\n:25:NL57ASNB0123456789\n"
         .":61:2604010401C100,00NTRFINV-001\n:86:100?32X\n"
         .":62F:C260430EUR1100,00\n-\n";
@@ -264,8 +264,6 @@ it('emits monotonically increasing sourceRowIndex starting at zero', function ()
 })->group('phase-2');
 
 it('flushes a mid-stream :61: with no :86: when the next :61: arrives', function (): void {
-    // Two consecutive :61: lines with no :86: between them: the second one
-    // must flush the first as a narrative-less row before it becomes pending.
     $body = ":20:S\n:25:NL57ASNB0123456789\n:60F:C260401EUR1000,00\n"
         .":61:2604010401C100,00NTRFA-1\n"
         .":61:2604020402C200,00NTRFA-2\n"
@@ -283,8 +281,6 @@ it('flushes a mid-stream :61: with no :86: when the next :61: arrives', function
 })->group('phase-2');
 
 it('ignores a :86: narrative that is not preceded by a :61: entry', function (): void {
-    // The leading :86: has no pending entry to attach to and must be dropped
-    // silently; only the genuine :61:/:86: pair yields a row.
     $body = ":20:S\n:25:NL57ASNB0123456789\n:60F:C260401EUR1000,00\n"
         .":86:orphan narrative with no entry\n"
         .":61:2604010401C100,00NTRFINV-001\n:86:100?32SPOTIFY AB\n"
@@ -298,8 +294,7 @@ it('ignores a :86: narrative that is not preceded by a :61: entry', function ():
 })->group('phase-2');
 
 it('ignores unrecognised MT940 tags without affecting the parsed rows', function (): void {
-    // :64: (available balance) is a real MT940 tag the ledger has no use for;
-    // it must fall through the header dispatch untouched.
+    // :64: is available balance — a real MT940 tag the ledger has no use for.
     $body = ":20:S\n:25:NL57ASNB0123456789\n:60F:C260401EUR1000,00\n"
         .":61:2604010401C100,00NTRFINV-001\n:86:100?32SPOTIFY AB\n"
         .":64:C260430EUR1100,00\n"
@@ -313,9 +308,8 @@ it('ignores unrecognised MT940 tags without affecting the parsed rows', function
 })->group('phase-2');
 
 it('leaves the closing balance null when its amount cell is malformed', function (): void {
-    // The :62F: amount carries a stray extra group so BankAmountParser rejects
-    // it; parseBalance must swallow that as a null closing balance rather than
-    // aborting the whole statement.
+    // The stray extra `,00` group makes BankAmountParser reject the :62F:
+    // amount, which must cost the balance and not the whole statement.
     $body = ":20:S\n:25:NL57ASNB0123456789\n:60F:C260401EUR1000,00\n"
         .":61:2604010401C100,00NTRFINV-001\n:86:100?32SPOTIFY AB\n"
         .":62F:C260430EUR1100,00,00\n-\n";
@@ -331,8 +325,6 @@ it('leaves the closing balance null when its amount cell is malformed', function
 })->group('phase-2');
 
 it('reports null statement metadata when the own IBAN tag is absent', function (): void {
-    // A file with :20: but no :25: and no entries produces no own IBAN, so the
-    // accumulator has nothing to anchor a StatementSummaryData on.
     $body = ":20:STMT-ONLY\n:60F:C260401EUR1000,00\n:62F:C260430EUR1000,00\n-\n";
     $tmp = writeMt940Temp($body);
 

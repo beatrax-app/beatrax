@@ -24,9 +24,6 @@ use Modules\Sync\Public\Events\TransactionSplitMutated;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/ledger/architecture.md
- */
 final class SaveTransactionSplit implements SavesTransactionSplit
 {
     // A missing row and a cross-user row are deliberately the same
@@ -74,9 +71,6 @@ final class SaveTransactionSplit implements SavesTransactionSplit
         }
     }
 
-    // Both reads of the parent are user-scoped and both treat an absent row
-    // the same way, so they ask the same question here. A missing row and a
-    // cross-user row stay indistinguishable on purpose.
     /**
      * @param  list<string>  $columns
      */
@@ -100,9 +94,8 @@ final class SaveTransactionSplit implements SavesTransactionSplit
      */
     private function assertSplittable(User $user, stdClass $parent, array $legs): void
     {
-        // Reconciled lock: reuses the already user-scoped parent load
-        // above — no extra query. TransactionDetail's catch blocks
-        // convert this into a warn toast, staying warn-first end-to-end.
+        // TransactionDetail's catch blocks turn this into a warn toast, so
+        // the reconciled lock stays warn-first end to end.
         if (self::toString($parent->status) === ClearedStatus::Reconciled->value) {
             throw new InvalidArgumentException(Lang::get('ledger::detail.errors.reconciled_split'));
         }
@@ -207,15 +200,11 @@ final class SaveTransactionSplit implements SavesTransactionSplit
         return [...$events, ...$this->deleteRemovedLegs($user, $transactionId, $existingIds, $incomingIds)];
     }
 
-    // Matched by id -> UPDATE in place, preserving the PK. Returns null when
-    // nothing actually changed, so an untouched leg raises no event.
     /**
      * @param  array{id: ?int, category_id: int, settled_amount_minor: int, note: ?string}  $leg
      */
     private function updateLeg(User $user, int $transactionId, int $legId, array $leg, int $index, ?stdClass $old): ?TransactionSplitMutated
     {
-        // Canonicalise empty note to NULL on write so '' and null are never
-        // distinct stored values.
         $normalizedNote = self::normalizeNote($leg['note']);
         $fields = [
             'category_id' => $leg['category_id'],
@@ -224,9 +213,8 @@ final class SaveTransactionSplit implements SavesTransactionSplit
             'sort_order' => $index,
         ];
 
-        // The DB row stores ciphertext; $fields (plaintext) stays the
-        // dirty-diff and dispatched-event source of truth so the op-log's
-        // own encrypt-on-write never double-encrypts.
+        // $fields stays plaintext as the dirty-diff and event source, or the
+        // op-log's own encrypt-on-write would double-encrypt the note.
         $dbFields = $fields;
         $dbFields['note'] = $this->encryptNote($normalizedNote, $user->id);
 
@@ -236,9 +224,8 @@ final class SaveTransactionSplit implements SavesTransactionSplit
             ->where('user_id', $user->id)
             ->update($dbFields);
 
-        // The stored note is ciphertext when encrypted — decrypt before
-        // diffing so the comparison runs on plaintext, never a fresh
-        // random-nonce ciphertext.
+        // Decrypt before diffing: a fresh random nonce re-encrypts the same
+        // note to different ciphertext, which would read as dirty.
         $oldFields = $old !== null ? [
             'category_id' => $old->category_id ?? null,
             'settled_amount_minor' => $old->settled_amount_minor ?? null,
@@ -279,15 +266,12 @@ final class SaveTransactionSplit implements SavesTransactionSplit
             'settled_currency' => $currency,
             'note' => self::normalizeNote($leg['note']),
             'sort_order' => $index,
-            // Pre-formatted datetime strings into the op-log dirtyFields
-            // rather than CarbonImmutable objects — decouples the capture
-            // payload from Carbon and the op-log serialiser's coercion.
+            // Strings, not CarbonImmutable: keeps the op-log capture payload
+            // off Carbon and off the serialiser's coercion.
             'created_at' => $now->toDateTimeString(),
             'updated_at' => $now->toDateTimeString(),
         ];
 
-        // $fields (plaintext) stays the dispatched-event source of truth;
-        // only the DB row gets the ciphertext note.
         $dbFields = $fields;
         $dbFields['note'] = $this->encryptNote($fields['note'], $user->id);
 
@@ -302,8 +286,6 @@ final class SaveTransactionSplit implements SavesTransactionSplit
         );
     }
 
-    // Present in the existing set but absent from the incoming one, which
-    // is a delete rather than an edit and tombstones for the sync merge.
     /**
      * @param  list<int>  $existingIds
      * @param  list<int>  $incomingIds
@@ -359,8 +341,6 @@ final class SaveTransactionSplit implements SavesTransactionSplit
                 throw new InvalidArgumentException(Lang::get(self::NOT_FOUND_KEY));
             }
 
-            // Reconciled lock: reuses the already user-scoped parent
-            // load above — no extra query.
             if (self::toString($parent->status) === ClearedStatus::Reconciled->value) {
                 throw new InvalidArgumentException(Lang::get('ledger::detail.errors.reconciled_split'));
             }
@@ -411,10 +391,8 @@ final class SaveTransactionSplit implements SavesTransactionSplit
         ));
     }
 
-    // $newValue's PHP type determines which normalization applies to
-    // the raw DB value before comparing. string|null fields (note) are
-    // canonicalised so '' and null compare equal, or leg notes would
-    // ping-pong between '' and null across devices under LWW.
+    // string|null fields (note) are canonicalised so '' and null compare
+    // equal, or leg notes ping-pong between them across devices under LWW.
     private static function legFieldChanged(mixed $oldValue, mixed $newValue): bool
     {
         if (is_int($newValue)) {

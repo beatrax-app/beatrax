@@ -7,6 +7,10 @@ return [
 
     'subtitle_html' => 'Обкръжение + среда на изпълнение + действаща конфигурация. Чувствителните ключове (с окончания <code class="font-mono text-xs">*password*</code>, <code class="font-mono text-xs">*secret*</code>, <code class="font-mono text-xs">*key</code>, <code class="font-mono text-xs">*token*</code>) са маскирани.',
     'php' => 'PHP',
+    'php_version' => 'версия',
+    'php_sapi' => 'sapi',
+    'php_ini_path' => 'ini път',
+    'php_extensions' => 'разширения',
     'laravel' => 'Laravel',
     'sqlite' => 'SQLite',
     'sqlite_file' => 'файл',

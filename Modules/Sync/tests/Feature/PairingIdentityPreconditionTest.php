@@ -10,12 +10,9 @@ use Modules\Sync\Public\Services\PairingGateway;
 
 uses(RefreshDatabase::class);
 
-/*
- * A responder needs an identity of its own before it can accept a pairing
- * token. load() reports "never minted" and "app is locked" as the same null,
- * so anything that mints must gate on the key-file itself — minting over a
- * locked device's identity would orphan every pairing it already had.
- */
+// load() reports "never minted" and "app is locked" as the same null, so
+// anything that mints must gate on the key file itself: minting over a locked
+// device's identity would orphan every pairing it already had.
 
 function identityPreconditionUser(string $username): User
 {
@@ -71,8 +68,6 @@ it('keeps the key-file check independent of whether the app is unlocked', functi
     expect($gateway->hasIdentityFile((int) $user->id))
         ->toBeTrue('a locked device still HAS an identity — it just cannot open it');
 
-    // The property that matters: the file is what a minting caller must gate
-    // on, so an identity is never regenerated over a locked one.
     expect((string) file_get_contents($path))->toBe($before);
 });
 

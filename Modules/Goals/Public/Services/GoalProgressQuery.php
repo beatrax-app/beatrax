@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Goals\Models\Goal;
 use Modules\Goals\Public\Dto\GoalProgressRow;
@@ -15,9 +16,6 @@ use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Pots\Public\Services\PotBalanceQuery;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/goals/architecture.md
- */
 final class GoalProgressQuery
 {
     use CoercesScalars;
@@ -68,8 +66,7 @@ final class GoalProgressQuery
             return [];
         }
 
-        // Both contribution sources are batch-loaded up front — a per-goal
-        // follow-up query would be an N+1 across the whole goals page.
+        // Batch-loaded up front: a per-goal follow-up is an N+1 across the page.
         $linkedPots = $this->potBalance->linkedPotBalancesForUser($user);
         $attributed = $this->attributedAmountsByGoalId(
             $user,
@@ -90,9 +87,6 @@ final class GoalProgressQuery
      */
     private function buildRow(stdClass $row, array $linkedPots, array $attributed, User $user): GoalProgressRow
     {
-        // A lightweight Goal model per row lets GoalProjectionService consume
-        // the model's typed properties (start_date as CarbonImmutable,
-        // target_minor) without re-implementing casting here.
         $goal = $this->hydrateGoal($row);
         $goalId = self::toInt($row->id);
         $targetCurrency = self::toString($row->target_currency);
@@ -157,8 +151,8 @@ final class GoalProgressQuery
         return $total;
     }
 
-    // An attribution is the user's own statement that this transaction funds
-    // this goal, so it counts whenever it posted — start_date only bounds the
+    // An attribution is the user's own statement that this transaction funds this
+    // goal, so it counts whenever it posted. start_date bounds only the
     // projection's observation window, never the sum.
     /**
      * @param  list<int>  $goalIds
@@ -183,9 +177,8 @@ final class GoalProgressQuery
         return $byGoal;
     }
 
-    // Hydrates a Goal Eloquent model from a raw stdClass row so model casts
-    // and typed properties are available to GoalProjectionService without
-    // repeating the casting logic here.
+    // GoalProjectionService reads typed properties, so the raw row is hydrated
+    // into a Goal rather than the casts being re-implemented here.
     private function hydrateGoal(stdClass $row): Goal
     {
         $goal = new Goal;
@@ -203,20 +196,9 @@ final class GoalProgressQuery
         return $goal;
     }
 
-    // Normalises a raw DB date value to a 'Y-m-d' string, regardless of
-    // whether the driver returns 'Y-m-d' or 'Y-m-d H:i:s'. Returns '' for an
-    // empty/unparseable value.
+    // The driver returns 'Y-m-d' or 'Y-m-d H:i:s' depending on the column.
     private static function toDateStr(mixed $value): string
     {
-        $raw = self::toString($value);
-        if ($raw === '') {
-            return '';
-        }
-
-        try {
-            return CarbonImmutable::parse($raw)->toDateString();
-        } catch (\Throwable) {
-            return '';
-        }
+        return SafeDate::parseOrNull(self::toString($value))?->toDateString() ?? '';
     }
 }

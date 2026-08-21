@@ -10,7 +10,7 @@ use Native\Desktop\AutoUpdater;
 use Psr\Log\LoggerInterface;
 
 /**
- * @link ../../../../.docs/features/desktop/architecture.md
+ * @link ../../../../.docs/features/desktop/auto-update.md
  */
 final readonly class TriggerUpdateDownload
 {
@@ -25,9 +25,8 @@ final readonly class TriggerUpdateDownload
             return;
         }
 
-        // The consenting click starts the download that autoDownload=false held
-        // back; UpdateDownloaded then re-verifies the binary before it installs,
-        // so nothing lands on disk-then-runs without passing the Ed25519 gate.
+        // The consenting click is the only thing that starts the download
+        // autoDownload=false holds back.
         $this->logger->info('TriggerUpdateDownload: user consented to install an update.', [
             'version' => $event->latestVersion,
         ]);

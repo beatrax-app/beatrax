@@ -2,24 +2,14 @@
 
 declare(strict_types=1);
 
+use Modules\OpenBanking\Internal\Exceptions\EnableBankingApiException;
+use Modules\OpenBanking\Internal\Exceptions\OpenBankingConnectionException;
+use Modules\OpenBanking\Internal\Exceptions\OpenBankingCredentialsException;
+use Modules\OpenBanking\Internal\Exceptions\UnsafeOpenBankingRequestException;
 use Modules\OpenBanking\Internal\Tls\LoopbackTlsException;
-use Modules\OpenBanking\Public\Exceptions\EnableBankingApiException;
-use Modules\OpenBanking\Public\Exceptions\OpenBankingConnectionException;
-use Modules\OpenBanking\Public\Exceptions\OpenBankingCredentialsException;
-use Modules\OpenBanking\Public\Exceptions\UnsafeOpenBankingRequestException;
 
-/*
- * The messages these exceptions carry, and the one decision taken from them.
- *
- * Each type builds its message from a named constructor rather than at the
- * throw site, so the identifiers a maintainer needs — which connection, which
- * host, which openssl primitive — live in one place instead of being
- * interpolated at each of twenty-two sites. That only helps if the identifiers
- * actually reach the message, which is what these assert. Several throw sites
- * are unreachable from a test (openssl_pkey_new() failing on a working build),
- * so without this their formatting would go unchecked entirely.
- */
-
+// Several throw sites are unreachable from a test (openssl_pkey_new() failing
+// on a working build), so the named constructors are exercised directly.
 it('names the call and keeps the transport failure as the cause', function (): void {
     $cause = new RuntimeException('cURL error 28: timeout');
     $e = EnableBankingApiException::transportFailed('https://api.enablebanking.com/aspsps', $cause);
@@ -54,10 +44,8 @@ it('says which field a transaction row was missing', function (): void {
         ->toContain('IBAN');
 });
 
-// 401 and 403 are the two statuses no retry can repair. Every other status,
-// and every failure that never reached a status at all, must stay retryable —
-// misreading one as terminal would strand a connection that only needed
-// another attempt.
+// 401 and 403 are the only statuses no retry can repair; reading any other as
+// terminal would strand a connection that needed one more attempt.
 it('treats only 401 and 403 as a consent failure', function (?int $status, bool $expected): void {
     $e = $status === null
         ? EnableBankingApiException::transportFailed('GET /aspsps', new RuntimeException('offline'))
@@ -73,9 +61,8 @@ it('treats only 401 and 403 as a consent failure', function (?int $status, bool 
     [null, false],
 ]);
 
-// The job and the settings page both act on this, and the import pipeline
-// between the provider call and their catch blocks is free to wrap what it
-// rethrows — so the answer cannot depend on the failure arriving unwrapped.
+// The import pipeline between the provider call and the catch blocks is free to
+// wrap what it rethrows, so the answer cannot assume an unwrapped failure.
 it('finds a consent failure through a wrapping exception', function (): void {
     $inner = EnableBankingApiException::errorStatus('GET /aspsps', 401, 'unauthorized');
     $wrapped = new RuntimeException('import run failed', 0, new RuntimeException('stage failed', 0, $inner));
@@ -97,9 +84,8 @@ it('names the host a bearer token was refused to', function (): void {
         ->toContain('non-HTTPS');
 });
 
-// parse_url() returns null for a host it cannot read, and the refusal still
-// has to say something — an empty "refused to: " reads as a bug in the guard
-// rather than a rejection of the URL.
+// parse_url() returns null for a host it cannot read, and an empty
+// "refused to: " reads as a broken guard rather than a rejected URL.
 it('still names an unparseable host', function (?string $host): void {
     expect(UnsafeOpenBankingRequestException::disallowedHost($host)->getMessage())
         ->toContain('(unparseable)');
@@ -125,9 +111,8 @@ it('names both institutions in a session mismatch', function (): void {
     expect($message)->toContain('ING')->and($message)->toContain('ABN');
 });
 
-// The path is the only identifier this message may carry: the decoded payload
-// and the raw bytes are both credential material, and this exception is
-// logged wherever it surfaces.
+// The path is the only identifier this message may carry: payload and raw
+// bytes are both credential material, and this is logged wherever it surfaces.
 it('names the unreadable secrets file without carrying its contents', function (): void {
     $cause = new JsonException('Syntax error');
     $e = OpenBankingCredentialsException::unreadable('/data/eb-secrets.json', $cause);
@@ -152,9 +137,8 @@ it('names the openssl primitive that gave up and the directory it could not use'
         ->toContain('non-string PEM');
 });
 
-// Two controllers and the sync job catch RuntimeException to decide what the
-// user is shown. A changed base class would be silent at the throw site and
-// only surface as an uncaught exception in production.
+// Two controllers and the sync job catch RuntimeException; a changed base class
+// would stay silent at the throw site and surface only as an uncaught crash.
 it('keeps every failure catchable as a RuntimeException', function (string $class): void {
     expect(is_subclass_of($class, RuntimeException::class))->toBeTrue();
 })->with([

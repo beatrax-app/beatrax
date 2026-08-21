@@ -6,10 +6,8 @@ namespace Modules\Auth\Internal\Lock;
 
 use Modules\Auth\Public\Contracts\KeyCustodian;
 
-// The default {@see KeyCustodian} on web / CI and any build without a
-// platform-specific custody binding. The handle IS the raw key, so
-// introducing the custody seam changes nothing until a desktop or mobile
-// build overrides this binding.
+// The default custodian on web and CI: the handle IS the raw key, so the
+// custody seam changes nothing until a desktop or mobile build rebinds it.
 final class NullKeyCustodian implements KeyCustodian
 {
     public function store(string $rawKey): string
@@ -24,7 +22,6 @@ final class NullKeyCustodian implements KeyCustodian
 
     public function forget(string $handle): void
     {
-        // No external state to release -- the handle is the key itself,
-        // not a reference to anything stored elsewhere.
+        // Nothing to release: the handle is the key, not a reference to it.
     }
 }

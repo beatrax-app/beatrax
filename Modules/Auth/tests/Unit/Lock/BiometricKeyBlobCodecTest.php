@@ -5,11 +5,8 @@ declare(strict_types=1);
 use Modules\Auth\Internal\Lock\AppLockKeyWrap;
 use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
 
-/*
- * Unit tests for BiometricKeyBlobCodec — the wrap/unwrap glue that produces
- * the self-contained biometric blob (BWS || nonce||ciphertext) the mobile
- * cold-start vault stores in the enclave.
- */
+// The blob is self-contained — secret || nonce || ciphertext — because the
+// enclave stores it as one opaque value.
 
 function blobCodec(): BiometricKeyBlobCodec
 {
@@ -32,8 +29,7 @@ it('produces a blob that is not the raw data key and carries a fresh secret each
     $a = $codec->wrap($dataKey);
     $b = $codec->wrap($dataKey);
 
-    // The 32-byte secret prefix is random per call, so two wraps of the same
-    // key differ, and neither equals the raw key.
+    // The secret prefix is random per call, so two wraps of one key differ.
     expect($a)->not->toBe($dataKey)
         ->and($a)->not->toBe($b)
         ->and(strlen($a))->toBeGreaterThan(32);
@@ -43,7 +39,7 @@ it('returns null for a tampered blob', function (): void {
     $codec = blobCodec();
     $blob = $codec->wrap(random_bytes(32));
 
-    // Flip a byte in the ciphertext region (past the 32-byte secret + nonce).
+    // Past the secret and the nonce, so this lands in the ciphertext.
     $tampered = $blob;
     $tampered[strlen($tampered) - 1] = $tampered[strlen($tampered) - 1] === "\x00" ? "\x01" : "\x00";
 
@@ -58,7 +54,7 @@ it('returns null when the secret half is wrong (blob from a different secret)', 
     $codec = blobCodec();
     $blob = $codec->wrap(random_bytes(32));
 
-    // Corrupt the secret prefix — unwrap must fail closed, not return garbage.
+    // A corrupt secret prefix must fail closed rather than return garbage.
     $corrupted = str_repeat("\x00", 32).substr($blob, 32);
 
     expect($codec->unwrap($corrupted))->toBeNull();

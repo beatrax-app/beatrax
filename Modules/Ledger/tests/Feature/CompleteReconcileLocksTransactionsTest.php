@@ -10,16 +10,6 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Services\ReconciliationWriter;
 use Modules\Sync\Public\Events\TransactionMutated;
 
-/*
- * Wave 0 RED stub (D-08, GREEN in 13.3-04).
- * `Modules/Ledger/Public/Services/ReconciliationWriter.php` does not exist
- * yet. Per 13.3-PATTERNS.md, `completeReconcile(User, accountId,
- * statementDate)` bulk-transitions this account's `cleared` transactions
- * posted on or before the statement date to `reconciled`; `uncleared` rows
- * and rows posted AFTER the statement date are left untouched. Scoped by
- * `user_id` (I2 guard) throughout.
- */
-
 beforeEach(function (): void {
     $this->user = User::create(['username' => 'complete-reconcile-fixture', 'password' => 'fixture-password', 'period_start_day' => 1]);
     $this->account = Account::create([
@@ -63,13 +53,12 @@ it('is scoped by user_id — never transitions another user\'s transactions', fu
     expect(DB::table('transactions')->where('id', $otherTx->id)->value('status'))->toBe('cleared');
 });
 
-it('dispatches a reconciled event only for rows the update actually transitioned (WR-02)', function (): void {
+it('dispatches a reconciled event only for rows the update actually transitioned', function (): void {
     Event::fake([TransactionMutated::class]);
 
     $inWindowA = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'cleared', 'posted_at' => '2026-06-10']);
     $inWindowB = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'cleared', 'posted_at' => '2026-06-12']);
-    // An uncleared in-window row and a cleared row posted after the window:
-    // neither is transitioned, so neither may receive a reconciled event.
+    // Neither of these is transitioned, so neither may receive an event.
     $uncleared = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'uncleared', 'posted_at' => '2026-06-11']);
     $afterWindow = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'cleared', 'posted_at' => '2026-06-20']);
 
@@ -92,13 +81,9 @@ it('dispatches a reconciled event only for rows the update actually transitioned
 });
 
 it('a second reconcile under a frozen clock counts and dispatches only the newly transitioned rows, never rows a prior reconcile already locked', function (): void {
-    // Regression for the WR-04/WR-02 timestamp re-select bug: when two
-    // completeReconcile() calls land in the same wall-clock second (or the
-    // clock is frozen, as under a Clock double), re-selecting "status =
-    // reconciled AND updated_at = $reconciledAt" cannot tell this call's
-    // rows apart from a prior call's rows sharing the same stamp. Freezing
-    // CarbonImmutable::setTestNow() reproduces exactly that same-timestamp
-    // collision deterministically.
+    // Two completeReconcile() calls in the same wall-clock second: re-selecting
+    // on "status = reconciled AND updated_at = $reconciledAt" cannot tell this
+    // call's rows from the previous call's. A frozen clock forces the collision.
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-06-20 09:00:00'));
 
     Event::fake([TransactionMutated::class]);
@@ -111,8 +96,7 @@ it('a second reconcile under a frozen clock counts and dispatches only the newly
     expect($firstCount)->toBe(1);
     expect(DB::table('transactions')->where('id', $r1->id)->value('status'))->toBe('reconciled');
 
-    // A new cleared row appears (e.g. cleared between statements) and gets
-    // reconciled by a second call — still under the same frozen instant.
+    // A second call, still under the same frozen instant.
     $r2 = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'cleared', 'posted_at' => '2026-06-16']);
 
     $secondCount = $writer->completeReconcile($this->user, $this->account->id, CarbonImmutable::parse('2026-06-20'));
@@ -127,9 +111,6 @@ it('a second reconcile under a frozen clock counts and dispatches only the newly
         ->map(static fn (array $args): int => $args[0]->transactionId)
         ->all();
 
-    // Exactly one event per row, ever — the bug this guards against is the
-    // second call re-selecting R1 (same `updated_at` stamp as R2) and
-    // dispatching a spurious second `reconciled` event for it.
     expect(array_count_values($dispatchedIds))->toBe([
         $r1->id => 1,
         $r2->id => 1,

@@ -1,5 +1,5 @@
 {{--
-    Sync-status surface — D-06 (Phase 13).
+    Sync-status surface.
     Mounted inside the "Devices & Sync" settings section via
     @livewire('sync.sync-status-section') in devices-and-sync-settings-section.blade.php.
 
@@ -14,6 +14,7 @@
     No new design primitives — composes existing Flux / Tailwind tokens.
 --}}
 
+@use('Illuminate\Support\Js')
 @use('Modules\Core\Public\Support\Lang')
 <div class="space-y-4" data-testid="sync-status-section">
 
@@ -26,15 +27,15 @@
         </div>
 
     @elseif ($overallStatus === 'error')
-        <div
-            class="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700
-                   dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300"
+        <x-core::alert
+            tone="danger"
+            class="flex items-center gap-2"
             role="alert"
             data-testid="sync-status-overall"
         >
             <span class="inline-block h-2 w-2 flex-shrink-0 rounded-full bg-rose-600 dark:bg-rose-500" aria-hidden="true"></span>
             {{ Lang::get('sync::status.error') }}
-        </div>
+        </x-core::alert>
 
     @elseif ($overallStatus === 'syncing')
         <div
@@ -47,20 +48,20 @@
         </div>
 
     @elseif ($overallStatus === 'offline')
-        <div
-            class="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700
-                   dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300"
+        <x-core::alert
+            tone="warning"
+            class="flex items-center gap-2"
             data-testid="sync-status-overall"
         >
             <span class="inline-block h-2 w-2 flex-shrink-0 rounded-full bg-amber-500 dark:bg-amber-400" aria-hidden="true"></span>
             {{ Lang::get('sync::status.offline') }}
-        </div>
+        </x-core::alert>
 
     @else
         {{-- all_synced --}}
-        <div
-            class="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700
-                   dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300"
+        <x-core::alert
+            tone="positive"
+            class="flex items-center gap-2"
             data-testid="sync-status-overall"
         >
             <span class="inline-block h-2 w-2 flex-shrink-0 rounded-full bg-emerald-500 dark:bg-emerald-400" aria-hidden="true"></span>
@@ -68,7 +69,7 @@
             @if ($lastSyncedHuman !== null)
                 <span class="text-emerald-600 dark:text-emerald-400">&middot; {{ Lang::get('sync::status.synced') }} {{ $lastSyncedHuman }}</span>
             @endif
-        </div>
+        </x-core::alert>
     @endif
 
     {{-- ===== Per-peer list ===== --}}
@@ -90,16 +91,19 @@
                         {{-- Status dot --}}
                         @if ($isFailed)
                             <span
+                                role="img"
                                 class="mt-0.5 inline-block h-2 w-2 flex-shrink-0 rounded-full bg-rose-500 dark:bg-rose-400"
                                 aria-label="{{ Lang::get('sync::status.dot_error') }}"
                             ></span>
                         @elseif ($isActive)
                             <span
+                                role="img"
                                 class="mt-0.5 inline-block h-2 w-2 flex-shrink-0 animate-pulse rounded-full bg-blue-500 dark:bg-blue-400"
                                 aria-label="{{ Lang::get('sync::status.dot_online') }}"
                             ></span>
                         @else
                             <span
+                                role="img"
                                 class="mt-0.5 inline-block h-2 w-2 flex-shrink-0 rounded-full bg-slate-300 dark:bg-slate-600"
                                 aria-label="{{ Lang::get('sync::status.dot_offline') }}"
                             ></span>
@@ -149,17 +153,12 @@
 
                         {{-- A bin, not a cross: this deletes a stored record
                              rather than closing something. --}}
-                        <button
-                            type="button"
-                            wire:click="dismissPeer(@js($peerDeviceId))"
-                            class="flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-rose-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:bg-slate-800 dark:hover:text-rose-400 dark:focus-visible:ring-slate-100"
-                            aria-label="{{ Lang::get('sync::status.dismiss_peer') }}"
+                        <x-core::emoji-action
+                            :label="Lang::get('sync::status.dismiss_peer')"
+                            tone="danger"
+                            wire:click="dismissPeer({{ Js::from($peerDeviceId) }})"
                             data-testid="peer-dismiss"
-                        >
-                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                            </svg>
-                        </button>
+                        >🗑️</x-core::emoji-action>
                     </div>
                 </li>
             @endforeach

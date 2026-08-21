@@ -13,13 +13,6 @@ use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
 
 uses(EnablesEncryptionForUser::class);
 
-/*
- * 14.1-05 — CR-05/D-04/D-05: `transactions.raw_payload` decrypts before
- * `json_decode` on every Eloquent reader via the new `EncryptedJsonCast`,
- * and the cast never re-encrypts what `RecordTransactions::encryptAttrs()`
- * already encrypted (get-only, no double-encrypt).
- */
-
 function rpdUser(): User
 {
     return User::query()->create([
@@ -74,7 +67,6 @@ it('encrypts raw_payload at rest and the Eloquent cast decrypts it back to the o
     $db = $this->app->make(DatabaseManager::class);
     $stored = $db->connection()->table('transactions')->first();
 
-    // Ciphertext at rest — a plain json_encode of the payload must not be readable directly.
     expect($stored->raw_payload)->not->toBe(json_encode($payload));
 
     /** @var SensitiveColumnCodec $codec */
@@ -82,9 +74,8 @@ it('encrypts raw_payload at rest and the Eloquent cast decrypts it back to the o
     $decryptedRaw = $codec->decryptValue('transactions', 'raw_payload', $stored->raw_payload, $user->id, $session)['value'];
     expect(json_decode($decryptedRaw, true))->toBe($payload);
 
-    // The Eloquent cast (EncryptedJsonCast) round-trips the SAME value —
-    // a double-encrypt would leave leftover ciphertext that json_decode
-    // cannot parse, collapsing this to null.
+    // A double-encrypt would leave ciphertext json_decode cannot parse, so the
+    // cast round-tripping the same value is what proves it is get-only.
     $tx = Transaction::query()->where('user_id', $user->id)->firstOrFail();
     expect($tx->raw_payload)->toBe($payload);
 });

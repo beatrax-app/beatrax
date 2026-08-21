@@ -17,17 +17,14 @@ use Modules\Notifications\Public\Actions\MarkNotificationRead;
 use Modules\Notifications\Public\Actions\UndoDismissNotification;
 use Modules\Notifications\Public\Services\NotificationQuery;
 
-/**
- * @link ../../../../../.docs/features/notifications/architecture.md
- */
 final class NotificationsPage extends Component
 {
     use DispatchesToast;
 
     private const TABS = ['unread', 'all', 'dismissed'];
 
-    // Whitelist-validated - a tampered value falls back to 'unread'
-    // rather than throwing.
+    // setTab() ignores an unknown value and render() falls back to 'unread';
+    // neither path throws.
     #[Url(as: 'tab', except: 'unread')]
     public string $tab = 'unread';
 
@@ -54,8 +51,7 @@ final class NotificationsPage extends Component
     {
         $action($notificationId, $currentUser->user());
 
-        // Reversible, no confirmation gate - mirrors the
-        // DriftAlerts/Anomaly dismiss-with-undo convention.
+        // Reversible, so no confirmation gate — the project-wide convention.
         $this->dispatch('toast', message: Lang::get('notifications::inbox.toast.dismissed'), undo: 'undoDismiss', undoArg: $notificationId);
     }
 

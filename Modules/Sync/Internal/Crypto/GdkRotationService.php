@@ -17,14 +17,10 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
 use SodiumException;
 
 /**
- * @link ../../../../.docs/features/sync/architecture.md
+ * @link ../../../../.docs/features/sync/device-removal-and-epoch-rotation.md
  */
 final class GdkRotationService
 {
-    // Device removal = trust revocation + forward-only GDK epoch rotation, in
-    // ONE operation. A rotate-only or revoke-only implementation is a
-    // HIGH-severity access-control gap. Order: revoke device_registry trust
-    // first, THEN rotate the epoch, THEN fan out the new epoch (see @link).
     public function __construct(
         private readonly GdkKeyringService $keyringService,
         private readonly DeviceRegistryService $deviceRegistry,
@@ -36,10 +32,8 @@ final class GdkRotationService
         private readonly DeviceKeySigner $signer,
     ) {}
 
-    // $session is a PER-METHOD parameter, not a constructor-captured field —
-    // this class is bound as a singleton, so a constructor-held Session would
-    // be captured once at first resolve and go stale across requests/the
-    // device-removal daemon path.
+    // $session is per-method, never constructor-held: this class is a
+    // singleton, so a captured Session goes stale across requests.
     /**
      * @throws \LogicException when the app-lock KEK is unavailable (propagated
      *                         from GdkKeyringService — the keyring is never
@@ -51,10 +45,9 @@ final class GdkRotationService
         $connection = $this->db->connection();
         $now = $this->clock->now()->toIso8601String();
 
-        // Never allow the acting device (is_self = 1) to be revoked. Livewire
-        // actions are client-invokable, so a crafted removeDevice(selfRowId)
-        // must be rejected AUTHORITATIVELY here, not merely hidden in the
-        // blade — self-revocation would drop the user out of their own trusted-device set.
+        // Livewire actions are client-invokable, so a crafted
+        // removeDevice(selfRowId) is refused authoritatively here rather than
+        // merely hidden in the blade.
         $targetIsSelf = $connection->table('device_registry')
             ->where('id', $deviceRegistryId)
             ->where('user_id', $userId)
@@ -65,32 +58,30 @@ final class GdkRotationService
             );
         }
 
-        // Fail fast if the app-lock KEK is unavailable BEFORE mutating
-        // device_registry, so a locked-app removal can never leave the device
-        // revoked-but-not-rotated. Empty keyring means encryption is not yet
-        // enabled (group-of-one bootstrap -> epoch 1).
+        // Throws on an unavailable KEK BEFORE device_registry is mutated, so a
+        // locked-app removal can never commit revoked-but-not-rotated. An empty
+        // keyring means encryption was never enabled.
         $keyring = $this->keyringService->loadKeyring($userId, $session);
-        $newEpochId = 1;
-        foreach ($keyring->epochs() as $epoch) {
-            $newEpochId = max($newEpochId, $epoch->epochId + 1);
-        }
 
-        // The acting device's identity signs each fan-out wrap so recipients can
-        // authenticate its provenance. Loaded after loadKeyring() has proven the
+        $newEpochId = GdkEpochId::mint(array_map(
+            static fn (GdkEpoch $epoch): int => $epoch->epochId,
+            $keyring->epochs(),
+        ));
+
+        // Signs each fan-out wrap. Loaded only after loadKeyring() proved the
         // app-lock KEK is available.
         $identity = $this->requireIdentity($userId, $session);
 
         $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
 
         try {
-            // Revoke + epoch append (current_epoch advance) + fan-out run in
-            // ONE SQL transaction, so a failure anywhere after the revoke can
-            // no longer COMMIT the revoke-only state. Residual: appendEpoch()
-            // writes the keyring FILE, which cannot join the SQL transaction.
+            // Revoke + epoch append + fan-out in ONE SQL transaction, so a
+            // later failure can never commit the revoke-only state. Residual:
+            // appendEpoch() writes the keyring FILE, outside the transaction.
             $connection->transaction(function () use ($connection, $userId, $deviceRegistryId, $now, $newEpochId, $rawGdkKey, $session, $identity): void {
-                // Step 1: revoke trust. Clearing confirmed_at is the exact
-                // column DeviceRegistryService's device-key queries already
-                // filter on, so this single write closes the Ed25519 gate.
+                // confirmed_at is the exact column DeviceRegistryService's
+                // device-key queries filter on, so this one write closes the
+                // Ed25519 gate and removes the device from the fan-out below.
                 $connection->table('device_registry')
                     ->where('id', $deviceRegistryId)
                     ->where('user_id', $userId)
@@ -102,9 +93,6 @@ final class GdkRotationService
                 $newEpoch = new GdkEpoch(epochId: $newEpochId, keyHex: $this->sodium->binToHex($rawGdkKey));
                 $this->keyringService->appendEpoch($userId, $newEpoch, $session);
 
-                // Step 3: wrap-per-remaining-device fan-out over the ZK-pure
-                // relay mailbox. Excludes self and the just-revoked device
-                // (already absent from deviceX25519Keys() after Step 1).
                 $selfDeviceId = $this->selfDeviceId($userId);
 
                 foreach ($this->deviceRegistry->deviceX25519Keys($userId) as $deviceId => $x25519PublicKeyHex) {
@@ -129,10 +117,9 @@ final class GdkRotationService
         }
     }
 
-    // Builds the GDK_EPOCH_WRAP for one recipient. The seal gives confidentiality;
-    // the detached Ed25519 signature over the sealed bytes + epoch id + both
-    // device ids gives sender authenticity, so GdkEpochControlHandler rejects a
-    // forged wrap against the sender's confirmed key rather than trust the channel.
+    // The seal gives confidentiality; the detached Ed25519 signature over the
+    // sealed bytes + epoch id + both device ids gives sender authenticity, so a
+    // forged wrap is refused rather than the channel being trusted.
     /**
      * @return array{type: string, epoch_id: int, wrapped_key_b64: string, recipient_device_id: string, sender_device_id: string, sig_hex: string}
      *

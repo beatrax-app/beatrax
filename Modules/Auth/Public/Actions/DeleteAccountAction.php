@@ -13,21 +13,17 @@ use Modules\Auth\Internal\Account\UserScopedFilePurge;
 use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-// Deletes the caller's own account and everything it owns ON THIS DEVICE, and
-// the settings copy says so: there is no Beatrax server to delete from, and a
-// paired household device holds its own replica. What it does guarantee is that
-// the account cannot come back — sync identity and group keyring go with it.
+// Scoped to THIS device, which the settings copy says: there is no Beatrax
+// server, and a paired household device keeps its own replica. What is
+// guaranteed is that the account cannot return -- identity and keyring go too.
 
-// The account that set the device up is its administrator, and deleting it
-// while a partner remains would leave a device nobody can administer and a
-// signup route that stays closed. The oldest surviving account is promoted in
-// the same transaction rather than leaving that dead end.
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
+// Deleting the administrator while a partner remains would leave a device
+// nobody can administer behind a closed signup route, so the oldest survivor
+// is promoted in the same transaction.
 final class DeleteAccountAction
 {
     public function __construct(
@@ -59,10 +55,9 @@ final class DeleteAccountAction
                 $connection->table('users')->where('id', $successorId)->update(['is_developer' => true]);
             }
 
-            // Before the rows, not after: forgetting an enrolment writes the
-            // flag back through the lock gateway, which after the row is gone
-            // would resurrect it. Inside the transaction so that write rolls
-            // back too; the keychain clear and desktop unlink cannot.
+            // Before the rows: forgetting an enrolment writes the flag back
+            // through the lock gateway, which would resurrect a deleted row.
+            // Inside the transaction, though the keychain clear cannot be.
             $this->coldStartVault->forget($userId);
 
             ($this->purgeData)($connection, $userId, $deviceIds);
@@ -71,34 +66,27 @@ final class DeleteAccountAction
         $this->settleAfterPurge($connection, $userId);
     }
 
-    // Everything past the commit, where no failure can bring the account back.
-    // Logged and swallowed rather than thrown: a caller reading a post-commit
-    // throw as "rolled back" told the user nothing had changed and left the
-    // session naming an id that no longer resolves. A held handle suffices.
+    // Past the commit, where no failure can bring the account back. Swallowed
+    // rather than thrown: a caller reading a post-commit throw as "rolled
+    // back" told the user nothing had changed.
     private function settleAfterPurge(Connection $connection, int $userId): void
     {
         try {
             $this->rebuildSearchIndex($connection);
         } catch (Throwable $e) {
-            $this->log->error('DeleteAccountAction: search index rebuild failed after the purge committed.', [
-                'exception' => $e->getMessage(),
-            ]);
+            $this->log->error('DeleteAccountAction: search index rebuild failed after the purge committed.', SafeExceptionContext::describe($e));
         }
 
         try {
             ($this->purgeFiles)($userId, $connection->table('users')->count() === 0);
         } catch (Throwable $e) {
-            $this->log->error('DeleteAccountAction: file purge failed after the purge committed; residue left on disk.', [
-                'exception' => $e->getMessage(),
-            ]);
+            $this->log->error('DeleteAccountAction: file purge failed after the purge committed; residue left on disk.', SafeExceptionContext::describe($e));
         }
 
         try {
             ($this->logout)();
         } catch (Throwable $e) {
-            $this->log->error('DeleteAccountAction: logout failed after the purge committed.', [
-                'exception' => $e->getMessage(),
-            ]);
+            $this->log->error('DeleteAccountAction: logout failed after the purge committed.', SafeExceptionContext::describe($e));
         }
     }
 
@@ -139,9 +127,8 @@ final class DeleteAccountAction
         return is_numeric($successor) ? (int) $successor : null;
     }
 
-    // The search index is an external-content FTS5 table, so it does not
-    // follow its content table's deletes. Left alone it keeps the deleted
-    // account's descriptions in the index for whoever searches next.
+    // An external-content FTS5 table does not follow its content table's
+    // deletes, so the descriptions would survive for the next searcher.
     private function rebuildSearchIndex(Connection $connection): void
     {
         if (! $connection->getSchemaBuilder()->hasTable('transaction_search_fts')) {

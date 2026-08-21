@@ -11,9 +11,6 @@ use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Public\Events\EntityMutated;
 use Modules\Tax\Public\Events\TransactionUntagged;
 
-/**
- * @link ../../../../.docs/features/tax/architecture.md
- */
 final class UntagTransaction
 {
     public function __construct(
@@ -63,9 +60,8 @@ final class UntagTransaction
                 transactionId: $transactionId,
             ));
 
-            // Re-index so the note text is removed from search results; a
-            // no-op when the Search module is absent. The writer
-            // re-verifies ownership from the passed actor id.
+            // Re-index so the note text leaves the search results; a no-op when
+            // the Search module is absent, and the writer re-checks ownership.
             $this->searchIndex?->upsertForTransaction($transactionId, $userId);
         }
     }

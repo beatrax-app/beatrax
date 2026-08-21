@@ -8,19 +8,15 @@ use Carbon\CarbonImmutable;
 use Generator;
 use League\Csv\CharsetConverter;
 use League\Csv\Reader;
+use Modules\Ingestion\Internal\Exceptions\UnsupportedPaypalCsvLanguageException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Contracts\SourceAdapter;
-use Modules\Ingestion\Public\Exceptions\UnsupportedPaypalCsvLanguageException;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
 use Modules\Ledger\Public\Dto\StatementSummaryData;
 
-/**
- * @link ../../../../../.docs/features/ingestion/architecture.md
- */
 final class PaypalCsvAdapter implements SourceAdapter
 {
-    // PayPal wallets have no real IBAN; AccountResolver scopes lookups by
-    // (iban, user_id), so a single per-instance literal is unambiguous.
+    // PayPal wallets have no real IBAN; AccountResolver scopes by user, so one literal is unambiguous.
     private const PAYPAL_OWN_IBAN = 'PAYPAL';
 
     private ?StatementSummaryData $lastStatementMetadata = null;
@@ -51,14 +47,11 @@ final class PaypalCsvAdapter implements SourceAdapter
         $reader->setHeaderOffset(0);
         CharsetConverter::addTo($reader, PaypalCsvLanguageProfile::SOURCE_ENCODING, 'UTF-8');
 
-        // Coerce the header to a positional list of strings — league/csv
-        // returns an array<int, string> but PHPStan widens it to
-        // array<int|string, string> by default. Explicit array_values
-        // pins the list shape PaypalCsvLanguageProfile::detect expects.
+        // array_values pins the list shape detect() expects; PHPStan widens
+        // getHeader() to array<int|string, string>.
         $headerColumns = array_values($reader->getHeader());
-        // Strip a leading byte-order mark from the first header cell — the
-        // empirical Activity Download CSV ships one, and CharsetConverter
-        // does not strip it since the source encoding is already Unicode.
+        // The Activity Download CSV ships a BOM on the first header cell, and
+        // CharsetConverter leaves it since the source encoding is already Unicode.
         if (isset($headerColumns[0])) {
             $headerColumns[0] = preg_replace('/^\xEF\xBB\xBF/', '', $headerColumns[0]) ?? $headerColumns[0];
         }
@@ -73,10 +66,8 @@ final class PaypalCsvAdapter implements SourceAdapter
         }
         $language = $languageProfile->detected();
 
-        // Buffer all rows: the walker needs the full set to resolve
-        // Reference-Txn-ID parent/child links before emitting canonical
-        // DTOs, so row-by-row yielding isn't possible here. Coerce
-        // league/csv's string|null ragged-row cells to empty string.
+        // Buffered, not yielded: the rollup walker needs the full set to resolve
+        // Reference-Txn-ID parent/child links before any DTO can be emitted.
         /** @var list<array<string, string>> $rawRows */
         $rawRows = [];
         foreach ($reader->getRecords() as $record) {
@@ -112,9 +103,8 @@ final class PaypalCsvAdapter implements SourceAdapter
         );
     }
 
-    // PayPal ships no opening/closing balance rows, so closing = sum(net)
-    // and opening = 0 are bookkeeping placeholders only; the walker
-    // counters in $extras carry the real audit signal for this format.
+    // PayPal ships no opening/closing balance rows, so closing = sum(net) and opening = 0
+    // are placeholders; the walker counters in $extras carry this format's audit signal.
     /**
      * @param  list<CarbonImmutable>  $bookedDates
      */

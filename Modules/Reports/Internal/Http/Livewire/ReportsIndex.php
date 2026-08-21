@@ -9,31 +9,27 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Livewire\Component;
-use Modules\Core\Models\UserPreference;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
+use Modules\Core\Public\Services\UserPreferenceWriter;
 use Modules\Core\Public\Support\Lang;
-use Modules\Reports\Public\Actions\DeleteReport;
-use Modules\Reports\Public\Actions\TogglePin;
-use Modules\Reports\Public\Services\SavedReportsQuery;
+use Modules\Reports\Internal\Actions\DeleteReport;
+use Modules\Reports\Internal\Actions\TogglePin;
+use Modules\Reports\Internal\Services\SavedReportsQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../../.docs/features/reports/architecture.md
- */
 final class ReportsIndex extends Component
 {
+    use HoldsFlashMessage;
+
     public string $view = 'cards';
 
     public ?int $confirmingDeleteId = null;
 
-    public string $flashMessage = '';
-
     public function mount(CurrentUser $currentUser, DatabaseManager $db): void
     {
-        // Materialise the user's persisted view-mode preference. The row
-        // may not exist yet (the foundation table is created lazily on
-        // first preference write), in which case the locked default
-        // `cards` applies — mirrors CounterpartyIndex::mount() verbatim.
+        // The row may not exist yet, since the preferences table is created
+        // lazily on the first write; the locked `cards` default applies then.
         $existing = $db->connection()->table('user_preferences')
             ->where('user_id', $currentUser->id())
             ->value('reports_index_view');
@@ -43,9 +39,9 @@ final class ReportsIndex extends Component
         }
     }
 
-    // Switches the view mode and persists the choice in
-    // user_preferences.reports_index_view scoped to the authenticated user.
-    public function setView(string $view, CurrentUser $currentUser): void
+    // Persisted through the shared preference writer, which is where the op-log
+    // capture lives, so the setting travels off the device that set it.
+    public function setView(string $view, CurrentUser $currentUser, UserPreferenceWriter $preferences): void
     {
         if (! in_array($view, ['cards', 'list'], true)) {
             return;
@@ -53,10 +49,7 @@ final class ReportsIndex extends Component
 
         $this->view = $view;
 
-        UserPreference::query()->updateOrCreate(
-            ['user_id' => $currentUser->id()],
-            ['reports_index_view' => $view],
-        );
+        $preferences->write($currentUser->id(), ['reports_index_view' => $view]);
     }
 
     public function confirmDelete(int $reportId): void
@@ -69,10 +62,8 @@ final class ReportsIndex extends Component
         $this->confirmingDeleteId = null;
     }
 
-    // DeleteReport throws NotFoundHttpException on a foreign/missing id,
-    // caught here so a tampered/stale Livewire payload renders a calm
-    // flash instead of a 500; the action's own user-scoped lookup is the
-    // actual security boundary.
+    // The action's own user-scoped lookup is the security boundary; catching its
+    // NotFoundHttpException only spares a stale payload a 500.
     public function deleteReport(int $reportId, CurrentUser $currentUser, DeleteReport $delete): void
     {
         try {
@@ -88,10 +79,8 @@ final class ReportsIndex extends Component
         $this->flashMessage = Lang::get('reports::index.flash.deleted');
     }
 
-    // TogglePin enforces the 3-pin cap in the write-service layer; a 4th
-    // pin attempt throws InvalidArgumentException, surfaced here verbatim
-    // as the flash message. A foreign/missing id throws
-    // NotFoundHttpException, caught the same way deleteReport() catches it.
+    // TogglePin enforces the 3-pin cap, and its InvalidArgumentException message
+    // is surfaced verbatim as the flash.
     public function togglePin(int $reportId, CurrentUser $currentUser, TogglePin $togglePin): void
     {
         try {

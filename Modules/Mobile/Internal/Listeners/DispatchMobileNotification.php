@@ -11,9 +11,6 @@ use Modules\Notifications\Public\Services\SuppressionEvaluator;
 use NativePHP\LocalNotifications\Facades\LocalNotifications;
 use Psr\Log\LoggerInterface;
 
-/**
- * @link ../../../../.docs/features/mobile/architecture.md
- */
 class DispatchMobileNotification
 {
     public function __construct(

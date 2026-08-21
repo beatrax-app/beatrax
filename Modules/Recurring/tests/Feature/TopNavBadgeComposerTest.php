@@ -6,13 +6,6 @@ use Carbon\CarbonImmutable;
 use Modules\Core\Models\User;
 use Modules\Recurring\Models\RecurringSeries;
 
-/*
- * Top-nav Recurring badge composer tests. The composer attaches a
- * `recurringPendingCount` integer to `core::livewire.top-nav` via the
- * View Factory contract (NEVER the `view()` global helper) so the nav
- * slot renders the pending-suggestion count.
- */
-
 function rcnbcUser(string $username): User
 {
     return User::query()->create([
@@ -57,21 +50,16 @@ it('renders the top-nav with recurringPendingCount equal to the pending-state co
     $response = $this->actingAs($this->user)->get(route('recurring.index'));
 
     $content = $response->getContent() ?: '';
-    // The top-nav badge anchor is rendered with the Recurring label
-    // and the pending count interpolated.
     expect($content)->toContain('Recurring');
     expect($content)->toContain('>3<');
 })->group('badge-equals-pending-count')
     ->todo('16-01 replaced the top-nav with the app sidebar. The Recurring pending-count badge slot exists on the .side-item but is not yet wired to the View Factory composer; a follow-up plan re-points registerTopNavBadgeComposer at core::livewire.app-sidebar and re-enables this assertion against the new .side-badge chrome.');
 
 it('binds recurringPendingCount to 0 when no user is authenticated (badge-is-zero-when-unauthenticated)', function (): void {
-    // Visit a non-auth-gated page to exercise the composer. /login is
-    // available to unauthenticated callers and includes the top-nav.
     $response = $this->get(route('recurring.index'));
 
-    // Unauthenticated callers redirect; we just confirm the composer
-    // does not blow up. The other badge slices cover authenticated
-    // rendering directly.
+    // Unauthenticated callers redirect; this only confirms the composer does not
+    // blow up. The authenticated rendering is covered above.
     expect($response->status())->toBeIn([302, 200]);
 })->group('badge-is-zero-when-unauthenticated');
 
@@ -81,8 +69,8 @@ it('binds recurringPendingCount to 0 when the authenticated user has no pending 
     $response = $this->actingAs($this->user)->get(route('recurring.index'));
     $content = $response->getContent() ?: '';
     expect($content)->toContain('Recurring');
-    // No badge span when count = 0 — the @if ($recurringPendingCount > 0)
-    // guard suppresses the rounded-full span; the anchor still renders.
+    // With count = 0 the @if guard suppresses the badge span; the anchor still
+    // renders.
     expect($content)->not->toContain('aria-label="Recurring; ');
 })->group('badge-is-zero-when-no-pending');
 

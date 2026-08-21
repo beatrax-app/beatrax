@@ -8,9 +8,6 @@ namespace Modules\Core\Public\Enums;
 // (3600, 86400, 60) in job intervals, TTLs and relative-time math. The
 // human-readable case is the spelling; seconds() is the machine value every
 // caller derives from, so no site re-computes the conversion by hand.
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 enum Duration: string
 {
     case Minute = 'minute';

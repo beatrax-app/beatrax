@@ -25,6 +25,8 @@ return [
         'tax_years' => 'Vergi yılları',
     ],
 
+    'tablist_aria' => 'Karşı taraf bölümleri',
+
     'tab_note_personal' => '— özel kişiler için finansman zinciri yoktur',
     'tab_note_bank' => '— banka ücreti karşı tarafı finansman zinciri oluşturmaz',
     'tab_note_government' => '— kamu karşı tarafları için finansman zinciri yoktur',

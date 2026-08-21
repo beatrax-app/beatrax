@@ -8,7 +8,7 @@ use Modules\Sync\Internal\Exceptions\CryptoOperationFailedException;
 use SodiumException;
 
 /**
- * @link ../../../../../.docs/features/sync/architecture.md
+ * @link ../../../../../.docs/features/sync/noise-handshake-state-machine.md
  */
 final class NoiseHandshakeState
 {

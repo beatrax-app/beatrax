@@ -11,12 +11,6 @@ use Modules\Core\Models\User;
 
 uses(RefreshDatabase::class);
 
-/*
- * Feature coverage for the AnomalyAlertQuery read surface: revival-aware
- * open set, dismissed/acknowledged tabs, the open count, and merchant
- * display-name resolution through the Counterparties Public surface.
- */
-
 function anomQueryUser(string $username): User
 {
     return User::query()->create([
@@ -28,9 +22,6 @@ function anomQueryUser(string $username): User
 }
 
 /**
- * Seeds an account + import run + counterparty + transaction and returns
- * [transactionId, counterpartyId].
- *
  * @return array{0: int, 1: int}
  */
 function anomQueryTxn(DatabaseManager $db, int $userId, string $merchantSlug): array

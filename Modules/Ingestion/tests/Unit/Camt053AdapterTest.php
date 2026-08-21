@@ -3,11 +3,11 @@
 declare(strict_types=1);
 
 use Modules\Ingestion\Internal\Adapters\Banking\Camt053Adapter;
+use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Internal\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\AccountResolution;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
-use Modules\Ingestion\Public\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 
 beforeEach(function (): void {
@@ -165,10 +165,8 @@ it('normalises a date-only BookgDt to 00:00:00 so cross-format dedup with CSV su
         preserve_keys: false,
     );
 
-    // The committed CAMT fixture has all BookgDt entries as date-only
-    // (<Dt>2026-02-02</Dt>); the adapter must zero the time so the
-    // FingerprintComposer v3 hash matches a CSV row whose bookedAt is
-    // `startOfDay()`.
+    // Every BookgDt in the fixture is date-only, and the fingerprint hash only
+    // matches the equivalent CSV row if the time is zeroed the same way.
     foreach ($dtos as $dto) {
         expect($dto->bookedAt->format('H:i:s'))->toBe('00:00:00');
     }

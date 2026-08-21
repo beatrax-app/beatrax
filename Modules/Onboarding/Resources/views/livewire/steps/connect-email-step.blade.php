@@ -3,7 +3,7 @@
     Connect-email step — wizard step 4 (optional). Renders two provider
     CTAs ("Authorize with Gmail" / "Authorize with Outlook") that
     dispatch `oauth-client-wizard:open` to the
-    `Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal`.
+    `Modules\EmailScan\Public\Http\Livewire\OAuthClientWizardModal`.
     The modal itself is mounted globally by the wizard layout, so this
     step is purely the routing layer and never duplicates the OAuth
     dance in its own markup.

@@ -39,14 +39,9 @@ use Psr\Log\LoggerInterface;
 
 uses(RefreshDatabase::class);
 
-/*
- * GdkEpochDeliveryTest — CRYPT-02 distribution: receive-side validate/open/
- * append of an inbound GDK_EPOCH_WRAP control message (Task 1,
- * GdkEpochControlHandler) plus the live-session + relay-mailbox delivery
- * wiring in SyncWebSocketHandler (Task 2). 14-VALIDATION.md CRYPT-02
- * delivery row.
+/**
+ * @link ../../../../.docs/features/sync/gdk-epoch-wrap-delivery.md
  */
-
 function deliveryUser(string $username): User
 {
     return User::query()->create([
@@ -81,12 +76,6 @@ function deliveryRegistryRow(DatabaseManager $db, int $userId, string $deviceId,
 }
 
 /**
- * Creates a CONFIRMED peer device in $userId's registry and returns the
- * Ed25519 signing material needed to build a GDK_EPOCH_WRAP that passes
- * GdkEpochControlHandler's sender-authenticity gate (F1): the sender must be a
- * device with a non-null confirmed_at whose ed25519_public_key_hex verifies the
- * wrap's signature. Mirrors deliveryRegistryRow's columns exactly.
- *
  * @return array{0: string, 1: string} [senderDeviceId, ed25519SecretKeyHex]
  */
 function deliverySender(DatabaseManager $db, int $userId, string $deviceId = 'gdk-sender-a'): array
@@ -112,11 +101,6 @@ function deliverySender(DatabaseManager $db, int $userId, string $deviceId = 'gd
     return [$deviceId, sodium_bin2hex(sodium_crypto_sign_secretkey($sigKp))];
 }
 
-/**
- * Minimal WebsocketClient fake — only sendBinary() is exercised by
- * SyncWebSocketHandler::deliverGdkEpochWraps(); every other interface
- * method is unused in this test and throws if ever called.
- */
 function deliveryFakeClient(): WebsocketClient
 {
     return new class implements IteratorAggregate, WebsocketClient
@@ -238,10 +222,6 @@ function deliveryBareSyncSession(): SyncSession
     );
 }
 
-// ---------------------------------------------------------------------
-// Task 1 — GdkEpochControlHandler: validate, open, append.
-// ---------------------------------------------------------------------
-
 it('opens a GDK_EPOCH_WRAP addressed to this device and appends the epoch to the local keyring', function (): void {
     $user = deliveryUser('delivery-open-user');
 
@@ -256,8 +236,7 @@ it('opens a GDK_EPOCH_WRAP addressed to this device and appends the epoch to the
     /** @var GdkRotationService $rotation */
     $rotation = app(GdkRotationService::class);
 
-    // A confirmed peer whose Ed25519 secret signs the wrap — the F1 sender-
-    // authenticity gate rejects any wrap not signed by a confirmed device.
+    // Only a confirmed peer's signature clears the sender-authenticity gate.
     [$senderId, $senderSecretHex] = deliverySender(app(DatabaseManager::class), (int) $user->id);
 
     $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
@@ -274,7 +253,6 @@ it('opens a GDK_EPOCH_WRAP addressed to this device and appends the epoch to the
 
     expect($loaded->keyFor(7))->toBe(sodium_bin2hex($rawGdkKey));
 
-    // B can decrypt an entry written under the newly-appended epoch.
     /** @var OpLogFieldCrypto $fieldCrypto */
     $fieldCrypto = app(OpLogFieldCrypto::class);
     $ad = 'transactions:1:description:7';
@@ -297,13 +275,11 @@ it('rejects a GDK_EPOCH_WRAP addressed to a foreign device and does not append',
     /** @var GdkRotationService $rotation */
     $rotation = app(GdkRotationService::class);
 
-    // Sender args are valid so the call type-checks; the rejection here is at
-    // the recipient-identity gate (foreign recipient_device_id), which runs
-    // BEFORE the sender-authenticity gate.
+    // The sender is valid: the rejection is at the recipient-identity gate,
+    // which runs before the sender-authenticity gate.
     [$senderId, $senderSecretHex] = deliverySender(app(DatabaseManager::class), (int) $user->id);
 
     $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
-    // Sealed to a DIFFERENT (foreign) device's public key, not this device's.
     $foreignPub = sodium_crypto_box_publickey(sodium_crypto_box_keypair());
     $wrap = $rotation->buildGdkEpochWrap(9, $rawGdkKey, $foreignPub, 'a-foreign-device-id', $senderId, $senderSecretHex);
 
@@ -332,17 +308,14 @@ it('rejects a tampered GDK_EPOCH_WRAP wrapped_key_b64 and does not append', func
     /** @var GdkRotationService $rotation */
     $rotation = app(GdkRotationService::class);
 
-    // A genuinely confirmed sender, so the wrap clears the sender-key lookup
-    // and the tamper below is caught by the SIGNATURE check (the detached
-    // signature no longer matches the mutated sealed bytes) rather than by an
-    // unrelated unconfirmed-sender rejection.
+    // A genuinely confirmed sender, so the tamper below is caught by the
+    // signature check and not by an unrelated unconfirmed-sender rejection.
     [$senderId, $senderSecretHex] = deliverySender(app(DatabaseManager::class), (int) $user->id);
 
     $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
     $recipientPub = sodium_hex2bin($deviceB->x25519PublicKeyHex);
     $wrap = $rotation->buildGdkEpochWrap(11, $rawGdkKey, $recipientPub, $deviceB->deviceId, $senderId, $senderSecretHex);
 
-    // Tamper: flip the last byte of the sealed box.
     $sealed = base64_decode((string) $wrap['wrapped_key_b64'], true);
     expect($sealed)->not->toBeFalse();
     $lastByte = substr((string) $sealed, -1);
@@ -373,12 +346,9 @@ it('rejects a malformed control message without any sodium call', function (): v
     /** @var GdkKeyringService $keyring */
     $keyring = app(GdkKeyringService::class);
 
-    // Baseline captured BEFORE handle() — asserted against a delta rather
-    // than an assumed-empty keyring, since the on-disk keyring file is
-    // keyed only by user id (Plan 02's documented cross-test filesystem
-    // isolation gap: SQLite rowids can be reused across RefreshDatabase
-    // transaction rollbacks within one process, so a prior test's user id
-    // may already have a keyring file on disk for this same id).
+    // The keyring file is keyed by user id alone and survives RefreshDatabase,
+    // so a reused rowid can inherit an earlier test's epochs — assert on a
+    // delta, not on an assumed-empty keyring.
     $before = $keyring->loadKeyring((int) $user->id, $session)->epochs();
 
     /** @var GdkEpochControlHandler $handler */
@@ -405,7 +375,7 @@ it('is idempotent — re-handling an already-present epoch does not duplicate or
 
     /** @var GdkKeyringService $keyring */
     $keyring = app(GdkKeyringService::class);
-    $keyring->generateAndPersist((int) $user->id, $session); // epoch 1
+    $selfMinted = $keyring->generateAndPersist((int) $user->id, $session); // epoch 1
 
     /** @var GdkRotationService $rotation */
     $rotation = app(GdkRotationService::class);
@@ -424,7 +394,6 @@ it('is idempotent — re-handling an already-present epoch does not duplicate or
     $afterFirst = $keyring->currentEpoch((int) $user->id, $session);
     expect($afterFirst->epochId)->toBe(2);
 
-    // Advance further, then re-deliver the STALE epoch 2 wrap again.
     $keyring->appendEpoch(
         (int) $user->id,
         new GdkEpoch(3, sodium_bin2hex(random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES))),
@@ -446,22 +415,10 @@ it('is idempotent — re-handling an already-present epoch does not duplicate or
     expect($countOfEpochTwo)->toBe(1, 'epoch 2 must not be duplicated in the keyring');
 });
 
-/*
- * MEDIUM-02 (15-import-join-REVIEW.md) — an already-present epoch_id is
- * EXACTLY where a desktop ADD-device fan-out collides: the peer may have
- * self-minted its OWN epoch 1 under a DIFFERENT key. Dropping the inbound
- * wrap, as this once did, left every row the desktop encrypted under its
- * epoch 1 permanently unreadable on that peer. The group's key wins when
- * the local one has encrypted nothing.
- */
 it('adopts the peer GDK epoch over a colliding local key that has encrypted nothing', function (): void {
     $user = deliveryUser('delivery-collision-user');
 
-    // Cross-test filesystem-isolation gap (documented at the top of the
-    // "is idempotent" test above): SQLite rowids can be reused across
-    // RefreshDatabase transaction rollbacks within one process, so a prior
-    // test's on-disk keyring file may already exist for this same reused
-    // user id. Start from a genuinely empty on-disk state.
+    // A reused rowid can inherit an earlier test's keyring file; start empty.
     @unlink(UserDataPathService::appPath('sync/gdk/'.$user->id.'.enc'));
 
     /** @var Session $session */
@@ -474,27 +431,22 @@ it('adopts the peer GDK epoch over a colliding local key that has encrypted noth
 
     /** @var GdkKeyringService $keyring */
     $keyring = app(GdkKeyringService::class);
-    // Device B already self-minted its OWN epoch 1 (mirrors a normal,
-    // non-import self-minting peer — a scenario the desktop cannot
-    // distinguish from an import peer without a cross-device signal,
-    // see HIGH-01).
-    $keyring->generateAndPersist((int) $user->id, $session);
+    // Device B self-mints its own epoch 1, which the sender cannot detect.
+    $selfMinted = $keyring->generateAndPersist((int) $user->id, $session);
 
     /** @var GdkRotationService $rotation */
     $rotation = app(GdkRotationService::class);
 
-    // The desktop's OWN, DIFFERENT epoch-1 key is now fanned out and
-    // collides with device B's already-present epoch 1.
     [$senderId, $senderSecretHex] = deliverySender(app(DatabaseManager::class), (int) $user->id);
 
     $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
     $recipientPub = sodium_hex2bin($deviceB->x25519PublicKeyHex);
-    $wrap = $rotation->buildGdkEpochWrap(1, $rawGdkKey, $recipientPub, $deviceB->deviceId, $senderId, $senderSecretHex);
+    // Epoch ids are minted per device, so a collision has to be built here.
+    $wrap = $rotation->buildGdkEpochWrap($selfMinted->epochId, $rawGdkKey, $recipientPub, $deviceB->deviceId, $senderId, $senderSecretHex);
 
-    // The handler logs via a constructor-injected LoggerInterface, NOT the
-    // Log facade — bind a container spy so the injected instance is captured.
-    // GdkEpochControlHandler is a singleton (SyncServiceProvider), so forget
-    // any cached instance and let it re-resolve with the spy logger.
+    // The handler takes LoggerInterface by constructor, not the Log facade,
+    // and is a singleton — forget the cached instance so it re-resolves
+    // against the spy.
     /** @var MockInterface $logSpy */
     $logSpy = Mockery::spy(LoggerInterface::class);
     app()->instance(LoggerInterface::class, $logSpy);
@@ -505,25 +457,18 @@ it('adopts the peer GDK epoch over a colliding local key that has encrypted noth
     $handler->handle(json_encode($wrap, JSON_THROW_ON_ERROR), (int) $user->id, $session);
 
     $logSpy->shouldHaveReceived('warning')
-        ->withArgs(function (string $message, array $ctx) use ($deviceB): bool {
+        ->withArgs(function (string $message, array $ctx) use ($deviceB, $selfMinted): bool {
             return str_starts_with($message, 'GdkEpochControlHandler:')
                 && str_contains($message, 'adopted the peer GDK epoch')
-                && ($ctx['epoch_id'] ?? null) === 1
+                && ($ctx['epoch_id'] ?? null) === $selfMinted->epochId
                 && ($ctx['recipient_device_id'] ?? null) === $deviceB->deviceId;
         })
         ->once();
 
-    // Nothing local was encrypted under the self-minted epoch 1, so the
-    // group's key replaces it and the desktop's rows become readable.
     $loaded = $keyring->loadKeyring((int) $user->id, $session);
-    expect($loaded->keyFor(1))->toBe(sodium_bin2hex($rawGdkKey), 'the group key must replace an unused local epoch of the same id');
+    expect($loaded->keyFor($selfMinted->epochId))->toBe(sodium_bin2hex($rawGdkKey), 'the group key must replace an unused local epoch of the same id');
 });
 
-/*
- * The mirror case: once a row IS encrypted under the local epoch, that key
- * is the only way to read it, so adopting the peer's would trade one set of
- * unreadable rows for another. The conflict is raised instead of resolved.
- */
 it('keeps a colliding local GDK epoch that local rows are already encrypted under', function (): void {
     $user = deliveryUser('delivery-collision-used');
 
@@ -539,10 +484,10 @@ it('keeps a colliding local GDK epoch that local rows are already encrypted unde
 
     /** @var GdkKeyringService $keyring */
     $keyring = app(GdkKeyringService::class);
-    $keyring->generateAndPersist((int) $user->id, $session);
-    $localKeyHex = $keyring->loadKeyring((int) $user->id, $session)->keyFor(1);
+    $selfMinted = $keyring->generateAndPersist((int) $user->id, $session);
+    $localKeyHex = $keyring->loadKeyring((int) $user->id, $session)->keyFor($selfMinted->epochId);
 
-    // One durable row encrypted under the local epoch 1 is all it takes.
+    // One row under the local epoch marks it used, which blocks replacement.
     app(DatabaseManager::class)->connection()->table('op_log_entries')->insert([
         'user_id' => (int) $user->id,
         'device_id' => $deviceB->deviceId,
@@ -554,7 +499,7 @@ it('keeps a colliding local GDK epoch that local rows are already encrypted unde
         'hlc_l' => 1,
         'hlc_c' => 0,
         'signature' => str_repeat('0', 128),
-        'gdk_epoch' => 1,
+        'gdk_epoch' => $selfMinted->epochId,
         'recorded_at' => '2026-01-01 00:00:00',
     ]);
 
@@ -564,7 +509,7 @@ it('keeps a colliding local GDK epoch that local rows are already encrypted unde
     $rotation = app(GdkRotationService::class);
     $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
     $recipientPub = sodium_hex2bin($deviceB->x25519PublicKeyHex);
-    $wrap = $rotation->buildGdkEpochWrap(1, $rawGdkKey, $recipientPub, $deviceB->deviceId, $senderId, $senderSecretHex);
+    $wrap = $rotation->buildGdkEpochWrap($selfMinted->epochId, $rawGdkKey, $recipientPub, $deviceB->deviceId, $senderId, $senderSecretHex);
 
     /** @var MockInterface $logSpy */
     $logSpy = Mockery::spy(LoggerInterface::class);
@@ -577,21 +522,13 @@ it('keeps a colliding local GDK epoch that local rows are already encrypted unde
 
     $logSpy->shouldHaveReceived('error')
         ->withArgs(fn (string $message, array $ctx): bool => str_contains($message, 'locally-USED epoch')
-            && ($ctx['epoch_id'] ?? null) === 1)
+            && ($ctx['epoch_id'] ?? null) === $selfMinted->epochId)
         ->once();
 
     $loaded = $keyring->loadKeyring((int) $user->id, $session);
-    expect($loaded->keyFor(1))->toBe($localKeyHex, 'a used local epoch key must survive a colliding delivery');
+    expect($loaded->keyFor($selfMinted->epochId))->toBe($localKeyHex, 'a used local epoch key must survive a colliding delivery');
 });
 
-/*
- * F1 regression guard — sender authenticity. A GDK_EPOCH_WRAP is a
- * confidential-but-unauthenticated sealed box; before F1 the handler opened
- * and appended ANY well-formed wrap addressed to this device. It must now
- * REFUSE a wrap unless its sender_device_id is a STILL-confirmed device in the
- * recipient's registry AND its Ed25519 signature verifies over the signed
- * message. These two tests pin both halves of that gate.
- */
 it('rejects a GDK_EPOCH_WRAP whose sender is not a confirmed device and does not append (F1)', function (): void {
     $user = deliveryUser('delivery-unconfirmed-sender-user');
 
@@ -609,10 +546,9 @@ it('rejects a GDK_EPOCH_WRAP whose sender is not a confirmed device and does not
     $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
     $recipientPub = sodium_hex2bin($deviceB->x25519PublicKeyHex);
 
-    // A perfectly well-formed, correctly self-signed wrap — but its sender
-    // identity is NEVER inserted into this user's device_registry, so
-    // deviceKeys() has no key for it and senderIsAuthentic() rejects it before
-    // any seal_open. (Before F1 this exact wrap would have been appended.)
+    // Well-formed and correctly self-signed, but the sender is never inserted
+    // into device_registry, so there is no key to verify against and the wrap
+    // is rejected before any seal_open.
     $ghostSigKp = sodium_crypto_sign_keypair();
     $ghostSecretHex = sodium_bin2hex(sodium_crypto_sign_secretkey($ghostSigKp));
     $wrap = $rotation->buildGdkEpochWrap(21, $rawGdkKey, $recipientPub, $deviceB->deviceId, 'ghost-sender-not-in-registry', $ghostSecretHex);
@@ -645,9 +581,8 @@ it('rejects a GDK_EPOCH_WRAP from a confirmed sender whose signature is corrupte
     $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
     $recipientPub = sodium_hex2bin($deviceB->x25519PublicKeyHex);
 
-    // The sender IS a genuinely confirmed device and the sealed bytes are
-    // untouched, so ONLY the corrupted detached signature can cause a
-    // rejection here — isolating the signature-verification half of the gate.
+    // Confirmed sender, untouched sealed bytes: only the corrupted signature
+    // can cause a rejection here.
     [$senderId, $senderSecretHex] = deliverySender(app(DatabaseManager::class), (int) $user->id);
     $wrap = $rotation->buildGdkEpochWrap(22, $rawGdkKey, $recipientPub, $deviceB->deviceId, $senderId, $senderSecretHex);
 
@@ -666,10 +601,6 @@ it('rejects a GDK_EPOCH_WRAP from a confirmed sender whose signature is corrupte
     expect($loaded->keyFor(22))->toBeNull('a wrap whose signature does not verify against the confirmed sender key must never be appended');
 });
 
-// ---------------------------------------------------------------------
-// Task 2 — SyncWebSocketHandler::deliverGdkEpochWraps() wiring.
-// ---------------------------------------------------------------------
-
 it('rotate-on-A delivers the enqueued wrap to a live-connecting peer over Noise and drains the peer\'s own inbound mailbox, converging its keyring; delivered wraps are cleared', function (): void {
     $user = deliveryUser('delivery-live-user');
 
@@ -679,26 +610,22 @@ it('rotate-on-A delivers the enqueued wrap to a live-connecting peer over Noise 
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
-    // Device A: the acting/self device that runs rotateAndRevoke(). Only a
-    // device_registry row is needed — GdkRotationService's fan-out never
-    // touches DeviceIdentityService/DeviceIdentityLoader for the acting side.
+    // Device A only needs a registry row: the fan-out never loads an identity
+    // for the acting side.
     $kpA = sodium_crypto_kx_keypair();
     $secretA = sodium_crypto_kx_secretkey($kpA);
     $publicA = sodium_crypto_kx_publickey($kpA);
     deliveryRegistryRow($db, (int) $user->id, 'device-a', sodium_bin2hex($publicA), isSelf: true);
 
-    // Device B: a REAL DeviceIdentityService identity (real X25519 secret
-    // key on "its own disk") so GdkEpochControlHandler can genuinely open
-    // the sealed box addressed to it. generateAndPersist() inserts its own
-    // is_self=1 row — flip it to is_self=0 since device-a is the true
-    // acting/self device for this rotation.
+    // Device B needs a real identity so it can actually open the sealed box.
+    // generateAndPersist() marks it is_self=1; device-a is the acting device
+    // here, so flip it back.
     /** @var DeviceIdentityService $identityService */
     $identityService = app(DeviceIdentityService::class);
     /** @var DeviceIdentityDto $deviceB */
     $deviceB = $identityService->generateAndPersist((int) $user->id, $session);
     $db->connection()->table('device_registry')->where('device_id', $deviceB->deviceId)->update(['is_self' => 0]);
 
-    // Device C: about to be removed.
     $removedId = $db->connection()->table('device_registry')->insertGetId([
         'user_id' => $user->id,
         'device_id' => 'device-c',
@@ -714,9 +641,7 @@ it('rotate-on-A delivers the enqueued wrap to a live-connecting peer over Noise 
         'updated_at' => '2026-07-09T10:00:00Z',
     ]);
 
-    // Rotation on A: revokes device-c, rotates the GDK epoch, and enqueues
-    // exactly one sealed-box wrap for device-b on the ZK-pure RelayMailbox
-    // (Plan 05) — regardless of whether device-b happens to be connected.
+    // The wrap is enqueued whether or not device-b is connected.
     /** @var GdkRotationService $rotation */
     $rotation = app(GdkRotationService::class);
     $rotation->rotateAndRevoke((int) $user->id, $removedId, $session);
@@ -732,8 +657,7 @@ it('rotate-on-A delivers the enqueued wrap to a live-connecting peer over Noise 
             ->count()
     )->toBe(1, 'exactly one pending wrap must be enqueued for device-b');
 
-    // --- Direction 1: A's live-connect delivery step pushes the pending
-    // wrap to a connecting device-b over an authenticated Noise session. ---
+    // Direction 1: A pushes the pending wrap to a live-connecting device-b.
     $initHs = NoiseHandshakeState::initIkInitiator(
         sodium_hex2bin($deviceB->x25519SecretKeyHex),
         sodium_hex2bin($deviceB->x25519PublicKeyHex),
@@ -766,8 +690,6 @@ it('rotate-on-A delivers the enqueued wrap to a live-connecting peer over Noise 
     $fakeClient = deliveryFakeClient();
     $handlerOnA->deliverGdkEpochWraps($fakeClient, $aSyncSession);
 
-    // Frame 0 is the GDK_EPOCH_PUSH header announcing the phase and its
-    // count; the wrap itself follows it.
     expect($fakeClient->sentBinary)->toHaveCount(2, 'the phase header plus the pending wrap must be pushed');
     expect(
         $db->connection()->table('relay_mailbox')
@@ -786,14 +708,12 @@ it('rotate-on-A delivers the enqueued wrap to a live-connecting peer over Noise 
     expect($deliveredWrap['epoch_id'])->toBe($aEpoch->epochId);
     expect($deliveredWrap['recipient_device_id'])->toBe($deviceB->deviceId);
 
-    // Re-running delivery must not resend an already-cleared wrap — the
-    // second pass adds its phase header (count 0) and nothing else.
+    // The second pass adds only its phase header: a cleared wrap is not resent.
     $handlerOnA->deliverGdkEpochWraps($fakeClient, $aSyncSession);
     expect($fakeClient->sentBinary)->toHaveCount(3, 'a cleared wrap must never be redelivered');
 
-    // --- Direction 2: device-b's OWN daemon drains ITS OWN inbound mailbox
-    // and routes each wrap through GdkEpochControlHandler, converging its
-    // local keyring under its own KEK. ---
+    // Direction 2: device-b drains its own inbound mailbox. This needs no peer
+    // session, so it is exercised on its own.
     $handlerOnB = deliverySyncWebSocketHandler(
         (int) $user->id,
         $deviceB->deviceId,
@@ -801,13 +721,7 @@ it('rotate-on-A delivers the enqueued wrap to a live-connecting peer over Noise 
         $deviceB->x25519PublicKeyHex,
     );
 
-    // Direction 2 is wire-independent: draining this device's own mailbox
-    // needs no peer session at all, so it is exercised on its own.
-
-    // Simulate the wrap having reached device-b's own local relay_mailbox
-    // (e.g. via an external relay or a peer forwarding it) by decrypting
-    // what A actually sent and re-enqueuing the SAME opaque blob addressed
-    // to device-b locally.
+    // Re-enqueue the exact blob A sent, as an external relay would have.
     $db->connection()->table('relay_mailbox')->insert([
         'sender_did' => 'device-a',
         'recipient_did' => $deviceB->deviceId,
@@ -830,13 +744,9 @@ it('rotate-on-A delivers the enqueued wrap to a live-connecting peer over Noise 
     )->toBe(0, 'device-b\'s own inbound wrap must be cleared after processing');
 });
 
-// The relay mailbox carries two protocols at once: the epoch wraps this step
-// owns, and the pairing frames the relay endpoint stores for the same peer.
-// Forwarding indiscriminately confirmed a leftover PAIR_CONFIRM away down a
-// channel whose reader discards it — and because that reader stopped at the
-// first thing it did not recognise, every wrap queued behind it went too. The
-// phone was then left holding no epoch key at all, quarantining the very
-// history it had just been sent.
+// The mailbox carries pairing frames as well as wraps. Forwarding a
+// PAIR_CONFIRM down this channel stopped the peer's reader dead and every wrap
+// queued behind it was lost with it.
 it('pushes only epoch wraps to the peer and leaves a pairing frame for the courier', function (): void {
     $user = deliveryUser('delivery-mixed-mailbox-user');
 

@@ -57,6 +57,7 @@ return [
         'meta_eur_equiv' => '(≈ :amount/a)',
         'cancel_impact' => 'Ütle see üles → säästad :amount/a',
         'cadence_flipped' => 'Maksesagedus muutus — kuvatakse ka jaotises',
+        'cadence_flipped_link' => 'Vaata korduvmaksed üle',
         'acknowledge' => 'Võta teadmiseks',
         'acknowledge_aria' => 'Võta teadmiseks muutuse hoiatus :id',
         'snooze' => 'Lükka edasi ▾',

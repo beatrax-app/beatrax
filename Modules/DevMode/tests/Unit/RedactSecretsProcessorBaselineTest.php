@@ -8,19 +8,6 @@ use Modules\DevMode\Internal\Logging\RedactSecretsProcessor;
 use Monolog\Level;
 use Monolog\LogRecord;
 
-/*
- * Baseline regression guard for the Monolog
- * RedactSecretsProcessor + PushRedactProcessor +
- * config/logging.php tap-slot wiring.
- *
- * Covers the Bearer + JWT scrub layer (the OAuthScrubSet layer
- * has its own coverage in OAuthScrubSetBustTest). The end-to-end
- * on-write redaction test uses an ephemeral per-test channel built
- * via LogManager::build() with the same tap array so the test
- * does not race the real shared laravel-{date}.log under parallel
- * Pest.
- */
-
 it('RedactSecretsProcessor replaces Authorization: Bearer + standalone JWT in the message', function (): void {
     $processor = new RedactSecretsProcessor;
 
@@ -82,6 +69,8 @@ it('config/logging.php has PushRedactProcessor in the tap slot for stack, single
 });
 
 it('end-to-end: logger() writes redacted Bearer to disk via the tapped channel', function (): void {
+    // An ephemeral channel, so parallel Pest workers do not race on the
+    // shared laravel-{date}.log.
     $tmpPath = tempnam(sys_get_temp_dir(), 'redact-test-').'.log';
 
     /** @var LogManager $manager */
@@ -93,14 +82,12 @@ it('end-to-end: logger() writes redacted Bearer to disk via the tapped channel',
         'level' => 'debug',
     ]);
 
-    // LogManager::build() bypasses configurationFor()-based tap resolution
-    // for ondemand channels, so we apply the tap manually here — this
-    // exercises the SAME PushRedactProcessor wiring that config/logging.php
-    // applies for the real 'single' / 'daily' / 'stack' channels.
+    // LogManager::build() skips tap resolution for on-demand channels, so the
+    // tap config/logging.php would have applied is applied by hand here.
     (new PushRedactProcessor)($channel);
 
     $channel->info('event: Authorization: Bearer toplevelsecrettoken');
-    // Force file flush
+    // close() is what flushes the handler's buffer to disk.
     foreach ($channel->getLogger()->getHandlers() as $handler) {
         if (method_exists($handler, 'close')) {
             $handler->close();

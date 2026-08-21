@@ -14,9 +14,6 @@ use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use RuntimeException;
 use SodiumException;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final class SensitiveColumnCodec
 {
     public function __construct(

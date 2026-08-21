@@ -50,8 +50,6 @@ final class EnvelopeAssignment extends Model
     }
 
     /**
-     * @link ../../../.docs/features/budgets/architecture.md
-     *
      * @return Attribute<CarbonImmutable|null, string>
      */
     protected function periodStart(): Attribute

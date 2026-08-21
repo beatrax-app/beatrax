@@ -9,13 +9,10 @@ use Modules\Import\Public\Contracts\DetectsStartingBalance;
 use Modules\Import\Public\Dto\StartingBalanceCandidate;
 use Modules\Ingestion\Public\Enums\SourceFormat;
 
-/**
- * @link ../../../../.docs/features/import/architecture.md#starting-balance-detection
- */
 final readonly class DetectStartingBalancesQuery
 {
-    // CAMT.053 carries an explicit <OpngBal> element, so on a date tie it
-    // is preferred over MT940's sometimes-recomputed running total.
+    // CAMT.053 carries an explicit <OpngBal>, so it wins a date tie against
+    // MT940's sometimes-recomputed running total.
     private const CAMT_FORMAT = SourceFormat::Camt053->value;
 
     /**
@@ -120,9 +117,8 @@ final readonly class DetectStartingBalancesQuery
             static fn (StartingBalanceCandidate $candidate): bool => $candidate->sourceFormat !== self::CAMT_FORMAT,
         ));
 
-        // A single canonical CAMT.053 wins outright; a single non-CAMT
-        // wins only when no CAMT is present. Any remaining multi-way tie
-        // surfaces every still-tied candidate for manual resolution.
+        // A remaining multi-way tie surfaces every candidate for the user to
+        // resolve by hand.
         return match (true) {
             count($camt053) === 1 && $other !== [] => [$camt053[0]],
             $camt053 === [] && count($other) === 1 => [$other[0]],

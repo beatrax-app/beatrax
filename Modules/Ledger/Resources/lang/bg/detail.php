@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Премахни категорията',
         'keep_category' => 'Задръж тази категория',
         'restore_single' => 'Да се възстанови ли като една категория?',
+        'survivor_legend' => 'Категория, която да остане',
         'confirm_unsplit' => 'Да, премахни разделянето',
         'keep_split' => 'Задръж разделянето',
     ],
@@ -51,6 +52,16 @@ return [
         'choose_aria' => 'Избери нов тип транзакция',
         'choose_option' => 'Избери тип…',
         'save' => 'Запази',
+    ],
+
+    'type_label' => [
+        'expense' => 'Разход',
+        'income' => 'Приход',
+        'transfer_out' => 'Изходящ превод',
+        'transfer_in' => 'Входящ превод',
+        'fee' => 'Такса',
+        'refund' => 'Възстановяване',
+        'adjustment' => 'Корекция',
     ],
 
     'note' => [

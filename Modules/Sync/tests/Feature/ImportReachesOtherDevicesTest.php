@@ -11,16 +11,10 @@ use Modules\Import\Public\Enums\BankCsvFormatHint;
 use Modules\Ledger\Models\Transaction;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
 
-/*
- * Importing a statement is how data gets into this app, and what it produced
- * used to stay on the device that read the file.
- *
- * Measured on a paired phone: importing an ASN CSV added 5 transactions and
- * import_run 6, and the only op-log entries the device authored were
- * `notifications create_row x5`. After a sync the desktop still held 141
- * transactions and 5 import_runs, and had received nothing but those
- * notifications — it was told an import happened and given none of it.
- */
+// Importing a statement is how data gets into this app, and what it produced
+// used to stay on the device that read the file. A phone that imported five
+// transactions sent its peer five notification rows and nothing else: the
+// desktop was told an import had happened and given none of it.
 
 beforeEach(function (): void {
     $this->seedFixtureUserAndAccount();

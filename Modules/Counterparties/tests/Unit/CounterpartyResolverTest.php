@@ -16,18 +16,6 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 uses(RefreshDatabase::class);
 
-/**
- * Pins the 7-step resolution chain documented on
- * CounterpartyResolverService. Each test exercises one branch in
- * isolation and asserts the resolver's contract: the returned DTO's
- * type, displayName, slug, the upserted Counterparty row (or lack
- * thereof for `self_account`), and the cross-user isolation invariant.
- *
- * Test transactions are constructed via `makeCpResolverTx()` so the per-step
- * arrange step stays focused on the discriminating fields
- * (description, counterparty_iban, transaction type) — the rest
- * receive sensible defaults.
- */
 function makeCpResolverUser(string $username): User
 {
     return User::query()->create([
@@ -131,8 +119,8 @@ it('Test 1 — step 1 self_account: routes the users own IBAN to type=self_accou
 });
 
 it('Test 2 — step 2 known-bridge: PayPal Luxembourg IBAN resolves to type=bank and upserts a row', function (): void {
-    // Seed the two synthetic accounts + the known-bridge alias rows
-    // so the bridge contract can succeed.
+    // The bridge resolves into an account of the alias's target kind, so both
+    // synthetic accounts have to exist before the seeder runs.
     makeCpResolverAccount($this->user, 'paypal', 'PAYPAL', 'resolver-fixture-2');
     makeCpResolverAccount($this->user, 'ics_card', 'ICS-CARD', 'resolver-fixture-3');
     app(DefaultKnownCounterpartyIbansSeeder::class)->run($this->user);
@@ -269,7 +257,6 @@ it('Test 6c — the KOSTEN bank-fee rule uses a word boundary, so ONKOSTEN does 
     $resolver = $this->app->make(CounterpartyResolverService::class);
     $dto = $resolver->resolve($tx, $this->user);
 
-    // Must NOT be mis-classified as a bank fee (the \bKOSTEN\b boundary).
     expect($dto?->type)->not->toBe('bank');
 });
 

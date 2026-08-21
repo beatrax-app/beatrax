@@ -5,12 +5,8 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\App;
 use Modules\Core\Public\Support\Lang;
 
-/*
- * The triage card's meta line read "1 transacties" — the count was
- * interpolated into a fixed plural. It is the line that tells the user how
- * much history they are labelling from, so the number and the noun have to
- * agree.
- */
+// Regression: the triage meta line read "1 transacties" — the count was being
+// interpolated into a fixed plural.
 
 it('says one transaction in the singular', function (): void {
     App::setLocale('nl');
@@ -57,9 +53,8 @@ it('has the screen actually ask for the plural form', function (): void {
         base_path('Modules/Counterparties/Resources/views/livewire/counterparty-triage.blade.php')
     );
 
-    // The cases above prove the STRINGS pluralise. Reverting the call site to
-    // Lang::get would put "1 transacties" back on screen with every one of
-    // them still green, because none of them renders the view.
+    // The cases above only prove the strings pluralise; none renders the view,
+    // so reverting the call site to Lang::get would leave them all green.
     expect($blade)->toContain("Lang::choice('counterparties::triage.meta'")
         ->and(str_contains($blade, "Lang::get('counterparties::triage.meta'"))
         ->toBeFalse('the triage meta line reads the plural string through Lang::get');

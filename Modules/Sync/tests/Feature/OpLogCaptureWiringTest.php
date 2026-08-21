@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -14,20 +13,6 @@ use Modules\Sync\Public\Events\TransactionMutated;
 
 uses(RefreshDatabase::class);
 
-/*
- * Capture-wiring tests for Plan 11-04.
- *
- * Asserts:
- * 1. Dispatching TransactionMutated(edit, {category_id: X}) results in an
- *    op_log_entries row (op_type='set', field='category_id').
- * 2. Dispatching mutationType 'delete' results in a delete_tombstone op.
- * 3. SyncCaptureListener::handle does NOT propagate exceptions — a writer
- *    that throws still leaves handle() returning normally.
- * 4. AssignCategory dispatches both TransactionCategorized AND TransactionMutated.
- *    (Integration with AssignCategory is in Categorization tests; here we assert
- *    the listener level only.)
- */
-
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-06-14 12:00:00');
 });
@@ -36,9 +21,6 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-/**
- * Build a minimal transaction row and return its id.
- */
 function seedCaptureTransaction(DatabaseManager $db, int $userId): int
 {
     $accountId = $db->connection()->table('accounts')->insertGetId([
@@ -89,9 +71,6 @@ function seedCaptureTransaction(DatabaseManager $db, int $userId): int
 }
 
 /**
- * Build an OpLogWriter with a throwaway keypair, bind it into the container,
- * and return a pre-configured SyncCaptureListener.
- *
  * @return array{writer: OpLogWriter, listener: SyncCaptureListener, userId: int, txnId: int}
  */
 function buildWriterAndFixture(DatabaseManager $db): array
@@ -117,7 +96,6 @@ function buildWriterAndFixture(DatabaseManager $db): array
         'publicKey' => $pk,
     ]);
 
-    // Bind the writer into the container so SyncCaptureListener can resolve it lazily.
     app()->instance(OpLogWriter::class, $writer);
 
     /** @var SyncCaptureListener $listener */
@@ -185,10 +163,8 @@ it('dispatching TransactionMutated(delete) lands a delete_tombstone op in op_log
 });
 
 it('SyncCaptureListener::handle does not propagate exceptions — a bad OpLogWriter does not abort the caller', function (): void {
-    // Verify the never-throw contract: if the OpLogWriter cannot be resolved
-    // (BindingResolutionException) or throws during a write, handle() must still
-    // return normally. We bind a "stub" writer and then force an error by binding
-    // a missing/unresolvable class — the catch block swallows it.
+    // The listener runs inside the request that saved the row, so a write it
+    // cannot perform must never become the user's edit failing.
 
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -201,7 +177,6 @@ it('SyncCaptureListener::handle does not propagate exceptions — a bad OpLogWri
         dirtyFields: ['note' => 'test note'],
     );
 
-    // Wrapping in closure verifies no exception escapes handle().
     $threw = false;
 
     try {
@@ -211,7 +186,6 @@ it('SyncCaptureListener::handle does not propagate exceptions — a bad OpLogWri
     }
 
     expect($threw)->toBeFalse();
-    // The Set op for 'note' must be in the log (normal path worked).
     $rows = $db->connection()->table('op_log_entries')
         ->where('user_id', $userId)
         ->where('field', 'note')
@@ -224,10 +198,9 @@ it('TransactionMutated event is dispatched through the framework Dispatcher to S
     $db = app(DatabaseManager::class);
     ['userId' => $userId, 'txnId' => $txnId] = buildWriterAndFixture($db);
 
-    // The SyncServiceProvider wires: TransactionMutated → SyncCaptureListener.
-    // However, that wiring used the singleton OpLogWriter bound without device creds.
-    // We test the event dispatch plumbing using Event::fake() to verify the event fires,
-    // and separately we test the listener directly (above tests).
+    // The provider's singleton writer carries no device credentials, so this
+    // covers the dispatch plumbing only; the listener itself is driven directly
+    // in the tests above.
 
     Event::fake([TransactionMutated::class]);
 

@@ -9,13 +9,6 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\AppChromeResolver;
 use Modules\Desktop\Public\Contracts\OsThemeSignal;
 
-/*
- * Unit tests for the per-request chrome the four page shells render into
- * their <html> tag: guests and unset columns fall to the system default,
- * an explicit dark user paints dark server-side, and a system user only
- * resolves dark when the desktop OsThemeSignal reports dark.
- */
-
 function chromeResolverFor(CurrentUser $currentUser, string $locale, bool $osBound, ?string $osTheme): AppChromeResolver
 {
     $translator = test()->createStub(Translator::class);

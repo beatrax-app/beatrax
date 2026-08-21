@@ -20,7 +20,7 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 /**
- * @link ../../../../.docs/features/sync/architecture.md
+ * @link ../../../../.docs/features/sync/op-log-merge-rules.md
  */
 final readonly class OpLogReplayer
 {

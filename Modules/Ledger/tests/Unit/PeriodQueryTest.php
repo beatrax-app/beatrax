@@ -8,9 +8,6 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Public\Services\PeriodQuery;
 
-/**
- * Builds an anonymous Clock that always returns a fixed instant.
- */
 function fakeClock(string $instant): Clock
 {
     return new class($instant) implements Clock
@@ -24,9 +21,6 @@ function fakeClock(string $instant): Clock
     };
 }
 
-/**
- * Builds an anonymous CurrentUser that returns a fixed periodStartDay.
- */
 function periodQueryCurrentUser(int $periodStartDay): CurrentUser
 {
     return new class($periodStartDay) implements CurrentUser

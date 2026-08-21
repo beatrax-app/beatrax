@@ -5,17 +5,10 @@ declare(strict_types=1);
 use Modules\Core\Models\User;
 use Tests\Helpers\LivewireRoundTrip;
 
-/*
- * Laravel keeps the active language in TWO places — `config('app.locale')`,
- * which `app()->getLocale()` reads, and the translator's own copy — and
- * SetLocale used to retarget only the second. Livewire reads the first:
- * SupportLocales stores `app()->getLocale()` in the wire snapshot on
- * dehydrate and re-applies it with `app()->setLocale()` on hydrate, which
- * runs AFTER the middleware. So the stale English half was replayed over the
- * negotiated one on every Livewire ACTION, and any screen reached by an
- * action rather than a page load rendered in English while the pages either
- * side of it were correct.
- */
+// Laravel keeps the active language in two places — config('app.locale'), which
+// app()->getLocale() reads, and the translator's own copy — and SetLocale
+// retargeted only the second. Livewire snapshots the first and re-applies it on
+// hydrate, after the middleware, replaying English over every action's render.
 
 // Both roots' first-launch gates redirect a 0-user install to their own
 // welcome screen, which would mask what these tests are asserting.

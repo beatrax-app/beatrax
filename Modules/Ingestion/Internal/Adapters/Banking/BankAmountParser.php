@@ -4,18 +4,13 @@ declare(strict_types=1);
 
 namespace Modules\Ingestion\Internal\Adapters\Banking;
 
-use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
 use Modules\Ledger\Public\ValueObjects\Money;
 
-/**
- * @link ../../../../../.docs/features/ingestion/architecture.md
- */
 final class BankAmountParser
 {
-    // Integer-only by construction: whole + fractional groups combine via
-    // ($whole * Money::MINOR_UNITS_PER_MAJOR + $fractional) * $sign, never a float cast — this is
-    // why "0.29" returns exactly 29 rather than the silent 28 that
-    // (int)((float) '0.29' * 100) would produce under 64-bit floating point.
+    // Integer-only, never a float cast: (int)((float) '0.29' * 100) yields a
+    // silent 28 under 64-bit floating point, where this yields exactly 29.
     public function parseMinor(string $raw): int
     {
         $normalized = trim($raw);

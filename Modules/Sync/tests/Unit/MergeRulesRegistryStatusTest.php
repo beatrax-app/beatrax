@@ -4,16 +4,10 @@ declare(strict_types=1);
 
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 
-/*
- * Wave 0 RED stub (D-10, GREEN in 13.3-02, Pitfall 5). `status` must be
- * added as an EXPLICIT entry on the `transactions` LWW field map — not
- * merely rely on `strategyFor()`'s unknown-field-defaults-to-'lww'
- * fallback, which would already make the first assertion pass without any
- * production change and mask a missing registry line. `status` must NOT
- * join `_create_required` (it has a DB default of `'cleared'`, mirroring
- * the registry's own existing comment about the deliberately-excluded
- * `payment_type` column).
- */
+// `status` has to be an explicit entry on the transactions field map: leaning on
+// strategyFor()'s unknown-field-defaults-to-lww fallback would make the first
+// assertion pass with no production change and hide a missing registry line. It
+// stays out of _create_required, since the column has a DB default of 'cleared'.
 
 it('registers status as an explicit lww-strategy field on transactions', function (): void {
     $registry = new MergeRulesRegistry;

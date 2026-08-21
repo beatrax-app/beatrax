@@ -10,21 +10,8 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Onboarding\Internal\Http\Livewire\StartingBalanceCard;
 
-/*
- * Covers the warn-don't-block contract on the starting-balance card.
- * When a user saves a starting-balance date that is later than the
- * earliest existing `transactions.posted_at` for the account (the
- * canonical "date the row landed in the ledger" column), the card
- * surfaces an inline amber warning but still accepts the save — the
- * wizard never blocks the user, only flags the implication.
- *
- * Two behaviours:
- *
- *  1. The amber warning copy renders when the user-entered date is
- *     after the account's earliest booked transaction.
- *  2. The same save still dispatches `starting-balance.confirmed` so
- *     the parent step records the confirmation.
- */
+// Warn, never block: a starting-balance date later than the account's
+// earliest transactions.posted_at flags the implication and still saves.
 
 beforeEach(function (): void {
     $this->user = User::query()->create([
@@ -44,7 +31,7 @@ beforeEach(function (): void {
         'default_currency' => 'EUR',
     ]);
 
-    // Need an ImportRun row to satisfy the transactions.import_run_id FK.
+    // Satisfies the transactions.import_run_id foreign key.
     /** @var ImportRun $run */
     $run = ImportRun::query()->create([
         'user_id' => $this->user->id,
@@ -55,8 +42,7 @@ beforeEach(function (): void {
         'status' => 'previewed',
     ]);
 
-    // Seed an earliest-known transaction at posted_at = 2026-01-15 so a
-    // save with a later starting-balance date triggers the warning row.
+    // Earliest posted_at is 2026-01-15, so a later save trips the warning.
     DB::table('transactions')->insert([
         'user_id' => $this->user->id,
         'account_id' => $this->account->id,

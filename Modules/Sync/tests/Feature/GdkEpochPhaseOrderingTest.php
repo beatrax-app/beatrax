@@ -4,13 +4,10 @@ declare(strict_types=1);
 
 use Modules\Sync\Internal\Transport\SyncWebSocketHandler;
 
-/*
- * The GDK epoch phase is a two-sided wire contract with no schema to enforce
- * it: SyncWebSocketHandler sends, LanSyncClient reads, and the two live in
- * different modules. Both halves are pinned here because getting either wrong
- * fails silently and expensively — the peer applies an entire encrypted
- * history it cannot read, and quarantine has no replay path.
- */
+// A two-sided wire contract with no schema to enforce it, and the two sides
+// live in different modules. Getting either wrong fails silently: the peer
+// applies an entire encrypted history it cannot read, and quarantine has no
+// replay path.
 
 function epochPhaseSource(string $relative): string
 {

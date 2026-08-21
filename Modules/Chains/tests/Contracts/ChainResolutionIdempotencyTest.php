@@ -19,23 +19,6 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 
-/*
- * Phase 5 idempotency contract.
- *
- * Invoking the resolver pass twice in a row MUST produce zero net new
- * chain_links the second time. The contract holds because:
- *   (a) the resolver's candidate-transfer query filters out transfers
- *       already carrying a confirmed ics_bulk_settle chain_link; and
- *   (b) the ChainLinkInsertHelper's pre-insert pair-uniqueness guard
- *       refuses to duplicate rows for the same (from, to, kind, user)
- *       tuple regardless of state.
- *
- * The second contract holds the rejected-pair stay-rejected semantics:
- * even when a chain_link is in state='rejected', the pair-uniqueness
- * guard prevents the resolver from re-proposing a fresh candidate for
- * the same pair.
- */
-
 function seedIdempotencyFixture(): array
 {
     $user = User::query()->create([
@@ -104,8 +87,6 @@ function seedIdempotencyFixture(): array
             'fingerprint_version' => 3,
         ]);
     }
-    // ASN-side transfer_out (the bulk-iDEAL settlement). counterparty
-    // IBAN alias-resolves to the user's ics_card account.
     Transaction::query()->create([
         'user_id' => $user->id,
         'account_id' => $bankAccount->id,
@@ -172,14 +153,13 @@ it('rejected pairs stay rejected — the pair-uniqueness guard blocks re-proposa
     $ics->resolveForUser($user);
     expect(ChainLink::query()->where('user_id', $user->id)->count())->toBe(5);
 
-    // Flip ONE chain_link to rejected to simulate user judgment.
     /** @var ChainLink $first */
     $first = ChainLink::query()->where('user_id', $user->id)->firstOrFail();
     $first->state = 'rejected';
     $first->save();
 
-    // Re-running must NOT re-propose the same (from, to, kind, user)
-    // tuple — the pre-insert pair-uniqueness guard checks ALL states.
+    // The pair-uniqueness guard checks ALL states, so a rejected pair is
+    // never re-proposed.
     $ics->resolveForUser($user);
     expect(ChainLink::query()->where('user_id', $user->id)->count())->toBe(5);
 

@@ -16,20 +16,9 @@ use Psr\Log\LoggerInterface;
 
 uses(RefreshDatabase::class, EnablesEncryptionForUser::class);
 
-/*
- * Req 14 / D-18 / D-37 — the notification-inbox retention sweep. Pins the
- * 365-day age-based cutoff (matching CounterpartyGarbageCollectorJob's
- * window exactly), state-blindness (unread/resolved rows prune the same),
- * cross-user isolation, idempotency, and — the whole point of D-37 — that
- * the sweep needs NO KEK to run, because its predicate keys solely on the
- * always-plaintext `created_at` column.
- *
- * Like CounterpartyGarbageCollectorJobTest, fixture timestamps are stamped
- * against REAL wall-clock time (`now()`), not `CarbonImmutable::setTestNow()`
- * — the job's `whereRaw("... < datetime('now', '-365 days')")` predicate is
- * evaluated by SQLite's own `now()`, which is real system time and is NOT
- * affected by freezing Carbon's clock in PHP.
- */
+// Fixture timestamps are stamped against real wall-clock time, never
+// CarbonImmutable::setTestNow(): the job's predicate is evaluated by SQLite's
+// own `now()`, which freezing Carbon in PHP does not touch.
 
 function pnjUser(string $username): User
 {
@@ -40,10 +29,6 @@ function pnjUser(string $username): User
     ]);
 }
 
-/**
- * Inserts a `notifications` row with an explicit `created_at` (days ago
- * from real wall-clock "now"). Returns the inserted row's sha256-shaped id.
- */
 function pnjNotification(int $userId, int $daysAgo, string $state = 'open'): string
 {
     $id = hash('sha256', $userId.'-'.$daysAgo.'-'.$state.'-'.bin2hex(random_bytes(8)));
@@ -98,10 +83,8 @@ it('leaves a row exactly at the 365-day boundary alone (the cutoff is strictly l
     $job = new PruneNotificationsJob($user->id);
     $job->handle($this->app->make(DatabaseManager::class));
 
-    // The job's predicate is `created_at < datetime('now', '-365 days')`.
-    // A row stamped EXACTLY 365 days ago is NOT strictly less than that
-    // same cutoff instant, so it survives — the boundary belongs to the
-    // "kept" side, not the "pruned" side.
+    // The predicate is a strict `<`, so a row stamped at exactly the cutoff
+    // belongs to the kept side.
     expect(pnjExists($id))->toBeTrue();
 });
 
@@ -131,12 +114,11 @@ it('prunes only the dispatching user\'s old rows, leaving another user\'s old ro
     expect(pnjExists($bOldId))->toBeTrue();
 });
 
-it('prunes with no KEK available (locked/headless device) — D-37\'s whole reason for existing', function (): void {
+it('prunes with no KEK available (locked/headless device)', function (): void {
     $user = pnjUser('pnj-kek-less');
     $session = $this->enablesEncryptionForUser($user);
 
-    // Simulate the real daemon dispatch shape (app-lock engaged / headless
-    // worker): withhold the KEK before the job runs.
+    // The daemon's real shape: app lock engaged, headless worker, no KEK.
     $this->app->make(AppLockKeyService::class)->withhold($session);
 
     $oldId = pnjNotification($user->id, 400);
@@ -166,8 +148,6 @@ it('is idempotent — running the job twice prunes nothing new on the second run
     expect(pnjExists($oldId))->toBeFalse();
     expect(pnjExists($recentId))->toBeTrue();
 
-    // Second run: nothing left to prune, must not throw and must not
-    // touch the surviving recent row.
     $job2 = new PruneNotificationsJob($user->id);
     $job2->handle($this->app->make(DatabaseManager::class));
 

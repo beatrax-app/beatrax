@@ -3,21 +3,13 @@
 declare(strict_types=1);
 
 use Modules\Ingestion\Internal\Adapters\Paypal\PaypalCsvLanguageProfile;
-use Modules\Ingestion\Public\Exceptions\UnsupportedPaypalCsvShapeException;
+use Modules\Ingestion\Internal\Exceptions\UnsupportedPaypalCsvShapeException;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
 
-/*
- * Locks the user-facing error message the sniffer surfaces when the user
- * uploads a PayPal Saldorapport (Balance Reconciliation Report) instead
- * of the per-event Rapport Transactiegegevens (Transaction Details
- * Report) CSV. The two exports look superficially identical (`.csv`,
- * comma-delimited, UTF-8 with BOM) but the Saldorapport ships rows
- * prefixed by record-type tokens (`RH`, `RD`, `RF`) and a completely
- * different column shape. Without an explicit shape check, the sniffer
- * fell through to the language-profile check and surfaced a misleading
- * "language profile not supported" message — the file was in Dutch but
- * the export type was wrong.
- */
+// PayPal's Saldorapport and Rapport Transactiegegevens exports are both
+// comma-delimited `.csv` with the same byte-order mark. Without an explicit
+// shape check the sniffer fell through to the language check and blamed the
+// language — for a file that was Dutch and simply the wrong export.
 
 beforeEach(function (): void {
     $this->sniffer = $this->app->make(HeaderSniffer::class);
@@ -25,10 +17,9 @@ beforeEach(function (): void {
 
 it('rejects a PayPal Saldorapport CSV with an actionable shape error', function (): void {
     $tmp = tempnam(sys_get_temp_dir(), 'sniff-pp-brr-').'.csv';
-    // Empirical first lines of the Saldorapport (Balance Reconciliation
-    // Report) export from the PayPal portal. The `RH` (Report Header)
-    // row is the discriminator — Rapport Transactiegegevens starts with
-    // the column-name header row directly.
+    // Verbatim first lines of a real Saldorapport export. The `RH` record-type
+    // token is the discriminator: the Transactiegegevens export opens on the
+    // column-name row instead.
     file_put_contents(
         $tmp,
         '"RH","Naam rapport","Status rapport","Begindatum en -tijd van rapport","Einddatum en -tijd van rapport","Datum en tijd voor het genereren van rapporten","Hiërarchie","Tijdzone"'."\n"
@@ -44,9 +35,6 @@ it('rejects a PayPal Saldorapport CSV with an actionable shape error', function 
 })->group('phase-16.1.1');
 
 it('still accepts the Rapport Transactiegegevens CSV shape after the Saldorapport guard is in place', function (): void {
-    // Regression backstop: the Saldorapport guard must not false-positive
-    // on the happy path. The redacted Rapport Transactiegegevens fixture
-    // must still sniff cleanly.
     $result = $this->sniffer->sniff(
         base_path('Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv'),
         PaypalCsvLanguageProfile::FORMAT,

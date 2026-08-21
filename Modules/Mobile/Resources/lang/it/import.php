@@ -28,7 +28,11 @@ return [
     'recovery_download' => 'Scarica come .txt',
     'recovery_copy' => 'Copia i codici',
     'recovery_copied' => 'Copiato',
+    'recovery_copy_failed' => 'Copia non riuscita. Annotare i codici.',
     'recovery_saved' => 'Salvato nei tuoi download.',
+    'recovery_share_title' => 'Codici di recupero Beatrax',
+    'recovery_share_message' => 'Conservali in un luogo sicuro.',
+    'recovery_save_failed' => 'Impossibile salvare il file. Annotare i codici.',
     'recovery_confirm' => 'Ho salvato questi codici in un posto sicuro.',
     'continue_to_pairing' => "Continua con l'abbinamento",
 

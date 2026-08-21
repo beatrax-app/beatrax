@@ -9,17 +9,6 @@ use Modules\Recurring\Internal\Http\Livewire\RecurringReviewPage;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Models\RecurringSeriesTransition;
 
-/*
- * Bulk Approve / Bulk Reject sticky action bar on /recurring/review.
- *
- * Pitfall 7 mitigation: after the first big backfill ~20 candidates can
- * land at once; the bulk-action bar lets the user resolve them in a
- * single click. Each bulk method runs the underlying single-row Public
- * Action in a loop, swallows foreign-user 404s so a poisoned select
- * doesn't break the batch, clears the selection, and dispatches a
- * single Undo toast naming the applied count.
- */
-
 function rrbUser(string $username): User
 {
     return User::query()->create([
@@ -129,10 +118,9 @@ it('skips foreign-user ids silently — only the caller`s rows flip (bulk-approv
 })->group('bulk-approve-skips-foreign-user-ids');
 
 it('coerces string ids from the wire payload before dispatching the action (bulk-approve-accepts-string-ids)', function (): void {
-    // Real browser payload: HTML checkbox `value=""` attributes
-    // round-trip through Livewire as strings, not ints. The bulk
-    // handlers must coerce before calling the int-typed Public
-    // Action — regression for TypeError seen in prod.
+    // Real browser payload: HTML checkbox value="" attributes round-trip through
+    // Livewire as strings, not ints, so the bulk handlers must coerce before
+    // calling the int-typed Public Action. Regression for a TypeError seen live.
     $stringIds = [];
     for ($i = 0; $i < 3; $i++) {
         $stringIds[] = (string) rrbSeries($this->user, 'pending', 'rrb::str::'.$i, 'str-'.$i)->id;

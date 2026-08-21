@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Public\ValueObjects;
 
-// The deliberate counterpart to Money — which refuses string parsing to stay
-// integer-only: parsing lives here at the input boundary and hands the system
-// a clean int. Accepts plain ("12.50"), Dutch-grouped ("1.234,56") and
-// comma-decimal ("12,50") forms; the rightmost of '.' or ',' is the decimal.
+// The string parsing Money refuses, confined to the input boundary. Accepts
+// "12.50", "1.234,56" and "12,50"; the rightmost of '.' or ',' is the decimal.
 final class MoneyInput
 {
-    // Signed because an amount can be negative — a debit, or a negative
-    // statement balance — so a leading '-' is honoured. Returns null when the
-    // string is empty or not a well-formed amount of at most two decimals.
+    // Null — never a guess — for anything that is not a well-formed amount of
+    // at most two decimals. A leading '-' is honoured.
     public static function tryToMinor(string $value): ?int
     {
         $trimmed = str_replace([' ', "\u{00A0}"], '', trim($value));
@@ -43,9 +40,8 @@ final class MoneyInput
         return $negative ? -$minor : $minor;
     }
 
-    // The magnitude-only variant: like tryToMinor(), but rejects zero and
-    // negatives. For inputs whose sign is fixed by context — a split leg, a
-    // pot/goal/budget target — where "0,00" or a minus is not a valid entry.
+    // Rejects zero as well as negatives, for inputs whose sign is fixed by
+    // context — a split leg, a pot/goal/budget target.
     public static function tryToPositiveMinor(string $value): ?int
     {
         $minor = self::tryToMinor($value);
@@ -53,20 +49,33 @@ final class MoneyInput
         return $minor !== null && $minor > 0 ? $minor : null;
     }
 
-    // e.g. -5000 -> "-50,00": the plain, symbol-free Dutch-decimal form the
-    // amount inputs round-trip through, so a value shown then submitted
+    // -123456 -> "-1.234,56": symbol-free, so a value shown then submitted
     // untouched parses back to the same minor units via tryToMinor().
     public static function formatMinor(int $minor): string
     {
         return ($minor < 0 ? '-' : '').self::formatAbsMinor($minor);
     }
 
-    // The magnitude only, e.g. 5000 (or -5000) -> "50,00", for inputs that
-    // carry their sign separately from the number they display.
+    // 123456 or -123456 -> "1.234,56", for inputs that carry their sign
+    // separately. Grouped because a five-figure balance in an input is read
+    // before it is edited, and tryToMinor() takes the group mark back out.
     public static function formatAbsMinor(int $minor): string
     {
         $abs = abs($minor);
+        $whole = (string) intdiv($abs, Money::MINOR_UNITS_PER_MAJOR);
+        $grouped = strrev(implode('.', str_split(strrev($whole), 3)));
 
-        return intdiv($abs, Money::MINOR_UNITS_PER_MAJOR).','.str_pad((string) ($abs % Money::MINOR_UNITS_PER_MAJOR), 2, '0', STR_PAD_LEFT);
+        return $grouped.','.str_pad((string) ($abs % Money::MINOR_UNITS_PER_MAJOR), 2, '0', STR_PAD_LEFT);
+    }
+
+    // The machine-readable form: "1234.56", no symbol and no group mark, for a
+    // CSV cell or an API field where a reader's separators would be a bug.
+    public static function toDecimalString(int $minor): string
+    {
+        $abs = abs($minor);
+
+        return ($minor < 0 ? '-' : '').
+            intdiv($abs, Money::MINOR_UNITS_PER_MAJOR).'.'.
+            str_pad((string) ($abs % Money::MINOR_UNITS_PER_MAJOR), 2, '0', STR_PAD_LEFT);
     }
 }

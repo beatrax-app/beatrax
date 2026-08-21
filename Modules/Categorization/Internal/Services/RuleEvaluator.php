@@ -10,17 +10,12 @@ use Modules\Import\Public\Pipeline\NormalizeStage;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/categorization/architecture.md
- */
 final class RuleEvaluator
 {
     public function __construct(private readonly DatabaseManager $db) {}
 
-    // Returns null when there is no merchants/merchant_memories row to
-    // match; the highest occurrence_count wins when several exist. The
-    // JOIN matches on the derived `normalized_name` key, distinct from
-    // the encrypted `counterparties.merchant_name` — no decrypt needed.
+    // The JOIN matches on the derived `normalized_name` key, which is not a
+    // sensitive column, so no decrypt is needed even for an encrypted user.
     public function lookupMemory(CanonicalTransaction $tx, int $userId): ?stdClass
     {
         $normalized = $tx->counterpartyNormalized;

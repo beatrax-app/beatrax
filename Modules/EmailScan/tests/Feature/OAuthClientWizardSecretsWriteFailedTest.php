@@ -7,18 +7,13 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Contracts\SecretShield;
-use Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal;
+use Modules\EmailScan\Public\Http\Livewire\OAuthClientWizardModal;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Modules\EmailScan\Public\Services\SecretsWriteFailed;
 
-/*
- * WR-08 iter-2: OAuthClientWizardModal::submit must catch
- * SecretsWriteFailed and surface an inline errorMessage rather than
- * letting the exception bubble to Livewire's generic "Server error"
- * toast. Without the catch, the user retypes the entire six-step
- * wizard preamble + re-pastes both credentials with no explanation
- * of why their submission failed.
- */
+// Letting SecretsWriteFailed bubble to Livewire's generic "Server error" toast
+// costs the user the whole six-step wizard and both pasted credentials, with
+// no explanation of why the submission failed.
 
 it('surfaces an inline errorMessage on SecretsWriteFailed instead of bubbling the exception', function (): void {
     $user = User::query()->create([
@@ -27,8 +22,8 @@ it('surfaces an inline errorMessage on SecretsWriteFailed instead of bubbling th
         'period_start_day' => 1,
     ]);
 
-    // Stub the repository to throw on saveProviderClient. Mirrors
-    // the EACCES / QueryException production failure mode.
+    // The throw stands in for the EACCES / QueryException the repository
+    // raises in production.
     $db = $this->app->make(DatabaseManager::class);
     $currentUser = $this->app->make(CurrentUser::class);
     $shield = $this->app->make(SecretShield::class);
@@ -57,13 +52,11 @@ it('surfaces an inline errorMessage on SecretsWriteFailed instead of bubbling th
         ->set('clientSecret', 'GOCSPX-secret-value')
         ->set('publishedConfirmed', true)
         ->call('submit')
-        // Inline error surfaces with actionable copy.
         ->assertSet('errorMessage', 'Could not save your OAuth client to disk — check your secrets-directory permissions and try again.')
-        // No exception bubbled — the component is still mounted.
+        // Still mounted, so nothing bubbled.
         ->assertSet('provider', 'gmail')
-        // Secret was wiped per the security posture (intentional —
-        // the user must re-paste rather than round-trip the secret
-        // through the wire payload on the next render).
+        // Wiped on purpose: re-pasting beats round-tripping the secret through
+        // the wire payload on the next render.
         ->assertSet('clientId', '')
         ->assertSet('clientSecret', '');
 });

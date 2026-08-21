@@ -6,17 +6,6 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 
-/**
- * Drives the `beatrax:rederive-fingerprints` artisan command across its
- * three operational paths: no-op on a fresh DB, dry-run reports without
- * writing, --confirm writes inside a single transaction, and a v3 tuple
- * collision aborts cleanly without touching the v2 rows.
- *
- * The seed helpers insert raw rows directly via DatabaseManager so the
- * scenario controls the stored `normalization_version` and `fingerprint`
- * values exactly — Eloquent's lifecycle would otherwise rewrite the
- * fingerprint via observers or fillable bypasses.
- */
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -142,10 +131,8 @@ it('falls back to dry-run output when neither --confirm nor --dry-run is supplie
 })->group('phase-2');
 
 it('re-derives v3 fingerprints over a realistic-scale row set without collisions', function (): void {
-    // Build 229 distinct v2 rows that all differ in at least one v3 tuple
-    // dimension. The count mirrors the 3-month ASN CAMT fixture corpus
-    // committed under `tests/fixtures/` so the stress-test runs at
-    // production scale.
+    // 229 rows: the size of the three-month ASN CAMT fixture corpus, so this
+    // runs at the scale a real re-derive would.
     for ($i = 0; $i < 229; $i++) {
         $day = sprintf('%02d', ($i % 28) + 1);
         $second = sprintf('%02d', $i % 60);

@@ -304,8 +304,8 @@ final-failing the sweep. Queue-uniqueness lock resolution is delegated to
 the shared `LockStore::forUniqueJobs()` helper, which resolves the cache
 store named by `config('cache.locks_store')`. The sweep runs read-mostly
 against `transactions` and writes only to Recurring-owned tables — the
-`noTransactionWritesFromRecurring` arch invariant blocks any cross-module
-write.
+`crossModuleRawTableWrites` arch invariant pins any cross-module raw-table
+write, and Recurring has none.
 
 ## Detection dispatch: two KEK postures (CRYPT-01)
 

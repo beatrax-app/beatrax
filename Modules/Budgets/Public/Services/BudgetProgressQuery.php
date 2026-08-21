@@ -17,8 +17,6 @@ final class BudgetProgressQuery
 {
     use CoercesScalars;
 
-    // Fraction of a budget at/above which the bar turns amber (legacy
-    // category_budgets progress read model).
     private const NEAR_THRESHOLD = 0.8;
 
     public function __construct(
@@ -38,9 +36,7 @@ final class BudgetProgressQuery
         $budgets = $connection->table('category_budgets as b')
             ->join('categories as c', 'c.id', '=', 'b.category_id')
             ->where('b.user_id', $user->id)
-            // Defence in depth: only surface budgets whose category is the
-            // user's own or a global one, so a mis-keyed row can never
-            // leak a foreign category's name across the user boundary.
+            // A mis-keyed budget row must not leak a foreign category's name.
             ->where(static function (QueryBuilder $query) use ($user): void {
                 $query->whereNull('c.user_id')->orWhere('c.user_id', $user->id);
             })
@@ -51,10 +47,8 @@ final class BudgetProgressQuery
             return [];
         }
 
-        // Delegates to the shared legs ∪ unsplit-parents read model so a
-        // split transaction's legs -- not its parent row -- count toward
-        // budget spend. Already keyed "categoryId|currency", matching what
-        // the loop below expects.
+        // The shared legs ∪ unsplit-parents read model, so a split
+        // transaction's legs — not its parent row — count toward spend.
         $spendByKey = $this->spendByCategory->forUserAndPeriodByCurrency($user->id, $period);
 
         $rows = [];
@@ -62,10 +56,8 @@ final class BudgetProgressQuery
             $categoryId = self::toInt($budget->category_id);
             $currency = self::toString($budget->currency);
             $budgetMinor = self::toInt($budget->budget_minor);
-            // Budgets are EUR and track EUR-settled spend (the app's
-            // consolidated value). Spend whose settled_currency differs from
-            // the budget currency is not counted — a known v1 limitation for
-            // the rare non-EUR-settled row.
+            // Keyed on the budget's own currency, so spend settled in any
+            // other currency is not counted — a known limitation.
             $spentMinor = max(0, $spendByKey[$categoryId.'|'.$currency] ?? 0);
 
             $fraction = $budgetMinor > 0 ? $spentMinor / $budgetMinor : 0.0;
@@ -110,9 +102,8 @@ final class BudgetProgressQuery
         return $options;
     }
 
-    // The picker's allow-list is not an authorization boundary on its own:
-    // every write path must call this since the Livewire category id is
-    // client-supplied.
+    // The Livewire category id is client-supplied, so every write path has to
+    // call this — rendering the picker's allow-list is not itself a boundary.
     public function canBudget(User $user, int $categoryId): bool
     {
         return array_key_exists($categoryId, $this->expenseCategories($user));

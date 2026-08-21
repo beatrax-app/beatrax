@@ -10,9 +10,6 @@ use Illuminate\Foundation\Vite;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * @link ../../../../../.docs/features/core/architecture.md
- */
 final class NoStoreFinancialData
 {
     // NativePHP injects its Livewire bridge as a static inline module on the
@@ -21,10 +18,9 @@ final class NoStoreFinancialData
     // recomputed from the shipped file so a package bump can never strand it.
     private const NATIVE_BRIDGE_JS = 'vendor/nativephp/desktop/resources/electron/electron-plugin/src/preload/livewire-dispatcher.js';
 
-    // Baseline headers on every `web` response. The app renders text it did
-    // not write — counterparty names, payment references and receipt bodies
-    // arrive from bank exports and mailboxes — so these are what stands
-    // between a missed escape and a working attack.
+    // The app renders text it did not write — counterparty names, payment
+    // references, receipt bodies from bank exports and mailboxes — so these
+    // are what stands between a missed escape and a working attack.
     /** @var array<string, string> */
     private const SECURITY_HEADERS = [
         'X-Content-Type-Options' => 'nosniff',
@@ -52,9 +48,8 @@ final class NoStoreFinancialData
 
     public function handle(Request $request, Closure $next): Response
     {
-        // Mint the per-request CSP nonce before the view renders so the inline
-        // scripts, @vite, Livewire and Flux all stamp the same value; the
-        // script-src below then admits exactly those and blocks injected code.
+        // Minted before the view renders so inline scripts, @vite, Livewire and
+        // Flux all stamp the same value the script-src below admits.
         $this->vite->useCspNonce();
 
         /** @var Response $response */
@@ -87,10 +82,9 @@ final class NoStoreFinancialData
         return $response;
     }
 
-    // Null while the Vite dev server is hot: HMR needs the dev origin and
-    // inline eval that a strict policy forbids, and the dev server is not a
-    // shipped surface. Every built bundle — desktop, mobile, self-hosted —
-    // gets the nonce policy, the XSS backstop for a missed Blade escape.
+    // Null while the Vite dev server is hot: HMR needs the dev origin and inline
+    // eval a strict policy forbids, and the dev server is not a shipped surface.
+    // Every built bundle gets the nonce policy instead.
     private function contentSecurityPolicy(): ?string
     {
         if ($this->vite->isRunningHot()) {
@@ -125,8 +119,7 @@ final class NoStoreFinancialData
 
     // The bridge's inline text is `\n{file}\n` — the module wrapper strips its
     // heredoc indentation — so hashing those exact bytes gives the token the
-    // browser computes. Null when the file is absent, since the bridge is then
-    // never injected and no hash is needed.
+    // browser computes. Null when the file is absent; nothing is injected then.
     private function nativeBridgeScriptHash(): ?string
     {
         $path = $this->app->basePath(self::NATIVE_BRIDGE_JS);

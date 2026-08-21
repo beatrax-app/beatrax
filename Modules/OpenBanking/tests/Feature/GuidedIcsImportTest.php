@@ -13,15 +13,6 @@ use Tests\Helpers\UploadIsolation;
 
 uses(RefreshDatabase::class);
 
-/*
- * 19-15 Task 1: Surface B7's guided ICS file-import affordance. Req 13's
- * proof — a dropped statement routes DIRECTLY through the EXISTING ICS
- * SourceAdapter (`ics-pdf`) into the EXISTING consolidated import-preview
- * (no new adapter, no new preview UI), and the path performs ZERO writes to
- * the OpenBanking secrets file — it stores no credentials and is entirely
- * independent of the OB connection state on the same page.
- */
-
 function guiUser(string $username): User
 {
     return User::query()->create([
@@ -75,7 +66,6 @@ it('dropping a PDF statement reveals the Import statement CTA without auto-submi
         ->set('icsStatement', UploadedFile::fake()->createWithContent('statement.pdf', $contents))
         ->assertSeeHtml('data-testid="ob-ics-import-button"');
 
-    // No ImportRun exists yet — the drop alone never runs the importer.
     expect(ImportRun::query()->where('user_id', $user->id)->count())->toBe(0);
 });
 
@@ -97,11 +87,8 @@ it('clicking Import statement routes the dropped file through the EXISTING ics-p
     expect($run)->not->toBeNull();
     expect($run->source_format)->toBe('ics-pdf');
 
-    // Req 13: zero writes to the OpenBanking secrets file on this path.
     expect(is_file(guiSecretsPath()))->toBeFalse();
 
-    // Zero writes to open_banking_connections either — this path is
-    // entirely independent of the OB connection state.
     expect(DB::table('open_banking_connections')->where('user_id', $user->id)->count())->toBe(0);
 
     $preview = $this->get(route('imports.preview', ['id' => $run->id]));

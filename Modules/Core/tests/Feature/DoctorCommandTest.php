@@ -6,10 +6,8 @@ use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Public\Contracts\Clock;
 
 it('reports installed versions and probe rows on a healthy environment', function (): void {
-    // Seed a fresh sidecar so the BackupFreshnessProbe reports ok; the
-    // WAL / synchronous probes already report ok against the testing
-    // connection per the SqliteOptimizationsProvider. With all three
-    // probes ok the existing inline tool checks decide the exit code.
+    // A fresh sidecar so BackupFreshnessProbe reports ok; with all three probes
+    // ok the inline tool checks decide the exit code.
     $backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-doctor-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
     putenv('NATIVEPHP_STORAGE_PATH='.dirname($backupsDir, 2));
 
@@ -47,12 +45,10 @@ it('reports installed versions and probe rows on a healthy environment', functio
     }
 });
 
-it('prints lines for each Phase 11 probe (WAL / synchronous / backup freshness)', function (): void {
-    // The three new probes report against the default connection. In
-    // the test harness that's sqlite_testing :memory:, where journal_mode
-    // is `memory` rather than `wal` — meaningless for the WAL/sync probes
-    // but still useful for proving the labels are printed. The freshness
-    // probe is the one we drive with a real sidecar so the row reads ok.
+it('prints lines for each probe (WAL / synchronous / backup freshness)', function (): void {
+    // The probes report against the default connection, which in the harness is
+    // sqlite_testing :memory: where journal_mode is `memory` — meaningless for
+    // the WAL/sync probes, but the labels still print.
     $backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-doctor-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
     putenv('NATIVEPHP_STORAGE_PATH='.dirname($backupsDir, 2));
 
@@ -91,15 +87,9 @@ it('prints lines for each Phase 11 probe (WAL / synchronous / backup freshness)'
 });
 
 it('exits non-zero when the BackupFreshnessProbe warns (DoctorCommand probe aggregation)', function (): void {
-    // Point the backups directory at a brand-new empty path. With no
-    // sidecars present, the BackupFreshnessProbe returns warning + the
-    // DoctorCommand aggregation bumps the exit code to >= 1. The
-    // WAL / synchronous probes report ok against the testing connection
-    // (SqliteOptimizationsProvider keeps them in sync).
-    //
-    // The drift-detection mechanic for WalModeProbe / SynchronousModeProbe
-    // is covered exhaustively by DoctorProbesTest in isolation; this
-    // feature test only verifies the command-level aggregation logic.
+    // An empty backups directory makes BackupFreshnessProbe warn, which bumps the
+    // aggregated exit code to >= 1. The probe drift mechanics themselves are
+    // covered by DoctorProbesTest; this asserts only the command-level roll-up.
     $backupsDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-doctor-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
     putenv('NATIVEPHP_STORAGE_PATH='.dirname($backupsDir, 2));
 

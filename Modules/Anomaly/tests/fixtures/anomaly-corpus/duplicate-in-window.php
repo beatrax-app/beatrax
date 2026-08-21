@@ -2,10 +2,8 @@
 
 declare(strict_types=1);
 
-// duplicate-in-window: two identical €49.99 charges to the same merchant
-// three days apart. The duplicate-charge detector (D-10: same counterparty
-// + exact same amount within the short window) fires a `duplicate` reason
-// on the second charge. Neither charge is on an approved recurring series.
+// Two identical €49.99 charges to one merchant three days apart, neither on
+// an approved recurring series: `duplicate` fires on the second.
 
 return [
     'settings' => [

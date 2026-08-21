@@ -8,16 +8,9 @@ use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Core\Models\User;
 
-/*
- * The app-lock's 30s grace window used to be enforced by a window.setTimeout
- * in lock.js. An Android WebView is suspended while backgrounded, so that
- * timer never fired, and the return handler then called _clearGrace() — which
- * cancelled it regardless of how long the app had actually been away. The
- * phone came back unlocked and only locked once the user touched something.
- *
- * The elapsed time is now judged server-side from a marker written the moment
- * the app leaves the foreground, so no timer has to survive anything.
- */
+// The grace window was a window.setTimeout in lock.js, and a backgrounded
+// Android WebView is suspended, so it never fired and the return handler
+// cancelled it however long the app was away. A marker needs no timer.
 
 function suspendedTimerUser(): User
 {
@@ -44,8 +37,8 @@ function suspendedTimerUser(): User
 it('locks on the next request when the grace window closed while backgrounded', function (): void {
     $user = suspendedTimerUser();
 
-    // 31s ago: past the grace window, but nowhere near the 5-minute idle
-    // timeout — so ONLY the background marker can produce this lock.
+    // Past the grace window but nowhere near the idle timeout, so only the
+    // background marker can produce this lock.
     $response = $this->actingAs($user)
         ->withSession([
             LockStateManager::SESSION_KEY => false,
@@ -72,8 +65,8 @@ it('does not lock when the app came back inside the grace window', function (): 
 it('spends the marker on the request that reads it', function (): void {
     $user = suspendedTimerUser();
 
-    // A return within grace must not leave the marker behind: backgrounding
-    // is what arms it, and a stale one would lock a session that never left.
+    // Backgrounding is what arms the marker, and a stale one would lock a
+    // session that never left.
     $this->actingAs($user)
         ->withSession([
             LockStateManager::SESSION_KEY => false,
@@ -98,8 +91,8 @@ it('records the marker when the client reports backgrounding', function (): void
 it('answers the resume probe with the lock redirect lock.js reloads on', function (): void {
     $user = suspendedTimerUser();
 
-    // lock.js reads `response.redirected`, so the redirect IS the signal that
-    // the grace closed — the endpoint itself never needs to say so in a body.
+    // lock.js reads `response.redirected`, so the redirect is itself the signal
+    // that the grace window closed.
     $this->actingAs($user)
         ->withSession([
             LockStateManager::SESSION_KEY => false,

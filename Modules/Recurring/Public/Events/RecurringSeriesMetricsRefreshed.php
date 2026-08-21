@@ -4,10 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Recurring\Public\Events;
 
-// Fires once per refreshed series per sweep (not per occurrence) after a
-// recurring_series row's metric columns are updated by the detector;
-// carries the post-refresh snapshot inline so listeners can decide whether
-// to act without re-reading the row.
+// Fires once per refreshed series per detector sweep, not once per occurrence.
 final readonly class RecurringSeriesMetricsRefreshed
 {
     public function __construct(

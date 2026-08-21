@@ -17,16 +17,10 @@ use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
 
 uses(RefreshDatabase::class, EnablesEncryptionForUser::class);
 
-/*
- * 14.1-05 — CR-05/D-05: the PayPal funding chain (both the deterministic
- * raw_payload-events arm and the ASN-direct counterparty_iban-alias arm)
- * resolves under an ENCRYPTED user — the same scenario would silently
- * return empty pre-fix, since the deterministic arm's raw query-builder
- * read bypassed the Eloquent cast entirely and the ASN-direct arm's JOIN
- * predicate ran an equality against ciphertext. Every seeded row here is
- * written through `RecordTransactions` (not `Transaction::create()`) so
- * `raw_payload`/`counterparty_iban` are genuinely encrypted at rest.
- */
+// Pre-fix this scenario returned empty under an encrypted user: the
+// deterministic arm's raw query-builder read bypassed the Eloquent cast, and
+// the ASN-direct arm's JOIN compared against ciphertext. Rows are written
+// through RecordTransactions so both columns are genuinely encrypted at rest.
 
 /**
  * @param  array<string, mixed>  $overrides
@@ -201,9 +195,8 @@ it('ASN-direct arm resolves under an encrypted user (counterparty_iban decrypt-t
         'sourceRef' => 'asn-1',
     ])], $this->user);
 
-    // Confirm the ASN row's counterparty_iban is genuinely ciphertext at
-    // rest — the pre-fix ciphertext-equality JOIN would find zero rows
-    // against this exact fixture.
+    // The pre-fix ciphertext-equality JOIN found zero rows against this
+    // fixture, so assert the column really is ciphertext at rest.
     $storedAsnTx = $this->db->connection()->table('transactions')
         ->where('account_id', $this->asn->id)->first();
     expect($storedAsnTx->counterparty_iban)->not->toBe('LU89751000135104200E');

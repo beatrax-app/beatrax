@@ -8,22 +8,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Sync\Internal\Http\Livewire\SyncStatusSection;
+use Modules\Sync\Public\Http\Livewire\SyncStatusSection;
 use Modules\Sync\Public\Services\SyncStatusService;
 
 uses(RefreshDatabase::class);
-
-/*
- * SyncStatusSectionTest — D-06 per-peer sync-status surface.
- *
- * Covers:
- *   - Component mounts cleanly for an authenticated user with no sessions.
- *   - Active peer shows 'syncing' overall status.
- *   - Closed peer (last sync complete) shows 'all_synced' overall status.
- *   - Failed peer with error_message surfaces 'error' overall + per-peer error label.
- *   - Component reads via SyncStatusService — no raw sync_sessions query in the Livewire class.
- *   - User-scope isolation: sessions for another user do not appear.
- */
 
 function statusUser(string $username): User
 {
@@ -36,8 +24,6 @@ function statusUser(string $username): User
 }
 
 /**
- * Insert a sync_sessions row and return its id.
- *
  * @param  array<string, mixed>  $overrides
  */
 function insertSession(DatabaseManager $db, User $user, array $overrides = []): int
@@ -130,7 +116,6 @@ it('shows error status and error label when a session is failed with an error me
         ->assertStatus(200)
         ->assertSet('overallStatus', 'error');
 
-    // The per-peer error label should surface "Handshake / verify failed".
     $component->assertSee('Handshake / verify failed');
 });
 
@@ -178,7 +163,6 @@ it('isolates sessions by user — another user sessions do not appear', function
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
-    // Insert a session for the other user only.
     insertSession($db, $otherUser, [
         'status' => 'active',
         'peer_device_id' => 'other-users-peer',
@@ -212,9 +196,7 @@ it('SyncStatusService is registered as a singleton and returns user-scoped rows'
 });
 
 it('component does not contain raw sync_sessions query (boundary rule)', function (): void {
-    // This structural test asserts the Livewire component class file does not
-    // contain 'sync_sessions' (T-13-16: reads only via SyncStatusService).
-    $componentFile = realpath(__DIR__.'/../../Internal/Http/Livewire/SyncStatusSection.php');
+    $componentFile = realpath(__DIR__.'/../../Public/Http/Livewire/SyncStatusSection.php');
 
     expect($componentFile)->not->toBeFalse()
         ->and(is_string($componentFile))->toBeTrue();

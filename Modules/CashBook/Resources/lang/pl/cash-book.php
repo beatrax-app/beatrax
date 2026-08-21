@@ -25,6 +25,8 @@ return [
     'no_entries' => 'Brak wpisów ręcznych.',
     'delete_entry' => 'Usuń wpis',
     'delete' => 'Usuń',
+    'delete_confirm' => 'Usunąć ten wpis?',
+    'delete_keep' => 'Zachowaj',
 
     'errors' => [
         'amount_positive' => 'Podaj kwotę większą od zera.',

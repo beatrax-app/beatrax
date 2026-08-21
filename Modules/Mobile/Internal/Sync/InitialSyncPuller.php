@@ -15,13 +15,12 @@ use Modules\Sync\Public\Services\HistoryReprojector;
 use Psr\Log\LoggerInterface;
 
 /**
- * @link ../../../../.docs/features/mobile/architecture.md
+ * @link ../../../../.docs/features/mobile/mobile-initial-sync-gate.md
  */
 final class InitialSyncPuller
 {
-    // The cursor state between "transfer finished" and "history rebuilt".
-    // Without it the rebuild ran inside the tick that finished the transfer
-    // and the step was never rendered.
+    // Without a state between "transfer finished" and "history rebuilt" the
+    // rebuild ran inside the finishing tick and the step never rendered.
     private const string PHASE_REBUILDING = 'rebuilding';
 
     public function __construct(
@@ -36,8 +35,7 @@ final class InitialSyncPuller
         private readonly LoggerInterface $logger,
     ) {}
 
-    // Safe to call repeatedly (e.g. from a Livewire wire:poll tick) -
-    // once phase reaches complete this is a cheap idempotent no-op.
+    // A cheap no-op once phase reaches complete, so a poll can keep calling.
     /**
      * @return array{records_applied: int, records_expected: ?int, percent: int, phase: string, blocked: ?SyncBlockedReason}
      */
@@ -53,10 +51,13 @@ final class InitialSyncPuller
             : $this->resolvePeerDeviceId($userId, $identity->deviceId);
 
         if ($peerDeviceId === null) {
-            // Locked / no key / sync never enabled, or no confirmed peer
-            // yet - skip entirely. Data stays encrypted; the cursor is left
-            // untouched.
-            return [...$this->progress($userId), 'blocked' => SyncBlockedReason::NoPeer];
+            // A peer that once confirmed and withdrew it reads identically to
+            // one that never paired, and calling that "waiting for the other
+            // device" left the screen turning on a pairing that cannot return.
+            return [
+                ...$this->progress($userId),
+                'blocked' => $this->peerRevokedUs($userId) ? SyncBlockedReason::Revoked : SyncBlockedReason::NoPeer,
+            ];
         }
 
         $cursor = $this->loadOrCreateCursor($userId, $peerDeviceId);
@@ -68,10 +69,6 @@ final class InitialSyncPuller
         return $this->advance($userId, $session, $peerDeviceId, $cursor, $lanHost, $lanPort);
     }
 
-    // Drives one sync step against a resolved, not-yet-complete cursor and
-    // persists the advanced state. Split from pull() so the identity/peer/
-    // complete guards stay a flat prelude rather than nesting the whole
-    // apply-and-persist body behind them.
     /**
      * @param  array{records_applied: int, records_expected: ?int, last_hlc_l: int, last_hlc_c: int, phase: string, reprojected_at: ?string}  $cursor
      * @return array{records_applied: int, records_expected: ?int, percent: int, phase: string, blocked: ?SyncBlockedReason}
@@ -87,8 +84,7 @@ final class InitialSyncPuller
         $result = $this->trigger->syncOnce($userId, $session, $lanHost, $lanPort);
 
         if ($result === null) {
-            // The key became unavailable mid-flow (race) - skip, no
-            // mutation.
+            // The key became unavailable mid-flow: skip, mutate nothing.
             return [...$this->toProgressArray($cursor), 'blocked' => SyncBlockedReason::Locked];
         }
 
@@ -105,10 +101,9 @@ final class InitialSyncPuller
 
         $keysInstalled = $this->keyringIsNonEmpty($userId);
 
-        // Announce the rebuild on the tick BEFORE running it. Re-projecting
-        // blocks the request it runs in, so doing it in the tick that
-        // finished the transfer made the screen jump straight to done,
-        // never showing the step that actually takes the time.
+        // Announce the rebuild on the tick BEFORE running it: re-projecting
+        // blocks its own request, so running it in the tick that finished the
+        // transfer made the screen jump to done past the slowest step.
         $reprojectedAt = $cursor['reprojected_at'];
         $announceRebuild = $reprojectedAt === null
             && $keysInstalled
@@ -134,18 +129,16 @@ final class InitialSyncPuller
             ];
         }
 
-        // The FIRST pull() step to observe a non-empty keyring re-projects
-        // the entire persisted op-log so any entry quarantined before the
-        // keyring was populated now decrypts and projects. Runs at most
-        // once per (user, peer) cursor, synchronously before completion.
+        // The first step to see a non-empty keyring re-projects the whole
+        // op-log, so entries quarantined before the keys arrived decrypt.
+        // At most once per (user, peer) cursor.
         if ($reprojectedAt === null && $keysInstalled) {
             try {
                 $this->reprojector->reproject($userId);
                 $reprojectedAt = $this->clock->now()->toIso8601String();
             } catch (\Throwable $e) {
-                // A re-projection failure must not crash the setup-screen
-                // poll. Log and leave reprojected_at null; completion
-                // stays gated on it below, so the next pull() retries.
+                // Leaving reprojected_at null keeps completion gated below,
+                // so the next pull() retries instead of crashing the poll.
                 $this->logger->error('InitialSyncPuller: history re-projection failed; will retry on the next pull.', [
                     'user_id' => $userId,
                     'exception' => $e,
@@ -153,16 +146,25 @@ final class InitialSyncPuller
             }
         }
 
-        // Finishing the sync leg is necessary but not sufficient for an
-        // import - completion also requires the desktop's epochs
-        // installed AND the history re-projected, else a relay-only or
-        // not-yet-delivered import would report complete prematurely.
+        // Finishing the sync leg is necessary but not sufficient: without the
+        // epochs and the re-projection, an import reports complete onto a
+        // dashboard of rows it cannot decrypt.
         $isComplete = $result === true && $keysInstalled && $reprojectedAt !== null;
 
         $phase = $isComplete ? 'complete' : 'pulling';
         $recordsExpected = $isComplete
             ? $recordsApplied
             : max($cursor['records_expected'] ?? 0, $recordsApplied);
+
+        // An import exists because another device HAS data, so finishing with
+        // nothing applied is an upstream defect. Nothing else says so: "0 of
+        // 0" on a complete screen looks like a sync with nothing to carry.
+        if ($isComplete && $recordsApplied === 0) {
+            $this->logger->warning('InitialSyncPuller: import completed without applying a single record.', [
+                'user_id' => $userId,
+                'peer_device_id' => $peerDeviceId,
+            ]);
+        }
 
         $this->persistCursor($userId, $peerDeviceId, new MobileSyncCursor(
             recordsApplied: $recordsApplied,
@@ -173,9 +175,8 @@ final class InitialSyncPuller
             reprojectedAt: $reprojectedAt,
         ));
 
-        // A silent screen is indistinguishable from a working one: this
-        // names what the pull is waiting on so a stall is legible instead of
-        // looking like an ordinary slow sync.
+        // Names what the pull is waiting on, so a stall reads as a stall
+        // rather than as an ordinary slow sync.
         $blocked = match (true) {
             $result === false => SyncBlockedReason::Unreachable,
             ! $keysInstalled => SyncBlockedReason::NoKeys,
@@ -192,10 +193,8 @@ final class InitialSyncPuller
         ];
     }
 
-    // A plain, non-secret integer pointer - read directly via a raw
-    // table query rather than GdkKeyringService (off-limits to this
-    // module directly); a bare read of a public, non-secret column
-    // crosses no module boundary.
+    // A raw column read rather than GdkKeyringService, which is off-limits to
+    // this module: current_epoch is a public, non-secret integer pointer.
     private function keyringIsNonEmpty(int $userId): bool
     {
         $currentEpoch = $this->db->connection()
@@ -206,9 +205,8 @@ final class InitialSyncPuller
         return $currentEpoch !== null;
     }
 
-    // Reads the durable progress cursor without driving a new pull step,
-    // so a cold-started process renders at the true resumed percent on
-    // its very first paint - never a default-0 flash.
+    // Reads the durable cursor without driving a step, so a cold-started
+    // process paints the true resumed percent instead of flashing 0.
     /**
      * @return array{records_applied: int, records_expected: ?int, percent: int, phase: string, blocked: ?SyncBlockedReason}
      */
@@ -237,8 +235,21 @@ final class InitialSyncPuller
         ];
     }
 
-    // Resolves the single confirmed non-self peer device_id (single-
-    // household pairing); multi-peer selection is out of scope.
+    // Paired but no longer confirmed means revoked: LanSyncClient clears
+    // confirmed_at when the other side says it no longer knows this device.
+    // A device that never paired has no row at all — "not yet", not "no more".
+    private function peerRevokedUs(int $userId): bool
+    {
+        return $this->db->connection()
+            ->table('device_registry')
+            ->where('user_id', $userId)
+            ->where('is_self', 0)
+            ->whereNotNull('paired_at')
+            ->whereNull('confirmed_at')
+            ->exists();
+    }
+
+    // Single-household pairing: the one confirmed non-self device.
     private function resolvePeerDeviceId(int $userId, string $localDeviceId): ?string
     {
         $confirmed = $this->registryService->deviceKeys($userId);
@@ -299,9 +310,8 @@ final class InitialSyncPuller
     {
         $now = $this->clock->now()->toIso8601String();
 
-        // loadOrCreateCursor() above guarantees a row already exists for
-        // this (user_id, peer_device_id) pair - a plain UPDATE, never a
-        // second insert path.
+        // loadOrCreateCursor() guarantees the row exists, so this stays a
+        // plain UPDATE rather than a second insert path.
         $this->db->connection()
             ->table('mobile_sync_progress')
             ->where('user_id', $userId)
@@ -317,10 +327,8 @@ final class InitialSyncPuller
             ]);
     }
 
-    // Counts how many entries FROM THE PEER exist strictly after ($lastHlcL,
-    // $lastHlcC), and the max (hlc_l, hlc_c) among them. A repeated call
-    // against an unchanged watermark returns 0 - the watermark only ever
-    // advances, so this never double-counts.
+    // The watermark only ever advances, so a repeated call against an
+    // unchanged one returns 0 and nothing is ever double-counted.
     /**
      * @return array{0: int, 1: int, 2: int} [count, maxHlcL, maxHlcC]
      */
@@ -334,10 +342,9 @@ final class InitialSyncPuller
 
         foreach ($frames as $frame) {
             foreach ($this->framer->decode($frame) as $entry) {
-                // Only what the PEER sent counts as progress. The watermark
-                // covers this device's own writes too, so a phone reported its
-                // own seeded rows as records received from a desktop it had
-                // never actually reached.
+                // The watermark covers this device's own writes too, so a
+                // phone counted its own seeded rows as records received from
+                // a desktop it had never actually reached.
                 if ($entry->deviceId !== $peerDeviceId) {
                     continue;
                 }
@@ -369,8 +376,6 @@ final class InitialSyncPuller
         ];
     }
 
-    // Plain-integer percent, clamped [0, 100]. Returns 0 when the
-    // expected total is unknown or zero (never a division by zero).
     private static function percentOf(int $applied, ?int $expected): int
     {
         if ($expected === null || $expected <= 0) {

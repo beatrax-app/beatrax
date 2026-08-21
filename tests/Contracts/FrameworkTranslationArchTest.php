@@ -4,14 +4,8 @@ declare(strict_types=1);
 
 use Modules\Core\Public\Enums\Locale;
 
-/*
- * The framework's own messages have to ship in every locale the product does.
- *
- * The app carried 26 locales of its own copy and none of Laravel's, so every
- * validation error rendered in English regardless of the chosen language —
- * "The naam field is required." on a Dutch screen. Nothing caught it, because
- * the parity test beside this one compares the app's module lang files against
- * each other and the framework's live outside that set entirely.
+/**
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#framework-translations-missing-from-every-locale
  */
 
 /** @return list<string> the framework lang files every locale must carry */

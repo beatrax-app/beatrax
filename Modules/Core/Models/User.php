@@ -11,8 +11,6 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 
 /**
- * @link ../../../.docs/features/core/architecture.md
- *
  * @property int $id
  * @property string $username
  * @property bool $is_developer

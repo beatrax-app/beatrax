@@ -10,14 +10,8 @@ use Modules\Core\Models\User;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
-/**
- * @link ../../../../.docs/features/categorization/architecture.md
- */
 final readonly class RowMatcher
 {
-    // One instance is built per ReapplyRulesJob run and folds every chunked
-    // transaction row through the same engine/applier/user/codec, so the
-    // per-run collaborators live here as state and only the row varies.
     public function __construct(
         private RuleEngine $engine,
         private RuleApplier $applier,
@@ -43,9 +37,8 @@ final readonly class RowMatcher
         $counterpartyName = is_string($row->counterparty_name) ? $row->counterparty_name : null;
         $description = is_string($row->description) ? $row->description : null;
 
-        // decryptValue() is a no-op pass-through when encryption isn't
-        // enabled, but skipping the call entirely when $hasKek is false
-        // avoids a wasted keyring-load attempt per row.
+        // decryptValue() is already a pass-through without encryption; this
+        // guard only avoids a wasted keyring-load attempt on every row.
         if ($this->hasKek) {
             if ($counterpartyName !== null && $counterpartyName !== '') {
                 $counterpartyName = $this->codec->decryptValue('transactions', 'counterparty_name', $counterpartyName, $this->userId, $this->session)['value'];

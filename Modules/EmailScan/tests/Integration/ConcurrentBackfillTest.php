@@ -23,29 +23,10 @@ use Modules\EmailScan\Public\Services\KnownSenderQuery;
 
 uses(RefreshDatabase::class);
 
-/*
- * SQLite writer-lock contention invariant.
- *
- * Two BackfillInboxJob runs for different inboxes of the same
- * user must converge without SQLITE_BUSY. The production guard
- * is `PRAGMA busy_timeout = 5000` set INSIDE the per-page
- * transaction so SQLite waits up to five seconds for a
- * competing writer before raising the busy error rather than
- * failing instantly.
- *
- * Two genuine concurrent writers cannot be created from a
- * single-threaded PHP test (the running thread cannot
- * simultaneously hold one transaction and release it from
- * another connection mid-wait). Instead the test wraps the
- * default connection with a passthrough decorator that records
- * every `statement()` call. The test then asserts that the
- * production transaction body issues `PRAGMA busy_timeout = 5000`
- * BEFORE any inbox_messages insert — proving the runtime guard
- * is in place every per-page write. A separate sanity check
- * exercises the busy_timeout in isolation by issuing the same
- * pragma against the real SQLite connection used by the test
- * suite and confirming the pragma applies cleanly.
- */
+// `PRAGMA busy_timeout = 5000` inside each per-page transaction is what makes
+// two backfills for one user wait rather than raise SQLITE_BUSY. A
+// single-threaded PHP test cannot stage two real writers, so a recording
+// decorator proves the pragma is issued before every insert instead.
 
 beforeEach(function (): void {
     Sleep::fake();
@@ -116,16 +97,10 @@ it('issues PRAGMA busy_timeout = 5000 inside every per-page transaction', functi
         $this->app->make(JobUserContext::class),
     );
 
-    // The recording arrays are populated by the connection
-    // decorator via reference; pull them off the decorator's
-    // public state.
     $captured = $recordingDb->capturedStatements;
 
-    // Every per-page transaction must have issued PRAGMA
-    // busy_timeout = 5000 before any other statement inside the
-    // transaction body. The job walks one page with three
-    // messages, so we expect at least 3 transactions × 1 pragma
-    // each.
+    // The pragma has to be the first statement in each transaction body, and
+    // the job walks one page of three messages, so at least three of them.
     $pragmaCount = 0;
     foreach ($captured as $tx) {
         if (count($tx) === 0) {
@@ -138,9 +113,7 @@ it('issues PRAGMA busy_timeout = 5000 inside every per-page transaction', functi
     }
     expect($pragmaCount)->toBeGreaterThanOrEqual(3);
 
-    // Sanity: confirm the persisted state landed despite the
-    // decorator passthrough — the recording wrapper is non-
-    // destructive.
+    // The recording wrapper is a passthrough, so the writes still landed.
     $msgCount = $realDb->connection()
         ->table('inbox_messages')
         ->where('inbox_id', $inboxId)
@@ -153,19 +126,13 @@ it('accepts PRAGMA busy_timeout = 5000 on the live test connection without error
     $db = $this->app->make(DatabaseManager::class);
     $connection = $db->connection();
 
-    // Issue the pragma; the connection responds without raising.
     $connection->statement('PRAGMA busy_timeout = 5000');
 
     expect(true)->toBeTrue();
 });
 
-/**
- * Passthrough DatabaseManager that wraps every `connection()`
- * call's result in a recording decorator. The capturedStatements
- * property collects one array per `transaction()` invocation,
- * each carrying the raw SQL strings issued via `statement()`
- * inside the transaction body.
- */
+// capturedStatements collects one array per transaction() invocation, holding
+// the raw SQL issued via statement() inside that transaction body.
 final class RecordingDatabaseManager extends DatabaseManager
 {
     /** @var list<list<string>> */

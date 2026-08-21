@@ -22,9 +22,6 @@ use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Events\PaymentReminderDue;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
-/**
- * @link ../../../../.docs/features/recurring/architecture.md
- */
 final class EmitPaymentRemindersJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Dispatchable;

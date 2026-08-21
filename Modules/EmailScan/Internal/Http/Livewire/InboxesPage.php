@@ -32,33 +32,20 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
-/**
- * @link ../../../../../.docs/features/email-scan/architecture.md
- */
 final class InboxesPage extends Component
 {
     use DispatchesToast;
 
     private const INBOX_NOT_FOUND = 'Inbox not found.';
 
-    // Populated from the single-use open_backfill_modal session flash
-    // the OAuth callback controller writes; when set, the Blade layer
-    // auto-dispatches backfill-window:open scoped to this inbox id.
     public ?int $openBackfillForInboxId = null;
 
-    // One-shot oauth_canceled flash carried from the OAuth callback
-    // controller through mount(), read here (not via the session()
-    // global helper in Blade) so DI-only applies to the render prop too.
+    // Carried through mount() rather than read via the session() global in
+    // Blade, so the DI-only rule covers the render props too.
     public ?string $oauthCanceledMessage = null;
 
-    // One-shot oauth_failed flash — same rationale as
-    // $oauthCanceledMessage above.
     public ?string $oauthFailedMessage = null;
 
-    // Inbox id from the ?reconnect={id} query parameter; when it
-    // resolves to a gmail/microsoft inbox owned by the current user,
-    // mount() auto-dispatches oauth-client-wizard:open against it. A
-    // foreign or missing id is silently ignored (404-not-403 contract).
     #[Url(as: 'reconnect', except: '')]
     public ?int $reconnectInboxId = null;
 
@@ -68,10 +55,8 @@ final class InboxesPage extends Component
         InboxQuery $inboxQuery,
         LoggerInterface $logger,
     ): void {
-        // The OAuth callback redirects with a session flash carrying
-        // the freshly-connected inbox id; pick it up and dispatch
-        // backfill-window:open. hasSession() guards a direct Livewire
-        // test harness that boots without a bound session.
+        // hasSession() guards a direct Livewire test harness that boots
+        // without a bound session.
         if ($request->hasSession()) {
             $this->consumeOAuthFlashes($request->session());
         }
@@ -79,9 +64,8 @@ final class InboxesPage extends Component
         $this->handleReconnectQueryParam($currentUser, $inboxQuery, $logger);
     }
 
-    // Every flash below uses pull() (single-use) so a later wire:poll
-    // tick or back-button revisit doesn't re-fire the modal or repaint
-    // a stale canceled/failed banner.
+    // pull() is single-use: a later wire:poll tick or back-button revisit
+    // must not re-fire the modal or repaint a stale banner.
     private function consumeOAuthFlashes(Session $session): void
     {
         $candidate = $session->pull('open_backfill_modal');
@@ -104,10 +88,8 @@ final class InboxesPage extends Component
         }
     }
 
-    // ?reconnect={id} hand-off: the SystemAlertsBanner Reconnect link
-    // routes here, auto-dispatching the modal-open event. Cross-user or
-    // missing ids are silently ignored (404-not-403) but logged at info
-    // so an operator can see the attempt.
+    // Cross-user or missing ids are silently ignored (404-not-403) but
+    // logged at info so an operator can still see the attempt.
     private function handleReconnectQueryParam(
         CurrentUser $currentUser,
         InboxQuery $inboxQuery,
@@ -134,10 +116,8 @@ final class InboxesPage extends Component
         }
     }
 
-    // Optimistically acknowledges the user's active
-    // oauth_reconsent_required alert for an inbox when the OAuth
-    // wizard signals a re-consent dance started; if the refresh later
-    // fails, RaiseReconsentAlertOnTokenFailure re-raises a fresh alert.
+    // Optimistic: if the refresh later fails, RaiseReconsentAlertOnTokenFailure
+    // raises a fresh alert.
     #[On('oauth-client-wizard:reconsented')]
     public function acknowledgeReconnect(
         int $inboxId,
@@ -155,15 +135,11 @@ final class InboxesPage extends Component
             try {
                 ($acknowledge)($alertId, $user);
             } catch (NotFoundHttpException) {
-                // Cross-row race: already acknowledged between the
-                // lookup and the call. Silent no-op keeps this idempotent.
+                // Already acknowledged between the lookup and the call.
             }
         }
     }
 
-    // Resolves the active oauth_reconsent_required alert ids for the
-    // given user + inbox, preferring SQLite's json_extract and falling
-    // through to a LIKE form when the JSON1-extension query throws.
     /**
      * @return list<int>
      */
@@ -180,10 +156,9 @@ final class InboxesPage extends Component
                 ->pluck('id')
                 ->all();
         } catch (Throwable) {
-            // SQLite LIKE has no character classes; anchor the
-            // trailing boundary by OR-ing the comma + closing-brace
-            // variants so `inbox_id=1` does not falsely match
-            // `inbox_id=10`, `inbox_id=11`, etc.
+            // SQLite LIKE has no character classes, so the trailing boundary
+            // is OR-ed as comma-or-brace: `inbox_id=1` must not match
+            // `inbox_id=10`.
             $withComma = '%"inbox_id":'.$inboxId.',%';
             $withBrace = '%"inbox_id":'.$inboxId.'}%';
             $rows = (clone $base)
@@ -205,9 +180,6 @@ final class InboxesPage extends Component
         return $ids;
     }
 
-    // Opens the backfill window modal scoped to a specific inbox row
-    // (wired to the inline Edit link) by dispatching the event
-    // BackfillWindowModal listens for via #[On(...)].
     public function editWindow(
         int $inboxId,
         CurrentUser $currentUser,
@@ -225,16 +197,12 @@ final class InboxesPage extends Component
         );
     }
 
-    // Polling target for the backfill progress strip
-    // (wire:poll.2s="refreshBackfillProgress"); intentionally a no-op
-    // because Livewire's re-render on every tick already re-queries
-    // InboxQuery for the live backfill_progress payload.
+    // Intentionally a no-op: Livewire's re-render on each wire:poll tick
+    // already re-queries InboxQuery for the live backfill_progress payload.
     public function refreshBackfillProgress(): void {}
 
-    // Manually triggers an incremental scan (the "Scan now" button),
-    // dispatching IncrementalScanJob whose ShouldBeUnique constraint
-    // deduplicates a rapid double-click into one queued job. No-ops
-    // with a toast when the inbox is already backfilling/scanning.
+    // IncrementalScanJob's ShouldBeUnique collapses a rapid double-click
+    // into one queued job.
     public function scanNow(
         int $inboxId,
         CurrentUser $currentUser,
@@ -255,10 +223,8 @@ final class InboxesPage extends Component
         $this->toast(Lang::get('email-scan::inboxes.toast.scan_started'));
     }
 
-    // Kicks off the per-inbox OAuth consent re-grant flow for a row
-    // stuck in needs_reauth, redirecting to
-    // /oauth/connect/{provider}?inbox_id={id} so OAuthConnectController
-    // resumes the existing row instead of backfilling from scratch.
+    // ?inbox_id={id} is what makes OAuthConnectController resume the
+    // existing row instead of connecting a second inbox.
     public function reconnect(
         int $inboxId,
         CurrentUser $currentUser,
@@ -274,17 +240,12 @@ final class InboxesPage extends Component
         $target = $urls->route('oauth.connect', ['provider' => $health->provider])
             .'?inbox_id='.$inboxId;
 
-        // Livewire 3+ honours $this->redirect($url) for client-side
-        // navigation (matches the openWizard() pattern above which uses
-        // $this->redirectRoute(...)). Plain RedirectResponse return is
-        // not picked up by the Livewire wire:click protocol.
+        // A returned RedirectResponse is not picked up by the wire:click
+        // protocol; $this->redirect() is.
         return $this->redirect($target);
     }
 
-    // Severs the mailbox: best-effort provider-side token revoke, then the
-    // local tokens and inbox row (children cascade). The row leaving the
-    // re-rendered list is the confirmation; the user's already-imported
-    // receipts live in file_imports and are not touched.
+    // Already-imported receipts live in file_imports and survive this.
     public function disconnect(
         int $inboxId,
         CurrentUser $currentUser,
@@ -293,10 +254,8 @@ final class InboxesPage extends Component
         ($disconnect)($inboxId, $currentUser->user());
     }
 
-    // Promotes a discovered_senders candidate into known_senders and
-    // transitions the row to state='added' (wired to the "Add" chip).
-    // PromoteDiscoveredSender is fully idempotent — an already
-    // promoted/dismissed row is a silent no-op.
+    // PromoteDiscoveredSender is idempotent — an already promoted or
+    // dismissed row is a silent no-op.
     public function promoteSender(
         int $discoveredSenderId,
         CurrentUser $currentUser,
@@ -306,8 +265,6 @@ final class InboxesPage extends Component
         $this->toast(Lang::get('email-scan::inboxes.toast.sender_added'));
     }
 
-    // Dismisses a discovered_senders candidate. Mirror of
-    // promoteSender — idempotent + cross-user 404 inside the action.
     public function dismissSender(
         int $discoveredSenderId,
         CurrentUser $currentUser,
@@ -329,10 +286,8 @@ final class InboxesPage extends Component
             return $this->redirectRoute('oauth.connect', ['provider' => $provider]);
         }
 
-        // Dispatches the modal's own open event rather than
-        // modal-show directly: the modal sets its $provider property
-        // and mounts under the provider-suffixed name before itself
-        // dispatching modal-show against that now-correct name.
+        // Not modal-show directly: the modal has to set $provider and mount
+        // under the provider-suffixed name before it can be shown.
         $this->dispatch('oauth-client-wizard:open', provider: $provider);
 
         return null;
@@ -347,9 +302,8 @@ final class InboxesPage extends Component
         $user = $currentUser->user();
         $inboxes = $inboxQuery->forCurrentUser($user);
 
-        // Skips the discovered-senders query when the user has no
-        // connected inboxes: the join would always return zero rows,
-        // saving a query on every empty-state render and wire:poll tick.
+        // With no inboxes the join always returns zero rows — skipping it
+        // saves a query on every empty-state render and wire:poll tick.
         $discoveredCandidates = $inboxes === []
             ? []
             : $discoveredQuery->candidatesForUser($user);

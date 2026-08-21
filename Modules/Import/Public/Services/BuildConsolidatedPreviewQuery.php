@@ -13,18 +13,13 @@ use Modules\Import\Public\Dto\ConsolidatedPreviewSection;
 use Modules\Import\Public\Dto\PreviewRowDto;
 use Modules\Ledger\Public\Enums\ImportRunStatus;
 
-/**
- * @link ../../../../.docs/features/import/architecture.md#consolidated-preview-multi-run-commit
- */
 final readonly class BuildConsolidatedPreviewQuery
 {
-    // The underlying preview cache TTL (30 min) already empties the row
-    // set well before this day-level window matters; filtering here too
-    // keeps the contract explicit at the query layer.
+    // The 30-minute cache TTL empties the rows long before this matters;
+    // the day-level window keeps the contract explicit at the query layer.
     public const int STALE_WINDOW_DAYS = 14;
 
-    // Mirrors the existing AliasMatchPreviewQuery five-row UI cap for
-    // the number of sampleRows rendered per section.
+    // Mirrors AliasMatchPreviewQuery's five-row cap.
     public const int SAMPLE_ROW_LIMIT = 5;
 
     public function __construct(
@@ -61,9 +56,8 @@ final readonly class BuildConsolidatedPreviewQuery
             );
         }
 
-        // Group surviving ids by their source_format while preserving
-        // first-appearance order so section ordering is deterministic
-        // for a given input list.
+        // First-appearance order is preserved, so a given input list always
+        // produces the same section order.
         $groupedIds = [];
         $orderedFormats = [];
         foreach ($surviving as $row) {
@@ -110,9 +104,6 @@ final readonly class BuildConsolidatedPreviewQuery
             ->select(['id', 'source_format'])
             ->get();
 
-        // Preserve caller-supplied ordering so section order is
-        // deterministic — first-appearance of each source_format in
-        // the input list wins.
         $bySurvivingId = [];
         foreach ($rows as $row) {
             $id = is_numeric($row->id) ? (int) $row->id : 0;
@@ -132,8 +123,7 @@ final readonly class BuildConsolidatedPreviewQuery
         return $ordered;
     }
 
-    // All counts are produced from a single cache read per run,
-    // eliminating the TTL-expiry race a second read would introduce.
+    // One cache read per run: a second read could cross a TTL expiry.
     /**
      * @param  list<int>  $importRunIds
      * @param  ?int  $override  When non-null and positive, replaces the
@@ -197,10 +187,9 @@ final readonly class BuildConsolidatedPreviewQuery
             return 'empty';
         }
 
-        // A failed parse contributes one row, an error carrying the reason.
-        // Counted as neither committable nor duplicate, it left the section
-        // 'ready' with a total of zero — a statement the app had correctly
-        // refused, presented as read and fine with a commit button under it.
+        // A failed parse contributes a single error row, which counts as
+        // neither committable nor duplicate. Without this the section reads
+        // 'ready' with a total of zero and offers a commit button.
         foreach ($allRows as $row) {
             if ($row->status !== 'error') {
                 return 'ready';
@@ -210,9 +199,8 @@ final readonly class BuildConsolidatedPreviewQuery
         return 'error';
     }
 
-    // The reason a section failed, in the parser's own words: which format it
-    // expected and what to re-download. Written to the log already; this is
-    // what carries it to the screen.
+    // The parser's own reason — which format it expected, what to
+    // re-download — carried to the screen rather than only to the log.
     /**
      * @param  list<PreviewRowDto>  $allRows
      */

@@ -10,9 +10,6 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\Category;
 use Psr\Log\LoggerInterface;
 
-/**
- * @link ../../../../.docs/features/categorization/architecture.md
- */
 final class DefaultCategorizationRuleSeeder
 {
     public function __construct(

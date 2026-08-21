@@ -7,13 +7,8 @@ namespace Modules\Migration\Tests\Support;
 use RuntimeException;
 use ZipArchive;
 
-/**
- * Shared path/extraction helpers for the golden fixtures under
- * `Modules/Migration/tests/Fixtures/`, used by the Wave 0 RED parser/
- * feature tests (13.5-02 Task 3). Kept as a plain PSR-4 class (rather than
- * global test-file functions) so multiple test files can use identically
- * named helpers without a global-function collision.
- */
+// A shared class rather than global test helpers, so several test files can
+// use these names without colliding.
 final class MigrationFixturePaths
 {
     public static function root(): string
@@ -21,12 +16,8 @@ final class MigrationFixturePaths
         return dirname(__DIR__).'/Fixtures';
     }
 
-    /**
-     * The ynab4 fixture ships as a loose two-CSV folder (a valid YNAB4
-     * export shape per RESEARCH.md — "a ZIP/folder containing two files")
-     * so no extraction step is needed; the directory itself IS the
-     * `$extractedPath` a `ParsesMigrationSource::parse()` expects.
-     */
+    // A YNAB4 export is a loose two-CSV folder, so there is nothing to extract:
+    // the directory itself is the $extractedPath parse() expects.
     public static function ynab4Dir(string $version): string
     {
         return self::root()."/ynab4/{$version}";
@@ -44,11 +35,6 @@ final class MigrationFixturePaths
         return self::root().'/corrupt/not-a-real-export.zip';
     }
 
-    /**
-     * Extracts a ZIP fixture to a fresh temp directory and returns its
-     * path — the caller is responsible for cleaning it up (or leaving it,
-     * since it lives under the OS temp dir).
-     */
     public static function extractZip(string $zipPath): string
     {
         $dir = sys_get_temp_dir().'/migration-fixture-extract-'.uniqid('', true);

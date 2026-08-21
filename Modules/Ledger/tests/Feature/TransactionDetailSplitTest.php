@@ -20,14 +20,6 @@ use Modules\Ledger\Public\Services\SpendByCategoryQuery;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
 
-/*
- * Feature tests for the inline split editor on TransactionDetail (Phase
- * 13.1 Plan 05). Covers the full lifecycle per the plan's <behavior>
- * block: fresh-open seeding, the server-truthful remaining gate, per-leg
- * validation, add/remove-leg, unsplit/remove-to-one collapse, per-leg tax
- * independence, and the transfer-type gate.
- */
-
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
@@ -60,7 +52,7 @@ beforeEach(function (): void {
     $this->household = Category::create(['user_id' => null, 'name' => 'Household', 'slug' => 'household-tdst', 'kind' => 'expense', 'display_order' => 2]);
 });
 
-/** Persist an €80 expense (unsplit) for the fixture user, categorised as Groceries. */
+// An €80 unsplit expense for the fixture user, categorised as Groceries.
 function tdstExpense(int $userId, int $accountId, int $runId, ?int $categoryId): Transaction
 {
     static $i = 500000;
@@ -166,7 +158,7 @@ it('rejectsAMissingCategory', function (): void {
         ->set('legs.0.amount', '60,00')
         ->set('legs.0.categoryId', $this->groceries->id)
         ->set('legs.1.amount', '20,00')
-        ->set('legs.1.categoryId', '') // left blank
+        ->set('legs.1.categoryId', '')
         ->call('saveSplit')
         ->assertSet('splitError', 'Choose a category.');
 
@@ -174,15 +166,10 @@ it('rejectsAMissingCategory', function (): void {
 })->group('phase-13.1');
 
 it('coercesEveryLegToTheParentsSignSoAnOppositeSignEntryCannotBeSaved', function (): void {
-    // The absolute-amount-only input (Req 3/D-03) can never itself produce
-    // an opposite-sign leg — a literal "-60,00" fails the parse regex
-    // entirely (no leading minus is accepted), so it contributes €0 to the
-    // live remaining recompute. That leaves remainingMinor non-zero, which
-    // the server-side gate rejects BEFORE the per-leg parse loop would
-    // otherwise report the leg itself as invalid — either way, save is
-    // blocked and nothing persists. Every leg that DOES parse is coerced to
-    // the parent's sign inside saveSplit(), so a genuine opposite-sign row
-    // can never reach SaveTransactionSplit from this editor.
+    // "-60,00" fails the parse regex outright, so it contributes €0 and the
+    // remaining-total gate blocks the save before the per-leg loop runs. Legs
+    // that do parse are coerced to the parent's sign inside saveSplit(), so an
+    // opposite-sign row cannot reach SaveTransactionSplit from this editor.
     $tx = tdstExpense($this->user->id, $this->account->id, $this->run->id, $this->groceries->id);
 
     Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
@@ -263,6 +250,28 @@ it('unsplitDefaultsToTheLargerMagnitudeLegAndCollapsesOnConfirm', function (): v
     expect(TransactionSplit::query()->where('transaction_id', $tx->id)->count())->toBe(0);
     $tx->refresh();
     expect($tx->category_id)->toBe($this->groceries->id);
+})->group('phase-13.1');
+
+it('namesTheUnsplitSurvivorRadioGroupAndFormatsItsAmountsThroughMoney', function (): void {
+    $tx = tdstExpense($this->user->id, $this->account->id, $this->run->id, $this->groceries->id);
+    app(SaveTransactionSplit::class)->save($this->user, $tx->id, [
+        ['id' => null, 'category_id' => $this->groceries->id, 'settled_amount_minor' => -6000, 'note' => null],
+        ['id' => null, 'category_id' => $this->household->id, 'settled_amount_minor' => -2000, 'note' => null],
+    ]);
+
+    $html = Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
+        ->call('unsplit')
+        ->html();
+
+    // Without the legend a screen reader reads each radio with no question.
+    expect($html)->toContain('<legend class="sr-only">Category to keep</legend>');
+    expect(preg_match('/<fieldset>.*name="unsplit-survivor".*<\/fieldset>/s', $html))->toBe(1);
+
+    // Money::format(), not a literal € glued to the raw input string — hence
+    // the non-breaking space ICU puts after the symbol.
+    expect($html)->toContain("€\u{00A0}60,00")
+        ->and($html)->toContain("€\u{00A0}20,00")
+        ->and($html)->not->toContain('€60,00');
 })->group('phase-13.1');
 
 it('unsplitSurvivorCanBeFlippedBeforeConfirming', function (): void {
@@ -369,7 +378,7 @@ it('rendersTheNotYetSplitEmptyStateOnAnExpenseDetailPage', function (): void {
 })->group('phase-13.1');
 
 it('autoUnsplitsWhenReclassifyingASplitToANonSplittableType', function (): void {
-    // CR-01: reclassifying a SPLIT expense to a non-splittable type
+    // Reclassifying a SPLIT expense to a non-splittable type
     // (transfer_out) must collapse the split first — otherwise the legs are
     // orphaned into phantom category spend with no UI path to recover.
     $tx = tdstExpense($this->user->id, $this->account->id, $this->run->id, $this->groceries->id);
@@ -383,7 +392,7 @@ it('autoUnsplitsWhenReclassifyingASplitToANonSplittableType', function (): void 
     Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
         ->assertSet('hasPersistedSplit', true)
         ->call('reclassify', 'transfer_out')
-        ->assertSet('hasPersistedSplit', false); // dead-UI guard cleared
+        ->assertSet('hasPersistedSplit', false);
 
     // Legs are gone — the sole mutator emitted their delete tombstones.
     expect(TransactionSplit::query()->where('transaction_id', $tx->id)->count())->toBe(0);
@@ -404,7 +413,7 @@ it('autoUnsplitsWhenReclassifyingASplitToANonSplittableType', function (): void 
 })->group('phase-13.1');
 
 it('emitsAPerLegDeleteTombstoneWhenDeletingASplitParent', function (): void {
-    // WR-01: parent delete must emit an explicit per-leg delete tombstone so
+    // Parent delete must emit an explicit per-leg delete tombstone so
     // peers converge without relying on FK cascade at replay time.
     $tx = tdstExpense($this->user->id, $this->account->id, $this->run->id, $this->groceries->id);
     app(SaveTransactionSplit::class)->save($this->user, $tx->id, [
@@ -430,7 +439,7 @@ it('emitsAPerLegDeleteTombstoneWhenDeletingASplitParent', function (): void {
         fn (TransactionMutated $e): bool => $e->transactionId === $tx->id && $e->mutationType === 'delete',
     );
 
-    // …plus one explicit leg-delete tombstone per leg (WR-01), mirroring unsplit().
+    // …plus one explicit leg-delete tombstone per leg, mirroring unsplit().
     Event::assertDispatchedTimes(TransactionSplitMutated::class, 2);
     foreach ($legIds as $legId) {
         Event::assertDispatched(
@@ -443,7 +452,7 @@ it('emitsAPerLegDeleteTombstoneWhenDeletingASplitParent', function (): void {
 })->group('phase-13.1');
 
 it('doesNotWriteACategoryOrOpWhenBackingOutOfANeverPersistedSplitEditor', function (): void {
-    // WR-02: removing to one leg in a never-persisted editor is a pure
+    // Removing to one leg in a never-persisted editor is a pure
     // in-memory back-out — it must NOT call the mutator, write a category, or
     // emit an op-log entry.
     $tx = tdstExpense($this->user->id, $this->account->id, $this->run->id, $this->groceries->id);
@@ -463,5 +472,5 @@ it('doesNotWriteACategoryOrOpWhenBackingOutOfANeverPersistedSplitEditor', functi
     expect(TransactionSplit::query()->where('transaction_id', $tx->id)->count())->toBe(0);
 
     $tx->refresh();
-    expect($tx->category_id)->toBe($this->groceries->id); // untouched
+    expect($tx->category_id)->toBe($this->groceries->id);
 })->group('phase-13.1');

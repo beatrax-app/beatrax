@@ -10,6 +10,7 @@ return [
         'reprojecting' => 'Rebuilding your history…',
         'retrying' => 'Reconnecting to the other device…',
         'locked' => 'Unlock the app to continue setting up.',
+        'revoked' => 'This device was removed from your other device. Pair again to resume syncing.',
     ],
     'step' => [
         'connect' => 'Connecting to your other device',

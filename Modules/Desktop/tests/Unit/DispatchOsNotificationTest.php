@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Lang;
 use Modules\Core\Models\User;
 use Modules\Desktop\Internal\Listeners\DispatchOsNotification;
 use Modules\Desktop\Internal\Native\WindowFocusState;
@@ -14,25 +15,6 @@ use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
 uses(RefreshDatabase::class);
-
-/*
- * Tests the D-31 collapsed OS-notification model: DispatchOsNotification is
- * now the SOLE listener on `NotificationDeliverable`, deciding only
- * whether/how to deliver an ALREADY-PERSISTED row to the OS —
- * SuppressionEvaluator (D-38 invariant 4) then the D-13 focus-gate then
- * D-24 hide-details.
- *
- * NATIVEPHP-FAKES.md records the `Notification` facade as ABSENT in
- * NativePHP v2 — there is no fakeable client we can intercept the
- * `Notification::title(...)->message(...)->event(...)->reference(...)
- * ->show()` chain against. Where the test needs to assert the FIRED
- * payload (event class + reference URL), the assertion is deferred
- * `->todo()`. Where the test asserts the DELIVERY DECISION (fire vs stay
- * quiet), the assertion is always automated: we `Http::fake()` the
- * NativePHP HTTP client so a fired notification surfaces as an outbound
- * POST to `/api/notification`, and assert the presence / absence of that
- * POST.
- */
 
 function donUser(string $username): User
 {
@@ -89,7 +71,7 @@ function donForecastDeliverable(int $userId): NotificationDeliverable
         notificationId: hash('sha256', 'don-forecast-'.$userId),
         userId: $userId,
         triggerType: DeterministicKeyDeriver::TRIGGER_FORECAST_SHORTFALL,
-        title: 'Cash-flow shortfall ahead',
+        title: (string) Lang::get('notifications::copy.title.forecast'),
         body: 'Your projected balance dips below zero within the next 30 days.',
         deepLinkRoute: '/forecast',
     );
@@ -101,13 +83,60 @@ function donDriftDeliverable(int $userId): NotificationDeliverable
         notificationId: hash('sha256', 'don-drift-'.$userId),
         userId: $userId,
         triggerType: DeterministicKeyDeriver::TRIGGER_DRIFT_CHANGED,
-        title: 'A recurring charge changed',
+        title: (string) Lang::get('notifications::copy.title.drift'),
         body: 'A recurring charge moved up by 2.50 EUR.',
         deepLinkRoute: '/drift',
     );
 }
 
-it('notification suppressed when focused (D-13 — does not fire when the window is focused)', function (): void {
+function donImportDeliverable(int $userId): NotificationDeliverable
+{
+    return new NotificationDeliverable(
+        notificationId: hash('sha256', 'don-import-'.$userId),
+        userId: $userId,
+        triggerType: DeterministicKeyDeriver::TRIGGER_IMPORT_FINISHED,
+        title: (string) Lang::get('notifications::copy.title.import_finished'),
+        body: 'Beatrax imported 124 transactions.',
+        deepLinkRoute: '/imports',
+    );
+}
+
+function donReceiptsDeliverable(int $userId): NotificationDeliverable
+{
+    return new NotificationDeliverable(
+        notificationId: hash('sha256', 'don-receipts-'.$userId),
+        userId: $userId,
+        triggerType: DeterministicKeyDeriver::TRIGGER_RECEIPTS_FOUND,
+        title: (string) Lang::get('notifications::copy.title.receipts'),
+        body: 'Beatrax found 3 receipts in your inbox.',
+        deepLinkRoute: '/receipts',
+    );
+}
+
+/**
+ * @param  callable(NotificationDeliverable): void  $fire
+ */
+function donAssertPayload(callable $fire, NotificationDeliverable $deliverable, string $key, string $expected): void
+{
+    Http::fake();
+    app(WindowFocusState::class)->markBlurred();
+
+    $fire($deliverable);
+
+    Http::assertSent(function ($request) use ($key, $expected): bool {
+        /** @var array<string, mixed> $payload */
+        $payload = $request->data();
+
+        return str_ends_with((string) $request->url(), '/notification')
+            && ($payload[$key] ?? null) === $expected;
+    });
+}
+
+// The `Notification` facade has no v2 fake, so a fired notification is observed
+// as an outbound POST on the NativePHP HTTP client. The whole payload rides on
+// that request, so the title, the click event and its reference are all
+// assertable from here.
+it('suppresses the OS notification when the window is focused', function (): void {
     Http::fake();
     $user = donUser('don-focused-forecast');
 
@@ -123,7 +152,7 @@ it('notification suppressed when focused (D-13 — does not fire when the window
     Http::assertNothingSent();
 });
 
-it('fires an OS notification when the window is unfocused (D-13 unfocused branch)', function (): void {
+it('fires an OS notification when the window is unfocused', function (): void {
     Http::fake();
     $user = donUser('don-unfocused-forecast');
 
@@ -136,10 +165,6 @@ it('fires an OS notification when the window is unfocused (D-13 unfocused branch
 
     $listener->handleNotificationDeliverable(donForecastDeliverable($user->id));
 
-    // The Notification facade has no v2 fake — the delivery decision
-    // surfaces as an outbound POST to `notification` on the NativePHP
-    // HTTP client. Asserting the POST happened proves the listener took
-    // the "fire" branch.
     Http::assertSent(fn ($request) => str_ends_with((string) $request->url(), '/notification'));
 });
 
@@ -163,7 +188,7 @@ it('fires a drift-alert OS notification when unfocused', function (): void {
     Http::assertSent(fn ($request) => str_ends_with((string) $request->url(), '/notification'));
 });
 
-it('does not fire even when unfocused when SuppressionEvaluator suppresses delivery (D-38 invariant 4)', function (): void {
+it('does not fire even when unfocused when SuppressionEvaluator suppresses delivery', function (): void {
     Http::fake();
     $user = donUser('don-suppressed');
     app(WindowFocusState::class)->markBlurred();
@@ -173,9 +198,8 @@ it('does not fire even when unfocused when SuppressionEvaluator suppresses deliv
     /** @var SuppressionEvaluator $suppression */
     $suppression = app(SuppressionEvaluator::class);
 
-    // The D-43 seeding/test suppression flag: shouldDeliver() returns
-    // deliver=false regardless of the trigger type or focus state — the
-    // ONE suppression site the listener consults BEFORE the focus gate.
+    // Suppression is consulted before the focus gate, so it wins regardless of
+    // the trigger type or the focus state.
     $suppression->suppressDelivery(function () use ($listener, $user): void {
         $listener->handleNotificationDeliverable(donForecastDeliverable($user->id));
     });
@@ -183,7 +207,7 @@ it('does not fire even when unfocused when SuppressionEvaluator suppresses deliv
     Http::assertNothingSent();
 });
 
-it('substitutes a non-empty detail-free body when the device hide-details preference is on (D-24)', function (): void {
+it('substitutes a non-empty detail-free body when the device hide-details preference is on', function (): void {
     Http::fake();
     $user = donUser('don-hide-details');
     app(WindowFocusState::class)->markBlurred();
@@ -208,15 +232,73 @@ it('substitutes a non-empty detail-free body when the device hide-details prefer
     });
 });
 
-it('uses the UI-SPEC verbatim title "Cash-flow shortfall ahead" for the forecast notification — payload-detail deferred to manual UAT (no v2 fake for Notification)')->todo();
+it('shows the forecast notification under its published title', function (): void {
+    $user = donUser('don-title-forecast');
 
-it('uses the UI-SPEC verbatim title "A recurring charge changed" for the drift-alert notification — payload-detail deferred to manual UAT (no v2 fake for Notification)')->todo();
+    donAssertPayload(
+        static fn ($deliverable) => app(DispatchOsNotification::class)->handleNotificationDeliverable($deliverable),
+        donForecastDeliverable($user->id),
+        'title',
+        'Cash-flow shortfall ahead',
+    );
+});
 
-it('uses the UI-SPEC verbatim title "Import finished" for the import-finished notification — payload-detail deferred to manual UAT (no v2 fake for Notification)')->todo();
+it('shows the drift-alert notification under its published title', function (): void {
+    $user = donUser('don-title-drift');
 
-it('uses the UI-SPEC verbatim title "New receipts found" for the receipts notification — payload-detail deferred to manual UAT (no v2 fake for Notification)')->todo();
+    donAssertPayload(
+        static fn ($deliverable) => app(DispatchOsNotification::class)->handleNotificationDeliverable($deliverable),
+        donDriftDeliverable($user->id),
+        'title',
+        'A recurring charge changed',
+    );
+});
 
-it('attaches a NotificationDeepLink click event with a screen-route reference — payload-detail deferred to manual UAT (no v2 fake for Notification)')->todo();
+it('shows the import-finished notification under its published title', function (): void {
+    $user = donUser('don-title-import');
+
+    donAssertPayload(
+        static fn ($deliverable) => app(DispatchOsNotification::class)->handleNotificationDeliverable($deliverable),
+        donImportDeliverable($user->id),
+        'title',
+        'Import finished',
+    );
+});
+
+it('shows the receipts notification under its published title', function (): void {
+    $user = donUser('don-title-receipts');
+
+    donAssertPayload(
+        static fn ($deliverable) => app(DispatchOsNotification::class)->handleNotificationDeliverable($deliverable),
+        donReceiptsDeliverable($user->id),
+        'title',
+        'New receipts found',
+    );
+});
+
+// Clicking the notification is the only way back to the screen it is about, so
+// the event class and the route it carries are the whole feature.
+it('attaches the deep-link click event to the OS notification', function (): void {
+    $user = donUser('don-deeplink-event');
+
+    donAssertPayload(
+        static fn ($deliverable) => app(DispatchOsNotification::class)->handleNotificationDeliverable($deliverable),
+        donForecastDeliverable($user->id),
+        'event',
+        NotificationDeepLink::class,
+    );
+});
+
+it('attaches the screen route the deep-link click should open', function (): void {
+    $user = donUser('don-deeplink-route');
+
+    donAssertPayload(
+        static fn ($deliverable) => app(DispatchOsNotification::class)->handleNotificationDeliverable($deliverable),
+        donForecastDeliverable($user->id),
+        'reference',
+        '/forecast',
+    );
+});
 
 it('exposes NotificationDeepLink as a final readonly class with a string screenRoute', function (): void {
     $reflection = new ReflectionClass(NotificationDeepLink::class);

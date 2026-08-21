@@ -1,6 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    /tax year cockpit — TAX-02 / D-09.
+    /tax year cockpit.
 
     $data:           TaxYearData|null  — grouped categories + totals for the selected year
     $availableYears: array<int>        — years with tags (for year switcher options)
@@ -52,7 +52,7 @@
                         @php
                             // Render ALL available years — history is retained forever
                             // (project constraint); the container flex-wraps past one
-                            // row, so a hard cap would silently hide older years (IN-05).
+                            // row, so a hard cap would silently hide older years.
                             $years = array_unique(array_merge([$year], $availableYears));
                             rsort($years);
                         @endphp
@@ -117,7 +117,10 @@
              So the prompt sits above the figures it refines, and the figures
              stay on screen. --}}
         @if (! $hasTaxCountry)
-            <div class="card mb-6 p-4" style="border-radius: var(--radius-lg);">
+            {{-- A tinted band, not a second .card: stacked directly on the
+                 totals strip it repeated the same white surface, border and
+                 shadow, so the two read as one card drawn twice. --}}
+            <div class="mb-6 rounded-lg p-4" style="background: var(--color-surface-2);">
                 <p style="font-size: var(--text-base); font-weight: 600; color: var(--color-text); margin: 0 0 var(--space-1);">
                     {{ Lang::get('tax::page.country_prompt_heading') }}
                 </p>
@@ -135,7 +138,7 @@
         @if ($data !== null)
 
         {{-- ────────────────────────────────────────────────────────────────── --}}
-        {{-- Year-totals strip (D-11/D-12)                                      --}}
+        {{-- Year-totals strip                                                  --}}
         {{-- ────────────────────────────────────────────────────────────────── --}}
 
             <div class="tax-totals-strip mb-6">
@@ -191,14 +194,15 @@
                     @endif
                     <a
                         href="{{ route('transactions.index') }}"
-                        style="display: inline-block; margin-top: var(--space-4); font-size: var(--text-base); color: var(--color-blue); text-decoration: underline;"
+                        class="font-medium underline-offset-2 hover:underline"
+                        style="display: inline-block; margin-top: var(--space-4); font-size: var(--text-base); color: var(--color-text);"
                     >{{ Lang::get('tax::page.go_to_transactions') }}</a>
                 </div>
 
             @else
 
                 {{-- ──────────────────────────────────────────────────────────── --}}
-                {{-- Category sections (D-11 — one per category + "No cat" last) --}}
+                {{-- Category sections — one per category + "No cat" last --}}
                 {{-- ──────────────────────────────────────────────────────────── --}}
 
                 <div class="space-y-4">
@@ -227,6 +231,7 @@
                                         {{ $isNoCategory ? Lang::get('tax::page.no_category') : $catName }}
                                     </span>
                                     <span
+                                        role="img"
                                         style="display: inline-flex; align-items: center; padding: 1px 8px; border-radius: var(--radius-full); background: var(--color-surface); border: 1px solid var(--color-border); font-size: var(--text-xs); color: var(--color-text-muted);"
                                         aria-label="{{ Lang::get('tax::page.items_count_aria', ['count' => $count]) }}"
                                     >{{ $count }}</span>
@@ -246,7 +251,10 @@
                                     style="border-collapse: collapse; font-size: var(--text-base);"
                                 >
                                     <thead>
-                                        <tr style="background: var(--color-surface-2); border-bottom: 1px solid var(--color-border);">
+                                        {{-- No fill of its own: .tax-section-header directly above is
+                                             already surface-2, so painting this row the same colour put
+                                             two identical grey bars 1px apart. --}}
+                                        <tr style="border-bottom: 1px solid var(--color-border);">
                                             <th class="date px-3 py-2 text-left" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em; width: 7rem;">{{ Lang::get('tax::page.col_date') }}</th>
                                             <th class="px-3 py-2 text-left" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em; width: 6rem;">{{ Lang::get('tax::page.col_account') }}</th>
                                             <th class="px-3 py-2 text-left" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em;">{{ Lang::get('tax::page.col_counterparty') }}</th>
@@ -301,7 +309,7 @@
                                                 {{-- Original (if non-EUR) --}}
                                                 <td class="px-3 py-2 text-right" style="font-size: var(--text-xs); color: var(--color-text-faint);">
                                                     @if ($showOrig)
-                                                        {{ $origCurrency }} {{ number_format(abs($origMinor) / Money::MINOR_UNITS_PER_MAJOR, 2) }}
+                                                        {{ Money::ofMinor(abs($origMinor), $origCurrency)->format() }}
                                                     @else
                                                         —
                                                     @endif
@@ -309,7 +317,7 @@
                                                 {{-- Year / override chip --}}
                                                 <td class="px-3 py-2 text-center">
                                                     @if ($hasOverride)
-                                                        <span class="tax-badge--amber" aria-label="{{ Lang::get('tax::page.override_aria', ['year' => $row['taxYearOverride']]) }}">
+                                                        <span role="img" class="tax-badge--amber" aria-label="{{ Lang::get('tax::page.override_aria', ['year' => $row['taxYearOverride']]) }}">
                                                             → {{ $row['taxYearOverride'] }}
                                                         </span>
                                                     @else
@@ -321,7 +329,7 @@
                                     </tbody>
                                 </table>
 
-                                {{-- Phone: card-per-row (Section 17 — D-21 card-per-row pattern) --}}
+                                {{-- Phone: card-per-row (Section 17) --}}
                                 <ul class="divide-y sm:hidden" style="border-color: var(--color-border);">
                                     @foreach ($rows as $row)
                                         @php

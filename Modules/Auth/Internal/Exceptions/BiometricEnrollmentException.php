@@ -6,13 +6,9 @@ namespace Modules\Auth\Internal\Exceptions;
 
 use RuntimeException;
 
-// Raised while completing a WebAuthn enrollment when the browser payload or
-// the produced key-wrap bytes fail the shape the ceremony requires. Worth
-// its own type so the enroll endpoint's catch reports an enrollment fault
-// rather than swallowing an anonymous generic error.
-/**
- * @link ../../../../.docs/features/auth/architecture.md
- */
+// A browser payload or key-wrap blob that fails the shape the ceremony
+// requires. Its own type so the enroll endpoint reports an enrollment fault
+// rather than an anonymous one.
 final class BiometricEnrollmentException extends RuntimeException
 {
     public static function unexpectedAttestationResponse(): self

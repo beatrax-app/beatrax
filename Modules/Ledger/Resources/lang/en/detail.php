@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Remove category',
         'keep_category' => 'Keep this category',
         'restore_single' => 'Restore as a single category?',
+        'survivor_legend' => 'Category to keep',
         'confirm_unsplit' => 'Yes, unsplit',
         'keep_split' => 'Keep split',
     ],
@@ -51,6 +52,18 @@ return [
         'choose_aria' => 'Choose new transaction type',
         'choose_option' => 'Choose a type…',
         'save' => 'Save',
+    ],
+
+    // Keyed by TransactionType's backing value: the reclassify dropdown offers
+    // the enum's cases and the raw key is not a name anyone should have to read.
+    'type_label' => [
+        'expense' => 'Expense',
+        'income' => 'Income',
+        'transfer_out' => 'Transfer out',
+        'transfer_in' => 'Transfer in',
+        'fee' => 'Fee',
+        'refund' => 'Refund',
+        'adjustment' => 'Adjustment',
     ],
 
     'note' => [

@@ -16,6 +16,7 @@ return [
     'empty' => [
         'heading' => 'Korduvat tegevust veel pole',
         'before_link' => 'Kinnita tuvastatud soovitused siin:',
+        'link' => 'Vaata korduvmaksed üle',
         'after_link' => 'et neid siin näha.',
     ],
 

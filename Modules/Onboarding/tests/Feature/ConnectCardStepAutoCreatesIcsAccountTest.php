@@ -11,13 +11,6 @@ use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 use Modules\Onboarding\Models\WizardProgress;
 use Tests\Helpers\UploadIsolation;
 
-/*
- * Covers the auto-provision branch of ConnectCardStep::submit: when no
- * ICS card account exists yet, a successful upload creates the synthetic
- * "ICS-CARD" account once, re-previews every run against it, and stashes
- * the produced run ids into wizard_progress.
- */
-
 beforeEach(function (): void {
     UploadIsolation::isolate();
 

@@ -14,15 +14,10 @@ use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
 
 uses(EnablesEncryptionForUser::class);
 
-/*
- * 14.1-10 Task 3 (D-06 fold-in, per 14.1-AUDIT.md Cluster 1) — under an
- * encrypted user, `transactions.counterparty_name` AND `description`
- * are both ciphertext at rest. UncategorizedTriageQuery::mapRow() must
- * decrypt both for the `/uncategorized` triage inbox rather than
- * leaking ciphertext into a TriageRow. No SQL predicate/ORDER BY on
- * either column exists at this site, so the D-09 guard cannot catch
- * an unfixed leak here — only this decrypt-for-display test does.
- */
+// Under an encrypted user both counterparty_name and description are
+// ciphertext at rest, and mapRow() has to decrypt them for the triage inbox.
+// No SQL predicate or ORDER BY touches either column here, so the guard that
+// catches those cannot see a leak at this site — only this test can.
 
 function uctddUser(): User
 {

@@ -18,9 +18,6 @@ use stdClass;
 // id list via FTS5 MATCH, or — for queries too short for FTS5 — the
 // decrypt-then-substring LIKE fallback, plus the highlight/snippet load
 // that reuses the same MATCH expression.
-/**
- * @link ../../../../.docs/features/search/architecture.md
- */
 final class FtsCandidateResolver
 {
     use CoercesScalars;

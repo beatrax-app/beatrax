@@ -7,21 +7,17 @@ namespace Modules\DevMode\Public\Contracts;
 use Carbon\CarbonInterface;
 use Modules\DevMode\Public\Dto\CommandRunAudit;
 
-// Cross-module audit-write seam: every Dev Console action crossing an
-// operational trust boundary (artisan run, destructive queue action,
-// SELECT-only SQL query) writes one row here. SpatieAuditWriter routes
-// rows into dev_mode_audit; NullAuditWriter is the ad-hoc-test fallback.
+// Every Dev Console action that crosses an operational trust boundary writes
+// one row through here.
 interface AuditWriter
 {
-    // The run's stdoutExcerpt/errorExcerpt are bounded by the calling
-    // pipeline — already passed through RedactionExcerptCap's scrub + 8
-    // KiB cap. A non-null CommandRunAudit::$runId lets finalizeCommandRun()
-    // locate and update the same row later; one-shot callers leave it null.
+    // Implementations do not scrub: the excerpts must already have been
+    // through RedactionExcerptCap. A non-null $runId is what lets
+    // finalizeCommandRun() find this row again.
     public function recordCommandRun(CommandRunAudit $run): void;
 
-    // Returns true when the row was located and updated, false when no
-    // matching row existed (callers fall back to a fresh
-    // recordCommandRun() so the audit trail still captures the run).
+    // False means no matching row, and callers answer that with a fresh
+    // recordCommandRun() so the run is never silently unaudited.
     public function finalizeCommandRun(
         string $runId,
         CarbonInterface $finishedAt,
@@ -31,8 +27,7 @@ interface AuditWriter
         bool $cancelled,
     ): bool;
 
-    // `context` is a free-form metadata bag the queue inspector
-    // populates with the action's specifics (job id, batch id, etc.).
+    // `context` is a free-form bag — job id, batch id, whatever the action has.
     /**
      * @param  array<string, mixed>  $context
      */
@@ -42,8 +37,7 @@ interface AuditWriter
         int $callerUserId,
     ): void;
 
-    // `query` is the verbatim SQL the user typed (post
-    // SelectOnlyValidator acceptance).
+    // `query` is the verbatim SQL the operator typed, not a normalised form.
     public function recordSelectQuery(
         string $query,
         int $rowcount,

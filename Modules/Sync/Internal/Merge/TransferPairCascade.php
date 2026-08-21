@@ -13,9 +13,6 @@ use Modules\Sync\Internal\OpLog\OpType;
 // deleted. A transfer only means anything as a pair, so the partner stops
 // being a transfer and becomes plain income or expense — and that has to be
 // recorded as a real op, or a rebuild would quietly revert it.
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class TransferPairCascade
 {
     public function __construct(

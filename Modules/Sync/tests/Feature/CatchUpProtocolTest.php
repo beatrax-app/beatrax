@@ -10,32 +10,11 @@ use Modules\Sync\Internal\Transport\PeerCatchUpExchanger;
 
 uses(RefreshDatabase::class);
 
-/*
- * CatchUpProtocolTest — XPORT-02: catch-up exchange delivers missing ops.
- *
- * Wave 3: PeerCatchUpExchanger now exists; these run as real integration tests.
- *
- * Validates the catch-up protocol (RESEARCH Pattern 6):
- *   On session establishment, both peers exchange their HLC watermarks.
- *   Each peer then sends all op_log_entries with (hlc_l, hlc_c) greater
- *   than the other's watermark. After the exchange both peers are up to date.
- *
- * Protocol summary:
- *   Initiator → Responder: CATCH_UP_REQUEST { my_hlc_l, my_hlc_c, device_id, user_id }
- *   Responder → Initiator: CATCH_UP_RESPONSE { ops: [...] where hlc > request watermark }
- *   Initiator → Responder: CATCH_UP_REQUEST (symmetric)
- *   Responder → Initiator: CATCH_UP_RESPONSE (symmetric)
- *   Both: CATCH_UP_COMPLETE → switch to LIVE_STREAM mode
- *
- * Gap detection: ops with (hlc_l, hlc_c) lexicographically > watermark.
- * Op delivery: batched at ≤ 1024 ops or ≤ 64KB per frame.
- *
- * Database: uses op_log_entries table (from Phase 11) for HLC state queries.
- */
+// The exchange is symmetric and watermark-driven: each peer sends every entry
+// ordered after the watermark the other reported. Frames are capped at 1024 ops
+// or 64KB, so anything asserting a single frame would pass by accident.
 
 /**
- * Helper: insert a row directly into op_log_entries without going through the replayer.
- *
  * @param  array<string, mixed>  $attrs
  */
 function insertOpLogRow(array $attrs): void
@@ -54,11 +33,45 @@ function insertOpLogRow(array $attrs): void
         'recorded_at' => now()->toDateTimeString(),
     ];
 
-    DB::table('op_log_entries')->insert(array_merge($defaults, $attrs));
+    $row = array_merge($defaults, $attrs);
+
+    // Register the author the way production does. A catch-up only ships
+    // entries whose device is still confirmed, because one signed by a device
+    // the registry has forgotten cannot be verified by anybody — an
+    // unregistered writer here would simply never be sent.
+    registerOpLogAuthor((int) $row['user_id'], (string) $row['device_id']);
+
+    DB::table('op_log_entries')->insert($row);
+}
+
+function registerOpLogAuthor(int $userId, string $deviceId): void
+{
+    $exists = DB::table('device_registry')
+        ->where('user_id', $userId)
+        ->where('device_id', $deviceId)
+        ->exists();
+
+    if ($exists) {
+        return;
+    }
+
+    DB::table('device_registry')->insert([
+        'user_id' => $userId,
+        'device_id' => $deviceId,
+        'name' => 'Catch-up fixture',
+        'ed25519_public_key_hex' => str_repeat('11', 32),
+        'x25519_public_key_hex' => str_repeat('22', 32),
+        'safety_number_words' => '',
+        'is_self' => 0,
+        'paired_at' => '2026-06-14T00:00:00+00:00',
+        'confirmed_at' => '2026-06-14T00:00:00+00:00',
+        'last_seen_at' => null,
+        'created_at' => '2026-06-14T00:00:00+00:00',
+        'updated_at' => '2026-06-14T00:00:00+00:00',
+    ]);
 }
 
 it('catch-up request correctly identifies ops missing from the peer (HLC watermark comparison)', function (): void {
-    // Arrange: insert 3 ops with ascending HLC values.
     insertOpLogRow(['hlc_l' => 1_718_000_000_100, 'hlc_c' => 0, 'field' => 'note', 'value' => '"op1"']);
     insertOpLogRow(['hlc_l' => 1_718_000_000_200, 'hlc_c' => 0, 'field' => 'note', 'value' => '"op2"']);
     insertOpLogRow(['hlc_l' => 1_718_000_000_300, 'hlc_c' => 0, 'field' => 'note', 'value' => '"op3"']);
@@ -69,13 +82,11 @@ it('catch-up request correctly identifies ops missing from the peer (HLC waterma
         framer: $framer,
     );
 
-    // Peer watermark is (hlc_l=1_718_000_000_150, hlc_c=0) — sits between op1 and op2.
+    // The watermark deliberately sits between op1 and op2.
     $frames = $exchanger->opsAfterWatermark(userId: 1, peerHlcL: 1_718_000_000_150, peerHlcC: 0);
 
-    // Only op2 and op3 should be returned (op1 is at hlc_l ≤ watermark).
     expect($frames)->not->toBeEmpty('ops newer than watermark must be returned');
 
-    // Decode all frames and collect entries.
     $entries = [];
     foreach ($frames as $frame) {
         $entries = array_merge($entries, $framer->decode($frame));
@@ -87,7 +98,6 @@ it('catch-up request correctly identifies ops missing from the peer (HLC waterma
 });
 
 it('catch-up delivers missing ops to the peer and both ends converge', function (): void {
-    // Arrange: insert 2 ops for user 1.
     insertOpLogRow(['hlc_l' => 1_718_000_000_100, 'hlc_c' => 0, 'field' => 'note', 'value' => '"first"']);
     insertOpLogRow(['hlc_l' => 1_718_000_000_200, 'hlc_c' => 5, 'field' => 'note', 'value' => '"second"']);
 
@@ -97,7 +107,6 @@ it('catch-up delivers missing ops to the peer and both ends converge', function 
         framer: $framer,
     );
 
-    // Peer has seen nothing (watermark 0,0) → should get all 2 ops.
     $frames = $exchanger->opsAfterWatermark(userId: 1, peerHlcL: 0, peerHlcC: 0);
 
     $entries = [];
@@ -107,14 +116,13 @@ it('catch-up delivers missing ops to the peer and both ends converge', function 
 
     expect($entries)->toHaveCount(2, 'peer at watermark (0,0) must receive all 2 ops');
 
-    // Bilateral: after the catch-up, a peer that absorbed both ops builds a watermark
-    // equal to the max (hlc_l=200, hlc_c=5). opsAfterWatermark for that watermark → empty.
+    // A peer that absorbed both ops reports the max as its watermark, and the
+    // exchange must then have nothing left to send.
     $framesAfterSync = $exchanger->opsAfterWatermark(userId: 1, peerHlcL: 1_718_000_000_200, peerHlcC: 5);
     expect($framesAfterSync)->toBeEmpty('after sync, watermark at max hlc → no gap → empty response');
 });
 
 it('catch-up with no gap (peer already up to date) sends an empty CATCH_UP_RESPONSE', function (): void {
-    // Arrange: one op exists.
     insertOpLogRow(['hlc_l' => 1_718_000_000_100, 'hlc_c' => 0]);
 
     $exchanger = new PeerCatchUpExchanger(
@@ -122,17 +130,15 @@ it('catch-up with no gap (peer already up to date) sends an empty CATCH_UP_RESPO
         framer: new TransportFramer,
     );
 
-    // Peer watermark exactly at the highest known op.
     $frames = $exchanger->opsAfterWatermark(userId: 1, peerHlcL: 1_718_000_000_100, peerHlcC: 0);
     expect($frames)->toBeEmpty('equal watermark means peer is up to date → empty response');
 
-    // Peer watermark beyond all known ops.
     $frames2 = $exchanger->opsAfterWatermark(userId: 1, peerHlcL: 1_718_000_999_999, peerHlcC: 0);
     expect($frames2)->toBeEmpty('watermark above all ops → still empty response');
 });
 
 it('catch-up batches large op sets into ≤ 64KB frames (backpressure guard)', function (): void {
-    // Arrange: insert 2100 ops — this exceeds the 1024-op-per-frame cap, forcing multiple frames.
+    // Past the 1024-op frame cap, so the exchange has to span several frames.
     $rows = [];
     for ($i = 0; $i < 2100; $i++) {
         $rows[] = [
@@ -149,7 +155,11 @@ it('catch-up batches large op sets into ≤ 64KB frames (backpressure guard)', f
             'recorded_at' => now()->toDateTimeString(),
         ];
     }
-    // Chunked to avoid SQLite parameter limit.
+    // Bulk insert bypasses insertOpLogRow(), so the author is registered here:
+    // a catch-up only ships entries whose device is still confirmed.
+    registerOpLogAuthor(1, 'device-a');
+
+    // Chunked to stay under SQLite's bound-parameter limit.
     foreach (array_chunk($rows, 500) as $chunk) {
         DB::table('op_log_entries')->insert($chunk);
     }
@@ -160,12 +170,10 @@ it('catch-up batches large op sets into ≤ 64KB frames (backpressure guard)', f
         framer: $framer,
     );
 
-    // Peer at watermark (0,0) → gets all 2100 ops.
     $frames = $exchanger->opsAfterWatermark(userId: 1, peerHlcL: 0, peerHlcC: 0);
 
     expect(count($frames))->toBeGreaterThanOrEqual(3, '2100 ops / 1024 max per frame → at least 3 frames');
 
-    // Every frame must decode without exception.
     $totalEntries = 0;
     foreach ($frames as $frame) {
         $decoded = $framer->decode($frame);
@@ -177,7 +185,6 @@ it('catch-up batches large op sets into ≤ 64KB frames (backpressure guard)', f
 });
 
 it('catch-up is user-scoped: ops from other users are never included in the CATCH_UP_RESPONSE', function (): void {
-    // Arrange: insert ops for both user 1 and user 2.
     insertOpLogRow(['user_id' => 1, 'hlc_l' => 1_718_000_000_100, 'field' => 'note', 'value' => '"for-user-1"']);
     insertOpLogRow(['user_id' => 2, 'hlc_l' => 1_718_000_000_200, 'field' => 'note', 'value' => '"for-user-2"']);
 
@@ -187,7 +194,6 @@ it('catch-up is user-scoped: ops from other users are never included in the CATC
         framer: $framer,
     );
 
-    // Catch-up for user 1 — must NOT include user 2's op.
     $frames = $exchanger->opsAfterWatermark(userId: 1, peerHlcL: 0, peerHlcC: 0);
     $entries = [];
     foreach ($frames as $frame) {
@@ -197,7 +203,6 @@ it('catch-up is user-scoped: ops from other users are never included in the CATC
     expect($entries)->toHaveCount(1, 'user-scoped catch-up must return only user 1 ops (T-13-11, I2 guard)');
     expect($entries[0]->userId)->toBe(1, 'returned entry must belong to user 1');
 
-    // Catch-up for user 2 — must NOT include user 1's op.
     $frames2 = $exchanger->opsAfterWatermark(userId: 2, peerHlcL: 0, peerHlcC: 0);
     $entries2 = [];
     foreach ($frames2 as $frame) {
@@ -206,4 +211,30 @@ it('catch-up is user-scoped: ops from other users are never included in the CATC
 
     expect($entries2)->toHaveCount(1, 'catch-up for user 2 must not bleed user 1 ops (I2 isolation)');
     expect($entries2[0]->userId)->toBe(2, 'returned entry must belong to user 2');
+});
+
+it('never ships an entry signed by a device the registry has forgotten', function (): void {
+    // An entry signed by a device the registry has forgotten cannot be verified
+    // by anyone, so sending it only fills the peer's log with drops. One import
+    // shipped 12,948 entries, the phone refused 12,476, and because progress is
+    // counted from survivors the screen reported the device as synced.
+    insertOpLogRow(['device_id' => 'device-live', 'pk' => '1', 'hlc_l' => 1_718_000_000_100]);
+    insertOpLogRow(['device_id' => 'device-retired', 'pk' => '2', 'hlc_l' => 1_718_000_000_200]);
+
+    // The identity is retired the way a removal retires it: the row goes.
+    DB::table('device_registry')->where('device_id', 'device-retired')->delete();
+
+    $framer = new TransportFramer;
+    $exchanger = new PeerCatchUpExchanger(db: app(DatabaseManager::class), framer: $framer);
+
+    $entries = [];
+    foreach ($exchanger->opsAfterWatermark(userId: 1, peerHlcL: 0, peerHlcC: 0) as $frame) {
+        foreach ($framer->decode($frame) as $entry) {
+            $entries[] = $entry->deviceId;
+        }
+    }
+
+    expect($entries)->toContain('device-live');
+    expect(in_array('device-retired', $entries, true))
+        ->toBeFalse('an entry no peer can verify was put on the wire anyway');
 });

@@ -6,10 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
-/**
- * Anonymous Eloquent model used to exercise the BelongsToUser trait without
- * requiring a real domain table (which lands in a later plan).
- */
 final class BelongsToUserSampleModel extends Model
 {
     use BelongsToUser;

@@ -1,10 +1,10 @@
 @use('Modules\Core\Public\Support\Lang')
 <div class="min-h-screen bg-white py-12 dark:bg-slate-950">
     <div class="max-w-xl mx-auto px-6 space-y-6">
-        <header class="space-y-1">
-            <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('auth::recovery_codes.title') }}</h1>
-            <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::recovery_codes.subtitle') }}</p>
-        </header>
+        <x-core::page-header
+            :title="Lang::get('auth::recovery_codes.title')"
+            :subtitle="Lang::get('auth::recovery_codes.subtitle')"
+        />
 
         {{-- One column on a phone, two from 640px.
 
@@ -32,17 +32,24 @@
             x-data="{
                     copied: false,
                     saved: false,
+                    failed: false,
                     codes: @js($codes),
                     payload: @js($downloadPayload),
                     filename: @js($downloadFilename),
-                    copy() {
-                        if (! navigator.clipboard) {
-                            return;
-                        }
-                        navigator.clipboard.writeText(this.codes.join('\n')).then(() => {
+                    async copy() {
+                        // The webview withholds navigator.clipboard outside a
+                        // secure context, and this screen is the one that can
+                        // never be shown again — so a copy that quietly does
+                        // nothing is the worst possible outcome here.
+                        if (await window.beatraxCopy(this.codes.join('\n'))) {
+                            this.failed = false;
                             this.copied = true;
                             setTimeout(() => { this.copied = false; }, 2500);
-                        });
+
+                            return;
+                        }
+
+                        this.failed = true;
                     },
                     save() {
                         const url = URL.createObjectURL(new Blob([this.payload], { type: 'text/plain' }));
@@ -81,12 +88,14 @@
             </div>
 
             <p x-show="saved" x-cloak aria-live="polite" class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::recovery_codes.saved_as', ['username' => $username]) }}</p>
+            <p x-show="failed" x-cloak role="alert" aria-live="assertive" class="text-sm text-rose-600 dark:text-rose-400">{{ Lang::get('auth::recovery_codes.copy_failed') }}</p>
         </div>
 
-        <label class="flex items-start gap-2">
-            <input type="checkbox" wire:model.live="confirmed" class="mt-1 rounded border-slate-300 dark:border-slate-600">
-            <span class="text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('auth::recovery_codes.confirm') }}</span>
-        </label>
+        <x-core::checkbox-field
+            align="start"
+            :label="Lang::get('auth::recovery_codes.confirm')"
+            wire:model.live="confirmed"
+        />
 
         <button
             type="button"

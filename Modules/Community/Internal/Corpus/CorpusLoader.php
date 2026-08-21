@@ -7,13 +7,11 @@ namespace Modules\Community\Internal\Corpus;
 use Illuminate\Database\DatabaseManager;
 use Modules\Community\Public\Dto\CorpusEntryDto;
 use Modules\Community\Public\Services\CorpusPatternMatcher;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Import\Public\Services\PatternGeneralizer;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/community/architecture.md
- */
 final class CorpusLoader
 {
     private const DEFAULT_CONTRIBUTOR = 'beatrax-bot';
@@ -64,10 +62,9 @@ final class CorpusLoader
 
     private function regionFromFilename(string $file): string
     {
-        // A filename longer than the region column is not a valid ISO code,
-        // so it is dropped to an empty region (with a warning) rather than
-        // overflowing the column and making a strict DB driver reject the
-        // whole file's rows.
+        // A filename longer than the region column is not a valid ISO code;
+        // dropping it beats overflowing the column and having a strict driver
+        // reject the whole file's rows.
         $region = strtoupper(pathinfo($file, PATHINFO_FILENAME));
         if (mb_strlen($region) > self::REGION_MAX) {
             $this->logger->warning('CorpusLoader: corpus filename is not a valid region code; region left empty.', [
@@ -151,10 +148,9 @@ final class CorpusLoader
         return $region !== '' ? $region : $defaultRegion;
     }
 
-    // A `regex:` pattern is matched verbatim by CorpusPatternMatcher, so it
-    // must NOT be run through the substring generalizer (which would produce a
-    // meaningless token). Its generalized_pattern is left empty so the
-    // substring scan skips it; the regex scan picks it up instead.
+    // A `regex:` pattern is matched verbatim, so generalizing it would produce
+    // a meaningless token; an empty generalized_pattern is what makes the
+    // substring scan skip the row and leave it to the regex scan.
     /**
      * @param  array<int|string, mixed>  $raw
      */
@@ -177,10 +173,7 @@ final class CorpusLoader
         try {
             $rows = $this->db->connection()->table('categories')->pluck('name');
         } catch (Throwable $e) {
-            $this->logger->warning('CorpusLoader: could not read categories table.', [
-                'exception_class' => $e::class,
-                'exception_message' => $e->getMessage(),
-            ]);
+            $this->logger->warning('CorpusLoader: could not read categories table.', SafeExceptionContext::describe($e));
 
             return [];
         }

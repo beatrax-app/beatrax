@@ -16,9 +16,6 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Modules\DevMode\Internal\System\ConfigFlattener;
 use Throwable;
 
-/**
- * @link ../../../../../.docs/features/dev-mode/architecture.md
- */
 #[Layout('dev::layouts.dev-shell')]
 final class SystemSnapshotPage extends Component
 {
@@ -105,9 +102,6 @@ final class SystemSnapshotPage extends Component
         return $this->firstPragmaValue($rows);
     }
 
-    // '(unset)' for no rows, the first column's scalar (json-encoded when
-    // not scalar) otherwise, and '(empty)' when the row exposes no columns
-    // — folding the not-an-object case into that same empty result.
     /**
      * @param  array<array-key, mixed>  $rows
      */
@@ -140,9 +134,8 @@ final class SystemSnapshotPage extends Component
         ];
     }
 
-    // Routes through UserDataPathService (never base_path()/storage_path()
-    // directly) so the raw-path-helpers-outside-the-service-only arch
-    // invariant stays clean.
+    // Paths come from UserDataPathService; a bare base_path() or
+    // storage_path() outside it fails the arch test.
     /**
      * @return array<string, string>
      */

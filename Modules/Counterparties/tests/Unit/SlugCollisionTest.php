@@ -12,25 +12,6 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 uses(RefreshDatabase::class);
 
-/**
- * Pins the slug-collision suffixing algorithm.
- *
- * When two distinct merchants resolve to the same kebab-cased base
- * slug, the resolver appends `-2`, then `-3`, …, so the per-user
- * UNIQUE on (user_id, slug) is never violated.
- *
- * Suffixing is per-user: user A's `bol` does NOT block user B's
- * `bol` because (user_id, slug) is the UNIQUE key, not `slug` on its
- * own.
- *
- * Distinct counterparties in this test are produced by writing two
- * MerchantAlias rows that share `friendly_name='Bol'` but key on
- * different `pattern` strings — the resolver's idempotency check
- * keys on (user_id, slug, display_name), so two upserts with the
- * same display_name resolve to the same slug; we force the
- * collision path by intentionally inserting a pre-existing
- * Counterparty row with the base slug and a DIFFERENT display name.
- */
 function makeSlugUser(string $username): User
 {
     return User::query()->create([
@@ -123,9 +104,9 @@ beforeEach(function (): void {
 });
 
 it('Test 1 — two distinct merchants both resolving to "Bol" produce slugs "bol" and "bol-2"', function (): void {
-    // Pre-seed a Counterparty row at slug=bol owned by a different
-    // display name. The resolver's first upsert for the second
-    // "Bol" candidate falls through to bol-2.
+    // The idempotency check keys on (user_id, slug, display_name), so the
+    // squatting row needs a DIFFERENT display name — otherwise the resolver
+    // reuses it instead of taking the collision path.
     DB::table('counterparties')->insert([
         'user_id' => $this->user->id,
         'type' => 'merchant',

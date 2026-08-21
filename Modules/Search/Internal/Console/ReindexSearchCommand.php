@@ -14,9 +14,6 @@ use stdClass;
 // transaction_search_docs/transaction_search_fts. Chunked in batches
 // of 500 to avoid OOM on multi-year datasets. SearchIndexWriter is the
 // synchronous path for normal writes; this is the full-rebuild path.
-/**
- * @link ../../../../.docs/features/search/architecture.md
- */
 final class ReindexSearchCommand extends Command
 {
     /** @var string */

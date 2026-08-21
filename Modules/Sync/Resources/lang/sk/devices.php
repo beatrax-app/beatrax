@@ -16,6 +16,7 @@ return [
     'on' => 'Zap.',
     'securing' => 'Zabezpečujú sa tvoje údaje…',
     'do_not_close' => 'Nezatváraj toto okno.',
+    'encryption_progress_aria' => 'Priebeh šifrovania',
     'not_encrypted_offer' => 'Tvoje údaje nie sú šifrované v pokoji. Nastav šifrovanie, aby boli chránené, ak sa toto zariadenie stratí alebo ho niekto ukradne.',
     'enable_encryption' => 'Zapnúť šifrovanie',
 

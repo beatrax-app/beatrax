@@ -8,17 +8,10 @@ use Modules\Sync\Public\Services\LocalRelayProvisioner;
 
 uses(RefreshDatabase::class);
 
-/*
- * What the desktop has to be holding before it can advertise a relay.
- *
- * Three things travel together in the pairing QR — the endpoint, the bearer
- * token the peer drains with, and the pin that makes a self-signed
- * certificate trustworthy — and a device missing any one of them looks, from
- * the phone, exactly like pairing that never completes. The provisioner used
- * to establish all three on its first run only, so a device that stored an
- * endpoint before the rest existed could never acquire them: every retry
- * short-circuited on "already configured" and drained into the same 401.
- */
+// Endpoint, drain token and certificate pin travel together in the QR, and a
+// device missing any one looks from the phone exactly like pairing that never
+// completes. The provisioner established all three on its first run only, so a
+// device that stored an endpoint early short-circuited into a permanent 401.
 beforeEach(function (): void {
     $this->storageRoot = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-provisioner-'.bin2hex(random_bytes(6)).DIRECTORY_SEPARATOR.'storage';
     putenv('NATIVEPHP_STORAGE_PATH='.$this->storageRoot);

@@ -7,21 +7,11 @@ use Modules\Desktop\Internal\Native\DesktopKeyCustodian;
 use Modules\Desktop\Internal\Native\SafeStorageSecretShield;
 use Native\Desktop\System;
 
-/*
- * Unit tests for SafeStorageSecretShield.
- *
- * The shield delegates to DesktopKeyCustodian, which degrades to pass-through
- * when `nativephp-internal.running` is not true — i.e. everywhere the repo
- * test toolchain runs (no Electron safeStorage). So off-bundle the shield is
- * the identity function, which is exactly what keeps every OAuth / biometric
- * test green without a running desktop shell. The real safeStorage round-trip
- * is exercised only by on-device / on-bundle UAT.
- */
-
 function offBundleShield(): SafeStorageSecretShield
 {
-    // running=false → DesktopKeyCustodian::canEncrypt() is false → identity;
-    // the System mock is never invoked on this path.
+    // canEncrypt() is false off-bundle, so the shield is the identity function —
+    // which is what keeps every OAuth and biometric test green without a running
+    // desktop shell. The System mock is never invoked on this path.
     $config = new Repository(['nativephp-internal' => ['running' => false]]);
 
     return new SafeStorageSecretShield(new DesktopKeyCustodian($config, Mockery::mock(System::class)));

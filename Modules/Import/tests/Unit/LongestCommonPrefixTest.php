@@ -4,17 +4,6 @@ declare(strict_types=1);
 
 use Modules\Import\Internal\Services\LongestCommonPrefix;
 
-/*
- * LongestCommonPrefix pure-fn coverage. The service feeds the Settings
- * → Aliases bulk-merge dialog with the prefilled "consolidated pattern"
- * candidate; the over-match safety property is encoded directly into
- * its rules (size-1 throws, empty input returns empty, LCP shorter
- * than four mb characters returns empty), so this suite locks those
- * rules with a dataset that covers Unicode, emoji, and the typical
- * "AH Albert / Albert Heijn 0917" merchant-name shapes seen in the
- * statement fixtures.
- */
-
 it('returns the lowercased trimmed shared prefix when one exists', function (array $patterns, string $expected): void {
     $svc = new LongestCommonPrefix;
     expect($svc->compute($patterns))->toBe($expected);

@@ -15,11 +15,8 @@ use Modules\Pots\Internal\Http\Livewire\PotsPage;
 use Modules\Pots\Models\Pot;
 use Modules\Pots\Public\Services\PotWriter;
 
-/**
- * The edit, withdraw, move and archive actions of PotsPage. Each one turns a
- * writer exception into an inline message rather than an error page, so the
- * failure paths are the reason the component exists at all.
- */
+// Every action turns a writer exception into an inline message rather than an
+// error page, so the failure paths are most of what there is to cover.
 beforeEach(function (): void {
     $this->user = User::create([
         'username' => 'wessel',
@@ -93,10 +90,6 @@ function ppaPot(int $userId, int $accountId, string $name = 'Pot', string $statu
     return $pot;
 }
 
-// ---------------------------------------------------------------------------
-// openEdit / updatePot / cancel
-// ---------------------------------------------------------------------------
-
 it('loads the pot into the form when editing opens', function (): void {
     $pot = ppaPot($this->user->id, $this->account->id, 'Buffer');
 
@@ -105,10 +98,8 @@ it('loads the pot into the form when editing opens', function (): void {
         ->assertSet('editPotId', $pot->id)
         ->assertSet('name', 'Buffer')
         ->assertSet('linkType', 'none')
-        // Deliberately NOT dispatched. Every Edit affordance picks sheet or
-        // modal from the viewport width on the client; announcing it from the
-        // server as well put the desktop modal on top of the phone sheet. The
-        // server's job here is to load the pot, which the assertions above are.
+        // Not dispatched: the client already picks sheet or modal by viewport,
+        // and announcing it server-side too stacked the modal on the sheet.
         ->assertNotDispatched('modal-show');
 });
 
@@ -207,10 +198,6 @@ it('clears the form when the edit is cancelled', function (): void {
         ->assertDispatched('modal-close');
 });
 
-// ---------------------------------------------------------------------------
-// withdrawPot
-// ---------------------------------------------------------------------------
-
 it('withdraws from a pot and closes the modal', function (): void {
     ppaCredit($this->user->id, $this->account->id, $this->run->id, 50000);
     $pot = ppaPot($this->user->id, $this->account->id);
@@ -230,9 +217,8 @@ it('tells the user what the pot actually holds when a withdrawal is too large', 
     $pot = ppaPot($this->user->id, $this->account->id, 'Buffer');
     $this->writer->fund($this->user, $pot->id, '10,00');
 
-    // The message carries the pot's name and formatted balance rather than a
-    // bare rejection, which is the whole reason the component re-reads the row
-    // before calling the writer.
+    // The message carries the pot's name and formatted balance, which is why the
+    // component re-reads the row before calling the writer.
     Livewire::actingAs($this->user)->test(PotsPage::class)
         ->set('operationPotId', $pot->id)
         ->set('operationAmount', '40,00')
@@ -250,10 +236,6 @@ it('surfaces an unparseable withdrawal amount inline', function (): void {
         ->call('withdrawPot')
         ->assertSet('errorAmount', 'Invalid or non-positive amount.');
 });
-
-// ---------------------------------------------------------------------------
-// movePot
-// ---------------------------------------------------------------------------
 
 it('moves funds between two pots and closes the modal', function (): void {
     ppaCredit($this->user->id, $this->account->id, $this->run->id, 50000);
@@ -299,10 +281,6 @@ it('turns an unchosen transfer target into an inline error rather than a crash',
         ->call('movePot')
         ->assertNotDispatched('modal-close');
 });
-
-// ---------------------------------------------------------------------------
-// archive / restore
-// ---------------------------------------------------------------------------
 
 it('arms and disarms the archive confirmation', function (): void {
     $pot = ppaPot($this->user->id, $this->account->id);

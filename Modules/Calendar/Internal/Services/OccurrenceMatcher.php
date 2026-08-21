@@ -11,19 +11,11 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 use stdClass;
 
-// Decides whether a past-day expected entry was actually paid: loads observed
-// occurrences around the month and matches them to expected dates within a
-// cadence-clamped tolerance window.
-/**
- * @link ../../../../.docs/features/calendar/architecture.md
- */
 final readonly class OccurrenceMatcher
 {
     use CoercesScalars;
 
-    // Tolerance window cap for past-day paid/missed matching; the effective
-    // window is clamped per cadence in matchWindowDays() so one observed
-    // payment can never mark multiple adjacent expected entries paid.
+    // The cap; matchWindowDays() clamps the effective window per cadence.
     private const int MATCH_WINDOW_DAYS = 7;
 
     private const int DAYS_PER_WEEK = 7;
@@ -38,8 +30,8 @@ final readonly class OccurrenceMatcher
         CarbonImmutable $monthStart,
         CarbonImmutable $monthEnd,
     ): array {
-        // Extend the window to catch occurrences just outside the month that
-        // might still match entries near the month boundaries.
+        // Overshoots the month so an entry near a boundary can still match an
+        // occurrence that landed just outside it.
         $windowStart = $monthStart->subDays(self::MATCH_WINDOW_DAYS)->toDateString();
         $windowEnd = $monthEnd->addDays(self::MATCH_WINDOW_DAYS)->toDateString();
 
@@ -66,10 +58,8 @@ final readonly class OccurrenceMatcher
     // expected occurrences can never both match the same observed payment.
     public function matchWindowDays(?SeriesCadence $cadence): int
     {
-        // Weekly is the only cadence short enough for the clamp to bite —
-        // half of a monthly interval already exceeds the default window. The
-        // string version also carried a 'daily' arm no series could reach:
-        // SeriesCadence has no daily case and never did.
+        // Only weekly is short enough for the clamp to bite: half a monthly
+        // interval already exceeds the default window.
         $cadenceDays = match ($cadence) {
             SeriesCadence::Weekly => self::DAYS_PER_WEEK,
             default => null,

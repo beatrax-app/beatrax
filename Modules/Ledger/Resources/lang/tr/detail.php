@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Kategoriyi kaldır',
         'keep_category' => 'Bu kategoriyi koru',
         'restore_single' => 'Tek kategori olarak geri yüklensin mi?',
+        'survivor_legend' => 'Korunacak kategori',
         'confirm_unsplit' => 'Evet, bölmeyi geri al',
         'keep_split' => 'Bölüştürmeyi koru',
     ],
@@ -51,6 +52,16 @@ return [
         'choose_aria' => 'Yeni işlem türünü seç',
         'choose_option' => 'Bir tür seç…',
         'save' => 'Kaydet',
+    ],
+
+    'type_label' => [
+        'expense' => 'Gider',
+        'income' => 'Gelir',
+        'transfer_out' => 'Giden transfer',
+        'transfer_in' => 'Gelen transfer',
+        'fee' => 'Ücret',
+        'refund' => 'İade',
+        'adjustment' => 'Düzeltme',
     ],
 
     'note' => [

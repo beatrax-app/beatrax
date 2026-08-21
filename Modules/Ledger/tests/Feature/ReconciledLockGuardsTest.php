@@ -16,15 +16,6 @@ use Modules\Ledger\Public\Actions\SaveTransactionSplit;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
 
-/*
- * Wave 0 RED stub (D-08, GREEN in 13.3-05 / Pitfall 4). None of
- * TransactionDetail's reclassify()/saveNote()/reassignCounterparty()/
- * deleteTransaction(), nor SaveTransactionSplit::save()/unsplit(), currently
- * check `status === 'reconciled'` before writing. Every case below asserts
- * the mutation is blocked/warned (D-08, warn-first per Claude's Discretion)
- * and the row is left byte-for-byte unchanged.
- */
-
 beforeEach(function (): void {
     $this->user = User::create(['username' => 'lock-fixture', 'password' => 'fixture-password', 'period_start_day' => 1]);
     $this->actingAs($this->user);
@@ -86,7 +77,6 @@ it('toggleLegTax refuses to change a reconciled transaction\'s leg tax state', f
         ->call('toggleLegTax', 0)
         ->assertDispatched('toast');
 
-    // No tax tag was written for any leg of the reconciled transaction.
     expect(DB::table('tax_transaction_tags')->where('transaction_id', $tx->id)->count())->toBe(0);
 });
 

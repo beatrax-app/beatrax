@@ -2,27 +2,12 @@
 
 declare(strict_types=1);
 
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Adds `envelope_settings.threshold_percent` (D-20) — the per-envelope
- * over-budget notification threshold Req 6's nudge trigger (plan 18-07)
- * reads. `envelope_settings` is the LIVE per-(user, category) settings row of
- * the post-D-13-cutover envelope model (it already holds `overspend_mode`),
- * making it the correct home for this setting now that the flat
- * `category_budgets` table is write-dead (see the sibling
- * 2026_07_17_000002 drop migration).
- *
- * Nullable with NO database default: null means "use the D-20 90% default",
- * which keeps the single default in ONE place
- * (`CarryoverQuery::DEFAULT_NOTIFY_THRESHOLD_PERCENT`) rather than duplicating
- * it into the schema, so a future default change applies to every existing
- * envelope without a data migration. Being nullable, it stays OUT of
- * `envelope_settings`'s `_create_required` sync set (asserted by
- * `EnvelopeSettingsRegistryColumnsTest`).
- */
+// Nullable with no DB default: null means "use
+// CarryoverQuery::DEFAULT_NOTIFY_THRESHOLD_PERCENT", and being nullable
+// keeps the column out of envelope_settings' required-create sync set.
 return new class extends ModuleMigration
 {
     public function up(): void

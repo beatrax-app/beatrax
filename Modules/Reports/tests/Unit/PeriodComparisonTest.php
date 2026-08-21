@@ -11,23 +11,11 @@ use Modules\Ledger\Models\Category;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Internal\Aggregation\PeriodComparison;
 use Modules\Reports\Internal\Aggregation\ReportAggregator;
-use Modules\Reports\Public\Dto\ReportDefinition;
-use Modules\Reports\Public\Dto\ReportResultRow;
-use Modules\Reports\Public\Enums\ReportGranularity;
+use Modules\Reports\Internal\Dto\ReportDefinition;
+use Modules\Reports\Internal\Dto\ReportResultRow;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
-
-/*
- * Plan 06 Task 2 (Req 13) — pins `ReportAggregator::run()`'s `compare =
- * true` behavior: `comparisonRows` carries the UNION of the current AND
- * previous-equivalent period's groups (a category that dropped to zero
- * this period still surfaces as a mover, mirroring
- * `CategorySpendTrendQuery`'s union-of-keys shape), each annotated with
- * `previousAmountMinor` + a signed `deltaMinor` (current − previous),
- * sorted by `abs(deltaMinor)` descending — and that comparison honors
- * `currencyMode` (a previous-period unconvertible-currency row is excluded
- * exactly like the current period's own base-mode total).
- */
 
 function pctUser(string $prefix = 'pct'): User
 {
@@ -140,21 +128,19 @@ function pctMarchPeriod(): Period
     );
 }
 
-it('previousPeriod() steps back by calendar months for a month-aligned period, not a raw day-count shift (CR-01)', function (): void {
+it('previousPeriod() steps back by calendar months for a month-aligned period, not a raw day-count shift', function (): void {
     $comparison = new PeriodComparison;
     $current = pctMarchPeriod(); // March 2026: 2026-03-01 -> 2026-04-01 (31 days)
 
     $previous = $comparison->previousPeriod($current);
 
-    // The correct previous calendar month is February 2026 (28 days in
-    // 2026, a non-leap year) — NOT a 31-day day-count shift, which used to
-    // "borrow" 3 days from January (2026-01-29 -> 2026-03-01) instead of
-    // landing on the real previous month.
+    // A 31-day day-count shift used to borrow 3 days from January
+    // (2026-01-29 -> 2026-03-01) instead of landing on the real previous month.
     expect($previous->start->toDateString())->toBe('2026-02-01');
     expect($previous->endExclusive->toDateString())->toBe('2026-03-01');
 });
 
-it('previousPeriod() Feb->Jan and Mar->Feb transitions land on the correct calendar month, never a day-count shift (CR-01)', function (): void {
+it('previousPeriod() Feb->Jan and Mar->Feb transitions land on the correct calendar month, never a day-count shift', function (): void {
     $comparison = new PeriodComparison;
 
     $feb = new Period(
@@ -172,9 +158,8 @@ it('previousPeriod() Feb->Jan and Mar->Feb transitions land on the correct calen
         label: 'March 2027',
     );
     $previousOfMar = $comparison->previousPeriod($mar);
-    // The exact CR-01 concrete-failure scenario from the review: March (31
-    // days) must step back to February (28 days) — a day-count shift would
-    // wrongly land on 2027-01-29 instead of 2027-02-01.
+    // March (31 days) stepping back to February (28) is where a day-count
+    // shift lands on 2027-01-29 instead of 2027-02-01.
     expect($previousOfMar->start->toDateString())->toBe('2027-02-01');
     expect($previousOfMar->endExclusive->toDateString())->toBe('2027-03-01');
 });
@@ -192,7 +177,6 @@ it('comparisonRows carries correct current/previous/signed-delta per group, sort
     $previousPeriod = $comparison->previousPeriod(pctMarchPeriod());
     $previousDate = $previousPeriod->start->addDays(2)->toDateString();
 
-    // Current period (March): Groceries -15_000, Fuel -2_000.
     pctTransaction($db, $user, $account, [
         'settled_amount_minor' => -15_000, 'category_id' => $groceries->id,
         'posted_at' => '2026-03-10', 'booked_at' => '2026-03-10 09:00:00', 'value_date' => '2026-03-10',
@@ -202,10 +186,8 @@ it('comparisonRows carries correct current/previous/signed-delta per group, sort
         'posted_at' => '2026-03-20', 'booked_at' => '2026-03-20 09:00:00', 'value_date' => '2026-03-20',
     ]);
 
-    // Previous-equivalent period: Groceries -10_000 (grew +5_000 this
-    // period), Fuel -6_000 (shrank -4_000 this period), Rent -9_000 (only
-    // existed in the previous period — dropped to zero this period, must
-    // still surface as a mover).
+    // Rent exists only in the previous period: it dropped to zero and must
+    // still surface as a mover.
     pctTransaction($db, $user, $account, [
         'settled_amount_minor' => -10_000, 'category_id' => $groceries->id,
         'posted_at' => $previousDate, 'booked_at' => $previousDate.' 09:00:00', 'value_date' => $previousDate,
@@ -239,7 +221,6 @@ it('comparisonRows carries correct current/previous/signed-delta per group, sort
     expect($byLabel['Rent']->previousAmountMinor)->toBe(9_000);
     expect($byLabel['Rent']->deltaMinor)->toBe(-9_000);
 
-    // Sorted by abs(delta) desc: Rent (9_000) > Groceries (5_000) > Fuel (4_000).
     $order = array_map(static fn ($row) => $row->groupLabel, $result->comparisonRows);
     expect($order)->toBe(['Rent', 'Groceries', 'Fuel']);
 });
@@ -258,9 +239,8 @@ it('comparison honors currencyMode=base — a previous-period unconvertible-curr
         'settled_amount_minor' => -5_000, 'settled_currency' => 'EUR',
         'posted_at' => '2026-03-10', 'booked_at' => '2026-03-10 09:00:00', 'value_date' => '2026-03-10',
     ]);
-    // Previous-period JPY row — no exchange_rates row seeded for JPY, so a
-    // base-mode conversion must exclude it, never fall back to 1:1 (which
-    // would have added 500_000 to the previous total).
+    // No exchange_rates row for JPY: a 1:1 fallback would have added 500_000
+    // to the previous total.
     pctTransaction($db, $user, $account, [
         'settled_amount_minor' => -500_000, 'settled_currency' => 'JPY',
         'posted_at' => $previousDate, 'booked_at' => $previousDate.' 09:00:00', 'value_date' => $previousDate,
@@ -279,7 +259,7 @@ it('comparison honors currencyMode=base — a previous-period unconvertible-curr
     expect($row->deltaMinor)->toBe(2_000);
 });
 
-it('CR-03: compare() keeps BOTH currencies for a group present in EUR and USD under currencyMode=original, never overwriting one with the other', function (): void {
+it('compare() keeps BOTH currencies for a group present in EUR and USD under currencyMode=original, never overwriting one with the other', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = pctUser();
@@ -330,7 +310,7 @@ it('CR-03: compare() keeps BOTH currencies for a group present in EUR and USD un
     expect($byCurrency['USD']->amountMinor)->toBe(3_000);
 });
 
-it('WR-04: hasExcludedAccounts/accountsWithoutRate surface an unconvertible currency that ONLY existed in the previous period', function (): void {
+it('hasExcludedAccounts/accountsWithoutRate surface an unconvertible currency that ONLY existed in the previous period', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = pctUser();
@@ -347,8 +327,7 @@ it('WR-04: hasExcludedAccounts/accountsWithoutRate surface an unconvertible curr
         'posted_at' => '2026-03-10', 'booked_at' => '2026-03-10 09:00:00', 'value_date' => '2026-03-10',
     ]);
 
-    // Previous period: an unconvertible JPY row — no exchange_rates row
-    // seeded for JPY, so a base-mode conversion must exclude it.
+    // No exchange_rates row for JPY, so base mode must exclude this one.
     pctTransaction($db, $user, $account, [
         'settled_amount_minor' => -500_000, 'settled_currency' => 'JPY',
         'posted_at' => $previousDate, 'booked_at' => $previousDate.' 09:00:00', 'value_date' => $previousDate,
@@ -356,9 +335,8 @@ it('WR-04: hasExcludedAccounts/accountsWithoutRate surface an unconvertible curr
 
     $result = app(ReportAggregator::class)->run($user, pctDefinition(compare: true, currencyMode: 'base'));
 
-    // Without WR-04, only the CURRENT period's (false/0) flags would
-    // survive onto the final DTO and the previous period's JPY exclusion
-    // would be invisible to the user viewing the compare delta.
+    // Only the current period's flags used to survive onto the final DTO, so the
+    // previous period's exclusion was invisible behind the compare delta.
     expect($result->hasExcludedAccounts)->toBeTrue();
     expect($result->accountsWithoutRate)->toBeGreaterThanOrEqual(1);
 });

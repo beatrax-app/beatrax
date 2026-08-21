@@ -7,33 +7,10 @@ use Modules\DevMode\Internal\Services\OAuthScrubSet;
 use Monolog\Level;
 use Monolog\LogRecord;
 
-/*
- * RedactSecretsProcessor invariants.
- *
- * Covers the three-layer scrub the processor applies in order:
- *   1. OAuth scrub-set (compiled regex over every decrypted
- *      oauth_secrets value).
- *   2. Authorization: Bearer header pattern.
- *   3. JWT shape (eyJ...header.payload.signature).
- *
- * The processor's __invoke is called against a hand-built
- * LogRecord; end-to-end behaviour (the tap class + the actual disk
- * write) is exercised in OAuthScrubSetBustTest and the baseline
- * test, both of which feed real log lines through
- * LogManager::build().
- *
- * The OAuthScrubSet doubles use a tiny in-memory stub class
- * declared once below; the parent's private cache state is
- * bypassed by overriding the three public methods.
- */
-
-/**
- * Test double that returns a fixed list from all() / compiledPattern()
- * without touching the DB. Avoids the anonymous-class-from-pest-helper
- * pitfall (pest's `it()` runs the body inside a `Closure` whose
- * declaration context matters for anonymous class redeclaration on
- * subsequent test iterations).
- */
+// A named class rather than an anonymous one: pest runs each `it()` body
+// inside a Closure, and an anonymous class declared there is redeclared on
+// repeat iterations. Overriding all three public methods sidesteps the
+// parent's private cache without touching the DB.
 class FixedOAuthScrubSetStub extends OAuthScrubSet
 {
     /**
@@ -59,10 +36,7 @@ class FixedOAuthScrubSetStub extends OAuthScrubSet
         return '/('.$alt.')/';
     }
 
-    public function bust(): void
-    {
-        // no-op for tests
-    }
+    public function bust(): void {}
 }
 
 function newProcessorRecord(string $message, array $context = [], array $extra = []): LogRecord
@@ -88,8 +62,8 @@ it('scrubs an Authorization: Bearer header in the message (Test 1)', function ()
 it('scrubs a JWT-shape token in the message (Test 2)', function (): void {
     $processor = new RedactSecretsProcessor(new FixedOAuthScrubSetStub([]));
 
-    // 28 / 26 / 43 char segments — clears the 20-char minimum per
-    // segment that the JWT regex enforces.
+    // 28 / 26 / 43 char segments — over the 20-char per-segment minimum the
+    // JWT regex enforces.
     $jwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0AAA.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
     $out = $processor(newProcessorRecord($jwt));
 
@@ -122,8 +96,8 @@ it('scrubs every OAuthScrubSet string from message + context recursively (Test 3
 });
 
 it('runs the OAuth scrub-set BEFORE the JWT pattern so a JWT-shaped real token is [REDACTED] not [JWT_REDACTED]', function (): void {
-    // A JWT-shaped string that is also in the scrub set — the
-    // scrub-set step is first, so the output should be [REDACTED].
+    // The same string is JWT-shaped and in the scrub set, so the marker in
+    // the output is what says which layer ran first.
     $jwt = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5OTk5OTk5OTk5In0BBB.aaaaaaaaaaaaaaaaaaaaaaaaa';
     $processor = new RedactSecretsProcessor(new FixedOAuthScrubSetStub([$jwt]));
 

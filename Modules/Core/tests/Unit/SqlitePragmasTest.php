@@ -46,6 +46,8 @@ it('applies WAL + synchronous=NORMAL + foreign_keys + busy_timeout pragmas via t
 it('applies the same pragmas via the ConnectionEstablished listener even when config keys are absent', function (): void {
     // A connection definition without `journal_mode`/`synchronous`/`busy_timeout`
     // keys proves the SqliteOptimizationsProvider listener fires regardless.
+    // Its fallback is thirty seconds: the desktop runs four processes against
+    // one file, and five lost whole pairing frames to "database is locked".
     $tempStub = (string) tempnam(sys_get_temp_dir(), 'beatrax-pragma-listener-');
     $tempDb = $tempStub.'.sqlite';
     @unlink($tempStub);
@@ -68,7 +70,7 @@ it('applies the same pragmas via the ConnectionEstablished listener even when co
 
         expect(strtolower((string) $connection->scalar('PRAGMA journal_mode')))->toBe('wal');
         expect((int) $connection->scalar('PRAGMA synchronous'))->toBe(1);
-        expect((int) $connection->scalar('PRAGMA busy_timeout'))->toBe(5000);
+        expect((int) $connection->scalar('PRAGMA busy_timeout'))->toBe(30000);
         expect((int) $connection->scalar('PRAGMA foreign_keys'))->toBe(1);
     } finally {
         @unlink($tempDb);

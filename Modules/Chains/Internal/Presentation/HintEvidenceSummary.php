@@ -10,9 +10,6 @@ use Modules\Ledger\Public\ValueObjects\Money;
 // Turns a hint's evidence JSON into the lines the review queue shows under
 // it. Each kind writes a different set of keys, so the per-kind readers are
 // separate rather than one chain of elseif over one shared bag.
-/**
- * @link ../../../../.docs/features/chains/architecture.md
- */
 final class HintEvidenceSummary
 {
     /**
@@ -48,7 +45,7 @@ final class HintEvidenceSummary
 
         $delta = $evidence['unaccounted_delta_minor'] ?? null;
         if (is_numeric($delta)) {
-            $lines[] = 'Unaccounted delta: '.Money::ofMinor((int) $delta, $currency)->format('en_US');
+            $lines[] = 'Unaccounted delta: '.Money::ofMinor((int) $delta, $currency)->format();
         }
 
         $covered = $evidence['covered_count'] ?? null;

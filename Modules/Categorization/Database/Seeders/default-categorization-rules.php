@@ -2,10 +2,8 @@
 
 declare(strict_types=1);
 
-// Each row's `field` (merchant/description/counterparty) and `match`
-// (equals/starts_with/contains) are both DB-trigger-enforced
-// allow-lists. Targets universal Dutch-household merchants only —
-// personal identifiers are excluded; the user authors those by hand.
+// Universal Dutch-household merchants only — personal identifiers are
+// excluded; the user authors those by hand.
 /**
  * @return list<array{category: string, field: string, match: string, value: string}>
  */
@@ -84,8 +82,7 @@ return [
     ['category' => 'transport-fuel', 'field' => 'counterparty', 'match' => 'contains', 'value' => 'Tinq'],
     ['category' => 'transport-fuel', 'field' => 'counterparty', 'match' => 'contains', 'value' => 'Tango'],
 
-    // `KOSTEN KASOPNAME` and `GELDMAAT …` are both ICS-card receipt
-    // strings for cash withdrawals. Match the prefix tokens.
+    // Both are ICS-card receipt strings for a cash withdrawal.
     ['category' => 'cash-withdrawal', 'field' => 'counterparty', 'match' => 'starts_with', 'value' => 'KOSTEN KASOPNAME'],
     ['category' => 'cash-withdrawal', 'field' => 'counterparty', 'match' => 'starts_with', 'value' => 'GELDMAAT'],
 
@@ -100,8 +97,6 @@ return [
     ['category' => 'insurance-other', 'field' => 'counterparty', 'match' => 'contains', 'value' => 'Allianz'],
     ['category' => 'insurance-other', 'field' => 'counterparty', 'match' => 'contains', 'value' => 'Nationale-Nederlanden'],
 
-    // Restricted to clearly-named NL charities; the user adds their own
-    // personal recurring gifts on top.
     ['category' => 'donations', 'field' => 'counterparty', 'match' => 'contains', 'value' => 'Stichting Dierenlot'],
     ['category' => 'donations', 'field' => 'counterparty', 'match' => 'contains', 'value' => 'Save The Children'],
     ['category' => 'donations', 'field' => 'counterparty', 'match' => 'contains', 'value' => 'Greenpeace'],
@@ -118,9 +113,8 @@ return [
     ['category' => 'fees', 'field' => 'counterparty', 'match' => 'contains', 'value' => 'CJIB'],
     ['category' => 'fees', 'field' => 'counterparty', 'match' => 'contains', 'value' => 'Bank Charges'],
 
-    // ICS bulk-payments are funding hops, not expenses; this rule
-    // catches the case where the IBAN-alias bridge has not already
-    // retyped the row to transfer_out/transfer_in upstream.
+    // ICS bulk-payments are funding hops, not expenses; this catches the rows
+    // the IBAN-alias bridge did not already retype upstream.
     ['category' => 'transfers-internal', 'field' => 'counterparty', 'match' => 'contains', 'value' => 'International Card Services'],
     ['category' => 'transfers-internal', 'field' => 'description', 'match' => 'contains', 'value' => 'IDEAL BETALING, DANK U'],
 ];

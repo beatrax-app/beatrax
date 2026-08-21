@@ -18,17 +18,9 @@ use Modules\Recurring\Models\RecurringSeriesOccurrence;
 use Modules\Recurring\Public\Events\PaymentSettled;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
-/*
- * Req 13 — reminders self-invalidate. Two halves:
- *
- *   - Matched BEFORE the job runs: EmitPaymentRemindersJob's settlement
- *     check skips the candidate entirely — no event, no row.
- *   - Matched AFTER delivery: dispatching PaymentSettled resolves the
- *     already-persisted row via the re-derived deterministic id.
- *
- * Event dispatch is wrapped in SuppressionEvaluator::suppressDelivery()
- * (D-43) so no test ever attempts a real OS notification.
- */
+// A charge that settles before the job runs is skipped outright; one that
+// settles after resolves the persisted row by re-deriving its id. Dispatch runs
+// inside suppressDelivery() so no case attempts a real OS notification.
 
 function rsiUser(string $username): User
 {
@@ -60,11 +52,8 @@ function rsiSeries(User $user, string $clusterKey, CarbonImmutable $nextExpected
     ]);
 }
 
-/**
- * Seeds a real transaction + a recurring_series_occurrences row observed
- * on $observedAt, so EmitPaymentRemindersJob's before-fire settlement
- * check has a real occurrence to find.
- */
+// The settlement check looks for a real occurrence row, so a bare transaction
+// is not enough.
 function rsiSeedOccurrence(User $user, RecurringSeries $series, CarbonImmutable $observedAt): void
 {
     /** @var DatabaseManager $db */
@@ -210,7 +199,7 @@ it('resolves the existing row when the charge settles after delivery', function 
     $resolved = rsiNotificationRow((int) $user->id, (int) $series->id, $due->toDateString());
     expect($resolved)->not->toBeNull();
     expect($resolved?->state)->toBe('resolved');
-    // title/body stay intact so the row remains legible as history.
+    // Resolving must not rewrite the copy; the row stays legible as history.
     expect($resolved?->title)->toBe($originalTitle);
     expect($resolved?->body)->toBe($originalBody);
 });
@@ -238,10 +227,8 @@ it('does not let a resolved row be resolved twice', function (): void {
     $firstResolve = rsiNotificationRow((int) $user->id, (int) $series->id, $due->toDateString());
     expect($firstResolve?->state)->toBe('resolved');
 
-    // Dispatching PaymentSettled again must stay a silent no-op — the
-    // listener's pre-check refuses to call the state machine for an
-    // already-resolved row, and the state machine itself rejects
-    // resolved -> resolved.
+    // The listener's pre-check keeps the second dispatch away from the state
+    // machine, which would otherwise reject resolved -> resolved by throwing.
     rsiDispatchSettled($user, $series, $due);
 
     $secondResolve = rsiNotificationRow((int) $user->id, (int) $series->id, $due->toDateString());

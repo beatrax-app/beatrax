@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-// Placeholder for the anonymised real ASN + ICS 6-month export. The
-// real anonymisation work (mining real exports, scrubbing PII,
-// stabilising counterparty IBANs into deterministic tokens) is
-// deferred. The stub keeps the contract test scaffold runnable and
-// the file lookup deterministic.
+// Stub standing in for the anonymised real ASN + ICS 6-month export, which is
+// not mined yet. It keeps the corpus lookup deterministic while it is empty.
 
 return [
     'transactions' => [],

@@ -4,18 +4,6 @@ declare(strict_types=1);
 
 use Modules\Core\Models\User;
 
-/*
- * SystemSnapshotPage rendering invariants.
- *
- * Covers:
- *   - GET /dev/system renders the snapshot page for a developer
- *     with PHP / Laravel / SQLite / Paths / Env / Runtime /
- *     Effective config section headings.
- *   - GET /dev/system does NOT leak the test-env APP_KEY value
- *     (denylist redaction via ConfigFlattener).
- *   - GET /dev/system returns 404 for a non-developer.
- */
-
 function systemSnapshotUser(string $username, bool $isDeveloper = true): User
 {
     return User::query()->create([
@@ -60,8 +48,6 @@ it('does not render the test-env APP_KEY value on /dev/system (denylist redactio
     $response->assertOk();
     $html = (string) $response->getContent();
 
-    // The literal APP_KEY value must not appear.
     expect($html)->not->toContain((string) $appKey);
-    // The redacted marker must appear adjacent to the key row.
     expect($html)->toContain('[REDACTED]');
 });

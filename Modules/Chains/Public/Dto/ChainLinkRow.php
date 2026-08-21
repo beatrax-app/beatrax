@@ -8,10 +8,7 @@ use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Spatie\LaravelData\Data;
 
-// One instance per candidate chain_links row for /chains/review.
-// confirmsRemaining counts down to the auto-promotion threshold; the
-// *CounterpartySlug fields are null when the transaction has no resolved
-// counterparty, falling back to plain text instead of a profile link.
+// confirmsRemaining counts down to the auto-promotion threshold.
 final class ChainLinkRow extends Data
 {
     public function __construct(

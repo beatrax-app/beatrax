@@ -12,16 +12,8 @@ use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 
 uses(RefreshDatabase::class);
 
-/*
- * Horizon-switch tests for D-14: the /forecast segmented control must
- * expose all five HORIZON_DAYS options (30, 60, 90, 180, 365) after the
- * Phase 6 extension. Prior to Phase 6 the control hard-coded [30, 60, 90].
- *
- * These tests render the ForecastPage and assert:
- *   1. wire:click="setHorizon(180)" is present in the rendered output.
- *   2. wire:click="setHorizon(365)" is present in the rendered output.
- *   3. The HORIZON_DAYS constant itself contains the expected five values.
- */
+// The segmented control used to hard-code [30, 60, 90]; these pin it to the
+// HORIZON_DAYS constant instead.
 
 function fphUser(string $suffix = 'fph'): User
 {

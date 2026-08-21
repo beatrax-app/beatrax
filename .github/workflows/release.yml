@@ -88,7 +88,7 @@ jobs:
         # workflow_dispatch-only while this workflow fires on any `v*` tag
         # push — so a human pushing a tag bypassed the spec entirely and the
         # pipeline would build and draft a release for a version the spec does
-        # not consider releasable (OPS-R18). Its own job, ahead of the builds,
+        # not consider releasable. Its own job, ahead of the builds,
         # so it costs seconds and fails before anything is compiled.
         name: spec gate
         runs-on: ubuntu-latest

@@ -6,14 +6,10 @@ use Illuminate\Contracts\Translation\Translator;
 use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Support\Fmt;
 
-/*
- * Fmt::number formats through ext-intl, which the mobile PHP build ships with
- * ICU data for English only — so on device NumberFormatter cannot be built for
- * any of the other twenty-five languages, and the four views that call Fmt
- * would 500 the moment the reader switched language. A locale ICU refuses
- * stands in for that condition, which a host with full ICU data cannot
- * otherwise reproduce.
- */
+// The mobile PHP build ships ICU data for English only, so on device
+// NumberFormatter cannot be built for any of the other twenty-five languages
+// and the views calling Fmt would 500 on a language switch. A locale ICU
+// refuses stands in for that, which a host with full ICU data cannot reproduce.
 
 it('formats through ICU when the runtime can', function (): void {
     app()->make(Translator::class)->setLocale(Locale::Nl->value);

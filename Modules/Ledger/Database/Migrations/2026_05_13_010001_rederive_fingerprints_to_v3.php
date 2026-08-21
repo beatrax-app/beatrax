@@ -9,11 +9,6 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Migration classes are anonymous and instantiated by Laravel's
-        // migrator with no constructor arguments, so the FingerprintRederiveService
-        // has to be resolved from the application container at the migration
-        // boundary. This is the documented exception to the DI-only rule:
-        // schema migrations cannot themselves receive constructor injection.
         /** @var FingerprintRederiveService $service */
         $service = app(FingerprintRederiveService::class);
 
@@ -37,10 +32,8 @@ return new class extends Migration
 
     public function down(): void
     {
-        // Re-deriving the current normalization_version back to its
-        // predecessor is destructive: the current algorithm may have merged
-        // rows that the previous one distinguished, and reversing the hash
-        // would re-fragment those merged rows incorrectly. Restore from a
-        // SQLite backup if a rollback is required.
+        // Re-deriving back to the predecessor version is destructive: the current
+        // algorithm may have merged rows the previous one distinguished, and the
+        // reverse would re-fragment them incorrectly. Restore from a SQLite backup.
     }
 };

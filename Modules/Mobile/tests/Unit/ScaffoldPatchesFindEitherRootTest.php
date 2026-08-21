@@ -2,15 +2,6 @@
 
 declare(strict_types=1);
 
-/*
- * The patch scripts resolved the generated project as ../mobile-app/nativephp/,
- * which exists in this repository and nowhere else. In a materialized
- * mobile-build tree the scripts and the scaffold share one root, so every one
- * of them printed "no scaffold yet — skipping" and exited 0: a green build
- * carrying NativePHP's own icon, no WebView camera permission and
- * allowBackup="true" on a financial app.
- */
-
 /** @return list<string> the scripts that patch the generated native project */
 function scaffoldPatchScripts(): array
 {
@@ -42,6 +33,11 @@ function scaffoldScriptsDirectory(): string
 
     return base_path('scripts');
 }
+
+// The patch scripts resolved the generated project as ../mobile-app/nativephp/,
+// which exists in this repository and nowhere else. In a materialized mobile-build
+// tree the scripts and the scaffold share one root, so each printed "no scaffold
+// yet" and exited 0: a green build carrying NativePHP's own icon.
 
 it('resolves no scaffold path by hand any more', function (): void {
     $hardcoded = [];

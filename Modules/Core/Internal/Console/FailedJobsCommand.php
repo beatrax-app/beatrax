@@ -11,9 +11,6 @@ use InvalidArgumentException;
 use Modules\Core\Internal\Console\Support\DurationParser;
 use Modules\Core\Public\Contracts\Clock;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class FailedJobsCommand extends Command
 {
     /** @var string */

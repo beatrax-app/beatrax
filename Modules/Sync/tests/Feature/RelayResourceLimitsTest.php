@@ -16,9 +16,9 @@ use Modules\Sync\Commands\RelayServeCommand;
 use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
-use Modules\Sync\Internal\Transport\Relay\RelayDeliverRateLimiter;
 use Modules\Sync\Internal\Transport\Relay\RelayDrainRegistry;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
+use Modules\Sync\Internal\Transport\Relay\RelayRateLimiter;
 use Modules\Sync\Internal\Transport\Relay\RelayTlsMaterial;
 use Psr\Log\NullLogger;
 
@@ -26,23 +26,11 @@ use function Amp\ByteStream\buffer;
 
 uses(RefreshDatabase::class);
 
-/*
- * RelayResourceLimitsTest — server-side resource-exhaustion guards for the
- * OPEN POST /relay/deliver endpoint (confirmed security finding: the relay
- * accepts unauthenticated blobs by design, but had no server-side blob size
- * cap, no did format/length validation, no per-mailbox quota, and GET
- * /relay/drain returned every pending row in one response).
- *
- * These tests exercise the REAL RelayServeCommand route handlers directly
- * (via reflection, mirroring RelayRoundTripTest's pattern) so the guards are
- * proven against the actual HTTP boundary — not just the client, which an
- * attacker hitting the socket directly would never go through.
- */
+// POST /relay/deliver accepts unauthenticated blobs by design, so its size,
+// did-format and quota guards are all that stands between a stranger and the
+// mailbox table. These drive the real route handlers through reflection: an
+// attacker at the socket never goes through RelayClient, so guarding it proves nothing.
 
-/**
- * Build a bare amphp Request for direct dispatch through
- * RelayServeCommand::route() (private — invoked via reflection).
- */
 function buildRelayLimitsRequest(string $method, string $path, string $body = '', array $headers = [], string $clientIp = '203.0.113.1'): AmpRequest
 {
     $client = Mockery::mock(AmpClient::class);
@@ -54,9 +42,6 @@ function buildRelayLimitsRequest(string $method, string $path, string $body = ''
 }
 
 /**
- * Dispatch a request through the command's private route() method and decode
- * the JSON response body alongside the HTTP status.
- *
  * @return array{status: int, body: array<string, mixed>}
  */
 function dispatchRelayLimitsRequest(RelayServeCommand $command, AmpRequest $request): array
@@ -88,7 +73,7 @@ beforeEach(function (): void {
         new NullLogger,
         $this->mailbox,
         new RelayDrainRegistry,
-        new RelayDeliverRateLimiter(app(Clock::class)),
+        new RelayRateLimiter(app(Clock::class)),
         new RelayTlsMaterial,
         new DaemonShutdownSignal,
     );
@@ -332,16 +317,70 @@ it('throttles a burst of deliveries from one source IP with 429 rate_limited (L1
 
     // The whole per-window budget from one source IP is accepted (all well
     // under MAX_PENDING_PER_RECIPIENT, so the quota cap never fires here).
-    for ($i = 0; $i < RelayDeliverRateLimiter::MAX_PER_WINDOW; $i++) {
+    for ($i = 0; $i < RelayRateLimiter::MAX_PER_WINDOW; $i++) {
         expect($deliver($flooderIp)['status'])->toBe(202);
     }
 
-    // The next delivery from the SAME IP is throttled — and it is the rate
-    // limit, not the mailbox_full quota (distinct error code proves which).
+    // The next delivery from the same IP is throttled, and the distinct error
+    // code is what proves it is the rate limit and not the mailbox quota.
     $throttled = $deliver($flooderIp);
     expect($throttled['status'])->toBe(429);
     expect($throttled['body']['error'] ?? null)->toBe('rate_limited');
 
     // A different source IP is unaffected — the limit is strictly per-source.
     expect($deliver('198.51.100.23')['status'])->toBe(202);
+});
+
+// Drain and confirm each resolve a row from the database INSIDE their own
+// authorization check, so an unauthenticated caller could still spend a query
+// per request. Only deliver was throttled, which is the endpoint that needs it
+// least — it at least writes the thing the caller asked for.
+it('throttles an unauthenticated burst against drain, not just deliver (L13)', function (): void {
+    $flooderIp = '203.0.113.9';
+
+    $drain = fn (string $ip): array => dispatchRelayLimitsRequest(
+        $this->command,
+        buildRelayLimitsRequest('GET', '/relay/drain?did=device-someone-else', '', [], $ip),
+    );
+
+    // Every one of these is refused as unauthorized, which is correct — but
+    // being refused is not the same as being free, and that is the point.
+    for ($i = 0; $i < RelayRateLimiter::MAX_PER_WINDOW; $i++) {
+        expect($drain($flooderIp)['status'])->toBe(401);
+    }
+
+    $throttled = $drain($flooderIp);
+    expect($throttled['status'])->toBe(429);
+    expect($throttled['body']['error'] ?? null)->toBe('rate_limited');
+
+    expect($drain('198.51.100.29')['status'])->toBe(401);
+});
+
+it('throttles an unauthenticated burst against confirm (L13)', function (): void {
+    $flooderIp = '203.0.113.11';
+
+    $confirm = fn (string $ip): array => dispatchRelayLimitsRequest(
+        $this->command,
+        buildRelayLimitsRequest('DELETE', '/relay/drain/123456', '', [], $ip),
+    );
+
+    for ($i = 0; $i < RelayRateLimiter::MAX_PER_WINDOW; $i++) {
+        expect($confirm($flooderIp)['status'])->toBe(401);
+    }
+
+    expect($confirm($flooderIp)['status'])->toBe(429);
+});
+
+// A did that cannot name a device is a malformed request, and saying so is
+// not a disclosure: deliver already answers this way, and drain answering
+// "unauthorized" instead told a caller its syntax error looked like a
+// credentials problem.
+it('refuses a malformed did on drain as a bad request rather than an auth failure', function (): void {
+    $result = dispatchRelayLimitsRequest(
+        $this->command,
+        buildRelayLimitsRequest('GET', '/relay/drain?did='.urlencode(str_repeat('x', 129)), '', [], '203.0.113.13'),
+    );
+
+    expect($result['status'])->toBe(400)
+        ->and($result['body']['error'] ?? null)->toBe('malformed_did');
 });

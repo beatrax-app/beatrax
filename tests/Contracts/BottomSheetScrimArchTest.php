@@ -2,14 +2,9 @@
 
 declare(strict_types=1);
 
-/*
- * The bottom-sheet scrim is a fixed, full-viewport, z-50 layer whose
- * visibility belongs to Alpine's x-show. A `display` declaration in the phone
- * media query overrides x-show, and `!important` beat even the inline style —
- * so every phone-width page carrying a sheet sat under an invisible overlay
- * that swallowed taps while scrolling still worked. It reads as a frozen app.
+/**
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-display-override-on-the-bottom-sheet-scrim
  */
-
 it('never forces the bottom-sheet scrim visible from CSS', function (): void {
     $css = (string) file_get_contents(base_path('resources/css/app.css'));
 

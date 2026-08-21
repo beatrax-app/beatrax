@@ -8,9 +8,6 @@ use Generator;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ledger\Public\Dto\StatementSummaryData;
 
-/**
- * @link ../../../../.docs/features/ingestion/architecture.md
- */
 interface SourceAdapter
 {
     public function format(): string;

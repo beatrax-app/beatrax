@@ -9,26 +9,6 @@ use Modules\Core\Models\User;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 use Modules\Forecasting\Public\Services\ForecastQuery;
 
-/*
- * End-to-end Wave 2 projection contract.
- *
- * Seeds the Wave 0 fixture's accounts + recurring_series rows (and
- * the transactions that back the occurrences so the series-to-
- * account derivation has a real DB path to follow), dispatches the
- * ProjectForecastJob synchronously per horizon, then reads the
- * resulting projection via the Public ForecastQuery and asserts the
- * fixture's `expected.projection` entries land within ±2 minor units
- * (BIGINT signed integer arithmetic is exact except for the
- * `(int) round()` reductions in DailyFold).
- *
- * Wave 2 dataset is the baseline-relevant subset of the corpus:
- * stable-monthly-subscription, drifting-subscription-midwindow,
- * salary-and-side-income, multi-account-baseline,
- * fx-only-usd-subscription, zero-occurrence-edge-case. Wave 3
- * extends with buffer-crossing + ics-settlement-chain; Wave 5 adds
- * variable-utility + scenario-with-each-mutation-kind.
- */
-
 /**
  * @return array<string, array{0: string}>
  */
@@ -41,15 +21,11 @@ function fpctFixtures(): array
         'multi-account-baseline' => ['multi-account-baseline'],
         'fx-only-usd-subscription' => ['fx-only-usd-subscription'],
         'zero-occurrence-edge-case' => ['zero-occurrence-edge-case'],
-        // Wave 3 additions — exercises ShortfallDetector + buffer-band
-        // semantics end-to-end via ProjectForecastJob.
+        // Exercises ShortfallDetector and buffer-band semantics end-to-end.
         'buffer-crossing' => ['buffer-crossing'],
-        // Wave 5 additions — exercises the percentile tier
-        // (variable-utility's variance_tolerance_percent=45 + 8
-        // observed occurrences trips the percentile-tier branch) and
-        // the scenario substrate read paths via the full multi-account
-        // baseline shape (scenario application itself is exercised by
-        // ScenarioApplier's dedicated tests + ScenarioIsolationContractTest).
+        // variable-utility's variance_tolerance_percent=45 plus 8 observed
+        // occurrences is what trips the percentile-tier branch. Scenario
+        // application itself is covered by ScenarioIsolationContractTest.
         'variable-utility' => ['variable-utility'],
         'scenario-with-each-mutation-kind' => ['scenario-with-each-mutation-kind'],
     ];
@@ -75,9 +51,6 @@ function fpctMapFixtureKindToDbKind(string $fixtureKind): string
 }
 
 /**
- * Seeds a fixture into the DB for the given user and returns the
- * fixtureAccountId → dbAccountId map.
- *
  * @return array{accountIdMap: array<int, int>, fixture: array<string, mixed>}
  */
 function fpctSeedFixture(DatabaseManager $db, User $user, string $fixtureName): array
@@ -160,9 +133,8 @@ function fpctSeedFixture(DatabaseManager $db, User $user, string $fixtureName): 
             'updated_at' => '2026-05-01 00:00:00',
         ]);
 
-        // Seed each occurrence with a backing transaction row so the
-        // series-to-account mapping resolves through the documented
-        // recurring_series_occurrences → transactions.account_id path.
+        // Each occurrence needs a backing transaction row: the series-to-account
+        // mapping resolves through recurring_series_occurrences.transaction_id.
         $occurrences = is_array($series['occurrences'] ?? null) ? $series['occurrences'] : [];
         foreach ($occurrences as $occ) {
             $occDate = (string) ($occ['date'] ?? '2026-05-01');
@@ -211,12 +183,10 @@ function fpctSeedFixture(DatabaseManager $db, User $user, string $fixtureName): 
     return ['accountIdMap' => $accountIdMap, 'fixture' => $fixture];
 }
 
-it('projects the Wave 2 fixture corpus subset end-to-end and matches expected.projection within ±2 minor', function (string $fixtureName): void {
-    // The fixture's expected.projection entries are calibrated off
-    // the account `opening_balance_as_of_date` (2026-05-01) so the
-    // projection horizon spans next_expected_date and the cadence
-    // steps that follow. Freeze the Clock to that anchor date so
-    // the ProjectionPipeline's asOf matches.
+it('projects the fixture corpus subset end-to-end and matches expected.projection within ±2 minor', function (string $fixtureName): void {
+    // The fixture's expected.projection values are calibrated off the accounts'
+    // opening_balance_as_of_date, so the clock has to be frozen to that same
+    // anchor for the pipeline's asOf to line up.
     CarbonImmutable::setTestNow('2026-05-01 00:00:00');
 
     /** @var DatabaseManager $db */
@@ -271,28 +241,14 @@ it('projects the Wave 2 fixture corpus subset end-to-end and matches expected.pr
         if ($matched === null) {
             continue;
         }
-        // Point (center) tolerance is tight for envelope-tier series
-        // — BIGINT signed sums are exact except for the integer
-        // rounding in DailyFold's FX conversion. Low/high tolerance is
-        // wider because the fixture corpus was synthesised against an
-        // approximate envelope-tier spread model; the per-occurrence
-        // quadrature spread in the implementation (locked by the
-        // DailyFoldTest load-bearing `√2 × 10 = 14` assertion) differs
-        // from the fixture's approximate spread by up to several
-        // thousand minor units when multiple series interact within
-        // one horizon. The load-bearing math contract lives in the
-        // unit test; the contract test confirms the centre-of-band
-        // ("point estimate") is exact and the band is in the right
-        // ballpark.
-        //
-        // Percentile-tier fixtures (variable-utility, the volatile-
-        // series exercise) get wider tolerances on both point AND band
-        // because the R-7 interpolation + cadence jitter widen the
-        // spread relative to the fixture's hand-computed envelope
-        // approximation. The fixture's expected values lock the
-        // ballpark; the dedicated PercentileTest + CadenceJitterTest
-        // hold the exact math contract.
+        // The point estimate is exact bar DailyFold's integer FX rounding, so its
+        // tolerance is tight. The band is not: the corpus was synthesised against
+        // an approximate envelope spread, and the implementation's per-occurrence
+        // quadrature differs by thousands of minor units when series overlap.
         $isPercentileTier = in_array($fixtureName, ['variable-utility'], true);
+        // Percentile-tier fixtures widen both: R-7 interpolation and cadence
+        // jitter spread the band beyond the hand-computed approximation.
+        // DailyFoldTest, PercentileTest and CadenceJitterTest hold the exact math.
         $pointTolerance = $isPercentileTier ? 12000 : 5;
         $bandTolerance = $isPercentileTier ? 20000 : 5000;
 
@@ -310,14 +266,9 @@ it('projects the Wave 2 fixture corpus subset end-to-end and matches expected.pr
         );
     }
 
-    // Wave 3 shortfall assertions. The fixture's `expected.shortfalls`
-    // entries (when present) name the windows ShortfallDetector should
-    // have written into the forecast_shortfall_windows table during the
-    // 30-day baseline projection above. The check is tolerant: it only
-    // asserts that AT LEAST ONE row exists with the matching (account,
-    // buffer_used_minor, currency) tuple — the start/end dates carry
-    // their own tolerance because the daily-fold + envelope timing can
-    // shift the boundary by a day.
+    // Deliberately tolerant: only that at least one window row exists for the
+    // (account, buffer_used_minor) pair. Daily-fold and envelope timing can shift
+    // a window boundary by a day, so the start/end dates are not asserted.
     $expectedShortfalls = is_array($fixture['expected']['shortfalls'] ?? null) ? $fixture['expected']['shortfalls'] : [];
     foreach ($expectedShortfalls as $expectedSf) {
         if (! is_array($expectedSf)) {

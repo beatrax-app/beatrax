@@ -9,16 +9,9 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Internal\Aggregation\TimeBucketSpendQuery;
-use Modules\Reports\Public\Enums\ReportGranularity;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
-
-/*
- * Covers 999.6-04 Task 3 / Req 2/3/6/7: TimeBucketSpendQuery loops
- * TimeBucketGenerator's output and produces exactly one ReportResultRow per
- * generated sub-Period, including zero-activity buckets. Fixture helpers
- * prefixed tbq_ to avoid cross-file global-function collisions.
- */
 
 function tbqUser(): User
 {

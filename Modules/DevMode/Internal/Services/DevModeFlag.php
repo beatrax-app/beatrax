@@ -6,10 +6,8 @@ namespace Modules\DevMode\Internal\Services;
 
 use Illuminate\Contracts\Config\Repository;
 
-// Thin DI seam over config('app.dev_mode') so the triple-gate's first
-// lock ("Dev Mode is ON") can be validated through a contract tests can
-// mock without poking config() directly. Default is unset (null);
-// operators flip it on via APP_DEV_MODE=true in .env.
+// A DI seam over config('app.dev_mode') — the triple-gate's first lock, so
+// tests need to flip it without reaching into config(). Set via APP_DEV_MODE.
 final readonly class DevModeFlag
 {
     public function __construct(

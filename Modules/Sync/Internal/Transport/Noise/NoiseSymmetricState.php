@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Transport\Noise;
 
-/**
- * @link ../../../../../.docs/features/sync/architecture.md
- */
 final class NoiseSymmetricState
 {
     /** @var string 32-byte chaining key */

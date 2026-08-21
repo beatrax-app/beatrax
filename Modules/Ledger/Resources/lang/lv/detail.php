@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Noņemt kategoriju',
         'keep_category' => 'Paturēt šo kategoriju',
         'restore_single' => 'Atjaunot kā vienu kategoriju?',
+        'survivor_legend' => 'Kategorija, ko paturēt',
         'confirm_unsplit' => 'Jā, atcelt sadalījumu',
         'keep_split' => 'Paturēt sadalījumu',
     ],
@@ -51,6 +52,16 @@ return [
         'choose_aria' => 'Izvēlieties jaunu darījuma veidu',
         'choose_option' => 'Izvēlieties veidu…',
         'save' => 'Saglabāt',
+    ],
+
+    'type_label' => [
+        'expense' => 'Izdevumi',
+        'income' => 'Ieņēmumi',
+        'transfer_out' => 'Izejošs pārskaitījums',
+        'transfer_in' => 'Ienākošs pārskaitījums',
+        'fee' => 'Komisijas maksa',
+        'refund' => 'Atmaksa',
+        'adjustment' => 'Korekcija',
     ],
 
     'note' => [

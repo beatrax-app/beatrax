@@ -10,12 +10,6 @@ use Modules\Recurring\Public\Actions\RejectRecurringSeries;
 use Modules\Recurring\Public\Actions\UnRejectRecurringSeries;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/*
- * UnRejectRecurringSeries — promotes a rejected series back to pending
- * so the next sweep will resurface it. Idempotent: a non-rejected
- * starting state is a silent no-op (matches the chains-side analog).
- */
-
 function urrUser(string $username): User
 {
     return User::query()->create([

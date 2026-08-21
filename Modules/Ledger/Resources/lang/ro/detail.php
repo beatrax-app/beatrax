@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Elimină categoria',
         'keep_category' => 'Păstrează această categorie',
         'restore_single' => 'Restaurezi ca o singură categorie?',
+        'survivor_legend' => 'Categoria de păstrat',
         'confirm_unsplit' => 'Da, anulează împărțirea',
         'keep_split' => 'Păstrează împărțirea',
     ],
@@ -51,6 +52,16 @@ return [
         'choose_aria' => 'Alege noul tip de tranzacție',
         'choose_option' => 'Alege un tip…',
         'save' => 'Salvează',
+    ],
+
+    'type_label' => [
+        'expense' => 'Cheltuială',
+        'income' => 'Venit',
+        'transfer_out' => 'Transfer ieșit',
+        'transfer_in' => 'Transfer primit',
+        'fee' => 'Comision',
+        'refund' => 'Rambursare',
+        'adjustment' => 'Ajustare',
     ],
 
     'note' => [

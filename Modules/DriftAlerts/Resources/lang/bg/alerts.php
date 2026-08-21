@@ -57,6 +57,7 @@ return [
         'meta_eur_equiv' => '(≈ :amount/год.)',
         'cancel_impact' => 'Прекрати → спестяваш :amount/год.',
         'cadence_flipped' => 'Честотата се промени — показва се и в',
+        'cadence_flipped_link' => 'Преглед на повтарящите се',
         'acknowledge' => 'Потвърди',
         'acknowledge_aria' => 'Потвърди сигнала за отклонение :id',
         'snooze' => 'Отложи ▾',

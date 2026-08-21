@@ -5,20 +5,14 @@ declare(strict_types=1);
 use App\Models\User;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
-use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Actions\RecordTransactions;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 
-/*
- * AmountsRemainAggregatableTest — CRYPT-01 / D-02a: with encryption enabled,
- * a raw SQL SUM(amount_minor) + GROUP BY over transactions still returns the
- * correct plaintext totals, proving amounts are NOT encrypted (Pitfall 1 —
- * ≥11 query classes depend on SQL-side aggregation over amount_minor /
- * settled_amount_minor; SQLite cannot aggregate ciphertext).
- * 14-VALIDATION.md CRYPT-01 row 4.
- */
+// Amounts stay in plaintext because a dozen query classes aggregate them in
+// SQL, and SQLite cannot SUM ciphertext.
 
 beforeEach(function (): void {
     $this->user = User::query()->create([
@@ -40,17 +34,14 @@ beforeEach(function (): void {
         'status' => 'previewed',
     ]);
 
-    // Prime the session with an unlocked dummy app-lock KEK — mirrors
-    // Modules/Sync/tests/TestCase.php's own priming.
+    // The keyring call hard-throws without an unlocked app-lock KEK in session.
     /** @var Session $session */
     $session = $this->app->make(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
 });
 
 it('sums amount_minor correctly via raw SQL after encryption is enabled for the user', function (): void {
-    // Turn encryption ON for this user (group-of-one GDK) BEFORE importing —
-    // proves the aggregation path is unaffected by the D-02b content
-    // encryption that runs alongside it.
+    // Encryption on before the import, so content encryption runs alongside.
     /** @var GdkKeyringService $keyring */
     $keyring = $this->app->make(GdkKeyringService::class);
 

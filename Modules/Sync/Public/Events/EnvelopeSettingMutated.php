@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Public\Events;
 
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class EnvelopeSettingMutated
 {
     /**

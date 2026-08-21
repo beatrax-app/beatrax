@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-// An acknowledged-then-snoozed alert whose snoozed_until is now in
-// the past. The hourly revival sweep flips the alert back to 'open'
-// and writes an audit row with
-// transition_reason='detector_revived_snooze'. The fixture describes
-// the post-revival state.
+// The expected block describes the POST-revival state: the alert is seeded as
+// snoozed with an expired snoozed_until, and the sweep flips it back to open.
 
 $transactions = [];
 $amounts = [-999, -999, -999, -1149, -1149, -1149];
@@ -31,9 +28,6 @@ for ($i = 0; $i < 6; $i++) {
 return [
     'transactions' => $transactions,
     'expected' => [
-        // Initial alert detected then snoozed in the past; the
-        // revival sweep flips state back to 'open' and writes a
-        // transition row.
         'alerts' => [
             [
                 'state' => 'open',

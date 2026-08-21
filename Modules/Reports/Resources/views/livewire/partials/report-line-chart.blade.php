@@ -1,14 +1,14 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    Report builder `line` viz partial (Req 8) — default for time-series
+    Report builder `line` viz partial — default for time-series
     reports (net_worth metric or time_bucket dimension). Clones the Alpine
     x-init + data-options ApexCharts mount block verbatim from
     Modules/Forecasting/Resources/views/livewire/partials/aggregate-line-chart.blade.php.
 
     Variables in scope:
       $chartElementId : string
-      $rows           : list<Modules\Reports\Public\Dto\ReportResultRow>
-      $drilldownUrls  : list<string>  — parallel to $rows, one URL per point (Req 12)
+      $rows           : list<Modules\Reports\Internal\Dto\ReportResultRow>
+      $drilldownUrls  : list<string>  — parallel to $rows, one URL per point
       $metricLabel    : string
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
@@ -62,7 +62,7 @@
 @endphp
 
 {{--
-    CR-03: `buildOptions()` re-reads `data-options` (and re-attaches the
+    `buildOptions()` re-reads `data-options` (and re-attaches the
     dataPointSelection drilldown handler off the FRESH `beatraxDrilldownUrls`
     array) every time it's called — used both at `x-init` mount and again on
     every `report-updated` browser event (dispatched by

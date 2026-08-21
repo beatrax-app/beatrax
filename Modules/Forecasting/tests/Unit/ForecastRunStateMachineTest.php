@@ -13,18 +13,6 @@ use Modules\Forecasting\Models\ForecastRun;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for ForecastRunStateMachine — the sole legal mutator
- * of forecast_runs.status. Covers:
- *
- *   - Valid transitions: pending → running / failed, running → complete / failed.
- *   - Illegal transitions: every move out of a terminal state, plus
- *     same-state transitions (no entry in the map).
- *   - Transition-map snapshot (locks the shape so future edits are
- *     intentional).
- *   - Lifecycle timestamp stamps via the injected Clock contract.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);

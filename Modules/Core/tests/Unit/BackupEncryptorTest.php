@@ -36,7 +36,6 @@ it('round-trips a multi-chunk payload byte-for-byte', function (): void {
     $enc->decrypt($p['enc'], $p['dec'], 'correct horse battery staple');
 
     expect(file_get_contents($p['dec']))->toBe($payload);
-    // The ciphertext must not contain the plaintext anywhere.
     expect(file_get_contents($p['enc']))->not->toContain($payload);
 
     $p['cleanup']();
@@ -137,14 +136,9 @@ it('uses a 256-bit symmetric key (quantum-safe floor)', function (): void {
     expect(SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_KEYBYTES * 8)->toBe(256);
 });
 
-// ---------------------------------------------------------------------------
-// Failure paths
-//
-// Everything below drives a branch that only opens when the filesystem or the
-// file itself misbehaves. They were unreachable from the suite before: a real
-// file will not fail a read halfway through on request, so the reads and
-// writes go through a stream wrapper that serves real bytes and then refuses.
-// ---------------------------------------------------------------------------
+// Failure paths: a real file will not fail a read halfway through on request,
+// so the tests below drive those branches through a stream wrapper that serves
+// real bytes and then refuses.
 
 it('refuses to read a backup that is not there', function (): void {
     $p = backupTmpPaths();
@@ -216,12 +210,9 @@ it('reports a write that reports zero bytes while encrypting', function (): void
 });
 
 // Not covered: the `fread() === false` check inside the decrypt loop, and the
-// SodiumException catch around init_pull. Neither is reachable from a test.
-// PHP turns a wrapper's failed read into a short read once its 8 KiB buffer is
-// in play, so the partial block reaches the AEAD and is rejected as corruption
-// instead; and init_pull only raises for a header of the wrong length, which
-// readExactly() has already guaranteed. Both stay as guards against a
-// filesystem or a libsodium that misbehaves in ways PHP will not simulate.
+// SodiumException catch around init_pull. PHP turns a wrapper's failed read
+// into a short read once its 8 KiB buffer is in play, and init_pull only
+// raises for a wrong-length header that readExactly() already guarantees.
 
 // The header is served as its own read so PHP's buffer is empty when the
 // ciphertext loop asks for its first block — otherwise the buffered remainder
@@ -248,8 +239,7 @@ it('reports a read that fails on the first ciphertext block', function (): void 
 
 // Truncating on an exact block boundary is a different failure from truncating
 // mid-block: the reader gets a clean end-of-file rather than a partial block,
-// so it leaves the loop without ever seeing the FINAL tag. Both must be
-// refused, and only the mid-block case was covered.
+// so it leaves the loop without ever seeing the FINAL tag.
 it('detects a backup truncated on a block boundary', function (): void {
     $p = backupTmpPaths();
     file_put_contents($p['plain'], random_bytes(200_000));

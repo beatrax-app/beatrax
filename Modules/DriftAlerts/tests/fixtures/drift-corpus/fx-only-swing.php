@@ -2,15 +2,10 @@
 
 declare(strict_types=1);
 
-// Netflix USD $11.99 stable across 6 months; the EUR
-// settlement amount drifts from €11.20 down to €10.80 purely because
-// of FX rate fluctuation. The drift detector compares ORIGINAL
-// currency only (per the FX-exclusion invariant) so USD stability
-// means zero alerts regardless of EUR shadow drift. Carry-forward
-// of the project-wide multi-currency original-only comparison rule.
+// The USD price holds at $11.99 while the EUR settlement drifts on FX alone.
+// The detector compares original currency only, so nothing fires.
 
 $transactions = [];
-// USD stable at -1199; EUR settlement drifts via fx jitter.
 $fxEur = [-1120, -1100, -1090, -1080, -1095, -1080];
 for ($i = 0; $i < 6; $i++) {
     $year = 2025 + intdiv($i, 12);

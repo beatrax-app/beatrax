@@ -11,16 +11,10 @@ use Modules\Sync\Internal\OpLog\OpType;
 
 uses(RefreshDatabase::class);
 
-/*
- * Only the first sighting of a merchant was captured. Every later one bumped
- * occurrence_count locally and told no peer, so two devices agreed on which
- * merchants they had seen and disagreed on how often — and that count is what
- * decides which remembered category wins when a merchant carries several.
- *
- * The obvious repair is worse than the gap: the column holds the merged total
- * across all devices, so publishing it as this device's total re-counts the
- * other device's increments as ours on every merge.
- */
+// Only a merchant's first sighting was captured, so devices agreed on which
+// merchants they had seen and disagreed on how often — and that count decides
+// which remembered category wins. The obvious repair is worse: the column holds
+// the merged total, so publishing it re-counts the peer's increments as ours.
 
 function memoryCountUser(DatabaseManager $db): int
 {
@@ -67,7 +61,7 @@ it('publishes this device running total, not the merged column value', function 
         ->map(static fn (string $v): mixed => json_decode($v, true))
         ->all();
 
-    // 1, 2, 3 — each op restating this device's own total so far.
+    // Each op restates this device's own running total, never the merged one.
     expect($published)->toBe([1, 2, 3]);
 });
 
@@ -103,7 +97,7 @@ it('sums both devices increments instead of letting the larger one win', functio
         );
     }
 
-    // Three sightings across two devices: a=1, b=2, merged 1 + 2 = 3. Under a
-    // last-writer-wins reading the b device would simply overwrite a.
+    // Three sightings across two devices sum to three. Read as last-writer-wins
+    // the second device would simply overwrite the first.
     expect((new GCounterStrategy)->resolve($candidates))->toBe(3);
 });

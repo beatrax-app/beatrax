@@ -4,23 +4,8 @@ declare(strict_types=1);
 
 use Modules\Mobile\Internal\Boot\NativeBuildPatches;
 
-/*
- * Two lists name the same set of shell patches, and they drifted.
- *
- * composer's post-update-cmd applies them after an update; NativeBuildPatches
- * re-applies them immediately before a build, because the build tooling
- * regenerates the Android project and a regenerated project carries only what
- * ran after it. The second list was three short — including the file chooser,
- * without which nothing can enter the app on Android at all.
- *
- * That gap is invisible to a developer: `composer update` runs the full list,
- * so their own device has every patch. It only shows up in CI and Bifrost,
- * which run `composer install` — and post-update-cmd does not fire for that.
- */
-
-// This suite runs from BOTH roots — the repo root and mobile-app/ — so
-// base_path() is not one place, which is the same asymmetry
-// NativeBuildPatches::locate() exists for. Resolved rather than assumed.
+// The suite runs from both roots, so base_path() is not one place — the same
+// asymmetry NativeBuildPatches::locate() exists for. Resolved rather than assumed.
 function mobileComposerManifest(): string
 {
     foreach ([base_path('composer.json'), base_path('mobile-app/composer.json')] as $candidate) {
@@ -76,6 +61,11 @@ function perBuildPatchScripts(): array
 
     return $scripts;
 }
+
+// Two lists name the same set of shell patches and they drifted: composer's
+// post-update-cmd applies them after an update, NativeBuildPatches re-applies them
+// before a build. The gap is invisible locally, because `composer update` runs the
+// full list, while CI and Bifrost run `composer install` and never fire the hook.
 
 it('re-applies before a build every patch composer applies after an update', function (): void {
     expect(perBuildPatchScripts())->toBe(patchScriptsIn('post-update-cmd'));

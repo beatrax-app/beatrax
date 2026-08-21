@@ -7,10 +7,6 @@ namespace Modules\Import\Database\Seeders\Demo;
 use Modules\Core\Models\User;
 use Modules\Import\Models\MerchantAlias;
 
-// Materialises three additional merchant_aliases rows for the primary
-// demo user (beyond DemoCounterpartiesSeeder's 24-row baseline).
-// Idempotent via updateOrCreate keyed on (user_id, pattern), matching
-// the table's existing UNIQUE constraint.
 final class DemoMerchantAliasesSeeder
 {
     /**

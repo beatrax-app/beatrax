@@ -9,22 +9,11 @@ use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
 use Modules\Search\Public\Dto\SearchFilters;
 use Modules\Search\Public\Services\SearchQuery;
 
-/**
- * CounterpartyFilterTest — Req 12 / D-04 (999.6-02).
- *
- * Proves SearchFilters/SearchQuery carry counterparty as a first-class,
- * ownership-validated filter dimension (T-999.6-04), and that the real
- * /transactions search-mode surface (TransactionsList) wires a
- * `?counterparty[]=` URL param through to it (T-999.6-05).
- */
 beforeEach(function (): void {
     $this->userAId = $this->searchTestUser('cpfilter-user-a');
     $this->userBId = $this->searchTestUser('cpfilter-user-b');
 });
 
-/**
- * Inserts a counterparties row for the given user and returns its id.
- */
 function cpFilterMakeCounterparty(int $userId, string $displayName): int
 {
     $db = app(DatabaseManager::class)->connection();
@@ -40,7 +29,6 @@ function cpFilterMakeCounterparty(int $userId, string $displayName): int
     ]);
 }
 
-// (a) SearchFilters with an owned counterparty id restricts to that counterparty.
 it('SearchQuery restricts results to the owned counterparty', function (): void {
     $ownedId = cpFilterMakeCounterparty($this->userAId, 'Owned Counterparty');
 
@@ -50,7 +38,6 @@ it('SearchQuery restricts results to the owned counterparty', function (): void 
         'description' => 'Matches the counterparty filter',
     ]);
 
-    // A second transaction with no counterparty_id — must not appear.
     $this->searchTestTransaction($this->userAId, [
         'counterparty_id' => null,
         'counterparty_name' => 'Unrelated Vendor',
@@ -68,7 +55,6 @@ it('SearchQuery restricts results to the owned counterparty', function (): void 
     expect($page->rows[0]->id)->toBe($matchingTxId);
 });
 
-// (b) A foreign counterparty id returns an empty result, never another user's data.
 it('SearchQuery returns empty result for a foreign counterparty id', function (): void {
     $foreignId = cpFilterMakeCounterparty($this->userBId, 'Foreign Counterparty');
 
@@ -78,7 +64,6 @@ it('SearchQuery returns empty result for a foreign counterparty id', function ()
         'description' => 'Belongs to user B',
     ]);
 
-    // User A has an unrelated transaction that must also not leak through.
     $this->searchTestTransaction($this->userAId, [
         'counterparty_id' => null,
         'counterparty_name' => 'User A Vendor',
@@ -89,14 +74,12 @@ it('SearchQuery returns empty result for a foreign counterparty id', function ()
     $searchQuery = app(SearchQuery::class);
     $user = User::findOrFail($this->userAId);
 
-    // User A queries with User B's counterparty id.
     $filters = new SearchFilters(counterparties: [$foreignId]);
     $page = $searchQuery->search($user, '', $filters);
 
     expect($page->totalCount)->toBe(0);
 });
 
-// (c) isActive() returns true when only counterparties is set.
 it('SearchFilters isActive is true when only counterparties is set', function (): void {
     $filters = new SearchFilters(counterparties: [123]);
 
@@ -108,8 +91,6 @@ it('SearchFilters isActive is false when empty', function (): void {
 
     expect($filters->isActive())->toBeFalse();
 });
-
-// ─── TransactionsList — the real drill-down target (999.6-02 Task 2) ────────
 
 it('TransactionsList with ?counterparty[]= enters search mode and shows only that counterparty rows', function (): void {
     $fixture = $this->seedFixtureUserAndAccount();

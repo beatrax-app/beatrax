@@ -4,30 +4,13 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Reports\Internal\Actions\SaveReport;
+use Modules\Reports\Internal\Dto\ReportDefinition;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 use Modules\Reports\Models\SavedReport;
-use Modules\Reports\Public\Actions\SaveReport;
-use Modules\Reports\Public\Dto\ReportDefinition;
-use Modules\Reports\Public\Enums\ReportGranularity;
 use Spatie\LaravelData\Exceptions\CannotCastEnum;
 
 uses(RefreshDatabase::class);
-
-/*
- * Wave 0 RED stub (999.6-03 Task 2, Req 4/9).
- *
- * Pins Modules\Reports\Public\Actions\SaveReport::save(User, ReportDefinition,
- * string $name): SavedReport (PATTERNS.md transaction-closes-before-event-
- * dispatch shape, mirrors EnvelopeWriter::setOverspendMode()). Saving a
- * report persists `$definition->toArray()` into `saved_reports.definition`
- * (already-existing table + model, Plan 01); reopening it via
- * `ReportDefinition::from($row->definition)` MUST round-trip every field
- * losslessly, INCLUDING `currencyMode` (base vs original) — a saved report
- * must reopen in the currency mode it was saved with (Req 4).
- *
- * RED as intended: SaveReport does not exist yet — every test below fails
- * on `app(SaveReport::class)` (missing class), not on the (already-existing)
- * ReportDefinition DTO or `saved_reports` table (Plan 01) it's built from.
- */
 
 function srrtUser(): User
 {
@@ -90,12 +73,9 @@ it('reopens a saved report with currencyMode=base exactly as it was saved', func
     expect($reopened->currencyMode)->toBe('base');
 });
 
-// C7-R21: a stored granularity outside the set must be rejected rather than
-// defaulted. Sync replicates saved reports between devices, so a definition
-// payload can arrive from a build whose vocabulary is not this one's. Quietly
-// reading such a report as monthly would show the user a different report
-// than the one they saved, under the name they gave it — a loud failure is
-// the lesser harm, and it is the one the requirement asks for.
+// Sync replicates saved reports between devices, so a definition can arrive from
+// a build whose vocabulary is not this one's. Reading an unknown granularity as
+// monthly would show a different report under the name the user gave it.
 it('refuses to reopen a saved report whose stored granularity is not in the vocabulary', function (): void {
     $user = srrtUser();
     test()->actingAs($user);
@@ -117,9 +97,8 @@ it('refuses to reopen a saved report whose stored granularity is not in the voca
     expect(fn () => ReportDefinition::from($payload))->toThrow(CannotCastEnum::class);
 });
 
-// Quarterly is reachable as a widening outcome but is not a granularity the
-// user can ask for. The distinction is easy to lose — the widening prose in
-// C7 names quarterly — so it is pinned here rather than left implicit.
+// Quarterly is reachable as a widening outcome but is not a granularity the user
+// can ask for; the widening prose names it, so the distinction is pinned here.
 it('does not admit quarterly as a granularity the user can choose', function (): void {
     expect(ReportGranularity::tryFrom('quarterly'))->toBeNull()
         ->and(array_map(

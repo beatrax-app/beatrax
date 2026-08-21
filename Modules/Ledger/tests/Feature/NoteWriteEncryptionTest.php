@@ -19,15 +19,6 @@ use Modules\Tax\Public\Actions\TagTransaction;
 
 uses(RefreshDatabase::class, EnablesEncryptionForUser::class);
 
-/*
- * 14.1-02 — CR-01/CR-02/RESEARCH-gap: TagTransaction (tax_transaction_tags.note),
- * SaveTransactionSplit (transaction_splits.note), and SetTransactionNote
- * (transactions.note) all encrypt on write under an encrypted user, per D-07.
- * Every test that asserts ciphertext primes the user with
- * EnablesEncryptionForUser so a decrypt-of-plaintext no-op can never mask a
- * broken write path.
- */
-
 function nweUser(): User
 {
     return User::query()->create([
@@ -109,8 +100,6 @@ function nweSpendCategory(string $name): Category
     ]);
 }
 
-// --- Task 1: TagTransaction (tax_transaction_tags.note, CR-01) ---
-
 it('encrypts tax_transaction_tags.note on INSERT for an encrypted user and decrypts back to the original', function (): void {
     $user = nweUser();
     $session = $this->enablesEncryptionForUser($user);
@@ -184,8 +173,6 @@ it('a null tax tag note stores null for an encrypted user, no crash', function (
 
     expect($row->note)->toBeNull();
 });
-
-// --- Task 2: SaveTransactionSplit (transaction_splits.note, CR-02) ---
 
 it('encrypts transaction_splits.note on INSERT for an encrypted user and decrypts back to the original', function (): void {
     $user = nweUser();
@@ -313,8 +300,6 @@ it('marks note dirty when genuinely changed, under an encrypted user, with the p
             && ($event->dirtyFields['note'] ?? null) === 'changed note';
     });
 });
-
-// --- Task 3: SetTransactionNote (transactions.note) ---
 
 it('encrypts transactions.note on set for an encrypted user and decrypts back to the original', function (): void {
     $user = nweUser();

@@ -36,6 +36,7 @@ return [
         'remove_category' => 'Poista kategoria',
         'keep_category' => 'Säilytä tämä kategoria',
         'restore_single' => 'Palautetaanko yhdeksi kategoriaksi?',
+        'survivor_legend' => 'Säilytettävä kategoria',
         'confirm_unsplit' => 'Kyllä, pura jako',
         'keep_split' => 'Säilytä jako',
     ],
@@ -51,6 +52,16 @@ return [
         'choose_aria' => 'Valitse uusi tapahtumatyyppi',
         'choose_option' => 'Valitse tyyppi…',
         'save' => 'Tallenna',
+    ],
+
+    'type_label' => [
+        'expense' => 'Meno',
+        'income' => 'Tulo',
+        'transfer_out' => 'Lähtevä siirto',
+        'transfer_in' => 'Saapuva siirto',
+        'fee' => 'Palvelumaksu',
+        'refund' => 'Hyvitys',
+        'adjustment' => 'Oikaisu',
     ],
 
     'note' => [

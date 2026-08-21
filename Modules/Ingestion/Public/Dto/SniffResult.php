@@ -6,9 +6,6 @@ namespace Modules\Ingestion\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/ingestion/architecture.md
- */
 final class SniffResult extends Data
 {
     public function __construct(

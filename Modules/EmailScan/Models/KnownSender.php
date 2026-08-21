@@ -8,10 +8,8 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
-// System-seeded rows carry user_id = NULL and source = 'system';
-// per-user rows (manual or promoted from discovered_senders) carry
-// user_id = $user->id and source = 'user'. The runtime query unions
-// both via WHERE user_id = $userId OR user_id IS NULL.
+// A NULL user_id is a system-seeded row, so the runtime query unions the two
+// populations with `WHERE user_id = ? OR user_id IS NULL`.
 /**
  * @property int $id
  * @property int|null $user_id

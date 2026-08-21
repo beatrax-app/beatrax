@@ -10,15 +10,12 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Migration\Internal\Actions\ConfirmMigration;
+use Modules\Migration\Internal\Actions\DiscardMigrationRun;
+use Modules\Migration\Internal\Dto\PreviewSummary;
 use Modules\Migration\Internal\Pipeline\PreviewSummaryBuilder;
 use Modules\Migration\Models\MigrationRun;
-use Modules\Migration\Public\Actions\ConfirmMigration;
-use Modules\Migration\Public\Actions\DiscardMigrationRun;
-use Modules\Migration\Public\Dto\PreviewSummary;
 
-/**
- * @link ../../../../../.docs/features/migration/architecture.md
- */
 final class PreviewMigration extends Component
 {
     public int $runId = 0;
@@ -30,10 +27,8 @@ final class PreviewMigration extends Component
 
     public function resolveConflict(int $conflictId, string $choice, DatabaseManager $db, CurrentUser $currentUser): void
     {
-        // Scoped to this run + the authenticated user — a forged
-        // $conflictId belonging to another run/user matches zero rows (a
-        // silent no-op, not a 404). ConfirmMigration reads this column
-        // later; nothing is applied to the domain here.
+        // Scoped to this run and user, so a forged $conflictId matches zero rows
+        // and no-ops. Nothing is applied to the domain until ConfirmMigration.
         if (! in_array($choice, ['keep_local', 'take_source'], true)) {
             return;
         }
@@ -97,8 +92,7 @@ final class PreviewMigration extends Component
             ->where('user_id', $user->id)
             ->firstOrFail();
 
-        // A second, independent guard — PreviewSummaryBuilder itself throws
-        // ModelNotFoundException for a foreign-owned run.
+        // PreviewSummaryBuilder throws for a foreign-owned run in its own right.
         $summary = $builder->forRun($this->runId, $user);
 
         return $views->make('migration::livewire.preview-migration', [
@@ -109,10 +103,8 @@ final class PreviewMigration extends Component
 
     public function fullyMapped(PreviewSummary $summary, string $statKey): bool
     {
-        // Only Categories/Counterparties have a corresponding unmapped-items
-        // group in this schema — Accounts/Transactions/Budget months are not
-        // tracked at per-row unmapped granularity, so they never show the
-        // "fully mapped" micro-label.
+        // Only categories and counterparties have an unmapped-items group in this
+        // schema, so nothing else can show the "fully mapped" micro-label.
         return match ($statKey) {
             'category' => $summary->unmapped['category']['count'] === 0,
             'payee' => $summary->unmapped['payee']['count'] === 0,

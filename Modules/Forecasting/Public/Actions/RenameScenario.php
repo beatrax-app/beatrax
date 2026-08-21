@@ -11,13 +11,12 @@ use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\QueryFailure;
 use Modules\Forecasting\Models\ForecastScenario;
 use Modules\Forecasting\Public\Events\ScenarioMutated;
+use Modules\Sync\Public\Events\EntityMutated;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final class RenameScenario
 {
     public function __construct(
@@ -57,7 +56,7 @@ final class RenameScenario
                     ]);
             });
         } catch (QueryException $e) {
-            if (self::looksLikeUniqueViolation($e)) {
+            if (QueryFailure::isUniqueViolation($e)) {
                 throw new InvalidArgumentException(Lang::get('forecasting::scenario.errors.name_taken'), 0, $e);
             }
             throw $e;
@@ -69,14 +68,16 @@ final class RenameScenario
             mutationId: 0,
             kind: 'rename',
         ));
-    }
 
-    private static function looksLikeUniqueViolation(QueryException $e): bool
-    {
-        $msg = $e->getMessage();
-
-        return str_contains($msg, 'UNIQUE constraint failed')
-            || str_contains($msg, 'Integrity constraint violation')
-            || str_contains($msg, 'Duplicate entry');
+        // One op per changed column, so a rename here and a description edit
+        // on the other device both survive the merge instead of one row-wide
+        // write flattening the other.
+        $this->events->dispatch(new EntityMutated(
+            table: 'forecast_scenarios',
+            pk: $scenarioId,
+            userId: $user->id,
+            mutationType: 'edit',
+            dirtyFields: ['name' => $trimmed],
+        ));
     }
 }

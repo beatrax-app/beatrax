@@ -18,9 +18,6 @@ use Modules\DevMode\Internal\Sql\SelectOnlyValidator;
 use Modules\DevMode\Public\Contracts\AuditWriter;
 use Throwable;
 
-/**
- * @link ../../../../../.docs/features/dev-mode/architecture.md
- */
 #[Layout('dev::layouts.dev-shell')]
 final class SqlPanelPage extends Component
 {
@@ -75,9 +72,7 @@ final class SqlPanelPage extends Component
         );
     }
 
-    // Gates that reject before the SELECT-only validator runs: the
-    // Advanced toggle must be on and the statement non-empty. Returns the
-    // operator-facing message, or null when the statement may proceed.
+    // Runs ahead of the SELECT-only validator; null means "may proceed".
     private function preflightError(Session $session, string $sql): ?string
     {
         return match (true) {
@@ -108,10 +103,8 @@ final class SqlPanelPage extends Component
         return 'unknown';
     }
 
-    // Returns the executed result, or null after setting errorMessage: a
-    // timeout notice when the engine hit its execution-time cap, otherwise
-    // the engine's own error text (e.g. SQLITE_READONLY from a write that
-    // slipped past the validator) so the operator can react.
+    // The engine's own error text is surfaced verbatim, so a SQLITE_READONLY
+    // from a write that slipped past the validator is visible rather than lost.
     /**
      * @return array{rows: list<object>, duration_ms: int}|null
      */
@@ -173,10 +166,8 @@ final class SqlPanelPage extends Component
         AuditWriter $audit,
         SchemaSnapshot $schema,
     ): void {
-        // Browse feeds SELECT * FROM <table> LIMIT 100 through the same
-        // pipeline. Assert the name is on the live schema allow-list
-        // first, so a tampered payload smuggling an off-schema name is
-        // rejected before the SELECT ever reaches the engine.
+        // The table name is checked against the live schema first, so a
+        // tampered payload naming an off-schema table never reaches the engine.
         $allowedNames = array_column($schema->all(), 'name');
         if (! in_array($table, $allowedNames, true)) {
             $this->resetResultState();

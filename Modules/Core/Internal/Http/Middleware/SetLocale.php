@@ -17,9 +17,6 @@ use Symfony\Component\HttpFoundation\Response;
 // renders, so downstream Lang::get lookups and the layout's <html lang>
 // read the same language. The three signals are gathered here and handed
 // to the negotiator, which owns the precedence rule.
-/**
- * @link ../../../../../.docs/features/core/architecture.md
- */
 final class SetLocale
 {
     public function __construct(

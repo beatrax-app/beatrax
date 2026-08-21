@@ -1,8 +1,8 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    Settings "Notifications" section (D-36). Two internal groups —
+    Settings "Notifications" section. Two internal groups —
     "What to notify me about" (4 toggles + lead time + cadence) then
-    "When and how" (quiet hours + hide details) — plus the D-35 read-only
+    "When and how" (quiet hours + hide details) — plus the read-only
     "Other devices" panel.
 
     Variables in scope:
@@ -29,82 +29,63 @@
             <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('notifications::settings.what_heading') }}</h3>
 
             {{-- Payment reminders --}}
-            <div class="flex items-start justify-between gap-3">
-                <div class="flex-1">
-                    <p class="text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('notifications::settings.reminders.label') }}</p>
-                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('notifications::settings.reminders.help') }}</p>
-                </div>
-                <button type="button"
-                        class="switch{{ $remindersEnabled ? ' switch--on' : '' }}"
-                        wire:click="$toggle('remindersEnabled')"
-                        aria-pressed="{{ $remindersEnabled ? 'true' : 'false' }}"
-                        aria-label="{{ Lang::get('notifications::settings.reminders.label') }}">
-                    <span class="switch__thumb"></span>
-                </button>
-            </div>
+            <x-core::setting-row :label="Lang::get('notifications::settings.reminders.label')" :description="Lang::get('notifications::settings.reminders.help')">
+                <x-core::switch
+                    :on="$remindersEnabled"
+                    :label="Lang::get('notifications::settings.reminders.label')"
+                    wire:click="$toggle('remindersEnabled')"
+                />
+            </x-core::setting-row>
 
             @if ($remindersEnabled)
-                <div class="space-y-1" wire:transition>
-                    <label for="reminderLeadDays" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('notifications::settings.lead_days.label') }}</label>
-                    <input
+                {{-- wire:transition belonged to the wrapper this field used
+                     to hand-roll, so it stays on a wrapper: putting it on the
+                     component would forward it to the input element and animate
+                     the control instead of the row appearing. --}}
+                <div wire:transition>
+                    <x-core::form-field
+                        name="reminderLeadDays"
                         type="number"
                         min="1"
                         max="30"
-                        id="reminderLeadDays"
-                        name="reminderLeadDays"
+                        :label="Lang::get('notifications::settings.lead_days.label')"
+                        :hint="Lang::get('notifications::settings.lead_days.help')"
                         wire:model="reminderLeadDays"
                         style="font-variant-numeric: tabular-nums;"
-                        class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
                     />
-                    <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('notifications::settings.lead_days.help') }}</p>
                 </div>
             @endif
 
             {{-- Budget nudges --}}
-            <div class="flex items-start justify-between gap-3">
-                <div class="flex-1">
-                    <p class="text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('notifications::settings.budget_nudges.label') }}</p>
-                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('notifications::settings.budget_nudges.help') }}</p>
-                </div>
-                <button type="button"
-                        class="switch{{ $budgetNudgesEnabled ? ' switch--on' : '' }}"
-                        wire:click="$toggle('budgetNudgesEnabled')"
-                        aria-pressed="{{ $budgetNudgesEnabled ? 'true' : 'false' }}"
-                        aria-label="{{ Lang::get('notifications::settings.budget_nudges.label') }}">
-                    <span class="switch__thumb"></span>
-                </button>
-            </div>
+            <x-core::setting-row :label="Lang::get('notifications::settings.budget_nudges.label')" :description="Lang::get('notifications::settings.budget_nudges.help')">
+                <x-core::switch
+                    :on="$budgetNudgesEnabled"
+                    :label="Lang::get('notifications::settings.budget_nudges.label')"
+                    wire:click="$toggle('budgetNudgesEnabled')"
+                />
+            </x-core::setting-row>
 
             {{-- Weekly position digest cadence --}}
-            <div class="space-y-1">
-                <label for="digestCadence" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('notifications::settings.digest.label') }}</label>
-                <select
-                    id="digestCadence"
-                    name="digestCadence"
-                    wire:model="digestCadence"
-                    class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
-                >
-                    <option value="daily">{{ Lang::get('notifications::settings.digest.daily') }}</option>
-                    <option value="weekly">{{ Lang::get('notifications::settings.digest.weekly') }}</option>
-                    <option value="off">{{ Lang::get('notifications::settings.digest.off') }}</option>
-                </select>
-                <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('notifications::settings.digest.help') }}</p>
-            </div>
+            <x-core::form-field
+                type="select"
+                name="digestCadence"
+                :label="Lang::get('notifications::settings.digest.label')"
+                :hint="Lang::get('notifications::settings.digest.help')"
+                wire:model="digestCadence"
+            >
+                <option value="daily">{{ Lang::get('notifications::settings.digest.daily') }}</option>
+                <option value="weekly">{{ Lang::get('notifications::settings.digest.weekly') }}</option>
+                <option value="off">{{ Lang::get('notifications::settings.digest.off') }}</option>
+            </x-core::form-field>
 
             {{-- Savings-opportunity prompts --}}
-            <div class="flex items-start justify-between gap-3">
-                <div class="flex-1">
-                    <p class="text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('notifications::settings.savings.label') }}</p>
-                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('notifications::settings.savings.help') }}</p>
-                </div>
-                <button type="button"
-                        class="switch{{ $savingsPromptsEnabled ? ' switch--on' : '' }}"
-                        wire:click="$toggle('savingsPromptsEnabled')"
-                        aria-pressed="{{ $savingsPromptsEnabled ? 'true' : 'false' }}"
-                        aria-label="{{ Lang::get('notifications::settings.savings.label') }}">
-                    <span class="switch__thumb"></span>
-                </button>
-            </div>
+            <x-core::setting-row :label="Lang::get('notifications::settings.savings.label')" :description="Lang::get('notifications::settings.savings.help')">
+                <x-core::switch
+                    :on="$savingsPromptsEnabled"
+                    :label="Lang::get('notifications::settings.savings.label')"
+                    wire:click="$toggle('savingsPromptsEnabled')"
+                />
+            </x-core::setting-row>
         </div>
 
         {{-- ===== When and how ===== --}}
@@ -112,19 +93,13 @@
             <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('notifications::settings.when_heading') }}</h3>
 
             {{-- Quiet hours --}}
-            <div class="flex items-start justify-between gap-3">
-                <div class="flex-1">
-                    <p class="text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('notifications::settings.quiet_hours.label') }}</p>
-                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('notifications::settings.quiet_hours.help') }}</p>
-                </div>
-                <button type="button"
-                        class="switch{{ $quietHoursEnabled ? ' switch--on' : '' }}"
-                        wire:click="$toggle('quietHoursEnabled')"
-                        aria-pressed="{{ $quietHoursEnabled ? 'true' : 'false' }}"
-                        aria-label="{{ Lang::get('notifications::settings.quiet_hours.label') }}">
-                    <span class="switch__thumb"></span>
-                </button>
-            </div>
+            <x-core::setting-row :label="Lang::get('notifications::settings.quiet_hours.label')" :description="Lang::get('notifications::settings.quiet_hours.help')">
+                <x-core::switch
+                    :on="$quietHoursEnabled"
+                    :label="Lang::get('notifications::settings.quiet_hours.label')"
+                    wire:click="$toggle('quietHoursEnabled')"
+                />
+            </x-core::setting-row>
 
             @if ($quietHoursEnabled)
                 <div class="grid grid-cols-2 gap-4" wire:transition>
@@ -146,19 +121,13 @@
             @endif
 
             {{-- Hide details in notifications (per-device) --}}
-            <div class="flex items-start justify-between gap-3">
-                <div class="flex-1">
-                    <p class="text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('notifications::settings.hide_details.label') }}</p>
-                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('notifications::settings.hide_details.help') }}</p>
-                </div>
-                <button type="button"
-                        class="switch{{ $hideDetails ? ' switch--on' : '' }}"
-                        wire:click="$toggle('hideDetails')"
-                        aria-pressed="{{ $hideDetails ? 'true' : 'false' }}"
-                        aria-label="{{ Lang::get('notifications::settings.hide_details.label') }}">
-                    <span class="switch__thumb"></span>
-                </button>
-            </div>
+            <x-core::setting-row :label="Lang::get('notifications::settings.hide_details.label')" :description="Lang::get('notifications::settings.hide_details.help')">
+                <x-core::switch
+                    :on="$hideDetails"
+                    :label="Lang::get('notifications::settings.hide_details.label')"
+                    wire:click="$toggle('hideDetails')"
+                />
+            </x-core::setting-row>
         </div>
 
         @if ($saveError !== '')
@@ -175,7 +144,7 @@
         @endif
     </form>
 
-    {{-- Other devices (D-35) — visible, not editable. --}}
+    {{-- Other devices — visible, not editable. --}}
     <details class="mt-2" data-testid="other-device-preferences">
         <summary class="cursor-pointer text-sm font-medium text-slate-900 dark:text-slate-100">{{ Lang::get('notifications::settings.other_devices.summary') }}</summary>
         @if (count($otherDevices) === 0)

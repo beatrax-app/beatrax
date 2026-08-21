@@ -20,15 +20,9 @@ use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
 
 uses(RefreshDatabase::class, EnablesEncryptionForUser::class);
 
-/*
- * 14.1-06 Task 2/3 — CR-03/D-06: IcsSettlementResolver (the ICS→ASN
- * bulk-iDEAL settlement chain, Core Value) and RetypeByAliasResolver
- * (the HIGH candidate-set-narrowing-risk retype-by-alias healing pass)
- * both resolve under a genuinely ENCRYPTED user. Every seeded row is
- * written through RecordTransactions (not Transaction::create()) so
- * counterparty_iban is real ciphertext at rest — a decrypt-of-plaintext
- * no-op would pass these tests for the wrong reason.
- */
+// Every seeded row goes through RecordTransactions rather than
+// Transaction::create(), so counterparty_iban is real ciphertext at rest:
+// a decrypt-of-plaintext no-op would otherwise pass for the wrong reason.
 
 /**
  * @param  array<string, mixed>  $overrides
@@ -139,7 +133,6 @@ it('IcsSettlementResolver resolves the ASN→ICS bulk-settle chain under an encr
         'target_account_kind' => 'ics_card',
     ]);
 
-    // Open card_statement covering April, total 100.00 EUR owed.
     CardStatement::query()->create([
         'user_id' => $this->user->id,
         'account_id' => $this->icsCard->id,
@@ -151,7 +144,6 @@ it('IcsSettlementResolver resolves the ASN→ICS bulk-settle chain under an encr
         'state' => 'open',
     ]);
 
-    // ICS-side expense inside the statement period.
     ($this->recorder)([creCanonical([
         'userId' => $this->user->id,
         'accountId' => $this->icsCard->id,
@@ -182,9 +174,8 @@ it('IcsSettlementResolver resolves the ASN→ICS bulk-settle chain under an encr
         'sourceRef' => 'asn-transfer-out',
     ])], $this->user);
 
-    // Confirm the ASN row's counterparty_iban is genuinely ciphertext
-    // at rest — the pre-fix ciphertext-equality resolveAccount() call
-    // would find zero rows against this exact fixture.
+    // The pre-fix ciphertext-equality resolveAccount() found zero rows against
+    // this fixture, so assert the column really is ciphertext at rest.
     $storedAsnTx = $this->db->connection()->table('transactions')
         ->where('account_id', $this->bank->id)->first();
     expect($storedAsnTx->counterparty_iban)->not->toBe('NL08ABNA0526650664');
@@ -292,8 +283,6 @@ it('RetypeByAliasResolver is idempotent under an encrypted user — a second pas
 });
 
 it('RetypeByAliasResolver never decrypts a single row when the user has no known-counterparty aliases (bounded scan)', function (): void {
-    // No KnownCounterpartyIban rows for this user at all — the fast
-    // path (T-14.1-06) must return 0 without touching the codec.
     ($this->recorder)([creCanonical([
         'userId' => $this->user->id,
         'accountId' => $this->bank->id,

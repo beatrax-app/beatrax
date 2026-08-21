@@ -6,10 +6,8 @@ namespace Modules\DevMode\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-// Exactly one of `handlerEvent` or `url` is non-null: the palette
-// dispatches the Livewire browser event for handlerEvent-shaped rows,
-// or navigates the focused window to `url` for url-shaped rows. `id`
-// is also the cache key for the per-user Recent-shortcuts list.
+// Exactly one of `handlerEvent` or `url` is non-null — the palette dispatches
+// the one it finds. `id` doubles as the per-user Recent-shortcuts cache key.
 final class AppAction extends Data
 {
     /**

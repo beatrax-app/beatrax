@@ -9,26 +9,23 @@ use Generator;
 use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Migration\Internal\Contracts\ParsesMigrationSource;
+use Modules\Migration\Internal\Dto\MigrationAccountDto;
+use Modules\Migration\Internal\Dto\MigrationBatch;
+use Modules\Migration\Internal\Dto\MigrationBudgetAssignmentDto;
+use Modules\Migration\Internal\Dto\MigrationCategoryDto;
+use Modules\Migration\Internal\Dto\MigrationGoalDto;
+use Modules\Migration\Internal\Dto\MigrationPayeeDto;
+use Modules\Migration\Internal\Dto\MigrationScheduleDto;
+use Modules\Migration\Internal\Dto\MigrationTransactionDto;
+use Modules\Migration\Internal\Dto\UnmappedItemDto;
+use Modules\Migration\Internal\Exceptions\UnrecognizedMigrationFileException;
 use Modules\Migration\Internal\Parsers\Concerns\ReadsYnabCsvFiles;
 use Modules\Migration\Internal\Parsers\Support\AmountStringParser;
 use Modules\Migration\Internal\Parsers\Support\YnabCsvColumnMap;
 use Modules\Migration\Internal\Parsers\Support\YnabSplitReconstructor;
 use Modules\Migration\Internal\Parsers\Support\YnabTransferMatcher;
-use Modules\Migration\Public\Contracts\ParsesMigrationSource;
-use Modules\Migration\Public\Dto\MigrationAccountDto;
-use Modules\Migration\Public\Dto\MigrationBatch;
-use Modules\Migration\Public\Dto\MigrationBudgetAssignmentDto;
-use Modules\Migration\Public\Dto\MigrationCategoryDto;
-use Modules\Migration\Public\Dto\MigrationGoalDto;
-use Modules\Migration\Public\Dto\MigrationPayeeDto;
-use Modules\Migration\Public\Dto\MigrationScheduleDto;
-use Modules\Migration\Public\Dto\MigrationTransactionDto;
-use Modules\Migration\Public\Dto\UnmappedItemDto;
-use Modules\Migration\Public\Exceptions\UnrecognizedMigrationFileException;
 
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 abstract class AbstractYnabParser implements ParsesMigrationSource
 {
     use ReadsYnabCsvFiles;
@@ -124,10 +121,6 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
             return;
         }
 
-        // Materializes the source's Category Group as a real parent Category
-        // (created once per distinct group, before any of its children —
-        // PromoteStagingToDomain::promoteCategories() processes staged rows
-        // in that same order) rather than leaving categories flat/top-level.
         $parentSourceExternalId = null;
         if ($group !== null && trim($group) !== '') {
             $parentSourceExternalId = $this->naturalGroupKey($group);
@@ -175,10 +168,6 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
 
     private function naturalGroupKey(string $group): string
     {
-        // The fixed literal prefix 'grp:' is prepended unconditionally here,
-        // never derived from $group content, so a group key can never start
-        // with 'cat:' (naturalCategoryKey()'s own prefix) and vice versa —
-        // the two keyspaces are provably disjoint for every possible input.
         return 'grp:'.mb_strtolower(trim($group));
     }
 
@@ -199,8 +188,6 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
             }
             $seen[$name] = true;
 
-            // No stable per-account id exists in either CSV export — the
-            // normalized account name IS the natural-key fallback.
             $accounts->push(new MigrationAccountDto(
                 sourceExternalId: $name,
                 name: $name,
@@ -228,8 +215,6 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
             }
             $seen[$name] = true;
 
-            // No stable per-payee id in either CSV export — natural-key
-            // fallback on the display-name string itself.
             $payees->push(new MigrationPayeeDto(
                 sourceExternalId: $name,
                 name: $name,
@@ -268,10 +253,8 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
 
     private function parseBudgetedMinor(string $raw): int
     {
-        // AmountStringParser::parse() treats ANY non-positive result as "no
-        // amount" (null), which would silently coerce a genuine negative
-        // Budgeted value to the same 0 a blank/malformed cell produces. The
-        // sign is detected here and re-applied to the magnitude-only parse.
+        // AmountStringParser::parse() nulls a non-positive result, so a negative
+        // Budgeted cell would read as the 0 a blank cell gives.
         $trimmed = trim($raw);
         $isNegative = str_starts_with($trimmed, '-');
         $magnitude = $isNegative ? ltrim(substr($trimmed, 1)) : $trimmed;
@@ -303,8 +286,6 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
         $normalisedGroup = $group !== null ? mb_strtolower(trim($group)) : '';
         $normalisedName = mb_strtolower(trim($name));
 
-        // 'cat:' is unconditionally prepended to every category key (see
-        // naturalGroupKey() for why this makes the two keyspaces disjoint).
         return 'cat:'.$normalisedGroup.'/'.$normalisedName;
     }
 
@@ -464,9 +445,7 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
 
     private function mapClearedStatus(string $flag): string
     {
-        // 'C' -> cleared, everything else -> uncleared. YNAB4/nYNAB's
-        // Cleared column never yields 'reconciled' — that status is not
-        // exportable from either source.
+        // Neither export can express beatrax's third status, 'reconciled'.
         return mb_strtoupper($flag) === 'C' ? 'cleared' : 'uncleared';
     }
 }

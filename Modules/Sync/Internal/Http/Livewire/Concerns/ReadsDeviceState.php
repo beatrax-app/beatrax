@@ -7,9 +7,6 @@ namespace Modules\Sync\Internal\Http\Livewire\Concerns;
 use Illuminate\Database\DatabaseManager;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 
-/**
- * @link ../../../../../../.docs/features/sync/architecture.md
- */
 trait ReadsDeviceState
 {
     private function selfRowExists(DatabaseManager $db, int $userId): bool

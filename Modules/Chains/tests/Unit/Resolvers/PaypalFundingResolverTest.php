@@ -14,31 +14,6 @@ use Modules\Ledger\Models\Transaction;
 
 uses(RefreshDatabase::class);
 
-/*
- * Wave 3 coverage for the PayPal funding-chain resolver. Two arms:
- *
- *   Arm 1 (deterministic — CHN-01 + D-106 close-out)
- *     PayPal `transfer_out` whose rawPayload.events[] carries a
- *     "Bankstorting" / "General Withdrawal" / "Transfer to bank" event
- *     with an inferable destination IBAN matching one of the user's
- *     accounts → chain_link state='confirmed', confidence=1.0,
- *     resolver='auto', evidence carrying matched_iban + event_type +
- *     signature_hash.
- *
- *   Arm 2 (fuzzy — CHN-02)
- *     PayPal expense scored against candidate transfer_in rows by
- *     Levenshtein-normalised merchant similarity + amount band (±2%) +
- *     date window (±3 days). Weighted score ≥ 0.6 → chain_link
- *     state='candidate', confidence ∈ [0.6, 0.99].
- *
- * Plus D-84 invariant (transactions never mutated), cross-user
- * isolation (FND-03), idempotency, rejected-pair stay-rejected
- * (pre-insert guard delegated to ChainLinkInsertHelper).
- */
-
-/**
- * Seed an ASN account for the user.
- */
 function seedAsnAccount(User $user, string $iban = 'NL57ASNB0123456789', string $slug = 'pf-asn'): Account
 {
     return Account::query()->create([
@@ -51,9 +26,6 @@ function seedAsnAccount(User $user, string $iban = 'NL57ASNB0123456789', string 
     ]);
 }
 
-/**
- * Seed a PayPal account for the user.
- */
 function seedPaypalAccount(User $user, string $slug = 'pf-paypal'): Account
 {
     return Account::query()->create([
@@ -67,8 +39,6 @@ function seedPaypalAccount(User $user, string $slug = 'pf-paypal'): Account
 }
 
 /**
- * Seed a PayPal transfer_out row (the "from" side of the chain link).
- *
  * @param  array<int|string, mixed>|null  $rawPayload
  */
 function seedPaypalTxOut(
@@ -104,9 +74,6 @@ function seedPaypalTxOut(
     ]);
 }
 
-/**
- * Seed a PayPal expense row.
- */
 function seedPaypalExpense(
     User $user,
     Account $paypal,
@@ -138,9 +105,6 @@ function seedPaypalExpense(
     ]);
 }
 
-/**
- * Seed an ASN transfer_in (funder leg) — matches the PayPal withdrawal.
- */
 function seedAsnTransferIn(
     User $user,
     Account $asn,
@@ -200,7 +164,7 @@ beforeEach(function (): void {
     $this->resolver = $resolver;
 });
 
-it('deterministic match: PayPal Bankstorting → ASN by IBAN-in-memo (D-106)', function (): void {
+it('deterministic match: PayPal Bankstorting → ASN by IBAN-in-memo', function (): void {
     $rawPayload = [
         'format' => 'paypal-csv',
         'language' => 'nl',
@@ -239,10 +203,9 @@ it('deterministic match: PayPal Bankstorting → ASN by IBAN-in-memo (D-106)', f
 });
 
 it('fuzzy match: PayPal expense without rawPayload yields candidate in [0.6, 0.99]', function (): void {
-    // Strong fuzzy candidate: identical counterparty_normalized, identical
-    // amount, same day → similarity = 1, amount_sim = 1, date_sim = 1,
-    // weighted = 1.0 — but we want the resolver to clamp to candidate
-    // since it's not deterministic. Use a slight merchant variation.
+    // An exact merchant match would score 1.0 on every component; the slight
+    // variation keeps the weighted score inside the candidate band instead of
+    // looking deterministic.
     $expense = seedPaypalExpense($this->user, $this->paypal, $this->run, 1999, 'spotify ab');
     seedAsnTransferIn($this->user, $this->asn, $this->run, 1999, 'spotyfi ab', '2026-05-16');
 
@@ -300,7 +263,7 @@ it('deterministic preempts fuzzy for the same PayPal row', function (): void {
     expect($link)->not->toBeNull();
     expect($link->state)->toBe('confirmed');
     expect((float) $link->confidence)->toBe(1.0);
-    expect(ChainLink::query()->count())->toBe(1); // exactly one — fuzzy skipped
+    expect(ChainLink::query()->count())->toBe(1);
 });
 
 it('signature_hash = sha256(normalized_merchant + | + funding_account_iban) on deterministic match', function (): void {
@@ -329,7 +292,7 @@ it('signature_hash = sha256(normalized_merchant + | + funding_account_iban) on d
     expect($link->evidence['signature_hash'])->toBe($expected);
 });
 
-it('does NOT mutate transactions rows (D-84 invariant)', function (): void {
+it('does NOT mutate transactions rows', function (): void {
     $rawPayload = [
         'format' => 'paypal-csv',
         'language' => 'nl',
@@ -387,7 +350,6 @@ it('isolates resolver by user — other users untouched', function (): void {
     );
     seedAsnTransferIn($other, $otherAsn, $otherRun, 1500, fingerprintSeed: 'ao2');
 
-    // This user's own row.
     seedPaypalTxOut($this->user, $this->paypal, $this->run, 1500, $rawPayload);
     seedAsnTransferIn($this->user, $this->asn, $this->run, 1500);
 
@@ -456,7 +418,6 @@ it('handles PayPal rows with empty events[] gracefully — falls back to fuzzy',
         $rawPayload,
         counterpartyNormalized: 'aaaaaaaaaa',
     );
-    // No strong fuzzy candidate → 0 chain_links, no exception.
     seedAsnTransferIn($this->user, $this->asn, $this->run, 1000, 'zzzzzzzzzz');
 
     $this->resolver->resolveForUser($this->user);
@@ -465,9 +426,6 @@ it('handles PayPal rows with empty events[] gracefully — falls back to fuzzy',
 });
 
 it('handles PayPal rows with null raw_payload (no events) gracefully', function (): void {
-    // Defensive: a PayPal row with no rawPayload at all (legacy import or
-    // forward-compat scenario) must NOT throw — fuzzy arm runs and drops
-    // below threshold.
     seedPaypalExpense($this->user, $this->paypal, $this->run, 1000, 'aaaaaaaaaa');
     seedAsnTransferIn($this->user, $this->asn, $this->run, 1000, 'zzzzzzzzzz');
 

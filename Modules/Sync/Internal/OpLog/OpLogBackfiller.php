@@ -18,9 +18,6 @@ use RuntimeException;
 // log as CREATE_ROW ops. Capture is event-driven, so a device that was used
 // before pairing had an empty log and handed its first peer nothing — the
 // phone sat on "0 of 0 records" while the desktop held years of data.
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class OpLogBackfiller
 {
     // Rows per SELECT. The log is written entry-by-entry regardless; this
@@ -119,9 +116,10 @@ final readonly class OpLogBackfiller
         return $captured;
     }
 
-    // Which of THIS chunk's rows already carry a create op, as a lookup keyed
-    // by pk. Asked per chunk rather than per table so neither the result set
-    // nor the IN list grows with the size of the table.
+    // Which of THIS chunk's rows already carry a create op a peer could
+    // actually verify, as a lookup keyed by pk. Asked per chunk rather than
+    // per table so neither the result set nor the IN list grows with the size
+    // of the table.
     /**
      * @param  Collection<int, \stdClass>  $rows
      * @return array<string, true>
@@ -145,6 +143,16 @@ final readonly class OpLogBackfiller
             ->where('table_name', $table)
             ->where('op_type', OpType::CreateRow->value)
             ->whereIn('pk', $pks)
+            // Only an author still confirmed can be verified, mirroring the
+            // key map deviceKeys() hands the wire. Counting an op signed by a
+            // retired identity as coverage retires the row from the backfill
+            // while leaving it unable to replicate.
+            ->whereIn('device_id', static function (Builder $query) use ($userId): void {
+                $query->select('device_id')
+                    ->from('device_registry')
+                    ->where('user_id', $userId)
+                    ->whereNotNull('confirmed_at');
+            })
             ->distinct()
             ->pluck('pk');
 

@@ -9,7 +9,6 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Community\Internal\Corpus\CorpusLoader;
 use Modules\Community\Internal\Corpus\CorpusYamlReader;
-use Modules\Community\Internal\Http\Livewire\HelpOthersTriageButton;
 use Modules\Community\Internal\Http\Livewire\MysteryMerchantsPage;
 use Modules\Community\Internal\Http\Livewire\SharedListSettingsPanel;
 use Modules\Community\Internal\Http\Livewire\SuggestMappingModal;
@@ -25,9 +24,6 @@ use Modules\Core\Public\Events\UserInstalled;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Native\Desktop\Contracts\Shell as ShellContract;
 
-/**
- * @link ../../../.docs/features/community/architecture.md
- */
 final class CommunityServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
@@ -56,10 +52,8 @@ final class CommunityServiceProvider extends ServiceProvider
 
         $events->listen(UserInstalled::class, SeedCommunityCorpus::class);
 
-        // Force the NoOp fallback outside the live NativePHP runtime — see the
-        // module architecture doc's "NativePHP Shell binding" section for why
-        // this must be re-asserted in boot() rather than left to register()'s
-        // `! bound()` guard.
+        // NativeServiceProvider binds the real Shell unconditionally at
+        // register time, so the NoOp fallback has to be re-asserted here.
         if (! (bool) $this->app->make('config')->get('nativephp-internal.running', false)) {
             $this->app->singleton(ShellContract::class, NoOpShell::class);
         }
@@ -67,6 +61,5 @@ final class CommunityServiceProvider extends ServiceProvider
         $livewire->component('community.suggest-mapping-modal', SuggestMappingModal::class);
         $livewire->component('community.mystery-merchants-page', MysteryMerchantsPage::class);
         $livewire->component('community.shared-list-settings-panel', SharedListSettingsPanel::class);
-        $livewire->component('community.help-others-triage-button', HelpOthersTriageButton::class);
     }
 }

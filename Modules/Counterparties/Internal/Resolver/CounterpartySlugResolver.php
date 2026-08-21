@@ -8,27 +8,19 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
-// Owns the slug half of counterparty resolution: derive a base slug from a
-// display name, then walk numbered suffixes until one is free for this user.
-// Extracted from CounterpartyResolverService so that class stays under the
-// method-count ceiling; the slug question is a cohesive slice of its own.
 /**
- * @link ../../../../.docs/features/counterparties/architecture.md
+ * @link ../../../../.docs/features/counterparties/resolution-chain.md
  */
 final readonly class CounterpartySlugResolver
 {
     public function __construct(
         private DatabaseManager $db,
         private SensitiveColumnCodec $codec,
-        // A factory, not the session itself: resolving a session builds the
-        // encrypter, and the host is reachable from a console command that
-        // Artisan constructs merely to list it.
+        // A factory, not the session: resolving a session builds the encrypter,
+        // and Artisan constructs this class merely to list a console command.
         private SessionFactory $session,
     ) {}
 
-    // The stored display_name is decrypted before the identity comparison so
-    // an already-resolved counterparty is never wrongly treated as "taken by
-    // a different name" just because the column is now ciphertext.
     public function resolveUnique(int $userId, string $displayName): string
     {
         $baseSlug = $this->slugify($displayName);
@@ -45,9 +37,9 @@ final readonly class CounterpartySlugResolver
     }
 
     // Free means unused, or already held by this same counterparty. The
-    // stored name is decrypted before comparing so a row whose column is now
-    // ciphertext is not mistaken for a different holder. The base slug and
-    // every numbered candidate ask this one question.
+    // stored name is decrypted before comparing: a raw ciphertext comparison
+    // treats every re-import as a different holder and fragments one merchant
+    // across bol, bol-2, bol-3 forever.
     private function slugIsFreeFor(int $userId, string $slug, string $displayName): bool
     {
         $existing = $this->db->connection()
@@ -60,17 +52,14 @@ final readonly class CounterpartySlugResolver
             || (is_string($existing) && $this->decryptDisplayName($existing, $userId) === $displayName);
     }
 
-    // Never throws — an undecryptable value falls back to the raw ciphertext
-    // string, which simply fails the identity comparison above and falls
-    // through to slug suffixing.
+    // Never throws: an undecryptable value comes back as raw ciphertext,
+    // which fails the identity comparison and falls through to suffixing.
     private function decryptDisplayName(string $stored, int $userId): string
     {
         return $this->codec->decryptValue('counterparties', 'display_name', $stored, $userId, ($this->session)())['value'];
     }
 
-    // Strips punctuation/accents to a lowercase ASCII approximation and
-    // collapses whitespace/underscores into single `-` separators; bounded
-    // to the column's 128-char UNIQUE-index width.
+    // 128 is the width of the slug column carrying the (user_id, slug) UNIQUE.
     private function slugify(string $value): string
     {
         $ascii = (string) iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value);

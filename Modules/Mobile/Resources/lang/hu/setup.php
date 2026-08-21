@@ -10,6 +10,7 @@ return [
         'reprojecting' => 'Az előzményeid újraépítése…',
         'retrying' => 'Újracsatlakozás a másik eszközhöz…',
         'locked' => 'Oldd fel az alkalmazást a beállítás folytatásához.',
+        'revoked' => 'Ezt az eszközt eltávolították a másik eszközéről. Párosítsa újra a szinkronizálás folytatásához.',
     ],
     'step' => [
         'connect' => 'Csatlakozás a másik eszközödhöz',

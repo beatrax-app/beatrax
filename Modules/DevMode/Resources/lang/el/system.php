@@ -7,6 +7,10 @@ return [
 
     'subtitle_html' => 'Περιβάλλον + χρόνος εκτέλεσης + ενεργή διαμόρφωση. Τα ευαίσθητα κλειδιά (καταλήξεις <code class="font-mono text-xs">*password*</code>, <code class="font-mono text-xs">*secret*</code>, <code class="font-mono text-xs">*key</code>, <code class="font-mono text-xs">*token*</code>) εμφανίζονται καλυμμένα.',
     'php' => 'PHP',
+    'php_version' => 'έκδοση',
+    'php_sapi' => 'sapi',
+    'php_ini_path' => 'διαδρομή ini',
+    'php_extensions' => 'επεκτάσεις',
     'laravel' => 'Πλαίσιο Laravel',
     'sqlite' => 'Βάση δεδομένων SQLite',
     'sqlite_file' => 'αρχείο',

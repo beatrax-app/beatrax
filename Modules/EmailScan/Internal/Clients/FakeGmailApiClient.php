@@ -13,33 +13,20 @@ final class FakeGmailApiClient implements GmailApiClientContract
     /** @var list<array{method: string, args: array<int|string, mixed>}> */
     private array $calls = [];
 
-    // Inbox-id-keyed retry-after seconds when a rate-limit simulation
-    // is armed; the next listSenderMessages* call for that inbox pops
-    // the entry and throws RateLimitedException.
     /** @var array<int, int> */
     private array $rateLimitedInboxes = [];
 
-    // Per-inbox page cursor: tracks which list page the next
-    // listSenderMessages call should serve.
     /** @var array<int, int> */
     private array $listPageCursor = [];
 
-    // Inbox-id-keyed retry-after seconds for a listHistory rate-limit
-    // simulation; the next listHistory call for that inbox pops the
-    // entry and throws RateLimitedException.
     /** @var array<int, int> */
     private array $historyRateLimitedInboxes = [];
 
-    // Queued success-shaped listHistory response. When set, the next
-    // listHistory call returns this payload verbatim instead of
-    // replaying the 404 fixture; set via queueHistoryResponse() and
-    // consumed on first use.
     /** @var array{history: list<array<string, mixed>>, historyId: ?string}|null */
     private ?array $queuedHistoryResponse = null;
 
-    // Queued listDiscoveryCandidates responses. Each call shifts the
-    // front entry; once empty, the default three-row fixture is
-    // replayed.
+    private ?string $currentHistoryId = '12345';
+
     /** @var list<array{messages: list<array<string, mixed>>, nextPageToken: ?string}> */
     private array $queuedDiscoveryResponses = [];
 
@@ -48,13 +35,11 @@ final class FakeGmailApiClient implements GmailApiClientContract
         private readonly string $fixtureRoot = __DIR__.'/../../tests/fixtures/api-responses/gmail',
     ) {}
 
-    // Replays users.messages.list with q=from:(...): the first call
-    // per inbox returns the page-1 fixture; the second call returns
-    // the empty page-2 sentinel, and every call after that keeps
-    // replaying the empty sentinel.
+    // Call 1 per inbox returns the page-1 fixture; every call after that
+    // returns the empty page-2 sentinel.
     /**
      * @param  list<string>  $senderPatterns
-     * @return array{messages: list<array{id: string, threadId: string}>, nextPageToken: ?string, historyId: ?string, resultSizeEstimate: int}
+     * @return array{messages: list<array{id: string, threadId: string}>, nextPageToken: ?string, resultSizeEstimate: int}
      */
     public function listSenderMessages(
         int $inboxId,
@@ -88,15 +73,26 @@ final class FakeGmailApiClient implements GmailApiClientContract
         return [
             'messages' => $messages,
             'nextPageToken' => $nextPageToken,
-            'historyId' => '12345',
             'resultSizeEstimate' => $estimate,
         ];
     }
 
-    // Replays users.messages.get?format=raw and returns the
-    // base64url-decoded RFC 822 byte stream, so the caller sees the
-    // same payload shape the real client surfaces after unwrapping
-    // Gmail's transport encoding.
+    public function currentHistoryId(int $inboxId): ?string
+    {
+        $this->calls[] = ['method' => __FUNCTION__, 'args' => ['inboxId' => $inboxId]];
+
+        return $this->currentHistoryId;
+    }
+
+    // Standing in for a mailbox whose profile endpoint is unreachable, which
+    // must leave the cursor unset rather than write an empty one.
+    public function simulateUnknownHistoryId(): void
+    {
+        $this->currentHistoryId = null;
+    }
+
+    // Returns decoded RFC 822 bytes, matching what the real client hands
+    // back once Gmail's base64url transport encoding is unwrapped.
     public function getRawMessage(int $inboxId, string $providerMessageId): string
     {
         $this->calls[] = ['method' => __FUNCTION__, 'args' => [
@@ -117,10 +113,8 @@ final class FakeGmailApiClient implements GmailApiClientContract
         return self::base64UrlDecode($raw);
     }
 
-    // Replays users.history.list, throwing CursorExpiredException via
-    // the default 404 fixture so the caller exercises the fallback
-    // path; queueHistoryResponse() and simulateHistoryRateLimit() arm
-    // alternate success/rate-limit shapes for targeted tests.
+    // The default 404 fixture throws CursorExpiredException, so an
+    // un-armed caller exercises the fallback path.
     /**
      * @return array{history: list<array<string, mixed>>, historyId: ?string}
      */
@@ -165,10 +159,7 @@ final class FakeGmailApiClient implements GmailApiClientContract
         ];
     }
 
-    // Replays the discovery query with one entry per message carrying
-    // parsed sender address + name + internalDate (never the raw .eml
-    // body). queueDiscoveryResponse() overrides the next call's
-    // result; simulateRateLimit() arms the shared rate-limit pool.
+    // Sender metadata only: the discovery surface never sees a raw .eml body.
     /**
      * @param  list<string>  $keywords
      * @param  list<string>  $excludeSenders
@@ -193,10 +184,7 @@ final class FakeGmailApiClient implements GmailApiClientContract
             return array_shift($this->queuedDiscoveryResponses);
         }
 
-        // Default fixture replay: synthesises the three sender
-        // metadata rows any test calling listDiscoveryCandidates
-        // without queueing keeps seeing. Dates match the .eml fixtures
-        // so other callers can cross-reference.
+        // Dates match the .eml fixtures so callers can cross-reference.
         return [
             'messages' => [
                 ['id' => 'paypal-sample-receipt', 'fromAddress' => 'service@paypal.com', 'fromName' => 'PayPal', 'internalDate' => '2026-05-11T09:14:21Z'],
@@ -207,9 +195,6 @@ final class FakeGmailApiClient implements GmailApiClientContract
         ];
     }
 
-    // Queues the next listDiscoveryCandidates response (FIFO); once
-    // the queue empties, calls fall back to the default three-row
-    // fixture.
     /**
      * @param  list<array<string, mixed>>  $messages
      */
@@ -221,28 +206,21 @@ final class FakeGmailApiClient implements GmailApiClientContract
         ];
     }
 
-    // Arms a rate-limit simulation: the next listSenderMessages or
-    // listDiscoveryCandidates call for the given inbox pops the armed
-    // entry and throws RateLimitedException with the configured
-    // retry-after.
     public function simulateRateLimit(int $inboxId, int $retryAfterSeconds = 2): void
     {
         $this->rateLimitedInboxes[$inboxId] = $retryAfterSeconds;
     }
 
-    // Arms a rate-limit response for the next listHistory call.
-    // IncrementalScanJob calls listHistory before listSenderMessages,
-    // so a Gmail incremental-scan rate-limit fires via this surface
-    // rather than via simulateRateLimit (which targets listSenderMessages).
+    // IncrementalScanJob calls listHistory before listSenderMessages, so a
+    // Gmail incremental rate-limit has to be armed here, not via
+    // simulateRateLimit().
     public function simulateHistoryRateLimit(int $inboxId, int $retryAfterSeconds = 60): void
     {
         $this->historyRateLimitedInboxes[$inboxId] = $retryAfterSeconds;
     }
 
-    // Queues the next listHistory response so the caller sees a
-    // success shape instead of the default 404 fixture; the
-    // messages-added list is materialised from $messageIds so the
-    // caller's downstream getRawMessage walk has fixture-mapped blobs.
+    // The messages-added list is materialised from $messageIds so the
+    // caller's getRawMessage walk finds fixture-mapped blobs.
     /**
      * @param  list<string>  $messageIds
      */
@@ -301,10 +279,8 @@ final class FakeGmailApiClient implements GmailApiClientContract
         return $decoded;
     }
 
-    // Maps an opaque provider message-id to the fixture slug used in
-    // the messages-get-raw-*.json filename. The synthesised corpus
-    // stores ids like "paypal-sample-receipt"; the fixture slug is
-    // the first dash-segment.
+    // "paypal-sample-receipt" resolves to messages-get-raw-paypal.json:
+    // the slug is the first dash-segment of the id.
     private function fixtureSlug(string $providerMessageId): string
     {
         $dash = strpos($providerMessageId, '-');

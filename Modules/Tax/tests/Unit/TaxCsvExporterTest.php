@@ -9,24 +9,6 @@ use Modules\Tax\Internal\Services\TaxCsvExporter;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit tests for TaxCsvExporter — the D-15 audit-extra CSV export service.
- *
- * Tests cover:
- *  - First row is exactly the 16-column header in documented order.
- *  - One data row per tagged transaction; settled_eur_amount is a 2-decimal
- *    string (never a float).
- *  - Audit-extra columns (original_amount, original_currency, transaction_id,
- *    source_format, import_run_id, fingerprint) are present.
- *  - tax_year_override places the row in the override year's CSV, not the
- *    booked year's.
- *  - Empty year yields a header-only CSV (no data rows, no error).
- */
-
-// ---------------------------------------------------------------------------
-// Shared fixture helpers (prefixed tce_ to avoid collisions)
-// ---------------------------------------------------------------------------
-
 function tceUser(DatabaseManager $db, string $username): User
 {
     /** @var User */
@@ -125,10 +107,6 @@ function tceTag(DatabaseManager $db, int $userId, int $txId, ?int $catId = null,
     ], $overrides));
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
 it('first row of CSV is the exact 16-column header', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -185,7 +163,6 @@ it('one data row per tagged transaction; settled_eur_amount is a 2-decimal strin
     // Header + 2 data rows
     expect(count($lines))->toBe(3);
 
-    // Check money format is a 2-decimal string like "1240.00"
     $row1 = str_getcsv($lines[1]);
     $row2 = str_getcsv($lines[2]);
 
@@ -193,7 +170,6 @@ it('one data row per tagged transaction; settled_eur_amount is a 2-decimal strin
     expect($row1[8])->toMatch('/^\d+\.\d{2}$/');
     expect($row2[8])->toMatch('/^\d+\.\d{2}$/');
 
-    // Exact value assertions
     expect($row1[8])->toBe('1240.00');
     expect($row2[8])->toBe('0.50');
 });
@@ -227,20 +203,16 @@ it('includes audit-extra columns: original_amount, original_currency, transactio
     // 9=original_amount, 10=original_currency, 12=transaction_id,
     // 13=source_format, 14=import_run_id, 15=fingerprint
 
-    // original_amount should be formatted from amount_minor (-8800 → "88.00")
+    // original_amount is formatted from amount_minor: -8800 becomes "88.00".
     expect($dataRow[9])->toMatch('/^\d+\.\d{2}$/');
     expect($dataRow[9])->toBe('88.00');
 
-    // original_currency
     expect($dataRow[10])->toBe('USD');
 
-    // transaction_id is a non-empty string containing the tx id
     expect($dataRow[12])->toBe((string) $txId);
 
-    // source_format
     expect($dataRow[13])->toBe('paypal-csv');
 
-    // fingerprint matches
     expect($dataRow[15])->toBe($fingerprintVal);
 
     // note is column 7
@@ -254,7 +226,7 @@ it('a transaction with tax_year_override appears in the override year, not the b
 
     $catId = tceCategory($db, $user->id, 'Overig');
 
-    // Booked in 2026 but overridden to 2025
+    // Booked in 2026, overridden to 2025.
     $txId = tceTransaction($db, $user->id, [
         'booked_at' => '2026-01-10 00:00:00',
         'settled_amount_minor' => -5000,
@@ -264,7 +236,6 @@ it('a transaction with tax_year_override appears in the override year, not the b
     /** @var TaxCsvExporter $exporter */
     $exporter = app(TaxCsvExporter::class);
 
-    // Must appear in 2025 CSV
     $csv2025 = $exporter->export($user, 2025);
     $lines2025 = array_values(array_filter(explode("\n", trim($csv2025))));
     expect(count($lines2025))->toBe(2); // header + 1 data row
@@ -273,13 +244,12 @@ it('a transaction with tax_year_override appears in the override year, not the b
     $dataRow2025 = str_getcsv($lines2025[1]);
     expect($dataRow2025[0])->toBe('2025');
 
-    // Must NOT appear in 2026 CSV (booked year)
     $csv2026 = $exporter->export($user, 2026);
     $lines2026 = array_values(array_filter(explode("\n", trim($csv2026))));
     expect(count($lines2026))->toBe(1); // header only
 });
 
-it('escapes formula-leading cells so the CSV is safe to open in Excel (WR-08)', function (): void {
+it('escapes formula-leading cells so the CSV is safe to open in Excel', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = tceUser($db, 'tce-formula-user');

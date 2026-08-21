@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Ingestion\Internal\Adapters\Banking;
 
-/**
- * @link ../../../../../.docs/features/ingestion/architecture.md
- */
 final class Mt940CounterpartyCleaner
 {
     private const GVC_PREFIX_REGEX = '/^\d{3}\s+/';

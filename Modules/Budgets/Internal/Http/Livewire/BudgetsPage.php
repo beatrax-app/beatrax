@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Budgets\Internal\Http\Livewire;
 
-use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
@@ -14,24 +13,19 @@ use Modules\Budgets\Public\Dto\EnvelopeRow;
 use Modules\Budgets\Public\Services\CarryoverQuery;
 use Modules\Budgets\Public\Services\EnvelopeBalanceQuery;
 use Modules\Budgets\Public\Services\EnvelopeWriter;
-use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\PeriodQuery;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
-/**
- * @link ../../../../../.docs/features/budgets/architecture.md
- */
 final class BudgetsPage extends Component
 {
     use DispatchesToast;
 
-    private const PERIOD_DATE_FORMAT = 'Y-m-d';
-
-    // Mirrors CarryoverQuery::FUTURE_HORIZON_PERIODS -- the nav bound
-    // must agree with the fold's own forward walk limit.
+    // Must agree with CarryoverQuery::FUTURE_HORIZON_PERIODS, which is private:
+    // nav past the fold's forward walk limit reads an unfolded period.
     private const FUTURE_HORIZON_PERIODS = 12;
 
     public ?string $periodStartStr = null;
@@ -45,8 +39,6 @@ final class BudgetsPage extends Component
     /** @var array<int, string> inline per-row threshold validation errors keyed by category id */
     public array $thresholdErrors = [];
 
-    // Move-money modal state, backing the per-row move-money modal opened
-    // via openMove() and submitted via moveMoney().
     public int $moveFromCategoryId = 0;
 
     public string $moveToCategoryId = '';
@@ -57,18 +49,16 @@ final class BudgetsPage extends Component
 
     public string $moveError = '';
 
-    // -------------------------------------------------------------------
-    // Month navigation
-    // -------------------------------------------------------------------
-
-    public function prevPeriod(CurrentUser $currentUser, PeriodQuery $periods, DatabaseManager $db): void
+    public function prevPeriod(CurrentUser $currentUser, PeriodQuery $periods, CarryoverQuery $carryover): void
     {
         if (! $currentUser->isAuthenticated()) {
             return;
         }
 
-        $selected = $this->resolvePeriod($periods);
-        $genesis = $this->genesisPeriod($currentUser->user(), $db, $periods);
+        $resolved = $periods->resolveAnchor($this->periodStartStr);
+        $this->periodStartStr = $resolved->isoDate;
+        $selected = $resolved->period;
+        $genesis = $carryover->genesisPeriodFor($currentUser->user());
 
         if ($genesis === null || ! $selected->start->greaterThan($genesis->start)) {
             return;
@@ -84,7 +74,9 @@ final class BudgetsPage extends Component
             return;
         }
 
-        $selected = $this->resolvePeriod($periods);
+        $resolved = $periods->resolveAnchor($this->periodStartStr);
+        $this->periodStartStr = $resolved->isoDate;
+        $selected = $resolved->period;
         $max = $this->maxPeriod($periods);
 
         if (! $selected->start->lessThan($max->start)) {
@@ -95,14 +87,8 @@ final class BudgetsPage extends Component
         $this->assignedInputs = [];
     }
 
-    // -------------------------------------------------------------------
-    // Assign-every-euro grid
-    // -------------------------------------------------------------------
-
-    // An empty or literal-zero input tombstones the row; any other valid
-    // amount upserts it (over-assignment is never rejected). EnvelopeWriter
-    // re-validates $categoryId server-side regardless of what the rendered
-    // grid displayed.
+    // An empty or literal-zero input tombstones the row; anything else upserts,
+    // and over-assignment is never rejected.
     public function setAssigned(CurrentUser $currentUser, EnvelopeWriter $writer, PeriodQuery $periods, int $categoryId): void
     {
         if (! $currentUser->isAuthenticated()) {
@@ -118,7 +104,9 @@ final class BudgetsPage extends Component
             return;
         }
 
-        $period = $this->resolvePeriod($periods);
+        $resolved = $periods->resolveAnchor($this->periodStartStr);
+        $this->periodStartStr = $resolved->isoDate;
+        $period = $resolved->period;
 
         try {
             $writer->setAssigned($currentUser->user(), $categoryId, $period->start, $minor);
@@ -135,10 +123,8 @@ final class BudgetsPage extends Component
         }
     }
 
-    // A bounds-check (1..200, whole numbers only) runs HERE before the
-    // writer is called: an out-of-range or non-numeric value sets an
-    // inline per-row error string rather than throwing, in defence-in-depth
-    // alongside the writer's own server-side check.
+    // Bounds-checked here as well as in the writer so an out-of-range entry is an
+    // inline per-row error, not a throw the grid has to render around.
     public function setNotifyThreshold(CurrentUser $currentUser, EnvelopeWriter $writer, int $categoryId): void
     {
         if (! $currentUser->isAuthenticated()) {
@@ -169,14 +155,11 @@ final class BudgetsPage extends Component
             return;
         }
 
-        // Reflect the stored value back: an explicit value shows as itself; a
-        // cleared threshold empties the field so the placeholder default shows.
+        // A cleared threshold empties the field so the placeholder default shows.
         $this->thresholdInputs[$categoryId] = $threshold === null ? '' : (string) $threshold;
     }
 
-    // Silent no-op on an invalid mode or an inaccessible category id -- the
-    // <select> only ever offers the two valid values, but the server never
-    // trusts that.
+    // The select only ever offers the two valid modes; the server never trusts it.
     public function setOverspendMode(CurrentUser $currentUser, EnvelopeWriter $writer, int $categoryId, string $mode): void
     {
         if (! $currentUser->isAuthenticated()) {
@@ -190,26 +173,22 @@ final class BudgetsPage extends Component
         }
     }
 
-    // Offered only while the selected period has zero assignments and the
-    // prior period has some ($showCopyBanner in render()).
+    // Reachable only while $showCopyBanner holds: nothing assigned this period,
+    // something assigned last.
     public function copyLastMonth(CurrentUser $currentUser, EnvelopeWriter $writer, PeriodQuery $periods): void
     {
         if (! $currentUser->isAuthenticated()) {
             return;
         }
 
-        $selected = $this->resolvePeriod($periods);
+        $resolved = $periods->resolveAnchor($this->periodStartStr);
+        $this->periodStartStr = $resolved->isoDate;
+        $selected = $resolved->period;
         $writer->copyFromPeriod($currentUser->user(), $periods->previous($selected), $selected);
         $this->assignedInputs = [];
         $this->toast(Lang::get('budgets::messages.notices.copied_last_month'));
     }
 
-    // -------------------------------------------------------------------
-    // Move money between envelopes
-    // -------------------------------------------------------------------
-
-    // The from-envelope is resolved for display in render() rather than
-    // trusted from any client-controlled value.
     public function openMove(int $fromCategoryId): void
     {
         $this->moveFromCategoryId = $fromCategoryId;
@@ -220,8 +199,8 @@ final class BudgetsPage extends Component
         $this->dispatch('modal-show', name: 'envelope-move');
     }
 
-    // Deliberately NO "insufficient balance" catch: a move that takes the
-    // source envelope negative always succeeds (see architecture.md).
+    // No "insufficient balance" catch by design: a move that takes the source
+    // envelope negative succeeds.
     public function moveMoney(CurrentUser $currentUser, EnvelopeWriter $writer, PeriodQuery $periods): void
     {
         $this->moveError = '';
@@ -241,7 +220,9 @@ final class BudgetsPage extends Component
             return;
         }
 
-        $period = $this->resolvePeriod($periods);
+        $resolved = $periods->resolveAnchor($this->periodStartStr);
+        $this->periodStartStr = $resolved->isoDate;
+        $period = $resolved->period;
         $memo = trim($this->moveMemo) !== '' ? $this->moveMemo : null;
 
         try {
@@ -256,8 +237,7 @@ final class BudgetsPage extends Component
         } catch (InvalidArgumentException $e) {
             $this->moveError = $e->getMessage();
         } catch (\RuntimeException) {
-            // A non-validation writer failure must surface as a calm inline
-            // error, never escape as an unhandled 500.
+            // A non-validation writer failure stays an inline error, not a 500.
             $this->moveError = Lang::get('budgets::messages.notices.move_failed');
         }
     }
@@ -271,10 +251,6 @@ final class BudgetsPage extends Component
         $writer->undoMove($currentUser->user(), $moveId);
         $this->toast(Lang::get('budgets::messages.notices.move_undone'));
     }
-
-    // -------------------------------------------------------------------
-    // Render
-    // -------------------------------------------------------------------
 
     public function render(
         CurrentUser $currentUser,
@@ -306,7 +282,9 @@ final class BudgetsPage extends Component
         }
 
         $user = $currentUser->user();
-        $selected = $this->resolvePeriod($periods);
+        $resolved = $periods->resolveAnchor($this->periodStartStr);
+        $this->periodStartStr = $resolved->isoDate;
+        $selected = $resolved->period;
 
         $fold = $carryover->forUserAndPeriod($user, $selected);
         /** @var array<int, EnvelopeRow> $rows */
@@ -317,7 +295,7 @@ final class BudgetsPage extends Component
         $this->seedAssignedInputs($rows);
         $this->seedThresholdInputs($db, $user->id, $rows);
 
-        $genesis = $this->genesisPeriod($user, $db, $periods);
+        $genesis = $carryover->genesisPeriodFor($user);
         $max = $this->maxPeriod($periods);
 
         $canGoPrevious = $genesis !== null && $selected->start->greaterThan($genesis->start);
@@ -329,9 +307,8 @@ final class BudgetsPage extends Component
         $priorHasAssignments = $priorIsWithinGenesis && $this->periodHasAssignments($db, $user->id, $previousPeriod);
         $showCopyBanner = ! $hasAssignmentsSelected && $priorHasAssignments;
 
-        // Move-money modal data: from-envelope is resolved server-side
-        // from the already-validated fold rows, never trusted from the
-        // client-controlled moveFromCategoryId directly.
+        // The from-envelope comes out of the already-validated fold rows; the
+        // client-controlled moveFromCategoryId is only a key into them.
         $moveFromCategory = null;
         $moveDestinations = [];
         if ($this->moveFromCategoryId !== 0 && array_key_exists($this->moveFromCategoryId, $rows)) {
@@ -343,8 +320,7 @@ final class BudgetsPage extends Component
             );
         }
 
-        // Batched into ONE query for all fold categories rather than one
-        // query per envelope on every render.
+        // One query for every fold category, not one per envelope per render.
         $recentMoves = $balances->recentMovesForCategories($user->id, array_keys($rows), $selected);
 
         $view = $views->make('budgets::livewire.budgets-page', [
@@ -367,50 +343,6 @@ final class BudgetsPage extends Component
         return $view;
     }
 
-    // -------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------
-
-    // Validates $periodStartStr strictly against Y-m-d; on any mismatch or
-    // parse failure, falls back to the current period and clears the
-    // property so a bad value cannot survive the round-trip.
-    private function resolvePeriod(PeriodQuery $periods): Period
-    {
-        if ($this->periodStartStr === null) {
-            return $periods->current();
-        }
-
-        $parsed = CarbonImmutable::createFromFormat(self::PERIOD_DATE_FORMAT, $this->periodStartStr);
-        if ($parsed === null || $parsed->format(self::PERIOD_DATE_FORMAT) !== $this->periodStartStr) {
-            $this->periodStartStr = null;
-
-            return $periods->current();
-        }
-
-        return $periods->containing($parsed);
-    }
-
-    // Mirrors CarryoverQuery::genesisAnchorFor()'s raw, explicitly-scoped
-    // read, kept independent here since the nav-bounds calculation is
-    // this component's own concern, not something CarryoverQuery exposes
-    // publicly.
-    private function genesisPeriod(User $user, DatabaseManager $db, PeriodQuery $periods): ?Period
-    {
-        $raw = $db->connection()->table('users')->where('id', $user->id)->value('envelope_activated_at');
-
-        if ($raw === null || $raw === '' || ! is_string($raw)) {
-            return null;
-        }
-
-        try {
-            return $periods->containing(CarbonImmutable::parse($raw));
-        } catch (\Throwable) {
-            return null;
-        }
-    }
-
-    // current + FUTURE_HORIZON_PERIODS -- the forward nav bound; must agree
-    // with the fold's own forward walk limit.
     private function maxPeriod(PeriodQuery $periods): Period
     {
         $max = $periods->current();
@@ -464,9 +396,8 @@ final class BudgetsPage extends Component
      */
     private function seedThresholdInputs(DatabaseManager $db, int $userId, array $rows): void
     {
-        // Seeded from EXPLICIT stored values only: an envelope with no
-        // explicit threshold stays blank so the placeholder default shows,
-        // rather than pre-filling the resolved value as if user-set.
+        // Explicit stored values only: pre-filling the resolved default would read
+        // back as user-set, and the next save would freeze it.
         $explicitThresholds = $this->explicitThresholds($db, $userId);
         foreach (array_keys($rows) as $categoryId) {
             if (! array_key_exists($categoryId, $this->thresholdInputs)) {
@@ -486,10 +417,8 @@ final class BudgetsPage extends Component
             ->exists();
     }
 
-    // EnvelopeWriter::parseAmount() only accepts strictly-positive amounts
-    // (null for both an unparsable string AND a literal "0"), so an empty
-    // or explicit-zero input is special-cased here into an explicit
-    // tombstone rather than surfacing as an "invalid amount" error.
+    // EnvelopeWriter::parseAmount() returns null for a literal "0" as well as for
+    // junk, so zero is recovered here as a tombstone rather than reported invalid.
     private function parseAssignedAmount(EnvelopeWriter $writer, string $raw): ?int
     {
         if ($raw === '') {
@@ -507,13 +436,10 @@ final class BudgetsPage extends Component
         return is_numeric($normalised) && (float) $normalised === 0.0 ? 0 : null;
     }
 
+    // A dot here put "50.00" next to "€ 50,00" in one row; the shared formatter
+    // matches the figures beside it and tryToMinor() accepts both on the way back.
     private function minorToDecimal(int $minor): string
     {
-        return number_format($minor / 100, 2, '.', '');
-    }
-
-    private function toast(string $message): void
-    {
-        $this->toastWithUndo($message, undoAction: '', undoPayload: null);
+        return MoneyInput::formatMinor($minor);
     }
 }

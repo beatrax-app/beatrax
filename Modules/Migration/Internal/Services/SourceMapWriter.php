@@ -10,9 +10,6 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Migration\Internal\ValueObjects\SourceMapKey;
 
-/**
- * @link ../../../../.docs/features/migration/architecture.md
- */
 final class SourceMapWriter
 {
     use CoercesScalars;
@@ -77,9 +74,8 @@ final class SourceMapWriter
         if ($key->sourceExternalId !== null) {
             $query->where('source_external_id', $key->sourceExternalId);
         } else {
-            // NULL is distinct-from-itself in a SQLite UNIQUE index — the
-            // natural_key equality check is what actually prevents a
-            // duplicate map row for a stable-id-less entity.
+            // NULL is distinct from itself in a SQLite UNIQUE index, so the
+            // natural_key equality is what prevents a duplicate map row here.
             $query->whereNull('source_external_id')->where('natural_key', $key->naturalKey);
         }
 

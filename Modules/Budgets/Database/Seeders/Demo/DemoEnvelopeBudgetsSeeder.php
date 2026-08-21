@@ -10,15 +10,11 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Enums\CategoryKind;
 
-/**
- * @link ../../../../../.docs/features/budgets/architecture.md
- */
 final class DemoEnvelopeBudgetsSeeder
 {
-    // Deliberately leaves several spending categories (cash withdrawal, car
-    // maintenance, memberships, donations, fees...) unbudgeted so the grid
-    // shows a genuine mix of funded and overspent envelopes plus a positive
-    // "Ready to assign" pool, rather than an all-red grid.
+    // Several spending categories are left unbudgeted on purpose, so the demo
+    // grid shows funded and overspent envelopes and a positive "Ready to
+    // assign" pool rather than a wall of red.
     /**
      * @var array<string, int>
      */
@@ -107,10 +103,9 @@ final class DemoEnvelopeBudgetsSeeder
         return $seeded;
     }
 
-    // Replicates PeriodQuery::containing() exactly (that service resolves
-    // the period from the authenticated user and so cannot be called
-    // per-user from a seeder) so the seeded period_start matches the
-    // period the live grid folds.
+    // PeriodQuery::containing() resolves the period from the authenticated user,
+    // so a seeder cannot call it per-user. The algorithm is replicated here so
+    // the seeded period_start matches what the live grid folds.
     private function currentPeriodStart(CarbonImmutable $now, int $periodStartDay): string
     {
         $startDay = max(1, min(28, $periodStartDay));

@@ -10,9 +10,6 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Public\Events\GoalContributionMutated;
 
-/**
- * @link ../../../../.docs/features/goals/architecture.md
- */
 final class GoalContributionWriter
 {
     public function __construct(
@@ -21,10 +18,9 @@ final class GoalContributionWriter
         private readonly Dispatcher $events,
     ) {}
 
-    // A goal or transaction the caller does not own is a silent no-op, not a
-    // throw: this is reachable straight from the browser, and the project's
-    // convention for a foreign id on a user-driven mutator is to write
-    // nothing rather than confirm the row exists.
+    // A goal or transaction the caller does not own writes nothing rather than
+    // throwing: this is reachable straight from the browser, and an error would
+    // confirm the row exists.
     /**
      * @return bool whether the attribution exists afterwards — false only when
      *              the goal or transaction is not the user's

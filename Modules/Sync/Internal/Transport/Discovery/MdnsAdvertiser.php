@@ -7,7 +7,7 @@ namespace Modules\Sync\Internal\Transport\Discovery;
 use Symfony\Component\Process\Process;
 
 /**
- * @link ../../../../../.docs/features/sync/architecture.md
+ * @link ../../../../../.docs/features/sync/lan-discovery-trust-model.md
  */
 final class MdnsAdvertiser
 {

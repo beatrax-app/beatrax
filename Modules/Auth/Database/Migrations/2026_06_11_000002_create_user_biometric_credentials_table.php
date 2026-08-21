@@ -5,22 +5,9 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Creates the user_biometric_credentials table — one row per enrolled
- * biometric device per user.
- *
- * Each enrollment stores a device-specific biometric_wrap_secret (raw
- * binary, used to wrap the data key during biometric unlock), the
- * credential_id (opaque device identifier from WebAuthn or NativePHP),
- * and a counter for authenticator replay protection.
- *
- * The platform column stores 'nativephp_macos' or 'webauthn' as a plain
- * string — no DB enum, consistent with the project convention. Validation
- * of acceptable platform values is the application layer's responsibility.
- *
- * biometric_failed_count tracks consecutive biometric failures per device;
- * it is reset to 0 on a successful authentication.
- */
+// One row per enrolled device. biometric_wrap_secret is raw binary wrapping
+// the data key for that device alone; counter is the authenticator's signature
+// counter, kept so a replayed assertion is visible.
 return new class extends ModuleMigration
 {
     public function up(): void

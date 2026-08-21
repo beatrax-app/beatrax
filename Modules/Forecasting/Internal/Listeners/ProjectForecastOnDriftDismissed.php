@@ -10,9 +10,6 @@ use Modules\DriftAlerts\Public\Events\DriftAlertDismissedCancelled;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 use Modules\Forecasting\Public\Services\ScenarioQuery;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final readonly class ProjectForecastOnDriftDismissed
 {
     public function __construct(

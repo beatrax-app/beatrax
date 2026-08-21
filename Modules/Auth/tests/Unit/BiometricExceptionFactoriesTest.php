@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-// The Auth Sonar refactor named the biometric ceremony failures as dedicated
-// exception types with static factories. A couple of factories sit behind
-// branches only a live authenticator can reach (a successful ceremony that
-// then produces invalid wrap bytes; a serializer factory returning the wrong
-// concrete type), so their contract — type + message — is asserted directly.
+// A couple of these factories sit behind branches only a live authenticator can
+// reach, so their type and message are asserted directly instead.
 
 use Modules\Auth\Internal\Exceptions\BiometricChallengeException;
 use Modules\Auth\Internal\Exceptions\BiometricEnrollmentException;

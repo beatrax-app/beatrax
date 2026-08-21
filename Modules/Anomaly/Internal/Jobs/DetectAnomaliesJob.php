@@ -16,9 +16,6 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Support\LockStore;
 
-/**
- * @link ../../../../.docs/features/anomaly/architecture.md
- */
 final class DetectAnomaliesJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Dispatchable;

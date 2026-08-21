@@ -7,9 +7,6 @@ namespace Modules\Community\Database\Seeders\Demo;
 use Modules\Community\Models\CommunityMerchantMapping;
 use Modules\Core\Models\User;
 
-/**
- * @link ../../../../../.docs/features/community/architecture.md
- */
 final class DemoCommunityMappingsSeeder
 {
     /**

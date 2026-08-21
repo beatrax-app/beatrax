@@ -12,31 +12,11 @@ use Modules\Sync\Internal\Transport\SyncSession;
 
 uses(RefreshDatabase::class);
 
-/*
- * TransportOpSignatureTest — XPORT-01: Ed25519 op signatures survive Noise transport.
- *
- * CRITICAL INVARIANT (RESEARCH Pitfall 7 + 10-FINDINGS T-10-01):
- * Transport encryption (Noise) is ADDITIVE — it does NOT replace per-entry
- * Ed25519 signatures. After Noise decryption on the receiving side,
- * DeviceKeySigner::verify() MUST still succeed on every deserialized
- * OpLogEntry. The transport cannot be used as a shortcut to skip op-log
- * signature verification.
- *
- * Three scenarios:
- *   S1: Happy path — an OpLogEntry is signed, Noise-encrypted into a frame,
- *       Noise-decrypted, deserialized, and DeviceKeySigner::verify() passes.
- *   S2: Tampered-op path — the plaintext payload is modified after Noise
- *       decryption (simulating a relay or routing node that tampered with the
- *       ciphertext before encryption).
- *       DeviceKeySigner::verify() must FAIL, preventing replay.
- *   S3: Forged-signature path — op with a signature from an unknown device_id
- *       → SyncSession::receiveOps drops the entry (not replayed).
- *
- * Wave 3: SyncSession now exists; these tests run as real integration tests.
- */
+// Noise is additive: it does not replace the per-entry Ed25519 signature, so
+// every deserialized OpLogEntry must still verify after decryption. The
+// transport is never a shortcut past op-log signature verification.
 
 it('OpLogEntry Ed25519 signature survives Noise encrypt/decrypt round-trip', function (): void {
-    // Arrange: create a signed OpLogEntry
     $signer = new DeviceKeySigner;
     $kp = sodium_crypto_sign_keypair();
     $secretKey = sodium_crypto_sign_secretkey($kp);
@@ -90,15 +70,12 @@ it('OpLogEntry Ed25519 signature survives Noise encrypt/decrypt round-trip', fun
 
     $framer = new TransportFramer;
 
-    // Initiator encrypts the frame.
     $frame = $framer->encode([$signedEntry]);
     $ciphertext = $initSend->encrypt($frame, '');
 
-    // Responder decrypts.
     $plainFrame = $respRecv->decrypt($ciphertext, '');
     $decoded = $framer->decode($plainFrame);
 
-    // Ed25519 signature must survive the round-trip.
     expect($decoded)->toHaveCount(1);
 
     $received = $decoded[0];
@@ -107,13 +84,12 @@ it('OpLogEntry Ed25519 signature survives Noise encrypt/decrypt round-trip', fun
         sigHex: $received->signature,
         publicKeyBin: $publicKey,
     );
-    expect($verifies)->toBeTrue('Ed25519 signature must survive Noise encrypt/decrypt round-trip (Pitfall 7)');
+    expect($verifies)->toBeTrue('Ed25519 signature must survive Noise encrypt/decrypt round-trip');
 
-    // SyncSession class must exist (Wave 3 shipped).
     expect(class_exists(SyncSession::class))->toBeTrue('SyncSession must exist in Wave 3');
 });
 
-it('tampered OpLogEntry fails DeviceKeySigner::verify() after Noise decrypt (Pitfall 7 guard)', function (): void {
+it('tampered OpLogEntry fails DeviceKeySigner::verify() after Noise decrypt', function (): void {
     $signer = new DeviceKeySigner;
     $kp = sodium_crypto_sign_keypair();
     $secretKey = sodium_crypto_sign_secretkey($kp);
@@ -150,12 +126,12 @@ it('tampered OpLogEntry fails DeviceKeySigner::verify() after Noise decrypt (Pit
         table: $signedEntry->table,
         pk: $signedEntry->pk,
         field: $signedEntry->field,
-        value: '"tampered-value"',  // attacker changed the value
+        value: '"tampered-value"',
         hlcL: $signedEntry->hlcL,
         hlcC: $signedEntry->hlcC,
         deviceId: $signedEntry->deviceId,
         opType: $signedEntry->opType,
-        signature: $signedEntry->signature,  // original signature — no longer valid
+        signature: $signedEntry->signature,
         userId: $signedEntry->userId,
     );
 
@@ -168,8 +144,6 @@ it('tampered OpLogEntry fails DeviceKeySigner::verify() after Noise decrypt (Pit
 });
 
 it('transport stack rejects an op whose signature was forged (unknown device key)', function (): void {
-    // Verify that SyncSession::receiveOps drops entries with unknown device_id.
-    // An op signed by an unknown device has no entry in deviceKeys → silently dropped.
     $signer = new DeviceKeySigner;
     $kp = sodium_crypto_sign_keypair();
     $secretKey = sodium_crypto_sign_secretkey($kp);
@@ -182,18 +156,18 @@ it('transport stack rejects an op whose signature was forged (unknown device key
         value: '"attacker-note"',
         hlcL: 1_718_000_000_000,
         hlcC: 0,
-        deviceId: 'unknown-device',  // not in deviceKeys
+        deviceId: 'unknown-device',
         opType: OpType::Set,
-        signature: $signer->sign('...', $secretKey),  // signed but with unknown device
+        signature: $signer->sign('...', $secretKey),
         userId: 1,
     );
 
-    // The device key map does NOT include 'unknown-device'.
     $deviceKeys = [
         'known-device' => sodium_bin2hex($publicKey),
     ];
 
-    // SyncSession::receiveOps internal logic: entry->deviceId not in deviceKeys → dropped.
+    // The lookup receiveOps performs: a device with no entry in deviceKeys has
+    // its op dropped rather than verified.
     $pubKeyHex = $deviceKeys[$entry->deviceId] ?? null;
     expect($pubKeyHex)->toBeNull('Unknown device_id must not be in deviceKeys → entry dropped');
 

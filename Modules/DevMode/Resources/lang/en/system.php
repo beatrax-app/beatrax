@@ -7,6 +7,10 @@ return [
 
     'subtitle_html' => 'Environment + runtime + effective configuration. Sensitive keys (suffixes <code class="font-mono text-xs">*password*</code>, <code class="font-mono text-xs">*secret*</code>, <code class="font-mono text-xs">*key</code>, <code class="font-mono text-xs">*token*</code>) are masked.',
     'php' => 'PHP',
+    'php_version' => 'version',
+    'php_sapi' => 'sapi',
+    'php_ini_path' => 'ini path',
+    'php_extensions' => 'extensions',
     'laravel' => 'Laravel',
     'sqlite' => 'SQLite',
     'sqlite_file' => 'file',

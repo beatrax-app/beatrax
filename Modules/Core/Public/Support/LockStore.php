@@ -8,9 +8,6 @@ use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Facades\Cache;
 use Modules\Core\Public\Exceptions\LockStoreNotConfiguredException;
 
-/**
- * @link ../../../../.docs/features/core/architecture.md
- */
 final class LockStore
 {
     public static function forUniqueJobs(): Repository

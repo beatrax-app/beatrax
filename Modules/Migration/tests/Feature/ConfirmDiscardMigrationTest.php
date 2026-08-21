@@ -6,23 +6,15 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Migration\Internal\Actions\ConfirmMigration;
+use Modules\Migration\Internal\Actions\DiscardMigrationRun;
+use Modules\Migration\Internal\Actions\StartMigrationRun;
+use Modules\Migration\Internal\Exceptions\MigrationAlreadyConfirmedException;
+use Modules\Migration\Internal\Exceptions\MigrationAlreadyDiscardedException;
 use Modules\Migration\Models\MigrationRun;
-use Modules\Migration\Public\Actions\ConfirmMigration;
-use Modules\Migration\Public\Actions\DiscardMigrationRun;
-use Modules\Migration\Public\Actions\StartMigrationRun;
-use Modules\Migration\Public\Exceptions\MigrationAlreadyConfirmedException;
-use Modules\Migration\Public\Exceptions\MigrationAlreadyDiscardedException;
 use Modules\Migration\Tests\Support\MigrationFixturePaths;
 
 uses(RefreshDatabase::class);
-
-/*
- * Task 3's own acceptance criteria describe testable behavior not already
- * covered by MigrationConfirmTest (which only re-runs the whole parse ->
- * stage -> confirm pipeline against a SECOND MigrationRun, never re-invokes
- * ConfirmMigration/DiscardMigrationRun on the SAME run twice) — added per
- * Plan 05/06's established Rule 3 precedent.
- */
 
 beforeEach(function (): void {
     $this->user = User::create([
@@ -107,7 +99,7 @@ it('DiscardMigrationRun: refuses to discard an already-confirmed run', function 
     expect($run->refresh()->status)->toBe('confirmed');
 });
 
-it('WR-02: ConfirmMigration refuses to confirm an already-discarded run', function (): void {
+it('ConfirmMigration: refuses to confirm an already-discarded run', function (): void {
     $run = app(StartMigrationRun::class)->__invoke(
         $this->user,
         'ynab4',
@@ -119,8 +111,7 @@ it('WR-02: ConfirmMigration refuses to confirm an already-discarded run', functi
     expect(fn () => app(ConfirmMigration::class)->__invoke($run->id, $this->user))
         ->toThrow(MigrationAlreadyDiscardedException::class);
 
-    // The run must stay 'discarded' — never silently flipped back to
-    // 'confirmed' with phantom all-zero counts.
+    // Never silently flipped back to 'confirmed' with phantom zero counts.
     expect($run->refresh()->status)->toBe('discarded');
     expect($this->db->connection()->table('categories')->where('user_id', $this->user->id)->count())->toBe(0);
     expect($this->db->connection()->table('transactions')->where('user_id', $this->user->id)->count())->toBe(0);
@@ -170,6 +161,5 @@ it('DiscardMigrationRun: sweepAbandonedForUser reclaims only THIS user\'s stale 
     expect($reclaimed)->toBe(1);
     expect(MigrationRun::query()->where('id', $staleRun->id)->exists())->toBeFalse();
     expect(MigrationRun::query()->where('id', $freshRun->id)->exists())->toBeTrue();
-    // The other user's equally-stale run is untouched — sweep is user-scoped.
     expect(MigrationRun::query()->where('id', $otherStaleRun->id)->exists())->toBeTrue();
 });

@@ -5,12 +5,8 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * Records which "You could save here" savings insights a user has dismissed, so
- * a dismissed suggestion never re-surfaces. The insight key is a stable string
- * the SavingsInsightsQuery composes (e.g. "cheaper:42" / "cancel:42"), so a
- * recomputed insight set is filtered against this table by key.
- */
+// insight_key is the stable key SavingsInsightsQuery composes ("cheaper:42",
+// "cancel:42"), so a recomputed insight set filters against this table by key.
 return new class extends ModuleMigration
 {
     public function up(): void

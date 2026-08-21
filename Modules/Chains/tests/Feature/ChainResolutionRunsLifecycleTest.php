@@ -19,23 +19,8 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 
-/*
- * Wave 2 chain_resolution_runs lifecycle coverage. Asserts the three
- * documented status transitions:
- *  - handle() begin   → status='running' + started_at set
- *  - handle() success → status='complete' + completed_at set + linked_count delta
- *  - JobFailed event  → status='failed' + last_error set + completed_at set
- *
- * Cross-user isolation: a failure for user A must not touch user B's
- * audit rows.
- */
-
-/**
- * Build a stub Illuminate\Contracts\Queue\Job whose payload['data']['command']
- * embeds the userId in the resolver-expected `userId;i:N` shape. Used
- * by the JobFailed tests to exercise the listener without booting a
- * real queue worker.
- */
+// The payload's serialised `command` must carry the userId in the
+// `userId;i:N` shape the listener's regex looks for.
 function makeLifecycleFakeJob(int $userId, string $jobId): Job
 {
     return new class($userId, $jobId) implements Job
@@ -206,12 +191,10 @@ it('transitions chain_resolution_runs from running to complete on successful han
     expect($row->status)->toBe('complete');
     expect($row->started_at)->not->toBeNull();
     expect($row->completed_at)->not->toBeNull();
-    // No fixture data → no chain_links written → linked_count is 0.
     expect((int) $row->linked_count)->toBe(0);
 });
 
 it('transitions chain_resolution_runs to failed when the JobFailed event fires', function (): void {
-    // Seed a pre-existing `running` row that the listener should flip.
     $db = $this->app->make(DatabaseManager::class);
     /** @var Clock $clock */
     $clock = $this->app->make(Clock::class);
@@ -225,9 +208,6 @@ it('transitions chain_resolution_runs to failed when the JobFailed event fires',
         'updated_at' => $now,
     ]);
 
-    // Synthesise a JobFailed event with a payload whose `command`
-    // serialised string includes the userId — the
-    // extractUserIdFromFailedJob() regex in the listener picks it up.
     $fakeJob = makeLifecycleFakeJob($this->user->id, 'test-uuid');
 
     $exception = new RuntimeException('Synthetic resolver failure for lifecycle test');
@@ -254,7 +234,6 @@ it('cross-user isolation: a failed-event for user A does not touch user B runnin
     $clock = $this->app->make(Clock::class);
     $now = $clock->now()->toDateTimeString();
 
-    // Seed two running rows — one per user.
     $db->connection()->table('chain_resolution_runs')->insert([
         'user_id' => $this->user->id,
         'status' => 'running',
@@ -272,14 +251,12 @@ it('cross-user isolation: a failed-event for user A does not touch user B runnin
         'updated_at' => $now,
     ]);
 
-    // Fire JobFailed for user A only.
     $fakeJob = makeLifecycleFakeJob($this->user->id, 'iso-uuid');
 
     /** @var Dispatcher $events */
     $events = $this->app->make(Dispatcher::class);
     $events->dispatch(new JobFailed('sync', $fakeJob, new RuntimeException('Isolated failure')));
 
-    // User A row flipped to failed; user B row stays running.
     /** @var ChainResolutionRun $userARow */
     $userARow = ChainResolutionRun::query()
         ->where('user_id', $this->user->id)

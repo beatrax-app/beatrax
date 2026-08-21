@@ -25,6 +25,8 @@ return [
     'no_entries' => 'Ainda não há lançamentos manuais.',
     'delete_entry' => 'Eliminar lançamento',
     'delete' => 'Eliminar',
+    'delete_confirm' => 'Eliminar este lançamento?',
+    'delete_keep' => 'Manter',
 
     'errors' => [
         'amount_positive' => 'Introduz um montante superior a zero.',

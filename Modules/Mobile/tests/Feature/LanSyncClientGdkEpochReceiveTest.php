@@ -17,7 +17,7 @@ use Amp\Websocket\WebsocketTimestamp;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\UserDataPathService;
@@ -36,26 +36,12 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
 
 uses(RefreshDatabase::class);
 
-/*
- * LanSyncClientGdkEpochReceiveTest — Task 4 (Phase 15 import-join, G3):
- * LanSyncClient::receiveGdkEpochWraps() consumes a pushed GDK_EPOCH_WRAP
- * frame over a real, already-authenticated Noise IK session and converges
- * the phone's keyring. 6e per 15-import-join-PLAN.md's test-plan.
- *
- * A real loopback WebSocket TCP connection is Manual-Only Verification
- * (LanDirectSessionTest's own documented precedent) — this test instead
- * exercises the SAME in-memory Noise handshake + SyncSession::authenticate()
- * + the new receive step directly, driven through a fake WebsocketConnection
- * (mirrors GdkEpochDeliveryTest's deliveryFakeClient() pattern, adapted to
- * the CLIENT-side WebsocketConnection interface).
- */
+// A real loopback WebSocket dial stays manual-only verification, so these
+// drive the same in-memory Noise handshake, SyncSession::authenticate() and
+// receive step through a fake connection instead.
 
-/**
- * Minimal WebsocketConnection fake — only receive() is exercised by
- * receiveGdkEpochWraps(); every other interface method throws if called.
- * Messages are served in order; once exhausted, receive() returns null
- * (clean-disconnect ending shape) unless $throwTimeoutAfterExhausted is set.
- */
+// Only receive() is exercised; every other method throws if called. Messages
+// are served in order, then receive() returns null — a clean disconnect.
 function lanReceiveFakeConnection(array $messages): WebsocketConnection
 {
     return new class($messages) implements IteratorAggregate, WebsocketConnection
@@ -156,12 +142,9 @@ function lanReceiveFakeConnection(array $messages): WebsocketConnection
     };
 }
 
-/*
- * The GDK_EPOCH_PUSH header the desktop sends to open the epoch phase,
- * sealed with its own send cipher exactly as a wrap frame is. The phase now
- * runs BEFORE catch-up, so its length is announced rather than inferred from
- * a read timeout, which would have eaten the catch-up request behind it.
- */
+// The header opening the epoch phase, sealed with the desktop's own send
+// cipher. The phase runs BEFORE catch-up, so its length is announced rather
+// than inferred from a read timeout, which would eat the request behind it.
 function lanReceivePushHeader(NoiseSession $desktopNoiseSession, int $count): WebsocketMessage
 {
     return WebsocketMessage::fromBinary($desktopNoiseSession->encrypt(json_encode(
@@ -225,7 +208,7 @@ it('routes a pushed GDK_EPOCH_WRAP frame through the authenticated session and c
 
     /** @var Session $session */
     $session = app(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat('k', 32));
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
 
     /** @var DeviceIdentityService $identityService */
     $identityService = app(DeviceIdentityService::class);
@@ -235,10 +218,9 @@ it('routes a pushed GDK_EPOCH_WRAP frame through the authenticated session and c
     $keyring = app(GdkKeyringService::class);
     expect($keyring->loadKeyring($userId, $session)->epochs())->toBe([]);
 
-    // A confirmed desktop peer with a real X25519 keypair (needed so the
-    // phone's SyncSession::authenticate() genuinely admits it) AND a real
-    // Ed25519 keypair whose secret signs the wrap it pushes — the phone's
-    // receive gateway authenticates the sender against this confirmed key (F1).
+    // Two real keypairs: X25519 so authenticate() genuinely admits the peer,
+    // Ed25519 because the receive gateway checks the wrap's signature
+    // against the confirmed device's recorded key.
     $desktopKp = sodium_crypto_kx_keypair();
     $desktopSecret = sodium_crypto_kx_secretkey($desktopKp);
     $desktopPublic = sodium_crypto_kx_publickey($desktopKp);
@@ -273,10 +255,8 @@ it('routes a pushed GDK_EPOCH_WRAP frame through the authenticated session and c
     $admitted = $phoneSyncSession->authenticate($phoneNoiseSession, $userId, $phone->deviceId);
     expect($admitted)->toBeTrue('the phone must authenticate the desktop as a confirmed peer before any wrap is trusted (WR-07)');
 
-    // The desktop builds + pushes a real sealed-box wrap addressed to the
-    // phone, encrypted with ITS OWN send cipher (the phone decrypts with
-    // the matching recv cipher on its own session — Noise bidirectional
-    // ciphers, not a shared key).
+    // Encrypted with the desktop's OWN send cipher: Noise ciphers are
+    // bidirectional, so the phone decrypts with its matching recv cipher.
     $rawEpochKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
     /** @var GdkRotationService $rotation */
     $rotation = app(GdkRotationService::class);
@@ -306,7 +286,7 @@ it('skips a malformed pushed frame without throwing and without appending anythi
 
     /** @var Session $session */
     $session = app(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat('k', 32));
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
 
     /** @var DeviceIdentityService $identityService */
     $identityService = app(DeviceIdentityService::class);
@@ -343,9 +323,7 @@ it('skips a malformed pushed frame without throwing and without appending anythi
     $phoneSyncSession = lanReceiveBareSyncSession();
     $phoneSyncSession->authenticate($phoneNoiseSession, $userId, $phone->deviceId);
 
-    // A genuinely non-JSON pushed frame — still a valid Noise ciphertext
-    // (encrypted with the desktop's real send cipher), but not parseable as
-    // a control message at all.
+    // A valid Noise ciphertext that is not parseable as a control message.
     $header = lanReceivePushHeader($desktopNoiseSession, 1);
     $malformedFrame = $desktopNoiseSession->encrypt('not a control message');
 
@@ -354,7 +332,6 @@ it('skips a malformed pushed frame without throwing and without appending anythi
     /** @var LanSyncClient $client */
     $client = app(LanSyncClient::class);
 
-    // Must not throw.
     $client->receiveGdkEpochWraps($connection, $phoneSyncSession, $userId, $session);
 
     /** @var GdkKeyringService $keyring */
@@ -362,24 +339,9 @@ it('skips a malformed pushed frame without throwing and without appending anythi
     expect($keyring->loadKeyring($userId, $session)->epochs())->toBe([], 'a malformed frame must never append anything to the keyring');
 });
 
-/*
- * ── Additional LanSyncClient fault-branch coverage ────────────────────────
- *
- * The cases below drive the fault branches the converge/malformed pair above
- * never reaches: the handshake premature-disconnect throw, the two remaining
- * receiveGdkEpochWraps loop exits (read-timeout and a non-wrap control
- * frame), and the confirmed-device-gate rejection factory. A live successful
- * dial (real desktop peer) stays Manual-Only Verification, so the
- * gate-rejection throw site inside syncOnce() is asserted through its
- * dedicated LanSyncException factory rather than a live socket.
- */
-
-/**
- * A scripted WebsocketConnection whose sendBinary() is a NO-OP (so
- * performHandshake's msg1 send does not blow up) and whose receive() replays
- * a script: a WebsocketMessage is returned as-is, '__NULL__' returns null
- * (clean disconnect), and '__TIMEOUT__' throws Amp\TimeoutException.
- */
+// sendBinary() is a no-op so performHandshake's msg1 send does not blow up.
+// receive() replays a script: a message is returned as-is, '__NULL__' is a
+// clean disconnect, '__TIMEOUT__' throws Amp\TimeoutException.
 function lanScriptedFakeConnection(array $script): WebsocketConnection
 {
     return new class($script) implements IteratorAggregate, WebsocketConnection
@@ -485,7 +447,7 @@ it('throws LanSyncException when the peer disconnects before sending the Noise m
 
     /** @var Session $session */
     $session = app(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat('k', 32));
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
 
     /** @var DeviceIdentityService $identityService */
     $identityService = app(DeviceIdentityService::class);
@@ -513,7 +475,7 @@ it('treats a timed-out GDK phase header as a retryable stall and appends nothing
 
     /** @var Session $session */
     $session = app(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat('k', 32));
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
 
     // The header opens the phase, so a timeout waiting for it is a stalled
     // peer, not "no more wraps". syncOnce() maps the throw onto its
@@ -541,7 +503,7 @@ it('ends the GDK receive loop on a well-formed but non-wrap control frame', func
 
     /** @var Session $session */
     $session = app(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat('k', 32));
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
 
     /** @var DeviceIdentityService $identityService */
     $identityService = app(DeviceIdentityService::class);
@@ -596,7 +558,7 @@ it('ends the GDK receive loop on a well-formed but non-wrap control frame', func
     expect($keyring->loadKeyring($userId, $session)->epochs())->toBe([], 'a non-wrap control frame must never append anything to the keyring');
 });
 
-it('LanSyncException::peerFailedConfirmedDeviceGate carries the T-13-13 confirmed-device-gate rejection message', function (): void {
+it('LanSyncException::peerFailedConfirmedDeviceGate carries the confirmed-device-gate rejection message', function (): void {
     // syncOnce() throws this the moment a peer completes the Noise handshake
     // yet fails SyncSession::authenticate() (a security-relevant rejection,
     // never a retryable transient). The live-dial throw site is Manual-Only,

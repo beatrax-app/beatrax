@@ -25,6 +25,8 @@ return [
     'no_entries' => 'Henüz elle girilen kayıt yok.',
     'delete_entry' => 'Kaydı sil',
     'delete' => 'Sil',
+    'delete_confirm' => 'Bu kayıt silinsin mi?',
+    'delete_keep' => 'Sakla',
 
     'errors' => [
         'amount_positive' => 'Sıfırdan büyük bir tutar gir.',

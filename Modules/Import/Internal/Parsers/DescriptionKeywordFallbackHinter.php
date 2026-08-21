@@ -6,16 +6,11 @@ namespace Modules\Import\Internal\Parsers;
 
 use Modules\Import\Public\Enums\PaymentType;
 
-/**
- * @link ../../../../.docs/features/import/architecture.md#payment-type-hinters
- */
 final class DescriptionKeywordFallbackHinter extends DescriptionKeywordHinter
 {
     private const CONFIDENCE = 40;
 
-    // Specific lexemes (`automatische incasso`) precede their shorter
-    // super-strings (`incasso`) so the longer match wins when both
-    // appear in the same description.
+    // Longest lexeme first, so `automatische incasso` beats `incasso`.
     /**
      * @var list<array{keyword: string, type: PaymentType}>
      */
@@ -37,8 +32,7 @@ final class DescriptionKeywordFallbackHinter extends DescriptionKeywordHinter
         ['keyword' => 'fee', 'type' => PaymentType::Fee],
     ];
 
-    // Answers for every row regardless of origin: this is the last hinter in
-    // the registry and exists to catch what the per-parser ones did not.
+    // Last in the registry, so it answers for every row whatever its origin.
     protected function handles(string $sourceFormat): bool
     {
         unset($sourceFormat);
@@ -46,8 +40,7 @@ final class DescriptionKeywordFallbackHinter extends DescriptionKeywordHinter
         return true;
     }
 
-    // Every keyword here carries the same low confidence, so the table stores
-    // the type alone and the confidence is stamped on at read time — keeping
+    // One confidence for every keyword, stamped on at read time so there is
     // one number to change rather than one per row.
     /**
      * @return list<array{keyword: string, type: PaymentType, confidence: int}>

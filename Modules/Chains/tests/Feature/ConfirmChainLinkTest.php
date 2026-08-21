@@ -4,26 +4,14 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Modules\Chains\Internal\Exceptions\ChainLinkRequiresConcretePartnerException;
 use Modules\Chains\Models\ChainLink;
 use Modules\Chains\Public\Actions\ConfirmChainLink;
-use Modules\Chains\Public\Exceptions\ChainLinkRequiresConcretePartnerException;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
-
-/*
- * ConfirmChainLink Public action — promotes a candidate to confirmed
- * and runs the D-87/D-88 auto-promotion learning loop: when the user
- * confirms three rows of the same signature_hash, every remaining
- * same-signature candidate auto-promotes to state='confirmed',
- * resolver='rule' on the same call (so the next refresh of the review
- * queue sees the drop in candidates).
- *
- * Cross-user invocation raises NotFoundHttpException (404) via
- * firstOrFail() — the same pattern UpdateTransactionCategory uses.
- */
 
 function cclUser(string $username): User
 {
@@ -139,22 +127,20 @@ it('promotes a single candidate to confirmed (no auto-promotion below threshold)
     expect($link->resolver)->toBe('auto');
 });
 
-it('auto-promotes other same-signature candidates at the 3rd confirmation (D-87/D-88)', function (): void {
+it('auto-promotes other same-signature candidates at the 3rd confirmation', function (): void {
     $signature = 'sig-auto-promote';
 
-    // Seed two already-confirmed rows with the same signature.
+    // Two already-confirmed rows + this confirm = the 3-confirm threshold.
     for ($i = 1; $i <= 2; $i++) {
         $f = cclTx($this->user, $this->paypal, $this->run, -100 * $i, 'expense', 'p'.$i, $i);
         $t = cclTx($this->user, $this->asn, $this->run, 100 * $i, 'transfer_in', 't'.$i, $i + 10);
         cclLink($this->db, $this->user, (int) $f->id, (int) $t->id, 'confirmed', $signature);
     }
 
-    // Seed the 3rd candidate (the one we'll confirm).
     $f3 = cclTx($this->user, $this->paypal, $this->run, -300, 'expense', 'p3', 3);
     $t3 = cclTx($this->user, $this->asn, $this->run, 300, 'transfer_in', 't3', 13);
     $thirdId = cclLink($this->db, $this->user, (int) $f3->id, (int) $t3->id, 'candidate', $signature);
 
-    // Seed two OTHER same-signature candidates that should auto-promote.
     $otherCandidateIds = [];
     for ($i = 4; $i <= 5; $i++) {
         $f = cclTx($this->user, $this->paypal, $this->run, -100 * $i, 'expense', 'p'.$i, $i);
@@ -162,7 +148,6 @@ it('auto-promotes other same-signature candidates at the 3rd confirmation (D-87/
         $otherCandidateIds[] = cclLink($this->db, $this->user, (int) $f->id, (int) $t->id, 'candidate', $signature);
     }
 
-    // Seed a DIFFERENT-signature candidate — must NOT be auto-promoted.
     $fOther = cclTx($this->user, $this->paypal, $this->run, -600, 'expense', 'po', 6);
     $tOther = cclTx($this->user, $this->asn, $this->run, 600, 'transfer_in', 'to', 16);
     $differentSignatureId = cclLink($this->db, $this->user, (int) $fOther->id, (int) $tOther->id, 'candidate', 'sig-different');
@@ -175,7 +160,6 @@ it('auto-promotes other same-signature candidates at the 3rd confirmation (D-87/
     expect($third->state)->toBe('confirmed');
     expect($third->resolver)->toBe('auto');
 
-    // The two same-signature candidates are auto-promoted to state='confirmed', resolver='rule'.
     foreach ($otherCandidateIds as $id) {
         /** @var ChainLink $row */
         $row = ChainLink::query()->findOrFail($id);
@@ -183,7 +167,6 @@ it('auto-promotes other same-signature candidates at the 3rd confirmation (D-87/
         expect($row->resolver)->toBe('rule');
     }
 
-    // The DIFFERENT-signature candidate stays unchanged.
     /** @var ChainLink $differentRow */
     $differentRow = ChainLink::query()->findOrFail($differentSignatureId);
     expect($differentRow->state)->toBe('candidate');
@@ -209,7 +192,7 @@ it('does NOT auto-promote when same-signature confirmed count is below 3', funct
 
     /** @var ChainLink $other */
     $other = ChainLink::query()->findOrFail($otherCandidateId);
-    expect($other->state)->toBe('candidate'); // unchanged — only 2 same-signature confirmed
+    expect($other->state)->toBe('candidate');
 });
 
 it('raises NotFoundHttpException on cross-user invocation (404)', function (): void {
@@ -225,12 +208,8 @@ it('raises NotFoundHttpException on cross-user invocation (404)', function (): v
 });
 
 it('whereJsonContains finds the signature on this SQLite build', function (): void {
-    // Defence-in-depth: the auto-promotion path uses whereJsonContains
-    // on evidence->signature_hash. The smoke test in
-    // ChainLinksJsonContainsSmokeTest already proves the JSON1 path
-    // works, but this test runs the SAME code path the action uses so
-    // a fallback (whereRaw json_extract) can be activated quickly if a
-    // future SQLite build regresses.
+    // The smoke test proves JSON1 works; this runs the same whereJsonContains
+    // path the action itself takes.
     $signature = 'sig-json-contains';
 
     for ($i = 1; $i <= 3; $i++) {
@@ -256,12 +235,9 @@ it('whereJsonContains finds the signature on this SQLite build', function (): vo
 });
 
 it('throws ChainLinkRequiresConcretePartnerException when confirming a hint row with NULL to_transaction_id', function (): void {
-    // Build the canonical exceeded-tolerance ics_bulk_settle hint
-    // shape that lives with `to_transaction_id IS NULL`. The schema's
-    // chain_links_to_transaction_id_check_update trigger refuses the
-    // state flip, so the action must guard BEFORE save() and produce
-    // a typed exception the caller can render as a user-readable
-    // notice — never a raw SQLSTATE 23000.
+    // The chain_links_to_transaction_id_check_update trigger refuses the state
+    // flip on a NULL-endpoint row, so the action must guard before save() and
+    // raise a typed exception rather than a raw SQLSTATE 23000.
     $from = cclTx($this->user, $this->paypal, $this->run, -1000, 'expense', 'h1', 1);
     $this->db->connection()->table('chain_links')->insert([
         'user_id' => $this->user->id,
@@ -280,7 +256,6 @@ it('throws ChainLinkRequiresConcretePartnerException when confirming a hint row 
     expect(fn () => ($this->confirm)($hintId, $this->user))
         ->toThrow(ChainLinkRequiresConcretePartnerException::class);
 
-    // State must NOT have flipped — the guard fires before save().
     /** @var ChainLink $unchanged */
     $unchanged = ChainLink::query()->findOrFail($hintId);
     expect($unchanged->state)->toBe('candidate');

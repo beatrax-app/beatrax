@@ -25,6 +25,8 @@ return [
         'tax_years' => 'Verovuodet',
     ],
 
+    'tablist_aria' => 'Vastapuolen osiot',
+
     'tab_note_personal' => '— henkilöyhteystiedoille ei muodostu rahoitusketjuja',
     'tab_note_bank' => '— pankkikuluvastapuoli ei muodosta rahoitusketjuja',
     'tab_note_government' => '— julkishallinnon vastapuolille ei muodostu rahoitusketjuja',

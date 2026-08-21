@@ -8,27 +8,6 @@ use Modules\Core\Models\User;
 use Modules\Onboarding\Internal\Http\Livewire\SetupWizard;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 
-/*
- * Acceptance coverage for WIZ-03 — Skip-step + Skip-rest behaviour.
- *
- * Three cases:
- *
- *  1. A skippable step (connect-bank) advances when the parent
- *     SetupWizard's `skip` event handler fires. The wizard_progress
- *     row for the skipped step lands in status `skipped`; the parent's
- *     `currentStepKey` advances to the next registry step.
- *
- *  2. The `skipRest` action marks every non-`done` row `skipped` and
- *     redirects to `/`. A user who has already done `welcome` and
- *     `connect-bank` keeps those rows intact; the remaining seven
- *     (connect-paypal, connect-card, connect-email, first-import,
- *     budgets, tax-country, done) all flip to `skipped` in one call.
- *
- *  3. The `skip` handler is a no-op on non-skippable steps (welcome,
- *     first-import, done) — the WizardStepRegistry's `isSkippable`
- *     guard prevents advancement.
- */
-
 beforeEach(function (): void {
     $this->user = User::query()->create([
         'username' => 'skip-wizard',
@@ -43,8 +22,7 @@ beforeEach(function (): void {
 });
 
 it('advances past a skippable step and marks the wizard_progress row as skipped', function (): void {
-    // Walk past welcome so the parent's currentStepKey resumes on
-    // connect-bank (the first skippable connector step).
+    // connect-bank is the first skippable step.
     DB::table('wizard_progress')
         ->where('user_id', $this->user->id)
         ->where('step_key', 'welcome')
@@ -64,10 +42,8 @@ it('advances past a skippable step and marks the wizard_progress row as skipped'
 });
 
 it('marks every non-done step skipped and redirects to / when skipRest is called', function (): void {
-    // User has finished welcome + connect-bank; the remaining seven
-    // rows (connect-paypal, connect-card, connect-email, first-import,
-    // budgets, tax-country, done) should all flip to skipped when the
-    // user hits "Resume later →".
+    // With welcome and connect-bank done, "Resume later" must flip the
+    // remaining seven rows to skipped in one call.
     DB::table('wizard_progress')
         ->where('user_id', $this->user->id)
         ->where('step_key', 'welcome')
@@ -100,9 +76,7 @@ it('marks every non-done step skipped and redirects to / when skipRest is called
 });
 
 it('is a no-op on non-skippable steps', function (): void {
-    // Default state is welcome (a non-skippable step). Dispatching
-    // wizard.step.skipped from welcome must leave currentStepKey on
-    // welcome and the row's status unchanged.
+    // welcome is not skippable, so the dispatch must change nothing.
     Livewire::test(SetupWizard::class)
         ->assertSet('currentStepKey', 'welcome')
         ->dispatch('wizard.step.skipped')

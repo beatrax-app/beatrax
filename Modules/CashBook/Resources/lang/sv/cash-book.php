@@ -25,6 +25,8 @@ return [
     'no_entries' => 'Inga manuella poster än.',
     'delete_entry' => 'Ta bort post',
     'delete' => 'Ta bort',
+    'delete_confirm' => 'Ta bort den här posten?',
+    'delete_keep' => 'Behåll',
 
     'errors' => [
         'amount_positive' => 'Ange ett belopp större än noll.',

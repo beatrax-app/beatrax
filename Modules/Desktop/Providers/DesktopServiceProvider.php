@@ -57,9 +57,6 @@ use Native\Desktop\Events\Windows\WindowClosed;
 use Native\Desktop\Events\Windows\WindowFocused;
 use Native\Desktop\Events\Windows\WindowHidden;
 
-/**
- * @link ../../../.docs/features/desktop/architecture.md
- */
 final class DesktopServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
@@ -70,9 +67,8 @@ final class DesktopServiceProvider extends ServiceProvider
         $this->app->singleton(WindowFocusState::class);
         $this->app->singleton(DispatchOsNotification::class);
 
-        // Singleton because the rolling crash-counter state lives on
-        // the listener — it must survive across every ProcessExited
-        // event.
+        // Singleton: the rolling crash-counter state lives on the listener and must
+        // survive across every ProcessExited event.
         $this->app->singleton(SurfaceWorkerCrashAlert::class);
 
         $this->app->singleton(WindowCloseBehavior::class);
@@ -85,49 +81,34 @@ final class DesktopServiceProvider extends ServiceProvider
         $this->app->singleton(NavigateOnNotificationDeepLink::class);
         $this->app->singleton(ApplyCloseWindowChoice::class);
 
-        // Unused by design, not by omission: Touch ID returns only a bool,
-        // and releasing the data key from it needs a persisted wrapped-KEK
-        // vault like the mobile cold-start one. Wiring the prompt without
-        // that vault would unlock the UI while the key stayed sealed.
         $this->app->singleton(NativeBiometricUnlock::class);
 
-        // Concrete registration; the KeyCustodian contract is pointed at it
-        // inside the NativePHP bundle only (see the binding below). Outside
-        // the bundle the unlocked key follows session custody.
         $this->app->singleton(DesktopKeyCustodian::class);
 
-        // OsThemeProbe binds to OsThemeSignal ONLY inside the
-        // NativePHP bundle. Under local dev / CI / before Electron is
-        // ready, no binding is registered — the app-layout's bound()
-        // check falls through to the client-side pre-paint script.
+        // Nothing below is bound outside the bundle, so local dev, CI and the web
+        // app keep the pass-through session custody and the app layout's bound()
+        // check falls through to its client-side pre-paint theme script.
         $config = $this->app->make(ConfigRepository::class);
         if ($config->get('nativephp-internal.running') === true) {
             $this->app->singleton(OsThemeSignal::class, OsThemeProbe::class);
 
-            // Route the unlocked data key through Electron safeStorage
-            // instead of the plaintext session copy. Web/CI never
-            // enter this block, so they keep the pass-through session
-            // custody.
+            // The unlocked data key goes to Electron safeStorage, not a plaintext
+            // session copy.
             $this->app->singleton(KeyCustodian::class, DesktopKeyCustodian::class);
 
-            // Touch ID unlock: the vault wraps the data key and hands it to
-            // safeStorage, so the prompt releases a real key instead of only
-            // reporting that the user authenticated.
             $this->app->singleton(ColdStartVault::class, DesktopColdStartVault::class);
 
-            // At-rest keychain shielding for persisted secrets
-            // (biometric wrap blob, OAuth token blob), delegating to
-            // DesktopKeyCustodian so safeStorage stays in one place.
+            // Shields the persisted secrets — the biometric wrap blob, OAuth token
+            // blobs — at rest in the OS keychain.
             $this->app->singleton(SecretShield::class, SafeStorageSecretShield::class);
 
             $this->reassertNativePhpSecret($config);
         }
     }
 
-    // NativePHP mints a fresh secret every launch; a stale Windows
-    // config:cache can strand a prior launch's value while the live
-    // window sends the current one, 403ing every request. getenv()
-    // reads the live process environment, so this is always correct.
+    // NativePHP mints a fresh secret every launch, and a stale Windows config:cache
+    // strands a prior launch's value while the live window sends the current one,
+    // 403ing every request. getenv() reads the live process environment.
     private function reassertNativePhpSecret(ConfigRepository $config): void
     {
         $secret = getenv('NATIVEPHP_SECRET');
@@ -146,38 +127,28 @@ final class DesktopServiceProvider extends ServiceProvider
         $livewire->component('desktop.close-window-prompt', CloseWindowPrompt::class);
         $livewire->component('desktop.file-staging-page', FileStagingPage::class);
 
-        // Registration is NOT bundle-gated: it must light up in the
-        // spawned queue:work process (which never sets
-        // nativephp-internal.running), so it precedes the bundle-only
-        // return guard below.
+        // NOT bundle-gated, so it must precede the return guard below: it has to
+        // light up in the spawned queue:work process, which never sets
+        // nativephp-internal.running.
         $queueManager = $this->app->make(QueueManager::class);
         $queueManager->looping(static function (): void {
-            // PHP's max_execution_time is wall-clock on Windows (no
-            // ext-pcntl, so Laravel's per-job timeout never arms);
-            // resetting per poll defuses the 120s ceiling accruing
-            // across the long-lived daemon.
+            // max_execution_time is wall-clock on Windows (no ext-pcntl, so Laravel's
+            // per-job timeout never arms), and the 120s ceiling would otherwise
+            // accrue across the whole long-lived daemon.
             @set_time_limit(0);
 
-            // A force quit never runs the supervisor's before-quit hook, so
-            // this worker was left running for hours against a dead app —
-            // spawning a job process every few seconds the whole time.
-            // Between polls is the one place a blocking worker can notice.
+            // A force quit never runs the supervisor's before-quit hook, so this
+            // worker was left running for hours against a dead app. Between polls is
+            // the one place a blocking worker can notice.
             if (HostPipeWatch::hostHasGone()) {
                 exit(0);
             }
         });
 
-        // Subscription is NOT bundle-gated: the pending-intent
-        // round-trip must work in local dev / CI / tests too, and the
-        // listener touches only the Session contract, no facade.
+        // NOT bundle-gated: the pending-intent round-trip must work in local dev and
+        // tests too, and the listener touches only the Session contract, no facade.
         $events->listen(Login::class, [ContinuePendingFileIntentAfterLogin::class, 'handle']);
 
-        // Also outside the bundle gate: enabling sync must bring the listener
-        // up in the same session, and startIfEnabled() is a no-op wherever
-        // NativePHP's ChildProcess facade is absent.
-
-        // A changed passphrase re-wraps the data key, so anything the vault
-        // holds can no longer decrypt — drop it rather than fail an unlock.
         $events->listen(
             AppLockPassphraseChanged::class,
             [ForgetColdStartVaultOnKeyRotation::class, 'handle'],
@@ -194,9 +165,6 @@ final class DesktopServiceProvider extends ServiceProvider
             return;
         }
 
-        // Focus-state flippers: NativePHP's WindowFocused/WindowBlurred
-        // feed the shared WindowFocusState singleton so
-        // DispatchOsNotification sees the current state at firing time.
         $focusState = $this->app->make(WindowFocusState::class);
         $events->listen(WindowFocused::class, static function () use ($focusState): void {
             $focusState->markFocused();
@@ -209,17 +177,13 @@ final class DesktopServiceProvider extends ServiceProvider
         $events->listen(ProcessExited::class, [SurfaceWorkerCrashAlert::class, 'handle']);
         $events->listen(OpenFile::class, [HandleNativeOpenFile::class, 'handle']);
 
-        // Both WindowHidden and WindowClosed route to the same handler
-        // — immediate lock, no grace period.
         $events->listen(WindowHidden::class, [LockOnWindowHideOrClose::class, 'handle']);
         $events->listen(WindowClosed::class, [LockOnWindowHideOrClose::class, 'handle']);
 
         $events->listen(NotificationDeepLink::class, [NavigateOnNotificationDeepLink::class, 'handle']);
 
-        // The explicit-consent auto-update chain, live only inside the bundle:
-        // electron-updater discovers an update but downloads nothing until the
-        // first listener verifies the signed manifest and the user consents,
-        // and the last listener re-verifies the binary before it installs.
+        // The explicit-consent auto-update chain, in order — discover, consent,
+        // install — each step gated on the publisher-signed manifest.
         $events->listen(UpdateAvailable::class, [VerifyAndAnnounceUpdate::class, 'handle']);
         $events->listen(UpdateInstallRequested::class, [TriggerUpdateDownload::class, 'handle']);
         $events->listen(UpdateDownloaded::class, [VerifyAndInstallDownload::class, 'handle']);

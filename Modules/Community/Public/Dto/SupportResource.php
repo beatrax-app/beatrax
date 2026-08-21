@@ -6,9 +6,6 @@ namespace Modules\Community\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-/**
- * @link ../../../../.docs/features/community/architecture.md
- */
 final class SupportResource extends Data
 {
     public function __construct(
@@ -45,10 +42,8 @@ final class SupportResource extends Data
             return null;
         }
 
-        // Defense-in-depth: a `to` carrying mailto control characters (?, &,
-        // whitespace, CR/LF) could inject extra recipients or headers into the
-        // pre-filled email. Refuse to build a mailto from a suspicious address
-        // rather than emit a tampered one.
+        // A `to` carrying ?, &, whitespace or CR/LF could inject extra
+        // recipients or headers into the pre-filled email.
         if (preg_match('/[?&\s]/', $this->cancelEmailTo) === 1) {
             return null;
         }

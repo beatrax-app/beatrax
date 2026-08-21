@@ -18,14 +18,11 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\LockStore;
-use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
-use Modules\OpenBanking\Public\Exceptions\EnableBankingApiException;
-use Modules\OpenBanking\Public\Services\OpenBankingFetchService;
+use Modules\OpenBanking\Internal\Events\OpenBankingConsentFailed;
+use Modules\OpenBanking\Internal\Exceptions\EnableBankingApiException;
+use Modules\OpenBanking\Internal\Services\OpenBankingFetchService;
 use Throwable;
 
-/**
- * @link ../../../../.docs/features/open-banking/architecture.md
- */
 final class SyncOpenBankingAccountJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Dispatchable;
@@ -89,17 +86,15 @@ final class SyncOpenBankingAccountJob implements ShouldBeUniqueUntilProcessing, 
                 ->table('open_banking_connections')
                 ->where('id', $this->connectionId)
                 ->update([
-                    // Deliberately not included: last_successful_sync_at —
-                    // a failed attempt must never advance the freshness
-                    // signal.
+                    // No last_successful_sync_at: a failed attempt must never
+                    // advance the freshness signal.
                     'last_attempt_at' => $now,
                     'last_attempt_status' => $isConsentFailure ? 'consent_failed' : 'error',
                     'updated_at' => $now,
                 ]);
 
-            // Non-consent failures rethrow to let the queue retry; a consent
-            // failure is terminal — retrying an expired/revoked consent cannot
-            // succeed until the user redoes the full re-link dance.
+            // A consent failure is terminal: no retry succeeds until the user
+            // redoes the re-link dance. Everything else goes back to the queue.
             if (! $isConsentFailure) {
                 throw $e;
             }
@@ -115,9 +110,8 @@ final class SyncOpenBankingAccountJob implements ShouldBeUniqueUntilProcessing, 
     private function resolveSyncableUser(?\stdClass $connection): ?User
     {
         if ($connection === null) {
-            // Deleted between dispatch and worker pickup — silently exit so
-            // the queue does not retry forever against a row that no longer
-            // exists.
+            // Deleted between dispatch and pickup: exit rather than retry
+            // forever against a row that no longer exists.
             return null;
         }
 
@@ -127,8 +121,6 @@ final class SyncOpenBankingAccountJob implements ShouldBeUniqueUntilProcessing, 
             && $consentExpiresAtRaw !== ''
             && CarbonImmutable::parse($consentExpiresAtRaw)->isFuture();
 
-        // No provider call, no timestamp write, for a connection that is off,
-        // whose consent has expired, or whose user_id is unusable.
         $rawUserId = $connection->user_id ?? null;
         if (! $enabled || ! $consentValid || ! is_numeric($rawUserId)) {
             return null;

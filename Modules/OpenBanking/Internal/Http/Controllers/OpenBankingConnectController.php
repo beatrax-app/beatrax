@@ -12,19 +12,15 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\EmailScan\Public\LoopbackRedirectUri;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingAccessScope;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Exceptions\OpenBankingConnectException;
 use Modules\OpenBanking\Internal\OAuth\OpenBankingStateRepository;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Exceptions\OpenBankingConnectException;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
 use RuntimeException;
 
-/**
- * @link ../../../../../.docs/features/open-banking/architecture.md
- */
 final class OpenBankingConnectController
 {
-    // Enable Banking discovers ASPSPs by country; ASN/SNS (this project's
-    // proven targets) are both Dutch banks.
+    // Enable Banking discovers ASPSPs by country; ASN and SNS are both Dutch.
     private const COUNTRY = 'NL';
 
     // Kept in sync with the identically-named constant on
@@ -46,9 +42,8 @@ final class OpenBankingConnectController
         try {
             $consentUrl = $this->resolveConsentUrl($request);
         } catch (RuntimeException $e) {
-            // OpenBankingConnectException, SecretsWriteFailed and the Enable
-            // Banking client's own failures all subclass RuntimeException and
-            // carry a user-facing reason — one flash handles every refusal.
+            // Every refusal subclasses RuntimeException and carries a
+            // user-facing reason, so one flash handles all of them.
             return $this->redirector
                 ->route('settings.open-banking')
                 ->with('open_banking_failed', $e->getMessage());
@@ -109,10 +104,9 @@ final class OpenBankingConnectController
 
         $scaHost = strtolower($scaHost);
 
-        // The SCA host is about to be persisted into the egress allow-list.
-        // An aggregator response (or TLS-defeating MITM) supplying a
-        // loopback/link-local/private/bare host must never widen that
-        // allow-list to an internal target — reject it before persisting.
+        // This host is about to enter the egress allow-list, so a loopback,
+        // link-local, private or bare host in the response would widen it to an
+        // internal target. Reject before persisting.
         if (! $this->isPublicScaHost($scaHost)) {
             throw OpenBankingConnectException::nonPublicConsentHost();
         }
@@ -122,9 +116,8 @@ final class OpenBankingConnectController
 
     private function guardConsentRedirect(string $consentUrl, string $scaHost): void
     {
-        // The consent URL is an outward redirect target — require https and
-        // that its host matches the SCA host just resolved and allow-listed,
-        // otherwise fail the flow rather than emit an open redirect.
+        // An outward redirect target: https and a host matching the SCA host
+        // just allow-listed, or this becomes an open redirect.
         $consentScheme = parse_url($consentUrl, PHP_URL_SCHEME);
         $consentHost = parse_url($consentUrl, PHP_URL_HOST);
         if (! is_string($consentScheme) || strtolower($consentScheme) !== 'https'
@@ -150,9 +143,6 @@ final class OpenBankingConnectController
         ));
     }
 
-    /**
-     * @link ../../../../../.docs/features/open-banking/architecture.md
-     */
     private function isPublicScaHost(string $host): bool
     {
         if ($host === '' || $host === 'localhost') {

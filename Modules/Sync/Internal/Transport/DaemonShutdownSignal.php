@@ -12,9 +12,6 @@ use function Amp\ByteStream\getStdin;
 
 // Parks a long-running daemon until it should shut down, watching both the
 // signals a supervisor sends and the pipe the host holds open.
-/**
- * @link ../../../../.docs/features/sync/architecture.md
- */
 final readonly class DaemonShutdownSignal
 {
     // A persistent ChildProcess outlives Electron by design, and a force quit

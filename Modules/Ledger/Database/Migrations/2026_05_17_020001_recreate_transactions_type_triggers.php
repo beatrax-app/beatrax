@@ -7,37 +7,12 @@ use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
-    /**
-     * Re-install the BEFORE INSERT / BEFORE UPDATE triggers on
-     * transactions.type after every subsequent ALTER pass dropped them.
-     *
-     * SQLite's blueprint compiler recreates a table whenever a column is
-     * added via Schema::table — the rename pass does not carry triggers
-     * across to the new table. Every later transactions migration
-     * (add_enriched_from, add_raw_payload, add_pair_transaction_id,
-     * add_auto_category_provenance) therefore silently dropped the
-     * paired type-check triggers created in
-     * 2026_05_12_010005_create_transactions_table.php. The runtime
-     * effect was that bad transaction-type values landed in the
-     * database without being rejected — verified by
-     * `Modules/Ledger/tests/Unit/TransactionTypeTest::it rejects an
-     * invalid transaction type at the DB layer` failing post-Phase 6.
-     *
-     * Pinning the trigger creation to a migration that runs LAST
-     * (later timestamp than every ALTER) gives the invariant a stable
-     * landing zone. Future ALTERs on transactions must either be added
-     * before this migration's timestamp, or re-install the triggers
-     * themselves immediately after.
-     *
-     * The trigger DDL is identical to the original definition in the
-     * create migration; allowed type list must stay in sync with
-     * `Modules\\Ledger\\Public\\Enums\\TransactionType`.
-     */
+    // Adding a column rebuilds the table in SQLite and leaves the triggers
+    // behind, so every later ALTER on transactions dropped these and bad type
+    // values landed unrejected. This migration is timestamped after all of
+    // them: a future ALTER must sort before it, or re-install them itself.
     public function up(): void
     {
-        // DROP first so the migration is idempotent across re-runs and
-        // across environments that may have already retained a stale
-        // trigger definition.
         DB::statement('DROP TRIGGER IF EXISTS transactions_type_check_insert');
         DB::statement('DROP TRIGGER IF EXISTS transactions_type_check_update');
 

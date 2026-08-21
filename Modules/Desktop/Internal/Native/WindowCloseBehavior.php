@@ -8,10 +8,9 @@ use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Actions\WriteUserPreference;
 
-// Decides what the window-close (X) button does based on the user's
-// close_behavior column: null shows the prompt, 'quit' quits, 'tray'
-// hides to the menu bar keeping the bundled worker + scheduler alive.
-// The actual quit/hide calls live in NativeAppServiceProvider instead.
+// users.close_behavior: null shows the prompt, 'quit' quits, 'tray' hides to the
+// menu bar keeping the bundled worker + scheduler alive. The quit/hide calls
+// themselves live in ApplyCloseWindowChoice.
 final class WindowCloseBehavior
 {
     public const CHOICE_QUIT = 'quit';

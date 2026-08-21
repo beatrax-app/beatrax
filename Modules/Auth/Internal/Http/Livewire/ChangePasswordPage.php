@@ -12,12 +12,15 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
 
 // ForcePasswordChangeMiddleware redirects a user carrying the
 // force_password_change_at_next_login flag here.
 final class ChangePasswordPage extends Component
 {
+    use HoldsFlashMessage;
+
     private const MINIMUM_PASSWORD_LENGTH = 12;
 
     public string $currentPassword = '';
@@ -25,8 +28,6 @@ final class ChangePasswordPage extends Component
     public string $newPassword = '';
 
     public string $newPasswordConfirmation = '';
-
-    public string $flashMessage = '';
 
     public function submit(
         CurrentUser $currentUser,
@@ -65,10 +66,8 @@ final class ChangePasswordPage extends Component
                 'force_password_change_at_next_login' => false,
             ]);
 
-        // Drop every other session this user holds (a second paired device,
-        // a browser left open elsewhere) so a password changed in response to
-        // suspected compromise actually severs the other sessions; the current
-        // one is kept so this request can complete its redirect.
+        // A password changed after a suspected compromise must sever the other
+        // sessions; this one survives only to finish the redirect.
         $db->connection()->table('sessions')
             ->where('user_id', $user->id)
             ->where('id', '!=', $session->getId())

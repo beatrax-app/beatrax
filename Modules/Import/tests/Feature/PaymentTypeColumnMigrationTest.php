@@ -28,11 +28,9 @@ beforeEach(function (): void {
     ]);
 });
 
+// Fed to a raw insert, so the SQLite trigger rather than the PHP enum cast is
+// the layer the rejection tests assert.
 /**
- * Builds the column tuple a raw DB::table('transactions')->insert needs.
- * The trigger-rejection tests use this directly so the SQLite trigger
- * (not the PHP enum cast) is the layer asserted under test.
- *
  * @return array<string, mixed>
  */
 function paymentTypeRowFixture(int $accountId, int $importRunId, int $rowIndex, string $paymentType, string $fingerprintSeed): array

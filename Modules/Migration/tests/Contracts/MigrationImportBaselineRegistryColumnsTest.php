@@ -8,16 +8,6 @@ use Modules\Sync\Internal\Config\MergeRulesRegistry;
 
 uses(RefreshDatabase::class);
 
-/*
- * Mirrors EnvelopeAssignmentsRegistryColumnsTest / TransactionSplitsRegistryColumnsTest
- * exactly. Asserts requiredCreateColumns('migration_import_baseline') is a
- * SUBSET of the migration's actual NOT-NULL-without-default columns
- * (excluding the auto-increment primary key), and pins the exact expected
- * set per 13.5-01-PLAN.md Task 3: migration_source_map_id, field_name,
- * baseline_value, imported_at. `user_id` is nullable (multi-user readiness)
- * so it is deliberately excluded from this required set.
- */
-
 it('MergeRulesRegistry migration_import_baseline _create_required is a subset of the real NOT-NULL-without-default columns', function (): void {
     $connection = app(DatabaseManager::class)->connection();
     $columns = $connection->getSchemaBuilder()->getColumns('migration_import_baseline');

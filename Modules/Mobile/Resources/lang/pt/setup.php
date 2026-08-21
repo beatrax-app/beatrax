@@ -10,6 +10,7 @@ return [
         'reprojecting' => 'A reconstruir o teu histórico…',
         'retrying' => 'A voltar a ligar ao outro dispositivo…',
         'locked' => 'Desbloqueia a aplicação para continuar a configuração.',
+        'revoked' => 'Este dispositivo foi removido a partir do outro dispositivo. Emparelhe novamente para retomar a sincronização.',
     ],
     'step' => [
         'connect' => 'A ligar ao teu outro dispositivo',

@@ -9,10 +9,8 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Desktop\Public\Contracts\RemembersPendingFileIntent;
 
-// Session-scoped store for a pending OS file-open intent: a logged-out
-// file-open is saved here until the user authenticates, then
-// ContinuePendingFileIntentAfterLogin routes them to the staging page
-// bound to that file — never inherited across a different session.
+// Session-scoped so a logged-out file-open survives until that same session
+// authenticates, and is never inherited by a different user's session.
 final class PendingFileIntent implements RemembersPendingFileIntent
 {
     public const SESSION_KEY = 'desktop.pending_file_intent';
@@ -67,8 +65,8 @@ final class PendingFileIntent implements RemembersPendingFileIntent
             return null;
         }
 
-        // A flash drive unmounted between the double-click and login
-        // makes realpath() return false — discard the stale intent.
+        // A flash drive unmounted between the double-click and login makes
+        // realpath() return false — discard the stale intent.
         $canonical = realpath($path);
         if ($canonical === false || ! is_file($canonical)) {
             return null;

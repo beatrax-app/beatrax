@@ -6,10 +6,8 @@ namespace Modules\DevMode\Public\Contracts;
 
 use Modules\DevMode\Public\Dto\CommandSpec;
 
-// safe() populates the command palette + artisan runner's SAFE list;
-// destructive() populates the runner's DESTRUCTIVE list (triple-gate
-// modal required before firing). CommandRegistry hard-codes both
-// allow-lists; NullDevCommandRegistry is the ad-hoc-test fallback.
+// The two lists are the allow-list: a command absent from both cannot be run,
+// and anything in destructive() needs the triple-gate modal before it fires.
 interface DevCommandRegistry
 {
     /**

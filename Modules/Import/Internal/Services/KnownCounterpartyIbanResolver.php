@@ -8,10 +8,9 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban;
 use Modules\Ledger\Models\Account;
 
-// Multi-account-per-kind: the resolver picks the lowest-id account for
-// deterministic behaviour. Cross-user isolation is the explicit
-// where('user_id', $userId) filter — BelongsToUser's global scope is
-// only a secondary guard (console/queued paths have no auth()->id()).
+// Lowest-id account wins when a user has several of one kind, so the
+// answer is deterministic. Cross-user isolation is the explicit
+// where('user_id', …): console and queued paths have no auth()->id().
 final class KnownCounterpartyIbanResolver implements ResolvesKnownCounterpartyIban
 {
     public function __construct(private readonly DatabaseManager $db) {}
@@ -38,10 +37,9 @@ final class KnownCounterpartyIbanResolver implements ResolvesKnownCounterpartyIb
         return is_string($alias) && $alias !== '' ? $alias : null;
     }
 
-    // Disambiguation: raw query builder returns the lowest-id matching
-    // account id; Eloquent's find($id) then hydrates the full model —
-    // sidesteps Larastan's staticMethod.dynamicCall lint while still
-    // returning the typed Account the contract promises.
+    // The raw builder picks the id and Eloquent hydrates it, which keeps
+    // Larastan's staticMethod.dynamicCall quiet without giving up the typed
+    // Account the contract promises.
     private function lowestIdAccountOfKind(string $kind, int $userId): ?Account
     {
         $accountId = $this->db->connection()

@@ -20,9 +20,6 @@ use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\LockStore;
 use Psr\Log\LoggerInterface;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md
- */
 final class PruneNotificationsJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Dispatchable;
@@ -31,10 +28,8 @@ final class PruneNotificationsJob implements ShouldBeUniqueUntilProcessing, Shou
     use SerializesModels;
     use TunedQueueJob;
 
-    // Matches CounterpartyGarbageCollectorJob's retention window exactly
-    // - one retention number across the project. Kept as a named
-    // constant, not a config()-driven tunable, so it stays a single
-    // grep-able number rather than a setting a user could widen unboundedly.
+    // One retention number across the project (CounterpartyGarbageCollectorJob
+    // matches). A constant rather than config so a user cannot widen it.
     private const int RETENTION_DAYS = 365;
 
     private const int CHUNK_SIZE = 500;
@@ -65,10 +60,9 @@ final class PruneNotificationsJob implements ShouldBeUniqueUntilProcessing, Shou
         ?EncryptionMigrationService $encryptionMigrationService = null,
         ?LoggerInterface $logger = null,
     ): void {
-        // Defensive safety net only - the real predicate below never
-        // touches an encrypted column, so this check gates nothing today;
-        // it only logs, so a future contributor who adds an
-        // encrypted-column predicate here notices the precedent exists.
+        // Gates nothing today — the predicate below touches no encrypted
+        // column. It logs so a contributor who later adds one sees the
+        // precedent already exists.
         if ($session !== null
             && $appLockKeyService !== null
             && $encryptionMigrationService !== null
@@ -77,7 +71,7 @@ final class PruneNotificationsJob implements ShouldBeUniqueUntilProcessing, Shou
             && $appLockKeyService->release($session) === null
         ) {
             $logger->info(
-                'PruneNotificationsJob: no app-lock KEK available for an encrypted user in this run. This is informational only — the retention sweep needs no KEK because it keys solely on the unencrypted created_at column (D-37) — logged so a future contributor who adds an encrypted-column predicate here notices this precedent.',
+                'PruneNotificationsJob: no app-lock KEK available for an encrypted user in this run. This is informational only — the retention sweep needs no KEK because it keys solely on the unencrypted created_at column — logged so a future contributor who adds an encrypted-column predicate here notices this precedent.',
                 ['user_id' => $this->userId],
             );
         }
@@ -85,15 +79,11 @@ final class PruneNotificationsJob implements ShouldBeUniqueUntilProcessing, Shou
         $connection = $db->connection();
 
         do {
-            // notifications.id is a 64-char sha256 hex string primary
-            // key, never an integer - every id collected/deleted below
-            // stays a string throughout.
+            // notifications.id is a 64-char sha256 hex string, never an int.
             /** @var list<string> $ids */
             $ids = $connection->table('notifications')
                 ->where('notifications.user_id', $this->userId)
-                // The age-based, key-less cutoff - the sole predicate.
-                // Portable SQLite date arithmetic mirrors
-                // CounterpartyGarbageCollectorJob's identical idiom.
+                // The age cutoff is the sole predicate, and needs no key.
                 ->whereRaw("notifications.created_at < datetime('now', '-".self::RETENTION_DAYS." days')")
                 ->orderBy('notifications.id')
                 ->limit(self::CHUNK_SIZE)

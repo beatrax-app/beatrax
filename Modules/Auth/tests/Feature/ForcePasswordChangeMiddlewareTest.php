@@ -9,18 +9,7 @@ use Modules\Auth\Internal\Http\Middleware\ForcePasswordChangeMiddleware;
 use Modules\Core\Models\User;
 use Symfony\Component\HttpFoundation\Response;
 
-/*
- * Feature coverage for ForcePasswordChangeMiddleware: a request passes
- * through when the user's force_password_change_at_next_login flag is
- * false, is redirected to /change-password when the flag is true and the
- * route is not exempt, and is NOT redirected when the route IS the
- * change-password page or the logout route (so no redirect loop forms).
- */
-
-/**
- * Builds a Request bound to a named route so the middleware can read the
- * route name.
- */
+// Bound to a named route, because the middleware reads the route name.
 function requestNamed(string $routeName, string $uri = '/'): Request
 {
     $request = Request::create($uri);
@@ -127,9 +116,8 @@ it('redirects a flagged user away from the dashboard and stops once the flag cle
 
     User::query()->where('id', $user->id)->update(['force_password_change_at_next_login' => false]);
 
-    // With the flag cleared the change-password middleware no longer
-    // intercepts; the dashboard's own first-run redirect to /imports/new
-    // is what remains for a user with no transactions.
+    // With the flag cleared this middleware stops intercepting, and what is
+    // left is the dashboard's own first-run redirect.
     $response = $this->actingAs($user->fresh())->get('/');
     expect($response->headers->get('Location'))->not->toBe(route('auth.change-password'));
 });

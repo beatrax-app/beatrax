@@ -9,14 +9,6 @@ use Modules\Notifications\Internal\StateMachines\NotificationStateMachine;
 
 uses(RefreshDatabase::class);
 
-/*
- * Unit coverage for NotificationStateMachine — the sole legal mutator of
- * notifications.state. Covers the open -> resolved happy path, the
- * resolved -> resolved illegal re-entry, the busy-timeout-fenced row
- * lock, and the explicit ->where('user_id', ...) isolation (T-18-03):
- * a cross-user resolve() call must not mutate a row it does not own.
- */
-
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);

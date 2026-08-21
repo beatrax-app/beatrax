@@ -6,9 +6,6 @@ namespace Modules\Forecasting\Internal\Pipeline;
 
 use InvalidArgumentException;
 
-/**
- * @link ../../../../.docs/features/forecasting/architecture.md
- */
 final readonly class Percentile
 {
     /**

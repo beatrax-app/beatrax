@@ -6,13 +6,6 @@ use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Receipts\Internal\Matchers\PaypalReceiptMatcher;
 use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 
-/*
- * Covers extractCharge / resolveMerchant / extractNativeAmount guard
- * arms the fixtures never reach: a missing transaction id, a missing
- * amount anchor (which walks the USD -> EUR -> labelled cascade to its
- * end), a missing merchant, and the labelled-amount native leg.
- */
-
 function paypalFailMatcher(): PaypalReceiptMatcher
 {
     return new PaypalReceiptMatcher(new EmlMimeReader, app(BaseCurrency::class));
@@ -54,9 +47,8 @@ it('returns unmatched when a charge is present but no merchant line is found', f
 });
 
 it('parses the native leg from a bare labelled amount (no USD/EUR anchor)', function (): void {
-    // "Total: 25,00" hits neither the USD nor the bare-EUR anchor, so
-    // the native amount is resolved via nativeFromLabelled(), defaulting
-    // the currency to EUR.
+    // "Total: 25,00" hits neither the USD nor the bare-EUR anchor, so the amount
+    // comes from nativeFromLabelled(), which defaults the currency to EUR.
     $body = "Merchant: Labelled Store\r\nTotal: 25,00\r\nTransaction ID: PAYPALLABEL000001\r\n";
     $outcome = paypalFailMatcher()->match(paypalPlainEml($body));
 

@@ -6,24 +6,6 @@ use Illuminate\Contracts\Config\Repository;
 use Modules\Core\Models\User;
 use Modules\DevMode\Internal\Process\RunRegistry;
 
-/*
- * DestructiveSpawnController invariants.
- *
- * The controller RE-VALIDATES all three gates server-side as
- * defense-in-depth even though TripleGateModal already validated:
- *   - DevModeFlag->isOn()
- *   - session('dev_mode.advanced') === true
- *   - request body confirmed_typed === 'beatrax' (hash_equals)
- *
- * On accept the controller routes through
- * CommandSpawner::start(..., 'destructive') and returns
- * {run_id, pid} with HTTP 202 — same shape as the SAFE controller
- * so the runner UI consumes both pathways identically.
- *
- * Skipped on systems lacking the posix extension (Linux/macOS
- * only).
- */
-
 beforeEach(function (): void {
     if (! extension_loaded('posix')) {
         $this->markTestSkipped('posix extension required');
@@ -68,7 +50,6 @@ it('rejects POST /dev/artisan/destructive-spawn with 403 when session.advanced i
     setDevModeFlagForDestructive(true);
 
     $response = $this->actingAs($user)
-        // Session lacks dev_mode.advanced
         ->postJson('/dev/artisan/destructive-spawn', [
             'command' => 'db:restore',
             'args' => ['from' => '/tmp/x.sqlite'],
@@ -127,9 +108,8 @@ it('spawns a destructive command + returns 202 + run_id + pid when all three gat
     expect($runId)->toBeString();
     expect($response->json('pid'))->toBeGreaterThan(0);
 
-    // The cached run record should reflect tier='destructive' so the
-    // audit pipeline can read it back when ArtisanStreamController
-    // finalizes the run.
+    // The tier has to survive into the cached record: that is where the
+    // finalize step reads it from.
     /** @var RunRegistry $registry */
     $registry = app(RunRegistry::class);
     $record = $registry->find($runId);

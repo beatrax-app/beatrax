@@ -15,24 +15,10 @@ use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
 
 uses(RefreshDatabase::class, EnablesEncryptionForUser::class);
 
-/*
- * 14.1-07 Task 2 (D-06 import-time twin of CR-04) — per-method audit
- * result for ApplyAutoCategoryStage/RuleEvaluator: both operate
- * EXCLUSIVELY on the incoming CanonicalTransaction DTO
- * (`RuleMatchInput::fromCanonical()` / `$tx->counterpartyNormalized`
- * against `merchants.normalized_name`, itself never a
- * SensitiveFieldRegistry column) — never on a stored `transactions`
- * row. ImportPipeline::preview() always calls `apply()` on the
- * freshly-parsed, pre-persistence row (see ImportPipeline's own
- * docblock), so the values matched against are plaintext regardless
- * of whether the user has encryption enabled: there is no
- * decrypt-before-match gap to close on this path, unlike
- * ReapplyRulesJob (CR-04 itself), which reads the persisted,
- * potentially-ciphertext `transactions.counterparty_name`/
- * `description` columns. This suite proves that safety holds for an
- * encrypted user end-to-end: the match still fires off the plaintext
- * DTO AND the eventual persisted row is genuinely ciphertext at rest.
- */
+// The stage matches on the pre-persistence CanonicalTransaction, so the values
+// it compares are plaintext whether or not the user has encryption on: there
+// is no decrypt-before-match gap here, unlike ReapplyRulesJob reading the
+// persisted columns. This proves that holds end-to-end for an encrypted user.
 
 beforeEach(function (): void {
     $this->user = User::query()->create([
@@ -155,10 +141,8 @@ it('fires an import-time rule against the plaintext DTO for an encrypted user, t
 
     $stored = DB::table('transactions')->where('user_id', $this->user->id)->orderByDesc('id')->first();
     expect((int) $stored->category_id)->toBe($this->streamingId);
-    // The write hook (RecordTransactions, closed by an earlier 14.1 plan)
-    // encrypts counterparty_name/description at rest — proving the match
-    // above genuinely ran BEFORE encryption, off the plaintext DTO, not
-    // off this (now ciphertext) persisted row.
+    // The write hook encrypts both columns at rest, so the match above must
+    // have run off the plaintext DTO rather than off this row.
     expect($stored->counterparty_name)->not->toBe('Spotify Premium');
     expect($stored->description)->not->toBe('Spotify Premium subscription');
 

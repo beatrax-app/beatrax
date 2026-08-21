@@ -6,16 +6,6 @@ use Carbon\CarbonImmutable;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Internal\Jobs\ScanMessageMapper;
 
-/*
- * ScanMessageMapper unit coverage.
- *
- * The mapper carries the pure parsing/matching helpers split out of
- * IncrementalScanJob: Gmail history unpacking, Graph message-meta field
- * extraction, sender-pattern matching and date normalisation. Each
- * defensive branch is driven directly so the collaborator is fully
- * exercised independently of the queued job.
- */
-
 beforeEach(function (): void {
     $this->frozen = CarbonImmutable::createFromTimestamp(1_700_000_000);
     $this->clock = new class($this->frozen) implements Clock

@@ -7,17 +7,7 @@ use Modules\Auth\Internal\Http\Livewire\RecoveryCodesDisplay;
 use Modules\Auth\Public\Actions\SignupAction;
 use Modules\Core\Models\User;
 
-/*
- * Feature coverage for the recovery-codes inline display ceremony: the
- * one-time render, the 404 when visited without a fresh signup, the
- * .txt stream download, the checkbox-gated Continue button, and the
- * session-key clearing on completion.
- */
-
 /**
- * Signs up the first user and returns them, leaving the plaintext codes
- * stashed in the session as the ceremony expects.
- *
  * @return array{user: User, codesPlain: list<string>}
  */
 function signupFirstUser(): array
@@ -52,10 +42,8 @@ it('returns 404 when visited without a fresh signup', function (): void {
 });
 
 it('hands the browser everything it needs to save the .txt itself', function (): void {
-    // The save is client-side: a WebView has no download manager to receive a
-    // StreamedResponse, so the old wire:click did nothing on device — and a
-    // Livewire round-trip here can 419 on an expired page, which on this
-    // screen destroys codes that are never shown again.
+    // Client-side: a WebView has no download manager for a StreamedResponse,
+    // and a 419 on this screen destroys codes never shown again.
     $result = signupFirstUser();
 
     $rendered = Livewire::actingAs($result['user'])->test(RecoveryCodesDisplay::class)
@@ -63,8 +51,6 @@ it('hands the browser everything it needs to save the .txt itself', function ():
         ->assertSeeHtml('data-testid="recovery-codes-download"')
         ->html();
 
-    // The payload the button writes is the formatter's own output, so the
-    // file keeps the exact ten lines the .txt has always carried.
     foreach ($result['codesPlain'] as $code) {
         expect($rendered)->toContain($code);
     }
@@ -84,8 +70,7 @@ it('completes the ceremony and clears the session key', function (): void {
     $result = signupFirstUser();
 
     // On to the setup wizard, not the dashboard: this screen sits between
-    // signup and setup, so finishing it resumes onboarding rather than
-    // skipping the nine steps the user has not seen yet.
+    // signup and setup, so finishing it resumes onboarding.
     Livewire::actingAs($result['user'])->test(RecoveryCodesDisplay::class)
         ->set('confirmed', true)
         ->call('continueAfterSave')

@@ -11,13 +11,10 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Support\Lang;
 use Modules\EmailScan\Public\LoopbackRedirectUri;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
-use Modules\OpenBanking\Public\Services\SecretsWriteFailed;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Services\SecretsWriteFailed;
 
-/**
- * @link ../../../../../.docs/features/open-banking/architecture.md
- */
 final class OpenBankingWizardModal extends Component
 {
     private const STEP_KEYPAIR = 1;
@@ -40,10 +37,8 @@ final class OpenBankingWizardModal extends Component
 
     public int $step = self::STEP_KEYPAIR;
 
-    // The generated public key only, safe to display/copy/round-trip
-    // through the Livewire snapshot — the matching private key is written
-    // directly to disk inside generateKeypair() and never touches a
-    // property on this class.
+    // The public half only: the private key goes straight to disk inside
+    // generateKeypair() and never reaches a property, hence never the snapshot.
     public string $publicKeyPem = '';
 
     public string $applicationId = '';
@@ -54,9 +49,6 @@ final class OpenBankingWizardModal extends Component
 
     public string $errorMessage = '';
 
-    /**
-     * @link ../../../../../.docs/features/open-banking/architecture.md
-     */
     #[On('open-banking-wizard:open')]
     public function open(
         OpenBankingSecretsRepository $secrets,
@@ -76,9 +68,8 @@ final class OpenBankingWizardModal extends Component
         $this->dispatch('modal-show', name: 'open-banking-wizard');
     }
 
-    // Generates a fresh 2048-bit RSA keypair locally, writes the private
-    // key to the secrets file immediately (empty application_id placeholder
-    // — Step 3 fills that in), and reveals only the public key.
+    // The private key is written to the secrets file immediately, with an empty
+    // application_id placeholder that step 3 fills in.
     public function generateKeypair(OpenBankingSecretsRepository $secrets): void
     {
         $this->errorMessage = '';
@@ -106,9 +97,8 @@ final class OpenBankingWizardModal extends Component
 
             return;
         } finally {
-            // $privateKeyPem lives only as a local variable — it is never
-            // assigned to a public property, so it cannot appear in the
-            // wire:snapshot payload. Clearing it is defence-in-depth.
+            // $privateKeyPem is a local only, so it cannot reach wire:snapshot;
+            // clearing it is defence-in-depth.
             $privateKeyPem = null;
         }
 
@@ -155,8 +145,7 @@ final class OpenBankingWizardModal extends Component
         $this->step = self::STEP_APPLICATION_ID;
     }
 
-    // application_id is not secret, so it is not wiped from the component
-    // after saving.
+    // application_id is not secret, so it survives on the component.
     public function saveApplicationId(OpenBankingSecretsRepository $secrets): void
     {
         $this->errorMessage = '';
@@ -213,8 +202,6 @@ final class OpenBankingWizardModal extends Component
         $this->step = self::STEP_CONSENT;
     }
 
-    // Hands off to the consent/SCA dance, carrying the user-chosen
-    // institution id — never hardcoded.
     public function connect(): mixed
     {
         $institutionId = $this->resolveInstitutionId();
@@ -230,9 +217,6 @@ final class OpenBankingWizardModal extends Component
         return $this->redirectRoute('oauth.open-banking.connect', ['institution_id' => $institutionId]);
     }
 
-    /**
-     * @link ../../../../../.docs/features/open-banking/architecture.md
-     */
     public function cancel(OpenBankingSecretsRepository $secrets, Session $session): void
     {
         if (! $secrets->hasApplication()) {

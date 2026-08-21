@@ -17,17 +17,14 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
 use Modules\Ledger\Public\Services\ReconciliationWriter;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
-use Throwable;
 
-// DI-only: no constructor. Service collaborators arrive as parameters
-// on mount()/render()/action methods — Livewire Component subclasses
-// are barred from constructor injection by phpstan-strict-rules.
 /**
- * @link ../../../../../.docs/features/ledger/architecture.md
+ * @link ../../../../../.docs/features/ledger/architecture.md#reconcile--account-reconciliation
  */
 final class ReconcilePage extends Component
 {
@@ -53,9 +50,8 @@ final class ReconcilePage extends Component
         $this->loadAccount($currentUser, $db);
     }
 
-    // Livewire hook: fires when the account picker changes. Clears any
-    // stale balance/date/error before re-running the pre-fill so a
-    // value from the previous account never bleeds through.
+    // Clears the stale balance/date/error before re-running the pre-fill, so
+    // a value from the previous account never bleeds through.
     public function updatedAccountId(mixed $value, Clock $clock, CurrentUser $currentUser, DatabaseManager $db): void
     {
         $this->statementBalance = '';
@@ -64,19 +60,16 @@ final class ReconcilePage extends Component
         $this->loadAccount($currentUser, $db);
     }
 
-    // Intentionally a no-op: render() already recomputes the difference
-    // on every round trip. This gives the UI an explicit "review the
-    // difference" action distinct from live-typing, and tests a stable
-    // action name to call.
+    // Intentionally a no-op: render() already recomputes the difference on
+    // every round trip. This is the UI's explicit "review the difference"
+    // action, distinct from live-typing, and a stable name for tests to call.
     public function checkDiscrepancy(): void
     {
         $this->error = '';
     }
 
-    // Completes the reconcile only when the entered/pre-filled statement
-    // balance exactly matches the cleared balance (difference === 0). A
-    // discrepancy performs no write and creates no transaction — it
-    // surfaces as an error for the user to resolve.
+    // A discrepancy performs no write and creates no balancing transaction —
+    // it surfaces as an error for the user to resolve.
     public function confirmReconcile(ReconciliationWriter $writer, CurrentUser $currentUser, AccountBalanceQuery $balances): void
     {
         $this->error = '';
@@ -102,8 +95,6 @@ final class ReconcilePage extends Component
         $cleared = $balances->clearedBalanceAsOf($this->accountId, $user, $date);
 
         if ($target - $cleared !== 0) {
-            // A discrepancy is flag-only — never auto-balanced, never
-            // completed. No write happens below this line.
             $this->error = Lang::get('ledger::reconcile.errors.mismatch');
 
             return;
@@ -138,10 +129,8 @@ final class ReconcilePage extends Component
 
         $ownedAccountId = $this->ownedAccountId($connection, $user->id);
 
-        // The on-screen difference, the disabled-button gate, and
-        // confirmReconcile() must all agree on posted_at <= statementDate
-        // — compute the cleared balance as of the parsed statement date,
-        // not the unbounded total.
+        // The on-screen difference, the disabled-button gate and
+        // confirmReconcile() must all agree on posted_at <= statementDate.
         $statementDate = self::parseDate($this->statementDate);
 
         $clearedBalanceMinor = ($ownedAccountId !== null && $statementDate !== null)
@@ -170,13 +159,9 @@ final class ReconcilePage extends Component
         return $view;
     }
 
-    // Pre-fills statementBalance/statementDate per account kind (source
-    // mapping documented in the linked architecture page). Re-validates
-    // account ownership before reading anything; a foreign accountId is
-    // cleared back to null so no other user's data leaks.
-    /**
-     * @link ../../../../../.docs/features/ledger/architecture.md
-     */
+    // Re-validates account ownership before reading anything; a foreign
+    // accountId is cleared back to null so no other user's data leaks. The
+    // per-kind source mapping is on the linked architecture page.
     private function loadAccount(CurrentUser $currentUser, DatabaseManager $db): void
     {
         if ($this->accountId === null) {
@@ -199,10 +184,9 @@ final class ReconcilePage extends Component
 
         $kind = is_string($account->kind ?? null) ? $account->kind : '';
 
-        // A card prefills from its card statements; any other account prefills
-        // from its imported statement summaries. An account with no statement
-        // source (paypal, cash book, API-connected) finds none, so
-        // statementBalance is left blank for manual entry.
+        // An account with no statement source (paypal, cash book,
+        // API-connected) finds none, so statementBalance is left blank for
+        // manual entry.
         if ($kind === AccountKind::IcsCard->value) {
             $this->prefillFromCardStatement($connection, $user->id);
         } else {
@@ -251,9 +235,8 @@ final class ReconcilePage extends Component
         }
     }
 
-    // Re-validates ownership on every render — never trusts the
-    // URL-bound $accountId without re-checking. Returns null for a
-    // foreign or missing account so render() shows nothing for it.
+    // Never trusts the URL-bound $accountId without re-checking: a foreign
+    // or missing account returns null and render() shows nothing for it.
     private function ownedAccountId(ConnectionInterface $connection, int $userId): ?int
     {
         if ($this->accountId === null) {
@@ -270,15 +253,6 @@ final class ReconcilePage extends Component
 
     private static function parseDate(string $raw): ?CarbonImmutable
     {
-        $trimmed = trim($raw);
-        if ($trimmed === '') {
-            return null;
-        }
-
-        try {
-            return CarbonImmutable::parse($trimmed)->startOfDay();
-        } catch (Throwable) {
-            return null;
-        }
+        return SafeDate::parseOrNull(trim($raw))?->startOfDay();
     }
 }

@@ -13,25 +13,24 @@ use Livewire\Component;
 use Modules\Auth\Public\Actions\RegenerateRecoveryCodesAction;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-// Raises a 404 -- never a 403 -- when the partner does not exist or the
-// current user is not a developer, so the route never reveals its own
-// existence to a non-owner.
+// A 404 and never a 403, so the route never reveals its own existence to a
+// non-owner.
 final class ManageUserPage extends Component
 {
+    use HoldsFlashMessage;
+
     private const MINIMUM_PASSWORD_LENGTH = 12;
 
-    // Locked so a Livewire update cannot retarget the developer's password
-    // reset at another account: mount() is the only writer, and it runs the
-    // is_developer + partner-exists checks before setting it.
+    // Locked so a Livewire update cannot retarget the password reset at another
+    // account: mount() is the only writer, and it gates before setting this.
     #[Locked]
     public string $partnerUsername = '';
 
     public string $newPartnerPassword = '';
-
-    public string $flashMessage = '';
 
     /** @var list<string> */
     public array $regeneratedCodes = [];
@@ -55,10 +54,8 @@ final class ManageUserPage extends Component
 
     public function setPartnerPassword(Hasher $hasher, DatabaseManager $db, CurrentUser $currentUser): void
     {
-        // Re-check the developer tier on the action itself, not only on the
-        // mount() gate: the developer route middleware does not re-run on a
-        // Livewire update, so a developer downgraded mid-session must not keep
-        // resetting passwords from a page still open in their browser.
+        // The route middleware does not re-run on a Livewire update, so a
+        // developer downgraded mid-session kept resetting passwords.
         if ($currentUser->user()->is_developer !== true) {
             throw new NotFoundHttpException;
         }

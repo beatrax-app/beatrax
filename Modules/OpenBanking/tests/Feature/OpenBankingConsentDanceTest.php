@@ -15,25 +15,14 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingJwtSigner;
+use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Internal\OAuth\InvalidStateException;
 use Modules\OpenBanking\Internal\OAuth\OpenBankingStateRepository;
-use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
-use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
-use Modules\OpenBanking\Public\Services\SecretsWriteFailed;
+use Modules\OpenBanking\Internal\Services\OpenBankingSecretsRepository;
+use Modules\OpenBanking\Internal\Services\SecretsWriteFailed;
 
-/*
- * Full consent/SCA dance (19-05 Task 2): the connect controller's
- * `/auth` call + resolved-SCA-host persistence, and the callback
- * controller's guard chain (provider-error -> CSRF-state -> no-code),
- * `/sessions` exchange, and DB-then-secret compensating rollback.
- *
- * Mirrors EmailScan's OAuthCallbackGmailTest structure: state is issued
- * directly via the repository (not by chaining an HTTP hit to the
- * connect route) so these scenarios do not depend on cross-request
- * session/cookie persistence in the test client. The connect
- * controller's own HTTP behaviour (redirect + SCA-host persistence) is
- * covered by its own dedicated test group below.
- */
+// State is issued straight through OpenBankingStateRepository, so no scenario
+// here depends on cross-request session persistence in the test client.
 
 beforeEach(function (): void {
     $this->obSecretsPath = storage_path('app/secrets/open-banking.json');
@@ -94,13 +83,6 @@ function ocdSeedApplication(string $privateKeyPem, ?string $bankScaHost = null, 
 }
 
 /**
- * Builds an EnableBankingHttpClient test double whose Guzzle transport
- * is a MockHandler replaying the given queued responses in order — the
- * `makeHttpClient()` override hook `EnableBankingHttpClientSsrfTest`
- * already establishes. `baseUri()` is left at its real value
- * (api.enablebanking.com), which is always allow-listed, so no real
- * network call is ever attempted regardless.
- *
  * @param  list<Response>  $responses
  */
 function ocdMockClient(OpenBankingSecretsRepository $secrets, array $responses): EnableBankingHttpClient
@@ -148,8 +130,6 @@ function ocdSessionResponse(string $sessionId = 'session-fixture-abc'): Response
     ], JSON_THROW_ON_ERROR));
 }
 
-// --- Connect controller ---------------------------------------------
-
 it('connect redirects to the EB consent URL and persists the resolved bank SCA host + institution id', function (): void {
     $user = ocdUser('connect-happy');
     $this->actingAs($user);
@@ -191,8 +171,6 @@ it('connect redirects to settings with a flash when no institution_id is supplie
     $response->assertSessionHas('open_banking_failed');
 });
 
-// --- Callback controller ---------------------------------------------
-
 it('callback happy path creates one open_banking_connections row and persists the session', function (): void {
     $user = ocdUser('callback-happy');
     $this->actingAs($user);
@@ -219,10 +197,8 @@ it('callback happy path creates one open_banking_connections row and persists th
     expect($row)->not->toBeNull();
     expect((bool) $row->enabled)->toBeFalse();
     expect($row->consent_expires_at)->not->toBeNull();
-    // 19-09: the FIRST accounts[] entry's uid is persisted so
-    // OpenBankingFetchService has a value to thread into
-    // RemoteSourceAdapter::fetch() — see EnableBankingHttpClient::
-    // accountUidFrom() and this fixture's ocdSessionResponse() shape.
+    // The FIRST accounts[] entry's uid is the one persisted, which is the value
+    // OpenBankingFetchService later threads into RemoteSourceAdapter::fetch().
     expect($row->account_uid)->toBe('acc-fixture-1');
 
     $loaded = $secrets->load();
@@ -292,16 +268,13 @@ it('compensating rollback: secret-write failure after a NEW row insert deletes t
     $client = ocdMockClient($secrets, [ocdSessionResponse('session-fixture-xyz')]);
     $this->app->instance(EnableBankingHttpClient::class, $client);
 
-    // Substitute a secrets repository whose save() always fails, to
-    // exercise the compensating-rollback branch. load()/hasApplication()
-    // delegate to the real repository so the earlier guard checks and
-    // the EB client's own credential load still see the seeded fixture.
+    // A secrets repository whose save() always fails, to reach the compensating
+    // rollback; the other methods delegate so the earlier guards still pass.
     $throwingSecrets = new class($secrets) extends OpenBankingSecretsRepository
     {
         public function __construct(private readonly OpenBankingSecretsRepository $real)
         {
-            // Skip parent constructor — every method delegates to the
-            // real repository except the throw point.
+            // No parent constructor: every method below delegates to $real.
         }
 
         public function hasApplication(): bool
@@ -341,13 +314,6 @@ it('compensating rollback: secret-write failure after a NEW row insert deletes t
     expect($db->connection()->table('open_banking_connections')->where('user_id', $user->id)->count())->toBe(0);
 });
 
-// --- Connect controller: consent-URL resolution failures -------------
-//
-// Each of these drives one refusal in resolveConsentUrl()/resolveScaHost()/
-// guardConsentRedirect() through to the single RuntimeException catch, and in
-// doing so exercises the matching OpenBankingConnectException factory. The
-// flashed message must be the factory's user-facing reason, never a raw error.
-
 it('connect flashes when Enable Banking returns no consent URL', function (): void {
     $user = ocdUser('connect-no-url');
     $this->actingAs($user);
@@ -370,8 +336,7 @@ it('connect flashes when the consent URL has no parseable host', function (): vo
     $this->actingAs($user);
 
     $secrets = ocdSeedApplication($this->privateKeyPem);
-    // A non-empty string that parse_url() yields no host for, so
-    // resolveScaHost() refuses it before persisting anything.
+    // A non-empty string parse_url() yields no host for.
     $unparseable = new Response(200, ['Content-Type' => 'application/json'], json_encode([
         'url' => 'https:///only-a-path',
     ], JSON_THROW_ON_ERROR));
@@ -395,8 +360,7 @@ it('connect refuses a non-public consent host before it widens the egress allow-
     $response->assertRedirect(route('settings.open-banking'));
     expect(session('open_banking_failed'))->toBe('Enable Banking returned a non-public consent host.');
 
-    // The bank SCA host must NOT have been persisted — the refusal happens
-    // before persistResolvedScaHost() runs.
+    // The refusal happens before persistResolvedScaHost() runs.
     expect($secrets->load()->bankScaHost)->toBeNull();
 })->with([
     'loopback name' => ['localhost'],
@@ -422,15 +386,12 @@ it('connect refuses a consent URL that is not https even when its host is public
     expect(session('open_banking_failed'))->toBe('Enable Banking returned an unsafe consent URL.');
 });
 
-// --- Callback controller: post-state completeConsent() failures ------
-
 it('callback flashes wizard-incomplete when the stored credentials carry no institution id', function (): void {
     $user = ocdUser('callback-no-institution');
     $this->actingAs($user);
 
-    // Seeded application WITHOUT an institution id: the wizard's bank-choice
-    // step never completed, so completeConsent() refuses before any session
-    // exchange.
+    // No institution id: the wizard's bank-choice step never completed, so
+    // completeConsent() refuses before any session exchange.
     ocdSeedApplication($this->privateKeyPem, bankScaHost: 'sca.asnbank.example', institutionId: null);
 
     /** @var OpenBankingStateRepository $stateRepo */
@@ -466,8 +427,7 @@ it('callback flashes when the session response carries no session id', function 
     $response->assertRedirect(route('settings.open-banking'));
     expect(session('open_banking_failed'))->toBe('Enable Banking did not return a session id.');
 
-    // No session id means no connection may be advertised — the insert never
-    // ran (the throw is before upsertConnectionRow()).
+    // The throw is before upsertConnectionRow(), so no row was ever inserted.
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     expect($db->connection()->table('open_banking_connections')->where('user_id', $user->id)->count())->toBe(0);
@@ -481,9 +441,8 @@ it('compensating rollback: secret-write failure on a RE-LINK restores the row pr
     $client = ocdMockClient($secrets, [ocdSessionResponse('session-fixture-relink')]);
     $this->app->instance(EnableBankingHttpClient::class, $client);
 
-    // Pre-existing connection row for this (user, institution): the upsert
-    // takes the UPDATE branch, so a later secret-write failure must roll the
-    // row back to these prior values rather than delete it.
+    // A pre-existing row for this (user, institution) sends the upsert down its
+    // UPDATE branch, so the rollback must restore these values, not delete.
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     $priorConsent = '2025-01-01 00:00:00';
@@ -503,11 +462,7 @@ it('compensating rollback: secret-write failure on a RE-LINK restores the row pr
 
     $throwingSecrets = new class($secrets) extends OpenBankingSecretsRepository
     {
-        public function __construct(private readonly OpenBankingSecretsRepository $real)
-        {
-            // Skip parent constructor — every method delegates to the real
-            // repository except the throw point under test.
-        }
+        public function __construct(private readonly OpenBankingSecretsRepository $real) {}
 
         public function hasApplication(): bool
         {
@@ -535,9 +490,8 @@ it('compensating rollback: secret-write failure on a RE-LINK restores the row pr
     $response->assertRedirect(route('settings.open-banking'));
     expect(session('open_banking_failed'))->toContain('simulated re-link write failure');
 
-    // Exactly the one pre-existing row, rolled back to its prior consent +
-    // account uid — never advertising a fresh consent the secrets file cannot
-    // back.
+    // Rolled back to the prior consent + account uid, never advertising a fresh
+    // consent the secrets file cannot back.
     $rows = $db->connection()->table('open_banking_connections')->where('user_id', $user->id)->get();
     expect($rows)->toHaveCount(1);
     $row = $rows->first();

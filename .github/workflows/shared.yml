@@ -1,5 +1,5 @@
 # Calls the reusable workflows the spec repo defines once for the whole
-# organisation (Q-R20, REPO-R1 to REPO-R4). First-party reusables ride a moving
+# organisation. First-party reusables ride a moving
 # major-version tag: a fix to a shared check reaches every consumer on its next
 # run, and a breaking change cuts v2 so repositories migrate one at a time
 # (ADR-0021). Third-party actions are still pinned to a full SHA (ADR-0012), and
@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   # The governance gate: a citation is present and every cited identifier
-  # resolves on the canonical spec (REPO-R1).
+  # resolves on the canonical spec.
   spec-check:
     uses: beatrax-app/spec/.github/workflows/spec-check.yml@v1
 
@@ -29,8 +29,8 @@ jobs:
   commitlint:
     uses: beatrax-app/spec/.github/workflows/commitlint.yml@v1
 
-  # The sticky comment linking each cited identifier to its defining file
-  # (GOV-R22). Skipped for fork PRs, whose token cannot write a comment.
+  # The sticky comment linking each cited identifier to its defining file.
+  # Skipped for fork PRs, whose token cannot write a comment.
   spec-references:
     if: github.event.pull_request.head.repo.full_name == github.repository
     permissions:

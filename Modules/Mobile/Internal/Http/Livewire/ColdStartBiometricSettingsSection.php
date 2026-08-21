@@ -10,23 +10,21 @@ use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Identity\BiometricKeyVault;
 use Modules\Mobile\Internal\Identity\ColdStartEnrollmentService;
 
-/**
- * @link ../../../../../.docs/features/mobile/architecture.md
- */
 final class ColdStartBiometricSettingsSection extends Component
 {
+    use HoldsFlashMessage;
+
     public bool $enrolled = false;
 
     public bool $available = false;
 
     #[Validate('nullable|regex:/^[0-9]{6,10}$/')]
     public string $pin = '';
-
-    public string $flashMessage = '';
 
     public function mount(
         CurrentUser $currentUser,
