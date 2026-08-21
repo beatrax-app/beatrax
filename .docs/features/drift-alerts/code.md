@@ -78,8 +78,9 @@ Modules/DriftAlerts/
     `DriftAlertDismissedCancelled` — each carrying the alert id and
     user id.
 - **Services/**
-  - `DriftAlertQuery::openCountForUser($user)` — top-nav badge
-    query (single COUNT against `(user_id, state)` index).
+  - `DriftAlertQuery::openCountForUser($user)` — open-alert count
+    (single COUNT against the `(user_id, state)` index). The sidebar
+    badge applies the same predicate from `NavCountsService`.
   - `DriftAlertQuery::listFor($user)` — drift page list ordered by
     `detected_at DESC`.
   - `DriftAlertQuery::forSeries($seriesId, $user)` — per-series
@@ -153,7 +154,6 @@ Migrations:
   namespace.
 - Subscribes `EvaluateDriftOnMetricsRefreshed` to
   `Recurring::RecurringSeriesMetricsRefreshed`.
-- Registers the top-nav badge composer via the ViewFactory
-  contract (no `view()` helper). The composer carries a boot-scoped
-  memo `&$cache` that collapses repeated renders within a single
-  boot cycle to a single COUNT query.
+- Registers no view composer. The sidebar's drift badge is one of the
+  counts `Core`'s `NavCountsService` computes, so the number has a
+  single source.

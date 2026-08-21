@@ -48,7 +48,7 @@ What the module explicitly does NOT do:
   - `ScenarioQuery::list($user)`, `forId($id, $user)` — scenario
     metadata reads.
   - `ForecastHighlightsQuery::activeShortfallCountForUser($user)` /
-    `tileFor($user)` — the dashboard tile + top-nav badge reads.
+    `tileFor($user)` — the dashboard tile + sidebar badge reads.
 - **Actions/**
   - Scenario CRUD: `CreateScenario`, `RenameScenario`,
     `DeleteScenario`, `AddScenarioMutation`,
@@ -202,7 +202,7 @@ The user-facing surface:
 dashboard
   → ForecastHighlightsTile SFC
        → ForecastHighlightsQuery::tileFor($user)
-top-nav badge
+sidebar badge
   → composer reads ForecastHighlightsQuery::activeShortfallCountForUser
 ```
 
@@ -456,9 +456,9 @@ derives from `variance_tolerance_percent` (var=5% → 10%-wide band, var=10%
 variance tolerance as their user-visible confidence signal even though the
 chart shows an empirical band.
 
-`ForecastHighlightsQuery` (dashboard tile + top-nav badge) counts shortfalls
+`ForecastHighlightsQuery` (dashboard tile + sidebar badge) counts shortfalls
 with a baseline-only filter (`scenario_id IS NULL`) — the dashboard and
-top-nav represent the user's CURRENT financial picture, and scenario
+the sidebar represent the user's CURRENT financial picture, and scenario
 shortfalls are "what-if" simulations that should not count toward the badge.
 A window is "active in the next 30 days" when `starts_at <= today + 30d`
 AND `ends_at >= today`.

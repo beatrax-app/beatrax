@@ -57,6 +57,9 @@ return [
         'tax' => 'Įrašų, pažymėtų kaip svarbių mokesčiams: :count',
         'subscriptions' => 'Prenumeratų: :count',
         'imports' => 'Importų: :count',
+        'chains' => 'Grandinės nuorodų, laukiančių peržiūros: :count',
+        'forecast' => 'Aktyvių trūkumo laikotarpių per artimiausias 30 dienų: :count',
+        'inboxes' => 'Pašto dėžutės elementų, kuriems reikia dėmesio: :count',
     ],
 
     'dev' => [

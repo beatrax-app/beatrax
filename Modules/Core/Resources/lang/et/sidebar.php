@@ -57,6 +57,9 @@ return [
         'tax' => ':count kirjet on märgitud maksuga seotuks',
         'subscriptions' => ':count tellimust',
         'imports' => ':count importi',
+        'chains' => ':count ahelalinki ootab ülevaatamist',
+        'forecast' => ':count aktiivset puudujäägi akent järgmise 30 päeva jooksul',
+        'inboxes' => ':count postkasti kirjet vajab tähelepanu',
     ],
 
     'dev' => [

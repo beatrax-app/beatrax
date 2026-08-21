@@ -57,6 +57,9 @@ return [
         'tax' => 'Vienumi, kas atzīmēti kā nodokļiem būtiski: :count',
         'subscriptions' => 'Abonementi: :count',
         'imports' => 'Importi: :count',
+        'chains' => 'Ķēdes saites, kas gaida pārskatīšanu: :count',
+        'forecast' => 'Aktīvi iztrūkuma periodi nākamajās 30 dienās: :count',
+        'inboxes' => 'Iesūtnes vienumi, kam nepieciešama uzmanība: :count',
     ],
 
     'dev' => [

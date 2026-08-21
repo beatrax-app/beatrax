@@ -57,6 +57,9 @@ return [
         'tax' => ':count itens etiquetados como relevantes para impostos',
         'subscriptions' => ':count subscrições',
         'imports' => ':count importações',
+        'chains' => ':count ligações de cadeia a aguardar revisão',
+        'forecast' => ':count janelas de défice ativas nos próximos 30 dias',
+        'inboxes' => ':count itens da caixa de entrada precisam de atenção',
     ],
 
     'dev' => [

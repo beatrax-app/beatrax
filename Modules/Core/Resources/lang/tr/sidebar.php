@@ -57,6 +57,9 @@ return [
         'tax' => 'vergiyle ilgili etiketlenmiş :count öğe',
         'subscriptions' => ':count abonelik',
         'imports' => ':count içe aktarma',
+        'chains' => 'incelenmeyi bekleyen :count zincir bağlantısı',
+        'forecast' => 'Önümüzdeki 30 günde :count etkin açık dönemi',
+        'inboxes' => 'dikkat gerektiren :count gelen kutusu öğesi',
     ],
 
     'dev' => [

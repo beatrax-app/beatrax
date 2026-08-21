@@ -136,7 +136,7 @@ final class ScenarioEditorSidebar extends Component
         $this->form = [];
         $this->refreshMutations($scenarioQuery, $currentUser);
         $this->toast(Lang::get('forecasting::scenario.toast.mutation_added'));
-        $this->dispatch('forecast-updated');
+        $this->dispatch('scenario-mutated');
     }
 
     public function editMutation(int $mutationId): void
@@ -190,7 +190,7 @@ final class ScenarioEditorSidebar extends Component
         $this->form = [];
         $this->refreshMutations($scenarioQuery, $currentUser);
         $this->toast(Lang::get('forecasting::scenario.toast.mutation_updated'));
-        $this->dispatch('forecast-updated');
+        $this->dispatch('scenario-mutated');
     }
 
     public function removeMutation(
@@ -207,7 +207,7 @@ final class ScenarioEditorSidebar extends Component
         }
         $this->refreshMutations($scenarioQuery, $currentUser);
         $this->toast(Lang::get('forecasting::scenario.toast.mutation_removed'));
-        $this->dispatch('forecast-updated');
+        $this->dispatch('scenario-mutated');
     }
 
     public function startRename(): void
@@ -247,7 +247,7 @@ final class ScenarioEditorSidebar extends Component
         $this->renamingScenario = false;
         $this->renameInput = '';
         $this->toast(Lang::get('forecasting::scenario.toast.renamed'));
-        $this->dispatch('forecast-updated');
+        $this->dispatch('scenario-renamed');
     }
 
     public function confirmDeleteScenario(): void
@@ -273,7 +273,6 @@ final class ScenarioEditorSidebar extends Component
         $this->confirmingDeleteScenario = null;
         $this->toast(Lang::get('forecasting::scenario.toast.deleted'));
         $this->dispatch('scenario-deleted', scenarioId: $this->scenarioId);
-        $this->dispatch('forecast-updated');
     }
 
     public function render(

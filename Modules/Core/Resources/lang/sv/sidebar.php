@@ -57,6 +57,9 @@ return [
         'tax' => ':count poster märkta som skatterelevanta',
         'subscriptions' => ':count prenumerationer',
         'imports' => ':count importer',
+        'chains' => ':count kedjelänkar väntar på granskning',
+        'forecast' => ':count aktiva underskottsperioder under de kommande 30 dagarna',
+        'inboxes' => ':count inkorgsobjekt kräver uppmärksamhet',
     ],
 
     'dev' => [

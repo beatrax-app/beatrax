@@ -371,7 +371,7 @@ historical narrative of the old ones.
 | Value | Where | Notes |
 | --- | --- | --- |
 | `[30, 60, 90, 180, 365]` | `ProjectForecastJob::HORIZON_DAYS` | The horizons a run may be dispatched for; the constructor rejects anything else |
-| `30` | `ForecastHighlightsQuery::HORIZON_DAYS` | The dashboard tile and top-nav badge read the 30-day run only |
+| `30` | `ForecastHighlightsQuery::HORIZON_DAYS` | The dashboard tile and sidebar badge read the 30-day run only |
 | `40` | `RangeProjector::HIGH_VARIANCE_THRESHOLD_PERCENT` | Minimum declared tolerance to consider the percentile tier |
 | `6` | `RangeProjector::MIN_OCCURRENCES_FOR_PERCENTILE` | Minimum observed occurrences to actually use it |
 | `3` | `RangeProjector::JITTER_WINDOW_DAYS` | Half-width in days; the replica window is 7 days |

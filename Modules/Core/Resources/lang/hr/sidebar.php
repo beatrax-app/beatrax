@@ -57,6 +57,9 @@ return [
         'tax' => 'Stavke označene kao porezno relevantne: :count',
         'subscriptions' => 'Pretplate: :count',
         'imports' => 'Uvozi: :count',
+        'chains' => ':count veza lanca čeka pregled',
+        'forecast' => ':count aktivnih razdoblja manjka u sljedećih 30 dana',
+        'inboxes' => ':count stavki pristigle pošte zahtijeva pozornost',
     ],
 
     'dev' => [

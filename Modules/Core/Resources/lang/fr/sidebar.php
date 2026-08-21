@@ -57,6 +57,9 @@ return [
         'tax' => ':count éléments marqués comme fiscalement pertinents',
         'subscriptions' => ':count abonnements',
         'imports' => ':count imports',
+        'chains' => ':count liens de chaîne en attente de vérification',
+        'forecast' => ':count fenêtres de déficit actives dans les 30 prochains jours',
+        'inboxes' => ':count éléments de boîte de réception nécessitent votre attention',
     ],
 
     'dev' => [

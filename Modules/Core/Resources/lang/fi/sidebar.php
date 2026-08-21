@@ -57,6 +57,9 @@ return [
         'tax' => ':count kohdetta merkitty verotuksen kannalta olennaisiksi',
         'subscriptions' => ':count tilausta',
         'imports' => ':count tuontia',
+        'chains' => ':count ketjulinkkiä odottaa tarkistusta',
+        'forecast' => ':count aktiivista vajejaksoa seuraavien 30 päivän aikana',
+        'inboxes' => ':count postilaatikkokohdetta vaatii huomiota',
     ],
 
     'dev' => [

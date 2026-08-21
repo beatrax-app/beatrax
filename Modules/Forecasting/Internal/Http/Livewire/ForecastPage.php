@@ -56,8 +56,8 @@ final class ForecastPage extends Component
 
     protected $listeners = [
         'buffer-editor:saved' => 'onBufferSaved',
-        'scenario-mutated' => '$refresh',
-        'scenario-renamed' => '$refresh',
+        'scenario-mutated' => 'onScenarioMutated',
+        'scenario-renamed' => 'onScenarioMutated',
         'scenario-deleted' => 'onScenarioDeleted',
     ];
 
@@ -171,6 +171,15 @@ final class ForecastPage extends Component
     public function onBufferSaved(): void
     {
         // The ApexCharts wrapper on the partial listens for this.
+        $this->dispatch('forecast-updated');
+    }
+
+    // The sidebar is a sibling component, so its own re-render leaves this
+    // page's scenario chips and chart payload untouched. Handling the event
+    // re-renders both, and the charts read the fresh data-options attribute
+    // off the forecast-updated that follows.
+    public function onScenarioMutated(): void
+    {
         $this->dispatch('forecast-updated');
     }
 

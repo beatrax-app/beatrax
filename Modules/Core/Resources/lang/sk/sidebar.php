@@ -57,6 +57,9 @@ return [
         'tax' => 'Položky označené ako daňovo relevantné: :count',
         'subscriptions' => 'Predplatné: :count',
         'imports' => 'Importy: :count',
+        'chains' => 'Prepojenia reťazca čakajúce na kontrolu: :count',
+        'forecast' => 'Aktívne okná nedostatku v najbližších 30 dňoch: :count',
+        'inboxes' => 'Položky v doručenej pošte vyžadujúce pozornosť: :count',
     ],
 
     'dev' => [

@@ -33,8 +33,8 @@ isolation.
   - Cross-user 404 posture (`DriftAlertCrossUser404Test`).
   - The drift page render (`DriftPageTest`).
   - The dashboard badge (`DashboardDriftBadgeTest`).
-  - The top-nav badge memoisation
-    (`TopNavDriftBadgeTest`).
+  - The sidebar drift badge, including the revived-snooze count and
+    its user scoping (`SidebarDriftBadgeTest`).
   - The threshold-editor (per-series + global)
     (`DriftThresholdOverrideEditorTest`,
     `GlobalDriftThresholdSettingTest`).
@@ -104,12 +104,13 @@ composer test
   `schedule:work`); confirm the snooze's `snoozed_until` is in the
   past. The state machine's `snoozed → open` transition is the
   path; check `drift_alert_transitions` for the audit trail.
-- **Top-nav badge showing a stale count after acknowledging** —
-  Livewire's response cycle re-renders the nav; the boot-scoped
-  memo collapses repeated COUNTs to one query per `&$cache` key
-  miss. A user id new to the cache produces a fresh COUNT; if the
-  badge stays stale after Acknowledge, the Livewire render did not
-  re-mount the nav — confirm the layout's nav is the same
+- **Sidebar badge showing a stale count after acknowledging** — the
+  count comes from `NavCountsService`, whose payload is cached for
+  five minutes per user. Nothing invalidates it on a drift transition,
+  so a badge that lags an Acknowledge by up to five minutes is the
+  cache, not a render bug. Call `NavCountsService::forget($userId)` to
+  confirm — if the badge stays stale after that, the Livewire render
+  did not re-mount the nav — confirm the layout's nav is the same
   Livewire component instance the action invalidated.
 
 ## Behavioural contracts, and the tests that hold them
@@ -187,10 +188,12 @@ The behavioural contract for the `DriftAlerts` module.
   `ShouldBeUniqueUntilProcessing` with
   `uniqueId() = "{userId}-{seriesId}"` collapses concurrent
   triggers. (`tests/Unit/DetectDriftAlertsJobUniqueTest.php`)
-- **The top-nav badge query is a single COUNT against
-  `(user_id, state)`.** The provider's badge composer memoises
-  within a boot cycle so repeated renders in the same response
-  collapse to one query. (`tests/Feature/TopNavDriftBadgeTest.php`)
+- **The sidebar badge counts what `/drift` lists.** The count moved
+  into `NavCountsService`, which applies the same revival-aware
+  predicate `DriftAlertQuery::openCountForUser` uses — `open`, plus a
+  `snoozed` row whose `snoozed_until` has passed — inside its own
+  group, so the OR cannot escape the `user_id` predicate.
+  (`tests/Feature/SidebarDriftBadgeTest.php`)
 
 ## Edge cases
 
@@ -231,8 +234,8 @@ The behavioural contract for the `DriftAlerts` module.
   - [`Forecasting`](../forecasting/how-to-test.md) — uses
     `CancellationImpactQuery` when projecting the
     "what if I cancel X" scenario.
-  - The shared layout — reads `DriftAlertQuery::openCountForUser`
-    via the top-nav badge composer.
+  - The app sidebar — reads the same open-alert count from
+    `Core`'s `NavCountsService`.
 
 ## Configuration + feature flags
 

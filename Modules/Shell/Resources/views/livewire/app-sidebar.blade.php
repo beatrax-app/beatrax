@@ -96,9 +96,17 @@
             <span role="img" class="side-badge muted" aria-label="{{ Lang::get('core::sidebar.badge.transactions', ['count' => $navCounts['transactions']]) }}">{{ $navCount('transactions') }}</span>
         @endif
     </a>
+    {{-- Forecasts — .side-badge.alert, not the default fill: a projected
+         shortfall window is a problem state the user cannot clear by working
+         through a queue, which is the same reason Drift Alerts and Unusual
+         charges carry the rose variant. Count merged into navCounts by the
+         Forecasting nav-badge composer; hidden at zero. --}}
     <a href="{{ route('forecast.index') }}" class="side-item {{ $isActive('/forecast') }}">
         <span class="ic" aria-hidden="true">↗</span>
         {{ Lang::get('core::sidebar.nav.forecasts') }}
+        @if (($navCounts['forecast'] ?? 0) > 0)
+            <span role="img" class="side-badge alert" aria-label="{{ Lang::get('core::sidebar.badge.forecast', ['count' => $navCounts['forecast']]) }}">{{ $navCount('forecast') }}</span>
+        @endif
     </a>
     <a href="{{ route('calendar.index') }}" class="side-item {{ $isActive('/calendar') }}">
         <span class="ic" aria-hidden="true">▦</span>
@@ -145,9 +153,17 @@
          primary discovery surface is "what chains do I have?" rather
          than "what's awaiting triage?". The overview header links to
          the review queue and the hints surface in turn. --}}
+    {{-- The badge counts the review queue, not the chains the overview lists:
+         the number worth interrupting for is the one the user can clear.
+         Default .side-badge (NOT .muted, NOT .alert) — an awaiting-review
+         count is exactly the actionable-count-to-clear the badge-intensity
+         taxonomy reserves the inverted fill for. --}}
     <a href="{{ route('chains.index') }}" class="side-item {{ $isActive('/chains') }}">
         <span class="ic" aria-hidden="true">⇉</span>
         {{ Lang::get('core::sidebar.nav.chains') }}
+        @if (($navCounts['chains'] ?? 0) > 0)
+            <span role="img" class="side-badge" aria-label="{{ Lang::get('core::sidebar.badge.chains', ['count' => $navCounts['chains']]) }}">{{ $navCount('chains') }}</span>
+        @endif
     </a>
     {{-- Unusual charges — the anomaly section of the /drift alerts home.
          Links to ?type=anomaly; amber .side-badge.alert
@@ -240,9 +256,16 @@
         <span class="ic" aria-hidden="true">€</span>
         {{ Lang::get('core::sidebar.nav.cashbook') }}
     </a>
+    {{-- Senders waiting to be promoted or dismissed, plus inboxes whose token
+         expired and need reconnecting — both are errands with a done state, so
+         this takes the default inverted .side-badge rather than the rose alert
+         variant. Nothing here is wrong with the user's money. --}}
     <a href="{{ route('inboxes.index') }}" class="side-item {{ $isActive('/inboxes') }}">
         <span class="ic" aria-hidden="true">✉</span>
         {{ Lang::get('core::sidebar.nav.email') }}
+        @if (($navCounts['inboxes'] ?? 0) > 0)
+            <span role="img" class="side-badge" aria-label="{{ Lang::get('core::sidebar.badge.inboxes', ['count' => $navCounts['inboxes']]) }}">{{ $navCount('inboxes') }}</span>
+        @endif
     </a>
 
     {{-- Organise: telling Beatrax what a transaction actually is — who the

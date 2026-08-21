@@ -71,7 +71,10 @@ function tdbTransaction(DatabaseManager $db, int $userId): int
     ]);
 }
 
-function tdbAlert(User $user): DriftAlert
+/**
+ * @param  array<string, mixed>  $overrides
+ */
+function tdbAlert(User $user, array $overrides = []): DriftAlert
 {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -115,7 +118,35 @@ function tdbAlert(User $user): DriftAlert
         'threshold_source' => 'global',
         'latest_occurrence_id' => $occurrenceId,
         'detected_at' => CarbonImmutable::parse('2026-05-19 12:00:00'),
+        ...$overrides,
     ]);
+}
+
+// The two badges the Commitments section carries for this data: rose for the
+// alerts, outlined for the series inventory. Asserted whole so a number
+// landing on the wrong row cannot pass.
+function tdbDriftBadge(int $count): string
+{
+    return '<span role="img" class="side-badge alert" aria-label="'
+        .$count.' open drift alerts">'.$count.'</span>';
+}
+
+function tdbRecurringBadge(int $count): string
+{
+    return '<span role="img" class="side-badge muted" aria-label="'
+        .$count.' recurring series">'.$count.'</span>';
+}
+
+// One sidebar anchor, from its href to the closing tag.
+function tdbNavRow(string $content, string $href): string
+{
+    $start = strpos($content, 'href="'.$href.'"');
+    expect($start)->toBeInt();
+
+    $end = strpos($content, '</a>', (int) $start);
+    expect($end)->toBeInt();
+
+    return substr($content, (int) $start, (int) $end - (int) $start);
 }
 
 function tdbPendingSeries(User $user): RecurringSeries
@@ -151,7 +182,7 @@ it('renders no drift pill when the user has no open alerts', function (): void {
     expect($content)->not->toContain('open drift alerts');
 })->group('drift-badge-hidden-when-zero');
 
-it('injects driftOpenCount > 0 and surfaces the rose drift pill in the aria-label', function (): void {
+it('renders the rose alert badge carrying the open-alert count', function (): void {
     tdbAlert($this->user);
     tdbAlert($this->user);
 
@@ -159,42 +190,76 @@ it('injects driftOpenCount > 0 and surfaces the rose drift pill in the aria-labe
     $response->assertOk();
     $content = $response->getContent() ?: '';
 
-    expect($content)->toContain('2 open drift alerts');
-    expect($content)->toContain('bg-rose-50');
-    expect($content)->toContain('text-rose-700');
-})->group('drift-badge-shows-rose-pill-when-non-zero')
-    ->todo('16-01 replaced the top-nav with the app sidebar. The Recurring drift pill chrome (bg-rose-50 / text-rose-700) no longer ships in the new sidebar markup; a follow-up plan re-wires the drift composer onto core::livewire.app-sidebar and re-introduces the rose .side-badge.alert pill, at which point this assertion is updated to match the new chrome.');
+    expect($content)->toContain(tdbDriftBadge(2));
+})->group('drift-badge-shows-rose-pill-when-non-zero');
 
-it('renders the compound pill when both pending recurring suggestions and open drift alerts exist', function (): void {
+it('renders the muted series badge beside the rose drift badge, and leaves a pending series out of both', function (): void {
     tdbPendingSeries($this->user);
+    // Each alert brings an approved series with it, which is what the muted
+    // Recurring badge counts. The pending one is in neither number.
     tdbAlert($this->user);
 
     $response = $this->actingAs($this->user)->get(route('recurring.index'));
     $response->assertOk();
     $content = $response->getContent() ?: '';
 
-    expect($content)->toContain('bg-slate-900');
-    expect($content)->toContain('bg-rose-50');
-    expect($content)->toContain('1 pending recurring suggestions');
-    expect($content)->toContain('1 open drift alerts');
-})->group('compound-pill-when-both-non-zero')
-    ->todo('16-01 replaced the top-nav with the app sidebar. The compound pending+drift pill chrome no longer ships in the new sidebar markup; a follow-up plan re-wires the composers onto core::livewire.app-sidebar and re-introduces the .side-badge slot with the default+alert variants, at which point this assertion is updated to match the new chrome.');
+    expect($content)->toContain(tdbDriftBadge(1));
+    expect($content)->toContain(tdbRecurringBadge(1));
+    expect($content)->not->toContain(tdbRecurringBadge(2));
+})->group('compound-pill-when-both-non-zero');
 
-it('renders only the drift pill when there are no pending suggestions but open drift alerts exist', function (): void {
+it('keeps the alert badge on the Drift row and the muted badge on the Recurring row', function (): void {
     tdbAlert($this->user);
 
     $response = $this->actingAs($this->user)->get(route('recurring.index'));
     $response->assertOk();
     $content = $response->getContent() ?: '';
 
-    expect($content)->toContain('1 open drift alerts');
+    // Sliced at the anchor so "which row" is part of what is asserted, not
+    // just "somewhere in the page".
+    $recurringRow = tdbNavRow($content, route('recurring.index'));
+    expect($recurringRow)->toContain('side-badge muted');
+    expect($recurringRow)->not->toContain('side-badge alert');
 
-    $start = strpos($content, 'href="'.route('recurring.index').'"');
-    expect($start)->toBeInt();
-    $segment = substr($content, (int) $start, 2000);
+    $driftRow = tdbNavRow($content, route('drift.index'));
+    expect($driftRow)->toContain('side-badge alert');
+    expect($driftRow)->not->toContain('side-badge muted');
+})->group('drift-only-pill-when-no-pending');
 
-    // bg-slate-900 is the pending pill's chrome, bg-rose-50 the drift pill's.
-    expect($segment)->toContain('bg-rose-50');
-    expect(str_contains($segment, 'bg-slate-900 px-2 py-0.5'))->toBeFalse();
-})->group('drift-only-pill-when-no-pending')
-    ->todo('16-01 replaced the top-nav with the app sidebar. The Recurring drift-only pill chrome no longer ships in the new sidebar markup; a follow-up plan re-wires the drift composer onto core::livewire.app-sidebar and re-introduces the rose .side-badge.alert pill, at which point this assertion is updated to match the new chrome.');
+it('counts a snoozed alert whose deadline has passed — the badge matches the list it points at', function (): void {
+    tdbAlert($this->user, [
+        'state' => 'snoozed',
+        'snoozed_until' => CarbonImmutable::parse('2026-05-19 12:00:00'),
+        'actioned_at' => CarbonImmutable::parse('2026-05-19 12:00:00'),
+    ]);
+    tdbAlert($this->user, [
+        'state' => 'snoozed',
+        'snoozed_until' => CarbonImmutable::parse('2026-06-30 12:00:00'),
+        'actioned_at' => CarbonImmutable::parse('2026-05-19 12:00:00'),
+    ]);
+
+    $response = $this->actingAs($this->user)->get(route('recurring.index'));
+    $response->assertOk();
+    $content = $response->getContent() ?: '';
+
+    // The revived one counts; the one still asleep until June does not.
+    expect($content)->toContain(tdbDriftBadge(1));
+})->group('drift-badge-counts-revived-snooze');
+
+it('never counts another household member\'s revived alert', function (): void {
+    $other = tdbUser('tdb-other');
+    tdbAlert($other, [
+        'state' => 'snoozed',
+        'snoozed_until' => CarbonImmutable::parse('2026-05-19 12:00:00'),
+        'actioned_at' => CarbonImmutable::parse('2026-05-19 12:00:00'),
+    ]);
+    tdbAlert($other);
+
+    $response = $this->actingAs($this->user)->get(route('recurring.index'));
+    $response->assertOk();
+    $content = $response->getContent() ?: '';
+
+    // An OR appended flat rather than grouped would escape the user_id
+    // predicate and hand this user the other one's revived alert.
+    expect($content)->not->toContain('open drift alerts');
+})->group('drift-badge-is-user-scoped');

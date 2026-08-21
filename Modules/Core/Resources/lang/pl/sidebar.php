@@ -57,6 +57,9 @@ return [
         'tax' => 'Pozycje oznaczone jako istotne podatkowo: :count',
         'subscriptions' => 'Subskrypcje: :count',
         'imports' => 'Importy: :count',
+        'chains' => 'Powiązania łańcucha oczekujące na przegląd: :count',
+        'forecast' => 'Aktywne okna niedoboru w ciągu najbliższych 30 dni: :count',
+        'inboxes' => 'Elementy skrzynki odbiorczej wymagające uwagi: :count',
     ],
 
     'dev' => [

@@ -162,8 +162,10 @@ final class SettingsPage extends Component
         $user->base_currency = $this->baseCurrency;
         $user->save();
 
+        // No `settings-saved` dispatch: nothing listened for it. Every
+        // sibling section on this page owns its own columns, and the only
+        // feedback the save owes the user is the $saved line beside it.
         $this->saved = true;
-        $this->dispatch('settings-saved');
     }
 
     public function render(ViewFactory $views, CurrentUser $currentUser, DatabaseManager $db, BaseCurrency $baseCurrency): View

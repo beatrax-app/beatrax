@@ -85,7 +85,7 @@ What the module explicitly does NOT do:
   `InvalidStateTransitionException` on any illegal transition.
 - **Internal/Listeners/** — `RaiseReconsentAlertOnTokenFailure`
   (writes the system_alerts row), `EmitOAuthReauthRequiredAlert`
-  (per-request belt-and-braces from the top-nav composer).
+  (per-request belt-and-braces from the sidebar composer).
 - **Internal/Http/Controllers/** — `OAuthConnectController`
   (begins the OAuth handshake; PKCE + state are owned here),
   `OAuthCallbackController` (handles the redirect, exchanges the
@@ -787,7 +787,7 @@ the Internal OAuth surface (`GoogleOAuthProvider`,
 are stateless and singleton-safe. `boot()` conditionally loads
 migrations/routes/views, registers the `/inboxes` Livewire SFC + the
 OAuth-client wizard modal SFC + the backfill-window modal SFC, and
-wires the top-nav badge View Factory composer.
+wires the nav badge View Factory composer.
 
 **Failed-job lifecycle:** `BackfillInboxJob` and `IncrementalScanJob`
 each define their own `failed(Throwable, InboxScanStateMachine)`
@@ -801,15 +801,17 @@ The queued jobs' `uniqueVia()` callbacks resolve their lock store
 through `Modules\Core\Public\Support\LockStore::forUniqueJobs()`, the
 single sanctioned `Cache` facade caller (a `BoundaryArchTest` carve-out).
 
-`registerTopNavBadgeComposer()` injects the top-nav "Inboxes" badge
-integer into the `core::livewire.top-nav` view via the View Factory
-contract (mirroring `ChainsServiceProvider`'s equivalent composer),
+`registerNavBadgeComposer()` merges the "Inboxes" badge integer into
+the `navCounts` array of the `shell::livewire.app-sidebar` view via the
+View Factory contract (mirroring `ChainsServiceProvider`'s equivalent
+composer),
 resolving the contract through `$this->app->make()` so the DI-only
 invariant stays visible at the call site rather than via the `view()`
 global helper. The composer fires only when the view is actually
-rendered (at most once per HTTP request that surfaces the top-nav);
-each invocation reads `CurrentUser` per-request (never cached across
-requests) and runs a single `InboxesBadgeCount` query. The same
+rendered (the sidebar mounts on every authenticated page); each
+invocation reads `CurrentUser` per-request (never cached across
+requests) and a by-reference per-boot memo collapses repeated renders
+in one request down to a single `InboxesBadgeCount` query. The same
 composer also runs the `EmitOAuthReauthRequiredAlert` listener, since
 this is the per-request hook closest to "the user is looking at the
 app", and the listener's own `.bak`-file pre-check plus de-dup guard

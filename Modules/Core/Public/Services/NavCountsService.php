@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
+use Modules\Core\Public\Contracts\Clock;
 
 final class NavCountsService
 {
@@ -19,6 +20,7 @@ final class NavCountsService
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly CacheRepository $cache,
+        private readonly Clock $clock,
     ) {}
 
     /**
@@ -72,11 +74,27 @@ final class NavCountsService
 
         $active = static fn (Builder $query): Builder => $query->whereIn('state', self::ACTIVE_STATES);
 
+        // A snooze whose deadline has passed is back on /drift, so the badge
+        // counts it too. The OR lives inside its own group: appended flat it
+        // would escape the user_id predicate above and count every household
+        // member's revived alerts.
+        $now = $this->clock->now()->toDateTimeString();
+        $openOrRevived = static fn (Builder $query): Builder => $query->where(
+            static function (Builder $group) use ($now): void {
+                $group->where('state', 'open')
+                    ->orWhere(static function (Builder $revived) use ($now): void {
+                        $revived->where('state', 'snoozed')
+                            ->whereNotNull('snoozed_until')
+                            ->where('snoozed_until', '<=', $now);
+                    });
+            },
+        );
+
         return [
             'transactions' => $count('transactions'),
             'recurring' => $count('recurring_series', $active),
             'counterparties' => $count('counterparties'),
-            'drift' => $count('drift_alerts', static fn (Builder $query): Builder => $query->where('state', 'open')),
+            'drift' => $count('drift_alerts', $openOrRevived),
             // The flat category_budgets table is write-dead after the
             // envelope cutover. The "Budgets" badge now reflects how many
             // distinct categories the user budgets via envelope_assignments.

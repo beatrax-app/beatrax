@@ -57,6 +57,9 @@ return [
         'tax' => 'Postavke, označene kot davčno pomembne: :count',
         'subscriptions' => 'Naročnine: :count',
         'imports' => 'Uvozi: :count',
+        'chains' => ':count povezav verige čaka na pregled',
+        'forecast' => ':count aktivnih obdobij primanjkljaja v naslednjih 30 dneh',
+        'inboxes' => ':count elementov nabiralnika zahteva pozornost',
     ],
 
     'dev' => [

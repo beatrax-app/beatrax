@@ -57,6 +57,9 @@ return [
         'tax' => ':count elemente marcate ca relevante fiscal',
         'subscriptions' => ':count abonamente',
         'imports' => ':count importuri',
+        'chains' => ':count legături de lanț în așteptarea verificării',
+        'forecast' => ':count ferestre de deficit active în următoarele 30 de zile',
+        'inboxes' => ':count elemente din inbox necesită atenție',
     ],
 
     'dev' => [

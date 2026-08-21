@@ -70,7 +70,7 @@ final class ChainsServiceProvider extends ServiceProvider
         $livewire->component('chains.chains-index', ChainsIndex::class);
 
         $this->registerJobFailedListener($events);
-        $this->registerTopNavBadgeComposer();
+        $this->registerNavBadgeComposer();
 
         // ChainHintDetected is dispatched from RecordReceipt after the
         // canonical transaction is persisted, so the FK constraint on
@@ -78,20 +78,38 @@ final class ChainsServiceProvider extends ServiceProvider
         $events->listen(ChainHintDetected::class, [CreateChainLinkFromHint::class, 'handle']);
     }
 
-    private function registerTopNavBadgeComposer(): void
+    // The per-boot $cache collapses repeated sidebar renders in one boot cycle
+    // down to a single COUNT query, which the (user_id, state) index serves.
+    private function registerNavBadgeComposer(): void
     {
         $app = $this->app;
         $factory = $app->make(ViewFactoryContract::class);
 
-        $factory->composer('core::livewire.top-nav', static function (View $compose) use ($app): void {
+        /** @var array<int, int> $cache */
+        $cache = [];
+
+        $factory->composer('shell::livewire.app-sidebar', static function (View $compose) use ($app, &$cache): void {
             $currentUser = $app->make(CurrentUser::class);
+
+            /** @var array<string, int> $navCounts */
+            $navCounts = (array) ($compose->getData()['navCounts'] ?? []);
+
             if (! $currentUser->isAuthenticated()) {
-                $compose->with('chainOpenCandidateCount', 0);
+                $navCounts['chains'] = 0;
+                $compose->with('navCounts', $navCounts);
 
                 return;
             }
-            $query = $app->make(ChainLinkQuery::class);
-            $compose->with('chainOpenCandidateCount', $query->openCandidateCount($currentUser->user()));
+
+            $user = $currentUser->user();
+            $userId = $user->id;
+            if (! array_key_exists($userId, $cache)) {
+                $query = $app->make(ChainLinkQuery::class);
+                $cache[$userId] = $query->openCandidateCount($user);
+            }
+
+            $navCounts['chains'] = $cache[$userId];
+            $compose->with('navCounts', $navCounts);
         });
     }
 

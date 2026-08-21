@@ -57,6 +57,9 @@ return [
         'tax' => ':count items tagged as tax-relevant',
         'subscriptions' => ':count subscriptions',
         'imports' => ':count imports',
+        'chains' => ':count chain links awaiting review',
+        'forecast' => ':count active shortfall windows in the next 30 days',
+        'inboxes' => ':count inbox items need attention',
     ],
 
     'dev' => [

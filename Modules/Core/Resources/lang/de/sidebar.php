@@ -57,6 +57,9 @@ return [
         'tax' => ':count als steuerrelevant markierte Einträge',
         'subscriptions' => ':count Abos',
         'imports' => ':count Importe',
+        'chains' => ':count Kettenverknüpfungen warten auf Prüfung',
+        'forecast' => ':count aktive Unterdeckungsfenster in den nächsten 30 Tagen',
+        'inboxes' => ':count Postfacheinträge erfordern Aufmerksamkeit',
     ],
 
     'dev' => [

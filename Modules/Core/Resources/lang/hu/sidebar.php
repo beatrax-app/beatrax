@@ -57,6 +57,9 @@ return [
         'tax' => ':count adózás szempontjából megjelölt tétel',
         'subscriptions' => ':count előfizetés',
         'imports' => ':count import',
+        'chains' => ':count láncelem vár ellenőrzésre',
+        'forecast' => ':count aktív hiányidőszak a következő 30 napban',
+        'inboxes' => ':count postafiókelem figyelmet igényel',
     ],
 
     'dev' => [

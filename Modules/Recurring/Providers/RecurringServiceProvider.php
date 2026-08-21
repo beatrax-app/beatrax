@@ -6,14 +6,11 @@ namespace Modules\Recurring\Providers;
 
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Session\Session;
-use Illuminate\Contracts\View\Factory as ViewFactoryContract;
-use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Recurring\Internal\CadenceInferrer;
@@ -102,24 +99,5 @@ final class RecurringServiceProvider extends ServiceProvider
         $livewire->component('recurring.recurring-review-page', RecurringReviewPage::class);
         $livewire->component('recurring.recurring-series-detail-page', RecurringSeriesDetailPage::class);
         $livewire->component('recurring.fixed-payments-card', FixedPaymentsCard::class);
-
-        $this->registerTopNavBadgeComposer();
-    }
-
-    private function registerTopNavBadgeComposer(): void
-    {
-        $app = $this->app;
-        $factory = $app->make(ViewFactoryContract::class);
-
-        $factory->composer('core::livewire.top-nav', static function (View $compose) use ($app): void {
-            $currentUser = $app->make(CurrentUser::class);
-            if (! $currentUser->isAuthenticated()) {
-                $compose->with('recurringPendingCount', 0);
-
-                return;
-            }
-            $query = $app->make(RecurringSeriesQuery::class);
-            $compose->with('recurringPendingCount', $query->pendingCountForUser($currentUser->user()));
-        });
     }
 }

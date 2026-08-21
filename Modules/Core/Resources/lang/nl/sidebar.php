@@ -57,6 +57,9 @@ return [
         'tax' => ':count als fiscaal relevant gemarkeerde items',
         'subscriptions' => ':count abonnementen',
         'imports' => ':count imports',
+        'chains' => ':count ketenkoppelingen wachten op beoordeling',
+        'forecast' => ':count actieve tekortvensters in de komende 30 dagen',
+        'inboxes' => ':count postvakitems vragen aandacht',
     ],
 
     'dev' => [

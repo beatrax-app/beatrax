@@ -57,6 +57,9 @@ return [
         'tax' => ':count poster merket som skatterelevante',
         'subscriptions' => ':count abonnementer',
         'imports' => ':count importer',
+        'chains' => ':count kjedekoblinger venter på gjennomgang',
+        'forecast' => ':count aktive underskuddsperioder de neste 30 dagene',
+        'inboxes' => ':count innbokselementer krever oppmerksomhet',
     ],
 
     'dev' => [
