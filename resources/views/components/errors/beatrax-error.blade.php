@@ -37,7 +37,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <title>{{ $title }} · Beatrax</title>
         <x-core::theme-prepaint :enabled="$chrome->needsPrePaintScript" />
-        <x-core::head-assets />
+        <x-core::head-assets :chrome="$chrome" />
     </head>
     <body
         class="beatrax-shell antialiased text-slate-900 dark:text-slate-100"

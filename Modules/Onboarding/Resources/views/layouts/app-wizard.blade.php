@@ -31,7 +31,7 @@
         @endif
         <title>{{ $title ?? Lang::get('onboarding::wizard.page_title').' · Beatrax' }}</title>
         <x-core::theme-prepaint :enabled="$chrome->needsPrePaintScript" />
-        <x-core::head-assets />
+        <x-core::head-assets :chrome="$chrome" />
     </head>
     <body
         class="antialiased bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100"
