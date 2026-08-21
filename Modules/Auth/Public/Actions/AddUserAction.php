@@ -59,45 +59,54 @@ final class AddUserAction
 
         /** @var User $partner */
         $partner = $this->db->connection()->transaction(function () use ($username, $password): User {
-            try {
-                $partner = User::query()->create([
-                    'username' => $username,
-                    'password' => $this->hasher->make($password),
-                    'is_developer' => false,
-                    'force_password_change_at_next_login' => true,
-                ]);
-            } catch (QueryException $e) {
-                if (QueryFailure::isUniqueViolation($e)) {
-                    throw ValidationException::withMessages([
-                        'username' => Lang::get('auth::add_user.error_duplicate'),
-                    ]);
-                }
-                throw $e;
-            }
-
-            $now = $this->clock->now();
-
-            $codesPlain = [];
-            while (count($codesPlain) < self::RECOVERY_CODE_COUNT) {
-                $code = $this->codeGenerator->generate();
-                if (in_array($code, $codesPlain, true)) {
-                    continue;
-                }
-                $codesPlain[] = $code;
-            }
-
-            foreach ($codesPlain as $plainCode) {
-                UserRecoveryCode::query()->create([
-                    'user_id' => $partner->id,
-                    'code_hash' => $this->hasher->make($plainCode),
-                    'used_at' => null,
-                    'created_at' => $now,
-                ]);
-            }
+            $partner = $this->createPartner($username, $password);
+            $this->issueRecoveryCodes($partner);
 
             return $partner;
         });
 
         return $partner;
+    }
+
+    private function createPartner(string $username, string $password): User
+    {
+        try {
+            return User::query()->create([
+                'username' => $username,
+                'password' => $this->hasher->make($password),
+                'is_developer' => false,
+                'force_password_change_at_next_login' => true,
+            ]);
+        } catch (QueryException $e) {
+            if (QueryFailure::isUniqueViolation($e)) {
+                throw ValidationException::withMessages([
+                    'username' => Lang::get('auth::add_user.error_duplicate'),
+                ]);
+            }
+            throw $e;
+        }
+    }
+
+    private function issueRecoveryCodes(User $partner): void
+    {
+        $now = $this->clock->now();
+
+        $codesPlain = [];
+        while (count($codesPlain) < self::RECOVERY_CODE_COUNT) {
+            $code = $this->codeGenerator->generate();
+            if (in_array($code, $codesPlain, true)) {
+                continue;
+            }
+            $codesPlain[] = $code;
+        }
+
+        foreach ($codesPlain as $plainCode) {
+            UserRecoveryCode::query()->create([
+                'user_id' => $partner->id,
+                'code_hash' => $this->hasher->make($plainCode),
+                'used_at' => null,
+                'created_at' => $now,
+            ]);
+        }
     }
 }
