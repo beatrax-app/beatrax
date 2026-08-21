@@ -2,40 +2,62 @@
 
 declare(strict_types=1);
 
-namespace Modules\Tax\Public\Services;
+namespace Modules\Core\Public\Services;
 
 use Collator;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Database\DatabaseManager;
 use IntlException;
-use Modules\Core\Models\User;
 use Modules\Core\Public\Actions\WriteUserPreference;
+use Modules\Core\Public\Enums\Country;
+use Modules\Core\Public\Events\UserCountryChanged;
 use Modules\Core\Public\Support\Lang;
-use Modules\Tax\Internal\Actions\TaxCategoryWriter;
-use Modules\Tax\Public\Enums\TaxCountry;
 
-final class TaxCountrySetup
+// The reader's own country, beside their language and theme rather than inside
+// Tax: it decides which country's tax rules, government bodies and bank fees
+// the app recognises, and more than one module now scopes to it.
+final class UserCountry
 {
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly WriteUserPreference $writeUserPreference,
-        private readonly TaxCategoryWriter $writer,
+        private readonly Dispatcher $events,
         private readonly Translator $translator,
     ) {}
 
-    // Derived from TaxCountry, never a second hand-maintained list: the literal
-    // copy that used to live here left onboarding on six countries while
-    // Settings offered twenty-six.
+    // An empty string, not null: "no country chosen" is a real state that widens
+    // classification to every region, and every caller compares against ''.
+    public function current(int $userId): string
+    {
+        /** @var mixed $code */
+        $code = $this->db->connection()
+            ->table('users')
+            ->where('id', $userId)
+            ->value('country_code');
 
-    // Labels come from the settings picker's own translation group.
+        return is_string($code) ? $code : '';
+    }
+
+    public function store(int $userId, string $countryCode): void
+    {
+        if (Country::tryFrom($countryCode) === null) {
+            return;
+        }
+
+        ($this->writeUserPreference)($userId, ['country_code' => $countryCode]);
+
+        $this->events->dispatch(new UserCountryChanged($userId, $countryCode));
+    }
+
     /**
      * @return array<string, string> code => display label
      */
-    public function availableCountries(): array
+    public function options(): array
     {
         $countries = [];
-        foreach (TaxCountry::cases() as $country) {
-            $countries[$country->value] = Lang::get('tax::settings.countries.'.$country->value);
+        foreach (Country::cases() as $country) {
+            $countries[$country->value] = Lang::get('core::settings.country.countries.'.$country->value);
         }
 
         $this->sortByLabel($countries);
@@ -83,32 +105,5 @@ final class TaxCountrySetup
         $folded = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $label);
 
         return $folded === false ? $label : $folded;
-    }
-
-    public function currentCountry(int $userId): string
-    {
-        /** @var mixed $code */
-        $code = $this->db->connection()
-            ->table('users')
-            ->where('id', $userId)
-            ->value('tax_country_code');
-
-        return is_string($code) ? $code : '';
-    }
-
-    public function selectCountry(int $userId, string $countryCode): void
-    {
-        if (TaxCountry::tryFrom($countryCode) === null) {
-            return;
-        }
-
-        $user = User::query()->find($userId);
-        if ($user === null) {
-            return;
-        }
-
-        $this->writer->seedFromCorpus($user, $countryCode);
-
-        ($this->writeUserPreference)($userId, ['tax_country_code' => $countryCode]);
     }
 }

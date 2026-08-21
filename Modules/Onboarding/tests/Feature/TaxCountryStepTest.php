@@ -10,7 +10,7 @@ use Modules\Onboarding\Internal\Http\Livewire\Steps\TaxCountryStep;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 use Modules\Onboarding\Internal\Services\WizardStepRegistry;
 
-// Choosing a country writes users.tax_country_code AND seeds the
+// Choosing a country writes users.country_code AND seeds the
 // per-country deduction categories; skipping writes nothing at all.
 
 beforeEach(function (): void {
@@ -53,18 +53,18 @@ it('renders the tax-country step inside the wizard once every earlier step is co
 it('renders the country choices with the settings-page labels', function (): void {
     Livewire::test(TaxCountryStep::class)
         ->assertOk()
-        ->assertSee('Pick your tax country')
+        ->assertSee('Choose your country')
         ->assertSee('Netherlands')
         ->assertSee('United Kingdom');
 });
 
-it('persists tax_country_code and seeds the deduction categories on continue', function (): void {
+it('persists country_code and seeds the deduction categories on continue', function (): void {
     Livewire::test(TaxCountryStep::class)
         ->set('taxCountryCode', 'nl')
         ->call('continue')
         ->assertDispatched('wizard.step.completed');
 
-    $countryCode = DB::table('users')->where('id', $this->user->id)->value('tax_country_code');
+    $countryCode = DB::table('users')->where('id', $this->user->id)->value('country_code');
     expect($countryCode)->toBe('nl');
 
     $categoryCount = DB::table('tax_deduction_categories')
@@ -79,7 +79,7 @@ it('advances on continue without writing anything when no country is chosen', fu
         ->call('continue')
         ->assertDispatched('wizard.step.completed');
 
-    expect(DB::table('users')->where('id', $this->user->id)->value('tax_country_code'))->toBeNull();
+    expect(DB::table('users')->where('id', $this->user->id)->value('country_code'))->toBeNull();
     expect(DB::table('tax_deduction_categories')->where('user_id', $this->user->id)->count())->toBe(0);
 });
 
@@ -89,7 +89,7 @@ it('advances without seeding on skip', function (): void {
         ->call('skip')
         ->assertDispatched('wizard.step.skipped');
 
-    expect(DB::table('users')->where('id', $this->user->id)->value('tax_country_code'))->toBeNull();
+    expect(DB::table('users')->where('id', $this->user->id)->value('country_code'))->toBeNull();
     expect(DB::table('tax_deduction_categories')->where('user_id', $this->user->id)->count())->toBe(0);
 });
 
@@ -99,12 +99,12 @@ it('ignores a code outside the allow-list on continue (no write, still advances)
         ->call('continue')
         ->assertDispatched('wizard.step.completed');
 
-    expect(DB::table('users')->where('id', $this->user->id)->value('tax_country_code'))->toBeNull();
+    expect(DB::table('users')->where('id', $this->user->id)->value('country_code'))->toBeNull();
     expect(DB::table('tax_deduction_categories')->where('user_id', $this->user->id)->count())->toBe(0);
 });
 
 it('preselects the stored tax country when the wizard is re-run', function (): void {
-    DB::table('users')->where('id', $this->user->id)->update(['tax_country_code' => 'de']);
+    DB::table('users')->where('id', $this->user->id)->update(['country_code' => 'de']);
 
     Livewire::test(TaxCountryStep::class)
         ->assertSet('taxCountryCode', 'de');

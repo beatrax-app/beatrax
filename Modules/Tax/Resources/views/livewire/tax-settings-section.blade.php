@@ -1,42 +1,27 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    Tax Settings Section — Country + Category Management
-    UI-SPEC § 12: .settings-section primitive (280px meta-side + body grid)
+    Tax settings — deduction categories, plus a signpost to the country
+    preference that decides which of them are offered.
     Livewire component: tax.settings-section
 --}}
 
 <div class="space-y-4">
-{{-- ===== Tax country row ===== --}}
-<div class="settings-section" data-testid="tax-country-row">
+{{-- The country used to be chosen here. A reader who learned that finds
+     the pointer rather than an absence. --}}
+<div class="settings-section" data-testid="tax-country-signpost">
     <div class="meta-side">
-        <span class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ Lang::get('tax::settings.country_label') }}</span>
-        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('tax::settings.country_desc') }}</p>
+        <span class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.country.heading') }}</span>
+        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('tax::settings.country_moved_desc') }}</p>
     </div>
     <div class="body-side space-y-2">
-        <select
-            wire:change="setTaxCountry($event.target.value)"
-            class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-            aria-label="{{ Lang::get('tax::settings.country_label') }}"
-            data-testid="tax-country-select"
-        >
-            {{-- strlen, not a comparison against '': an empty-string literal inside
-                 a Blade directive reads to Sonar's HTML parser as an opening
-                 attribute quote, and it swallows markup until the next quote —
-                 reporting a deprecated `name` attribute 50 lines further down. --}}
-            <option value="" @selected(strlen($taxCountryCode) === 0)>{{ Lang::get('tax::settings.country_choose') }}</option>
-            {{-- $allowedCountries comes straight from TaxCountry::cases(), the
-                 same enum the setter validates against — a literal list here
-                 would silently disagree with it the next time a country's
-                 corpus file lands. --}}
-            @foreach ($allowedCountries as $code)
-                <option value="{{ $code }}" @selected($taxCountryCode === $code)>{{ Lang::get('tax::settings.countries.'.$code) }}</option>
-            @endforeach
-        </select>
-        @if ($taxCountryCode !== '')
-            <p class="text-xs text-[var(--color-amber)]">
-                {{ Lang::get('tax::settings.country_switch_warning') }}
-            </p>
+        @if ($countryLabel !== '')
+            <p class="text-sm text-slate-900 dark:text-slate-100" data-testid="tax-country-current">{{ $countryLabel }}</p>
         @endif
+        <a
+            href="#country"
+            class="pill-btn-ghost inline-flex text-sm"
+            data-testid="tax-country-link"
+        >{{ Lang::get('tax::settings.country_moved_link') }}</a>
     </div>
 </div>
 
@@ -53,7 +38,7 @@
             $archived = array_filter((array) $categories, fn ($c) => ($c->status ?? '') === 'archived');
         @endphp
 
-        @if (empty($active) && $taxCountryCode === '')
+        @if (empty($active) && $countryLabel === '')
             <p class="text-sm text-[var(--color-text-faint)]" data-testid="categories-empty">
                 {{ Lang::get('tax::settings.categories_empty') }}
             </p>

@@ -11,9 +11,9 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Community\Public\Dto\ClassificationRule;
 use Modules\Community\Public\Services\ClassificationRuleProvider;
 use Modules\Community\Public\Services\CorpusPatternMatcher;
-use Modules\Tax\Public\Services\TaxCountrySetup;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Core\Public\Services\UserCountry;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Contracts\CounterpartyResolver;
 use Modules\Counterparties\Public\Dto\CounterpartyResolutionDto;
@@ -68,7 +68,7 @@ final class CounterpartyResolverService implements CounterpartyResolver
         // and Artisan constructs this class merely to list a console command.
         private readonly SessionFactory $session,
         private readonly CounterpartySlugResolver $slugResolver,
-        private readonly TaxCountrySetup $countries,
+        private readonly UserCountry $countries,
     ) {}
 
     /** @var array<int, string> */
@@ -227,7 +227,7 @@ final class CounterpartyResolverService implements CounterpartyResolver
     // transaction and the answer cannot change inside one import.
     private function regionFor(int $userId): string
     {
-        return $this->regionByUser[$userId] ??= $this->countries->currentCountry($userId);
+        return $this->regionByUser[$userId] ??= $this->countries->current($userId);
     }
 
     private function resolveGovernment(CanonicalTransaction $tx, int $userId): ?CounterpartyResolutionDto

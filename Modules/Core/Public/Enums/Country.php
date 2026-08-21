@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Modules\Tax\Public\Enums;
+namespace Modules\Core\Public\Enums;
 
-// The countries a user can pick a tax-deduction corpus for (ISO 3166 alpha-2,
-// lowercase). The same closed set gated the settings validator and the corpus
-// loader by hand; it lives here once now.
-enum TaxCountry: string
+// The countries a reader can pick as their own (ISO 3166 alpha-2, lowercase).
+// One closed set behind the preference picker, the tax-deduction corpus and the
+// classification region scoping, so none of the three can drift.
+enum Country: string
 {
     case At = 'at';
 

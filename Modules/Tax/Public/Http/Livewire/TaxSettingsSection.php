@@ -6,19 +6,15 @@ namespace Modules\Tax\Public\Http\Livewire;
 
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
-use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
-use Modules\Core\Public\Actions\WriteUserPreference;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Services\UserCountry;
 use Modules\Core\Public\Support\Lang;
 use Modules\Tax\Internal\Actions\TaxCategoryWriter;
-use Modules\Tax\Public\Enums\TaxCountry;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class TaxSettingsSection extends Component
 {
-    public string $taxCountryCode = '';
-
     public string $newCategoryName = '';
 
     public string $addError = '';
@@ -26,44 +22,6 @@ final class TaxSettingsSection extends Component
     public string $renameError = '';
 
     public bool $addSuccess = false;
-
-    public function mount(CurrentUser $currentUser, DatabaseManager $db): void
-    {
-        // A hydrate whose session expired must still mount and render, not throw
-        // when it reaches user().
-        if (! $currentUser->isAuthenticated()) {
-            return;
-        }
-
-        $user = $currentUser->user();
-
-        /** @var string|null $code */
-        $code = $db->connection()
-            ->table('users')
-            ->where('id', $user->id)
-            ->value('tax_country_code');
-
-        $this->taxCountryCode = is_string($code) ? $code : '';
-    }
-
-    public function setTaxCountry(
-        string $code,
-        CurrentUser $currentUser,
-        WriteUserPreference $writeUserPreference,
-        TaxCategoryWriter $writer,
-    ): void {
-        if (TaxCountry::tryFrom($code) === null) {
-            return;
-        }
-
-        $user = $currentUser->user();
-
-        $writer->seedFromCorpus($user, $code);
-
-        ($writeUserPreference)($user->id, ['tax_country_code' => $code]);
-
-        $this->taxCountryCode = $code;
-    }
 
     public function addCategory(CurrentUser $currentUser, TaxCategoryWriter $writer): void
     {
@@ -129,20 +87,26 @@ final class TaxSettingsSection extends Component
     public function render(
         CurrentUser $currentUser,
         TaxCategoryWriter $writer,
+        UserCountry $countries,
         ViewFactory $views,
     ): View {
+        // A hydrate whose session expired must still render, not throw when it
+        // reaches user().
         if (! $currentUser->isAuthenticated()) {
             return $views->make('tax::livewire.tax-settings-section', [
                 'categories' => [],
-                'allowedCountries' => array_column(TaxCountry::cases(), 'value'),
+                'countryLabel' => '',
             ]);
         }
 
-        $categories = $writer->listForUser($currentUser->user()->id, includeArchived: true);
+        $userId = $currentUser->user()->id;
+        $countryCode = $countries->current($userId);
 
         return $views->make('tax::livewire.tax-settings-section', [
-            'categories' => $categories,
-            'allowedCountries' => array_column(TaxCountry::cases(), 'value'),
+            'categories' => $writer->listForUser($userId, includeArchived: true),
+            'countryLabel' => $countryCode === ''
+                ? ''
+                : Lang::get('core::settings.country.countries.'.$countryCode),
         ]);
     }
 }

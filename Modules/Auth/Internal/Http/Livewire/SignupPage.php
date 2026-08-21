@@ -12,6 +12,7 @@ use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Modules\Auth\Public\Actions\SignupAction;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
+use Modules\Core\Public\Services\UserCountry;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\ValidationMessages;
@@ -33,6 +34,10 @@ final class SignupPage extends Component
 
     public string $passwordConfirmation = '';
 
+    // Skipping is a real answer: an unset country widens classification to
+    // every region rather than pinning the install to a guessed one.
+    public string $country = '';
+
     // A rejected submit leaves both password boxes as the reader typed them.
     // Emptying them turned a username error into a retyped 12-character
     // passphrase on a phone keyboard, and left the live checklist ticking
@@ -49,7 +54,7 @@ final class SignupPage extends Component
         }
 
         try {
-            $signup($this->username, $this->password);
+            $signup($this->username, $this->password, countryCode: $this->country);
         } catch (ValidationException $e) {
             $this->reportRejection($e);
 
@@ -61,10 +66,11 @@ final class SignupPage extends Component
         $this->redirect($urls->route('auth.recovery-codes-display'), navigate: false);
     }
 
-    public function render(ViewFactory $views, Router $routes, UrlGenerator $urls): View
+    public function render(ViewFactory $views, Router $routes, UrlGenerator $urls, UserCountry $countries): View
     {
         $view = $views->make('auth::livewire.signup-page', [
             'backUrl' => $this->welcomeUrl($routes, $urls),
+            'countryOptions' => $countries->options(),
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */

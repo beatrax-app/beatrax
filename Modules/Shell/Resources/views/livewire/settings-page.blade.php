@@ -67,13 +67,13 @@
         <section class="space-y-2">
             <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.language.heading') }}</h2>
             <div class="space-y-1">
-                <span class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.language.label') }}</span>
+                <label for="settings-locale-select" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.language.label') }}</label>
                 {{-- A select, not a button per language: the segmented row only
                      works while there are two or three, and the list is meant
                      to grow. Auto is last here and in the theme switcher. --}}
                 <select
+                    id="settings-locale-select"
                     wire:change="setLocale($event.target.value)"
-                    aria-label="{{ Lang::get('core::settings.language.heading') }}"
                     class="block w-full max-w-xs rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-slate-100"
                 >
                     @foreach (Locale::cases() as $localeOption)
@@ -81,12 +81,46 @@
                             value="{{ $localeOption->value }}"
                             lang="{{ $localeOption->value }}"
                             @selected($locale === $localeOption->value)
-                        >{{ $localeOption->flag() }} {{ $localeOption->label() }}</option>
+                        >{{ $localeOption->label() }}</option>
                     @endforeach
                     <option value="auto" @selected($locale === 'auto')>{{ Lang::get('core::settings.language.system') }}</option>
                 </select>
                 <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.language.help') }}</p>
                 @error('locale')
+                    <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
+                @enderror
+            </div>
+        </section>
+    </div>
+
+    {{-- ===== Country ===== --}}
+    {{-- Beside the language, and deliberately without flags: a flag names a
+         country, so putting one on the language picker is the confusion this
+         pair has to avoid. Each help line says what the other one does not do. --}}
+    <div class="{{ $card }}">
+        <section class="space-y-2" id="country">
+            <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.country.heading') }}</h2>
+            <div class="space-y-1">
+                <label for="settings-country-select" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.country.label') }}</label>
+                <select
+                    id="settings-country-select"
+                    wire:change="setCountry($event.target.value)"
+                    class="block w-full max-w-xs rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-slate-100"
+                    data-testid="settings-country-select"
+                >
+                    {{-- strlen, not a comparison against '': an empty-string
+                         literal inside a Blade directive reads to the HTML
+                         analyser as an opening attribute quote. --}}
+                    <option value="" @selected(strlen($country) === 0)>{{ Lang::get('core::settings.country.choose') }}</option>
+                    @foreach ($countryOptions as $countryCode => $countryName)
+                        <option value="{{ $countryCode }}" @selected($country === $countryCode)>{{ $countryName }}</option>
+                    @endforeach
+                </select>
+                <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.country.help') }}</p>
+                @if ($country !== '')
+                    <p class="text-xs text-[var(--color-amber)]">{{ Lang::get('core::settings.country.switch_note') }}</p>
+                @endif
+                @error('country')
                     <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
                 @enderror
             </div>
@@ -321,7 +355,7 @@
         </section>
     </div>
 
-    {{-- ===== Tax — country + deduction categories ===== --}}
+    {{-- ===== Tax — deduction categories ===== --}}
     <div class="{{ $card }}">
         <section class="space-y-2" id="tax-settings">
             <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.tax_heading') }}</h2>
