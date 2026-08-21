@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Desktop\Internal\Native\FirstLaunchBootstrap;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -47,10 +48,7 @@ final class SetupScreen extends Component
         } catch (Throwable $e) {
             $this->failed = true;
 
-            $logger->error('SetupScreen: pending migrations could not be applied.', [
-                'exception' => $e::class,
-                'message' => $e->getMessage(),
-            ]);
+            $logger->error('SetupScreen: pending migrations could not be applied.', SafeExceptionContext::describe($e));
         }
     }
 

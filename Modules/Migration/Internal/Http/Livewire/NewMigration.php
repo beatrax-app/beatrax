@@ -14,6 +14,7 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Migration\Internal\Parsers\Support\ZipExtractor;
 use Modules\Migration\Models\MigrationRun;
 use Modules\Migration\Public\Actions\CheckForUpdates;
@@ -27,9 +28,8 @@ final class NewMigration extends Component
 {
     use WithFileUploads;
 
-    // Rejects an obviously-oversized upload before it ever reaches disk;
-    // ZipExtractor itself separately enforces the post-extraction
-    // decompression cap.
+    // Rejects an oversized upload before it reaches disk; ZipExtractor
+    // separately caps the post-extraction size.
     private const MAX_UPLOAD_KB = 204800;
 
     public ?TemporaryUploadedFile $file = null;
@@ -37,16 +37,14 @@ final class NewMigration extends Component
     #[Validate('required|in:ynab4,nynab,actual')]
     public string $sourceProduct = MigrationSourceProduct::Ynab4->value;
 
-    // Set (and the format <select> locked) when mounted with a
-    // ?reconcile_of={run} query parameter that resolves to one of this
-    // user's own CONFIRMED runs. Null for a first-time import.
+    // Set from a ?reconcile_of={run} parameter resolving to one of this user's
+    // own confirmed runs; null for a first-time import.
     public ?int $reconcileOf = null;
 
     public bool $formatLocked = false;
 
-    // One-shot error surfaced inline when parse-or-stage raises (corrupt
-    // file, unknown format, zip-bomb/zip-slip guard trip) — a fixed
-    // user-facing string, never the raw exception message.
+    // A fixed user-facing string when parse-or-stage raises, never the raw
+    // exception message.
     public ?string $uploadError = null;
 
     public function mount(Request $request, CurrentUser $currentUser): void
@@ -77,10 +75,8 @@ final class NewMigration extends Component
     public function rules(): array
     {
         return [
-            // extensions:zip checks the client-supplied filename extension;
-            // mimes:zip additionally sniffs the real content via finfo — see
-            // the architecture doc's "Wizard pages" section for why both
-            // run as defence-in-depth against a renamed non-ZIP file.
+            // extensions:zip trusts the filename; mimes:zip sniffs the content
+            // via finfo. Both run, so a renamed non-ZIP fails either way.
             'file' => ['required', 'file', 'max:'.self::MAX_UPLOAD_KB, 'extensions:zip', 'mimes:zip'],
             'sourceProduct' => ['required', 'in:ynab4,nynab,actual'],
         ];
@@ -145,9 +141,8 @@ final class NewMigration extends Component
                     ? $checkForUpdates($this->reconcileOf, $user, $this->sourceProduct, $extractedPath)
                     : $startMigrationRun($user, $this->sourceProduct, $extractedPath, $originalFilename);
             } finally {
-                // Wraps extract() too (not just parse-or-stage), so cleanup()
-                // still runs even when extract() itself threw partway — safe
-                // to call when nothing was extracted, and safe twice.
+                // Wraps extract() too, so a partway throw still cleans up;
+                // safe when nothing was extracted, and safe twice.
                 $extractor->cleanup();
             }
         } catch (Throwable $e) {
@@ -155,8 +150,7 @@ final class NewMigration extends Component
                 'source_product' => $this->sourceProduct,
                 'reconcile_of' => $this->reconcileOf,
                 'filename' => $originalFilename,
-                'exception_class' => $e::class,
-                'exception_message' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
                 'exception_trace' => $e->getTraceAsString(),
             ]);
             $this->uploadError = $this->unrecognisedExportMessage();
@@ -177,16 +171,14 @@ final class NewMigration extends Component
 
     private function unrecognisedExportMessage(): string
     {
-        // The single user-facing "can't read this export" line, shared by the
-        // extensions/mimes validation messages and submit()'s inline banner —
-        // deliberately a fixed string, never the raw exception message.
+        // One fixed line shared by the validation messages and submit()'s
+        // banner, never the raw exception message.
         return Lang::get('migration::new.errors.unrecognised');
     }
 
     private function sanitiseFilename(string $original): string
     {
-        // Reduces to a safe [A-Za-z0-9_-]+.zip shape — the user-supplied
-        // original name is never used to construct disk paths directly.
+        // The user-supplied name never reaches a disk path unreduced.
         $stem = pathinfo($original, PATHINFO_FILENAME);
         $safe = preg_replace('/[^A-Za-z0-9_-]+/', '_', $stem);
         $stemPart = ($safe === null || $safe === '') ? 'upload' : $safe;

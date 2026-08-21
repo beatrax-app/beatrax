@@ -7,6 +7,7 @@ namespace Modules\EmailScan\Internal\Listeners;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Public\Services\SystemAlertWriter;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Events\InboxTokenFailed;
 use Psr\Log\LoggerInterface;
@@ -38,10 +39,9 @@ final class RaiseReconsentAlertOnTokenFailure
         }
 
         try {
-            // A lapsed mail token is a fact about the ACCOUNT, not about
-            // this machine, so unlike the operational probes this row is
-            // owned and travels — otherwise the other device keeps telling
-            // the user to reconnect long after they have.
+            // A lapsed mail token is a fact about the account, not this
+            // machine, so the row travels — otherwise the other device keeps
+            // prompting long after the user reconnected.
             $this->alerts->raiseForUser(
                 userId: $userId,
                 kind: self::ALERT_KIND,
@@ -60,16 +60,13 @@ final class RaiseReconsentAlertOnTokenFailure
                 [
                     'inbox_id' => $inboxId,
                     'provider' => $event->provider,
-                    'error' => $e->getMessage(),
+                    ...SafeExceptionContext::describe($e),
                 ],
             );
         }
     }
 
-    // Existence check for an active (un-acknowledged) re-consent alert
-    // scoped to the user + inbox, preferring json_extract and falling
-    // back to LIKE when the extracted-column predicate throws on an
-    // older SQLite without the JSON1 extension compiled in.
+    // Falls back to LIKE on an older SQLite with no JSON1 extension.
     private function alreadyAlerted(int $userId, int $inboxId): bool
     {
         $baseQuery = $this->baseDedupQuery($userId);
@@ -79,10 +76,8 @@ final class RaiseReconsentAlertOnTokenFailure
                 ->whereRaw("json_extract(metadata, '$.inbox_id') = ?", [$inboxId])
                 ->exists();
         } catch (Throwable) {
-            // Fallback: matches the JSON fragment "inbox_id":N inside
-            // the raw column text, anchoring the trailing boundary
-            // with two needles (comma- and brace-terminated) since
-            // SQLite LIKE has no character classes to bound the digits.
+            // SQLite LIKE has no character classes, so the trailing boundary
+            // needs separate comma- and brace-terminated needles.
             $withComma = '%"inbox_id":'.$inboxId.',%';
             $withBrace = '%"inbox_id":'.$inboxId.'}%';
 
@@ -95,9 +90,8 @@ final class RaiseReconsentAlertOnTokenFailure
         }
     }
 
-    // Shared per-user predicate filtered to active re-consent rows;
-    // the LIKE-fallback call re-builds the query since Laravel
-    // builders aren't safe to reuse across where re-additions.
+    // Rebuilt per call: a Laravel builder is not safe to reuse once further
+    // where clauses have been added to it.
     private function baseDedupQuery(int $userId): Builder
     {
         return $this->db->connection()

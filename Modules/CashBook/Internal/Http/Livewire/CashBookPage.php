@@ -16,6 +16,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
@@ -140,9 +141,8 @@ final class CashBookPage extends Component
             ->limit(100)
             ->get(['t.id', 't.posted_at', 't.counterparty_name', 't.settled_amount_minor', 't.type', 'c.name as category_name']);
 
-        // counterparty_name is ciphertext at rest and the raw query builder
-        // applies no cast, so decrypt each entry before it reaches the view.
-        // decryptValue is a pass-through no-op for non-encryption users.
+        // The raw query builder applies no cast to ciphertext columns.
+        // decryptValue is a pass-through for non-encryption users.
         $entries = $entries->map(function (object $entry) use ($codec, $user, $session): object {
             if (is_string($entry->counterparty_name) && $entry->counterparty_name !== '') {
                 $entry->counterparty_name = $codec->decryptValue(
@@ -185,9 +185,8 @@ final class CashBookPage extends Component
             return null;
         }
 
-        // The category id comes from a client-controllable Livewire property —
-        // only attach it if it is one of the user's own or a shared global
-        // category, never another user's private one.
+        // The category id is a client-controllable Livewire property, so it is
+        // attached only when it is the user's own or a shared global.
         $owned = $db->connection()->table('categories')
             ->where('id', $this->categoryId)
             ->where(static function (Builder $query) use ($userId): void {
@@ -198,10 +197,9 @@ final class CashBookPage extends Component
         return $owned ? $this->categoryId : null;
     }
 
-    // Accepts plain ("12.50"), Dutch grouped ("1.234,56"), and comma-decimal
-    // ("12,50") forms; the rightmost of '.' or ',' is the decimal separator.
-    // Rejects non-numeric characters, so scientific notation or a leading
-    // sign never coerces to a surprise amount.
+    // Plain ("12.50"), Dutch grouped ("1.234,56") and comma-decimal ("12,50"):
+    // the rightmost of '.' or ',' is the separator. Non-numeric characters are
+    // rejected, so no leading sign or exponent coerces to a surprise amount.
     private static function parseAmount(string $raw): ?int
     {
         $trimmed = str_replace(' ', '', trim($raw));
@@ -229,18 +227,6 @@ final class CashBookPage extends Component
 
     private static function parseDate(string $raw): ?CarbonImmutable
     {
-        $trimmed = trim($raw);
-
-        // parse('') returns NOW rather than throwing, so a cleared field fell
-        // straight past the catch and booked the entry today.
-        if ($trimmed === '') {
-            return null;
-        }
-
-        try {
-            return CarbonImmutable::parse($trimmed)->startOfDay();
-        } catch (\Throwable) {
-            return null;
-        }
+        return SafeDate::parseOrNull(trim($raw))?->startOfDay();
     }
 }

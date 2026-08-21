@@ -12,13 +12,13 @@ use Livewire\Component;
 use Modules\Auth\Public\Actions\DeleteAccountAction;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-// The in-app account-deletion path both app stores require. It asks for the
-// password because a household shares this device and the button sits on a
-// settings page anyone signed in can reach.
+// The in-app deletion path both app stores require. It asks for the password
+// because a household shares this device and anyone signed in reaches settings.
 final class DeleteAccountSection extends Component
 {
     public string $password = '';
@@ -53,8 +53,7 @@ final class DeleteAccountSection extends Component
             $deleteAccount($currentUser->user(), $this->password);
         } catch (ValidationException $e) {
             // Cleared before it propagates: the component survives a failure
-            // and is re-serialised into the browser's wire snapshot, and a
-            // mistyped password is a near-miss of the real one.
+            // into the wire snapshot, and a mistyped password is a near-miss.
             $this->password = '';
 
             // Rethrown so Livewire maps it onto the field's error bag.
@@ -62,20 +61,17 @@ final class DeleteAccountSection extends Component
         } catch (Throwable $e) {
             $this->password = '';
 
-            // Only pre-commit failures reach here — DeleteAccountAction swallows
-            // everything past the commit — so this message cannot claim a
-            // rollback that did not happen.
-            $log->error('DeleteAccountSection: account deletion failed and was rolled back.', [
-                'exception' => $e->getMessage(),
-            ]);
+            // DeleteAccountAction swallows everything past the commit, so this
+            // message cannot claim a rollback that did not happen.
+            $log->error('DeleteAccountSection: account deletion failed and was rolled back.', SafeExceptionContext::describe($e));
 
             $this->failure = Lang::get('auth::delete_account.error_failed');
 
             return;
         }
 
-        // navigate: false because the whole session is gone — a Livewire
-        // navigation would re-use page state with no account behind it.
+        // The whole session is gone, so a Livewire navigation would re-use page
+        // state with no account behind it.
         $this->redirect('/', navigate: false);
     }
 

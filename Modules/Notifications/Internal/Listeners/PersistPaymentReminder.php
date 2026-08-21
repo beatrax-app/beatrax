@@ -6,6 +6,7 @@ namespace Modules\Notifications\Internal\Listeners;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Internal\Support\NotificationCopyRenderer;
 use Modules\Notifications\Internal\Support\NotificationDraft;
@@ -33,15 +34,13 @@ final class PersistPaymentReminder
                 userId: $event->userId,
                 triggerType: DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER,
                 subjectKey: (string) $event->seriesId,
-                // The occurrence key is the due date (a date string,
-                // never a datetime) - two devices computing at different
-                // times of day must still derive the same id.
+                // A date string, never a datetime: two devices computing at
+                // different times of day must derive the same id.
                 occurrence: $event->dueDate->toDateString(),
                 title: $event->confidenceLow
                     ? Lang::get('notifications::copy.title.payment_reminder_hedged', ['day' => $dayLabel])
                     : Lang::get('notifications::copy.title.payment_reminder_confident', ['day' => $dayLabel]),
-                // Hedge the body too when confidence is low - "expected
-                // around {day}" rather than a hard date.
+                // Low confidence hedges the body too: "expected around".
                 body: $event->confidenceLow
                     ? Lang::get('notifications::copy.body.payment_reminder_hedged', ['name' => $event->displayName, 'day' => $dayLabel, 'amount' => $amountText])
                     : Lang::get('notifications::copy.body.payment_reminder_confident', ['name' => $event->displayName, 'day' => $dayLabel, 'date' => $event->dueDate->translatedFormat('d M'), 'amount' => $amountText]),
@@ -53,7 +52,7 @@ final class PersistPaymentReminder
             // Swallow - a failed persist must never break the
             // originating reminder job run.
             $this->log->error('PersistPaymentReminder: failed to persist payment reminder', [
-                'exception' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
                 'seriesId' => $event->seriesId,
                 'userId' => $event->userId,
             ]);

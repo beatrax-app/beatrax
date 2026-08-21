@@ -7,6 +7,7 @@ namespace Modules\Reports\Internal\Aggregation;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Dto\Period;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Reports\Internal\Aggregation\Dto\NetWorthSeriesPoint;
 use Modules\Reports\Public\Dto\ReportDefinition;
 use Modules\Reports\Public\Dto\ReportResultDto;
@@ -38,10 +39,8 @@ final class ReportAggregator
             return $result;
         }
 
-        // Pass the FULL previous-period ReportResultDto (rows and
-        // FX-exclusion metadata) through, not just ->rows — otherwise an
-        // unconvertible previous-period currency would silently vanish
-        // from the final compare DTO's exclusion counters below.
+        // The full previous-period DTO, not just ->rows: otherwise an
+        // unconvertible previous currency vanishes from the exclusion counters.
         $comparison = $this->periodComparison->compare(
             $period,
             $result->rows,
@@ -61,19 +60,13 @@ final class ReportAggregator
         );
     }
 
-    // -------------------------------------------------------------------
-    // Transaction metrics: spend / income / net
-    // -------------------------------------------------------------------
-
     private function buildTransactionResult(User $user, Period $period, ReportDefinition $definition): ReportResultDto
     {
         $filters = self::filtersFor($definition);
         $queryForCurrency = fn (string $currency): array => $this->dimensionRows($user, $period, $definition, $currency, $filters);
 
-        // discoverCurrencies() must see the same accounts/categories/
-        // counterparties filters the dimension query itself applies, so a
-        // filtered report only ever discovers currencies that can
-        // actually produce rows.
+        // discoverCurrencies() needs the dimension query's own filters, or a
+        // filtered report discovers currencies that cannot produce rows.
         return $this->currencyModeApplier->apply(
             $user,
             $period,
@@ -85,10 +78,8 @@ final class ReportAggregator
         );
     }
 
-    // A row-level ABS(settled_amount_minor) predicate honoring
-    // amountDirection in/out/both is threaded into every dimension query
-    // via this value object, so totals/chart/table/CSV never silently
-    // ignore an active amount filter.
+    // Threaded into every dimension query, so totals, chart, table and CSV
+    // cannot silently disagree about an active amount filter.
     private static function filtersFor(ReportDefinition $definition): SpendQueryFilters
     {
         return new SpendQueryFilters(
@@ -123,12 +114,8 @@ final class ReportAggregator
             return null;
         }
 
-        return (int) round(((float) $amount) * 100);
+        return MoneyInput::tryToMinor($amount);
     }
-
-    // -------------------------------------------------------------------
-    // net_worth metric — time series, dimension ignored (Req 2/7)
-    // -------------------------------------------------------------------
 
     private function buildNetWorthResult(User $user, Period $period, ReportDefinition $definition): ReportResultDto
     {
@@ -140,10 +127,9 @@ final class ReportAggregator
         $hasExcluded = false;
         $excludedTotal = 0;
         foreach ($points as $point) {
-            // Net worth is a balance, not a flow: the DTO-level total is
-            // the most recent sample point, never a sum-across-points
-            // (which would double-count every account's balance once per
-            // bucket) — overwritten each iteration so the last point wins.
+            // Net worth is a balance, not a flow, so the total is the most recent
+            // point; summing would count every account's balance once per bucket.
+            // Overwritten each iteration so the last point wins.
             $totalMinor = $point->totalMinor;
             $currency = $point->currency;
             if ($point->excludedCount > 0) {

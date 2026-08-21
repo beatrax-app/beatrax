@@ -6,18 +6,16 @@ use Illuminate\Support\Facades\Schema;
 use Modules\Auth\Public\Events\AppLockPassphraseChanged;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Sync\Internal\Crypto\GdkRewrapContract;
 use Modules\Sync\Internal\Crypto\RewrapGdkOnPassphraseChange;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-/*
- * Security-review regression: a GDK keyring re-wrap failure after an app-lock
- * passphrase change must surface a CRITICAL in-app SystemAlert (not just a log
- * line) so a single-device user can recover, while preserving the handler's
- * never-throw guarantee — the passphrase change is already committed when this
- * runs, so neither the re-wrap nor the alert write may propagate.
- */
+// The passphrase change is already committed by the time this handler runs, so
+// neither a failed re-wrap nor the alert write may propagate. The failure has to
+// surface as a critical in-app SystemAlert rather than a log line alone, or a
+// single-device user never learns the keyring became unreadable.
 
 function rewrapGdkTestUser(): User
 {
@@ -29,7 +27,6 @@ function rewrapGdkTestUser(): User
     ]);
 }
 
-/** A GdkRewrapContract fake whose rewrap() always throws. */
 function throwingGdkRewrap(): GdkRewrapContract
 {
     return new class implements GdkRewrapContract
@@ -41,15 +38,11 @@ function throwingGdkRewrap(): GdkRewrapContract
     };
 }
 
-/** A GdkRewrapContract fake whose rewrap() is a clean no-op (success). */
 function noopGdkRewrap(): GdkRewrapContract
 {
     return new class implements GdkRewrapContract
     {
-        public function rewrap(int $userId, string $oldKek, string $newKek): void
-        {
-            // success — nothing to do
-        }
+        public function rewrap(int $userId, string $oldKek, string $newKek): void {}
     };
 }
 
@@ -57,7 +50,7 @@ it('does not throw and writes a critical SystemAlert when the rewrap fails', fun
     $user = rewrapGdkTestUser();
     $userId = (int) $user->id;
 
-    $handler = new RewrapGdkOnPassphraseChange(throwingGdkRewrap(), new NullLogger);
+    $handler = new RewrapGdkOnPassphraseChange(throwingGdkRewrap(), new NullLogger, app(SystemAlertWriter::class));
 
     expect(fn () => $handler->handle(new AppLockPassphraseChanged($userId, 'old', 'new')))
         ->not->toThrow(Throwable::class);
@@ -72,7 +65,7 @@ it('does not write a SystemAlert when the rewrap succeeds', function (): void {
     $user = rewrapGdkTestUser();
     $userId = (int) $user->id;
 
-    $handler = new RewrapGdkOnPassphraseChange(noopGdkRewrap(), new NullLogger);
+    $handler = new RewrapGdkOnPassphraseChange(noopGdkRewrap(), new NullLogger, app(SystemAlertWriter::class));
 
     $handler->handle(new AppLockPassphraseChanged($userId, 'old', 'new'));
 
@@ -88,7 +81,7 @@ it('never propagates even when the SystemAlert write itself fails', function ():
     // still return cleanly (never-throw guarantee, incl. the alert write).
     Schema::drop('system_alerts');
 
-    $handler = new RewrapGdkOnPassphraseChange(throwingGdkRewrap(), new NullLogger);
+    $handler = new RewrapGdkOnPassphraseChange(throwingGdkRewrap(), new NullLogger, app(SystemAlertWriter::class));
 
     expect(fn () => $handler->handle(new AppLockPassphraseChanged($userId, 'old', 'new')))
         ->not->toThrow(Throwable::class);
@@ -103,7 +96,7 @@ it('preserves the existing log->error call on rewrap failure', function (): void
         ->once()
         ->with('RewrapGdkOnPassphraseChange: GDK re-wrap failed', Mockery::type('array'));
 
-    $handler = new RewrapGdkOnPassphraseChange(throwingGdkRewrap(), $logger);
+    $handler = new RewrapGdkOnPassphraseChange(throwingGdkRewrap(), $logger, app(SystemAlertWriter::class));
 
     $handler->handle(new AppLockPassphraseChanged($userId, 'old', 'new'));
 });

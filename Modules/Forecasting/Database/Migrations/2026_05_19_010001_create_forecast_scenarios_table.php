@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Illuminate\Container\Container;
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 

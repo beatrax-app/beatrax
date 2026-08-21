@@ -14,6 +14,7 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Internal\Support\AmountStringParser;
 use Modules\Forecasting\Public\Actions\CreateAmountChangeScenarioForSeries;
 use Modules\Forecasting\Public\Actions\CreateCancellationScenarioForSeries;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -46,7 +47,7 @@ final class ModelWhatIfDropdown extends Component
         $this->seriesName = $series->displayNameOverride ?? $series->detectedName;
         $this->currentAmountMinor = $series->latestAmount->toMinor();
         $this->currency = $series->latestAmount->currency();
-        $this->newAmountInput = number_format(abs($this->currentAmountMinor) / 100, 2, ',', '.');
+        $this->newAmountInput = MoneyInput::formatAbsMinor($this->currentAmountMinor);
     }
 
     public function openMenu(): void
@@ -65,7 +66,7 @@ final class ModelWhatIfDropdown extends Component
     {
         $this->mode = 'amount-form';
         $this->errorMessage = null;
-        $this->newAmountInput = number_format(abs($this->currentAmountMinor) / 100, 2, ',', '.');
+        $this->newAmountInput = MoneyInput::formatAbsMinor($this->currentAmountMinor);
     }
 
     public function modelCancellation(

@@ -12,6 +12,7 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\SafeTrace;
 use Modules\Core\Public\Support\UploadLimits;
 use Modules\Import\Public\Actions\EnsurePaypalAccountAction;
@@ -83,8 +84,7 @@ final class ConnectPaypalStep extends Component
             $logger->error('ConnectPaypalStep: import preview failed.', [
                 'source_format' => $this->selectedFormat,
                 'filename' => $originalFilename,
-                'exception_class' => $e::class,
-                'exception_message' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
                 'exception_trace' => SafeTrace::cap($e, $app->basePath()),
             ]);
             $this->uploadError = Lang::get('onboarding::connect_paypal.errors.unreadable');
@@ -129,9 +129,6 @@ final class ConnectPaypalStep extends Component
         return $views->make('onboarding::livewire.steps.connect-paypal-step');
     }
 
-    /**
-     * @link ../../../../../../.docs/features/onboarding/architecture.md#fatal-parse-detection-on-the-paypal-step
-     */
     private function fatalParseMessage(ImportPreviewResult $result): ?string
     {
         if ($result->rows === [] || $result->accountsToName !== []) {

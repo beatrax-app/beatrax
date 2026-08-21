@@ -38,7 +38,7 @@ final class UserPreferenceWriter
         $preference->fill($columns);
         $preference->save();
 
-        $stored = $this->storedRow((int) $preference->id);
+        $stored = $this->storedRow($preference->id);
 
         // A create carries the whole row, so a peer that has never held one
         // materialises the same defaults this device did; an edit carries only
@@ -46,7 +46,7 @@ final class UserPreferenceWriter
         // keep their change instead of the later write flattening the earlier.
         $this->events->dispatch(new EntityMutated(
             table: 'user_preferences',
-            pk: (int) $preference->id,
+            pk: $preference->id,
             userId: $userId,
             mutationType: $isNew ? 'create' : 'edit',
             dirtyFields: $isNew ? $stored : array_intersect_key($stored, $columns),

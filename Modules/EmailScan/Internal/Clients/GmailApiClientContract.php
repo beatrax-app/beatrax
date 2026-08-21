@@ -10,7 +10,7 @@ interface GmailApiClientContract
 {
     /**
      * @param  list<string>  $senderPatterns
-     * @return array{messages: list<array{id: string, threadId: string}>, nextPageToken: ?string, historyId: ?string, resultSizeEstimate: int}
+     * @return array{messages: list<array{id: string, threadId: string}>, nextPageToken: ?string, resultSizeEstimate: int}
      */
     public function listSenderMessages(
         int $inboxId,
@@ -18,6 +18,10 @@ interface GmailApiClientContract
         ?string $pageToken,
         ?DateTimeImmutable $windowStart = null,
     ): array;
+
+    // users.messages.list carries no historyId, so the only way to baseline the
+    // incremental cursor is to ask the mailbox for its current one.
+    public function currentHistoryId(int $inboxId): ?string;
 
     public function getRawMessage(int $inboxId, string $providerMessageId): string;
 

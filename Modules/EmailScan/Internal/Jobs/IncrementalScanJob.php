@@ -43,15 +43,12 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
 
     public int $timeout = ScanJobBudget::TIMEOUT_SECONDS;
 
-    // Defensive cap on the cursor-expiry fallback walk so a
-    // misbehaving provider returning pages indefinitely cannot
-    // exhaust the heap; the 7-day window is the primary guard, this
-    // is the defence-in-depth ceiling.
+    // Defence-in-depth ceiling: the 7-day window is the primary guard,
+    // this stops a provider paginating forever from exhausting the heap.
     private const FALLBACK_WALK_HARD_CAP = 500;
 
-    // Cursor-expiry fallback window: caps the re-scan at 7 days back
-    // from last_scan_at; the rest of the retention window is
-    // recovered on the next Reconnect or manual backfill.
+    // Caps the cursor-expiry re-scan at 7 days back from last_scan_at; the
+    // rest is recovered on the next Reconnect or manual backfill.
     private const FALLBACK_WALK_DAYS = 7;
 
     public function __construct(public readonly int $inboxId) {}
@@ -63,8 +60,8 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
 
     public function uniqueFor(): int
     {
-        // 10-minute single-flight ceiling: incremental scans complete
-        // in seconds, so the lock shouldn't linger past a crash.
+        // Incremental scans finish in seconds; this only bounds a lock
+        // left behind by a crashed worker.
         return 600;
     }
 
@@ -90,15 +87,13 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        // Before any API client runs: everything below reaches
-        // OAuthSecretsRepository, which scopes through the guard.
+        // Must precede every API client: they reach OAuthSecretsRepository,
+        // which scopes through the guard.
         $jobUser->bind($prepared->context->userId());
 
         try {
-            // The default arm surfaces a misconfigured provider without
-            // retrying forever; the inboxes CHECK trigger pair keeps
-            // gmail|microsoft the only legal production values, so it is
-            // reached only if data bypassed the migration.
+            // The default arm is unreachable while the inboxes CHECK trigger
+            // pair holds; it surfaces bypassed data without retrying forever.
             match ($prepared->provider) {
                 MailProvider::Gmail->value => $this->runGmailIncremental($prepared->context, $gmail, $prepared->senderPatterns, $prepared->stateRow, $mapper),
                 MailProvider::Microsoft->value => $this->runMicrosoftIncremental($prepared->context, $graph, $prepared->senderPatterns, $prepared->stateRow, $mapper),
@@ -118,9 +113,6 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         }
     }
 
-    // Folds the inbox-missing, state-missing, needs-reauth, no-sender
-    // and reject-transition preconditions into one nullable return so
-    // handle() dispatches on a ready scan without any early-exit noise.
     private function prepareScan(
         DatabaseManager $db,
         Clock $clock,
@@ -163,15 +155,13 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             ->where('folder', 'INBOX')
             ->first();
         if ($inboxRow === null || $stateRow === null) {
-            // Inbox deleted between dispatch and worker pickup, or no
-            // scan-state row exists yet — silently exit so the queue
-            // doesn't retry forever.
+            // Inbox deleted between dispatch and pickup, or no scan-state row
+            // yet — exit silently so the queue doesn't retry forever.
             return null;
         }
 
-        // needs_reauth inboxes are terminal until the user hits
-        // Reconnect: no provider API call, since a revoked refresh
-        // token cannot be repaired by another scan attempt.
+        // needs_reauth is terminal until the user hits Reconnect: another
+        // scan attempt cannot repair a revoked refresh token.
         $currentStatus = is_string($stateRow->status) ? $stateRow->status : '';
         if ($currentStatus === InboxScanStatus::NeedsReauth->value) {
             return null;
@@ -196,9 +186,8 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
 
     private function beginScanning(InboxScanStateMachine $sm): bool
     {
-        // Collapses the contention case where a backfill is mid-flight:
-        // the state machine rejects backfilling -> scanning, so a
-        // rejected transition means skip rather than error.
+        // A backfill mid-flight makes backfilling -> scanning illegal, and a
+        // rejected transition there means skip rather than error.
         try {
             $sm->applyStatus($this->inboxId, InboxScanStatus::Scanning->value);
 
@@ -220,8 +209,14 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
     ): void {
         $startHistoryId = is_string($stateRow->last_history_id ?? null) ? $stateRow->last_history_id : '';
         if ($startHistoryId === '') {
-            // No cursor yet — the next hour's tick after a backfill
-            // populates last_history_id will pick up the deltas.
+            // An inbox backfilled before the baseline existed carries no cursor
+            // and would sit idle forever. Adopting the mailbox's current one
+            // makes the next tick a real delta; there is none to compute now.
+            $baseline = $gmail->currentHistoryId($this->inboxId);
+            if ($baseline !== null && $baseline !== '') {
+                $context->sm->recordCursor($this->inboxId, ScanCursor::gmail($baseline));
+            }
+
             return;
         }
 
@@ -255,9 +250,8 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
 
             return [$mapper->extractGmailHistoryMessageIds($history['history']), $history['historyId']];
         } catch (CursorExpiredException) {
-            // listSenderMessages never returns a historyId (Gmail
-            // surfaces it via getProfile in production), so the prior
-            // cursor is kept — the next run re-attempts listHistory.
+            // listSenderMessages returns no historyId, so the prior cursor is
+            // kept and the next run re-attempts listHistory.
             return [$this->gmailFallbackWalk($gmail, $stateRow, $senderPatterns, $clock, $mapper), null];
         }
     }
@@ -305,9 +299,8 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
 
             return [$page['messages'], $page['deltaLink']];
         } catch (CursorExpiredException) {
-            // Fallback walk anchored to the pre-walk timestamp, then
-            // re-baselined via deltaPage(null, walkStartedAt) — the same
-            // pattern BackfillInboxJob uses to close the gap-window race.
+            // Re-baselining from the pre-walk timestamp closes the gap-window
+            // race; BackfillInboxJob anchors the same way.
             $walkStartedAt = $clock->now()->toDateTimeImmutable();
             $messages = $this->graphFallbackWalk($graph, $stateRow, $senderPatterns, $clock, $mapper);
             $baseline = $graph->deltaPage($this->inboxId, null, $walkStartedAt);
@@ -327,10 +320,8 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         array $senderPatterns,
         ScanMessageMapper $mapper,
     ): void {
-        // Client-side post-filter: Graph's delta endpoint doesn't honour
-        // a from-address filter, so senders outside the allow-list are
-        // dropped here (the fallback walk already filters server-side
-        // via listSenderMessagesPaged).
+        // Graph's delta endpoint ignores a from-address filter, so the
+        // allow-list has to be applied client-side here.
         $senderAddr = $mapper->extractSenderAddress($msgMeta);
         if (! $mapper->matchesAnyPattern($senderAddr, $senderPatterns)) {
             return;
@@ -348,10 +339,9 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         );
     }
 
-    // Laravel calls this as a bare `$command->failed($e)` — one argument, NO
-    // container resolution (unlike handle()). Declaring collaborators as
-    // parameters made every exhausted job fatal with "Too few arguments", so
-    // the terminal error transition this hook exists to apply never ran.
+    // Laravel calls this as a bare `$command->failed($e)` with no container
+    // resolution, so declaring collaborators as parameters made every
+    // exhausted job fatal with "Too few arguments".
     public function failed(?Throwable $exception): void
     {
         $sm = Container::getInstance()->make(InboxScanStateMachine::class);
@@ -363,15 +353,11 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
                 substr($exception?->getMessage() ?? 'unknown failure', 0, 500),
             );
         } catch (Throwable) {
-            // Invalid transitions are acceptable on this hook — they
-            // must not escalate into a hard queue-worker error.
+            // An invalid transition here must not escalate into a hard
+            // queue-worker error.
         }
     }
 
-    // Rate-limit bumps retry_attempts + stamps the retry hint and
-    // rethrows for the backoff curve, a revoked grant parks the inbox
-    // at needs_reauth without a rethrow, and any other throwable records
-    // the error before rethrowing to the failed hook.
     private function transitionOnScanError(InboxScanStateMachine $sm, Throwable $e): void
     {
         match (true) {
@@ -393,10 +379,6 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         }
     }
 
-    // Date-bounded fallback walk over Gmail's listSenderMessages,
-    // invoked when listHistory's startHistoryId has aged out; passes
-    // $windowStart = last_scan_at - FALLBACK_WALK_DAYS so the
-    // server-side after: filter trims the result set to the recovery window.
     /**
      * @param  list<string>  $senderPatterns
      * @return list<string>
@@ -433,10 +415,6 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         return $ids;
     }
 
-    // Date-bounded fallback walk over Microsoft Graph's
-    // listSenderMessagesPaged, invoked when deltaPage's stored
-    // delta-link has aged out; walks at most FALLBACK_WALK_HARD_CAP
-    // messages defensively.
     /**
      * @param  list<string>  $senderPatterns
      * @return list<array<string, mixed>>

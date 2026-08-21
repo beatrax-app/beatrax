@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Public\ValueObjects;
 
+use Brick\Math\RoundingMode;
 use Brick\Money\Exception\UnknownCurrencyException;
 use Brick\Money\Money as BrickMoney;
 use IntlException;
@@ -104,25 +105,43 @@ final class Money implements Stringable
     // while the fallback can only be reached by making ICU throw.
     public function formatWithoutIcu(): string
     {
-        $language = $this->language();
         $amount = (string) $this->inner->getAmount();
-
-        $negative = str_starts_with($amount, '-');
         [$whole, $fraction] = array_pad(explode('.', ltrim($amount, '-')), 2, '');
-        $grouped = strrev(implode($language->groupMark(), str_split(strrev($whole), 3)));
-        $sign = $negative ? '-' : '';
+        $digits = $this->group($whole);
 
         if ($fraction !== '') {
-            $grouped .= $language->decimalMark().$fraction;
+            $digits .= $this->language()->decimalMark().$fraction;
         }
 
-        $symbol = self::SYMBOLS[$this->currency()] ?? $this->currency()."\u{00A0}";
+        return $this->assemble($digits, str_starts_with($amount, '-'));
+    }
 
-        // Dutch writes the symbol first and the sign against the digits
-        // (€ -1.234,50); US English signs the whole amount (-$1,234.50).
-        return $language === Locale::Nl
-            ? $symbol."\u{00A0}".$sign.$grouped
-            : $sign.$symbol.$grouped;
+    // Whole units, for a surface with no room for cents: a calendar cell is
+    // four characters wide, and a magnitude there beats an exact figure that
+    // wraps. Rounds half-up, and never reaches for the minor unit itself —
+    // JPY has none, so dividing by a hundred would render a hundredth of it.
+    public function formatWholeUnits(): string
+    {
+        $rounded = (string) $this->inner->getAmount()->toScale(0, RoundingMode::HalfUp);
+
+        return $this->assemble($this->group(ltrim($rounded, '-')), str_starts_with($rounded, '-'));
+    }
+
+    private function group(string $whole): string
+    {
+        return strrev(implode($this->language()->groupMark(), str_split(strrev($whole), 3)));
+    }
+
+    // Dutch writes the symbol first and the sign against the digits
+    // (€ -1.234,50); US English signs the whole amount (-$1,234.50).
+    private function assemble(string $digits, bool $negative): string
+    {
+        $symbol = self::SYMBOLS[$this->currency()] ?? $this->currency()."\u{00A0}";
+        $sign = $negative ? '-' : '';
+
+        return $this->language() === Locale::Nl
+            ? $symbol."\u{00A0}".$sign.$digits
+            : $sign.$symbol.$digits;
     }
 
     // EUR reads in the Dutch convention, every other currency the way a card

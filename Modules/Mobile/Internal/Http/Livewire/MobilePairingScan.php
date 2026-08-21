@@ -535,8 +535,11 @@ final class MobilePairingScan extends Component
         Session $session,
         LoggerInterface $logger,
     ): void {
+        // Scoped as well as #[Locked]: this runs whatever confirm() returned,
+        // so the id's provenance is the only thing keeping the read in-account.
         $initiatorDeviceId = $db->connection()->table('pairing_tokens')
             ->where('id', (int) $this->pairingTokenId)
+            ->where('user_id', $userId)
             ->value('initiator_device_id');
 
         if (! is_string($initiatorDeviceId) || $initiatorDeviceId === '') {

@@ -11,6 +11,7 @@ use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\SafeDate;
 use Throwable;
 
 final class BackupFreshnessProbe implements Probe
@@ -112,7 +113,7 @@ final class BackupFreshnessProbe implements Probe
 
         $completedAt = $this->readCompletedAtField($entry->getPathname());
 
-        return $completedAt === null ? null : $this->parseOrNull($completedAt);
+        return $completedAt === null ? null : SafeDate::parseOrNull($completedAt);
     }
 
     // The non-empty completed_at string from a sidecar file, or null when the
@@ -128,15 +129,6 @@ final class BackupFreshnessProbe implements Probe
         $completedAt = is_array($decoded) ? ($decoded['completed_at'] ?? null) : null;
 
         return is_string($completedAt) && $completedAt !== '' ? $completedAt : null;
-    }
-
-    private function parseOrNull(string $value): ?CarbonImmutable
-    {
-        try {
-            return CarbonImmutable::parse($value);
-        } catch (Throwable) {
-            return null;
-        }
     }
 
     private function recordOverdueAlert(?int $hoursOld): void

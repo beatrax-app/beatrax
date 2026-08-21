@@ -14,6 +14,7 @@ use Livewire\WithFileUploads;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\SafeTrace;
 use Modules\Core\Public\Support\UploadLimits;
 use Modules\Import\Public\Contracts\RunsImports;
@@ -126,8 +127,7 @@ final class ConnectCardStep extends Component
                 $logger->error('ConnectCardStep: import preview failed.', [
                     'source_format' => $this->selectedFormat,
                     'filename' => $originalFilename,
-                    'exception_class' => $e::class,
-                    'exception_message' => $e->getMessage(),
+                    ...SafeExceptionContext::describe($e),
                     'exception_trace' => SafeTrace::cap($e, $app->basePath()),
                 ]);
                 $firstError ??= Lang::get('onboarding::connect_card.errors.file_unreadable', ['filename' => $originalFilename]);
@@ -141,8 +141,6 @@ final class ConnectCardStep extends Component
     // PHPStan strict-rules staticMethod.dynamicCall.
     /**
      * @param  list<int>  $newRunIds
-     *
-     * @link ../../../../../../.docs/features/onboarding/architecture.md#auto-create-the-account-then-re-preview
      */
     private function ensureIcsAccount(array $newRunIds, User $user, DatabaseManager $db, RunsImports $importer, LoggerInterface $logger, Application $app): void
     {
@@ -169,8 +167,8 @@ final class ConnectCardStep extends Component
         }
     }
 
-    // Also repopulates statement_summaries, which the starting-balance
-    // detector on the first-import step reads.
+    // Also repopulates statement_summaries, which the first-import step's
+    // starting-balance detector reads.
     private function repreview(int $runId, User $user, RunsImports $importer, LoggerInterface $logger, Application $app): void
     {
         /** @var ImportRun|null $run */
@@ -192,8 +190,7 @@ final class ConnectCardStep extends Component
         } catch (Throwable $e) {
             $logger->warning('ConnectCardStep: re-preview after ICS account creation failed.', [
                 'import_run_id' => $runId,
-                'exception_class' => $e::class,
-                'exception_message' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
                 'exception_trace' => SafeTrace::cap($e, $app->basePath()),
             ]);
         }

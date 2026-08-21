@@ -131,7 +131,7 @@ final class InboxQuery
             lastScanAt: $this->parseLastScanAt($row->last_scan_at ?? null),
             status: $status,
             retryAttempts: self::toInt($row->retry_attempts ?? 0),
-            errorMessage: $this->toNullableString($row->error_message ?? null),
+            errorMessage: self::toStringOrNull($row->error_message ?? null),
             backfillFetchedCount: $fetched,
             backfillTotalEstimated: $totalEstimated,
         );
@@ -173,14 +173,5 @@ final class InboxQuery
         } catch (\Throwable) {
             return null;
         }
-    }
-
-    private function toNullableString(mixed $value): ?string
-    {
-        if ($value === null) {
-            return null;
-        }
-
-        return self::toStringOrNull($value);
     }
 }

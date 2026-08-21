@@ -15,6 +15,7 @@ use Livewire\WithFileUploads;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\SafeTrace;
 use Modules\Core\Public\Support\UploadLimits;
 use Modules\Import\Public\Contracts\RunsImports;
@@ -90,8 +91,7 @@ final class ConnectBankStep extends Component
         return $this->isCsvFormat($this->selectedFormat) && $this->selectedBankFormatHint === null;
     }
 
-    // Mirrors UploadWizard::submit(); keep the validator shape, the
-    // Throwable catch-all and the logger payload in step with it.
+    // Mirrors UploadWizard::submit(); the two must not drift apart.
     public function submit(
         RunsImports $importer,
         CurrentUser $currentUser,
@@ -143,8 +143,7 @@ final class ConnectBankStep extends Component
             $logger->error('ConnectBankStep: import preview failed.', [
                 'source_format' => $this->selectedFormat,
                 'filename' => $originalFilename,
-                'exception_class' => $e::class,
-                'exception_message' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
                 'exception_trace' => SafeTrace::cap($e, $app->basePath()),
             ]);
             $this->uploadError = Lang::get('onboarding::connect_bank.errors.unreadable');
@@ -153,9 +152,6 @@ final class ConnectBankStep extends Component
         }
     }
 
-    /**
-     * @link ../../../../../../.docs/features/onboarding/architecture.md#auto-create-the-account-then-re-preview
-     */
     private function ensureBankAccounts(ImportPreviewResult $result, User $user, DatabaseManager $db, RunsImports $importer, ?BankCsvFormatHint $formatHint, LoggerInterface $logger, Application $app): void
     {
         $bankLabel = $this->bankLabelFor($this->selectedFormat, $this->selectedBankFormatHint);
@@ -195,8 +191,8 @@ final class ConnectBankStep extends Component
         return true;
     }
 
-    // Also repopulates statement_summaries, which the starting-balance
-    // detector on the first-import step reads.
+    // Also repopulates statement_summaries, which the first-import step's
+    // starting-balance detector reads.
     private function repreview(int $importRunId, User $user, RunsImports $importer, ?BankCsvFormatHint $formatHint, LoggerInterface $logger, Application $app): void
     {
         /** @var ImportRun|null $run */
@@ -219,8 +215,7 @@ final class ConnectBankStep extends Component
         } catch (Throwable $e) {
             $logger->warning('ConnectBankStep: re-preview after bank account creation failed.', [
                 'import_run_id' => $importRunId,
-                'exception_class' => $e::class,
-                'exception_message' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
                 'exception_trace' => SafeTrace::cap($e, $app->basePath()),
             ]);
         }
@@ -275,9 +270,9 @@ final class ConnectBankStep extends Component
         return $views->make('onboarding::livewire.steps.connect-bank-step');
     }
 
-    // Strips path-traversal characters before the name reaches a filesystem
-    // path. The extension follows the declared format so the stored copy
-    // still sniffs correctly when repreview() re-reads it.
+    // Path-traversal characters go before the name reaches a filesystem path; the
+    // extension follows the declared format so the stored copy still sniffs
+    // correctly when repreview() re-reads it.
     private function sanitiseFilename(string $original): string
     {
         $stem = pathinfo($original, PATHINFO_FILENAME);

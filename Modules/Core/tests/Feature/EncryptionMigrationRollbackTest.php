@@ -7,8 +7,8 @@ use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
-use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Auth\Public\Services\AppLockKeyService;
+use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Internal\Encryption\PreMigrationSnapshot;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\EncryptionMigrationService;
@@ -117,7 +117,7 @@ it('gates read-trust while migration_in_progress is set — a stale in-progress 
 it('a genuine forced failure mid-pass (real KEK, real data) leaves zero half-encrypted rows, preserves the snapshot, and a subsequent happy-path migrate() then succeeds', function (): void {
     /** @var Session $session */
     $session = $this->app->make(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
 
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);

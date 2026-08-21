@@ -9,6 +9,8 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Ledger\Public\Services\TransactionCursor;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Search\Internal\Services\DidYouMeanSuggester;
 use Modules\Search\Internal\Services\FtsCandidateResolver;
 use Modules\Search\Internal\Services\QueryParser;
@@ -69,8 +71,7 @@ final class SearchQuery
             && $candidateIds === []
             && preg_match('/^\d+(?:[.,]\d{1,2})?$/', trim($textQuery)) === 1
         ) {
-            $normalized = str_replace(',', '.', trim($textQuery));
-            $minor = (int) round((float) $normalized * 100);
+            $minor = MoneyInput::tryToMinor($textQuery) ?? 0;
             $candidateIds = self::toIntList(
                 $this->db->connection()
                     ->table('transactions')
@@ -100,7 +101,7 @@ final class SearchQuery
         $totalIn = is_numeric($summary?->total_in) ? (int) $summary->total_in : 0;
 
         $query->limit($limit + 1);
-        $this->applyCursor($query, $cursorPostedAt, $cursorId);
+        TransactionCursor::apply($query, $cursorPostedAt, $cursorId);
 
         $rows = $query->get();
         $hasMore = $rows->count() > $limit;
@@ -380,13 +381,15 @@ final class SearchQuery
 
     private function applyAmountFilters(Builder $query, SearchFilters $filters): void
     {
-        if ($filters->amountMin !== null) {
-            $minMinor = (int) round((float) $filters->amountMin * 100);
+        // A filter that will not parse is dropped rather than widened to zero:
+        // "> €0" is every row, which is not what the typist asked for.
+        $minMinor = $filters->amountMin === null ? null : MoneyInput::tryToMinor($filters->amountMin);
+        if ($minMinor !== null) {
             $query->whereRaw('ABS(transactions.settled_amount_minor) >= ?', [$minMinor]);
         }
 
-        if ($filters->amountMax !== null) {
-            $maxMinor = (int) round((float) $filters->amountMax * 100);
+        $maxMinor = $filters->amountMax === null ? null : MoneyInput::tryToMinor($filters->amountMax);
+        if ($maxMinor !== null) {
             $query->whereRaw('ABS(transactions.settled_amount_minor) <= ?', [$maxMinor]);
         }
 
@@ -395,24 +398,6 @@ final class SearchQuery
         } elseif ($filters->amountDirection === 'out') {
             $query->where('transactions.amount_minor', '<', 0);
         }
-    }
-
-    private function applyCursor(Builder $query, ?string $cursorPostedAt, ?int $cursorId): void
-    {
-        if ($cursorId === null) {
-            return;
-        }
-
-        if ($cursorPostedAt === null) {
-            $query->where('transactions.id', '<', $cursorId);
-
-            return;
-        }
-
-        $query->whereRaw(
-            '(transactions.posted_at, transactions.id) < (?, ?)',
-            [$cursorPostedAt, $cursorId],
-        );
     }
 
     /**

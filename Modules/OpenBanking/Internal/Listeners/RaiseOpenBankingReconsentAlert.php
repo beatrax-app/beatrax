@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -48,15 +49,13 @@ final class RaiseOpenBankingReconsentAlert
                 ],
             );
         } catch (Throwable $e) {
-            // Defence-in-depth — the listener must never throw upward
-            // because the upstream caller (the sync job / consent-check)
-            // is mid-error-recovery already. Log at warning level so the
-            // failure stays visible without a second alert flood.
+            // The listener must never throw upward: its caller is already
+            // mid-error-recovery. Warning level keeps it visible without a flood.
             $this->logger->warning(
                 'RaiseOpenBankingReconsentAlert failed to persist alert row',
                 [
                     'connection_id' => $connectionId,
-                    'error' => $e->getMessage(),
+                    ...SafeExceptionContext::describe($e),
                 ],
             );
         }

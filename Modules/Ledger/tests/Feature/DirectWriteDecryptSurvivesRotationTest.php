@@ -5,29 +5,13 @@ declare(strict_types=1);
 use App\Models\User;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
-use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Actions\RecordTransactions;
 use Modules\Sync\Internal\Crypto\GdkEpoch;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
-
-/*
- * DirectWriteDecryptSurvivesRotationTest — CRYPT-02 / BLOCKER-1: content
- * encrypted under epoch N via the direct-write (import) path still decrypts
- * to plaintext after current_epoch advances to N+1 — the codec tries every
- * keyring epoch (rotation-safe), since import rows have no per-row epoch
- * column the way op_log_entries.gdk_epoch does.
- * 14-VALIDATION.md CRYPT-02 row "Direct-write columns... decrypt after
- * rotation".
- *
- * Rewritten per 14-04-PLAN.md Task 1: simulates a rotation directly via
- * GdkKeyringService::appendEpoch (the mechanism Plan 05's
- * GdkRotationService::rotateAndRevoke will itself call) rather than
- * depending on the not-yet-built GdkRotationService/device-revocation
- * flow, which is out of this plan's scope.
- */
 
 beforeEach(function (): void {
     $this->user = User::query()->create([
@@ -49,11 +33,10 @@ beforeEach(function (): void {
         'status' => 'previewed',
     ]);
 
-    // Prime the session with an unlocked dummy app-lock KEK — mirrors
-    // Modules/Sync/tests/TestCase.php's own priming.
+    // The keyring calls hard-throw without an unlocked app-lock KEK in session.
     /** @var Session $session */
     $session = $this->app->make(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
 });
 
 it('a transaction encrypted under epoch N still decrypts after the GDK rotates to epoch N+1', function (): void {
@@ -76,10 +59,8 @@ it('a transaction encrypted under epoch N still decrypts after the GDK rotates t
         ]),
     ], $this->user);
 
-    // Simulate a rotation (what Plan 05's GdkRotationService::rotateAndRevoke
-    // will do on device removal): append a new epoch, advancing
-    // sync_encryption_state.current_epoch to N+1. The OLD epoch-1 ciphertext
-    // must still decrypt (try-every-epoch, BLOCKER-1).
+    // Appending an epoch advances current_epoch to N+1. Import rows carry no
+    // per-row epoch column, so the codec has to try every one of them.
     $epoch2 = new GdkEpoch(epochId: $epoch1->epochId + 1, keyHex: bin2hex(random_bytes(32)));
     $keyring->appendEpoch((int) $this->user->id, $epoch2, $session);
 

@@ -5,27 +5,12 @@ declare(strict_types=1);
 use App\Models\User;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
-use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Actions\RecordTransactions;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
-
-/*
- * RecordTransactionsEncryptionTest — CRYPT-01: importing a CanonicalTransaction
- * encrypts description/counterparty_name/counterparty_iban/raw_payload
- * (D-02b direct-write set) before insertOrIgnore, and the read-side decrypt
- * (via the Sync Public SensitiveColumnCodec) returns the original plaintext.
- * 14-VALIDATION.md CRYPT-01 row 3 (Pitfall 2: the direct-write path bypasses
- * the op-log entirely per SYNC-03 — this is a SEPARATE hook from Plan 03's
- * op-log encryption).
- *
- * Encryption must be explicitly turned on for the user (GdkKeyringService::
- * generateAndPersist) before importing — RecordTransactions::persistChunk
- * is a pass-through (plaintext at rest) when encryption is not enabled,
- * exactly like every other SensitiveColumnCodec consumer.
- */
 
 beforeEach(function (): void {
     $this->user = User::query()->create([
@@ -47,13 +32,12 @@ beforeEach(function (): void {
         'status' => 'previewed',
     ]);
 
-    // Prime the session with an unlocked dummy app-lock KEK — mirrors
-    // Modules/Sync/tests/TestCase.php's own priming. Without this,
-    // GdkKeyringService::generateAndPersist() below hard-throws
-    // LogicException (D-02 weak-key-window guard).
+    // generateAndPersist() hard-throws without an unlocked app-lock KEK in the
+    // session, and without an enabled keyring the write path stores plaintext
+    // and every assertion below would pass for the wrong reason.
     /** @var Session $session */
     $session = $this->app->make(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
 
     /** @var GdkKeyringService $keyring */
     $keyring = $this->app->make(GdkKeyringService::class);
@@ -78,7 +62,6 @@ it('encrypts description/counterparty_name/counterparty_iban at rest and decrypt
     $db = $this->app->make(DatabaseManager::class);
     $stored = $db->connection()->table('transactions')->first();
 
-    // Ciphertext at rest — the plaintext must NOT be readable directly off disk.
     expect($stored->description)->not->toBe('Albert Heijn weekly groceries');
     expect($stored->counterparty_name)->not->toBe('Albert Heijn');
     expect($stored->counterparty_iban)->not->toBe('NL91ABNA0417164300');
@@ -115,9 +98,8 @@ it('leaves amount_minor/settled_amount_minor plaintext (D-02a) while the content
     expect((int) $stored->amount_minor)->toBe(-1299);
     expect((int) $stored->settled_amount_minor)->toBe(-1299);
 
-    // D-02a is only meaningful once D-02b's content-column encryption
-    // actually exists — pin both halves of the boundary in the same test so
-    // this file cannot go accidentally green before the codec ships.
+    // Pin the content-column decrypt in the same test, so this file cannot go
+    // green with the amounts intact but the encryption gone.
     /** @var SensitiveColumnCodec $codec */
     $codec = $this->app->make(SensitiveColumnCodec::class);
     /** @var Session $session */

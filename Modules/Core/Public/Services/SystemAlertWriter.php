@@ -44,10 +44,10 @@ final class SystemAlertWriter
 
         $this->events->dispatch(new EntityMutated(
             table: 'system_alerts',
-            pk: (int) $alert->id,
+            pk: $alert->id,
             userId: $userId,
             mutationType: 'create',
-            dirtyFields: $this->storedRow((int) $alert->id),
+            dirtyFields: $this->storedRow($alert->id),
         ));
 
         return $alert;

@@ -4,17 +4,15 @@ declare(strict_types=1);
 
 namespace Modules\Budgets\Public\Services;
 
-use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Budgets\Public\Dto\EnvelopeMoveRow;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\Ledger\Public\Dto\Period;
 
-// Read model over the append-only envelope_moves ledger, mirroring
-// PotBalanceQuery's SUM-at-read discipline: there is no stored balance
-// column anywhere -- a category's net_moved for a period is always
-// SUM(amount_minor) over its own rows, derived fresh on every read.
+// There is no stored balance column anywhere: a category's net_moved is
+// always SUM(amount_minor) over its own rows, derived fresh on every read.
 final class EnvelopeBalanceQuery
 {
     use CoercesScalars;
@@ -68,9 +66,8 @@ final class EnvelopeBalanceQuery
         return $result;
     }
 
-    // Batched variant of recentMovesFor(): loads up to $limit recent moves
-    // for many categories in ONE query, avoiding the N+1 of calling
-    // recentMovesFor() once per envelope on every render.
+    // Batched variant of recentMovesFor(): one query for many categories, so
+    // a render does not go N+1 across the envelopes on the page.
     /**
      * @param  list<int>  $categoryIds
      * @return array<int, list<EnvelopeMoveRow>> category_id => recent moves
@@ -135,14 +132,6 @@ final class EnvelopeBalanceQuery
 
     private function formatCreatedAt(mixed $createdAtRaw): string
     {
-        if ($createdAtRaw === null || $createdAtRaw === '') {
-            return '';
-        }
-
-        try {
-            return CarbonImmutable::parse(self::toString($createdAtRaw))->format('Y-m-d H:i');
-        } catch (\Throwable) {
-            return '';
-        }
+        return SafeDate::parseOrNull(self::toString($createdAtRaw))?->format('Y-m-d H:i') ?? '';
     }
 }

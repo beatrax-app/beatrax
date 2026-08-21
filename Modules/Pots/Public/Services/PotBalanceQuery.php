@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Pots\Public\Services;
 
-use Carbon\CarbonImmutable;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\PeriodQuery;
@@ -90,8 +90,6 @@ final class PotBalanceQuery
         return $this->loadPotRows($user, 'archived');
     }
 
-    // The account rows the pots page groups its cards under, name-ordered
-    // so the card columns render in a stable, alphabetical sequence.
     /**
      * @return array<int, stdClass>
      */
@@ -105,9 +103,8 @@ final class PotBalanceQuery
             ->all();
     }
 
-    // The goals the pots picker may link to: active goals not already claimed
-    // by another pot. When editing a pot, that pot's own goal stays selectable
-    // (editPotId is client-controlled, so every read is user-scoped).
+    // Active goals no other pot has claimed, plus the edited pot's own goal, which
+    // would otherwise vanish from its own picker. editPotId is client-controlled.
     /**
      * @return array<int, stdClass>
      */
@@ -180,9 +177,7 @@ final class PotBalanceQuery
         return $result;
     }
 
-    // Net allocation into a pot on or after $since ('Y-m-d'), signed the same
-    // way as the movement rows themselves. A goal reading its progress from a
-    // pot balance measures its run-rate from the movements behind it.
+    // $since is 'Y-m-d'; the result keeps the movement rows' own sign.
     public function netMovementForPotSince(int $potId, string $since, User $user): int
     {
         return (int) $this->db->connection()
@@ -211,9 +206,8 @@ final class PotBalanceQuery
         return is_numeric($id) ? (int) $id : null;
     }
 
-    // Single-goal convenience lookup; batched consumers should prefer
-    // linkedPotBalancesForUser(), which carries the currency alongside the
-    // balance.
+    // One goal at a time. Anything iterating goals wants linkedPotBalancesForUser(),
+    // which returns the currency beside the balance in one query.
     public function currencyForLinkedPot(int $goalId, User $user): ?string
     {
         $row = $this->db->connection()
@@ -232,12 +226,6 @@ final class PotBalanceQuery
         return is_string($currency) ? $currency : null;
     }
 
-    // -------------------------------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------------------------------
-
-    // Shared by reconciliationForAccount and currentUnallocatedForAccount so
-    // neither duplicates the query logic.
     private function allocatedForAccount(int $accountId, User $user): int
     {
         $activePotIds = $this->db->connection()
@@ -382,15 +370,7 @@ final class PotBalanceQuery
 
     private static function formatMovementDate(mixed $createdAt): string
     {
-        if ($createdAt === null || $createdAt === '') {
-            return '';
-        }
-
-        try {
-            return CarbonImmutable::parse(self::toString($createdAt))->format('Y-m-d H:i');
-        } catch (\Throwable) {
-            return '';
-        }
+        return SafeDate::parseOrNull(self::toString($createdAt))?->format('Y-m-d H:i') ?? '';
     }
 
     // Filtered to the pot's own currency — summing mixed currencies in raw

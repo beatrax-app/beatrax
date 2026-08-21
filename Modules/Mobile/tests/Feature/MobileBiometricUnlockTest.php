@@ -7,8 +7,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
-use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Auth\Public\Services\AppLockKeyService;
+use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Mobile\Internal\Http\Livewire\MobileLockScreen;
 use Modules\Mobile\Internal\Identity\BiometricUnlockBridge;
@@ -56,7 +56,7 @@ it('biometric success releases the LOCK-04 key and redirects to the intended URL
     // has to be holding one already.
     /** @var Session $session */
     $session = app(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat('k', 32));
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
 
     // Enroll an armed biometric credential so biometricAvailable is true.
     /** @var BiometricDeviceStore $store */
@@ -88,7 +88,7 @@ it('biometric success releases the LOCK-04 key and redirects to the intended URL
 it('biometric abort never releases the key — data stays encrypted, PIN pad remains the fallback (T-15-15)', function (): void {
     $user = mobileBiometricTestUser('mobile-bio-abort');
     test()->actingAs($user);
-    test()->session([LockStateManager::SESSION_KEY => true]);
+    test()->session([AppLockTestHarness::LOCKED_SESSION_KEY => true]);
 
     app()->bind(BiometricUnlockBridge::class, fn () => new class extends BiometricUnlockBridge
     {
@@ -117,7 +117,7 @@ it('biometric abort never releases the key — data stays encrypted, PIN pad rem
 it('biometric success against a genuinely locked session (no data key) falls through silently — the PIN pad completes the unlock', function (): void {
     $user = mobileBiometricTestUser('mobile-bio-nokey');
     test()->actingAs($user);
-    test()->session([LockStateManager::SESSION_KEY => true]);
+    test()->session([AppLockTestHarness::LOCKED_SESSION_KEY => true]);
 
     app()->bind(BiometricUnlockBridge::class, fn () => new class extends BiometricUnlockBridge
     {
@@ -146,7 +146,7 @@ it('biometric success against a genuinely locked session (no data key) falls thr
 it('PIN path still works on the mobile lock screen — the Auth chain is reused unchanged', function (): void {
     $user = mobileBiometricTestUser('mobile-pin-still-works');
     test()->actingAs($user);
-    test()->session([LockStateManager::SESSION_KEY => true]);
+    test()->session([AppLockTestHarness::LOCKED_SESSION_KEY => true]);
 
     /** @var AppLockProvisioner $provisioner */
     $provisioner = app(AppLockProvisioner::class);
@@ -158,15 +158,13 @@ it('PIN path still works on the mobile lock screen — the Auth chain is reused 
 
     /** @var Session $session */
     $session = app(Session::class);
-    /** @var LockStateManager $lockState */
-    $lockState = app(LockStateManager::class);
-    expect($lockState->isLocked($session))->toBeFalse();
+    expect(AppLockTestHarness::isLocked($session))->toBeFalse();
 });
 
 it('wrong PIN on the mobile lock screen sets flash message and leaves the session locked', function (): void {
     $user = mobileBiometricTestUser('mobile-pin-wrong');
     test()->actingAs($user);
-    test()->session([LockStateManager::SESSION_KEY => true]);
+    test()->session([AppLockTestHarness::LOCKED_SESSION_KEY => true]);
 
     /** @var AppLockProvisioner $provisioner */
     $provisioner = app(AppLockProvisioner::class);
@@ -182,7 +180,7 @@ it('GET /mobile/lock renders 200 with the PIN pad and Sign out', function (): vo
     $user = mobileBiometricTestUser('mobile-lock-get');
     test()->actingAs($user);
 
-    test()->withSession([LockStateManager::SESSION_KEY => true])
+    test()->withSession([AppLockTestHarness::LOCKED_SESSION_KEY => true])
         ->get('/mobile/lock')
         ->assertOk()
         ->assertSee('Sign out');

@@ -6,18 +6,16 @@ namespace Modules\Auth\Internal\Recovery;
 
 use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Database\DatabaseManager;
-use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\SystemAlertWriter;
 
 final class RecoveryCodeAuthenticator
 {
     private const GROUP_LENGTH = 4;
 
-    // A fixed number of bcrypt comparisons per attempt — the provisioned
-    // recovery-code count (RegenerateRecoveryCodesCommand issues 10). Both the
-    // account-not-found and the wrong-code paths run exactly this many hashes,
-    // so response time never distinguishes a missing username from a wrong code.
+    // A fixed bcrypt count per attempt, matching the ten codes issued, so
+    // response time never separates a missing username from a wrong code.
     private const HASH_OPS = 10;
 
     public function __construct(
@@ -25,21 +23,23 @@ final class RecoveryCodeAuthenticator
         private readonly Hasher $hasher,
         private readonly Clock $clock,
         private readonly RecoveryCodeNormalizer $normalizer,
+        private readonly SystemAlertWriter $alerts,
     ) {}
 
     public function verify(string $usernameInput, string $codeInput): ?User
     {
+        /** @var list<array{userId: int, kind: string, severity: string, message: string}> $alerts */
+        $alerts = [];
+
         /** @var User|null $result */
-        $result = $this->db->connection()->transaction(function () use ($usernameInput, $codeInput): ?User {
+        $result = $this->db->connection()->transaction(function () use ($usernameInput, $codeInput, &$alerts): ?User {
             $connection = $this->db->connection();
             $username = strtolower(trim($usernameInput));
 
             $user = User::query()->where('username', $username)->first();
             $candidate = $this->reformat($this->normalizer->normalize($codeInput));
 
-            // The unused code rows for a real account, or none for an unknown
-            // username. Loaded under a row lock so a matched code is consumed
-            // atomically within this transaction.
+            // Row-locked, so a matched code is consumed atomically here.
             $unused = $user instanceof User
                 ? $connection->table('user_recovery_codes')
                     ->where('user_id', $user->id)
@@ -49,10 +49,9 @@ final class RecoveryCodeAuthenticator
                     ->all()
                 : [];
 
-            // Run a FIXED number of bcrypt comparisons regardless of whether the
-            // account exists or how many codes remain, so neither response time
-            // nor match position distinguishes a missing username from a wrong
-            // code. Padding uses make() (same bcrypt cost as check()), one per pass.
+            // A fixed comparison count whatever the account state, so neither
+            // timing nor match position leaks it. The padding uses make(),
+            // which costs the same as check().
             $matchedId = null;
             $iterations = max(self::HASH_OPS, count($unused));
             for ($i = 0; $i < $iterations; $i++) {
@@ -70,27 +69,31 @@ final class RecoveryCodeAuthenticator
                 $connection->table('user_recovery_codes')
                     ->where('id', $matchedId)
                     ->update(['used_at' => $this->clock->now()]);
-                $this->emitSuccess($user);
+                $alerts[] = self::successAlert($user);
 
                 return $user;
             }
 
-            // A failure against a real account warns its owner. An unknown
-            // username has no owner to warn, and a user_id=null alert is shown
-            // to every user (SystemAlertQuery), so recording one would let an
-            // unauthenticated caller flood every banner — so it is not recorded.
+            // An unknown username has no owner to warn, and a user_id=null
+            // alert shows to everyone, so recording one would let an
+            // unauthenticated caller flood every banner.
             if ($user instanceof User) {
-                $this->emitFailure($user);
+                $alerts[] = self::failureAlert($user);
             }
 
             return null;
         });
 
+        // After commit: the alert is the owner's own row and has to reach
+        // their other device, which only the writer arranges.
+        foreach ($alerts as $alert) {
+            $this->alerts->raiseForUser($alert['userId'], $alert['kind'], $alert['severity'], $alert['message']);
+        }
+
         return $result;
     }
 
-    // Re-inserts a hyphen every four characters so the normalised bare
-    // code is compared in the same shape it was hashed in.
+    // The bare code is hashed in hyphenated shape, so restore it before check.
     private function reformat(string $bareCode): string
     {
         $groups = str_split($bareCode, self::GROUP_LENGTH);
@@ -98,23 +101,25 @@ final class RecoveryCodeAuthenticator
         return implode('-', $groups);
     }
 
-    private function emitSuccess(User $user): void
+    /** @return array{userId: int, kind: string, severity: string, message: string} */
+    private static function successAlert(User $user): array
     {
-        SystemAlert::query()->create([
-            'user_id' => $user->id,
+        return [
+            'userId' => $user->id,
             'kind' => 'auth.recovery_code_consumed',
             'severity' => 'warning',
             'message' => "Recovery code used by {$user->username}.",
-        ]);
+        ];
     }
 
-    private function emitFailure(User $user): void
+    /** @return array{userId: int, kind: string, severity: string, message: string} */
+    private static function failureAlert(User $user): array
     {
-        SystemAlert::query()->create([
-            'user_id' => $user->id,
+        return [
+            'userId' => $user->id,
             'kind' => 'auth.recovery_code_failed',
             'severity' => 'critical',
             'message' => "Failed recovery code attempt for {$user->username}.",
-        ]);
+        ];
     }
 }

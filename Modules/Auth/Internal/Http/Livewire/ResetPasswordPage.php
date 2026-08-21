@@ -13,6 +13,7 @@ use Livewire\Component;
 use Modules\Auth\Public\Actions\ResetPasswordAction;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\ValidationMessages;
 
 final class ResetPasswordPage extends Component
 {
@@ -40,7 +41,7 @@ final class ResetPasswordPage extends Component
         try {
             $reset($this->username, $this->recoveryCode, $this->newPassword);
         } catch (ValidationException $e) {
-            $this->flashMessage = self::firstErrorMessage($e);
+            $this->flashMessage = ValidationMessages::first($e, 'auth::reset_password.error_generic');
             $this->resetPasswordFields();
 
             return;
@@ -61,31 +62,11 @@ final class ResetPasswordPage extends Component
         return $view;
     }
 
-    // Cleared on every failure path so the plaintext never re-enters the
+    // Called on every failure path so the plaintext never re-enters the
     // component snapshot.
     private function resetPasswordFields(): void
     {
         $this->newPassword = '';
         $this->newPasswordConfirmation = '';
-    }
-
-    private static function firstErrorMessage(ValidationException $exception): string
-    {
-        /** @var array<string, mixed> $errors */
-        $errors = $exception->errors();
-
-        foreach ($errors as $messages) {
-            if (! is_array($messages)) {
-                continue;
-            }
-
-            foreach ($messages as $message) {
-                if (is_string($message) && $message !== '') {
-                    return $message;
-                }
-            }
-        }
-
-        return Lang::get('auth::reset_password.error_generic');
     }
 }

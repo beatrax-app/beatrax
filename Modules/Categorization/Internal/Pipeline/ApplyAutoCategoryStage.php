@@ -15,6 +15,7 @@ use Modules\Categorization\Public\Contracts\AppliesAutoCategory;
 use Modules\Categorization\Public\Dto\AutoCategorizationOutcomeDto;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -44,8 +45,7 @@ final class ApplyAutoCategoryStage implements AppliesAutoCategory
                     'user_id' => $user->id,
                     'source_format' => $tx->sourceFormat,
                     'source_row_index' => $tx->sourceRowIndex,
-                    'exception' => $e::class,
-                    'message' => $e->getMessage(),
+                    ...SafeExceptionContext::describe($e),
                 ],
             );
 

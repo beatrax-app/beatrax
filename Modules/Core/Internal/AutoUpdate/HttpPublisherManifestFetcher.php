@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Http\Client\Factory as HttpClient;
 use Modules\Core\Public\Contracts\PublisherManifestFetcher;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
@@ -42,9 +43,7 @@ final readonly class HttpPublisherManifestFetcher implements PublisherManifestFe
         } catch (Throwable $e) {
             // Offline, DNS failure, malformed manifest, unparseable date: one
             // answer to the caller, and never a throw into the update flow.
-            $this->logger->warning('HttpPublisherManifestFetcher: manifest fetch failed.', [
-                'error' => $e->getMessage(),
-            ]);
+            $this->logger->warning('HttpPublisherManifestFetcher: manifest fetch failed.', SafeExceptionContext::describe($e));
 
             return null;
         }

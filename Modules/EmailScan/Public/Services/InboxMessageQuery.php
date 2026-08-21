@@ -47,21 +47,12 @@ readonly class InboxMessageQuery
                 providerMessageId: self::toString($row->provider_message_id),
                 internalDate: self::toDateTime($row->internal_date),
                 senderEmail: self::toString($row->sender_email),
-                senderName: self::toNullableString($row->sender_name),
-                subject: self::toNullableString($row->subject),
+                senderName: self::toStringOrNull($row->sender_name),
+                subject: self::toStringOrNull($row->subject),
                 status: self::toString($row->status),
                 fetchedAt: self::toDateTime($row->fetched_at),
             );
         }
-    }
-
-    private static function toNullableString(mixed $value): ?string
-    {
-        if ($value === null) {
-            return null;
-        }
-
-        return self::toString($value);
     }
 
     private static function toDateTime(mixed $value): DateTimeImmutable

@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
@@ -11,9 +10,8 @@ return new class extends ModuleMigration
     public function up(): void
     {
         // Persistent, unlike the migration_staging_* scratch, and registered in
-        // Sync's MergeRulesRegistry so a second device cannot double-import. A
-        // natural-key-only dedup was rejected: a renamed category's natural key
-        // changes, which orphans the old row instead of updating it.
+        // Sync's MergeRulesRegistry so a second device cannot double-import.
+        // Natural-key-only dedup was rejected: a rename orphans the old row.
         $this->schema()->create('migration_source_map', static function (Blueprint $table): void {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained('users')->cascadeOnDelete();

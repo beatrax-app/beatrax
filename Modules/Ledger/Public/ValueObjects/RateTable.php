@@ -70,7 +70,9 @@ final class RateTable
     public function rateFor(string $from, string $to): ?Rate
     {
         try {
-            return Rate::of((string) $this->provider()->getExchangeRate(Currency::of($from), Currency::of($to)));
+            $rate = $this->provider()->getExchangeRate(Currency::of($from), Currency::of($to));
+
+            return $rate === null ? null : Rate::fromNumber($rate);
         } catch (Throwable) {
             return null;
         }

@@ -44,8 +44,8 @@ final readonly class LargeVsTypicalDetector
         }
 
         $direction = Direction::fromTransactionType(is_string($txn['type'] ?? null) ? $txn['type'] : TransactionType::Expense->value)->value;
-        $counterpartyId = self::toIntOrNull($txn['counterparty_id'] ?? null);
-        $categoryId = self::toIntOrNull($txn['category_id'] ?? null);
+        $counterpartyId = self::toPositiveIntOrNull($txn['counterparty_id'] ?? null);
+        $categoryId = self::toPositiveIntOrNull($txn['category_id'] ?? null);
 
         $context = new LargeSampleContext(
             user: $user,
@@ -139,15 +139,5 @@ final readonly class LargeVsTypicalDetector
         $floor = max((float) RobustStatistics::MAD_FLOOR_MINOR, $median * self::MAD_FLOOR_MEDIAN_FRACTION);
 
         return (int) $floor;
-    }
-
-    private static function toIntOrNull(mixed $value): ?int
-    {
-        if (! is_numeric($value)) {
-            return null;
-        }
-        $int = (int) $value;
-
-        return $int > 0 ? $int : null;
     }
 }

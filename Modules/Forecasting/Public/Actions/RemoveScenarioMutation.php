@@ -58,7 +58,7 @@ final class RemoveScenarioMutation
         $this->events->dispatch(new EntityMutated(
             table: 'forecast_scenario_mutations',
             pk: $mutationId,
-            userId: (int) $user->id,
+            userId: $user->id,
             mutationType: 'delete',
         ));
 

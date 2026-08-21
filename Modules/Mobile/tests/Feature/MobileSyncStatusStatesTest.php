@@ -7,19 +7,17 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
-use Modules\Mobile\Internal\Sync\SyncBlockedReason;
-use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Http\Livewire\SyncScreen;
 use Modules\Mobile\Internal\Sync\NetworkPolicyResolver;
+use Modules\Mobile\Internal\Sync\SyncBlockedReason;
 
 uses(RefreshDatabase::class);
 
-// The D-10 network-policy file is device-scoped (not per-user), at a FIXED
-// path — clean it up before/after each test so runs never interfere with
-// each other, mirroring NetworkPolicyResolverTest's own established
-// precedent (15-05-PLAN.md Task 1).
+// The network-policy file is device-scoped rather than per-user, at a fixed path,
+// so runs interfere with each other unless it is cleaned up around every test.
 beforeEach(function (): void {
     @unlink(UserDataPathService::appPath('mobile/network-policy.json'));
 });
@@ -27,28 +25,6 @@ beforeEach(function (): void {
 afterEach(function (): void {
     @unlink(UserDataPathService::appPath('mobile/network-policy.json'));
 });
-
-/*
- * MOBILE-02 (R7) — `/sync` status surface. Turns the Wave-0 RED
- * class_exists() gate GREEN (15-10-PLAN.md Task 1).
- *
- * Behavior pinned: SyncScreen resolves the four R7 states truthfully —
- *   - idle: the embedded sync.sync-status-section's "All devices up to
- *     date · synced Nm ago" banner (SyncStatusService, unchanged), with a
- *     correct relative timestamp.
- *   - active progress: this screen's OWN "{n} records" line, sourced from
- *     the own-module mobile_sync_progress durable cursor (phase='pulling')
- *     — independent of sync_sessions.
- *   - offline/not-connected: the embedded component's "Devices offline"
- *     banner.
- *   - per-device list: the embedded component's per-peer rows (device id
- *     visible) — proven alongside the idle scenario.
- *
- * Status is read exclusively via the embedded sync.sync-status-section
- * component (itself SyncStatusService-backed) or this module's own
- * mobile_sync_progress table — never sync_sessions/relay_mailbox
- * directly (T-15-26/T-15-28, structurally asserted in the last test).
- */
 
 function mobileSyncStatusUser(string $username): User
 {
@@ -61,8 +37,6 @@ function mobileSyncStatusUser(string $username): User
 }
 
 /**
- * Insert a sync_sessions row and return its id.
- *
  * @param  array<string, mixed>  $overrides
  */
 function insertMobileSyncSession(DatabaseManager $db, User $user, array $overrides = []): int
@@ -111,9 +85,9 @@ it('resolves the idle state — all devices up to date, correct relative timesta
         ->assertStatus(200)
         ->assertSee('All devices up to date')
         ->assertSee('synced 5m ago')
-        // Per-device list — the embedded component's per-peer row.
+        // The per-device list is the embedded component's per-peer row.
         ->assertSee('desktop-peer-dev')
-        // No initial sync is in progress — the progress line is absent.
+        // No initial sync is in progress, so the progress line is absent.
         ->assertDontSee('records');
 });
 
@@ -151,9 +125,9 @@ it('resolves the offline / not-connected state', function (): void {
 
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
-    // A session that never got anywhere and was never seen — resolves to
-    // SyncStatusService::overallStatus()'s 'offline' bucket (not
-    // 'error' — no error_message; not 'all_synced' — never closed/seen).
+    // A session that never got anywhere and was never seen lands in the 'offline'
+    // bucket: 'error' would need an error_message, 'all_synced' would need it
+    // closed and seen.
     insertMobileSyncSession($db, $user, [
         'status' => 'failed',
         'error_message' => null,
@@ -182,11 +156,9 @@ it('the Sync now button invokes syncOnce() and re-fetches progress', function ()
     $user = mobileSyncStatusUser('mobile-status-syncnow-'.bin2hex(random_bytes(4)));
     $this->actingAs($user);
 
-    // No device identity/KEK is set up for this fixture user, so
-    // MobileSyncTriggerService::syncOnce() skips the tick (returns null) —
-    // this proves the button wires through to the real service without a
-    // live LAN/relay round-trip (mirrors MobileBidirectionalMergeTest's
-    // own KEK-absent-skip precedent). No exception, no crash.
+    // No device identity or KEK is set up for this fixture user, so syncOnce()
+    // skips the tick. That is enough to prove the button reaches the real service
+    // without a live LAN or relay round-trip.
     Livewire::test(SyncScreen::class)
         ->assertStatus(200)
         ->call('syncNow')
@@ -234,21 +206,15 @@ it('embeds the existing sync.sync-status-section component and never queries syn
 });
 
 it('shows what the setup poll is waiting on, and a way out when it cannot resolve', function (): void {
-    /*
-     * Every blocked reason had copy in twenty-six languages and the screen
-     * rendered none of it — the component set $blocked and the blade never
-     * read it. A stalled setup showed a turning bar and nothing else.
-     *
-     * Revoked is the one that matters most: the other device no longer knows
-     * this one, so polling can never clear it, and MobileEnsureImportCompleted
-     * redirects every route back here until the import completes. Without a
-     * way out that is a permanent lockout.
-     */
+    // Every blocked reason had copy in twenty-six languages and the screen rendered
+    // none of it: the component set $blocked and the blade never read it. Revoked
+    // is the one that matters, since polling can never clear it and the import gate
+    // redirects every route back here, so without a way out it is a lockout.
     $blade = (string) file_get_contents(
         base_path('Modules/Mobile/Resources/views/livewire/setup-progress-screen.blade.php')
     );
 
-    expect(str_contains($blade, "mobile::setup.blocked."))
+    expect(str_contains($blade, 'mobile::setup.blocked.'))
         ->toBeTrue('the setup screen renders no blocked reason at all');
 
     expect(str_contains($blade, 'setup-repair-link'))

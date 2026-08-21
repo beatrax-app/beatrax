@@ -12,15 +12,6 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Actions\RecordTransactions;
 use Modules\Ledger\Public\Events\TransactionBatchImported;
 
-/*
- * Req 10 / D-22 — proves the new batch-altitude event fires exactly ONCE
- * per RecordTransactions::__invoke() call (never once per row), carries the
- * real inserted count + distinct sorted source-format list, is skipped
- * entirely for a zero-insert batch, and is dispatched outside any open DB
- * transaction (D-28 / WR-06). The existing per-row TransactionImported
- * dispatch is asserted UNCHANGED alongside it.
- */
-
 /** @var list<TransactionBatchImported> */
 $recordedBatches = [];
 
@@ -69,8 +60,7 @@ beforeEach(function () use (&$recordedBatches, &$recordedRows): void {
         },
     );
 
-    // Distinct-fingerprint row builder — mirrors RecordTransactionsChunkingTest's
-    // approach so every row in a batch is a genuine insert.
+    // Distinct fingerprints, so every row in a batch is a genuine insert.
     $this->distinctBatch = function (int $count, string $sourceFormat = 'csv', int $offset = 0): array {
         $rows = [];
 
@@ -140,14 +130,11 @@ it('reports both formats sorted for a mixed csv + eml batch, in a single event',
     expect($recordedBatches[0]->insertedCount)->toBe(5);
 });
 
-it('dispatches the batch event outside any open DB transaction (D-28 / WR-06)', function (): void {
-    // RefreshDatabase already wraps the whole test in its own outer
-    // transaction, so an absolute `=== 0` assertion is not meaningful here.
-    // Instead, compare against the baseline transaction level captured
-    // BEFORE the action runs: the per-row event (dispatched inside
-    // persistChunk's own transaction) must be baseline+1, while the batch
-    // event — dispatched after every chunk transaction has committed — must
-    // be back down to the exact same baseline.
+it('dispatches the per-row and batch events outside any open DB transaction (D-28 / WR-06)', function (): void {
+    // RefreshDatabase already holds an outer transaction, so `=== 0` would prove
+    // nothing. Both events must land back at that baseline: the per-row one used
+    // to fire inside persistChunk's own transaction, so a rollback left Search,
+    // Transfers, Receipts and Anomaly acting on rows that never committed.
     $baseline = DB::transactionLevel();
 
     /** @var Dispatcher $events */
@@ -174,11 +161,11 @@ it('dispatches the batch event outside any open DB transaction (D-28 / WR-06)', 
 
     $action($rows, $this->user);
 
-    expect($rowLevel)->toBe($baseline + 1);
+    expect($rowLevel)->toBe($baseline, 'TransactionImported must fire after persistChunk commits');
     expect($batchLevel)->toBe($baseline);
 });
 
-it('leaves the existing per-row TransactionImported dispatch untouched inside persistChunk', function (): void {
+it('owes its after-commit ordering to the action, not to a framework marker interface', function (): void {
     expect(new ReflectionClass(TransactionImported::class)->getInterfaceNames())
         ->not->toContain('Illuminate\\Contracts\\Events\\ShouldHandleEventsAfterCommit')
         ->not->toContain('Illuminate\\Contracts\\Queue\\ShouldQueue');

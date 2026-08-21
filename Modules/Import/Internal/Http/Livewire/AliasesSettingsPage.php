@@ -17,6 +17,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Import\Internal\Services\AliasYamlExporter;
 use Modules\Import\Internal\Services\AliasYamlImporter;
 use Modules\Import\Internal\Services\LongestCommonPrefix;
@@ -27,9 +28,6 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
-/**
- * @link ../../../../../.docs/features/import/architecture.md#merchant-aliases
- */
 final class AliasesSettingsPage extends Component
 {
     use HoldsFlashMessage;
@@ -115,9 +113,8 @@ final class AliasesSettingsPage extends Component
         $this->previewResult = [];
     }
 
-    // The 400ms debounce and the 500-row scan cap together bound what a
-    // fast keystroke stream can cost; patterns under 3 characters
-    // short-circuit before the scan runs at all.
+    // The 400ms debounce and the 500-row scan cap together bound what a fast
+    // keystroke stream can cost.
     public function updatedEditingPattern(AliasMatchPreviewQuery $previewQuery, CurrentUser $currentUser): void
     {
         $value = trim($this->editingPattern);
@@ -157,9 +154,8 @@ final class AliasesSettingsPage extends Component
             return;
         }
 
-        // The where('user_id', …) clause is the structural guard; a
-        // cross-user id simply affects 0 rows and gets the same calm
-        // "not found" flash a genuinely stale row would.
+        // The where('user_id', …) clause is the structural guard: a cross-user
+        // id affects 0 rows and gets the same flash a stale row would.
         $affected = $db->connection()
             ->table('merchant_aliases')
             ->where('user_id', $currentUser->user()->id)
@@ -186,7 +182,6 @@ final class AliasesSettingsPage extends Component
 
     public function deleteAlias(int $aliasId, CurrentUser $currentUser, DatabaseManager $db): void
     {
-        // Ownership is the where('user_id', …) clause; the flash is only UI.
         $affected = $db->connection()
             ->table('merchant_aliases')
             ->where('user_id', $currentUser->user()->id)
@@ -223,7 +218,6 @@ final class AliasesSettingsPage extends Component
             ->get(['id', 'generalized_pattern', 'friendly_name']);
 
         if ($rows->count() !== count($uniqueIds)) {
-            // Ownership is the where('user_id', …) clause; the flash is only UI.
             $this->selectedIds = [];
             $this->flashMessage = Lang::get('import::aliases.errors.some_not_found');
 
@@ -283,10 +277,7 @@ final class AliasesSettingsPage extends Component
 
             return;
         } catch (Throwable $e) {
-            $logger->error('AliasesSettingsPage: bulk-merge failed.', [
-                'exception_class' => $e::class,
-                'exception_message' => $e->getMessage(),
-            ]);
+            $logger->error('AliasesSettingsPage: bulk-merge failed.', SafeExceptionContext::describe($e));
             $this->showMergeModal = false;
             $this->flashMessage = Lang::get('import::aliases.errors.merge_failed', ['class' => $e::class]);
 
@@ -300,7 +291,6 @@ final class AliasesSettingsPage extends Component
         $this->flashMessage = Lang::get('import::aliases.flash.merged');
     }
 
-    // Method-DI'd rather than the global response() helper.
     public function exportYaml(
         AliasYamlExporter $exporter,
         CurrentUser $currentUser,

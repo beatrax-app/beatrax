@@ -12,6 +12,7 @@ use Modules\Categorization\Public\Actions\Concerns\NormalisesRuleInput;
 use Modules\Categorization\Public\Dto\RuleInput;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\QueryFailure;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class UpdateCategorizationRule
@@ -65,7 +66,7 @@ final class UpdateCategorizationRule
                 return $ruleId;
             });
         } catch (QueryException $e) {
-            if (self::isUniqueViolation($e)) {
+            if (QueryFailure::isUniqueViolation($e)) {
                 throw ValidationException::withMessages([
                     'value' => self::duplicateMessage(),
                 ]);

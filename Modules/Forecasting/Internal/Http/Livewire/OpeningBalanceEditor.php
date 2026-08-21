@@ -15,6 +15,7 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Internal\Support\AmountStringParser;
 use Modules\Forecasting\Public\Actions\SetAccountOpeningBalance;
 use Modules\Forecasting\Public\Exceptions\OpeningBalanceDivergenceWarning;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class OpeningBalanceEditor extends Component
@@ -77,7 +78,7 @@ final class OpeningBalanceEditor extends Component
         $this->currency = $currency;
 
         $this->openingInput = $currentOpeningMinor !== null
-            ? number_format($currentOpeningMinor / 100, 2, ',', '.')
+            ? MoneyInput::formatMinor($currentOpeningMinor)
             : '';
         $this->asOfInput = $currentAsOfDate ?? '';
     }
@@ -156,7 +157,7 @@ final class OpeningBalanceEditor extends Component
         if ($this->beatraxsNumberMinor === null) {
             return;
         }
-        $this->openingInput = number_format($this->beatraxsNumberMinor / 100, 2, ',', '.');
+        $this->openingInput = MoneyInput::formatMinor($this->beatraxsNumberMinor);
         $this->showingDivergenceBanner = false;
         $this->divergenceDiffMinor = null;
         $this->errorMessage = null;

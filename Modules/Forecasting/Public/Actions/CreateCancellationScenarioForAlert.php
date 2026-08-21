@@ -7,6 +7,7 @@ namespace Modules\Forecasting\Public\Actions;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
+use Modules\Forecasting\Internal\Support\ScenarioSeriesResolver;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\CancelSeriesPayload;
 use Modules\Forecasting\Public\Enums\ScenarioMutationKind;
 use stdClass;
@@ -18,6 +19,7 @@ final class CreateCancellationScenarioForAlert
         private readonly DatabaseManager $db,
         private readonly CreateScenario $createScenario,
         private readonly AddScenarioMutation $addMutation,
+        private readonly ScenarioSeriesResolver $seriesResolver,
     ) {}
 
     public function __invoke(int $driftAlertId, User $user): int
@@ -45,7 +47,7 @@ final class CreateCancellationScenarioForAlert
             throw new NotFoundHttpException('Recurring series not found.');
         }
         /** @var stdClass $series */
-        $name = $this->resolveSeriesName($series);
+        $name = $this->seriesResolver->resolveSeriesName($series);
 
         $scenarioName = "Cancel {$name}";
 
@@ -61,33 +63,11 @@ final class CreateCancellationScenarioForAlert
             // the launchpad once, then clicked again without deleting
             // the prior scenario). Return the existing id so the caller
             // redirects into it instead of surfacing a 500.
-            $existing = $this->existingScenarioIdByName($user, $scenarioName);
+            $existing = $this->seriesResolver->existingScenarioIdByName($user, $scenarioName);
             if ($existing !== null) {
                 return $existing;
             }
             throw $e;
         }
-    }
-
-    private function existingScenarioIdByName(User $user, string $name): ?int
-    {
-        $value = $this->db->connection()->table('forecast_scenarios')
-            ->where('user_id', $user->id)
-            ->where('name', $name)
-            ->value('id');
-
-        return is_numeric($value) ? (int) $value : null;
-    }
-
-    private function resolveSeriesName(stdClass $row): string
-    {
-        if (isset($row->display_name_override) && is_string($row->display_name_override) && $row->display_name_override !== '') {
-            return $row->display_name_override;
-        }
-        if (isset($row->detected_name) && is_string($row->detected_name) && $row->detected_name !== '') {
-            return $row->detected_name;
-        }
-
-        return 'series';
     }
 }

@@ -40,9 +40,8 @@ final class PotsPage extends Component
 
     public string $operationKind = '';
 
-    // String-typed because it backs a <select> whose placeholder option is
-    // '' — hydrating '' into an int property throws a Livewire property-type
-    // error instead of a validation message. Cast in movePot().
+    // String-typed: the select's placeholder option is '', and hydrating that
+    // into an int property throws instead of validating. Cast in movePot().
     public string $transferTargetPotId = '';
 
     public int $archivingPotId = 0;
@@ -52,10 +51,6 @@ final class PotsPage extends Component
     public string $errorAmount = '';
 
     public bool $showArchived = false;
-
-    // -----------------------------------------------------------------------
-    // Create pot
-    // -----------------------------------------------------------------------
 
     public function createPot(CurrentUser $currentUser, PotWriter $writer): void
     {
@@ -77,8 +72,8 @@ final class PotsPage extends Component
             return;
         }
 
-        // linkType is 'goal' | 'none' only — PotWriter always receives a
-        // null categoryId here.
+        // linkType is 'goal' | 'none' only, so PotWriter always gets a null
+        // categoryId: category-linked pots are no longer creatable.
         $goalId = ($this->linkType === 'goal' && $this->goalId !== '') ? (int) $this->goalId : null;
         $rawAmount = trim($this->amount) !== '' ? $this->amount : null;
 
@@ -106,10 +101,6 @@ final class PotsPage extends Component
         $this->toast(Lang::get('pots::messages.toast.pot_created'));
     }
 
-    // -----------------------------------------------------------------------
-    // Edit / update pot
-    // -----------------------------------------------------------------------
-
     public function openEdit(int $potId, PotBalanceQuery $query, CurrentUser $currentUser): void
     {
         if (! $currentUser->isAuthenticated()) {
@@ -126,18 +117,15 @@ final class PotsPage extends Component
                     $this->linkType = 'goal';
                     $this->goalId = (string) $pot->goalId;
                 } else {
-                    // Any pot with a lingering category_id falls back to
-                    // 'none' rather than surfacing a picker that no longer
-                    // exists.
+                    // A lingering category_id falls back to 'none' rather than
+                    // surfacing a picker that no longer exists.
                     $this->linkType = 'none';
                     $this->goalId = '';
                 }
                 $this->clearErrors();
 
-                // Deliberately does NOT dispatch `modal-show` — see the same
-                // note in GoalsPage::openEdit(). Announcing it from the server
-                // put the desktop modal on top of the phone sheet.
-
+                // No `modal-show` dispatch: announcing it server-side put the
+                // desktop modal on top of the phone's bottom sheet.
                 return;
             }
         }
@@ -171,9 +159,8 @@ final class PotsPage extends Component
                 null,
             );
         } catch (\InvalidArgumentException $e) {
-            // PotNotFoundException derives from InvalidArgumentException, so
-            // the single catch covers both; the instance check keeps the
-            // not-found reset distinct from a surfaced validation message.
+            // PotNotFoundException extends InvalidArgumentException, so one catch
+            // covers both and the instance check separates the two responses.
             if ($e instanceof PotNotFoundException) {
                 $this->resetForm();
             } else {
@@ -187,10 +174,6 @@ final class PotsPage extends Component
         $this->dispatch('modal-close', name: 'pot-form');
         $this->toast(Lang::get('pots::messages.toast.pot_updated'));
     }
-
-    // -----------------------------------------------------------------------
-    // Fund pot
-    // -----------------------------------------------------------------------
 
     public function fundPot(CurrentUser $currentUser, PotWriter $writer, PotBalanceQuery $query): void
     {
@@ -228,7 +211,7 @@ final class PotsPage extends Component
             $availableFormatted = Money::ofMinor(
                 max(0, $unallocated),
                 $currency
-            )->format($currency === 'EUR' ? 'nl_NL' : 'en_US');
+            )->format();
             $this->errorAmount = Lang::get(
                 'pots::messages.errors.amount_exceeds_unallocated_available',
                 ['amount' => $availableFormatted],
@@ -245,10 +228,6 @@ final class PotsPage extends Component
         $this->dispatch('modal-close', name: 'pot-fund');
         $this->toast(Lang::get('pots::messages.toast.pot_funded'));
     }
-
-    // -----------------------------------------------------------------------
-    // Withdraw
-    // -----------------------------------------------------------------------
 
     public function withdrawPot(CurrentUser $currentUser, PotWriter $writer, PotBalanceQuery $query): void
     {
@@ -288,7 +267,7 @@ final class PotsPage extends Component
             $availableFormatted = Money::ofMinor(
                 max(0, $balance),
                 $currency
-            )->format($currency === 'EUR' ? 'nl_NL' : 'en_US');
+            )->format();
             $this->errorAmount = Lang::get(
                 'pots::messages.errors.amount_exceeds_pot_balance',
                 ['name' => $potName, 'amount' => $availableFormatted],
@@ -305,10 +284,6 @@ final class PotsPage extends Component
         $this->dispatch('modal-close', name: 'pot-withdraw');
         $this->toast(Lang::get('pots::messages.toast.withdrawn'));
     }
-
-    // -----------------------------------------------------------------------
-    // Move / transfer
-    // -----------------------------------------------------------------------
 
     public function movePot(CurrentUser $currentUser, PotWriter $writer, PotBalanceQuery $query): void
     {
@@ -330,8 +305,7 @@ final class PotsPage extends Component
         }
 
         try {
-            // '' (placeholder) casts to 0, which PotWriter rejects with
-            // PotNotFoundException, surfacing as an inline error below.
+            // The placeholder '' casts to 0, which PotWriter rejects.
             $writer->transfer(
                 $user,
                 $this->operationPotId,
@@ -351,7 +325,7 @@ final class PotsPage extends Component
             $availableFormatted = Money::ofMinor(
                 max(0, $balance),
                 $currency
-            )->format($currency === 'EUR' ? 'nl_NL' : 'en_US');
+            )->format();
             $this->errorAmount = Lang::get(
                 'pots::messages.errors.amount_exceeds_pot_balance',
                 ['name' => $potName, 'amount' => $availableFormatted],
@@ -368,10 +342,6 @@ final class PotsPage extends Component
         $this->dispatch('modal-close', name: 'pot-move');
         $this->toast(Lang::get('pots::messages.toast.funds_moved'));
     }
-
-    // -----------------------------------------------------------------------
-    // Archive / restore
-    // -----------------------------------------------------------------------
 
     public function confirmArchive(CurrentUser $currentUser, int $potId): void
     {
@@ -418,17 +388,13 @@ final class PotsPage extends Component
         $this->dispatch('modal-close', name: 'pot-form');
     }
 
-    // -----------------------------------------------------------------------
-    // Render
-    // -----------------------------------------------------------------------
-
     public function render(
         CurrentUser $currentUser,
         PotBalanceQuery $query,
         ViewFactory $views,
     ): View {
-        // Defence-in-depth: the auth route middleware makes this unreachable,
-        // but guard anyway so an unauthenticated render degrades gracefully.
+        // Unreachable behind the auth middleware; kept so an unauthenticated
+        // render degrades to the empty page instead of throwing.
         if (! $currentUser->isAuthenticated()) {
             $view = $views->make('pots::livewire.pots-page', [
                 'groups' => [],
@@ -471,9 +437,6 @@ final class PotsPage extends Component
             'archived' => $archived,
             'accounts' => $accounts,
             'goalsForPicker' => $goalsForPicker,
-            // The move-modal destination picker consumes the same
-            // account-grouped active pots as the card list — one structure,
-            // two view variables.
             'potsForMove' => $groups,
         ]);
 
@@ -482,10 +445,6 @@ final class PotsPage extends Component
 
         return $view;
     }
-
-    // -----------------------------------------------------------------------
-    // Helpers
-    // -----------------------------------------------------------------------
 
     private function clearErrors(): void
     {
@@ -512,10 +471,5 @@ final class PotsPage extends Component
         $this->operationKind = '';
         $this->transferTargetPotId = '';
         $this->clearErrors();
-    }
-
-    private function toast(string $message): void
-    {
-        $this->toastWithUndo($message, undoAction: '', undoPayload: null);
     }
 }

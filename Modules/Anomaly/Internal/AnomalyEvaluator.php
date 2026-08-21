@@ -14,6 +14,7 @@ use Modules\Anomaly\Internal\Detectors\LargeVsTypicalDetector;
 use Modules\Anomaly\Public\Enums\AnomalyAlertState;
 use Modules\Anomaly\Public\Events\AnomalyAlertOpened;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Ledger\Public\Enums\Direction;
@@ -23,6 +24,8 @@ use Modules\Sync\Public\Events\EntityMutated;
 
 final readonly class AnomalyEvaluator
 {
+    use CoercesScalars;
+
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
@@ -155,7 +158,7 @@ final readonly class AnomalyEvaluator
      */
     private function filterSuppressed(array $txn, User $user, string $direction, array $reasons, bool $largeFromMerchantBaseline): array
     {
-        $counterpartyId = self::toIntOrNull($txn['counterparty_id'] ?? null);
+        $counterpartyId = self::toPositiveIntOrNull($txn['counterparty_id'] ?? null);
         $settledMinor = self::toInt($txn['settled_amount_minor'] ?? 0, 0);
         $settledCurrency = is_string($txn['settled_currency'] ?? null) ? $txn['settled_currency'] : $this->baseCurrency->code();
 
@@ -218,20 +221,5 @@ final readonly class AnomalyEvaluator
         $present = array_unique($reasons);
 
         return array_values(array_filter($order, static fn (string $r): bool => in_array($r, $present, true)));
-    }
-
-    private static function toInt(mixed $value, int $default = 0): int
-    {
-        return is_numeric($value) ? (int) $value : $default;
-    }
-
-    private static function toIntOrNull(mixed $value): ?int
-    {
-        if (! is_numeric($value)) {
-            return null;
-        }
-        $int = (int) $value;
-
-        return $int > 0 ? $int : null;
     }
 }

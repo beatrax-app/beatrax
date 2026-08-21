@@ -11,6 +11,7 @@ use Modules\Categorization\Public\Enums\ActionType;
 use Modules\Categorization\Public\Enums\NoteMode;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Ledger\Public\Contracts\ReassignsCounterparty;
 use Modules\Ledger\Public\Contracts\SetsTransactionNote;
 use Modules\Ledger\Public\Contracts\UpdatesTransactionCategory;
@@ -262,8 +263,6 @@ final class RuleApplier
         return ['tax_tag', $deductionCategoryId];
     }
 
-    // Reads the existing row first so an identical re-apply is a genuine
-    // no-op rather than relying on the upsert's own idempotency.
     private function writeTaxTag(int $ruleId, int $transactionId, int $userId, int $deductionCategoryId, ?int $year): bool
     {
         $current = $this->db->connection()
@@ -297,8 +296,7 @@ final class RuleApplier
             $this->logger->warning('RuleApplier skipped a tax_tag action.', [
                 'rule_id' => $ruleId,
                 'action_type' => 'tax_tag',
-                'exception' => $e::class,
-                'message' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
             ]);
 
             return false;

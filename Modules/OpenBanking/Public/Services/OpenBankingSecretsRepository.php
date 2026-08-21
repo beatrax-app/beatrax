@@ -12,6 +12,7 @@ use JsonException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Public\Exceptions\OpenBankingCredentialsException;
 use Psr\Log\LoggerInterface;
@@ -37,8 +38,7 @@ class OpenBankingSecretsRepository
         // Second at-rest layer: keeps the file ciphertext on the targets where
         // SecretShield binds to the identity PassthroughSecretShield.
         private readonly Encrypter $encrypter,
-        // Injected rather than the Log facade — larastan's strict rules forbid
-        // facades here.
+        // Injected because larastan's strict rules forbid the Log facade here.
         private readonly LoggerInterface $logger = new NullLogger,
     ) {}
 
@@ -64,9 +64,8 @@ class OpenBankingSecretsRepository
         ]);
     }
 
-    // Gated on the private key alone, unlike hasApplication(): the wizard
-    // writes the key at step 1 and the application_id at step 3, and step 3
-    // has to load() the half-written file to merge the pasted id into it.
+    // Gated on the private key alone, unlike hasApplication(): the wizard writes
+    // the key first and must load() the half-written file to merge in the id.
     public function load(): ?OpenBankingCredentials
     {
         $data = $this->readAll();
@@ -161,8 +160,7 @@ class OpenBankingSecretsRepository
             return [];
         }
 
-        // Narrows array<mixed, mixed> to array<string, mixed>; PHPStan cannot
-        // infer that a decoded JSON object only has string keys.
+        // PHPStan cannot infer that a decoded JSON object has only string keys.
         $out = [];
         foreach ($decoded as $key => $value) {
             $out[(string) $key] = $value;
@@ -171,9 +169,8 @@ class OpenBankingSecretsRepository
         return $out;
     }
 
-    // A file written before the APP_KEY layer existed holds unencrypted JSON,
-    // which raises DecryptException; read it as plaintext so the connection
-    // survives the upgrade and the next save() re-persists it encrypted.
+    // A file written before the APP_KEY layer holds plain JSON and raises
+    // DecryptException; reading it through lets the next save() re-encrypt it.
     private function decryptAtRest(string $revealed): string
     {
         try {
@@ -210,9 +207,8 @@ class OpenBankingSecretsRepository
 
     private function ensureSecretsDirectory(string $dir): void
     {
-        // 0700 is applied only on create: re-chmodding on every write would
-        // silently undo a widening an operator applied on purpose, e.g. for a
-        // backup agent that needs read access.
+        // 0700 on create only: re-chmodding every write would silently undo a
+        // widening an operator applied on purpose, e.g. for a backup agent.
         if (is_dir($dir)) {
             return;
         }
@@ -309,13 +305,6 @@ class OpenBankingSecretsRepository
 
     private static function toDateTime(mixed $value): ?CarbonImmutable
     {
-        if (! is_string($value) || $value === '') {
-            return null;
-        }
-        try {
-            return CarbonImmutable::parse($value);
-        } catch (Throwable) {
-            return null;
-        }
+        return is_string($value) ? SafeDate::parseOrNull($value) : null;
     }
 }

@@ -10,6 +10,7 @@ use Illuminate\Database\QueryException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Migration\Internal\Services\SourceMapWriter;
@@ -158,7 +159,7 @@ final class EntityChangeApplier
                 'transaction_id' => $transactionId,
                 'user_id' => $user->id,
                 'is_fingerprint_collision' => self::isFingerprintUniqueViolation($e),
-                'exception_message' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
             ]);
 
             if (! self::isFingerprintUniqueViolation($e)) {

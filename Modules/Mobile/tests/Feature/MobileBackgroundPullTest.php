@@ -8,7 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Http;
-use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Mobile\Commands\MobilePullCommand;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
@@ -38,7 +38,7 @@ it('runs exactly one bounded background sync burst per user and never loops', fu
     $session = app(Session::class);
 
     // The module TestCase does not prime an unlocked session.
-    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
 
     /** @var DeviceIdentityService $identityService */
     $identityService = app(DeviceIdentityService::class);

@@ -30,16 +30,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 uses(RefreshDatabase::class);
 
-/*
- * Feature coverage for the Wave 4 scenario-CRUD Public Actions +
- * ScenarioApplier + ProjectForecastOnScenarioChange listener fan-out.
- *
- * The scenario-isolation boundary is exercised end-to-end: persisted
- * mutations round-trip through the typed cast; ScenarioApplier
- * transforms baseline contributions in pure PHP; the load-bearing arch
- * invariant `noScenarioMutationsJoinedToTransactionQueries` stays green.
- */
-
+/** @link ../../../../.docs/features/forecasting/scenario-isolation.md */
 function scUser(string $username): User
 {
     return User::query()->create([
@@ -294,13 +285,9 @@ it('11. EditScenarioMutation kind mismatch on new payload throws', function (): 
 });
 
 it('12. Listener fan-out: ScenarioMutated triggers exactly 6 ProjectForecastJob dispatches (3 baseline + 3 affected)', function (): void {
-    // Fake the Bus contract BEFORE the application's listener singleton is
-    // constructed — Laravel's Bus::fake() rebinds Illuminate\Bus\Dispatcher
-    // / Illuminate\Contracts\Bus\Dispatcher in the container, so listeners
-    // resolved AFTER the fake call get the fake instance. Resolving the
-    // listener proactively here guarantees the binding survives the swap.
+    // Bus::fake() rebinds the dispatcher, and the listener takes its copy at
+    // construction, so it has to be resolved after the fake, not before.
     Bus::fake();
-    // Force the listener to resolve now so it captures the fake dispatcher.
     $this->app->make(ProjectForecastOnScenarioChange::class);
     /** @var CreateScenario $create */
     $create = $this->app->make(CreateScenario::class);
@@ -308,14 +295,13 @@ it('12. Listener fan-out: ScenarioMutated triggers exactly 6 ProjectForecastJob 
     $add = $this->app->make(AddScenarioMutation::class);
 
     $seriesId = scSeriesId($this->db, $this->user->id);
-    // Two saved scenarios — the listener should ONLY fan out to baseline + the affected scenario, not every scenario the user owns.
+    // The second scenario is the tripwire: the listener must fan out to the
+    // baseline and the mutated scenario only, never to every scenario owned.
     $unrelatedId = ($create)($this->user, 'Unrelated scenario');
     $scenarioId = ($create)($this->user, 'Affected scenario');
 
-    // Each of the two CreateScenario calls above fires ScenarioCreated → 6 dispatches each.
-    // Now Reset the spy via a fresh Bus::fake() — but re-resolve the listener
-    // again so it picks up the new fake. We rebind the listener as a fresh
-    // instance for the same reason.
+    // A fresh fake drops the dispatches the two CreateScenario calls caused, so
+    // the count below covers the AddScenarioMutation alone.
     Bus::fake();
     $this->app->forgetInstance(ProjectForecastOnScenarioChange::class);
     $this->app->make(ProjectForecastOnScenarioChange::class);
@@ -401,7 +387,7 @@ it('15. ScenarioApplier change_series_amount: rewrites low/point/high using new 
     $result = $applier->apply($baseline, $scenarioId, $this->user, $asOf, 30);
 
     expect($result)->toHaveCount(1);
-    // 5% tolerance => low = -1149 * 1.05 = -1206; high = -1149 * 0.95 = -1092.
+    // The series' 5% tolerance redraws the band: -1149 × 1.05 and × 0.95.
     expect($result[0]->pointMinor)->toBe(-1149);
     expect($result[0]->lowMinor)->toBe(-1206);
     expect($result[0]->highMinor)->toBe(-1092);
@@ -431,8 +417,6 @@ it('16. ScenarioApplier shift_series_date with scope=next: shifts only the first
 
     $result = $applier->apply($baseline, $scenarioId, $this->user, $asOf, 90);
 
-    // First occurrence shifted from 2026-05-25 to 2026-06-02 (+8 days).
-    // Second occurrence stays at 2026-06-24.
     $dates = array_map(static fn (ForecastContribution $c): string => $c->date->toDateString(), $result);
     sort($dates);
     expect($dates)->toBe(['2026-06-02', '2026-06-24']);
@@ -462,10 +446,42 @@ it('17. ScenarioApplier shift_series_date with scope=all_subsequent: shifts ever
 
     $result = $applier->apply($baseline, $scenarioId, $this->user, $asOf, 90);
 
-    // Both occurrences shifted by +8 days.
     $dates = array_map(static fn (ForecastContribution $c): string => $c->date->toDateString(), $result);
     sort($dates);
     expect($dates)->toBe(['2026-06-02', '2026-07-02']);
+});
+
+// CarbonImmutable::parse() answers NOW for a blank string rather than throwing,
+// so a shift payload carrying no date computed a delta against today and moved
+// the whole series there. A mutation with nothing to say must leave the
+// baseline exactly as it found it.
+it('17a. ScenarioApplier shift_series_date with a blank date moves nothing', function (): void {
+    /** @var CreateScenario $create */
+    $create = $this->app->make(CreateScenario::class);
+    /** @var AddScenarioMutation $add */
+    $add = $this->app->make(AddScenarioMutation::class);
+    /** @var ScenarioApplier $applier */
+    $applier = $this->app->make(ScenarioApplier::class);
+
+    $seriesId = scSeriesId($this->db, $this->user->id);
+    $scenarioId = ($create)($this->user, 'Shift nowhere');
+    ($add)($scenarioId, $this->user, 'shift_series_date', new ShiftSeriesDatePayload(
+        seriesId: $seriesId,
+        newNextDate: '   ',
+        scope: 'all_subsequent',
+    ));
+
+    $asOf = CarbonImmutable::parse('2026-05-19');
+    $baseline = [
+        new ForecastContribution(date: $asOf->addDays(6), pointMinor: -1199, lowMinor: -1259, highMinor: -1139, currency: 'EUR', fxRateUsed: null, seriesId: $seriesId, accountId: 1),
+        new ForecastContribution(date: $asOf->addDays(36), pointMinor: -1199, lowMinor: -1259, highMinor: -1139, currency: 'EUR', fxRateUsed: null, seriesId: $seriesId, accountId: 1),
+    ];
+
+    $result = $applier->apply($baseline, $scenarioId, $this->user, $asOf, 90);
+
+    $dates = array_map(static fn (ForecastContribution $c): string => $c->date->toDateString(), $result);
+    sort($dates);
+    expect($dates)->toBe(['2026-05-25', '2026-06-24']);
 });
 
 it('19. ScenarioApplier add_one_off on an empty baseline falls back to the user lowest-id account', function (): void {
@@ -476,7 +492,6 @@ it('19. ScenarioApplier add_one_off on an empty baseline falls back to the user 
     /** @var ScenarioApplier $applier */
     $applier = $this->app->make(ScenarioApplier::class);
 
-    // Seed two accounts so the fallback has something to pick from.
     $low = $this->db->connection()->table('accounts')->insertGetId([
         'user_id' => $this->user->id,
         'name' => 'A-low',
@@ -507,8 +522,6 @@ it('19. ScenarioApplier add_one_off on an empty baseline falls back to the user 
     ));
 
     $asOf = CarbonImmutable::parse('2026-05-19');
-    // Empty baseline → the applier resolves the user's lowest-id account
-    // ($low) as the landing pad rather than dropping the contribution.
     $result = $applier->apply([], $scenarioId, $this->user, $asOf, 30);
 
     expect($result)->toHaveCount(1);
@@ -533,10 +546,8 @@ it('20. ScenarioApplier pickAccountIdForOneOff: deterministic tie-break by accou
     ));
 
     $asOf = CarbonImmutable::parse('2026-05-19');
-    // Two accounts with exactly 1 contribution each; the higher
-    // accountId (42) is fed FIRST in the baseline. The earlier arsort
-    // implementation would tie-break by insertion order and pick 42;
-    // the corrected uksort picks the LOWER accountId (7) deterministically.
+    // One contribution each, higher accountId fed first: the old arsort
+    // tie-broke on insertion order and picked 42, the uksort picks 7.
     $baseline = [
         new ForecastContribution(date: $asOf->addDays(5), pointMinor: -100, lowMinor: -100, highMinor: -100, currency: 'EUR', fxRateUsed: null, seriesId: 100, accountId: 42),
         new ForecastContribution(date: $asOf->addDays(6), pointMinor: -100, lowMinor: -100, highMinor: -100, currency: 'EUR', fxRateUsed: null, seriesId: 101, accountId: 7),
@@ -544,20 +555,17 @@ it('20. ScenarioApplier pickAccountIdForOneOff: deterministic tie-break by accou
 
     $result = $applier->apply($baseline, $scenarioId, $this->user, $asOf, 30);
 
-    // 2 baseline + 1 appended one-off.
     expect($result)->toHaveCount(3);
     $oneOff = $result[2];
-    expect($oneOff->accountId)->toBe(7); // ASC tie-break.
+    expect($oneOff->accountId)->toBe(7);
 });
 
 it('18. ScenarioApplier source file does NOT contain JOINs onto transaction-substrate tables', function (): void {
     $contents = (string) file_get_contents(base_path('Modules/Forecasting/Internal/Pipeline/ScenarioApplier.php'));
     $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
 
-    // Affirmative: no JOIN onto any forbidden table.
     foreach (['transactions', 'recurring_series_occurrences', 'chain_links', 'card_statements'] as $table) {
         expect(preg_match("/->(join|leftJoin|rightJoin|crossJoin)\\(\\s*['\"]{$table}['\"]/", $stripped) === 1)->toBeFalse();
     }
-    // Affirmative: no write verbs against any forbidden table.
     expect(preg_match("/->table\\(['\"](transactions|recurring_series|card_statements|chain_links|drift_alerts)['\"]\\)[^;]*->(update|insert|delete|truncate)\\s*\\(/", $stripped) === 1)->toBeFalse();
 });

@@ -2,11 +2,9 @@
 
 declare(strict_types=1);
 
-use Psr\Log\LoggerInterface;
-use Modules\Core\Public\Support\SafeExceptionContext;
-use Illuminate\Database\QueryException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Container\Container;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -16,7 +14,9 @@ use Modules\Core\Internal\Http\Middleware\NoStoreFinancialData;
 use Modules\Core\Internal\Http\Middleware\SetLocale;
 use Modules\Core\Internal\Http\Middleware\TrustedHostGuard;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Desktop\Internal\Http\Middleware\EnsureDatabaseReady;
+use Psr\Log\LoggerInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -38,26 +38,22 @@ return Application::configure(basePath: dirname(__DIR__))
         // responses such as /up.
         $middleware->append(NoStoreFinancialData::class);
         // `web`, not global: both read StartSession and the auth guard.
-        // SetLocale stays AHEAD of EnsureDatabaseReady — that gate redirects a
-        // device with no account, and a redirect short-circuits the stack, so
-        // behind it every pre-signup screen rendered in English regardless.
+        // SetLocale goes first because EnsureDatabaseReady redirects a device
+        // with no account, which left every pre-signup screen in English.
         $middleware->web(append: [
             SetLocale::class,
             EnsureDatabaseReady::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        // A guest hitting a protected route is the intended redirect, not an
-        // error; left reported, a NativePHP cold boot writes one
-        // production.ERROR per route the browser loads before the cookie lands.
+        // The intended redirect, not an error: reported, a NativePHP cold boot
+        // logs one production.ERROR per route loaded before the cookie lands.
         $exceptions->dontReport([
             AuthenticationException::class,
         ]);
 
-        // Method and path ONLY — never the query string or body, which in
-        // this app carry financial data. Without any context a framework 403
-        // logs as a bare stack trace, which is what made the first Windows
-        // 403 flood impossible to attribute to a route.
+        // Method and path ONLY: the query string and body carry financial data
+        // here. With no context at all a 403 logs as an unattributable trace.
         $exceptions->context(function (): array {
             $request = Container::getInstance()->make(Request::class);
 
@@ -67,9 +63,8 @@ return Application::configure(basePath: dirname(__DIR__))
             ];
         });
 
-        // A QueryException's message carries the statement AND its bindings,
-        // and here the bindings ARE the financial data — the default reporter
-        // would log exactly what the context callback above withholds.
+        // A QueryException's message carries its bindings, which here ARE the
+        // financial data the context callback above withholds.
         $exceptions->reportable(function (QueryException $e): bool {
             Container::getInstance()->make(LoggerInterface::class)->error(
                 'Database query failed.',
@@ -80,10 +75,11 @@ return Application::configure(basePath: dirname(__DIR__))
         });
     })
     ->booting(function (): void {
-        // The empty file must exist before provider boot opens the
-        // connection, and must NEVER be seeded or migrated here.
-        // Why, and which two callers depend on it:
-        // ../.docs/architecture/sqlite-file-precreation.md
+        /**
+         * @link ../.docs/architecture/sqlite-file-precreation.md
+         */
+        // The empty file must exist before provider boot opens the connection,
+        // and must NEVER be seeded or migrated here.
         $dbFile = UserDataPathService::databaseFile();
         $dbDir = dirname($dbFile);
         if (! is_dir($dbDir)) {
@@ -91,9 +87,8 @@ return Application::configure(basePath: dirname(__DIR__))
         }
         if (! file_exists($dbFile)) {
             @touch($dbFile);
-            // Owner-only from creation, before the migrator writes anything:
-            // the umask default is commonly 0644 and this file holds every
-            // transaction, balance and account number in plaintext.
+            // Owner-only before the migrator writes anything: the usual 0644
+            // umask would expose every balance and account number in plaintext.
             @chmod($dbFile, 0600);
         }
     })

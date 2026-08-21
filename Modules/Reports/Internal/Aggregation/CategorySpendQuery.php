@@ -6,7 +6,6 @@ namespace Modules\Reports\Internal\Aggregation;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
-use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Support\Lang;
@@ -18,8 +17,7 @@ final class CategorySpendQuery
 {
     use CoercesScalars;
 
-    // SQL GROUP BY category_id already returns one NULL-keyed group; this
-    // just gives it a non-colliding array key distinct from any real
+    // An array key for GROUP BY's NULL group, distinct from any real
     // (positive) autoincrement category id.
     private const UNCATEGORIZED_SENTINEL = -1;
 
@@ -37,19 +35,18 @@ final class CategorySpendQuery
         SpendQueryFilters $filters = new SpendQueryFilters,
     ): array {
         $connection = $this->db->connection();
-        $types = self::metricTypes($metric);
+        $reportMetric = ReportMetric::fromMetric($metric);
+        $types = $reportMetric->types();
         /** @var array<int, int> $map */
         $map = [];
 
-        // 1. Unsplit parents AND "broken split" parents: a parent rolls up
-        // via its own category_id whenever it has no split rows at all OR
-        // its legs do not sum to its settled_amount_minor. Uncategorized
-        // rows are included here under the sentinel key (see architecture doc).
+        // A parent rolls up via its own category_id whenever it has no split
+        // rows at all, or its legs do not sum to its settled_amount_minor.
+        // Uncategorized rows land here under the sentinel key.
         $unsplit = $connection->table('transactions as t')
-            // Kept as one parenthesized group: unparenthesized, SQL's AND
-            // binding tighter than OR would let the unscoped NOT EXISTS
-            // half match every unsplit transaction for every user/period,
-            // not just this query's own scope.
+            // One parenthesized group: AND binds tighter than OR, so unbracketed
+            // the NOT EXISTS half would match every unsplit transaction for every
+            // user and period rather than this query's scope.
             ->whereRaw('(NOT EXISTS (SELECT 1 FROM transaction_splits AS ts WHERE ts.transaction_id = t.id) OR COALESCE((SELECT SUM(ts.settled_amount_minor) FROM transaction_splits AS ts WHERE ts.transaction_id = t.id), 0) <> t.settled_amount_minor)')
             ->where('t.user_id', $user->id)
             ->where('t.settled_currency', $currency)
@@ -64,7 +61,7 @@ final class CategorySpendQuery
             ->when($filters->amountDirection === 'in', static fn (QueryBuilder $q): QueryBuilder => $q->where('t.settled_amount_minor', '>', 0))
             ->when($filters->amountDirection === 'out', static fn (QueryBuilder $q): QueryBuilder => $q->where('t.settled_amount_minor', '<', 0))
             ->groupBy('t.category_id')
-            ->get(['t.category_id', $connection->raw(self::unsplitAmountExpr($metric).' AS amount_minor')]);
+            ->get(['t.category_id', $connection->raw($reportMetric->sumExpr('t.').' AS amount_minor')]);
 
         foreach ($unsplit as $row) {
             /** @var stdClass $row */
@@ -72,10 +69,8 @@ final class CategorySpendQuery
             $map[$key] = ($map[$key] ?? 0) + self::toInt($row->amount_minor);
         }
 
-        // 2. Split legs: same user/period/type predicate as the parent,
-        // joined through the parent for user_id/posted_at/type (legs carry
-        // neither). transaction_splits.category_id is required, so legs
-        // never need the uncategorized sentinel.
+        // Split legs carry no user_id/posted_at/type, so those are joined through
+        // the parent. transaction_splits.category_id is required, so no sentinel.
         $legs = $connection->table('transaction_splits as ts')
             ->join('transactions as t', 't.id', '=', 'ts.transaction_id')
             ->where('t.user_id', $user->id)
@@ -83,10 +78,8 @@ final class CategorySpendQuery
             ->whereIn('t.type', $types)
             ->where('t.posted_at', '>=', $period->start->toDateString())
             ->where('t.posted_at', '<', $period->endExclusive->toDateString())
-            // Only attribute legs when the split is internally consistent
-            // (legs sum to the parent). Broken splits fall back to the
-            // parent category above; ignored here so the two branches
-            // never double-count nor drop spend.
+            // Legs count only when they sum to the parent; a broken split falls
+            // back to the parent above, so the branches never double-count.
             ->whereRaw('(SELECT SUM(ts2.settled_amount_minor) FROM transaction_splits AS ts2 WHERE ts2.transaction_id = ts.transaction_id) = t.settled_amount_minor')
             ->when($filters->accountIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('t.account_id', $filters->accountIds))
             ->when($filters->categoryIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('ts.category_id', $filters->categoryIds))
@@ -96,7 +89,7 @@ final class CategorySpendQuery
             ->when($filters->amountDirection === 'in', static fn (QueryBuilder $q): QueryBuilder => $q->where('ts.settled_amount_minor', '>', 0))
             ->when($filters->amountDirection === 'out', static fn (QueryBuilder $q): QueryBuilder => $q->where('ts.settled_amount_minor', '<', 0))
             ->groupBy('ts.category_id')
-            ->get(['ts.category_id', $connection->raw(self::legAmountExpr($metric).' AS amount_minor')]);
+            ->get(['ts.category_id', $connection->raw($reportMetric->sumExpr('ts.').' AS amount_minor')]);
 
         foreach ($legs as $row) {
             /** @var stdClass $row */
@@ -131,47 +124,6 @@ final class CategorySpendQuery
         }
 
         return $result;
-    }
-
-    /**
-     * @return list<string>
-     */
-    private static function metricTypes(string $metric): array
-    {
-        return match ($metric) {
-            'spend' => ['expense'],
-            'income' => ['income'],
-            'net' => ['expense', 'income'],
-            default => throw new InvalidArgumentException("Unknown report metric: {$metric}"),
-        };
-    }
-
-    // Two separate literal-string-returning methods (t./ts. prefix) rather
-    // than one parameterized helper: Connection::raw() requires a
-    // literal-string argument, which a runtime string-interpolated column
-    // name would not satisfy under strict PHPStan analysis.
-    /**
-     * @return literal-string
-     */
-    private static function unsplitAmountExpr(string $metric): string
-    {
-        return match ($metric) {
-            'spend' => 'SUM(-t.settled_amount_minor)',
-            'income', 'net' => 'SUM(t.settled_amount_minor)',
-            default => throw new InvalidArgumentException("Unknown report metric: {$metric}"),
-        };
-    }
-
-    /**
-     * @return literal-string
-     */
-    private static function legAmountExpr(string $metric): string
-    {
-        return match ($metric) {
-            'spend' => 'SUM(-ts.settled_amount_minor)',
-            'income', 'net' => 'SUM(ts.settled_amount_minor)',
-            default => throw new InvalidArgumentException("Unknown report metric: {$metric}"),
-        };
     }
 
     /**

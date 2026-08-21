@@ -13,12 +13,13 @@ use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Modules\Auth\Public\Actions\SignupAction;
 use Modules\Auth\Public\Recovery\RecoveryCodeFormatter;
-use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
-use Modules\Mobile\Internal\Identity\RecoveryCodesExportBridge;
 use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\ValidationMessages;
 use Modules\Mobile\Internal\Identity\MobileProvisioningCredentials;
+use Modules\Mobile\Internal\Identity\RecoveryCodesExportBridge;
 use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
 use Modules\Sync\Public\Services\PairingGateway;
 use Throwable;
@@ -101,7 +102,7 @@ final class MobileImportBootstrap extends Component
             // over sync, and a local set would collide id-for-id with them.
             $userId = $signup->__invoke($this->username, $this->password, seedsStarterData: false)['user']->id;
         } catch (ValidationException $e) {
-            $this->flashMessage = self::firstErrorMessage($e);
+            $this->flashMessage = ValidationMessages::first($e, 'mobile::import.errors.account_failed');
             $this->password = '';
             $this->passwordConfirmation = '';
 
@@ -289,25 +290,5 @@ final class MobileImportBootstrap extends Component
         $codes = $session->get(self::RECOVERY_CODES_SESSION_KEY);
 
         return $codes ?? [];
-    }
-
-    private static function firstErrorMessage(ValidationException $exception): string
-    {
-        /** @var array<string, mixed> $errors */
-        $errors = $exception->errors();
-
-        foreach ($errors as $messages) {
-            if (! is_array($messages)) {
-                continue;
-            }
-
-            foreach ($messages as $message) {
-                if (is_string($message) && $message !== '') {
-                    return $message;
-                }
-            }
-        }
-
-        return Lang::get('mobile::import.errors.account_failed');
     }
 }

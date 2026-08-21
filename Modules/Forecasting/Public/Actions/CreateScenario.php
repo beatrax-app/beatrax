@@ -11,6 +11,7 @@ use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\QueryFailure;
 use Modules\Forecasting\Models\ForecastScenario;
 use Modules\Forecasting\Public\Events\ScenarioCreated;
 use Modules\Sync\Public\Events\EntityMutated;
@@ -46,7 +47,7 @@ final class CreateScenario
                 ]);
             });
         } catch (QueryException $e) {
-            if (self::looksLikeUniqueViolation($e)) {
+            if (QueryFailure::isUniqueViolation($e)) {
                 throw new InvalidArgumentException(Lang::get('forecasting::scenario.errors.name_taken'), 0, $e);
             }
             throw $e;
@@ -64,10 +65,10 @@ final class CreateScenario
         $this->events->dispatch(new EntityMutated(
             table: 'forecast_scenarios',
             pk: $newId,
-            userId: (int) $user->id,
+            userId: $user->id,
             mutationType: 'create',
             dirtyFields: [
-                'user_id' => (int) $user->id,
+                'user_id' => $user->id,
                 'name' => $trimmed,
                 'description' => $description,
                 'created_at' => $now,
@@ -76,14 +77,5 @@ final class CreateScenario
         ));
 
         return $newId;
-    }
-
-    private static function looksLikeUniqueViolation(QueryException $e): bool
-    {
-        $msg = $e->getMessage();
-
-        return str_contains($msg, 'UNIQUE constraint failed')
-            || str_contains($msg, 'Integrity constraint violation')
-            || str_contains($msg, 'Duplicate entry');
     }
 }

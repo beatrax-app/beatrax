@@ -80,10 +80,14 @@ final class EnsureDatabaseReady
         return $this->hasExemptPrefix($name) || $this->hasExemptSuffix($name);
     }
 
+    // The prefix has to end on a dot, or it is not a prefix but a substring.
+    // 'sw' is two characters, so a plain str_starts_with exempted any future
+    // route named sw-anything from the gate that decides whether the database
+    // is ready — silently, and only on a fresh install.
     private function hasExemptPrefix(string $name): bool
     {
         foreach (self::EXEMPT_ROUTE_PREFIXES as $prefix) {
-            if (str_starts_with($name, $prefix)) {
+            if ($name === $prefix || str_starts_with($name, $prefix.'.')) {
                 return true;
             }
         }

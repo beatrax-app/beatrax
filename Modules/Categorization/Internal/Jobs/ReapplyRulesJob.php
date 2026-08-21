@@ -22,6 +22,7 @@ use Modules\Categorization\Internal\Services\RuleEngine;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
@@ -216,8 +217,7 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
             $logger->warning('ReapplyRulesJob skipped a row after a match/apply failure.', [
                 'user_id' => $userId,
                 'transaction_id' => $transactionId,
-                'exception' => $e::class,
-                'message' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
             ]);
 
             return;

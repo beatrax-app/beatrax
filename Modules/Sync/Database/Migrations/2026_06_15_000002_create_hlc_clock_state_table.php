@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Illuminate\Database\Migrations\Migration;
 use Modules\Core\Database\Support\ModuleMigration;
 
 return new class extends ModuleMigration

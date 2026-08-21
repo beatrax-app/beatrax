@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Desktop\Internal\Listeners;
 
-use Illuminate\Contracts\Session\Session;
 use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Public\Services\SessionFactory;
 

@@ -6,6 +6,7 @@ namespace Modules\Notifications\Internal\Listeners;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Forecasting\Public\Events\ForecastShortfallDetected;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Internal\Support\NotificationCopyRenderer;
@@ -41,7 +42,7 @@ final class PersistForecastShortfall
             // Swallow - a failed persist must never break the
             // originating shortfall-detection run.
             $this->log->error('PersistForecastShortfall: failed to persist forecast shortfall notification', [
-                'exception' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
                 'accountId' => $event->accountId,
                 'userId' => $event->userId,
             ]);

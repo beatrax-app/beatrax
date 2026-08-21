@@ -14,6 +14,7 @@ use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Internal\Support\AmountStringParser;
 use Modules\Forecasting\Public\Actions\SetAccountForecastBuffer;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class AccountBufferEditor extends Component
@@ -55,7 +56,7 @@ final class AccountBufferEditor extends Component
         $this->currency = $currency;
         $this->accountName = $accountName;
         $this->bufferInput = $currentBufferMinor !== null
-            ? number_format($currentBufferMinor / 100, 2, ',', '.')
+            ? MoneyInput::formatMinor($currentBufferMinor)
             : '';
     }
 

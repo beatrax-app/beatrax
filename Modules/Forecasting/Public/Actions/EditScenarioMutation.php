@@ -9,11 +9,9 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Forecasting\Internal\Support\ScenarioSeriesResolver;
 use Modules\Forecasting\Models\ForecastScenarioMutation;
-use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\CancelSeriesPayload;
-use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ChangeSeriesAmountPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ScenarioMutationPayload;
-use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayload;
 use Modules\Forecasting\Public\Events\ScenarioMutated;
 use Modules\Sync\Public\Events\EntityMutated;
 use stdClass;
@@ -25,6 +23,7 @@ final class EditScenarioMutation
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
         private readonly Dispatcher $events,
+        private readonly ScenarioSeriesResolver $seriesResolver,
     ) {}
 
     public function __invoke(int $mutationId, User $user, ScenarioMutationPayload $newPayload): void
@@ -47,9 +46,9 @@ final class EditScenarioMutation
             ? (int) $row->forecast_scenario_id
             : 0;
 
-        $targetSeriesId = $this->targetSeriesIdFor($newPayload);
+        $targetSeriesId = $this->seriesResolver->targetSeriesIdFor($newPayload);
         if ($targetSeriesId !== null) {
-            $this->assertSeriesOwnedByUser($targetSeriesId, $user);
+            $this->seriesResolver->assertSeriesOwnedByUser($targetSeriesId, $user);
         }
 
         $now = $this->clock->now();
@@ -83,7 +82,7 @@ final class EditScenarioMutation
         $this->events->dispatch(new EntityMutated(
             table: 'forecast_scenario_mutations',
             pk: $mutationId,
-            userId: (int) $user->id,
+            userId: $user->id,
             mutationType: 'edit',
             dirtyFields: [
                 'target_series_id' => $targetSeriesId,
@@ -97,26 +96,5 @@ final class EditScenarioMutation
             mutationId: $mutationId,
             kind: $existingKind,
         ));
-    }
-
-    private function targetSeriesIdFor(ScenarioMutationPayload $payload): ?int
-    {
-        return match (true) {
-            $payload instanceof CancelSeriesPayload => $payload->seriesId,
-            $payload instanceof ChangeSeriesAmountPayload => $payload->seriesId,
-            $payload instanceof ShiftSeriesDatePayload => $payload->seriesId,
-            default => null,
-        };
-    }
-
-    private function assertSeriesOwnedByUser(int $seriesId, User $user): void
-    {
-        $owns = $this->db->connection()->table('recurring_series')
-            ->where('id', $seriesId)
-            ->where('user_id', $user->id)
-            ->exists();
-        if (! $owns) {
-            throw new NotFoundHttpException('Recurring series not found.');
-        }
     }
 }

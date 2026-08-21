@@ -12,10 +12,6 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use stdClass;
 
-// Streams every row below the composer's current normalization
-// version, composes the new fingerprint in memory, detects collisions
-// before writing anything, then applies all UPDATEs in one transaction
-// (or returns a failure outcome untouched on collision).
 final class FingerprintRederiveService
 {
     use CoercesScalars;
@@ -111,9 +107,6 @@ final class FingerprintRederiveService
         };
     }
 
-    // Writes every pending fingerprint UPDATE inside one DB transaction,
-    // then reports the applied outcome. Reached only when a collision-free
-    // set of updates exists and the run is not a dry-run.
     /**
      * @param  array<int, string>  $updates  Maps transactions.id to the new sha256 fingerprint
      */
@@ -138,9 +131,8 @@ final class FingerprintRederiveService
         return FingerprintRederiveOutcome::applied($targetVersion, $pendingCount);
     }
 
-    // Date columns stored as ISO strings round-trip through
-    // CarbonImmutable so the composer sees the same value it would for
-    // a freshly-built canonical.
+    // ISO date strings round-trip through CarbonImmutable so the composer
+    // sees the same value it would for a freshly-built canonical.
     private function buildCanonicalFromRow(stdClass $row, int $targetVersion): CanonicalTransaction
     {
         return new CanonicalTransaction(
@@ -181,18 +173,5 @@ final class FingerprintRederiveService
         }
 
         return is_numeric($value) ? (int) $value : $fallback;
-    }
-
-    private static function toStringOrNull(mixed $value): ?string
-    {
-        if ($value === null) {
-            return null;
-        }
-
-        if (is_string($value)) {
-            return $value;
-        }
-
-        return is_scalar($value) ? (string) $value : null;
     }
 }

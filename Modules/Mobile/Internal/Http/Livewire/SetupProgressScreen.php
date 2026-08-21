@@ -11,6 +11,7 @@ use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Mobile\Internal\Sync\InitialSyncPuller;
 use Modules\Mobile\Internal\Sync\PeerLanAddress;
 use Modules\Mobile\Internal\Sync\SetupStep;
@@ -83,8 +84,7 @@ final class SetupProgressScreen extends Component
 
             $logger->warning('SetupProgressScreen: initial-sync tick failed — retrying on the next poll.', [
                 'user_id' => $currentUser->id(),
-                'exception' => $e::class,
-                'message' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
             ]);
         }
 

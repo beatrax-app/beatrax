@@ -46,7 +46,7 @@ final class DeleteScenario
         $this->events->dispatch(new EntityMutated(
             table: 'forecast_scenarios',
             pk: $scenarioId,
-            userId: (int) $user->id,
+            userId: $user->id,
             mutationType: 'delete',
         ));
     }

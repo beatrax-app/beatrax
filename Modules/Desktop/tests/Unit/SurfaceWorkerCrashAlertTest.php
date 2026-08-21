@@ -5,28 +5,10 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Support\Facades\Http;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Desktop\Internal\Listeners\SurfaceWorkerCrashAlert;
 use Modules\Desktop\Internal\Native\WindowFocusState;
 use Native\Desktop\Events\ChildProcess\ProcessExited;
-
-/*
- * Pure-unit drives for the D-07 worker-crash-loop listener — windowed
- * counter behaviour without touching the system_alerts table.
- *
- * The listener exposes the rolling-window threshold + window-seconds as
- * public class constants so the test assertions reference the same
- * source of truth as production. `SurfaceWorkerCrashAlert::isCrashLoop()`
- * returns true only after the threshold is reached within the window.
- *
- * The OS-notification half of the listener (D-13 focus-gate) is also
- * verified here as a pure boolean — the listener exposes a
- * `shouldFireOsNotification()` helper that consults WindowFocusState.
- * No `Notification` facade fake exists in NativePHP v2 (NATIVEPHP-FAKES.md),
- * so the live `Notification::title()->...->show()` call surfaces in the
- * feature test as an outbound POST asserted via Http::fake().
- */
 
 it('exposes the windowed crash-loop threshold as public constants', function (): void {
     expect(SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD)->toBeGreaterThanOrEqual(2);
@@ -75,8 +57,6 @@ it('returns true after threshold ProcessExited events within the rolling window'
         app(UrlGenerator::class),
     );
 
-    // Fire THRESHOLD exits within the rolling window — the last one
-    // should trip the crash-loop signal.
     for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD; $i++) {
         $clock->time = $now->addSeconds($i * 10);
         $listener->recordExit(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));
@@ -104,9 +84,8 @@ it('does not flag a crash-loop when exits are spaced beyond the window', functio
         app(UrlGenerator::class),
     );
 
-    // Space the exits one full window apart so only the most recent
-    // exit ever falls inside the rolling window — the threshold is
-    // never reached.
+    // Spacing the exits a full window apart leaves only the most recent one
+    // inside the window, so the threshold is never reached.
     $windowSeconds = SurfaceWorkerCrashAlert::CRASH_LOOP_WINDOW_SECONDS;
     for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD + 2; $i++) {
         $clock->time = $now->addSeconds($i * ($windowSeconds + 10));
@@ -132,9 +111,8 @@ it('ignores ProcessExited events for non-worker aliases', function (): void {
         app(UrlGenerator::class),
     );
 
-    // Fire enough events to trip the threshold — but tagged with a
-    // foreign alias. The crash-loop check stays false for the worker
-    // alias because the foreign events are not counted.
+    // Enough events to trip the threshold, but under a foreign alias, which the
+    // worker's counter must not count.
     for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD + 2; $i++) {
         $listener->recordExit(new ProcessExited(alias: 'something-else', code: 1));
     }
@@ -150,9 +128,7 @@ it('is bound as a singleton so its crash-counter state persists across resolutio
 });
 
 it('uses the verbatim UI-SPEC body for the worker-crashed alert', function (): void {
-    // The locked copy lives as a public class constant so a future
-    // copy edit lands in one place and the test references the same
-    // source of truth.
+    // The copy lives on a class constant so an edit lands in one place.
     expect(SurfaceWorkerCrashAlert::ALERT_BODY)
         ->toContain("Beatrax's background processing stopped unexpectedly")
         ->toContain('Imports and email scans are paused')

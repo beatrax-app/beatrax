@@ -6,6 +6,7 @@ namespace Modules\Notifications\Internal\Listeners;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Internal\Support\NotificationCopyRenderer;
@@ -45,7 +46,7 @@ final class PersistPositionDigest
             // Swallow - a failed persist must never break the
             // originating digest job run.
             $this->log->error('PersistPositionDigest: failed to persist position digest', [
-                'exception' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
                 'userId' => $event->userId,
                 'cadence' => $event->cadence,
             ]);

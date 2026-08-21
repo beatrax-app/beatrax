@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Notifications\Internal\Listeners;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Notifications\Internal\StateMachines\NotificationStateMachine;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Public\Enums\NotificationState;
@@ -55,7 +56,7 @@ final class ResolveSettledReminder
             // Swallow - a failed resolve must never break the
             // originating settlement-detection path.
             $this->log->error('ResolveSettledReminder: failed to resolve settled reminder', [
-                'exception' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
                 'seriesId' => $event->seriesId,
                 'userId' => $event->userId,
             ]);

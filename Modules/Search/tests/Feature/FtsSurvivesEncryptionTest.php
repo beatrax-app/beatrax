@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
-use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
@@ -31,7 +31,7 @@ it('a full-text search still matches a transaction description/counterparty afte
     // The keyring can only be generated while the app lock is unlocked.
     /** @var Session $session */
     $session = $this->app->make(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
 
     /** @var GdkKeyringService $keyring */
     $keyring = $this->app->make(GdkKeyringService::class);
@@ -71,7 +71,7 @@ it('the real import path (RecordTransactions, genuinely encrypted) still indexes
 
     /** @var Session $session */
     $session = $this->app->make(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
 
     /** @var GdkKeyringService $keyring */
     $keyring = $this->app->make(GdkKeyringService::class);

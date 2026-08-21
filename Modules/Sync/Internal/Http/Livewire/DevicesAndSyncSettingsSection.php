@@ -16,6 +16,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\Http\Livewire\Concerns\ManagesDeviceRenaming;
 use Modules\Sync\Internal\Http\Livewire\Concerns\ReadsDeviceState;
@@ -153,8 +154,7 @@ final class DevicesAndSyncSettingsSection extends Component
             $this->encryptionActivationFailed = true;
             $logger->warning('At-rest encryption auto-activation failed during enableSync.', [
                 'user_id' => $userId,
-                'exception' => $e::class,
-                'message' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
             ]);
         }
 

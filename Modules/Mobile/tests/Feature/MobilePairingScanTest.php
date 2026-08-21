@@ -8,7 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Livewire\Livewire;
-use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Http\Livewire\MobilePairingScan;
@@ -42,7 +42,7 @@ function pairingScanTestUser(string $username): User
  */
 function pairingScanSetUpIdentity(User $user, Session $session): array
 {
-    (new LockStateManager)->unlock($session, str_repeat('k', 32));
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
 
     /** @var DeviceIdentityService $identityService */
     $identityService = app(DeviceIdentityService::class);

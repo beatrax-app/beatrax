@@ -2,9 +2,6 @@
 
 declare(strict_types=1);
 
-use Illuminate\Container\Container;
-use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\Migrations\Migration;
 use Modules\Core\Database\Support\ModuleMigration;
 
 // SQLite cannot ALTER a trigger in place, so both pairs are dropped and

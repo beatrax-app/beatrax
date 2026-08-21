@@ -213,16 +213,4 @@ final class RetypeByAliasResolver
 
         return $touched;
     }
-
-    private static function toStringOrNull(mixed $value): ?string
-    {
-        if ($value === null) {
-            return null;
-        }
-        if (is_string($value)) {
-            return $value;
-        }
-
-        return is_scalar($value) ? (string) $value : null;
-    }
 }

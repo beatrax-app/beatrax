@@ -10,6 +10,7 @@ use Illuminate\Database\QueryException;
 use Modules\Categorization\Public\Events\TransactionCategorized;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\QueryFailure;
 use Modules\Import\Public\Pipeline\NormalizeStage;
 use Modules\Sync\Public\Events\EntityMutated;
 
@@ -70,7 +71,7 @@ final class MerchantMemoryWriter
 
             return;
         } catch (QueryException $e) {
-            if (! self::isUniqueViolation($e)) {
+            if (! QueryFailure::isUniqueViolation($e)) {
                 throw $e;
             }
         }
@@ -160,18 +161,5 @@ final class MerchantMemoryWriter
                 'default_category_id' => $merchant->default_category_id,
             ],
         ));
-    }
-
-    private static function isUniqueViolation(QueryException $e): bool
-    {
-        $sqlState = (string) $e->getCode();
-        if ($sqlState === '23000') {
-            return true;
-        }
-        $message = $e->getMessage();
-
-        return str_contains($message, 'UNIQUE constraint failed')
-            || str_contains($message, 'Duplicate entry')
-            || str_contains($message, 'duplicate key value');
     }
 }

@@ -40,7 +40,7 @@ final readonly class AnomalySuppressionRuleQuery
         $counterpartyIds = [];
         foreach ($rows as $row) {
             /** @var stdClass $row */
-            $id = self::toIntOrNull($row->counterparty_id ?? null);
+            $id = self::toPositiveIntOrNull($row->counterparty_id ?? null);
             if ($id !== null) {
                 $counterpartyIds[] = $id;
             }
@@ -60,7 +60,7 @@ final readonly class AnomalySuppressionRuleQuery
         $result = [];
         foreach ($rows as $row) {
             /** @var stdClass $row */
-            $counterpartyId = self::toIntOrNull($row->counterparty_id ?? null);
+            $counterpartyId = self::toPositiveIntOrNull($row->counterparty_id ?? null);
             $currency = $this->toCurrency($row->currency ?? null);
 
             $result[] = new AnomalySuppressionRuleDto(
@@ -81,15 +81,5 @@ final readonly class AnomalySuppressionRuleQuery
     private function toCurrency(mixed $value): string
     {
         return is_string($value) && $value !== '' ? $value : $this->baseCurrency->code();
-    }
-
-    private static function toIntOrNull(mixed $value): ?int
-    {
-        if (! is_numeric($value)) {
-            return null;
-        }
-        $int = (int) $value;
-
-        return $int > 0 ? $int : null;
     }
 }

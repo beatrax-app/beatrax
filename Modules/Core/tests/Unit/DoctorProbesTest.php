@@ -214,6 +214,39 @@ it('BackupFreshnessProbe returns ok and does NOT write an alert when a fresh sid
     expect(SystemAlert::query()->where('kind', 'backup_overdue')->count())->toBe(0);
 });
 
+// CarbonImmutable::parse() answers NOW for a blank string instead of throwing,
+// so a sidecar carrying a whitespace-only completed_at read as a backup that
+// finished this second — the probe said "0h old", stayed green, and wrote no
+// alert. A backup that never completed looking current is a lie the one
+// morning it matters, so the blank must reach the caller as "no backup".
+it('BackupFreshnessProbe never reads a blank completed_at as a backup finished right now', function (): void {
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    /** @var Filesystem $files */
+    $files = $this->app->make(Filesystem::class);
+    /** @var Clock $clock */
+    $clock = $this->app->make(Clock::class);
+
+    /** @var string $backupsDir */
+    $backupsDir = $this->backupsDir;
+    $files->makeDirectory($backupsDir, 0o755, recursive: true, force: true);
+
+    $sidecar = $backupsDir.DIRECTORY_SEPARATOR.'beatrax-blank.sqlite.meta.json';
+    $files->put($sidecar, (string) json_encode([
+        'data_version' => 1,
+        'started_at' => $clock->now()->subHour()->toIso8601String(),
+        'completed_at' => '   ',
+        'integrity' => 'ok',
+    ]));
+
+    $result = (new BackupFreshnessProbe($files, $clock, $db, new UserDataPathService))->run();
+
+    expect($result->severity)->toBe('warning');
+    expect($result->metadata)->toHaveKey('hours_old');
+    expect($result->metadata['hours_old'])->toBeNull();
+    expect(SystemAlert::query()->where('kind', 'backup_overdue')->count())->toBe(1);
+});
+
 it('BackupFreshnessProbe returns warning AND writes an alert when newest sidecar is older than 48h', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);

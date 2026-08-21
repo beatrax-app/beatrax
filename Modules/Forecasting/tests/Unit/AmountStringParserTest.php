@@ -4,15 +4,8 @@ declare(strict_types=1);
 
 use Modules\Forecasting\Internal\Support\AmountStringParser;
 
-/*
- * Regression coverage for the shared "last-separator-wins" money input
- * parser. The earlier inline implementation in ScenarioEditorSidebar +
- * ModelWhatIfDropdown stripped every dot indiscriminately, so the
- * US-style decimal "12.50" silently became 1250 → 125000 minor units
- * (€1,250 instead of €12.50). These tests pin the contract for all
- * four call sites (AccountBufferEditor, OpeningBalanceEditor,
- * ScenarioEditorSidebar, ModelWhatIfDropdown).
- */
+// The inline parsers this replaced stripped every dot, so a US-style "12.50"
+// read as 1250 and became 125000 minor — €1,250 charged instead of €12.50.
 
 it('parses a US-style decimal "12.50" as 1250 minor units', function (): void {
     expect(AmountStringParser::toMinor('12.50'))->toBe(1250);
@@ -62,7 +55,7 @@ it('throws on whitespace-only input', function (): void {
 
 it('throws on non-numeric garbage', function (): void {
     expect(fn () => AmountStringParser::toMinor('abc'))
-        ->toThrow(InvalidArgumentException::class, 'Amount must be a number.');
+        ->toThrow(InvalidArgumentException::class, 'Amount must be a number with at most two decimals.');
 });
 
 it('rejects a negative value when allowNegative=false', function (): void {
@@ -79,8 +72,16 @@ it('accepts zero by default', function (): void {
     expect(AmountStringParser::toMinor('0'))->toBe(0);
 });
 
-it('rounds half-up at the 2dp boundary', function (): void {
-    // 12.345 → round to 1234.5 minor units → 1235 (banker's-half-to-even
-    // would give 1234, but PHP round() defaults to half-away-from-zero).
-    expect(AmountStringParser::toMinor('12.345'))->toBe(1235);
+it('refuses a third decimal rather than rounding it away', function (): void {
+    // "12.345" used to become 1235 minor. Silently deciding which of two
+    // amounts the typist meant is worse than asking, and no other amount
+    // input in the app does it.
+    expect(fn () => AmountStringParser::toMinor('12.345'))
+        ->toThrow(InvalidArgumentException::class);
+});
+
+it('refuses scientific notation, which is_numeric() used to wave through', function (): void {
+    // "1e3" parsed as €1,000 here and as nothing anywhere else.
+    expect(fn () => AmountStringParser::toMinor('1e3'))
+        ->toThrow(InvalidArgumentException::class);
 });

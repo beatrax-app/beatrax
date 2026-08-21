@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Models\User;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
-use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
@@ -94,7 +94,7 @@ it('encrypts pre-existing plaintext tax_transaction_tags.note and transaction_sp
 
     /** @var Session $session */
     $session = $this->app->make(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
 
     /** @var EncryptionMigrationService $migration */
     $migration = $this->app->make(EncryptionMigrationService::class);

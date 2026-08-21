@@ -2,13 +2,9 @@
 
 declare(strict_types=1);
 
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
 
-/**
- * @link ../../../../.docs/features/notifications/architecture.md#per-device-preferences
- */
 return new class extends ModuleMigration
 {
     public function up(): void

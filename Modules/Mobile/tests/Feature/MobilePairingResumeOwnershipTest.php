@@ -7,7 +7,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
-use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Mobile\Internal\Http\Livewire\MobilePairingScan;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
@@ -15,22 +15,8 @@ use Modules\Sync\Public\Services\PairingGateway;
 
 uses(RefreshDatabase::class);
 
-/*
- * Resuming a live handshake on the phone.
- *
- * PairingGateway::inFlightFor() answers "is a ceremony running for this
- * ACCOUNT", which is not the same question as "is a ceremony running for this
- * DEVICE". Two other devices on the same account mid-handshake produced a row
- * this screen adopted whole — token id, safety words, and the relay addressing
- * it re-emits its responder-accept to — and dropped the user onto a trust gate
- * for a pairing between two machines neither of which was the phone.
- *
- * The side is derived from this device's own identity now, and only a row this
- * device is the responder of is resumed. Helpers are prefixed rather than
- * sharing the desktop file's names: Pest declares them globally, and two files
- * declaring resumeUser() would fatal on a full-suite run.
- */
-
+// Prefixed rather than sharing the desktop file's helper names: Pest declares
+// these globally, and two files declaring resumeUser() would fatal on a full run.
 function pairingOwnershipUser(string $username): User
 {
     return User::query()->create([
@@ -73,7 +59,7 @@ beforeEach(function (): void {
 
     /** @var Session $session */
     $session = app(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat('k', 32));
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
     app(DeviceIdentityService::class)->generateAndPersist((int) $this->user->id, $session);
 
     $this->localDeviceId = (string) app(PairingGateway::class)->currentDeviceId((int) $this->user->id, $session);
@@ -83,6 +69,11 @@ beforeEach(function (): void {
 afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
+
+// PairingGateway::inFlightFor() answers whether a ceremony is running for the
+// account, not for this device. Two other devices mid-handshake produced a row
+// this screen adopted whole, dropping the user onto a trust gate for a pairing
+// between two machines neither of which was the phone.
 
 it('does not adopt a ceremony between two other devices on the same account', function (): void {
     pairingOwnershipRow((int) $this->user->id, 'device-one', 'device-two', 'awaiting_confirm');
@@ -96,9 +87,8 @@ it('does not adopt a ceremony between two other devices on the same account', fu
 });
 
 it('does not adopt a ceremony whose responder side is still unclaimed', function (): void {
-    // The initiator has issued a code nobody has scanned yet. It is a live row
-    // for the account, and this phone is no more part of it than any other
-    // device the user owns.
+    // The initiator has issued a code nobody has scanned yet, and this phone is no
+    // more part of that row than any other device the user owns.
     pairingOwnershipRow((int) $this->user->id, 'device-one', null, 'awaiting_confirm');
 
     Livewire::test(MobilePairingScan::class)

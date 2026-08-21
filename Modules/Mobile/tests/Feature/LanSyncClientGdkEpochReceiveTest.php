@@ -17,7 +17,7 @@ use Amp\Websocket\WebsocketTimestamp;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\UserDataPathService;
@@ -208,7 +208,7 @@ it('routes a pushed GDK_EPOCH_WRAP frame through the authenticated session and c
 
     /** @var Session $session */
     $session = app(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat('k', 32));
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
 
     /** @var DeviceIdentityService $identityService */
     $identityService = app(DeviceIdentityService::class);
@@ -286,7 +286,7 @@ it('skips a malformed pushed frame without throwing and without appending anythi
 
     /** @var Session $session */
     $session = app(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat('k', 32));
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
 
     /** @var DeviceIdentityService $identityService */
     $identityService = app(DeviceIdentityService::class);
@@ -447,7 +447,7 @@ it('throws LanSyncException when the peer disconnects before sending the Noise m
 
     /** @var Session $session */
     $session = app(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat('k', 32));
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
 
     /** @var DeviceIdentityService $identityService */
     $identityService = app(DeviceIdentityService::class);
@@ -475,7 +475,7 @@ it('treats a timed-out GDK phase header as a retryable stall and appends nothing
 
     /** @var Session $session */
     $session = app(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat('k', 32));
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
 
     // The header opens the phase, so a timeout waiting for it is a stalled
     // peer, not "no more wraps". syncOnce() maps the throw onto its
@@ -503,7 +503,7 @@ it('ends the GDK receive loop on a well-formed but non-wrap control frame', func
 
     /** @var Session $session */
     $session = app(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat('k', 32));
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
 
     /** @var DeviceIdentityService $identityService */
     $identityService = app(DeviceIdentityService::class);

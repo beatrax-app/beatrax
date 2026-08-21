@@ -15,6 +15,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\SafeTrace;
 use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Import\Public\Dto\ConsolidatedPreviewBatch;
@@ -45,8 +46,8 @@ final class FirstImportStep extends Component
 
     public bool $isCommitting = false;
 
-    // Recomputed on every render(), so walking back to a connector step and
-    // returning shows the new run without a manual refresh.
+    // Recomputed every render() so a run added on a connector step shows up
+    // on the way back without a manual refresh.
     /** @var list<int> */
     public array $stashedImportRunIds = [];
 
@@ -64,8 +65,6 @@ final class FirstImportStep extends Component
         $this->expandedRowCount = [];
     }
 
-    // Empty batch before the first render, so tests can assert on state
-    // rather than on rendered HTML.
     public function currentPreview(): ConsolidatedPreviewBatch
     {
         return $this->preview ?? new ConsolidatedPreviewBatch(
@@ -75,9 +74,8 @@ final class FirstImportStep extends Component
         );
     }
 
-    // accountId arrives from a child component and is never trusted on the
-    // UPDATE: persistCommit() re-filters on where('user_id', ...) so a forged
-    // dispatch cannot write to another user's row.
+    // accountId comes off a dispatch and is never trusted on the UPDATE:
+    // persistCommit() re-filters on user_id so a forgery cannot write elsewhere.
     #[On('starting-balance.confirmed')]
     public function onStartingBalanceConfirmed(int $accountId, int $minor, string $date): void
     {
@@ -97,9 +95,6 @@ final class FirstImportStep extends Component
 
     // Not named commit(): Livewire reserves $commit as a magic state-sync
     // action and a method by that name never reaches user code.
-    /**
-     * @link ../../../../../../.docs/features/onboarding/architecture.md#firstimportstep--the-consolidated-commit-surface
-     */
     public function commitEverything(
         DatabaseManager $db,
         ConfirmsImports $confirmImport,
@@ -140,8 +135,7 @@ final class FirstImportStep extends Component
             $this->dispatch('wizard.step.completed');
         } catch (Throwable $e) {
             $logger->error('FirstImportStep: commit-everything failed.', [
-                'exception_class' => $e::class,
-                'exception_message' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
                 'exception_trace' => SafeTrace::cap($e, $app->basePath()),
             ]);
             $this->commitError = Lang::get('onboarding::first_import.errors.commit_failed');
@@ -150,9 +144,8 @@ final class FirstImportStep extends Component
         }
     }
 
-    // Someone who skipped every connector has no ready section and so no
-    // enabled commit button; without skip they could never reach budgets,
-    // tax-country or done.
+    // Someone who skipped every connector has no ready section and so no enabled
+    // commit button; without skip they could never reach budgets or tax-country.
     public function skip(): void
     {
         $this->dispatch('wizard.step.skipped');
@@ -180,8 +173,6 @@ final class FirstImportStep extends Component
     /**
      * @param  list<int>  $runIdsToCommit
      * @param  array<int, array{minor: int, date: string}>  $balanceConfirmations
-     *
-     * @link ../../../../../../.docs/features/onboarding/architecture.md#firstimportstep--the-consolidated-commit-surface
      */
     private function persistCommit(DatabaseManager $db, ConfirmsImports $confirmImport, User $user, string $now, array $runIdsToCommit, array $balanceConfirmations): void
     {
@@ -219,8 +210,7 @@ final class FirstImportStep extends Component
             $app->make(DispatchesRecurringDetection::class)->dispatchForUser($userId);
         } catch (Throwable $dispatchException) {
             $logger->error('FirstImportStep: post-commit dispatch failed (data already committed).', [
-                'exception_class' => $dispatchException::class,
-                'exception_message' => $dispatchException->getMessage(),
+                ...SafeExceptionContext::describe($dispatchException),
                 'exception_trace' => SafeTrace::cap($dispatchException, $app->basePath()),
             ]);
         }
@@ -242,8 +232,8 @@ final class FirstImportStep extends Component
             sectionLimitOverrides: $this->expandedRowCount,
         );
 
-        // Two candidates for one account is the conflict case; the blade
-        // groups this flat list by accountId to spot it.
+        // Two candidates for one account is the conflict case; the blade groups
+        // this flat list by accountId to spot it.
         $this->startingBalances = $detectBalances->collect($this->stashedImportRunIds, $user);
 
         $this->accountMeta = $this->loadAccountMeta($user->id, $db, $this->startingBalances);
@@ -255,9 +245,8 @@ final class FirstImportStep extends Component
         ]);
     }
 
-    // Raw table() rather than WizardProgress::query(), so the user-scope
-    // filter below is the real one: BelongsToUser's global scope falls
-    // through outside an HTTP request (queue workers, listener tests).
+    // Raw table(), not WizardProgress::query(): BelongsToUser's global scope falls
+    // through outside an HTTP request, so the explicit user_id filter is the real one.
     /**
      * @return list<int>
      */
@@ -282,8 +271,8 @@ final class FirstImportStep extends Component
             }
         }
 
-        // First-occurrence order survives, which the orderByRaw above has
-        // already fixed as bank → PayPal → ICS card → email.
+        // array_unique keeps first-occurrence order, which the orderByRaw fixed
+        // as bank → PayPal → ICS card → email.
         return array_values(array_unique($ids));
     }
 

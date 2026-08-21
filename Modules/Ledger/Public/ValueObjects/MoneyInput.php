@@ -49,18 +49,33 @@ final class MoneyInput
         return $minor !== null && $minor > 0 ? $minor : null;
     }
 
-    // -5000 -> "-50,00": symbol-free, so a value shown then submitted
+    // -123456 -> "-1.234,56": symbol-free, so a value shown then submitted
     // untouched parses back to the same minor units via tryToMinor().
     public static function formatMinor(int $minor): string
     {
         return ($minor < 0 ? '-' : '').self::formatAbsMinor($minor);
     }
 
-    // 5000 or -5000 -> "50,00", for inputs that carry their sign separately.
+    // 123456 or -123456 -> "1.234,56", for inputs that carry their sign
+    // separately. Grouped because a five-figure balance in an input is read
+    // before it is edited, and tryToMinor() takes the group mark back out.
     public static function formatAbsMinor(int $minor): string
     {
         $abs = abs($minor);
+        $whole = (string) intdiv($abs, Money::MINOR_UNITS_PER_MAJOR);
+        $grouped = strrev(implode('.', str_split(strrev($whole), 3)));
 
-        return intdiv($abs, Money::MINOR_UNITS_PER_MAJOR).','.str_pad((string) ($abs % Money::MINOR_UNITS_PER_MAJOR), 2, '0', STR_PAD_LEFT);
+        return $grouped.','.str_pad((string) ($abs % Money::MINOR_UNITS_PER_MAJOR), 2, '0', STR_PAD_LEFT);
+    }
+
+    // The machine-readable form: "1234.56", no symbol and no group mark, for a
+    // CSV cell or an API field where a reader's separators would be a bug.
+    public static function toDecimalString(int $minor): string
+    {
+        $abs = abs($minor);
+
+        return ($minor < 0 ? '-' : '').
+            intdiv($abs, Money::MINOR_UNITS_PER_MAJOR).'.'.
+            str_pad((string) ($abs % Money::MINOR_UNITS_PER_MAJOR), 2, '0', STR_PAD_LEFT);
     }
 }

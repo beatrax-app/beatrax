@@ -9,10 +9,24 @@ trait CoercesScalars
     // SQLite hands query-builder columns back as strings on stdClass, and
     // json_decode hands back mixed, so anything read that way needs a
     // narrowing step before it can satisfy a typed property. Non-numeric
-    // input collapses to 0 rather than raising: the callers are read paths.
-    private static function toInt(mixed $value): int
+    // input collapses to $default rather than raising: the callers are read paths.
+    private static function toInt(mixed $value, int $default = 0): int
     {
-        return is_numeric($value) ? (int) $value : 0;
+        return is_numeric($value) ? (int) $value : $default;
+    }
+
+    // For foreign keys and row ids, where 0 and a negative are as absent as
+    // null is — a caller that gets an int back can use it as an id without a
+    // second range check.
+    private static function toPositiveIntOrNull(mixed $value): ?int
+    {
+        if (! is_numeric($value)) {
+            return null;
+        }
+
+        $int = (int) $value;
+
+        return $int > 0 ? $int : null;
     }
 
     // Objects and arrays have no useful string form here, so they collapse

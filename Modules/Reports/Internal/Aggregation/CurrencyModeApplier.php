@@ -46,10 +46,8 @@ final class CurrencyModeApplier
         };
     }
 
-    // Applies the same accounts/categories/counterparties filters the
-    // caller's dimension query applies, so a filtered report never
-    // discovers a currency that only exists on a filtered-out dimension.
-    // Ordered deterministically rather than left to unordered DISTINCT.
+    // Filtered exactly as the caller's dimension query is, so a filtered report
+    // never discovers a currency that only exists on a filtered-out dimension.
     /**
      * @param  list<int>  $accountIds
      * @param  list<int>  $categoryIds
@@ -61,7 +59,7 @@ final class CurrencyModeApplier
         $values = $this->db->connection()
             ->table('transactions')
             ->where('user_id', $user->id)
-            ->whereIn('type', self::metricTypes($metric))
+            ->whereIn('type', ReportMetric::fromMetric($metric)->types())
             ->where('posted_at', '>=', $period->start->toDateString())
             ->where('posted_at', '<', $period->endExclusive->toDateString())
             ->whereNotNull('settled_currency')
@@ -94,10 +92,8 @@ final class CurrencyModeApplier
         /** @var array<string, array{key: int|string|null, label: string, amount: int}> $merged */
         $merged = [];
 
-        // A set, not a tally. The row loop counted once per ROW and the fee
-        // loop once per CURRENCY, so a report with 12 unconvertible USD rows
-        // and USD fees reported 13. A rate is missing per currency, which is
-        // the only unit both loops can agree on.
+        // A set, not a tally: the row loop counted per row and the fee loop per
+        // currency, so 12 unconvertible USD rows plus USD fees reported 13.
         /** @var array<string, true> $excludedCurrencies */
         $excludedCurrencies = [];
 
@@ -109,10 +105,8 @@ final class CurrencyModeApplier
                 $money = Money::ofMinor($row->amountMinor, $currency);
                 $conversion = $this->fx->convertToBase($money, $baseCurrency);
 
-                // Never a silent 1:1 fallback: a passthrough whose converted
-                // currency still differs from the target means no rate was
-                // available at all — exclude + count, exactly like
-                // NetWorthSeriesQuery's own never-1:1 guard.
+                // Never a silent 1:1 fallback: a converted currency that still
+                // differs from the target means no rate was available at all.
                 if ($conversion->converted->currency() !== $baseCurrency) {
                     $excludedCurrencies[$currency] = true;
 
@@ -139,17 +133,14 @@ final class CurrencyModeApplier
             $total += $entry['amount'];
         }
 
-        // Fees are discovered from their own query, not from $currencies:
-        // a currency that carries only fees produces no rows, so it never
-        // reaches the list above, and its fees would go missing from the very
-        // figure that exists to stop money going missing.
+        // Fees come from their own query, not $currencies: a currency carrying
+        // only fees produces no rows, so it never reaches the list above.
         $other = 0;
         foreach ($otherTotalsByCurrency as $currency => $amount) {
             $conversion = $this->fx->convertToBase(Money::ofMinor($amount, $currency), $baseCurrency);
             if ($conversion->converted->currency() !== $baseCurrency) {
-                // Counted, not just flagged: the banner reads ":count not
-                // converted", so raising the flag alone would render a literal
-                // zero beside a warning that something was dropped.
+                // The banner reads ":count not converted", so flagging without
+                // counting renders a literal zero beside the warning.
                 $excludedCurrencies[$currency] = true;
 
                 continue;
@@ -167,10 +158,8 @@ final class CurrencyModeApplier
         );
     }
 
-    // No conversion. The DTO-level currency/totalMinor are picked after
-    // running every currency's query — the currency with the largest
-    // absolute total among the actual result rows, never a "first
-    // discovered currency" guess that could land on a filtered-to-zero row.
+    // No conversion. currency/totalMinor go to whichever currency has the largest
+    // absolute total in the actual rows, never a first-discovered guess.
     /**
      * @param  list<string>  $currencies
      * @param  callable(string $currency): list<ReportResultRow>  $queryForCurrency
@@ -219,18 +208,5 @@ final class CurrencyModeApplier
     private static function rowKey(ReportResultRow $row): string
     {
         return $row->groupKey === null ? 'null:'.$row->groupLabel : (string) $row->groupKey;
-    }
-
-    /**
-     * @return list<string>
-     */
-    private static function metricTypes(string $metric): array
-    {
-        return match ($metric) {
-            'spend' => ['expense'],
-            'income' => ['income'],
-            'net' => ['expense', 'income'],
-            default => throw new InvalidArgumentException("Unknown report metric: {$metric}"),
-        };
     }
 }

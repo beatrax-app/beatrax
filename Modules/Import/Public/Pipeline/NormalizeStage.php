@@ -55,7 +55,6 @@ final class NormalizeStage
             $fxRateUsed = (string) Rate::between(
                 Money::ofMinor($source->settledAmountMinor, $source->settledCurrency),
                 Money::ofMinor($source->amountMinor, $source->currency),
-                8,
             );
         }
 

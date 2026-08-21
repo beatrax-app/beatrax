@@ -5,8 +5,8 @@ declare(strict_types=1);
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Auth\Public\Services\AppLockKeyService;
+use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Mobile\Internal\Sync\MobileSyncTriggerService;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
@@ -146,7 +146,7 @@ it('MobileSyncTriggerService::syncOnce() skips cleanly — no data write, no key
     // key the way the Sync one does, so a fresh session starts genuinely locked.
     // Unlock it so generateAndPersist() succeeds, and only then rebind
     // AppLockKeyService, leaving the KEK as the one thing that differs.
-    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
 
     /** @var DeviceIdentityService $identityService */
     $identityService = app(DeviceIdentityService::class);

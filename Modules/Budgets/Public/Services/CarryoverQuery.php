@@ -13,6 +13,7 @@ use Modules\Budgets\Public\Enums\OverspendMode;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\Services\SpendByCategoryQuery;
@@ -28,10 +29,8 @@ final class CarryoverQuery
 
     private const DEFAULT_OVERSPEND_MODE = OverspendMode::ReduceToBudget->value;
 
-    // The default over-budget notify threshold (percent) for an envelope
-    // with no explicit envelope_settings.threshold_percent. Single source
-    // of the default -- surfaced on EnvelopeRow::$notifyThresholdPercent,
-    // which the nudge job reads already-resolved.
+    // Fallback when envelope_settings.threshold_percent is null. Resolved here
+    // so the nudge job reads EnvelopeRow::$notifyThresholdPercent, never the default.
     public const DEFAULT_NOTIFY_THRESHOLD_PERCENT = 90;
 
     private const FUTURE_HORIZON_PERIODS = 12;
@@ -48,8 +47,6 @@ final class CarryoverQuery
         private readonly LoggerInterface $log,
     ) {}
 
-    // Every expense category at zero: what the envelope grid looks like
-    // before the first assignment, so the first assignment has somewhere to go.
     /**
      * @return array<int, EnvelopeRow>
      */
@@ -81,18 +78,13 @@ final class CarryoverQuery
      */
     public function forUserAndPeriod(User $user, Period $target): array
     {
-        $genesisInstant = $this->genesisAnchorFor($user);
+        $genesisPeriod = $this->genesisPeriodFor($user);
 
-        if ($genesisInstant === null) {
-            // Nothing to fold over yet, but the categories still exist and
-            // the page still needs a cell to put the first assignment in.
-            // Returning [] rendered "you have no expense categories" at 24 of
-            // them, with no cell to click and no advice that could help.
-
-            // Income, not zero: the fold below is income + carry - assigned,
-            // and both of those are nought before the first assignment, so
-            // income is what it would answer. Zero told a reader with a
-            // month's pay in the account that they had nothing to assign.
+        if ($genesisPeriod === null) {
+            // Pre-genesis the fold is income + carry - assigned, and carry and
+            // assigned are both nought, so income is what it would answer. Zero
+            // told a reader with a month's pay banked they had nothing to assign;
+            // [] rendered "you have no expense categories" at 24 of them.
             return [
                 'toBudgetMinor' => $this->glance->incomeForPeriod($user, $target, self::CURRENCY),
                 'overspentCount' => 0,
@@ -100,7 +92,6 @@ final class CarryoverQuery
             ];
         }
 
-        $genesisPeriod = $this->periods->containing($genesisInstant);
         $currentPeriod = $this->periods->containing($this->clock->now());
         $maxPeriod = $currentPeriod;
         for ($i = 0; $i < self::FUTURE_HORIZON_PERIODS; $i++) {
@@ -112,8 +103,7 @@ final class CarryoverQuery
             $targetBounded = $maxPeriod;
         }
         if ($targetBounded->start->lessThan($genesisPeriod->start)) {
-            // Nothing before genesis -- clamp the walk to genesis itself
-            // rather than walking backwards or reading pre-activation history.
+            // Back-navigation must never read pre-activation history.
             $targetBounded = $genesisPeriod;
         }
 
@@ -161,10 +151,8 @@ final class CarryoverQuery
         }
 
         if ($result === null) {
-            // Only possible if MAX_WALK_PERIODS tripped first (unreachable
-            // in practice, since target is bounded to current+12). Log the
-            // anomaly and degrade to all-zero rather than throw -- a
-            // degraded read is safer than a fatal budgets page.
+            // Only reachable if MAX_WALK_PERIODS tripped first; target is bounded
+            // to current+12. A degraded read beats a fatal budgets page.
             $this->log->warning('CarryoverQuery fold hit the walk cap before reaching the target period; returning all-zero.', [
                 'user_id' => $user->id,
                 'genesis' => $genesisPeriod->start->toDateString(),
@@ -178,9 +166,18 @@ final class CarryoverQuery
         return $result;
     }
 
-    // Reads via the query builder rather than the Eloquent User model so
-    // this Public service never depends on Modules\Core\Models\User
-    // carrying a cast for a column owned by this module's migration.
+    // The one anchor: the fold clamps back-navigation to it and the budgets page
+    // gates its month-back control on it, so a second derivation would let the
+    // two disagree about which months exist.
+    public function genesisPeriodFor(User $user): ?Period
+    {
+        $anchor = $this->genesisAnchorFor($user);
+
+        return $anchor === null ? null : $this->periods->containing($anchor);
+    }
+
+    // Query builder, not the User model: a Public service must not depend on
+    // Core\Models\User carrying a cast for a column this module's migration owns.
     private function genesisAnchorFor(User $user): ?CarbonImmutable
     {
         $raw = $this->db->connection()
@@ -188,22 +185,13 @@ final class CarryoverQuery
             ->where('id', $user->id)
             ->value('envelope_activated_at');
 
-        if ($raw !== null && $raw !== '') {
-            try {
-                return CarbonImmutable::parse(self::toString($raw));
-            } catch (\Throwable) {
-                // Fall through to the assignments below rather than treating
-                // an unreadable stamp as "never started".
-            }
-        }
-
-        return $this->earliestAssignedPeriodFor($user);
+        // An unreadable stamp must not read as "never started".
+        return SafeDate::parseOrNull(self::toString($raw)) ?? $this->earliestAssignedPeriodFor($user);
     }
 
-    // envelope_activated_at is absent from the merge registry, so a device
-    // that joined by pairing has it null forever and every assignment that
-    // arrived with the sync was reported as zero. The earliest month anything
-    // was assigned is the honest anchor for when budgeting began.
+    // envelope_activated_at is absent from the merge registry, so a device that
+    // joined by pairing has it null forever and reported every synced assignment
+    // as zero. The earliest assigned month is the honest anchor.
     private function earliestAssignedPeriodFor(User $user): ?CarbonImmutable
     {
         $earliest = $this->db->connection()
@@ -211,15 +199,7 @@ final class CarryoverQuery
             ->where('user_id', $user->id)
             ->min('period_start');
 
-        if (! is_string($earliest) || $earliest === '') {
-            return null;
-        }
-
-        try {
-            return CarbonImmutable::parse($earliest);
-        } catch (\Throwable) {
-            return null;
-        }
+        return is_string($earliest) ? SafeDate::parseOrNull($earliest) : null;
     }
 
     /**
@@ -236,9 +216,8 @@ final class CarryoverQuery
         int $poolCarry,
         array $carriedIn,
     ): FoldStep {
-        // Single round trip per period (already legs ∪ unsplit-parents
-        // safe -- never a fresh GROUP BY that could double-count a
-        // split transaction's spend).
+        // Reuses the shared query: a fresh GROUP BY here would double-count a
+        // split transaction, which is already legs ∪ unsplit parents.
         $spentByKey = $this->spendByCategory->forUserAndPeriodByCurrency($user->id, $period);
         $income = $this->glance->incomeForPeriod($user, $period, self::CURRENCY);
 
@@ -273,13 +252,11 @@ final class CarryoverQuery
             $notifyThreshold = $context->notifyThresholdByCategory[$categoryId] ?? self::DEFAULT_NOTIFY_THRESHOLD_PERCENT;
 
             if ($available < 0 && $mode === self::DEFAULT_OVERSPEND_MODE) {
-                // Resets to 0 next period and debits the pool exactly
-                // once per overspent envelope per period.
+                // reduce_to_budget: the pool eats the shortfall once per period.
                 $shortfallMoney = $shortfallMoney->plus($availableMoney);
                 $nextCarriedIn[$categoryId] = 0;
             } else {
-                // Positive availability rolls forward as-is; carry_negative
-                // keeps the negative in the envelope, never touching the pool.
+                // carry_negative keeps the negative in the envelope, off the pool.
                 $nextCarriedIn[$categoryId] = $available;
             }
 
@@ -316,9 +293,8 @@ final class CarryoverQuery
      */
     private function sumNonEurSpent(array $spentByKey, int $categoryId): int
     {
-        // Sums this category's non-EUR settled spend so the grid can
-        // surface it rather than vanish it -- see architecture.md
-        // ("nonEurSpentMinor") for why this is never folded in.
+        // Surfaced beside the fold, never folded into it: the fold is EUR-only,
+        // so a converted figure would drift against the ledger.
         $nonEurSpent = 0;
         $prefix = "{$categoryId}|";
         foreach ($spentByKey as $key => $minor) {
@@ -422,14 +398,7 @@ final class CarryoverQuery
     private static function periodKeyFromRaw(mixed $value): string
     {
         $raw = self::toString($value);
-        if ($raw === '') {
-            return '';
-        }
 
-        try {
-            return CarbonImmutable::parse($raw)->toDateString();
-        } catch (\Throwable) {
-            return $raw;
-        }
+        return SafeDate::parseOrNull($raw)?->toDateString() ?? $raw;
     }
 }

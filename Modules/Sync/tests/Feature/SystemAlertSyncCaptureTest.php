@@ -3,9 +3,14 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Hashing\Hasher;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
+use Modules\Auth\Internal\Lock\AppLockProvisioner;
+use Modules\Auth\Internal\Lock\PinVerificationService;
+use Modules\Auth\Internal\Recovery\RecoveryCodeAuthenticator;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Actions\AcknowledgeSystemAlert;
@@ -20,17 +25,10 @@ use Modules\Sync\Internal\OpLog\OpType;
 
 uses(RefreshDatabase::class);
 
-/*
- * system_alerts is two tables wearing one name. A row with an owner says
- * something about the ACCOUNT — your mail token lapsed, your bank consent
- * expired — and the user clears it from whichever device is to hand. A row
- * with a null owner says something about the MACHINE, and the other machine
- * has its own probes and its own row ids.
- *
- * Only the first kind may travel. Capturing the second would put a create on
- * the wire that the peer would file under the wrong id, and capturing the
- * acknowledgement alone would send a SET for a pk the peer never held.
- */
+// system_alerts is two tables wearing one name. A row with an owner says
+// something about the account and travels; a row with a null owner says
+// something about the machine, and the peer has its own probes and its own row
+// ids, so a create would land on the wrong id and a lone SET on none at all.
 
 function systemAlertUser(): User
 {
@@ -42,8 +40,8 @@ function systemAlertUser(): User
     ]);
 }
 
-// Binds the device identity the capture listener resolves, and hands back the
-// public key so the same history can be verified as a peer would verify it.
+// Hands the public key back so the captured history can be verified the way a
+// peer would verify it.
 function bindSystemAlertWriter(int $userId): string
 {
     $keypair = sodium_crypto_sign_keypair();
@@ -200,4 +198,87 @@ it('rebuilds the alert and its acknowledgement on a peer that never saw either',
         ->and((string) $rebuilt->kind)->toBe('oauth_reconsent_required')
         ->and((string) $rebuilt->message)->toBe('Reconnect your Outlook')
         ->and($rebuilt->acknowledged_at)->not->toBeNull('an alert cleared on one device must not still be shouting on the other');
+});
+
+// The three owned alerts the app raises about a user's own security — a PIN
+// lockout, a recovery code, a failed keyring re-wrap — went straight to the
+// model and so reached neither the op log nor the other device.
+
+/** Enables the app lock and hands back the PIN, so a wrong one can be offered. */
+function armAppLockFor(User $user): string
+{
+    app(AppLockProvisioner::class)->enable((int) $user->id, '123456', 'fixture');
+
+    return '123456';
+}
+
+it('captures the PIN hard-cap lockout alert', function (): void {
+    $user = systemAlertUser();
+    $this->actingAs($user);
+    armAppLockFor($user);
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    // Wound up in the database rather than through nine real attempts, each of
+    // which would pay the Argon2id cost.
+    $db->connection()->table('user_app_lock_configs')
+        ->where('user_id', $user->id)
+        ->update(['failed_attempts' => PinVerificationService::HARD_CAP - 1]);
+
+    bindSystemAlertWriter((int) $user->id);
+
+    app(PinVerificationService::class)->verify((int) $user->id, '000000', app(Session::class));
+
+    expect(systemAlertOps((int) $user->id))->not->toBeEmpty(
+        'the device that just locked the user out is the one device that already knows',
+    );
+});
+
+it('captures the alert a corrupt PIN wrap blob raises', function (): void {
+    $user = systemAlertUser();
+    $this->actingAs($user);
+    $pin = armAppLockFor($user);
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $db->connection()->table('user_app_lock_configs')
+        ->where('user_id', $user->id)
+        ->update(['kdf_salt' => null, 'pin_wrapped_key' => null]);
+
+    bindSystemAlertWriter((int) $user->id);
+
+    app(PinVerificationService::class)->verify((int) $user->id, $pin, app(Session::class));
+
+    expect(systemAlertOps((int) $user->id))->not->toBeEmpty();
+});
+
+it('captures a consumed recovery code', function (): void {
+    $user = systemAlertUser();
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    // Drawn from the generator's ambiguous-free alphabet: an I, L, O, 0 or 1
+    // is stripped on normalisation and the reformatted code stops matching.
+    $code = 'ABCD-EFGH-JKMN-PQRS';
+    $db->connection()->table('user_recovery_codes')->insert([
+        'user_id' => $user->id,
+        'code_hash' => app(Hasher::class)->make($code),
+        'created_at' => CarbonImmutable::now(),
+    ]);
+
+    bindSystemAlertWriter((int) $user->id);
+
+    expect(app(RecoveryCodeAuthenticator::class)->verify($user->username, $code))->not->toBeNull();
+    expect(systemAlertOps((int) $user->id))->not->toBeEmpty(
+        'a recovery code spent on one device is news the other device needs',
+    );
+});
+
+it('captures a failed recovery-code attempt', function (): void {
+    $user = systemAlertUser();
+    bindSystemAlertWriter((int) $user->id);
+
+    expect(app(RecoveryCodeAuthenticator::class)->verify($user->username, 'ZZZZ-ZZZZ-ZZZZ-ZZZZ'))->toBeNull();
+    expect(systemAlertOps((int) $user->id))->not->toBeEmpty();
 });

@@ -7,6 +7,7 @@ namespace Modules\Tax\Internal\Services;
 use League\Csv\EscapeFormula;
 use League\Csv\Writer;
 use Modules\Core\Models\User;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
 /**
  * @link ../../../../.docs/features/tax/tax-year-resolution.md
@@ -85,8 +86,8 @@ final class TaxCsvExporter
         $rawOriginal = $row['amountMinor'] ?? 0;
         $originalMinor = is_numeric($rawOriginal) ? (int) $rawOriginal : 0;
 
-        $settledEurAmount = number_format(abs($settledMinor) / 100, 2, '.', '');
-        $originalAmount = number_format(abs($originalMinor) / 100, 2, '.', '');
+        $settledEurAmount = MoneyInput::toDecimalString(abs($settledMinor));
+        $originalAmount = MoneyInput::toDecimalString(abs($originalMinor));
 
         return [
             (string) $taxYear,

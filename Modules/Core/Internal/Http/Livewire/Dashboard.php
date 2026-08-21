@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Core\Internal\Http\Livewire;
 
-use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
@@ -12,14 +11,11 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
-use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Position\Public\Services\PositionQuery;
 
 final class Dashboard extends Component
 {
-    private const PERIOD_DATE_FORMAT = 'Y-m-d';
-
     // Anchor date (Y-m-d) that pins the displayed period, client-controlled
     // via the wire payload. Null = current period.
     public ?string $periodStartStr = null;
@@ -31,14 +27,14 @@ final class Dashboard extends Component
 
     public function previousPeriod(PeriodQuery $periods): void
     {
-        $current = $this->resolvePeriod($periods);
-        $this->periodStartStr = $periods->previous($current)->start->toDateString();
+        $resolved = $periods->resolveAnchor($this->periodStartStr);
+        $this->periodStartStr = $periods->previous($resolved->period)->start->toDateString();
     }
 
     public function nextPeriod(PeriodQuery $periods): void
     {
-        $current = $this->resolvePeriod($periods);
-        $this->periodStartStr = $periods->next($current)->start->toDateString();
+        $resolved = $periods->resolveAnchor($this->periodStartStr);
+        $this->periodStartStr = $periods->next($resolved->period)->start->toDateString();
     }
 
     public function today(): void
@@ -79,7 +75,9 @@ final class Dashboard extends Component
         Session $session,
     ): View {
         $user = $currentUser->user();
-        $period = $this->resolvePeriod($periods);
+        $resolved = $periods->resolveAnchor($this->periodStartStr);
+        $this->periodStartStr = $resolved->isoDate;
+        $period = $resolved->period;
 
         // One Position seam so the dashboard and the position digest cannot
         // disagree. `$summary` stays settled-EUR-only; only the tiles split.
@@ -115,25 +113,5 @@ final class Dashboard extends Component
             // Non-developers get queue messaging via SystemAlertsBanner instead.
             'isDeveloper' => $user->is_developer === true,
         ]);
-    }
-
-    private function resolvePeriod(PeriodQuery $periods): Period
-    {
-        if ($this->periodStartStr === null) {
-            return $periods->current();
-        }
-
-        $parsed = CarbonImmutable::createFromFormat(self::PERIOD_DATE_FORMAT, $this->periodStartStr);
-
-        // Carbon accepts "2026-02-30" and normalises it to "2026-03-02", so a
-        // round-trip format comparison is the real validity check. Clear the bad
-        // value so it cannot survive another round-trip.
-        if ($parsed === null || $parsed->format(self::PERIOD_DATE_FORMAT) !== $this->periodStartStr) {
-            $this->periodStartStr = null;
-
-            return $periods->current();
-        }
-
-        return $periods->containing($parsed);
     }
 }

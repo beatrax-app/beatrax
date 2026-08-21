@@ -19,17 +19,6 @@ use Modules\Desktop\Internal\NativeAppServiceProvider;
 use Native\Desktop\Facades\Window;
 use Native\Desktop\Windows\Window as NativeWindow;
 
-/*
- * Drives the four behaviours of the first-launch DB bootstrap (D-21/D-22/D-23):
- *
- *   (a) On a DB with pending migrations, runPendingMigrations() runs them.
- *   (b) A second run with no pending migrations is a no-op (idempotent).
- *   (c) A fresh install (zero users after migration) is detected as first-run;
- *       a non-fresh install is not.
- *   (d) EnsureDatabaseReady redirects to the "Setting up…" route while
- *       migrations are pending and lets requests through once they finish.
- */
-
 it('reports pending migrations when at least one is not yet run', function (): void {
     $migrator = $this->app->make(Migrator::class);
     $bootstrap = new FirstLaunchBootstrap(
@@ -39,25 +28,18 @@ it('reports pending migrations when at least one is not yet run', function (): v
         $this->app->make(EnsureAppKey::class),
     );
 
-    // Drop the migrations repository so every migration on disk counts as
-    // pending — the cleanest way to drive the "pending" branch under Pest's
-    // RefreshDatabase trait, which leaves a fully migrated schema otherwise.
+    // RefreshDatabase leaves a fully migrated schema, so dropping the migrations
+    // repository is what makes every migration on disk count as pending.
     $migrator->getRepository()->deleteRepository();
 
     expect($bootstrap->hasPendingMigrations())->toBeTrue();
 });
 
 it('runs pending migrations by delegating to the framework Migrator', function (): void {
-    // Verify the bootstrap drives `Migrator::run()` with the registered
-    // migration paths — the core behavioural claim. A spy migrator
-    // captures the call without needing a writable DDL surface inside
-    // the RefreshDatabase transaction (where DROP TABLE / VACUUM are
-    // either constrained or refused).
-    //
-    // The spy reuses the real container-bound migrator's collaborators
-    // (repository, resolver, filesystem, events) so its behaviour is
-    // indistinguishable from the framework's apart from the recorded
-    // `run()` call.
+    // A spy migrator captures the `run()` call without needing a writable DDL
+    // surface inside the RefreshDatabase transaction, where DROP TABLE and
+    // VACUUM are constrained or refused. It reuses the real container-bound
+    // migrator's collaborators so it behaves like the framework's otherwise.
     /** @var Migrator $real */
     $real = $this->app->make(Migrator::class);
     $real->path(base_path('database/migrations'));
@@ -102,8 +84,6 @@ it('runs pending migrations by delegating to the framework Migrator', function (
     $bootstrap->runPendingMigrations();
 
     expect($spy->runCalls)->toBe(1);
-    // The spy received the registered migration paths — every module path
-    // plus the canonical `database/migrations` default.
     expect($spy->runWith[0])->toContain(base_path('database/migrations'));
     expect(count($spy->runWith[0]))->toBeGreaterThan(1); // at least default + a module path
 });
@@ -120,8 +100,6 @@ it('is a no-op when no migrations are pending (idempotent)', function (): void {
     // RefreshDatabase has already migrated, so this is the post-bootstrap state.
     expect($bootstrap->hasPendingMigrations())->toBeFalse();
 
-    // A second invocation must succeed (no-op) and leave the DB in the same
-    // shape — no errors thrown, repository still intact.
     $bootstrap->runPendingMigrations();
     $bootstrap->runPendingMigrations();
 
@@ -170,14 +148,13 @@ it('resolves the SQLite database path via UserDataPathService', function (): voi
         $this->app->make(EnsureAppKey::class),
     );
 
-    // The bootstrap must report the same canonical path UserDataPathService
-    // resolves — no raw database_path() call. Verifies the
-    // noStoragePathHardCodedOutsideUserDataPathService invariant is honoured.
+    // The path must come from UserDataPathService rather than a raw
+    // database_path() — the noStoragePathHardCodedOutsideUserDataPathService
+    // invariant.
     expect($bootstrap->databasePath())->toBe(UserDataPathService::databaseFile());
 });
 
 it('redirects to the setup route when migrations are pending', function (): void {
-    // Register a stub gated route under the EnsureDatabaseReady middleware.
     $this->app['router']
         ->middleware(['web', EnsureDatabaseReady::class])
         ->get('/__test/gated', static fn () => 'GATED');
@@ -194,10 +171,8 @@ it('lets requests through when no migrations are pending and at least one user e
         ->middleware(['web', EnsureDatabaseReady::class])
         ->get('/__test/gated-ok', static fn () => 'GATED-OK');
 
-    // RefreshDatabase has already migrated; seed a user so the
-    // fresh-install branch does not bounce us to /welcome — the
-    // pass-through case is "migrations done AND at least one account
-    // exists", i.e. a normal post-signup runtime.
+    // Seed a user so the fresh-install branch does not bounce to /welcome: the
+    // pass-through case is migrations done AND at least one account existing.
     User::query()->create([
         'username' => 'existing',
         'password' => bcrypt('not-the-real-password'),
@@ -212,12 +187,8 @@ it('lets requests through when no migrations are pending and at least one user e
 });
 
 it('registers EnsureDatabaseReady globally on the web middleware group', function (): void {
-    // The middleware must be appended to the `web` group in
-    // bootstrap/app.php so production routes (not just the ad-hoc
-    // /__test/gated stubs above) get the redirect on pending state.
-    // Driving the assertion through the framework's web group lets us
-    // catch a regression if the bootstrap-level registration is ever
-    // removed.
+    // Appending to the `web` group in bootstrap/app.php is what makes production
+    // routes gated, not just the route-level stubs the earlier tests decorate.
     /** @var Router $router */
     $router = $this->app['router'];
     $webGroup = $router->getMiddlewareGroups()['web'] ?? [];
@@ -225,11 +196,8 @@ it('registers EnsureDatabaseReady globally on the web middleware group', functio
 });
 
 it('redirects a real web-group request to setup when migrations are pending (production wiring)', function (): void {
-    // Drive the production middleware stack: register a stub route on
-    // the bare `web` group (no explicit EnsureDatabaseReady) so the
-    // assertion proves the middleware is wired via bootstrap/app.php's
-    // `web(append: [...])` call rather than the route-level decoration
-    // the earlier /__test/gated assertion relies on.
+    // A stub on the bare `web` group, with no route-level decoration, so the
+    // redirect can only come from the bootstrap/app.php registration.
     $this->app['router']
         ->middleware(['web'])
         ->get('/__test/production-gated', static fn () => 'PRODUCTION-GATED');
@@ -249,9 +217,8 @@ it('exempts the setup route itself from the gate', function (): void {
 });
 
 it('exempts every desktop.setup.* route via name-prefix matching (IN-01)', function (): void {
-    // Register a hypothetical error variant of the setup screen — the
-    // prefix-match contract promises this works without re-editing the
-    // middleware's exempt list.
+    // A hypothetical error variant of the setup screen: the prefix match is
+    // meant to cover it without re-editing the middleware's exempt list.
     $this->app['router']
         ->middleware(['web', EnsureDatabaseReady::class])
         ->get('/__test/setup-error', static fn () => 'SETUP-ERROR')
@@ -265,18 +232,9 @@ it('exempts every desktop.setup.* route via name-prefix matching (IN-01)', funct
 });
 
 it('does NOT exempt routes that just happen to share a leading substring (prefix boundary)', function (): void {
-    // `desktop.setup-not-actually` must NOT be exempted by the
-    // `desktop.setup` prefix — only proper dotted prefixes count. The
-    // current implementation uses `str_starts_with`, which would in
-    // fact match this string too; this assertion pins the
-    // intentionally-strict contract so a future change to a real
-    // prefix-with-dot match has a regression catcher.
-    //
-    // For now we accept the more-permissive `str_starts_with` match,
-    // so this assertion records the looser contract: any name that
-    // starts with `desktop.setup` IS exempt. The point of the test is
-    // to lock the chosen semantics so an accidental flip to strict
-    // dotted-prefix matching gets caught.
+    // A prefix ends on a dot. Without that, 'sw' matched any route named
+    // sw-anything, and this one proves the boundary rather than pinning the
+    // substring behaviour the test's own name always denied.
     $this->app['router']
         ->middleware(['web', EnsureDatabaseReady::class])
         ->get('/__test/setupish', static fn () => 'SETUPISH')
@@ -284,9 +242,7 @@ it('does NOT exempt routes that just happen to share a leading substring (prefix
 
     $this->app->make(Migrator::class)->getRepository()->deleteRepository();
 
-    $this->get('/__test/setupish')
-        ->assertOk()
-        ->assertSee('SETUPISH');
+    $this->get('/__test/setupish')->assertRedirect();
 });
 
 it('renders the welcome screen on a fresh install with no users', function (): void {
@@ -297,19 +253,13 @@ it('renders the welcome screen on a fresh install with no users', function (): v
 });
 
 it('redirects a fresh-install gated request to the welcome screen when migrations are done but no user exists (UAT-1 regression)', function (): void {
-    // The cold-start path NativePHP::boot() leaves behind: migrations
-    // already ran (so hasPendingMigrations() is false), but no user has
-    // ever been created on this device. Before the UAT-1 fix the gate
-    // middleware was a pass-through here and the user landed on /login;
-    // the welcome screen was effectively unreachable. The fix funnels
-    // the fresh-install signal through the gate so the first-launch UX
-    // actually fires.
+    // After NativePHP::boot() the migrations have run but no user exists yet.
+    // The gate used to pass this state through to /login, leaving the welcome
+    // screen unreachable; the fresh-install signal now routes through the gate.
     $this->app['router']
         ->middleware(['web', EnsureDatabaseReady::class])
         ->get('/__test/cold-start', static fn () => 'COLD-START');
 
-    // RefreshDatabase leaves the schema migrated with zero users —
-    // mirrors the post-boot() / pre-signup state on a fresh install.
     expect(User::query()->count())->toBe(0);
 
     $this->get('/__test/cold-start')
@@ -335,8 +285,6 @@ it('does not redirect to welcome once at least one user exists (post-signup runt
 });
 
 it('exempts the welcome route itself from the fresh-install gate', function (): void {
-    // RefreshDatabase + zero users == fresh-install state. The welcome
-    // route must render its own page rather than redirecting onto itself.
     expect(User::query()->count())->toBe(0);
 
     $this->get(route('desktop.welcome'))
@@ -345,10 +293,8 @@ it('exempts the welcome route itself from the fresh-install gate', function (): 
 });
 
 it('exempts the signup route so the welcome → signup chain does not loop back', function (): void {
-    // The "Get started" button on the welcome screen links to /signup.
-    // Because the fresh-install state still holds (no users yet), the
-    // gate would loop the user back to /welcome without an explicit
-    // exemption for the signup route name.
+    // "Get started" links to /signup while the fresh-install state still holds,
+    // so without an exemption the gate would loop the user back to /welcome.
     expect(User::query()->count())->toBe(0);
 
     $this->get(route('signup'))
@@ -356,20 +302,13 @@ it('exempts the signup route so the welcome → signup chain does not loop back'
 });
 
 it('exempts the Livewire AJAX update endpoint so the signup submit POST is not bounced (UAT-4 regression)', function (): void {
-    // The signup form is a Livewire component: hitting "Create the first
-    // account" posts to the Livewire AJAX endpoint (`*livewire.update`),
-    // not to /signup directly. The Livewire route is registered on the
-    // `web` middleware group, so EnsureDatabaseReady runs against it.
-    // Without an exemption, a fresh-install POST is short-circuited to
-    // /welcome with a 302 BEFORE SignupAction ever runs — the user is
-    // returned to the welcome screen and no account is created. The
-    // exemption matches the `livewire.update` suffix the framework uses
-    // for both the default and any custom Livewire update route.
+    // The signup submit posts to Livewire's AJAX endpoint, not to /signup, and
+    // that route sits on the `web` group. Without an exemption a fresh-install
+    // POST is bounced to /welcome with a 302 before SignupAction runs, so no
+    // account is ever created. The match is on the `livewire.update` suffix.
     expect(User::query()->count())->toBe(0);
 
-    // Register a stub route ending with `livewire.update` on the bare
-    // `web` group to drive the production middleware stack symmetrically
-    // with how Livewire registers its own AJAX endpoint.
+    // Named the way Livewire names its own AJAX endpoint, on the bare `web` group.
     $this->app['router']
         ->middleware(['web'])
         ->post('/__test/fake-livewire/update', static fn () => 'LW-UPDATE')
@@ -381,10 +320,8 @@ it('exempts the Livewire AJAX update endpoint so the signup submit POST is not b
 });
 
 it('exempts the default-livewire.update route name specifically (Livewire 4 default)', function (): void {
-    // Livewire 4's HandleRequests mechanism names its default update
-    // route `default-livewire.update`. The exemption suffix-matches on
-    // `livewire.update`, so the default name resolves through the gate
-    // even on a fresh install.
+    // Livewire 4 names its default update route `default-livewire.update`; the
+    // exemption suffix-matches, so that name resolves even on a fresh install.
     expect(User::query()->count())->toBe(0);
 
     $this->app['router']
@@ -392,30 +329,24 @@ it('exempts the default-livewire.update route name specifically (Livewire 4 defa
         ->post('/__test/default-lw/update', static fn () => 'DEFAULT-LW')
         ->name('default-livewire.update-test-stub');
 
-    // The stub above is named with a non-suffix-matching name so it
-    // would NOT be exempt — used as a control to prove the suffix
-    // matcher is doing the work. Now register the real-name variant:
+    // The stub above is the control: its name does not end in the suffix, so it
+    // stays gated. This second one carries the real Livewire endpoint name.
     $this->app['router']
         ->middleware(['web'])
         ->post('/__test/real-default-lw/update', static fn () => 'REAL-LW-UPDATE')
         ->name('default-livewire.update');
 
-    // Control: a route that merely contains the substring but does not
-    // end with `livewire.update` is still gated.
     $this->post('/__test/default-lw/update')
         ->assertRedirect(route('desktop.welcome'));
 
-    // Real-shaped Livewire endpoint name: exempt.
     $this->post('/__test/real-default-lw/update')
         ->assertOk()
         ->assertSee('REAL-LW-UPDATE');
 });
 
 it('redirects a fresh-install production-wired request to welcome (end-to-end gate)', function (): void {
-    // Drive the production middleware stack — register a stub route on
-    // the bare `web` group (no explicit EnsureDatabaseReady), so the
-    // assertion proves the middleware is wired via bootstrap/app.php
-    // and that the welcome branch fires through the production wiring.
+    // Bare `web` group again, so the welcome branch is proven to fire through
+    // the production wiring rather than a route-level decoration.
     $this->app['router']
         ->middleware(['web'])
         ->get('/__test/production-cold-start', static fn () => 'PRODUCTION-COLD-START');
@@ -427,16 +358,10 @@ it('redirects a fresh-install production-wired request to welcome (end-to-end ga
 });
 
 it('NativeAppServiceProvider::boot() runs pending migrations before opening the main window', function (): void {
-    // The provider boot path must run the framework migrator BEFORE
-    // the main window opens so the just-opened window's first request
-    // sees a fully migrated schema.
-    //
-    // The real `FirstLaunchBootstrap` is `final`; we route the assertion
-    // through a Migrator spy bound on the container so the production
-    // bootstrap class is exercised end-to-end while still capturing the
-    // sequencing snapshot. The spy records the window-fake's `opened`
-    // array at each `run()` call; an empty array proves the bootstrap
-    // path executed before the provider opened the window.
+    // Migrations must run before the main window opens, so the window's first
+    // request sees a migrated schema. `FirstLaunchBootstrap` is final, so the
+    // sequencing is captured by a Migrator spy that snapshots the window fake's
+    // `opened` array at each run(): an empty array means the order held.
     Http::fake();
 
     $fake = Window::fake();

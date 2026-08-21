@@ -37,7 +37,7 @@ final readonly class DuplicateChargeDetector
     {
         $settledMinor = self::toInt($txn['settled_amount_minor'] ?? 0);
         $absMinor = abs($settledMinor);
-        $counterpartyId = self::toIntOrNull($txn['counterparty_id'] ?? null);
+        $counterpartyId = self::toPositiveIntOrNull($txn['counterparty_id'] ?? null);
 
         if ($absMinor < $minFloorMinor || $counterpartyId === null) {
             return false;
@@ -76,15 +76,5 @@ final readonly class DuplicateChargeDetector
         $bothOnSeries = ($membership[$thisId] ?? false) && ($membership[$siblingId] ?? false);
 
         return ! $bothOnSeries;
-    }
-
-    private static function toIntOrNull(mixed $value): ?int
-    {
-        if (! is_numeric($value)) {
-            return null;
-        }
-        $int = (int) $value;
-
-        return $int > 0 ? $int : null;
     }
 }

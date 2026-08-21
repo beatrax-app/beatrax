@@ -18,6 +18,9 @@ use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
+/**
+ * @link ../../../../.docs/features/ledger/architecture.md#transactionlistquery--paginated-list-read
+ */
 final class TransactionListQuery
 {
     use CoercesScalars;
@@ -43,7 +46,7 @@ final class TransactionListQuery
             ->where('transactions.posted_at', '>=', $cutoff->toDateString())
             ->limit($limit + 1);
 
-        $this->applyCursor($query, $cursorPostedAt, $cursorId);
+        TransactionCursor::apply($query, $cursorPostedAt, $cursorId);
 
         return $this->buildPage($query, $limit, $user->id);
     }
@@ -57,7 +60,7 @@ final class TransactionListQuery
     ): TransactionListPage {
         $query = $this->baseQuery($user, $currency)->limit($limit + 1);
 
-        $this->applyCursor($query, $cursorPostedAt, $cursorId);
+        TransactionCursor::apply($query, $cursorPostedAt, $cursorId);
 
         return $this->buildPage($query, $limit, $user->id);
     }
@@ -107,26 +110,6 @@ final class TransactionListQuery
         }
 
         return $query;
-    }
-
-    private function applyCursor(Builder $query, ?string $cursorPostedAt, ?int $cursorId): void
-    {
-        if ($cursorId === null) {
-            return;
-        }
-
-        if ($cursorPostedAt === null) {
-            // Legacy single-id cursor, kept for backwards compatibility;
-            // callers should supply the pair for correct posted_at-tie ordering.
-            $query->where('transactions.id', '<', $cursorId);
-
-            return;
-        }
-
-        $query->whereRaw(
-            '(transactions.posted_at, transactions.id) < (?, ?)',
-            [$cursorPostedAt, $cursorId],
-        );
     }
 
     private function buildPage(Builder $query, int $limit, int $userId): TransactionListPage

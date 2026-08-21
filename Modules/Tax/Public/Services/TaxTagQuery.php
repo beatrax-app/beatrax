@@ -59,7 +59,7 @@ final class TaxTagQuery
             $map[$txId] = new TaxTagData(
                 transactionId: $txId,
                 deductionCategoryId: $row->deduction_category_id !== null ? self::toInt($row->deduction_category_id) : null,
-                deductionCategoryShortName: self::toStrOrNull($row->category_short_name),
+                deductionCategoryShortName: self::toStringOrNull($row->category_short_name),
                 note: $this->decryptNoteOrNull($row->note, $userId),
                 taxYearOverride: $row->tax_year_override !== null ? self::toInt($row->tax_year_override) : null,
             );
@@ -101,7 +101,7 @@ final class TaxTagQuery
             $map[$key] = new TaxTagData(
                 transactionId: $txId,
                 deductionCategoryId: $row->deduction_category_id !== null ? self::toInt($row->deduction_category_id) : null,
-                deductionCategoryShortName: self::toStrOrNull($row->category_short_name),
+                deductionCategoryShortName: self::toStringOrNull($row->category_short_name),
                 note: $this->decryptNoteOrNull($row->note, $userId),
                 taxYearOverride: $row->tax_year_override !== null ? self::toInt($row->tax_year_override) : null,
                 transactionSplitId: $splitId,
@@ -174,8 +174,7 @@ final class TaxTagQuery
 
         $cpId = self::toInt($tx->counterparty_id);
 
-        // Read-side decrypt — display_name is ciphertext at rest once
-        // encryption is enabled; a pass-through no-op otherwise.
+        // display_name is ciphertext at rest once encryption is on.
         $cpRow = $connection
             ->table('counterparties')
             ->where('id', $cpId)
@@ -239,14 +238,5 @@ final class TaxTagQuery
         }
 
         return $this->codec->decryptValue('tax_transaction_tags', 'note', $value, $userId, ($this->session)())['value'];
-    }
-
-    private static function toStrOrNull(mixed $value): ?string
-    {
-        if ($value === null) {
-            return null;
-        }
-
-        return self::toStringOrNull($value);
     }
 }

@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use Google\Client as GoogleClient;
 use Google\Service\Exception as GoogleServiceException;
 use Google\Service\Gmail as GmailService;
+use Google\Service\Gmail\Resource\Users;
 use Google\Service\Gmail\Resource\UsersHistory;
 use Google\Service\Gmail\Resource\UsersMessages;
 use GuzzleHttp\Client as GuzzleClient;
@@ -37,7 +38,7 @@ final class GmailApiClient implements GmailApiClientContract
 
     /**
      * @param  list<string>  $senderPatterns
-     * @return array{messages: list<array{id: string, threadId: string}>, nextPageToken: ?string, historyId: ?string, resultSizeEstimate: int}
+     * @return array{messages: list<array{id: string, threadId: string}>, nextPageToken: ?string, resultSizeEstimate: int}
      */
     public function listSenderMessages(
         int $inboxId,
@@ -78,12 +79,24 @@ final class GmailApiClient implements GmailApiClientContract
         return [
             'messages' => $messages,
             'nextPageToken' => $nextPageToken,
-            // users.messages.list carries no historyId. Nothing here
-            // re-reads one, so the Gmail cursor is only ever baselined
-            // from a Fake or from a listHistory response.
-            'historyId' => null,
             'resultSizeEstimate' => (int) $estimate,
         ];
+    }
+
+    // users.getProfile is the only endpoint that hands back the mailbox's
+    // current historyId; users.messages.list does not carry one.
+    public function currentHistoryId(int $inboxId): ?string
+    {
+        $resource = $this->usersResource($inboxId);
+        try {
+            $profile = $resource->getProfile('me');
+        } catch (GoogleServiceException $e) {
+            throw $this->mapRateLimit($e);
+        }
+
+        $historyId = $profile->getHistoryId();
+
+        return $historyId === '' ? null : $historyId;
     }
 
     // Gmail's raw field is base64url; the caller wants RFC 822 bytes.
@@ -263,6 +276,19 @@ final class GmailApiClient implements GmailApiClientContract
         return $resource;
     }
 
+    private function usersResource(int $inboxId): Users
+    {
+        $gmail = $this->makeGmailService($inboxId);
+        $resource = $gmail->users;
+        if (! $resource instanceof Users) {
+            throw new GmailResourceUnavailableException(
+                'GmailApiClient: Gmail service has no users resource.',
+            );
+        }
+
+        return $resource;
+    }
+
     private function makeGmailService(int $inboxId): GmailService
     {
         $accessToken = $this->ensureFreshAccessToken($inboxId);
@@ -294,8 +320,7 @@ final class GmailApiClient implements GmailApiClientContract
         $expiresTs = $creds->expiresAt?->getTimestamp();
         $cachedAccessToken = $creds->accessToken;
 
-        // Refreshes within 60 seconds of the stamped expiry, never on
-        // it. Unlike Microsoft, Gmail does not rotate refresh tokens
+        // Unlike Microsoft, Gmail does not rotate refresh tokens
         // single-use, so the same one is written back unchanged.
         if (
             $cachedAccessToken === null
@@ -338,9 +363,8 @@ final class GmailApiClient implements GmailApiClientContract
         );
     }
 
-    // Returns 0 rather than throwing when the row is gone: the inbox
-    // can be deleted between scan kick-off and the failed refresh, and
-    // the error-recovery path still has to complete.
+    // Returns 0 rather than throwing: the inbox can be deleted between scan
+    // kick-off and a failed refresh, and recovery still has to complete.
     private function lookupInboxUserId(int $inboxId): int
     {
         $value = $this->db->connection()
@@ -384,9 +408,8 @@ final class GmailApiClient implements GmailApiClientContract
         return $decoded;
     }
 
-    // Gmail's internalDate is milliseconds since the epoch. Falling
-    // back to now on a bad value is safe: the discovery loop only
-    // orders by this, it never settles anything on it.
+    // Gmail's internalDate is epoch milliseconds; falling back to now on a
+    // bad value is safe because the discovery loop only orders by it.
     private static function internalDateMsToIso(mixed $internalDateMs): string
     {
         if (! is_numeric($internalDateMs)) {
@@ -397,8 +420,7 @@ final class GmailApiClient implements GmailApiClientContract
         return gmdate('Y-m-d\TH:i:s\Z', $seconds);
     }
 
-    // Handles both "Name" <addr@example.com> and a bare address. The
-    // address comes back lowercased so callers can compare it against
+    // The address comes back lowercased so callers can compare it against
     // the sender allow-list without re-normalising.
     /**
      * @return array{0: string, 1: ?string}

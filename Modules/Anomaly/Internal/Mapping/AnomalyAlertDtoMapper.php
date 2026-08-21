@@ -52,7 +52,7 @@ final class AnomalyAlertDtoMapper
             latestAmount: $latestAmount,
             currency: $currency,
             sensitivityPercentUsed: self::toInt($row->sensitivity_percent_used ?? null),
-            dismissedAs: self::toStringOrNull($row->dismissed_as ?? null),
+            dismissedAs: self::toNonEmptyStringOrNull($row->dismissed_as ?? null),
             detectedAt: $detectedAt,
             actionedAt: self::toDateOrNull($row->actioned_at ?? null),
             snoozedUntil: self::toDateOrNull($row->snoozed_until ?? null),
@@ -93,7 +93,9 @@ final class AnomalyAlertDtoMapper
         return is_string($value) && $value !== '' ? $value : 'EUR';
     }
 
-    private static function toStringOrNull(mixed $value): ?string
+    // Not CoercesScalars::toStringOrNull(): an empty `dismissed_as` means the
+    // alert was never dismissed, so it has to read as null rather than ''.
+    private static function toNonEmptyStringOrNull(mixed $value): ?string
     {
         if (is_string($value) && $value !== '') {
             return $value;

@@ -121,7 +121,7 @@ final class SavingsInsightsQuery
         SupportResource $resource,
         bool $hasOpenAlert,
     ): ?SavingsInsight {
-        $monthly = Money::ofMinor($monthlyMinor, $currency)->format($currency === 'EUR' ? 'nl_NL' : 'en_US');
+        $monthly = Money::ofMinor($monthlyMinor, $currency)->format();
 
         // The review floor is a EUR threshold; the arm applies it only to EUR
         // series so a foreign-currency minor amount is never compared with it.

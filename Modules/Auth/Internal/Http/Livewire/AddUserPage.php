@@ -12,6 +12,7 @@ use Modules\Auth\Public\Actions\AddUserAction;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\ValidationMessages;
 
 // The partner's recovery codes are never shown to the owner -- the
 // partner sees them after their own first sign-in.
@@ -37,7 +38,7 @@ final class AddUserPage extends Component
         try {
             $partner = $addUser($currentUser->user(), $this->username, $this->initialPassword);
         } catch (ValidationException $e) {
-            $this->flashMessage = self::firstErrorMessage($e);
+            $this->flashMessage = ValidationMessages::first($e, 'auth::add_user.error_generic');
             $this->resetPasswordFields();
 
             return;
@@ -62,25 +63,5 @@ final class AddUserPage extends Component
     {
         $this->initialPassword = '';
         $this->initialPasswordConfirmation = '';
-    }
-
-    private static function firstErrorMessage(ValidationException $exception): string
-    {
-        /** @var array<string, mixed> $errors */
-        $errors = $exception->errors();
-
-        foreach ($errors as $messages) {
-            if (! is_array($messages)) {
-                continue;
-            }
-
-            foreach ($messages as $message) {
-                if (is_string($message) && $message !== '') {
-                    return $message;
-                }
-            }
-        }
-
-        return Lang::get('auth::add_user.error_generic');
     }
 }

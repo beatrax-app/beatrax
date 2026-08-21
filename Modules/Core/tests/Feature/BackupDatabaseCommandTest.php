@@ -5,7 +5,6 @@ declare(strict_types=1);
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
-use Illuminate\Support\Facades\DB;
 use Modules\Core\Public\Exceptions\BackupNotSupportedException;
 use Modules\Core\Public\Exceptions\UnsafeBackupPathException;
 use Tests\Helpers\RealSqliteFixture;

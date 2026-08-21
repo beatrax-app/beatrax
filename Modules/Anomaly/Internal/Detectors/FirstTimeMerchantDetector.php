@@ -40,7 +40,7 @@ final readonly class FirstTimeMerchantDetector
             return false;
         }
 
-        $counterpartyId = self::toIntOrNull($txn['counterparty_id'] ?? null);
+        $counterpartyId = self::toPositiveIntOrNull($txn['counterparty_id'] ?? null);
         if ($counterpartyId === null) {
             return false;
         }
@@ -92,15 +92,5 @@ final readonly class FirstTimeMerchantDetector
         }
 
         return RobustStatistics::exceedsPercentile($absMinor, $sample, RobustStatistics::CATEGORY_PERCENTILE);
-    }
-
-    private static function toIntOrNull(mixed $value): ?int
-    {
-        if (! is_numeric($value)) {
-            return null;
-        }
-        $int = (int) $value;
-
-        return $int > 0 ? $int : null;
     }
 }

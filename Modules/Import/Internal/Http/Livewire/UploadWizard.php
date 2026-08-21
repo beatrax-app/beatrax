@@ -13,6 +13,7 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\UploadLimits;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
@@ -20,9 +21,6 @@ use Modules\Ingestion\Public\Enums\SourceFormat;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-/**
- * @link ../../../../../.docs/features/import/architecture.md#upload-wizard
- */
 final class UploadWizard extends Component
 {
     use WithFileUploads;
@@ -197,8 +195,7 @@ final class UploadWizard extends Component
             $logger->error('UploadWizard: import preview failed.', [
                 'source_format' => $this->sourceFormat,
                 'filename' => $originalFilename,
-                'exception_class' => $e::class,
-                'exception_message' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
                 'exception_trace' => $e->getTraceAsString(),
             ]);
             $this->uploadError = Lang::get('import::upload.errors.process_failed', [

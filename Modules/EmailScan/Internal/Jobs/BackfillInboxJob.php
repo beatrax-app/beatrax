@@ -56,9 +56,8 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
 
     public function uniqueFor(): int
     {
-        // 30-minute single-flight ceiling: long enough for a
-        // multi-page year-of-receipts backfill to finish, short
-        // enough that a worker crash unblocks the next dispatch.
+        // Long enough for a multi-page year-of-receipts backfill, short
+        // enough that a crashed worker unblocks the next dispatch.
         return 1800;
     }
 
@@ -120,10 +119,8 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
 
         $context = new InboxScanContext($this->inboxId, $clock, $sm, $connection, $blobStore, $mime, $userId);
 
-        // The inboxes CHECK trigger pair keeps gmail|microsoft the only
-        // legal production values, so the default arm is reached only if
-        // data bypassed the migration; it surfaces the misconfiguration
-        // without retrying forever rather than walking an empty provider.
+        // The default arm is unreachable while the inboxes CHECK trigger
+        // pair holds; it surfaces bypassed data without retrying forever.
         match ($provider) {
             MailProvider::Gmail->value => $this->runGmailBackfill($context, $gmail, $senderPatterns, $window),
             MailProvider::Microsoft->value => $this->runMicrosoftBackfill($context, $graph, $senderPatterns, $window),
@@ -146,30 +143,26 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
     ): void {
         $context->sm->applyStatus($this->inboxId, InboxScanStatus::Backfilling->value);
 
-        // Honours the user-selected window: the Gmail after: operator
-        // bounds the q= search to this date floor so the walk stops
-        // at the slider value instead of racing the full-inbox quota.
+        // Gmail's after: operator bounds the q= search server-side, so the
+        // walk stops at the slider value instead of the whole inbox.
         $windowStart = $context->clock->now()->modify("-{$windowMonths} months")->toDateTimeImmutable();
 
-        // Mutable accumulators captured by the page closure: the
-        // running estimate is the max() of per-page hints, and the
-        // historyId baseline is the latest non-null reading.
         $accum = new class
         {
             public int $estimated = 0;
-
-            public ?string $highestHistoryId = null;
         };
 
         try {
+            // Read before the walk, never after: anything that lands while the
+            // walk runs then sits above the baseline and the first incremental
+            // tick replays it, where a post-walk read would skip it for good.
+            $baselineHistoryId = $gmail->currentHistoryId($this->inboxId);
+
             $this->walkAndPersist(
                 $context,
                 fetchNextPage: function (?string $cursor) use ($gmail, $senderPatterns, $windowStart, $accum): array {
                     $page = $gmail->listSenderMessages($this->inboxId, $senderPatterns, $cursor, $windowStart);
                     $accum->estimated = max($accum->estimated, $page['resultSizeEstimate']);
-                    if ($page['historyId'] !== null) {
-                        $accum->highestHistoryId = $page['historyId'];
-                    }
 
                     return [
                         'messages' => $page['messages'],
@@ -183,12 +176,10 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
                 extractInternalDate: static fn (array $msgMeta): ?DateTimeImmutable => null,
             );
 
-            // Sets the baseline cursor only via the state machine's
-            // sole-mutator surface so BoundaryArchTest stays green.
-            if ($accum->highestHistoryId !== null) {
+            if ($baselineHistoryId !== null && $baselineHistoryId !== '') {
                 $context->sm->recordCursor(
                     $this->inboxId,
-                    ScanCursor::gmail($accum->highestHistoryId),
+                    ScanCursor::gmail($baselineHistoryId),
                 );
             }
 
@@ -209,16 +200,11 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
     ): void {
         $context->sm->applyStatus($this->inboxId, InboxScanStatus::Backfilling->value);
 
-        // Captures the wall-clock anchor before any provider call so
-        // the post-walk deltaPage(null, anchor) baseline uses the
-        // pre-walk timestamp, closing the multi-hour-backfill race
-        // window (see architecture.md for the full argument).
+        // Anchored before any provider call so the post-walk
+        // deltaPage(null, anchor) baseline cannot skip mid-walk arrivals.
         $walkStartedAt = $context->clock->now()->toDateTimeImmutable();
         $windowStart = $walkStartedAt->modify("-{$windowMonths} months");
 
-        // Mutable accumulators captured by the page closure: the
-        // running estimate is the max count of messages seen so far,
-        // and lastMessageDate is the most recent receivedDateTime.
         $accum = new class
         {
             public int $estimated = 0;
@@ -246,10 +232,6 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
                 extractInternalDate: fn (array $msgMeta): ?DateTimeImmutable => $this->graphMessageInternalDate($msgMeta),
             );
 
-            // Baseline phase: a single delta call after the walk ends
-            // and before idle, pinned to the pre-walk anchor so
-            // mid-walk messages are captured by the next incremental
-            // tick rather than falling into a walk-end/baseline gap.
             $baseline = $graph->deltaPage($this->inboxId, null, $walkStartedAt);
             $deltaLink = $baseline['deltaLink'] ?? null;
             if ($deltaLink !== null && $deltaLink !== '') {
@@ -265,10 +247,6 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         }
     }
 
-    // Provider-agnostic walker: iterates pages via the closure-based
-    // fetcher, persists each new message through the scan context,
-    // updates the progress strip per page, and sleeps between pages so
-    // the provider quota isn't exhausted by a tight loop.
     /**
      * @param  Closure(?string): array{messages: list<array<string, mixed>>, nextCursor: ?string, totalEstimated: int, lastMessageDate: ?string}  $fetchNextPage
      * @param  Closure(array<string, mixed>): string  $extractMessageId
@@ -297,9 +275,8 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
                 $fetched += $this->persistPageMessage($context, $msgMeta, $extractMessageId, $fetchRawEml, $extractInternalDate);
             }
 
-            // Updates the live progress payload for /inboxes wire:poll,
-            // routed through the state machine so BoundaryArchTest's
-            // noOtherInboxScanStateMutator covers this column too.
+            // Routed through the state machine: BoundaryArchTest forbids any
+            // other writer of inbox_scan_state, backfill_progress included.
             $context->sm->recordBackfillProgress($this->inboxId, [
                 'fetched_count' => $fetched,
                 'total_estimated' => $page['totalEstimated'],
@@ -311,9 +288,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
                 break;
             }
 
-            // Throttle between pages so the read quota envelope
-            // is not exhausted by a tight loop. Sleep::sleep
-            // is fakeable via Sleep::fake() in tests.
+            // Throttle between pages so a tight loop can't burn the read quota.
             Sleep::sleep(2);
         }
     }
@@ -342,10 +317,9 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         return 1;
     }
 
-    // Laravel calls this as a bare `$command->failed($e)` — one argument, NO
-    // container resolution (unlike handle()). Declaring collaborators as
-    // parameters made every exhausted job fatal with "Too few arguments", so
-    // the terminal error transition this hook exists to apply never ran.
+    // Laravel calls this as a bare `$command->failed($e)` with no container
+    // resolution, so declaring collaborators as parameters made every
+    // exhausted job fatal with "Too few arguments".
     public function failed(?Throwable $exception): void
     {
         $container = Container::getInstance();
@@ -360,16 +334,14 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
                 substr($reason, 0, 500),
             );
         } catch (Throwable $stateWriteFailure) {
-            // An invalid transition here is acceptable, but a genuine
-            // write failure (e.g. SQLITE_BUSY) leaves the inbox
-            // stranded with no UI signal — log a warning so it stays
-            // discoverable.
+            // An invalid transition here is fine, but a real write failure
+            // (SQLITE_BUSY) strands the inbox with no UI signal.
             $logger->warning(
                 'BackfillInboxJob::failed could not apply the terminal error state.',
                 [
                     'inbox_id' => $this->inboxId,
                     'original_failure' => $reason,
-                    'state_write_failure' => $stateWriteFailure->getMessage(),
+                    'state_write_failure' => $stateWriteFailure::class,
                 ],
             );
         }
@@ -377,17 +349,10 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
 
     private function clearProgressAndIdle(InboxScanContext $context): void
     {
-        // Clears the progress payload and flips status back to idle,
-        // both through the state machine so its lifecycle write
-        // boundary covers backfill_progress alongside status/cursor.
         $context->sm->recordBackfillProgress($this->inboxId, null);
         $context->sm->applyStatus($this->inboxId, InboxScanStatus::Idle->value);
     }
 
-    // Both provider branches share one error envelope: rate-limit
-    // transitions and rethrows for the backoff curve, a revoked grant
-    // parks the inbox at needs_reauth without a rethrow, and any other
-    // throwable records the error before rethrowing to the failed hook.
     private function transitionOnScanError(InboxScanContext $context, Throwable $e): void
     {
         match (true) {
@@ -435,9 +400,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         return is_string($msgMeta['id'] ?? null) ? $msgMeta['id'] : '';
     }
 
-    // Provider-stamped receivedDateTime is the canonical internal date
-    // for Microsoft; a null return lets the scan context fall back to
-    // the project Clock when the stamp is missing or unparseable.
+    // A null return lets the scan context fall back to the project Clock.
     /**
      * @param  array<string, mixed>  $msgMeta
      */

@@ -6,7 +6,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
-use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Sync\InitialSyncPuller;
@@ -64,7 +64,7 @@ it('resumes an initial sync from a durable mobile_sync_progress cursor with no d
 
     // The module TestCase does not prime an unlocked session, and the local
     // device identity cannot be generated without one.
-    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
 
     /** @var DeviceIdentityService $identityService */
     $identityService = app(DeviceIdentityService::class);
@@ -193,7 +193,7 @@ it('runs the history re-projection AT MOST ONCE per cursor once the keyring beco
 
     /** @var Session $session */
     $session = app(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
 
     @unlink(UserDataPathService::appPath('sync/gdk/'.$userId.'.enc'));
 
@@ -271,7 +271,7 @@ it('re-delivering an already-installed (stale) epoch wrap through the receive ga
 
     /** @var Session $session */
     $session = app(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
 
     @unlink(UserDataPathService::appPath('sync/gdk/'.$userId.'.enc'));
 
@@ -343,7 +343,7 @@ it('does not report complete while the GDK keyring is empty — an import awaiti
 
     /** @var Session $session */
     $session = app(Session::class);
-    (new LockStateManager)->unlock($session, str_repeat("\x2a", 32));
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
 
     /** @var DeviceIdentityService $identityService */
     $identityService = app(DeviceIdentityService::class);

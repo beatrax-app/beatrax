@@ -42,9 +42,13 @@ final class SystemAlertsBanner extends Component
     // the request; the desktop module is the sole listener and turns it into a
     // re-verified download, so on web or mobile — where no listener is bound —
     // the click is inert and nothing outside the app stores ever installs.
-    public function install(int $alertId, AcknowledgeSystemAlert $acknowledge, CurrentUser $currentUser): void
-    {
-        $alert = SystemAlert::withoutGlobalScopes()->find($alertId);
+    public function install(
+        int $alertId,
+        AcknowledgeSystemAlert $acknowledge,
+        CurrentUser $currentUser,
+        SystemAlertQuery $query,
+    ): void {
+        $alert = $query->visibleTo($alertId, $currentUser->user());
         if ($alert === null) {
             return;
         }
@@ -66,9 +70,10 @@ final class SystemAlertsBanner extends Component
         UserPreferenceWriter $preferences,
         CurrentUser $currentUser,
         AcknowledgeSystemAlert $acknowledge,
+        SystemAlertQuery $query,
     ): void {
         $user = $currentUser->user();
-        $alert = SystemAlert::withoutGlobalScopes()->find($alertId);
+        $alert = $query->visibleTo($alertId, $user);
         if ($alert === null) {
             return;
         }
