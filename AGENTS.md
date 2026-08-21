@@ -25,9 +25,11 @@ are a deliberate shared read-seam other modules may use directly. Nothing else
 crosses.
 
 Enforced twice, so it cannot be argued around: `App\PhpStan\Rules\BoundaryRule`
-at static-analysis time, and the per-module invariants in
-`tests/Contracts/BoundaryArchTest.php`. If you find yourself importing another
-module's `Internal\`, the answer is a new `Public\` contract, not an exception.
+at static-analysis time, and `pinnedCrossModuleInternalImports` in
+`tests/Contracts/BoundaryArchTest.php`, which pins every crossing that exists —
+in production, in tests, and in the Blade views that mount a neighbour's
+Livewire component by alias. If you find yourself importing another module's
+`Internal\`, the answer is a new `Public\` contract, not an exception.
 
 The map is [`.docs/architecture/module-boundaries.md`](.docs/architecture/module-boundaries.md);
 the contract is
@@ -52,9 +54,13 @@ An IMAP library is not a shortcut here; it is a specification violation.
 
 ## Code standards (enforced)
 
-- **The gate is three checks, all blocking:** `vendor/bin/pint --test`,
-  `vendor/bin/phpstan analyse` at **level 10 in strict mode**, and
-  `vendor/bin/pest` — unit, feature, contract, and architecture in one run.
+- **The gate is four checks, all blocking:** `vendor/bin/pint --test`,
+  `vendor/bin/phpstan analyse` at **level 10 in strict mode**,
+  `vendor/bin/pest` — unit, feature, contract, and architecture in one run —
+  and `composer analyse:deps`, which fails when code imports a namespace no
+  direct dependency declares. A package reachable only through another
+  package's requirements disappears the day that package drops it, so an
+  undeclared import is a break scheduled for an unrelated `composer update`.
 - Comments explain *why*, never *what*, and the bar is high: if the code says it,
   the comment does not need to. An inline `//` block is **at most 4 lines**, and
   a thought worth one line should BE one line — there is no floor, and padding to
@@ -74,8 +80,8 @@ An IMAP library is not a shortcut here; it is a specification violation.
 
 ## Before you open a PR
 
-- All three gate checks pass locally (`composer format:check && composer analyse
-  && composer test`).
+- All four gate checks pass locally (`composer format:check && composer analyse
+  && composer analyse:deps && composer test`).
 - Your change cites a spec identifier in a commit `Spec:` trailer **and** in the
   PR body — the gate reads both. Routine maintenance cites `GOV-R12`.
 - Behaviour change? **The spec PR merged first**

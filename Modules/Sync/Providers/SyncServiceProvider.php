@@ -327,7 +327,6 @@ final class SyncServiceProvider extends ServiceProvider
         // runtime-built FQCN strings so PHPStan stays clean before the
         // classes exist. This provider is the single owner.
         $transportNamespace = 'Modules\Sync\Internal\Transport\\';
-        $discoveryNamespace = $transportNamespace.'Discovery\\';
         $relayNamespace = $transportNamespace.'Relay\\';
 
         // Noise state machine classes are NOT singletons — they hold
@@ -346,10 +345,6 @@ final class SyncServiceProvider extends ServiceProvider
 
         $this->singletonIfExists($relayNamespace.'RelayClient');
         $this->singletonIfExists($relayNamespace.'RelayConfig');
-
-        // Wraps a long-lived dns-sd/avahi process — singleton so the
-        // container reuses the same process handle across resolutions.
-        $this->singletonIfExists($discoveryNamespace.'MdnsBrowser');
 
         $this->registerWebSocketHandler();
     }

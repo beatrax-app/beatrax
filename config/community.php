@@ -22,18 +22,8 @@ return [
         'root' => 'resources/corpus',
     ],
 
-    // Null means resolve `corpus.root` against the injected
-    // `Application::basePath()`, so relocating the tree needs no code change.
-    // Tests bind a fixture directory here instead of touching the shipped corpus.
+    // Null resolves `corpus.root` against the injected `Application::basePath()`.
+    // Tests bind a fixture directory rather than touch the shipped corpus.
     'app_root' => null,
-
-    // Seeded into `users.community_settings` until the user saves a choice.
-    // `update_on_app_updates` ships disabled: the live-update mechanism it
-    // would drive does not exist yet.
-    'defaults' => [
-        'use_shared_list' => true,
-        'offer_to_contribute' => true,
-        'update_on_app_updates' => false,
-    ],
 
 ];

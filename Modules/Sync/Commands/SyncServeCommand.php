@@ -10,12 +10,14 @@ use Amp\Websocket\Server\Rfc6455Acceptor;
 use Amp\Websocket\Server\Websocket;
 use Closure;
 use Illuminate\Console\Command;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Sync\Internal\Pairing\PairingOfferRateLimiter;
 use Modules\Sync\Internal\Pairing\PairingOfferService;
 use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
 use Modules\Sync\Internal\Transport\Discovery\MdnsAdvertiser;
 use Modules\Sync\Internal\Transport\PairingOfferRequestHandler;
 use Modules\Sync\Internal\Transport\SyncWebSocketHandler;
+use Modules\Sync\Public\Services\SyncPorts;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -25,7 +27,7 @@ use Psr\Log\LoggerInterface;
 final class SyncServeCommand extends Command
 {
     /** @var string */
-    protected $signature = 'sync:serve {--port=51337 : WebSocket listen port}';
+    protected $signature = 'sync:serve {--port= : WebSocket listen port; defaults to SYNC_PORT}';
 
     /** @var string */
     protected $description = 'Start the long-running Noise/WebSocket sync listener (amphp event loop).';
@@ -42,7 +44,7 @@ final class SyncServeCommand extends Command
         parent::__construct();
     }
 
-    public function handle(): int
+    public function handle(SyncPorts $ports): int
     {
         // The desktop bundle starts PHP with -d max_execution_time=120, and
         // a listener is by definition longer-lived than any request: the loop
@@ -50,7 +52,8 @@ final class SyncServeCommand extends Command
         // dialling during that gap got a refused connection.
         set_time_limit(0);
 
-        $port = (int) $this->option('port');
+        $requested = $this->option('port');
+        $port = is_string($requested) && $requested !== '' ? (int) $requested : $ports->lan();
         if ($port <= 0 || $port > 65535) {
             $this->error("sync:serve: invalid port {$port}.");
 
@@ -108,8 +111,8 @@ final class SyncServeCommand extends Command
 
             $httpServer->stop();
         } catch (\Throwable $e) {
-            $this->logger->error('sync:serve: fatal error.', ['error' => $e->getMessage()]);
-            $this->error("sync:serve: fatal — {$e->getMessage()}");
+            $this->logger->error('sync:serve: fatal error.', SafeExceptionContext::describe($e));
+            $this->error('sync:serve: fatal — '.$e::class);
 
             return self::FAILURE;
         } finally {

@@ -261,6 +261,12 @@ jobs:
               # CI step pins the same limit explicitly.
               run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
 
+            - name: Declared dependencies cover every import
+              # An import satisfied only by a dependency-of-a-dependency
+              # compiles until that middle package drops it, and then the
+              # break arrives on an unrelated `composer update`.
+              run: composer analyse:deps
+
     # The name the branch ruleset requires. Sharding turned one check into
     # three, and a required check has to be one name that means "the suite
     # passed" — so the shards report under their own names and this collapses

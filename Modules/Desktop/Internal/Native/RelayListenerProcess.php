@@ -6,6 +6,7 @@ namespace Modules\Desktop\Internal\Native;
 
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\LocalRelayProvisioner;
+use Modules\Sync\Public\Services\SyncPorts;
 use Native\Desktop\Facades\ChildProcess;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -15,10 +16,6 @@ use Throwable;
 // accept, never showed the safety words, and the phone polled forever.
 final readonly class RelayListenerProcess
 {
-    // Mirrors config/sync.php 'relay_port'; duplicated because phpstan's
-    // noGlobalLaravelFunction rule bans the config() helper in this layer.
-    private const PORT = 51338;
-
     private const ALIAS = 'relay-listener';
 
     private const PROBE_TIMEOUT_SECONDS = 1;
@@ -26,6 +23,7 @@ final readonly class RelayListenerProcess
     public function __construct(
         private DeviceRegistryService $devices,
         private LocalRelayProvisioner $provisioner,
+        private SyncPorts $ports,
         private LoggerInterface $logger,
     ) {}
 
@@ -42,7 +40,7 @@ final readonly class RelayListenerProcess
         // Provision BEFORE spawning: relay:serve reads the certificate once, at
         // startup, so a relay started ahead of the material served plaintext for its
         // whole life while the QR advertised an https endpoint nobody could reach.
-        $endpoint = $this->provisioner->ensureConfigured(self::PORT);
+        $endpoint = $this->provisioner->ensureConfigured($this->ports->relay());
 
         if ($endpoint === null) {
             $this->logger->warning('relay listener: no LAN address found; pairing cannot advertise an endpoint.');
@@ -70,7 +68,7 @@ final readonly class RelayListenerProcess
     {
         try {
             ChildProcess::artisan(
-                'relay:serve --port='.self::PORT,
+                'relay:serve --port='.$this->ports->relay(),
                 self::ALIAS,
                 null,
                 true,
@@ -100,7 +98,7 @@ final readonly class RelayListenerProcess
     // negotiation each time — accepted, over fighting the daemon for its port.
     private function portIsBound(): bool
     {
-        $socket = @fsockopen('127.0.0.1', self::PORT, $errno, $errstr, self::PROBE_TIMEOUT_SECONDS);
+        $socket = @fsockopen('127.0.0.1', $this->ports->relay(), $errno, $errstr, self::PROBE_TIMEOUT_SECONDS);
 
         if ($socket === false) {
             return false;
@@ -121,7 +119,7 @@ final readonly class RelayListenerProcess
         ]]);
 
         $socket = @stream_socket_client(
-            'ssl://127.0.0.1:'.self::PORT,
+            'ssl://127.0.0.1:'.$this->ports->relay(),
             $errno,
             $errstr,
             self::PROBE_TIMEOUT_SECONDS,

@@ -12,14 +12,12 @@ use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Desktop\Public\Events\FileOpenedFromOs;
 use Modules\Import\Public\Events\TransactionImported;
 use Modules\Receipts\Internal\Http\Livewire\ReceiptConflictToast;
-use Modules\Receipts\Internal\Http\Livewire\WizardEmailFileStep;
 use Modules\Receipts\Internal\Listeners\DispatchChainHintsFromReceipt;
 use Modules\Receipts\Internal\Listeners\HandleFileOpenedFromOs;
 use Modules\Receipts\Internal\MatcherRegistry;
 use Modules\Receipts\Public\Actions\ApplyReceiptConflictResolution;
 use Modules\Receipts\Public\Actions\RecordReceipt;
 use Modules\Receipts\Public\Contracts\SenderMatcher;
-use Modules\Receipts\Public\Services\FileImportQuery;
 use Modules\Receipts\Public\Services\ReceiptConflictQuery;
 
 final class ReceiptsServiceProvider extends ServiceProvider
@@ -60,7 +58,6 @@ final class ReceiptsServiceProvider extends ServiceProvider
         }
 
         $this->app->singleton(RecordReceipt::class);
-        $this->app->singleton(FileImportQuery::class);
         $this->app->singleton(DispatchChainHintsFromReceipt::class);
         $this->app->singleton(HandleFileOpenedFromOs::class);
         $this->app->singleton(ApplyReceiptConflictResolution::class);
@@ -92,7 +89,6 @@ final class ReceiptsServiceProvider extends ServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
         }
 
-        $livewire->component('receipts.wizard-email-file-step', WizardEmailFileStep::class);
         $livewire->component('receipts.receipt-conflict-toast', ReceiptConflictToast::class);
 
         $events->listen(TransactionImported::class, [DispatchChainHintsFromReceipt::class, 'handle']);

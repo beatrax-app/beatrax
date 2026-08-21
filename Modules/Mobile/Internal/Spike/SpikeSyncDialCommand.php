@@ -8,6 +8,7 @@ use Amp\CancelledException;
 use Amp\TimeoutCancellation;
 use Amp\Websocket\Client\WebsocketConnectException;
 use Illuminate\Console\Command;
+use Modules\Sync\Public\Services\SyncPorts;
 use Throwable;
 
 use function Amp\async;
@@ -16,15 +17,16 @@ use function Amp\Websocket\Client\connect;
 final class SpikeSyncDialCommand extends Command
 {
     /** @var string */
-    protected $signature = 'mobile:spike-dial {--host= : Desktop peer host to dial (default 127.0.0.1)} {--port=51337 : Desktop sync:serve WebSocket port}';
+    protected $signature = 'mobile:spike-dial {--host= : Desktop peer host to dial (default 127.0.0.1)} {--port= : Desktop sync:serve WebSocket port; defaults to SYNC_PORT}';
 
     /** @var string */
     protected $description = 'Spike A: drive the amphp/Revolt loop for a single bounded dial-out to a desktop sync:serve listener.';
 
-    public function handle(): int
+    public function handle(SyncPorts $ports): int
     {
         $host = $this->resolveHost();
-        $port = (int) $this->option('port');
+        $requested = $this->option('port');
+        $port = is_string($requested) && $requested !== '' ? (int) $requested : $ports->lan();
 
         if ($port <= 0 || $port > 65535) {
             $this->error("mobile:spike-dial: invalid port {$port}.");

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Desktop\Internal\Native;
 
 use Modules\Sync\Public\Services\DeviceRegistryService;
+use Modules\Sync\Public\Services\SyncPorts;
 use Native\Desktop\Facades\ChildProcess;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -14,10 +15,6 @@ use Throwable;
 // WindowManager is not bound.
 final readonly class SyncListenerProcess
 {
-    // Mirrors config/sync.php 'port'; duplicated because phpstan's
-    // noGlobalLaravelFunction rule bans the config() helper in this layer.
-    private const PORT = 51337;
-
     private const ALIAS = 'sync-listener';
 
     // Loopback only, so a bound port answers immediately and boot stays fast.
@@ -25,6 +22,7 @@ final readonly class SyncListenerProcess
 
     public function __construct(
         private DeviceRegistryService $devices,
+        private SyncPorts $ports,
         private LoggerInterface $logger,
     ) {}
 
@@ -58,7 +56,7 @@ final readonly class SyncListenerProcess
 
         try {
             ChildProcess::artisan(
-                'sync:serve --port='.self::PORT,
+                'sync:serve --port='.$this->ports->lan(),
                 self::ALIAS,
                 $environment === [] ? null : $environment,
                 true,
@@ -98,7 +96,7 @@ final readonly class SyncListenerProcess
             ChildProcess::stop(self::ALIAS);
 
             ChildProcess::artisan(
-                'sync:serve --port='.self::PORT,
+                'sync:serve --port='.$this->ports->lan(),
                 self::ALIAS,
                 $environment,
                 true,
@@ -117,7 +115,7 @@ final readonly class SyncListenerProcess
     // leaving every later request spawning another through Electron's sync IPC.
     private function portIsBound(): bool
     {
-        $socket = @fsockopen('127.0.0.1', self::PORT, $errno, $errstr, self::PROBE_TIMEOUT_SECONDS);
+        $socket = @fsockopen('127.0.0.1', $this->ports->lan(), $errno, $errstr, self::PROBE_TIMEOUT_SECONDS);
 
         if ($socket === false) {
             return false;

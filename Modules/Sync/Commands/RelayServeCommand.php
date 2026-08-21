@@ -22,17 +22,19 @@ use Modules\Sync\Internal\Transport\Relay\RelayDrainRegistry;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
 use Modules\Sync\Internal\Transport\Relay\RelayRateLimiter;
 use Modules\Sync\Internal\Transport\Relay\RelayTlsMaterial;
+use Modules\Sync\Public\Services\SyncPorts;
 use Psr\Log\LoggerInterface;
 
 /**
  * @see SyncServiceProvider
+ * @link ../../../.docs/features/sync/relay-endpoint-authorization.md
  */
 final class RelayServeCommand extends Command
 {
     private const JSON_CONTENT_TYPE = 'application/json';
 
     /** @var string */
-    protected $signature = 'relay:serve {--port=51338 : Relay HTTP listen port}';
+    protected $signature = 'relay:serve {--port= : Relay HTTP listen port; defaults to SYNC_RELAY_PORT}';
 
     /** @var string */
     protected $description = 'Start the ZK relay HTTP endpoint daemon (POST /relay/deliver, GET /relay/drain, DELETE /relay/drain/{id}).';
@@ -66,7 +68,7 @@ final class RelayServeCommand extends Command
         parent::__construct();
     }
 
-    public function handle(): int
+    public function handle(SyncPorts $ports): int
     {
         // The desktop bundle starts PHP with -d max_execution_time=120, and
         // a listener is by definition longer-lived than any request: the loop
@@ -74,7 +76,8 @@ final class RelayServeCommand extends Command
         // dialling during that gap got a refused connection.
         set_time_limit(0);
 
-        $port = (int) $this->option('port');
+        $requested = $this->option('port');
+        $port = is_string($requested) && $requested !== '' ? (int) $requested : $ports->relay();
         if ($port <= 0 || $port > 65535) {
             $this->error("relay:serve: invalid port {$port}.");
 
@@ -111,8 +114,8 @@ final class RelayServeCommand extends Command
 
             $httpServer->stop();
         } catch (\Throwable $e) {
-            $this->logger->error('relay:serve: fatal error.', ['error' => $e->getMessage()]);
-            $this->error("relay:serve: fatal — {$e->getMessage()}");
+            $this->logger->error('relay:serve: fatal error.', SafeExceptionContext::describe($e));
+            $this->error('relay:serve: fatal — '.$e::class);
 
             return self::FAILURE;
         }
