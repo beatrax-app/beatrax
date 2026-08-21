@@ -113,11 +113,23 @@ jobs:
             # first. The action resolves from the checked-out tag, so a tag
             # cut before this step existed cannot find it — rebuild from a
             # tag that contains it.
+            - name: Resolve the bundle identifier the build was given
+              id: app-identity
+              run: |
+                  set -euo pipefail
+                  identifier=$(php artisan tinker --execute="echo config('nativephp.app_id');" 2>/dev/null | tail -n 1 | tr -d '[:space:]')
+                  if [ -z "${identifier}" ]; then
+                      echo "::error::could not resolve config('nativephp.app_id'); refusing to verify a bundle against an unknown identity."
+                      exit 1
+                  fi
+                  echo "identifier=${identifier}" >> "$GITHUB_OUTPUT"
+
             - name: Verify the macOS bundle is genuinely signed
               uses: ./.github/actions/verify-signature
               with:
                   platform: macos
                   artifact-path: nativephp/electron/dist/*.dmg
+                  expected-identifier: ${{ steps.app-identity.outputs.identifier }}
 
             - name: Upload macOS artifacts (arm64)
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
