@@ -48,7 +48,7 @@
              full-screen activity is the fallback where neither is offered.
              Both funnel into the same submitCode(). --}}
         {{-- No beatrax-step-left listener: nothing ever dispatched that event.
-             Leaving the scan step re-renders this @if away, and Alpine's
+             Leaving the scan step renders this branch away, and Alpine's
              destroy() hook stops the stream — which is what actually closes
              the camera. --}}
         <div x-data="beatraxInlineScanner($wire)" x-init="probe()">

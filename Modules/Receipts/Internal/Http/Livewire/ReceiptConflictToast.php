@@ -12,11 +12,10 @@ use Modules\Receipts\Public\Actions\ApplyReceiptConflictResolution;
 use Modules\Receipts\Public\Enums\ReceiptConflictChoice;
 use Modules\Receipts\Public\Services\ReceiptConflictQuery;
 
-// Surfaces the latest pending conflict on mount. It used to also carry a
-// `receipt-conflict-detected` Livewire listener, but conflicts are recorded
-// by queued jobs, which cannot reach the browser channel: nothing ever
-// dispatched that name, and the mount read is the whole delivery path.
-// Every action is scoped by ApplyReceiptConflictResolution's user_id.
+// Surfaces the latest pending conflict on mount, which is the whole delivery
+// path: the `receipt-conflict-detected` listener this used to carry could
+// never fire, because conflicts are recorded by queued jobs and a worker
+// reaches no browser. Actions stay scoped by ApplyReceiptConflictResolution.
 final class ReceiptConflictToast extends Component
 {
     public bool $visible = false;
