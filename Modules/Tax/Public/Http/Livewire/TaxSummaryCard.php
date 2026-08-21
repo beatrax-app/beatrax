@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Tax\Internal\Support\FilingSeason;
 use Modules\Tax\Public\Services\TaxTagQuery;
 
 final class TaxSummaryCard extends Component
@@ -27,10 +28,7 @@ final class TaxSummaryCard extends Component
             ]);
         }
 
-        // TaxPage::mount() resolves the same seasonal default; the card and the
-        // page it links to have to agree.
-        $now = $clock->now();
-        $year = $now->month <= 4 ? $now->year - 1 : $now->year;
+        $year = FilingSeason::defaultYear($clock->now());
 
         $summary = $query->summaryForUser($currentUser->user()->id, $year);
 
