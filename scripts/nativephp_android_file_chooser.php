@@ -97,6 +97,42 @@ KOTLIN;
 $override = <<<'KOTLIN'
 return object : WebChromeClient() {
             // Added by scripts/nativephp_android_file_chooser.php — see that
+            /*
+             * Android providers do not agree on what a bank statement is.
+             * MediaStore reports a .csv as `text/comma-separated-values` — the
+             * legacy MimeTypeMap answer — while the WebView derives `text/csv`
+             * from the page's accept attribute, so DocumentsUI greyed out every
+             * statement on the device and the import step could not be passed
+             * at all. A .sta shows up as a BIN file and an .mbox as nothing in
+             * particular, so the disagreement is not limited to one format.
+             *
+             * The intent therefore asks for anything and names the types it
+             * prefers, rather than filtering on one spelling. Selecting the
+             * wrong file is recoverable — the parser reports precisely what it
+             * could not read — whereas a picker that cannot select the right
+             * file is not recoverable from inside the app at all.
+             */
+            private fun widenAcceptedMimeTypes(intent: Intent) {
+                val preferred = arrayOf(
+                    "text/csv",
+                    "text/comma-separated-values",
+                    "text/plain",
+                    "text/xml",
+                    "application/xml",
+                    "application/vnd.ms-excel",
+                    "message/rfc822",
+                    "application/mbox",
+                    "application/pdf",
+                    "application/zip",
+                    // What a provider falls back to when it cannot name the
+                    // type — which is what a .sta and an .mt940 usually get.
+                    "application/octet-stream"
+                )
+
+                intent.type = "*/*"
+                intent.putExtra(Intent.EXTRA_MIME_TYPES, preferred)
+            }
+
             // file for why the generated shell needs it.
             override fun onShowFileChooser(
                 webView: WebView?,
@@ -115,6 +151,8 @@ return object : WebChromeClient() {
                     filePathCallback?.onReceiveValue(null)
                     return false
                 }
+
+                widenAcceptedMimeTypes(intent)
 
                 BeatraxFileChooser.start(filePathCallback)
 
@@ -136,8 +174,17 @@ KOTLIN;
 
 $webViewSource = (string) file_get_contents($webViewTarget);
 
-if (str_contains($webViewSource, 'onShowFileChooser')) {
+// Two markers, not one. The first says this file was patched at all; the
+// second says it was patched by THIS version. A scaffold carrying an older
+// override is the dangerous case: skipping on the first marker alone shipped
+// the old picker while reporting success, which is how a build reaches a phone
+// that still cannot open a bank statement.
+if (str_contains($webViewSource, 'widenAcceptedMimeTypes')) {
     fwrite(STDOUT, "nativephp_android_file_chooser: WebViewManager already patched.\n");
+} elseif (str_contains($webViewSource, 'onShowFileChooser')) {
+    fwrite(STDERR, "nativephp_android_file_chooser: {$webViewTarget} carries an OLDER version of this override.\n");
+    fwrite(STDERR, "Regenerate the scaffold (php artisan native:install) so the current one is applied.\n");
+    exit(1);
 } else {
     $anchor = "return object : WebChromeClient() {\n";
 

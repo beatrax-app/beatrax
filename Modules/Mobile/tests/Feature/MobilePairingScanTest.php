@@ -508,6 +508,64 @@ it('useWordCode() reaches enter_code WITHOUT the amber notice — a choice, not 
         ->assertSet('flashMessage', '');
 });
 
+// A handshake that ends — expired, refused, cancelled on the other device —
+// resets the attempt. It used to read the CURRENT step to decide where to land,
+// but by then the step is 'confirm', which is never 'enter_code' — so a reader
+// who had typed a word code was returned to a camera they had already declined.
+it('returns a word-code reader to the keypad after a reset, not to the camera', function (): void {
+    $user = pairingScanTestUser('mobile-pair-reset-keypad');
+    test()->actingAs($user);
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    pairingScanSetUpIdentity($user, $session);
+    $issued = pairingScanIssueToken($user);
+
+    /** @var WordCodeEncoder $encoder */
+    $encoder = app(WordCodeEncoder::class);
+
+    Livewire::test(MobilePairingScan::class)
+        ->call('useWordCode')
+        ->assertSet('entryStep', 'enter_code')
+        ->set('wordCode', $encoder->encode($issued['token']))
+        ->call('submitCode', null)
+        ->assertSet('step', 'confirm')
+        // The ceremony ends out of sight — the token expires — and the next
+        // poll resets the attempt.
+        ->tap(function () use ($user, $issued): void {
+            app(DatabaseManager::class)->connection()->table('pairing_tokens')
+                ->where('user_id', $user->id)
+                ->update(['expires_at' => CarbonImmutable::now()->subDay()->toIso8601String()]);
+        })
+        ->call('checkPairingState')
+        ->assertSet('step', 'enter_code');
+});
+
+// The poll sets flashMessage on every failed delivery. The confirm step had
+// nowhere to render it, so one phone set it 86 times over four minutes while the
+// screen showed nothing but "waiting for the other device".
+it('shows a delivery failure on the confirm step instead of only a spinner', function (): void {
+    $user = pairingScanTestUser('mobile-pair-confirm-flash');
+    test()->actingAs($user);
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    pairingScanSetUpIdentity($user, $session);
+    $issued = pairingScanIssueToken($user);
+
+    /** @var WordCodeEncoder $encoder */
+    $encoder = app(WordCodeEncoder::class);
+
+    $html = (string) Livewire::test(MobilePairingScan::class)
+        ->set('wordCode', $encoder->encode($issued['token']))
+        ->call('submitCode', null)
+        ->assertSet('step', 'confirm')
+        ->set('flashMessage', 'Cannot reach the other device.')
+        ->html();
+
+    expect($html)->toContain('Cannot reach the other device.');
+});
+
 it('startScan() falls back to enter_code when the bridge cannot open a camera', function (): void {
     $user = pairingScanTestUser('mobile-pair-startscan');
     test()->actingAs($user);
