@@ -7,7 +7,7 @@ return [
     'body' => 'Konto kustutamine eemaldab selle sellest seadmest koos kõigega, mis sellele kuulub. Seda ei saa tagasi võtta.',
     'removes' => 'Kaovad su tehingud, kontod, eelarved, eesmärgid ja aruanded ning ka reeglid, eelistused, taastekoodid, sünkroonimisidentiteet ja krüpteerimisvõtmed.',
     'devices_heading' => 'Su teised seadmed hoiavad oma koopiat alles',
-    'devices_body' => 'Beatraxil ei ole serverit, seega ei saa midagi eemalt kustutada. Need seadmed hoiavad ikka täielikku koopiat ja need tuleb korda teha seadmes endas — :devices',
+    'devices_body' => 'Beatraxil ei ole serverit, seega ei saa midagi eemalt kustutada. See seade hoiab ikka täielikku koopiat ja see tuleb korda teha seadmes endas — :devices|Beatraxil ei ole serverit, seega ei saa midagi eemalt kustutada. Need seadmed hoiavad ikka täielikku koopiat ja need tuleb korda teha seadmes endas — :devices',
     'devices_none' => 'Selle seadmega pole ükski teine seade seotud, seega on see su andmete ainus koopia.',
     'successor' => 'Sina haldad seda seadet, nii et pärast su konto kadumist võtab selle üle :username.',
     'password_label' => 'Kinnitamiseks sisesta oma parool',

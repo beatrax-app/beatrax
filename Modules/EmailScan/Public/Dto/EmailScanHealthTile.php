@@ -6,7 +6,6 @@ namespace Modules\EmailScan\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-// The tile shows at most three lines; $overflowCount is what is left over.
 /**
  * @phpstan-type LinesArray array<int, InboxHealthLine>
  */

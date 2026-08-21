@@ -8,8 +8,11 @@ return [
     'heading_complete' => 'Importas baigtas',
     'heading_update' => 'Atnaujinimas pritaikytas',
 
-    'summary_line' => 'Importuota kategorijų: :categories, biudžeto mėnesių: :budget_months, operacijų: :transactions.',
-    'summary_attention' => 'Dėmesio vis dar reikalauja įrašų: :count — žr. žemiau.',
+    'summary_line' => 'Importuota: :categories, :budget_months ir :transactions.',
+    'summary_categories' => ':count kategorija|:count kategorijos|:count kategorijų',
+    'summary_budget_months' => ':count biudžeto mėnuo|:count biudžeto mėnesiai|:count biudžeto mėnesių',
+    'summary_transactions' => ':count operacija|:count operacijos|:count operacijų',
+    'summary_attention' => ':count įrašas vis dar reikalauja dėmesio — žr. žemiau.|:count įrašai vis dar reikalauja dėmesio — žr. žemiau.|:count įrašų vis dar reikalauja dėmesio — žr. žemiau.',
 
     'stats' => [
         'category' => 'Kategorijos',

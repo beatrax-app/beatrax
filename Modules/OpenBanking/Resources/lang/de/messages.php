@@ -57,7 +57,7 @@ return [
 
         'consent_expired' => 'Einwilligung abgelaufen — erneut verbinden.',
         'unavailable' => 'Enable Banking ist vorübergehend nicht erreichbar. Versuche es gleich noch einmal.',
-        'new_found' => ':count neue Transaktionen gefunden.',
+        'new_found' => ':count neue Transaktion gefunden.|:count neue Transaktionen gefunden.',
         'none' => 'Keine neuen Transaktionen.',
     ],
 

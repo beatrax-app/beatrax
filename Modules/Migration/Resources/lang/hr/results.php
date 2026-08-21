@@ -8,8 +8,11 @@ return [
     'heading_complete' => 'Uvoz dovršen',
     'heading_update' => 'Ažuriranje primijenjeno',
 
-    'summary_line' => 'Uvezeno: :categories kategorija, :budget_months proračunskih mjeseci i :transactions transakcija.',
-    'summary_attention' => 'Stavki koje još traže tvoju pažnju: :count — pogledaj u nastavku.',
+    'summary_line' => 'Uvezeno: :categories, :budget_months i :transactions.',
+    'summary_categories' => ':count kategorija|:count kategorije|:count kategorija',
+    'summary_budget_months' => ':count proračunski mjesec|:count proračunska mjeseca|:count proračunskih mjeseci',
+    'summary_transactions' => ':count transakcija|:count transakcije|:count transakcija',
+    'summary_attention' => ':count stavka još traži tvoju pažnju — pogledaj u nastavku.|:count stavke još traže tvoju pažnju — pogledaj u nastavku.|:count stavki još traži tvoju pažnju — pogledaj u nastavku.',
 
     'stats' => [
         'category' => 'Kategorije',

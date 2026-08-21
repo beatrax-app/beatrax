@@ -63,7 +63,7 @@
                     </span>
                 </div>
                 <div class="mt-2 text-[11px] text-slate-400">
-                    {{ Lang::get('dev::overview.queue_summary', ['failed' => $queueCounts['failed'], 'batches' => $queueCounts['batches']]) }}
+                    {{ Lang::get('dev::overview.queue_summary', ['failed' => Lang::choice('dev::overview.queue_summary_failed', $queueCounts['failed']), 'batches' => Lang::choice('dev::overview.queue_summary_batches', $queueCounts['batches'])]) }}
                 </div>
             </div>
 

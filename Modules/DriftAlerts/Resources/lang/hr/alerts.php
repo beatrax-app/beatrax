@@ -24,7 +24,7 @@ return [
     ],
 
     'load_more' => 'Učitaj još',
-    'group_count' => ':count otvorenih odstupanja',
+    'group_count' => ':count otvoreno odstupanje|:count otvorena odstupanja|:count otvorenih odstupanja',
 
     'anomaly_empty' => [
         'open_heading' => 'Nema neuobičajenih terećenja',

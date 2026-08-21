@@ -171,7 +171,6 @@ final readonly class CommandSpawner
         return $truthy && $isOption ? [escapeshellarg($argSpec->name)] : [];
     }
 
-    // The bash wrapper detaches, so the 5s timeout below is generous.
     private function spawnDetached(string $shellCommand): int
     {
         $cwd = UserDataPathService::projectPath();

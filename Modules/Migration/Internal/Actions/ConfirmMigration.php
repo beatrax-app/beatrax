@@ -105,7 +105,6 @@ final class ConfirmMigration
                 fieldName: $row->field_name,
                 localValue: is_string($row->local_value) ? $row->local_value : null,
                 sourceValue: is_string($row->source_value) ? $row->source_value : null,
-                // NULL means the user never touched the toggle.
                 resolution: is_string($row->resolution) ? $row->resolution : 'keep_local',
             );
         }

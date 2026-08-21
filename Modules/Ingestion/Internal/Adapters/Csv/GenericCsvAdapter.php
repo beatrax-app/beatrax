@@ -68,7 +68,6 @@ final class GenericCsvAdapter implements SourceAdapter
 
             $dateCell = trim($this->cell($record, $normMap, $this->preset->dateHeader));
             if ($dateCell === '') {
-                // An incomplete/pending row (no booking date) is skipped, never fatal to the import.
                 continue;
             }
 

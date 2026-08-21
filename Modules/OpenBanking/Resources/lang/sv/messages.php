@@ -57,7 +57,7 @@ return [
 
         'consent_expired' => 'Samtycket har gått ut — anslut på nytt.',
         'unavailable' => 'Enable Banking är tillfälligt otillgängligt. Försök igen om en stund.',
-        'new_found' => ':count nya transaktioner hittades.',
+        'new_found' => ':count ny transaktion hittades.|:count nya transaktioner hittades.',
         'none' => 'Inga nya transaktioner.',
     ],
 

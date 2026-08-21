@@ -24,7 +24,7 @@ return [
     ],
 
     'load_more' => 'Lataa lisää',
-    'group_count' => ':count hinnanmuutosta avoinna',
+    'group_count' => ':count hinnanmuutos avoinna|:count hinnanmuutosta avoinna',
 
     'anomaly_empty' => [
         'open_heading' => 'Ei poikkeavia veloituksia',

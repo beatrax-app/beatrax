@@ -36,8 +36,7 @@ return [
     'toast' => [
         'unknown_command' => 'Onbekend commando: :command',
         'missing_args' => 'Kan :command niet uitvoeren — vereist :noun: :list',
-        'arg_singular' => 'argument',
-        'arg_plural' => 'argumenten',
+        'arg' => 'argument|argumenten',
         'started' => 'Gestart :command (run :runId)',
         'run_expired' => 'Runrecord verlopen — opnieuw uitvoeren niet mogelijk.',
         'reran' => 'Opnieuw uitgevoerd :command (run :runId)',

@@ -57,7 +57,7 @@ return [
 
         'consent_expired' => 'Consentimiento caducado — vuelve a conectar.',
         'unavailable' => 'Enable Banking no está disponible temporalmente. Inténtalo de nuevo en un momento.',
-        'new_found' => 'Se han encontrado :count transacciones nuevas.',
+        'new_found' => 'Se ha encontrado :count transacción nueva.|Se han encontrado :count transacciones nuevas.',
         'none' => 'No hay transacciones nuevas.',
     ],
 

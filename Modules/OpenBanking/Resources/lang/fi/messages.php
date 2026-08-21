@@ -57,7 +57,7 @@ return [
 
         'consent_expired' => 'Suostumus vanhentunut — yhdistä uudelleen.',
         'unavailable' => 'Enable Banking ei ole hetkellisesti käytettävissä. Yritä pian uudelleen.',
-        'new_found' => 'Löytyi :count uutta tapahtumaa.',
+        'new_found' => 'Löytyi :count uusi tapahtuma.|Löytyi :count uutta tapahtumaa.',
         'none' => 'Ei uusia tapahtumia.',
     ],
 

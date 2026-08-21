@@ -349,7 +349,7 @@ final class OpenBankingSettingsPage extends Component
 
         if ($newCount > 0) {
             $this->syncFlashTone = 'success';
-            $this->syncFlashMessage = Lang::get('openbanking::messages.sync.new_found', ['count' => $newCount]);
+            $this->syncFlashMessage = Lang::choice('openbanking::messages.sync.new_found', $newCount);
             $this->syncReviewImportRunId = $preview->importRunId;
 
             return;

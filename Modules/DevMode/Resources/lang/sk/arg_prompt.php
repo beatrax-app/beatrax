@@ -16,7 +16,6 @@ return [
         'unknown_command' => 'Neznámy príkaz: :command',
         'missing' => ':noun: :list',
         'invalid_args' => 'Jeden alebo viac argumentov je neplatných.',
-        'arg_singular' => 'Chýba argument',
-        'arg_plural' => 'Chýbajú argumenty',
+        'arg' => 'Chýba argument|Chýbajú argumenty|Chýbajú argumenty',
     ],
 ];

@@ -24,7 +24,7 @@ return [
     ],
 
     'load_more' => 'Naloži več',
-    'group_count' => ':count odprtih odstopanj',
+    'group_count' => ':count odprto odstopanje|:count odprti odstopanji|:count odprta odstopanja|:count odprtih odstopanj',
 
     'anomaly_empty' => [
         'open_heading' => 'Ni nenavadnih bremenitev',

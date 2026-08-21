@@ -24,7 +24,7 @@ return [
     ],
 
     'load_more' => 'Încarcă mai multe',
-    'group_count' => ':count abateri deschise',
+    'group_count' => ':count abatere deschisă|:count abateri deschise|:count de abateri deschise',
 
     'anomaly_empty' => [
         'open_heading' => 'Nicio tranzacție neobișnuită',

@@ -7,7 +7,7 @@ return [
     'heading' => 'Data & Devices',
     'sync_status' => 'Sync status',
     'your_devices' => 'Your devices',
-    'syncing_progress' => 'Syncing… :count records',
+    'syncing_progress' => 'Syncing… :count record|Syncing… :count records',
     'initial_sync_aria' => 'Initial sync progress',
     'no_peers' => 'Pair another device to start syncing.',
     'sync_now' => 'Sync now',

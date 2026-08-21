@@ -28,7 +28,8 @@ final readonly class FileTailer
     // is caught up; both are "nothing", hence the single `<=`.
     private function readableLength(string $path, int $fromOffset): int
     {
-        // Before filesize(), or a growing file reports its stale size.
+        // PHP caches stat results per path, so filesize() below would answer
+        // from the previous poll and a still-growing file would never advance.
         clearstatcache(true, $path);
 
         if (! is_file($path)) {

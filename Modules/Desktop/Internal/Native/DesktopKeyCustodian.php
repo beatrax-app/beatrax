@@ -20,7 +20,6 @@ final class DesktopKeyCustodian implements KeyCustodian
     public function store(string $rawKey): string
     {
         if (! $this->canEncrypt()) {
-            // Unchanged, so the Auth module's encrypted-session custody applies.
             return $rawKey;
         }
 
@@ -40,7 +39,6 @@ final class DesktopKeyCustodian implements KeyCustodian
     public function read(string $blob): ?string
     {
         if (! $this->canEncrypt()) {
-            // The blob IS the raw key — store() returned it unchanged.
             return $blob;
         }
 

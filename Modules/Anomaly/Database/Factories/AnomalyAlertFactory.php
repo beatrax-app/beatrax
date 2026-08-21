@@ -10,7 +10,6 @@ use Modules\Anomaly\Models\AnomalyAlert;
 use Modules\Anomaly\Public\Enums\AnomalyAlertState;
 use Modules\Ledger\Public\Enums\Direction;
 
-// Callers must override `transaction_id`: the FK rejects the `null` default.
 /**
  * @extends Factory<AnomalyAlert>
  */

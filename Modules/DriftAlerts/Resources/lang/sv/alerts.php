@@ -24,7 +24,7 @@ return [
     ],
 
     'load_more' => 'Ladda mer',
-    'group_count' => ':count öppna avvikelser',
+    'group_count' => ':count öppen avvikelse|:count öppna avvikelser',
 
     'anomaly_empty' => [
         'open_heading' => 'Inga ovanliga debiteringar',

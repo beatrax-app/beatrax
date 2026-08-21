@@ -145,7 +145,6 @@ final class OpenBankingWizardModal extends Component
         $this->step = self::STEP_APPLICATION_ID;
     }
 
-    // application_id is not secret, so it survives on the component.
     public function saveApplicationId(OpenBankingSecretsRepository $secrets): void
     {
         $this->errorMessage = '';

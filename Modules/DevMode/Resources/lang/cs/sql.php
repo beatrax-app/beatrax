@@ -16,7 +16,7 @@ return [
     'advanced_off_hint' => 'Zapni Pokročilé (Dev Mode → Advanced) a můžeš spouštět dotazy.',
     'statement_label' => 'Příkaz SELECT',
     'run' => 'Spustit',
-    'rows_meta' => ':rows řádků · :durationms',
+    'rows_meta' => ':rows řádek · :durationms|:rows řádky · :durationms|:rows řádků · :durationms',
     'no_rows' => 'Dotaz nevrátil žádné řádky.',
 
     'errors' => [

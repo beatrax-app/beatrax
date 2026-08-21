@@ -8,8 +8,11 @@ return [
     'heading_complete' => 'Импортът е завършен',
     'heading_update' => 'Актуализацията е приложена',
 
-    'summary_line' => 'Импортирани са :categories категории, :budget_months бюджетни месеца и :transactions транзакции.',
-    'summary_attention' => ':count елемента все още изискват внимание — виж по-долу.',
+    'summary_line' => 'Импортирани са :categories, :budget_months и :transactions.',
+    'summary_categories' => ':count категория|:count категории',
+    'summary_budget_months' => ':count бюджетен месец|:count бюджетни месеца',
+    'summary_transactions' => ':count транзакция|:count транзакции',
+    'summary_attention' => ':count елемент все още изисква внимание — виж по-долу.|:count елемента все още изискват внимание — виж по-долу.',
 
     'stats' => [
         'category' => 'Категории',

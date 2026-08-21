@@ -178,7 +178,6 @@ final class PotBalanceQuery
         return $result;
     }
 
-    // $since is 'Y-m-d'; the result keeps the movement rows' own sign.
     public function netMovementForPotSince(int $potId, string $since, User $user): int
     {
         return (int) $this->db->connection()

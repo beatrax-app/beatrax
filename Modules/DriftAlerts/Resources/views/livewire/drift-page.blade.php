@@ -235,7 +235,7 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                                         </svg>
                                         <span class="truncate">{{ $firstAlert->displayName }}</span>
-                                        <flux:badge color="slate" size="sm" class="ml-2" style="font-variant-numeric: tabular-nums;">{{ Lang::get('drift-alerts::alerts.group_count', ['count' => $alertCount]) }}</flux:badge>
+                                        <flux:badge color="slate" size="sm" class="ml-2" style="font-variant-numeric: tabular-nums;">{{ Lang::choice('drift-alerts::alerts.group_count', $alertCount) }}</flux:badge>
                                     </button>
                                     <div class="shrink-0">
                                         @livewire('drift-alerts.drift-threshold-editor', ['recurringSeriesId' => $seriesId], key('threshold-group-'.$seriesId))

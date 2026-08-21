@@ -16,7 +16,7 @@ return [
     'advanced_off_hint' => 'Omogoči Advanced (Dev Mode → Advanced) za izvajanje poizvedb.',
     'statement_label' => 'Stavek SELECT',
     'run' => 'Zaženi',
-    'rows_meta' => ':rows vrstic · :durationms',
+    'rows_meta' => ':rows vrstica · :durationms|:rows vrstici · :durationms|:rows vrstice · :durationms|:rows vrstic · :durationms',
     'no_rows' => 'Poizvedba ni vrnila nobene vrstice.',
 
     'errors' => [

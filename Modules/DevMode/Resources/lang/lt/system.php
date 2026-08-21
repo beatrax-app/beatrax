@@ -23,6 +23,6 @@ return [
     'runtime_nativephp' => 'nativephp',
     'runtime_host_os' => 'pagrindinė OS',
     'effective_config' => 'Veikianti konfigūracija',
-    'show_entries' => 'Rodyti įrašus (:count)',
+    'show_entries' => 'Rodyti :count įrašą|Rodyti :count įrašus|Rodyti :count įrašų',
     'hide' => 'Slėpti',
 ];

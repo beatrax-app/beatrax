@@ -36,8 +36,7 @@ return [
     'toast' => [
         'unknown_command' => 'Comando desconocido: :command',
         'missing_args' => 'No se puede ejecutar :command — :noun sin indicar: :list',
-        'arg_singular' => 'argumento',
-        'arg_plural' => 'argumentos',
+        'arg' => 'argumento|argumentos',
         'started' => 'Iniciado :command (ejecución :runId)',
         'run_expired' => 'El registro de la ejecución ha caducado — no se puede reejecutar.',
         'reran' => 'Reejecutado :command (ejecución :runId)',

@@ -49,6 +49,8 @@ return [
     'flash_saved' => 'Pravidlo uložené.',
     'flash_reapplying' => 'Pravidlá sa znova aplikujú na tvoju históriu…',
     'summary_no_changes' => 'Žiadne zmeny — tvoja história už zodpovedá pravidlám.',
-    'summary_updated' => 'Upravené polia: :fields — dotknuté transakcie: :transactions.',
-    'summary_reconciled_skipped' => 'Preskočené odsúhlasené transakcie: :count.',
+    'summary_updated' => 'Upravené: :fields, :transactions.',
+    'summary_fields' => ':count pole|:count polia|:count polí',
+    'summary_transactions' => ':count transakcia|:count transakcie|:count transakcií',
+    'summary_reconciled_skipped' => 'Preskočená :count odsúhlasená transakcia.|Preskočené :count odsúhlasené transakcie.|Preskočených :count odsúhlasených transakcií.',
 ];

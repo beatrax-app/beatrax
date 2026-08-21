@@ -137,13 +137,11 @@ class EnableBankingHttpClient
         return $this->getJson(self::ACCOUNTS_PATH.rawurlencode($uid).'/balances');
     }
 
-    // Protected so the SSRF test can substitute a hostile base.
     protected function baseUri(): string
     {
         return 'https://'.self::EB_API_HOST.'/';
     }
 
-    // Protected so the SSRF test can inject a MockHandler instead of the network.
     protected function makeHttpClient(): GuzzleClient
     {
         return new GuzzleClient([
@@ -258,7 +256,6 @@ class EnableBankingHttpClient
             return [];
         }
 
-        // PHPStan cannot infer that a decoded JSON object has only string keys.
         $out = [];
         foreach ($decoded as $key => $value) {
             $out[(string) $key] = $value;

@@ -57,7 +57,7 @@ return [
 
         'consent_expired' => 'Zgoda wygasła — połącz ponownie.',
         'unavailable' => 'Enable Banking jest chwilowo niedostępne. Spróbuj ponownie za chwilę.',
-        'new_found' => 'Znalezione nowe transakcje: :count.',
+        'new_found' => 'Znaleziono :count nową transakcję.|Znaleziono :count nowe transakcje.|Znaleziono :count nowych transakcji.',
         'none' => 'Brak nowych transakcji.',
     ],
 

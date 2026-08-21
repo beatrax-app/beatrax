@@ -57,7 +57,7 @@ return [
 
         'consent_expired' => 'Piekrišanas termiņš beidzies — savienojiet no jauna.',
         'unavailable' => 'Enable Banking īslaicīgi nav pieejams. Mēģiniet vēlreiz pēc brīža.',
-        'new_found' => 'Atrasti jauni darījumi: :count.',
+        'new_found' => 'Atrasti :count jaunu darījumu.|Atrasts :count jauns darījums.|Atrasti :count jauni darījumi.',
         'none' => 'Nav jaunu darījumu.',
     ],
 

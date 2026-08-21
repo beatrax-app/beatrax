@@ -18,8 +18,7 @@ return [
     'connect_microsoft' => 'Collega Microsoft 365',
     'readonly_note' => 'Beatrax legge soltanto i messaggi. Non invia, etichetta, sposta né elimina nulla nella tua casella.',
 
-    'month' => '1 mese',
-    'months' => ':count mesi',
+    'months' => ':count mese|:count mesi',
     'not_scanned_yet' => 'non ancora scansionata',
     'last_scanned' => 'ultima scansione',
     'window_prefix' => 'Finestra:',
@@ -50,7 +49,7 @@ return [
     'discovered_heading' => 'Mittenti rilevati',
     'discovered_body' => 'Mittenti che sembrano inviare ricevute ma non sono ancora nel tuo elenco di ricevute note. Aggiungi quelli che vuoi far scansionare a Beatrax; ignora gli altri.',
     'last_seen' => 'ultima volta',
-    'seen_times' => 'Visto :count volte',
+    'seen_times' => 'Visto :count volta|Visto :count volte',
     'add' => 'Aggiungi',
     'add_aria' => 'Aggiungi :email',
     'dismiss' => 'Ignora',

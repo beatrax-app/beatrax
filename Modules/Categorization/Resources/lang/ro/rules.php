@@ -49,6 +49,8 @@ return [
     'flash_saved' => 'Regulă salvată.',
     'flash_reapplying' => 'Se reaplică regulile pe istoricul tău…',
     'summary_no_changes' => 'Nicio schimbare — istoricul tău corespunde deja regulilor tale.',
-    'summary_updated' => 'S-au actualizat :fields câmpuri în :transactions tranzacții.',
-    'summary_reconciled_skipped' => ':count tranzacții reconciliate au fost omise.',
+    'summary_updated' => 'S-au actualizat :fields în :transactions.',
+    'summary_fields' => ':count câmp|:count câmpuri|:count de câmpuri',
+    'summary_transactions' => ':count tranzacție|:count tranzacții|:count de tranzacții',
+    'summary_reconciled_skipped' => ':count tranzacție reconciliată a fost omisă.|:count tranzacții reconciliate au fost omise.|:count de tranzacții reconciliate au fost omise.',
 ];

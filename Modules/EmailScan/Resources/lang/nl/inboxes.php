@@ -18,8 +18,7 @@ return [
     'connect_microsoft' => 'Microsoft 365 koppelen',
     'readonly_note' => 'Beatrax leest alleen berichten. Het verstuurt, labelt, verplaatst of verwijdert nooit iets in je postvak.',
 
-    'month' => '1 maand',
-    'months' => ':count maanden',
+    'months' => ':count maand|:count maanden',
     'not_scanned_yet' => 'nog niet gescand',
     'last_scanned' => 'laatst gescand',
     'window_prefix' => 'Periode:',
@@ -50,7 +49,7 @@ return [
     'discovered_heading' => 'Ontdekte afzenders',
     'discovered_body' => 'Afzenders die eruitzien alsof ze bonnen sturen maar nog niet op je lijst met bekende bonnen staan. Voeg de afzenders toe die je door Beatrax wilt laten scannen; wijs de rest af.',
     'last_seen' => 'laatst gezien',
-    'seen_times' => ':count keer gezien',
+    'seen_times' => ':count keer gezien|:count keer gezien',
     'add' => 'Toevoegen',
     'add_aria' => ':email toevoegen',
     'dismiss' => 'Afwijzen',

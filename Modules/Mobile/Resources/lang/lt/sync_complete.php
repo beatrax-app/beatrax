@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Šis įrenginys sinchronizuotas',
     'heading' => 'Šis įrenginys sinchronizuotas',
-    'records' => 'Iš :peer nukopijuota įrašų: :count.',
+    'records' => 'Iš :peer nukopijuotas :count įrašas.|Iš :peer nukopijuoti :count įrašai.|Iš :peer nukopijuota :count įrašų.',
     'records_none' => 'Iš :peer kopijuoti nebuvo ko — viskas jau suvienodinta.',
     'how_it_works' => 'Nuo šiol',
     'automatic_title' => 'Viskas atsinaujina savaime',

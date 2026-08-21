@@ -8,8 +8,11 @@ return [
     'heading_complete' => 'Importación completada',
     'heading_update' => 'Actualización aplicada',
 
-    'summary_line' => 'Se han importado :categories categorías, :budget_months meses de presupuesto y :transactions transacciones.',
-    'summary_attention' => ':count elementos siguen necesitando tu atención — míralos abajo.',
+    'summary_line' => 'Se han importado :categories, :budget_months y :transactions.',
+    'summary_categories' => ':count categoría|:count categorías',
+    'summary_budget_months' => ':count mes de presupuesto|:count meses de presupuesto',
+    'summary_transactions' => ':count transacción|:count transacciones',
+    'summary_attention' => ':count elemento sigue necesitando tu atención — míralo abajo.|:count elementos siguen necesitando tu atención — míralos abajo.',
 
     'stats' => [
         'category' => 'Categorías',

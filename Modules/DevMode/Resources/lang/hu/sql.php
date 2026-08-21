@@ -16,7 +16,7 @@ return [
     'advanced_off_hint' => 'A lekérdezések futtatásához kapcsold be az Advanced módot (Dev Mode → Advanced).',
     'statement_label' => 'SELECT utasítás',
     'run' => 'Futtatás',
-    'rows_meta' => ':rows sor · :durationms',
+    'rows_meta' => ':rows sor · :durationms|:rows sor · :durationms',
     'no_rows' => 'A lekérdezés nem adott vissza sort.',
 
     'errors' => [

@@ -36,8 +36,7 @@ return [
     'toast' => [
         'unknown_command' => 'Ukjent kommando: :command',
         'missing_args' => 'Kan ikke kjøre :command — krever :noun: :list',
-        'arg_singular' => 'argument',
-        'arg_plural' => 'argumenter',
+        'arg' => 'argument|argumenter',
         'started' => 'Startet :command (kjøring :runId)',
         'run_expired' => 'Kjøringsoppføringen er utløpt — kan ikke kjøres på nytt.',
         'reran' => 'Kjørte :command på nytt (kjøring :runId)',

@@ -49,6 +49,8 @@ return [
     'flash_saved' => 'Pravilo je sačuvano.',
     'flash_reapplying' => 'Ponovna primena pravila na istoriju…',
     'summary_no_changes' => 'Nema izmena — tvoja istorija već odgovara pravilima.',
-    'summary_updated' => 'Ažurirano :fields polja u :transactions transakcija.',
-    'summary_reconciled_skipped' => 'Preskočeno je :count usaglašenih transakcija.',
+    'summary_updated' => 'Ažurirano: :fields, :transactions.',
+    'summary_fields' => ':count polje|:count polja|:count polja',
+    'summary_transactions' => ':count transakcija|:count transakcije|:count transakcija',
+    'summary_reconciled_skipped' => 'Preskočena je :count usaglašena transakcija.|Preskočene su :count usaglašene transakcije.|Preskočeno je :count usaglašenih transakcija.',
 ];

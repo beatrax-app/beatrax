@@ -7,6 +7,7 @@ namespace Modules\DevMode\Internal\Services;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\SecretShield;
+use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\EmailScan\Models\OAuthSecret;
 use Throwable;
 
@@ -132,7 +133,7 @@ class OAuthScrubSet
             SystemAlert::create([
                 'user_id' => null,
                 'kind' => 'oauth_scrub_set_failed',
-                'severity' => 'critical',
+                'severity' => SystemAlertSeverity::Critical->value,
                 'message' => 'OAuth secret redaction is offline. Logs and audit excerpts may contain unredacted tokens until the next successful load.',
                 'metadata' => [
                     'exception' => $e->getMessage(),

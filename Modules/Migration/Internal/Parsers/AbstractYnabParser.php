@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Generator;
 use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
+use Modules\Ledger\Public\Enums\CategoryKind;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Migration\Internal\Contracts\ParsesMigrationSource;
 use Modules\Migration\Internal\Dto\MigrationAccountDto;
@@ -133,7 +134,9 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
         }
         $seen[$key] = true;
 
-        $kind = $group !== null && mb_strtolower($group) === 'income' ? 'income' : 'expense';
+        $kind = $group !== null && mb_strtolower($group) === 'income'
+            ? CategoryKind::Income->value
+            : CategoryKind::Expense->value;
         $categories->push(new MigrationCategoryDto(
             sourceExternalId: $key,
             name: $name,
@@ -155,7 +158,9 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
         $seen[$groupKey] = true;
 
         $groupName = trim($group);
-        $kind = mb_strtolower($groupName) === 'income' ? 'income' : 'expense';
+        $kind = mb_strtolower($groupName) === 'income'
+            ? CategoryKind::Income->value
+            : CategoryKind::Expense->value;
 
         $categories->push(new MigrationCategoryDto(
             sourceExternalId: $groupKey,

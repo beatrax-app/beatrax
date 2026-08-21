@@ -36,8 +36,7 @@ return [
     'toast' => [
         'unknown_command' => 'Commande inconnue : :command',
         'missing_args' => 'Impossible de lancer :command — il faut :noun : :list',
-        'arg_singular' => 'argument',
-        'arg_plural' => 'arguments',
+        'arg' => 'argument|arguments',
         'started' => 'Démarré :command (exécution :runId)',
         'run_expired' => 'Enregistrement de l\'exécution expiré — impossible de relancer.',
         'reran' => 'Relancé :command (exécution :runId)',

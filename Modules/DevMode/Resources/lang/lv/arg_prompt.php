@@ -16,7 +16,6 @@ return [
         'unknown_command' => 'Nezināma komanda: :command',
         'missing' => 'Trūkst :noun: :list',
         'invalid_args' => 'Viens vai vairāki argumenti nav derīgi.',
-        'arg_singular' => 'argumenta',
-        'arg_plural' => 'argumentu',
+        'arg' => 'argumentu|argumenta|argumentu',
     ],
 ];

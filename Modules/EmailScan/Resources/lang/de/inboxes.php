@@ -18,8 +18,7 @@ return [
     'connect_microsoft' => 'Microsoft 365 verbinden',
     'readonly_note' => 'Beatrax liest nur Nachrichten. Es sendet, kennzeichnet, verschiebt oder löscht nie etwas in deinem Postfach.',
 
-    'month' => '1 Monat',
-    'months' => ':count Monate',
+    'months' => ':count Monat|:count Monate',
     'not_scanned_yet' => 'noch nicht gescannt',
     'last_scanned' => 'zuletzt gescannt',
     'window_prefix' => 'Zeitraum:',
@@ -50,7 +49,7 @@ return [
     'discovered_heading' => 'Entdeckte Absender',
     'discovered_body' => 'Absender, die so aussehen, als würden sie Belege schicken, aber noch nicht auf deiner Liste bekannter Belegabsender stehen. Füge die hinzu, die Beatrax durchsuchen soll; verwirf den Rest.',
     'last_seen' => 'zuletzt gesehen',
-    'seen_times' => ':count Mal gesehen',
+    'seen_times' => ':count Mal gesehen|:count Mal gesehen',
     'add' => 'Hinzufügen',
     'add_aria' => ':email hinzufügen',
     'dismiss' => 'Verwerfen',

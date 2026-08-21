@@ -145,8 +145,10 @@ final readonly class SeriesEntryPlacer
             array_values(array_unique(array_values($counterpartyIdBySeries))),
         );
 
-        // A series with no occurrence-linked counterparty can still resolve:
-        // cluster_counterparty_key holds a counterparties.slug.
+        // A series with no occurrence-linked counterparty can still resolve
+        // when cluster_counterparty_key happens to equal a counterparties.slug
+        // — single-token merchants only, and never once at-rest encryption has
+        // made that key a digest. See sensitive-columns-at-rest.md.
         $unresolvedSeriesIds = array_values(array_filter(
             $placedSeriesIds,
             static fn (int $id): bool => ! isset($counterpartyIdBySeries[$id]),
@@ -266,7 +268,8 @@ final readonly class SeriesEntryPlacer
         $anchor = $next->startOfDay();
         $k = $this->firstOccurrenceIndex($anchor, $cadence, $monthStart);
 
-        // Dates increase strictly in k, so the first one past monthEnd ends it.
+        // Dates increase strictly in k, so the first one past monthEnd ends the
+        // walk; there is nothing behind it that could still land in the month.
         $results = [];
         $iterations = 0;
 

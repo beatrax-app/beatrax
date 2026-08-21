@@ -8,8 +8,11 @@ return [
     'heading_complete' => 'Imports pabeigts',
     'heading_update' => 'Atjauninājums lietots',
 
-    'summary_line' => 'Importētas :categories kategorijas, :budget_months budžeta mēneši un :transactions darījumi.',
-    'summary_attention' => 'Vēl neatrisināti ieraksti: :count — skatiet zemāk.',
+    'summary_line' => 'Importēts: :categories, :budget_months un :transactions.',
+    'summary_categories' => ':count kategoriju|:count kategorija|:count kategorijas',
+    'summary_budget_months' => ':count budžeta mēnešu|:count budžeta mēnesis|:count budžeta mēneši',
+    'summary_transactions' => ':count darījumu|:count darījums|:count darījumi',
+    'summary_attention' => ':count ierakstu vēl nav atrisināti — skatiet zemāk.|:count ieraksts vēl nav atrisināts — skatiet zemāk.|:count ieraksti vēl nav atrisināti — skatiet zemāk.',
 
     'stats' => [
         'category' => 'Kategorijas',

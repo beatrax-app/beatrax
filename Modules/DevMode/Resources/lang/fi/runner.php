@@ -36,8 +36,7 @@ return [
     'toast' => [
         'unknown_command' => 'Tuntematon komento: :command',
         'missing_args' => 'Komentoa :command ei voi suorittaa — tarvitaan :noun: :list',
-        'arg_singular' => 'argumentti',
-        'arg_plural' => 'argumentit',
+        'arg' => 'argumentti|argumentit',
         'started' => 'Aloitettiin :command (suoritus :runId)',
         'run_expired' => 'Suoritustietue vanhentui — uudelleensuoritus ei onnistu.',
         'reran' => 'Suoritettiin uudelleen :command (suoritus :runId)',

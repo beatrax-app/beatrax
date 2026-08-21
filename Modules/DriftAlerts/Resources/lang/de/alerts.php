@@ -24,7 +24,7 @@ return [
     ],
 
     'load_more' => 'Mehr laden',
-    'group_count' => ':count Abweichungen offen',
+    'group_count' => ':count Abweichung offen|:count Abweichungen offen',
 
     'anomaly_empty' => [
         'open_heading' => 'Keine ungewöhnlichen Abbuchungen',

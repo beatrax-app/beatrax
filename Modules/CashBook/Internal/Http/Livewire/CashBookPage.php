@@ -24,6 +24,7 @@ use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
 use Modules\Tax\Public\Services\TaxTagQuery;
+use stdClass;
 
 /**
  * @see RecordManualTransaction
@@ -155,7 +156,7 @@ final class CashBookPage extends Component
 
         // The raw query builder applies no cast to ciphertext columns.
         // decryptValue is a pass-through for non-encryption users.
-        $entries = $entries->map(function (object $entry) use ($codec, $user, $session): object {
+        $entries = $entries->map(function (stdClass $entry) use ($codec, $user, $session): stdClass {
             if (is_string($entry->counterparty_name) && $entry->counterparty_name !== '') {
                 $entry->counterparty_name = $codec->decryptValue(
                     'transactions',
@@ -176,12 +177,18 @@ final class CashBookPage extends Component
                 $query->whereNull('user_id')->orWhere('user_id', $user->id);
             })
             ->get(['id', 'name', 'slug', 'name_is_default'])
-            ->map(static function (object $row): object {
+            ->map(static function (stdClass $row): stdClass {
                 $row->name = CategoryDisplayName::fromRow($row) ?? '';
 
                 return $row;
             })
-            ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+            ->sort(static function (stdClass $a, stdClass $b): int {
+                $byName = strnatcasecmp(is_string($a->name) ? $a->name : '', is_string($b->name) ? $b->name : '');
+
+                return $byName !== 0
+                    ? $byName
+                    : (is_numeric($a->id) ? (int) $a->id : 0) <=> (is_numeric($b->id) ? (int) $b->id : 0);
+            })
             ->values();
 
         $entryIds = array_map(static fn (object $row): int => is_numeric($row->id) ? (int) $row->id : 0, $entries->all());

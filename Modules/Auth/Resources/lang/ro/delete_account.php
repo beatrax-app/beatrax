@@ -7,7 +7,7 @@ return [
     'body' => 'Ștergerea contului îl scoate de pe acest dispozitiv, împreună cu tot ce îi aparține. Nu se poate anula.',
     'removes' => 'Dispar tranzacțiile, conturile, bugetele, obiectivele și rapoartele tale, împreună cu regulile, preferințele, codurile de recuperare, identitatea de sincronizare și cheile de criptare.',
     'devices_heading' => 'Celelalte dispozitive ale tale își păstrează propria copie',
-    'devices_body' => 'Beatrax nu are server, așa că nimic nu poate fi șters de la distanță. Aceste dispozitive păstrează în continuare o copie completă și trebuie rezolvate chiar pe dispozitiv — :devices',
+    'devices_body' => 'Beatrax nu are server, așa că nimic nu poate fi șters de la distanță. Acest dispozitiv păstrează în continuare o copie completă și trebuie rezolvat chiar pe dispozitiv — :devices|Beatrax nu are server, așa că nimic nu poate fi șters de la distanță. Aceste dispozitive păstrează în continuare o copie completă și trebuie rezolvate chiar pe dispozitiv — :devices|Beatrax nu are server, așa că nimic nu poate fi șters de la distanță. Aceste dispozitive păstrează în continuare o copie completă și trebuie rezolvate chiar pe dispozitiv — :devices',
     'devices_none' => 'Niciun alt dispozitiv nu este asociat cu acesta, deci aceasta este singura copie a datelor tale.',
     'successor' => 'Tu administrezi acest dispozitiv, așa că :username preia rolul de îndată ce contul tău dispare.',
     'password_label' => 'Introdu parola pentru a confirma',

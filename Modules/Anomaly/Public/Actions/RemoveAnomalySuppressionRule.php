@@ -37,7 +37,6 @@ final class RemoveAnomalySuppressionRule
             ->delete();
     }
 
-    // The only caller of the state machine's `dismissed -> open` edge.
     public function undoSuppression(int $alertId, User $user): void
     {
         /** @var AnomalyAlert|null $alert */

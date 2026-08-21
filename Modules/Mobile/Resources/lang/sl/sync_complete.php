@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Ta naprava je sinhronizirana',
     'heading' => 'Ta naprava je sinhronizirana',
-    'records' => 'Kopiranih zapisov: :count. Izvorna naprava: :peer.',
+    'records' => 'Kopiranih zapisov: :count. Izvorna naprava: :peer.|Kopiranih zapisov: :count. Izvorna naprava: :peer.|Kopiranih zapisov: :count. Izvorna naprava: :peer.|Kopiranih zapisov: :count. Izvorna naprava: :peer.',
     'records_none' => 'Vse je usklajeno — nič novega ni bilo za kopiranje. Izvorna naprava: :peer.',
     'how_it_works' => 'Od zdaj naprej',
     'automatic_title' => 'Vse se posodablja samo',

@@ -7,7 +7,7 @@ return [
     'heading' => 'Dati un ierīces',
     'sync_status' => 'Sinhronizācijas statuss',
     'your_devices' => 'Jūsu ierīces',
-    'syncing_progress' => 'Sinhronizē… ieraksti: :count',
+    'syncing_progress' => 'Sinhronizē… :count ierakstu|Sinhronizē… :count ieraksts|Sinhronizē… :count ieraksti',
     'initial_sync_aria' => 'Sākotnējās sinhronizācijas gaita',
     'no_peers' => 'Sapārojiet vēl vienu ierīci, lai sāktu sinhronizāciju.',
     'sync_now' => 'Sinhronizēt tagad',

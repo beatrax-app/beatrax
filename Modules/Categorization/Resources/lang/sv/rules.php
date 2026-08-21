@@ -49,6 +49,8 @@ return [
     'flash_saved' => 'Regeln har sparats.',
     'flash_reapplying' => 'Tillämpar reglerna på din historik igen…',
     'summary_no_changes' => 'Inga ändringar — din historik stämmer redan med dina regler.',
-    'summary_updated' => 'Uppdaterade :fields fält i :transactions transaktioner.',
-    'summary_reconciled_skipped' => ':count avstämda transaktioner hoppades över.',
+    'summary_updated' => 'Uppdaterade :fields i :transactions.',
+    'summary_fields' => ':count fält|:count fält',
+    'summary_transactions' => ':count transaktion|:count transaktioner',
+    'summary_reconciled_skipped' => ':count avstämd transaktion hoppades över.|:count avstämda transaktioner hoppades över.',
 ];

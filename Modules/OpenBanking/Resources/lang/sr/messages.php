@@ -57,7 +57,7 @@ return [
 
         'consent_expired' => 'Saglasnost je istekla — poveži ponovo.',
         'unavailable' => 'Enable Banking privremeno nije dostupan. Probaj ponovo uskoro.',
-        'new_found' => 'Pronađeno novih transakcija: :count.',
+        'new_found' => 'Pronađena je :count nova transakcija.|Pronađene su :count nove transakcije.|Pronađeno je :count novih transakcija.',
         'none' => 'Nema novih transakcija.',
     ],
 

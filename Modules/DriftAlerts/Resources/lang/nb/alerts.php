@@ -24,7 +24,7 @@ return [
     ],
 
     'load_more' => 'Last inn mer',
-    'group_count' => ':count åpne avvik',
+    'group_count' => ':count åpent avvik|:count åpne avvik',
 
     'anomaly_empty' => [
         'open_heading' => 'Ingen uvanlige belastninger',

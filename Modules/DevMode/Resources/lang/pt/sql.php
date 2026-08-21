@@ -16,7 +16,7 @@ return [
     'advanced_off_hint' => 'Ativa o modo avançado (Modo Dev → Avançado) para executares consultas.',
     'statement_label' => 'Instrução SELECT',
     'run' => 'Executar',
-    'rows_meta' => ':rows linhas · :durationms',
+    'rows_meta' => ':rows linha · :durationms|:rows linhas · :durationms',
     'no_rows' => 'A consulta não devolveu linhas.',
 
     'errors' => [

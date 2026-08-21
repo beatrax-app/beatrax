@@ -8,8 +8,11 @@ return [
     'heading_complete' => 'Importen er færdig',
     'heading_update' => 'Opdateringen er anvendt',
 
-    'summary_line' => 'Importerede :categories kategorier, :budget_months budgetmåneder og :transactions transaktioner.',
-    'summary_attention' => ':count poster kræver stadig opmærksomhed — se nedenfor.',
+    'summary_line' => 'Importerede :categories, :budget_months og :transactions.',
+    'summary_categories' => ':count kategori|:count kategorier',
+    'summary_budget_months' => ':count budgetmåned|:count budgetmåneder',
+    'summary_transactions' => ':count transaktion|:count transaktioner',
+    'summary_attention' => ':count post kræver stadig opmærksomhed — se nedenfor.|:count poster kræver stadig opmærksomhed — se nedenfor.',
 
     'stats' => [
         'category' => 'Kategorier',

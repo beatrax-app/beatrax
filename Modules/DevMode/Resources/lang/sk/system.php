@@ -23,6 +23,6 @@ return [
     'runtime_nativephp' => 'nativephp',
     'runtime_host_os' => 'host os',
     'effective_config' => 'Efektívna konfigurácia',
-    'show_entries' => 'Zobraziť záznamy: :count',
+    'show_entries' => 'Zobraziť :count záznam|Zobraziť :count záznamy|Zobraziť :count záznamov',
     'hide' => 'Skryť',
 ];

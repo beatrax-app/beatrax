@@ -7,7 +7,7 @@ return [
     'heading' => 'Data og enheder',
     'sync_status' => 'Synkroniseringsstatus',
     'your_devices' => 'Dine enheder',
-    'syncing_progress' => 'Synkroniserer… :count poster',
+    'syncing_progress' => 'Synkroniserer… :count post|Synkroniserer… :count poster',
     'initial_sync_aria' => 'Fremdrift for den første synkronisering',
     'no_peers' => 'Par en anden enhed for at begynde at synkronisere.',
     'sync_now' => 'Synkronisér nu',

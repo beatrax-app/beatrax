@@ -17,7 +17,7 @@ return [
         'pin_length' => 'PIN mora imeti vsaj 6 števke.',
 
         'too_many_attempts' => 'Preveč poskusov — poskusi znova čez :secondss.',
-        'incorrect_pin_remaining' => 'Napačen PIN. Preostalo poskusov: :count.',
+        'incorrect_pin_remaining' => 'Napačen PIN. Preostalo poskusov: :count.|Napačen PIN. Preostalo poskusov: :count.|Napačen PIN. Preostalo poskusov: :count.|Napačen PIN. Preostalo poskusov: :count.',
         'incorrect_pin' => 'Napačen PIN.',
     ],
 ];

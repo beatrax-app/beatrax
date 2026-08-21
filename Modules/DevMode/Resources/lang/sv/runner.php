@@ -36,8 +36,7 @@ return [
     'toast' => [
         'unknown_command' => 'Okänt kommando: :command',
         'missing_args' => 'Kan inte köra :command — kräver :noun: :list',
-        'arg_singular' => 'argument',
-        'arg_plural' => 'argument',
+        'arg' => 'argument|argument',
         'started' => 'Startade :command (körning :runId)',
         'run_expired' => 'Körningsposten har upphört — kan inte köras igen.',
         'reran' => 'Körde :command igen (körning :runId)',

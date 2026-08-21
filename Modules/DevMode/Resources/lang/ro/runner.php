@@ -36,8 +36,7 @@ return [
     'toast' => [
         'unknown_command' => 'Comandă necunoscută: :command',
         'missing_args' => 'Nu se poate rula :command — are nevoie de :noun: :list',
-        'arg_singular' => 'argument',
-        'arg_plural' => 'argumente',
+        'arg' => 'argument|argumente|argumente',
         'started' => 'Pornit :command (rulare :runId)',
         'run_expired' => 'Înregistrarea rulării a expirat — nu se poate rula din nou.',
         'reran' => 'Rulat din nou :command (rulare :runId)',

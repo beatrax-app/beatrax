@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\InboxMessageStatus;
 use Modules\Receipts\Internal\MatcherRegistry;
 use Modules\Receipts\Public\Dto\MatcherInputDto;
 use Modules\Receipts\Public\Dto\MatchOutcomeDto;
@@ -67,7 +68,7 @@ final class RecordReceipt
             'sender_name' => null,
             'subject' => $subject,
             'eml_path' => $blobPath,
-            'status' => 'fetched',
+            'status' => InboxMessageStatus::Fetched->value,
             'fetched_at' => $now,
             'created_at' => $now,
             'updated_at' => $now,
@@ -83,7 +84,7 @@ final class RecordReceipt
         $rawId = $row->id;
         $fileImportId = is_numeric($rawId) ? (int) $rawId : 0;
 
-        if ($inserted === 0 && $row->status !== 'fetched') {
+        if ($inserted === 0 && $row->status !== InboxMessageStatus::Fetched->value) {
             // Already processed by a prior drop — never re-dispatch or
             // yield a duplicate canonical row to the caller.
             return MatchOutcomeDto::unmatched('duplicate_drop');
@@ -107,13 +108,13 @@ final class RecordReceipt
         ];
 
         if ($outcome->kind === 'parsed' && $outcome->parsed !== null) {
-            $update['status'] = 'parsed';
+            $update['status'] = InboxMessageStatus::Parsed->value;
             $rawKey = $outcome->parsed->rawPayload['matcher_key'] ?? null;
             $update['matcher_key'] = is_string($rawKey) && $rawKey !== '' ? $rawKey : null;
         } elseif ($outcome->kind === 'skipped') {
-            $update['status'] = 'skipped';
+            $update['status'] = InboxMessageStatus::Skipped->value;
         } else {
-            $update['status'] = 'unmatched';
+            $update['status'] = InboxMessageStatus::Unmatched->value;
         }
 
         $connection->table('file_imports')

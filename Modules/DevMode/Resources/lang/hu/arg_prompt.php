@@ -16,7 +16,6 @@ return [
         'unknown_command' => 'Ismeretlen parancs: :command',
         'missing' => 'Hiányzó :noun: :list',
         'invalid_args' => 'Egy vagy több argumentum érvénytelen.',
-        'arg_singular' => 'argumentum',
-        'arg_plural' => 'argumentumok',
+        'arg' => 'argumentum|argumentumok',
     ],
 ];

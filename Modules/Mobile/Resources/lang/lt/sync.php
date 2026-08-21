@@ -7,7 +7,7 @@ return [
     'heading' => 'Duomenys ir įrenginiai',
     'sync_status' => 'Sinchronizavimo būsena',
     'your_devices' => 'Tavo įrenginiai',
-    'syncing_progress' => 'Sinchronizuojama… įrašų: :count',
+    'syncing_progress' => 'Sinchronizuojama… :count įrašas|Sinchronizuojama… :count įrašai|Sinchronizuojama… :count įrašų',
     'initial_sync_aria' => 'Pradinio sinchronizavimo eiga',
     'no_peers' => 'Susiek kitą įrenginį, kad prasidėtų sinchronizavimas.',
     'sync_now' => 'Sinchronizuoti dabar',

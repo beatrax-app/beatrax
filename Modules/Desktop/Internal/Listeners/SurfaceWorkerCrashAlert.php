@@ -8,6 +8,7 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Support\Lang;
 use Modules\Desktop\Internal\Native\WindowFocusState;
 use Modules\Desktop\Public\Events\NotificationDeepLink;
@@ -94,7 +95,7 @@ final class SurfaceWorkerCrashAlert
             SystemAlert::query()->create([
                 'user_id' => null,
                 'kind' => self::ALERT_KIND,
-                'severity' => 'critical',
+                'severity' => SystemAlertSeverity::Critical->value,
                 'message' => Lang::get('desktop::native.worker_alert.body'),
             ]);
         }

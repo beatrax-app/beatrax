@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Ovaj uređaj je sinkroniziran',
     'heading' => 'Ovaj uređaj je sinkroniziran',
-    'records' => 'Kopirano zapisa: :count. Izvorni uređaj: :peer.',
+    'records' => 'Kopiran :count zapis s uređaja :peer.|Kopirana :count zapisa s uređaja :peer.|Kopirano :count zapisa s uređaja :peer.',
     'records_none' => 'Sve je usklađeno — nije bilo ničeg novog za kopiranje. Izvorni uređaj: :peer.',
     'how_it_works' => 'Od sada nadalje',
     'automatic_title' => 'Sve se ažurira samo',

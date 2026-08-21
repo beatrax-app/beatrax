@@ -49,6 +49,8 @@ return [
     'flash_saved' => 'Regel gespeichert.',
     'flash_reapplying' => 'Regeln werden erneut auf deinen Verlauf angewendet…',
     'summary_no_changes' => 'Keine Änderungen — dein Verlauf entspricht bereits deinen Regeln.',
-    'summary_updated' => ':fields Felder in :transactions Transaktionen aktualisiert.',
-    'summary_reconciled_skipped' => ':count abgeglichene Transaktionen wurden übersprungen.',
+    'summary_updated' => ':fields in :transactions aktualisiert.',
+    'summary_fields' => ':count Feld|:count Felder',
+    'summary_transactions' => ':count Transaktion|:count Transaktionen',
+    'summary_reconciled_skipped' => ':count abgeglichene Transaktion wurde übersprungen.|:count abgeglichene Transaktionen wurden übersprungen.',
 ];

@@ -49,6 +49,8 @@ return [
     'flash_saved' => 'Ο κανόνας αποθηκεύτηκε.',
     'flash_reapplying' => 'Οι κανόνες εφαρμόζονται ξανά στο ιστορικό σου…',
     'summary_no_changes' => 'Καμία αλλαγή — το ιστορικό σου ταιριάζει ήδη με τους κανόνες σου.',
-    'summary_updated' => 'Ενημερώθηκαν :fields πεδία σε :transactions συναλλαγές.',
-    'summary_reconciled_skipped' => 'Παραλείφθηκαν :count συμφωνημένες συναλλαγές.',
+    'summary_updated' => 'Ενημερώθηκαν :fields σε :transactions.',
+    'summary_fields' => ':count πεδίο|:count πεδία',
+    'summary_transactions' => ':count συναλλαγή|:count συναλλαγές',
+    'summary_reconciled_skipped' => 'Παραλείφθηκε :count συμφωνημένη συναλλαγή.|Παραλείφθηκαν :count συμφωνημένες συναλλαγές.',
 ];

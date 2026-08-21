@@ -23,6 +23,6 @@ return [
     'runtime_nativephp' => 'nativephp',
     'runtime_host_os' => 'isäntäkäyttöjärjestelmä',
     'effective_config' => 'Voimassa oleva konfiguraatio',
-    'show_entries' => 'Näytä :count merkintää',
+    'show_entries' => 'Näytä :count merkintä|Näytä :count merkintää',
     'hide' => 'Piilota',
 ];

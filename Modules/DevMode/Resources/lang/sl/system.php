@@ -23,6 +23,6 @@ return [
     'runtime_nativephp' => 'nativephp',
     'runtime_host_os' => 'os gostitelja',
     'effective_config' => 'Veljavna konfiguracija',
-    'show_entries' => 'Prikaži :count vnosov',
+    'show_entries' => 'Prikaži :count vnos|Prikaži :count vnosa|Prikaži :count vnose|Prikaži :count vnosov',
     'hide' => 'Skrij',
 ];

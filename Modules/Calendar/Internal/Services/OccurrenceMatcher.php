@@ -15,7 +15,6 @@ final readonly class OccurrenceMatcher
 {
     use CoercesScalars;
 
-    // The cap; matchWindowDays() clamps the effective window per cadence.
     private const int MATCH_WINDOW_DAYS = 7;
 
     private const int DAYS_PER_WEEK = 7;

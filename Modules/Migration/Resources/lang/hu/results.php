@@ -8,8 +8,11 @@ return [
     'heading_complete' => 'Import kész',
     'heading_update' => 'Frissítés alkalmazva',
 
-    'summary_line' => ':categories kategória, :budget_months költségvetési hónap és :transactions tranzakció importálva.',
-    'summary_attention' => ':count elem továbbra is figyelmet igényel — lásd alább.',
+    'summary_line' => ':categories, :budget_months és :transactions importálva.',
+    'summary_categories' => ':count kategória|:count kategória',
+    'summary_budget_months' => ':count költségvetési hónap|:count költségvetési hónap',
+    'summary_transactions' => ':count tranzakció|:count tranzakció',
+    'summary_attention' => ':count elem továbbra is figyelmet igényel — lásd alább.|:count elem továbbra is figyelmet igényel — lásd alább.',
 
     'stats' => [
         'category' => 'Kategóriák',

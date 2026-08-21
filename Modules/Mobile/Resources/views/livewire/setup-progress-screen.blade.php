@@ -89,7 +89,7 @@
              determinate bar from it — so a ratio here read as "x of x". --}}
         @if ($recordsApplied > 0)
             <p aria-live="polite" class="text-sm text-slate-500 dark:text-slate-400">
-                {{ Lang::get('mobile::setup.records', ['count' => $recordsApplied]) }}
+                {{ Lang::choice('mobile::setup.records', $recordsApplied) }}
             </p>
         @endif
 

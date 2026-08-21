@@ -16,7 +16,7 @@ return [
     'advanced_off_hint' => 'Enable Advanced (Dev Mode → Advanced) to run queries.',
     'statement_label' => 'SELECT statement',
     'run' => 'Run',
-    'rows_meta' => ':rows rows · :durationms',
+    'rows_meta' => ':rows row · :durationms|:rows rows · :durationms',
     'no_rows' => 'Query returned no rows.',
 
     'errors' => [

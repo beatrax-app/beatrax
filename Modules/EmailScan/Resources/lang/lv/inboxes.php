@@ -18,8 +18,7 @@ return [
     'connect_microsoft' => 'Pievienot Microsoft 365',
     'readonly_note' => 'Beatrax ziņojumus tikai lasa. Tā nekad neko nesūta, neatzīmē, nepārvieto un nedzēš jūsu pastkastē.',
 
-    'month' => '1 mēnesis',
-    'months' => ':count mēneši',
+    'months' => ':count mēnešu|:count mēnesis|:count mēneši',
     'not_scanned_yet' => 'vēl nav skenēts',
     'last_scanned' => 'pēdējoreiz skenēts',
     'window_prefix' => 'Periods:',
@@ -50,7 +49,7 @@ return [
     'discovered_heading' => 'Atklātie sūtītāji',
     'discovered_body' => 'Sūtītāji, kas izskatās pēc čeku sūtītājiem, bet vēl nav jūsu zināmo čeku sarakstā. Pievienojiet tos, kurus vēlaties skenēt ar Beatrax; pārējos aizveriet.',
     'last_seen' => 'pēdējoreiz redzēts',
-    'seen_times' => 'Redzēts :count reizes',
+    'seen_times' => 'Redzēts :count reižu|Redzēts :count reizi|Redzēts :count reizes',
     'add' => 'Pievienot',
     'add_aria' => 'Pievienot :email',
     'dismiss' => 'Aizvērt',

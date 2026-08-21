@@ -49,6 +49,8 @@ return [
     'flash_saved' => 'Reegel on salvestatud.',
     'flash_reapplying' => 'Rakendan reegleid sinu ajaloole uuesti…',
     'summary_no_changes' => 'Muudatusi pole — sinu ajalugu vastab juba reeglitele.',
-    'summary_updated' => 'Uuendatud :fields välja :transactions tehingus.',
-    'summary_reconciled_skipped' => ':count kooskõlastatud tehingut jäeti vahele.',
+    'summary_updated' => 'Uuendatud: :fields, :transactions.',
+    'summary_fields' => ':count väli|:count välja',
+    'summary_transactions' => ':count tehing|:count tehingut',
+    'summary_reconciled_skipped' => ':count kooskõlastatud tehing jäeti vahele.|:count kooskõlastatud tehingut jäeti vahele.',
 ];

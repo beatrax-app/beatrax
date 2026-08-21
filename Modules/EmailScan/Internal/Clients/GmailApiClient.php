@@ -99,7 +99,6 @@ final class GmailApiClient implements GmailApiClientContract
         return $historyId === '' ? null : $historyId;
     }
 
-    // Gmail's raw field is base64url; the caller wants RFC 822 bytes.
     public function getRawMessage(int $inboxId, string $providerMessageId): string
     {
         $resource = $this->messagesResource($inboxId);

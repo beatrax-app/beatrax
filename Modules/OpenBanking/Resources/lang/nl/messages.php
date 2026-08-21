@@ -56,7 +56,7 @@ return [
         'sync_now' => 'Nu synchroniseren',
         'consent_expired' => 'Toestemming verlopen — opnieuw verbinden.',
         'unavailable' => 'Enable Banking is tijdelijk niet beschikbaar. Probeer het zo weer.',
-        'new_found' => ':count nieuwe transacties gevonden.',
+        'new_found' => ':count nieuwe transactie gevonden.|:count nieuwe transacties gevonden.',
         'none' => 'Geen nieuwe transacties.',
     ],
 

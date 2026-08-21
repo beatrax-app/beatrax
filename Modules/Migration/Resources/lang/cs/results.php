@@ -8,8 +8,11 @@ return [
     'heading_complete' => 'Import dokončen',
     'heading_update' => 'Aktualizace použita',
 
-    'summary_line' => 'Naimportováno — kategorie: :categories, měsíce rozpočtu: :budget_months, transakce: :transactions.',
-    'summary_attention' => 'Položky, které ještě potřebují pozornost: :count — viz níže.',
+    'summary_line' => 'Naimportováno: :categories, :budget_months a :transactions.',
+    'summary_categories' => ':count kategorie|:count kategorie|:count kategorií',
+    'summary_budget_months' => ':count měsíc rozpočtu|:count měsíce rozpočtu|:count měsíců rozpočtu',
+    'summary_transactions' => ':count transakce|:count transakce|:count transakcí',
+    'summary_attention' => ':count položka ještě potřebuje pozornost — viz níže.|:count položky ještě potřebují pozornost — viz níže.|:count položek ještě potřebuje pozornost — viz níže.',
 
     'stats' => [
         'category' => 'Kategorie',

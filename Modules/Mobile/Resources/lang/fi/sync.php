@@ -7,7 +7,7 @@ return [
     'heading' => 'Tiedot ja laitteet',
     'sync_status' => 'Synkronoinnin tila',
     'your_devices' => 'Laitteesi',
-    'syncing_progress' => 'Synkronoidaan… :count tietuetta',
+    'syncing_progress' => 'Synkronoidaan… :count tietue|Synkronoidaan… :count tietuetta',
     'initial_sync_aria' => 'Ensimmäisen synkronoinnin edistyminen',
     'no_peers' => 'Muodosta laitepari toisen laitteen kanssa, niin synkronointi alkaa.',
     'sync_now' => 'Synkronoi nyt',

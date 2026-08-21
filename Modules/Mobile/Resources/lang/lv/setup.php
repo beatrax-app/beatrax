@@ -29,6 +29,6 @@ return [
     'resuming' => 'Atsāk iestatīšanu…',
     'setting_up' => 'Iestata šo ierīci…',
     'progress_aria' => 'Iestatīšanas gaita',
-    'records' => 'Ieraksti: :count',
+    'records' => ':count ierakstu|:count ieraksts|:count ieraksti',
     'records_preparing' => 'Gaida otru ierīci…',
 ];

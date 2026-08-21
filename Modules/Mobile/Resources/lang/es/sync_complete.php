@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Este dispositivo está sincronizado',
     'heading' => 'Este dispositivo está sincronizado',
-    'records' => 'Se han copiado :count registros desde :peer.',
+    'records' => 'Se ha copiado :count registro desde :peer.|Se han copiado :count registros desde :peer.',
     'records_none' => 'Ya está al día con :peer. No había nada nuevo que copiar.',
     'how_it_works' => 'A partir de ahora',
     'automatic_title' => 'Se mantiene al día solo',

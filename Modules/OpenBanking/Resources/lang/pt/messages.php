@@ -57,7 +57,7 @@ return [
 
         'consent_expired' => 'Consentimento expirado — volta a ligar.',
         'unavailable' => 'O Enable Banking está temporariamente indisponível. Tenta de novo daqui a pouco.',
-        'new_found' => ':count novas transações encontradas.',
+        'new_found' => ':count nova transação encontrada.|:count novas transações encontradas.',
         'none' => 'Não há transações novas.',
     ],
 

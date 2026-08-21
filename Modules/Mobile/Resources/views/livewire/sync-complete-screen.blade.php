@@ -43,7 +43,7 @@
                 @if ($recordsApplied === 0)
                     {{ Lang::get('mobile::sync_complete.records_none', ['peer' => $peerName]) }}
                 @else
-                    {{ Lang::get('mobile::sync_complete.records', ['count' => $recordsApplied, 'peer' => $peerName]) }}
+                    {{ Lang::choice('mobile::sync_complete.records', $recordsApplied, ['peer' => $peerName]) }}
                 @endif
             </p>
         </div>

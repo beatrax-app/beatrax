@@ -17,7 +17,7 @@ return [
         'pin_length' => 'Il PIN deve avere almeno 6 cifre.',
 
         'too_many_attempts' => 'Troppi tentativi — riprova tra :secondss.',
-        'incorrect_pin_remaining' => 'PIN errato. Restano :count tentativi.',
+        'incorrect_pin_remaining' => 'PIN errato. Resta :count tentativo.|PIN errato. Restano :count tentativi.',
         'incorrect_pin' => 'PIN errato.',
     ],
 ];

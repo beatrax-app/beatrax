@@ -80,7 +80,6 @@ final class FakeGraphApiClient implements GraphApiClientContract
         $emlPath = $this->resolveEmlPath($slug);
         $contents = $this->files->get($emlPath);
 
-        // CRLF wire form, matching what the real endpoint returns.
         return self::normaliseCrlf($contents);
     }
 

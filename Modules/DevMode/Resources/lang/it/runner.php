@@ -36,8 +36,7 @@ return [
     'toast' => [
         'unknown_command' => 'Comando sconosciuto: :command',
         'missing_args' => 'Impossibile eseguire :command — richiede :noun: :list',
-        'arg_singular' => 'argomento',
-        'arg_plural' => 'argomenti',
+        'arg' => 'argomento|argomenti',
         'started' => 'Avviato :command (esecuzione :runId)',
         'run_expired' => 'Record di esecuzione scaduto — impossibile rieseguire.',
         'reran' => 'Rieseguito :command (esecuzione :runId)',

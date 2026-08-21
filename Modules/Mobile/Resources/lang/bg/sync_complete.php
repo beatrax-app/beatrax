@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Това устройство е синхронизирано',
     'heading' => 'Това устройство е синхронизирано',
-    'records' => 'Копирани са :count записа от :peer.',
+    'records' => 'Копиран е :count запис от :peer.|Копирани са :count записа от :peer.',
     'records_none' => 'Актуално с :peer. Нямаше нищо ново за копиране.',
     'how_it_works' => 'Оттук нататък',
     'automatic_title' => 'Поддържа се актуално само',

@@ -16,7 +16,6 @@ return [
         'unknown_command' => 'Neznan ukaz: :command',
         'missing' => 'Manjka :noun: :list',
         'invalid_args' => 'Eden ali več argumentov ni veljaven.',
-        'arg_singular' => 'argument',
-        'arg_plural' => 'argumentov',
+        'arg' => 'argument|argumentov|argumentov|argumentov',
     ],
 ];

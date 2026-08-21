@@ -16,7 +16,7 @@ return [
     'advanced_off_hint' => 'Attiva Advanced (Dev Mode → Advanced) per eseguire le query.',
     'statement_label' => 'Statement SELECT',
     'run' => 'Esegui',
-    'rows_meta' => ':rows righe · :durationms',
+    'rows_meta' => ':rows riga · :durationms|:rows righe · :durationms',
     'no_rows' => 'La query non ha restituito righe.',
 
     'errors' => [

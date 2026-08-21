@@ -16,7 +16,6 @@ return [
         'unknown_command' => 'Comando desconocido: :command',
         'missing' => ':noun sin indicar: :list',
         'invalid_args' => 'Uno o más argumentos no son válidos.',
-        'arg_singular' => 'argumento',
-        'arg_plural' => 'argumentos',
+        'arg' => 'argumento|argumentos',
     ],
 ];

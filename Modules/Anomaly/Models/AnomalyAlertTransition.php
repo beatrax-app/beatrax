@@ -12,7 +12,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Anomaly\Database\Factories\AnomalyAlertTransitionFactory;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
-// `actor` is `user` (alerts-page affordance) or `detector` (snooze-expiry revival).
 /**
  * @property int $id
  * @property int|null $user_id

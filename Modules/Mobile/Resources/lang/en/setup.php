@@ -29,6 +29,6 @@ return [
     'resuming' => 'Resuming setup…',
     'setting_up' => 'Setting up this device…',
     'progress_aria' => 'Setup progress',
-    'records' => ':count records',
+    'records' => ':count record|:count records',
     'records_preparing' => 'Waiting for the other device…',
 ];

@@ -49,6 +49,8 @@ return [
     'flash_saved' => 'Reglen er gemt.',
     'flash_reapplying' => 'Anvender reglerne på din historik igen…',
     'summary_no_changes' => 'Ingen ændringer — din historik passer allerede med dine regler.',
-    'summary_updated' => 'Opdaterede :fields felter på tværs af :transactions transaktioner.',
-    'summary_reconciled_skipped' => ':count afstemte transaktioner blev sprunget over.',
+    'summary_updated' => 'Opdaterede :fields på tværs af :transactions.',
+    'summary_fields' => ':count felt|:count felter',
+    'summary_transactions' => ':count transaktion|:count transaktioner',
+    'summary_reconciled_skipped' => ':count afstemt transaktion blev sprunget over.|:count afstemte transaktioner blev sprunget over.',
 ];

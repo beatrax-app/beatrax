@@ -30,6 +30,7 @@ use Modules\Reports\Internal\Http\DrilldownUrlBuilder;
 use Modules\Reports\Internal\Services\ReportCsvExporter;
 use Modules\Reports\Models\SavedReport;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
+use stdClass;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class ReportBuilder extends Component
@@ -51,8 +52,8 @@ final class ReportBuilder extends Component
     #[Url(as: 'to', except: '')]
     public string $customTo = '';
 
-    #[Url(as: 'gran', except: 'monthly')]
-    public string $granularity = 'monthly';
+    #[Url(as: 'gran', except: ReportGranularity::Monthly->value)]
+    public string $granularity = ReportGranularity::Monthly->value;
 
     #[Url(as: 'ccy', except: 'base')]
     public string $currencyMode = 'base';
@@ -315,14 +316,14 @@ final class ReportBuilder extends Component
             ->get(['id', 'name', 'slug', 'name_is_default'])
             ->all();
 
-        $options = array_values(array_map(static function (object $row): array {
+        $options = array_values(array_map(static function (stdClass $row): array {
             return [
                 'id' => is_numeric($row->id) ? (int) $row->id : 0,
                 'name' => CategoryDisplayName::fromRow($row) ?? '',
             ];
         }, $rows));
 
-        usort($options, static fn (array $a, array $b): int => strcasecmp($a['name'], $b['name']));
+        usort($options, static fn (array $a, array $b): int => strcasecmp($a['name'], $b['name']) ?: $a['id'] <=> $b['id']);
 
         return $options;
     }

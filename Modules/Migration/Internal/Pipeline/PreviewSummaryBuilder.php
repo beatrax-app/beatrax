@@ -14,6 +14,7 @@ use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Migration\Internal\Dto\PreviewSummary;
+use Modules\Migration\Internal\Enums\MigrationEntityType;
 use Modules\Migration\Internal\Enums\MigrationRunStatus;
 use Modules\Migration\Internal\Exceptions\MigrationRunNotParsedException;
 use Modules\Migration\Models\MigrationRun;
@@ -200,14 +201,14 @@ final class PreviewSummaryBuilder
     private function categoryOrAccountLabel(Connection $connection, User $user, string $sourceProduct, string $entityType, string $table, string $sourceExternalId): string
     {
         $name = $this->resolvedName($connection, $user, $sourceProduct, $entityType, $sourceExternalId, $table);
-        $kind = $entityType === 'category' ? 'category' : 'account';
+        $kind = $entityType === MigrationEntityType::Category->value ? 'category' : 'account';
 
         return $name !== null ? "\"{$name}\" {$kind} name" : ucfirst($kind).' name';
     }
 
     private function transactionLabel(Connection $connection, User $user, string $sourceProduct, string $sourceExternalId, string $fieldName): string
     {
-        $beatraxId = $this->resolveBeatraxId($connection, $user, $sourceProduct, 'transaction', $sourceExternalId);
+        $beatraxId = $this->resolveBeatraxId($connection, $user, $sourceProduct, MigrationEntityType::Transaction->value, $sourceExternalId);
         $fieldLabel = $fieldName === 'amount_minor' ? 'amount' : 'description';
 
         if ($beatraxId === null) {

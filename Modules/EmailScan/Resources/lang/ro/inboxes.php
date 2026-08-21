@@ -18,8 +18,7 @@ return [
     'connect_microsoft' => 'Conectează Microsoft 365',
     'readonly_note' => 'Beatrax doar citește mesajele. Nu trimite, nu etichetează, nu mută și nu șterge niciodată nimic din căsuța ta.',
 
-    'month' => '1 lună',
-    'months' => ':count luni',
+    'months' => ':count lună|:count luni|:count de luni',
     'not_scanned_yet' => 'încă nescanat',
     'last_scanned' => 'ultima scanare',
     'window_prefix' => 'Interval:',
@@ -50,7 +49,7 @@ return [
     'discovered_heading' => 'Expeditori descoperiți',
     'discovered_body' => 'Expeditori care par să trimită bonuri, dar nu sunt încă pe lista ta de expeditori cunoscuți. Adaugă-i pe cei pe care vrei ca Beatrax să îi scaneze; pe ceilalți închide-i.',
     'last_seen' => 'văzut ultima dată',
-    'seen_times' => 'Văzut de :count ori',
+    'seen_times' => 'Văzut de :count ori|Văzut de :count ori|Văzut de :count ori',
     'add' => 'Adaugă',
     'add_aria' => 'Adaugă :email',
     'dismiss' => 'Închide',

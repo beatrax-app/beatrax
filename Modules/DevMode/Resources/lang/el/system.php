@@ -23,6 +23,6 @@ return [
     'runtime_nativephp' => 'έκδοση nativephp',
     'runtime_host_os' => 'λειτουργικό σύστημα',
     'effective_config' => 'Ενεργή διαμόρφωση',
-    'show_entries' => 'Εμφάνιση :count καταχωρίσεων',
+    'show_entries' => 'Εμφάνιση :count καταχώρισης|Εμφάνιση :count καταχωρίσεων',
     'hide' => 'Απόκρυψη',
 ];

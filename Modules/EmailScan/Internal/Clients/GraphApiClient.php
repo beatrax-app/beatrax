@@ -337,8 +337,8 @@ final class GraphApiClient implements GraphApiClientContract
             return [];
         }
 
-        // json_decode yields array<mixed, mixed>; the key cast is what lets
-        // PHPStan narrow it to array<string, mixed>.
+        // json_decode yields array<mixed, mixed>; casting each key is what
+        // lets static analysis narrow the result to array<string, mixed>.
         $out = [];
         foreach ($decoded as $key => $value) {
             $out[(string) $key] = $value;

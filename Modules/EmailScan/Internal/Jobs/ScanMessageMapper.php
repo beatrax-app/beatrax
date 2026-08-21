@@ -93,7 +93,6 @@ final class ScanMessageMapper
         return is_string($msgMeta['id'] ?? null) ? $msgMeta['id'] : '';
     }
 
-    // A null return lets the scan context fall back to the project Clock.
     /**
      * @param  array<string, mixed>  $msgMeta
      */

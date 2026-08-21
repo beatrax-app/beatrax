@@ -16,7 +16,7 @@ return [
     'advanced_off_hint' => 'Schakel Advanced in (Dev Mode → Advanced) om query’s uit te voeren.',
     'statement_label' => 'SELECT-statement',
     'run' => 'Uitvoeren',
-    'rows_meta' => ':rows regels · :durationms',
+    'rows_meta' => ':rows regel · :durationms|:rows regels · :durationms',
     'no_rows' => 'Query gaf geen regels terug.',
 
     'errors' => [

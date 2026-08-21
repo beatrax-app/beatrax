@@ -24,7 +24,7 @@ return [
     ],
 
     'load_more' => 'Wczytaj więcej',
-    'group_count' => 'Otwarte odchylenia: :count',
+    'group_count' => ':count otwarte odchylenie|:count otwarte odchylenia|:count otwartych odchyleń',
 
     'anomaly_empty' => [
         'open_heading' => 'Brak nietypowych obciążeń',

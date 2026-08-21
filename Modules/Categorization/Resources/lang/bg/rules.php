@@ -49,6 +49,8 @@ return [
     'flash_saved' => 'Правилото е запазено.',
     'flash_reapplying' => 'Правилата се прилагат повторно към историята ти…',
     'summary_no_changes' => 'Няма промени — историята ти вече отговаря на правилата ти.',
-    'summary_updated' => 'Обновени са :fields полета в :transactions транзакции.',
-    'summary_reconciled_skipped' => ':count равнени транзакции бяха пропуснати.',
+    'summary_updated' => 'Обновени :fields в :transactions.',
+    'summary_fields' => ':count поле|:count полета',
+    'summary_transactions' => ':count транзакция|:count транзакции',
+    'summary_reconciled_skipped' => ':count равнена транзакция беше пропусната.|:count равнени транзакции бяха пропуснати.',
 ];

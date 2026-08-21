@@ -16,14 +16,12 @@ final class GenericCsvAmountParser
             throw new InvalidAmountException('Empty amount cell.');
         }
 
-        // Accounting-style parenthesised negative, "(12,34)", used by some fintech exports.
         $negative = false;
         if (preg_match('/^\((.*)\)$/', $raw, $m) === 1) {
             $negative = true;
             $raw = $m[1];
         }
 
-        // Currency symbols, thousands separators, spaces and NBSPs are all stripped.
         $thousands = $decimalSeparator === ',' ? '.' : ',';
         $raw = str_replace([$thousands, ' ', "\u{00A0}"], '', $raw);
         $raw = preg_replace('/[^0-9'.preg_quote($decimalSeparator, '/').'+-]/u', '', $raw) ?? '';

@@ -29,6 +29,6 @@ return [
     'resuming' => 'Nadaljevanje nastavitve…',
     'setting_up' => 'Nastavljanje te naprave…',
     'progress_aria' => 'Napredek nastavitve',
-    'records' => 'Zapisov: :count',
+    'records' => ':count zapis|:count zapisa|:count zapisi|:count zapisov',
     'records_preparing' => 'Čakamo na drugo napravo…',
 ];

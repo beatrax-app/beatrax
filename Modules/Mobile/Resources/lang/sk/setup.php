@@ -29,6 +29,6 @@ return [
     'resuming' => 'Pokračuje sa v nastavení…',
     'setting_up' => 'Nastavuje sa toto zariadenie…',
     'progress_aria' => 'Priebeh nastavenia',
-    'records' => 'Záznamy: :count',
+    'records' => ':count záznam|:count záznamy|:count záznamov',
     'records_preparing' => 'Čaká sa na druhé zariadenie…',
 ];

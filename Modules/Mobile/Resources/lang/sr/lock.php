@@ -17,7 +17,7 @@ return [
         'pin_length' => 'PIN mora da ima bar 6 cifre.',
 
         'too_many_attempts' => 'Previše pokušaja — probaj ponovo za :secondss.',
-        'incorrect_pin_remaining' => 'Neispravan PIN. Preostalo pokušaja: :count.',
+        'incorrect_pin_remaining' => 'Neispravan PIN. Preostaje :count pokušaj.|Neispravan PIN. Preostaju :count pokušaja.|Neispravan PIN. Preostaje :count pokušaja.',
         'incorrect_pin' => 'Neispravan PIN.',
     ],
 ];

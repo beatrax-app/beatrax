@@ -36,8 +36,7 @@ return [
     'toast' => [
         'unknown_command' => 'Nepoznata komanda: :command',
         'missing_args' => 'Nije moguće pokrenuti :command — potrebno je :noun: :list',
-        'arg_singular' => 'argument',
-        'arg_plural' => 'argumenti',
+        'arg' => 'argument|argumenti|argumenti',
         'started' => 'Pokrenuto :command (pokretanje :runId)',
         'run_expired' => 'Zapis o pokretanju je istekao — ponovno pokretanje nije moguće.',
         'reran' => 'Ponovo pokrenuto :command (pokretanje :runId)',

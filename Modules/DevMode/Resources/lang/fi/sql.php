@@ -16,7 +16,7 @@ return [
     'advanced_off_hint' => 'Ota Lisäasetukset käyttöön (Kehitystila → Lisäasetukset), niin voit suorittaa kyselyitä.',
     'statement_label' => 'SELECT-lause',
     'run' => 'Suorita',
-    'rows_meta' => ':rows riviä · :durationms',
+    'rows_meta' => ':rows rivi · :durationms|:rows riviä · :durationms',
     'no_rows' => 'Kysely ei palauttanut rivejä.',
 
     'errors' => [

@@ -17,7 +17,6 @@ final class OsThemeProbe implements OsThemeSignal
         return match (System::theme()) {
             SystemThemesEnum::DARK => 'dark',
             SystemThemesEnum::LIGHT => 'light',
-            // No OS-wide preference — the layout's prefers-color-scheme script decides.
             SystemThemesEnum::SYSTEM => null,
         };
     }

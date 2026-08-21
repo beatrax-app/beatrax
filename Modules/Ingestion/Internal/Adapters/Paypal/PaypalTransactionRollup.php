@@ -124,7 +124,6 @@ final class PaypalTransactionRollup
             }
 
             if ($isChildAction) {
-                // Parent absent from this report window; promoted so the row is not lost.
                 $this->orphanChildCount++;
             }
 
@@ -189,13 +188,11 @@ final class PaypalTransactionRollup
                 $settledAmountMinor = $childAmountMinor;
                 $settledCurrency = $childCurrency;
             } elseif ($childCurrency !== 'EUR' && $nativeCurrency === 'EUR') {
-                // Swapped orientation: the parent's Gross is the EUR settled leg.
                 $settledAmountMinor = $nativeAmountMinor;
                 $settledCurrency = $nativeCurrency;
                 $nativeAmountMinor = $childAmountMinor;
                 $nativeCurrency = $childCurrency;
             }
-            // A same-currency pair is degenerate for FX and leaves the settled leg null.
         }
 
         $bookedAt = $this->dates->parse($this->columns->value('date', $language, $parentRow) ?? '');

@@ -16,7 +16,6 @@ return [
         'unknown_command' => 'Comandă necunoscută: :command',
         'missing' => 'Lipsă :noun: :list',
         'invalid_args' => 'Unul sau mai multe argumente sunt invalide.',
-        'arg_singular' => 'argument',
-        'arg_plural' => 'argumente',
+        'arg' => 'argument|argumente|argumente',
     ],
 ];

@@ -92,7 +92,6 @@ final class AsnCsvAdapter implements SourceAdapter
         }
     }
 
-    // league/csv 9.x yields only strings or null per row; anything else is a precondition violation.
     /**
      * @return array<int, string>
      */

@@ -29,6 +29,6 @@ return [
     'resuming' => 'Tęsiama sąranka…',
     'setting_up' => 'Ruošiamas šis įrenginys…',
     'progress_aria' => 'Sąrankos eiga',
-    'records' => 'Įrašų: :count',
+    'records' => ':count įrašas|:count įrašai|:count įrašų',
     'records_preparing' => 'Laukiama kito įrenginio…',
 ];

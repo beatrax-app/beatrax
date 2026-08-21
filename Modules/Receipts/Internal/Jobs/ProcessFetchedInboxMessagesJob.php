@@ -16,6 +16,7 @@ use Illuminate\Queue\SerializesModels;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\InboxMessageStatus;
 use Modules\Core\Public\Support\LockStore;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
 use Modules\EmailScan\Public\Services\InboxMessageQuery;
@@ -75,7 +76,7 @@ final class ProcessFetchedInboxMessagesJob implements ShouldBeUniqueUntilProcess
         // backlog walk never creates an orphan ImportRun row.
         $importRunId = null;
 
-        foreach ($inboxes->forStatus('fetched') as $dto) {
+        foreach ($inboxes->forStatus(InboxMessageStatus::Fetched->value) as $dto) {
             if ($dto->userId !== $this->userId) {
                 // Defence-in-depth: the query is user-agnostic by
                 // design; the consumer enforces the per-user scope.
@@ -120,7 +121,7 @@ final class ProcessFetchedInboxMessagesJob implements ShouldBeUniqueUntilProcess
             ->table('inbox_messages')
             ->where('id', $inboxMessageId)
             ->update([
-                'status' => 'unmatched',
+                'status' => InboxMessageStatus::Unmatched->value,
                 'updated_at' => $clock->now()->toDateTimeString(),
             ]);
     }
@@ -141,7 +142,7 @@ final class ProcessFetchedInboxMessagesJob implements ShouldBeUniqueUntilProcess
 
         if ($outcome->kind === 'parsed' && $outcome->parsed !== null) {
             $rawKey = $outcome->parsed->rawPayload['matcher_key'] ?? null;
-            $update['status'] = 'parsed';
+            $update['status'] = InboxMessageStatus::Parsed->value;
             $update['matcher_key'] = is_string($rawKey) && $rawKey !== '' ? $rawKey : null;
             $importRunId = $this->bridgeToLedger(
                 $outcome->parsed,
@@ -156,7 +157,9 @@ final class ProcessFetchedInboxMessagesJob implements ShouldBeUniqueUntilProcess
             return [$update, $importRunId];
         }
 
-        $update['status'] = $outcome->kind === 'skipped' ? 'skipped' : 'unmatched';
+        $update['status'] = $outcome->kind === 'skipped'
+            ? InboxMessageStatus::Skipped->value
+            : InboxMessageStatus::Unmatched->value;
 
         return [$update, $importRunId];
     }

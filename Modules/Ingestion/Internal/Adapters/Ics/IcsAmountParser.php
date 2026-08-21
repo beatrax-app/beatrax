@@ -16,14 +16,14 @@ final class IcsAmountParser
             throw new InvalidAmountException('Empty amount string.');
         }
 
-        // A closed list of ISO alpha-3 codes, not \b[A-Z]{3}\b, which would eat a non-currency token.
+        // The currency list is closed rather than \b[A-Z]{3}\b, which would
+        // swallow any three-letter token sitting beside the amount.
         $stripped = preg_replace('/[€$£¥]|\b(?:EUR|USD|GBP|JPY|CHF|CAD|AUD)\b/u', '', $trimmed);
         if ($stripped === null) {
             throw new InvalidAmountException(sprintf('Invalid amount string: %s', $raw));
         }
         $stripped = trim($stripped);
 
-        // The body table prints no minus at all — the Af/Bij marker carries the sign there.
         $sign = 1;
         if (str_starts_with($stripped, '-')) {
             $sign = -1;
@@ -34,7 +34,6 @@ final class IcsAmountParser
         }
         $stripped = trim($stripped);
 
-        // Dutch convention: comma decimal, period thousands.
         $stripped = str_replace('.', '', $stripped);
         $parts = explode(',', $stripped);
 

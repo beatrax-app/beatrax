@@ -36,8 +36,7 @@ return [
     'toast' => [
         'unknown_command' => 'Невідома команда: :command',
         'missing_args' => 'Не можна виконати :command — бракує :noun: :list',
-        'arg_singular' => 'аргумента',
-        'arg_plural' => 'аргументів',
+        'arg' => 'аргумента|аргументів|аргументів',
         'started' => 'Запущено :command (запуск :runId)',
         'run_expired' => 'Запис про запуск застарів — повторний запуск неможливий.',
         'reran' => 'Повторно запущено :command (запуск :runId)',

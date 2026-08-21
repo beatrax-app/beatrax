@@ -36,8 +36,7 @@ return [
     'toast' => [
         'unknown_command' => 'Bilinmeyen komut: :command',
         'missing_args' => ':command çalıştırılamıyor — gereken :noun: :list',
-        'arg_singular' => 'argüman',
-        'arg_plural' => 'argümanlar',
+        'arg' => 'argüman',
         'started' => ':command başlatıldı (çalıştırma :runId)',
         'run_expired' => 'Çalıştırma kaydının süresi doldu — yeniden çalıştırılamaz.',
         'reran' => ':command yeniden çalıştırıldı (çalıştırma :runId)',

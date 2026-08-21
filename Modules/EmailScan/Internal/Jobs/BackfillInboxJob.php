@@ -44,6 +44,8 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
 
     public int $timeout = ScanJobBudget::TIMEOUT_SECONDS;
 
+    private const READ_QUOTA_THROTTLE_SECONDS = 2;
+
     public function __construct(
         public readonly int $inboxId,
         public readonly int $windowMonths,
@@ -288,8 +290,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
                 break;
             }
 
-            // Throttle between pages so a tight loop can't burn the read quota.
-            Sleep::sleep(2);
+            Sleep::sleep(self::READ_QUOTA_THROTTLE_SECONDS);
         }
     }
 
@@ -400,7 +401,6 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         return is_string($msgMeta['id'] ?? null) ? $msgMeta['id'] : '';
     }
 
-    // A null return lets the scan context fall back to the project Clock.
     /**
      * @param  array<string, mixed>  $msgMeta
      */

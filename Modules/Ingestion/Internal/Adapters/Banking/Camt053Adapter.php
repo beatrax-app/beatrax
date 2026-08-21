@@ -89,7 +89,6 @@ final class Camt053Adapter implements SourceAdapter
                 $entryCount++;
             }
 
-            // A multi-<Stmt> file keeps the LAST statement's metadata — the one just imported.
             $this->lastStatementMetadata = $this->buildStatementMetadata($record, $ownIban, $entryCount);
         }
     }
@@ -115,7 +114,6 @@ final class Camt053Adapter implements SourceAdapter
             entryCount: $entryCount,
             extras: [
                 'statementId' => $stmt->getId(),
-                // UTC so the same statement yields identical extras JSON on any export host.
                 'createdOn' => $stmt->getCreatedOn()
                     ->setTimezone(new DateTimeZone('UTC'))
                     ->format('Y-m-d\TH:i:s\Z'),
@@ -136,7 +134,9 @@ final class Camt053Adapter implements SourceAdapter
 
     private function readMessage(string $localPath): Message
     {
-        // XXE: deny every external entity — with XSD validation disabled below, nothing legitimate resolves.
+        // Denying every external entity closes XXE on untrusted statement XML;
+        // XSD validation is disabled below, so nothing legitimate needs to
+        // resolve. The finally clause puts the process-wide loader back.
         libxml_set_external_entity_loader(
             static fn (?string $publicId, ?string $systemId, array $context): ?string => null
         );
@@ -160,7 +160,6 @@ final class Camt053Adapter implements SourceAdapter
             }
         } finally {
             libxml_use_internal_errors($previousErrorState);
-            // The hardening is scoped to this parse, not to the process.
             libxml_set_external_entity_loader(null);
         }
     }
@@ -208,7 +207,9 @@ final class Camt053Adapter implements SourceAdapter
         }
         $value = $entry->getValueDate() ?? $booking;
 
-        // Zeroed to match the CSV adapter's startOfDay() so both formats fingerprint identically.
+        // The import fingerprint hashes the booking timestamp, so a CAMT row and
+        // the same row from a CSV export must both be zeroed to startOfDay() to
+        // land on one fingerprint and dedupe.
         $bookedAt = CarbonImmutable::instance($booking)->startOfDay();
 
         return new SourceTransactionDto(
@@ -227,7 +228,6 @@ final class Camt053Adapter implements SourceAdapter
         );
     }
 
-    // moneyphp/money returns minor units as a numeric string ("399" for €3.99).
     private function moneyToMinor(Money $money): int
     {
         return (int) $money->getAmount();
@@ -243,7 +243,6 @@ final class Camt053Adapter implements SourceAdapter
         return $account->getIdentification();
     }
 
-    // An inbound CRDT entry's counterparty is the Debtor; an outbound DBIT entry's is the Creditor.
     /**
      * @return array{0: ?string, 1: ?string} [counterparty name, counterparty IBAN]
      */

@@ -92,7 +92,6 @@ final class PreviewMigration extends Component
             ->where('user_id', $user->id)
             ->firstOrFail();
 
-        // PreviewSummaryBuilder throws for a foreign-owned run in its own right.
         $summary = $builder->forRun($this->runId, $user);
 
         return $views->make('migration::livewire.preview-migration', [

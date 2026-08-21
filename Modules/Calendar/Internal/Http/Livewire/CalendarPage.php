@@ -115,7 +115,6 @@ final class CalendarPage extends Component
 
         $this->selectedDay = $date;
 
-        // Consumed by <x-bottom-sheet name="day-detail"> at phone width.
         $this->dispatch('open-sheet', name: 'day-detail');
     }
 
@@ -155,7 +154,6 @@ final class CalendarPage extends Component
     {
         $ownedIds = $this->fetchOwnedAccountIds($db, $currentUser->id());
 
-        // Client-controlled input, so the DB never stores a foreign id.
         $this->visibleAccountIds = self::sanitizeAccountIds($this->visibleAccountIds, $ownedIds);
         $this->balanceAccountIds = self::sanitizeAccountIds($this->balanceAccountIds, $ownedIds);
 

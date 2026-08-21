@@ -49,6 +49,8 @@ return [
     'flash_saved' => 'Sääntö tallennettu.',
     'flash_reapplying' => 'Sääntöjä käytetään uudelleen historiaasi…',
     'summary_no_changes' => 'Ei muutoksia — historiasi vastaa jo sääntöjäsi.',
-    'summary_updated' => 'Päivitetty :fields kenttää :transactions tapahtumassa.',
-    'summary_reconciled_skipped' => ':count täsmäytettyä tapahtumaa ohitettiin.',
+    'summary_updated' => 'Päivitetty: :fields, :transactions.',
+    'summary_fields' => ':count kenttä|:count kenttää',
+    'summary_transactions' => ':count tapahtuma|:count tapahtumaa',
+    'summary_reconciled_skipped' => ':count täsmäytetty tapahtuma ohitettiin.|:count täsmäytettyä tapahtumaa ohitettiin.',
 ];

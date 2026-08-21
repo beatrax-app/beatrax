@@ -6,6 +6,7 @@ namespace Modules\OpenBanking\Internal\Listeners;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
+use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeExceptionContext;
@@ -16,8 +17,6 @@ use Throwable;
 final class RaiseOpenBankingReconsentAlert
 {
     private const ALERT_KIND = 'open_banking_reconsent_required';
-
-    private const ALERT_SEVERITY = 'warning';
 
     public function __construct(
         private readonly DatabaseManager $db,
@@ -41,7 +40,7 @@ final class RaiseOpenBankingReconsentAlert
             $this->alerts->raiseForUser(
                 userId: $userId,
                 kind: self::ALERT_KIND,
-                severity: self::ALERT_SEVERITY,
+                severity: SystemAlertSeverity::Warning->value,
                 message: Lang::get('openbanking::messages.alert.reconsent'),
                 metadata: [
                     'connection_id' => $connectionId,

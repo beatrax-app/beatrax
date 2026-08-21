@@ -57,7 +57,7 @@ return [
 
         'consent_expired' => 'Consenso scaduto — ricollega.',
         'unavailable' => 'Enable Banking non è disponibile al momento. Riprova tra poco.',
-        'new_found' => ':count nuove transazioni trovate.',
+        'new_found' => ':count nuova transazione trovata.|:count nuove transazioni trovate.',
         'none' => 'Nessuna nuova transazione.',
     ],
 

@@ -10,7 +10,6 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-// 404 rather than 403 for non-developers: a 403 would confirm the route exists.
 final readonly class EnsureDeveloperMode
 {
     public function __construct(private CurrentUser $currentUser) {}

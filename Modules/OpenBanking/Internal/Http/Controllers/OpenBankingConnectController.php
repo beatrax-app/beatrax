@@ -20,8 +20,7 @@ use RuntimeException;
 
 final class OpenBankingConnectController
 {
-    // Enable Banking discovers ASPSPs by country; ASN and SNS are both Dutch.
-    private const COUNTRY = 'NL';
+    private const ASPSP_COUNTRY = 'NL';
 
     // Kept in sync with the identically-named constant on
     // OpenBankingCallbackController.
@@ -81,7 +80,7 @@ final class OpenBankingConnectController
 
         $response = $this->client->initiateAuth(
             institutionId: $institutionId,
-            country: self::COUNTRY,
+            country: self::ASPSP_COUNTRY,
             redirectUrl: $redirectUri,
             scope: new EnableBankingAccessScope(balances: true, transactions: true, accounts: true),
             validUntil: $this->clock->now()->addDays(self::CONSENT_VALID_FOR_DAYS),

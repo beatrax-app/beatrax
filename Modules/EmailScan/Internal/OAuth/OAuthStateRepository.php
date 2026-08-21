@@ -14,7 +14,6 @@ use Throwable;
 
 final class OAuthStateRepository
 {
-    // 10 minutes covers a typical OAuth round-trip including an MFA prompt.
     private const MAX_AGE_SECONDS = 600;
 
     public function __construct(
@@ -103,7 +102,6 @@ final class OAuthStateRepository
         ($this->session)()->put($this->pkceSessionKey($provider), $verifier);
     }
 
-    // Single-use like the state entry: gone from the session once read.
     public function consumePkceVerifier(string $provider): ?string
     {
         $this->assertProvider($provider);

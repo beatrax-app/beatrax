@@ -16,7 +16,7 @@ return [
     'advanced_off_hint' => 'Ενεργοποίησε τη λειτουργία «Για προχωρημένους» (Λειτουργία προγραμματιστή → Για προχωρημένους) για να εκτελείς ερωτήματα.',
     'statement_label' => 'Δήλωση SELECT',
     'run' => 'Εκτέλεση',
-    'rows_meta' => ':rows γραμμές · :durationms',
+    'rows_meta' => ':rows γραμμή · :durationms|:rows γραμμές · :durationms',
     'no_rows' => 'Το ερώτημα δεν επέστρεψε γραμμές.',
 
     'errors' => [

@@ -29,6 +29,6 @@ return [
     'resuming' => 'Återupptar konfigurationen…',
     'setting_up' => 'Konfigurerar den här enheten…',
     'progress_aria' => 'Förlopp för konfigurationen',
-    'records' => ':count poster',
+    'records' => ':count post|:count poster',
     'records_preparing' => 'Väntar på den andra enheten…',
 ];

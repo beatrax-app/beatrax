@@ -17,6 +17,8 @@ final class EmlBlobStore
     // ImmutableId values carry `=` padding.
     private const MESSAGE_ID_PATTERN = '/^[A-Za-z0-9._%=+\-]{1,512}$/';
 
+    private const MAX_PARENT_HOPS = 32;
+
     private const DIR_MODE = 0700;
 
     private const FILE_MODE = 0600;
@@ -140,9 +142,8 @@ final class EmlBlobStore
         $root = $this->paths->appRelative('inbox').DIRECTORY_SEPARATOR;
         $current = rtrim($leafDir, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR;
         $iters = 0;
-        // Defensive cap in case dirname() loops on malformed input.
         while (
-            $iters++ < 32
+            $iters++ < self::MAX_PARENT_HOPS
             && str_starts_with($current, $root)
             && is_dir(rtrim($current, DIRECTORY_SEPARATOR))
         ) {

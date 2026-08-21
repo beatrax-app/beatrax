@@ -16,7 +16,7 @@ return [
     'advanced_off_hint' => 'Aktivér Advanced (Dev Mode → Advanced) for at køre forespørgsler.',
     'statement_label' => 'SELECT-sætning',
     'run' => 'Kør',
-    'rows_meta' => ':rows rækker · :durationms',
+    'rows_meta' => ':rows række · :durationms|:rows rækker · :durationms',
     'no_rows' => 'Forespørgslen returnerede ingen rækker.',
 
     'errors' => [

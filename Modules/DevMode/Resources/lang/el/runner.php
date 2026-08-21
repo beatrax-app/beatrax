@@ -36,8 +36,7 @@ return [
     'toast' => [
         'unknown_command' => 'Άγνωστη εντολή: :command',
         'missing_args' => 'Δεν είναι δυνατή η εκτέλεση της εντολής :command — απαιτεί :noun: :list',
-        'arg_singular' => 'όρισμα',
-        'arg_plural' => 'ορίσματα',
+        'arg' => 'όρισμα|ορίσματα',
         'started' => 'Ξεκίνησε η εντολή :command (εκτέλεση :runId)',
         'run_expired' => 'Η εγγραφή της εκτέλεσης έληξε — δεν είναι δυνατή η επανεκτέλεση.',
         'reran' => 'Εκτελέστηκε ξανά η εντολή :command (εκτέλεση :runId)',

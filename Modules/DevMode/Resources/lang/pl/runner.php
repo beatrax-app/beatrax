@@ -36,8 +36,7 @@ return [
     'toast' => [
         'unknown_command' => 'Nieznane polecenie: :command',
         'missing_args' => 'Nie można uruchomić polecenia :command — wymaga :noun: :list',
-        'arg_singular' => 'argumentu',
-        'arg_plural' => 'argumentów',
+        'arg' => 'argumentu|argumentów|argumentów',
         'started' => 'Uruchomiono :command (uruchomienie :runId)',
         'run_expired' => 'Rekord uruchomienia wygasł — nie można uruchomić ponownie.',
         'reran' => 'Uruchomiono ponownie :command (uruchomienie :runId)',

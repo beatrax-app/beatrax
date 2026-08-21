@@ -95,7 +95,6 @@ final class DetectIcsStatementReadyJob implements ShouldBeUniqueUntilProcessing,
             return null;
         }
 
-        // One malformed internal_date must not abort the per-user sweep.
         try {
             $internalDate = CarbonImmutable::parse($internalDateRaw);
         } catch (InvalidFormatException) {

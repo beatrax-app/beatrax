@@ -91,7 +91,6 @@ final class EmailScanServiceProvider extends ServiceProvider
 
         $this->loadModuleResources('email-scan');
 
-        // One wizard component for both providers; it branches on $provider.
         $livewire->component('email-scan.inboxes-page', InboxesPage::class);
         $livewire->component('email-scan.oauth-client-wizard-modal', OAuthClientWizardModal::class);
         $livewire->component('email-scan.backfill-window-modal', BackfillWindowModal::class);

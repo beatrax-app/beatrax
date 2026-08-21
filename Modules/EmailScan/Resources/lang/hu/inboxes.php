@@ -18,8 +18,7 @@ return [
     'connect_microsoft' => 'Microsoft 365 csatlakoztatása',
     'readonly_note' => 'A Beatrax csak olvassa az üzeneteket. Soha nem küld, nem címkéz, nem mozgat és nem töröl semmit a postafiókodban.',
 
-    'month' => '1 hónap',
-    'months' => ':count hónap',
+    'months' => ':count hónap|:count hónap',
     'not_scanned_yet' => 'még nem vizsgáltuk',
     'last_scanned' => 'utolsó vizsgálat',
     'window_prefix' => 'Időszak:',
@@ -50,7 +49,7 @@ return [
     'discovered_heading' => 'Felfedezett feladók',
     'discovered_body' => 'Olyan feladók, amelyek bizonylatot küldhetnek, de még nincsenek az ismert bizonylatküldők listáján. Add hozzá azokat, amelyeket a Beatrax vizsgáljon; a többit vesd el.',
     'last_seen' => 'legutóbb',
-    'seen_times' => ':count alkalommal fordult elő',
+    'seen_times' => ':count alkalommal fordult elő|:count alkalommal fordult elő',
     'add' => 'Hozzáadás',
     'add_aria' => 'A(z) :email hozzáadása',
     'dismiss' => 'Elvetés',

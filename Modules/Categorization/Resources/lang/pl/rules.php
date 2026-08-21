@@ -49,6 +49,8 @@ return [
     'flash_saved' => 'Reguła zapisana.',
     'flash_reapplying' => 'Ponowne stosowanie reguł do historii…',
     'summary_no_changes' => 'Brak zmian — historia już odpowiada Twoim regułom.',
-    'summary_updated' => 'Zaktualizowano. Pola: :fields, transakcje: :transactions.',
-    'summary_reconciled_skipped' => 'Pominięto uzgodnione transakcje: :count.',
+    'summary_updated' => 'Zaktualizowano: :fields, :transactions.',
+    'summary_fields' => ':count pole|:count pola|:count pól',
+    'summary_transactions' => ':count transakcja|:count transakcje|:count transakcji',
+    'summary_reconciled_skipped' => 'Pominięto :count uzgodnioną transakcję.|Pominięto :count uzgodnione transakcje.|Pominięto :count uzgodnionych transakcji.',
 ];

@@ -49,7 +49,6 @@ final class CsvPreset
         public readonly array $acceptedStates = [],
     ) {}
 
-    // So a bank's spelling variations compare equal: "Naam / Omschrijving" == "Naam/Omschrijving".
     public static function normaliseHeader(string $header): string
     {
         $lowered = mb_strtolower(trim($header));

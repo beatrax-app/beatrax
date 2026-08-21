@@ -196,7 +196,6 @@ final class InboxScanStateMachine
         });
     }
 
-    // Under the same busy_timeout=5000 fence as the other lifecycle writes.
     /**
      * @param  array{fetched_count: int, total_estimated: int, last_message_date: ?string}|null  $progress
      */

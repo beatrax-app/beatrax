@@ -29,6 +29,6 @@ return [
     'resuming' => 'A beállítás folytatása…',
     'setting_up' => 'Ennek az eszköznek a beállítása…',
     'progress_aria' => 'Beállítás folyamata',
-    'records' => ':count rekord',
+    'records' => ':count rekord|:count rekord',
     'records_preparing' => 'Várakozás a másik eszközre…',
 ];

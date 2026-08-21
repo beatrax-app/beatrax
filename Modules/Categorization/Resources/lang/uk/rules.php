@@ -49,6 +49,8 @@ return [
     'flash_saved' => 'Правило збережено.',
     'flash_reapplying' => 'Повторне застосування правил до твоєї історії…',
     'summary_no_changes' => 'Без змін — твоя історія вже відповідає правилам.',
-    'summary_updated' => 'Оновлено полів: :fields, транзакцій: :transactions.',
-    'summary_reconciled_skipped' => 'Пропущено звірених транзакцій: :count.',
+    'summary_updated' => 'Оновлено: :fields, :transactions.',
+    'summary_fields' => ':count поле|:count поля|:count полів',
+    'summary_transactions' => ':count транзакція|:count транзакції|:count транзакцій',
+    'summary_reconciled_skipped' => 'Пропущено :count звірену транзакцію.|Пропущено :count звірені транзакції.|Пропущено :count звірених транзакцій.',
 ];

@@ -34,7 +34,6 @@ final class TransferPairer implements PairsTransferLegs
 
     public function pairOne(Transaction $tx, User $user): ?int
     {
-        // A re-fire after pairing is a defensive no-op.
         if (! in_array($tx->type, TransactionType::transferValues(), true) || $tx->pair_transaction_id !== null) {
             return null;
         }
@@ -140,7 +139,8 @@ final class TransferPairer implements PairsTransferLegs
                 'updated_at' => $now,
             ]);
 
-        // The caller's in-memory model, so observers see the post-pair state.
+        // The row was written through the query builder, so the caller's model is
+        // re-synced by hand and observers see the post-pair state.
         $tx->pair_transaction_id = $partnerId;
         $tx->syncOriginalAttribute('pair_transaction_id');
     }
@@ -149,7 +149,6 @@ final class TransferPairer implements PairsTransferLegs
     {
         $connection = $this->db->connection();
 
-        // Snapshotted: iterating an updating result set is undefined in SQLite.
         /** @var list<int<1, max>> $candidateIds */
         $candidateIds = $connection
             ->table('transactions')
@@ -170,7 +169,6 @@ final class TransferPairer implements PairsTransferLegs
             if ($tx === null) {
                 continue;
             }
-            // A previous iteration may have written both rows already.
             if ($tx->pair_transaction_id !== null) {
                 continue;
             }
@@ -279,7 +277,6 @@ final class TransferPairer implements PairsTransferLegs
                 ($this->session)(),
             );
 
-            // Skipped rather than compared against ciphertext.
             if ($encryptionEnabled && ! $candidateResult['decrypted']) {
                 continue;
             }

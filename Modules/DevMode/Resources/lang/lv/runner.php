@@ -36,8 +36,7 @@ return [
     'toast' => [
         'unknown_command' => 'Nezināma komanda: :command',
         'missing_args' => 'Nevar izpildīt :command — trūkst :noun: :list',
-        'arg_singular' => 'argumenta',
-        'arg_plural' => 'argumentu',
+        'arg' => 'argumentu|argumenta|argumentu',
         'started' => 'Sākts :command (izpilde :runId)',
         'run_expired' => 'Izpildes ieraksts ir novecojis — nevar palaist vēlreiz.',
         'reran' => 'Atkārtoti izpildīts :command (izpilde :runId)',

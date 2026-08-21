@@ -24,7 +24,7 @@ return [
     ],
 
     'load_more' => 'Načítať ďalšie',
-    'group_count' => 'Otvorené odchýlky: :count',
+    'group_count' => ':count otvorená odchýlka|:count otvorené odchýlky|:count otvorených odchýliek',
 
     'anomaly_empty' => [
         'open_heading' => 'Žiadne nezvyčajné platby',

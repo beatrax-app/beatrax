@@ -16,7 +16,7 @@ return [
     'advanced_off_hint' => 'Aktiviere Advanced (Dev Mode → Advanced), um Abfragen auszuführen.',
     'statement_label' => 'SELECT-Statement',
     'run' => 'Ausführen',
-    'rows_meta' => ':rows Zeilen · :durationms',
+    'rows_meta' => ':rows Zeile · :durationms|:rows Zeilen · :durationms',
     'no_rows' => 'Die Abfrage lieferte keine Zeilen.',
 
     'errors' => [

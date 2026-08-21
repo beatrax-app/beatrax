@@ -95,7 +95,8 @@ final class ExchangeRateService
         string $knownRate,
         string $date,
     ): ConversionResult {
-        // tx.fx_rate_used is already stored in the direction this conversion needs.
+        // tx.fx_rate_used is stored in the direction this conversion needs, so it
+        // is registered as a direct pair and never inverted.
         $converted = RateTable::direct()
             ->withRate($money->currency(), $targetCurrency, $knownRate)
             ->convert($money, $targetCurrency);

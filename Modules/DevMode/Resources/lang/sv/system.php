@@ -23,6 +23,6 @@ return [
     'runtime_nativephp' => 'nativephp',
     'runtime_host_os' => 'host os',
     'effective_config' => 'Effektiv konfiguration',
-    'show_entries' => 'Visa :count poster',
+    'show_entries' => 'Visa :count post|Visa :count poster',
     'hide' => 'Dölj',
 ];

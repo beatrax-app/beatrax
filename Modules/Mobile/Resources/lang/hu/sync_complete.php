@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Ez az eszköz szinkronizálva van',
     'heading' => 'Ez az eszköz szinkronizálva van',
-    'records' => ':count rekord átmásolva innen: :peer.',
+    'records' => ':count rekord átmásolva innen: :peer.|:count rekord átmásolva innen: :peer.',
     'records_none' => 'Naprakész ezzel: :peer. Nem volt új másolnivaló.',
     'how_it_works' => 'Mostantól',
     'automatic_title' => 'Magától naprakész marad',

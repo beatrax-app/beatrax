@@ -18,8 +18,7 @@ return [
     'connect_microsoft' => 'Połącz Microsoft 365',
     'readonly_note' => 'Beatrax tylko czyta wiadomości. Nigdy niczego nie wysyła, nie etykietuje, nie przenosi ani nie usuwa w Twojej skrzynce.',
 
-    'month' => '1 miesiąc',
-    'months' => ':count mies.',
+    'months' => ':count mies.|:count mies.|:count mies.',
     'not_scanned_yet' => 'jeszcze nieskanowane',
     'last_scanned' => 'ostatnio skanowane',
     'window_prefix' => 'Okres:',
@@ -50,7 +49,7 @@ return [
     'discovered_heading' => 'Wykryci nadawcy',
     'discovered_body' => 'Nadawcy, którzy wyglądają na wysyłających paragony, ale nie ma ich jeszcze na liście znanych nadawców. Dodaj tych, których ma skanować Beatrax; resztę odrzuć.',
     'last_seen' => 'ostatnio widziano',
-    'seen_times' => 'Liczba wystąpień: :count',
+    'seen_times' => 'Liczba wystąpień: :count|Liczba wystąpień: :count|Liczba wystąpień: :count',
     'add' => 'Dodaj',
     'add_aria' => 'Dodaj :email',
     'dismiss' => 'Odrzuć',

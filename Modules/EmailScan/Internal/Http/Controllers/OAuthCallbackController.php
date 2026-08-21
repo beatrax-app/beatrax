@@ -103,7 +103,6 @@ final class OAuthCallbackController
         return $existingInboxId;
     }
 
-    // A string return is the user-facing oauth_failed flash message.
     private function exchangeToken(
         Request $request,
         GoogleOAuthProvider|MicrosoftOAuthProvider $oauth,

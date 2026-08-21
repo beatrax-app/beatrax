@@ -92,9 +92,7 @@
             @foreach ($inboxes as $inbox)
                 @php
                     $providerLabel = $inbox->provider === \Modules\EmailScan\Public\Enums\MailProvider::Gmail->value ? 'Gmail' : 'Microsoft 365';
-                    $windowText = $inbox->backfillWindowMonths === 1
-                        ? Lang::get('email-scan::inboxes.month')
-                        : Lang::get('email-scan::inboxes.months', ['count' => $inbox->backfillWindowMonths]);
+                    $windowText = Lang::choice('email-scan::inboxes.months', $inbox->backfillWindowMonths);
                     $lastScanText = $inbox->lastScanAt === null
                         ? Lang::get('email-scan::inboxes.not_scanned_yet')
                         : Lang::get('email-scan::inboxes.last_scanned').' '.\Carbon\CarbonImmutable::instance($inbox->lastScanAt)->diffForHumans(syntax: \Carbon\CarbonInterface::DIFF_RELATIVE_TO_NOW, short: true);
@@ -260,7 +258,7 @@
                             <span
                                 class="text-xs text-slate-500 dark:text-slate-400"
                                 style="font-variant-numeric: tabular-nums;"
-                            >{{ Lang::get('email-scan::inboxes.seen_times', ['count' => $cand->occurrenceCount]) }}</span>
+                            >{{ Lang::choice('email-scan::inboxes.seen_times', $cand->occurrenceCount) }}</span>
                             <button
                                 type="button"
                                 wire:click="promoteSender({{ $cand->id }})"

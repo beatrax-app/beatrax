@@ -24,7 +24,7 @@ return [
     ],
 
     'load_more' => 'Įkelti daugiau',
-    'group_count' => 'Neperžiūrėtų pokyčių: :count',
+    'group_count' => ':count neperžiūrėtas pokytis|:count neperžiūrėti pokyčiai|:count neperžiūrėtų pokyčių',
 
     'anomaly_empty' => [
         'open_heading' => 'Neįprastų mokėjimų nėra',

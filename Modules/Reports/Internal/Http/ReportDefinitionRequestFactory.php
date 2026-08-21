@@ -10,7 +10,6 @@ use Modules\Reports\Internal\Enums\ReportGranularity;
 
 final class ReportDefinitionRequestFactory
 {
-    // Keeps the export route's per-parameter coercion out of the route closure.
     public function fromExportQuery(Request $request): ReportDefinition
     {
         return new ReportDefinition(

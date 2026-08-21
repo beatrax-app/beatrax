@@ -23,6 +23,6 @@ return [
     'runtime_nativephp' => 'nativephp',
     'runtime_host_os' => 'resursdatora OS',
     'effective_config' => 'Faktiskā konfigurācija',
-    'show_entries' => 'Rādīt :count ierakstus',
+    'show_entries' => 'Rādīt :count ierakstu|Rādīt :count ierakstu|Rādīt :count ierakstus',
     'hide' => 'Slēpt',
 ];

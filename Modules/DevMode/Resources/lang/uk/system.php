@@ -23,6 +23,6 @@ return [
     'runtime_nativephp' => 'nativephp',
     'runtime_host_os' => 'host os',
     'effective_config' => 'Чинна конфігурація',
-    'show_entries' => 'Показати записів: :count',
+    'show_entries' => 'Показати :count запис|Показати :count записи|Показати :count записів',
     'hide' => 'Сховати',
 ];

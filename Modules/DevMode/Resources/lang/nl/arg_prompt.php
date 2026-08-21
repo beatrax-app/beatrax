@@ -16,7 +16,6 @@ return [
         'unknown_command' => 'Onbekend commando: :command',
         'missing' => 'Ontbreekt :noun: :list',
         'invalid_args' => 'Een of meer argumenten zijn ongeldig.',
-        'arg_singular' => 'argument',
-        'arg_plural' => 'argumenten',
+        'arg' => 'argument|argumenten',
     ],
 ];

@@ -29,6 +29,6 @@ return [
     'resuming' => 'Se reia configurarea…',
     'setting_up' => 'Se configurează acest dispozitiv…',
     'progress_aria' => 'Progresul configurării',
-    'records' => ':count înregistrări',
+    'records' => ':count înregistrare|:count înregistrări|:count de înregistrări',
     'records_preparing' => 'Se așteaptă celălalt dispozitiv…',
 ];

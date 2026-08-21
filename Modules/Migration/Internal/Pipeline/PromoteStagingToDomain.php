@@ -191,7 +191,6 @@ final class PromoteStagingToDomain
                 ->where('period_start', $periodStart->toDateString())
                 ->value('id');
 
-            // setAssigned() deletes the row outright on a zero amount (absence == 0).
             if ($assignmentId !== null) {
                 $externalId = $categoryExternalId.'|'.$periodStart->toDateString();
 

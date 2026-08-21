@@ -49,6 +49,8 @@ return [
     'flash_saved' => 'Szabály mentve.',
     'flash_reapplying' => 'Szabályok újraalkalmazása az előzményeidre…',
     'summary_no_changes' => 'Nincs változás — az előzményeid már megfelelnek a szabályaidnak.',
-    'summary_updated' => ':fields mező frissítve :transactions tranzakcióban.',
-    'summary_reconciled_skipped' => ':count egyeztetett tranzakció kimaradt.',
+    'summary_updated' => 'Frissítve: :fields, :transactions.',
+    'summary_fields' => ':count mező|:count mező',
+    'summary_transactions' => ':count tranzakció|:count tranzakció',
+    'summary_reconciled_skipped' => ':count egyeztetett tranzakció kimaradt.|:count egyeztetett tranzakció kimaradt.',
 ];

@@ -36,8 +36,7 @@ return [
     'toast' => [
         'unknown_command' => 'Tundmatu käsk: :command',
         'missing_args' => 'Käsku :command ei saa käivitada — vaja on :noun: :list',
-        'arg_singular' => 'argument',
-        'arg_plural' => 'argumendid',
+        'arg' => 'argument|argumendid',
         'started' => 'Käivitatud :command (käivitus :runId)',
         'run_expired' => 'Käivituse kirje on aegunud — uuesti käivitada ei saa.',
         'reran' => 'Käivitatud uuesti :command (käivitus :runId)',

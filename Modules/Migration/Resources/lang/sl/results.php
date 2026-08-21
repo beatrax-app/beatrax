@@ -8,8 +8,11 @@ return [
     'heading_complete' => 'Uvoz končan',
     'heading_update' => 'Posodobitev uporabljena',
 
-    'summary_line' => 'Uvoženo: :categories kategorij, :budget_months proračunskih mesecev in :transactions transakcij.',
-    'summary_attention' => 'Postavke, ki še potrebujejo tvojo pozornost: :count — glej spodaj.',
+    'summary_line' => 'Uvoženo: :categories, :budget_months in :transactions.',
+    'summary_categories' => ':count kategorija|:count kategoriji|:count kategorije|:count kategorij',
+    'summary_budget_months' => ':count proračunski mesec|:count proračunska meseca|:count proračunski meseci|:count proračunskih mesecev',
+    'summary_transactions' => ':count transakcija|:count transakciji|:count transakcije|:count transakcij',
+    'summary_attention' => ':count postavka še potrebuje tvojo pozornost — glej spodaj.|:count postavki še potrebujeta tvojo pozornost — glej spodaj.|:count postavke še potrebujejo tvojo pozornost — glej spodaj.|:count postavk še potrebuje tvojo pozornost — glej spodaj.',
 
     'stats' => [
         'category' => 'Kategorije',

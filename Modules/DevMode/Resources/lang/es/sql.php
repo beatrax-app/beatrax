@@ -16,7 +16,7 @@ return [
     'advanced_off_hint' => 'Activa el modo avanzado (Dev Mode → Avanzado) para ejecutar consultas.',
     'statement_label' => 'Sentencia SELECT',
     'run' => 'Ejecutar',
-    'rows_meta' => ':rows filas · :durationms',
+    'rows_meta' => ':rows fila · :durationms|:rows filas · :durationms',
     'no_rows' => 'La consulta no ha devuelto ninguna fila.',
 
     'errors' => [

@@ -24,7 +24,7 @@ return [
     ],
 
     'load_more' => 'Ielādēt vairāk',
-    'group_count' => 'Atvērtās izmaiņas: :count',
+    'group_count' => ':count atvērtu izmaiņu|:count atvērta izmaiņa|:count atvērtas izmaiņas',
 
     'anomaly_empty' => [
         'open_heading' => 'Nav neparastu maksājumu',

@@ -7,7 +7,7 @@ return [
     'heading' => 'Datos y dispositivos',
     'sync_status' => 'Estado de sincronización',
     'your_devices' => 'Tus dispositivos',
-    'syncing_progress' => 'Sincronizando… :count registros',
+    'syncing_progress' => 'Sincronizando… :count registro|Sincronizando… :count registros',
     'initial_sync_aria' => 'Progreso de la sincronización inicial',
     'no_peers' => 'Vincula otro dispositivo para empezar a sincronizar.',
     'sync_now' => 'Sincronizar ahora',

@@ -16,7 +16,6 @@ return [
         'unknown_command' => 'Неизвестна команда: :command',
         'missing' => 'Няма :noun: :list',
         'invalid_args' => 'Един или повече аргументи са невалидни.',
-        'arg_singular' => 'аргумент',
-        'arg_plural' => 'аргументи',
+        'arg' => 'аргумент|аргументи',
     ],
 ];

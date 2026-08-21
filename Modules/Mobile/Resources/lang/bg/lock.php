@@ -17,7 +17,7 @@ return [
         'pin_length' => 'ПИН кодът трябва да е поне 6 цифри.',
 
         'too_many_attempts' => 'Твърде много опити — опитай отново след :secondsс.',
-        'incorrect_pin_remaining' => 'Грешен ПИН код. Остават :count опита.',
+        'incorrect_pin_remaining' => 'Грешен ПИН код. Остава :count опит.|Грешен ПИН код. Остават :count опита.',
         'incorrect_pin' => 'Грешен ПИН код.',
     ],
 ];

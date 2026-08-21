@@ -23,6 +23,6 @@ return [
     'runtime_nativephp' => 'nativephp',
     'runtime_host_os' => 'host os',
     'effective_config' => 'Effectieve configuratie',
-    'show_entries' => ':count regels tonen',
+    'show_entries' => ':count regel tonen|:count regels tonen',
     'hide' => 'Verbergen',
 ];

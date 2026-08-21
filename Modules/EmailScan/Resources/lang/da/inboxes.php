@@ -18,8 +18,7 @@ return [
     'connect_microsoft' => 'Forbind Microsoft 365',
     'readonly_note' => 'Beatrax læser kun beskeder. Det sender, mærker, flytter eller sletter aldrig noget i din indbakke.',
 
-    'month' => '1 måned',
-    'months' => ':count måneder',
+    'months' => ':count måned|:count måneder',
     'not_scanned_yet' => 'ikke scannet endnu',
     'last_scanned' => 'sidst scannet',
     'window_prefix' => 'Periode:',
@@ -50,7 +49,7 @@ return [
     'discovered_heading' => 'Fundne afsendere',
     'discovered_body' => 'Afsendere, der ser ud til at sende kvitteringer, men som endnu ikke står på din liste over kendte kvitteringsafsendere. Tilføj dem, du vil have Beatrax til at scanne, og luk resten.',
     'last_seen' => 'sidst set',
-    'seen_times' => 'Set :count gange',
+    'seen_times' => 'Set :count gang|Set :count gange',
     'add' => 'Tilføj',
     'add_aria' => 'Tilføj :email',
     'dismiss' => 'Luk',

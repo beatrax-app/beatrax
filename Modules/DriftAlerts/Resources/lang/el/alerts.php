@@ -24,7 +24,7 @@ return [
     ],
 
     'load_more' => 'Φόρτωση περισσότερων',
-    'group_count' => ':count ανοιχτές αποκλίσεις',
+    'group_count' => ':count ανοιχτή απόκλιση|:count ανοιχτές αποκλίσεις',
 
     'anomaly_empty' => [
         'open_heading' => 'Καμία ασυνήθιστη χρέωση',

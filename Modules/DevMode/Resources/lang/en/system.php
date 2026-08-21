@@ -23,6 +23,6 @@ return [
     'runtime_nativephp' => 'nativephp',
     'runtime_host_os' => 'host os',
     'effective_config' => 'Effective configuration',
-    'show_entries' => 'Show :count entries',
+    'show_entries' => 'Show :count entry|Show :count entries',
     'hide' => 'Hide',
 ];

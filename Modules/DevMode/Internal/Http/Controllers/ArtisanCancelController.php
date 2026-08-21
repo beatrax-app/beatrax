@@ -36,7 +36,6 @@ final readonly class ArtisanCancelController
             throw new HttpException(500, 'posix_required_for_cancel');
         }
 
-        // Cancelling an already-dead PID is idempotent, not an error.
         if (! posix_kill($record->pid, 0)) {
             $this->registry->markCancelled($runId);
 
@@ -60,7 +59,6 @@ final readonly class ArtisanCancelController
         /** @phpstan-ignore-next-line if.alwaysTrue */
         if (posix_kill($record->pid, 0)) {
             @posix_kill($record->pid, SIGKILL);
-            // Same reason: let the SIGKILL land inside this wall-clock second.
             usleep(200_000);
         }
 
