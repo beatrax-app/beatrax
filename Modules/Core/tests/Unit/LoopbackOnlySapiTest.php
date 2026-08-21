@@ -35,10 +35,27 @@ it('serves an in-process mobile request that carries no SERVER_ADDR', function (
     expect($response->getStatusCode())->toBe(200);
 });
 
-it('serves the built-in server, which also omits SERVER_ADDR', function (): void {
-    $response = loopbackOnly(PhpSapi::CliServer)->handle(new Request, passThrough());
+it('serves the built-in server when the peer it is talking to is loopback', function (): void {
+    $request = new Request(server: ['REMOTE_ADDR' => '127.0.0.1']);
 
-    expect($response->getStatusCode())->toBe(200);
+    expect(loopbackOnly(PhpSapi::CliServer)->handle($request, passThrough())->getStatusCode())->toBe(200);
+});
+
+// `php artisan serve --host=0.0.0.0` publishes no SERVER_ADDR and binds every
+// interface, so treating "omits a bind address" as "is local" let a machine on
+// the same network reach every route.
+it('refuses the built-in server when the peer is not loopback', function (): void {
+    $request = new Request(server: ['REMOTE_ADDR' => '192.168.178.66']);
+
+    expect(fn () => loopbackOnly(PhpSapi::CliServer)->handle($request, passThrough()))
+        ->toThrow(NotFoundHttpException::class);
+});
+
+// Nothing to prove it with, so it is not assumed — unlike the in-process SAPI,
+// which has no socket for anyone to arrive on in the first place.
+it('refuses the built-in server when it cannot see who it is talking to', function (): void {
+    expect(fn () => loopbackOnly(PhpSapi::CliServer)->handle(new Request, passThrough()))
+        ->toThrow(NotFoundHttpException::class);
 });
 
 // The reason the branch exists: a socket-serving SAPI that never said which

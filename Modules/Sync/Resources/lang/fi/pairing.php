@@ -11,6 +11,7 @@ return [
     'show_my_code' => 'Näytä koodini',
     'show_my_code_help' => 'Näytä tämän laitteen QR- ja sanakoodi toiselle laitteelle.',
     'enter_a_code' => 'Syötä koodi',
+    'safety_number_changed' => 'Toinen laite muuttui vertailun aikana. Tarkista alla olevat sanat uudelleen ennen vahvistamista.',
     'enter_a_code_help' => 'Kirjoita toisella laitteella näkyvä koodi.',
 
     'show_this_code' => 'Näytä tämä koodi',

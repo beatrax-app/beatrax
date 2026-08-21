@@ -68,3 +68,38 @@ it('reads the saved value once the stale guard is dropped', function (): void {
     // Re-resolved from the session, so it is the row as it stands now.
     expect($auth->guard()->user()?->locale)->toBe('nl');
 });
+
+// forgetGuards() rebuilds the session driver, and rebuilding registers a
+// rebound callback the container never prunes. On a runtime that boots once and
+// runs for the life of the app, that list only grows — and every later request
+// walks all of it.
+it('does not accumulate rebound callbacks across requests', function (): void {
+    $user = guardStaleUser();
+
+    /** @var AuthManager $auth */
+    $auth = app(AuthManager::class);
+    $auth->guard()->loginUsingId($user->id);
+
+    $middleware = new ForgetGuardsBetweenRequests($auth);
+    $count = static function (): int {
+        $property = new ReflectionProperty(app(), 'reboundCallbacks');
+
+        return count($property->getValue(app())['request'] ?? []);
+    };
+
+    // A real request reads the user after the middleware runs, which is what
+    // re-resolves the guard — measuring without that misses the growth entirely.
+    $cycle = static function () use ($middleware, $auth): void {
+        $middleware->handle(new Request, static fn (): Response => new Response('ok'));
+        $auth->guard()->user();
+    };
+
+    $cycle();
+    $afterFirst = $count();
+
+    for ($i = 0; $i < 5; $i++) {
+        $cycle();
+    }
+
+    expect($count())->toBe($afterFirst);
+});

@@ -64,6 +64,7 @@ use Modules\Sync\Public\Events\NotificationMutated;
 use Modules\Sync\Public\Events\SavedReportMutated;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
+use Modules\Sync\Public\Services\BlindIndexCodec;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\EncryptionMigrationSupport;
 use Modules\Sync\Public\Services\ImportSyncCapture;
@@ -121,6 +122,9 @@ final class SyncServiceProvider extends ServiceProvider
         }
         if (class_exists(SensitiveColumnCodec::class)) {
             $this->app->singleton(SensitiveColumnCodec::class);
+        }
+        if (class_exists(BlindIndexCodec::class)) {
+            $this->app->singleton(BlindIndexCodec::class);
         }
 
         // Minimal Public wrapper EncryptionMigrationService consumes

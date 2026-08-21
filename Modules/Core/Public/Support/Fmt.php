@@ -16,7 +16,7 @@ use ValueError;
 // The blade-facing number-formatting seam, the numeric counterpart to Lang:
 // views @use this class and call Fmt::number(...) so a count or percentage
 // picks up the active locale's grouping and decimal marks (en 1,234.5 vs
-// nl 1.234,5). Currency stays with Money, which formats by currency instead.
+// nl 1.234,5). Amounts stay with Money, which carries the currency too.
 final class Fmt
 {
     private const FALLBACK_DATE_PATTERN = 'DD-MM-YYYY';

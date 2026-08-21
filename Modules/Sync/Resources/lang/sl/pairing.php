@@ -11,6 +11,7 @@ return [
     'show_my_code' => 'Prikaži mojo kodo',
     'show_my_code_help' => 'Drugi napravi pokaži kodo QR in besedno kodo te naprave.',
     'enter_a_code' => 'Vnesi kodo',
+    'safety_number_changed' => 'Druga naprava se je med primerjanjem spremenila. Pred potrditvijo znova preveri spodnje besede.',
     'enter_a_code_help' => 'Vtipkaj kodo, prikazano na drugi napravi.',
 
     'show_this_code' => 'Prikaži to kodo',

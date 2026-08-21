@@ -11,6 +11,7 @@ return [
     'show_my_code' => 'Pokaż mój kod',
     'show_my_code_help' => 'Wyświetl kod QR i kod słowny tego urządzenia dla drugiego urządzenia.',
     'enter_a_code' => 'Wpisz kod',
+    'safety_number_changed' => 'Drugie urządzenie zmieniło się podczas porównywania. Sprawdź ponownie poniższe słowa przed potwierdzeniem.',
     'enter_a_code_help' => 'Wpisz kod pokazany na drugim urządzeniu.',
 
     'show_this_code' => 'Pokaż ten kod',

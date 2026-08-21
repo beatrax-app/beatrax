@@ -114,6 +114,11 @@ it('auto-runs the encryption migration when a pairing both-confirm admits a peer
     $tokenService->accept($plaintextToken, (int) $user->id, 'device-resp', str_repeat('c', 64), str_repeat('d', 64));
     $tokenService->confirm($tokenId, (int) $user->id, 'device-resp', PairingSafetyDigest::forToken($tokenId, (int) $user->id));
 
+    // The poll is what advances show_code -> confirm and derives the words. A
+    // confirmation is bound to the words the human saw, so skipping this step
+    // and tapping confirm is a path no reader can take.
+    $pairing->call('checkPairingState')->assertSet('step', 'confirm');
+
     $pairing->call('confirmMatch')->assertSet('step', 'success');
 
     $state = $db->connection()->table('sync_encryption_state')->where('user_id', $user->id)->first();

@@ -226,8 +226,13 @@ final class MergeRulesRegistry
                 '_delete_wins' => false,
                 '_create_required' => ['name', 'kind', 'iban'],
             ],
+            // `name_is_default` travels with `name`: a peer that took the
+            // rename and not the flag would keep translating the slug over
+            // the top of the user's own words. It carries a DB default, so it
+            // stays out of `_create_required`.
             'categories' => [
                 'name' => ['strategy' => 'lww', 'nullable' => false],
+                'name_is_default' => ['strategy' => 'lww', 'nullable' => false],
                 'slug' => ['strategy' => 'lww', 'nullable' => false],
                 'kind' => ['strategy' => 'lww', 'nullable' => false],
                 '_delete_wins' => true,

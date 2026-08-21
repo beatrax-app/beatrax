@@ -21,6 +21,10 @@ use SodiumException;
  */
 final class GdkRotationService
 {
+    // The blind-index key is not an epoch and has no id. Zero is outside
+    // GdkEpochId::mint()'s range, so it can never name a real one.
+    private const BLIND_INDEX_WRAP_EPOCH_ID = 0;
+
     public function __construct(
         private readonly GdkKeyringService $keyringService,
         private readonly DeviceRegistryService $deviceRegistry,
@@ -121,7 +125,7 @@ final class GdkRotationService
     // sealed bytes + epoch id + both device ids gives sender authenticity, so a
     // forged wrap is refused rather than the channel being trusted.
     /**
-     * @return array{type: string, epoch_id: int, wrapped_key_b64: string, recipient_device_id: string, sender_device_id: string, sig_hex: string}
+     * @return array{type: string, epoch_id: int, wrapped_key_b64: string, recipient_device_id: string, sender_device_id: string, sig_hex: string, key_role?: string}
      *
      * @throws InvalidArgumentException when a required argument is empty.
      * @throws SodiumException on a libsodium failure (translated by callers).
@@ -133,6 +137,7 @@ final class GdkRotationService
         string $recipientDeviceId,
         string $senderDeviceId,
         string $senderEd25519SecretKeyHex,
+        string $role = GdkEpochWrapSignature::ROLE_EPOCH,
     ): array {
         if ($rawGdkKey === '' || $recipientX25519PublicKeyBin === ''
             || $senderDeviceId === '' || $senderEd25519SecretKeyHex === '') {
@@ -147,14 +152,14 @@ final class GdkRotationService
 
         try {
             $sigHex = $this->signer->sign(
-                GdkEpochWrapSignature::signingMessage($epochId, $sealed, $recipientDeviceId, $senderDeviceId),
+                GdkEpochWrapSignature::signingMessage($epochId, $sealed, $recipientDeviceId, $senderDeviceId, $role),
                 $senderSecretBin,
             );
         } finally {
             sodium_memzero($senderSecretBin);
         }
 
-        return [
+        $wrap = [
             'type' => 'GDK_EPOCH_WRAP',
             'epoch_id' => $epochId,
             'wrapped_key_b64' => base64_encode($sealed),
@@ -162,6 +167,12 @@ final class GdkRotationService
             'sender_device_id' => $senderDeviceId,
             'sig_hex' => $sigHex,
         ];
+
+        if ($role !== GdkEpochWrapSignature::ROLE_EPOCH) {
+            $wrap['key_role'] = $role;
+        }
+
+        return $wrap;
     }
 
     // ADD-device analog of rotateAndRevoke()'s fan-out: wraps EVERY epoch
@@ -200,23 +211,55 @@ final class GdkRotationService
 
             $this->db->connection()->transaction(function () use ($keyring, $recipientPub, $recipientDeviceId, $selfDeviceId, $identity): void {
                 foreach ($keyring->epochs() as $epoch) {
-                    $rawKey = $this->sodium->hexToBin($epoch->keyHex);
+                    $this->deliverWrap($epoch->epochId, $epoch->keyHex, $recipientPub, $recipientDeviceId, $selfDeviceId, $identity);
+                }
 
-                    try {
-                        $wrap = $this->buildGdkEpochWrap($epoch->epochId, $rawKey, $recipientPub, $recipientDeviceId, $identity->deviceId, $identity->ed25519SecretKeyHex);
-
-                        $this->relayMailbox->deliver(
-                            senderDid: $selfDeviceId ?? '',
-                            recipientDid: $recipientDeviceId,
-                            blob: json_encode($wrap, JSON_THROW_ON_ERROR),
-                        );
-                    } finally {
-                        sodium_memzero($rawKey);
-                    }
+                // Rides the same sealed, signed, still-confirmed-sender channel
+                // as an epoch, tagged so neither side can mistake one for the
+                // other. Without it a joining device cannot compute the
+                // counterparty key and its imports would fail closed.
+                $blindIndexKeyHex = $keyring->blindIndexKeyHex();
+                if ($blindIndexKeyHex !== null) {
+                    $this->deliverWrap(
+                        self::BLIND_INDEX_WRAP_EPOCH_ID,
+                        $blindIndexKeyHex,
+                        $recipientPub,
+                        $recipientDeviceId,
+                        $selfDeviceId,
+                        $identity,
+                        GdkEpochWrapSignature::ROLE_BLIND_INDEX,
+                    );
                 }
             });
         } catch (SodiumException $e) {
             throw CryptoOperationFailedException::during('GDK epoch fan-out to a device', $e);
+        }
+    }
+
+    /**
+     * @throws SodiumException on a libsodium failure (translated by the caller).
+     */
+    private function deliverWrap(
+        int $epochId,
+        string $keyHex,
+        string $recipientPub,
+        string $recipientDeviceId,
+        ?string $selfDeviceId,
+        DeviceIdentityDto $identity,
+        string $role = GdkEpochWrapSignature::ROLE_EPOCH,
+    ): void {
+        $rawKey = $this->sodium->hexToBin($keyHex);
+
+        try {
+            $wrap = $this->buildGdkEpochWrap($epochId, $rawKey, $recipientPub, $recipientDeviceId, $identity->deviceId, $identity->ed25519SecretKeyHex, $role);
+
+            $this->relayMailbox->deliver(
+                senderDid: $selfDeviceId ?? '',
+                recipientDid: $recipientDeviceId,
+                blob: json_encode($wrap, JSON_THROW_ON_ERROR),
+            );
+        } finally {
+            sodium_memzero($rawKey);
         }
     }
 

@@ -11,6 +11,7 @@ return [
     'show_my_code' => 'Afficher mon code',
     'show_my_code_help' => 'Affiche le QR et le code en mots de cet appareil pour l\'autre appareil.',
     'enter_a_code' => 'Saisir un code',
+    'safety_number_changed' => 'L\'autre appareil a changé pendant la comparaison. Vérifie à nouveau les mots ci-dessous avant de confirmer.',
     'enter_a_code_help' => 'Tape le code affiché sur l\'autre appareil.',
 
     'show_this_code' => 'Afficher ce code',

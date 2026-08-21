@@ -16,10 +16,10 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Services\EncryptionMigrationService;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
 use Modules\Sync\Internal\Http\Livewire\Concerns\ReadsPairingTokenRow;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
-use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\OpLog\PreSyncHistoryCapture;
 use Modules\Sync\Internal\Pairing\PairingFrameCourier;
@@ -438,6 +438,7 @@ final class PairingFlowModal extends Component
         PairingFrameCourier $relayCourier,
         RelayConfig $relayConfig,
         PreSyncHistoryCapture $historyCapture,
+        SafetyNumberDeriver $safetyDeriver,
     ): void {
         if ($this->pairingTokenId === '') {
             return;
@@ -454,16 +455,27 @@ final class PairingFlowModal extends Component
             return;
         }
 
-        // The service is the single source of truth for the trust decision:
-        // it returns the resulting state, so we never re-read the row and
-        // re-derive bothConfirmed() here.
-        // Bound to the words on screen, not to whatever the row says now.
+        // The service is the single source of truth for the trust decision, and
+        // the tap is bound to the words on screen rather than to whatever the
+        // row says now.
         $state = $tokenService->confirm(
             (int) $this->pairingTokenId,
             $userId,
             $identity->deviceId,
             self::safetyDigestOf($this->safetyWords),
         );
+
+        // Refused: the keys behind those words are not the keys on the row any
+        // more. Say so and show the new ones — silence here reads as "waiting
+        // for the other device" and leaves a responder that rebinds able to
+        // stall the ceremony indefinitely without ever being seen.
+        if ($state === null) {
+            $this->awaitingPeer = false;
+            $this->safetyWords = $this->deriveSafetyWords($db, $safetyDeriver, $userId);
+            $this->flashMessage = Lang::get('sync::pairing.safety_number_changed');
+
+            return;
+        }
 
         // Safe regardless of $state: the frame is only consumable once the
         // peer's own local side has confirmed too.

@@ -47,9 +47,18 @@ final class CorpusPatternMatcher
             return false;
         }
 
-        $delimited = '#(?<![\p{L}\p{N}])'.preg_quote($needle, '#').'(?![\p{L}\p{N}])#iu';
+        // Each edge is asserted only where the needle's OWN edge is alphanumeric.
+        // A pattern ending in punctuation carries its own boundary — asserting
+        // past it made `AMAZON.` stop matching `AMAZON.NL`.
+        $before = self::isWordEdge(mb_substr($needle, 0, 1)) ? '(?<![\p{L}\p{N}])' : '';
+        $after = self::isWordEdge(mb_substr($needle, -1)) ? '(?![\p{L}\p{N}])' : '';
 
-        return preg_match($delimited, $haystack) === 1;
+        return preg_match('#'.$before.preg_quote($needle, '#').$after.'#iu', $haystack) === 1;
+    }
+
+    private static function isWordEdge(string $character): bool
+    {
+        return preg_match('/^[\p{L}\p{N}]$/u', $character) === 1;
     }
 
     public function isRegex(string $pattern): bool

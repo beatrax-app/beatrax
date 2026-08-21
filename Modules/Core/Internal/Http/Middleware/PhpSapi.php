@@ -4,24 +4,27 @@ declare(strict_types=1);
 
 namespace Modules\Core\Internal\Http\Middleware;
 
-// The one thing this decides: whether a request could have crossed a network to
-// arrive. A SAPI not named here is treated as socket-serving, which is why
-// callers go through tryFrom() and read a null as "not one of ours".
+// The SAPIs that serve without publishing a bind address. A SAPI not named here
+// publishes one, which is why callers go through tryFrom() and read a null as
+// "not one of ours".
 enum PhpSapi: string
 {
-    // Binds loopback yet publishes no SERVER_ADDR.
+    // PHP's built-in server. It publishes no SERVER_ADDR but DOES bind a real
+    // socket, and `--host=0.0.0.0` binds every interface — so unlike Embed it
+    // can receive a request that crossed a network.
     case CliServer = 'cli-server';
 
     // The mobile shell calling into PHP in-process: no listening socket at all,
-    // so no bind address to publish either.
+    // so nothing can reach it from off the device.
     case Embed = 'embed';
 
-    // Neither can receive a request that crossed a network, so a gate on the
-    // interface a connection arrived over has nothing to judge.
-    public function servesInProcess(): bool
+    // True only where there is no socket to reach. Everything else has to prove
+    // where the request came from.
+    public function cannotBeReachedOffDevice(): bool
     {
         return match ($this) {
-            self::CliServer, self::Embed => true,
+            self::Embed => true,
+            self::CliServer => false,
         };
     }
 }

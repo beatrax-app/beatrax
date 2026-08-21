@@ -95,8 +95,9 @@ return Application::configure(basePath: dirname(__DIR__))
         SpikeStoragePathCommand::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
-        // Outermost, because it repairs a container binding every later
-        // middleware depends on: see the class for what leaves it broken.
+        // RestoreFrameworkRedirector repairs a container binding every later
+        // middleware depends on; see the class for what leaves it broken.
+        // Prepend order is reversed, so the LAST call here runs first.
         // Before anything reads the authenticated user: this runtime keeps one
         // container for the life of the process, so the guard still holds the
         // User model resolved at sign-in and every preference on it is stale.

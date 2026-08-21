@@ -14,5 +14,6 @@ final readonly class GdkKeyringStage
         public int $userId,
         public GdkEpoch $epoch,
         public string $tmpEncPath,
+        public string $blindIndexKeyHex,
     ) {}
 }

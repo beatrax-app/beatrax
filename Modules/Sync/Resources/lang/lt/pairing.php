@@ -11,6 +11,7 @@ return [
     'show_my_code' => 'Rodyti mano kodą',
     'show_my_code_help' => 'Parodo šio įrenginio QR ir žodinį kodą kitam įrenginiui.',
     'enter_a_code' => 'Įvesti kodą',
+    'safety_number_changed' => 'Kitas įrenginys pasikeitė, kol lyginai. Prieš patvirtindamas dar kartą patikrink žemiau esančius žodžius.',
     'enter_a_code_help' => 'Įvesk kitame įrenginyje rodomą kodą.',
 
     'show_this_code' => 'Rodyti šį kodą',

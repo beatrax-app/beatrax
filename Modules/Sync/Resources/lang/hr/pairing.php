@@ -11,6 +11,7 @@ return [
     'show_my_code' => 'Prikaži moj kod',
     'show_my_code_help' => 'Prikaži QR kod i kod od riječi ovog uređaja drugom uređaju.',
     'enter_a_code' => 'Unesi kod',
+    'safety_number_changed' => 'Drugi se uređaj promijenio dok si uspoređivao. Prije potvrde ponovno provjeri riječi u nastavku.',
     'enter_a_code_help' => 'Upiši kod prikazan na drugom uređaju.',
 
     'show_this_code' => 'Prikaži ovaj kod',

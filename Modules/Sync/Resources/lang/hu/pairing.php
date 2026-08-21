@@ -11,6 +11,7 @@ return [
     'show_my_code' => 'A kódom megjelenítése',
     'show_my_code_help' => 'Megjeleníti ennek az eszköznek a QR- és szókódját a másik eszköz számára.',
     'enter_a_code' => 'Kód megadása',
+    'safety_number_changed' => 'A másik eszköz megváltozott az összehasonlítás közben. Megerősítés előtt ellenőrizd újra az alábbi szavakat.',
     'enter_a_code_help' => 'Írd be a másik eszközön megjelenő kódot.',
 
     'show_this_code' => 'Ennek a kódnak a megjelenítése',
