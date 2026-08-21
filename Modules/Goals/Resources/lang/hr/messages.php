@@ -33,7 +33,7 @@ return [
     'projection' => [
         'target_reached' => 'Cilj je dosegnut',
         'add_contributions' => 'Dodaj uplate da vidiš projekciju',
-        'building' => 'Izrada projekcije…',
+        'not_enough_history' => 'Još nema dovoljno povijesti za projekciju datuma',
         'est' => 'Procj. :date ·',
         'projection_note' => '(projekcija)',
         'projected' => 'Projekcija: :date',

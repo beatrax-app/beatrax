@@ -33,7 +33,7 @@ return [
     'projection' => [
         'target_reached' => 'Tikslas pasiektas',
         'add_contributions' => 'Pridėk įnašų, kad matytum prognozę',
-        'building' => 'Rengiama prognozė…',
+        'not_enough_history' => 'Kol kas per mažai istorijos datai prognozuoti',
         'est' => 'Apytiksliai :date ·',
         'projection_note' => '(prognozė)',
         'projected' => 'Prognozuojama: :date',

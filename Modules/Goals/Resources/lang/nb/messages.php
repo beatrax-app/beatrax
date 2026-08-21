@@ -33,7 +33,7 @@ return [
     'projection' => [
         'target_reached' => 'Målet er nådd',
         'add_contributions' => 'Legg til innskudd for å se en prognose',
-        'building' => 'Bygger en prognose…',
+        'not_enough_history' => 'Ennå ikke nok historikk til å anslå en dato',
         'est' => 'Ca. :date ·',
         'projection_note' => '(prognose)',
         'projected' => 'Forventet: :date',

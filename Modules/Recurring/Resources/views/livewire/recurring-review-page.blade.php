@@ -78,16 +78,16 @@
             :body="$emptyBody"
         />
     @else
-        {{-- Power-surface fallback: wrap in overflow-x:auto at phone width.
-             The multi-action row (Approve/Reject/Snooze/Edit-name) cannot be
-             cleanly mapped to a card at <768px without significant redesign —
-             the overflow-x scroller ensures all columns remain reachable. --}}
-        <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-        <ul class="space-y-3" style="min-width: 560px;">
+        {{-- The row reflows rather than scrolls. Held at 560px it was 202px
+             wider than a 375px phone, and the horizontal scroller meant to
+             rescue it was never reached by a swipe: Snooze showed 23px of its
+             80 and Edit name sat entirely off-screen, with no way to get to
+             either. The actions take their own line below the name instead. --}}
+        <ul class="space-y-3">
             @foreach ($rows as $row)
-                <li class="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:bg-slate-900 dark:border-slate-700">
-                    <div class="flex items-start justify-between gap-4">
-                        <div class="min-w-0 flex-1">
+                <li class="relative rounded-lg border border-slate-200 bg-slate-50 p-4 dark:bg-slate-900 dark:border-slate-700">
+                    <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+                        <div class="min-w-0 flex-1 basis-full sm:basis-auto">
                             <p class="text-sm text-slate-900 dark:text-slate-100">
                                 <input
                                     type="checkbox"
@@ -109,7 +109,7 @@
                                 @endif
                             </p>
                         </div>
-                        <div class="flex shrink-0 items-center gap-2">
+                        <div class="flex flex-wrap items-center gap-2">
                             @if ($tab === 'rejected')
                                 <button
                                     type="button"
@@ -129,7 +129,10 @@
                                     aria-label="{{ Lang::get('recurring::review.reject_aria', ['id' => $row->seriesId]) }}"
                                     class="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-600 hover:bg-rose-100 dark:bg-rose-950 dark:text-rose-500 dark:hover:bg-rose-900"
                                 >{{ Lang::get('recurring::review.reject') }}</button>
-                                <div x-data="{ open: false }" class="relative">
+                                {{-- Both popovers are anchored to the row rather than to their
+                                     button below sm: right-aligned to a trigger near the left edge,
+                                     a 192px panel opens off the left of a 375px screen. --}}
+                                <div x-data="{ open: false }" class="sm:relative">
                                     <button
                                         type="button"
                                         x-on:click="open = ! open"
@@ -139,7 +142,7 @@
                                         x-show="open"
                                         x-cloak
                                         x-on:click.outside="open = false"
-                                        class="absolute right-0 z-10 mt-1 w-48 rounded-md border border-slate-200 bg-white p-2 text-xs shadow-lg dark:bg-slate-950 dark:border-slate-700"
+                                        class="absolute inset-x-0 z-10 mt-1 rounded-md border border-slate-200 bg-white p-2 text-xs shadow-lg sm:left-auto sm:right-0 sm:w-48 dark:bg-slate-950 dark:border-slate-700"
                                     >
                                         <button
                                             type="button"
@@ -161,7 +164,7 @@
                                         >{{ Lang::get('recurring::review.snooze_3m') }}</button>
                                     </div>
                                 </div>
-                                <div x-data="{ editing: false, newName: @js($row->displayName()) }" class="relative">
+                                <div x-data="{ editing: false, newName: @js($row->displayName()) }" class="sm:relative">
                                     <button
                                         type="button"
                                         x-on:click="editing = ! editing"
@@ -171,7 +174,7 @@
                                         x-show="editing"
                                         x-cloak
                                         x-on:click.outside="editing = false"
-                                        class="absolute right-0 z-10 mt-1 w-64 rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:bg-slate-950 dark:border-slate-700"
+                                        class="absolute inset-x-0 z-10 mt-1 rounded-md border border-slate-200 bg-white p-2 shadow-lg sm:left-auto sm:right-0 sm:w-64 dark:bg-slate-950 dark:border-slate-700"
                                     >
                                         <label for="series-name-{{ $row->seriesId }}" class="sr-only">{{ Lang::get('recurring::review.new_name_label') }}</label>
                                         <input
@@ -193,6 +196,5 @@
                 </li>
             @endforeach
         </ul>
-        </div>{{-- end overflow-x scroller --}}
     @endif
 </div>

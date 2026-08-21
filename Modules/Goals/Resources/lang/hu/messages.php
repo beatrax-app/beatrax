@@ -33,7 +33,7 @@ return [
     'projection' => [
         'target_reached' => 'Cél elérve',
         'add_contributions' => 'Adj hozzá befizetéseket az előrejelzéshez',
-        'building' => 'Előrejelzés készül…',
+        'not_enough_history' => 'Még nincs elég előzmény a dátum előrejelzéséhez',
         'est' => 'Becsült: :date ·',
         'projection_note' => '(előrejelzés)',
         'projected' => 'Előrejelzés: :date',

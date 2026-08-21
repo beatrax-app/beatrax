@@ -33,7 +33,7 @@ return [
     'projection' => [
         'target_reached' => 'Cieľ dosiahnutý',
         'add_contributions' => 'Pridaj príspevky a zobrazí sa prognóza',
-        'building' => 'Zostavuje sa prognóza…',
+        'not_enough_history' => 'Zatiaľ nie je dosť histórie na odhad dátumu',
         'est' => 'Odhad :date ·',
         'projection_note' => '(prognóza)',
         'projected' => 'Prognóza: :date',

@@ -2,11 +2,17 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\Goals\Internal\Http\Livewire\GoalsPage;
 use Modules\Goals\Models\Goal;
+use Modules\Goals\Public\Services\GoalContributionWriter;
+use Modules\Goals\Public\Services\GoalProgressQuery;
 use Modules\Ledger\Models\Account;
+use Modules\Ledger\Models\ImportRun;
+use Modules\Ledger\Models\Transaction;
 use Modules\Pots\Models\Pot;
 
 beforeEach(function (): void {
@@ -385,4 +391,56 @@ it('cross-user cannot archive another users goal', function (): void {
         'id' => $foreignGoal->id,
         'status' => 'active',
     ]);
+});
+
+// "Building a projection…" read as work in flight, but it is the terminal
+// branch for a goal whose contributions carry no measurable rate, with no job
+// behind it — the reader waited for a computation that had never started.
+it('tells a goal with no measurable rate that history is short, not that work is running', function (): void {
+    $goal = Goal::factory()->create([
+        'user_id' => $this->user->id,
+        'target_minor' => 120000,
+        'start_date' => CarbonImmutable::now()->toDateString(),
+        'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
+        'status' => 'active',
+    ]);
+
+    $run = ImportRun::create([
+        'user_id' => $this->user->id,
+        'source_format' => 'camt053',
+        'raw_file_path' => '/tmp/goals-projection.xml',
+        'sha256' => str_repeat('c', 64),
+        'uploaded_at' => CarbonImmutable::now(),
+        'status' => 'previewed',
+    ]);
+
+    $transaction = Transaction::create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'type' => 'transfer_in',
+        'posted_at' => CarbonImmutable::now()->toDateString(),
+        'booked_at' => CarbonImmutable::now()->toDateString().' 12:00:00',
+        'value_date' => CarbonImmutable::now()->toDateString(),
+        'amount_minor' => 50000,
+        'currency' => 'EUR',
+        'settled_amount_minor' => 50000,
+        'settled_currency' => 'EUR',
+        'counterparty_name' => 'Vakantiepot',
+        'counterparty_normalized' => 'vakantiepot',
+        'normalization_version' => 1,
+        'source_format' => 'camt053',
+        'import_run_id' => $run->id,
+        'source_row_index' => 1,
+        'fingerprint' => str_pad('goalproj', 64, '0', STR_PAD_LEFT),
+        'fingerprint_version' => 1,
+    ]);
+
+    app(GoalContributionWriter::class)->attribute($this->user, $goal->id, $transaction->id);
+
+    expect(app(GoalProgressQuery::class)->forUser($this->user)[0]->projectedFinishDate)->toBeNull();
+
+    Livewire::test(GoalsPage::class)
+        ->assertOk()
+        ->assertSee(Lang::get('goals::messages.projection.not_enough_history'))
+        ->assertDontSee('Building a projection');
 });

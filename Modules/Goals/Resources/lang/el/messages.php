@@ -33,7 +33,7 @@ return [
     'projection' => [
         'target_reached' => 'Ο στόχος επιτεύχθηκε',
         'add_contributions' => 'Πρόσθεσε καταθέσεις για να δεις πρόβλεψη',
-        'building' => 'Δημιουργία πρόβλεψης…',
+        'not_enough_history' => 'Δεν υπάρχει ακόμη αρκετό ιστορικό για πρόβλεψη ημερομηνίας',
         'est' => 'Εκτ. :date ·',
         'projection_note' => '(πρόβλεψη)',
         'projected' => 'Προβλεπόμενη: :date',

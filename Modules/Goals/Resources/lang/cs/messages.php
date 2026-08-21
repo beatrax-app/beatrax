@@ -33,7 +33,7 @@ return [
     'projection' => [
         'target_reached' => 'Cíl dosažen',
         'add_contributions' => 'Přidej vklady a zobrazí se odhad',
-        'building' => 'Sestavuje se odhad…',
+        'not_enough_history' => 'Zatím není dost historie pro odhad data',
         'est' => 'Odh. :date ·',
         'projection_note' => '(odhad)',
         'projected' => 'Odhad: :date',

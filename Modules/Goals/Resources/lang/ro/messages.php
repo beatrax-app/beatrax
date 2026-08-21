@@ -33,7 +33,7 @@ return [
     'projection' => [
         'target_reached' => 'Țintă atinsă',
         'add_contributions' => 'Adaugă contribuții pentru a vedea o proiecție',
-        'building' => 'Se construiește o proiecție…',
+        'not_enough_history' => 'Încă nu există suficient istoric pentru a estima o dată',
         'est' => 'Est. :date ·',
         'projection_note' => '(proiecție)',
         'projected' => 'Estimat: :date',

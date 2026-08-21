@@ -95,7 +95,7 @@ it('returns a projected finish date when there is a contribution history', funct
 
 // A goal younger than the minimum observation window must not project: one large
 // early deposit over a 1-3 day window extrapolates a misleadingly soon finish,
-// so the card shows "building a projection" until enough history accrues.
+// so the card says it has too little history instead.
 it('suppresses the projected date until the minimum observation window has elapsed', function (): void {
     $startDate = CarbonImmutable::now()->subDays(3)->toDateString();
     $goal = Goal::factory()->create([

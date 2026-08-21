@@ -33,7 +33,7 @@ return [
     'projection' => [
         'target_reached' => 'Ziel erreicht',
         'add_contributions' => 'Füge Einzahlungen hinzu, um eine Prognose zu sehen',
-        'building' => 'Prognose wird erstellt…',
+        'not_enough_history' => 'Noch zu wenig Verlauf für ein Prognosedatum',
         'est' => 'Vsl. :date ·',
         'projection_note' => '(Prognose)',
         'projected' => 'Voraussichtlich: :date',

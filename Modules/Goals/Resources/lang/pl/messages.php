@@ -33,7 +33,7 @@ return [
     'projection' => [
         'target_reached' => 'Cel osiągnięty',
         'add_contributions' => 'Dodaj wpłaty, aby zobaczyć prognozę',
-        'building' => 'Tworzenie prognozy…',
+        'not_enough_history' => 'Za mało historii, aby przewidzieć datę',
         'est' => 'Szac. :date ·',
         'projection_note' => '(prognoza)',
         'projected' => 'Prognoza: :date',

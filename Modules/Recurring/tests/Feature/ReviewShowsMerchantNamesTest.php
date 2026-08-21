@@ -11,7 +11,8 @@ use Modules\Recurring\Internal\Detectors\ExpenseSeriesDetector;
 use Modules\Recurring\Models\RecurringSeries;
 
 // detected_name used to be the clustering key, so the review screen showed
-// `domino s pizza`. merchants maps that key back to the name as written.
+// `domino s pizza`. merchants maps that key back to the name the user gave it,
+// and the transactions themselves carry the name the bank wrote.
 function rsmnUser(): User
 {
     return User::query()->create([
@@ -23,7 +24,7 @@ function rsmnUser(): User
     ]);
 }
 
-function rsmnSeed(User $user, string $normalized, ?string $displayName): void
+function rsmnSeed(User $user, string $normalized, ?string $displayName, ?string $bankName = null): void
 {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -68,7 +69,7 @@ function rsmnSeed(User $user, string $normalized, ?string $displayName): void
             'currency' => 'EUR',
             'settled_amount_minor' => -1399,
             'settled_currency' => 'EUR',
-            'counterparty_name' => $displayName ?? $normalized,
+            'counterparty_name' => $bankName ?? $displayName ?? $normalized,
             'counterparty_normalized' => $normalized,
             'normalization_version' => 3,
             'source_format' => 'asn-csv',
@@ -110,9 +111,9 @@ it('keeps the clustering key on the column that clusters', function (): void {
         ->and($series->detected_name)->toBe('Netflix International BV');
 });
 
-it('falls back to the normalised key when the merchant is unknown', function (): void {
+it('falls back to the normalised key when no source knows a name', function (): void {
     $user = rsmnUser();
-    rsmnSeed($user, 'kpn bv', null);
+    rsmnSeed($user, 'kpn bv', null, '');
 
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-19 09:00:00'));
     app(ExpenseSeriesDetector::class)->detectForUser($user);
@@ -210,4 +211,62 @@ it('heals only the owner rows, never another account with the same key', functio
         ->toBe('ASN Bank GEA')
         ->and($db->connection()->table('recurring_series')->where('id', $rows[$theirs->id])->value('detected_name'))
         ->toBe('asn bank gea');
+});
+
+// merchants is only ever written by the demo seeder and by sync, so an imported
+// statement leaves it empty and every recurring surface showed `kpn bv` — while
+// the dashboard's own transaction list beside it showed "KPN BV" all along.
+it('names the series the way the bank wrote it when no merchant row exists', function (): void {
+    $user = rsmnUser();
+    rsmnSeed($user, 'kpn bv', null, 'KPN BV');
+
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-19 09:00:00'));
+    app(ExpenseSeriesDetector::class)->detectForUser($user);
+    CarbonImmutable::setTestNow();
+
+    $series = RecurringSeries::query()->where('user_id', $user->id)->first();
+
+    expect($series)->not->toBeNull()
+        ->and($series->detected_name)->toBe('KPN BV')
+        ->and($series->cluster_counterparty_key)->toBe('kpn bv');
+});
+
+// The rows a user already has were detected before this existed, and only the
+// insert path resolved a name — so nothing would have changed on their screen.
+it('heals a stored key on the next sweep and leaves a real name alone', function (): void {
+    $user = rsmnUser();
+    rsmnSeed($user, 'zilveren kruis', null, 'Zilveren Kruis');
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $seriesId = $db->connection()->table('recurring_series')->insertGetId([
+        'user_id' => $user->id,
+        'direction' => 'expense',
+        'detected_name' => 'zilveren kruis',
+        'state' => 'approved',
+        'cadence' => 'monthly',
+        'latest_amount_minor' => -1399,
+        'latest_currency' => 'EUR',
+        'monthly_equivalent_minor' => -1399,
+        'variance_tolerance_percent' => 25,
+        'cluster_key' => 'expense|zilveren kruis|EUR|monthly',
+        'cluster_counterparty_key' => 'zilveren kruis',
+        'created_at' => '2026-05-17 12:00:00',
+        'updated_at' => '2026-05-17 12:00:00',
+    ]);
+
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-19 09:00:00'));
+    app(ExpenseSeriesDetector::class)->detectForUser($user);
+
+    expect($db->connection()->table('recurring_series')->where('id', $seriesId)->value('detected_name'))
+        ->toBe('Zilveren Kruis');
+
+    // A name the sweep did not write is not the sweep's to overwrite.
+    $db->connection()->table('recurring_series')->where('id', $seriesId)->update(['detected_name' => 'Zilveren Kruis Zorgverzekering']);
+    app(ExpenseSeriesDetector::class)->detectForUser($user);
+    CarbonImmutable::setTestNow();
+
+    expect($db->connection()->table('recurring_series')->where('id', $seriesId)->value('detected_name'))
+        ->toBe('Zilveren Kruis Zorgverzekering');
 });

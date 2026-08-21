@@ -185,3 +185,22 @@ it('encodes a display name that contains an apostrophe as a JS-safe string liter
     // JS whichever quote style the browser picks for the attribute.
     expect($content)->toContain('alice\\u0027s plan');
 })->group('display-name-js-safe');
+
+// Measured on an iPhone 12 mini: the row was 560px wide inside a 375px
+// viewport, Snooze showed 23px of its 80 and Edit name none of it, and the
+// horizontal scroller meant to reach them was never found by a swipe. The row
+// reflows now, so neither mechanism is left to fail.
+it('keeps the review row within phone width instead of pinning it to a scroller', function (): void {
+    rrpSeries($this->user, 'pending', 'rrp::phone-width', 'nordwind media bv');
+
+    $html = (string) $this->actingAs($this->user)->get(route('recurring.review'))->getContent();
+
+    $row = mb_strstr(mb_strstr($html, '<ul class="space-y-3"'), '</ul>', true);
+    expect($row)->toBeString();
+
+    expect($row)->not->toContain('min-width')
+        ->and($row)->not->toContain('overflow-x')
+        // Four actions cannot sit on one 343px line, so the cluster has to wrap
+        // rather than refuse to compress.
+        ->and($row)->toContain('flex flex-wrap items-center gap-2');
+});

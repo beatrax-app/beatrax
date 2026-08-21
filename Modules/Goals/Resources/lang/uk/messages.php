@@ -33,7 +33,7 @@ return [
     'projection' => [
         'target_reached' => 'Ціль досягнуто',
         'add_contributions' => 'Додай внески, щоб побачити прогноз',
-        'building' => 'Будуємо прогноз…',
+        'not_enough_history' => 'Ще замало історії, щоб спрогнозувати дату',
         'est' => 'Орієнтовно :date ·',
         'projection_note' => '(прогноз)',
         'projected' => 'Прогноз: :date',

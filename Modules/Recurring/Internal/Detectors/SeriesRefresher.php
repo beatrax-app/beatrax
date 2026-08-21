@@ -25,29 +25,39 @@ final readonly class SeriesRefresher
         private OccurrenceWriter $occurrences,
     ) {}
 
+    // $healedName is set only for a row still showing the clustering key as its
+    // name; it is never the user's own name for the series, which lives on
+    // display_name_override and is not written here.
     public function refresh(
         RecurringSeries $series,
         string $counterpartyKey,
         DetectedSeries $detected,
         User $user,
         string $direction,
+        ?string $healedName = null,
     ): void {
         $previousCadence = $series->cadence;
         $seriesId = $series->id;
 
+        $columns = [
+            'cadence' => $detected->cadence->value,
+            'cluster_key' => $detected->clusterKey,
+            'cluster_counterparty_key' => $counterpartyKey,
+            'latest_amount_minor' => $detected->latestAmountMinor,
+            'latest_currency' => $detected->currency,
+            'monthly_equivalent_minor' => $detected->monthlyEquivalentMinor,
+            'next_expected_at' => $detected->nextExpectedAt?->toDateString(),
+            'next_expected_confidence_low' => $detected->confidenceLow,
+            'updated_at' => $this->clock->now()->toDateTimeString(),
+        ];
+
+        if ($healedName !== null) {
+            $columns['detected_name'] = $healedName;
+        }
+
         $this->db->connection()->table('recurring_series')
             ->where('id', $seriesId)
-            ->update([
-                'cadence' => $detected->cadence->value,
-                'cluster_key' => $detected->clusterKey,
-                'cluster_counterparty_key' => $counterpartyKey,
-                'latest_amount_minor' => $detected->latestAmountMinor,
-                'latest_currency' => $detected->currency,
-                'monthly_equivalent_minor' => $detected->monthlyEquivalentMinor,
-                'next_expected_at' => $detected->nextExpectedAt?->toDateString(),
-                'next_expected_confidence_low' => $detected->confidenceLow,
-                'updated_at' => $this->clock->now()->toDateTimeString(),
-            ]);
+            ->update($columns);
 
         $this->occurrences->write($user->id, $seriesId, $detected->rows, $detected->currency);
 

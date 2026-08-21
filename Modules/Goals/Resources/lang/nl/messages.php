@@ -33,7 +33,7 @@ return [
     'projection' => [
         'target_reached' => 'Doel bereikt',
         'add_contributions' => 'Voeg bijdragen toe om een prognose te zien',
-        'building' => 'Prognose wordt opgebouwd…',
+        'not_enough_history' => 'Nog te weinig historie voor een prognosedatum',
         'est' => 'Ca. :date ·',
         'projection_note' => '(prognose)',
         'projected' => 'Verwacht: :date',
