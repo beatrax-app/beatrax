@@ -94,11 +94,23 @@ final readonly class PairingPeerOutbox
             return null;
         }
 
-        $type = isset($decoded['type']) && is_string($decoded['type'])
-            ? PairingFrameType::tryFrom($decoded['type'])
+        // Rebuilt key by key rather than passed through: a JSON array decodes
+        // to a list with integer keys, which is not a frame, and refusing it
+        // here means nothing downstream has to wonder.
+        $frame = [];
+
+        foreach ($decoded as $key => $value) {
+            if (! is_string($key)) {
+                return null;
+            }
+
+            $frame[$key] = $value;
+        }
+
+        $type = isset($frame['type']) && is_string($frame['type'])
+            ? PairingFrameType::tryFrom($frame['type'])
             : null;
 
-        /** @var array<string, mixed>|null */
-        return $type === null ? null : $decoded;
+        return $type === null ? null : $frame;
     }
 }
