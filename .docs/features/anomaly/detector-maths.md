@@ -30,7 +30,7 @@ Every sample is drawn from `transactions` under the same five constraints:
   compared against income),
 - `settled_currency` matches the charge under test exactly,
 - `posted_at >= now - WINDOW_MONTHS`,
-- `id != ` the charge under test, so a charge is never part of its own
+- `id !=` the charge under test, so a charge is never part of its own
   baseline.
 
 Amounts are always `settled_amount_minor` — the settled figure, not the

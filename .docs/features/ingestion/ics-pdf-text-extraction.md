@@ -75,7 +75,7 @@ same line:
 
 1. it starts with `<day> <three-letter Dutch month>`, optionally
    followed by a period (`23 jan.`);
-2. it ends with the direction marker ` Af` or ` Bij`.
+2. it ends with a whitespace-delimited `Af` or `Bij` direction marker.
 
 Either test alone produces false positives — body paragraphs open with
 dates, and the summary block ends with `Af`. Requiring both is what
@@ -95,8 +95,8 @@ the cursor advances by one or two lines depending on what the body found.
 order. Each step removes what it matched, so the next regex anchors on a
 new end-of-string:
 
-1. **Direction** — the trailing ` Af` / ` Bij` token. Missing marker is a
-   parse error, never a default.
+1. **Direction** — the trailing whitespace-delimited `Af` / `Bij` token.
+   Missing marker is a parse error, never a default.
 2. **Settled EUR amount** — now the trailing `[\d.,]+` run. `Af` negates
    it; the statement itself never prints a minus sign, the marker column
    carries the sign.
