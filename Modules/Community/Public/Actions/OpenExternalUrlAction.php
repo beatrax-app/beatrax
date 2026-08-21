@@ -34,6 +34,14 @@ final class OpenExternalUrlAction
         }
 
         $this->shell->openExternal($url);
-        $this->logger->info('OpenExternalUrlAction: launched system browser.', ['url' => $url]);
+        // The query string carries the suggest-mapping YAML body, i.e. the
+        // user's own statement description. Encryption at rest exists to keep
+        // that off the disk, so the log line records only which page opened.
+        $this->logger->info('OpenExternalUrlAction: launched system browser.', ['url' => self::withoutQuery($url)]);
+    }
+
+    private static function withoutQuery(string $url): string
+    {
+        return substr($url, 0, strcspn($url, '?#'));
     }
 }

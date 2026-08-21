@@ -44,9 +44,8 @@ final class CommunityCorpusQuery
     {
         foreach ($this->generalizedRows() as $row) {
             // Whole token, not any substring: a bare search matched the corpus
-            // token OBI inside "mobiel" and renamed a phone bill after a DIY
-            // chain. containsToken() is case-insensitive, so the haystack no
-            // longer needs lowering first.
+            // token OBI inside "mobiel". The match is case-insensitive, so the
+            // haystack is no longer lowered first.
             if (CorpusPatternMatcher::containsToken($rawDescription, $row['needle'])) {
                 return $row['name'];
             }
